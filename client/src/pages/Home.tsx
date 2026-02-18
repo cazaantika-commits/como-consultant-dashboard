@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, BarChart3, ClipboardList, TrendingUp, FileText, Building2 } from "lucide-react";
+import { Loader2, BarChart3, ClipboardList, TrendingUp, FileText, Building2, HardDrive } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
 
@@ -93,6 +93,24 @@ export default function Home() {
             <CardContent>
               <p className="text-gray-600">
                 عرض تفصيلي لكل استشاري مع ملاحظات خاصة ونقاط القوة والضعف
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* مستعرض الملفات - Google Drive */}
+          <Card
+            className="cursor-pointer hover:shadow-lg transition-all border-2 border-purple-200 hover:border-purple-400"
+            onClick={() => navigate("/drive")}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-purple-700">
+                <HardDrive className="w-6 h-6" />
+                مستعرض الملفات
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">
+                تصفح وإدارة ملفات Google Drive — المجلدات والمستندات والعروض التقديمية
               </p>
             </CardContent>
           </Card>

@@ -8,6 +8,7 @@ import Home from "./pages/Home";
 import ConsultantDashboardPage from "./pages/ConsultantDashboardPage";
 import ConsultantProfilesPage from "./pages/ConsultantProfilesPage";
 import ConsultantDetailPage from "./pages/ConsultantDetailPage";
+import DriveBrowserPage from "./pages/DriveBrowserPage";
 
 function Router() {
   return (
@@ -16,6 +17,7 @@ function Router() {
       <Route path="/consultant-dashboard" component={ConsultantDashboardPage} />
       <Route path="/consultant-profiles" component={ConsultantProfilesPage} />
       <Route path="/consultant-profile/:id" component={ConsultantDetailPage} />
+      <Route path="/drive" component={DriveBrowserPage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
