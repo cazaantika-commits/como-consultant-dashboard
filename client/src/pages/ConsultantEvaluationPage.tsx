@@ -349,42 +349,59 @@ export default function ConsultantEvaluationPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {projectConsultants.map((consultant) => (
+                          {projectConsultants.map((consultant) => {
+                            const fin = financialQuery.data?.find((f: any) => f.consultantId === consultant.id);
+                            const designType = fin?.designType || 'pct';
+                            const designValue = fin ? (designType === 'pct' ? (fin.designValue || 0) / 100 : fin.designValue || 0) : 0;
+                            const supervisionType = fin?.supervisionType || 'pct';
+                            const supervisionValue = fin ? (supervisionType === 'pct' ? (fin.supervisionValue || 0) / 100 : fin.supervisionValue || 0) : 0;
+                            return (
                             <tr key={consultant.id} className="border-b">
                               <td className="border p-2 font-semibold">{consultant.name}</td>
                               <td className="border p-2 text-center">
-                                <Select defaultValue="pct">
+                                <Select value={designType} onValueChange={(v: any) => {
+                                  updateFinancialMutation.mutate({ projectId: selectedProjectId!, consultantId: consultant.id, designType: v, designValue: designType === 'pct' ? Math.round(designValue * 100) : designValue, supervisionType: supervisionType as any, supervisionValue: supervisionType === 'pct' ? Math.round(supervisionValue * 100) : supervisionValue });
+                                }}>
                                   <SelectTrigger className="w-full">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="pct">نسبة %</SelectItem>
-                                    <SelectItem value="lump">مقطوع</SelectItem>
+                                    <SelectItem value="lumpsum">مقطوع</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </td>
                               <td className="border p-2">
-                                <Input type="number" placeholder="0" className="w-full" />
+                                <Input type="number" value={designValue || ''} placeholder="0" className="w-full" onChange={(e) => {
+                                  const val = parseFloat(e.target.value) || 0;
+                                  updateFinancialMutation.mutate({ projectId: selectedProjectId!, consultantId: consultant.id, designType: designType as any, designValue: designType === 'pct' ? Math.round(val * 100) : val, supervisionType: supervisionType as any, supervisionValue: supervisionType === 'pct' ? Math.round(supervisionValue * 100) : supervisionValue });
+                                }} />
                               </td>
                               <td className="border p-2 text-center">
-                                <Select defaultValue="pct">
+                                <Select value={supervisionType} onValueChange={(v: any) => {
+                                  updateFinancialMutation.mutate({ projectId: selectedProjectId!, consultantId: consultant.id, designType: designType as any, designValue: designType === 'pct' ? Math.round(designValue * 100) : designValue, supervisionType: v, supervisionValue: supervisionType === 'pct' ? Math.round(supervisionValue * 100) : supervisionValue });
+                                }}>
                                   <SelectTrigger className="w-full">
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="pct">نسبة %</SelectItem>
-                                    <SelectItem value="lump">مقطوع</SelectItem>
+                                    <SelectItem value="lumpsum">مقطوع</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </td>
                               <td className="border p-2">
-                                <Input type="number" placeholder="0" className="w-full" />
+                                <Input type="number" value={supervisionValue || ''} placeholder="0" className="w-full" onChange={(e) => {
+                                  const val = parseFloat(e.target.value) || 0;
+                                  updateFinancialMutation.mutate({ projectId: selectedProjectId!, consultantId: consultant.id, designType: designType as any, designValue: designType === 'pct' ? Math.round(designValue * 100) : designValue, supervisionType: supervisionType as any, supervisionValue: supervisionType === 'pct' ? Math.round(val * 100) : val });
+                                }} />
                               </td>
                               <td className="border p-2 text-center font-bold">
                                 {financialTotals[consultant.id]?.toLocaleString() || 0} AED
                               </td>
                             </tr>
-                          ))}
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>

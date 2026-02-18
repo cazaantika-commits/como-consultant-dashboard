@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, projects, InsertProject, consultants, InsertConsultant, projectConsultants, InsertProjectConsultant, financialData, InsertFinancialData, evaluationScores, InsertEvaluationScore } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -160,7 +160,7 @@ export async function getProjectConsultants(projectId: number) {
   const relations = await db.select().from(projectConsultants).where(eq(projectConsultants.projectId, projectId));
   const consultantIds = relations.map(r => r.consultantId);
   if (consultantIds.length === 0) return [];
-  return await db.select().from(consultants).where(eq(consultants.id, consultantIds[0]));
+  return await db.select().from(consultants).where(inArray(consultants.id, consultantIds));
 }
 
 export async function addConsultantToProject(projectId: number, consultantId: number) {
@@ -173,7 +173,7 @@ export async function removeConsultantFromProject(projectId: number, consultantI
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   return await db.delete(projectConsultants)
-    .where(eq(projectConsultants.projectId, projectId) && eq(projectConsultants.consultantId, consultantId));
+    .where(and(eq(projectConsultants.projectId, projectId), eq(projectConsultants.consultantId, consultantId)));
 }
 
 // Financial data
@@ -187,11 +187,11 @@ export async function upsertFinancialData(projectId: number, consultantId: numbe
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   const existing = await db.select().from(financialData)
-    .where(eq(financialData.projectId, projectId) && eq(financialData.consultantId, consultantId))
+    .where(and(eq(financialData.projectId, projectId), eq(financialData.consultantId, consultantId)))
     .limit(1);
   if (existing.length > 0) {
     return await db.update(financialData).set(data)
-      .where(eq(financialData.projectId, projectId) && eq(financialData.consultantId, consultantId));
+      .where(and(eq(financialData.projectId, projectId), eq(financialData.consultantId, consultantId)));
   }
   return await db.insert(financialData).values({ projectId, consultantId, ...data });
 }
@@ -207,11 +207,11 @@ export async function upsertEvaluationScore(projectId: number, consultantId: num
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   const existing = await db.select().from(evaluationScores)
-    .where(eq(evaluationScores.projectId, projectId) && eq(evaluationScores.consultantId, consultantId) && eq(evaluationScores.criterionId, criterionId))
+    .where(and(eq(evaluationScores.projectId, projectId), eq(evaluationScores.consultantId, consultantId), eq(evaluationScores.criterionId, criterionId)))
     .limit(1);
   if (existing.length > 0) {
     return await db.update(evaluationScores).set({ score })
-      .where(eq(evaluationScores.projectId, projectId) && eq(evaluationScores.consultantId, consultantId) && eq(evaluationScores.criterionId, criterionId));
+      .where(and(eq(evaluationScores.projectId, projectId), eq(evaluationScores.consultantId, consultantId), eq(evaluationScores.criterionId, criterionId)));
   }
   return await db.insert(evaluationScores).values({ projectId, consultantId, criterionId, score });
 }

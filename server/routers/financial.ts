@@ -17,9 +17,9 @@ export const financialRouter = router({
       z.object({
         projectId: z.number(),
         consultantId: z.number(),
-        designType: z.enum(["pct", "lump"]).optional(),
+        designType: z.enum(["pct", "lump", "lumpsum"]).optional(),
         designValue: z.number().optional(),
-        supervisionType: z.enum(["pct", "lump"]).optional(),
+        supervisionType: z.enum(["pct", "lump", "lumpsum"]).optional(),
         supervisionValue: z.number().optional(),
         proposalLink: z.string().url().optional(),
       })

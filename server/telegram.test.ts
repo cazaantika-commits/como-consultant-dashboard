@@ -16,7 +16,7 @@ describe("Telegram Bot Token Validation", () => {
     const res = await fetch(`https://api.telegram.org/bot${token}/getMe`);
     const data = await res.json();
     expect(data.ok).toBe(true);
-    expect(data.result.username).toBe("Salwa_Dev_Bot");
+    expect(data.result.username).toBe("Salwa_COMO_Bot");
     expect(data.result.is_bot).toBe(true);
   }, 30000);
 });
@@ -40,7 +40,7 @@ describe("Telegram Bot Module", () => {
     const modulePath = path.resolve(__dirname, "telegramBot.ts");
     const source = fs.readFileSync(modulePath, "utf-8");
 
-    expect(source).toContain("export function initTelegramBot");
+    expect(source).toContain("export async function initTelegramBot");
     expect(source).toContain("export async function stopTelegramBot");
     expect(source).toContain("export function getBot");
     expect(source).toContain("export async function getBotInfo");
@@ -128,7 +128,7 @@ describe("Telegram API Direct Tests", () => {
     expect(data.result).toHaveProperty("first_name");
     expect(data.result).toHaveProperty("username");
     expect(data.result.is_bot).toBe(true);
-    expect(data.result.username).toBe("Salwa_Dev_Bot");
+    expect(data.result.username).toBe("Salwa_COMO_Bot");
   });
 
   it("should get webhook info", async () => {

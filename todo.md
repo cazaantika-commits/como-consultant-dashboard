@@ -139,3 +139,11 @@
 - [x] تحديث لوحة الألوان والخطوط (Tajawal + IBM Plex Sans Arabic)
 - [x] تحسين البطاقات والجداول والتفاعلات
 - [x] تحديث مكونات الصفحات (Home, AgentDashboard, KPI)
+
+## إصلاح صفحة تقييم الاستشاريين والبيانات المالية
+- [x] إصلاح خطأ 404 - تسجيل المسار /consultant-evaluation في App.tsx
+- [x] إصلاح خطأ Drizzle AND - تحويل && إلى and() في جميع استعلامات WHERE المركبة
+- [x] إصلاح عرض استشاري واحد فقط - تحويل eq() إلى inArray() في getProjectConsultants
+- [x] إصلاح Zod enum - إضافة "lumpsum" كقيمة مقبولة في financial router
+- [x] إصلاح اختبارات Telegram (اسم البوت الجديد + async export)
+- [x] التحقق من عرض البيانات المالية بشكل صحيح (110 اختبار ناجح)

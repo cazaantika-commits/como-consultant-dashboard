@@ -11,6 +11,7 @@ import ConsultantDetailPage from "./pages/ConsultantDetailPage";
 import DriveBrowserPage from "./pages/DriveBrowserPage";
 import TasksPage from "./pages/TasksPage";
 import AgentDashboardPage from "./pages/AgentDashboardPage";
+import ConsultantEvaluationPage from "./pages/ConsultantEvaluationPage";
 
 function Router() {
   return (
@@ -22,6 +23,7 @@ function Router() {
       <Route path="/drive" component={DriveBrowserPage} />
       <Route path="/tasks" component={TasksPage} />
       <Route path="/agent-dashboard" component={AgentDashboardPage} />
+      <Route path="/consultant-evaluation" component={ConsultantEvaluationPage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
