@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, projects, InsertProject, consultants, InsertConsultant, projectConsultants, InsertProjectConsultant, financialData, InsertFinancialData, evaluationScores, InsertEvaluationScore } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -89,4 +89,129 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+// Projects queries
+export async function getUserProjects(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(projects).where(eq(projects.userId, userId));
+}
+
+export async function getProjectById(projectId: number, userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(projects)
+    .where(eq(projects.id, projectId))
+    .limit(1);
+  return result.length > 0 && result[0].userId === userId ? result[0] : null;
+}
+
+export async function createProject(userId: number, data: Omit<InsertProject, 'userId'>) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const result = await db.insert(projects).values({ ...data, userId } as InsertProject);
+  return result;
+}
+
+export async function updateProject(projectId: number, userId: number, data: Partial<InsertProject>) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const project = await getProjectById(projectId, userId);
+  if (!project) throw new Error('Project not found');
+  return await db.update(projects).set(data).where(eq(projects.id, projectId));
+}
+
+export async function deleteProject(projectId: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const project = await getProjectById(projectId, userId);
+  if (!project) throw new Error('Project not found');
+  return await db.delete(projects).where(eq(projects.id, projectId));
+}
+
+// Consultants queries
+export async function getUserConsultants(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(consultants).where(eq(consultants.userId, userId));
+}
+
+export async function createConsultant(userId: number, data: Omit<InsertConsultant, 'userId'>) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  return await db.insert(consultants).values({ ...data, userId } as InsertConsultant);
+}
+
+export async function deleteConsultant(consultantId: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const consultant = await db.select().from(consultants)
+    .where(eq(consultants.id, consultantId))
+    .limit(1);
+  if (consultant.length === 0 || consultant[0].userId !== userId) {
+    throw new Error('Consultant not found');
+  }
+  return await db.delete(consultants).where(eq(consultants.id, consultantId));
+}
+
+// Project-Consultant relationship
+export async function getProjectConsultants(projectId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const relations = await db.select().from(projectConsultants).where(eq(projectConsultants.projectId, projectId));
+  const consultantIds = relations.map(r => r.consultantId);
+  if (consultantIds.length === 0) return [];
+  return await db.select().from(consultants).where(eq(consultants.id, consultantIds[0]));
+}
+
+export async function addConsultantToProject(projectId: number, consultantId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  return await db.insert(projectConsultants).values({ projectId, consultantId });
+}
+
+export async function removeConsultantFromProject(projectId: number, consultantId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  return await db.delete(projectConsultants)
+    .where(eq(projectConsultants.projectId, projectId) && eq(projectConsultants.consultantId, consultantId));
+}
+
+// Financial data
+export async function getProjectFinancialData(projectId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(financialData).where(eq(financialData.projectId, projectId));
+}
+
+export async function upsertFinancialData(projectId: number, consultantId: number, data: Partial<InsertFinancialData>) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const existing = await db.select().from(financialData)
+    .where(eq(financialData.projectId, projectId) && eq(financialData.consultantId, consultantId))
+    .limit(1);
+  if (existing.length > 0) {
+    return await db.update(financialData).set(data)
+      .where(eq(financialData.projectId, projectId) && eq(financialData.consultantId, consultantId));
+  }
+  return await db.insert(financialData).values({ projectId, consultantId, ...data });
+}
+
+// Evaluation scores
+export async function getProjectEvaluationScores(projectId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(evaluationScores).where(eq(evaluationScores.projectId, projectId));
+}
+
+export async function upsertEvaluationScore(projectId: number, consultantId: number, criterionId: number, score: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const existing = await db.select().from(evaluationScores)
+    .where(eq(evaluationScores.projectId, projectId) && eq(evaluationScores.consultantId, consultantId) && eq(evaluationScores.criterionId, criterionId))
+    .limit(1);
+  if (existing.length > 0) {
+    return await db.update(evaluationScores).set({ score })
+      .where(eq(evaluationScores.projectId, projectId) && eq(evaluationScores.consultantId, consultantId) && eq(evaluationScores.criterionId, criterionId));
+  }
+  return await db.insert(evaluationScores).values({ projectId, consultantId, criterionId, score });
+}
