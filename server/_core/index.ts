@@ -9,6 +9,7 @@ import dashboardDataRoute from "../dashboardDataRoute";
 import agentApiRoute from "../agentApi";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { initTelegramBot, registerCallbackHandler, getBotInfo } from "../telegramBot";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -67,6 +68,20 @@ async function startServer() {
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
   });
+
+  // Initialize Telegram bot (Salwa)
+  try {
+    const telegramBot = initTelegramBot();
+    if (telegramBot) {
+      registerCallbackHandler(telegramBot);
+      const info = await getBotInfo();
+      if (info) {
+        console.log(`[TelegramBot] ✅ @${info.username} (${info.firstName}) is running`);
+      }
+    }
+  } catch (error) {
+    console.warn("[TelegramBot] Failed to start:", error);
+  }
 }
 
 startServer().catch(console.error);

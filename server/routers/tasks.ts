@@ -3,6 +3,7 @@ import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { tasks } from "../../drizzle/schema";
 import { eq, desc, and, sql } from "drizzle-orm";
+import { getBot, getBotInfo } from "../telegramBot";
 
 const taskInput = z.object({
   title: z.string().min(1),
@@ -148,6 +149,21 @@ export const tasksRouter = router({
     return {
       totalAgentTasks: agentTasks.length,
       byAgent,
+    };
+  }),
+
+  // Telegram bot status
+  telegramStatus: publicProcedure.query(async () => {
+    const bot = getBot();
+    if (!bot) {
+      return { connected: false, username: "", firstName: "", id: 0 };
+    }
+    const info = await getBotInfo();
+    return {
+      connected: true,
+      username: info?.username || "",
+      firstName: info?.firstName || "",
+      id: info?.id || 0,
     };
   }),
 
