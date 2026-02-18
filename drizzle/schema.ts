@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -176,3 +176,65 @@ export const agents = mysqlTable('agents', {
 
 export type Agent = typeof agents.$inferSelect;
 export type InsertAgent = typeof agents.$inferInsert;
+
+// Feasibility Studies table - دراسة الجدوى المالية
+export const feasibilityStudies = mysqlTable('feasibilityStudies', {
+  id: int('id').autoincrement().primaryKey(),
+  userId: int('userId').notNull().references(() => users.id),
+  // Project identification
+  projectName: varchar('projectName', { length: 500 }).notNull(), // المنطقة _ الوصف _ رقم القطعة
+  community: varchar('community', { length: 255 }), // المنطقة
+  plotNumber: varchar('plotNumber', { length: 100 }), // رقم القطعة
+  projectDescription: varchar('projectDescription', { length: 255 }), // وصف المشروع مثل G+2P+6
+  landUse: varchar('landUse', { length: 255 }), // الاستعمال
+  // Areas (stored in sqft)
+  plotArea: int('plotArea'), // مساحة الأرض بالقدم²
+  plotAreaM2: int('plotAreaM2'), // مساحة الأرض بالمتر²
+  gfaResidential: int('gfaResidential'), // GFA سكني بالقدم²
+  gfaRetail: int('gfaRetail'), // GFA تجاري بالقدم²
+  gfaOffices: int('gfaOffices'), // GFA مكاتب بالقدم²
+  totalGfa: int('totalGfa'), // إجمالي GFA بالقدم²
+  saleableResidentialPct: int('saleableResidentialPct').default(90), // نسبة المساحة القابلة للبيع سكني
+  saleableRetailPct: int('saleableRetailPct').default(99), // نسبة المساحة القابلة للبيع تجاري
+  saleableOfficesPct: int('saleableOfficesPct').default(90), // نسبة المساحة القابلة للبيع مكاتب
+  estimatedBua: int('estimatedBua'), // مساحة البناء التقديرية بالقدم²
+  numberOfUnits: int('numberOfUnits'), // عدد الوحدات
+  // Costs - User inputs
+  landPrice: int('landPrice'), // سعر الأرض
+  agentCommissionLandPct: int('agentCommissionLandPct').default(1), // عمولة وسيط الأرض %
+  soilInvestigation: int('soilInvestigation'), // فحص التربة
+  topographySurvey: int('topographySurvey'), // المسح الطبوغرافي
+  authoritiesFee: int('authoritiesFee'), // رسوم الجهات الحكومية
+  constructionCostPerSqft: int('constructionCostPerSqft'), // تكلفة البناء لكل قدم²
+  communityFee: int('communityFee'), // رسوم المجتمع
+  // Percentages (stored as whole numbers, e.g., 2 = 2%)
+  designFeePct: int('designFeePct').default(2), // أتعاب التصميم %
+  supervisionFeePct: int('supervisionFeePct').default(2), // أتعاب الإشراف % (1.75 stored as 175 /100)
+  separationFeePerM2: int('separationFeePerM2').default(40), // رسوم الفصل لكل م²
+  contingenciesPct: int('contingenciesPct').default(2), // احتياطي %
+  developerFeePct: int('developerFeePct').default(5), // أتعاب المطور %
+  agentCommissionSalePct: int('agentCommissionSalePct').default(5), // عمولة البيع %
+  marketingPct: int('marketingPct').default(2), // تسويق %
+  // Fixed fees
+  reraOffplanFee: int('reraOffplanFee').default(150000),
+  reraUnitFee: int('reraUnitFee').default(850), // per unit
+  nocFee: int('nocFee').default(10000),
+  escrowFee: int('escrowFee').default(140000),
+  bankCharges: int('bankCharges').default(20000),
+  surveyorFees: int('surveyorFees').default(12000),
+  reraAuditFees: int('reraAuditFees').default(18000),
+  reraInspectionFees: int('reraInspectionFees').default(70000),
+  // Sale prices per sqft
+  residentialSalePrice: int('residentialSalePrice'), // سعر بيع القدم² سكني
+  retailSalePrice: int('retailSalePrice'), // سعر بيع القدم² تجاري
+  officesSalePrice: int('officesSalePrice'), // سعر بيع القدم² مكاتب
+  // COMO profit share
+  comoProfitSharePct: int('comoProfitSharePct').default(15), // حصة COMO من الربح %
+  // Notes
+  notes: text('notes'),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type FeasibilityStudy = typeof feasibilityStudies.$inferSelect;
+export type InsertFeasibilityStudy = typeof feasibilityStudies.$inferInsert;

@@ -220,6 +220,7 @@ export default function Home() {
                   { label: "المهام", icon: FileText, path: "/tasks", color: "oklch(0.55 0.14 175)" },
                   { label: "ملفات Drive", icon: Archive, path: "/drive", color: "oklch(0.55 0.15 145)" },
                   { label: "تقييم الاستشاريين", icon: Users, path: "/consultant-dashboard", color: "oklch(0.55 0.12 45)" },
+                  { label: "دراسة الجدوى", icon: Calculator, path: "/feasibility-study", color: "oklch(0.50 0.15 30)" },
                 ].map((item, i) => (
                   <button
                     key={i}
