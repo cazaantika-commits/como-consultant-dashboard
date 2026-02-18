@@ -207,8 +207,11 @@ export default function FeasibilityStudyPage() {
     const saleableOff = gfaOff * ((f.saleableOfficesPct || 90) / 100);
     const totalSaleable = saleableRes + saleableRet + saleableOff;
 
-    // Construction cost
-    const constructionCost = totalGfa * (f.constructionCostPerSqft || 0);
+    // BUA (manual input)
+    const bua = f.estimatedBua || 0;
+
+    // Construction cost (based on BUA, not GFA)
+    const constructionCost = bua * (f.constructionCostPerSqft || 0);
 
     // Land registration (4% of land price)
     const landRegistration = (f.landPrice || 0) * 0.04;
@@ -604,7 +607,7 @@ export default function FeasibilityStudyPage() {
                           value={form.estimatedBua}
                           onChange={(v) => setField("estimatedBua", v)}
                           suffix="sqft"
-                          hint="تقدير أولي - يتم تحديده لاحقاً من المخططات"
+                          hint="مساحة البناء الفعلية - تُستخدم لحساب تكلفة البناء"
                         />
                       </div>
                     </CardContent>
@@ -731,7 +734,7 @@ export default function FeasibilityStudyPage() {
                           suffix="AED/sqft"
                         />
                         <ComputedValue
-                          label={`تكلفة البناء الإجمالية (${fmt(computed.totalGfa)} sqft)`}
+                          label={`تكلفة البناء الإجمالية (BUA: ${fmt(form.estimatedBua || 0)} sqft)`}
                           value={computed.constructionCost}
                           highlight
                         />
