@@ -40,6 +40,11 @@ import {
   User,
   Terminal,
   Search,
+  Activity,
+  Mail,
+  Zap,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
@@ -109,9 +114,13 @@ export default function TasksPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<TaskFormData>({ ...emptyForm });
 
+  const [showAgentPanel, setShowAgentPanel] = useState(false);
+
   const utils = trpc.useUtils();
   const { data: allTasks = [], isLoading } = trpc.tasks.list.useQuery();
   const { data: stats } = trpc.tasks.stats.useQuery();
+  const { data: agentStats } = trpc.tasks.agentStats.useQuery();
+  const { data: agentActivity = [] } = trpc.tasks.agentActivity.useQuery();
 
   const createMutation = trpc.tasks.create.useMutation({
     onSuccess: () => {
@@ -620,6 +629,154 @@ export default function TasksPage() {
                 </tbody>
               </table>
             </div>
+          </CardContent>
+        </Card>
+        {/* Agent Activity Panel */}
+        <Card className="border-purple-200 bg-gradient-to-r from-purple-50/50 to-indigo-50/50">
+          <CardContent className="p-4">
+            <button
+              onClick={() => setShowAgentPanel(!showAgentPanel)}
+              className="w-full flex items-center justify-between"
+            >
+              <div className="flex items-center gap-2">
+                <Bot className="w-5 h-5 text-purple-600" />
+                <h3 className="text-lg font-bold text-purple-800">نشاط الوكلاء</h3>
+                {agentStats && agentStats.totalAgentTasks > 0 && (
+                  <Badge className="bg-purple-600 text-white text-xs">
+                    {agentStats.totalAgentTasks} مهمة
+                  </Badge>
+                )}
+              </div>
+              {showAgentPanel ? (
+                <ChevronUp className="w-5 h-5 text-purple-600" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-purple-600" />
+              )}
+            </button>
+
+            {showAgentPanel && (
+              <div className="mt-4 space-y-4">
+                {/* Agent Stats Cards */}
+                {agentStats && Object.keys(agentStats.byAgent).length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {Object.entries(agentStats.byAgent).map(([name, data]) => (
+                      <Card key={name} className="border-purple-100">
+                        <CardContent className="p-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                              <Bot className="w-4 h-4 text-purple-600" />
+                            </div>
+                            <div>
+                              <span className="font-bold text-sm">{name}</span>
+                              <span className="text-xs text-muted-foreground block">
+                                {name === "قاسم" ? "وكيل الأرشفة" : name === "سلوى" ? "وكيلة التقييم" : "وكيل"}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-4 gap-1 text-center text-xs">
+                            <div>
+                              <div className="font-bold text-purple-700">{data.total}</div>
+                              <div className="text-muted-foreground">الكل</div>
+                            </div>
+                            <div>
+                              <div className="font-bold text-gray-600">{data.new}</div>
+                              <div className="text-muted-foreground">جديدة</div>
+                            </div>
+                            <div>
+                              <div className="font-bold text-blue-600">{data.progress}</div>
+                              <div className="text-muted-foreground">تنفيذ</div>
+                            </div>
+                            <div>
+                              <div className="font-bold text-green-600">{data.done}</div>
+                              <div className="text-muted-foreground">مكتملة</div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-muted-foreground text-sm">
+                    <Bot className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                    <p>لم يقم أي وكيل بإنشاء مهام بعد</p>
+                    <p className="text-xs mt-1">الوكلاء (قاسم، سلوى) سيبدأون بإنشاء المهام تلقائياً من رسائل البريد الإلكتروني</p>
+                  </div>
+                )}
+
+                {/* Recent Agent Activity Log */}
+                {agentActivity.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-bold text-purple-700 mb-2 flex items-center gap-1">
+                      <Activity className="w-4 h-4" />
+                      آخر الأنشطة
+                    </h4>
+                    <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
+                      {agentActivity.slice(0, 10).map((a: any, i: number) => (
+                        <div key={i} className="flex items-start gap-2 text-xs bg-white rounded-md p-2 border border-purple-100">
+                          <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            {a.action === "email_parsed" ? (
+                              <Mail className="w-3 h-3 text-purple-600" />
+                            ) : a.action === "task_created" ? (
+                              <Zap className="w-3 h-3 text-purple-600" />
+                            ) : (
+                              <Activity className="w-3 h-3 text-purple-600" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-1">
+                              <span className="font-bold text-purple-700">{a.agentName}</span>
+                              <span className="text-muted-foreground">
+                                {a.action === "email_parsed" ? "حلّل بريد إلكتروني" :
+                                 a.action === "task_created" ? "أنشأ مهمة" :
+                                 a.action === "bulk_tasks_created" ? "أنشأ مهام متعددة" : a.action}
+                              </span>
+                            </div>
+                            <p className="text-muted-foreground mt-0.5">{a.details}</p>
+                            {a.createdAt && (
+                              <span className="text-[10px] text-muted-foreground">
+                                {new Date(a.createdAt).toLocaleString("ar-SA")}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* API Info */}
+                <div className="bg-white rounded-md p-3 border border-purple-100 text-xs">
+                  <h4 className="font-bold text-purple-700 mb-1">نقاط الاتصال (API Endpoints)</h4>
+                  <div className="space-y-1 font-mono text-[11px] text-slate-600">
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-green-600 text-white text-[10px] px-1.5">POST</Badge>
+                      <span>/api/agent/task</span>
+                      <span className="text-muted-foreground">— إنشاء مهمة مباشرة</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-green-600 text-white text-[10px] px-1.5">POST</Badge>
+                      <span>/api/agent/email-to-task</span>
+                      <span className="text-muted-foreground">— تحليل إيميل وإنشاء مهام</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-green-600 text-white text-[10px] px-1.5">POST</Badge>
+                      <span>/api/agent/bulk-tasks</span>
+                      <span className="text-muted-foreground">— إنشاء مهام متعددة</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-blue-600 text-white text-[10px] px-1.5">GET</Badge>
+                      <span>/api/agent/tasks</span>
+                      <span className="text-muted-foreground">— قائمة مهام الوكيل</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-blue-600 text-white text-[10px] px-1.5">GET</Badge>
+                      <span>/api/agent/activity</span>
+                      <span className="text-muted-foreground">— سجل النشاط</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </main>

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { tasks } from "../../drizzle/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 
 const taskInput = z.object({
   title: z.string().min(1),
@@ -112,6 +112,43 @@ export const tasksRouter = router({
 
     await db.delete(tasks).where(eq(tasks.id, input));
     return { success: true };
+  }),
+
+  // Agent activity log - for the UI to show agent activity
+  agentActivity: publicProcedure.query(async ({ ctx }) => {
+    if (!ctx.user) return [];
+    const db = await getDb();
+    if (!db) return [];
+    try {
+      const result = await db.execute(
+        sql`SELECT * FROM agentActivityLog ORDER BY createdAt DESC LIMIT 50`
+      );
+      const rows = result[0] as unknown as any[];
+      return rows || [];
+    } catch {
+      return [];
+    }
+  }),
+
+  // Agent-created tasks summary
+  agentStats: publicProcedure.query(async ({ ctx }) => {
+    if (!ctx.user) return null;
+    const db = await getDb();
+    if (!db) return null;
+    const agentTasks = await db.select().from(tasks).where(eq(tasks.source, "agent"));
+    const byAgent: Record<string, { total: number; new: number; progress: number; done: number }> = {};
+    for (const t of agentTasks) {
+      const name = t.sourceAgent || "غير معروف";
+      if (!byAgent[name]) byAgent[name] = { total: 0, new: 0, progress: 0, done: 0 };
+      byAgent[name].total++;
+      if (t.status === "new") byAgent[name].new++;
+      if (t.status === "progress") byAgent[name].progress++;
+      if (t.status === "done") byAgent[name].done++;
+    }
+    return {
+      totalAgentTasks: agentTasks.length,
+      byAgent,
+    };
   }),
 
   // Agent API - allows agents to create tasks programmatically

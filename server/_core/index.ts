@@ -6,6 +6,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import dashboardDataRoute from "../dashboardDataRoute";
+import agentApiRoute from "../agentApi";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 
@@ -38,6 +39,8 @@ async function startServer() {
   registerOAuthRoutes(app);
   // Dashboard data API (for original HTML page)
   app.use("/api/dashboard-data", dashboardDataRoute);
+  // Agent API (for Qasim, Salwa, and other agents)
+  app.use("/api/agent", agentApiRoute);
 
   // tRPC API
   app.use(
