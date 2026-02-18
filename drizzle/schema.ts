@@ -97,3 +97,40 @@ export const evaluationScores = mysqlTable('evaluationScores', {
 
 export type EvaluationScore = typeof evaluationScores.$inferSelect;
 export type InsertEvaluationScore = typeof evaluationScores.$inferInsert;
+
+// Consultant profiles - detailed info
+export const consultantProfiles = mysqlTable('consultantProfiles', {
+  id: int('id').autoincrement().primaryKey(),
+  consultantId: int('consultantId').notNull().references(() => consultants.id, { onDelete: 'cascade' }).unique(),
+  companyNameAr: varchar('companyNameAr', { length: 255 }),
+  founded: varchar('founded', { length: 50 }),
+  headquarters: varchar('headquarters', { length: 255 }),
+  website: varchar('website', { length: 500 }),
+  employeeCount: varchar('employeeCount', { length: 100 }),
+  specializations: text('specializations'), // comma-separated or JSON
+  keyProjects: text('keyProjects'), // JSON array of notable projects
+  certifications: text('certifications'), // ISO, LEED, etc.
+  overview: text('overview'), // general description
+  strengths: text('strengths'),
+  weaknesses: text('weaknesses'),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type ConsultantProfile = typeof consultantProfiles.$inferSelect;
+export type InsertConsultantProfile = typeof consultantProfiles.$inferInsert;
+
+// Private notes on consultants
+export const consultantNotes = mysqlTable('consultantNotes', {
+  id: int('id').autoincrement().primaryKey(),
+  consultantId: int('consultantId').notNull().references(() => consultants.id, { onDelete: 'cascade' }),
+  userId: int('userId').notNull().references(() => users.id),
+  title: varchar('title', { length: 255 }),
+  content: text('content').notNull(),
+  category: varchar('category', { length: 100 }), // e.g. 'meeting', 'feedback', 'general'
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type ConsultantNote = typeof consultantNotes.$inferSelect;
+export type InsertConsultantNote = typeof consultantNotes.$inferInsert;

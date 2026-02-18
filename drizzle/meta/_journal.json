@@ -15,6 +15,13 @@
       "when": 1771407775660,
       "tag": "0001_nosy_mantis",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1771411180442,
+      "tag": "0002_curly_epoch",
+      "breakpoints": true
     }
   ]
 }

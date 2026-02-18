@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, BarChart3, ClipboardList, TrendingUp, FileText } from "lucide-react";
+import { Loader2, BarChart3, ClipboardList, TrendingUp, FileText, Building2 } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
 
@@ -75,6 +75,24 @@ export default function Home() {
             <CardContent>
               <p className="text-gray-600">
                 مقارنة وتقييم الاستشاريين الهندسيين — الأتعاب المالية والتقييم الفني والنتائج
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* الملفات التعريفية للاستشاريين */}
+          <Card
+            className="cursor-pointer hover:shadow-lg transition-all border-2 border-emerald-200 hover:border-emerald-400"
+            onClick={() => navigate("/consultant-profiles")}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-emerald-700">
+                <Building2 className="w-6 h-6" />
+                الملفات التعريفية للاستشاريين
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">
+                عرض تفصيلي لكل استشاري مع ملاحظات خاصة ونقاط القوة والضعف
               </p>
             </CardContent>
           </Card>
