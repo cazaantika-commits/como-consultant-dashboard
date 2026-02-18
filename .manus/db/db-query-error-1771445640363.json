@@ -1,0 +1,8 @@
+{
+  "query": "SELECT fd.*, c.name as consultantName, p.name as projectName FROM financial_data fd LEFT JOIN consultants c ON fd.consultantId = c.id LEFT JOIN projects p ON fd.projectId = p.id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT fd.*, c.name as consultantName, p.name as projectName FROM financial_data fd LEFT JOIN consultants c ON fd.consultantId = c.id LEFT JOIN projects p ON fd.projectId = p.id;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1146 (42S02) at line 1: Table 'q366eayg4q7iam8vuammfx.financial_data' doesn't exist"
+  ]
+}
