@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
@@ -43,7 +43,7 @@ function parseNum(val: string): number | null {
   return isNaN(n) ? null : n;
 }
 
-// Editable number input component
+// Editable number input component - uses local string state to preserve decimal point while typing
 function NumInput({
   label,
   value,
@@ -61,6 +61,18 @@ function NumInput({
   disabled?: boolean;
   hint?: string;
 }) {
+  const [localValue, setLocalValue] = useState(value != null ? fmt(value) : "");
+  const isFocused = useRef(false);
+  const prevExternalValue = useRef(value);
+
+  // Sync from external value only when NOT focused (i.e., not typing)
+  useEffect(() => {
+    if (!isFocused.current && value !== prevExternalValue.current) {
+      prevExternalValue.current = value;
+      setLocalValue(value != null ? fmt(value) : "");
+    }
+  }, [value]);
+
   return (
     <div className="space-y-1">
       <Label className="text-xs text-muted-foreground font-medium">{label}</Label>
@@ -70,8 +82,34 @@ function NumInput({
         )}
         <Input
           type="text"
-          value={value != null ? fmt(value) : ""}
-          onChange={(e) => onChange(parseNum(e.target.value))}
+          value={localValue}
+          onFocus={() => {
+            isFocused.current = true;
+            // Remove formatting on focus so user can edit raw number
+            if (value != null) {
+              setLocalValue(String(value));
+            }
+          }}
+          onChange={(e) => {
+            const raw = e.target.value;
+            setLocalValue(raw);
+            // Update parent immediately for live calculations, but keep raw string locally
+            const parsed = parseNum(raw);
+            onChange(parsed);
+          }}
+          onBlur={() => {
+            isFocused.current = false;
+            // Format the display value on blur
+            const parsed = parseNum(localValue);
+            if (parsed != null) {
+              setLocalValue(fmt(parsed));
+              onChange(parsed);
+            } else {
+              setLocalValue("");
+              onChange(null);
+            }
+            prevExternalValue.current = parsed;
+          }}
           className={`text-left font-mono text-sm h-9 ${prefix ? "pr-14" : ""} ${suffix ? "pl-12" : ""}`}
           disabled={disabled}
           dir="ltr"
