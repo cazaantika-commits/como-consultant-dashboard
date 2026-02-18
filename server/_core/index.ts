@@ -71,12 +71,12 @@ async function startServer() {
 
   // Initialize Telegram bot (Salwa)
   try {
-    const telegramBot = initTelegramBot();
+    const telegramBot = await initTelegramBot();
     if (telegramBot) {
       registerCallbackHandler(telegramBot);
       const info = await getBotInfo();
       if (info) {
-        console.log(`[TelegramBot] ✅ @${info.username} (${info.firstName}) is running`);
+        console.log(`[TelegramBot] \u2705 @${info.username} (${info.firstName}) is running`);
       }
     }
   } catch (error) {

@@ -3,6 +3,8 @@ import { getDb } from "./db";
 import { tasks } from "../drizzle/schema";
 import { invokeLLM } from "./_core/llm";
 import { notifyOwner } from "./_core/notification";
+import { transcribeAudio } from "./_core/voiceTranscription";
+import { storagePut } from "./storage";
 import { eq, desc, and, sql } from "drizzle-orm";
 import { searchFiles, listFilesInFolder, listSharedDrives } from "./googleDrive";
 
@@ -55,7 +57,7 @@ const KNOWN_OWNERS = [
 /**
  * Initialize the Telegram bot
  */
-export function initTelegramBot(): TelegramBot | null {
+export async function initTelegramBot(): Promise<TelegramBot | null> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) {
     console.warn("[TelegramBot] TELEGRAM_BOT_TOKEN not set, skipping initialization");
@@ -67,13 +69,54 @@ export function initTelegramBot(): TelegramBot | null {
   }
 
   try {
-    bot = new TelegramBot(token, { polling: true });
+    // Step 1: Delete any webhook
+    try {
+      await fetch(`https://api.telegram.org/bot${token}/deleteWebhook?drop_pending_updates=true`);
+    } catch (e) {
+      console.warn("[TelegramBot] Could not clear webhook:", e);
+    }
+
+    // Step 2: Force-claim the polling session by making a short getUpdates call
+    // This terminates any other long-polling connection
+    try {
+      await fetch(`https://api.telegram.org/bot${token}/getUpdates?timeout=0&offset=-1`);
+      // Wait for the old polling session to fully release
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    } catch (e) {
+      console.warn("[TelegramBot] Could not force-claim polling:", e);
+    }
+
+    bot = new TelegramBot(token, {
+      polling: {
+        interval: 2000,
+        autoStart: true,
+        params: {
+          timeout: 10,
+        },
+      },
+    });
     isInitialized = true;
+
+    // Track consecutive conflict errors
+    let conflictCount = 0;
+
+    // Handle polling errors gracefully (don't crash)
+    bot.on("polling_error", (error: any) => {
+      if (error?.code === "ETELEGRAM" && error?.message?.includes("409 Conflict")) {
+        conflictCount++;
+        // Only log every 10th conflict to avoid spam
+        if (conflictCount % 10 === 1) {
+          console.warn(`[TelegramBot] Polling conflict #${conflictCount} - published version may also be running.`);
+        }
+      } else {
+        console.error("[TelegramBot] Polling error:", error?.message || error);
+      }
+    });
 
     // Register command handlers
     registerCommands(bot);
 
-    console.log("[TelegramBot] ✅ Salwa bot initialized and polling for messages");
+    console.log("[TelegramBot] \u2705 Salwa bot initialized and polling for messages");
     return bot;
   } catch (error) {
     console.error("[TelegramBot] Failed to initialize:", error);
@@ -412,6 +455,18 @@ function registerCommands(bot: TelegramBot) {
       `📧 *تحليل بريد إلكتروني*\n\nأرسل محتوى البريد الإلكتروني (يمكنك نسخه ولصقه هنا) وسأقوم بتحليله واستخراج المهام منه تلقائياً.`,
       { parse_mode: "Markdown" }
     );
+  });
+
+  // Handle voice messages (audio transcription)
+  bot.on("voice", async (msg) => {
+    const chatId = msg.chat.id;
+    await handleVoiceMessage(bot!, chatId, msg);
+  });
+
+  // Handle audio files (audio transcription)
+  bot.on("audio", async (msg) => {
+    const chatId = msg.chat.id;
+    await handleVoiceMessage(bot!, chatId, msg);
   });
 
   // Handle all text messages (for conversations and free-text AI analysis)
@@ -1039,6 +1094,91 @@ async function quickCreateTask(bot: TelegramBot, chatId: number, title: string) 
   } catch (error: any) {
     console.error("[TelegramBot] Quick task error:", error);
     await bot.sendMessage(chatId, `⚠️ فشل إنشاء المهمة: ${error.message}`);
+  }
+}
+
+/**
+ * Handle voice messages - download, upload to S3, transcribe, then process as text
+ */
+async function handleVoiceMessage(
+  bot: TelegramBot,
+  chatId: number,
+  msg: TelegramBot.Message
+) {
+  try {
+    const voice = msg.voice || msg.audio;
+    if (!voice) {
+      await bot.sendMessage(chatId, "⚠️ لم أتمكن من قراءة الرسالة الصوتية");
+      return;
+    }
+
+    // Check file size (16MB limit)
+    const fileSizeMB = (voice.file_size || 0) / (1024 * 1024);
+    if (fileSizeMB > 16) {
+      await bot.sendMessage(chatId, `⚠️ الملف الصوتي كبير جداً (${fileSizeMB.toFixed(1)}MB). الحد الأقصى 16MB.`);
+      return;
+    }
+
+    await bot.sendMessage(chatId, "🎙️ جاري الاستماع إلى رسالتك الصوتية...");
+
+    // Get file link from Telegram
+    const fileLink = await bot.getFileLink(voice.file_id);
+
+    // Download the audio file
+    const audioResponse = await fetch(fileLink);
+    if (!audioResponse.ok) {
+      await bot.sendMessage(chatId, "⚠️ فشل تحميل الملف الصوتي من تيليجرام");
+      return;
+    }
+
+    const audioBuffer = Buffer.from(await audioResponse.arrayBuffer());
+    const mimeType = voice.mime_type || "audio/ogg";
+    const ext = mimeType.includes("ogg") ? "ogg" : mimeType.includes("mp3") ? "mp3" : "ogg";
+
+    // Upload to S3
+    const fileKey = `telegram-voice/${chatId}-${Date.now()}.${ext}`;
+    const { url: audioUrl } = await storagePut(fileKey, audioBuffer, mimeType);
+
+    // Transcribe using Whisper
+    const result = await transcribeAudio({
+      audioUrl,
+      language: "ar",
+      prompt: "تحويل رسالة صوتية عربية إلى نص. قد تحتوي على أسماء مشاريع مثل الجداف، مجان، ند الشبا، الفلل، المول.",
+    });
+
+    if ("error" in result) {
+      await bot.sendMessage(chatId, `⚠️ فشل تحويل الصوت إلى نص: ${result.error}`);
+      return;
+    }
+
+    const transcribedText = result.text?.trim();
+    if (!transcribedText) {
+      await bot.sendMessage(chatId, "⚠️ لم أتمكن من فهم الرسالة الصوتية. حاول مرة أخرى بصوت أوضح.");
+      return;
+    }
+
+    // Show the transcribed text
+    await bot.sendMessage(chatId,
+      `🎙️ *سمعتك:*\n\n"${transcribedText}"\n\n⏳ جاري معالجة طلبك...`,
+      { parse_mode: "Markdown" }
+    );
+
+    // Log the voice activity
+    await logActivity("سلوى", "telegram_voice", `رسالة صوتية: ${transcribedText.substring(0, 100)}`);
+
+    // Check if there's an active conversation
+    const convo = conversations.get(chatId);
+    if (convo) {
+      await handleConversation(bot, chatId, transcribedText, convo, msg);
+      return;
+    }
+
+    // Process the transcribed text as free text
+    await handleFreeText(bot, chatId, transcribedText, msg);
+
+  } catch (error: any) {
+    console.error("[TelegramBot] Voice message error:", error);
+    await bot.sendMessage(chatId, `⚠️ حدث خطأ في معالجة الرسالة الصوتية: ${error.message}`);
   }
 }
 
