@@ -140,15 +140,20 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer hover:shadow-lg transition-all opacity-60">
+          <Card
+            className="cursor-pointer hover:shadow-lg transition-all border-2 border-amber-200 hover:border-amber-400"
+            onClick={() => navigate("/tasks")}
+          >
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-gray-500">
+              <CardTitle className="flex items-center gap-2 text-amber-700">
                 <ClipboardList className="w-6 h-6" />
-                المهام
+                لوحة المهام
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-400">قريباً — إدارة المهام والمتابعة</p>
+              <p className="text-gray-600">
+                إدارة ومتابعة مهام المشاريع — إدخال يدوي وذكي من الوكلاء
+              </p>
             </CardContent>
           </Card>
         </div>

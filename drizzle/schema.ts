@@ -134,3 +134,24 @@ export const consultantNotes = mysqlTable('consultantNotes', {
 
 export type ConsultantNote = typeof consultantNotes.$inferSelect;
 export type InsertConsultantNote = typeof consultantNotes.$inferInsert;
+// Tasks table for project task management
+export const tasks = mysqlTable('tasks', {
+  id: int('id').autoincrement().primaryKey(),
+  title: varchar('title', { length: 500 }).notNull(),
+  description: text('description'),
+  project: varchar('project', { length: 255 }).notNull(),
+  category: varchar('category', { length: 100 }),
+  owner: varchar('owner', { length: 255 }).notNull(),
+  priority: mysqlEnum('priority', ['high', 'medium', 'low']).default('medium').notNull(),
+  status: mysqlEnum('status', ['new', 'progress', 'hold', 'done', 'cancelled']).default('new').notNull(),
+  progress: int('progress').default(0).notNull(),
+  dueDate: varchar('dueDate', { length: 20 }),
+  attachment: text('attachment'),
+  source: mysqlEnum('source', ['manual', 'agent', 'command']).default('manual').notNull(),
+  sourceAgent: varchar('sourceAgent', { length: 255 }),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type Task = typeof tasks.$inferSelect;
+export type InsertTask = typeof tasks.$inferInsert;
