@@ -1,0 +1,82 @@
+{
+  "query": "SELECT projectId, consultantId, designType, designValue, supervisionType, supervisionValue FROM financialData WHERE designType = 'pct';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT projectId, consultantId, designType, designValue, supervisionType, supervisionValue FROM financialData WHERE designType = 'pct';",
+  "rows": [
+    {
+      "projectId": "3",
+      "consultantId": "2",
+      "designType": "pct",
+      "designValue": "1.50",
+      "supervisionType": "pct",
+      "supervisionValue": "1.50"
+    },
+    {
+      "projectId": "4",
+      "consultantId": "2",
+      "designType": "pct",
+      "designValue": "1.55",
+      "supervisionType": "pct",
+      "supervisionValue": "1.50"
+    },
+    {
+      "projectId": "5",
+      "consultantId": "2",
+      "designType": "pct",
+      "designValue": "1.50",
+      "supervisionType": "pct",
+      "supervisionValue": "1.50"
+    },
+    {
+      "projectId": "6",
+      "consultantId": "2",
+      "designType": "pct",
+      "designValue": "1.50",
+      "supervisionType": "pct",
+      "supervisionValue": "2.00"
+    },
+    {
+      "projectId": "5",
+      "consultantId": "4",
+      "designType": "pct",
+      "designValue": "2.00",
+      "supervisionType": "pct",
+      "supervisionValue": "2.00"
+    },
+    {
+      "projectId": "3",
+      "consultantId": "4",
+      "designType": "pct",
+      "designValue": "2.00",
+      "supervisionType": "pct",
+      "supervisionValue": "2.00"
+    },
+    {
+      "projectId": "6",
+      "consultantId": "4",
+      "designType": "pct",
+      "designValue": "2.50",
+      "supervisionType": "pct",
+      "supervisionValue": "2.00"
+    },
+    {
+      "projectId": "4",
+      "consultantId": "4",
+      "designType": "pct",
+      "designValue": "2.00",
+      "supervisionType": "pct",
+      "supervisionValue": "2.00"
+    },
+    {
+      "projectId": "2",
+      "consultantId": "4",
+      "designType": "pct",
+      "designValue": "1.80",
+      "supervisionType": "pct",
+      "supervisionValue": "2.00"
+    }
+  ],
+  "messages": [],
+  "stdout": "projectId\tconsultantId\tdesignType\tdesignValue\tsupervisionType\tsupervisionValue\n3\t2\tpct\t1.50\tpct\t1.50\n4\t2\tpct\t1.55\tpct\t1.50\n5\t2\tpct\t1.50\tpct\t1.50\n6\t2\tpct\t1.50\tpct\t2.00\n5\t4\tpct\t2.00\tpct\t2.00\n3\t4\tpct\t2.00\tpct\t2.00\n6\t4\tpct\t2.50\tpct\t2.00\n4\t4\tpct\t2.00\tpct\t2.00\n2\t4\tpct\t1.80\tpct\t2.00\n",
+  "stderr": "",
+  "execution_time_ms": 1604
+}

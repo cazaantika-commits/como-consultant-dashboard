@@ -21,7 +21,7 @@ export const financialRouter = router({
         designValue: z.number().optional(),
         supervisionType: z.enum(["pct", "lump", "lumpsum"]).optional(),
         supervisionValue: z.number().optional(),
-        proposalLink: z.string().url().optional(),
+        proposalLink: z.string().optional(),
       })
     )
     .mutation(({ input }) => {

@@ -379,7 +379,7 @@ export default function FeasibilityStudyPage() {
             </Button>
             <div className="flex items-center gap-2">
               <Calculator className="w-5 h-5 text-primary" />
-              <h1 className="text-base font-bold text-foreground">دراسة الجدوى المالية</h1>
+              <h1 className="text-base font-bold text-foreground">📊 دراسة الجدوى المالية</h1>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -441,7 +441,7 @@ export default function FeasibilityStudyPage() {
         {!selectedStudyId ? (
           <div className="text-center py-20">
             <Calculator className="w-16 h-16 mx-auto mb-4 text-muted-foreground/30" />
-            <h2 className="text-xl font-bold text-muted-foreground mb-2">اختر دراسة جدوى أو أنشئ واحدة جديدة</h2>
+            <h2 className="text-xl font-bold text-muted-foreground mb-2">📄 اختر دراسة جدوى أو أنشئ واحدة جديدة</h2>
             <p className="text-sm text-muted-foreground/70">
               يمكنك إنشاء دراسات جدوى متعددة لمشاريع مختلفة
             </p>
@@ -506,23 +506,23 @@ export default function FeasibilityStudyPage() {
               <TabsList className="w-full justify-start mb-4 bg-card border border-border h-auto flex-wrap">
                 <TabsTrigger value="info" className="gap-1.5 text-xs">
                   <MapPin className="w-3.5 h-3.5" />
-                  معلومات المشروع
+                  📍 معلومات المشروع
                 </TabsTrigger>
                 <TabsTrigger value="areas" className="gap-1.5 text-xs">
                   <Ruler className="w-3.5 h-3.5" />
-                  المساحات
+                  📐 المساحات
                 </TabsTrigger>
                 <TabsTrigger value="costs" className="gap-1.5 text-xs">
                   <DollarSign className="w-3.5 h-3.5" />
-                  التكاليف
+                  💵 التكاليف
                 </TabsTrigger>
                 <TabsTrigger value="revenue" className="gap-1.5 text-xs">
                   <TrendingUp className="w-3.5 h-3.5" />
-                  الإيرادات
+                  📈 الإيرادات
                 </TabsTrigger>
                 <TabsTrigger value="summary" className="gap-1.5 text-xs">
                   <PieChart className="w-3.5 h-3.5" />
-                  الملخص والربحية
+                  🎯 الملخص والربحية
                 </TabsTrigger>
               </TabsList>
 

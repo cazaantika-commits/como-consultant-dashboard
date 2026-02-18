@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,124 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Plus, Trash2, Download } from "lucide-react";
+import { Loader2, Plus, Trash2, Download, Star, BarChart3, DollarSign, Users, Award, ExternalLink, Link2 } from "lucide-react";
+
+// FinancialRow component with local state - saves ONLY on blur
+function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, updateFinancialMutation, onTotalChange }: {
+  consultant: any;
+  fin: any;
+  selectedProjectId: number;
+  constructionCost: number;
+  updateFinancialMutation: any;
+  onTotalChange: (consultantId: number, total: number) => void;
+}) {
+  const [designType, setDesignType] = useState(fin?.designType || 'pct');
+  const [designValue, setDesignValue] = useState(fin ? String(parseFloat(String(fin.designValue)) || 0) : '0');
+  const [supervisionType, setSupervisionType] = useState(fin?.supervisionType || 'pct');
+  const [supervisionValue, setSupervisionValue] = useState(fin ? String(parseFloat(String(fin.supervisionValue)) || 0) : '0');
+  const [proposalLink, setProposalLink] = useState((fin as any)?.proposalLink || '');
+  const editingRef = useRef(false); // prevents server sync while user is editing
+  const initRef = useRef(fin?.id); // track which record we initialized from
+
+  // Sync from server ONLY on initial load or when a different record loads
+  useEffect(() => {
+    if (fin && fin.id !== initRef.current) {
+      initRef.current = fin.id;
+      setDesignType(fin.designType || 'pct');
+      setDesignValue(String(parseFloat(String(fin.designValue)) || 0));
+      setSupervisionType(fin.supervisionType || 'pct');
+      setSupervisionValue(String(parseFloat(String(fin.supervisionValue)) || 0));
+      setProposalLink((fin as any)?.proposalLink || '');
+    }
+  }, [fin?.id]);
+
+  // Calculate total
+  const dv = parseFloat(designValue) || 0;
+  const sv = parseFloat(supervisionValue) || 0;
+  const designAmount = designType === 'pct' ? constructionCost * (dv / 100) : dv;
+  const supervisionAmount = supervisionType === 'pct' ? constructionCost * (sv / 100) : sv;
+  const total = designAmount + supervisionAmount;
+
+  const totalRef = useRef(total);
+  useEffect(() => {
+    if (totalRef.current !== total) {
+      totalRef.current = total;
+      onTotalChange(consultant.id, total);
+    }
+  }, [total, consultant.id, onTotalChange]);
+
+  const doSave = (overrides: any = {}) => {
+    editingRef.current = false;
+    const data = {
+      projectId: selectedProjectId,
+      consultantId: consultant.id,
+      designType: overrides.designType ?? designType,
+      designValue: overrides.designValue !== undefined ? overrides.designValue : (parseFloat(designValue) || 0),
+      supervisionType: overrides.supervisionType ?? supervisionType,
+      supervisionValue: overrides.supervisionValue !== undefined ? overrides.supervisionValue : (parseFloat(supervisionValue) || 0),
+      proposalLink: overrides.proposalLink ?? proposalLink,
+    };
+    updateFinancialMutation.mutate(data);
+  };
+
+  return (
+    <tr className="border-b hover:bg-blue-50/50 transition-colors">
+      <td className="border p-2 font-semibold">{consultant.name}</td>
+      <td className="border p-2 text-center">
+        <Select value={designType} onValueChange={(v: any) => {
+          setDesignType(v);
+          doSave({ designType: v });
+        }}>
+          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="pct">نسبة %</SelectItem>
+            <SelectItem value="lumpsum">مقطوع</SelectItem>
+          </SelectContent>
+        </Select>
+      </td>
+      <td className="border p-2">
+        <Input type="number" step="0.01" value={designValue} placeholder="0" className="w-full"
+          onFocus={() => { editingRef.current = true; }}
+          onChange={(e) => { editingRef.current = true; setDesignValue(e.target.value); }}
+          onBlur={() => doSave({ designValue: parseFloat(designValue) || 0 })} />
+      </td>
+      <td className="border p-2 text-center">
+        <Select value={supervisionType} onValueChange={(v: any) => {
+          setSupervisionType(v);
+          doSave({ supervisionType: v });
+        }}>
+          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="pct">نسبة %</SelectItem>
+            <SelectItem value="lumpsum">مقطوع</SelectItem>
+          </SelectContent>
+        </Select>
+      </td>
+      <td className="border p-2">
+        <Input type="number" step="0.01" value={supervisionValue} placeholder="0" className="w-full"
+          onFocus={() => { editingRef.current = true; }}
+          onChange={(e) => { editingRef.current = true; setSupervisionValue(e.target.value); }}
+          onBlur={() => doSave({ supervisionValue: parseFloat(supervisionValue) || 0 })} />
+      </td>
+      <td className="border p-2 text-center font-bold text-blue-700">
+        {total.toLocaleString()} AED
+      </td>
+      <td className="border p-2 text-center">
+        <div className="flex items-center gap-1">
+          <Input type="url" value={proposalLink} placeholder="رابط عرض السعر" className="w-full text-sm"
+            onFocus={() => { editingRef.current = true; }}
+            onChange={(e) => { editingRef.current = true; setProposalLink(e.target.value); }}
+            onBlur={() => doSave({ proposalLink })} />
+          {proposalLink && (
+            <a href={proposalLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 shrink-0">
+              <ExternalLink className="w-4 h-4" />
+            </a>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+}
 
 // Evaluation criteria
 const CRITERIA = [
@@ -103,6 +220,7 @@ export default function ConsultantEvaluationPage() {
   }, [selectedProjectId, evaluationQuery.data, projectDetailsQuery.data]);
 
   // Calculate financial totals
+  // DB stores pct values directly (1.5 = 1.5%, 2 = 2%)
   const financialTotals = useMemo(() => {
     if (!financialQuery.data || !projectDetailsQuery.data) return {};
 
@@ -110,15 +228,17 @@ export default function ConsultantEvaluationPage() {
     const project = projectDetailsQuery.data;
     const buildingCost = (project.bua || 0) * (project.pricePerSqft || 0);
 
-    financialQuery.data.forEach((fin) => {
+    financialQuery.data.forEach((fin: any) => {
+      const dv = parseFloat(fin.designValue) || 0;
+      const sv = parseFloat(fin.supervisionValue) || 0;
       const designAmount =
         fin.designType === "pct"
-          ? (fin.designValue || 0) * buildingCost / 100
-          : fin.designValue || 0;
+          ? (dv / 100) * buildingCost
+          : dv;
       const supervisionAmount =
         fin.supervisionType === "pct"
-          ? (fin.supervisionValue || 0) * buildingCost / 100
-          : fin.supervisionValue || 0;
+          ? (sv / 100) * buildingCost
+          : sv;
 
       totals[fin.consultantId] = designAmount + supervisionAmount;
     });
@@ -148,14 +268,17 @@ export default function ConsultantEvaluationPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-8 rounded-lg mb-8 shadow-lg">
-          <h1 className="text-4xl font-bold mb-2">⭐ نظام التقييم الفني والمقارنة</h1>
+          <div className="flex items-center gap-3 mb-2">
+            <Star className="w-10 h-10 text-yellow-300 fill-yellow-300" />
+            <h1 className="text-4xl font-bold">نظام التقييم الفني والمقارنة</h1>
+          </div>
           <p className="text-blue-100">تقييم شامل للاستشاريين مع المقارنة المالية</p>
         </div>
 
         {/* Project Selection */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>اختر المشروع</CardTitle>
+            <CardTitle className="flex items-center gap-2">📂 اختر المشروع</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex gap-2">
@@ -208,7 +331,7 @@ export default function ConsultantEvaluationPage() {
             {/* Consultants Management */}
             <Card className="mb-6">
               <CardHeader>
-                <CardTitle>إدارة الاستشاريين للمشروع</CardTitle>
+                <CardTitle className="flex items-center gap-2"><Users className="w-5 h-5 text-blue-600" /> إدارة الاستشاريين للمشروع</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex gap-2 mb-4">
@@ -253,15 +376,15 @@ export default function ConsultantEvaluationPage() {
             {/* Evaluation & Financial Tabs */}
             <Tabs defaultValue="evaluation" className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="evaluation">التقييم الفني</TabsTrigger>
-                <TabsTrigger value="financial">الأتعاب المالية</TabsTrigger>
+                <TabsTrigger value="evaluation" className="flex items-center gap-2"><BarChart3 className="w-4 h-4" /> التقييم الفني</TabsTrigger>
+                <TabsTrigger value="financial" className="flex items-center gap-2"><DollarSign className="w-4 h-4" /> الأتعاب المالية</TabsTrigger>
               </TabsList>
 
               {/* Evaluation Tab */}
               <TabsContent value="evaluation">
                 <Card>
                   <CardHeader>
-                    <CardTitle>نموذج التقييم الفني</CardTitle>
+                    <CardTitle className="flex items-center gap-2">📊 نموذج التقييم الفني</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="overflow-x-auto">
@@ -333,7 +456,7 @@ export default function ConsultantEvaluationPage() {
               <TabsContent value="financial">
                 <Card>
                   <CardHeader>
-                    <CardTitle>الأتعاب المالية</CardTitle>
+                    <CardTitle className="flex items-center gap-2">💰 الأتعاب المالية</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="overflow-x-auto">
@@ -346,60 +469,25 @@ export default function ConsultantEvaluationPage() {
                             <th className="border p-2 text-center">نوع الإشراف</th>
                             <th className="border p-2 text-center">قيمة الإشراف</th>
                             <th className="border p-2 text-center">المجموع</th>
+                            <th className="border p-2 text-center">📎 رابط عرض السعر</th>
                           </tr>
                         </thead>
                         <tbody>
                           {projectConsultants.map((consultant) => {
                             const fin = financialQuery.data?.find((f: any) => f.consultantId === consultant.id);
-                            const designType = fin?.designType || 'pct';
-                            const designValue = fin ? (designType === 'pct' ? (fin.designValue || 0) / 100 : fin.designValue || 0) : 0;
-                            const supervisionType = fin?.supervisionType || 'pct';
-                            const supervisionValue = fin ? (supervisionType === 'pct' ? (fin.supervisionValue || 0) / 100 : fin.supervisionValue || 0) : 0;
+                            const buildingCost = (selectedProject?.bua || 0) * (selectedProject?.pricePerSqft || 0);
                             return (
-                            <tr key={consultant.id} className="border-b">
-                              <td className="border p-2 font-semibold">{consultant.name}</td>
-                              <td className="border p-2 text-center">
-                                <Select value={designType} onValueChange={(v: any) => {
-                                  updateFinancialMutation.mutate({ projectId: selectedProjectId!, consultantId: consultant.id, designType: v, designValue: designType === 'pct' ? Math.round(designValue * 100) : designValue, supervisionType: supervisionType as any, supervisionValue: supervisionType === 'pct' ? Math.round(supervisionValue * 100) : supervisionValue });
-                                }}>
-                                  <SelectTrigger className="w-full">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="pct">نسبة %</SelectItem>
-                                    <SelectItem value="lumpsum">مقطوع</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </td>
-                              <td className="border p-2">
-                                <Input type="number" value={designValue || ''} placeholder="0" className="w-full" onChange={(e) => {
-                                  const val = parseFloat(e.target.value) || 0;
-                                  updateFinancialMutation.mutate({ projectId: selectedProjectId!, consultantId: consultant.id, designType: designType as any, designValue: designType === 'pct' ? Math.round(val * 100) : val, supervisionType: supervisionType as any, supervisionValue: supervisionType === 'pct' ? Math.round(supervisionValue * 100) : supervisionValue });
-                                }} />
-                              </td>
-                              <td className="border p-2 text-center">
-                                <Select value={supervisionType} onValueChange={(v: any) => {
-                                  updateFinancialMutation.mutate({ projectId: selectedProjectId!, consultantId: consultant.id, designType: designType as any, designValue: designType === 'pct' ? Math.round(designValue * 100) : designValue, supervisionType: v, supervisionValue: supervisionType === 'pct' ? Math.round(supervisionValue * 100) : supervisionValue });
-                                }}>
-                                  <SelectTrigger className="w-full">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="pct">نسبة %</SelectItem>
-                                    <SelectItem value="lumpsum">مقطوع</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </td>
-                              <td className="border p-2">
-                                <Input type="number" value={supervisionValue || ''} placeholder="0" className="w-full" onChange={(e) => {
-                                  const val = parseFloat(e.target.value) || 0;
-                                  updateFinancialMutation.mutate({ projectId: selectedProjectId!, consultantId: consultant.id, designType: designType as any, designValue: designType === 'pct' ? Math.round(designValue * 100) : designValue, supervisionType: supervisionType as any, supervisionValue: supervisionType === 'pct' ? Math.round(val * 100) : val });
-                                }} />
-                              </td>
-                              <td className="border p-2 text-center font-bold">
-                                {financialTotals[consultant.id]?.toLocaleString() || 0} AED
-                              </td>
-                            </tr>
+                              <FinancialRow
+                                key={consultant.id}
+                                consultant={consultant}
+                                fin={fin}
+                                selectedProjectId={selectedProjectId!}
+                                constructionCost={buildingCost}
+                                updateFinancialMutation={updateFinancialMutation}
+                                onTotalChange={(cId, total) => {
+                                  // totals are also calculated in useMemo, this is for live preview
+                                }}
+                              />
                             );
                           })}
                         </tbody>
@@ -413,7 +501,7 @@ export default function ConsultantEvaluationPage() {
             {/* Results Summary */}
             <Card className="mt-6">
               <CardHeader>
-                <CardTitle>ملخص المقارنة والترتيب</CardTitle>
+                <CardTitle className="flex items-center gap-2"><Award className="w-5 h-5 text-amber-500" /> ملخص المقارنة والترتيب</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">

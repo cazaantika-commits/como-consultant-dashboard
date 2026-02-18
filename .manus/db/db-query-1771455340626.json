@@ -1,0 +1,9 @@
+{
+  "query": "\nALTER TABLE financialData MODIFY COLUMN designValue DECIMAL(15,2) DEFAULT NULL;\nALTER TABLE financialData MODIFY COLUMN supervisionValue DECIMAL(15,2) DEFAULT NULL;\nUPDATE financialData SET designValue = designValue / 100 WHERE designType = 'pct' AND designValue IS NOT NULL;\nUPDATE financialData SET supervisionValue = supervisionValue / 100 WHERE supervisionType = 'pct' AND supervisionValue IS NOT NULL;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute \nALTER TABLE financialData MODIFY COLUMN designValue DECIMAL(15,2) DEFAULT NULL;\nALTER TABLE financialData MODIFY COLUMN supervisionValue DECIMAL(15,2) DEFAULT NULL;\nUPDATE financialData SET designValue = designValue / 100 WHERE designType = 'pct' AND designValue IS NOT NULL;\nUPDATE financialData SET supervisionValue = supervisionValue / 100 WHERE supervisionType = 'pct' AND supervisionValue IS NOT NULL;\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 3697
+}

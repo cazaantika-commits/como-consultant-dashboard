@@ -23,6 +23,11 @@ import {
   ChevronLeft,
   Building2,
   LogOut,
+  TrendingUp,
+  BrainCircuit,
+  Layers,
+  Target,
+  Activity,
 } from "lucide-react";
 import { useLocation } from "wouter";
 
@@ -36,6 +41,21 @@ const AGENT_ICONS: Record<string, any> = {
   rocket: Rocket,
   "bar-chart-2": BarChart2,
 };
+
+/* Colored emoji-style icon wrapper */
+function ColorIcon({ children, bg, shadow }: { children: React.ReactNode; bg: string; shadow: string }) {
+  return (
+    <div
+      className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:rotate-3"
+      style={{
+        background: bg,
+        boxShadow: `0 8px 24px ${shadow}`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
 
 export default function Home() {
   const { user, loading, isAuthenticated } = useAuth();
@@ -53,8 +73,8 @@ export default function Home() {
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-              <Building2 className="w-5 h-5 text-primary-foreground" />
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-lg shadow-blue-600/20">
+              <Building2 className="w-5 h-5 text-white" />
             </div>
             <div>
               <h1 className="text-base font-bold text-foreground leading-tight">COMO Developments</h1>
@@ -97,14 +117,20 @@ export default function Home() {
       <main>
         {/* ── Hero Section ── */}
         <section className="relative py-20 lg:py-28 overflow-hidden">
-          {/* Subtle background pattern */}
+          {/* Colorful background blobs */}
           <div className="absolute inset-0 pattern-overlay opacity-40" />
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-primary/5 blur-[120px]" />
+          <div className="absolute top-10 right-1/4 w-[400px] h-[400px] rounded-full bg-blue-500/8 blur-[100px]" />
+          <div className="absolute bottom-10 left-1/4 w-[300px] h-[300px] rounded-full bg-amber-500/8 blur-[100px]" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-primary/5 blur-[120px]" />
 
           <div className="relative max-w-7xl mx-auto px-6">
             <div className="max-w-3xl mx-auto text-center">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/5 border border-primary/10 text-primary text-xs font-medium mb-6 fade-in">
-                <Sparkles className="w-3.5 h-3.5" />
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-500/20 text-primary text-xs font-medium mb-6 fade-in">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500"></span>
+                </span>
+                <Sparkles className="w-3.5 h-3.5 text-blue-500" />
                 مدعوم بالذكاء الاصطناعي
               </div>
 
@@ -125,7 +151,7 @@ export default function Home() {
                     <Button
                       size="lg"
                       onClick={() => navigate("/agent-dashboard")}
-                      className="gap-2 px-6 shadow-lg shadow-primary/20"
+                      className="gap-2 px-6 shadow-lg shadow-primary/20 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                     >
                       <Bot className="w-4 h-4" />
                       لوحة تحكم الوكلاء
@@ -144,7 +170,7 @@ export default function Home() {
                   <Button
                     size="lg"
                     onClick={() => (window.location.href = getLoginUrl())}
-                    className="gap-2 px-8 shadow-lg shadow-primary/20"
+                    className="gap-2 px-8 shadow-lg shadow-primary/20 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                   >
                     ابدأ الآن
                     <ArrowLeft className="w-4 h-4" />
@@ -159,6 +185,9 @@ export default function Home() {
         <section className="py-16 border-t border-border/50">
           <div className="max-w-7xl mx-auto px-6">
             <div className="text-center mb-12">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-400 to-red-500 shadow-lg shadow-orange-500/25 mb-4">
+                <Rocket className="w-6 h-6 text-white" />
+              </div>
               <h2 className="text-2xl font-bold text-foreground mb-3">قدرات المنصة</h2>
               <p className="text-muted-foreground">أدوات متقدمة لإدارة كل جانب من جوانب مشاريعك</p>
             </div>
@@ -166,46 +195,64 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
               {[
                 {
-                  icon: Bot,
+                  icon: BrainCircuit,
                   title: "وكلاء ذكيون",
                   desc: "فريق من الوكلاء المتخصصين يعملون على مدار الساعة",
-                  color: "oklch(0.50 0.18 255)",
+                  gradient: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                  shadow: "rgba(99, 102, 241, 0.3)",
+                  emoji: "🤖",
+                  borderColor: "#6366f1",
                 },
                 {
                   icon: Shield,
                   title: "تدقيق العقود",
                   desc: "مراجعة قانونية ذكية للعقود واكتشاف المخاطر",
-                  color: "oklch(0.55 0.20 175)",
+                  gradient: "linear-gradient(135deg, #06b6d4, #0891b2)",
+                  shadow: "rgba(6, 182, 212, 0.3)",
+                  emoji: "🛡️",
+                  borderColor: "#06b6d4",
                 },
                 {
-                  icon: BarChart3,
+                  icon: TrendingUp,
                   title: "تحليل مالي",
                   desc: "تحليل الميزانيات والمستخلصات المالية بدقة",
-                  color: "oklch(0.55 0.22 145)",
+                  gradient: "linear-gradient(135deg, #10b981, #059669)",
+                  shadow: "rgba(16, 185, 129, 0.3)",
+                  emoji: "💰",
+                  borderColor: "#10b981",
                 },
                 {
-                  icon: FileText,
+                  icon: Layers,
                   title: "أرشفة ذكية",
                   desc: "تنظيم وأرشفة الملفات تلقائياً بتسمية احترافية",
-                  color: "oklch(0.55 0.18 45)",
+                  gradient: "linear-gradient(135deg, #f59e0b, #d97706)",
+                  shadow: "rgba(245, 158, 11, 0.3)",
+                  emoji: "📁",
+                  borderColor: "#f59e0b",
                 },
               ].map((feature, i) => (
                 <div
                   key={i}
-                  className="premium-card p-6 hover-lift fade-in group"
+                  className="premium-card p-6 hover-lift fade-in group relative overflow-hidden"
                   style={{ animationDelay: `${i * 0.1}s` }}
                 >
+                  {/* Colored top accent bar */}
                   <div
-                    className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg"
-                    style={{ 
-                      backgroundColor: `color-mix(in oklch, ${feature.color} 15%, transparent)`,
-                      boxShadow: `0 0 0 0 ${feature.color}20`
-                    }}
-                  >
-                    <feature.icon className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" style={{ color: feature.color }} />
+                    className="absolute top-0 left-0 right-0 h-1 rounded-t-xl"
+                    style={{ background: feature.gradient }}
+                  />
+                  <div className="flex items-start gap-4">
+                    <ColorIcon bg={feature.gradient} shadow={feature.shadow}>
+                      <feature.icon className="w-7 h-7 text-white" />
+                    </ColorIcon>
+                    <div className="flex-1 pt-1">
+                      <h3 className="font-bold text-foreground mb-1.5 text-base">
+                        <span className="ml-1.5">{feature.emoji}</span>
+                        {feature.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed">{feature.desc}</p>
+                    </div>
                   </div>
-                  <h3 className="font-bold text-foreground mb-2">{feature.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{feature.desc}</p>
                 </div>
               ))}
             </div>
@@ -216,28 +263,40 @@ export default function Home() {
         {isAuthenticated && (
           <section className="py-12 border-t border-border/50">
             <div className="max-w-7xl mx-auto px-6">
-              <h2 className="text-lg font-bold text-foreground mb-5">الوصول السريع</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-md shadow-orange-500/20">
+                  <Zap className="w-5 h-5 text-white" />
+                </div>
+                <h2 className="text-lg font-bold text-foreground">الوصول السريع</h2>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 {[
-                  { label: "لوحة الوكلاء", icon: Bot, path: "/agent-dashboard", color: "oklch(0.50 0.18 255)" },
-                  { label: "المهام", icon: FileText, path: "/tasks", color: "oklch(0.55 0.20 175)" },
-                  { label: "ملفات Drive", icon: Archive, path: "/drive", color: "oklch(0.55 0.22 145)" },
-                  { label: "تقييم الاستشاريين", icon: Users, path: "/consultant-dashboard", color: "oklch(0.55 0.18 45)" },
-                  { label: "دراسة الجدوى", icon: Calculator, path: "/feasibility-study", color: "oklch(0.50 0.20 30)" },
+                  { label: "لوحة الوكلاء", emoji: "🤖", icon: Bot, path: "/agent-dashboard", gradient: "linear-gradient(135deg, #6366f1, #8b5cf6)", shadow: "rgba(99, 102, 241, 0.25)" },
+                  { label: "المهام", emoji: "📝", icon: FileText, path: "/tasks", gradient: "linear-gradient(135deg, #06b6d4, #0891b2)", shadow: "rgba(6, 182, 212, 0.25)" },
+                  { label: "ملفات Drive", emoji: "📂", icon: Archive, path: "/drive", gradient: "linear-gradient(135deg, #10b981, #059669)", shadow: "rgba(16, 185, 129, 0.25)" },
+                  { label: "تقييم الاستشاريين", emoji: "⭐", icon: Users, path: "/consultant-dashboard", gradient: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245, 158, 11, 0.25)" },
+                  { label: "دراسة الجدوى", emoji: "📊", icon: Calculator, path: "/feasibility-study", gradient: "linear-gradient(135deg, #ef4444, #dc2626)", shadow: "rgba(239, 68, 68, 0.25)" },
                 ].map((item, i) => (
                   <button
                     key={i}
                     onClick={() => navigate(item.path)}
-                    className="premium-card p-5 text-right hover-lift group"
+                    className="premium-card p-5 text-right hover-lift group relative overflow-hidden"
                   >
+                    {/* Subtle gradient overlay on hover */}
                     <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 transition-all duration-300 group-hover:scale-110 group-hover:shadow-md"
-                      style={{ backgroundColor: `color-mix(in oklch, ${item.color} 18%, transparent)` }}
-                    >
-                      <item.icon className="w-5 h-5" style={{ color: item.color }} />
+                      className="absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-300 rounded-xl"
+                      style={{ background: item.gradient }}
+                    />
+                    <div className="relative">
+                      <ColorIcon bg={item.gradient} shadow={item.shadow}>
+                        <item.icon className="w-6 h-6 text-white" />
+                      </ColorIcon>
+                      <div className="mt-4 flex items-center gap-2">
+                        <span className="text-lg">{item.emoji}</span>
+                        <span className="font-semibold text-sm text-foreground">{item.label}</span>
+                      </div>
+                      <ArrowLeft className="w-4 h-4 text-muted-foreground mt-2 transition-transform group-hover:-translate-x-1" />
                     </div>
-                    <span className="font-semibold text-sm text-foreground">{item.label}</span>
-                    <ArrowLeft className="w-4 h-4 text-muted-foreground mt-2 transition-transform group-hover:-translate-x-1" />
                   </button>
                 ))}
               </div>
@@ -250,11 +309,16 @@ export default function Home() {
           <section className="py-16 border-t border-border/50 bg-muted/30">
             <div className="max-w-7xl mx-auto px-6">
               <div className="flex items-center justify-between mb-8">
-                <div>
-                  <h2 className="text-2xl font-bold text-foreground mb-2">فريق الوكلاء</h2>
-                  <p className="text-muted-foreground text-sm">
-                    {agentsList.length} وكيل متخصص يعملون تحت إشراف سلوى
-                  </p>
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/25">
+                    <Users className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-foreground">فريق الوكلاء</h2>
+                    <p className="text-muted-foreground text-sm">
+                      {agentsList.length} وكيل متخصص يعملون تحت إشراف سلوى
+                    </p>
+                  </div>
                 </div>
                 <Button
                   variant="outline"
@@ -269,27 +333,29 @@ export default function Home() {
 
               {/* Coordinator Card */}
               {coordinator && (
-                <div className="premium-card p-6 mb-6 gold-glow fade-in">
+                <div className="premium-card p-6 mb-6 gold-glow fade-in relative overflow-hidden">
+                  {/* Gold accent bar */}
+                  <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-400" />
                   <div className="flex items-center gap-4">
                     <div
-                      className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
+                      className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 shadow-lg"
                       style={{
-                        backgroundColor: `color-mix(in oklch, ${coordinator.color || '#6366f1'} 10%, transparent)`,
-                        border: `2px solid color-mix(in oklch, ${coordinator.color || '#6366f1'} 20%, transparent)`,
+                        background: `linear-gradient(135deg, ${coordinator.color || '#6366f1'}, ${coordinator.color || '#6366f1'}cc)`,
+                        boxShadow: `0 8px 24px ${coordinator.color || '#6366f1'}40`,
                       }}
                     >
                       {(() => {
                         const IconComp = AGENT_ICONS[coordinator.icon || "crown"] || Crown;
-                        return <IconComp className="w-7 h-7" style={{ color: coordinator.color }} />;
+                        return <IconComp className="w-8 h-8 text-white" />;
                       })()}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="text-lg font-bold text-foreground">{coordinator.name}</h3>
-                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                          المنسقة
+                        <span className="text-[11px] px-2.5 py-1 rounded-full bg-gradient-to-r from-blue-500/10 to-indigo-500/10 text-blue-600 font-semibold border border-blue-200">
+                          👑 المنسقة
                         </span>
-                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center gap-1 font-medium">
+                        <span className="text-[11px] px-2.5 py-1 rounded-full bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-600 border border-emerald-200 flex items-center gap-1 font-semibold">
                           <Send className="w-3 h-3" />
                           تيليجرام
                         </span>
@@ -317,21 +383,27 @@ export default function Home() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {teamAgents.map((agent: any, i: number) => {
                   const IconComp = AGENT_ICONS[agent.icon || "bot"] || Bot;
+                  const agentColor = agent.color || '#6366f1';
                   return (
                     <div
                       key={agent.id}
-                      className="premium-card p-5 group fade-in"
+                      className="premium-card p-5 group fade-in relative overflow-hidden hover-lift"
                       style={{ animationDelay: `${i * 0.05}s` }}
                     >
+                      {/* Colored left accent bar */}
+                      <div
+                        className="absolute top-0 right-0 w-1 h-full rounded-r-xl"
+                        style={{ background: agentColor }}
+                      />
                       <div className="flex items-center gap-3 mb-3">
                         <div
-                          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110"
+                          className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-md"
                           style={{
-                            backgroundColor: `color-mix(in oklch, ${agent.color || '#6366f1'} 10%, transparent)`,
-                            border: `1px solid color-mix(in oklch, ${agent.color || '#6366f1'} 15%, transparent)`,
+                            background: `linear-gradient(135deg, ${agentColor}, ${agentColor}cc)`,
+                            boxShadow: `0 6px 16px ${agentColor}35`,
                           }}
                         >
-                          <IconComp className="w-5 h-5" style={{ color: agent.color }} />
+                          <IconComp className="w-6 h-6 text-white" />
                         </div>
                         <div className="min-w-0">
                           <h4 className="font-bold text-foreground text-sm">{agent.name}</h4>
@@ -342,16 +414,27 @@ export default function Home() {
                         {agent.role}
                       </p>
                       <div className="flex items-center gap-2">
-                        <div
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            agent.status === "active"
-                              ? "bg-emerald-500"
-                              : agent.status === "maintenance"
-                              ? "bg-amber-500"
-                              : "bg-gray-400"
-                          }`}
-                        />
-                        <span className="text-[11px] text-muted-foreground">
+                        <div className="relative">
+                          <div
+                            className={`w-2 h-2 rounded-full ${
+                              agent.status === "active"
+                                ? "bg-emerald-500"
+                                : agent.status === "maintenance"
+                                ? "bg-amber-500"
+                                : "bg-gray-400"
+                            }`}
+                          />
+                          {agent.status === "active" && (
+                            <div className="absolute inset-0 w-2 h-2 rounded-full bg-emerald-500 animate-ping opacity-50" />
+                          )}
+                        </div>
+                        <span className={`text-[11px] font-medium ${
+                          agent.status === "active"
+                            ? "text-emerald-600"
+                            : agent.status === "maintenance"
+                            ? "text-amber-600"
+                            : "text-gray-400"
+                        }`}>
                           {agent.status === "active"
                             ? "نشط"
                             : agent.status === "maintenance"
@@ -374,8 +457,10 @@ export default function Home() {
           <p className="text-xs text-muted-foreground">
             COMO Developments &copy; {new Date().getFullYear()}
           </p>
-          <p className="text-xs text-muted-foreground flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-primary/50" />
+          <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+            <span className="inline-flex w-4 h-4 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 items-center justify-center">
+              <Sparkles className="w-2.5 h-2.5 text-white" />
+            </span>
             مدعوم بالذكاء الاصطناعي
           </p>
         </div>
