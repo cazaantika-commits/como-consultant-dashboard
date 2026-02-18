@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>لوحة تحكم المشاريع — مقارنة وتقييم الاستشاريين</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', 'Cairo', sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container { max-width: 1600px; margin: 0 auto; }
+    
+    .header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+      color: white;
+      padding: 30px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    }
+    .header h1 { font-size: 32px; margin-bottom: 8px; font-weight: 700; }
+    .header p { font-size: 15px; opacity: 0.95; }
+    
+    .controls {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 25px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 15px;
+      align-items: end;
+    }
+    .control-group { display: flex; flex-direction: column; gap: 5px; }
+    .control-group label { font-size: 13px; font-weight: 600; color: #555; }
+    .control-group select, .control-group input {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+    .btn-group { display: flex; gap: 8px; }
+    .btn {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+    .btn-primary { background: #0d6efd; color: white; }
+    .btn-primary:hover { background: #0b4bb3; }
+    .btn-secondary { background: #6c757d; color: white; }
+    .btn-secondary:hover { background: #5a6268; }
+    
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #ddd;
+      overflow-x: auto;
+    }
+    .tab-btn {
+      padding: 12px 20px;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      color: #666;
+      transition: all 0.3s;
+      white-space: nowrap;
+    }
+    .tab-btn.active {
+      color: #0d6efd;
+      border-bottom-color: #0d6efd;
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    .financial-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+    }
+    .financial-table th {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+      color: white;
+      padding: 14px 12px;
+      text-align: right;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .financial-table td {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+      text-align: right;
+    }
+    .financial-table tr:hover { background: #f9f9f9; }
+    
+    .evaluation-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+      table-layout: fixed;
+    }
+    .evaluation-table th {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+      color: white;
+      padding: 14px 12px;
+      text-align: center;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .evaluation-table td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: right;
+      font-size: 12px;
+      vertical-align: top;
+    }
+    .evaluation-table .criteria-name {
+      background: #f0f4f8;
+      font-weight: 600;
+      width: 200px;
+      text-align: right;
+    }
+    .evaluation-table select {
+      width: 100%;
+      padding: 6px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+    
+    .results-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .results-table th {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+      color: white;
+      padding: 14px 12px;
+      text-align: right;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .results-table td {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+      text-align: right;
+    }
+    .results-table tr:hover { background: #f9f9f9; }
+    .progress-bar {
+      width: 100%;
+      height: 20px;
+      background: #e9ecef;
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #28a745, #20c997);
+      transition: width 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    
+    .notes-area {
+      width: 100%;
+      min-height: 150px;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 14px;
+      resize: vertical;
+    }
+    
+    .info-box {
+      background: #e7f3ff;
+      border-left: 4px solid #0d6efd;
+      padding: 12px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+      font-size: 13px;
+      color: #004085;
+    }
+
+    .warning-box {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 12px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+      font-size: 13px;
+      color: #856404;
+    }
+
+    .consultant-header-box {
+      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+      color: #1e3a5f;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 13px;
+      display: block;
+      margin: 0 auto;
+      border: 2px solid #2563eb;
+      box-shadow: 0 2px 6px rgba(37,99,235,0.15);
+    }
+
+    .total-row {
+      background: #f0f4f8;
+      font-weight: 700;
+      color: #0d6efd;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📊 لوحة تحكم المشاريع — مقارنة وتقييم الاستشاريين</h1>
+      <p>مشاريع كومو للتطوير العقاري — مقارنة شاملة للأتعاب والتقييم الفني</p>
+    </div>
+    
+    <div class="controls">
+      <div class="control-group">
+        <label>اختر المشروع</label>
+        <select id="projectSelect" onchange="switchProject()">
+          <option value="">— اختر المشروع —</option>
+        </select>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <div class="control-group">
+          <label>مساحة البناء (BUA) — مثلاً: 500000</label>
+          <input type="number" id="buaInput" placeholder="مثلاً: 500000" oninput="updateFinancial()" />
+        </div>
+        <div class="control-group">
+          <label>سعر القدم المربع (AED) — مثلاً: 100</label>
+          <input type="number" id="pricePerSqft" placeholder="مثلاً: 100" oninput="updateFinancial()" />
+        </div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="saveData()">💾 حفظ</button>
+        <button class="btn btn-secondary" onclick="clearAll()">🗑️ مسح الكل</button>
+      </div>
+    </div>
+    
+    <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+      <strong>تكلفة البناء المحسوبة:</strong> <span id="buildingCostDisplay" style="color: #0d6efd; font-weight: 600; font-size: 16px;">AED 0</span>
+    </div>
+    
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('financial')">💰 الأتعاب المالية</button>
+      <button class="tab-btn" onclick="switchTab('consultants')">👥 إدارة الاستشاريين</button>
+      <button class="tab-btn" onclick="switchTab('evaluation')">⭐ التقييم الفني</button>
+      <button class="tab-btn" onclick="switchTab('results')">📊 النتائج والمقارنة</button>
+      <button class="tab-btn" onclick="switchTab('notes')">📝 الملاحظات والتوصية</button>
+    </div>
+    
+    <!-- Financial Tab -->
+    <div id="financial" class="tab-content active">
+      <div class="warning-box" id="projectWarning" style="display:none;">
+        ⚠️ الرجاء اختيار مشروع أولاً من القائمة العلوية
+      </div>
+      <div style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
+        <select id="consultantSelect" style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; flex: 1;">
+          <option value="">-- اختر استشاري لإضافته --</option>
+        </select>
+        <button class="btn btn-primary" onclick="addSelectedConsultant()" style="white-space: nowrap;">➕ إضافة</button>
+      </div>
+      <table class="financial-table">
+        <thead>
+          <tr>
+            <th>الاستشاري</th>
+            <th colspan="2">التصميم</th>
+            <th colspan="2">الإشراف</th>
+            <th style="width: 150px; text-align: center;">المجموع</th>
+            <th style="width: 220px; text-align: center;">📎 رابط عرض السعر</th>
+          </tr>
+        </thead>
+        <tbody id="financialBody"></tbody>
+      </table>
+    </div>
+    
+    <!-- Consultants Management Tab -->
+    <div id="consultants" class="tab-content">
+      <div class="info-box">
+        <strong>إدارة قائمة الاستشاريين المركزية:</strong> أضف أو احذف استشاريين من القاعدة العامة. سيتم تطبيق التغييرات على جميع المشاريع.
+      </div>
+      <div id="consultantsManagementContent"></div>
+    </div>
+    
+    <!-- Evaluation Tab -->
+    <div id="evaluation" class="tab-content">
+      <div class="warning-box" id="evalWarning" style="display:none;">
+        ⚠️ الرجاء اختيار مشروع أولاً من القائمة العلوية
+      </div>
+      <div class="info-box">
+        <strong>التقييم الفني المقارن:</strong> اختر الوصف المناسب لكل معيار لكل استشاري. الأوصاف موضحة بالكامل لضمان تقييم موضوعي ودقيق.
+      </div>
+      <table class="evaluation-table">
+        <thead>
+          <tr id="eval-headers-row">
+            <th style="width: 200px;">المعيار</th>
+          </tr>
+        </thead>
+        <tbody id="evaluationBody"></tbody>
+      </table>
+    </div>
+    
+    <!-- Results Tab -->
+    <div id="results" class="tab-content">
+      <div class="warning-box" id="resultsWarning" style="display:none;">
+        ⚠️ الرجاء اختيار مشروع أولاً من القائمة العلوية
+      </div>
+
+      <table class="results-table">
+        <thead>
+          <tr>
+            <th style="width: 80px; text-align: center;">الترتيب</th>
+            <th>الاستشاري</th>
+            <th>التصميم (AED)</th>
+            <th>الإشراف (AED)</th>
+            <th>المجموع (AED)</th>
+            <th>النقاط الفنية (100)</th>
+            <th style="width: 250px;">💡 التحليل الذكي والتوصية</th>
+          </tr>
+        </thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+    </div>
+    
+    <!-- Notes Tab -->
+    <div id="notes" class="tab-content">
+      <label style="display: block; margin-bottom: 10px; font-weight: 600;">الملاحظات والتوصية:</label>
+      <textarea id="notesText" class="notes-area" onchange="saveData()" placeholder="اكتب ملاحظاتك والتوصيات الخاصة بهذا المشروع..."></textarea>
+    </div>
+  </div>
+
+  <script>
+    const CRITERIA = [
+      { name: 'الهوية المعمارية وجودة التصميم', weight: 12.75, options: [
+        { label: '10 نقاط: مستوى معلم بارز — هوية أيقونية قوية، عامل تمييز في السوق، عمارة لا تُنسى', score: 10 },
+        { label: '8 نقاط: جودة عالية — هوية مميزة، سرد تصميمي واضح، حضور سوقي فوق المتوسط', score: 8 },
+        { label: '6 نقاط: جودة متوسطة — كفء لكن عام، لا يوجد تمييز قوي', score: 6 },
+        { label: '4 نقاط: هوية ضعيفة — يفتقر للوضوح، جاذبية سوقية محدودة', score: 4 },
+        { label: '2 نقاط: تصميم ضعيف — لا توجد هوية متماسكة، ضعيف بصرياً', score: 2 }
+      ]},
+      { name: 'القدرات التقنية والتكامل مع BIM', weight: 12.75, options: [
+        { label: '10 نقاط: ممارسة BIM متقدمة — سير عمل BIM كامل، تنسيق تصميم LOD 300-350، إدارة تضارب قوية، مخرجات رقمية منظمة', score: 10 },
+        { label: '8 نقاط: ممارسة BIM جيدة — استخدام BIM بشكل متسق، تنسيق جيد', score: 8 },
+        { label: '6 نقاط: استخدام BIM أساسي — BIM محدود في النمذجة فقط', score: 6 },
+        { label: '4 نقاط: تكامل BIM ضئيل — تنسيق معتمد على 2D في الغالب', score: 4 },
+        { label: '2 نقاط: لا توجد قدرة BIM', score: 2 }
+      ]},
+      { name: 'الأتعاب المهنية', weight: 12.75, options: [
+        { label: '10 نقاط: قيمة ممتازة — أتعاب تنافسية للغاية ومبررة', score: 10 },
+        { label: '8 نقاط: تنافسية', score: 8 },
+        { label: '6 نقاط: متوسط السوق', score: 6 },
+        { label: '4 نقاط: أتعاب مرتفعة', score: 4 },
+        { label: '2 نقاط: أتعاب مفرطة', score: 2 }
+      ]},
+      { name: 'كفاءة التخطيط وتحسين المساحات', weight: 11.9, options: [
+        { label: '10 نقاط: كفاءة استثنائية — منطق تخطيط ممتاز، استخدام أمثل للمساحة، الحد الأدنى من الفراغات الميتة، تخطيط خدمات قوي، وعي مالي واضح', score: 10 },
+        { label: '8 نقاط: كفاءة قوية — تخطيط مساحات جيد جداً، عدم كفاءة طفيف لكن فهم تجاري قوي بشكل عام', score: 8 },
+        { label: '6 نقاط: كفاءة مقبولة — تخطيط وظيفي لكن تقليدي، بعض المساحات المفقودة، حساسية مالية محدودة', score: 6 },
+        { label: '4 نقاط: كفاءة ضعيفة — منطق حركة ضعيف، مساحات مهدرة ملحوظة، تخطيط خدمات ضعيف', score: 4 },
+        { label: '2 نقاط: كفاءة ضعيفة جداً — تخطيط غير فعال، فقدان كبير في المساحة القابلة للاستخدام، تخطيط مضر مالياً', score: 2 }
+      ]},
+      { name: 'التحكم في التكاليف والوعي بالميزانية', weight: 9.35, options: [
+        { label: '10 نقاط: ذكاء تكلفة قوي — قرارات التصميم تعكس الوعي بالميزانية', score: 10 },
+        { label: '8 نقاط: حساسية تكلفة جيدة', score: 8 },
+        { label: '6 نقاط: محايد', score: 6 },
+        { label: '4 نقاط: وعي تكلفة ضعيف', score: 4 },
+        { label: '2 نقاط: مخاطر تصميم مكلفة', score: 2 }
+      ]},
+      { name: 'الخبرة في مشاريع مشابهة', weight: 8.5, options: [
+        { label: '10 نقاط: خبرة واسعة ذات صلة — مشاريع متعددة مكتملة بنفس الحجم والنوع', score: 10 },
+        { label: '8 نقاط: خبرة قوية — محفظة جيدة ذات صلة مع تسليم مثبت', score: 8 },
+        { label: '6 نقاط: خبرة متوسطة — بعض المشاريع ذات الصلة لكن ليست قابلة للمقارنة بالكامل', score: 6 },
+        { label: '4 نقاط: خبرة محدودة — مراجع مشابهة قليلة', score: 4 },
+        { label: '2 نقاط: لا توجد خبرة ذات صلة', score: 2 }
+      ]},
+      { name: 'قوة فريق المشروع', weight: 8.5, options: [
+        { label: '10 نقاط: فريق مخصص ذو خبرة عالية — قيادة عليا مشاركة مباشرة', score: 10 },
+        { label: '8 نقاط: فريق قوي — خبرة جيدة مع دعم قادر', score: 8 },
+        { label: '6 نقاط: فريق متوسط', score: 6 },
+        { label: '4 نقاط: تكليف ضعيف', score: 4 },
+        { label: '2 نقاط: فريق غير واضح أو عديم الخبرة', score: 2 }
+      ]},
+      { name: 'إدارة الوقت والتحكم في البرنامج', weight: 8.5, options: [
+        { label: '10 نقاط: سجل ممتاز — انضباط جدولة قوي، موافقات سريعة مثبتة', score: 10 },
+        { label: '8 نقاط: تحكم جيد', score: 8 },
+        { label: '6 نقاط: مقبول', score: 6 },
+        { label: '4 نقاط: تأخيرات محتملة', score: 4 },
+        { label: '2 نقاط: تحكم ضعيف', score: 2 }
+      ]},
+      { name: 'الاهتمام الخاص بالمشروع ومرونة التعامل', weight: 8, options: [
+        { label: '10 نقاط: المشروع أولوية قصوى لدى الاستشاري، اهتمام خاص جداً، متابعة مستمرة، ومرونة عالية في التعامل', score: 10 },
+        { label: '8 نقاط: المشروع ذو أهمية خاصة، اهتمام واضح، وتواصل جيد ومرن', score: 8 },
+        { label: '6 نقاط: المشروع يلقى اهتمام جيد، استجابة مقبولة وتعاون معقول', score: 6 },
+        { label: '4 نقاط: المشروع أحد مشاريع الشركة العادية، اهتمام محدود دون تميّز', score: 4 },
+        { label: '2 نقاط: المشروع ليس ذو أهمية لديهم، استجابة ضعيفة واهتمام منخفض', score: 2 }
+      ]},
+      { name: 'مرونة التعاقد', weight: 7, options: [
+        { label: '10 نقاط: لا أعمال إضافية غير مبررة، ومرونة ممتازة جداً في التعديلات ضمن نطاق العمل، مع شروط عادلة وواضحة', score: 10 },
+        { label: '8 نقاط: مرونة ممتازة في التعديلات، مع بعض القيود المنطقية على الأعمال الإضافية', score: 8 },
+        { label: '6 نقاط: مرونة متوسطة، يقبل التعديلات لكن بإجراءات رسمية وشروط عديدة', score: 6 },
+        { label: '4 نقاط: رسمي في التعاقد، يميل لتقييد التعديلات ولا يبدي مرونة إلا في نطاق ضيق', score: 4 },
+        { label: '2 نقاط: مبالغ في تكاليف التعديلات والأعمال الإضافية، ويربط معظم التغييرات بمطالبات مالية مرهقة للمشروع', score: 2 }
+      ]}
+    ];
+
+    const PROJECTS = [
+      { id: 'p1', name: 'مركز مجان التجاري (G+4)', consultants: ['Osus International', 'Realistic Engineering', 'ARTEC Architectural & Engineering Consultants', 'DATUM Engineering Consultants'] },
+      { id: 'p2', name: 'مجان متعدد الاستخدامات (G+4P+25)', consultants: ['LACASA', 'ARTEC Architectural & Engineering Consultants', 'DATUM Engineering Consultants'] },
+      { id: 'p3', name: 'مبنى الجداف السكني (G+7)', consultants: ['Osus International', 'Realistic Engineering', 'ARTEC Architectural & Engineering Consultants', 'DATUM Engineering Consultants'] },
+      { id: 'p4', name: 'ند الشبا — قطعة 1 (6185392)', consultants: ['Realistic Engineering', 'ARTEC Architectural & Engineering Consultants', 'DATUM Engineering Consultants', 'Safeer Engineering Consultants (SEC)'] },
+      { id: 'p5', name: 'ند الشبا — قطعة 2 المدمجة (6182776)', consultants: ['Realistic Engineering', 'ARTEC Architectural & Engineering Consultants', 'DATUM Engineering Consultants', 'Safeer Engineering Consultants (SEC)'] },
+      { id: 'p6', name: 'ند الشبا — قطعة 3 الفلل (6180578)', consultants: ['Realistic Engineering', 'ARTEC Architectural & Engineering Consultants', 'DATUM Engineering Consultants', 'Safeer Engineering Consultants (SEC)'] }
+    ];
+
+    let ALL_CONSULTANTS = ['Osus International', 'Realistic Engineering', 'DATUM Engineering Consultants', 'ARTEC Architectural & Engineering Consultants', 'Arif & Bintoak Consulting Architects & Engineers', 'Al Diwan Engineering Consultants', 'LACASA', 'XYZ Designers', 'Kieferle & Partner', 'Safeer Engineering Consultants (SEC)'];
+
+    let data = {};
+    let currentProject = null;
+    const API_BASE = '/api/dashboard-data';
+
+    async function loadData() {
+      try {
+        let res = await fetch(API_BASE);
+        if (res.ok) {
+          data = await res.json();
+        } else {
+          let stored = localStorage.getItem('consultantDashboardData_v9');
+          if (stored) data = JSON.parse(stored);
+          else data = {};
+        }
+      } catch(e) {
+        let stored = localStorage.getItem('consultantDashboardData_v9');
+        if (stored) data = JSON.parse(stored);
+        else data = {};
+      }
+      
+      if (currentProject && !data[currentProject]) {
+        data[currentProject] = { financial: [], evaluation: {}, notes: '' };
+      }
+    }
+
+    function saveData() {
+      if (!currentProject) return;
+      
+      let bua = parseFloat(document.getElementById('buaInput').value) || 0;
+      let price = parseFloat(document.getElementById('pricePerSqft').value) || 0;
+      
+      if (!data[currentProject]) data[currentProject] = {};
+      data[currentProject].bua = bua;
+      data[currentProject].price = price;
+      data[currentProject].notes = document.getElementById('notesText').value;
+      
+      let project = PROJECTS.find(p => p.id === currentProject);
+      if (project) {
+        data[currentProject].financial = [];
+        project.consultants.forEach((c, idx) => {
+          let designSelect = document.querySelector(`select[data-consultant="${c}"][data-type="design"]`);
+          let designInput = document.querySelector(`input[data-consultant="${c}"][data-type="design"]`);
+          let supervisionSelect = document.querySelector(`select[data-consultant="${c}"][data-type="supervision"]`);
+          let supervisionInput = document.querySelector(`input[data-consultant="${c}"][data-type="supervision"]`);
+          
+          data[currentProject].financial[idx] = {
+            consultant: c,
+            designType: designSelect?.value || 'pct',
+            designVal: parseFloat(designInput?.value) || 0,
+            supervisionType: supervisionSelect?.value || 'pct',
+            supervisionVal: parseFloat(supervisionInput?.value) || 0
+          };
+        });
+      }
+      
+      data[currentProject].evaluation = {};
+      CRITERIA.forEach((crit, critIdx) => {
+        data[currentProject].evaluation[critIdx] = {};
+        project.consultants.forEach(c => {
+          let select = document.querySelector(`select[data-criterion="${critIdx}"][data-consultant="${c}"]`);
+          data[currentProject].evaluation[critIdx][c] = select?.value || '';
+        });
+      });
+      
+      localStorage.setItem('consultantDashboardData_v9', JSON.stringify(data));
+      // Sync to server
+      fetch(API_BASE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      }).catch(e => console.warn('Server sync failed:', e));
+    }
+
+    function switchTab(tabName) {
+      if (!currentProject && (tabName === 'financial' || tabName === 'evaluation' || tabName === 'results')) {
+        alert('الرجاء اختيار مشروع أولاً');
+        return;
+      }
+      
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabName).classList.add('active');
+      event.target.classList.add('active');
+      
+      if (tabName === 'evaluation') renderEvaluation();
+      if (tabName === 'results') renderResults();
+      if (tabName === 'consultants') renderConsultantsManagement();
+    }
+
+    function switchProject() {
+      let sel = document.querySelector('select#projectSelect');
+      currentProject = sel.value;
+      
+      if (!currentProject) {
+        document.getElementById('projectWarning').style.display = 'block';
+        document.getElementById('evalWarning').style.display = 'block';
+        document.getElementById('resultsWarning').style.display = 'block';
+        return;
+      }
+      
+      document.getElementById('projectWarning').style.display = 'none';
+      document.getElementById('evalWarning').style.display = 'none';
+      document.getElementById('resultsWarning').style.display = 'none';
+      
+      loadData();
+      let project = PROJECTS.find(p => p.id === currentProject);
+      
+      document.getElementById('buaInput').value = data[currentProject]?.bua || '';
+      document.getElementById('pricePerSqft').value = data[currentProject]?.price || '';
+      document.getElementById('notesText').value = data[currentProject]?.notes || '';
+      
+      renderFinancial();
+      renderEvaluation();
+      renderResults();
+      updateConsultantSelect();
+    }
+    
+    function updateConsultantSelect() {
+      if (!currentProject) return;
+      let project = PROJECTS.find(p => p.id === currentProject);
+      let select = document.getElementById('consultantSelect');
+      select.innerHTML = '<option value="">-- اختر استشاري لإضافته --</option>';
+      
+      let available = ALL_CONSULTANTS.filter(c => !project.consultants.includes(c));
+      
+      available.forEach(c => {
+        let option = document.createElement('option');
+        option.value = c;
+        option.textContent = c;
+        select.appendChild(option);
+      });
+    }
+    
+    function addSelectedConsultant() {
+      let select = document.getElementById('consultantSelect');
+      let name = select.value.trim();
+      if (!name) return;
+      
+      addConsultantToProject(name);
+      select.value = '';
+      updateConsultantSelect();
+    }
+
+    function renderFinancial() {
+      if (!currentProject) return;
+      
+      let project = PROJECTS.find(p => p.id === currentProject);
+      if (!project) return;
+      
+      let bua = parseFloat(document.getElementById('buaInput').value) || 0;
+      let price = parseFloat(document.getElementById('pricePerSqft').value) || 0;
+      let buildingCost = bua * price;
+      
+      document.getElementById('buildingCostDisplay').textContent = 'AED ' + buildingCost.toLocaleString();
+      
+      let tbody = document.getElementById('financialBody');
+      tbody.innerHTML = '';
+      
+      project.consultants.forEach((c, idx) => {
+        let fin = data[currentProject]?.financial?.[idx] || { designType: 'pct', designVal: 0, supervisionType: 'pct', supervisionVal: 0 };
+        
+        let designAmount = fin.designType === 'pct' ? (fin.designVal * buildingCost / 100) : fin.designVal;
+        let supervisionAmount = fin.supervisionType === 'pct' ? (fin.supervisionVal * buildingCost / 100) : fin.supervisionVal;
+        let total = designAmount + supervisionAmount;
+        
+        let proposalLink = data[currentProject]?.proposalLinks?.[c] || '';
+        let linkIcon = proposalLink ? `<a href="${proposalLink}" target="_blank" title="فتح عرض ${c}" style="margin-right: 8px; text-decoration: none; font-size: 16px;">📎</a>` : '';
+        
+        let row = document.createElement('tr');
+        row.innerHTML = `
+          <td style="position:relative;">
+            ${linkIcon}${c}
+            <button onclick="removeConsultant('${c.replace(/'/g, "\\'")}')" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);background:#dc3545;color:white;border:none;border-radius:3px;padding:3px 8px;font-size:11px;cursor:pointer;">✕</button>
+          </td>
+          <td style="text-align:center;font-size:12px;">
+            <select data-consultant="${c}" data-type="design" onchange="updateFinancial()" style="width:70px;padding:6px;font-size:12px;">
+              <option value="pct" ${fin.designType === 'pct' ? 'selected' : ''}>نسبة %</option>
+              <option value="lump" ${fin.designType === 'lump' ? 'selected' : ''}>مقطوع</option>
+            </select>
+          </td>
+          <td class="amount">
+            <input type="number" data-consultant="${c}" data-type="design" value="${fin.designVal}" placeholder="0" step="any" style="width:100px;padding:6px;border:1px solid #ddd;border-radius:4px;" oninput="updateFinancial()">
+            <small style="display:block;color:#0d6efd;margin-top:2px;font-weight:600;">${designAmount.toLocaleString()} AED</small>
+          </td>
+          <td style="text-align:center;font-size:12px;">
+            <select data-consultant="${c}" data-type="supervision" onchange="updateFinancial()" style="width:70px;padding:6px;font-size:12px;">
+              <option value="pct" ${fin.supervisionType === 'pct' ? 'selected' : ''}>نسبة %</option>
+              <option value="lump" ${fin.supervisionType === 'lump' ? 'selected' : ''}>مقطوع</option>
+            </select>
+          </td>
+          <td class="amount">
+            <input type="number" data-consultant="${c}" data-type="supervision" value="${fin.supervisionVal}" placeholder="0" step="any" style="width:100px;padding:6px;border:1px solid #ddd;border-radius:4px;" oninput="updateFinancial()">
+            <small style="display:block;color:#0d6efd;margin-top:2px;font-weight:600;">${supervisionAmount.toLocaleString()} AED</small>
+          </td>
+          <td id="total-${c.replace(/\s+/g, '')}" style="font-weight:700;color:#0d6efd;text-align:center;font-size:16px;">AED ${total.toLocaleString()}</td>
+          <td style="text-align:center;">
+            <input type="url" value="${proposalLink}" data-consultant="${c}" onchange="saveProposalLink('${c.replace(/'/g, "\\'")}', this.value)" placeholder="رابط عرض السعر" style="width:200px;padding:6px;border:1px solid #ddd;border-radius:4px;font-size:12px;">
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function updateFinancial() {
+      if (!currentProject) return;
+      
+      let bua = parseFloat(document.getElementById('buaInput').value) || 0;
+      let price = parseFloat(document.getElementById('pricePerSqft').value) || 0;
+      let buildingCost = bua * price;
+      
+      document.getElementById('buildingCostDisplay').textContent = 'AED ' + buildingCost.toLocaleString();
+      
+      let project = PROJECTS.find(p => p.id === currentProject);
+      
+      project.consultants.forEach(c => {
+        let designSelect = document.querySelector(`select[data-consultant="${c}"][data-type="design"]`);
+        let designInput = document.querySelector(`input[data-consultant="${c}"][data-type="design"]`);
+        let supervisionSelect = document.querySelector(`select[data-consultant="${c}"][data-type="supervision"]`);
+        let supervisionInput = document.querySelector(`input[data-consultant="${c}"][data-type="supervision"]`);
+        
+        let designAmount = 0;
+        let supervisionAmount = 0;
+
+        if (designInput && designSelect) {
+          designAmount = designSelect.value === 'pct' ? (parseFloat(designInput.value) * buildingCost / 100) : parseFloat(designInput.value || 0);
+          designInput.nextElementSibling.textContent = designAmount.toLocaleString() + ' AED';
+        }
+        
+        if (supervisionInput && supervisionSelect) {
+          supervisionAmount = supervisionSelect.value === 'pct' ? (parseFloat(supervisionInput.value) * buildingCost / 100) : parseFloat(supervisionInput.value || 0);
+          supervisionInput.nextElementSibling.textContent = supervisionAmount.toLocaleString() + ' AED';
+        }
+        
+        let total = designAmount + supervisionAmount;
+        let totalCell = document.getElementById(`total-${c.replace(/\s+/g, '')}`);
+        if (totalCell) totalCell.textContent = 'AED ' + total.toLocaleString();
+      });
+    }
+
+    function renderEvaluation() {
+      if (!currentProject) return;
+      
+      let project = PROJECTS.find(p => p.id === currentProject);
+      if (!project) return;
+      
+      let headerRow = document.getElementById('eval-headers-row');
+      headerRow.innerHTML = '<th style="width: 200px;">المعيار</th>';
+      
+      project.consultants.forEach(c => {
+        let shortName = c.split(' ')[0];
+        let th = document.createElement('th');
+        th.innerHTML = `<div class="consultant-header-box">${shortName}</div>`;
+        headerRow.appendChild(th);
+      });
+      
+      let tbody = document.getElementById('evaluationBody');
+      tbody.innerHTML = '';
+      
+      CRITERIA.forEach((crit, critIdx) => {
+        let row = document.createElement('tr');
+        let cells = `<td class="criteria-name">${crit.name}<br><small style="font-weight:normal;color:#666;">(وزن: ${crit.weight}%)</small></td>`;
+        
+        project.consultants.forEach(c => {
+          let selectedScore = data[currentProject]?.evaluation?.[critIdx]?.[c] || '';
+          let options = crit.options.map((opt, optIdx) => 
+            `<option value="${opt.score}" ${selectedScore == opt.score ? 'selected' : ''}>${opt.label}</option>`
+          ).join('');
+          
+          cells += `<td><select data-criterion="${critIdx}" data-consultant="${c}" onchange="saveData()">${options}</select></td>`;
+        });
+        
+        row.innerHTML = cells;
+        tbody.appendChild(row);
+      });
+    }
+
+    function renderResults() {
+      if (!currentProject) return;
+      
+      let project = PROJECTS.find(p => p.id === currentProject);
+      if (!project) return;
+      
+      let bua = parseFloat(document.getElementById('buaInput').value) || 0;
+      let price = parseFloat(document.getElementById('pricePerSqft').value) || 0;
+      let buildingCost = bua * price;
+      
+      let results = [];
+      project.consultants.forEach((c, idx) => {
+        let fin = data[currentProject]?.financial?.[idx] || { designType: 'pct', designVal: 0, supervisionType: 'pct', supervisionVal: 0 };
+        let designAmount = fin.designType === 'pct' ? (fin.designVal * buildingCost / 100) : fin.designVal;
+        let supervisionAmount = fin.supervisionType === 'pct' ? (fin.supervisionVal * buildingCost / 100) : fin.supervisionVal;
+        let total = designAmount + supervisionAmount;
+        
+        let totalScore = 0;
+        CRITERIA.forEach((crit, critIdx) => {
+          let score = parseFloat(data[currentProject]?.evaluation?.[critIdx]?.[c]) || 0;
+          totalScore += (score * crit.weight / 100);
+        });
+        
+        results.push({ consultant: c, design: designAmount, supervision: supervisionAmount, total, score: totalScore });
+      });
+      
+      // ترتيب النتائج من الأفضل للأسوأ
+      results.sort((a, b) => b.score - a.score);
+      
+      // حساب متوسط الأسعار والنقاط للتحليل
+      let avgScore = results.reduce((acc, r) => acc + r.score, 0) / results.length;
+      let avgPrice = results.reduce((acc, r) => acc + r.total, 0) / results.length;
+      
+      let maxScore = Math.max(...results.map(r => r.score), 1);
+      
+      let tbody = document.getElementById('resultsBody');
+      tbody.innerHTML = results.map((r, index) => {
+        // منطق التحليل الذكي
+        let analysis = "";
+        let analysisColor = "#666";
+        
+        if (r.score >= avgScore && r.total <= avgPrice) {
+          analysis = "💎 <b>خيار استراتيجي:</b> جودة فنية عالية وسعر منافس جداً.";
+          analysisColor = "#198754";
+        } else if (r.score >= avgScore && r.total > avgPrice) {
+          analysis = "✨ <b>خيار متميز:</b> جودة فنية عالية، لكن بتكلفة أعلى من المتوسط.";
+          analysisColor = "#0d6efd";
+        } else if (r.score < avgScore && r.total <= avgPrice) {
+          analysis = "💰 <b>خيار اقتصادي:</b> سعر منخفض، لكن الجودة الفنية أقل من المنافسين.";
+          analysisColor = "#fd7e14";
+        } else {
+          analysis = "⚠️ <b>خيار عالي المخاطر:</b> سعر مرتفع مع جودة فنية منخفضة.";
+          analysisColor = "#dc3545";
+        }
+        
+        // إضافة توصية إضافية للمركز الأول
+        if (index === 0) {
+          analysis += "<br><small>🎯 <b>التوصية:</b> الخيار الأمثل بناءً على توازن السعر والجودة.</small>";
+        }
+        let percentage = (r.score / maxScore) * 100;
+        let rank = index + 1;
+        let rankBadge = '';
+        let rowStyle = '';
+        
+        if (rank === 1) {
+          rankBadge = '🥇';
+          rowStyle = 'background: linear-gradient(90deg, #fff9e6 0%, #ffffff 100%); border-right: 4px solid #FFD700;';
+        } else if (rank === 2) {
+          rankBadge = '🥈';
+          rowStyle = 'background: linear-gradient(90deg, #f5f5f5 0%, #ffffff 100%); border-right: 4px solid #C0C0C0;';
+        } else if (rank === 3) {
+          rankBadge = '🥉';
+          rowStyle = 'background: linear-gradient(90deg, #fff4e6 0%, #ffffff 100%); border-right: 4px solid #CD7F32;';
+        } else {
+          rankBadge = rank;
+        }
+        
+        let proposalLink = data[currentProject]?.proposalLinks?.[r.consultant] || '';
+        let linkIcon = proposalLink ? `<a href="${proposalLink}" target="_blank" title="فتح عرض ${r.consultant}" style="margin-right: 8px; text-decoration: none; font-size: 16px;">📎</a>` : '';
+        
+        return `
+          <tr style="${rowStyle}">
+            <td style="text-align: center; font-size: 24px; font-weight: 700;">${rankBadge}</td>
+            <td style="font-weight: ${rank <= 3 ? '700' : '400'};">${linkIcon}${r.consultant}</td>
+            <td>${r.design.toLocaleString()} AED</td>
+            <td>${r.supervision.toLocaleString()} AED</td>
+            <td style="font-weight:700;color:#0d6efd;">${r.total.toLocaleString()} AED</td>
+            <td style="font-weight: 700; font-size: 16px; color: #198754;">${r.score.toFixed(1)}</td>
+            <td style="font-size: 12px; color: ${analysisColor}; line-height: 1.4;">${analysis}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderConsultantsManagement() {
+      let container = document.getElementById('consultantsManagementContent');
+      container.innerHTML = `
+        <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+          <input type="text" id="newConsultantName" placeholder="أدخل اسم الاستشاري الجديد" style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; flex: 1; font-size: 14px;">
+          <button class="btn btn-primary" onclick="addNewConsultant()">➕ إضافة</button>
+        </div>
+        <table class="financial-table">
+          <thead>
+            <tr>
+              <th>الاستشاري</th>
+              <th style="width: 400px;">رابط العرض</th>
+              <th style="width: 100px;">الإجراء</th>
+            </tr>
+          </thead>
+          <tbody id="consultantsListBody"></tbody>
+        </table>
+      `;
+      
+      let tbody = document.getElementById('consultantsListBody');
+      tbody.innerHTML = ALL_CONSULTANTS.map(c => {
+        let link = data.consultantLinks?.[c] || '';
+        return `
+        <tr>
+          <td>${c}</td>
+          <td>
+            <input type="url" value="${link}" onchange="saveConsultantLink('${c.replace(/'/g, "\\'")}', this.value)" placeholder="الصق رابط العرض (PDF, Google Drive, إلخ)" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+          </td>
+          <td><button onclick="deleteConsultant('${c.replace(/'/g, "\\'")}')" style="background:#dc3545;color:white;border:none;border-radius:3px;padding:5px 10px;font-size:12px;cursor:pointer;">حذف</button></td>
+        </tr>
+      `;
+      }).join('');
+    }
+
+    function addNewConsultant() {
+      let input = document.getElementById('newConsultantName');
+      let name = input.value.trim();
+      if (!name) {
+        alert('الرجاء إدخال اسم الاستشاري');
+        return;
+      }
+      
+      if (ALL_CONSULTANTS.includes(name)) {
+        alert('هذا الاستشاري موجود بالفعل');
+        return;
+      }
+      
+      ALL_CONSULTANTS.push(name);
+      input.value = '';
+      renderConsultantsManagement();
+      updateConsultantSelect();
+    }
+
+    function saveProposalLink(name, link) {
+      if (!currentProject) return;
+      if (!data[currentProject]) data[currentProject] = {};
+      if (!data[currentProject].proposalLinks) data[currentProject].proposalLinks = {};
+      data[currentProject].proposalLinks[name] = link;
+      localStorage.setItem('consultantDashboardData_v9', JSON.stringify(data));
+      fetch(API_BASE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      }).catch(e => console.warn('Server sync failed:', e));
+    }
+
+    function saveConsultantLink(name, link) {
+      if (!data.consultantLinks) data.consultantLinks = {};
+      data.consultantLinks[name] = link;
+      localStorage.setItem('consultantDashboardData_v9', JSON.stringify(data));
+      fetch(API_BASE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      }).catch(e => console.warn('Server sync failed:', e));
+    }
+
+    function deleteConsultant(name) {
+      if (!confirm(`هل تريد حذف ${name}؟`)) return;
+      ALL_CONSULTANTS = ALL_CONSULTANTS.filter(c => c !== name);
+      if (data.consultantLinks) delete data.consultantLinks[name];
+      renderConsultantsManagement();
+      updateConsultantSelect();
+    }
+
+    function addConsultantToProject(name) {
+      if (!currentProject) {
+        alert('الرجاء اختيار مشروع أولاً');
+        return;
+      }
+      
+      let project = PROJECTS.find(p => p.id === currentProject);
+      if (project.consultants.includes(name)) {
+        alert('هذا الاستشاري موجود بالفعل في المشروع');
+        return;
+      }
+      
+      project.consultants.push(name);
+      renderFinancial();
+      renderEvaluation();
+      renderResults();
+      saveData();
+    }
+
+    function removeConsultant(name) {
+      if (!currentProject) return;
+      
+      if (!confirm(`هل تريد حذف ${name} من هذا المشروع؟`)) return;
+      
+      let project = PROJECTS.find(p => p.id === currentProject);
+      project.consultants = project.consultants.filter(c => c !== name);
+      
+      renderFinancial();
+      renderEvaluation();
+      renderResults();
+      saveData();
+    }
+
+    function clearAll() {
+      if (!confirm('هل تريد مسح جميع البيانات؟')) return;
+      localStorage.removeItem('consultantDashboardData_v8');
+      data = {};
+      location.reload();
+    }
+
+    window.onload = async function() {
+      let sel = document.querySelector('select#projectSelect');
+      PROJECTS.forEach(p => {
+        let opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name;
+        sel.appendChild(opt);
+      });
+      
+      await loadData();
+    };
+  </script>
+</body>
+</html>

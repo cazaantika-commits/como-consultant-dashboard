@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, BarChart3, Users, Settings } from "lucide-react";
+import { Loader2, BarChart3, ClipboardList, TrendingUp, FileText } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
 
@@ -22,11 +22,11 @@ export default function Home() {
       <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center p-4" dir="rtl">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="text-center text-2xl">لوحة تحكم تقييم الاستشاريين</CardTitle>
+            <CardTitle className="text-center text-2xl">مركز قيادة كومو</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-center text-gray-600">
-              نظام متكامل لإدارة وتقييم الاستشاريين الهندسيين في مشاريع التطوير العقاري
+              منظومة إدارة رقمية متكاملة لمشاريع التطوير العقاري
             </p>
             <Button
               onClick={() => (window.location.href = getLoginUrl())}
@@ -46,8 +46,8 @@ export default function Home() {
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold">لوحة التحكم الرئيسية</h1>
-            <p className="text-blue-100">مرحبا {user?.name || "بك"}</p>
+            <h1 className="text-3xl font-bold">مركز قيادة كومو</h1>
+            <p className="text-blue-100">مرحباً {user?.name || "بك"}</p>
           </div>
           <Button
             variant="outline"
@@ -60,52 +60,59 @@ export default function Home() {
       </div>
 
       <div className="max-w-7xl mx-auto p-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* تقييم الاستشاريين - الصفحة الأصلية */}
           <Card
-            className="cursor-pointer hover:shadow-lg transition-all"
-            onClick={() => navigate("/dashboard")}
+            className="cursor-pointer hover:shadow-lg transition-all border-2 border-blue-200 hover:border-blue-400"
+            onClick={() => navigate("/consultant-dashboard")}
           >
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="w-5 h-5" />
-                لوحة التحكم
+              <CardTitle className="flex items-center gap-2 text-blue-700">
+                <BarChart3 className="w-6 h-6" />
+                تقييم الاستشاريين
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-gray-600">
-                إدارة المشاريع والاستشاريين وتنظيم البيانات الأساسية
+                مقارنة وتقييم الاستشاريين الهندسيين — الأتعاب المالية والتقييم الفني والنتائج
               </p>
             </CardContent>
           </Card>
 
-          <Card
-            className="cursor-pointer hover:shadow-lg transition-all"
-            onClick={() => navigate("/evaluation")}
-          >
+          {/* صفحات مستقبلية */}
+          <Card className="cursor-pointer hover:shadow-lg transition-all opacity-60">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                التقييم والمقارنة
+              <CardTitle className="flex items-center gap-2 text-gray-500">
+                <TrendingUp className="w-6 h-6" />
+                دراسات الجدوى
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">
-                تقييم الاستشاريين فنيا وماليا والمقارنة بينهم
-              </p>
+              <p className="text-gray-400">قريباً — تحليل الجدوى المالية للمشاريع</p>
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer hover:shadow-lg transition-all">
+          <Card className="cursor-pointer hover:shadow-lg transition-all opacity-60">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="w-5 h-5" />
-                الإعدادات
+              <CardTitle className="flex items-center gap-2 text-gray-500">
+                <FileText className="w-6 h-6" />
+                دراسة السوق
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-600">
-                إدارة الإعدادات والتكوينات
-              </p>
+              <p className="text-gray-400">قريباً — تحليل السوق العقاري</p>
+            </CardContent>
+          </Card>
+
+          <Card className="cursor-pointer hover:shadow-lg transition-all opacity-60">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-gray-500">
+                <ClipboardList className="w-6 h-6" />
+                المهام
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-400">قريباً — إدارة المهام والمتابعة</p>
             </CardContent>
           </Card>
         </div>
