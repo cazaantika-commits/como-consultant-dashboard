@@ -6,8 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/lib/trpc";
 import {
-  Loader2,
-  ArrowRight,
   Folder,
   FileText,
   FileSpreadsheet,
@@ -21,48 +19,47 @@ import {
   CheckCircle2,
   XCircle,
   ExternalLink,
-  Copy,
-  FolderPlus,
-  ArrowLeft,
+  ArrowRight,
+  FolderOpen,
+  ChevronRight,
 } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
 import { useState, useMemo, useCallback } from "react";
-import { toast } from "sonner";
 
 interface BreadcrumbItem {
   id: string;
   name: string;
 }
 
-function getFileIcon(mimeType: string) {
-  if (mimeType === "application/vnd.google-apps.folder") return <Folder className="w-5 h-5 text-amber-500" />;
-  if (mimeType.includes("spreadsheet") || mimeType.includes("excel")) return <FileSpreadsheet className="w-5 h-5 text-green-600" />;
-  if (mimeType.includes("image")) return <FileImage className="w-5 h-5 text-purple-500" />;
-  if (mimeType.includes("pdf")) return <FileText className="w-5 h-5 text-red-500" />;
-  if (mimeType.includes("document") || mimeType.includes("word")) return <FileText className="w-5 h-5 text-blue-500" />;
-  if (mimeType.includes("presentation") || mimeType.includes("powerpoint")) return <FileText className="w-5 h-5 text-orange-500" />;
-  return <File className="w-5 h-5 text-gray-500" />;
+function getFileIcon(mimeType: string, size: "sm" | "lg" = "sm") {
+  const cls = size === "lg" ? "w-8 h-8" : "w-5 h-5";
+  if (mimeType === "application/vnd.google-apps.folder") return <Folder className={`${cls} text-amber-500`} />;
+  if (mimeType.includes("spreadsheet") || mimeType.includes("excel")) return <FileSpreadsheet className={`${cls} text-green-600`} />;
+  if (mimeType.includes("image") || mimeType.includes("dwg")) return <FileImage className={`${cls} text-purple-500`} />;
+  if (mimeType.includes("pdf")) return <FileText className={`${cls} text-red-500`} />;
+  if (mimeType.includes("document") || mimeType.includes("word")) return <FileText className={`${cls} text-blue-500`} />;
+  if (mimeType.includes("presentation") || mimeType.includes("powerpoint")) return <FileText className={`${cls} text-orange-500`} />;
+  if (mimeType.includes("html")) return <FileText className={`${cls} text-teal-500`} />;
+  return <File className={`${cls} text-gray-500`} />;
 }
 
 function getFileTypeName(mimeType: string): string {
   if (mimeType === "application/vnd.google-apps.folder") return "مجلد";
   if (mimeType === "application/vnd.google-apps.document") return "مستند Google";
-  if (mimeType === "application/vnd.google-apps.spreadsheet") return "جدول بيانات Google";
-  if (mimeType === "application/vnd.google-apps.presentation") return "عرض تقديمي Google";
+  if (mimeType === "application/vnd.google-apps.spreadsheet") return "جدول بيانات";
+  if (mimeType === "application/vnd.google-apps.presentation") return "عرض تقديمي";
   if (mimeType.includes("pdf")) return "PDF";
-  if (mimeType.includes("image")) return "صورة";
-  if (mimeType.includes("word")) return "مستند Word";
-  if (mimeType.includes("excel") || mimeType.includes("spreadsheet")) return "جدول بيانات Excel";
-  if (mimeType.includes("powerpoint") || mimeType.includes("presentation")) return "عرض تقديمي PowerPoint";
-  if (mimeType.includes("zip") || mimeType.includes("rar")) return "ملف مضغوط";
-  if (mimeType.includes("video")) return "فيديو";
-  if (mimeType.includes("audio")) return "صوت";
+  if (mimeType.includes("image") || mimeType.includes("dwg")) return "صورة / رسم";
+  if (mimeType.includes("word")) return "Word";
+  if (mimeType.includes("excel") || mimeType.includes("spreadsheet")) return "Excel";
+  if (mimeType.includes("powerpoint") || mimeType.includes("presentation")) return "PowerPoint";
+  if (mimeType.includes("html")) return "HTML";
   return "ملف";
 }
 
 function formatFileSize(bytes?: string): string {
-  if (!bytes) return "—";
+  if (!bytes) return "";
   const size = parseInt(bytes);
   if (size < 1024) return `${size} B`;
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
@@ -71,7 +68,7 @@ function formatFileSize(bytes?: string): string {
 }
 
 function formatDate(dateStr?: string): string {
-  if (!dateStr) return "—";
+  if (!dateStr) return "";
   const date = new Date(dateStr);
   return date.toLocaleDateString("ar-SA", {
     year: "numeric",
@@ -96,7 +93,7 @@ export default function DriveBrowserPage() {
 
   // Shared folders (root level)
   const sharedQuery = trpc.drive.listShared.useQuery(undefined, {
-    enabled: isAuthenticated && !currentFolderId,
+    enabled: isAuthenticated && !currentFolderId && !isSearching,
     staleTime: 30000,
   });
 
@@ -106,7 +103,7 @@ export default function DriveBrowserPage() {
     [currentFolderId]
   );
   const filesQuery = trpc.drive.listFiles.useQuery(folderInput!, {
-    enabled: isAuthenticated && !!currentFolderId,
+    enabled: isAuthenticated && !!currentFolderId && !isSearching,
     staleTime: 15000,
   });
 
@@ -176,7 +173,10 @@ export default function DriveBrowserPage() {
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin" />
+        <div className="text-center space-y-3">
+          <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-gray-500 text-sm">جاري التحميل...</p>
+        </div>
       </div>
     );
   }
@@ -199,8 +199,13 @@ export default function DriveBrowserPage() {
     );
   }
 
-  const isLoading = currentFolderId ? filesQuery.isLoading : sharedQuery.isLoading;
-  const files = isSearching
+  const isLoading = isSearching
+    ? searchResults.isLoading
+    : currentFolderId
+    ? filesQuery.isLoading
+    : sharedQuery.isLoading;
+
+  const currentItems = isSearching
     ? searchResults.data || []
     : currentFolderId
     ? filesQuery.data?.files || []
@@ -216,72 +221,77 @@ export default function DriveBrowserPage() {
       }));
 
   // Separate folders and files
-  const folders = files.filter((f) => f.mimeType === "application/vnd.google-apps.folder");
-  const regularFiles = files.filter((f) => f.mimeType !== "application/vnd.google-apps.folder");
+  const folders = currentItems.filter((f) => f.mimeType === "application/vnd.google-apps.folder");
+  const regularFiles = currentItems.filter((f) => f.mimeType !== "application/vnd.google-apps.folder");
+
+  // Current location name
+  const currentLocationName = breadcrumbs.length > 0
+    ? breadcrumbs[breadcrumbs.length - 1].name
+    : "المجلدات المشتركة";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100" dir="rtl">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate("/")}
-                className="text-white hover:bg-white/20"
-              >
-                <ArrowRight className="w-4 h-4 ml-1" />
-                الرئيسية
-              </Button>
+      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
+        <div className="max-w-6xl mx-auto px-6 py-5">
+          <div className="flex justify-between items-center mb-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/")}
+              className="text-white/80 hover:text-white hover:bg-white/10"
+            >
+              <ArrowRight className="w-4 h-4 ml-1" />
+              الرئيسية
+            </Button>
+            <div className="flex items-center gap-2 text-sm text-blue-100">
+              {connectionQuery.data?.connected ? (
+                <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-full">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-300" />
+                  متصل — {connectionQuery.data.sharedFilesCount} ملف
+                </span>
+              ) : connectionQuery.isLoading ? (
+                <span className="bg-white/10 px-3 py-1 rounded-full">جاري التحقق...</span>
+              ) : (
+                <span className="flex items-center gap-1.5 bg-red-500/20 px-3 py-1 rounded-full">
+                  <XCircle className="w-3.5 h-3.5 text-red-300" />
+                  غير متصل
+                </span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <HardDrive className="w-8 h-8" />
-            <div>
-              <h1 className="text-2xl font-bold">مستعرض الملفات — Google Drive</h1>
-              <p className="text-blue-100 text-sm">
-                {connectionQuery.data?.connected ? (
-                  <span className="flex items-center gap-1">
-                    <CheckCircle2 className="w-4 h-4 text-green-300" />
-                    متصل — {connectionQuery.data.sharedFilesCount} ملف مشترك
-                  </span>
-                ) : connectionQuery.isLoading ? (
-                  "جاري التحقق من الاتصال..."
-                ) : (
-                  <span className="flex items-center gap-1">
-                    <XCircle className="w-4 h-4 text-red-300" />
-                    غير متصل
-                  </span>
-                )}
-              </p>
-            </div>
+            <HardDrive className="w-7 h-7" />
+            <h1 className="text-xl font-bold">مستعرض الملفات — Google Drive</h1>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-6 space-y-4">
-        {/* Breadcrumbs */}
-        <Card>
-          <CardContent className="py-3 px-4">
-            <div className="flex items-center gap-2 flex-wrap">
+      <div className="max-w-6xl mx-auto px-6 py-5 space-y-4">
+        {/* Breadcrumbs Navigation */}
+        <div className="bg-white rounded-xl border shadow-sm px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 flex-wrap text-sm">
               <button
                 onClick={() => navigateToBreadcrumb(-1)}
-                className="flex items-center gap-1 text-blue-600 hover:text-blue-800 font-medium text-sm"
+                className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors ${
+                  breadcrumbs.length === 0
+                    ? "bg-blue-50 text-blue-700 font-semibold"
+                    : "text-blue-600 hover:bg-blue-50"
+                }`}
               >
-                <Home className="w-4 h-4" />
-                المجلدات المشتركة
+                <Home className="w-3.5 h-3.5" />
+                الرئيسية
               </button>
               {breadcrumbs.map((crumb, index) => (
-                <span key={crumb.id} className="flex items-center gap-2">
-                  <ChevronLeft className="w-4 h-4 text-gray-400" />
+                <span key={crumb.id} className="flex items-center gap-1.5">
+                  <ChevronLeft className="w-3.5 h-3.5 text-gray-300" />
                   <button
                     onClick={() => navigateToBreadcrumb(index)}
-                    className={`text-sm font-medium ${
+                    className={`px-2 py-1 rounded-md transition-colors ${
                       index === breadcrumbs.length - 1
-                        ? "text-gray-800"
-                        : "text-blue-600 hover:text-blue-800"
+                        ? "bg-blue-50 text-blue-700 font-semibold"
+                        : "text-blue-600 hover:bg-blue-50"
                     }`}
                   >
                     {crumb.name}
@@ -289,179 +299,203 @@ export default function DriveBrowserPage() {
                 </span>
               ))}
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Search Bar */}
-        <Card>
-          <CardContent className="py-3 px-4">
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input
-                  placeholder="البحث في الملفات..."
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    if (e.target.value.length < 2) setIsSearching(false);
-                  }}
-                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  className="pr-10"
-                />
-              </div>
-              <Button onClick={handleSearch} disabled={searchQuery.length < 2} size="sm">
-                <Search className="w-4 h-4 ml-1" />
-                بحث
-              </Button>
-              {isSearching && (
-                <Button onClick={clearSearch} variant="outline" size="sm">
-                  إلغاء البحث
-                </Button>
-              )}
+            <div className="flex items-center gap-1.5">
               {currentFolderId && (
-                <Button onClick={navigateBack} variant="outline" size="sm">
-                  <ArrowLeft className="w-4 h-4 ml-1" />
+                <Button onClick={navigateBack} variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700">
+                  <ChevronRight className="w-4 h-4 ml-1" />
                   رجوع
                 </Button>
               )}
               <Button
                 onClick={() => {
-                  if (currentFolderId) {
-                    filesQuery.refetch();
-                  } else {
-                    sharedQuery.refetch();
-                  }
+                  if (currentFolderId) filesQuery.refetch();
+                  else sharedQuery.refetch();
                 }}
-                variant="outline"
+                variant="ghost"
                 size="sm"
+                className="text-gray-400 hover:text-gray-600"
               >
                 <RefreshCw className="w-4 h-4" />
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+
+        {/* Search Bar */}
+        <div className="bg-white rounded-xl border shadow-sm px-4 py-3">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                placeholder="البحث في الملفات والمجلدات..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  if (e.target.value.length < 2) setIsSearching(false);
+                }}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                className="pr-10 border-gray-200"
+              />
+            </div>
+            <Button onClick={handleSearch} disabled={searchQuery.length < 2} size="sm">
+              <Search className="w-4 h-4 ml-1" />
+              بحث
+            </Button>
+            {isSearching && (
+              <Button onClick={clearSearch} variant="outline" size="sm">
+                إلغاء
+              </Button>
+            )}
+          </div>
+        </div>
 
         {/* Search Results Badge */}
         {isSearching && (
           <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="text-sm">
+            <Badge variant="secondary" className="text-sm px-3 py-1">
               نتائج البحث عن "{searchQuery}"
               {searchResults.data && ` — ${searchResults.data.length} نتيجة`}
             </Badge>
           </div>
         )}
 
+        {/* Current Location Title */}
+        {!isSearching && (
+          <div className="flex items-center gap-2 px-1">
+            <FolderOpen className="w-5 h-5 text-amber-500" />
+            <h2 className="text-lg font-semibold text-gray-800">{currentLocationName}</h2>
+            {!isLoading && (
+              <span className="text-sm text-gray-400">
+                ({folders.length} مجلد{regularFiles.length > 0 ? ` · ${regularFiles.length} ملف` : ""})
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Loading State */}
-        {(isLoading || (isSearching && searchResults.isLoading)) && (
-          <div className="space-y-3">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <Card key={i}>
-                <CardContent className="py-3 px-4">
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="w-10 h-10 rounded" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-4 w-48" />
-                      <Skeleton className="h-3 w-32" />
-                    </div>
+        {isLoading && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="bg-white rounded-xl border p-4">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="w-10 h-10 rounded-lg" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-20" />
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))}
           </div>
         )}
 
         {/* Empty State */}
-        {!isLoading && !isSearching && files.length === 0 && (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Folder className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-              <h3 className="text-lg font-medium text-gray-600 mb-2">
-                {currentFolderId ? "هذا المجلد فارغ" : "لا توجد مجلدات مشتركة"}
-              </h3>
-              <p className="text-gray-400 text-sm">
-                {currentFolderId
-                  ? "لم يتم العثور على ملفات في هذا المجلد"
-                  : "تأكد من مشاركة المجلدات مع حساب الخدمة"}
-              </p>
-            </CardContent>
-          </Card>
+        {!isLoading && currentItems.length === 0 && !isSearching && (
+          <div className="bg-white rounded-xl border shadow-sm py-16 text-center">
+            <Folder className="w-16 h-16 mx-auto text-gray-200 mb-4" />
+            <h3 className="text-lg font-medium text-gray-500 mb-1">
+              {currentFolderId ? "هذا المجلد فارغ" : "لا توجد مجلدات مشتركة"}
+            </h3>
+            <p className="text-gray-400 text-sm">
+              {currentFolderId
+                ? "لم يتم العثور على ملفات أو مجلدات هنا"
+                : "تأكد من مشاركة المجلدات مع حساب الخدمة"}
+            </p>
+          </div>
         )}
 
-        {/* Folders Section */}
+        {/* Folders Grid */}
         {!isLoading && folders.length > 0 && (
           <div>
-            <h3 className="text-sm font-medium text-gray-500 mb-2 flex items-center gap-1">
-              <Folder className="w-4 h-4" />
-              المجلدات ({folders.length})
-            </h3>
+            {regularFiles.length > 0 && (
+              <p className="text-xs font-medium text-gray-400 mb-2 px-1 uppercase tracking-wider">
+                المجلدات
+              </p>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {folders.map((folder) => (
-                <Card
+                <button
                   key={folder.id}
-                  className="cursor-pointer hover:shadow-md transition-all hover:border-amber-300"
                   onClick={() => navigateToFolder(folder.id, folder.name)}
+                  className="bg-white rounded-xl border shadow-sm p-4 text-right hover:shadow-md hover:border-amber-300 transition-all group cursor-pointer w-full"
                 >
-                  <CardContent className="py-4 px-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center">
-                        <Folder className="w-6 h-6 text-amber-500" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{folder.name}</p>
-                        <p className="text-xs text-gray-400">مجلد</p>
-                      </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 bg-amber-50 rounded-lg flex items-center justify-center shrink-0 group-hover:bg-amber-100 transition-colors">
+                      <Folder className="w-6 h-6 text-amber-500" />
                     </div>
-                  </CardContent>
-                </Card>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm text-gray-800 truncate">{folder.name}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">مجلد</p>
+                    </div>
+                    <ChevronLeft className="w-4 h-4 text-gray-300 group-hover:text-amber-500 transition-colors shrink-0" />
+                  </div>
+                </button>
               ))}
             </div>
           </div>
         )}
 
-        {/* Files Section */}
+        {/* Files List */}
         {!isLoading && regularFiles.length > 0 && (
           <div>
-            <h3 className="text-sm font-medium text-gray-500 mb-2 flex items-center gap-1">
-              <FileText className="w-4 h-4" />
-              الملفات ({regularFiles.length})
-            </h3>
-            <Card>
-              <div className="divide-y">
+            {folders.length > 0 && (
+              <p className="text-xs font-medium text-gray-400 mb-2 px-1 uppercase tracking-wider mt-4">
+                الملفات
+              </p>
+            )}
+            <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+              {/* Table header */}
+              <div className="grid grid-cols-[1fr_100px_120px_40px] gap-2 px-4 py-2.5 bg-gray-50 border-b text-xs font-medium text-gray-500">
+                <span>الاسم</span>
+                <span className="text-center">الحجم</span>
+                <span className="text-center">التاريخ</span>
+                <span></span>
+              </div>
+              {/* File rows */}
+              <div className="divide-y divide-gray-100">
                 {regularFiles.map((file) => (
                   <div
                     key={file.id}
-                    className="flex items-center gap-3 py-3 px-4 hover:bg-slate-50 transition-colors"
+                    className="grid grid-cols-[1fr_100px_120px_40px] gap-2 items-center px-4 py-3 hover:bg-blue-50/50 transition-colors"
                   >
-                    <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center shrink-0">
-                      {getFileIcon(file.mimeType)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{file.name}</p>
-                      <div className="flex items-center gap-3 text-xs text-gray-400 mt-0.5">
-                        <span>{getFileTypeName(file.mimeType)}</span>
-                        {file.size && <span>{formatFileSize(file.size)}</span>}
-                        {file.modifiedTime && <span>{formatDate(file.modifiedTime)}</span>}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 bg-gray-50 rounded-lg flex items-center justify-center shrink-0">
+                        {getFileIcon(file.mimeType)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-800 truncate">{file.name}</p>
+                        <p className="text-xs text-gray-400">{getFileTypeName(file.mimeType)}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
+                    <span className="text-xs text-gray-500 text-center">{formatFileSize(file.size)}</span>
+                    <span className="text-xs text-gray-500 text-center">{formatDate(file.modifiedTime)}</span>
+                    <div className="flex justify-center">
                       {file.webViewLink && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
+                        <button
                           onClick={(e) => {
                             e.stopPropagation();
                             window.open(file.webViewLink, "_blank");
                           }}
+                          className="p-1.5 rounded-md text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
                           title="فتح في Google Drive"
                         >
                           <ExternalLink className="w-4 h-4" />
-                        </Button>
+                        </button>
                       )}
                     </div>
                   </div>
                 ))}
               </div>
-            </Card>
+            </div>
+          </div>
+        )}
+
+        {/* Search empty state */}
+        {isSearching && !searchResults.isLoading && (searchResults.data?.length === 0) && (
+          <div className="bg-white rounded-xl border shadow-sm py-16 text-center">
+            <Search className="w-12 h-12 mx-auto text-gray-200 mb-4" />
+            <h3 className="text-lg font-medium text-gray-500 mb-1">لا توجد نتائج</h3>
+            <p className="text-gray-400 text-sm">لم يتم العثور على ملفات تطابق "{searchQuery}"</p>
           </div>
         )}
       </div>

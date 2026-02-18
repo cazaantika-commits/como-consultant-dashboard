@@ -64,12 +64,12 @@ export interface DriveFolder {
 const FOLDER_MIME = "application/vnd.google-apps.folder";
 
 /**
- * List all files and folders shared with the service account (root level)
+ * List root-level shared folders (only the top-level folders shared with the service account)
  */
 export async function listSharedDrives(): Promise<DriveFolder[]> {
   const drive = getDriveClient();
   const res = await drive.files.list({
-    q: "'me' in readers or sharedWithMe",
+    q: "sharedWithMe = true and trashed = false",
     fields: "files(id, name, mimeType)",
     pageSize: 100,
     supportsAllDrives: true,
