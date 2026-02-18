@@ -155,3 +155,24 @@ export const tasks = mysqlTable('tasks', {
 
 export type Task = typeof tasks.$inferSelect;
 export type InsertTask = typeof tasks.$inferInsert;
+
+// AI Agents table - الوكلاء الذكيون
+export const agents = mysqlTable('agents', {
+  id: int('id').autoincrement().primaryKey(),
+  name: varchar('name', { length: 100 }).notNull().unique(),
+  nameEn: varchar('nameEn', { length: 100 }),
+  role: varchar('role', { length: 255 }).notNull(),
+  roleEn: varchar('roleEn', { length: 255 }),
+  description: text('description'),
+  color: varchar('color', { length: 20 }),
+  icon: varchar('icon', { length: 50 }),
+  status: mysqlEnum('agentStatus', ['active', 'inactive', 'maintenance']).default('active').notNull(),
+  capabilities: text('capabilities'), // JSON array of capabilities
+  isCoordinator: int('isCoordinator').default(0).notNull(), // 1 for سلوى
+  gender: mysqlEnum('gender', ['male', 'female']).default('male').notNull(),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type Agent = typeof agents.$inferSelect;
+export type InsertAgent = typeof agents.$inferInsert;

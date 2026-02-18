@@ -18,7 +18,7 @@ describe("Telegram Bot Token Validation", () => {
     expect(data.ok).toBe(true);
     expect(data.result.username).toBe("Salwa_Dev_Bot");
     expect(data.result.is_bot).toBe(true);
-  });
+  }, 30000);
 });
 
 // ============================================================
@@ -62,6 +62,23 @@ describe("Telegram Bot Module", () => {
     expect(source).toContain("/search");
     expect(source).toContain("/stats");
     expect(source).toContain("/email");
+    expect(source).toContain("/team");
+  });
+
+  it("should reference all 8 agents in the source", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const modulePath = path.resolve(__dirname, "telegramBot.ts");
+    const source = fs.readFileSync(modulePath, "utf-8");
+
+    expect(source).toContain("سلوى");
+    expect(source).toContain("خازن");
+    expect(source).toContain("فاروق");
+    expect(source).toContain("براق");
+    expect(source).toContain("خالد");
+    expect(source).toContain("قاسم");
+    expect(source).toContain("باز");
+    expect(source).toContain("جويل");
   });
 
   it("should integrate with LLM for email analysis", async () => {
@@ -138,6 +155,7 @@ describe("Telegram API Direct Tests", () => {
       { command: "search", description: "البحث في ملفات Drive" },
       { command: "stats", description: "إحصائيات المهام" },
       { command: "email", description: "تحليل بريد إلكتروني" },
+      { command: "team", description: "عرض فريق الوكلاء" },
     ];
 
     const res = await fetch(`${baseUrl}/setMyCommands`, {
@@ -154,7 +172,7 @@ describe("Telegram API Direct Tests", () => {
     const res = await fetch(`${baseUrl}/getMyCommands`);
     const data = await res.json();
     expect(data.ok).toBe(true);
-    expect(data.result.length).toBe(8);
+    expect(data.result.length).toBe(9);
 
     const commandNames = data.result.map((c: any) => c.command);
     expect(commandNames).toContain("start");
@@ -164,6 +182,7 @@ describe("Telegram API Direct Tests", () => {
     expect(commandNames).toContain("search");
     expect(commandNames).toContain("stats");
     expect(commandNames).toContain("email");
+    expect(commandNames).toContain("team");
   });
 });
 
@@ -386,5 +405,120 @@ describe("Known Projects and Owners", () => {
 
   it("should have 6 owner entries (3 Arabic + 3 English)", () => {
     expect(KNOWN_OWNERS.length).toBe(6);
+  });
+});
+
+// ============================================================
+// 9. Agent Registration Tests
+// ============================================================
+describe("Agent Registration in Database", () => {
+  it("should have all 8 agents in the database", async () => {
+    const { getDb } = await import("./db");
+    const db = await getDb();
+    if (!db) {
+      console.warn("Database not available, skipping test");
+      return;
+    }
+
+    const { agents } = await import("../drizzle/schema");
+    const result = await db.select().from(agents);
+    expect(result.length).toBe(8);
+  });
+
+  it("should have correct agent names", async () => {
+    const { getDb } = await import("./db");
+    const db = await getDb();
+    if (!db) {
+      console.warn("Database not available, skipping test");
+      return;
+    }
+
+    const { agents } = await import("../drizzle/schema");
+    const result = await db.select().from(agents);
+    const names = result.map((a) => a.name);
+
+    expect(names).toContain("سلوى");
+    expect(names).toContain("خازن");
+    expect(names).toContain("فاروق");
+    expect(names).toContain("براق");
+    expect(names).toContain("خالد");
+    expect(names).toContain("قاسم");
+    expect(names).toContain("باز");
+    expect(names).toContain("جويل");
+  });
+
+  it("should have سلوى as the coordinator", async () => {
+    const { getDb } = await import("./db");
+    const db = await getDb();
+    if (!db) {
+      console.warn("Database not available, skipping test");
+      return;
+    }
+
+    const { agents } = await import("../drizzle/schema");
+    const { eq } = await import("drizzle-orm");
+    const result = await db.select().from(agents).where(eq(agents.name, "سلوى"));
+    expect(result.length).toBe(1);
+    expect(result[0].isCoordinator).toBe(1);
+  });
+
+  it("should have all agents active", async () => {
+    const { getDb } = await import("./db");
+    const db = await getDb();
+    if (!db) {
+      console.warn("Database not available, skipping test");
+      return;
+    }
+
+    const { agents } = await import("../drizzle/schema");
+    const result = await db.select().from(agents);
+    const allActive = result.every((a) => a.status === "active");
+    expect(allActive).toBe(true);
+  });
+
+  it("should have correct roles for each agent", async () => {
+    const { getDb } = await import("./db");
+    const db = await getDb();
+    if (!db) {
+      console.warn("Database not available, skipping test");
+      return;
+    }
+
+    const { agents } = await import("../drizzle/schema");
+    const result = await db.select().from(agents);
+    const agentMap = new Map(result.map((a) => [a.name, a]));
+
+    expect(agentMap.get("خازن")?.role).toContain("أرشفة");
+    expect(agentMap.get("فاروق")?.role).toContain("محامي");
+    expect(agentMap.get("براق")?.role).toContain("تنفيذ");
+    expect(agentMap.get("خالد")?.role).toContain("جودة");
+    expect(agentMap.get("قاسم")?.role).toContain("مالي");
+    expect(agentMap.get("باز")?.role).toContain("استراتيجي");
+    expect(agentMap.get("جويل")?.role).toContain("جدوى");
+  });
+});
+
+// ============================================================
+// 10. Agents Router Tests
+// ============================================================
+describe("Agents tRPC Router", () => {
+  it("should have agents router file", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const routerPath = path.resolve(__dirname, "routers/agents.ts");
+    expect(fs.existsSync(routerPath)).toBe(true);
+  });
+
+  it("should export agentsRouter with required procedures", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const routerPath = path.resolve(__dirname, "routers/agents.ts");
+    const source = fs.readFileSync(routerPath, "utf-8");
+
+    expect(source).toContain("agentsRouter");
+    expect(source).toContain("list:");
+    expect(source).toContain("getByName:");
+    expect(source).toContain("updateStatus:");
+    expect(source).toContain("activityStats:");
   });
 });

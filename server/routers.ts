@@ -10,6 +10,7 @@ import { projectConsultantsRouter } from "./routers/projectConsultants";
 import { profilesRouter } from "./routers/profiles";
 import { driveRouter } from "./routers/drive";
 import { tasksRouter } from "./routers/tasks";
+import { agentsRouter } from "./routers/agents";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -33,6 +34,7 @@ export const appRouter = router({
   profiles: profilesRouter,
   drive: driveRouter,
   tasks: tasksRouter,
+  agents: agentsRouter,
 });
 
 export type AppRouter = typeof appRouter;
