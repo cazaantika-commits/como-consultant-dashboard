@@ -30,6 +30,10 @@ import { useLocation } from "wouter";
 // Helper to format numbers with commas
 function fmt(n: number | null | undefined): string {
   if (n == null || isNaN(n)) return "0";
+  // Preserve decimals for small numbers (percentages), round large numbers
+  if (n < 100 && n % 1 !== 0) {
+    return n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  }
   return Math.round(n).toLocaleString("en-US");
 }
 

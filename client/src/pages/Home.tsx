@@ -109,9 +109,9 @@ export default function Home() {
               </div>
 
               <h1 className="text-4xl lg:text-5xl font-extrabold text-foreground leading-tight mb-5 fade-in">
-                إدارة مشاريعك بذكاء
+                إدارة مشاريع كومو بذكاء
                 <br />
-                <span className="text-gold-gradient">مع فريق الوكلاء الرقميين</span>
+                <span className="text-gold-gradient">مع فريق الوكلاء الفنيين</span>
               </h1>
 
               <p className="text-lg text-muted-foreground leading-relaxed mb-8 max-w-2xl mx-auto fade-in">
@@ -169,37 +169,40 @@ export default function Home() {
                   icon: Bot,
                   title: "وكلاء ذكيون",
                   desc: "فريق من الوكلاء المتخصصين يعملون على مدار الساعة",
-                  color: "oklch(0.45 0.12 255)",
+                  color: "oklch(0.50 0.18 255)",
                 },
                 {
                   icon: Shield,
                   title: "تدقيق العقود",
                   desc: "مراجعة قانونية ذكية للعقود واكتشاف المخاطر",
-                  color: "oklch(0.55 0.14 175)",
+                  color: "oklch(0.55 0.20 175)",
                 },
                 {
                   icon: BarChart3,
                   title: "تحليل مالي",
                   desc: "تحليل الميزانيات والمستخلصات المالية بدقة",
-                  color: "oklch(0.55 0.15 145)",
+                  color: "oklch(0.55 0.22 145)",
                 },
                 {
                   icon: FileText,
                   title: "أرشفة ذكية",
                   desc: "تنظيم وأرشفة الملفات تلقائياً بتسمية احترافية",
-                  color: "oklch(0.55 0.12 45)",
+                  color: "oklch(0.55 0.18 45)",
                 },
               ].map((feature, i) => (
                 <div
                   key={i}
-                  className="premium-card p-6 hover-lift fade-in"
+                  className="premium-card p-6 hover-lift fade-in group"
                   style={{ animationDelay: `${i * 0.1}s` }}
                 >
                   <div
-                    className="w-11 h-11 rounded-xl flex items-center justify-center mb-4"
-                    style={{ backgroundColor: `color-mix(in oklch, ${feature.color} 10%, transparent)` }}
+                    className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg"
+                    style={{ 
+                      backgroundColor: `color-mix(in oklch, ${feature.color} 15%, transparent)`,
+                      boxShadow: `0 0 0 0 ${feature.color}20`
+                    }}
                   >
-                    <feature.icon className="w-5 h-5" style={{ color: feature.color }} />
+                    <feature.icon className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" style={{ color: feature.color }} />
                   </div>
                   <h3 className="font-bold text-foreground mb-2">{feature.title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">{feature.desc}</p>
@@ -216,11 +219,11 @@ export default function Home() {
               <h2 className="text-lg font-bold text-foreground mb-5">الوصول السريع</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                  { label: "لوحة الوكلاء", icon: Bot, path: "/agent-dashboard", color: "oklch(0.45 0.12 255)" },
-                  { label: "المهام", icon: FileText, path: "/tasks", color: "oklch(0.55 0.14 175)" },
-                  { label: "ملفات Drive", icon: Archive, path: "/drive", color: "oklch(0.55 0.15 145)" },
-                  { label: "تقييم الاستشاريين", icon: Users, path: "/consultant-dashboard", color: "oklch(0.55 0.12 45)" },
-                  { label: "دراسة الجدوى", icon: Calculator, path: "/feasibility-study", color: "oklch(0.50 0.15 30)" },
+                  { label: "لوحة الوكلاء", icon: Bot, path: "/agent-dashboard", color: "oklch(0.50 0.18 255)" },
+                  { label: "المهام", icon: FileText, path: "/tasks", color: "oklch(0.55 0.20 175)" },
+                  { label: "ملفات Drive", icon: Archive, path: "/drive", color: "oklch(0.55 0.22 145)" },
+                  { label: "تقييم الاستشاريين", icon: Users, path: "/consultant-dashboard", color: "oklch(0.55 0.18 45)" },
+                  { label: "دراسة الجدوى", icon: Calculator, path: "/feasibility-study", color: "oklch(0.50 0.20 30)" },
                 ].map((item, i) => (
                   <button
                     key={i}
@@ -228,8 +231,8 @@ export default function Home() {
                     className="premium-card p-5 text-right hover-lift group"
                   >
                     <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 transition-transform group-hover:scale-110"
-                      style={{ backgroundColor: `color-mix(in oklch, ${item.color} 10%, transparent)` }}
+                      className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 transition-all duration-300 group-hover:scale-110 group-hover:shadow-md"
+                      style={{ backgroundColor: `color-mix(in oklch, ${item.color} 18%, transparent)` }}
                     >
                       <item.icon className="w-5 h-5" style={{ color: item.color }} />
                     </div>
