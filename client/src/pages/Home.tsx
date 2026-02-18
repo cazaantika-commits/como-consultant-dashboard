@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, BarChart3, ClipboardList, TrendingUp, FileText, Building2, HardDrive } from "lucide-react";
+import { Loader2, BarChart3, ClipboardList, TrendingUp, FileText, Building2, HardDrive, Bot } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
 
@@ -153,6 +153,24 @@ export default function Home() {
             <CardContent>
               <p className="text-gray-600">
                 إدارة ومتابعة مهام المشاريع — إدخال يدوي وذكي من الوكلاء
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* لوحة تحكم الوكلاء */}
+          <Card
+            className="cursor-pointer hover:shadow-lg transition-all border-2 border-indigo-200 hover:border-indigo-400"
+            onClick={() => navigate("/agent-dashboard")}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-indigo-700">
+                <Bot className="w-6 h-6" />
+                لوحة تحكم الوكلاء
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">
+                متابعة مهام قاسم وسلوى — فلترة حسب الوكيل والحالة مع سجل النشاط
               </p>
             </CardContent>
           </Card>
