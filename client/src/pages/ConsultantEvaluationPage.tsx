@@ -583,36 +583,32 @@ export default function ConsultantEvaluationPage() {
                       </div>
                     </div>
 
-                    {/* Evaluation Table for Active Evaluator */}
-                    {projectConsultants.length > 2 && (
-                      <p className="text-xs text-stone-400 mb-1">← اسحب لليسار لرؤية باقي الاستشاريين</p>
-                    )}
+                    {/* Evaluation Table for Active Evaluator - Transposed: consultants as rows, criteria as columns */}
                     <div className="overflow-x-auto border rounded-lg" style={{ maxWidth: '100%' }}>
-                      <table className="border-collapse w-max">
+                      <table className="border-collapse w-full table-fixed">
                         <thead>
                           <tr className="bg-stone-800 text-white">
-                            <th className="border border-stone-600 p-2 text-right sticky right-0 bg-stone-800 z-10" style={{ minWidth: '180px' }}>المعيار (الوزن)</th>
-                            {projectConsultants.map((consultant) => (
-                              <th key={consultant.id} className="border border-stone-600 p-2 text-center" style={{ minWidth: '250px', width: '250px' }}>
-                                {consultant.name}
+                            <th className="border border-stone-600 p-2 text-right sticky right-0 bg-stone-800 z-10" style={{ width: '120px', minWidth: '120px' }}>الاستشاري</th>
+                            {CRITERIA.map((criterion) => (
+                              <th key={criterion.id} className="border border-stone-600 p-1 text-center text-[10px] leading-tight" style={{ width: `${(100 - 12) / CRITERIA.length}%` }}>
+                                <div className="truncate" title={criterion.name}>{criterion.name}</div>
+                                <div className="text-stone-400 text-[9px]">({criterion.weight}%)</div>
                               </th>
                             ))}
                           </tr>
                         </thead>
                         <tbody>
-                          {CRITERIA.map((criterion) => (
-                            <tr key={criterion.id} className="border-b">
-                              <td className="border p-2 bg-gray-50 font-semibold text-right sticky right-0 z-10" style={{ minWidth: '180px' }}>
-                                {criterion.name}
-                                <br />
-                                <small className="text-gray-600">(وزن: {criterion.weight}%)</small>
+                          {projectConsultants.map((consultant) => (
+                            <tr key={consultant.id} className="border-b hover:bg-stone-50/50">
+                              <td className="border p-2 bg-gray-50 font-semibold text-right text-sm sticky right-0 z-10" style={{ width: '120px', minWidth: '120px' }}>
+                                {consultant.name}
                               </td>
-                              {projectConsultants.map((consultant) => {
+                              {CRITERIA.map((criterion) => {
                                 const currentScore = (evaluatorScoresQuery.data || []).find(
                                   (s: any) => s.consultantId === consultant.id && s.criterionId === criterion.id && s.evaluatorName === activeEvaluator
                                 );
                                 return (
-                                  <td key={consultant.id} className="border p-2 text-center">
+                                  <td key={criterion.id} className="border p-1 text-center">
                                     <Select
                                       value={currentScore?.score?.toString() || ""}
                                       onValueChange={(value) => {
@@ -625,8 +621,8 @@ export default function ConsultantEvaluationPage() {
                                         });
                                       }}
                                     >
-                                      <SelectTrigger className="w-full">
-                                        <SelectValue placeholder="اختر" />
+                                      <SelectTrigger className="w-full h-8 text-xs px-1">
+                                        <SelectValue placeholder="—" />
                                       </SelectTrigger>
                                       <SelectContent>
                                         {criterion.options.map((option: { score: number; label: string }) => (
@@ -648,32 +644,34 @@ export default function ConsultantEvaluationPage() {
                       </table>
                     </div>
 
-                    {/* Average Results Table */}
+                    {/* Average Results Table - Transposed */}
                     <div className="mt-6">
                       <h3 className="font-bold text-stone-800 mb-3">المتوسط النهائي (من المقيّمين الثلاثة)</h3>
                       <div className="overflow-x-auto border rounded-lg" style={{ maxWidth: '100%' }}>
-                        <table className="border-collapse w-max">
+                        <table className="border-collapse w-full table-fixed">
                           <thead>
                             <tr className="bg-amber-100">
-                              <th className="border p-2 text-right font-semibold text-amber-800 sticky right-0 bg-amber-100 z-10" style={{ minWidth: '180px' }}>المعيار</th>
-                              {projectConsultants.map((consultant) => (
-                                <th key={consultant.id} className="border p-2 text-center font-semibold text-amber-800" style={{ minWidth: '200px', width: '200px' }}>
-                                  {consultant.name}
+                              <th className="border p-2 text-right font-semibold text-amber-800 sticky right-0 bg-amber-100 z-10" style={{ width: '120px', minWidth: '120px' }}>الاستشاري</th>
+                              {CRITERIA.map((criterion) => (
+                                <th key={criterion.id} className="border p-1 text-center font-semibold text-amber-800 text-[10px] leading-tight" style={{ width: `${(100 - 12) / (CRITERIA.length + 1)}%` }}>
+                                  <div className="truncate" title={criterion.name}>{criterion.name}</div>
+                                  <div className="text-amber-600 text-[9px]">({criterion.weight}%)</div>
                                 </th>
                               ))}
+                              <th className="border p-1 text-center font-bold text-amber-900 text-xs" style={{ width: `${(100 - 12) / (CRITERIA.length + 1)}%` }}>المجموع</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {CRITERIA.map((criterion, critIdx) => (
-                              <tr key={criterion.id} className="border-b">
-                                <td className="border p-2 bg-gray-50 font-semibold text-right text-sm sticky right-0 z-10" style={{ minWidth: '180px' }}>
-                                  {criterion.name} ({criterion.weight}%)
+                            {projectConsultants.map((consultant) => (
+                              <tr key={consultant.id} className="border-b hover:bg-amber-50/50">
+                                <td className="border p-2 bg-gray-50 font-semibold text-right text-sm sticky right-0 z-10" style={{ width: '120px', minWidth: '120px' }}>
+                                  {consultant.name}
                                 </td>
-                                {projectConsultants.map((consultant) => {
+                                {CRITERIA.map((criterion, critIdx) => {
                                   const avgScore = consultantScores[consultant.id]?.scores[critIdx] || 0;
                                   return (
-                                    <td key={consultant.id} className="border p-2 text-center">
-                                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-sm font-bold ${
+                                    <td key={criterion.id} className="border p-1 text-center">
+                                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${
                                         avgScore >= 75 ? 'bg-emerald-100 text-emerald-700' :
                                         avgScore >= 50 ? 'bg-amber-100 text-amber-700' :
                                         avgScore > 0 ? 'bg-red-100 text-red-700' :
@@ -684,16 +682,11 @@ export default function ConsultantEvaluationPage() {
                                     </td>
                                   );
                                 })}
+                                <td className="border p-1 text-center font-bold text-lg">
+                                  {consultantScores[consultant.id]?.weighted.toFixed(1) || 0}
+                                </td>
                               </tr>
                             ))}
-                            <tr className="bg-stone-100 font-bold">
-                              <td className="border p-2 text-right sticky right-0 bg-stone-100 z-10">المجموع المرجح</td>
-                              {projectConsultants.map((consultant) => (
-                                <td key={consultant.id} className="border p-2 text-center text-lg">
-                                  {consultantScores[consultant.id]?.weighted.toFixed(1) || 0} / 100
-                                </td>
-                              ))}
-                            </tr>
                           </tbody>
                         </table>
                       </div>
