@@ -1,0 +1,67 @@
+{
+  "query": "SHOW TABLES;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SHOW TABLES;",
+  "rows": [
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "__drizzle_migrations"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "agentActivityLog"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "agents"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "committeeDecisions"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "consultantDetails"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "consultantNotes"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "consultantProfiles"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "consultants"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "dashboardData"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "evaluationScores"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "evaluatorScores"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "feasibilityStudies"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "financialData"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "projectCapitalSettings"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "projectConsultants"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "projectPhases"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "projects"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "tasks"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "users"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_Q366eAYG4Q7iaM8VuAmmFX\n__drizzle_migrations\nagentActivityLog\nagents\ncommitteeDecisions\nconsultantDetails\nconsultantNotes\nconsultantProfiles\nconsultants\ndashboardData\nevaluationScores\nevaluatorScores\nfeasibilityStudies\nfinancialData\nprojectCapitalSettings\nprojectConsultants\nprojectPhases\nprojects\ntasks\nusers\n",
+  "stderr": "",
+  "execution_time_ms": 1534
+}
