@@ -966,6 +966,34 @@ async function handleFreeText(
       }
     }
 
+    // Quick email check pattern - detect email-related free text
+    const emailKeywords = [
+      "ايميل", "إيميل", "اميل", "إميل", "بريد", "رسائل", "رسالة",
+      "email", "mail", "inbox",
+      "شوفي", "شوف", "تشيك", "تشيكي", "فحص", "افحصي", "راجعي",
+      "وصل", "وصلني", "وصلت", "جديد", "جديدة",
+      "الوارد", "صندوق", "check",
+    ];
+    const textLower = text.toLowerCase();
+    const isEmailRelated = emailKeywords.some(kw => textLower.includes(kw));
+    if (isEmailRelated) {
+      // Initialize email integration for this chat
+      setOwnerChatId(chatId);
+      initEmailIntegration(bot, chatId);
+      await bot.sendMessage(chatId, "📧 جاري فحص بريدك الإلكتروني...");
+      try {
+        const newCount = await forceEmailCheck();
+        if (newCount <= 0) {
+          await bot.sendMessage(chatId, "✅ لا توجد رسائل جديدة غير مقروءة في بريدك.");
+        }
+        // If there are new emails, the emailIntegration module will send notifications automatically
+      } catch (emailError: any) {
+        console.error("[TelegramBot] Email check from free text error:", emailError);
+        await bot.sendMessage(chatId, "⚠️ حدث خطأ أثناء فحص البريد. جرب /checkmail لاحقاً.");
+      }
+      return;
+    }
+
     // Use AI to understand the message
     const llmResponse = await invokeLLM({
       messages: [
@@ -1009,7 +1037,7 @@ async function handleFreeText(
             properties: {
               intent: {
                 type: "string",
-                enum: ["create_task", "query_tasks", "search_files", "general_response"],
+                enum: ["create_task", "query_tasks", "search_files", "check_email", "general_response"],
               },
               task_data: {
                 type: "object",
