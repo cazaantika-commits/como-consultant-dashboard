@@ -291,3 +291,35 @@ export const consultantDetails = mysqlTable('consultantDetails', {
 
 export type ConsultantDetail = typeof consultantDetails.$inferSelect;
 export type InsertConsultantDetail = typeof consultantDetails.$inferInsert;
+
+// Capital Planning - Project Phases (5 phases per project)
+export const projectPhases = mysqlTable('projectPhases', {
+  id: int('id').autoincrement().primaryKey(),
+  projectId: int('projectId').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  phaseNumber: int('phaseNumber').notNull(), // 1-5
+  phaseName: varchar('phaseName', { length: 255 }).notNull(), // Market & Feasibility, Consultant & Design, etc.
+  startMonth: int('startMonth').notNull(), // Month offset from project start (0-based)
+  durationMonths: int('durationMonths').notNull(), // Duration in months
+  estimatedCost: decimal('estimatedCost', { precision: 15, scale: 2 }), // Total cost for this phase in AED
+  delayMonths: int('delayMonths').default(0).notNull(), // Manual delay/shift in months (negative = speed up)
+  notes: text('notes'),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type ProjectPhase = typeof projectPhases.$inferSelect;
+export type InsertProjectPhase = typeof projectPhases.$inferInsert;
+
+// Capital Planning - Project start date and settings
+export const projectCapitalSettings = mysqlTable('projectCapitalSettings', {
+  id: int('id').autoincrement().primaryKey(),
+  projectId: int('projectId').notNull().references(() => projects.id, { onDelete: 'cascade' }).unique(),
+  startDate: varchar('startDate', { length: 10 }).notNull(), // YYYY-MM format
+  totalBudget: decimal('totalBudget', { precision: 15, scale: 2 }), // Total project budget
+  notes: text('notes'),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type ProjectCapitalSettings = typeof projectCapitalSettings.$inferSelect;
+export type InsertProjectCapitalSettings = typeof projectCapitalSettings.$inferInsert;

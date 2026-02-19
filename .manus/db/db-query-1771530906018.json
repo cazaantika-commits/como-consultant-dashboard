@@ -1,0 +1,34 @@
+{
+  "query": "SELECT id, name FROM projects;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, name FROM projects;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "مركز مجان التجاري (G+4)"
+    },
+    {
+      "id": "2",
+      "name": "مجان متعدد الاستخدامات (G+4P+25)"
+    },
+    {
+      "id": "3",
+      "name": "مبنى الجداف السكني (G+7)"
+    },
+    {
+      "id": "4",
+      "name": "ند الشبا — قطعة 1 (6185392)"
+    },
+    {
+      "id": "5",
+      "name": "ند الشبا — قطعة 2 المدمجة (6182776)"
+    },
+    {
+      "id": "6",
+      "name": "ند الشبا — قطعة 3 الفلل (6180578)"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\n1\tمركز مجان التجاري (G+4)\n2\tمجان متعدد الاستخدامات (G+4P+25)\n3\tمبنى الجداف السكني (G+7)\n4\tند الشبا — قطعة 1 (6185392)\n5\tند الشبا — قطعة 2 المدمجة (6182776)\n6\tند الشبا — قطعة 3 الفلل (6180578)\n",
+  "stderr": "",
+  "execution_time_ms": 1538
+}

@@ -19,6 +19,7 @@ import ConsultantProposalsPage from "./pages/ConsultantProposalsPage";
 import ConsultantKnowPage from "./pages/ConsultantKnowPage";
 import ConsultantRecommendPage from "./pages/ConsultantRecommendPage";
 import ConsultantCommitteePage from "./pages/ConsultantCommitteePage";
+import CapitalPlanningPage from "./pages/CapitalPlanningPage";
 
 function Router() {
   return (
@@ -38,6 +39,7 @@ function Router() {
       <Route path="/consultant-know" component={ConsultantKnowPage} />
       <Route path="/consultant-recommend" component={ConsultantRecommendPage} />
       <Route path="/consultant-committee" component={ConsultantCommitteePage} />
+      <Route path="/capital-planning" component={CapitalPlanningPage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
