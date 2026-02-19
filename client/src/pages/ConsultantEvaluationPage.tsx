@@ -239,6 +239,12 @@ export default function ConsultantEvaluationPage() {
     },
   });
 
+  const updateProjectMutation = trpc.projects.update.useMutation({
+    onSuccess: () => {
+      projectDetailsQuery.refetch();
+    },
+  });
+
   const addConsultantMutation = trpc.projectConsultants.add.useMutation({
     onSuccess: () => {
       projectDetailsQuery.refetch();
@@ -418,16 +424,32 @@ export default function ConsultantEvaluationPage() {
               <CardContent>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <p className="text-sm text-gray-600">مساحة البناء</p>
-                    <p className="text-lg font-bold">{selectedProject.bua || 0} قدم²</p>
+                    <label className="text-sm text-gray-600 block mb-1">مساحة البناء (قدم²)</label>
+                    <Input
+                      type="number"
+                      value={selectedProject.bua || ''}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value) || 0;
+                        updateProjectMutation.mutate({ id: selectedProject.id, bua: val });
+                      }}
+                      placeholder="مثلاً: 500000"
+                    />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">سعر القدم المربع</p>
-                    <p className="text-lg font-bold">{selectedProject.pricePerSqft || 0} AED</p>
+                    <label className="text-sm text-gray-600 block mb-1">سعر القدم المربع (AED)</label>
+                    <Input
+                      type="number"
+                      value={selectedProject.pricePerSqft || ''}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value) || 0;
+                        updateProjectMutation.mutate({ id: selectedProject.id, pricePerSqft: val });
+                      }}
+                      placeholder="مثلاً: 100"
+                    />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">إجمالي تكلفة البناء</p>
-                    <p className="text-lg font-bold">
+                    <p className="text-sm text-gray-600 mb-1">إجمالي تكلفة البناء</p>
+                    <p className="text-lg font-bold text-stone-800">
                       {((selectedProject.bua || 0) * (selectedProject.pricePerSqft || 0)).toLocaleString()} AED
                     </p>
                   </div>
@@ -576,13 +598,16 @@ export default function ConsultantEvaluationPage() {
                     </div>
 
                     {/* Evaluation Table for Active Evaluator */}
-                    <div className="overflow-x-auto" style={{ maxWidth: '100%' }}>
-                      <table className="border-collapse" style={{ minWidth: `${200 + projectConsultants.length * 220}px` }}>
+                    {projectConsultants.length > 2 && (
+                      <p className="text-xs text-stone-400 mb-1">← اسحب لليسار لرؤية باقي الاستشاريين</p>
+                    )}
+                    <div className="overflow-x-auto border rounded-lg" style={{ maxWidth: '100%' }}>
+                      <table className="border-collapse w-max">
                         <thead>
                           <tr className="bg-stone-800 text-white">
                             <th className="border border-stone-600 p-2 text-right sticky right-0 bg-stone-800 z-10" style={{ minWidth: '180px' }}>المعيار (الوزن)</th>
                             {projectConsultants.map((consultant) => (
-                              <th key={consultant.id} className="border border-stone-600 p-2 text-center" style={{ minWidth: '200px' }}>
+                              <th key={consultant.id} className="border border-stone-600 p-2 text-center" style={{ minWidth: '250px', width: '250px' }}>
                                 {consultant.name}
                               </th>
                             ))}
@@ -640,13 +665,13 @@ export default function ConsultantEvaluationPage() {
                     {/* Average Results Table */}
                     <div className="mt-6">
                       <h3 className="font-bold text-stone-800 mb-3">المتوسط النهائي (من المقيّمين الثلاثة)</h3>
-                      <div className="overflow-x-auto" style={{ maxWidth: '100%' }}>
-                        <table className="border-collapse" style={{ minWidth: `${200 + projectConsultants.length * 150}px` }}>
+                      <div className="overflow-x-auto border rounded-lg" style={{ maxWidth: '100%' }}>
+                        <table className="border-collapse w-max">
                           <thead>
                             <tr className="bg-amber-100">
                               <th className="border p-2 text-right font-semibold text-amber-800 sticky right-0 bg-amber-100 z-10" style={{ minWidth: '180px' }}>المعيار</th>
                               {projectConsultants.map((consultant) => (
-                                <th key={consultant.id} className="border p-2 text-center font-semibold text-amber-800">
+                                <th key={consultant.id} className="border p-2 text-center font-semibold text-amber-800" style={{ minWidth: '200px', width: '200px' }}>
                                   {consultant.name}
                                 </th>
                               ))}
