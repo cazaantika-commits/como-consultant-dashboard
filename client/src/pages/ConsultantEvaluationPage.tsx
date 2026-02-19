@@ -209,6 +209,7 @@ export default function ConsultantEvaluationPage() {
   const { user, isAuthenticated } = useAuth();
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [newProjectName, setNewProjectName] = useState("");
+  const [newConsultantName, setNewConsultantName] = useState("");
   const [activeEvaluator, setActiveEvaluator] = useState('sheikh_issa');
 
   // Queries
@@ -240,6 +241,26 @@ export default function ConsultantEvaluationPage() {
 
   const addConsultantMutation = trpc.projectConsultants.add.useMutation({
     onSuccess: () => {
+      projectDetailsQuery.refetch();
+    },
+  });
+
+  const removeConsultantFromProjectMutation = trpc.projectConsultants.remove.useMutation({
+    onSuccess: () => {
+      projectDetailsQuery.refetch();
+    },
+  });
+
+  const createConsultantMutation = trpc.consultants.create.useMutation({
+    onSuccess: () => {
+      consultantsQuery.refetch();
+      setNewConsultantName("");
+    },
+  });
+
+  const deleteConsultantMutation = trpc.consultants.delete.useMutation({
+    onSuccess: () => {
+      consultantsQuery.refetch();
       projectDetailsQuery.refetch();
     },
   });
@@ -420,6 +441,7 @@ export default function ConsultantEvaluationPage() {
                 <CardTitle className="flex items-center gap-2"><Users className="w-5 h-5 text-stone-600" /> إدارة الاستشاريين للمشروع</CardTitle>
               </CardHeader>
               <CardContent>
+                {/* Add existing consultant to project */}
                 <div className="flex gap-2 mb-4">
                   <Select
                     onValueChange={(value) => {
@@ -432,8 +454,8 @@ export default function ConsultantEvaluationPage() {
                       }
                     }}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="أضف استشاري" />
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="أضف استشاري للمشروع" />
                     </SelectTrigger>
                     <SelectContent>
                       {consultants
@@ -446,15 +468,75 @@ export default function ConsultantEvaluationPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                {/* Project consultants with remove button */}
+                <div className="flex flex-wrap gap-2 mb-6">
                   {projectConsultants.map((consultant) => (
                     <div
                       key={consultant.id}
-                      className="bg-stone-100 text-stone-800 px-3 py-1 rounded-full text-sm"
+                      className="bg-stone-100 text-stone-800 px-3 py-1 rounded-full text-sm flex items-center gap-1"
                     >
                       {consultant.name}
+                      <button
+                        onClick={() => {
+                          if (confirm(`هل تريد إزالة ${consultant.name} من هذا المشروع؟`)) {
+                            removeConsultantFromProjectMutation.mutate({
+                              projectId: selectedProject.id,
+                              consultantId: consultant.id,
+                            });
+                          }
+                        }}
+                        className="mr-1 text-red-400 hover:text-red-600 transition-colors"
+                        title="إزالة من المشروع"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
                     </div>
                   ))}
+                </div>
+                {/* Add new consultant to master list */}
+                <div className="border-t pt-4">
+                  <p className="text-sm text-stone-500 mb-2">إضافة استشاري جديد للقائمة الرئيسية</p>
+                  <div className="flex gap-2">
+                    <Input
+                      value={newConsultantName}
+                      onChange={(e) => setNewConsultantName(e.target.value)}
+                      placeholder="اسم الاستشاري الجديد"
+                      className="flex-1"
+                    />
+                    <Button
+                      onClick={() => {
+                        if (newConsultantName.trim()) {
+                          createConsultantMutation.mutate({ name: newConsultantName.trim() });
+                        }
+                      }}
+                      disabled={!newConsultantName.trim() || createConsultantMutation.isPending}
+                      size="sm"
+                    >
+                      <Plus className="w-4 h-4 ml-1" /> إضافة
+                    </Button>
+                  </div>
+                  {/* Master list with delete */}
+                  <div className="mt-3">
+                    <p className="text-xs text-stone-400 mb-1">القائمة الرئيسية:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {consultants.map((c) => (
+                        <div key={c.id} className="bg-stone-50 border border-stone-200 text-stone-600 px-2 py-0.5 rounded text-xs flex items-center gap-1">
+                          {c.name}
+                          <button
+                            onClick={() => {
+                              if (confirm(`هل تريد حذف ${c.name} نهائياً من القائمة الرئيسية؟`)) {
+                                deleteConsultantMutation.mutate(c.id);
+                              }
+                            }}
+                            className="text-red-300 hover:text-red-500 transition-colors"
+                            title="حذف من القائمة الرئيسية"
+                          >
+                            <Trash2 className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -494,13 +576,13 @@ export default function ConsultantEvaluationPage() {
                     </div>
 
                     {/* Evaluation Table for Active Evaluator */}
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse">
+                    <div className="overflow-x-auto" style={{ maxWidth: '100%' }}>
+                      <table className="border-collapse" style={{ minWidth: `${200 + projectConsultants.length * 220}px` }}>
                         <thead>
                           <tr className="bg-stone-800 text-white">
-                            <th className="border border-stone-600 p-2 text-right">المعيار (الوزن)</th>
+                            <th className="border border-stone-600 p-2 text-right sticky right-0 bg-stone-800 z-10" style={{ minWidth: '180px' }}>المعيار (الوزن)</th>
                             {projectConsultants.map((consultant) => (
-                              <th key={consultant.id} className="border border-stone-600 p-2 text-center">
+                              <th key={consultant.id} className="border border-stone-600 p-2 text-center" style={{ minWidth: '200px' }}>
                                 {consultant.name}
                               </th>
                             ))}
@@ -509,7 +591,7 @@ export default function ConsultantEvaluationPage() {
                         <tbody>
                           {CRITERIA.map((criterion) => (
                             <tr key={criterion.id} className="border-b">
-                              <td className="border p-2 bg-gray-50 font-semibold text-right">
+                              <td className="border p-2 bg-gray-50 font-semibold text-right sticky right-0 z-10" style={{ minWidth: '180px' }}>
                                 {criterion.name}
                                 <br />
                                 <small className="text-gray-600">(وزن: {criterion.weight}%)</small>
@@ -558,11 +640,11 @@ export default function ConsultantEvaluationPage() {
                     {/* Average Results Table */}
                     <div className="mt-6">
                       <h3 className="font-bold text-stone-800 mb-3">المتوسط النهائي (من المقيّمين الثلاثة)</h3>
-                      <div className="overflow-x-auto">
-                        <table className="w-full border-collapse">
+                      <div className="overflow-x-auto" style={{ maxWidth: '100%' }}>
+                        <table className="border-collapse" style={{ minWidth: `${200 + projectConsultants.length * 150}px` }}>
                           <thead>
                             <tr className="bg-amber-100">
-                              <th className="border p-2 text-right font-semibold text-amber-800">المعيار</th>
+                              <th className="border p-2 text-right font-semibold text-amber-800 sticky right-0 bg-amber-100 z-10" style={{ minWidth: '180px' }}>المعيار</th>
                               {projectConsultants.map((consultant) => (
                                 <th key={consultant.id} className="border p-2 text-center font-semibold text-amber-800">
                                   {consultant.name}
@@ -573,7 +655,7 @@ export default function ConsultantEvaluationPage() {
                           <tbody>
                             {CRITERIA.map((criterion, critIdx) => (
                               <tr key={criterion.id} className="border-b">
-                                <td className="border p-2 bg-gray-50 font-semibold text-right text-sm">
+                                <td className="border p-2 bg-gray-50 font-semibold text-right text-sm sticky right-0 z-10" style={{ minWidth: '180px' }}>
                                   {criterion.name} ({criterion.weight}%)
                                 </td>
                                 {projectConsultants.map((consultant) => {
@@ -594,7 +676,7 @@ export default function ConsultantEvaluationPage() {
                               </tr>
                             ))}
                             <tr className="bg-stone-100 font-bold">
-                              <td className="border p-2 text-right">المجموع المرجح</td>
+                              <td className="border p-2 text-right sticky right-0 bg-stone-100 z-10">المجموع المرجح</td>
                               {projectConsultants.map((consultant) => (
                                 <td key={consultant.id} className="border p-2 text-center text-lg">
                                   {consultantScores[consultant.id]?.weighted.toFixed(1) || 0} / 100
@@ -617,16 +699,16 @@ export default function ConsultantEvaluationPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="overflow-x-auto">
-                      <table className="w-full border-collapse">
+                      <table className="w-full border-collapse table-fixed">
                         <thead>
                           <tr className="bg-stone-700 text-white">
-                            <th className="border p-2 text-right">الاستشاري</th>
-                            <th className="border p-2 text-center">نوع التصميم</th>
-                            <th className="border p-2 text-center">قيمة التصميم</th>
-                            <th className="border p-2 text-center">نوع الإشراف</th>
-                            <th className="border p-2 text-center">قيمة الإشراف</th>
-                            <th className="border p-2 text-center">المجموع</th>
-                            <th className="border p-2 text-center">📎 رابط عرض السعر</th>
+                            <th className="border p-2 text-right" style={{ width: '15%' }}>الاستشاري</th>
+                            <th className="border p-2 text-center" style={{ width: '10%' }}>نوع التصميم</th>
+                            <th className="border p-2 text-center" style={{ width: '15%' }}>قيمة التصميم</th>
+                            <th className="border p-2 text-center" style={{ width: '10%' }}>نوع الإشراف</th>
+                            <th className="border p-2 text-center" style={{ width: '15%' }}>قيمة الإشراف</th>
+                            <th className="border p-2 text-center" style={{ width: '15%' }}>المجموع</th>
+                            <th className="border p-2 text-center" style={{ width: '20%' }}>📎 رابط عرض السعر</th>
                           </tr>
                         </thead>
                         <tbody>
