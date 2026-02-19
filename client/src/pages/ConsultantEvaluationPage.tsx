@@ -6,7 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Plus, Trash2, Download, Star, BarChart3, DollarSign, Users, Award, ExternalLink, Link2 } from "lucide-react";
+import { Loader2, Plus, Trash2, Download, Star, BarChart3, DollarSign, Users, Award, ExternalLink, Link2, FileDown } from "lucide-react";
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 // FinancialRow component with local state - saves ONLY on blur
 function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, updateFinancialMutation, onTotalChange }: {
@@ -621,7 +623,12 @@ export default function ConsultantEvaluationPage() {
                                         });
                                       }}
                                     >
-                                      <SelectTrigger className="w-full h-8 text-xs px-1">
+                                      <SelectTrigger className={`w-full h-8 text-xs px-1 font-bold ${
+                                        (currentScore?.score ?? 0) >= 8 ? 'text-emerald-700 bg-emerald-50 border-emerald-200' :
+                                        (currentScore?.score ?? 0) >= 6 ? 'text-amber-700 bg-amber-50 border-amber-200' :
+                                        (currentScore?.score ?? 0) >= 2 ? 'text-red-700 bg-red-50 border-red-200' :
+                                        ''
+                                      }`}>
                                         <SelectValue placeholder="—">
                                           {currentScore?.score ? `${currentScore.score}` : '—'}
                                         </SelectValue>
@@ -675,18 +682,25 @@ export default function ConsultantEvaluationPage() {
                                   return (
                                     <td key={criterion.id} className="border p-1 text-center">
                                       <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${
-                                        avgScore >= 75 ? 'bg-emerald-100 text-emerald-700' :
-                                        avgScore >= 50 ? 'bg-amber-100 text-amber-700' :
+                                        avgScore >= 8 ? 'bg-emerald-100 text-emerald-700' :
+                                        avgScore >= 6 ? 'bg-amber-100 text-amber-700' :
                                         avgScore > 0 ? 'bg-red-100 text-red-700' :
                                         'bg-gray-100 text-gray-400'
                                       }`}>
-                                        {avgScore > 0 ? avgScore.toFixed(0) : '—'}
+                                        {avgScore > 0 ? avgScore.toFixed(1) : '—'}
                                       </span>
                                     </td>
                                   );
                                 })}
-                                <td className="border p-1 text-center font-bold text-lg">
-                                  {consultantScores[consultant.id]?.weighted.toFixed(1) || 0}
+                                <td className="border p-1 text-center">
+                                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-bold ${
+                                    (consultantScores[consultant.id]?.weighted || 0) >= 7 ? 'bg-emerald-200 text-emerald-800' :
+                                    (consultantScores[consultant.id]?.weighted || 0) >= 5 ? 'bg-amber-200 text-amber-800' :
+                                    (consultantScores[consultant.id]?.weighted || 0) > 0 ? 'bg-red-200 text-red-800' :
+                                    'bg-gray-100 text-gray-400'
+                                  }`}>
+                                    {consultantScores[consultant.id]?.weighted.toFixed(1) || '0.0'}
+                                  </span>
                                 </td>
                               </tr>
                             ))}
@@ -747,7 +761,120 @@ export default function ConsultantEvaluationPage() {
             {/* Results Summary */}
             <Card className="mt-6">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Award className="w-5 h-5 text-amber-500" /> ملخص المقارنة والترتيب</CardTitle>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="flex items-center gap-2"><Award className="w-5 h-5 text-amber-500" /> ملخص المقارنة والترتيب</CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => {
+                      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+                      
+                      // Title
+                      doc.setFontSize(16);
+                      doc.text(`Evaluation Report - ${selectedProject?.name || 'Project'}`, 148, 15, { align: 'center' });
+                      doc.setFontSize(10);
+                      doc.text(`Date: ${new Date().toLocaleDateString('en-US')}`, 148, 22, { align: 'center' });
+                      
+                      // BUA Info
+                      const bua = selectedProject?.bua || 0;
+                      const price = selectedProject?.pricePerSqft || 0;
+                      doc.text(`BUA: ${bua.toLocaleString()} sqft | Price/sqft: ${price} AED | Total: ${(bua * price).toLocaleString()} AED`, 148, 28, { align: 'center' });
+                      
+                      // Technical Evaluation Table
+                      const sortedConsultants = projectConsultants
+                        .map((c) => ({ c, score: consultantScores[c.id]?.weighted || 0, cost: financialTotals[c.id] || 0 }))
+                        .sort((a, b) => b.score - a.score);
+                      
+                      const criteriaHeaders = CRITERIA.map(cr => cr.shortName);
+                      const tableHead = [['#', 'Consultant', ...criteriaHeaders, 'Weighted Total']];
+                      const tableBody = sortedConsultants.map((item, idx) => {
+                        const scores = consultantScores[item.c.id];
+                        const criteriaScores = CRITERIA.map((_, i) => {
+                          const s = scores?.scores[i] || 0;
+                          return s > 0 ? s.toFixed(1) : '-';
+                        });
+                        return [
+                          String(idx + 1),
+                          item.c.name,
+                          ...criteriaScores,
+                          (scores?.weighted || 0).toFixed(1)
+                        ];
+                      });
+                      
+                      autoTable(doc, {
+                        head: tableHead,
+                        body: tableBody,
+                        startY: 34,
+                        theme: 'grid',
+                        headStyles: { fillColor: [68, 64, 60], fontSize: 7, halign: 'center' },
+                        bodyStyles: { fontSize: 8, halign: 'center' },
+                        columnStyles: { 1: { halign: 'left' } },
+                        styles: { cellPadding: 2 },
+                      });
+                      
+                      // Financial Table
+                      const finY = (doc as any).lastAutoTable.finalY + 10;
+                      const finHead = [['#', 'Consultant', 'Design Fee', 'Supervision Fee', 'Total Fees']];
+                      const finBody = sortedConsultants.map((item, idx) => {
+                        const fin = financialQuery.data?.find((f: any) => f.consultantId === item.c.id);
+                        const buildCost = bua * price;
+                        const dv = parseFloat(String(fin?.designValue ?? 0)) || 0;
+                        const sv = parseFloat(String(fin?.supervisionValue ?? 0)) || 0;
+                        const designAmt = fin?.designType === 'pct' ? (dv / 100) * buildCost : dv;
+                        const supAmt = fin?.supervisionType === 'pct' ? (sv / 100) * buildCost : sv;
+                        return [
+                          String(idx + 1),
+                          item.c.name,
+                          `${designAmt.toLocaleString()} AED`,
+                          `${supAmt.toLocaleString()} AED`,
+                          `${(designAmt + supAmt).toLocaleString()} AED`
+                        ];
+                      });
+                      
+                      autoTable(doc, {
+                        head: finHead,
+                        body: finBody,
+                        startY: finY,
+                        theme: 'grid',
+                        headStyles: { fillColor: [180, 130, 50], fontSize: 8, halign: 'center' },
+                        bodyStyles: { fontSize: 8, halign: 'center' },
+                        columnStyles: { 1: { halign: 'left' } },
+                      });
+                      
+                      // Ranking Summary
+                      const rankY = (doc as any).lastAutoTable.finalY + 10;
+                      doc.setFontSize(12);
+                      doc.text('Final Ranking', 148, rankY, { align: 'center' });
+                      const rankHead = [['Rank', 'Consultant', 'Technical Score', 'Total Fees', 'Value Rating']];
+                      const rankBody = sortedConsultants.map((item, idx) => {
+                        const valueRating = item.cost > 0 ? (item.score / (item.cost / 1000000)).toFixed(2) : '-';
+                        return [
+                          String(idx + 1),
+                          item.c.name,
+                          item.score.toFixed(1),
+                          `${item.cost.toLocaleString()} AED`,
+                          valueRating
+                        ];
+                      });
+                      
+                      autoTable(doc, {
+                        head: rankHead,
+                        body: rankBody,
+                        startY: rankY + 4,
+                        theme: 'grid',
+                        headStyles: { fillColor: [34, 120, 74], fontSize: 8, halign: 'center' },
+                        bodyStyles: { fontSize: 9, halign: 'center' },
+                        columnStyles: { 1: { halign: 'left' } },
+                      });
+                      
+                      doc.save(`Evaluation_${selectedProject?.name || 'Report'}_${new Date().toISOString().split('T')[0]}.pdf`);
+                    }}
+                  >
+                    <FileDown className="w-4 h-4" />
+                    تصدير PDF
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
