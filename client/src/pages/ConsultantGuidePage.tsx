@@ -2,102 +2,166 @@ import { Link } from "wouter";
 import { ArrowLeft, BookOpen, ChevronDown } from "lucide-react";
 import { useState } from "react";
 
-// Same criteria as in ConsultantEvaluationPage - ordered by weight (highest first)
+// Exact criteria from consultant-dashboard.html - ordered by weight (highest first)
 const CRITERIA_GUIDE = [
   {
     id: 0,
-    name: "الخبرة والسابقة",
-    weight: 20,
+    name: "الهوية المعمارية وجودة التصميم",
+    weight: 12.75,
     color: "from-amber-500 to-orange-600",
     bgLight: "bg-amber-50",
     borderColor: "border-amber-200",
-    importance: "الخبرة هي الركيزة الأساسية في اختيار الاستشاري. المكتب ذو الخبرة العميقة في مشاريع مشابهة يملك فهماً أعمق للتحديات التقنية والتنظيمية، مما يقلل المخاطر ويضمن سلاسة التنفيذ. في سوق دبي العقاري، الخبرة المحلية مع الجهات الحكومية (بلدية دبي، RERA، DLD) تعتبر ميزة حاسمة.",
+    importance: "الهوية المعمارية هي أول ما يراه المشتري والمستثمر. تصميم مميز وأيقوني يرفع قيمة المشروع السوقية ويخلق عامل تمييز قوي في سوق دبي العقاري المزدحم. الاستشاري الذي يملك رؤية تصميمية واضحة يستطيع تحويل المبنى من مجرد هيكل إلى علامة تجارية معمارية تجذب المشترين وتحقق أسعار بيع أعلى.",
     levels: [
-      { score: 100, label: "ممتاز", description: "خبرة تتجاوز 15 سنة في مشاريع مماثلة بدبي والإمارات. سجل حافل بمشاريع كبرى ناجحة (أبراج سكنية، مجمعات تجارية). علاقات قوية مع الجهات الحكومية. معرفة عميقة بأنظمة البناء المحلية والدولية." },
-      { score: 75, label: "جيد", description: "خبرة 10-15 سنة مع مشاريع متنوعة. نجح في تسليم مشاريع متوسطة إلى كبيرة. معرفة جيدة بالسوق المحلي. بعض المشاريع المرجعية القوية." },
-      { score: 50, label: "متوسط", description: "خبرة 5-10 سنوات. عمل على مشاريع متوسطة الحجم. معرفة أساسية بالسوق المحلي. يحتاج إلى دعم في بعض الجوانب التنظيمية." },
-      { score: 25, label: "ضعيف", description: "خبرة 2-5 سنوات فقط. مشاريع محدودة وصغيرة. معرفة سطحية بالسوق المحلي. قد يواجه تحديات في التعامل مع الجهات الحكومية." },
-      { score: 0, label: "ضعيف جداً", description: "خبرة أقل من سنتين أو بدون خبرة في مشاريع مماثلة. لا يملك سجل أعمال مرجعي. غير مؤهل للمشاريع الكبرى." },
-    ],
-  },
-  {
-    id: 4,
-    name: "جودة المخططات",
-    weight: 20,
-    color: "from-violet-500 to-purple-600",
-    bgLight: "bg-violet-50",
-    borderColor: "border-violet-200",
-    importance: "جودة المخططات تنعكس مباشرة على جودة التنفيذ. مخططات دقيقة ومفصلة تقلل الأخطاء في الموقع، تقلل التعديلات أثناء البناء، وتوفر الوقت والمال. المخططات الاحترافية تسهل أيضاً عملية الحصول على التراخيص من الجهات المعنية.",
-    levels: [
-      { score: 100, label: "ممتاز", description: "مخططات بمعايير دولية (BIM Level 2+). تفاصيل دقيقة لكل عنصر. تنسيق ممتاز بين التخصصات (معماري، إنشائي، ميكانيكي). وثائق شاملة وواضحة. استخدام أحدث البرامج والتقنيات." },
-      { score: 75, label: "جيد", description: "مخططات جيدة مع تفاصيل كافية. تنسيق جيد بين التخصصات. بعض النقاط تحتاج توضيح. جودة الطباعة والعرض مقبولة." },
-      { score: 50, label: "متوسط", description: "مخططات أساسية تؤدي الغرض. بعض التفاصيل ناقصة. تنسيق متوسط بين التخصصات. قد تحتاج مراجعات متعددة." },
-      { score: 25, label: "ضعيف", description: "مخططات تفتقر للتفاصيل الكافية. أخطاء في التنسيق بين التخصصات. تحتاج مراجعات كثيرة. قد تسبب مشاكل في الموقع." },
-      { score: 0, label: "ضعيف جداً", description: "مخططات غير مكتملة أو بها أخطاء جوهرية. لا تلبي الحد الأدنى من المعايير. غير صالحة للتنفيذ بدون إعادة عمل شاملة." },
+      { score: 10, label: "10 نقاط — مستوى معلم بارز", description: "هوية أيقونية قوية، عامل تمييز في السوق، عمارة لا تُنسى. التصميم يخلق انطباعاً فورياً ويصبح مرجعاً في المنطقة. يمتلك سرداً تصميمياً متكاملاً من الواجهات إلى التفاصيل الداخلية. المبنى يُعرف من شكله دون الحاجة لقراءة اسمه." },
+      { score: 8, label: "8 نقاط — جودة عالية", description: "هوية مميزة، سرد تصميمي واضح، حضور سوقي فوق المتوسط. التصميم جذاب ومتماسك لكن قد لا يكون أيقونياً بالكامل. يتفوق على معظم المشاريع المنافسة في المنطقة." },
+      { score: 6, label: "6 نقاط — جودة متوسطة", description: "كفء لكن عام، لا يوجد تمييز قوي. التصميم مقبول ولا يوجد فيه عيوب واضحة، لكنه لا يبرز في السوق ولا يخلق انطباعاً خاصاً عند المشتري." },
+      { score: 4, label: "4 نقاط — هوية ضعيفة", description: "يفتقر للوضوح، جاذبية سوقية محدودة. التصميم تقليدي ومكرر، لا يملك شخصية واضحة. قد يؤثر سلباً على القيمة السوقية للمشروع." },
+      { score: 2, label: "2 نقاط — تصميم ضعيف", description: "لا توجد هوية متماسكة، ضعيف بصرياً. التصميم غير جذاب وقد ينفّر المشترين المحتملين. يحتاج إعادة تصميم جذرية." },
     ],
   },
   {
     id: 1,
-    name: "جودة الكادر الفني",
-    weight: 20,
+    name: "القدرات التقنية والتكامل مع BIM",
+    weight: 12.75,
     color: "from-emerald-500 to-teal-600",
     bgLight: "bg-emerald-50",
     borderColor: "border-emerald-200",
-    importance: "الكادر الفني هو العمود الفقري لأي مكتب استشاري. مهندسون مؤهلون ومتخصصون يضمنون حلولاً تقنية مبتكرة وتصاميم عالية الجودة. تنوع التخصصات (معماري، إنشائي، ميكانيكي، كهربائي) ضروري لتغطية جميع جوانب المشروع.",
+    importance: "تقنية BIM (نمذجة معلومات البناء) أصبحت معياراً أساسياً في المشاريع الحديثة. الاستشاري الذي يتقن BIM يستطيع اكتشاف التضاربات بين التخصصات قبل البناء، مما يوفر ملايين الدراهم في تكاليف التعديلات. مستوى LOD 300-350 يعني تفاصيل دقيقة كافية للتنفيذ المباشر. إدارة التضارب القوية تمنع المشاكل في الموقع.",
     levels: [
-      { score: 100, label: "ممتاز", description: "فريق متكامل من مهندسين ذوي خبرة عالية. تخصصات متنوعة تغطي جميع الجوانب. شهادات مهنية معتمدة (PE, CEng). استقرار وظيفي عالٍ. قدرة على التعامل مع مشاريع معقدة." },
-      { score: 75, label: "جيد", description: "فريق جيد مع تخصصات رئيسية. خبرة متوسطة إلى عالية. بعض الشهادات المهنية. استقرار وظيفي مقبول." },
-      { score: 50, label: "متوسط", description: "فريق أساسي يغطي التخصصات الرئيسية. خبرة متوسطة. قد يحتاج استعانة بمتخصصين خارجيين في بعض الجوانب." },
-      { score: 25, label: "ضعيف", description: "فريق صغير بتخصصات محدودة. خبرة قليلة. يعتمد بشكل كبير على الاستعانة الخارجية. معدل دوران وظيفي عالٍ." },
-      { score: 0, label: "ضعيف جداً", description: "فريق غير مؤهل أو غير مكتمل. لا يملك التخصصات الأساسية. غير قادر على إدارة المشروع بشكل مستقل." },
+      { score: 10, label: "10 نقاط — ممارسة BIM متقدمة", description: "سير عمل BIM كامل، تنسيق تصميم LOD 300-350، إدارة تضارب قوية، مخرجات رقمية منظمة. الاستشاري يعمل بنظام BIM متكامل من التصميم الأولي حتى التسليم. يستخدم أدوات Clash Detection بشكل دوري. المخرجات الرقمية منظمة ويمكن تسليمها للمقاول مباشرة." },
+      { score: 8, label: "8 نقاط — ممارسة BIM جيدة", description: "استخدام BIM بشكل متسق، تنسيق جيد. يستخدم BIM في معظم مراحل التصميم لكن قد لا يصل لمستوى LOD 350 في كل التفاصيل. التنسيق بين التخصصات جيد مع بعض الفجوات الطفيفة." },
+      { score: 6, label: "6 نقاط — استخدام BIM أساسي", description: "BIM محدود في النمذجة فقط. يستخدم BIM للنمذجة ثلاثية الأبعاد لكن لا يستفيد من إمكانياته الكاملة في إدارة التضارب أو التنسيق بين التخصصات. المخرجات تحتاج مراجعة إضافية." },
+      { score: 4, label: "4 نقاط — تكامل BIM ضئيل", description: "تنسيق معتمد على 2D في الغالب. يستخدم BIM بشكل محدود جداً أو للعرض فقط. التنسيق الفعلي بين التخصصات يتم بالطرق التقليدية (2D). مخاطر تضارب عالية في الموقع." },
+      { score: 2, label: "2 نقاط — لا توجد قدرة BIM", description: "لا يملك أي قدرة على العمل بنظام BIM. يعتمد كلياً على الرسومات ثنائية الأبعاد. احتمال عالٍ لمشاكل تنسيق وتضارب في الموقع." },
     ],
   },
   {
     id: 2,
-    name: "سابقة الأعمال",
-    weight: 15,
-    color: "from-sky-500 to-cyan-600",
-    bgLight: "bg-sky-50",
-    borderColor: "border-sky-200",
-    importance: "سابقة الأعمال هي الدليل العملي على قدرة المكتب. مشاريع سابقة ناجحة ومماثلة تعطي ثقة بأن المكتب قادر على تحقيق النتائج المطلوبة. الأهم هو التشابه في نوع وحجم المشاريع مع المشروع المطروح.",
+    name: "الأتعاب المهنية",
+    weight: 12.75,
+    color: "from-violet-500 to-purple-600",
+    bgLight: "bg-violet-50",
+    borderColor: "border-violet-200",
+    importance: "الأتعاب المهنية تمثل جزءاً مهماً من تكلفة المشروع الإجمالية. المطلوب ليس الأرخص بل الأفضل قيمة — أتعاب معقولة مقابل جودة عالية. أتعاب منخفضة جداً قد تعني جودة أقل أو نقص في الكوادر. أتعاب مرتفعة جداً تأكل من هامش ربح المشروع. المقارنة يجب أن تكون بالنسبة لمتوسط السوق لنفس نوع وحجم المشروع.",
     levels: [
-      { score: 100, label: "ممتاز", description: "محفظة أعمال غنية بمشاريع مماثلة (سكنية/تجارية في دبي). مشاريع مرجعية يمكن زيارتها. شهادات رضا من عملاء سابقين. تنوع في أنواع المشاريع المنفذة." },
-      { score: 75, label: "جيد", description: "عدة مشاريع مماثلة منجزة. بعض المشاريع المرجعية المتاحة. ردود فعل إيجابية من عملاء سابقين." },
-      { score: 50, label: "متوسط", description: "مشاريع سابقة لكن ليست بنفس الحجم أو النوع. بعض المراجع المتاحة. نتائج مقبولة في المشاريع السابقة." },
-      { score: 25, label: "ضعيف", description: "مشاريع سابقة قليلة ومختلفة عن المطلوب. مراجع محدودة. بعض المشاكل في مشاريع سابقة." },
-      { score: 0, label: "ضعيف جداً", description: "لا يملك سابقة أعمال مماثلة. لا مراجع متاحة. أو سجل سلبي في مشاريع سابقة." },
+      { score: 10, label: "10 نقاط — قيمة ممتازة", description: "أتعاب تنافسية للغاية ومبررة. السعر أقل من متوسط السوق مع جودة عالية. نطاق العمل شامل ومفصل. لا رسوم مخفية أو إضافية غير متوقعة. أفضل قيمة مقابل المال." },
+      { score: 8, label: "8 نقاط — تنافسية", description: "أتعاب قريبة من متوسط السوق أو أقل قليلاً. نطاق عمل واضح ومعقول. قيمة جيدة مقابل الخدمة المقدمة." },
+      { score: 6, label: "6 نقاط — متوسط السوق", description: "أتعاب في حدود متوسط السوق. لا ميزة سعرية واضحة لكن السعر عادل ومقبول." },
+      { score: 4, label: "4 نقاط — أتعاب مرتفعة", description: "أتعاب أعلى من متوسط السوق بشكل ملحوظ. قد تكون مبررة جزئياً بالجودة لكن تؤثر على ميزانية المشروع." },
+      { score: 2, label: "2 نقاط — أتعاب مفرطة", description: "أتعاب أعلى بكثير من متوسط السوق. غير مبررة بالنسبة لنطاق العمل. تشكل عبئاً مالياً كبيراً على المشروع." },
     ],
   },
   {
     id: 3,
-    name: "الالتزام الزمني",
-    weight: 15,
+    name: "كفاءة التخطيط وتحسين المساحات",
+    weight: 11.9,
+    color: "from-sky-500 to-cyan-600",
+    bgLight: "bg-sky-50",
+    borderColor: "border-sky-200",
+    importance: "كفاءة التخطيط تؤثر مباشرة على العائد المالي للمشروع. كل متر مربع مهدر هو خسارة مالية مباشرة. الاستشاري الذكي يعظّم المساحات القابلة للبيع ويقلل الممرات والفراغات الميتة. تخطيط الخدمات (مواقف، مصاعد، سلالم) يجب أن يكون فعالاً دون أن يأكل من المساحات التجارية أو السكنية.",
+    levels: [
+      { score: 10, label: "10 نقاط — كفاءة استثنائية", description: "منطق تخطيط ممتاز، استخدام أمثل للمساحة، الحد الأدنى من الفراغات الميتة، تخطيط خدمات قوي، وعي مالي واضح. نسبة المساحات القابلة للبيع إلى إجمالي المساحة عالية جداً. كل متر مربع له غرض واضح." },
+      { score: 8, label: "8 نقاط — كفاءة قوية", description: "تخطيط مساحات جيد جداً، عدم كفاءة طفيف لكن فهم تجاري قوي بشكل عام. بعض الفراغات يمكن تحسينها لكن النتيجة الإجمالية ممتازة." },
+      { score: 6, label: "6 نقاط — كفاءة مقبولة", description: "تخطيط وظيفي لكن تقليدي، بعض المساحات المفقودة، حساسية مالية محدودة. التخطيط يعمل لكن لا يعظّم العائد المالي." },
+      { score: 4, label: "4 نقاط — كفاءة ضعيفة", description: "منطق حركة ضعيف، مساحات مهدرة ملحوظة، تخطيط خدمات ضعيف. فراغات ميتة واضحة تقلل من المساحات القابلة للبيع." },
+      { score: 2, label: "2 نقاط — كفاءة ضعيفة جداً", description: "تخطيط غير فعال، فقدان كبير في المساحة القابلة للاستخدام، تخطيط مضر مالياً. يحتاج إعادة تخطيط كاملة." },
+    ],
+  },
+  {
+    id: 4,
+    name: "التحكم في التكاليف والوعي بالميزانية",
+    weight: 9.35,
     color: "from-rose-500 to-pink-600",
     bgLight: "bg-rose-50",
     borderColor: "border-rose-200",
-    importance: "الالتزام بالجدول الزمني حاسم في المشاريع العقارية. التأخير يعني تكاليف إضافية وخسارة فرص بيع. المكتب الملتزم زمنياً يظهر تنظيماً داخلياً جيداً وقدرة على إدارة الموارد بفعالية.",
+    importance: "الاستشاري الواعي بالميزانية يصمم بذكاء — يختار مواد وحلول تحقق الجودة المطلوبة بأقل تكلفة ممكنة. قرارات التصميم تؤثر على 70-80% من تكلفة البناء. استشاري يصمم واجهات زجاجية معقدة دون مبرر قد يضيف ملايين للتكلفة. الوعي بالميزانية لا يعني التقشف بل الذكاء في توزيع الموارد.",
     levels: [
-      { score: 100, label: "ممتاز", description: "سجل ممتاز في الالتزام بالمواعيد. يسلم قبل أو في الموعد المحدد. نظام إدارة مشاريع متطور. تقارير تقدم دورية. مرونة في التعامل مع التغييرات دون تأخير." },
-      { score: 75, label: "جيد", description: "يلتزم بالمواعيد في معظم الحالات. تأخيرات طفيفة ومبررة. تواصل جيد حول الجدول الزمني. قدرة على التعافي من التأخيرات." },
-      { score: 50, label: "متوسط", description: "التزام متوسط بالمواعيد. تأخيرات متكررة لكن ليست كبيرة. يحتاج متابعة مستمرة. تواصل مقبول حول التقدم." },
-      { score: 25, label: "ضعيف", description: "تأخيرات متكررة وملحوظة. ضعف في إدارة الوقت. يحتاج ضغط مستمر للالتزام. تواصل ضعيف حول الجدول الزمني." },
-      { score: 0, label: "ضعيف جداً", description: "تأخيرات كبيرة ومتكررة. لا يلتزم بأي جدول زمني. يسبب خسائر مالية بسبب التأخير. غير موثوق في المواعيد." },
+      { score: 10, label: "10 نقاط — ذكاء تكلفة قوي", description: "قرارات التصميم تعكس الوعي بالميزانية. يقترح حلولاً بديلة أقل تكلفة دون التضحية بالجودة. يفهم تأثير كل قرار تصميمي على التكلفة الإجمالية. يعمل ضمن الميزانية المحددة ويحترمها." },
+      { score: 8, label: "8 نقاط — حساسية تكلفة جيدة", description: "يراعي الميزانية في معظم قراراته التصميمية. يقدم بدائل عند الحاجة. وعي جيد بتكاليف المواد والأنظمة." },
+      { score: 6, label: "6 نقاط — محايد", description: "لا يتجاوز الميزانية بشكل كبير لكن لا يسعى لتوفير التكاليف بشكل استباقي. يحتاج توجيه من المالك للبقاء ضمن الميزانية." },
+      { score: 4, label: "4 نقاط — وعي تكلفة ضعيف", description: "يميل لاختيار حلول مكلفة دون مبرر كافٍ. لا يقدم بدائل اقتصادية. قد يتجاوز الميزانية بشكل متكرر." },
+      { score: 2, label: "2 نقاط — مخاطر تصميم مكلفة", description: "قرارات تصميمية تضخم التكاليف بشكل كبير. لا يراعي الميزانية إطلاقاً. يشكل خطراً مالياً على المشروع." },
     ],
   },
   {
     id: 5,
-    name: "السمعة والاستقرار",
-    weight: 10,
+    name: "الخبرة في مشاريع مشابهة",
+    weight: 8.5,
     color: "from-slate-500 to-gray-600",
     bgLight: "bg-slate-50",
     borderColor: "border-slate-200",
-    importance: "سمعة المكتب واستقراره المالي والإداري يعكسان موثوقيته على المدى الطويل. مكتب مستقر يضمن استمرارية الخدمة طوال فترة المشروع وما بعدها (فترة الضمان). السمعة الجيدة في السوق تعني علاقات أفضل مع المقاولين والموردين.",
+    importance: "الخبرة في مشاريع مشابهة من حيث النوع (سكني، تجاري، مختلط) والحجم تعني أن الاستشاري يفهم التحديات المحددة لهذا النوع من المشاريع. استشاري عمل على 10 أبراج سكنية يعرف بالضبط كيف يوزع الشقق، أين يضع الخدمات، وكيف يتعامل مع متطلبات الدفاع المدني والبلدية.",
     levels: [
-      { score: 100, label: "ممتاز", description: "سمعة ممتازة في السوق المحلي والإقليمي. استقرار مالي وإداري قوي. علاقات ممتازة مع الجهات الحكومية والمقاولين. لا نزاعات قانونية. تاريخ طويل ونظيف." },
-      { score: 75, label: "جيد", description: "سمعة جيدة في السوق. استقرار مالي مقبول. علاقات جيدة مع الأطراف المعنية. لا مشاكل قانونية كبيرة." },
-      { score: 50, label: "متوسط", description: "سمعة مقبولة. استقرار مالي متوسط. بعض التحديات الإدارية. معروف في السوق لكن ليس من الصف الأول." },
-      { score: 25, label: "ضعيف", description: "سمعة مختلطة. مشاكل مالية أو إدارية. بعض النزاعات مع عملاء سابقين. غير مستقر إدارياً." },
-      { score: 0, label: "ضعيف جداً", description: "سمعة سيئة أو غير معروف. مشاكل مالية خطيرة. نزاعات قانونية متعددة. خطر عدم الاستمرارية." },
+      { score: 10, label: "10 نقاط — خبرة واسعة ذات صلة", description: "مشاريع متعددة مكتملة بنفس الحجم والنوع. محفظة أعمال غنية بمشاريع مماثلة في دبي والإمارات. يمكن زيارة مشاريعه المرجعية. سجل نجاح مثبت." },
+      { score: 8, label: "8 نقاط — خبرة قوية", description: "محفظة جيدة ذات صلة مع تسليم مثبت. عدة مشاريع مماثلة منجزة بنجاح. ردود فعل إيجابية من عملاء سابقين." },
+      { score: 6, label: "6 نقاط — خبرة متوسطة", description: "بعض المشاريع ذات الصلة لكن ليست قابلة للمقارنة بالكامل. قد تكون المشاريع السابقة أصغر حجماً أو مختلفة قليلاً في النوع." },
+      { score: 4, label: "4 نقاط — خبرة محدودة", description: "مراجع مشابهة قليلة. معظم الخبرة في أنواع مختلفة من المشاريع. يحتاج وقتاً للتأقلم مع متطلبات هذا النوع." },
+      { score: 2, label: "2 نقاط — لا توجد خبرة ذات صلة", description: "لم يعمل على مشاريع مشابهة من قبل. خبرته في مجالات مختلفة تماماً. مخاطرة عالية في تكليفه بهذا المشروع." },
+    ],
+  },
+  {
+    id: 6,
+    name: "قوة فريق المشروع",
+    weight: 8.5,
+    color: "from-indigo-500 to-blue-600",
+    bgLight: "bg-indigo-50",
+    borderColor: "border-indigo-200",
+    importance: "الفريق المخصص للمشروع هو من سيعمل يومياً على التصميم. حتى لو كان المكتب ممتازاً، إذا خصص فريقاً ضعيفاً أو مبتدئاً فالنتيجة ستكون ضعيفة. مشاركة القيادة العليا (الشركاء أو المديرين) تعني اهتماماً حقيقياً بالمشروع وقرارات أسرع وأفضل.",
+    levels: [
+      { score: 10, label: "10 نقاط — فريق مخصص ذو خبرة عالية", description: "قيادة عليا مشاركة مباشرة. فريق متكامل من مهندسين ذوي خبرة عالية في كل التخصصات. الشريك أو المدير العام يشرف شخصياً. استقرار الفريق مضمون طوال المشروع." },
+      { score: 8, label: "8 نقاط — فريق قوي", description: "خبرة جيدة مع دعم قادر. فريق متمرس مع إشراف من الإدارة العليا. تخصصات رئيسية مغطاة بكفاءة." },
+      { score: 6, label: "6 نقاط — فريق متوسط", description: "فريق يؤدي المطلوب لكن بدون تميز. خبرة متوسطة. قد يحتاج دعماً خارجياً في بعض التخصصات." },
+      { score: 4, label: "4 نقاط — تكليف ضعيف", description: "فريق مبتدئ أو غير مكتمل. القيادة العليا غير مشاركة. قد يتم نقل أعضاء الفريق لمشاريع أخرى." },
+      { score: 2, label: "2 نقاط — فريق غير واضح أو عديم الخبرة", description: "لم يتم تحديد فريق واضح. أو الفريق المقترح بدون خبرة كافية. مخاطرة عالية في جودة المخرجات." },
+    ],
+  },
+  {
+    id: 7,
+    name: "إدارة الوقت والتحكم في البرنامج",
+    weight: 8.5,
+    color: "from-teal-500 to-green-600",
+    bgLight: "bg-teal-50",
+    borderColor: "border-teal-200",
+    importance: "في المشاريع العقارية، الوقت هو مال. كل شهر تأخير في التصميم يعني تأخيراً في البناء وتأخيراً في البيع والتسليم. الاستشاري المنضبط زمنياً يلتزم بالجدول ويسلم الموافقات في وقتها. سرعة الاستجابة للملاحظات وسرعة الحصول على موافقات الجهات الحكومية مؤشرات مهمة.",
+    levels: [
+      { score: 10, label: "10 نقاط — سجل ممتاز", description: "انضباط جدولة قوي، موافقات سريعة مثبتة. يسلم قبل الموعد أو في الموعد المحدد. نظام إدارة مشاريع متطور. تقارير تقدم دورية. سجل مثبت في الحصول على موافقات الجهات بسرعة." },
+      { score: 8, label: "8 نقاط — تحكم جيد", description: "يلتزم بالمواعيد في معظم الحالات. تأخيرات طفيفة ومبررة. تواصل جيد حول الجدول الزمني." },
+      { score: 6, label: "6 نقاط — مقبول", description: "التزام متوسط بالمواعيد. يحتاج متابعة مستمرة. تأخيرات متكررة لكن ليست كبيرة." },
+      { score: 4, label: "4 نقاط — تأخيرات محتملة", description: "سجل تأخيرات في مشاريع سابقة. ضعف في إدارة الوقت. يحتاج ضغط مستمر للالتزام." },
+      { score: 2, label: "2 نقاط — تحكم ضعيف", description: "تأخيرات كبيرة ومتكررة. لا يلتزم بأي جدول زمني. يسبب خسائر مالية بسبب التأخير." },
+    ],
+  },
+  {
+    id: 8,
+    name: "الاهتمام الخاص بالمشروع ومرونة التعامل",
+    weight: 8,
+    color: "from-orange-500 to-red-600",
+    bgLight: "bg-orange-50",
+    borderColor: "border-orange-200",
+    importance: "هل المشروع أولوية لدى الاستشاري أم مجرد مشروع عادي ضمن عشرات المشاريع؟ الاستشاري الذي يعتبر مشروعك أولوية سيخصص أفضل كوادره، يستجيب بسرعة، ويبذل جهداً إضافياً. المرونة في التعامل تعني القدرة على التكيف مع التغييرات والملاحظات دون تعقيد.",
+    levels: [
+      { score: 10, label: "10 نقاط — أولوية قصوى", description: "المشروع أولوية قصوى لدى الاستشاري، اهتمام خاص جداً، متابعة مستمرة، ومرونة عالية في التعامل. يشعرك بأن مشروعك هو الأهم لديه. استجابة فورية للملاحظات." },
+      { score: 8, label: "8 نقاط — أهمية خاصة", description: "المشروع ذو أهمية خاصة، اهتمام واضح، وتواصل جيد ومرن. يخصص وقتاً كافياً ويستجيب بسرعة معقولة." },
+      { score: 6, label: "6 نقاط — اهتمام جيد", description: "المشروع يلقى اهتمام جيد، استجابة مقبولة وتعاون معقول. يؤدي المطلوب لكن بدون جهد إضافي." },
+      { score: 4, label: "4 نقاط — اهتمام محدود", description: "المشروع أحد مشاريع الشركة العادية، اهتمام محدود دون تميّز. استجابة بطيئة أحياناً." },
+      { score: 2, label: "2 نقاط — اهتمام منخفض", description: "المشروع ليس ذو أهمية لديهم، استجابة ضعيفة واهتمام منخفض. قد يتأخر في الرد أو يهمل الملاحظات." },
+    ],
+  },
+  {
+    id: 9,
+    name: "مرونة التعاقد",
+    weight: 7,
+    color: "from-cyan-500 to-blue-600",
+    bgLight: "bg-cyan-50",
+    borderColor: "border-cyan-200",
+    importance: "المشاريع العقارية تتطلب تعديلات مستمرة أثناء التصميم — تغيير في عدد الوحدات، تعديل الواجهات، إضافة طابق. الاستشاري المرن يتقبل هذه التعديلات ضمن نطاق العمل المعقول دون مطالبات مالية مبالغ فيها. الاستشاري الجامد يحول كل تعديل صغير إلى أمر تغيير مكلف.",
+    levels: [
+      { score: 10, label: "10 نقاط — مرونة ممتازة", description: "لا أعمال إضافية غير مبررة، ومرونة ممتازة جداً في التعديلات ضمن نطاق العمل، مع شروط عادلة وواضحة. يتفهم طبيعة المشاريع العقارية وحاجتها للتعديلات المستمرة." },
+      { score: 8, label: "8 نقاط — مرونة جيدة", description: "مرونة ممتازة في التعديلات، مع بعض القيود المنطقية على الأعمال الإضافية. شروط واضحة ومعقولة." },
+      { score: 6, label: "6 نقاط — مرونة متوسطة", description: "يقبل التعديلات لكن بإجراءات رسمية وشروط عديدة. يحتاج تفاوض على كل تعديل." },
+      { score: 4, label: "4 نقاط — مرونة محدودة", description: "رسمي في التعاقد، يميل لتقييد التعديلات ولا يبدي مرونة إلا في نطاق ضيق. يطالب بأوامر تغيير لمعظم التعديلات." },
+      { score: 2, label: "2 نقاط — جمود تعاقدي", description: "مبالغ في تكاليف التعديلات والأعمال الإضافية، ويربط معظم التغييرات بمطالبات مالية مرهقة للمشروع. يحول العلاقة إلى صراع مالي مستمر." },
     ],
   },
 ];
@@ -112,8 +176,11 @@ function CriterionCard({ criterion, index }: { criterion: typeof CRITERIA_GUIDE[
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center gap-4 p-5 text-right hover:bg-stone-50/50 transition-colors"
       >
-        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${criterion.color} flex items-center justify-center shadow-md shrink-0`}>
-          <span className="text-white font-bold text-lg">{criterion.weight}%</span>
+        <div className="flex items-center gap-3 shrink-0">
+          <span className="text-stone-400 font-bold text-lg w-8 text-center">{index + 1}</span>
+          <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${criterion.color} flex items-center justify-center shadow-md`}>
+            <span className="text-white font-bold text-sm">{criterion.weight}%</span>
+          </div>
         </div>
         <div className="flex-1">
           <h3 className="text-lg font-bold text-stone-800">{criterion.name}</h3>
@@ -128,7 +195,7 @@ function CriterionCard({ criterion, index }: { criterion: typeof CRITERIA_GUIDE[
           {/* Importance */}
           <div className={`${criterion.bgLight} rounded-xl p-4 border ${criterion.borderColor}`}>
             <h4 className="font-semibold text-stone-700 mb-2 flex items-center gap-2">
-              <span className="text-lg">💡</span> أهمية هذا المعيار
+              لماذا هذا المعيار مهم؟
             </h4>
             <p className="text-sm text-stone-600 leading-relaxed">{criterion.importance}</p>
           </div>
@@ -136,28 +203,28 @@ function CriterionCard({ criterion, index }: { criterion: typeof CRITERIA_GUIDE[
           {/* Score Levels */}
           <div className="space-y-3">
             <h4 className="font-semibold text-stone-700 flex items-center gap-2">
-              <span className="text-lg">📊</span> مستويات التقييم
+              مستويات التقييم — ماذا تعني كل نقطة؟
             </h4>
             {criterion.levels.map((level) => (
               <div key={level.score} className="flex gap-3 items-start">
-                <div className={`w-16 h-10 rounded-lg flex items-center justify-center shrink-0 font-bold text-sm ${
-                  level.score === 100 ? 'bg-emerald-100 text-emerald-700' :
-                  level.score === 75 ? 'bg-sky-100 text-sky-700' :
-                  level.score === 50 ? 'bg-amber-100 text-amber-700' :
-                  level.score === 25 ? 'bg-orange-100 text-orange-700' :
-                  'bg-red-100 text-red-700'
+                <div className={`w-16 h-12 rounded-lg flex items-center justify-center shrink-0 font-bold text-sm ${
+                  level.score === 10 ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' :
+                  level.score === 8 ? 'bg-sky-100 text-sky-700 border border-sky-200' :
+                  level.score === 6 ? 'bg-amber-100 text-amber-700 border border-amber-200' :
+                  level.score === 4 ? 'bg-orange-100 text-orange-700 border border-orange-200' :
+                  'bg-red-100 text-red-700 border border-red-200'
                 }`}>
                   {level.score}
                 </div>
                 <div className="flex-1">
                   <p className={`font-semibold text-sm ${
-                    level.score === 100 ? 'text-emerald-700' :
-                    level.score === 75 ? 'text-sky-700' :
-                    level.score === 50 ? 'text-amber-700' :
-                    level.score === 25 ? 'text-orange-700' :
+                    level.score === 10 ? 'text-emerald-700' :
+                    level.score === 8 ? 'text-sky-700' :
+                    level.score === 6 ? 'text-amber-700' :
+                    level.score === 4 ? 'text-orange-700' :
                     'text-red-700'
                   }`}>{level.label}</p>
-                  <p className="text-sm text-stone-500 leading-relaxed">{level.description}</p>
+                  <p className="text-sm text-stone-500 leading-relaxed mt-1">{level.description}</p>
                 </div>
               </div>
             ))}
@@ -182,12 +249,12 @@ export default function ConsultantGuidePage() {
             العودة لمكاتب الاستشارات
           </Link>
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-slate-400 to-gray-500 flex items-center justify-center shadow-lg shrink-0">
+            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shrink-0">
               <BookOpen className="w-7 h-7 text-white" />
             </div>
             <div>
               <h1 className="text-3xl font-bold text-white">دليل التقييم التفصيلي</h1>
-              <p className="text-stone-400 text-sm">شرح مفصل لكل معيار ومستويات النقاط لمساعدة أعضاء اللجنة في التقييم</p>
+              <p className="text-stone-400 text-sm">شرح مفصل لكل معيار ومستويات النقاط — مرجع أساسي لأعضاء اللجنة قبل التقييم</p>
             </div>
           </div>
         </div>
@@ -197,19 +264,62 @@ export default function ConsultantGuidePage() {
       <div className="max-w-4xl mx-auto px-6 py-8">
         {/* Summary Table */}
         <div className="bg-white rounded-2xl border border-stone-200 p-5 mb-8 shadow-sm">
-          <h2 className="text-lg font-bold text-stone-800 mb-4">ملخص الأوزان</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {CRITERIA_GUIDE.map((c) => (
-              <div key={c.id} className={`${c.bgLight} rounded-xl p-3 border ${c.borderColor}`}>
-                <p className="font-bold text-stone-700 text-sm">{c.name}</p>
-                <p className={`text-2xl font-bold bg-gradient-to-br ${c.color} bg-clip-text text-transparent`}>{c.weight}%</p>
-              </div>
-            ))}
+          <h2 className="text-lg font-bold text-stone-800 mb-4">ملخص الأوزان (مرتبة من الأعلى للأقل)</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-stone-200">
+                  <th className="text-right py-2 px-3 text-stone-500 font-medium">#</th>
+                  <th className="text-right py-2 px-3 text-stone-500 font-medium">المعيار</th>
+                  <th className="text-center py-2 px-3 text-stone-500 font-medium">الوزن</th>
+                  <th className="text-center py-2 px-3 text-stone-500 font-medium">النقاط</th>
+                </tr>
+              </thead>
+              <tbody>
+                {CRITERIA_GUIDE.map((c, i) => (
+                  <tr key={c.id} className="border-b border-stone-100 last:border-0">
+                    <td className="py-2.5 px-3 text-stone-400 font-medium">{i + 1}</td>
+                    <td className="py-2.5 px-3 font-medium text-stone-700">{c.name}</td>
+                    <td className="py-2.5 px-3 text-center">
+                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold bg-gradient-to-br ${c.color} text-white`}>
+                        {c.weight}%
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3 text-center text-stone-500">2 — 10</td>
+                  </tr>
+                ))}
+                <tr className="bg-stone-50 font-bold">
+                  <td className="py-2.5 px-3"></td>
+                  <td className="py-2.5 px-3 text-stone-800">المجموع</td>
+                  <td className="py-2.5 px-3 text-center text-stone-800">100%</td>
+                  <td className="py-2.5 px-3 text-center text-stone-500"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* How scoring works */}
+        <div className="bg-white rounded-2xl border border-stone-200 p-5 mb-8 shadow-sm">
+          <h2 className="text-lg font-bold text-stone-800 mb-3">كيف يعمل نظام التقييم؟</h2>
+          <div className="space-y-3 text-sm text-stone-600 leading-relaxed">
+            <p>كل معيار يُقيّم من <strong className="text-stone-800">2 إلى 10 نقاط</strong> (5 مستويات: 2، 4، 6، 8، 10). كل مستوى له وصف دقيق يساعد المقيّم في اختيار النقاط المناسبة.</p>
+            <p>النتيجة النهائية لكل استشاري = مجموع (نقاط كل معيار × وزن المعيار). الاستشاري الحاصل على أعلى مجموع هو الأفضل وفق التقييم.</p>
+            <p>التقييم يتم من <strong className="text-stone-800">3 أعضاء</strong> (الشيخ عيسى، وائل، عبدالرحمن) والنتيجة النهائية هي <strong className="text-stone-800">متوسط التقييمات الثلاثة</strong>.</p>
           </div>
         </div>
 
         {/* Criteria Details */}
         <div className="space-y-4">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-bold text-stone-800">تفصيل المعايير</h2>
+            <button
+              onClick={() => setAllOpen(!allOpen)}
+              className="text-sm text-stone-500 hover:text-stone-700 transition-colors"
+            >
+              {allOpen ? 'إغلاق الكل' : 'فتح الكل'}
+            </button>
+          </div>
           {CRITERIA_GUIDE.map((criterion, index) => (
             <CriterionCard key={criterion.id} criterion={criterion} index={index} />
           ))}
@@ -217,25 +327,27 @@ export default function ConsultantGuidePage() {
 
         {/* Tips */}
         <div className="mt-8 bg-amber-50 rounded-2xl border border-amber-200 p-6">
-          <h3 className="font-bold text-amber-800 mb-3 flex items-center gap-2">
-            <span className="text-xl">📝</span> نصائح للمقيّمين
-          </h3>
+          <h3 className="font-bold text-amber-800 mb-3">نصائح للمقيّمين</h3>
           <ul className="space-y-2 text-sm text-amber-700">
             <li className="flex items-start gap-2">
               <span className="mt-1">•</span>
-              <span>قيّم كل معيار بشكل مستقل عن المعايير الأخرى — لا تدع انطباعك العام يؤثر على تقييم معيار محدد.</span>
+              <span>اقرأ وصف كل مستوى بعناية قبل اختيار النقاط — الفرق بين 6 و 8 قد يكون دقيقاً لكنه مهم.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="mt-1">•</span>
-              <span>استند إلى أدلة ملموسة (مشاريع سابقة، شهادات، تقارير) وليس فقط الانطباعات الشخصية.</span>
+              <span>قيّم كل معيار بشكل مستقل — لا تدع انطباعك العام عن الاستشاري يؤثر على تقييم معيار محدد.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="mt-1">•</span>
-              <span>إذا لم تكن متأكداً، اختر "متوسط" (50 نقطة) كنقطة بداية ثم عدّل حسب المعلومات المتاحة.</span>
+              <span>استند إلى أدلة ملموسة (عروض الأسعار، المشاريع السابقة، العروض التقديمية) وليس فقط الانطباعات.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="mt-1">•</span>
-              <span>تذكر أن التقييم النهائي هو متوسط تقييمات الأعضاء الثلاثة، مما يضمن العدالة والموضوعية.</span>
+              <span>إذا لم تكن متأكداً، اختر 6 نقاط (متوسط) كنقطة بداية ثم عدّل حسب المعلومات المتاحة.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-1">•</span>
+              <span>التقييم النهائي هو متوسط تقييمات الأعضاء الثلاثة، مما يضمن العدالة والموضوعية.</span>
             </li>
           </ul>
         </div>
