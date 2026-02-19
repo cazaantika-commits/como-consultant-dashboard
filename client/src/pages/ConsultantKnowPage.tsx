@@ -7,15 +7,35 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
   ArrowLeft, UserCircle, Phone, MapPin, Award, Users, Building,
-  Mail, Edit3, Save, X, Briefcase, Hash
+  Mail, Edit3, Save, X, Briefcase, Hash, Plus, Trash2
 } from "lucide-react";
 
 export default function ConsultantKnowPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editData, setEditData] = useState<any>({});
+  const [newConsultantName, setNewConsultantName] = useState("");
 
+  const utils = trpc.useUtils();
   const consultantsQuery = trpc.consultants.list.useQuery();
   const detailsQuery = trpc.consultantDetails.getAll.useQuery();
+
+  const createMutation = trpc.consultants.create.useMutation({
+    onSuccess: () => {
+      utils.consultants.list.invalidate();
+      setNewConsultantName("");
+      toast.success("تمت إضافة الاستشاري بنجاح");
+    },
+    onError: () => toast.error("حدث خطأ في الإضافة"),
+  });
+
+  const deleteMutation = trpc.consultants.delete.useMutation({
+    onSuccess: () => {
+      utils.consultants.list.invalidate();
+      toast.success("تم حذف الاستشاري بنجاح");
+    },
+    onError: () => toast.error("حدث خطأ في الحذف"),
+  });
+
   const upsertMutation = trpc.consultantDetails.upsert.useMutation({
     onSuccess: () => {
       detailsQuery.refetch();
@@ -56,6 +76,21 @@ export default function ConsultantKnowPage() {
     });
   };
 
+  const handleAddConsultant = () => {
+    const name = newConsultantName.trim();
+    if (!name) {
+      toast.error("يرجى إدخال اسم الاستشاري");
+      return;
+    }
+    createMutation.mutate({ name });
+  };
+
+  const handleDeleteConsultant = (id: number, name: string) => {
+    if (confirm(`هل أنت متأكد من حذف "${name}" من القائمة الرئيسية؟`)) {
+      deleteMutation.mutate(id);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-stone-50 via-white to-stone-100" dir="rtl">
       {/* Header */}
@@ -79,6 +114,53 @@ export default function ConsultantKnowPage() {
       </div>
 
       <div className="max-w-5xl mx-auto px-6 py-8">
+        {/* إدارة القائمة الرئيسية للاستشاريين */}
+        <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-6 mb-8">
+          <h2 className="text-lg font-bold text-stone-800 mb-4 flex items-center gap-2">
+            <Users className="w-5 h-5 text-violet-600" />
+            إدارة القائمة الرئيسية للاستشاريين
+          </h2>
+
+          {/* إضافة استشاري جديد */}
+          <div className="flex gap-3 mb-5">
+            <Input
+              value={newConsultantName}
+              onChange={(e) => setNewConsultantName(e.target.value)}
+              placeholder="اسم الاستشاري الجديد"
+              className="flex-1"
+              onKeyDown={(e) => e.key === "Enter" && handleAddConsultant()}
+            />
+            <Button
+              onClick={handleAddConsultant}
+              disabled={createMutation.isPending}
+              className="gap-1 bg-violet-600 hover:bg-violet-700 shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              إضافة استشاري
+            </Button>
+          </div>
+
+          {/* قائمة الاستشاريين الحالية */}
+          <div className="flex flex-wrap gap-2">
+            {consultants.map((c: any) => (
+              <div key={c.id} className="flex items-center gap-2 bg-violet-50 border border-violet-200 rounded-lg px-3 py-2">
+                <span className="text-sm font-medium text-stone-800">{c.name}</span>
+                <button
+                  onClick={() => handleDeleteConsultant(c.id, c.name)}
+                  className="text-red-400 hover:text-red-600 transition-colors"
+                  title="حذف الاستشاري"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+            {consultants.length === 0 && (
+              <p className="text-stone-400 text-sm">لا يوجد استشاريين بعد. أضف استشاري جديد من الحقل أعلاه.</p>
+            )}
+          </div>
+        </div>
+
+        {/* بطاقات الاستشاريين التفصيلية */}
         <div className="space-y-5">
           {consultants.map((consultant: any) => {
             const detail = getDetail(consultant.id);
