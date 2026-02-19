@@ -1,6 +1,6 @@
 import { eq, and, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, projects, InsertProject, consultants, InsertConsultant, projectConsultants, InsertProjectConsultant, financialData, InsertFinancialData, evaluationScores, InsertEvaluationScore, evaluatorScores, InsertEvaluatorScore, committeeDecisions, InsertCommitteeDecision, consultantDetails, InsertConsultantDetail, projectPhases, InsertProjectPhase, projectCapitalSettings, InsertProjectCapitalSettings } from "../drizzle/schema";
+import { InsertUser, users, projects, InsertProject, consultants, InsertConsultant, projectConsultants, InsertProjectConsultant, financialData, InsertFinancialData, evaluationScores, InsertEvaluationScore, evaluatorScores, InsertEvaluatorScore, committeeDecisions, InsertCommitteeDecision, consultantDetails, InsertConsultantDetail } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -300,61 +300,4 @@ export async function getAllConsultants() {
   const db = await getDb();
   if (!db) return [];
   return await db.select().from(consultants);
-}
-
-// Capital Planning - Project Phases
-export async function getProjectPhases(projectId: number) {
-  const db = await getDb();
-  if (!db) return [];
-  return await db.select().from(projectPhases).where(eq(projectPhases.projectId, projectId));
-}
-
-export async function getAllProjectPhases() {
-  const db = await getDb();
-  if (!db) return [];
-  return await db.select().from(projectPhases);
-}
-
-export async function upsertProjectPhase(projectId: number, phaseNumber: number, data: Partial<InsertProjectPhase>) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-  const existing = await db.select().from(projectPhases)
-    .where(and(eq(projectPhases.projectId, projectId), eq(projectPhases.phaseNumber, phaseNumber)))
-    .limit(1);
-  if (existing.length > 0) {
-    return await db.update(projectPhases).set(data)
-      .where(and(eq(projectPhases.projectId, projectId), eq(projectPhases.phaseNumber, phaseNumber)));
-  }
-  return await db.insert(projectPhases).values({ projectId, phaseNumber, ...data } as InsertProjectPhase);
-}
-
-export async function updatePhaseDelay(projectId: number, phaseNumber: number, delayMonths: number) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-  return await db.update(projectPhases).set({ delayMonths })
-    .where(and(eq(projectPhases.projectId, projectId), eq(projectPhases.phaseNumber, phaseNumber)));
-}
-
-// Capital Planning - Project Settings
-export async function getProjectCapitalSettings(projectId: number) {
-  const db = await getDb();
-  if (!db) return null;
-  const result = await db.select().from(projectCapitalSettings).where(eq(projectCapitalSettings.projectId, projectId)).limit(1);
-  return result.length > 0 ? result[0] : null;
-}
-
-export async function getAllProjectCapitalSettings() {
-  const db = await getDb();
-  if (!db) return [];
-  return await db.select().from(projectCapitalSettings);
-}
-
-export async function upsertProjectCapitalSettings(projectId: number, data: Partial<InsertProjectCapitalSettings>) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-  const existing = await db.select().from(projectCapitalSettings).where(eq(projectCapitalSettings.projectId, projectId)).limit(1);
-  if (existing.length > 0) {
-    return await db.update(projectCapitalSettings).set(data).where(eq(projectCapitalSettings.projectId, projectId));
-  }
-  return await db.insert(projectCapitalSettings).values({ projectId, ...data } as InsertProjectCapitalSettings);
 }

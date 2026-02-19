@@ -7,6 +7,8 @@ import { transcribeAudio } from "./_core/voiceTranscription";
 import { storagePut } from "./storage";
 import { eq, desc, and, sql } from "drizzle-orm";
 import { searchFiles, listFilesInFolder, listSharedDrives } from "./googleDrive";
+import { initEmailIntegration, setOwnerChatId, handleEmailCallback, handleCustomReplyText, hasPendingReply } from "./emailIntegration";
+import { startEmailScheduler, stopEmailScheduler, forceEmailCheck, getSchedulerStatus } from "./emailScheduler";
 
 /**
  * Salwa Telegram Bot - وكيل سلوى على تيليجرام
@@ -116,6 +118,9 @@ export async function initTelegramBot(): Promise<TelegramBot | null> {
     // Register command handlers
     registerCommands(bot);
 
+    // Start email scheduler
+    startEmailScheduler();
+
     console.log("[TelegramBot] \u2705 Salwa bot initialized and polling for messages");
     return bot;
   } catch (error) {
@@ -128,6 +133,7 @@ export async function initTelegramBot(): Promise<TelegramBot | null> {
  * Stop the Telegram bot
  */
 export async function stopTelegramBot(): Promise<void> {
+  stopEmailScheduler();
   if (bot) {
     try {
       await bot.stopPolling();
@@ -155,6 +161,9 @@ function registerCommands(bot: TelegramBot) {
   bot.onText(/\/start/, async (msg) => {
     const chatId = msg.chat.id;
     authorizedChats.add(chatId);
+    // Initialize email integration with this chat
+    setOwnerChatId(chatId);
+    initEmailIntegration(bot!, chatId);
 
     const welcomeMessage = `🏗️ *مرحباً! أنا سلوى - المساعدة التنفيذية الذكية لشركة كومو للتطوير العقاري*
 
@@ -193,6 +202,8 @@ function registerCommands(bot: TelegramBot) {
 🔹 /search \\[كلمة\\] - البحث في ملفات Drive
 🔹 /stats - إحصائيات المهام
 🔹 /email - تحليل بريد إلكتروني
+🔹 /checkmail - فحص البريد الآن
+🔹 /emailstatus - حالة مراقبة البريد
 🔹 /team - عرض فريق الوكلاء
 
 💡 *نصائح:*
@@ -210,8 +221,7 @@ function registerCommands(bot: TelegramBot) {
       `🤖 *سلوى* - المساعدة التنفيذية الذكية\n` +
       `   التنسيق بين الفريق وتوزيع المهام وتقديم التقارير\n\n` +
       `📦 *خازن* - مدير الأرشفة والتخزين\n` +
-      `   تنظيم الملفات حسب نظام التسمية المنهجي: [PROJECT\_CODE]\_[PLOT]\_[DOC\_TYPE]\_[DATE]\_[COMPANY]\n` +
-      `   المجلدات: COMO\_FOUNDATION | PLOT\_CONTRACTS | CONSULTANCY\_PROPOSALS\n\n` +
+      `   تنظيم الملفات وتسميتها وحفظها في Google Drive\n\n` +
       `⚖️ *فاروق* - محامي خبير\n` +
       `   تدقيق العقود واكتشاف الثغرات القانونية وتقديم الرأي القانوني\n\n` +
       `⏱ *براق* - مراقب التنفيذ والجدول الزمني\n` +
@@ -442,6 +452,41 @@ function registerCommands(bot: TelegramBot) {
     }
   });
 
+  // /checkmail command - force email check
+  bot.onText(/\/checkmail/, async (msg) => {
+    const chatId = msg.chat.id;
+    authorizedChats.add(chatId);
+    setOwnerChatId(chatId);
+    initEmailIntegration(bot!, chatId);
+
+    await bot.sendMessage(chatId, "📧 جاري فحص البريد الإلكتروني...");
+    try {
+      const count = await forceEmailCheck();
+      if (count === 0) {
+        await bot.sendMessage(chatId, "✅ لا توجد رسائل جديدة.");
+      } else if (count === -1) {
+        await bot.sendMessage(chatId, "⏳ فحص آخر قيد التنفيذ. انتظر قليلاً.");
+      } else {
+        await bot.sendMessage(chatId, "📬 تم العثور على " + count + " رسالة جديدة. تابع أعلاه.");
+      }
+    } catch (error) {
+      await bot.sendMessage(chatId, "⚠️ خطأ في فحص البريد: " + (error as Error).message);
+    }
+  });
+
+  // /emailstatus command - show scheduler status
+  bot.onText(/\/emailstatus/, async (msg) => {
+    const chatId = msg.chat.id;
+    const status = getSchedulerStatus();
+    await bot.sendMessage(chatId,
+      "📧 حالة مراقبة البريد\n\n" +
+      "الحالة: " + (status.isActive ? "✅ نشط" : "❌ متوقف") + "\n" +
+      "الوقت الحالي (دبي): " + status.currentDubaiTime + "\n" +
+      "الفحص القادم: " + status.nextScheduledCheck + "\n" +
+      "الجدول: 9:30 ص | 11:30 ص | 2:00 م | 9:00 م"
+    );
+  });
+
   // /email command - start email analysis
   bot.onText(/\/email/, async (msg) => {
     const chatId = msg.chat.id;
@@ -475,6 +520,12 @@ function registerCommands(bot: TelegramBot) {
     if (!msg.text || msg.text.startsWith("/")) return;
     const chatId = msg.chat.id;
     const text = msg.text.trim();
+
+    // Check if there's a pending email reply
+    if (hasPendingReply(chatId)) {
+      const handled = await handleCustomReplyText(bot!, chatId, text);
+      if (handled) return;
+    }
 
     // Check if there's an active conversation
     const convo = conversations.get(chatId);
@@ -580,6 +631,19 @@ export function registerCallbackHandler(bot: TelegramBot) {
     if (!chatId) return;
 
     const data = query.data || "";
+
+    // Handle email callbacks first
+    if (data.startsWith("email_")) {
+      try {
+        const handled = await handleEmailCallback(bot, chatId, data, query.id);
+        if (handled) return;
+      } catch (err) {
+        console.error("[TelegramBot] Email callback error:", err);
+        await bot.answerCallbackQuery(query.id, { text: "خطأ في معالجة الإيميل" });
+        return;
+      }
+    }
+
     const convo = conversations.get(chatId);
 
     if (!convo) {
@@ -730,7 +794,7 @@ async function analyzeEmailFromTelegram(
           role: "system",
           content: `أنتِ سلوى - المساعدة التنفيذية الذكية لشركة كومو للتطوير العقاري (COMO Developments) في دبي.
 مهمتك تحليل رسائل البريد الإلكتروني واستخراج المهام القابلة للتنفيذ منها.
-أنتِ تنسقين بين فريق من الوكلاء: خازن (أرشفة - يتبع نظام التسمية: [PROJECT_CODE]_[PLOT]_[DOC_TYPE]_[DATE]_[COMPANY] والمجلدات: COMO_FOUNDATION, PLOT_CONTRACTS, CONSULTANCY_PROPOSALS)، فاروق (قانون)، براق (تنفيذ)، خالد (جودة)، قاسم (مالية)، باز (استراتيجية)، جويل (دراسات جدوى).
+أنتِ تنسقين بين فريق من الوكلاء: خازن (أرشفة)، فاروق (قانون)، براق (تنفيذ)، خالد (جودة)، قاسم (مالية)، باز (استراتيجية)، جويل (دراسات جدوى).
 
 المشاريع المعروفة:
 - الجداف (Al Jaddaf)
@@ -909,9 +973,7 @@ async function handleFreeText(
           role: "system",
           content: `أنت سلوى - المساعدة التنفيذية الذكية لشركة كومو للتطوير العقاري (COMO Developments) في دبي.
 أنتِ تنسقين بين فريق من الوكلاء المتخصصين:
-- خازن: مدير الأرشفة والتخزين - يتبع نظام التسمية المنهجي: [PROJECT_CODE]_[PLOT_NUMBER]_[DOC_TYPE]_[DATE]_[COMPANY_CODE]
-  أكواد المشاريع: COMO (عام), NAS-V (ند الشبا فيلا 6180578), NAS-R (ند الشبا سكني 6185392), NAS-RA (ند الشبا شقق 6182776), JAD (الجداف 3260885), MAJ-M (ماجان مول 6457956), MAJ-R (ماجان سكني 6457879)
-  المجلدات: COMO_FOUNDATION (وثائق تأسيسية), PLOT_CONTRACTS (عقود أراضي), CONSULTANCY_PROPOSALS (عروض استشاريين)
+- خازن: مدير الأرشفة والتخزين
 - فاروق: محامي خبير (العقود والقانون)
 - براق: مراقب التنفيذ والجدول الزمني
 - خالد: مدقق الجودة والامتثال الفني

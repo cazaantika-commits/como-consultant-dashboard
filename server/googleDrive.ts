@@ -248,65 +248,6 @@ export async function searchFiles(
 }
 
 /**
- * Rename a file/folder
- */
-export async function renameFile(
-  fileId: string,
-  newName: string
-): Promise<DriveFile> {
-  const drive = getDriveClient();
-  const res = await drive.files.update({
-    fileId,
-    requestBody: { name: newName },
-    fields: "id, name, mimeType, size, modifiedTime, parents, webViewLink",
-    supportsAllDrives: true,
-  });
-  return {
-    id: res.data.id!,
-    name: res.data.name!,
-    mimeType: res.data.mimeType!,
-    size: res.data.size || undefined,
-    modifiedTime: res.data.modifiedTime || undefined,
-    parents: res.data.parents || undefined,
-    webViewLink: res.data.webViewLink || undefined,
-  };
-}
-
-/**
- * Move a file to a different folder
- */
-export async function moveFile(
-  fileId: string,
-  newParentId: string
-): Promise<DriveFile> {
-  const drive = getDriveClient();
-  // Get current parents
-  const file = await drive.files.get({
-    fileId,
-    fields: "parents",
-    supportsAllDrives: true,
-  });
-  const previousParents = (file.data.parents || []).join(",");
-  
-  const res = await drive.files.update({
-    fileId,
-    addParents: newParentId,
-    removeParents: previousParents,
-    fields: "id, name, mimeType, size, modifiedTime, parents, webViewLink",
-    supportsAllDrives: true,
-  });
-  return {
-    id: res.data.id!,
-    name: res.data.name!,
-    mimeType: res.data.mimeType!,
-    size: res.data.size || undefined,
-    modifiedTime: res.data.modifiedTime || undefined,
-    parents: res.data.parents || undefined,
-    webViewLink: res.data.webViewLink || undefined,
-  };
-}
-
-/**
  * Verify connection to Google Drive - returns service account email and shared files count
  */
 export async function verifyConnection(): Promise<{
@@ -330,12 +271,4 @@ export async function verifyConnection(): Promise<{
     email: credentials.client_email,
     sharedFilesCount: res.data.files?.length || 0,
   };
-}
-
-export async function deleteFile(fileId: string): Promise<void> {
-  const drive = getDriveClient();
-  await drive.files.delete({
-    fileId,
-    supportsAllDrives: true,
-  });
 }

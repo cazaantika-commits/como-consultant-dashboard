@@ -6,9 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Plus, Trash2, Download, Star, BarChart3, DollarSign, Users, Award, ExternalLink, Link2, FileDown } from "lucide-react";
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { Loader2, Plus, Trash2, Download, Star, BarChart3, DollarSign, Users, Award, ExternalLink, Link2 } from "lucide-react";
 
 // FinancialRow component with local state - saves ONLY on blur
 function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, updateFinancialMutation, onTotalChange }: {
@@ -129,70 +127,70 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
 
 // Evaluation criteria - exact match from consultant-dashboard.html
 const CRITERIA = [
-  { id: 0, name: 'الهوية المعمارية وجودة التصميم', shortName: 'الهوية والتصميم', weight: 12.75, options: [
+  { id: 0, name: 'الهوية المعمارية وجودة التصميم', weight: 12.75, options: [
     { score: 10, label: '10 نقاط: مستوى معلم بارز — هوية أيقونية قوية، عامل تمييز في السوق، عمارة لا تُنسى' },
     { score: 8, label: '8 نقاط: جودة عالية — هوية مميزة، سرد تصميمي واضح، حضور سوقي فوق المتوسط' },
     { score: 6, label: '6 نقاط: جودة متوسطة — كفء لكن عام، لا يوجد تمييز قوي' },
     { score: 4, label: '4 نقاط: هوية ضعيفة — يفتقر للوضوح، جاذبية سوقية محدودة' },
     { score: 2, label: '2 نقاط: تصميم ضعيف — لا توجد هوية متماسكة، ضعيف بصرياً' },
   ]},
-  { id: 1, name: 'القدرات التقنية والتكامل مع BIM', shortName: 'التقنية وBIM', weight: 12.75, options: [
+  { id: 1, name: 'القدرات التقنية والتكامل مع BIM', weight: 12.75, options: [
     { score: 10, label: '10 نقاط: ممارسة BIM متقدمة — سير عمل BIM كامل، تنسيق تصميم LOD 300-350، إدارة تضارب قوية، مخرجات رقمية منظمة' },
     { score: 8, label: '8 نقاط: ممارسة BIM جيدة — استخدام BIM بشكل متسق، تنسيق جيد' },
     { score: 6, label: '6 نقاط: استخدام BIM أساسي — BIM محدود في النمذجة فقط' },
     { score: 4, label: '4 نقاط: تكامل BIM ضئيل — تنسيق معتمد على 2D في الغالب' },
     { score: 2, label: '2 نقاط: لا توجد قدرة BIM' },
   ]},
-  { id: 2, name: 'الأتعاب المهنية', shortName: 'الأتعاب', weight: 12.75, options: [
+  { id: 2, name: 'الأتعاب المهنية', weight: 12.75, options: [
     { score: 10, label: '10 نقاط: قيمة ممتازة — أتعاب تنافسية للغاية ومبررة' },
     { score: 8, label: '8 نقاط: تنافسية' },
     { score: 6, label: '6 نقاط: متوسط السوق' },
     { score: 4, label: '4 نقاط: أتعاب مرتفعة' },
     { score: 2, label: '2 نقاط: أتعاب مفرطة' },
   ]},
-  { id: 3, name: 'كفاءة التخطيط وتحسين المساحات', shortName: 'تحسين المساحات', weight: 11.9, options: [
+  { id: 3, name: 'كفاءة التخطيط وتحسين المساحات', weight: 11.9, options: [
     { score: 10, label: '10 نقاط: كفاءة استثنائية — منطق تخطيط ممتاز، استخدام أمثل للمساحة، الحد الأدنى من الفراغات الميتة، تخطيط خدمات قوي، وعي مالي واضح' },
     { score: 8, label: '8 نقاط: كفاءة قوية — تخطيط مساحات جيد جداً، عدم كفاءة طفيف لكن فهم تجاري قوي بشكل عام' },
     { score: 6, label: '6 نقاط: كفاءة مقبولة — تخطيط وظيفي لكن تقليدي، بعض المساحات المفقودة، حساسية مالية محدودة' },
     { score: 4, label: '4 نقاط: كفاءة ضعيفة — منطق حركة ضعيف، مساحات مهدرة ملحوظة، تخطيط خدمات ضعيف' },
     { score: 2, label: '2 نقاط: كفاءة ضعيفة جداً — تخطيط غير فعال، فقدان كبير في المساحة القابلة للاستخدام، تخطيط مضر مالياً' },
   ]},
-  { id: 4, name: 'التحكم في التكاليف والوعي بالميزانية', shortName: 'الوعي بالميزانية', weight: 9.35, options: [
+  { id: 4, name: 'التحكم في التكاليف والوعي بالميزانية', weight: 9.35, options: [
     { score: 10, label: '10 نقاط: ذكاء تكلفة قوي — قرارات التصميم تعكس الوعي بالميزانية' },
     { score: 8, label: '8 نقاط: حساسية تكلفة جيدة' },
     { score: 6, label: '6 نقاط: محايد' },
     { score: 4, label: '4 نقاط: وعي تكلفة ضعيف' },
     { score: 2, label: '2 نقاط: مخاطر تصميم مكلفة' },
   ]},
-  { id: 5, name: 'الخبرة في مشاريع مشابهة', shortName: 'مشاريع مشابهة', weight: 8.5, options: [
+  { id: 5, name: 'الخبرة في مشاريع مشابهة', weight: 8.5, options: [
     { score: 10, label: '10 نقاط: خبرة واسعة ذات صلة — مشاريع متعددة مكتملة بنفس الحجم والنوع' },
     { score: 8, label: '8 نقاط: خبرة قوية — محفظة جيدة ذات صلة مع تسليم مثبت' },
     { score: 6, label: '6 نقاط: خبرة متوسطة — بعض المشاريع ذات الصلة لكن ليست قابلة للمقارنة بالكامل' },
     { score: 4, label: '4 نقاط: خبرة محدودة — مراجع مشابهة قليلة' },
     { score: 2, label: '2 نقاط: لا توجد خبرة ذات صلة' },
   ]},
-  { id: 6, name: 'قوة فريق المشروع', shortName: 'فريق المشروع', weight: 8.5, options: [
+  { id: 6, name: 'قوة فريق المشروع', weight: 8.5, options: [
     { score: 10, label: '10 نقاط: فريق مخصص ذو خبرة عالية — قيادة عليا مشاركة مباشرة' },
     { score: 8, label: '8 نقاط: فريق قوي — خبرة جيدة مع دعم قادر' },
     { score: 6, label: '6 نقاط: فريق متوسط' },
     { score: 4, label: '4 نقاط: تكليف ضعيف' },
     { score: 2, label: '2 نقاط: فريق غير واضح أو عديم الخبرة' },
   ]},
-  { id: 7, name: 'إدارة الوقت والتحكم في البرنامج', shortName: 'التحكم بالوقت', weight: 8.5, options: [
+  { id: 7, name: 'إدارة الوقت والتحكم في البرنامج', weight: 8.5, options: [
     { score: 10, label: '10 نقاط: سجل ممتاز — انضباط جدولة قوي، موافقات سريعة مثبتة' },
     { score: 8, label: '8 نقاط: تحكم جيد' },
     { score: 6, label: '6 نقاط: مقبول' },
     { score: 4, label: '4 نقاط: تأخيرات محتملة' },
     { score: 2, label: '2 نقاط: تحكم ضعيف' },
   ]},
-  { id: 8, name: 'الاهتمام الخاص بالمشروع ومرونة التعامل', shortName: 'الاهتمام والمرونة', weight: 8, options: [
+  { id: 8, name: 'الاهتمام الخاص بالمشروع ومرونة التعامل', weight: 8, options: [
     { score: 10, label: '10 نقاط: المشروع أولوية قصوى لدى الاستشاري، اهتمام خاص جداً، متابعة مستمرة، ومرونة عالية في التعامل' },
     { score: 8, label: '8 نقاط: المشروع ذو أهمية خاصة، اهتمام واضح، وتواصل جيد ومرن' },
     { score: 6, label: '6 نقاط: المشروع يلقى اهتمام جيد، استجابة مقبولة وتعاون معقول' },
     { score: 4, label: '4 نقاط: المشروع أحد مشاريع الشركة العادية، اهتمام محدود دون تميّز' },
     { score: 2, label: '2 نقاط: المشروع ليس ذو أهمية لديهم، استجابة ضعيفة واهتمام منخفض' },
   ]},
-  { id: 9, name: 'مرونة التعاقد', shortName: 'مرونة التعاقد', weight: 7, options: [
+  { id: 9, name: 'مرونة التعاقد', weight: 7, options: [
     { score: 10, label: '10 نقاط: لا أعمال إضافية غير مبررة، ومرونة ممتازة جداً في التعديلات ضمن نطاق العمل، مع شروط عادلة وواضحة' },
     { score: 8, label: '8 نقاط: مرونة ممتازة في التعديلات، مع بعض القيود المنطقية على الأعمال الإضافية' },
     { score: 6, label: '6 نقاط: مرونة متوسطة، يقبل التعديلات لكن بإجراءات رسمية وشروط عديدة' },
@@ -585,32 +583,36 @@ export default function ConsultantEvaluationPage() {
                       </div>
                     </div>
 
-                    {/* Evaluation Table for Active Evaluator - Transposed: consultants as rows, criteria as columns */}
+                    {/* Evaluation Table for Active Evaluator */}
+                    {projectConsultants.length > 2 && (
+                      <p className="text-xs text-stone-400 mb-1">← اسحب لليسار لرؤية باقي الاستشاريين</p>
+                    )}
                     <div className="overflow-x-auto border rounded-lg" style={{ maxWidth: '100%' }}>
-                      <table className="border-collapse w-full table-fixed">
+                      <table className="border-collapse w-max">
                         <thead>
                           <tr className="bg-stone-800 text-white">
-                            <th className="border border-stone-600 p-2 text-right sticky right-0 bg-stone-800 z-10" style={{ width: '120px', minWidth: '120px' }}>الاستشاري</th>
-                            {CRITERIA.map((criterion) => (
-                              <th key={criterion.id} className="border border-stone-600 p-1 text-center text-[10px] leading-tight" style={{ width: `${(100 - 12) / CRITERIA.length}%` }} title={criterion.name}>
-                                <div className="whitespace-nowrap">{criterion.shortName}</div>
-                                <div className="text-stone-400 text-[9px]">{criterion.weight}%</div>
+                            <th className="border border-stone-600 p-2 text-right sticky right-0 bg-stone-800 z-10" style={{ minWidth: '180px' }}>المعيار (الوزن)</th>
+                            {projectConsultants.map((consultant) => (
+                              <th key={consultant.id} className="border border-stone-600 p-2 text-center" style={{ minWidth: '250px', width: '250px' }}>
+                                {consultant.name}
                               </th>
                             ))}
                           </tr>
                         </thead>
                         <tbody>
-                          {projectConsultants.map((consultant) => (
-                            <tr key={consultant.id} className="border-b hover:bg-stone-50/50">
-                              <td className="border p-2 bg-gray-50 font-semibold text-right text-sm sticky right-0 z-10" style={{ width: '120px', minWidth: '120px' }}>
-                                {consultant.name}
+                          {CRITERIA.map((criterion) => (
+                            <tr key={criterion.id} className="border-b">
+                              <td className="border p-2 bg-gray-50 font-semibold text-right sticky right-0 z-10" style={{ minWidth: '180px' }}>
+                                {criterion.name}
+                                <br />
+                                <small className="text-gray-600">(وزن: {criterion.weight}%)</small>
                               </td>
-                              {CRITERIA.map((criterion) => {
+                              {projectConsultants.map((consultant) => {
                                 const currentScore = (evaluatorScoresQuery.data || []).find(
                                   (s: any) => s.consultantId === consultant.id && s.criterionId === criterion.id && s.evaluatorName === activeEvaluator
                                 );
                                 return (
-                                  <td key={criterion.id} className="border p-1 text-center">
+                                  <td key={consultant.id} className="border p-2 text-center">
                                     <Select
                                       value={currentScore?.score?.toString() || ""}
                                       onValueChange={(value) => {
@@ -623,22 +625,14 @@ export default function ConsultantEvaluationPage() {
                                         });
                                       }}
                                     >
-                                      <SelectTrigger className={`w-full h-8 text-xs px-1 font-bold ${
-                                        (currentScore?.score ?? 0) >= 8 ? 'text-emerald-700 bg-emerald-50 border-emerald-200' :
-                                        (currentScore?.score ?? 0) >= 6 ? 'text-amber-700 bg-amber-50 border-amber-200' :
-                                        (currentScore?.score ?? 0) >= 2 ? 'text-red-700 bg-red-50 border-red-200' :
-                                        ''
-                                      }`}>
-                                        <SelectValue placeholder="—">
-                                          {currentScore?.score ? `${currentScore.score}` : '—'}
-                                        </SelectValue>
+                                      <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="اختر" />
                                       </SelectTrigger>
-                                      <SelectContent className="max-w-[400px]">
+                                      <SelectContent>
                                         {criterion.options.map((option: { score: number; label: string }) => (
                                           <SelectItem
                                             key={option.score}
                                             value={option.score.toString()}
-                                            className="text-xs"
                                           >
                                             {option.label}
                                           </SelectItem>
@@ -654,56 +648,52 @@ export default function ConsultantEvaluationPage() {
                       </table>
                     </div>
 
-                    {/* Average Results Table - Transposed */}
+                    {/* Average Results Table */}
                     <div className="mt-6">
                       <h3 className="font-bold text-stone-800 mb-3">المتوسط النهائي (من المقيّمين الثلاثة)</h3>
                       <div className="overflow-x-auto border rounded-lg" style={{ maxWidth: '100%' }}>
-                        <table className="border-collapse w-full table-fixed">
+                        <table className="border-collapse w-max">
                           <thead>
                             <tr className="bg-amber-100">
-                              <th className="border p-2 text-right font-semibold text-amber-800 sticky right-0 bg-amber-100 z-10" style={{ width: '120px', minWidth: '120px' }}>الاستشاري</th>
-                              {CRITERIA.map((criterion) => (
-                                <th key={criterion.id} className="border p-1 text-center font-semibold text-amber-800 text-[10px] leading-tight" style={{ width: `${(100 - 12) / (CRITERIA.length + 1)}%` }} title={criterion.name}>
-                                  <div className="whitespace-nowrap">{criterion.shortName}</div>
-                                  <div className="text-amber-600 text-[9px]">{criterion.weight}%</div>
+                              <th className="border p-2 text-right font-semibold text-amber-800 sticky right-0 bg-amber-100 z-10" style={{ minWidth: '180px' }}>المعيار</th>
+                              {projectConsultants.map((consultant) => (
+                                <th key={consultant.id} className="border p-2 text-center font-semibold text-amber-800" style={{ minWidth: '200px', width: '200px' }}>
+                                  {consultant.name}
                                 </th>
                               ))}
-                              <th className="border p-1 text-center font-bold text-amber-900 text-xs" style={{ width: `${(100 - 12) / (CRITERIA.length + 1)}%` }}>المجموع</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {projectConsultants.map((consultant) => (
-                              <tr key={consultant.id} className="border-b hover:bg-amber-50/50">
-                                <td className="border p-2 bg-gray-50 font-semibold text-right text-sm sticky right-0 z-10" style={{ width: '120px', minWidth: '120px' }}>
-                                  {consultant.name}
+                            {CRITERIA.map((criterion, critIdx) => (
+                              <tr key={criterion.id} className="border-b">
+                                <td className="border p-2 bg-gray-50 font-semibold text-right text-sm sticky right-0 z-10" style={{ minWidth: '180px' }}>
+                                  {criterion.name} ({criterion.weight}%)
                                 </td>
-                                {CRITERIA.map((criterion, critIdx) => {
+                                {projectConsultants.map((consultant) => {
                                   const avgScore = consultantScores[consultant.id]?.scores[critIdx] || 0;
                                   return (
-                                    <td key={criterion.id} className="border p-1 text-center">
-                                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${
-                                        avgScore >= 8 ? 'bg-emerald-100 text-emerald-700' :
-                                        avgScore >= 6 ? 'bg-amber-100 text-amber-700' :
+                                    <td key={consultant.id} className="border p-2 text-center">
+                                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-sm font-bold ${
+                                        avgScore >= 75 ? 'bg-emerald-100 text-emerald-700' :
+                                        avgScore >= 50 ? 'bg-amber-100 text-amber-700' :
                                         avgScore > 0 ? 'bg-red-100 text-red-700' :
                                         'bg-gray-100 text-gray-400'
                                       }`}>
-                                        {avgScore > 0 ? avgScore.toFixed(1) : '—'}
+                                        {avgScore > 0 ? avgScore.toFixed(0) : '—'}
                                       </span>
                                     </td>
                                   );
                                 })}
-                                <td className="border p-1 text-center">
-                                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-bold ${
-                                    (consultantScores[consultant.id]?.weighted || 0) >= 7 ? 'bg-emerald-200 text-emerald-800' :
-                                    (consultantScores[consultant.id]?.weighted || 0) >= 5 ? 'bg-amber-200 text-amber-800' :
-                                    (consultantScores[consultant.id]?.weighted || 0) > 0 ? 'bg-red-200 text-red-800' :
-                                    'bg-gray-100 text-gray-400'
-                                  }`}>
-                                    {consultantScores[consultant.id]?.weighted.toFixed(1) || '0.0'}
-                                  </span>
-                                </td>
                               </tr>
                             ))}
+                            <tr className="bg-stone-100 font-bold">
+                              <td className="border p-2 text-right sticky right-0 bg-stone-100 z-10">المجموع المرجح</td>
+                              {projectConsultants.map((consultant) => (
+                                <td key={consultant.id} className="border p-2 text-center text-lg">
+                                  {consultantScores[consultant.id]?.weighted.toFixed(1) || 0} / 100
+                                </td>
+                              ))}
+                            </tr>
                           </tbody>
                         </table>
                       </div>
@@ -761,120 +751,7 @@ export default function ConsultantEvaluationPage() {
             {/* Results Summary */}
             <Card className="mt-6">
               <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle className="flex items-center gap-2"><Award className="w-5 h-5 text-amber-500" /> ملخص المقارنة والترتيب</CardTitle>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => {
-                      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-                      
-                      // Title
-                      doc.setFontSize(16);
-                      doc.text(`Evaluation Report - ${selectedProject?.name || 'Project'}`, 148, 15, { align: 'center' });
-                      doc.setFontSize(10);
-                      doc.text(`Date: ${new Date().toLocaleDateString('en-US')}`, 148, 22, { align: 'center' });
-                      
-                      // BUA Info
-                      const bua = selectedProject?.bua || 0;
-                      const price = selectedProject?.pricePerSqft || 0;
-                      doc.text(`BUA: ${bua.toLocaleString()} sqft | Price/sqft: ${price} AED | Total: ${(bua * price).toLocaleString()} AED`, 148, 28, { align: 'center' });
-                      
-                      // Technical Evaluation Table
-                      const sortedConsultants = projectConsultants
-                        .map((c) => ({ c, score: consultantScores[c.id]?.weighted || 0, cost: financialTotals[c.id] || 0 }))
-                        .sort((a, b) => b.score - a.score);
-                      
-                      const criteriaHeaders = CRITERIA.map(cr => cr.shortName);
-                      const tableHead = [['#', 'Consultant', ...criteriaHeaders, 'Weighted Total']];
-                      const tableBody = sortedConsultants.map((item, idx) => {
-                        const scores = consultantScores[item.c.id];
-                        const criteriaScores = CRITERIA.map((_, i) => {
-                          const s = scores?.scores[i] || 0;
-                          return s > 0 ? s.toFixed(1) : '-';
-                        });
-                        return [
-                          String(idx + 1),
-                          item.c.name,
-                          ...criteriaScores,
-                          (scores?.weighted || 0).toFixed(1)
-                        ];
-                      });
-                      
-                      autoTable(doc, {
-                        head: tableHead,
-                        body: tableBody,
-                        startY: 34,
-                        theme: 'grid',
-                        headStyles: { fillColor: [68, 64, 60], fontSize: 7, halign: 'center' },
-                        bodyStyles: { fontSize: 8, halign: 'center' },
-                        columnStyles: { 1: { halign: 'left' } },
-                        styles: { cellPadding: 2 },
-                      });
-                      
-                      // Financial Table
-                      const finY = (doc as any).lastAutoTable.finalY + 10;
-                      const finHead = [['#', 'Consultant', 'Design Fee', 'Supervision Fee', 'Total Fees']];
-                      const finBody = sortedConsultants.map((item, idx) => {
-                        const fin = financialQuery.data?.find((f: any) => f.consultantId === item.c.id);
-                        const buildCost = bua * price;
-                        const dv = parseFloat(String(fin?.designValue ?? 0)) || 0;
-                        const sv = parseFloat(String(fin?.supervisionValue ?? 0)) || 0;
-                        const designAmt = fin?.designType === 'pct' ? (dv / 100) * buildCost : dv;
-                        const supAmt = fin?.supervisionType === 'pct' ? (sv / 100) * buildCost : sv;
-                        return [
-                          String(idx + 1),
-                          item.c.name,
-                          `${designAmt.toLocaleString()} AED`,
-                          `${supAmt.toLocaleString()} AED`,
-                          `${(designAmt + supAmt).toLocaleString()} AED`
-                        ];
-                      });
-                      
-                      autoTable(doc, {
-                        head: finHead,
-                        body: finBody,
-                        startY: finY,
-                        theme: 'grid',
-                        headStyles: { fillColor: [180, 130, 50], fontSize: 8, halign: 'center' },
-                        bodyStyles: { fontSize: 8, halign: 'center' },
-                        columnStyles: { 1: { halign: 'left' } },
-                      });
-                      
-                      // Ranking Summary
-                      const rankY = (doc as any).lastAutoTable.finalY + 10;
-                      doc.setFontSize(12);
-                      doc.text('Final Ranking', 148, rankY, { align: 'center' });
-                      const rankHead = [['Rank', 'Consultant', 'Technical Score', 'Total Fees', 'Value Rating']];
-                      const rankBody = sortedConsultants.map((item, idx) => {
-                        const valueRating = item.cost > 0 ? (item.score / (item.cost / 1000000)).toFixed(2) : '-';
-                        return [
-                          String(idx + 1),
-                          item.c.name,
-                          item.score.toFixed(1),
-                          `${item.cost.toLocaleString()} AED`,
-                          valueRating
-                        ];
-                      });
-                      
-                      autoTable(doc, {
-                        head: rankHead,
-                        body: rankBody,
-                        startY: rankY + 4,
-                        theme: 'grid',
-                        headStyles: { fillColor: [34, 120, 74], fontSize: 8, halign: 'center' },
-                        bodyStyles: { fontSize: 9, halign: 'center' },
-                        columnStyles: { 1: { halign: 'left' } },
-                      });
-                      
-                      doc.save(`Evaluation_${selectedProject?.name || 'Report'}_${new Date().toISOString().split('T')[0]}.pdf`);
-                    }}
-                  >
-                    <FileDown className="w-4 h-4" />
-                    تصدير PDF
-                  </Button>
-                </div>
+                <CardTitle className="flex items-center gap-2"><Award className="w-5 h-5 text-amber-500" /> ملخص المقارنة والترتيب</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
