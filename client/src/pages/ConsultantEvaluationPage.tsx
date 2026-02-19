@@ -205,6 +205,63 @@ const EVALUATORS = [
   { id: 'abdulrahman', name: 'عبدالرحمن' },
 ];
 
+// BUA/Price fields with local state - saves on blur
+function BuaPriceFields({ project, updateProjectMutation }: { project: any; updateProjectMutation: any }) {
+  const [localBua, setLocalBua] = useState(String(project.bua || ''));
+  const [localPrice, setLocalPrice] = useState(String(project.pricePerSqft || ''));
+  const prevProjectId = useRef(project.id);
+
+  // Sync when project changes
+  useEffect(() => {
+    if (project.id !== prevProjectId.current) {
+      prevProjectId.current = project.id;
+      setLocalBua(String(project.bua || ''));
+      setLocalPrice(String(project.pricePerSqft || ''));
+    }
+  }, [project.id, project.bua, project.pricePerSqft]);
+
+  const buaNum = parseFloat(localBua) || 0;
+  const priceNum = parseFloat(localPrice) || 0;
+  const total = buaNum * priceNum;
+
+  return (
+    <div className="grid grid-cols-3 gap-4">
+      <div>
+        <label className="text-sm text-gray-600 block mb-1">مساحة البناء (قدم²)</label>
+        <Input
+          type="number"
+          value={localBua}
+          onChange={(e) => setLocalBua(e.target.value)}
+          onBlur={() => {
+            const val = parseFloat(localBua) || 0;
+            updateProjectMutation.mutate({ id: project.id, bua: val });
+          }}
+          placeholder="مثلاً: 500000"
+        />
+      </div>
+      <div>
+        <label className="text-sm text-gray-600 block mb-1">سعر القدم المربع (AED)</label>
+        <Input
+          type="number"
+          value={localPrice}
+          onChange={(e) => setLocalPrice(e.target.value)}
+          onBlur={() => {
+            const val = parseFloat(localPrice) || 0;
+            updateProjectMutation.mutate({ id: project.id, pricePerSqft: val });
+          }}
+          placeholder="مثلاً: 100"
+        />
+      </div>
+      <div>
+        <p className="text-sm text-gray-600 mb-1">إجمالي تكلفة البناء</p>
+        <p className="text-lg font-bold text-stone-800">
+          {total.toLocaleString()} AED
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function ConsultantEvaluationPage() {
   const { user, isAuthenticated } = useAuth();
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
@@ -241,6 +298,7 @@ export default function ConsultantEvaluationPage() {
 
   const updateProjectMutation = trpc.projects.update.useMutation({
     onSuccess: () => {
+      projectsQuery.refetch();
       projectDetailsQuery.refetch();
     },
   });
@@ -422,38 +480,10 @@ export default function ConsultantEvaluationPage() {
                 <CardTitle>{selectedProject.name}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-sm text-gray-600 block mb-1">مساحة البناء (قدم²)</label>
-                    <Input
-                      type="number"
-                      value={selectedProject.bua || ''}
-                      onChange={(e) => {
-                        const val = parseFloat(e.target.value) || 0;
-                        updateProjectMutation.mutate({ id: selectedProject.id, bua: val });
-                      }}
-                      placeholder="مثلاً: 500000"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm text-gray-600 block mb-1">سعر القدم المربع (AED)</label>
-                    <Input
-                      type="number"
-                      value={selectedProject.pricePerSqft || ''}
-                      onChange={(e) => {
-                        const val = parseFloat(e.target.value) || 0;
-                        updateProjectMutation.mutate({ id: selectedProject.id, pricePerSqft: val });
-                      }}
-                      placeholder="مثلاً: 100"
-                    />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">إجمالي تكلفة البناء</p>
-                    <p className="text-lg font-bold text-stone-800">
-                      {((selectedProject.bua || 0) * (selectedProject.pricePerSqft || 0)).toLocaleString()} AED
-                    </p>
-                  </div>
-                </div>
+                <BuaPriceFields
+                  project={selectedProject}
+                  updateProjectMutation={updateProjectMutation}
+                />
               </CardContent>
             </Card>
 
@@ -515,51 +545,7 @@ export default function ConsultantEvaluationPage() {
                     </div>
                   ))}
                 </div>
-                {/* Add new consultant to master list */}
-                <div className="border-t pt-4">
-                  <p className="text-sm text-stone-500 mb-2">إضافة استشاري جديد للقائمة الرئيسية</p>
-                  <div className="flex gap-2">
-                    <Input
-                      value={newConsultantName}
-                      onChange={(e) => setNewConsultantName(e.target.value)}
-                      placeholder="اسم الاستشاري الجديد"
-                      className="flex-1"
-                    />
-                    <Button
-                      onClick={() => {
-                        if (newConsultantName.trim()) {
-                          createConsultantMutation.mutate({ name: newConsultantName.trim() });
-                        }
-                      }}
-                      disabled={!newConsultantName.trim() || createConsultantMutation.isPending}
-                      size="sm"
-                    >
-                      <Plus className="w-4 h-4 ml-1" /> إضافة
-                    </Button>
-                  </div>
-                  {/* Master list with delete */}
-                  <div className="mt-3">
-                    <p className="text-xs text-stone-400 mb-1">القائمة الرئيسية:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {consultants.map((c) => (
-                        <div key={c.id} className="bg-stone-50 border border-stone-200 text-stone-600 px-2 py-0.5 rounded text-xs flex items-center gap-1">
-                          {c.name}
-                          <button
-                            onClick={() => {
-                              if (confirm(`هل تريد حذف ${c.name} نهائياً من القائمة الرئيسية؟`)) {
-                                deleteConsultantMutation.mutate(c.id);
-                              }
-                            }}
-                            className="text-red-300 hover:text-red-500 transition-colors"
-                            title="حذف من القائمة الرئيسية"
-                          >
-                            <Trash2 className="w-2.5 h-2.5" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+
               </CardContent>
             </Card>
 

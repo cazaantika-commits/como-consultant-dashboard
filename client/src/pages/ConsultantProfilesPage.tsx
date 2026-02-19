@@ -1,18 +1,39 @@
+import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ArrowRight, Building2, Globe, Users, Award, ChevronLeft } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Loader2, ArrowRight, Building2, Globe, Users, Award, ChevronLeft, Plus, Trash2, UserPlus } from "lucide-react";
 import { Link } from "wouter";
 import { getLoginUrl } from "@/const";
 
 export default function ConsultantProfilesPage() {
   const { user, loading: authLoading, isAuthenticated } = useAuth();
-  const { data: consultantsWithProfiles, isLoading } = trpc.profiles.listWithProfiles.useQuery(
+  const [newConsultantName, setNewConsultantName] = useState("");
+
+  const { data: consultantsWithProfiles, isLoading, refetch: refetchProfiles } = trpc.profiles.listWithProfiles.useQuery(
     undefined,
     { enabled: isAuthenticated }
   );
+
+  const consultantsQuery = trpc.consultants.list.useQuery(undefined, { enabled: isAuthenticated });
+
+  const createConsultantMutation = trpc.consultants.create.useMutation({
+    onSuccess: () => {
+      consultantsQuery.refetch();
+      refetchProfiles();
+      setNewConsultantName("");
+    },
+  });
+
+  const deleteConsultantMutation = trpc.consultants.delete.useMutation({
+    onSuccess: () => {
+      consultantsQuery.refetch();
+      refetchProfiles();
+    },
+  });
 
   if (authLoading) {
     return (
@@ -43,7 +64,7 @@ export default function ConsultantProfilesPage() {
       <header className="bg-gradient-to-l from-blue-700 to-blue-500 text-white shadow-lg">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold">الملفات التعريفية للاستشاريين</h1>
+            <h1 className="text-xl font-bold">تعرّف على الاستشاريين</h1>
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm opacity-80">{user?.name}</span>
@@ -59,6 +80,66 @@ export default function ConsultantProfilesPage() {
 
       {/* Content */}
       <main className="container mx-auto px-4 py-8">
+        {/* Add New Consultant Section */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-blue-600" />
+              إدارة القائمة الرئيسية للاستشاريين
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2 mb-4">
+              <Input
+                value={newConsultantName}
+                onChange={(e) => setNewConsultantName(e.target.value)}
+                placeholder="اسم الاستشاري الجديد"
+                className="flex-1"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newConsultantName.trim()) {
+                    createConsultantMutation.mutate({ name: newConsultantName.trim() });
+                  }
+                }}
+              />
+              <Button
+                onClick={() => {
+                  if (newConsultantName.trim()) {
+                    createConsultantMutation.mutate({ name: newConsultantName.trim() });
+                  }
+                }}
+                disabled={!newConsultantName.trim() || createConsultantMutation.isPending}
+              >
+                <Plus className="w-4 h-4 ml-1" /> إضافة استشاري
+              </Button>
+            </div>
+            {/* Master list with delete */}
+            {consultantsQuery.data && consultantsQuery.data.length > 0 && (
+              <div>
+                <p className="text-sm text-gray-500 mb-2">القائمة الرئيسية ({consultantsQuery.data.length} استشاري):</p>
+                <div className="flex flex-wrap gap-2">
+                  {consultantsQuery.data.map((c) => (
+                    <div key={c.id} className="bg-blue-50 border border-blue-200 text-blue-800 px-3 py-1.5 rounded-lg text-sm flex items-center gap-2">
+                      {c.name}
+                      <button
+                        onClick={() => {
+                          if (confirm(`هل تريد حذف ${c.name} نهائياً من القائمة الرئيسية؟\nسيتم حذفه من جميع المشاريع أيضاً.`)) {
+                            deleteConsultantMutation.mutate(c.id);
+                          }
+                        }}
+                        className="text-red-400 hover:text-red-600 transition-colors"
+                        title="حذف من القائمة الرئيسية"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Consultant Profiles Grid */}
         {isLoading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="animate-spin h-8 w-8 text-blue-600" />
@@ -68,7 +149,7 @@ export default function ConsultantProfilesPage() {
             <CardContent>
               <Building2 className="h-12 w-12 mx-auto text-gray-400 mb-4" />
               <p className="text-gray-500 text-lg">لا يوجد استشاريون حالياً</p>
-              <p className="text-gray-400 text-sm mt-2">يمكنك إضافة استشاريين من صفحة تقييم الاستشاريين</p>
+              <p className="text-gray-400 text-sm mt-2">أضف استشاريين جدد من القسم أعلاه</p>
             </CardContent>
           </Card>
         ) : (
