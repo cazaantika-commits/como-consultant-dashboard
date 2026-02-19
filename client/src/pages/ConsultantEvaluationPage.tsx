@@ -127,70 +127,70 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
 
 // Evaluation criteria - exact match from consultant-dashboard.html
 const CRITERIA = [
-  { id: 0, name: 'الهوية المعمارية وجودة التصميم', weight: 12.75, options: [
+  { id: 0, name: 'الهوية المعمارية وجودة التصميم', shortName: 'الهوية والتصميم', weight: 12.75, options: [
     { score: 10, label: '10 نقاط: مستوى معلم بارز — هوية أيقونية قوية، عامل تمييز في السوق، عمارة لا تُنسى' },
     { score: 8, label: '8 نقاط: جودة عالية — هوية مميزة، سرد تصميمي واضح، حضور سوقي فوق المتوسط' },
     { score: 6, label: '6 نقاط: جودة متوسطة — كفء لكن عام، لا يوجد تمييز قوي' },
     { score: 4, label: '4 نقاط: هوية ضعيفة — يفتقر للوضوح، جاذبية سوقية محدودة' },
     { score: 2, label: '2 نقاط: تصميم ضعيف — لا توجد هوية متماسكة، ضعيف بصرياً' },
   ]},
-  { id: 1, name: 'القدرات التقنية والتكامل مع BIM', weight: 12.75, options: [
+  { id: 1, name: 'القدرات التقنية والتكامل مع BIM', shortName: 'التقنية وBIM', weight: 12.75, options: [
     { score: 10, label: '10 نقاط: ممارسة BIM متقدمة — سير عمل BIM كامل، تنسيق تصميم LOD 300-350، إدارة تضارب قوية، مخرجات رقمية منظمة' },
     { score: 8, label: '8 نقاط: ممارسة BIM جيدة — استخدام BIM بشكل متسق، تنسيق جيد' },
     { score: 6, label: '6 نقاط: استخدام BIM أساسي — BIM محدود في النمذجة فقط' },
     { score: 4, label: '4 نقاط: تكامل BIM ضئيل — تنسيق معتمد على 2D في الغالب' },
     { score: 2, label: '2 نقاط: لا توجد قدرة BIM' },
   ]},
-  { id: 2, name: 'الأتعاب المهنية', weight: 12.75, options: [
+  { id: 2, name: 'الأتعاب المهنية', shortName: 'الأتعاب', weight: 12.75, options: [
     { score: 10, label: '10 نقاط: قيمة ممتازة — أتعاب تنافسية للغاية ومبررة' },
     { score: 8, label: '8 نقاط: تنافسية' },
     { score: 6, label: '6 نقاط: متوسط السوق' },
     { score: 4, label: '4 نقاط: أتعاب مرتفعة' },
     { score: 2, label: '2 نقاط: أتعاب مفرطة' },
   ]},
-  { id: 3, name: 'كفاءة التخطيط وتحسين المساحات', weight: 11.9, options: [
+  { id: 3, name: 'كفاءة التخطيط وتحسين المساحات', shortName: 'تحسين المساحات', weight: 11.9, options: [
     { score: 10, label: '10 نقاط: كفاءة استثنائية — منطق تخطيط ممتاز، استخدام أمثل للمساحة، الحد الأدنى من الفراغات الميتة، تخطيط خدمات قوي، وعي مالي واضح' },
     { score: 8, label: '8 نقاط: كفاءة قوية — تخطيط مساحات جيد جداً، عدم كفاءة طفيف لكن فهم تجاري قوي بشكل عام' },
     { score: 6, label: '6 نقاط: كفاءة مقبولة — تخطيط وظيفي لكن تقليدي، بعض المساحات المفقودة، حساسية مالية محدودة' },
     { score: 4, label: '4 نقاط: كفاءة ضعيفة — منطق حركة ضعيف، مساحات مهدرة ملحوظة، تخطيط خدمات ضعيف' },
     { score: 2, label: '2 نقاط: كفاءة ضعيفة جداً — تخطيط غير فعال، فقدان كبير في المساحة القابلة للاستخدام، تخطيط مضر مالياً' },
   ]},
-  { id: 4, name: 'التحكم في التكاليف والوعي بالميزانية', weight: 9.35, options: [
+  { id: 4, name: 'التحكم في التكاليف والوعي بالميزانية', shortName: 'الوعي بالميزانية', weight: 9.35, options: [
     { score: 10, label: '10 نقاط: ذكاء تكلفة قوي — قرارات التصميم تعكس الوعي بالميزانية' },
     { score: 8, label: '8 نقاط: حساسية تكلفة جيدة' },
     { score: 6, label: '6 نقاط: محايد' },
     { score: 4, label: '4 نقاط: وعي تكلفة ضعيف' },
     { score: 2, label: '2 نقاط: مخاطر تصميم مكلفة' },
   ]},
-  { id: 5, name: 'الخبرة في مشاريع مشابهة', weight: 8.5, options: [
+  { id: 5, name: 'الخبرة في مشاريع مشابهة', shortName: 'مشاريع مشابهة', weight: 8.5, options: [
     { score: 10, label: '10 نقاط: خبرة واسعة ذات صلة — مشاريع متعددة مكتملة بنفس الحجم والنوع' },
     { score: 8, label: '8 نقاط: خبرة قوية — محفظة جيدة ذات صلة مع تسليم مثبت' },
     { score: 6, label: '6 نقاط: خبرة متوسطة — بعض المشاريع ذات الصلة لكن ليست قابلة للمقارنة بالكامل' },
     { score: 4, label: '4 نقاط: خبرة محدودة — مراجع مشابهة قليلة' },
     { score: 2, label: '2 نقاط: لا توجد خبرة ذات صلة' },
   ]},
-  { id: 6, name: 'قوة فريق المشروع', weight: 8.5, options: [
+  { id: 6, name: 'قوة فريق المشروع', shortName: 'فريق المشروع', weight: 8.5, options: [
     { score: 10, label: '10 نقاط: فريق مخصص ذو خبرة عالية — قيادة عليا مشاركة مباشرة' },
     { score: 8, label: '8 نقاط: فريق قوي — خبرة جيدة مع دعم قادر' },
     { score: 6, label: '6 نقاط: فريق متوسط' },
     { score: 4, label: '4 نقاط: تكليف ضعيف' },
     { score: 2, label: '2 نقاط: فريق غير واضح أو عديم الخبرة' },
   ]},
-  { id: 7, name: 'إدارة الوقت والتحكم في البرنامج', weight: 8.5, options: [
+  { id: 7, name: 'إدارة الوقت والتحكم في البرنامج', shortName: 'التحكم بالوقت', weight: 8.5, options: [
     { score: 10, label: '10 نقاط: سجل ممتاز — انضباط جدولة قوي، موافقات سريعة مثبتة' },
     { score: 8, label: '8 نقاط: تحكم جيد' },
     { score: 6, label: '6 نقاط: مقبول' },
     { score: 4, label: '4 نقاط: تأخيرات محتملة' },
     { score: 2, label: '2 نقاط: تحكم ضعيف' },
   ]},
-  { id: 8, name: 'الاهتمام الخاص بالمشروع ومرونة التعامل', weight: 8, options: [
+  { id: 8, name: 'الاهتمام الخاص بالمشروع ومرونة التعامل', shortName: 'الاهتمام والمرونة', weight: 8, options: [
     { score: 10, label: '10 نقاط: المشروع أولوية قصوى لدى الاستشاري، اهتمام خاص جداً، متابعة مستمرة، ومرونة عالية في التعامل' },
     { score: 8, label: '8 نقاط: المشروع ذو أهمية خاصة، اهتمام واضح، وتواصل جيد ومرن' },
     { score: 6, label: '6 نقاط: المشروع يلقى اهتمام جيد، استجابة مقبولة وتعاون معقول' },
     { score: 4, label: '4 نقاط: المشروع أحد مشاريع الشركة العادية، اهتمام محدود دون تميّز' },
     { score: 2, label: '2 نقاط: المشروع ليس ذو أهمية لديهم، استجابة ضعيفة واهتمام منخفض' },
   ]},
-  { id: 9, name: 'مرونة التعاقد', weight: 7, options: [
+  { id: 9, name: 'مرونة التعاقد', shortName: 'مرونة التعاقد', weight: 7, options: [
     { score: 10, label: '10 نقاط: لا أعمال إضافية غير مبررة، ومرونة ممتازة جداً في التعديلات ضمن نطاق العمل، مع شروط عادلة وواضحة' },
     { score: 8, label: '8 نقاط: مرونة ممتازة في التعديلات، مع بعض القيود المنطقية على الأعمال الإضافية' },
     { score: 6, label: '6 نقاط: مرونة متوسطة، يقبل التعديلات لكن بإجراءات رسمية وشروط عديدة' },
@@ -590,9 +590,9 @@ export default function ConsultantEvaluationPage() {
                           <tr className="bg-stone-800 text-white">
                             <th className="border border-stone-600 p-2 text-right sticky right-0 bg-stone-800 z-10" style={{ width: '120px', minWidth: '120px' }}>الاستشاري</th>
                             {CRITERIA.map((criterion) => (
-                              <th key={criterion.id} className="border border-stone-600 p-1 text-center text-[10px] leading-tight" style={{ width: `${(100 - 12) / CRITERIA.length}%` }}>
-                                <div className="truncate" title={criterion.name}>{criterion.name}</div>
-                                <div className="text-stone-400 text-[9px]">({criterion.weight}%)</div>
+                              <th key={criterion.id} className="border border-stone-600 p-1 text-center text-[10px] leading-tight" style={{ width: `${(100 - 12) / CRITERIA.length}%` }} title={criterion.name}>
+                                <div className="whitespace-nowrap">{criterion.shortName}</div>
+                                <div className="text-stone-400 text-[9px]">{criterion.weight}%</div>
                               </th>
                             ))}
                           </tr>
@@ -622,13 +622,16 @@ export default function ConsultantEvaluationPage() {
                                       }}
                                     >
                                       <SelectTrigger className="w-full h-8 text-xs px-1">
-                                        <SelectValue placeholder="—" />
+                                        <SelectValue placeholder="—">
+                                          {currentScore?.score ? `${currentScore.score}` : '—'}
+                                        </SelectValue>
                                       </SelectTrigger>
-                                      <SelectContent>
+                                      <SelectContent className="max-w-[400px]">
                                         {criterion.options.map((option: { score: number; label: string }) => (
                                           <SelectItem
                                             key={option.score}
                                             value={option.score.toString()}
+                                            className="text-xs"
                                           >
                                             {option.label}
                                           </SelectItem>
@@ -653,9 +656,9 @@ export default function ConsultantEvaluationPage() {
                             <tr className="bg-amber-100">
                               <th className="border p-2 text-right font-semibold text-amber-800 sticky right-0 bg-amber-100 z-10" style={{ width: '120px', minWidth: '120px' }}>الاستشاري</th>
                               {CRITERIA.map((criterion) => (
-                                <th key={criterion.id} className="border p-1 text-center font-semibold text-amber-800 text-[10px] leading-tight" style={{ width: `${(100 - 12) / (CRITERIA.length + 1)}%` }}>
-                                  <div className="truncate" title={criterion.name}>{criterion.name}</div>
-                                  <div className="text-amber-600 text-[9px]">({criterion.weight}%)</div>
+                                <th key={criterion.id} className="border p-1 text-center font-semibold text-amber-800 text-[10px] leading-tight" style={{ width: `${(100 - 12) / (CRITERIA.length + 1)}%` }} title={criterion.name}>
+                                  <div className="whitespace-nowrap">{criterion.shortName}</div>
+                                  <div className="text-amber-600 text-[9px]">{criterion.weight}%</div>
                                 </th>
                               ))}
                               <th className="border p-1 text-center font-bold text-amber-900 text-xs" style={{ width: `${(100 - 12) / (CRITERIA.length + 1)}%` }}>المجموع</th>
