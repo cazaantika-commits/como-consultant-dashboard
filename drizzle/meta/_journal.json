@@ -43,6 +43,13 @@
       "when": 1771450495068,
       "tag": "0005_outstanding_mole_man",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1771486517964,
+      "tag": "0006_wealthy_professor_monster",
+      "breakpoints": true
     }
   ]
 }

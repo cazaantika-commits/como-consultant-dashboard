@@ -238,3 +238,56 @@ export const feasibilityStudies = mysqlTable('feasibilityStudies', {
 
 export type FeasibilityStudy = typeof feasibilityStudies.$inferSelect;
 export type InsertFeasibilityStudy = typeof feasibilityStudies.$inferInsert;
+
+// Evaluator scores - 3 evaluators per project/consultant/criterion
+export const evaluatorScores = mysqlTable('evaluatorScores', {
+  id: int('id').autoincrement().primaryKey(),
+  projectId: int('projectId').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  consultantId: int('consultantId').notNull().references(() => consultants.id, { onDelete: 'cascade' }),
+  criterionId: int('criterionId').notNull(), // 0-5 for the 6 criteria
+  evaluatorName: varchar('evaluatorName', { length: 100 }).notNull(), // الشيخ عيسى، وائل، عبدالرحمن
+  score: int('score'), // Score value (0, 25, 50, 75, 100)
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type EvaluatorScore = typeof evaluatorScores.$inferSelect;
+export type InsertEvaluatorScore = typeof evaluatorScores.$inferInsert;
+
+// Committee decisions per project
+export const committeeDecisions = mysqlTable('committeeDecisions', {
+  id: int('id').autoincrement().primaryKey(),
+  projectId: int('projectId').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  selectedConsultantId: int('selectedConsultantId').references(() => consultants.id),
+  decisionType: varchar('decisionType', { length: 50 }), // 'selected', 'negotiate', 'pending'
+  negotiationTarget: text('negotiationTarget'), // التارجت
+  committeeNotes: text('committeeNotes'), // ملاحظات اللجنة
+  aiAnalysis: text('aiAnalysis'), // تحليل الذكاء الاصطناعي
+  aiRecommendation: text('aiRecommendation'), // توصية الذكاء الاصطناعي
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type CommitteeDecision = typeof committeeDecisions.$inferSelect;
+export type InsertCommitteeDecision = typeof committeeDecisions.$inferInsert;
+
+// Extended consultant details (for "تعرف على الاستشاري")
+export const consultantDetails = mysqlTable('consultantDetails', {
+  id: int('id').autoincrement().primaryKey(),
+  consultantId: int('consultantId').notNull().references(() => consultants.id, { onDelete: 'cascade' }).unique(),
+  phone2: varchar('phone2', { length: 20 }),
+  location: varchar('location', { length: 255 }),
+  classification: varchar('classification', { length: 100 }), // تصنيف
+  weight: varchar('weight', { length: 100 }), // وزن
+  yearsOfExperience: int('yearsOfExperience'),
+  numberOfEngineers: int('numberOfEngineers'),
+  notableClients: text('notableClients'), // عملاء بارزون
+  contactPerson: varchar('contactPerson', { length: 255 }),
+  contactPersonPhone: varchar('contactPersonPhone', { length: 20 }),
+  contactPersonEmail: varchar('contactPersonEmail', { length: 320 }),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type ConsultantDetail = typeof consultantDetails.$inferSelect;
+export type InsertConsultantDetail = typeof consultantDetails.$inferInsert;

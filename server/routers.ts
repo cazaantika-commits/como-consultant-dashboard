@@ -12,6 +12,9 @@ import { driveRouter } from "./routers/drive";
 import { tasksRouter } from "./routers/tasks";
 import { agentsRouter } from "./routers/agents";
 import { feasibilityRouter } from "./routers/feasibility";
+import { evaluatorScoresRouter } from "./routers/evaluatorScores";
+import { committeeRouter } from "./routers/committee";
+import { consultantDetailsRouter } from "./routers/consultantDetails";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -37,6 +40,9 @@ export const appRouter = router({
   tasks: tasksRouter,
   agents: agentsRouter,
   feasibility2: feasibilityRouter,
+  evaluatorScores: evaluatorScoresRouter,
+  committee: committeeRouter,
+  consultantDetails: consultantDetailsRouter,
 });
 
 export type AppRouter = typeof appRouter;

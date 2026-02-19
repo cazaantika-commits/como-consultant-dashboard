@@ -1,6 +1,6 @@
 import { eq, and, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, projects, InsertProject, consultants, InsertConsultant, projectConsultants, InsertProjectConsultant, financialData, InsertFinancialData, evaluationScores, InsertEvaluationScore } from "../drizzle/schema";
+import { InsertUser, users, projects, InsertProject, consultants, InsertConsultant, projectConsultants, InsertProjectConsultant, financialData, InsertFinancialData, evaluationScores, InsertEvaluationScore, evaluatorScores, InsertEvaluatorScore, committeeDecisions, InsertCommitteeDecision, consultantDetails, InsertConsultantDetail } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -214,4 +214,90 @@ export async function upsertEvaluationScore(projectId: number, consultantId: num
       .where(and(eq(evaluationScores.projectId, projectId), eq(evaluationScores.consultantId, consultantId), eq(evaluationScores.criterionId, criterionId)));
   }
   return await db.insert(evaluationScores).values({ projectId, consultantId, criterionId, score });
+}
+
+// Evaluator scores (3-evaluator system)
+export async function getProjectEvaluatorScores(projectId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(evaluatorScores).where(eq(evaluatorScores.projectId, projectId));
+}
+
+export async function upsertEvaluatorScore(projectId: number, consultantId: number, criterionId: number, evaluatorName: string, score: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const existing = await db.select().from(evaluatorScores)
+    .where(and(
+      eq(evaluatorScores.projectId, projectId),
+      eq(evaluatorScores.consultantId, consultantId),
+      eq(evaluatorScores.criterionId, criterionId),
+      eq(evaluatorScores.evaluatorName, evaluatorName)
+    ))
+    .limit(1);
+  if (existing.length > 0) {
+    return await db.update(evaluatorScores).set({ score })
+      .where(and(
+        eq(evaluatorScores.projectId, projectId),
+        eq(evaluatorScores.consultantId, consultantId),
+        eq(evaluatorScores.criterionId, criterionId),
+        eq(evaluatorScores.evaluatorName, evaluatorName)
+      ));
+  }
+  return await db.insert(evaluatorScores).values({ projectId, consultantId, criterionId, evaluatorName, score });
+}
+
+// Committee decisions
+export async function getCommitteeDecision(projectId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(committeeDecisions).where(eq(committeeDecisions.projectId, projectId)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function upsertCommitteeDecision(projectId: number, data: Partial<InsertCommitteeDecision>) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const existing = await db.select().from(committeeDecisions).where(eq(committeeDecisions.projectId, projectId)).limit(1);
+  if (existing.length > 0) {
+    return await db.update(committeeDecisions).set(data).where(eq(committeeDecisions.projectId, projectId));
+  }
+  return await db.insert(committeeDecisions).values({ projectId, ...data } as InsertCommitteeDecision);
+}
+
+// Consultant details
+export async function getConsultantDetail(consultantId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(consultantDetails).where(eq(consultantDetails.consultantId, consultantId)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function getAllConsultantDetails() {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(consultantDetails);
+}
+
+export async function upsertConsultantDetail(consultantId: number, data: Partial<InsertConsultantDetail>) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const existing = await db.select().from(consultantDetails).where(eq(consultantDetails.consultantId, consultantId)).limit(1);
+  if (existing.length > 0) {
+    return await db.update(consultantDetails).set(data).where(eq(consultantDetails.consultantId, consultantId));
+  }
+  return await db.insert(consultantDetails).values({ consultantId, ...data } as InsertConsultantDetail);
+}
+
+// Get all projects (no user filter - for portal)
+export async function getAllProjects() {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(projects);
+}
+
+// Get all consultants (no user filter - for portal)
+export async function getAllConsultants() {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(consultants);
 }

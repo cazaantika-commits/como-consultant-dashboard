@@ -67,7 +67,7 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
   };
 
   return (
-    <tr className="border-b hover:bg-blue-50/50 transition-colors">
+    <tr className="border-b hover:bg-stone-50/50 transition-colors">
       <td className="border p-2 font-semibold">{consultant.name}</td>
       <td className="border p-2 text-center">
         <Select value={designType} onValueChange={(v: any) => {
@@ -105,7 +105,7 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
           onChange={(e) => { editingRef.current = true; setSupervisionValue(e.target.value); }}
           onBlur={() => doSave({ supervisionValue: parseFloat(supervisionValue) || 0 })} />
       </td>
-      <td className="border p-2 text-center font-bold text-blue-700">
+      <td className="border p-2 text-center font-bold text-stone-700">
         {total.toLocaleString()} AED
       </td>
       <td className="border p-2 text-center">
@@ -115,7 +115,7 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
             onChange={(e) => { editingRef.current = true; setProposalLink(e.target.value); }}
             onBlur={() => doSave({ proposalLink })} />
           {proposalLink && (
-            <a href={proposalLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 shrink-0">
+            <a href={proposalLink} target="_blank" rel="noopener noreferrer" className="text-amber-600 hover:text-amber-800 shrink-0">
               <ExternalLink className="w-4 h-4" />
             </a>
           )}
@@ -143,10 +143,17 @@ const SCORE_OPTIONS = [
   { value: 100, label: "ممتاز" },
 ];
 
+const EVALUATORS = [
+  { id: 'sheikh_issa', name: 'الشيخ عيسى' },
+  { id: 'wael', name: 'وائل' },
+  { id: 'abdulrahman', name: 'عبدالرحمن' },
+];
+
 export default function ConsultantEvaluationPage() {
   const { user, isAuthenticated } = useAuth();
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [newProjectName, setNewProjectName] = useState("");
+  const [activeEvaluator, setActiveEvaluator] = useState('sheikh_issa');
 
   // Queries
   const projectsQuery = trpc.projects.list.useQuery();
@@ -159,6 +166,12 @@ export default function ConsultantEvaluationPage() {
   });
   const financialQuery = trpc.financial.getByProject.useQuery(selectedProjectId || 0, {
     enabled: !!selectedProjectId,
+  });
+  const evaluatorScoresQuery = trpc.evaluatorScores.getByProject.useQuery(selectedProjectId || 0, {
+    enabled: !!selectedProjectId,
+  });
+  const updateEvaluatorScoreMutation = trpc.evaluatorScores.upsert.useMutation({
+    onSuccess: () => evaluatorScoresQuery.refetch(),
   });
 
   // Mutations
@@ -187,37 +200,54 @@ export default function ConsultantEvaluationPage() {
     },
   });
 
-  // Calculate scores
+  // Calculate scores - now uses evaluator scores (3-evaluator system)
   const consultantScores = useMemo(() => {
-    if (!selectedProjectId || !evaluationQuery.data) return {};
+    if (!selectedProjectId) return {};
 
-    const scores: Record<number, { scores: number[]; total: number; weighted: number }> = {};
+    const scores: Record<number, { scores: number[]; total: number; weighted: number; evaluatorScores: Record<string, number[]> }> = {};
 
-    const projectConsultants = projectDetailsQuery.data?.consultants || [];
-    projectConsultants.forEach((consultant) => {
-      const consultantEvals = evaluationQuery.data.filter(
-        (e) => e.consultantId === consultant.id
-      );
+    const pConsultants = projectDetailsQuery.data?.consultants || [];
+    const evalScores = evaluatorScoresQuery.data || [];
+    const oldEvals = evaluationQuery.data || [];
 
-      const criteriaScores = CRITERIA.map((crit) => {
-        const eval_ = consultantEvals.find((e) => e.criterionId === crit.id);
-        return eval_?.score || 0;
+    pConsultants.forEach((consultant) => {
+      const evaluatorCriteriaScores: Record<string, number[]> = {};
+
+      EVALUATORS.forEach((ev) => {
+        evaluatorCriteriaScores[ev.id] = CRITERIA.map((crit) => {
+          const s = evalScores.find(
+            (es: any) => es.consultantId === consultant.id && es.criterionId === crit.id && es.evaluatorName === ev.id
+          );
+          return s?.score || 0;
+        });
       });
 
-      const totalScore = criteriaScores.reduce((a, b) => a + b, 0) / CRITERIA.length;
+      // Average across evaluators for each criterion
+      const avgCriteriaScores = CRITERIA.map((crit, idx) => {
+        const allScores = EVALUATORS.map((ev) => evaluatorCriteriaScores[ev.id][idx]).filter(s => s > 0);
+        if (allScores.length === 0) {
+          // Fallback to old single-evaluator scores
+          const oldEval = oldEvals.find((e: any) => e.consultantId === consultant.id && e.criterionId === crit.id);
+          return oldEval?.score || 0;
+        }
+        return allScores.reduce((a, b) => a + b, 0) / allScores.length;
+      });
+
+      const totalScore = avgCriteriaScores.reduce((a, b) => a + b, 0) / CRITERIA.length;
       const weightedScore = CRITERIA.reduce((sum, crit, idx) => {
-        return sum + (criteriaScores[idx] * crit.weight) / 100;
+        return sum + (avgCriteriaScores[idx] * crit.weight) / 100;
       }, 0);
 
       scores[consultant.id] = {
-        scores: criteriaScores,
+        scores: avgCriteriaScores,
         total: totalScore,
         weighted: weightedScore,
+        evaluatorScores: evaluatorCriteriaScores,
       };
     });
 
     return scores;
-  }, [selectedProjectId, evaluationQuery.data, projectDetailsQuery.data]);
+  }, [selectedProjectId, evaluatorScoresQuery.data, evaluationQuery.data, projectDetailsQuery.data]);
 
   // Calculate financial totals
   // DB stores pct values directly (1.5 = 1.5%, 2 = 2%)
@@ -267,12 +297,12 @@ export default function ConsultantEvaluationPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6" dir="rtl">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-8 rounded-lg mb-8 shadow-lg">
+        <div className="bg-gradient-to-r from-stone-700 to-stone-900 text-white p-8 rounded-lg mb-8 shadow-lg">
           <div className="flex items-center gap-3 mb-2">
             <Star className="w-10 h-10 text-yellow-300 fill-yellow-300" />
             <h1 className="text-4xl font-bold">نظام التقييم الفني والمقارنة</h1>
           </div>
-          <p className="text-blue-100">تقييم شامل للاستشاريين مع المقارنة المالية</p>
+          <p className="text-stone-300">تقييم شامل للاستشاريين مع المقارنة المالية</p>
         </div>
 
         {/* Project Selection */}
@@ -331,7 +361,7 @@ export default function ConsultantEvaluationPage() {
             {/* Consultants Management */}
             <Card className="mb-6">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Users className="w-5 h-5 text-blue-600" /> إدارة الاستشاريين للمشروع</CardTitle>
+                <CardTitle className="flex items-center gap-2"><Users className="w-5 h-5 text-stone-600" /> إدارة الاستشاريين للمشروع</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex gap-2 mb-4">
@@ -364,7 +394,7 @@ export default function ConsultantEvaluationPage() {
                   {projectConsultants.map((consultant) => (
                     <div
                       key={consultant.id}
-                      className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm"
+                      className="bg-stone-100 text-stone-800 px-3 py-1 rounded-full text-sm"
                     >
                       {consultant.name}
                     </div>
@@ -380,20 +410,41 @@ export default function ConsultantEvaluationPage() {
                 <TabsTrigger value="financial" className="flex items-center gap-2"><DollarSign className="w-4 h-4" /> الأتعاب المالية</TabsTrigger>
               </TabsList>
 
-              {/* Evaluation Tab */}
+              {/* Evaluation Tab - 3 Evaluators */}
               <TabsContent value="evaluation">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">📊 نموذج التقييم الفني</CardTitle>
+                    <CardTitle className="flex items-center gap-2">📊 نموذج التقييم الفني (3 مقيّمين)</CardTitle>
                   </CardHeader>
                   <CardContent>
+                    {/* Evaluator Selector */}
+                    <div className="flex gap-2 mb-4 flex-wrap">
+                      {EVALUATORS.map((ev) => (
+                        <button
+                          key={ev.id}
+                          onClick={() => setActiveEvaluator(ev.id)}
+                          className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                            activeEvaluator === ev.id
+                              ? 'bg-stone-800 text-white shadow-md'
+                              : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                          }`}
+                        >
+                          {ev.name}
+                        </button>
+                      ))}
+                      <div className="mr-auto bg-amber-50 text-amber-700 px-3 py-2 rounded-lg text-xs font-medium">
+                        المتوسط يُحسب تلقائياً من تقييمات الثلاثة
+                      </div>
+                    </div>
+
+                    {/* Evaluation Table for Active Evaluator */}
                     <div className="overflow-x-auto">
                       <table className="w-full border-collapse">
                         <thead>
-                          <tr className="bg-blue-600 text-white">
-                            <th className="border p-2 text-right">المعيار (الوزن)</th>
+                          <tr className="bg-stone-800 text-white">
+                            <th className="border border-stone-600 p-2 text-right">المعيار (الوزن)</th>
                             {projectConsultants.map((consultant) => (
-                              <th key={consultant.id} className="border p-2 text-center">
+                              <th key={consultant.id} className="border border-stone-600 p-2 text-center">
                                 {consultant.name}
                               </th>
                             ))}
@@ -407,46 +458,96 @@ export default function ConsultantEvaluationPage() {
                                 <br />
                                 <small className="text-gray-600">(وزن: {criterion.weight}%)</small>
                               </td>
+                              {projectConsultants.map((consultant) => {
+                                const currentScore = (evaluatorScoresQuery.data || []).find(
+                                  (s: any) => s.consultantId === consultant.id && s.criterionId === criterion.id && s.evaluatorName === activeEvaluator
+                                );
+                                return (
+                                  <td key={consultant.id} className="border p-2 text-center">
+                                    <Select
+                                      value={currentScore?.score?.toString() || ""}
+                                      onValueChange={(value) => {
+                                        updateEvaluatorScoreMutation.mutate({
+                                          projectId: selectedProject.id,
+                                          consultantId: consultant.id,
+                                          criterionId: criterion.id,
+                                          evaluatorName: activeEvaluator,
+                                          score: parseInt(value),
+                                        });
+                                      }}
+                                    >
+                                      <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="اختر" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {SCORE_OPTIONS.map((option) => (
+                                          <SelectItem
+                                            key={option.value}
+                                            value={option.value.toString()}
+                                          >
+                                            {option.label}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Average Results Table */}
+                    <div className="mt-6">
+                      <h3 className="font-bold text-stone-800 mb-3">المتوسط النهائي (من المقيّمين الثلاثة)</h3>
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse">
+                          <thead>
+                            <tr className="bg-amber-100">
+                              <th className="border p-2 text-right font-semibold text-amber-800">المعيار</th>
                               {projectConsultants.map((consultant) => (
-                                <td key={consultant.id} className="border p-2 text-center">
-                                  <Select
-                                    onValueChange={(value) => {
-                                      updateEvaluationMutation.mutate({
-                                        projectId: selectedProject.id,
-                                        consultantId: consultant.id,
-                                        criterionId: criterion.id,
-                                        score: parseInt(value),
-                                      });
-                                    }}
-                                  >
-                                    <SelectTrigger className="w-full">
-                                      <SelectValue placeholder="اختر" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {SCORE_OPTIONS.map((option) => (
-                                        <SelectItem
-                                          key={option.value}
-                                          value={option.value.toString()}
-                                        >
-                                          {option.label}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
+                                <th key={consultant.id} className="border p-2 text-center font-semibold text-amber-800">
+                                  {consultant.name}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {CRITERIA.map((criterion, critIdx) => (
+                              <tr key={criterion.id} className="border-b">
+                                <td className="border p-2 bg-gray-50 font-semibold text-right text-sm">
+                                  {criterion.name} ({criterion.weight}%)
+                                </td>
+                                {projectConsultants.map((consultant) => {
+                                  const avgScore = consultantScores[consultant.id]?.scores[critIdx] || 0;
+                                  return (
+                                    <td key={consultant.id} className="border p-2 text-center">
+                                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-sm font-bold ${
+                                        avgScore >= 75 ? 'bg-emerald-100 text-emerald-700' :
+                                        avgScore >= 50 ? 'bg-amber-100 text-amber-700' :
+                                        avgScore > 0 ? 'bg-red-100 text-red-700' :
+                                        'bg-gray-100 text-gray-400'
+                                      }`}>
+                                        {avgScore > 0 ? avgScore.toFixed(0) : '—'}
+                                      </span>
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            ))}
+                            <tr className="bg-stone-100 font-bold">
+                              <td className="border p-2 text-right">المجموع المرجح</td>
+                              {projectConsultants.map((consultant) => (
+                                <td key={consultant.id} className="border p-2 text-center text-lg">
+                                  {consultantScores[consultant.id]?.weighted.toFixed(1) || 0} / 100
                                 </td>
                               ))}
                             </tr>
-                          ))}
-                          <tr className="bg-blue-50 font-bold">
-                            <td className="border p-2 text-right">المجموع المرجح</td>
-                            {projectConsultants.map((consultant) => (
-                              <td key={consultant.id} className="border p-2 text-center">
-                                {consultantScores[consultant.id]?.weighted.toFixed(1) || 0} / 100
-                              </td>
-                            ))}
-                          </tr>
-                        </tbody>
-                      </table>
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -462,7 +563,7 @@ export default function ConsultantEvaluationPage() {
                     <div className="overflow-x-auto">
                       <table className="w-full border-collapse">
                         <thead>
-                          <tr className="bg-blue-600 text-white">
+                          <tr className="bg-stone-700 text-white">
                             <th className="border p-2 text-right">الاستشاري</th>
                             <th className="border p-2 text-center">نوع التصميم</th>
                             <th className="border p-2 text-center">قيمة التصميم</th>
@@ -519,7 +620,7 @@ export default function ConsultantEvaluationPage() {
                           index === 0
                             ? "border-green-500 bg-green-50"
                             : index === 1
-                              ? "border-blue-500 bg-blue-50"
+                              ? "border-amber-500 bg-amber-50"
                               : "border-gray-300 bg-gray-50"
                         }`}
                       >

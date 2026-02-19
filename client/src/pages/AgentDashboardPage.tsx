@@ -49,7 +49,7 @@ import { toast } from "sonner";
 
 const STATUS_MAP: Record<string, { label: string; color: string; icon: any }> = {
   new: { label: "لم تبدأ", color: "bg-slate-100 text-slate-600 border-slate-200", icon: ListTodo },
-  progress: { label: "قيد التنفيذ", color: "bg-blue-50 text-blue-600 border-blue-200", icon: Clock },
+  progress: { label: "قيد التنفيذ", color: "bg-amber-50 text-amber-600 border-amber-200", icon: Clock },
   hold: { label: "معلقة", color: "bg-amber-50 text-amber-600 border-amber-200", icon: Pause },
   done: { label: "مكتملة", color: "bg-emerald-50 text-emerald-600 border-emerald-200", icon: CheckCircle2 },
   cancelled: { label: "ملغاة", color: "bg-red-50 text-red-600 border-red-200", icon: XCircle },
@@ -204,7 +204,7 @@ export default function AgentDashboardPage() {
           {[
             { label: "إجمالي المهام", value: statsData.total, color: "text-primary", accent: "oklch(0.45 0.12 255)" },
             { label: "لم تبدأ", value: statsData.new, color: "text-slate-600", accent: "oklch(0.55 0.01 260)" },
-            { label: "قيد التنفيذ", value: statsData.progress, color: "text-blue-600", accent: "oklch(0.55 0.2 255)" },
+            { label: "قيد التنفيذ", value: statsData.progress, color: "text-amber-600", accent: "oklch(0.65 0.15 60)" },
             { label: "معلقة", value: statsData.hold, color: "text-amber-600", accent: "oklch(0.65 0.18 70)" },
             { label: "مكتملة", value: statsData.done, color: "text-emerald-600", accent: "oklch(0.55 0.17 155)" },
             { label: "ملغاة", value: statsData.cancelled, color: "text-red-600", accent: "oklch(0.55 0.2 25)" },
@@ -360,7 +360,7 @@ export default function AgentDashboardPage() {
                   { method: "POST", path: "/api/agent/notify", desc: "إرسال إشعار للمدير" },
                 ].map((api, i) => (
                   <div key={i} className="bg-muted/30 rounded-lg p-3 border border-border flex items-center gap-2">
-                    <Badge className={`text-[10px] px-1.5 ${api.method === "POST" ? "bg-emerald-50 text-emerald-600 border-emerald-200" : "bg-blue-50 text-blue-600 border-blue-200"}`}>
+                    <Badge className={`text-[10px] px-1.5 ${api.method === "POST" ? "bg-emerald-50 text-emerald-600 border-emerald-200" : "bg-amber-50 text-amber-600 border-amber-200"}`}>
                       {api.method}
                     </Badge>
                     <code className="text-[11px] text-muted-foreground font-mono">{api.path}</code>
@@ -623,7 +623,7 @@ export default function AgentDashboardPage() {
                     const projectTasks = agentTasks.filter((t: any) => t.project === project);
                     const doneTasks = projectTasks.filter((t: any) => t.status === "done").length;
                     const projectCompletion = projectTasks.length > 0 ? Math.round((doneTasks / projectTasks.length) * 100) : 0;
-                    const colors = ["text-primary", "text-blue-400", "text-purple-400", "text-green-400", "text-amber-400", "text-pink-400"];
+                    const colors = ["text-primary", "text-amber-400", "text-purple-400", "text-green-400", "text-amber-400", "text-pink-400"];
 
                     return (
                       <div key={project} className="bg-card rounded-lg p-4 border border-border shadow-sm hover:shadow-md transition-shadow">

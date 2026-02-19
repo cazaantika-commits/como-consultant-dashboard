@@ -919,8 +919,8 @@ export default function FeasibilityStudyPage() {
                     <SectionHeader icon={TrendingUp} title="الإيرادات - أسعار البيع" />
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       {/* Residential */}
-                      <div className="space-y-3 p-4 rounded-xl bg-blue-50/50 border border-blue-100">
-                        <h4 className="font-bold text-sm text-blue-700">سكني</h4>
+                      <div className="space-y-3 p-4 rounded-xl bg-stone-50/50 border border-stone-200">
+                        <h4 className="font-bold text-sm text-stone-700">سكني</h4>
                         <NumInput
                           label="سعر البيع لكل قدم²"
                           value={form.residentialSalePrice}

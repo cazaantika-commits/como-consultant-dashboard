@@ -24,7 +24,7 @@ export default function ConsultantDashboardPage() {
   return (
     <div className="min-h-screen flex flex-col" dir="rtl">
       {/* شريط علوي بسيط */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white px-4 py-3 flex justify-between items-center">
+      <div className="bg-gradient-to-r from-stone-700 to-stone-900 text-white px-4 py-3 flex justify-between items-center">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -37,7 +37,7 @@ export default function ConsultantDashboardPage() {
           </Button>
           <span className="text-lg font-bold">تقييم الاستشاريين</span>
         </div>
-        <span className="text-blue-100 text-sm">{user?.name}</span>
+        <span className="text-stone-300 text-sm">{user?.name}</span>
       </div>
 
       {/* الصفحة الأصلية كما هي */}

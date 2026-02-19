@@ -13,6 +13,12 @@ import TasksPage from "./pages/TasksPage";
 import AgentDashboardPage from "./pages/AgentDashboardPage";
 import ConsultantEvaluationPage from "./pages/ConsultantEvaluationPage";
 import FeasibilityStudyPage from "./pages/FeasibilityStudyPage";
+import ConsultantPortalPage from "./pages/ConsultantPortalPage";
+import ConsultantGuidePage from "./pages/ConsultantGuidePage";
+import ConsultantProposalsPage from "./pages/ConsultantProposalsPage";
+import ConsultantKnowPage from "./pages/ConsultantKnowPage";
+import ConsultantRecommendPage from "./pages/ConsultantRecommendPage";
+import ConsultantCommitteePage from "./pages/ConsultantCommitteePage";
 
 function Router() {
   return (
@@ -26,6 +32,12 @@ function Router() {
       <Route path="/agent-dashboard" component={AgentDashboardPage} />
       <Route path="/consultant-evaluation" component={ConsultantEvaluationPage} />
       <Route path="/feasibility-study" component={FeasibilityStudyPage} />
+      <Route path="/consultant-portal" component={ConsultantPortalPage} />
+      <Route path="/consultant-guide" component={ConsultantGuidePage} />
+      <Route path="/consultant-proposals" component={ConsultantProposalsPage} />
+      <Route path="/consultant-know" component={ConsultantKnowPage} />
+      <Route path="/consultant-recommend" component={ConsultantRecommendPage} />
+      <Route path="/consultant-committee" component={ConsultantCommitteePage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
