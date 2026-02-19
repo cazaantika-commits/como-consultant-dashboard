@@ -331,3 +331,11 @@ export async function verifyConnection(): Promise<{
     sharedFilesCount: res.data.files?.length || 0,
   };
 }
+
+export async function deleteFile(fileId: string): Promise<void> {
+  const drive = getDriveClient();
+  await drive.files.delete({
+    fileId,
+    supportsAllDrives: true,
+  });
+}
