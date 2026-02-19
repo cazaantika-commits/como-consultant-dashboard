@@ -46,6 +46,7 @@ export default function ConsultantDashboardPage() {
         className="flex-1 w-full border-0"
         style={{ minHeight: "calc(100vh - 52px)" }}
         title="لوحة تقييم الاستشاريين"
+        sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-popups-to-escape-sandbox"
       />
     </div>
   );

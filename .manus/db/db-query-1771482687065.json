@@ -1,0 +1,190 @@
+{
+  "query": "SELECT fd.projectId, c.name, fd.designType, fd.designValue, fd.supervisionType, fd.supervisionValue, fd.proposalLink FROM financialData fd JOIN consultants c ON fd.consultantId = c.id ORDER BY fd.projectId, fd.id LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT fd.projectId, c.name, fd.designType, fd.designValue, fd.supervisionType, fd.supervisionValue, fd.proposalLink FROM financialData fd JOIN consultants c ON fd.consultantId = c.id ORDER BY fd.projectId, fd.id LIMIT 20;",
+  "rows": [
+    {
+      "projectId": "1",
+      "name": "Osus International",
+      "designType": "pct",
+      "designValue": "0.00",
+      "supervisionType": "pct",
+      "supervisionValue": "0.00",
+      "proposalLink": "NULL"
+    },
+    {
+      "projectId": "1",
+      "name": "Realistic Engineering",
+      "designType": "pct",
+      "designValue": "0.00",
+      "supervisionType": "pct",
+      "supervisionValue": "0.00",
+      "proposalLink": "NULL"
+    },
+    {
+      "projectId": "1",
+      "name": "ARTEC Architectural & Engineering Consultants",
+      "designType": "pct",
+      "designValue": "0.00",
+      "supervisionType": "pct",
+      "supervisionValue": "0.00",
+      "proposalLink": "NULL"
+    },
+    {
+      "projectId": "1",
+      "name": "DATUM Engineering Consultants",
+      "designType": "pct",
+      "designValue": "0.00",
+      "supervisionType": "pct",
+      "supervisionValue": "0.00",
+      "proposalLink": "NULL"
+    },
+    {
+      "projectId": "1",
+      "name": "Osus International",
+      "designType": "pct",
+      "designValue": "0.00",
+      "supervisionType": "pct",
+      "supervisionValue": "0.00",
+      "proposalLink": "NULL"
+    },
+    {
+      "projectId": "1",
+      "name": "Realistic Engineering",
+      "designType": "pct",
+      "designValue": "0.00",
+      "supervisionType": "pct",
+      "supervisionValue": "0.00",
+      "proposalLink": "NULL"
+    },
+    {
+      "projectId": "1",
+      "name": "ARTEC Architectural & Engineering Consultants",
+      "designType": "pct",
+      "designValue": "0.00",
+      "supervisionType": "pct",
+      "supervisionValue": "0.00",
+      "proposalLink": "NULL"
+    },
+    {
+      "projectId": "1",
+      "name": "DATUM Engineering Consultants",
+      "designType": "pct",
+      "designValue": "0.00",
+      "supervisionType": "pct",
+      "supervisionValue": "0.00",
+      "proposalLink": "NULL"
+    },
+    {
+      "projectId": "1",
+      "name": "Osus International",
+      "designType": "pct",
+      "designValue": "0.00",
+      "supervisionType": "pct",
+      "supervisionValue": "0.00",
+      "proposalLink": "NULL"
+    },
+    {
+      "projectId": "1",
+      "name": "Realistic Engineering",
+      "designType": "pct",
+      "designValue": "0.00",
+      "supervisionType": "pct",
+      "supervisionValue": "0.00",
+      "proposalLink": "NULL"
+    },
+    {
+      "projectId": "1",
+      "name": "ARTEC Architectural & Engineering Consultants",
+      "designType": "pct",
+      "designValue": "0.00",
+      "supervisionType": "pct",
+      "supervisionValue": "0.00",
+      "proposalLink": "NULL"
+    },
+    {
+      "projectId": "1",
+      "name": "DATUM Engineering Consultants",
+      "designType": "pct",
+      "designValue": "0.00",
+      "supervisionType": "pct",
+      "supervisionValue": "0.00",
+      "proposalLink": "NULL"
+    },
+    {
+      "projectId": "1",
+      "name": "Osus International",
+      "designType": "pct",
+      "designValue": "0.00",
+      "supervisionType": "pct",
+      "supervisionValue": "0.00",
+      "proposalLink": "NULL"
+    },
+    {
+      "projectId": "1",
+      "name": "Realistic Engineering",
+      "designType": "pct",
+      "designValue": "0.00",
+      "supervisionType": "pct",
+      "supervisionValue": "0.00",
+      "proposalLink": "NULL"
+    },
+    {
+      "projectId": "1",
+      "name": "ARTEC Architectural & Engineering Consultants",
+      "designType": "pct",
+      "designValue": "0.00",
+      "supervisionType": "pct",
+      "supervisionValue": "0.00",
+      "proposalLink": "NULL"
+    },
+    {
+      "projectId": "1",
+      "name": "DATUM Engineering Consultants",
+      "designType": "pct",
+      "designValue": "0.00",
+      "supervisionType": "pct",
+      "supervisionValue": "0.00",
+      "proposalLink": "NULL"
+    },
+    {
+      "projectId": "2",
+      "name": "DATUM Engineering Consultants",
+      "designType": "lumpsum",
+      "designValue": "5350000.00",
+      "supervisionType": "lumpsum",
+      "supervisionValue": "5350000.00",
+      "proposalLink": "https://drive.google.com/file/d/1mRSctF9KBkBuwMA0H5juOxR11EsnqKHp/view"
+    },
+    {
+      "projectId": "2",
+      "name": "ARTEC Architectural & Engineering Consultants",
+      "designType": "pct",
+      "designValue": "1.80",
+      "supervisionType": "pct",
+      "supervisionValue": "2.00",
+      "proposalLink": "https://drive.google.com/file/d/1P3xXM8yJE5W3D4CN_nUxqaDymW4pwKEj/view"
+    },
+    {
+      "projectId": "2",
+      "name": "LACASA",
+      "designType": "pct",
+      "designValue": "0.00",
+      "supervisionType": "pct",
+      "supervisionValue": "0.00",
+      "proposalLink": "NULL"
+    },
+    {
+      "projectId": "2",
+      "name": "ARTEC Architectural & Engineering Consultants",
+      "designType": "pct",
+      "designValue": "2.00",
+      "supervisionType": "pct",
+      "supervisionValue": "2.00",
+      "proposalLink": "https://drive.google.com/file/d/1P3xXM8yJE5W3D4CN_nUxqaDymW4pwKEj/view"
+    }
+  ],
+  "messages": [],
+  "stdout": "projectId\tname\tdesignType\tdesignValue\tsupervisionType\tsupervisionValue\tproposalLink\n1\tOsus International\tpct\t0.00\tpct\t0.00\tNULL\n1\tRealistic Engineering\tpct\t0.00\tpct\t0.00\tNULL\n1\tARTEC Architectural & Engineering Consultants\tpct\t0.00\tpct\t0.00\tNULL\n1\tDATUM Engineering Consultants\tpct\t0.00\tpct\t0.00\tNULL\n1\tOsus International\tpct\t0.00\tpct\t0.00\tNULL\n1\tRealistic Engineering\tpct\t0.00\tpct\t0.00\tNULL\n1\tARTEC Architectural & Engineering Consultants\tpct\t0.00\tpct\t0.00\tNULL\n1\tDATUM Engineering Consultants\tpct\t0.00\tpct\t0.00\tNULL\n1\tOsus International\tpct\t0.00\tpct\t0.00\tNULL\n1\tRealistic Engineering\tpct\t0.00\tpct\t0.00\tNULL\n1\tARTEC Architectural & Engineering Consultants\tpct\t0.00\tpct\t0.00\tNULL\n1\tDATUM Engineering Consultants\tpct\t0.00\tpct\t0.00\tNULL\n1\tOsus International\tpct\t0.00\tpct\t0.00\tNULL\n1\tRealistic Engineering\tpct\t0.00\tpct\t0.00\tNULL\n1\tARTEC Architectural & Engineering Consultants\tpct\t0.00\tpct\t0.00\tNULL\n1\tDATUM Engineering Consultants\tpct\t0.00\tpct\t0.00\tNULL\n2\tDATUM Engineering Consultants\tlumpsum\t5350000.00\tlumpsum\t5350000.00\thttps://drive.google.com/file/d/1mRSctF9KBkBuwMA0H5juOxR11EsnqKHp/view\n2\tARTEC Architectural & Engineering Consultants\tpct\t1.80\tpct\t2.00\thttps://drive.google.com/file/d/1P3xXM8yJE5W3D4CN_nUxqaDymW4pwKEj/view\n2\tLACASA\tpct\t0.00\tpct\t0.00\tNULL\n2\tARTEC Architectural & Engineering Consultants\tpct\t2.00\tpct\t2.00\thttps://drive.google.com/file/d/1P3xXM8yJE5W3D4CN_nUxqaDymW4pwKEj/view\n",
+  "stderr": "",
+  "execution_time_ms": 1558
+}

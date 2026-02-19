@@ -126,14 +126,9 @@ async function buildDataFromStructuredTables(): Promise<any> {
     for (const cName of projectConsultants) {
       const fd = financialMap.get(cName);
       if (fd) {
-        // Convert from DB format to HTML format
-        // DB stores pct values multiplied by 100 (e.g., 150 = 1.5%)
-        const designVal =
-          fd.designType === "pct" ? fd.designValue / 100 : fd.designValue;
-        const supervisionVal =
-          fd.supervisionType === "pct"
-            ? fd.supervisionValue / 100
-            : fd.supervisionValue;
+        // DB stores pct values as-is (e.g., 2 = 2%)
+        const designVal = Number(fd.designValue);
+        const supervisionVal = Number(fd.supervisionValue);
 
         financial.push({
           consultant: cName,
@@ -300,9 +295,9 @@ async function syncToStructuredTables(db: any, data: any) {
 
         const designType = fin.designType === "lump" ? "lumpsum" : "pct";
         const supervisionType = fin.supervisionType === "lump" ? "lumpsum" : "pct";
-        // Convert back: HTML uses raw values, DB stores pct * 100
-        const designValue = designType === "pct" ? Math.round(fin.designVal * 100) : fin.designVal;
-        const supervisionValue = supervisionType === "pct" ? Math.round(fin.supervisionVal * 100) : fin.supervisionVal;
+        // HTML uses raw values (2 = 2%), DB stores same
+        const designValue = fin.designVal;
+        const supervisionValue = fin.supervisionVal;
 
         await db.execute(
           sql`INSERT INTO financialData (projectId, consultantId, designType, designValue, supervisionType, supervisionValue)
