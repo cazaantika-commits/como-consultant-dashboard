@@ -135,7 +135,7 @@ async function callOpenAI(
       "Authorization": `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
+      model: "gpt-4o",
       messages,
       max_tokens: 2048,
       temperature: 0.8,
@@ -237,7 +237,7 @@ export async function handleAgentChat(req: AgentChatRequest): Promise<string> {
   // Try OpenAI GPT-4 first, fallback to Manus LLM
   try {
     if (ENV.openaiApiKey) {
-      console.log(`[AgentChat] Using OpenAI GPT-4o-mini for ${agent}`);
+      console.log(`[AgentChat] Using OpenAI GPT-4o for ${agent}`);
       return await callOpenAI(systemPrompt, message, conversationHistory);
     }
   } catch (err) {

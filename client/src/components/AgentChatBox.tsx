@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { X, Send, Loader2 } from "lucide-react";
+import { X, Send, Loader2, Trash2, History } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Card } from "./ui/card";
@@ -92,18 +92,42 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
   const agentAvatar = agentData?.avatarUrl || defaults.avatar;
   const agentDesc = defaults.description;
 
+  const welcomeMsg = `مرحباً! أنا ${agentName}، ${agentTitle}. كيف يمكنني مساعدتك؟`;
+
   const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "agent",
-      content: `مرحباً! أنا ${agentName}، ${agentTitle}. كيف يمكنني مساعدتك؟`,
-      timestamp: new Date()
-    }
+    { role: "agent", content: welcomeMsg, timestamp: new Date() }
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const chatMutation = trpc.agents.chat.useMutation();
+  const clearHistoryMutation = trpc.agents.clearChatHistory.useMutation();
+
+  // Load chat history from database on mount
+  const { data: chatHistoryData } = trpc.agents.getChatHistory.useQuery(
+    { agent, limit: 50 },
+    { enabled: !historyLoaded }
+  );
+
+  useEffect(() => {
+    if (chatHistoryData && chatHistoryData.length > 0 && !historyLoaded) {
+      const loadedMessages: Message[] = chatHistoryData.map(h => ({
+        role: h.role === "user" ? "user" as const : "agent" as const,
+        content: h.content,
+        timestamp: new Date(h.createdAt)
+      }));
+      // Prepend welcome message, then loaded history
+      setMessages([
+        { role: "agent", content: welcomeMsg, timestamp: new Date(chatHistoryData[0].createdAt) },
+        ...loadedMessages
+      ]);
+      setHistoryLoaded(true);
+    } else if (chatHistoryData && chatHistoryData.length === 0) {
+      setHistoryLoaded(true);
+    }
+  }, [chatHistoryData, historyLoaded, welcomeMsg]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -112,6 +136,17 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const handleClearHistory = async () => {
+    try {
+      await clearHistoryMutation.mutateAsync({ agent });
+      setMessages([
+        { role: "agent", content: welcomeMsg, timestamp: new Date() }
+      ]);
+    } catch {
+      // silently fail
+    }
+  };
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -129,7 +164,7 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
     try {
       // Build conversation history for GPT-4 context
       const conversationHistory = messages
-        .filter(m => m.content !== `مرحباً! أنا ${agentName}، ${agentTitle}. كيف يمكنني مساعدتك؟`)
+        .filter(m => m.content !== welcomeMsg)
         .map(m => ({
           role: (m.role === "user" ? "user" : "assistant") as "user" | "assistant",
           content: m.content
@@ -185,15 +220,36 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
             <p className="text-sm opacity-90 leading-tight">{agentTitle}</p>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onClose}
-          className="text-white hover:bg-white/20 rounded-full"
-        >
-          <X className="h-5 w-5" />
-        </Button>
+        <div className="flex items-center gap-1">
+          {messages.length > 1 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleClearHistory}
+              className="text-white hover:bg-white/20 rounded-full"
+              title="مسح المحادثة"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="text-white hover:bg-white/20 rounded-full"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
+
+      {/* History loaded indicator */}
+      {chatHistoryData && chatHistoryData.length > 0 && historyLoaded && (
+        <div className="bg-muted/50 px-3 py-1.5 flex items-center justify-center gap-1.5 text-xs text-muted-foreground border-b">
+          <History className="h-3 w-3" />
+          <span>تم تحميل {chatHistoryData.length} رسالة سابقة</span>
+        </div>
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-muted/20" dir="rtl">
@@ -274,7 +330,7 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
           </Button>
         </div>
         <p className="text-[10px] text-muted-foreground mt-1.5 text-center">
-          {agentDesc}
+          مدعوم بـ GPT-4o • {agentDesc}
         </p>
       </div>
     </Card>

@@ -312,3 +312,16 @@ export const consultantPortfolio = mysqlTable('consultantPortfolio', {
 
 export type ConsultantPortfolioItem = typeof consultantPortfolio.$inferSelect;
 export type InsertConsultantPortfolioItem = typeof consultantPortfolio.$inferInsert;
+
+// Chat history for agent conversations
+export const chatHistory = mysqlTable('chatHistory', {
+  id: int('id').primaryKey().autoincrement(),
+  userId: int('userId').notNull(),
+  agent: varchar('agent', { length: 50 }).notNull(), // salwa, farouq, etc.
+  role: varchar('role', { length: 20 }).notNull(), // user or assistant
+  content: text('content').notNull(),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+
+export type ChatHistoryItem = typeof chatHistory.$inferSelect;
+export type InsertChatHistoryItem = typeof chatHistory.$inferInsert;

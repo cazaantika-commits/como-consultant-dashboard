@@ -19,7 +19,7 @@ describe("OpenAI API Key Validation", () => {
         "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-4o",
         messages: [
           { role: "system", content: "You are a test assistant. Reply with exactly: OK" },
           { role: "user", content: "Test" }
@@ -50,7 +50,7 @@ describe("OpenAI API Key Validation", () => {
         "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-4o",
         messages: [
           { role: "system", content: "أنتِ سلوى، المنسقة الرئيسية لفريق كومو. أجيبي بالعربية بشكل ودود." },
           { role: "user", content: "مرحبا سلوى، كيف حالك؟" }

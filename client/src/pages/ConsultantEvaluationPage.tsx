@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Plus, Trash2, Download, Star, BarChart3, DollarSign, Users, Award, ExternalLink, Link2, TrendingUp, Target, CheckCircle2, Building } from "lucide-react";
+import { Loader2, Plus, Trash2, Download, Star, BarChart3, DollarSign, Users, Award, ExternalLink, Link2, TrendingUp, Target, CheckCircle2, Building, FileDown } from "lucide-react";
+import { generateEvaluationPDF } from "@/lib/pdfExport";
 
 // FinancialRow component with local state - saves ONLY on blur
 function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, updateFinancialMutation, onTotalChange }: {
@@ -437,6 +438,50 @@ export default function ConsultantEvaluationPage() {
   const selectedProject = projects.find((p: any) => p.id === selectedProjectId);
   const projectConsultants = projectDetailsQuery.data?.consultants || [];
 
+  // PDF Export handler
+  const handleExportPDF = (type: 'technical' | 'financial' | 'full') => {
+    if (!selectedProject || projectConsultants.length === 0) return;
+
+    const buildingCost = (projectDetailsQuery.data?.bua || 0) * (projectDetailsQuery.data?.pricePerSqft || 0);
+
+    const pdfConsultants = projectConsultants.map((c: any) => ({
+      name: c.name,
+      scores: consultantScores[c.id]?.scores || CRITERIA.map(() => 0),
+      weightedTotal: consultantScores[c.id]?.weighted || 0,
+    }));
+
+    const pdfFinancials = projectConsultants.map((c: any) => {
+      const fin = financialQuery.data?.find((f: any) => f.consultantId === c.id);
+      const dv = fin ? parseFloat(String(fin.designValue)) || 0 : 0;
+      const sv = fin ? parseFloat(String(fin.supervisionValue)) || 0 : 0;
+      const dt = fin?.designType || 'pct';
+      const st = fin?.supervisionType || 'pct';
+      const designAmount = dt === 'pct' ? buildingCost * (dv / 100) : dv;
+      const supervisionAmount = st === 'pct' ? buildingCost * (sv / 100) : sv;
+      return {
+        consultantName: c.name,
+        designValue: String(dv),
+        designType: dt,
+        designAmount,
+        supervisionValue: String(sv),
+        supervisionType: st,
+        supervisionAmount,
+        total: designAmount + supervisionAmount,
+      };
+    });
+
+    generateEvaluationPDF({
+      projectName: selectedProject.name,
+      bua: projectDetailsQuery.data?.bua || 0,
+      pricePerSqft: projectDetailsQuery.data?.pricePerSqft || 0,
+      constructionCost: buildingCost,
+      consultants: pdfConsultants,
+      criteria: CRITERIA.map(c => ({ name: c.name, weight: c.weight })),
+      evaluators: EVALUATORS.map(e => ({ name: e.name })),
+      financials: pdfFinancials,
+    }, type);
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
@@ -467,19 +512,49 @@ export default function ConsultantEvaluationPage() {
                 <p className="text-blue-100 text-lg">نظام تقييم شامل للاستشاريين - فني ومالي</p>
               </div>
             </div>
-            <div className="flex gap-3 mt-6">
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2 text-white text-sm flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4" />
-                <span>3 مقيّمين مستقلين</span>
+            <div className="flex items-center justify-between mt-6">
+              <div className="flex gap-3">
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2 text-white text-sm flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>3 مقيّمين مستقلين</span>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2 text-white text-sm flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>10 معايير تقييم</span>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2 text-white text-sm flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>مقارنة مالية شاملة</span>
+                </div>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2 text-white text-sm flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4" />
-                <span>10 معايير تقييم</span>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2 text-white text-sm flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4" />
-                <span>مقارنة مالية شاملة</span>
-              </div>
+              {selectedProjectId && projectConsultants.length > 0 && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    className="bg-white/15 hover:bg-white/25 text-white border border-white/20 rounded-xl gap-2 backdrop-blur-sm"
+                    onClick={() => handleExportPDF('technical')}
+                  >
+                    <FileDown className="w-4 h-4" />
+                    تصدير التقييم الفني PDF
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="bg-white/15 hover:bg-white/25 text-white border border-white/20 rounded-xl gap-2 backdrop-blur-sm"
+                    onClick={() => handleExportPDF('financial')}
+                  >
+                    <FileDown className="w-4 h-4" />
+                    تصدير الأتعاب PDF
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="bg-emerald-500/80 hover:bg-emerald-500 text-white border border-emerald-400/30 rounded-xl gap-2 backdrop-blur-sm font-bold"
+                    onClick={() => handleExportPDF('full')}
+                  >
+                    <FileDown className="w-4 h-4" />
+                    تقرير شامل PDF
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </div>
