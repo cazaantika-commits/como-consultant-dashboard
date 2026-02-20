@@ -588,12 +588,12 @@ export default function ConsultantEvaluationPage() {
                       <p className="text-xs text-stone-400 mb-1">← اسحب لليسار لرؤية باقي الاستشاريين</p>
                     )}
                     <div className="overflow-x-auto border rounded-lg" style={{ maxWidth: '100%' }}>
-                      <table className="border-collapse w-full table-fixed">
+                      <table className="border-collapse w-max">
                         <thead>
                           <tr className="bg-stone-800 text-white">
-                            <th className="border border-stone-600 p-2 text-right sticky right-0 bg-stone-800 z-10" style={{ width: '160px', minWidth: '160px' }}>المعيار (الوزن)</th>
+                            <th className="border border-stone-600 p-2 text-right sticky right-0 bg-stone-800 z-10" style={{ minWidth: '160px', maxWidth: '200px' }}>المعيار (الوزن)</th>
                             {projectConsultants.map((consultant) => (
-                              <th key={consultant.id} className="border border-stone-600 p-2 text-center" style={{ minWidth: '160px' }}>
+                              <th key={consultant.id} className="border border-stone-600 p-2 text-center" style={{ minWidth: '200px', maxWidth: '280px' }}>
                                 <span className="whitespace-normal leading-tight text-sm">{consultant.name}</span>
                               </th>
                             ))}
@@ -612,7 +612,7 @@ export default function ConsultantEvaluationPage() {
                                   (s: any) => s.consultantId === consultant.id && s.criterionId === criterion.id && s.evaluatorName === activeEvaluator
                                 );
                                 return (
-                                  <td key={consultant.id} className="border p-2 text-center">
+                                  <td key={consultant.id} className="border p-2 text-center overflow-visible">
                                     <Select
                                       value={currentScore?.score?.toString() || ""}
                                       onValueChange={(value) => {
@@ -625,7 +625,7 @@ export default function ConsultantEvaluationPage() {
                                         });
                                       }}
                                     >
-                                      <SelectTrigger className="w-full text-xs h-auto min-h-[2.5rem] py-1 whitespace-normal leading-snug text-right">
+                                      <SelectTrigger className="w-full text-xs h-auto min-h-[2.5rem] py-1 whitespace-normal leading-snug text-right cursor-pointer">
                                         <SelectValue placeholder="اختر" />
                                       </SelectTrigger>
                                       <SelectContent className="w-[450px] max-w-[90vw]">
@@ -658,12 +658,12 @@ export default function ConsultantEvaluationPage() {
                     <div className="mt-6">
                       <h3 className="font-bold text-stone-800 mb-3">المتوسط النهائي (من المقيّمين الثلاثة)</h3>
                       <div className="overflow-x-auto border rounded-lg" style={{ maxWidth: '100%' }}>
-                        <table className="border-collapse w-full table-fixed">
+                        <table className="border-collapse w-max">
                           <thead>
                             <tr className="bg-amber-100">
-                              <th className="border p-2 text-right font-semibold text-amber-800 sticky right-0 bg-amber-100 z-10" style={{ width: '160px', minWidth: '160px' }}>المعيار</th>
+                              <th className="border p-2 text-right font-semibold text-amber-800 sticky right-0 bg-amber-100 z-10" style={{ minWidth: '160px', maxWidth: '200px' }}>المعيار</th>
                               {projectConsultants.map((consultant) => (
-                                <th key={consultant.id} className="border p-2 text-center font-semibold text-amber-800" style={{ minWidth: '140px' }}>
+                                <th key={consultant.id} className="border p-2 text-center font-semibold text-amber-800" style={{ minWidth: '200px', maxWidth: '280px' }}>
                                   <span className="whitespace-normal leading-tight text-sm">{consultant.name}</span>
                                 </th>
                               ))}
@@ -716,7 +716,7 @@ export default function ConsultantEvaluationPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="overflow-x-auto">
-                      <table className="w-full border-collapse table-fixed">
+                      <table className="border-collapse w-max min-w-full">
                         <thead>
                           <tr className="bg-stone-700 text-white">
                             <th className="border p-2 text-right text-sm whitespace-normal leading-tight" style={{ width: '14%' }}>الاستشاري</th>
