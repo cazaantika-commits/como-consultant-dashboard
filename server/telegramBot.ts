@@ -7,7 +7,7 @@ import { transcribeAudio } from "./_core/voiceTranscription";
 import { storagePut } from "./storage";
 import { eq, desc, and, sql } from "drizzle-orm";
 import { searchFiles, listFilesInFolder, listSharedDrives } from "./googleDrive";
-import { initEmailIntegration, setOwnerChatId, handleEmailCallback, handleCustomReplyText, hasPendingReply } from "./emailIntegration";
+import { initEmailIntegration, setOwnerChatId, handleEmailCallback, handleCustomReplyText, hasPendingReply, checkLast48HoursEmails } from "./emailIntegration";
 import { startEmailScheduler, stopEmailScheduler, forceEmailCheck, getSchedulerStatus } from "./emailScheduler";
 
 /**
@@ -203,6 +203,7 @@ function registerCommands(bot: TelegramBot) {
 🔹 /stats - إحصائيات المهام
 🔹 /email - تحليل بريد إلكتروني
 🔹 /checkmail - فحص البريد الآن
+🔹 /check48 - عرض إيميلات آخر 48 ساعة
 🔹 /emailstatus - حالة مراقبة البريد
 🔹 /team - عرض فريق الوكلاء
 
@@ -468,6 +469,26 @@ function registerCommands(bot: TelegramBot) {
         await bot.sendMessage(chatId, "⏳ فحص آخر قيد التنفيذ. انتظر قليلاً.");
       } else {
         await bot.sendMessage(chatId, "📬 تم العثور على " + count + " رسالة جديدة. تابع أعلاه.");
+      }
+    } catch (error) {
+      await bot.sendMessage(chatId, "⚠️ خطأ في فحص البريد: " + (error as Error).message);
+    }
+  });
+
+  // /check48 command - check last 48 hours emails
+  bot.onText(/\/check48/, async (msg) => {
+    const chatId = msg.chat.id;
+    authorizedChats.add(chatId);
+    setOwnerChatId(chatId);
+    initEmailIntegration(bot!, chatId);
+
+    await bot.sendMessage(chatId, "📧 جاري فحص إيميلات آخر 48 ساعة (مقروءة وغير مقروءة)...");
+    try {
+      const count = await checkLast48HoursEmails();
+      if (count === 0) {
+        // Message already sent by checkLast48HoursEmails
+      } else {
+        console.log("[TelegramBot] 48h check found " + count + " emails");
       }
     } catch (error) {
       await bot.sendMessage(chatId, "⚠️ خطأ في فحص البريد: " + (error as Error).message);

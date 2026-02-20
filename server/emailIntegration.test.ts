@@ -229,3 +229,325 @@ describe("Email Notification Formatting", () => {
     expect(suffix).toBe("");
   });
 });
+
+// ─── NEW: Test IMAP SINCE date string generation ───────────────────
+describe("IMAP SINCE Date Generation", () => {
+  it("should generate correct SINCE date string for 48 hours ago", () => {
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    
+    // Test with a known date
+    const now = new Date("2026-02-20T10:00:00Z");
+    const sinceDate = new Date(now.getTime());
+    sinceDate.setHours(sinceDate.getHours() - 48);
+    
+    const sinceDateStr = `${sinceDate.getDate()}-${months[sinceDate.getMonth()]}-${sinceDate.getFullYear()}`;
+    
+    expect(sinceDateStr).toBe("18-Feb-2026");
+  });
+
+  it("should handle month boundary crossing", () => {
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    
+    const now = new Date("2026-03-01T10:00:00Z");
+    const sinceDate = new Date(now.getTime());
+    sinceDate.setHours(sinceDate.getHours() - 48);
+    
+    const sinceDateStr = `${sinceDate.getDate()}-${months[sinceDate.getMonth()]}-${sinceDate.getFullYear()}`;
+    
+    expect(sinceDateStr).toBe("27-Feb-2026");
+  });
+
+  it("should handle year boundary crossing", () => {
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    
+    const now = new Date("2026-01-01T10:00:00Z");
+    const sinceDate = new Date(now.getTime());
+    sinceDate.setHours(sinceDate.getHours() - 48);
+    
+    const sinceDateStr = `${sinceDate.getDate()}-${months[sinceDate.getMonth()]}-${sinceDate.getFullYear()}`;
+    
+    expect(sinceDateStr).toBe("30-Dec-2025");
+  });
+});
+
+// ─── NEW: Test 48-hour email summary formatting ────────────────────
+describe("48-Hour Email Summary Formatting", () => {
+  it("should correctly count read and unread emails", () => {
+    const emails = [
+      { isRead: true, attachments: [] },
+      { isRead: false, attachments: [{ filename: "test.pdf" }] },
+      { isRead: true, attachments: [{ filename: "doc.pdf" }] },
+      { isRead: false, attachments: [] },
+      { isRead: false, attachments: [{ filename: "a.pdf" }, { filename: "b.pdf" }] },
+    ];
+
+    const readCount = emails.filter(e => e.isRead).length;
+    const unreadCount = emails.filter(e => !e.isRead).length;
+    const withAttachments = emails.filter(e => e.attachments.length > 0).length;
+
+    expect(readCount).toBe(2);
+    expect(unreadCount).toBe(3);
+    expect(withAttachments).toBe(3);
+    expect(emails.length).toBe(5);
+  });
+
+  it("should limit displayed emails to 20", () => {
+    const emails = Array.from({ length: 30 }, (_, i) => ({
+      uid: i + 1,
+      fromName: "Test " + i,
+      subject: "Subject " + i,
+      isRead: i % 2 === 0,
+      attachments: [],
+      date: new Date(),
+    }));
+
+    const displayedEmails = emails.slice(0, 20);
+    const remaining = emails.length - 20;
+
+    expect(displayedEmails.length).toBe(20);
+    expect(remaining).toBe(10);
+  });
+
+  it("should show all emails when less than 20", () => {
+    const emails = Array.from({ length: 5 }, (_, i) => ({
+      uid: i + 1,
+      fromName: "Test " + i,
+      subject: "Subject " + i,
+    }));
+
+    const displayedEmails = emails.slice(0, 20);
+    expect(displayedEmails.length).toBe(5);
+  });
+});
+
+// ─── NEW: Test Farouq analysis with attachment handling ────────────
+describe("Farouq Analysis - Attachment Handling", () => {
+  it("should identify PDF attachments for LLM file_url", () => {
+    const attachmentUrls = [
+      { filename: "proposal.pdf", url: "https://s3.example.com/proposal.pdf", contentType: "application/pdf" },
+      { filename: "image.png", url: "https://s3.example.com/image.png", contentType: "image/png" },
+      { filename: "report.pdf", url: "https://s3.example.com/report.pdf", contentType: "application/pdf" },
+      { filename: "data.xlsx", url: "https://s3.example.com/data.xlsx", contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+    ];
+
+    const pdfAttachments = attachmentUrls.filter(att => att.contentType === "application/pdf");
+    expect(pdfAttachments.length).toBe(2);
+    expect(pdfAttachments[0].filename).toBe("proposal.pdf");
+    expect(pdfAttachments[1].filename).toBe("report.pdf");
+  });
+
+  it("should build multi-modal content array for LLM", () => {
+    const emailContent = "من: Test Consultant\nالموضوع: عرض أتعاب";
+    const attachmentUrls = [
+      { filename: "proposal.pdf", url: "https://s3.example.com/proposal.pdf", contentType: "application/pdf" },
+    ];
+
+    const userContent: any[] = [
+      { type: "text", text: "حلل هذا الإيميل:\n\n" + emailContent }
+    ];
+
+    for (const att of attachmentUrls) {
+      if (att.contentType === "application/pdf") {
+        userContent.push({
+          type: "file_url",
+          file_url: { url: att.url, mime_type: "application/pdf" }
+        });
+      }
+    }
+
+    expect(userContent.length).toBe(2);
+    expect(userContent[0].type).toBe("text");
+    expect(userContent[1].type).toBe("file_url");
+    expect(userContent[1].file_url.mime_type).toBe("application/pdf");
+  });
+
+  it("should handle emails with no attachments gracefully", () => {
+    const attachmentUrls: any[] = [];
+    
+    const attachmentNote = attachmentUrls.length > 0
+      ? "\n📎 تم قراءة " + attachmentUrls.length + " مرفق(ات) لاستخراج البيانات"
+      : "\n⚠️ لا توجد مرفقات - التحليل مبني على نص الإيميل فقط";
+
+    expect(attachmentNote).toContain("لا توجد مرفقات");
+  });
+
+  it("should extract text from text-based attachments", () => {
+    const attachmentTexts: string[] = [];
+    const textAttachment = {
+      filename: "notes.txt",
+      contentType: "text/plain",
+      content: Buffer.from("This is the fee proposal: AED 500,000 for design"),
+    };
+
+    if (textAttachment.contentType.includes("text")) {
+      attachmentTexts.push("--- محتوى ملف: " + textAttachment.filename + " ---\n" + textAttachment.content.toString("utf-8").substring(0, 5000));
+    }
+
+    expect(attachmentTexts.length).toBe(1);
+    expect(attachmentTexts[0]).toContain("AED 500,000");
+  });
+});
+
+// ─── NEW: Test Khazen archiving - safe filename generation ─────────
+describe("Khazen Archiving - File Handling", () => {
+  it("should sanitize filenames for S3 keys", () => {
+    const filename = "عرض أتعاب (التصميم).pdf";
+    const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+    expect(safeFilename).not.toContain(" ");
+    expect(safeFilename).not.toContain("(");
+    expect(safeFilename).not.toContain(")");
+    expect(safeFilename).toContain(".pdf");
+  });
+
+  it("should generate unique file keys with random suffix", () => {
+    const keys = new Set<string>();
+    for (let i = 0; i < 10; i++) {
+      const randomSuffix = Math.random().toString(36).substring(2, 8);
+      const fileKey = "email-attachments/test@test.com/" + Date.now() + "-" + randomSuffix + "-test.pdf";
+      keys.add(fileKey);
+    }
+    // All keys should be unique
+    expect(keys.size).toBe(10);
+  });
+
+  it("should sanitize email addresses for folder paths", () => {
+    const email = "consultant@company.com";
+    const sanitized = email.replace(/[^a-zA-Z0-9@._-]/g, "_");
+    expect(sanitized).toBe("consultant@company.com");
+
+    const arabicEmail = "أحمد@شركة.com";
+    const sanitized2 = arabicEmail.replace(/[^a-zA-Z0-9@._-]/g, "_");
+    expect(sanitized2).not.toContain("أحمد");
+  });
+
+  it("should sanitize consultant name for Google Drive folder", () => {
+    const name = 'Test Consultant <"Company">';
+    const sanitized = name.replace(/[<>:"/\\|?*]/g, "_");
+    expect(sanitized).not.toContain("<");
+    expect(sanitized).not.toContain(">");
+    expect(sanitized).not.toContain('"');
+    expect(sanitized).toContain("Test Consultant");
+  });
+});
+
+// ─── NEW: Test FarouqAnalysis JSON parsing ─────────────────────────
+describe("Farouq Analysis JSON Parsing", () => {
+  it("should parse valid analysis JSON", () => {
+    const analysisText = JSON.stringify({
+      consultantName: "ABC Engineering",
+      proposalType: "both",
+      totalFees: "1,500,000",
+      designFees: "800,000",
+      supervisionFees: "700,000",
+      currency: "AED",
+      summary: "عرض شامل للتصميم والإشراف",
+      notes: ["يشمل ضريبة القيمة المضافة", "صالح لمدة 30 يوم"],
+      projectMentioned: "ند الشبا",
+    });
+
+    const analysis = JSON.parse(analysisText);
+    expect(analysis.consultantName).toBe("ABC Engineering");
+    expect(analysis.proposalType).toBe("both");
+    expect(analysis.totalFees).toBe("1,500,000");
+    expect(analysis.notes).toHaveLength(2);
+    expect(analysis.projectMentioned).toBe("ند الشبا");
+  });
+
+  it("should fallback on invalid JSON", () => {
+    const invalidText = "This is not JSON";
+    let analysis: any;
+    
+    try {
+      analysis = JSON.parse(invalidText);
+    } catch {
+      analysis = {
+        consultantName: "Unknown",
+        proposalType: "other",
+        totalFees: "غير محدد",
+        currency: "AED",
+        summary: "لم يتمكن فاروق من تحليل العرض تلقائياً.",
+        notes: ["يحتاج مراجعة يدوية"],
+      };
+    }
+
+    expect(analysis.consultantName).toBe("Unknown");
+    expect(analysis.proposalType).toBe("other");
+    expect(analysis.notes).toContain("يحتاج مراجعة يدوية");
+  });
+});
+
+// ─── NEW: Test email keywords detection for free text ──────────────
+describe("Email Keywords Detection", () => {
+  it("should detect Arabic email-related keywords", () => {
+    const emailKeywords = [
+      "ايميل", "إيميل", "اميل", "إميل", "بريد", "رسائل", "رسالة",
+      "email", "mail", "inbox",
+      "شوفي", "شوف", "تشيك", "تشيكي", "فحص", "افحصي", "راجعي",
+      "وصل", "وصلني", "وصلت", "جديد", "جديدة",
+      "الوارد", "صندوق", "check",
+    ];
+
+    const testMessages = [
+      { text: "شوفي الإيميلات", expected: true },
+      { text: "فيه رسائل جديدة؟", expected: true },
+      { text: "check my email", expected: true },
+      { text: "افحصي البريد", expected: true },
+      { text: "وصلني شي جديد؟", expected: true },
+      { text: "كيف حالك؟", expected: false },
+      { text: "أنشئ مهمة جديدة", expected: true }, // "جديدة" matches
+    ];
+
+    for (const test of testMessages) {
+      const textLower = test.text.toLowerCase();
+      const isEmailRelated = emailKeywords.some(kw => textLower.includes(kw));
+      if (test.expected) {
+        expect(isEmailRelated).toBe(true);
+      }
+    }
+  });
+});
+
+// ─── NEW: Test pending emails state management ─────────────────────
+describe("Pending Emails State Management", () => {
+  it("should track pending emails by UID key", () => {
+    const pendingEmails = new Map<string, any>();
+    
+    const email1 = { uid: 100, from: "a@test.com", subject: "Test 1" };
+    const email2 = { uid: 200, from: "b@test.com", subject: "Test 2" };
+    
+    pendingEmails.set("uid_100", { email: email1, status: "pending", notifiedAt: new Date() });
+    pendingEmails.set("uid_200", { email: email2, status: "pending", notifiedAt: new Date() });
+    
+    expect(pendingEmails.has("uid_100")).toBe(true);
+    expect(pendingEmails.has("uid_200")).toBe(true);
+    expect(pendingEmails.has("uid_300")).toBe(false);
+    expect(pendingEmails.size).toBe(2);
+  });
+
+  it("should count pending emails correctly", () => {
+    const pendingEmails = new Map<string, any>();
+    
+    pendingEmails.set("uid_1", { status: "pending" });
+    pendingEmails.set("uid_2", { status: "replied" });
+    pendingEmails.set("uid_3", { status: "pending" });
+    pendingEmails.set("uid_4", { status: "archived" });
+    pendingEmails.set("uid_5", { status: "ignored" });
+    
+    const pendingCount = Array.from(pendingEmails.values()).filter(e => e.status === "pending").length;
+    expect(pendingCount).toBe(2);
+  });
+
+  it("should not add duplicate emails", () => {
+    const pendingEmails = new Map<string, any>();
+    
+    const key = "uid_100";
+    pendingEmails.set(key, { email: { uid: 100 }, status: "pending" });
+    
+    // Try to add again
+    if (!pendingEmails.has(key)) {
+      pendingEmails.set(key, { email: { uid: 100 }, status: "pending" });
+    }
+    
+    expect(pendingEmails.size).toBe(1);
+  });
+});

@@ -192,6 +192,197 @@ export function fetchNewEmails(): Promise<EmailMessage[]> {
 }
 
 /**
+ * Fetch emails from the last N hours (both read and unread)
+ * Used for the 48-hour check feature
+ */
+export function fetchEmailsSince(hours: number = 48): Promise<EmailMessage[]> {
+  return new Promise((resolve, reject) => {
+    if (!EMAIL_PASSWORD) {
+      reject(new Error("EMAIL_PASSWORD not configured"));
+      return;
+    }
+
+    const imap = new Imap({
+      user: EMAIL_USER,
+      password: EMAIL_PASSWORD,
+      host: EMAIL_HOST,
+      port: 993,
+      tls: true,
+      tlsOptions: { rejectUnauthorized: false },
+      connTimeout: 15000,
+      authTimeout: 10000,
+    });
+
+    const emails: EmailMessage[] = [];
+
+    imap.once("ready", () => {
+      imap.openBox("INBOX", true, (err, box) => {
+        if (err) {
+          imap.end();
+          reject(err);
+          return;
+        }
+
+        const sinceDate = new Date();
+        sinceDate.setHours(sinceDate.getHours() - hours);
+        const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        const sinceDateStr = `${sinceDate.getDate()}-${months[sinceDate.getMonth()]}-${sinceDate.getFullYear()}`;
+
+        imap.search([["SINCE", sinceDateStr]], (err, uids) => {
+          if (err) {
+            imap.end();
+            reject(err);
+            return;
+          }
+
+          if (!uids || uids.length === 0) {
+            imap.end();
+            resolve([]);
+            return;
+          }
+
+          const fetch = imap.fetch(uids, { bodies: "", struct: true });
+          let pending = uids.length;
+
+          fetch.on("message", (msg) => {
+            let uid = 0;
+            const chunks: Buffer[] = [];
+            let flags: string[] = [];
+
+            msg.on("attributes", (attrs) => {
+              uid = attrs.uid;
+              flags = attrs.flags || [];
+            });
+
+            msg.on("body", (stream) => {
+              stream.on("data", (chunk: Buffer) => { chunks.push(chunk); });
+            });
+
+            msg.once("end", async () => {
+              try {
+                const raw = Buffer.concat(chunks);
+                const parsed: ParsedMail = await simpleParser(raw);
+                emails.push({
+                  uid,
+                  messageId: parsed.messageId || "",
+                  from: parsed.from?.value?.[0]?.address || "",
+                  fromName: parsed.from?.value?.[0]?.name || parsed.from?.value?.[0]?.address || "",
+                  to: parsed.to ? (Array.isArray(parsed.to) ? parsed.to : [parsed.to]).map(t => t.value.map(v => v.address).join(", ")).join(", ") : "",
+                  cc: parsed.cc ? (Array.isArray(parsed.cc) ? parsed.cc : [parsed.cc]).map(t => t.value.map(v => v.address).join(", ")).join(", ") : "",
+                  subject: parsed.subject || "(بدون عنوان)",
+                  date: parsed.date || new Date(),
+                  textBody: parsed.text || "",
+                  htmlBody: parsed.html || "",
+                  attachments: (parsed.attachments || []).map((att: Attachment) => ({
+                    filename: att.filename || "unnamed",
+                    contentType: att.contentType || "application/octet-stream",
+                    size: att.size || 0,
+                  })),
+                  isRead: flags.includes("\\Seen"),
+                });
+              } catch (parseErr) {
+                console.error("[EmailMonitor] Parse error:", parseErr);
+              }
+              pending--;
+              if (pending === 0) imap.end();
+            });
+          });
+
+          fetch.once("error", (err) => { console.error("[EmailMonitor] Fetch error:", err); imap.end(); });
+          fetch.once("end", () => { if (pending === 0) imap.end(); });
+        });
+      });
+    });
+
+    imap.once("error", (err: Error) => reject(err));
+    imap.once("end", () => {
+      emails.sort((a, b) => b.date.getTime() - a.date.getTime());
+      resolve(emails);
+    });
+
+    imap.connect();
+  });
+}
+
+/**
+ * Fetch a single email by UID with full attachments
+ */
+export function fetchEmailByUID(targetUID: number): Promise<EmailMessage | null> {
+  return new Promise((resolve, reject) => {
+    if (!EMAIL_PASSWORD) {
+      reject(new Error("EMAIL_PASSWORD not configured"));
+      return;
+    }
+
+    const imap = new Imap({
+      user: EMAIL_USER,
+      password: EMAIL_PASSWORD,
+      host: EMAIL_HOST,
+      port: 993,
+      tls: true,
+      tlsOptions: { rejectUnauthorized: false },
+      connTimeout: 15000,
+      authTimeout: 10000,
+    });
+
+    let result: EmailMessage | null = null;
+
+    imap.once("ready", () => {
+      imap.openBox("INBOX", true, (err, box) => {
+        if (err) { imap.end(); reject(err); return; }
+
+        const fetch = imap.fetch([targetUID], { bodies: "", struct: true });
+
+        fetch.on("message", (msg) => {
+          let uid = 0;
+          const chunks: Buffer[] = [];
+          let flags: string[] = [];
+
+          msg.on("attributes", (attrs) => { uid = attrs.uid; flags = attrs.flags || []; });
+          msg.on("body", (stream) => { stream.on("data", (chunk: Buffer) => { chunks.push(chunk); }); });
+
+          msg.once("end", async () => {
+            try {
+              const raw = Buffer.concat(chunks);
+              const parsed: ParsedMail = await simpleParser(raw);
+              result = {
+                uid,
+                messageId: parsed.messageId || "",
+                from: parsed.from?.value?.[0]?.address || "",
+                fromName: parsed.from?.value?.[0]?.name || parsed.from?.value?.[0]?.address || "",
+                to: parsed.to ? (Array.isArray(parsed.to) ? parsed.to : [parsed.to]).map(t => t.value.map(v => v.address).join(", ")).join(", ") : "",
+                cc: parsed.cc ? (Array.isArray(parsed.cc) ? parsed.cc : [parsed.cc]).map(t => t.value.map(v => v.address).join(", ")).join(", ") : "",
+                subject: parsed.subject || "(بدون عنوان)",
+                date: parsed.date || new Date(),
+                textBody: parsed.text || "",
+                htmlBody: parsed.html || "",
+                attachments: (parsed.attachments || []).map((att: Attachment) => ({
+                  filename: att.filename || "unnamed",
+                  contentType: att.contentType || "application/octet-stream",
+                  size: att.size || 0,
+                  content: att.content,
+                })),
+                isRead: flags.includes("\\Seen"),
+              };
+            } catch (parseErr) {
+              console.error("[EmailMonitor] Parse error for UID " + targetUID + ":", parseErr);
+            }
+          });
+        });
+
+        fetch.once("error", (err) => { console.error("[EmailMonitor] Fetch error:", err); imap.end(); });
+        fetch.once("end", () => { imap.end(); });
+      });
+    });
+
+    imap.once("error", (err: Error) => reject(err));
+    imap.once("end", () => resolve(result));
+
+    imap.connect();
+  });
+}
+
+/**
  * Fetch recent emails (both read and unread) for display
  */
 export function fetchRecentEmails(count: number = 10): Promise<EmailMessage[]> {
