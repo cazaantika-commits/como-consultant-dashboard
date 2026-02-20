@@ -382,20 +382,30 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Team Agents Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {/* Team Agents Grid - with avatars */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-6">
                 {teamAgents.map((agent: any, i: number) => {
                   const IconComp = AGENT_ICONS[agent.icon || "bot"] || Bot;
                   const agentColor = agent.color || '#6366f1';
                   return (
-                    <div
+                    <button
                       key={agent.id}
-                      className="premium-card p-5 group fade-in relative overflow-hidden hover-lift"
+                      onClick={() => setActiveAgent(agent.name.toLowerCase() as AgentType)}
+                      className="premium-card p-6 group fade-in relative overflow-hidden hover-lift text-center cursor-pointer"
                       style={{ animationDelay: `${i * 0.05}s` }}
                     >
-                      {/* Colored left accent bar */}
+                      {/* Avatar */}
+                      {agent.avatarUrl && (
+                        <div className="mx-auto mb-4 relative">
+                          <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-offset-2 ring-offset-background shadow-xl mx-auto transition-all duration-300 group-hover:scale-110 group-hover:ring-6" style={{ borderColor: agentColor }}>
+                            <img src={agent.avatarUrl} alt={agent.name} className="w-full h-full object-cover" />
+                          </div>
+                          <span className="absolute bottom-0 right-1/2 translate-x-1/2 translate-y-1 w-4 h-4 bg-emerald-500 rounded-full border-3 border-background shadow-md" />
+                        </div>
+                      )}
+                      {/* Colored top accent bar */}
                       <div
-                        className="absolute top-0 right-0 w-1 h-full rounded-r-xl"
+                        className="absolute top-0 left-0 right-0 h-1 rounded-t-xl"
                         style={{ background: agentColor }}
                       />
                       <div className="flex items-center gap-3 mb-3">
@@ -445,7 +455,19 @@ export default function Home() {
                             : "غير نشط"}
                         </span>
                       </div>
-                    </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full mt-4 gap-2 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveAgent(agent.name.toLowerCase() as AgentType);
+                        }}
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        تحدث مع {agent.name}
+                      </Button>
+                    </button>
                   );
                 })}
               </div>
@@ -469,34 +491,7 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* ── Floating Agent Icons ── */}
-      {isAuthenticated && (
-        <div className="fixed bottom-6 right-6 flex flex-col gap-2 z-40">
-          {[
-            { agent: "salwa" as AgentType, avatar: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/sFWezOzuQFJxzpKl.png", name: "سلوى", ring: "ring-amber-400" },
-            { agent: "farouq" as AgentType, avatar: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/UphyyKbtnxhtJDDy.png", name: "فاروق", ring: "ring-purple-400" },
-            { agent: "khazen" as AgentType, avatar: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/pTwUciwtTCWHPghO.png", name: "خازن", ring: "ring-blue-400" },
-            { agent: "buraq" as AgentType, avatar: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/fsUKhyALKYaTfnMj.png", name: "براق", ring: "ring-orange-400" },
-            { agent: "khaled" as AgentType, avatar: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/gFGfLWvLCJrhamTj.png", name: "خالد", ring: "ring-emerald-400" },
-            { agent: "alina" as AgentType, avatar: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/qJSwoNSavgDflAVc.png", name: "ألينا", ring: "ring-yellow-400" },
-            { agent: "baz" as AgentType, avatar: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/GorWfdugNGIAdkOm.png", name: "باز", ring: "ring-pink-400" },
-            { agent: "joelle" as AgentType, avatar: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/mCOkEovAXTtxsABs.png", name: "جويل", ring: "ring-cyan-400" },
-          ].map(({ agent, avatar, name, ring }) => (
-            <button
-              key={agent}
-              onClick={() => setActiveAgent(agent)}
-              className={`w-11 h-11 rounded-full shadow-lg hover:scale-110 transition-all duration-300 group relative ring-2 ${ring} overflow-hidden`}
-              title={`تحدث مع ${name}`}
-            >
-              <img src={avatar} alt={name} className="w-full h-full object-cover" />
-              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white" />
-              <span className="absolute left-full ml-2 px-3 py-1 bg-card border rounded-lg text-xs font-medium text-foreground opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-lg pointer-events-none">
-                {name}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
+
 
       {/* ── Agent Chat Box ── */}
       {activeAgent && (
