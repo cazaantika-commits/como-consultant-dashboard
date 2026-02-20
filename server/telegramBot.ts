@@ -70,6 +70,24 @@ export async function initTelegramBot(): Promise<TelegramBot | null> {
     return bot;
   }
 
+  // In development mode, check if the published version is already polling
+  // to avoid duplicate responses
+  const isDev = process.env.NODE_ENV === "development";
+  if (isDev) {
+    try {
+      // Try a quick getUpdates to see if another instance is polling
+      const testRes = await fetch(`https://api.telegram.org/bot${token}/getUpdates?timeout=1&offset=-1`);
+      const testData = await testRes.json() as any;
+      // If we get a 409 Conflict, another instance is running - skip initialization
+      if (!testData.ok && testData.error_code === 409) {
+        console.log("[TelegramBot] ⚠️ Published version is already polling. Skipping dev bot to avoid duplicate responses.");
+        return null;
+      }
+    } catch (e) {
+      // If check fails, proceed with initialization
+    }
+  }
+
   try {
     // Step 1: Delete any webhook
     try {
@@ -80,12 +98,15 @@ export async function initTelegramBot(): Promise<TelegramBot | null> {
 
     // Step 2: Force-claim the polling session by making a short getUpdates call
     // This terminates any other long-polling connection
-    try {
-      await fetch(`https://api.telegram.org/bot${token}/getUpdates?timeout=0&offset=-1`);
-      // Wait for the old polling session to fully release
-      await new Promise(resolve => setTimeout(resolve, 2000));
-    } catch (e) {
-      console.warn("[TelegramBot] Could not force-claim polling:", e);
+    if (!isDev) {
+      // Only force-claim in production to avoid stealing from published version
+      try {
+        await fetch(`https://api.telegram.org/bot${token}/getUpdates?timeout=0&offset=-1`);
+        // Wait for the old polling session to fully release
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      } catch (e) {
+        console.warn("[TelegramBot] Could not force-claim polling:", e);
+      }
     }
 
     bot = new TelegramBot(token, {
@@ -106,6 +127,12 @@ export async function initTelegramBot(): Promise<TelegramBot | null> {
     bot.on("polling_error", (error: any) => {
       if (error?.code === "ETELEGRAM" && error?.message?.includes("409 Conflict")) {
         conflictCount++;
+        if (conflictCount >= 3 && isDev) {
+          // In dev mode, stop polling after 3 conflicts to avoid duplicates
+          console.warn("[TelegramBot] ⚠️ Too many conflicts in dev mode. Stopping bot to avoid duplicate responses.");
+          stopTelegramBot();
+          return;
+        }
         // Only log every 10th conflict to avoid spam
         if (conflictCount % 10 === 1) {
           console.warn(`[TelegramBot] Polling conflict #${conflictCount} - published version may also be running.`);

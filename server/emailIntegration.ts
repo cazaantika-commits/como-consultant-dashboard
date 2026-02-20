@@ -3,6 +3,9 @@ import { invokeLLM } from "./_core/llm";
 import { storagePut } from "./storage";
 import { searchFiles, getDriveClient, createFolder } from "./googleDrive";
 import { Readable } from "stream";
+import { getDb } from "./db";
+import { consultants, projects, financialData, projectConsultants, feasibilityStudies, consultantProfiles } from "../drizzle/schema";
+import { eq, and, like } from "drizzle-orm";
 
 /**
  * Email-Telegram Integration with Agent Routing
@@ -25,15 +28,30 @@ interface PendingEmail {
 }
 
 interface FarouqAnalysis {
+  documentType: string; // "consultant_proposal" | "feasibility_study" | "contract" | "report" | "other"
   consultantName: string;
+  consultantEmail?: string;
   proposalType: string;
   totalFees: string;
   designFees?: string;
   supervisionFees?: string;
+  designFeesPct?: string;
+  supervisionFeesPct?: string;
   currency: string;
   summary: string;
   notes: string[];
   projectMentioned?: string;
+  // Feasibility study fields
+  plotArea?: string;
+  totalGfa?: string;
+  estimatedBua?: string;
+  numberOfUnits?: string;
+  constructionCost?: string;
+  projectValue?: string;
+  landPrice?: string;
+  // Platform update status
+  platformUpdated?: boolean;
+  platformUpdateDetails?: string;
 }
 
 interface ReplyDraft {
@@ -574,7 +592,33 @@ async function handleAnalyzeAction(bot: any, chatId: number, uid: number, callba
       messages: [
         {
           role: "system",
-          content: "أنت فاروق، محلل قانوني ومالي خبير في شركة Como Developments للتطوير العقاري في دبي. مهمتك تحليل عروض الاستشاريين الهندسيين بدقة عالية. اقرأ كل المرفقات والملفات المرفقة بعناية شديدة واستخرج:\n1. اسم الاستشاري/الشركة\n2. نوع العرض (تصميم/إشراف/كلاهما/أخرى)\n3. قيمة الأتعاب بالتفصيل (إجمالي + تفصيل التصميم والإشراف)\n4. العملة\n5. ملخص شامل للعرض\n6. ملاحظات مهمة وتحذيرات\n7. المشروع المذكور\n\nإذا كانت المرفقات تحتوي على جداول أسعار أو تفاصيل مالية، استخرجها بدقة. أجب بصيغة JSON."
+          content: `أنت فاروق، محلل قانوني ومالي خبير في شركة Como Developments للتطوير العقاري في دبي.
+
+مهمتك:
+1. حدد نوع المستند أولاً:
+   - "consultant_proposal" = عرض سعر أو عرض أتعاب من استشاري هندسي
+   - "feasibility_study" = دراسة جدوى مالية لمشروع عقاري
+   - "contract" = عقد أو اتفاقية
+   - "report" = تقرير فني أو إداري
+   - "other" = أي شيء آخر
+
+2. حسب نوع المستند، استخرج البيانات المناسبة:
+
+لعرض الاستشاري:
+- اسم الاستشاري/الشركة والإيميل
+- نوع العرض (تصميم/إشراف/كلاهما)
+- الأتعاب بالتفصيل (إجمالي + تصميم + إشراف) كأرقام ونسب مئوية
+- المشروع المذكور
+
+لدراسة الجدوى:
+- اسم المشروع
+- مساحة الأرض ومساحة البناء (BUA) بالقدم المربع
+- عدد الوحدات
+- تكلفة البناء لكل قدم مربع
+- القيمة الإجمالية للمشروع
+- سعر الأرض
+
+اقرأ كل المرفقات بعناية شديدة واستخرج الأرقام بدقة. أجب بصيغة JSON.`
         },
         {
           role: "user",
@@ -584,22 +628,33 @@ async function handleAnalyzeAction(bot: any, chatId: number, uid: number, callba
       response_format: {
         type: "json_schema",
         json_schema: {
-          name: "proposal_analysis",
+          name: "document_analysis",
           strict: true,
           schema: {
             type: "object",
             properties: {
-              consultantName: { type: "string", description: "اسم الاستشاري أو الشركة" },
+              documentType: { type: "string", description: "consultant_proposal, feasibility_study, contract, report, other" },
+              consultantName: { type: "string", description: "اسم الاستشاري أو الشركة المرسلة" },
+              consultantEmail: { type: "string", description: "إيميل الاستشاري" },
               proposalType: { type: "string", description: "design, supervision, both, other" },
-              totalFees: { type: "string", description: "الأتعاب الإجمالية مع الرقم" },
-              designFees: { type: "string", description: "أتعاب التصميم مع الرقم" },
-              supervisionFees: { type: "string", description: "أتعاب الإشراف مع الرقم" },
-              currency: { type: "string", description: "العملة (AED, USD, etc.)" },
-              summary: { type: "string", description: "ملخص شامل للعرض يتضمن أهم النقاط" },
-              notes: { type: "array", items: { type: "string" }, description: "ملاحظات وتحذيرات مهمة" },
-              projectMentioned: { type: "string", description: "اسم المشروع المذكور" },
+              totalFees: { type: "string", description: "الأتعاب الإجمالية كرقم" },
+              designFees: { type: "string", description: "أتعاب التصميم كرقم" },
+              supervisionFees: { type: "string", description: "أتعاب الإشراف كرقم" },
+              designFeesPct: { type: "string", description: "نسبة أتعاب التصميم مثل 2.5%" },
+              supervisionFeesPct: { type: "string", description: "نسبة أتعاب الإشراف مثل 1.75%" },
+              currency: { type: "string", description: "AED, USD, etc." },
+              summary: { type: "string", description: "ملخص شامل" },
+              notes: { type: "array", items: { type: "string" }, description: "ملاحظات وتحذيرات" },
+              projectMentioned: { type: "string", description: "اسم المشروع" },
+              plotArea: { type: "string", description: "مساحة الأرض بالقدم المربع (لدراسة الجدوى)" },
+              totalGfa: { type: "string", description: "إجمالي GFA بالقدم المربع" },
+              estimatedBua: { type: "string", description: "مساحة البناء التقديرية BUA" },
+              numberOfUnits: { type: "string", description: "عدد الوحدات" },
+              constructionCost: { type: "string", description: "تكلفة البناء لكل قدم مربع" },
+              projectValue: { type: "string", description: "القيمة الإجمالية للمشروع" },
+              landPrice: { type: "string", description: "سعر الأرض" },
             },
-            required: ["consultantName", "proposalType", "totalFees", "designFees", "supervisionFees", "currency", "summary", "notes", "projectMentioned"],
+            required: ["documentType", "consultantName", "consultantEmail", "proposalType", "totalFees", "designFees", "supervisionFees", "designFeesPct", "supervisionFeesPct", "currency", "summary", "notes", "projectMentioned", "plotArea", "totalGfa", "estimatedBua", "numberOfUnits", "constructionCost", "projectValue", "landPrice"],
             additionalProperties: false,
           },
         },
@@ -613,6 +668,7 @@ async function handleAnalyzeAction(bot: any, chatId: number, uid: number, callba
       analysis = JSON.parse(analysisText);
     } catch {
       analysis = {
+        documentType: "other",
         consultantName: pending.email.fromName,
         proposalType: "other",
         totalFees: "غير محدد",
@@ -624,22 +680,48 @@ async function handleAnalyzeAction(bot: any, chatId: number, uid: number, callba
 
     pending.farouqAnalysis = analysis;
 
+    // ─── Auto-update platform database ───
+    let platformMsg = "";
+    try {
+      platformMsg = await updatePlatformFromAnalysis(analysis, pending.email);
+    } catch (platformErr) {
+      console.error("[EmailIntegration] Platform update error:", platformErr);
+      platformMsg = "\n⚠️ فشل تحديث المنصة: " + (platformErr as Error).message;
+    }
+
     const typeMap: Record<string, string> = { design: "تصميم", supervision: "إشراف", both: "تصميم وإشراف", other: "أخرى" };
+    const docTypeMap: Record<string, string> = { consultant_proposal: "عرض استشاري", feasibility_study: "دراسة جدوى", contract: "عقد", report: "تقرير", other: "أخرى" };
 
     const attachmentNote = attachmentUrls.length > 0
       ? "\n📎 تم قراءة " + attachmentUrls.length + " مرفق(ات) لاستخراج البيانات"
       : "\n⚠️ لا توجد مرفقات - التحليل مبني على نص الإيميل فقط";
 
-    const resultMsg = "📋 تقرير فاروق — تحليل العرض\n\n" +
-      "🏢 الاستشاري: " + analysis.consultantName + "\n" +
-      "📄 نوع العرض: " + (typeMap[analysis.proposalType] || analysis.proposalType) + "\n" +
-      "💰 الأتعاب الإجمالية: " + analysis.totalFees + " " + analysis.currency + "\n" +
-      (analysis.designFees ? "  🎨 تصميم: " + analysis.designFees + " " + analysis.currency + "\n" : "") +
-      (analysis.supervisionFees ? "  👷 إشراف: " + analysis.supervisionFees + " " + analysis.currency + "\n" : "") +
-      (analysis.projectMentioned ? "\n🏗️ المشروع: " + analysis.projectMentioned + "\n" : "") +
-      attachmentNote +
+    let resultMsg = "📋 تقرير فاروق — " + (docTypeMap[analysis.documentType] || "تحليل") + "\n\n";
+
+    if (analysis.documentType === "consultant_proposal") {
+      resultMsg += "🏢 الاستشاري: " + analysis.consultantName + "\n" +
+        "📄 نوع العرض: " + (typeMap[analysis.proposalType] || analysis.proposalType) + "\n" +
+        "💰 الأتعاب الإجمالية: " + analysis.totalFees + " " + analysis.currency + "\n" +
+        (analysis.designFees && analysis.designFees !== "N/A" ? "  🎨 تصميم: " + analysis.designFees + (analysis.designFeesPct ? " (" + analysis.designFeesPct + ")" : "") + "\n" : "") +
+        (analysis.supervisionFees && analysis.supervisionFees !== "N/A" ? "  👷 إشراف: " + analysis.supervisionFees + (analysis.supervisionFeesPct ? " (" + analysis.supervisionFeesPct + ")" : "") + "\n" : "") +
+        (analysis.projectMentioned ? "\n🏗️ المشروع: " + analysis.projectMentioned + "\n" : "");
+    } else if (analysis.documentType === "feasibility_study") {
+      resultMsg += "🏗️ المشروع: " + (analysis.projectMentioned || "غير محدد") + "\n" +
+        (analysis.plotArea && analysis.plotArea !== "N/A" ? "📏 مساحة الأرض: " + analysis.plotArea + " sqft\n" : "") +
+        (analysis.estimatedBua && analysis.estimatedBua !== "N/A" ? "🏠 مساحة البناء: " + analysis.estimatedBua + " sqft\n" : "") +
+        (analysis.numberOfUnits && analysis.numberOfUnits !== "N/A" ? "🏢 عدد الوحدات: " + analysis.numberOfUnits + "\n" : "") +
+        (analysis.constructionCost && analysis.constructionCost !== "N/A" ? "💷 تكلفة البناء/sqft: " + analysis.constructionCost + " AED\n" : "") +
+        (analysis.projectValue && analysis.projectValue !== "N/A" ? "💰 قيمة المشروع: " + analysis.projectValue + " AED\n" : "") +
+        (analysis.landPrice && analysis.landPrice !== "N/A" ? "🏞️ سعر الأرض: " + analysis.landPrice + " AED\n" : "");
+    } else {
+      resultMsg += "🏢 المرسل: " + analysis.consultantName + "\n";
+      if (analysis.projectMentioned) resultMsg += "🏗️ المشروع: " + analysis.projectMentioned + "\n";
+    }
+
+    resultMsg += attachmentNote +
       "\n\n📝 الملخص:\n" + analysis.summary + "\n" +
-      (analysis.notes && analysis.notes.length > 0 ? "\n⚠️ ملاحظات:\n" + analysis.notes.map(n => "  • " + n).join("\n") : "");
+      (analysis.notes && analysis.notes.length > 0 ? "\n⚠️ ملاحظات:\n" + analysis.notes.map(n => "  • " + n).join("\n") : "") +
+      platformMsg;
 
     await bot.sendMessage(chatId, resultMsg, {
       reply_markup: {
@@ -658,6 +740,175 @@ async function handleAnalyzeAction(bot: any, chatId: number, uid: number, callba
     console.error("[EmailIntegration] Analysis error:", error);
     await bot.sendMessage(chatId, "⚠️ فاروق: فشل في التحليل: " + (error as Error).message);
   }
+}
+
+// ─── Auto-update platform from Farouq analysis ───
+async function updatePlatformFromAnalysis(analysis: FarouqAnalysis, email: EmailMessage): Promise<string> {
+  const db = await getDb();
+  if (!db) return "\n⚠️ قاعدة البيانات غير متاحة";
+
+  // Get owner user (userId = 1 for admin)
+  const { users } = await import("../drizzle/schema");
+  const ownerUsers = await db.select().from(users).where(eq(users.role, "admin")).limit(1);
+  const ownerId = ownerUsers.length > 0 ? ownerUsers[0].id : 1;
+
+  const updates: string[] = [];
+
+  if (analysis.documentType === "consultant_proposal") {
+    // 1. Find or create consultant
+    const consultantName = analysis.consultantName || email.fromName;
+    const consultantEmail = analysis.consultantEmail || email.from;
+    
+    let existingConsultants = await db.select().from(consultants)
+      .where(eq(consultants.email, consultantEmail)).limit(1);
+    
+    if (existingConsultants.length === 0) {
+      // Try by name
+      existingConsultants = await db.select().from(consultants)
+        .where(like(consultants.name, "%" + consultantName.substring(0, 10) + "%")).limit(1);
+    }
+
+    let consultantId: number;
+    if (existingConsultants.length > 0) {
+      consultantId = existingConsultants[0].id;
+      updates.push("✅ وُجد الاستشاري: " + existingConsultants[0].name);
+    } else {
+      // Create new consultant
+      const result = await db.insert(consultants).values({
+        userId: ownerId,
+        name: consultantName,
+        email: consultantEmail,
+        specialization: analysis.proposalType === "design" ? "تصميم" : analysis.proposalType === "supervision" ? "إشراف" : "تصميم وإشراف",
+      });
+      consultantId = (result as any)[0]?.insertId || (result as any).insertId;
+      updates.push("➕ تم إضافة استشاري جديد: " + consultantName);
+    }
+
+    // 2. Find or create project
+    if (analysis.projectMentioned && analysis.projectMentioned !== "N/A" && analysis.projectMentioned !== "غير محدد") {
+      let existingProjects = await db.select().from(projects)
+        .where(like(projects.name, "%" + analysis.projectMentioned.substring(0, 15) + "%")).limit(1);
+
+      let projectId: number;
+      if (existingProjects.length > 0) {
+        projectId = existingProjects[0].id;
+        updates.push("✅ وُجد المشروع: " + existingProjects[0].name);
+      } else {
+        const result = await db.insert(projects).values({
+          userId: ownerId,
+          name: analysis.projectMentioned,
+          description: analysis.summary?.substring(0, 200),
+        });
+        projectId = (result as any)[0]?.insertId || (result as any).insertId;
+        updates.push("➕ تم إنشاء مشروع جديد: " + analysis.projectMentioned);
+      }
+
+      // 3. Link consultant to project
+      const existingLink = await db.select().from(projectConsultants)
+        .where(and(
+          eq(projectConsultants.projectId, projectId),
+          eq(projectConsultants.consultantId, consultantId)
+        )).limit(1);
+
+      if (existingLink.length === 0) {
+        await db.insert(projectConsultants).values({ projectId, consultantId });
+        updates.push("🔗 تم ربط الاستشاري بالمشروع");
+      }
+
+      // 4. Update financial data
+      const parseNum = (s: string | undefined): number | undefined => {
+        if (!s || s === "N/A" || s === "غير محدد") return undefined;
+        const num = parseInt(s.replace(/[^0-9]/g, ""));
+        return isNaN(num) ? undefined : num;
+      };
+      const parsePct = (s: string | undefined): number | undefined => {
+        if (!s || s === "N/A") return undefined;
+        const num = parseFloat(s.replace(/[^0-9.]/g, ""));
+        return isNaN(num) ? undefined : Math.round(num * 100); // Store as basis points for precision
+      };
+
+      const designVal = parseNum(analysis.designFees);
+      const supervisionVal = parseNum(analysis.supervisionFees);
+      const designPctVal = parsePct(analysis.designFeesPct);
+      const supervisionPctVal = parsePct(analysis.supervisionFeesPct);
+
+      const finData: any = {};
+      if (designVal !== undefined) {
+        finData.designType = "lump";
+        finData.designValue = designVal;
+      } else if (designPctVal !== undefined) {
+        finData.designType = "pct";
+        finData.designValue = designPctVal;
+      }
+      if (supervisionVal !== undefined) {
+        finData.supervisionType = "lump";
+        finData.supervisionValue = supervisionVal;
+      } else if (supervisionPctVal !== undefined) {
+        finData.supervisionType = "pct";
+        finData.supervisionValue = supervisionPctVal;
+      }
+
+      if (Object.keys(finData).length > 0) {
+        const existingFin = await db.select().from(financialData)
+          .where(and(
+            eq(financialData.projectId, projectId),
+            eq(financialData.consultantId, consultantId)
+          )).limit(1);
+
+        if (existingFin.length > 0) {
+          await db.update(financialData).set(finData)
+            .where(and(
+              eq(financialData.projectId, projectId),
+              eq(financialData.consultantId, consultantId)
+            ));
+        } else {
+          await db.insert(financialData).values({ projectId, consultantId, ...finData });
+        }
+        updates.push("💰 تم تحديث البيانات المالية");
+      }
+    }
+
+  } else if (analysis.documentType === "feasibility_study") {
+    // Update feasibility study data
+    const parseNum = (s: string | undefined): number | undefined => {
+      if (!s || s === "N/A" || s === "غير محدد") return undefined;
+      const num = parseInt(s.replace(/[^0-9]/g, ""));
+      return isNaN(num) ? undefined : num;
+    };
+
+    const projectName = analysis.projectMentioned || "مشروع جديد - " + new Date().toLocaleDateString("ar");
+
+    // Check if feasibility study exists for this project
+    const existingStudy = await db.select().from(feasibilityStudies)
+      .where(like(feasibilityStudies.projectName, "%" + projectName.substring(0, 15) + "%")).limit(1);
+
+    const studyData: any = {
+      projectName,
+      plotArea: parseNum(analysis.plotArea),
+      totalGfa: parseNum(analysis.totalGfa),
+      estimatedBua: parseNum(analysis.estimatedBua),
+      numberOfUnits: parseNum(analysis.numberOfUnits),
+      constructionCostPerSqft: parseNum(analysis.constructionCost),
+      landPrice: parseNum(analysis.landPrice),
+    };
+
+    // Remove undefined values
+    Object.keys(studyData).forEach(k => { if (studyData[k] === undefined) delete studyData[k]; });
+
+    if (existingStudy.length > 0) {
+      await db.update(feasibilityStudies).set(studyData)
+        .where(eq(feasibilityStudies.id, existingStudy[0].id));
+      updates.push("📊 تم تحديث دراسة الجدوى: " + projectName);
+    } else {
+      await db.insert(feasibilityStudies).values({ userId: ownerId, ...studyData });
+      updates.push("📊 تم إنشاء دراسة جدوى جديدة: " + projectName);
+    }
+  }
+
+  if (updates.length > 0) {
+    return "\n\n🔄 تحديث المنصة:\n" + updates.map(u => "  " + u).join("\n");
+  }
+  return "";
 }
 
 // Done action
