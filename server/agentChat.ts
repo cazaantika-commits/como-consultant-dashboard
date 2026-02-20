@@ -14,6 +14,20 @@ interface AgentChatRequest {
   conversationHistory?: { role: "user" | "assistant"; content: string }[];
 }
 
+// Model assignment per agent based on quality analysis
+type AIModel = "gpt-4o" | "claude-sonnet-4" | "gemini-2.5-flash";
+
+const AGENT_MODEL_MAP: Record<AgentType, AIModel> = {
+  salwa: "gpt-4o",           // Best for natural Arabic conversation & coordination
+  alina: "gpt-4o",           // Best for financial calculations & structured analysis
+  khazen: "gpt-4o",          // Best for file context understanding & classification
+  buraq: "gpt-4o",           // Best for timeline tracking & task management
+  farouq: "claude-sonnet-4",   // Best for legal analysis, contracts & deep document review
+  khaled: "claude-sonnet-4",   // Best for technical standards, quality details & precision
+  baz: "claude-sonnet-4",      // Best for strategic thinking & multi-dimensional analysis
+  joelle: "gemini-2.5-flash",   // Best for large data processing & market research
+};
+
 // Agent personality system prompts - rich and detailed
 const AGENT_PROMPTS: Record<AgentType, string> = {
   salwa: `أنتِ سلوى، المنسقة الرئيسية لفريق كومو الذكي في شركة Como Developments للتطوير العقاري في دبي.
@@ -101,25 +115,22 @@ const AGENT_PROMPTS: Record<AgentType, string> = {
 تتحدثين بأسلوب أنيق ومحترف. تستخدمين إحصائيات وبيانات السوق. تقولين "حسب تحليلي..." كثيراً.`
 };
 
-// Call OpenAI GPT-4 directly
+// ═══════════════════════════════════════════════════
+// Model-specific API callers
+// ═══════════════════════════════════════════════════
+
+// Call OpenAI GPT-4o
 async function callOpenAI(
   systemPrompt: string,
   userMessage: string,
   conversationHistory?: { role: "user" | "assistant"; content: string }[]
 ): Promise<string> {
   const apiKey = ENV.openaiApiKey;
-  
-  if (!apiKey) {
-    throw new Error("OpenAI API Key not configured");
-  }
+  if (!apiKey) throw new Error("OpenAI API Key not configured");
 
-  const messages: any[] = [
-    { role: "system", content: systemPrompt }
-  ];
+  const messages: any[] = [{ role: "system", content: systemPrompt }];
 
-  // Add conversation history for context
   if (conversationHistory && conversationHistory.length > 0) {
-    // Keep last 20 messages for context window management
     const recentHistory = conversationHistory.slice(-20);
     for (const msg of recentHistory) {
       messages.push({ role: msg.role, content: msg.content });
@@ -145,11 +156,108 @@ async function callOpenAI(
   if (!response.ok) {
     const errorText = await response.text();
     console.error("[OpenAI] Error:", response.status, errorText);
-    throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+    throw new Error(`OpenAI API error: ${response.status}`);
   }
 
   const data = await response.json();
   return data.choices[0]?.message?.content || "عذراً، لم أتمكن من الرد.";
+}
+
+// Call Anthropic Claude 3.5 Sonnet
+async function callClaude(
+  systemPrompt: string,
+  userMessage: string,
+  conversationHistory?: { role: "user" | "assistant"; content: string }[]
+): Promise<string> {
+  const apiKey = ENV.anthropicApiKey;
+  if (!apiKey) throw new Error("Anthropic API Key not configured");
+
+  const messages: any[] = [];
+
+  if (conversationHistory && conversationHistory.length > 0) {
+    const recentHistory = conversationHistory.slice(-20);
+    for (const msg of recentHistory) {
+      messages.push({ role: msg.role, content: msg.content });
+    }
+  }
+
+  messages.push({ role: "user", content: userMessage });
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 2048,
+      system: systemPrompt,
+      messages,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("[Claude] Error:", response.status, errorText);
+    throw new Error(`Claude API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.content?.[0]?.text || "عذراً، لم أتمكن من الرد.";
+}
+
+// Call Google Gemini 1.5 Pro
+async function callGemini(
+  systemPrompt: string,
+  userMessage: string,
+  conversationHistory?: { role: "user" | "assistant"; content: string }[]
+): Promise<string> {
+  const apiKey = ENV.googleGeminiApiKey;
+  if (!apiKey) throw new Error("Google Gemini API Key not configured");
+
+  const contents: any[] = [];
+
+  if (conversationHistory && conversationHistory.length > 0) {
+    const recentHistory = conversationHistory.slice(-20);
+    for (const msg of recentHistory) {
+      contents.push({
+        role: msg.role === "assistant" ? "model" : "user",
+        parts: [{ text: msg.content }],
+      });
+    }
+  }
+
+  contents.push({
+    role: "user",
+    parts: [{ text: userMessage }],
+  });
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents,
+        generationConfig: {
+          maxOutputTokens: 2048,
+          temperature: 0.8,
+        },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("[Gemini] Error:", response.status, errorText);
+    throw new Error(`Gemini API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || "عذراً، لم أتمكن من الرد.";
 }
 
 // Fallback to built-in Manus LLM
@@ -164,6 +272,66 @@ async function callManusLLM(systemPrompt: string, userMessage: string): Promise<
   return typeof content === "string" ? content : "عذراً، لم أتمكن من فهم طلبك.";
 }
 
+// ═══════════════════════════════════════════════════
+// Smart model router - picks the best model per agent
+// ═══════════════════════════════════════════════════
+
+async function callBestModel(
+  agent: AgentType,
+  systemPrompt: string,
+  userMessage: string,
+  conversationHistory?: { role: "user" | "assistant"; content: string }[]
+): Promise<string> {
+  const assignedModel = AGENT_MODEL_MAP[agent];
+
+  // Try the assigned model first
+  try {
+    switch (assignedModel) {
+      case "gpt-4o":
+        if (ENV.openaiApiKey) {
+          console.log(`[AgentChat] 🟢 ${agent} → GPT-4o (OpenAI)`);
+          return await callOpenAI(systemPrompt, userMessage, conversationHistory);
+        }
+        break;
+      case "claude-sonnet-4":
+        if (ENV.anthropicApiKey) {
+          console.log(`[AgentChat] 🟣 ${agent} → Claude Sonnet 4 (Anthropic)`);
+          return await callClaude(systemPrompt, userMessage, conversationHistory);
+        }
+        break;
+      case "gemini-2.5-flash":
+        if (ENV.googleGeminiApiKey) {
+          console.log(`[AgentChat] 🔵 ${agent} → Gemini 2.5 Flash (Google)`);
+          return await callGemini(systemPrompt, userMessage, conversationHistory);
+        }
+        break;
+    }
+  } catch (err) {
+    console.error(`[AgentChat] Primary model ${assignedModel} failed for ${agent}:`, err);
+  }
+
+  // Fallback chain: try other models in order
+  const fallbackOrder: { model: AIModel; fn: typeof callOpenAI; key: string }[] = [
+    { model: "gpt-4o", fn: callOpenAI, key: ENV.openaiApiKey },
+    { model: "claude-sonnet-4", fn: callClaude, key: ENV.anthropicApiKey },
+    { model: "gemini-2.5-flash", fn: callGemini, key: ENV.googleGeminiApiKey },
+  ];
+
+  for (const fallback of fallbackOrder) {
+    if (fallback.model === assignedModel || !fallback.key) continue;
+    try {
+      console.log(`[AgentChat] ⚠️ Fallback: ${agent} → ${fallback.model}`);
+      return await fallback.fn(systemPrompt, userMessage, conversationHistory);
+    } catch (err) {
+      console.error(`[AgentChat] Fallback ${fallback.model} also failed:`, err);
+    }
+  }
+
+  // Final fallback: Manus built-in LLM
+  console.log(`[AgentChat] 🔴 All models failed, using Manus LLM for ${agent}`);
+  return await callManusLLM(systemPrompt, userMessage);
+}
+
 // Get platform context data for smarter responses
 async function getPlatformContext(agent: AgentType): Promise<string> {
   let contextData = "";
@@ -171,7 +339,6 @@ async function getPlatformContext(agent: AgentType): Promise<string> {
     const db = await getDb();
     if (!db) return "";
 
-    // All agents get project and consultant context
     const projectList = await db.select().from(projects).limit(10);
     if (projectList.length > 0) {
       contextData += `\n\n📋 المشاريع الحالية في كومو:\n${projectList.map(p => `- ${p.name}`).join("\n")}`;
@@ -182,7 +349,6 @@ async function getPlatformContext(agent: AgentType): Promise<string> {
       contextData += `\n\n🏛️ الاستشاريون المسجلون:\n${consultantList.map(c => `- ${c.name}`).join("\n")}`;
     }
 
-    // Financial context for Alina and Farouq
     if (["alina", "farouq", "joelle"].includes(agent)) {
       try {
         const fees = await db.select().from(financialData).limit(20);
@@ -192,7 +358,6 @@ async function getPlatformContext(agent: AgentType): Promise<string> {
       } catch {}
     }
 
-    // Evaluation context for relevant agents
     if (["farouq", "khaled", "alina", "joelle", "baz"].includes(agent)) {
       try {
         const scores = await db.select().from(evaluationScores).limit(10);
@@ -231,20 +396,10 @@ export async function handleAgentChat(req: AgentChatRequest): Promise<string> {
   const contextData = await getPlatformContext(agent);
 
   // Build system prompt with context
+  const modelName = AGENT_MODEL_MAP[agent];
   const systemPrompt = AGENT_PROMPTS[agent] + contextData + 
     "\n\nتعليمات مهمة: أجب بشكل طبيعي وشخصي. تحدث كأنك زميل عمل حقيقي. استخدم المعلومات المتاحة عن المشاريع والاستشاريين عند الحاجة. إذا لم تكن متأكداً من معلومة، قل ذلك بصراحة.";
 
-  // Try OpenAI GPT-4 first, fallback to Manus LLM
-  try {
-    if (ENV.openaiApiKey) {
-      console.log(`[AgentChat] Using OpenAI GPT-4o for ${agent}`);
-      return await callOpenAI(systemPrompt, message, conversationHistory);
-    }
-  } catch (err) {
-    console.error(`[AgentChat] OpenAI failed for ${agent}, falling back to Manus LLM:`, err);
-  }
-
-  // Fallback to built-in LLM
-  console.log(`[AgentChat] Using Manus LLM for ${agent}`);
-  return await callManusLLM(systemPrompt, message);
+  // Route to the best model for this agent
+  return await callBestModel(agent, systemPrompt, message, conversationHistory);
 }

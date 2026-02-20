@@ -357,3 +357,13 @@
 
 ## إصلاح خطأ AgentChatBox - فبراير 20
 - [x] إصلاح خطأ "Cannot read properties of undefined (reading 'name')" في AgentChatBox
+
+## ربط كل وكيل بالنموذج الأنسب - فبراير 20
+- [x] حفظ مفتاح Anthropic (Claude) في المنصة
+- [x] حفظ مفتاح Google Gemini في المنصة
+- [x] تحديث agentChat.ts لتوجيه كل وكيل للنموذج الأنسب
+- [x] GPT-4o: سلوى، ألينا، خازن، براق
+- [x] Claude Sonnet 4: فاروق، خالد، باز
+- [x] Gemini 2.5 Flash: جويل
+- [x] اختبار جميع النماذج الثلاثة (159 اختبار ناجح)
+- [ ] حفظ checkpoint
