@@ -118,7 +118,7 @@ export const agentsRouter = router({
       // Import agent handlers
       const { handleAgentChat } = await import("../agentChat");
       
-      const response = await handleAgentChat({
+      const result = await handleAgentChat({
         agent: input.agent,
         message: input.message,
         userId: ctx.user.id,
@@ -130,13 +130,13 @@ export const agentsRouter = router({
         try {
           await db.insert(chatHistory).values([
             { userId: ctx.user.id, agent: input.agent, role: "user", content: input.message },
-            { userId: ctx.user.id, agent: input.agent, role: "assistant", content: response }
+            { userId: ctx.user.id, agent: input.agent, role: "assistant", content: result.text }
           ]);
         } catch (err) {
           console.error("[ChatHistory] Failed to save:", err);
         }
       }
 
-      return { response };
+      return { response: result.text, model: result.model };
     }),
 });

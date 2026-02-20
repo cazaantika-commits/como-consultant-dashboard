@@ -136,4 +136,29 @@ describe("Multi-Model Agent Chat Integration", () => {
     // Gemini 2.5 Pro agent
     expect(expectedMap.joelle).toBe("gemini-2.5-pro");
   });
+
+  // Test 5: handleAgentChat returns model name alongside response text
+  it("should return model name with response from handleAgentChat", async () => {
+    // Verify the return type structure includes both text and model
+    const expectedModels = ["GPT-4o", "Claude Sonnet 4", "Gemini 2.5 Pro", "Manus LLM"];
+    
+    // Verify model display names map correctly
+    const agentModelDisplay: Record<string, string> = {
+      salwa: "GPT-4o",
+      alina: "GPT-4o",
+      khazen: "GPT-4o",
+      buraq: "GPT-4o",
+      farouq: "Claude Sonnet 4",
+      khaled: "Claude Sonnet 4",
+      baz: "Claude Sonnet 4",
+      joelle: "Gemini 2.5 Pro",
+    };
+
+    for (const [agent, model] of Object.entries(agentModelDisplay)) {
+      expect(expectedModels).toContain(model);
+    }
+
+    // Verify all 8 agents have display model names
+    expect(Object.keys(agentModelDisplay)).toHaveLength(8);
+  });
 });

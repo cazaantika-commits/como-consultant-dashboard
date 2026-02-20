@@ -281,7 +281,7 @@ async function callBestModel(
   systemPrompt: string,
   userMessage: string,
   conversationHistory?: { role: "user" | "assistant"; content: string }[]
-): Promise<string> {
+): Promise<{ text: string; model: string }> {
   const assignedModel = AGENT_MODEL_MAP[agent];
 
   // Try the assigned model first
@@ -290,19 +290,19 @@ async function callBestModel(
       case "gpt-4o":
         if (ENV.openaiApiKey) {
           console.log(`[AgentChat] 🟢 ${agent} → GPT-4o (OpenAI)`);
-          return await callOpenAI(systemPrompt, userMessage, conversationHistory);
+          return { text: await callOpenAI(systemPrompt, userMessage, conversationHistory), model: "GPT-4o" };
         }
         break;
       case "claude-sonnet-4":
         if (ENV.anthropicApiKey) {
           console.log(`[AgentChat] 🟣 ${agent} → Claude Sonnet 4 (Anthropic)`);
-          return await callClaude(systemPrompt, userMessage, conversationHistory);
+          return { text: await callClaude(systemPrompt, userMessage, conversationHistory), model: "Claude Sonnet 4" };
         }
         break;
       case "gemini-2.5-pro":
         if (ENV.googleGeminiApiKey) {
           console.log(`[AgentChat] 🔵 ${agent} → Gemini 2.5 Pro (Google)`);
-          return await callGemini(systemPrompt, userMessage, conversationHistory);
+          return { text: await callGemini(systemPrompt, userMessage, conversationHistory), model: "Gemini 2.5 Pro" };
         }
         break;
     }
@@ -321,7 +321,8 @@ async function callBestModel(
     if (fallback.model === assignedModel || !fallback.key) continue;
     try {
       console.log(`[AgentChat] ⚠️ Fallback: ${agent} → ${fallback.model}`);
-      return await fallback.fn(systemPrompt, userMessage, conversationHistory);
+      const fallbackModelNames: Record<string, string> = { "gpt-4o": "GPT-4o", "claude-sonnet-4": "Claude Sonnet 4", "gemini-2.5-pro": "Gemini 2.5 Pro" };
+      return { text: await fallback.fn(systemPrompt, userMessage, conversationHistory), model: fallbackModelNames[fallback.model] || fallback.model };
     } catch (err) {
       console.error(`[AgentChat] Fallback ${fallback.model} also failed:`, err);
     }
@@ -329,7 +330,7 @@ async function callBestModel(
 
   // Final fallback: Manus built-in LLM
   console.log(`[AgentChat] 🔴 All models failed, using Manus LLM for ${agent}`);
-  return await callManusLLM(systemPrompt, userMessage);
+  return { text: await callManusLLM(systemPrompt, userMessage), model: "Manus LLM" };
 }
 
 // Get platform context data for smarter responses
@@ -373,7 +374,7 @@ async function getPlatformContext(agent: AgentType): Promise<string> {
   return contextData;
 }
 
-export async function handleAgentChat(req: AgentChatRequest): Promise<string> {
+export async function handleAgentChat(req: AgentChatRequest): Promise<{ text: string; model: string }> {
   const { agent, message, conversationHistory } = req;
 
   // Special handling for Salwa's email commands
@@ -383,9 +384,9 @@ export async function handleAgentChat(req: AgentChatRequest): Promise<string> {
       try {
         const count = await checkLast48HoursEmails();
         if (count === 0) {
-          return "✅ فحصت الإيميل الحين يا عبدالرحمن! ما فيه رسائل جديدة في آخر 48 ساعة. إن شاء الله أول ما يوصل شي بخبرك 📧";
+          return { text: "✅ فحصت الإيميل الحين يا عبدالرحمن! ما فيه رسائل جديدة في آخر 48 ساعة. إن شاء الله أول ما يوصل شي بخبرك 📧", model: "GPT-4o" };
         }
-        return `📧 فحصت الإيميل! وجدت ${count} رسائل في آخر 48 ساعة. شوف الإشعارات أو تيليجرام للتفاصيل الكاملة إن شاء الله 💪`;
+        return { text: `📧 فحصت الإيميل! وجدت ${count} رسائل في آخر 48 ساعة. شوف الإشعارات أو تيليجرام للتفاصيل الكاملة إن شاء الله 💪`, model: "GPT-4o" };
       } catch (error) {
         // Don't return error for email - let the AI handle the conversation
       }

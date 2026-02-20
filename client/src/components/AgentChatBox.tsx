@@ -24,7 +24,28 @@ interface Message {
   role: "user" | "agent";
   content: string;
   timestamp: Date;
+  model?: string;
 }
+
+// Model badge styling
+const MODEL_BADGES: Record<string, { label: string; bg: string; text: string; icon: string }> = {
+  "GPT-4o": { label: "GPT-4o", bg: "bg-emerald-100 dark:bg-emerald-900/40", text: "text-emerald-700 dark:text-emerald-300", icon: "🟢" },
+  "Claude Sonnet 4": { label: "Claude", bg: "bg-purple-100 dark:bg-purple-900/40", text: "text-purple-700 dark:text-purple-300", icon: "🟣" },
+  "Gemini 2.5 Pro": { label: "Gemini", bg: "bg-blue-100 dark:bg-blue-900/40", text: "text-blue-700 dark:text-blue-300", icon: "🔵" },
+  "Manus LLM": { label: "Manus", bg: "bg-gray-100 dark:bg-gray-800/40", text: "text-gray-700 dark:text-gray-300", icon: "⚪" },
+};
+
+// Default model per agent (for history messages that don't have model info)
+const AGENT_DEFAULT_MODEL: Record<AgentType, string> = {
+  salwa: "GPT-4o",
+  alina: "GPT-4o",
+  khazen: "GPT-4o",
+  buraq: "GPT-4o",
+  farouq: "Claude Sonnet 4",
+  khaled: "Claude Sonnet 4",
+  baz: "Claude Sonnet 4",
+  joelle: "Gemini 2.5 Pro",
+};
 
 const agentDefaults: Record<AgentType, { name: string; title: string; description: string; gradient: string; avatar: string }> = {
   salwa: {
@@ -85,17 +106,28 @@ const agentDefaults: Record<AgentType, { name: string; title: string; descriptio
   }
 };
 
+function ModelBadge({ model }: { model: string }) {
+  const badge = MODEL_BADGES[model] || MODEL_BADGES["Manus LLM"];
+  return (
+    <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-medium ${badge.bg} ${badge.text} leading-none`}>
+      <span className="text-[8px]">{badge.icon}</span>
+      {badge.label}
+    </span>
+  );
+}
+
 export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
   const defaults = agentDefaults[agent];
   const agentName = agentData?.name || defaults.name;
   const agentTitle = agentData?.role || defaults.title;
   const agentAvatar = agentData?.avatarUrl || defaults.avatar;
   const agentDesc = defaults.description;
+  const defaultModel = AGENT_DEFAULT_MODEL[agent];
 
   const welcomeMsg = `مرحباً! أنا ${agentName}، ${agentTitle}. كيف يمكنني مساعدتك؟`;
 
   const [messages, setMessages] = useState<Message[]>([
-    { role: "agent", content: welcomeMsg, timestamp: new Date() }
+    { role: "agent", content: welcomeMsg, timestamp: new Date(), model: defaultModel }
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -116,18 +148,19 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
       const loadedMessages: Message[] = chatHistoryData.map(h => ({
         role: h.role === "user" ? "user" as const : "agent" as const,
         content: h.content,
-        timestamp: new Date(h.createdAt)
+        timestamp: new Date(h.createdAt),
+        model: h.role === "assistant" ? defaultModel : undefined
       }));
       // Prepend welcome message, then loaded history
       setMessages([
-        { role: "agent", content: welcomeMsg, timestamp: new Date(chatHistoryData[0].createdAt) },
+        { role: "agent", content: welcomeMsg, timestamp: new Date(chatHistoryData[0].createdAt), model: defaultModel },
         ...loadedMessages
       ]);
       setHistoryLoaded(true);
     } else if (chatHistoryData && chatHistoryData.length === 0) {
       setHistoryLoaded(true);
     }
-  }, [chatHistoryData, historyLoaded, welcomeMsg]);
+  }, [chatHistoryData, historyLoaded, welcomeMsg, defaultModel]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -141,7 +174,7 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
     try {
       await clearHistoryMutation.mutateAsync({ agent });
       setMessages([
-        { role: "agent", content: welcomeMsg, timestamp: new Date() }
+        { role: "agent", content: welcomeMsg, timestamp: new Date(), model: defaultModel }
       ]);
     } catch {
       // silently fail
@@ -162,7 +195,7 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
     setIsLoading(true);
 
     try {
-      // Build conversation history for GPT-4 context
+      // Build conversation history for context
       const conversationHistory = messages
         .filter(m => m.content !== welcomeMsg)
         .map(m => ({
@@ -179,7 +212,8 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
       const agentMessage: Message = {
         role: "agent",
         content: response.response,
-        timestamp: new Date()
+        timestamp: new Date(),
+        model: response.model || defaultModel
       };
 
       setMessages(prev => [...prev, agentMessage]);
@@ -187,7 +221,8 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
       const errorMessage: Message = {
         role: "agent",
         content: "⚠️ عذراً، حدث خطأ. حاول مرة أخرى.",
-        timestamp: new Date()
+        timestamp: new Date(),
+        model: undefined
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
@@ -279,12 +314,17 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
               ) : (
                 <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
               )}
-              <p className="text-[10px] opacity-50 mt-1">
-                {msg.timestamp.toLocaleTimeString("ar-AE", {
-                  hour: "2-digit",
-                  minute: "2-digit"
-                })}
-              </p>
+              <div className="flex items-center justify-between mt-1.5 gap-2">
+                <p className="text-[10px] opacity-50">
+                  {msg.timestamp.toLocaleTimeString("ar-AE", {
+                    hour: "2-digit",
+                    minute: "2-digit"
+                  })}
+                </p>
+                {msg.role === "agent" && msg.model && (
+                  <ModelBadge model={msg.model} />
+                )}
+              </div>
             </div>
           </div>
         ))}
@@ -330,7 +370,7 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
           </Button>
         </div>
         <p className="text-[10px] text-muted-foreground mt-1.5 text-center">
-          مدعوم بـ GPT-4o • {agentDesc}
+          مدعوم بالذكاء الاصطناعي • {agentDesc}
         </p>
       </div>
     </Card>
