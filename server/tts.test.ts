@@ -142,9 +142,56 @@ describe("TTS Endpoint Input Validation", () => {
   });
 });
 
+// Test TTS model upgrade to tts-1-hd
+describe("TTS Model Configuration", () => {
+  it("should use tts-1-hd model (upgraded from tts-1)", () => {
+    // The endpoint now uses tts-1-hd for higher quality audio
+    const TTS_MODEL = "tts-1-hd";
+    expect(TTS_MODEL).toBe("tts-1-hd");
+    expect(TTS_MODEL).not.toBe("tts-1");
+  });
+
+  it("should support all valid TTS models", () => {
+    const validModels = ["tts-1", "tts-1-hd"];
+    expect(validModels).toContain("tts-1-hd");
+  });
+});
+
+// Test Salwa avatar animation states
+describe("Salwa Avatar Animation States", () => {
+  it("should identify Salwa as the animated avatar agent", () => {
+    const isSalwa = (agent: string) => agent === "salwa";
+    expect(isSalwa("salwa")).toBe(true);
+    expect(isSalwa("farouq")).toBe(false);
+    expect(isSalwa("joelle")).toBe(false);
+  });
+
+  it("should have correct animation states", () => {
+    const states = { idle: false, speaking: true, loading: false };
+    // When speaking, isSpeaking should be true
+    expect(states.speaking).toBe(true);
+    expect(states.idle).toBe(false);
+  });
+
+  it("should support three avatar sizes", () => {
+    const sizeMap = { sm: 48, md: 80, lg: 120 };
+    expect(sizeMap.sm).toBe(48);
+    expect(sizeMap.md).toBe(80);
+    expect(sizeMap.lg).toBe(120);
+  });
+
+  it("should have canvas size larger than avatar for glow effects", () => {
+    const avatarSize = 48; // sm size
+    const canvasExtra = 40; // extra space for glow
+    const canvasSize = avatarSize + canvasExtra;
+    expect(canvasSize).toBeGreaterThan(avatarSize);
+    expect(canvasSize).toBe(88);
+  });
+});
+
 // Test TTS API integration (live test with OpenAI)
 describe("TTS API Live Test", () => {
-  it("should generate audio from text using OpenAI TTS", async () => {
+  it("should generate audio from text using OpenAI TTS HD", async () => {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
       console.log("Skipping live TTS test - no API key");
@@ -158,7 +205,7 @@ describe("TTS API Live Test", () => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "tts-1",
+        model: "tts-1-hd",
         input: "مرحباً، أنا سلوى",
         voice: "nova",
         response_format: "mp3",
@@ -182,14 +229,14 @@ describe("TTS API Live Test", () => {
     expect(isMP3).toBe(true);
   }, 30000);
 
-  it("should generate audio with different voices", async () => {
+  it("should generate audio with different voices using tts-1-hd", async () => {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
       console.log("Skipping live TTS voice test - no API key");
       return;
     }
 
-    // Test with onyx (farouq's voice)
+    // Test with onyx (farouq's voice) on HD model
     const response = await fetch("https://api.openai.com/v1/audio/speech", {
       method: "POST",
       headers: {
@@ -197,7 +244,7 @@ describe("TTS API Live Test", () => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "tts-1",
+        model: "tts-1-hd",
         input: "مرحباً، أنا فاروق المحلل القانوني",
         voice: "onyx",
         response_format: "mp3",

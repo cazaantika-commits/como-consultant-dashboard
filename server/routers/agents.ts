@@ -216,7 +216,7 @@ export const agentsRouter = router({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "tts-1",
+          model: "tts-1-hd",
           input: input.text,
           voice: voice,
           response_format: "mp3",

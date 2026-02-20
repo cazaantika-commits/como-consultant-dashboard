@@ -5,6 +5,7 @@ import { Input } from "./ui/input";
 import { Card } from "./ui/card";
 import { trpc } from "@/lib/trpc";
 import { Streamdown } from "streamdown";
+import { SalwaAvatar, SalwaSpeakingIndicator } from "./SalwaAvatar";
 
 export type AgentType = "salwa" | "farouq" | "khazen" | "buraq" | "khaled" | "alina" | "baz" | "joelle";
 
@@ -116,10 +117,11 @@ function ModelBadge({ model }: { model: string }) {
   );
 }
 
-// TTS Audio playback hook
+// TTS Audio playback hook - now returns speaking state for avatar animation
 function useTTSPlayer() {
   const [playingMessageIdx, setPlayingMessageIdx] = useState<number | null>(null);
   const [loadingMessageIdx, setLoadingMessageIdx] = useState<number | null>(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const ttsMutation = trpc.agents.textToSpeech.useMutation();
 
@@ -131,6 +133,7 @@ function useTTSPlayer() {
         audioRef.current.currentTime = 0;
       }
       setPlayingMessageIdx(null);
+      setIsSpeaking(false);
       return;
     }
 
@@ -163,13 +166,23 @@ function useTTSPlayer() {
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
 
+      audio.onplay = () => {
+        setIsSpeaking(true);
+      };
+
       audio.onended = () => {
         setPlayingMessageIdx(null);
+        setIsSpeaking(false);
         URL.revokeObjectURL(audioUrl);
+      };
+
+      audio.onpause = () => {
+        setIsSpeaking(false);
       };
 
       audio.onerror = () => {
         setPlayingMessageIdx(null);
+        setIsSpeaking(false);
         URL.revokeObjectURL(audioUrl);
       };
 
@@ -177,6 +190,7 @@ function useTTSPlayer() {
       setPlayingMessageIdx(messageIdx);
     } catch (err) {
       console.error("[TTS] Playback error:", err);
+      setIsSpeaking(false);
     } finally {
       setLoadingMessageIdx(null);
     }
@@ -188,6 +202,7 @@ function useTTSPlayer() {
       audioRef.current.currentTime = 0;
     }
     setPlayingMessageIdx(null);
+    setIsSpeaking(false);
   }, []);
 
   // Cleanup on unmount
@@ -200,7 +215,7 @@ function useTTSPlayer() {
     };
   }, []);
 
-  return { playingMessageIdx, loadingMessageIdx, playAudio, stopAudio };
+  return { playingMessageIdx, loadingMessageIdx, isSpeaking, playAudio, stopAudio };
 }
 
 // Voice recording hook
@@ -347,6 +362,7 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
   const agentAvatar = agentData?.avatarUrl || defaults.avatar;
   const agentDesc = defaults.description;
   const defaultModel = AGENT_DEFAULT_MODEL[agent];
+  const isSalwa = agent === "salwa";
 
   const welcomeMsg = `مرحباً! أنا ${agentName}، ${agentTitle}. كيف يمكنني مساعدتك؟`;
 
@@ -363,7 +379,7 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
   const chatMutation = trpc.agents.chat.useMutation();
   const clearHistoryMutation = trpc.agents.clearChatHistory.useMutation();
   const { isRecording, recordingTime, isTranscribing, startRecording, stopRecording, cancelRecording } = useVoiceRecorder();
-  const { playingMessageIdx, loadingMessageIdx, playAudio, stopAudio } = useTTSPlayer();
+  const { playingMessageIdx, loadingMessageIdx, isSpeaking, playAudio, stopAudio } = useTTSPlayer();
 
   // Load chat history
   const { data: chatHistoryData } = trpc.agents.getChatHistory.useQuery(
@@ -498,10 +514,23 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
       {/* Header */}
       <div className={`bg-gradient-to-r ${defaults.gradient} text-white p-4 flex items-center justify-between`}>
         <div className="flex items-center gap-3">
-          <div className="relative">
-            <img src={agentAvatar} alt={agentName} className="w-12 h-12 rounded-full object-cover border-2 border-white/40 shadow-lg" />
-            <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-white" />
-          </div>
+          {isSalwa ? (
+            /* Salwa gets the animated avatar */
+            <div className="relative -my-2 -ml-2">
+              <SalwaAvatar
+                avatarUrl={agentAvatar}
+                isSpeaking={isSpeaking}
+                isLoading={loadingMessageIdx !== null}
+                size="sm"
+                className=""
+              />
+            </div>
+          ) : (
+            <div className="relative">
+              <img src={agentAvatar} alt={agentName} className="w-12 h-12 rounded-full object-cover border-2 border-white/40 shadow-lg" />
+              <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-white" />
+            </div>
+          )}
           <div>
             <h3 className="font-bold text-lg leading-tight">{agentName}</h3>
             <p className="text-sm opacity-90 leading-tight">{agentTitle}</p>
@@ -529,11 +558,18 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
         </div>
       </div>
 
+      {/* Salwa speaking indicator bar */}
+      {isSalwa && isSpeaking && (
+        <div className="bg-amber-50 border-b border-amber-200 px-3 py-1.5 flex items-center justify-center">
+          <SalwaSpeakingIndicator isSpeaking={isSpeaking} />
+        </div>
+      )}
+
       {/* Auto-speak indicator */}
-      {autoSpeak && (
+      {autoSpeak && !isSpeaking && (
         <div className="bg-primary/10 px-3 py-1 flex items-center justify-center gap-1.5 text-xs text-primary border-b">
           <Volume2 className="h-3 w-3" />
-          <span>الرد الصوتي التلقائي مفعّل</span>
+          <span>الرد الصوتي التلقائي مفعّل {isSalwa ? "(HD)" : ""}</span>
         </div>
       )}
 
@@ -550,12 +586,27 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
         {messages.map((msg, idx) => (
           <div key={idx} className={`flex gap-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
             {msg.role === "agent" && (
-              <img src={agentAvatar} alt={agentName} className="w-8 h-8 rounded-full object-cover shrink-0 mt-1" />
+              isSalwa ? (
+                /* Salwa messages: show animated mini avatar when that message is playing */
+                <div className="relative shrink-0 mt-1">
+                  {playingMessageIdx === idx ? (
+                    <div className="w-8 h-8 rounded-full overflow-hidden ring-2 ring-amber-400 ring-offset-1 animate-pulse">
+                      <img src={agentAvatar} alt={agentName} className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <img src={agentAvatar} alt={agentName} className="w-8 h-8 rounded-full object-cover" />
+                  )}
+                </div>
+              ) : (
+                <img src={agentAvatar} alt={agentName} className="w-8 h-8 rounded-full object-cover shrink-0 mt-1" />
+              )
             )}
             <div className={`max-w-[78%] rounded-2xl p-3 ${
               msg.role === "user"
                 ? "bg-primary text-primary-foreground rounded-tl-sm"
-                : "bg-card border shadow-sm rounded-tr-sm"
+                : isSalwa && playingMessageIdx === idx
+                  ? "bg-amber-50 border-2 border-amber-300 shadow-md shadow-amber-100 rounded-tr-sm"
+                  : "bg-card border shadow-sm rounded-tr-sm"
             }`}>
               {msg.role === "agent" ? (
                 <div className="text-sm"><Streamdown>{msg.content}</Streamdown></div>
@@ -585,10 +636,16 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
         ))}
         {isLoading && (
           <div className="flex gap-2">
-            <img src={agentAvatar} alt={agentName} className="w-8 h-8 rounded-full object-cover shrink-0" />
+            {isSalwa ? (
+              <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 ring-2 ring-amber-300 ring-offset-1">
+                <img src={agentAvatar} alt={agentName} className="w-full h-full object-cover animate-pulse" />
+              </div>
+            ) : (
+              <img src={agentAvatar} alt={agentName} className="w-8 h-8 rounded-full object-cover shrink-0" />
+            )}
             <div className="bg-card border rounded-2xl rounded-tr-sm p-3 flex items-center gap-2 shadow-sm">
-              <Loader2 className="h-4 w-4 animate-spin text-primary" />
-              <span className="text-sm text-muted-foreground">{agentName} يكتب...</span>
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">{agentName} {isSalwa ? "تفكر..." : "يكتب..."}</span>
             </div>
           </div>
         )}
@@ -676,7 +733,7 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
           </Button>
         </div>
         <p className="text-[10px] text-muted-foreground mt-1.5 text-center">
-          مدعوم بالذكاء الاصطناعي • {agentDesc} • 🎤 صوتي • 🔊 رد صوتي
+          مدعوم بالذكاء الاصطناعي • {agentDesc} • 🎤 صوتي • 🔊 HD
         </p>
       </div>
     </Card>
