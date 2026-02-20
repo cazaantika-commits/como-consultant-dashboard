@@ -625,19 +625,24 @@ export default function ConsultantEvaluationPage() {
                                         });
                                       }}
                                     >
-                                      <SelectTrigger className="w-full text-xs">
+                                      <SelectTrigger className="w-full text-xs h-auto min-h-[2.5rem] py-1 whitespace-normal leading-snug text-right">
                                         <SelectValue placeholder="اختر" />
                                       </SelectTrigger>
-                                      <SelectContent className="max-w-[350px]">
-                                        {criterion.options.map((option: { score: number; label: string }) => (
-                                          <SelectItem
-                                            key={option.score}
-                                            value={option.score.toString()}
-                                            className="whitespace-normal text-xs leading-relaxed"
-                                          >
-                                            {option.label}
-                                          </SelectItem>
-                                        ))}
+                                      <SelectContent className="w-[450px] max-w-[90vw]">
+                                        {criterion.options.map((option: { score: number; label: string }) => {
+                                          const parts = option.label.match(/^(\d+\s*\u0646\u0642\u0627\u0637):\s*(.*)$/);
+                                          return (
+                                            <SelectItem
+                                              key={option.score}
+                                              value={option.score.toString()}
+                                              className="whitespace-normal text-xs leading-relaxed py-2"
+                                            >
+                                              {parts ? (
+                                                <span><span className="font-bold whitespace-nowrap">{parts[1]}:</span> {parts[2]}</span>
+                                              ) : option.label}
+                                            </SelectItem>
+                                          );
+                                        })}
                                       </SelectContent>
                                     </Select>
                                   </td>
