@@ -402,7 +402,7 @@ export default function Home() {
                   return (
                     <button
                       key={agent.id}
-                      onClick={() => setActiveAgent(agent.name.toLowerCase() as AgentType)}
+                      onClick={() => setActiveAgent((agent.nameEn || agent.name).toLowerCase() as AgentType)}
                       className="premium-card p-6 group fade-in relative overflow-hidden hover-lift text-center cursor-pointer"
                       style={{ animationDelay: `${i * 0.05}s` }}
                     >
@@ -501,7 +501,11 @@ export default function Home() {
 
       {/* ── Agent Chat Box ── */}
       {activeAgent && (
-        <AgentChatBox agent={activeAgent} onClose={() => setActiveAgent(null)} />
+        <AgentChatBox
+          agent={activeAgent}
+          agentData={agentsList.find((a: any) => (a.nameEn || a.name).toLowerCase() === activeAgent)}
+          onClose={() => setActiveAgent(null)}
+        />
       )}
     </div>
   );

@@ -354,3 +354,6 @@
 
 ## إصلاح خطأ button داخل button - فبراير 20
 - [x] إصلاح خطأ "button cannot contain a nested button" في الصفحة الرئيسية
+
+## إصلاح خطأ AgentChatBox - فبراير 20
+- [x] إصلاح خطأ "Cannot read properties of undefined (reading 'name')" في AgentChatBox
