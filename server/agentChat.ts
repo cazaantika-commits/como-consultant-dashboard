@@ -4,6 +4,7 @@ import { checkLast48HoursEmails } from "./emailIntegration";
 import { getDb } from "./db";
 import { consultants, projects, agents, evaluationScores, financialData, modelUsageLog } from "../drizzle/schema";
 import { like, eq, desc } from "drizzle-orm";
+import { getToolsForAgent, executeAgentTool, AGENT_TOOLS } from "./agentTools";
 
 export type AgentType = "salwa" | "farouq" | "khazen" | "buraq" | "khaled" | "alina" | "baz" | "joelle";
 
@@ -115,15 +116,31 @@ const AGENT_PROMPTS: Record<AgentType, string> = {
 تتحدثين بأسلوب أنيق ومحترف. تستخدمين إحصائيات وبيانات السوق. تقولين "حسب تحليلي..." كثيراً.`
 };
 
+// Tool-use instruction appended to system prompts
+const TOOL_USE_INSTRUCTION = `
+
+🔧 لديك أدوات للوصول إلى بيانات المنصة الحقيقية. استخدمها عندما يطلب منك المستخدم:
+- عرض أو البحث عن بيانات (مشاريع، استشاريين، تقييمات، أتعاب، مهام)
+- إضافة أو تعديل بيانات (استشاري جديد، مهمة، تقييم، بيانات مالية)
+- تحليل معلومات محددة من المنصة
+
+عند استخدام الأدوات:
+1. استخدم الأداة المناسبة لجلب البيانات أولاً
+2. حلل النتائج وقدمها بأسلوبك الشخصي
+3. أضف رأيك وتحليلك المهني
+4. لا تقل "ما عندي اكسس" - أنت لديك وصول كامل لبيانات المنصة!`;
+
 // ═══════════════════════════════════════════════════
-// Model-specific API callers
+// Model-specific API callers WITH TOOL SUPPORT
 // ═══════════════════════════════════════════════════
 
-// Call OpenAI GPT-4o
+// Call OpenAI GPT-4o with function calling
 async function callOpenAI(
   systemPrompt: string,
   userMessage: string,
-  conversationHistory?: { role: "user" | "assistant"; content: string }[]
+  conversationHistory?: { role: "user" | "assistant"; content: string }[],
+  tools?: any[],
+  userId?: number
 ): Promise<string> {
   const apiKey = ENV.openaiApiKey;
   if (!apiKey) throw new Error("OpenAI API Key not configured");
@@ -139,18 +156,25 @@ async function callOpenAI(
 
   messages.push({ role: "user", content: userMessage });
 
+  const body: any = {
+    model: "gpt-4o",
+    messages,
+    max_tokens: 2048,
+    temperature: 0.8,
+  };
+
+  if (tools && tools.length > 0) {
+    body.tools = tools;
+    body.tool_choice = "auto";
+  }
+
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      model: "gpt-4o",
-      messages,
-      max_tokens: 2048,
-      temperature: 0.8,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
@@ -159,15 +183,60 @@ async function callOpenAI(
     throw new Error(`OpenAI API error: ${response.status}`);
   }
 
-  const data = await response.json();
-  return data.choices[0]?.message?.content || "عذراً، لم أتمكن من الرد.";
+  let data = await response.json();
+  let assistantMessage = data.choices[0]?.message;
+
+  // Handle tool calls - up to 5 rounds
+  let toolRounds = 0;
+  while (assistantMessage?.tool_calls && toolRounds < 5) {
+    toolRounds++;
+    console.log(`[OpenAI] Tool call round ${toolRounds}: ${assistantMessage.tool_calls.length} tools`);
+    
+    messages.push(assistantMessage);
+
+    for (const toolCall of assistantMessage.tool_calls) {
+      const fnName = toolCall.function.name;
+      const fnArgs = JSON.parse(toolCall.function.arguments || "{}");
+      console.log(`[OpenAI] Executing tool: ${fnName}`, fnArgs);
+      
+      const result = await executeAgentTool(fnName, fnArgs, userId || 0);
+      messages.push({
+        role: "tool",
+        tool_call_id: toolCall.id,
+        content: result,
+      });
+    }
+
+    // Call again with tool results
+    const followUp = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ model: "gpt-4o", messages, max_tokens: 2048, temperature: 0.8, tools, tool_choice: "auto" }),
+    });
+
+    if (!followUp.ok) {
+      const errorText = await followUp.text();
+      console.error("[OpenAI] Follow-up error:", followUp.status, errorText);
+      break;
+    }
+
+    data = await followUp.json();
+    assistantMessage = data.choices[0]?.message;
+  }
+
+  return assistantMessage?.content || "عذراً، لم أتمكن من الرد.";
 }
 
-// Call Anthropic Claude 3.5 Sonnet
+// Call Anthropic Claude with tool use
 async function callClaude(
   systemPrompt: string,
   userMessage: string,
-  conversationHistory?: { role: "user" | "assistant"; content: string }[]
+  conversationHistory?: { role: "user" | "assistant"; content: string }[],
+  tools?: any[],
+  userId?: number
 ): Promise<string> {
   const apiKey = ENV.anthropicApiKey;
   if (!apiKey) throw new Error("Anthropic API Key not configured");
@@ -183,6 +252,24 @@ async function callClaude(
 
   messages.push({ role: "user", content: userMessage });
 
+  // Convert OpenAI tool format to Claude format
+  const claudeTools = tools?.map(t => ({
+    name: t.function.name,
+    description: t.function.description,
+    input_schema: t.function.parameters,
+  })) || [];
+
+  const body: any = {
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 2048,
+    system: systemPrompt,
+    messages,
+  };
+
+  if (claudeTools.length > 0) {
+    body.tools = claudeTools;
+  }
+
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -190,12 +277,7 @@ async function callClaude(
       "x-api-key": apiKey,
       "anthropic-version": "2023-06-01",
     },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 2048,
-      system: systemPrompt,
-      messages,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
@@ -204,15 +286,71 @@ async function callClaude(
     throw new Error(`Claude API error: ${response.status}`);
   }
 
-  const data = await response.json();
-  return data.content?.[0]?.text || "عذراً، لم أتمكن من الرد.";
+  let data = await response.json();
+
+  // Handle tool use - up to 5 rounds
+  let toolRounds = 0;
+  while (data.stop_reason === "tool_use" && toolRounds < 5) {
+    toolRounds++;
+    console.log(`[Claude] Tool use round ${toolRounds}`);
+    
+    // Add assistant response to messages
+    messages.push({ role: "assistant", content: data.content });
+
+    // Execute each tool call
+    const toolResults: any[] = [];
+    for (const block of data.content) {
+      if (block.type === "tool_use") {
+        console.log(`[Claude] Executing tool: ${block.name}`, block.input);
+        const result = await executeAgentTool(block.name, block.input || {}, userId || 0);
+        toolResults.push({
+          type: "tool_result",
+          tool_use_id: block.id,
+          content: result,
+        });
+      }
+    }
+
+    messages.push({ role: "user", content: toolResults });
+
+    // Call again with tool results
+    const followUp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 2048,
+        system: systemPrompt,
+        messages,
+        tools: claudeTools,
+      }),
+    });
+
+    if (!followUp.ok) {
+      const errorText = await followUp.text();
+      console.error("[Claude] Follow-up error:", followUp.status, errorText);
+      break;
+    }
+
+    data = await followUp.json();
+  }
+
+  // Extract text from content blocks
+  const textBlocks = data.content?.filter((b: any) => b.type === "text") || [];
+  return textBlocks.map((b: any) => b.text).join("\n") || "عذراً، لم أتمكن من الرد.";
 }
 
-// Call Google Gemini 1.5 Pro
+// Call Google Gemini with function calling
 async function callGemini(
   systemPrompt: string,
   userMessage: string,
-  conversationHistory?: { role: "user" | "assistant"; content: string }[]
+  conversationHistory?: { role: "user" | "assistant"; content: string }[],
+  tools?: any[],
+  userId?: number
 ): Promise<string> {
   const apiKey = ENV.googleGeminiApiKey;
   if (!apiKey) throw new Error("Google Gemini API Key not configured");
@@ -234,19 +372,34 @@ async function callGemini(
     parts: [{ text: userMessage }],
   });
 
+  // Convert OpenAI tool format to Gemini format
+  const geminiTools = tools && tools.length > 0 ? [{
+    functionDeclarations: tools.map(t => ({
+      name: t.function.name,
+      description: t.function.description,
+      parameters: t.function.parameters,
+    }))
+  }] : undefined;
+
+  const body: any = {
+    systemInstruction: { parts: [{ text: systemPrompt }] },
+    contents,
+    generationConfig: {
+      maxOutputTokens: 2048,
+      temperature: 0.8,
+    },
+  };
+
+  if (geminiTools) {
+    body.tools = geminiTools;
+  }
+
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents,
-        generationConfig: {
-          maxOutputTokens: 2048,
-          temperature: 0.8,
-        },
-      }),
+      body: JSON.stringify(body),
     }
   );
 
@@ -256,11 +409,67 @@ async function callGemini(
     throw new Error(`Gemini API error: ${response.status}`);
   }
 
-  const data = await response.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || "عذراً، لم أتمكن من الرد.";
+  let data = await response.json();
+
+  // Handle function calls - up to 5 rounds
+  let toolRounds = 0;
+  let candidate = data.candidates?.[0];
+  
+  while (candidate?.content?.parts?.some((p: any) => p.functionCall) && toolRounds < 5) {
+    toolRounds++;
+    console.log(`[Gemini] Function call round ${toolRounds}`);
+    
+    // Add model response to contents
+    contents.push(candidate.content);
+
+    // Execute function calls and build response parts
+    const functionResponseParts: any[] = [];
+    for (const part of candidate.content.parts) {
+      if (part.functionCall) {
+        console.log(`[Gemini] Executing tool: ${part.functionCall.name}`, part.functionCall.args);
+        const result = await executeAgentTool(part.functionCall.name, part.functionCall.args || {}, userId || 0);
+        functionResponseParts.push({
+          functionResponse: {
+            name: part.functionCall.name,
+            response: JSON.parse(result),
+          }
+        });
+      }
+    }
+
+    contents.push({ role: "user", parts: functionResponseParts });
+
+    // Call again with function results
+    const followUp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents,
+          generationConfig: { maxOutputTokens: 2048, temperature: 0.8 },
+          tools: geminiTools,
+        }),
+      }
+    );
+
+    if (!followUp.ok) {
+      const errorText = await followUp.text();
+      console.error("[Gemini] Follow-up error:", followUp.status, errorText);
+      break;
+    }
+
+    data = await followUp.json();
+    candidate = data.candidates?.[0];
+  }
+
+  // Extract text from final response
+  const textParts = candidate?.content?.parts?.filter((p: any) => p.text) || [];
+  return textParts.map((p: any) => p.text).join("\n") || "عذراً، لم أتمكن من الرد.";
 }
 
-// Fallback to built-in Manus LLM
+// Fallback to built-in Manus LLM (no tool support)
 async function callManusLLM(systemPrompt: string, userMessage: string): Promise<string> {
   const response = await invokeLLM({
     messages: [
@@ -273,14 +482,16 @@ async function callManusLLM(systemPrompt: string, userMessage: string): Promise<
 }
 
 // ═══════════════════════════════════════════════════
-// Smart model router - picks the best model per agent
+// Main routing with tool support
 // ═══════════════════════════════════════════════════
 
 async function callBestModel(
   agent: AgentType,
   systemPrompt: string,
   userMessage: string,
-  conversationHistory?: { role: "user" | "assistant"; content: string }[]
+  conversationHistory?: { role: "user" | "assistant"; content: string }[],
+  tools?: any[],
+  userId?: number
 ): Promise<{ text: string; model: string }> {
   const assignedModel = AGENT_MODEL_MAP[agent];
 
@@ -289,20 +500,20 @@ async function callBestModel(
     switch (assignedModel) {
       case "gpt-4o":
         if (ENV.openaiApiKey) {
-          console.log(`[AgentChat] 🟢 ${agent} → GPT-4o (OpenAI)`);
-          return { text: await callOpenAI(systemPrompt, userMessage, conversationHistory), model: "GPT-4o" };
+          console.log(`[AgentChat] 🟢 ${agent} → GPT-4o (OpenAI) ${tools?.length ? `with ${tools.length} tools` : ''}`);
+          return { text: await callOpenAI(systemPrompt, userMessage, conversationHistory, tools, userId), model: "GPT-4o" };
         }
         break;
       case "claude-sonnet-4":
         if (ENV.anthropicApiKey) {
-          console.log(`[AgentChat] 🟣 ${agent} → Claude Sonnet 4 (Anthropic)`);
-          return { text: await callClaude(systemPrompt, userMessage, conversationHistory), model: "Claude Sonnet 4" };
+          console.log(`[AgentChat] 🟣 ${agent} → Claude Sonnet 4 (Anthropic) ${tools?.length ? `with ${tools.length} tools` : ''}`);
+          return { text: await callClaude(systemPrompt, userMessage, conversationHistory, tools, userId), model: "Claude Sonnet 4" };
         }
         break;
       case "gemini-2.5-pro":
         if (ENV.googleGeminiApiKey) {
-          console.log(`[AgentChat] 🔵 ${agent} → Gemini 2.5 Pro (Google)`);
-          return { text: await callGemini(systemPrompt, userMessage, conversationHistory), model: "Gemini 2.5 Pro" };
+          console.log(`[AgentChat] 🔵 ${agent} → Gemini 2.5 Pro (Google) ${tools?.length ? `with ${tools.length} tools` : ''}`);
+          return { text: await callGemini(systemPrompt, userMessage, conversationHistory, tools, userId), model: "Gemini 2.5 Pro" };
         }
         break;
     }
@@ -322,13 +533,13 @@ async function callBestModel(
     try {
       console.log(`[AgentChat] ⚠️ Fallback: ${agent} → ${fallback.model}`);
       const fallbackModelNames: Record<string, string> = { "gpt-4o": "GPT-4o", "claude-sonnet-4": "Claude Sonnet 4", "gemini-2.5-pro": "Gemini 2.5 Pro" };
-      return { text: await fallback.fn(systemPrompt, userMessage, conversationHistory), model: fallbackModelNames[fallback.model] || fallback.model };
+      return { text: await fallback.fn(systemPrompt, userMessage, conversationHistory, tools, userId), model: fallbackModelNames[fallback.model] || fallback.model };
     } catch (err) {
       console.error(`[AgentChat] Fallback ${fallback.model} also failed:`, err);
     }
   }
 
-  // Final fallback: Manus built-in LLM
+  // Final fallback: Manus built-in LLM (no tools)
   console.log(`[AgentChat] 🔴 All models failed, using Manus LLM for ${agent}`);
   return { text: await callManusLLM(systemPrompt, userMessage), model: "Manus LLM" };
 }
@@ -342,12 +553,12 @@ async function getPlatformContext(agent: AgentType): Promise<string> {
 
     const projectList = await db.select().from(projects).limit(10);
     if (projectList.length > 0) {
-      contextData += `\n\n📋 المشاريع الحالية في كومو:\n${projectList.map(p => `- ${p.name}`).join("\n")}`;
+      contextData += `\n\n📋 المشاريع الحالية في كومو:\n${projectList.map(p => `- ${p.name} (ID: ${p.id})`).join("\n")}`;
     }
 
     const consultantList = await db.select().from(consultants).limit(15);
     if (consultantList.length > 0) {
-      contextData += `\n\n🏛️ الاستشاريون المسجلون:\n${consultantList.map(c => `- ${c.name}`).join("\n")}`;
+      contextData += `\n\n🏛️ الاستشاريون المسجلون:\n${consultantList.map(c => `- ${c.name} (ID: ${c.id})`).join("\n")}`;
     }
 
     if (["alina", "farouq", "joelle"].includes(agent)) {
@@ -396,10 +607,12 @@ export async function handleAgentChat(req: AgentChatRequest): Promise<{ text: st
   // Get platform context
   const contextData = await getPlatformContext(agent);
 
-  // Build system prompt with context
-  const modelName = AGENT_MODEL_MAP[agent];
-  const systemPrompt = AGENT_PROMPTS[agent] + contextData + 
-    "\n\nتعليمات مهمة: أجب بشكل طبيعي وشخصي. تحدث كأنك زميل عمل حقيقي. استخدم المعلومات المتاحة عن المشاريع والاستشاريين عند الحاجة. إذا لم تكن متأكداً من معلومة، قل ذلك بصراحة.";
+  // Get tools for this agent
+  const agentTools = getToolsForAgent(agent);
+
+  // Build system prompt with context and tool instructions
+  const systemPrompt = AGENT_PROMPTS[agent] + contextData + TOOL_USE_INSTRUCTION +
+    "\n\nتعليمات مهمة: أجب بشكل طبيعي وشخصي. تحدث كأنك زميل عمل حقيقي. استخدم الأدوات لجلب البيانات الحقيقية من المنصة عند الحاجة. إذا سُئلت عن بيانات محددة، استخدم الأدوات أولاً ثم حلل النتائج.";
 
   // Route to the best model for this agent with timing
   const startTime = Date.now();
@@ -408,7 +621,7 @@ export async function handleAgentChat(req: AgentChatRequest): Promise<{ text: st
   let isFallback = false;
   
   try {
-    result = await callBestModel(agent, systemPrompt, message, conversationHistory);
+    result = await callBestModel(agent, systemPrompt, message, conversationHistory, agentTools, req.userId);
     // Check if fallback was used
     const expectedModel: Record<string, string> = { "gpt-4o": "GPT-4o", "claude-sonnet-4": "Claude Sonnet 4", "gemini-2.5-pro": "Gemini 2.5 Pro" };
     isFallback = result.model !== expectedModel[AGENT_MODEL_MAP[agent]];
