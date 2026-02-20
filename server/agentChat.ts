@@ -15,7 +15,7 @@ interface AgentChatRequest {
 }
 
 // Model assignment per agent based on quality analysis
-type AIModel = "gpt-4o" | "claude-sonnet-4" | "gemini-2.5-flash";
+type AIModel = "gpt-4o" | "claude-sonnet-4" | "gemini-3-flash";
 
 const AGENT_MODEL_MAP: Record<AgentType, AIModel> = {
   salwa: "gpt-4o",           // Best for natural Arabic conversation & coordination
@@ -25,7 +25,7 @@ const AGENT_MODEL_MAP: Record<AgentType, AIModel> = {
   farouq: "claude-sonnet-4",   // Best for legal analysis, contracts & deep document review
   khaled: "claude-sonnet-4",   // Best for technical standards, quality details & precision
   baz: "claude-sonnet-4",      // Best for strategic thinking & multi-dimensional analysis
-  joelle: "gemini-2.5-flash",   // Best for large data processing & market research
+  joelle: "gemini-3-flash",     // Gemini 3 Flash - latest generation for market research & data
 };
 
 // Agent personality system prompts - rich and detailed
@@ -235,7 +235,7 @@ async function callGemini(
   });
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -299,9 +299,9 @@ async function callBestModel(
           return await callClaude(systemPrompt, userMessage, conversationHistory);
         }
         break;
-      case "gemini-2.5-flash":
+      case "gemini-3-flash":
         if (ENV.googleGeminiApiKey) {
-          console.log(`[AgentChat] 🔵 ${agent} → Gemini 2.5 Flash (Google)`);
+          console.log(`[AgentChat] 🔵 ${agent} → Gemini 3 Flash (Google)`);
           return await callGemini(systemPrompt, userMessage, conversationHistory);
         }
         break;
@@ -314,7 +314,7 @@ async function callBestModel(
   const fallbackOrder: { model: AIModel; fn: typeof callOpenAI; key: string }[] = [
     { model: "gpt-4o", fn: callOpenAI, key: ENV.openaiApiKey },
     { model: "claude-sonnet-4", fn: callClaude, key: ENV.anthropicApiKey },
-    { model: "gemini-2.5-flash", fn: callGemini, key: ENV.googleGeminiApiKey },
+    { model: "gemini-3-flash", fn: callGemini, key: ENV.googleGeminiApiKey },
   ];
 
   for (const fallback of fallbackOrder) {

@@ -57,13 +57,13 @@ describe("Multi-Model Agent Chat Integration", () => {
     console.log("[Test] Claude Sonnet 4 response:", data.content[0].text);
   }, 30000);
 
-  // Test 3: Google Gemini 2.5 Flash API key validation
-  it("should validate Google Gemini 2.5 Flash API key works", async () => {
+  // Test 3: Google Gemini 3 Flash API key validation
+  it("should validate Google Gemini 3 Flash API key works", async () => {
     const apiKey = process.env.GOOGLE_GEMINI_API_KEY;
     expect(apiKey).toBeTruthy();
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -80,7 +80,7 @@ describe("Multi-Model Agent Chat Integration", () => {
     const data = await response.json();
     expect(data.candidates).toBeDefined();
     expect(data.candidates[0].content.parts[0].text).toBeTruthy();
-    console.log("[Test] Gemini 2.5 Flash response:", data.candidates[0].content.parts[0].text);
+    console.log("[Test] Gemini 3 Flash response:", data.candidates[0].content.parts[0].text);
   }, 60000);
 
   // Test 4: Model routing map is correct
@@ -93,7 +93,7 @@ describe("Multi-Model Agent Chat Integration", () => {
       farouq: "claude-sonnet-4",
       khaled: "claude-sonnet-4",
       baz: "claude-sonnet-4",
-      joelle: "gemini-2.5-flash",
+      joelle: "gemini-3-flash",
     };
 
     // Verify all 8 agents are mapped
@@ -110,7 +110,7 @@ describe("Multi-Model Agent Chat Integration", () => {
     expect(expectedMap.khaled).toBe("claude-sonnet-4");
     expect(expectedMap.baz).toBe("claude-sonnet-4");
     
-    // Gemini 2.5 Flash agent
-    expect(expectedMap.joelle).toBe("gemini-2.5-flash");
+    // Gemini 3 Flash agent
+    expect(expectedMap.joelle).toBe("gemini-3-flash");
   });
 });

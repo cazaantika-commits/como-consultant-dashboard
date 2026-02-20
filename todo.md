@@ -364,6 +364,6 @@
 - [x] تحديث agentChat.ts لتوجيه كل وكيل للنموذج الأنسب
 - [x] GPT-4o: سلوى، ألينا، خازن، براق
 - [x] Claude Sonnet 4: فاروق، خالد، باز
-- [x] Gemini 2.5 Flash: جويل
+- [x] Gemini 3 Flash (Preview): جويل - تمت الترقية من 2.5 Flash إلى 3 Flash (أحدث جيل)
 - [x] اختبار جميع النماذج الثلاثة (159 اختبار ناجح)
-- [ ] حفظ checkpoint
+- [x] حفظ checkpoint
