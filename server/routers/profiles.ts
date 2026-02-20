@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { consultants, consultantProfiles, consultantNotes } from "../../drizzle/schema";
+import { consultants, consultantProfiles, consultantNotes, consultantPortfolio, consultantDetails } from "../../drizzle/schema";
 import { eq, and, desc } from "drizzle-orm";
 
 export const profilesRouter = router({
@@ -41,7 +41,15 @@ export const profilesRouter = router({
         ))
         .orderBy(desc(consultantNotes.createdAt));
 
-      return { consultant, profile: profile || null, notes };
+      const details = await db.select().from(consultantDetails)
+        .where(eq(consultantDetails.consultantId, input.consultantId))
+        .limit(1);
+
+      const portfolio = await db.select().from(consultantPortfolio)
+        .where(eq(consultantPortfolio.consultantId, input.consultantId))
+        .orderBy(consultantPortfolio.sortOrder);
+
+      return { consultant, profile: profile || null, notes, details: details[0] || null, portfolio };
     }),
 
   // Create or update profile
@@ -128,6 +136,34 @@ export const profilesRouter = router({
         content: input.content,
         category: input.category || note.category,
       }).where(eq(consultantNotes.id, input.noteId));
+      return { success: true };
+    }),
+
+  // Portfolio CRUD
+  addPortfolioItem: protectedProcedure
+    .input(z.object({
+      consultantId: z.number(),
+      title: z.string().min(1),
+      description: z.string().optional(),
+      imageUrl: z.string().optional(),
+      projectType: z.string().optional(),
+      location: z.string().optional(),
+      year: z.string().optional(),
+      area: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      await db.insert(consultantPortfolio).values(input);
+      return { success: true };
+    }),
+
+  deletePortfolioItem: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      await db.delete(consultantPortfolio).where(eq(consultantPortfolio.id, input.id));
       return { success: true };
     }),
 

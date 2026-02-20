@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
   ArrowLeft, UserCircle, Phone, MapPin, Award, Users, Building,
-  Mail, Edit3, Save, X, Briefcase, Hash, Plus, Trash2
+  Mail, Edit3, Save, X, Briefcase, Hash, Plus, Trash2, ExternalLink
 } from "lucide-react";
 
 export default function ConsultantKnowPage() {
@@ -271,6 +271,15 @@ export default function ConsultantKnowPage() {
                       </Button>
                     </div>
                   )}
+                  {/* Link to full profile */}
+                  <div className="mt-4 pt-4 border-t border-stone-100 flex justify-end">
+                    <Link href={`/consultant-profile/${consultant.id}`}>
+                      <Button variant="outline" size="sm" className="gap-2 text-violet-600 border-violet-200 hover:bg-violet-50">
+                        <ExternalLink className="w-4 h-4" />
+                        عرض البروفايل الكامل
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               </div>
             );

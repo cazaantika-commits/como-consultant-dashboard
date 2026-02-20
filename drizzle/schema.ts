@@ -291,3 +291,22 @@ export const consultantDetails = mysqlTable('consultantDetails', {
 
 export type ConsultantDetail = typeof consultantDetails.$inferSelect;
 export type InsertConsultantDetail = typeof consultantDetails.$inferInsert;
+
+// Portfolio items for consultant profile
+export const consultantPortfolio = mysqlTable('consultantPortfolio', {
+  id: int('id').autoincrement().primaryKey(),
+  consultantId: int('consultantId').notNull().references(() => consultants.id, { onDelete: 'cascade' }),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  imageUrl: varchar('imageUrl', { length: 500 }),
+  projectType: varchar('projectType', { length: 100 }), // residential, commercial, mixed-use
+  location: varchar('location', { length: 255 }),
+  year: varchar('year', { length: 10 }),
+  area: varchar('area', { length: 100 }), // sqft or sqm
+  sortOrder: int('sortOrder').default(0),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type ConsultantPortfolioItem = typeof consultantPortfolio.$inferSelect;
+export type InsertConsultantPortfolioItem = typeof consultantPortfolio.$inferInsert;
