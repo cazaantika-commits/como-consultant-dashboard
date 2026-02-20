@@ -591,9 +591,9 @@ export default function ConsultantEvaluationPage() {
                       <table className="border-collapse w-max">
                         <thead>
                           <tr className="bg-stone-800 text-white">
-                            <th className="border border-stone-600 p-2 text-right sticky right-0 bg-stone-800 z-10" style={{ minWidth: '160px', maxWidth: '200px' }}>المعيار (الوزن)</th>
+                            <th className="border border-stone-600 p-3 text-right sticky right-0 bg-stone-800 z-10" style={{ minWidth: '140px', maxWidth: '170px' }}>المعيار (الوزن)</th>
                             {projectConsultants.map((consultant) => (
-                              <th key={consultant.id} className="border border-stone-600 p-2 text-center" style={{ minWidth: '200px', maxWidth: '280px' }}>
+                              <th key={consultant.id} className="border border-stone-600 p-3 text-center" style={{ minWidth: '160px', maxWidth: '220px' }}>
                                 <span className="whitespace-normal leading-tight text-sm">{consultant.name}</span>
                               </th>
                             ))}
@@ -601,8 +601,8 @@ export default function ConsultantEvaluationPage() {
                         </thead>
                         <tbody>
                           {CRITERIA.map((criterion) => (
-                            <tr key={criterion.id} className="border-b">
-                              <td className="border p-2 bg-gray-50 font-semibold text-right sticky right-0 z-10" style={{ minWidth: '180px' }}>
+                            <tr key={criterion.id} className="border-b" style={{ minHeight: '70px' }}>
+                              <td className="border p-3 py-4 bg-gray-50 font-semibold text-right sticky right-0 z-10 whitespace-normal leading-relaxed" style={{ minWidth: '140px', maxWidth: '170px' }}>
                                 {criterion.name}
                                 <br />
                                 <small className="text-gray-600">(وزن: {criterion.weight}%)</small>
@@ -612,7 +612,7 @@ export default function ConsultantEvaluationPage() {
                                   (s: any) => s.consultantId === consultant.id && s.criterionId === criterion.id && s.evaluatorName === activeEvaluator
                                 );
                                 return (
-                                  <td key={consultant.id} className="border p-2 text-center overflow-visible">
+                                  <td key={consultant.id} className="border p-3 py-4 text-center overflow-visible" style={{ minWidth: '160px', maxWidth: '220px' }}>
                                     <Select
                                       value={currentScore?.score?.toString() || ""}
                                       onValueChange={(value) => {
@@ -625,7 +625,7 @@ export default function ConsultantEvaluationPage() {
                                         });
                                       }}
                                     >
-                                      <SelectTrigger className="w-full text-xs h-auto min-h-[2.5rem] py-1 whitespace-normal leading-snug text-right cursor-pointer">
+                                      <SelectTrigger className="w-full text-xs h-auto min-h-[3rem] py-2 whitespace-normal leading-relaxed text-right cursor-pointer">
                                         <SelectValue placeholder="اختر" />
                                       </SelectTrigger>
                                       <SelectContent className="w-[450px] max-w-[90vw]">
@@ -729,7 +729,9 @@ export default function ConsultantEvaluationPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {projectConsultants.map((consultant) => {
+                          {[...projectConsultants]
+                            .sort((a, b) => (financialTotals[a.id] || 0) - (financialTotals[b.id] || 0))
+                            .map((consultant) => {
                             const fin = financialQuery.data?.find((f: any) => f.consultantId === consultant.id);
                             const buildingCost = (selectedProject?.bua || 0) * (selectedProject?.pricePerSqft || 0);
                             return (
