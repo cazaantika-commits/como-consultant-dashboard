@@ -336,24 +336,36 @@ export default function Home() {
 
               {/* Coordinator Card */}
               {coordinator && (
-                <div className="premium-card p-6 mb-6 gold-glow fade-in relative overflow-hidden">
+                <button
+                  onClick={() => setActiveAgent("salwa" as AgentType)}
+                  className="premium-card p-6 mb-6 gold-glow fade-in relative overflow-hidden cursor-pointer text-right w-full"
+                >
                   {/* Gold accent bar */}
                   <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-400" />
-                  <div className="flex items-center gap-4">
-                    <div
-                      className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 shadow-lg"
-                      style={{
-                        background: `linear-gradient(135deg, ${coordinator.color || '#6366f1'}, ${coordinator.color || '#6366f1'}cc)`,
-                        boxShadow: `0 8px 24px ${coordinator.color || '#6366f1'}40`,
-                      }}
-                    >
-                      {(() => {
-                        const IconComp = AGENT_ICONS[coordinator.icon || "crown"] || Crown;
-                        return <IconComp className="w-8 h-8 text-white" />;
-                      })()}
+                  <div className="flex items-center gap-5">
+                    {/* Salwa's Avatar */}
+                    <div className="relative shrink-0">
+                      {coordinator.avatarUrl ? (
+                        <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-amber-400 ring-offset-2 ring-offset-background shadow-xl transition-all duration-300 hover:scale-110">
+                          <img src={coordinator.avatarUrl} alt={coordinator.name} className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div
+                          className="w-24 h-24 rounded-full flex items-center justify-center shadow-lg"
+                          style={{
+                            background: `linear-gradient(135deg, ${coordinator.color || '#6366f1'}, ${coordinator.color || '#6366f1'}cc)`,
+                          }}
+                        >
+                          {(() => {
+                            const IconComp = AGENT_ICONS[coordinator.icon || "crown"] || Crown;
+                            return <IconComp className="w-10 h-10 text-white" />;
+                          })()}
+                        </div>
+                      )}
+                      <span className="absolute bottom-0 right-0 w-5 h-5 bg-emerald-500 rounded-full border-3 border-background shadow-md" />
                     </div>
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <h3 className="text-lg font-bold text-foreground">{coordinator.name}</h3>
                         <span className="text-[11px] px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500/10 to-stone-500/10 text-amber-700 font-semibold border border-amber-200">
                           👑 المنسقة
@@ -365,21 +377,21 @@ export default function Home() {
                       </div>
                       <p className="text-sm text-muted-foreground">{coordinator.role}</p>
                       <p className="text-xs text-muted-foreground/70 mt-1.5 leading-relaxed">{coordinator.description}</p>
+                      {coordinator.capabilities && coordinator.capabilities.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border">
+                          {coordinator.capabilities.map((cap: string, idx: number) => (
+                            <span
+                              key={idx}
+                              className="text-[11px] px-2.5 py-1 rounded-full bg-muted text-muted-foreground font-medium"
+                            >
+                              {cap}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
-                  {coordinator.capabilities && coordinator.capabilities.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-border">
-                      {coordinator.capabilities.map((cap: string, idx: number) => (
-                        <span
-                          key={idx}
-                          className="text-[11px] px-2.5 py-1 rounded-full bg-muted text-muted-foreground font-medium"
-                        >
-                          {cap}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                </button>
               )}
 
               {/* Team Agents Grid - with avatars */}
