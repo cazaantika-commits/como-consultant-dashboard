@@ -14,7 +14,7 @@ export const evaluatorScoresRouter = router({
       z.object({
         projectId: z.number(),
         consultantId: z.number(),
-        criterionId: z.number().min(0).max(5),
+        criterionId: z.number().min(0).max(20),
         evaluatorName: z.string(),
         score: z.number().min(0).max(100),
       })
