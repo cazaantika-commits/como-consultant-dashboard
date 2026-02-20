@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useState } from "react";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ import {
   Activity,
 } from "lucide-react";
 import { useLocation } from "wouter";
+import { AgentChatBox, AgentType } from "@/components/AgentChatBox";
 
 const AGENT_ICONS: Record<string, any> = {
   crown: Crown,
@@ -60,6 +62,7 @@ function ColorIcon({ children, bg, shadow }: { children: React.ReactNode; bg: st
 export default function Home() {
   const { user, loading, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
+  const [activeAgent, setActiveAgent] = useState<AgentType | null>(null);
   const { data: agentsList = [] } = trpc.agents.list.useQuery(undefined, {
     enabled: isAuthenticated,
   });
@@ -465,6 +468,35 @@ export default function Home() {
           </p>
         </div>
       </footer>
+
+      {/* ── Floating Agent Icons ── */}
+      {isAuthenticated && (
+        <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-40">
+          {[
+            { agent: "salwa" as AgentType, emoji: "📧", color: "from-blue-500 to-cyan-500", name: "سلوى" },
+            { agent: "farouq" as AgentType, emoji: "📊", color: "from-purple-500 to-pink-500", name: "فاروق" },
+            { agent: "khazen" as AgentType, emoji: "📁", color: "from-green-500 to-emerald-500", name: "خازن" },
+          ].map(({ agent, emoji, color, name }) => (
+            <button
+              key={agent}
+              onClick={() => setActiveAgent(agent)}
+              className={`w-14 h-14 rounded-full bg-gradient-to-br ${color} shadow-lg hover:scale-110 transition-all duration-300 flex items-center justify-center text-2xl group relative`}
+              title={`تحدث مع ${name}`}
+            >
+              {emoji}
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white" />
+              <span className="absolute left-full ml-2 px-3 py-1 bg-card border rounded-lg text-xs font-medium text-foreground opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-lg">
+                {name}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── Agent Chat Box ── */}
+      {activeAgent && (
+        <AgentChatBox agent={activeAgent} onClose={() => setActiveAgent(null)} />
+      )}
     </div>
   );
 }

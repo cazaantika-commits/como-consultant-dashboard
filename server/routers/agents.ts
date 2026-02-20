@@ -54,4 +54,25 @@ export const agentsRouter = router({
       return [];
     }
   }),
+
+  // Chat with an agent
+  chat: publicProcedure
+    .input(z.object({
+      agent: z.enum(["salwa", "farouq", "khazen"]),
+      message: z.string()
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user) throw new Error("غير مصرح");
+      
+      // Import agent handlers
+      const { handleAgentChat } = await import("../agentChat");
+      
+      const response = await handleAgentChat({
+        agent: input.agent,
+        message: input.message,
+        userId: ctx.user.id
+      });
+
+      return { response };
+    }),
 });
