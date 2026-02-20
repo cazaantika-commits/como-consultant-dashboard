@@ -467,18 +467,12 @@ export default function Home() {
                             : "غير نشط"}
                         </span>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full mt-4 gap-2 text-xs"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveAgent(agent.name.toLowerCase() as AgentType);
-                        }}
+                      <div
+                        className="w-full mt-4 gap-2 text-xs flex items-center justify-center rounded-md border border-input bg-transparent px-3 py-2 hover:bg-accent hover:text-accent-foreground transition-colors"
                       >
                         <Send className="w-3.5 h-3.5" />
                         تحدث مع {agent.name}
-                      </Button>
+                      </div>
                     </button>
                   );
                 })}
