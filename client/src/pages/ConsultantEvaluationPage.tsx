@@ -68,7 +68,7 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
 
   return (
     <tr className="border-b hover:bg-stone-50/50 transition-colors">
-      <td className="border p-2 font-semibold">{consultant.name}</td>
+      <td className="border p-2 font-semibold text-sm whitespace-normal leading-tight">{consultant.name}</td>
       <td className="border p-2 text-center">
         <Select value={designType} onValueChange={(v: any) => {
           setDesignType(v);
@@ -588,13 +588,13 @@ export default function ConsultantEvaluationPage() {
                       <p className="text-xs text-stone-400 mb-1">← اسحب لليسار لرؤية باقي الاستشاريين</p>
                     )}
                     <div className="overflow-x-auto border rounded-lg" style={{ maxWidth: '100%' }}>
-                      <table className="border-collapse w-max">
+                      <table className="border-collapse w-full table-fixed">
                         <thead>
                           <tr className="bg-stone-800 text-white">
-                            <th className="border border-stone-600 p-2 text-right sticky right-0 bg-stone-800 z-10" style={{ minWidth: '180px' }}>المعيار (الوزن)</th>
+                            <th className="border border-stone-600 p-2 text-right sticky right-0 bg-stone-800 z-10" style={{ width: '160px', minWidth: '160px' }}>المعيار (الوزن)</th>
                             {projectConsultants.map((consultant) => (
-                              <th key={consultant.id} className="border border-stone-600 p-2 text-center" style={{ minWidth: '250px', width: '250px' }}>
-                                {consultant.name}
+                              <th key={consultant.id} className="border border-stone-600 p-2 text-center" style={{ minWidth: '160px' }}>
+                                <span className="whitespace-normal leading-tight text-sm">{consultant.name}</span>
                               </th>
                             ))}
                           </tr>
@@ -625,14 +625,15 @@ export default function ConsultantEvaluationPage() {
                                         });
                                       }}
                                     >
-                                      <SelectTrigger className="w-full">
+                                      <SelectTrigger className="w-full text-xs">
                                         <SelectValue placeholder="اختر" />
                                       </SelectTrigger>
-                                      <SelectContent>
+                                      <SelectContent className="max-w-[350px]">
                                         {criterion.options.map((option: { score: number; label: string }) => (
                                           <SelectItem
                                             key={option.score}
                                             value={option.score.toString()}
+                                            className="whitespace-normal text-xs leading-relaxed"
                                           >
                                             {option.label}
                                           </SelectItem>
@@ -652,13 +653,13 @@ export default function ConsultantEvaluationPage() {
                     <div className="mt-6">
                       <h3 className="font-bold text-stone-800 mb-3">المتوسط النهائي (من المقيّمين الثلاثة)</h3>
                       <div className="overflow-x-auto border rounded-lg" style={{ maxWidth: '100%' }}>
-                        <table className="border-collapse w-max">
+                        <table className="border-collapse w-full table-fixed">
                           <thead>
                             <tr className="bg-amber-100">
-                              <th className="border p-2 text-right font-semibold text-amber-800 sticky right-0 bg-amber-100 z-10" style={{ minWidth: '180px' }}>المعيار</th>
+                              <th className="border p-2 text-right font-semibold text-amber-800 sticky right-0 bg-amber-100 z-10" style={{ width: '160px', minWidth: '160px' }}>المعيار</th>
                               {projectConsultants.map((consultant) => (
-                                <th key={consultant.id} className="border p-2 text-center font-semibold text-amber-800" style={{ minWidth: '200px', width: '200px' }}>
-                                  {consultant.name}
+                                <th key={consultant.id} className="border p-2 text-center font-semibold text-amber-800" style={{ minWidth: '140px' }}>
+                                  <span className="whitespace-normal leading-tight text-sm">{consultant.name}</span>
                                 </th>
                               ))}
                             </tr>
@@ -713,13 +714,13 @@ export default function ConsultantEvaluationPage() {
                       <table className="w-full border-collapse table-fixed">
                         <thead>
                           <tr className="bg-stone-700 text-white">
-                            <th className="border p-2 text-right" style={{ width: '15%' }}>الاستشاري</th>
-                            <th className="border p-2 text-center" style={{ width: '10%' }}>نوع التصميم</th>
-                            <th className="border p-2 text-center" style={{ width: '15%' }}>قيمة التصميم</th>
-                            <th className="border p-2 text-center" style={{ width: '10%' }}>نوع الإشراف</th>
-                            <th className="border p-2 text-center" style={{ width: '15%' }}>قيمة الإشراف</th>
-                            <th className="border p-2 text-center" style={{ width: '15%' }}>المجموع</th>
-                            <th className="border p-2 text-center" style={{ width: '20%' }}>📎 رابط عرض السعر</th>
+                            <th className="border p-2 text-right text-sm whitespace-normal leading-tight" style={{ width: '14%' }}>الاستشاري</th>
+                            <th className="border p-2 text-center text-sm whitespace-normal leading-tight" style={{ width: '9%' }}>نوع<br/>التصميم</th>
+                            <th className="border p-2 text-center text-sm whitespace-normal leading-tight" style={{ width: '13%' }}>قيمة<br/>التصميم</th>
+                            <th className="border p-2 text-center text-sm whitespace-normal leading-tight" style={{ width: '9%' }}>نوع<br/>الإشراف</th>
+                            <th className="border p-2 text-center text-sm whitespace-normal leading-tight" style={{ width: '13%' }}>قيمة<br/>الإشراف</th>
+                            <th className="border p-2 text-center text-sm whitespace-normal leading-tight" style={{ width: '14%' }}>المجموع</th>
+                            <th className="border p-2 text-center text-sm whitespace-normal leading-tight" style={{ width: '18%' }}>📎 رابط<br/>عرض السعر</th>
                           </tr>
                         </thead>
                         <tbody>
