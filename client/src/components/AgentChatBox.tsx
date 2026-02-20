@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { X, Send, Loader2, Trash2, History, Mic, MicOff, Square } from "lucide-react";
+import { X, Send, Loader2, Trash2, History, Mic, MicOff, Square, Volume2, VolumeX, Pause } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Card } from "./ui/card";
@@ -116,6 +116,93 @@ function ModelBadge({ model }: { model: string }) {
   );
 }
 
+// TTS Audio playback hook
+function useTTSPlayer() {
+  const [playingMessageIdx, setPlayingMessageIdx] = useState<number | null>(null);
+  const [loadingMessageIdx, setLoadingMessageIdx] = useState<number | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const ttsMutation = trpc.agents.textToSpeech.useMutation();
+
+  const playAudio = useCallback(async (text: string, agent: AgentType, messageIdx: number) => {
+    // If already playing this message, stop it
+    if (playingMessageIdx === messageIdx) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+      setPlayingMessageIdx(null);
+      return;
+    }
+
+    // Stop any currently playing audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+
+    setLoadingMessageIdx(messageIdx);
+
+    try {
+      // Strip markdown formatting for cleaner speech
+      const cleanText = text
+        .replace(/[#*_~`>|[\](){}]/g, "")
+        .replace(/\n{2,}/g, ". ")
+        .replace(/\n/g, " ")
+        .replace(/\s{2,}/g, " ")
+        .trim()
+        .slice(0, 4096); // API limit
+
+      const result = await ttsMutation.mutateAsync({ text: cleanText, agent });
+
+      // Create audio from base64
+      const audioBlob = new Blob(
+        [Uint8Array.from(atob(result.audioBase64), c => c.charCodeAt(0))],
+        { type: "audio/mpeg" }
+      );
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+
+      audio.onended = () => {
+        setPlayingMessageIdx(null);
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      audio.onerror = () => {
+        setPlayingMessageIdx(null);
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      await audio.play();
+      setPlayingMessageIdx(messageIdx);
+    } catch (err) {
+      console.error("[TTS] Playback error:", err);
+    } finally {
+      setLoadingMessageIdx(null);
+    }
+  }, [playingMessageIdx, ttsMutation]);
+
+  const stopAudio = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    setPlayingMessageIdx(null);
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  return { playingMessageIdx, loadingMessageIdx, playAudio, stopAudio };
+}
+
 // Voice recording hook
 function useVoiceRecorder() {
   const [isRecording, setIsRecording] = useState(false);
@@ -142,7 +229,7 @@ function useVoiceRecorder() {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
 
-      mediaRecorder.start(250); // Collect data every 250ms
+      mediaRecorder.start(250);
       setIsRecording(true);
       setRecordingTime(0);
 
@@ -164,7 +251,6 @@ function useVoiceRecorder() {
       }
 
       mediaRecorder.onstop = async () => {
-        // Stop all tracks
         mediaRecorder.stream.getTracks().forEach((t) => t.stop());
         if (timerRef.current) clearInterval(timerRef.current);
         setIsRecording(false);
@@ -172,8 +258,6 @@ function useVoiceRecorder() {
 
         try {
           const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-          
-          // Convert to base64
           const arrayBuffer = await blob.arrayBuffer();
           const uint8Array = new Uint8Array(arrayBuffer);
           let binary = "";
@@ -182,7 +266,6 @@ function useVoiceRecorder() {
           }
           const base64 = btoa(binary);
 
-          // Send to server for transcription
           const result = await transcribeMutation.mutateAsync({
             audioBase64: base64,
             mimeType: "audio/webm",
@@ -222,6 +305,41 @@ function formatRecordingTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+// Speaker button component for each agent message
+function SpeakerButton({ 
+  message, agent, messageIdx, playingIdx, loadingIdx, onPlay 
+}: { 
+  message: Message; agent: AgentType; messageIdx: number; 
+  playingIdx: number | null; loadingIdx: number | null;
+  onPlay: (text: string, agent: AgentType, idx: number) => void;
+}) {
+  const isPlaying = playingIdx === messageIdx;
+  const isLoading = loadingIdx === messageIdx;
+
+  return (
+    <button
+      onClick={() => onPlay(message.content, agent, messageIdx)}
+      disabled={isLoading || (loadingIdx !== null && loadingIdx !== messageIdx)}
+      className={`inline-flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 ${
+        isPlaying 
+          ? "bg-primary/20 text-primary hover:bg-primary/30" 
+          : isLoading
+            ? "bg-muted text-muted-foreground"
+            : "text-muted-foreground/50 hover:text-primary hover:bg-primary/10"
+      }`}
+      title={isPlaying ? "إيقاف الصوت" : "تشغيل الصوت"}
+    >
+      {isLoading ? (
+        <Loader2 className="h-3 w-3 animate-spin" />
+      ) : isPlaying ? (
+        <Pause className="h-3 w-3" />
+      ) : (
+        <Volume2 className="h-3 w-3" />
+      )}
+    </button>
+  );
+}
+
 export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
   const defaults = agentDefaults[agent];
   const agentName = agentData?.name || defaults.name;
@@ -239,11 +357,13 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const [micError, setMicError] = useState<string | null>(null);
+  const [autoSpeak, setAutoSpeak] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const chatMutation = trpc.agents.chat.useMutation();
   const clearHistoryMutation = trpc.agents.clearChatHistory.useMutation();
   const { isRecording, recordingTime, isTranscribing, startRecording, stopRecording, cancelRecording } = useVoiceRecorder();
+  const { playingMessageIdx, loadingMessageIdx, playAudio, stopAudio } = useTTSPlayer();
 
   // Load chat history
   const { data: chatHistoryData } = trpc.agents.getChatHistory.useQuery(
@@ -278,6 +398,7 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
   }, [messages]);
 
   const handleClearHistory = async () => {
+    stopAudio();
     try {
       await clearHistoryMutation.mutateAsync({ agent });
       setMessages([
@@ -310,12 +431,22 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
         conversationHistory
       });
 
-      setMessages(prev => [...prev, {
+      const newMessageIdx = messages.length + 1; // +1 because we added user message
+      const agentMessage: Message = {
         role: "agent",
         content: response.response,
         timestamp: new Date(),
         model: response.model || defaultModel
-      }]);
+      };
+
+      setMessages(prev => [...prev, agentMessage]);
+
+      // Auto-speak if enabled
+      if (autoSpeak) {
+        setTimeout(() => {
+          playAudio(response.response, agent, newMessageIdx);
+        }, 300);
+      }
     } catch {
       setMessages(prev => [...prev, {
         role: "agent",
@@ -339,11 +470,9 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
   const handleMicClick = async () => {
     setMicError(null);
     if (isRecording) {
-      // Stop and transcribe
       try {
         const result = await stopRecording();
         if (result.text.trim()) {
-          // Auto-send the transcribed text
           await sendMessage(result.text);
         }
       } catch (err: any) {
@@ -351,7 +480,6 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
         setTimeout(() => setMicError(null), 3000);
       }
     } else {
-      // Start recording
       try {
         await startRecording();
       } catch (err: any) {
@@ -380,6 +508,16 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
           </div>
         </div>
         <div className="flex items-center gap-1">
+          {/* Auto-speak toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => { setAutoSpeak(!autoSpeak); if (autoSpeak) stopAudio(); }}
+            className={`text-white hover:bg-white/20 rounded-full ${autoSpeak ? "bg-white/25" : ""}`}
+            title={autoSpeak ? "إيقاف الرد الصوتي التلقائي" : "تفعيل الرد الصوتي التلقائي"}
+          >
+            {autoSpeak ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+          </Button>
           {messages.length > 1 && (
             <Button variant="ghost" size="icon" onClick={handleClearHistory} className="text-white hover:bg-white/20 rounded-full" title="مسح المحادثة">
               <Trash2 className="h-4 w-4" />
@@ -390,6 +528,14 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
           </Button>
         </div>
       </div>
+
+      {/* Auto-speak indicator */}
+      {autoSpeak && (
+        <div className="bg-primary/10 px-3 py-1 flex items-center justify-center gap-1.5 text-xs text-primary border-b">
+          <Volume2 className="h-3 w-3" />
+          <span>الرد الصوتي التلقائي مفعّل</span>
+        </div>
+      )}
 
       {/* History indicator */}
       {chatHistoryData && chatHistoryData.length > 0 && historyLoaded && (
@@ -417,10 +563,22 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
                 <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
               )}
               <div className="flex items-center justify-between mt-1.5 gap-2">
-                <p className="text-[10px] opacity-50">
-                  {msg.timestamp.toLocaleTimeString("ar-AE", { hour: "2-digit", minute: "2-digit" })}
-                </p>
-                {msg.role === "agent" && msg.model && <ModelBadge model={msg.model} />}
+                <div className="flex items-center gap-1.5">
+                  <p className="text-[10px] opacity-50">
+                    {msg.timestamp.toLocaleTimeString("ar-AE", { hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                  {msg.role === "agent" && msg.model && <ModelBadge model={msg.model} />}
+                </div>
+                {msg.role === "agent" && msg.content !== welcomeMsg && (
+                  <SpeakerButton
+                    message={msg}
+                    agent={agent}
+                    messageIdx={idx}
+                    playingIdx={playingMessageIdx}
+                    loadingIdx={loadingMessageIdx}
+                    onPlay={playAudio}
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -518,7 +676,7 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
           </Button>
         </div>
         <p className="text-[10px] text-muted-foreground mt-1.5 text-center">
-          مدعوم بالذكاء الاصطناعي • {agentDesc} • 🎤 صوتي
+          مدعوم بالذكاء الاصطناعي • {agentDesc} • 🎤 صوتي • 🔊 رد صوتي
         </p>
       </div>
     </Card>

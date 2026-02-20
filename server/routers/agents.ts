@@ -181,6 +181,62 @@ export const agentsRouter = router({
       return { text: result.text, language: result.language, duration: result.duration };
     }),
 
+  // Text-to-Speech - convert agent response to audio
+  textToSpeech: publicProcedure
+    .input(z.object({
+      text: z.string().min(1).max(4096),
+      agent: z.enum(["salwa", "farouq", "khazen", "buraq", "khaled", "alina", "baz", "joelle"]),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED" });
+
+      const openaiKey = process.env.OPENAI_API_KEY;
+      if (!openaiKey) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "OpenAI API key not configured" });
+
+      // Unique voice per agent - OpenAI TTS voices:
+      // alloy (neutral), ash (warm male), coral (warm female), echo (male), 
+      // fable (British), nova (female energetic), onyx (deep male), sage (calm), shimmer (soft female)
+      const AGENT_VOICES: Record<string, string> = {
+        salwa: "nova",      // Female, energetic, warm - perfect for coordinator
+        farouq: "onyx",     // Deep male, authoritative - perfect for senior legal expert
+        khazen: "ash",      // Warm male - good for organized young tech guy
+        buraq: "echo",      // Male, clear - good for timeline monitor
+        khaled: "sage",     // Calm, precise - perfect for quality auditor
+        alina: "shimmer",   // Soft female - good for financial director
+        baz: "fable",       // Expressive - good for strategic advisor
+        joelle: "coral",    // Warm female - perfect for market analyst
+      };
+
+      const voice = AGENT_VOICES[input.agent] || "alloy";
+
+      const response = await fetch("https://api.openai.com/v1/audio/speech", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${openaiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "tts-1",
+          input: input.text,
+          voice: voice,
+          response_format: "mp3",
+          speed: 1.0,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("[TTS] Error:", response.status, errorText);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "فشل تحويل النص إلى صوت" });
+      }
+
+      // Convert audio to base64
+      const arrayBuffer = await response.arrayBuffer();
+      const base64 = Buffer.from(arrayBuffer).toString("base64");
+
+      return { audioBase64: base64, mimeType: "audio/mpeg", voice };
+    }),
+
   // Model usage statistics
   modelUsageStats: publicProcedure.query(async ({ ctx }) => {
     if (!ctx.user) return { byModel: [], byAgent: [], recentActivity: [], totals: { totalCalls: 0, avgResponseTime: 0, successRate: 0 } };
