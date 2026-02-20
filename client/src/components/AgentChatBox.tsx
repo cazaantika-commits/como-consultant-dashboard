@@ -127,9 +127,18 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
     setIsLoading(true);
 
     try {
+      // Build conversation history for GPT-4 context
+      const conversationHistory = messages
+        .filter(m => m.content !== `مرحباً! أنا ${agentName}، ${agentTitle}. كيف يمكنني مساعدتك؟`)
+        .map(m => ({
+          role: (m.role === "user" ? "user" : "assistant") as "user" | "assistant",
+          content: m.content
+        }));
+
       const response = await chatMutation.mutateAsync({
         agent,
-        message: userMessage.content
+        message: userMessage.content,
+        conversationHistory
       });
 
       const agentMessage: Message = {

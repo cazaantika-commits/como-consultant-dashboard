@@ -59,7 +59,11 @@ export const agentsRouter = router({
   chat: publicProcedure
     .input(z.object({
       agent: z.enum(["salwa", "farouq", "khazen", "buraq", "khaled", "alina", "baz", "joelle"]),
-      message: z.string()
+      message: z.string(),
+      conversationHistory: z.array(z.object({
+        role: z.enum(["user", "assistant"]),
+        content: z.string()
+      })).optional()
     }))
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user) throw new Error("غير مصرح");
@@ -70,7 +74,8 @@ export const agentsRouter = router({
       const response = await handleAgentChat({
         agent: input.agent,
         message: input.message,
-        userId: ctx.user.id
+        userId: ctx.user.id,
+        conversationHistory: input.conversationHistory
       });
 
       return { response };
