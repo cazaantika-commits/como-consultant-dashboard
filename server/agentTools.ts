@@ -10,7 +10,7 @@ import {
   consultants, projects, projectConsultants, financialData,
   evaluationScores, evaluatorScores, committeeDecisions,
   consultantDetails, consultantProfiles, consultantNotes,
-  tasks, feasibilityStudies, agents
+  tasks, feasibilityStudies, agents, agentAssignments
 } from "../drizzle/schema";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 
@@ -385,6 +385,23 @@ const EVALUATION_CRITERIA = [
 // Tool Execution Functions
 // ═══════════════════════════════════════════════════
 
+// Write tools that should be logged as assignments
+const WRITE_TOOL_NAMES = new Set([
+  "add_consultant", "update_consultant", "add_consultant_to_project",
+  "remove_consultant_from_project", "set_evaluation_score", "set_financial_data",
+  "add_project", "add_task", "update_task_status", "update_consultant_profile",
+  "add_consultant_note"
+]);
+
+// Current agent context for assignment logging
+let _currentAgent: string = "";
+let _currentUserMessage: string = "";
+
+export function setAgentContext(agent: string, userMessage: string) {
+  _currentAgent = agent;
+  _currentUserMessage = userMessage;
+}
+
 export async function executeAgentTool(
   toolName: string,
   args: Record<string, any>,
@@ -394,6 +411,58 @@ export async function executeAgentTool(
   if (!db) return JSON.stringify({ error: "قاعدة البيانات غير متاحة" });
 
   try {
+    // Auto-log write operations as assignments
+    let assignmentId: number | null = null;
+    if (WRITE_TOOL_NAMES.has(toolName)) {
+      try {
+        const [inserted] = await db.insert(agentAssignments).values({
+          userId,
+          agent: _currentAgent || "unknown",
+          userMessage: _currentUserMessage || "(direct tool call)",
+          toolUsed: toolName,
+          toolArgs: JSON.stringify(args),
+          status: "executing",
+        });
+        assignmentId = inserted.insertId;
+        console.log(`[AgentAssignment] Created #${assignmentId}: ${toolName} by ${_currentAgent}`);
+      } catch (e) {
+        console.error("[AgentAssignment] Failed to create:", e);
+      }
+    }
+
+    const result = await _executeToolInternal(db, toolName, args, userId);
+
+    // Update assignment status
+    if (assignmentId) {
+      try {
+        const parsed = JSON.parse(result);
+        const status = parsed.error ? "failed" : "completed";
+        await db.update(agentAssignments)
+          .set({ 
+            toolResult: result.substring(0, 2000),
+            status,
+            completedAt: new Date(),
+          })
+          .where(eq(agentAssignments.id, assignmentId));
+      } catch (e) {
+        console.error("[AgentAssignment] Failed to update:", e);
+      }
+    }
+
+    return result;
+  } catch (error: any) {
+    console.error(`[AgentTools] Error executing ${toolName}:`, error);
+    return JSON.stringify({ error: `خطأ في تنفيذ الأداة: ${error.message}` });
+  }
+}
+
+async function _executeToolInternal(
+  db: any,
+  toolName: string,
+  args: Record<string, any>,
+  userId: number
+): Promise<string> {
+  try {
     switch (toolName) {
       // ─── READ ───
       case "list_projects": {
@@ -401,7 +470,7 @@ export async function executeAgentTool(
         if (result.length === 0) return JSON.stringify({ message: "لا توجد مشاريع مسجلة", data: [] });
         return JSON.stringify({
           message: `${result.length} مشروع مسجل`,
-          data: result.map(p => ({
+          data: result.map((p: any) => ({
             id: p.id, name: p.name, description: p.description,
             bua: p.bua, pricePerSqft: p.pricePerSqft, notes: p.notes
           }))
@@ -413,7 +482,7 @@ export async function executeAgentTool(
         if (result.length === 0) return JSON.stringify({ message: "لا يوجد استشاريون مسجلون", data: [] });
         return JSON.stringify({
           message: `${result.length} استشاري مسجل`,
-          data: result.map(c => ({
+          data: result.map((c: any) => ({
             id: c.id, name: c.name, email: c.email,
             phone: c.phone, specialization: c.specialization
           }))
@@ -424,11 +493,11 @@ export async function executeAgentTool(
         const { projectId } = args;
         const relations = await db.select().from(projectConsultants).where(eq(projectConsultants.projectId, projectId));
         if (relations.length === 0) return JSON.stringify({ message: "لا يوجد استشاريون مرتبطون بهذا المشروع", data: [] });
-        const ids = relations.map(r => r.consultantId);
+        const ids: number[] = relations.map((r: any) => r.consultantId);
         const result = await db.select().from(consultants).where(inArray(consultants.id, ids));
         return JSON.stringify({
           message: `${result.length} استشاري مرتبط بالمشروع`,
-          data: result.map(c => ({ id: c.id, name: c.name, email: c.email, phone: c.phone, specialization: c.specialization }))
+          data: result.map((c: any) => ({ id: c.id, name: c.name, email: c.email, phone: c.phone, specialization: c.specialization }))
         });
       }
 
@@ -438,14 +507,14 @@ export async function executeAgentTool(
         if (scores.length === 0) return JSON.stringify({ message: "لا توجد تقييمات لهذا المشروع", data: [] });
         
         // Get consultant names
-        const consultantIds = Array.from(new Set(scores.map(s => s.consultantId)));
+        const consultantIds: number[] = Array.from(new Set(scores.map((s: any) => s.consultantId)));
         const consultantList = await db.select().from(consultants).where(inArray(consultants.id, consultantIds));
-        const consultantMap = Object.fromEntries(consultantList.map(c => [c.id, c.name]));
+        const consultantMap = Object.fromEntries(consultantList.map((c: any) => [c.id, c.name]));
         
         return JSON.stringify({
           message: `${scores.length} تقييم لـ ${consultantIds.length} استشاري`,
           criteria: EVALUATION_CRITERIA,
-          data: scores.map(s => ({
+          data: scores.map((s: any) => ({
             consultantId: s.consultantId,
             consultantName: consultantMap[s.consultantId] || "غير معروف",
             criterionId: s.criterionId,
@@ -461,13 +530,13 @@ export async function executeAgentTool(
         const scores = await db.select().from(evaluatorScores).where(eq(evaluatorScores.projectId, projectId));
         if (scores.length === 0) return JSON.stringify({ message: "لا توجد تقييمات للمقيّمين لهذا المشروع", data: [] });
         
-        const consultantIds = Array.from(new Set(scores.map(s => s.consultantId)));
+        const consultantIds: number[] = Array.from(new Set(scores.map((s: any) => s.consultantId)));
         const consultantList = await db.select().from(consultants).where(inArray(consultants.id, consultantIds));
-        const consultantMap = Object.fromEntries(consultantList.map(c => [c.id, c.name]));
+        const consultantMap = Object.fromEntries(consultantList.map((c: any) => [c.id, c.name]));
         
         return JSON.stringify({
           message: `${scores.length} تقييم من المقيّمين`,
-          data: scores.map(s => ({
+          data: scores.map((s: any) => ({
             consultantId: s.consultantId,
             consultantName: consultantMap[s.consultantId] || "غير معروف",
             criterionId: s.criterionId,
@@ -483,13 +552,13 @@ export async function executeAgentTool(
         const fees = await db.select().from(financialData).where(eq(financialData.projectId, projectId));
         if (fees.length === 0) return JSON.stringify({ message: "لا توجد بيانات مالية لهذا المشروع", data: [] });
         
-        const consultantIds = Array.from(new Set(fees.map(f => f.consultantId)));
+        const consultantIds: number[] = Array.from(new Set(fees.map((f: any) => f.consultantId)));
         const consultantList = await db.select().from(consultants).where(inArray(consultants.id, consultantIds));
-        const consultantMap = Object.fromEntries(consultantList.map(c => [c.id, c.name]));
+        const consultantMap = Object.fromEntries(consultantList.map((c: any) => [c.id, c.name]));
         
         return JSON.stringify({
           message: `بيانات مالية لـ ${fees.length} استشاري`,
-          data: fees.map(f => ({
+          data: fees.map((f: any) => ({
             consultantId: f.consultantId,
             consultantName: consultantMap[f.consultantId] || "غير معروف",
             designType: f.designType === "pct" ? "نسبة مئوية" : "مبلغ مقطوع",
@@ -526,7 +595,7 @@ export async function executeAgentTool(
             strengths: profile[0].strengths,
             weaknesses: profile[0].weaknesses,
           } : null,
-          recentNotes: notes.map(n => ({ title: n.title, content: n.content, category: n.category, date: n.createdAt })),
+          recentNotes: notes.map((n: any) => ({ title: n.title, content: n.content, category: n.category, date: n.createdAt })),
         });
       }
 
@@ -575,7 +644,7 @@ export async function executeAgentTool(
         const result = await query.orderBy(desc(tasks.createdAt)).limit(30);
         return JSON.stringify({
           message: `${result.length} مهمة`,
-          data: result.map(t => ({
+          data: result.map((t: any) => ({
             id: t.id, title: t.title, project: t.project, owner: t.owner,
             priority: t.priority, status: t.status, progress: t.progress,
             dueDate: t.dueDate, source: t.source, sourceAgent: t.sourceAgent,
@@ -587,7 +656,7 @@ export async function executeAgentTool(
         return JSON.stringify({
           message: "معايير التقييم الفني العشرة",
           totalWeight: 100,
-          criteria: EVALUATION_CRITERIA.map(c => ({
+          criteria: EVALUATION_CRITERIA.map((c: any) => ({
             id: c.id, name: c.name, weight: c.weight,
             scoreOptions: "2 (ضعيف جداً), 4 (ضعيف), 6 (متوسط), 8 (جيد), 10 (ممتاز)"
           }))
@@ -733,9 +802,52 @@ export async function executeAgentTool(
         return JSON.stringify({ error: `أداة غير معروفة: ${toolName}` });
     }
   } catch (error: any) {
-    console.error(`[AgentTools] Error executing ${toolName}:`, error);
+    console.error(`[AgentTools] Error in tool ${toolName}:`, error);
     return JSON.stringify({ error: `خطأ في تنفيذ الأداة: ${error.message}` });
   }
+}
+
+// ═══════════════════════════════════════════════════
+// Assignment query helpers
+// ═══════════════════════════════════════════════════
+
+export async function getAgentAssignments(filters?: { agent?: string; status?: string; limit?: number }) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  let query = db.select().from(agentAssignments).orderBy(desc(agentAssignments.createdAt));
+  
+  if (filters?.agent) {
+    query = query.where(eq(agentAssignments.agent, filters.agent)) as any;
+  }
+  
+  const limit = filters?.limit || 50;
+  const results = await query.limit(limit);
+  
+  if (filters?.status) {
+    return results.filter((r: any) => r.status === filters.status);
+  }
+  
+  return results;
+}
+
+export async function getAssignmentStats() {
+  const db = await getDb();
+  if (!db) return { total: 0, completed: 0, failed: 0, executing: 0, byAgent: {} };
+  
+  const rawResult = await db.select().from(agentAssignments);
+  const all = Array.isArray(rawResult) ? rawResult : [];
+  const byAgent: Record<string, number> = {};
+  let completed = 0, failed = 0, executing = 0;
+  
+  for (const a of all) {
+    byAgent[a.agent] = (byAgent[a.agent] || 0) + 1;
+    if (a.status === "completed") completed++;
+    else if (a.status === "failed") failed++;
+    else executing++;
+  }
+  
+  return { total: all.length, completed, failed, executing, byAgent };
 }
 
 // ═══════════════════════════════════════════════════

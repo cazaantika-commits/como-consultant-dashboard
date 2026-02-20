@@ -78,6 +78,13 @@
       "when": 1771616840696,
       "tag": "0010_eminent_quentin_quire",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1771626750540,
+      "tag": "0011_bored_stranger",
+      "breakpoints": true
     }
   ]
 }

@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { agents, chatHistory, modelUsageLog } from "../../drizzle/schema";
+import { agents, chatHistory, modelUsageLog, agentAssignments } from "../../drizzle/schema";
+import { getAgentAssignments, getAssignmentStats } from "../agentTools";
 import { eq, desc, sql } from "drizzle-orm";
 import { transcribeAudio } from "../_core/voiceTranscription";
 import { storagePut } from "../storage";
@@ -283,4 +284,34 @@ export const agentsRouter = router({
       return { byModel: [], byAgent: [], recentActivity: [], totals: { totalCalls: 0, avgResponseTime: 0, successRate: 0 } };
     }
   }),
+
+  // ═══════════════════════════════════════════════════
+  // Agent Assignments (تكليفات الوكلاء)
+  // ═══════════════════════════════════════════════════
+
+  listAssignments: publicProcedure
+    .input(z.object({
+      agent: z.string().optional(),
+      status: z.string().optional(),
+      limit: z.number().optional(),
+    }).optional())
+    .query(async ({ ctx, input }) => {
+      if (!ctx.user) return [];
+      return getAgentAssignments(input || {});
+    }),
+
+  assignmentStats: publicProcedure.query(async ({ ctx }) => {
+    if (!ctx.user) return { total: 0, completed: 0, failed: 0, executing: 0, byAgent: {} };
+    return getAssignmentStats();
+  }),
+
+  deleteAssignment: publicProcedure
+    .input(z.number())
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED" });
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await db.delete(agentAssignments).where(eq(agentAssignments.id, input));
+      return { success: true };
+    }),
 });

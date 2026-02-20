@@ -4,7 +4,7 @@ import { checkLast48HoursEmails } from "./emailIntegration";
 import { getDb } from "./db";
 import { consultants, projects, agents, evaluationScores, financialData, modelUsageLog } from "../drizzle/schema";
 import { like, eq, desc } from "drizzle-orm";
-import { getToolsForAgent, executeAgentTool, AGENT_TOOLS } from "./agentTools";
+import { getToolsForAgent, executeAgentTool, AGENT_TOOLS, setAgentContext } from "./agentTools";
 
 export type AgentType = "salwa" | "farouq" | "khazen" | "buraq" | "khaled" | "alina" | "baz" | "joelle";
 
@@ -613,6 +613,9 @@ export async function handleAgentChat(req: AgentChatRequest): Promise<{ text: st
   // Build system prompt with context and tool instructions
   const systemPrompt = AGENT_PROMPTS[agent] + contextData + TOOL_USE_INSTRUCTION +
     "\n\nتعليمات مهمة: أجب بشكل طبيعي وشخصي. تحدث كأنك زميل عمل حقيقي. استخدم الأدوات لجلب البيانات الحقيقية من المنصة عند الحاجة. إذا سُئلت عن بيانات محددة، استخدم الأدوات أولاً ثم حلل النتائج.";
+
+  // Set agent context for assignment logging
+  setAgentContext(agent, message);
 
   // Route to the best model for this agent with timing
   const startTime = Date.now();

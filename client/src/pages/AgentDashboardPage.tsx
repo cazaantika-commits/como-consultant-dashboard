@@ -191,6 +191,15 @@ export default function AgentDashboardPage() {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => navigate("/agent-assignments")}
+              className="text-xs gap-1.5"
+            >
+              <ListTodo className="w-3.5 h-3.5" />
+              تكليفات الوكلاء
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => navigate("/model-stats")}
               className="text-xs gap-1.5"
             >

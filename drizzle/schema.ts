@@ -342,3 +342,21 @@ export const modelUsageLog = mysqlTable('modelUsageLog', {
 
 export type ModelUsageLogItem = typeof modelUsageLog.$inferSelect;
 export type InsertModelUsageLogItem = typeof modelUsageLog.$inferInsert;
+
+// Agent Assignments - تكليفات الوكلاء (منفصل عن المهام)
+export const agentAssignments = mysqlTable('agentAssignments', {
+  id: int('id').primaryKey().autoincrement(),
+  userId: int('userId').notNull(),
+  agent: varchar('agent', { length: 50 }).notNull(), // salwa, farouq, khaled, etc.
+  userMessage: text('userMessage').notNull(), // الطلب الأصلي من المستخدم
+  toolUsed: varchar('toolUsed', { length: 100 }).notNull(), // اسم الأداة المستخدمة
+  toolArgs: text('toolArgs'), // JSON - المعاملات المرسلة للأداة
+  toolResult: text('toolResult'), // JSON - نتيجة تنفيذ الأداة
+  status: mysqlEnum('assignmentStatus', ['executing', 'completed', 'failed']).default('executing').notNull(),
+  agentResponse: text('agentResponse'), // رد الوكيل النهائي
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  completedAt: timestamp('completedAt'),
+});
+
+export type AgentAssignment = typeof agentAssignments.$inferSelect;
+export type InsertAgentAssignment = typeof agentAssignments.$inferInsert;
