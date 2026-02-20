@@ -143,12 +143,17 @@ export async function checkLast48HoursEmails(): Promise<number> {
       summaryMsg += "\n... و " + (emails.length - 20) + " إيميل آخر";
     }
 
-    summaryMsg += "\n\n💡 للتفاعل مع إيميل محدد، استخدم /checkmail لعرض الإيميلات غير المقروءة مع أزرار التحكم.";
+    summaryMsg += "\n\n💡 سأعرض الإيميلات مع أزرار التحكم (رد، أرشفة، تحليل) أدناه.";
 
     await botInstance.sendMessage(ownerChatId, summaryMsg);
 
-    // Send individual notifications for unread emails with action buttons
-    for (const email of emails.filter(e => !e.isRead).slice(0, 10)) {
+    // Send individual notifications with action buttons for all emails with attachments
+    // (prioritize unread first, then read with attachments)
+    const unreadEmails = emails.filter(e => !e.isRead);
+    const readWithAttachments = emails.filter(e => e.isRead && e.attachments.length > 0);
+    const toNotify = [...unreadEmails, ...readWithAttachments].slice(0, 10);
+    
+    for (const email of toNotify) {
       await notifyOwnerAboutEmail(email);
       markAsProcessed(email.uid);
     }
@@ -172,7 +177,8 @@ async function notifyOwnerAboutEmail(email: EmailMessage) {
     ? email.textBody.substring(0, 300).replace(/\n{3,}/g, "\n\n")
     : "(لا يوجد نص)";
 
-  const message = "📧 إيميل جديد\n\n" +
+  const readStatus = email.isRead ? "✅ مقروء" : "🔴 غير مقروء";
+  const message = "📧 إيميل (" + readStatus + ")\n\n" +
     "👤 من: " + email.fromName + " (" + email.from + ")\n" +
     "📌 الموضوع: " + email.subject + "\n" +
     "📅 التاريخ: " + email.date.toLocaleDateString("ar-AE", { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }) +

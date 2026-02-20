@@ -460,15 +460,13 @@ function registerCommands(bot: TelegramBot) {
     setOwnerChatId(chatId);
     initEmailIntegration(bot!, chatId);
 
-    await bot.sendMessage(chatId, "📧 جاري فحص البريد الإلكتروني...");
+    await bot.sendMessage(chatId, "📧 جاري فحص إيميلات آخر 48 ساعة...");
     try {
-      const count = await forceEmailCheck();
+      const count = await checkLast48HoursEmails();
       if (count === 0) {
-        await bot.sendMessage(chatId, "✅ لا توجد رسائل جديدة.");
-      } else if (count === -1) {
-        await bot.sendMessage(chatId, "⏳ فحص آخر قيد التنفيذ. انتظر قليلاً.");
+        // Message already sent by checkLast48HoursEmails
       } else {
-        await bot.sendMessage(chatId, "📬 تم العثور على " + count + " رسالة جديدة. تابع أعلاه.");
+        console.log("[TelegramBot] checkmail found " + count + " emails");
       }
     } catch (error) {
       await bot.sendMessage(chatId, "⚠️ خطأ في فحص البريد: " + (error as Error).message);
@@ -1001,13 +999,14 @@ async function handleFreeText(
       // Initialize email integration for this chat
       setOwnerChatId(chatId);
       initEmailIntegration(bot, chatId);
-      await bot.sendMessage(chatId, "📧 جاري فحص بريدك الإلكتروني...");
+      await bot.sendMessage(chatId, "📧 جاري فحص إيميلات آخر 48 ساعة...");
       try {
-        const newCount = await forceEmailCheck();
-        if (newCount <= 0) {
-          await bot.sendMessage(chatId, "✅ لا توجد رسائل جديدة غير مقروءة في بريدك.");
+        const count = await checkLast48HoursEmails();
+        if (count === 0) {
+          // Message already sent by checkLast48HoursEmails
+        } else {
+          console.log("[TelegramBot] Free text email check found " + count + " emails");
         }
-        // If there are new emails, the emailIntegration module will send notifications automatically
       } catch (emailError: any) {
         console.error("[TelegramBot] Email check from free text error:", emailError);
         await bot.sendMessage(chatId, "⚠️ حدث خطأ أثناء فحص البريد. جرب /checkmail لاحقاً.");
