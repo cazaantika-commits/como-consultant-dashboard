@@ -191,6 +191,15 @@ export default function AgentDashboardPage() {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => navigate("/model-stats")}
+              className="text-xs gap-1.5"
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              إحصائيات النماذج
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => navigate("/")}
               className="text-xs gap-1.5"
             >

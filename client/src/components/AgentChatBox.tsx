@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { X, Send, Loader2, Trash2, History } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { X, Send, Loader2, Trash2, History, Mic, MicOff, Square } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Card } from "./ui/card";
@@ -35,7 +35,7 @@ const MODEL_BADGES: Record<string, { label: string; bg: string; text: string; ic
   "Manus LLM": { label: "Manus", bg: "bg-gray-100 dark:bg-gray-800/40", text: "text-gray-700 dark:text-gray-300", icon: "⚪" },
 };
 
-// Default model per agent (for history messages that don't have model info)
+// Default model per agent
 const AGENT_DEFAULT_MODEL: Record<AgentType, string> = {
   salwa: "GPT-4o",
   alina: "GPT-4o",
@@ -116,6 +116,112 @@ function ModelBadge({ model }: { model: string }) {
   );
 }
 
+// Voice recording hook
+function useVoiceRecorder() {
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const transcribeMutation = trpc.agents.transcribeVoice.useMutation();
+
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+          ? "audio/webm;codecs=opus"
+          : "audio/webm",
+      });
+      
+      chunksRef.current = [];
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.start(250); // Collect data every 250ms
+      setIsRecording(true);
+      setRecordingTime(0);
+
+      timerRef.current = setInterval(() => {
+        setRecordingTime((t) => t + 1);
+      }, 1000);
+    } catch (err) {
+      console.error("[Voice] Microphone access denied:", err);
+      throw new Error("لم يتم السماح بالوصول للميكروفون");
+    }
+  }, []);
+
+  const stopRecording = useCallback((): Promise<{ text: string }> => {
+    return new Promise((resolve, reject) => {
+      const mediaRecorder = mediaRecorderRef.current;
+      if (!mediaRecorder || mediaRecorder.state === "inactive") {
+        reject(new Error("No active recording"));
+        return;
+      }
+
+      mediaRecorder.onstop = async () => {
+        // Stop all tracks
+        mediaRecorder.stream.getTracks().forEach((t) => t.stop());
+        if (timerRef.current) clearInterval(timerRef.current);
+        setIsRecording(false);
+        setIsTranscribing(true);
+
+        try {
+          const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+          
+          // Convert to base64
+          const arrayBuffer = await blob.arrayBuffer();
+          const uint8Array = new Uint8Array(arrayBuffer);
+          let binary = "";
+          for (let i = 0; i < uint8Array.length; i++) {
+            binary += String.fromCharCode(uint8Array[i]);
+          }
+          const base64 = btoa(binary);
+
+          // Send to server for transcription
+          const result = await transcribeMutation.mutateAsync({
+            audioBase64: base64,
+            mimeType: "audio/webm",
+            language: "ar",
+          });
+
+          setIsTranscribing(false);
+          resolve({ text: result.text });
+        } catch (err) {
+          setIsTranscribing(false);
+          reject(err);
+        }
+      };
+
+      mediaRecorder.stop();
+    });
+  }, [transcribeMutation]);
+
+  const cancelRecording = useCallback(() => {
+    const mediaRecorder = mediaRecorderRef.current;
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.stream.getTracks().forEach((t) => t.stop());
+      mediaRecorder.stop();
+    }
+    if (timerRef.current) clearInterval(timerRef.current);
+    setIsRecording(false);
+    setRecordingTime(0);
+    chunksRef.current = [];
+  }, []);
+
+  return { isRecording, recordingTime, isTranscribing, startRecording, stopRecording, cancelRecording };
+}
+
+function formatRecordingTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
   const defaults = agentDefaults[agent];
   const agentName = agentData?.name || defaults.name;
@@ -132,12 +238,14 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [micError, setMicError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const chatMutation = trpc.agents.chat.useMutation();
   const clearHistoryMutation = trpc.agents.clearChatHistory.useMutation();
+  const { isRecording, recordingTime, isTranscribing, startRecording, stopRecording, cancelRecording } = useVoiceRecorder();
 
-  // Load chat history from database on mount
+  // Load chat history
   const { data: chatHistoryData } = trpc.agents.getChatHistory.useQuery(
     { agent, limit: 50 },
     { enabled: !historyLoaded }
@@ -151,7 +259,6 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
         timestamp: new Date(h.createdAt),
         model: h.role === "assistant" ? defaultModel : undefined
       }));
-      // Prepend welcome message, then loaded history
       setMessages([
         { role: "agent", content: welcomeMsg, timestamp: new Date(chatHistoryData[0].createdAt), model: defaultModel },
         ...loadedMessages
@@ -181,21 +288,15 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
     }
   };
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || isLoading) return;
 
-    const userMessage: Message = {
-      role: "user",
-      content: input.trim(),
-      timestamp: new Date()
-    };
-
+    const userMessage: Message = { role: "user", content: text.trim(), timestamp: new Date() };
     setMessages(prev => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
 
     try {
-      // Build conversation history for context
       const conversationHistory = messages
         .filter(m => m.content !== welcomeMsg)
         .map(m => ({
@@ -205,30 +306,28 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
 
       const response = await chatMutation.mutateAsync({
         agent,
-        message: userMessage.content,
+        message: text.trim(),
         conversationHistory
       });
 
-      const agentMessage: Message = {
+      setMessages(prev => [...prev, {
         role: "agent",
         content: response.response,
         timestamp: new Date(),
         model: response.model || defaultModel
-      };
-
-      setMessages(prev => [...prev, agentMessage]);
-    } catch (error) {
-      const errorMessage: Message = {
+      }]);
+    } catch {
+      setMessages(prev => [...prev, {
         role: "agent",
         content: "⚠️ عذراً، حدث خطأ. حاول مرة أخرى.",
-        timestamp: new Date(),
-        model: undefined
-      };
-      setMessages(prev => [...prev, errorMessage]);
+        timestamp: new Date()
+      }]);
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleSend = () => sendMessage(input);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -237,17 +336,42 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
     }
   };
 
+  const handleMicClick = async () => {
+    setMicError(null);
+    if (isRecording) {
+      // Stop and transcribe
+      try {
+        const result = await stopRecording();
+        if (result.text.trim()) {
+          // Auto-send the transcribed text
+          await sendMessage(result.text);
+        }
+      } catch (err: any) {
+        setMicError(err.message || "فشل التحويل الصوتي");
+        setTimeout(() => setMicError(null), 3000);
+      }
+    } else {
+      // Start recording
+      try {
+        await startRecording();
+      } catch (err: any) {
+        setMicError(err.message || "لم يتم السماح بالوصول للميكروفون");
+        setTimeout(() => setMicError(null), 3000);
+      }
+    }
+  };
+
+  const handleCancelRecording = () => {
+    cancelRecording();
+  };
+
   return (
     <Card className="fixed bottom-4 left-4 w-[420px] h-[650px] shadow-2xl flex flex-col z-50 overflow-hidden border-0 rounded-2xl">
-      {/* Header with avatar */}
+      {/* Header */}
       <div className={`bg-gradient-to-r ${defaults.gradient} text-white p-4 flex items-center justify-between`}>
         <div className="flex items-center gap-3">
           <div className="relative">
-            <img
-              src={agentAvatar}
-              alt={agentName}
-              className="w-12 h-12 rounded-full object-cover border-2 border-white/40 shadow-lg"
-            />
+            <img src={agentAvatar} alt={agentName} className="w-12 h-12 rounded-full object-cover border-2 border-white/40 shadow-lg" />
             <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-white" />
           </div>
           <div>
@@ -257,28 +381,17 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
         </div>
         <div className="flex items-center gap-1">
           {messages.length > 1 && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleClearHistory}
-              className="text-white hover:bg-white/20 rounded-full"
-              title="مسح المحادثة"
-            >
+            <Button variant="ghost" size="icon" onClick={handleClearHistory} className="text-white hover:bg-white/20 rounded-full" title="مسح المحادثة">
               <Trash2 className="h-4 w-4" />
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="text-white hover:bg-white/20 rounded-full"
-          >
+          <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-white/20 rounded-full">
             <X className="h-5 w-5" />
           </Button>
         </div>
       </div>
 
-      {/* History loaded indicator */}
+      {/* History indicator */}
       {chatHistoryData && chatHistoryData.length > 0 && historyLoaded && (
         <div className="bg-muted/50 px-3 py-1.5 flex items-center justify-center gap-1.5 text-xs text-muted-foreground border-b">
           <History className="h-3 w-3" />
@@ -289,52 +402,32 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-muted/20" dir="rtl">
         {messages.map((msg, idx) => (
-          <div
-            key={idx}
-            className={`flex gap-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}
-          >
+          <div key={idx} className={`flex gap-2 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
             {msg.role === "agent" && (
-              <img
-                src={agentAvatar}
-                alt={agentName}
-                className="w-8 h-8 rounded-full object-cover shrink-0 mt-1"
-              />
+              <img src={agentAvatar} alt={agentName} className="w-8 h-8 rounded-full object-cover shrink-0 mt-1" />
             )}
-            <div
-              className={`max-w-[78%] rounded-2xl p-3 ${
-                msg.role === "user"
-                  ? "bg-primary text-primary-foreground rounded-tl-sm"
-                  : "bg-card border shadow-sm rounded-tr-sm"
-              }`}
-            >
+            <div className={`max-w-[78%] rounded-2xl p-3 ${
+              msg.role === "user"
+                ? "bg-primary text-primary-foreground rounded-tl-sm"
+                : "bg-card border shadow-sm rounded-tr-sm"
+            }`}>
               {msg.role === "agent" ? (
-                <div className="text-sm">
-                  <Streamdown>{msg.content}</Streamdown>
-                </div>
+                <div className="text-sm"><Streamdown>{msg.content}</Streamdown></div>
               ) : (
                 <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
               )}
               <div className="flex items-center justify-between mt-1.5 gap-2">
                 <p className="text-[10px] opacity-50">
-                  {msg.timestamp.toLocaleTimeString("ar-AE", {
-                    hour: "2-digit",
-                    minute: "2-digit"
-                  })}
+                  {msg.timestamp.toLocaleTimeString("ar-AE", { hour: "2-digit", minute: "2-digit" })}
                 </p>
-                {msg.role === "agent" && msg.model && (
-                  <ModelBadge model={msg.model} />
-                )}
+                {msg.role === "agent" && msg.model && <ModelBadge model={msg.model} />}
               </div>
             </div>
           </div>
         ))}
         {isLoading && (
           <div className="flex gap-2">
-            <img
-              src={agentAvatar}
-              alt={agentName}
-              className="w-8 h-8 rounded-full object-cover shrink-0"
-            />
+            <img src={agentAvatar} alt={agentName} className="w-8 h-8 rounded-full object-cover shrink-0" />
             <div className="bg-card border rounded-2xl rounded-tr-sm p-3 flex items-center gap-2 shadow-sm">
               <Loader2 className="h-4 w-4 animate-spin text-primary" />
               <span className="text-sm text-muted-foreground">{agentName} يكتب...</span>
@@ -344,6 +437,41 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Recording indicator */}
+      {(isRecording || isTranscribing) && (
+        <div className="px-3 py-2 border-t bg-red-50 dark:bg-red-950/30 flex items-center justify-between" dir="rtl">
+          <div className="flex items-center gap-2">
+            {isRecording && (
+              <>
+                <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
+                <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                  جاري التسجيل... {formatRecordingTime(recordingTime)}
+                </span>
+              </>
+            )}
+            {isTranscribing && (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                <span className="text-sm font-medium text-muted-foreground">جاري تحويل الصوت لنص...</span>
+              </>
+            )}
+          </div>
+          {isRecording && (
+            <Button variant="ghost" size="sm" onClick={handleCancelRecording} className="text-red-500 hover:text-red-700 h-7 px-2">
+              <Square className="h-3 w-3 ml-1" />
+              إلغاء
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Mic error */}
+      {micError && (
+        <div className="px-3 py-1.5 bg-destructive/10 text-destructive text-xs text-center border-t">
+          {micError}
+        </div>
+      )}
+
       {/* Input */}
       <div className="p-3 border-t bg-background">
         <div className="flex gap-2">
@@ -351,14 +479,34 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder={`تحدث مع ${agentName}...`}
-            disabled={isLoading}
+            placeholder={isRecording ? "اضغط الميكروفون لإيقاف التسجيل..." : `تحدث مع ${agentName}...`}
+            disabled={isLoading || isRecording || isTranscribing}
             className="flex-1 rounded-full bg-muted/50 border-0 focus-visible:ring-1"
             dir="rtl"
           />
+          
+          {/* Mic button */}
+          <Button
+            onClick={handleMicClick}
+            disabled={isLoading || isTranscribing}
+            size="icon"
+            variant={isRecording ? "destructive" : "outline"}
+            className={`rounded-full shrink-0 transition-all ${isRecording ? "animate-pulse" : ""}`}
+            title={isRecording ? "إيقاف التسجيل وإرسال" : "تسجيل صوتي"}
+          >
+            {isTranscribing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : isRecording ? (
+              <MicOff className="h-4 w-4" />
+            ) : (
+              <Mic className="h-4 w-4" />
+            )}
+          </Button>
+
+          {/* Send button */}
           <Button
             onClick={handleSend}
-            disabled={!input.trim() || isLoading}
+            disabled={!input.trim() || isLoading || isRecording}
             size="icon"
             className="rounded-full shrink-0"
           >
@@ -370,7 +518,7 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
           </Button>
         </div>
         <p className="text-[10px] text-muted-foreground mt-1.5 text-center">
-          مدعوم بالذكاء الاصطناعي • {agentDesc}
+          مدعوم بالذكاء الاصطناعي • {agentDesc} • 🎤 صوتي
         </p>
       </div>
     </Card>

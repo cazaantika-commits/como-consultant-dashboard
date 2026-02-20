@@ -2,7 +2,7 @@ import { invokeLLM } from "./_core/llm";
 import { ENV } from "./_core/env";
 import { checkLast48HoursEmails } from "./emailIntegration";
 import { getDb } from "./db";
-import { consultants, projects, agents, evaluationScores, financialData } from "../drizzle/schema";
+import { consultants, projects, agents, evaluationScores, financialData, modelUsageLog } from "../drizzle/schema";
 import { like, eq, desc } from "drizzle-orm";
 
 export type AgentType = "salwa" | "farouq" | "khazen" | "buraq" | "khaled" | "alina" | "baz" | "joelle";
@@ -401,6 +401,52 @@ export async function handleAgentChat(req: AgentChatRequest): Promise<{ text: st
   const systemPrompt = AGENT_PROMPTS[agent] + contextData + 
     "\n\nتعليمات مهمة: أجب بشكل طبيعي وشخصي. تحدث كأنك زميل عمل حقيقي. استخدم المعلومات المتاحة عن المشاريع والاستشاريين عند الحاجة. إذا لم تكن متأكداً من معلومة، قل ذلك بصراحة.";
 
-  // Route to the best model for this agent
-  return await callBestModel(agent, systemPrompt, message, conversationHistory);
+  // Route to the best model for this agent with timing
+  const startTime = Date.now();
+  let result: { text: string; model: string };
+  let success = true;
+  let isFallback = false;
+  
+  try {
+    result = await callBestModel(agent, systemPrompt, message, conversationHistory);
+    // Check if fallback was used
+    const expectedModel: Record<string, string> = { "gpt-4o": "GPT-4o", "claude-sonnet-4": "Claude Sonnet 4", "gemini-2.5-pro": "Gemini 2.5 Pro" };
+    isFallback = result.model !== expectedModel[AGENT_MODEL_MAP[agent]];
+  } catch (err) {
+    success = false;
+    throw err;
+  } finally {
+    const responseTimeMs = Date.now() - startTime;
+    // Log usage asynchronously (don't block response)
+    logModelUsage(req.userId, agent, success ? (result!.model || "unknown") : "failed", responseTimeMs, success, isFallback).catch(e => 
+      console.error("[ModelUsage] Failed to log:", e)
+    );
+  }
+  
+  return result;
+}
+
+// Log model usage to database
+async function logModelUsage(
+  userId: number, 
+  agent: string, 
+  model: string, 
+  responseTimeMs: number, 
+  success: boolean, 
+  isFallback: boolean
+) {
+  try {
+    const db = await getDb();
+    if (!db) return;
+    await db.insert(modelUsageLog).values({
+      userId,
+      agent,
+      model,
+      responseTimeMs,
+      success: success ? "true" : "false",
+      isFallback: isFallback ? "true" : "false",
+    });
+  } catch (err) {
+    console.error("[ModelUsage] DB insert failed:", err);
+  }
 }

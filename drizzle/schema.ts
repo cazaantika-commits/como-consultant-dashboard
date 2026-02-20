@@ -325,3 +325,20 @@ export const chatHistory = mysqlTable('chatHistory', {
 
 export type ChatHistoryItem = typeof chatHistory.$inferSelect;
 export type InsertChatHistoryItem = typeof chatHistory.$inferInsert;
+
+// AI Model Usage Log - تتبع استخدام النماذج وأوقات الاستجابة
+export const modelUsageLog = mysqlTable('modelUsageLog', {
+  id: int('id').primaryKey().autoincrement(),
+  userId: int('userId').notNull(),
+  agent: varchar('agent', { length: 50 }).notNull(), // salwa, farouq, etc.
+  model: varchar('model', { length: 100 }).notNull(), // GPT-4o, Claude Sonnet 4, Gemini 2.5 Pro
+  responseTimeMs: int('responseTimeMs').notNull(), // Response time in milliseconds
+  success: mysqlEnum('success', ['true', 'false']).default('true').notNull(),
+  isFallback: mysqlEnum('isFallback', ['true', 'false']).default('false').notNull(),
+  inputTokens: int('inputTokens'), // Approximate input tokens
+  outputTokens: int('outputTokens'), // Approximate output tokens
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+
+export type ModelUsageLogItem = typeof modelUsageLog.$inferSelect;
+export type InsertModelUsageLogItem = typeof modelUsageLog.$inferInsert;
