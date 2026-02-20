@@ -471,21 +471,26 @@ export default function Home() {
 
       {/* ── Floating Agent Icons ── */}
       {isAuthenticated && (
-        <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-40">
+        <div className="fixed bottom-6 right-6 flex flex-col gap-2 z-40">
           {[
-            { agent: "salwa" as AgentType, emoji: "📧", color: "from-blue-500 to-cyan-500", name: "سلوى" },
-            { agent: "farouq" as AgentType, emoji: "📊", color: "from-purple-500 to-pink-500", name: "فاروق" },
-            { agent: "khazen" as AgentType, emoji: "📁", color: "from-green-500 to-emerald-500", name: "خازن" },
-          ].map(({ agent, emoji, color, name }) => (
+            { agent: "salwa" as AgentType, avatar: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/sFWezOzuQFJxzpKl.png", name: "سلوى", ring: "ring-amber-400" },
+            { agent: "farouq" as AgentType, avatar: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/UphyyKbtnxhtJDDy.png", name: "فاروق", ring: "ring-purple-400" },
+            { agent: "khazen" as AgentType, avatar: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/pTwUciwtTCWHPghO.png", name: "خازن", ring: "ring-blue-400" },
+            { agent: "buraq" as AgentType, avatar: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/fsUKhyALKYaTfnMj.png", name: "براق", ring: "ring-orange-400" },
+            { agent: "khaled" as AgentType, avatar: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/gFGfLWvLCJrhamTj.png", name: "خالد", ring: "ring-emerald-400" },
+            { agent: "alina" as AgentType, avatar: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/qJSwoNSavgDflAVc.png", name: "ألينا", ring: "ring-yellow-400" },
+            { agent: "baz" as AgentType, avatar: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/GorWfdugNGIAdkOm.png", name: "باز", ring: "ring-pink-400" },
+            { agent: "joelle" as AgentType, avatar: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/mCOkEovAXTtxsABs.png", name: "جويل", ring: "ring-cyan-400" },
+          ].map(({ agent, avatar, name, ring }) => (
             <button
               key={agent}
               onClick={() => setActiveAgent(agent)}
-              className={`w-14 h-14 rounded-full bg-gradient-to-br ${color} shadow-lg hover:scale-110 transition-all duration-300 flex items-center justify-center text-2xl group relative`}
+              className={`w-11 h-11 rounded-full shadow-lg hover:scale-110 transition-all duration-300 group relative ring-2 ${ring} overflow-hidden`}
               title={`تحدث مع ${name}`}
             >
-              {emoji}
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white" />
-              <span className="absolute left-full ml-2 px-3 py-1 bg-card border rounded-lg text-xs font-medium text-foreground opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-lg">
+              <img src={avatar} alt={name} className="w-full h-full object-cover" />
+              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white" />
+              <span className="absolute left-full ml-2 px-3 py-1 bg-card border rounded-lg text-xs font-medium text-foreground opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-lg pointer-events-none">
                 {name}
               </span>
             </button>

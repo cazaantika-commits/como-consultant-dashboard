@@ -46,6 +46,8 @@ import {
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
+import { AgentChatBox, AgentType } from "@/components/AgentChatBox";
+import { MessageCircle } from "lucide-react";
 
 const STATUS_MAP: Record<string, { label: string; color: string; icon: any }> = {
   new: { label: "لم تبدأ", color: "bg-slate-100 text-slate-600 border-slate-200", icon: ListTodo },
@@ -81,6 +83,7 @@ export default function AgentDashboardPage() {
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("agents");
+  const [chatAgent, setChatAgent] = useState<{ type: AgentType; data: any } | null>(null);
 
   const { data: allTasks = [], isLoading } = trpc.tasks.list.useQuery();
   const { data: agentStats } = trpc.tasks.agentStats.useQuery();
@@ -246,11 +249,15 @@ export default function AgentDashboardPage() {
               <div className="mb-6">
                 <div className="premium-card p-6 gold-glow">
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${coordinator.color}20`, border: `2px solid ${coordinator.color}50` }}>
-                      {(() => {
-                        const IconComp = AGENT_ICONS[coordinator.icon || "crown"] || Crown;
-                        return <IconComp className="w-8 h-8" style={{ color: coordinator.color }} />;
-                      })()}
+                    <div className="relative">
+                      {coordinator.avatarUrl ? (
+                        <img src={coordinator.avatarUrl} alt={coordinator.name} className="w-16 h-16 rounded-2xl object-cover border-2 shadow-lg" style={{ borderColor: `${coordinator.color}50` }} />
+                      ) : (
+                        <div className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${coordinator.color}20`, border: `2px solid ${coordinator.color}50` }}>
+                          {(() => { const IconComp = AGENT_ICONS[coordinator.icon || "crown"] || Crown; return <IconComp className="w-8 h-8" style={{ color: coordinator.color }} />; })()}
+                        </div>
+                      )}
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white" />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
@@ -263,15 +270,22 @@ export default function AgentDashboardPage() {
                       </div>
                       <p className="text-sm text-muted-foreground">{coordinator.role}</p>
                       <p className="text-xs text-muted-foreground/80 mt-2 leading-relaxed">{coordinator.description}</p>
+                      {coordinator.age && <span className="text-[10px] text-muted-foreground/60 mt-1 block">العمر: {coordinator.age} سنة</span>}
                     </div>
                   </div>
-                  {coordinator.capabilities && coordinator.capabilities.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-border">
-                      {coordinator.capabilities.map((cap: string, idx: number) => (
-                        <span key={idx} className="text-xs px-2.5 py-1 rounded-full bg-primary/5 text-primary/80 border border-primary/10">{cap}</span>
-                      ))}
-                    </div>
-                  )}
+                  <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-border">
+                    {coordinator.capabilities && coordinator.capabilities.length > 0 && coordinator.capabilities.map((cap: string, idx: number) => (
+                      <span key={idx} className="text-xs px-2.5 py-1 rounded-full bg-primary/5 text-primary/80 border border-primary/10">{cap}</span>
+                    ))}
+                    <Button
+                      size="sm"
+                      className="mr-auto text-xs gap-1.5"
+                      onClick={() => setChatAgent({ type: (coordinator.nameEn?.toLowerCase() || 'salwa') as AgentType, data: coordinator })}
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      تحدث مع {coordinator.name}
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
@@ -288,17 +302,21 @@ export default function AgentDashboardPage() {
                 return (
                   <div key={agent.id} className="premium-card p-5 group hover-lift">
                     <div className="flex items-center gap-3 mb-3">
-                      <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110"
-                        style={{ backgroundColor: `color-mix(in oklch, ${agent.color || '#6366f1'} 10%, transparent)`, border: `1px solid color-mix(in oklch, ${agent.color || '#6366f1'} 15%, transparent)` }}
-                      >
-                        <IconComp className="w-5 h-5" style={{ color: agent.color }} />
+                      <div className="relative shrink-0">
+                        {agent.avatarUrl ? (
+                          <img src={agent.avatarUrl} alt={agent.name} className="w-12 h-12 rounded-xl object-cover border transition-transform group-hover:scale-110" style={{ borderColor: `${agent.color || '#6366f1'}30` }} />
+                        ) : (
+                          <div className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110" style={{ backgroundColor: `color-mix(in oklch, ${agent.color || '#6366f1'} 10%, transparent)`, border: `1px solid color-mix(in oklch, ${agent.color || '#6366f1'} 15%, transparent)` }}>
+                            <IconComp className="w-5 h-5" style={{ color: agent.color }} />
+                          </div>
+                        )}
+                        <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white ${agent.status === "active" ? "bg-emerald-500" : agent.status === "maintenance" ? "bg-amber-500" : "bg-gray-400"}`} />
                       </div>
                       <div className="min-w-0 flex-1">
                         <h4 className="font-bold text-foreground">{agent.name}</h4>
                         <p className="text-xs text-muted-foreground truncate">{agent.role}</p>
                       </div>
-                      <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${agent.status === "active" ? "bg-emerald-500" : agent.status === "maintenance" ? "bg-amber-500" : "bg-gray-400"}`} />
+
                     </div>
 
                     <p className="text-xs text-muted-foreground/80 leading-relaxed mb-3 line-clamp-2">{agent.description}</p>
@@ -327,18 +345,28 @@ export default function AgentDashboardPage() {
                       </div>
                     )}
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full mt-3 text-xs"
-                      onClick={() => {
-                        setFilterAgent(agent.name);
-                        setActiveTab("tasks");
-                      }}
-                    >
-                      <Filter className="w-3 h-3 ml-1" />
-                      عرض مهام {agent.name}
-                    </Button>
+                    <div className="flex gap-2 mt-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 text-xs"
+                        onClick={() => {
+                          setFilterAgent(agent.name);
+                          setActiveTab("tasks");
+                        }}
+                      >
+                        <Filter className="w-3 h-3 ml-1" />
+                        المهام
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="flex-1 text-xs gap-1"
+                        onClick={() => setChatAgent({ type: (agent.nameEn?.toLowerCase() || agent.name) as AgentType, data: agent })}
+                      >
+                        <MessageCircle className="w-3 h-3" />
+                        تحدث
+                      </Button>
+                    </div>
                   </div>
                 );
               })}
@@ -655,6 +683,14 @@ export default function AgentDashboardPage() {
           </TabsContent>
         </Tabs>
       </div>
+      {/* Agent Chat */}
+      {chatAgent && (
+        <AgentChatBox
+          agent={chatAgent.type}
+          agentData={chatAgent.data}
+          onClose={() => setChatAgent(null)}
+        />
+      )}
     </div>
   );
 }

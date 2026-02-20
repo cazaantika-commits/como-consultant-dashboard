@@ -170,6 +170,8 @@ export const agents = mysqlTable('agents', {
   capabilities: text('capabilities'), // JSON array of capabilities
   isCoordinator: int('isCoordinator').default(0).notNull(), // 1 for سلوى
   gender: mysqlEnum('gender', ['male', 'female']).default('male').notNull(),
+  avatarUrl: text('avatarUrl'),
+  age: int('age'),
   createdAt: timestamp('createdAt').defaultNow().notNull(),
   updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
 });

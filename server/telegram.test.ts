@@ -76,7 +76,7 @@ describe("Telegram Bot Module", () => {
     expect(source).toContain("فاروق");
     expect(source).toContain("براق");
     expect(source).toContain("خالد");
-    expect(source).toContain("قاسم");
+    expect(source).toContain("ألينا");
     expect(source).toContain("باز");
     expect(source).toContain("جويل");
   });
@@ -442,7 +442,7 @@ describe("Agent Registration in Database", () => {
     expect(names).toContain("فاروق");
     expect(names).toContain("براق");
     expect(names).toContain("خالد");
-    expect(names).toContain("قاسم");
+    expect(names).toContain("ألينا");
     expect(names).toContain("باز");
     expect(names).toContain("جويل");
   });
@@ -492,7 +492,7 @@ describe("Agent Registration in Database", () => {
     expect(agentMap.get("فاروق")?.role).toContain("محامي");
     expect(agentMap.get("براق")?.role).toContain("تنفيذ");
     expect(agentMap.get("خالد")?.role).toContain("جودة");
-    expect(agentMap.get("قاسم")?.role).toContain("مالي");
+    expect(agentMap.get("ألينا")?.role).toContain("مالي");
     expect(agentMap.get("باز")?.role).toContain("استراتيجي");
     expect(agentMap.get("جويل")?.role).toContain("جدوى");
   });

@@ -58,7 +58,7 @@ export const agentsRouter = router({
   // Chat with an agent
   chat: publicProcedure
     .input(z.object({
-      agent: z.enum(["salwa", "farouq", "khazen"]),
+      agent: z.enum(["salwa", "farouq", "khazen", "buraq", "khaled", "alina", "baz", "joelle"]),
       message: z.string()
     }))
     .mutation(async ({ ctx, input }) => {

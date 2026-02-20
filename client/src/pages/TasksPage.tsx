@@ -669,7 +669,7 @@ export default function TasksPage() {
                             <div>
                               <span className="font-bold text-sm">{name}</span>
                               <span className="text-xs text-muted-foreground block">
-                                {name === "قاسم" ? "وكيل الأرشفة" : name === "سلوى" ? "وكيلة التقييم" : "وكيل"}
+                                {name === "ألينا" ? "المديرة المالية" : name === "سلوى" ? "المنسقة" : "وكيل"}
                               </span>
                             </div>
                           </div>
@@ -699,7 +699,7 @@ export default function TasksPage() {
                   <div className="text-center py-4 text-muted-foreground text-sm">
                     <Bot className="w-10 h-10 mx-auto mb-2 opacity-30" />
                     <p>لم يقم أي وكيل بإنشاء مهام بعد</p>
-                    <p className="text-xs mt-1">الوكلاء (قاسم، سلوى) سيبدأون بإنشاء المهام تلقائياً من رسائل البريد الإلكتروني</p>
+                    <p className="text-xs mt-1">الوكلاء (ألينا، سلوى) سيبدأون بإنشاء المهام تلقائياً من رسائل البريد الإلكتروني</p>
                   </div>
                 )}
 
@@ -943,7 +943,7 @@ export default function TasksPage() {
                 <Input
                   value={form.sourceAgent}
                   onChange={(e) => setForm({ ...form, sourceAgent: e.target.value })}
-                  placeholder={form.source === "agent" ? "مثال: قاسم، سلوى" : "اسم المنشئ"}
+                  placeholder={form.source === "agent" ? "مثال: ألينا، سلوى" : "اسم المنشئ"}
                 />
               </div>
             )}

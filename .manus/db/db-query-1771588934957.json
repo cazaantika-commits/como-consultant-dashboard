@@ -1,0 +1,90 @@
+{
+  "query": "SELECT id, name, nameEn, role, gender, isCoordinator, icon, color FROM agents ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, name, nameEn, role, gender, isCoordinator, icon, color FROM agents ORDER BY id;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "سلوى",
+      "nameEn": "Salwa",
+      "role": "المنسقة والمساعدة التنفيذية الذكية",
+      "gender": "female",
+      "isCoordinator": "1",
+      "icon": "crown",
+      "color": "#c9a96e"
+    },
+    {
+      "id": "2",
+      "name": "خازن",
+      "nameEn": "Khazen",
+      "role": "مدير الأرشفة والتخزين",
+      "gender": "male",
+      "isCoordinator": "0",
+      "icon": "archive",
+      "color": "#60a5fa"
+    },
+    {
+      "id": "3",
+      "name": "فاروق",
+      "nameEn": "Farouq",
+      "role": "محامي خبير - العقود والقانون",
+      "gender": "male",
+      "isCoordinator": "0",
+      "icon": "scale",
+      "color": "#a78bfa"
+    },
+    {
+      "id": "4",
+      "name": "براق",
+      "nameEn": "Buraq",
+      "role": "مراقب التنفيذ والجدول الزمني",
+      "gender": "male",
+      "isCoordinator": "0",
+      "icon": "gauge",
+      "color": "#f97316"
+    },
+    {
+      "id": "5",
+      "name": "خالد",
+      "nameEn": "Khaled",
+      "role": "مدقق الجودة والامتثال الفني",
+      "gender": "male",
+      "isCoordinator": "0",
+      "icon": "shield-check",
+      "color": "#34d399"
+    },
+    {
+      "id": "6",
+      "name": "قاسم",
+      "nameEn": "Qasim",
+      "role": "المدير المالي ومراقب التكاليف",
+      "gender": "male",
+      "isCoordinator": "0",
+      "icon": "calculator",
+      "color": "#fbbf24"
+    },
+    {
+      "id": "7",
+      "name": "باز",
+      "nameEn": "Baz",
+      "role": "المستشار الاستراتيجي للابتكار والتحسين",
+      "gender": "male",
+      "isCoordinator": "0",
+      "icon": "rocket",
+      "color": "#f472b6"
+    },
+    {
+      "id": "8",
+      "name": "جويل",
+      "nameEn": "Joelle",
+      "role": "محللة دراسات الجدوى والسوق",
+      "gender": "female",
+      "isCoordinator": "0",
+      "icon": "bar-chart-2",
+      "color": "#22d3ee"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tnameEn\trole\tgender\tisCoordinator\ticon\tcolor\n1\tسلوى\tSalwa\tالمنسقة والمساعدة التنفيذية الذكية\tfemale\t1\tcrown\t#c9a96e\n2\tخازن\tKhazen\tمدير الأرشفة والتخزين\tmale\t0\tarchive\t#60a5fa\n3\tفاروق\tFarouq\tمحامي خبير - العقود والقانون\tmale\t0\tscale\t#a78bfa\n4\tبراق\tBuraq\tمراقب التنفيذ والجدول الزمني\tmale\t0\tgauge\t#f97316\n5\tخالد\tKhaled\tمدقق الجودة والامتثال الفني\tmale\t0\tshield-check\t#34d399\n6\tقاسم\tQasim\tالمدير المالي ومراقب التكاليف\tmale\t0\tcalculator\t#fbbf24\n7\tباز\tBaz\tالمستشار الاستراتيجي للابتكار والتحسين\tmale\t0\trocket\t#f472b6\n8\tجويل\tJoelle\tمحللة دراسات الجدوى والسوق\tfemale\t0\tbar-chart-2\t#22d3ee\n",
+  "stderr": "",
+  "execution_time_ms": 1514
+}
