@@ -76,7 +76,9 @@ export default function MeetingRoomPage() {
     onSuccess: () => refetchMeeting(),
   });
   const generateMinutes = trpc.meetings.generateMinutes.useMutation();
+  const retryTaskExecution = trpc.meetings.retryTaskExecution.useMutation();
   const saveToKnowledge = trpc.meetings.saveToKnowledge.useMutation();
+  const [isRetryingTasks, setIsRetryingTasks] = useState(false);
   const textToSpeech = trpc.agents.textToSpeech.useMutation();
 
   // Auto-scroll to bottom
@@ -722,13 +724,39 @@ export default function MeetingRoomPage() {
                     ))}
                   </div>
                   {meeting.status === "completed" && (
-                    <Button
-                      onClick={() => setLocation("/tasks")}
-                      variant="outline"
-                      className="mt-3 text-sm border-blue-200 text-blue-600 hover:bg-blue-50 w-full"
-                    >
-                      📋 عرض المهام في لوحة المهام
-                    </Button>
+                    <div className="mt-3 flex gap-2">
+                      <Button
+                        onClick={() => setLocation("/tasks")}
+                        variant="outline"
+                        className="text-sm border-blue-200 text-blue-600 hover:bg-blue-50 flex-1"
+                      >
+                        📋 عرض المهام في لوحة المهام
+                      </Button>
+                      <Button
+                        onClick={async () => {
+                          setIsRetryingTasks(true);
+                          try {
+                            const result = await retryTaskExecution.mutateAsync(meetingId);
+                            await refetchMessages();
+                            alert(`تم إنشاء ${result.createdCount} مهام من أصل ${result.totalTasks} وجاري تنفيذها`);
+                          } catch (err: any) {
+                            alert(err?.message || "فشل إعادة إنشاء المهام");
+                          } finally {
+                            setIsRetryingTasks(false);
+                          }
+                        }}
+                        variant="outline"
+                        className="text-sm border-amber-200 text-amber-600 hover:bg-amber-50 flex-1"
+                        disabled={isRetryingTasks}
+                      >
+                        {isRetryingTasks ? (
+                          <Loader2 className="w-4 h-4 ml-1 animate-spin" />
+                        ) : (
+                          <span>🔄</span>
+                        )}
+                        إعادة تنفيذ المهام
+                      </Button>
+                    </div>
                   )}
                 </div>
               )}

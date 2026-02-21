@@ -1,0 +1,22 @@
+{
+  "query": "SELECT id, messageText FROM meetingMessages WHERE meetingId = 30002 AND speakerId = 'system' ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, messageText FROM meetingMessages WHERE meetingId = 30002 AND speakerId = 'system' ORDER BY id;",
+  "rows": [
+    {
+      "id": "30012",
+      "messageText": "🟢 تم بدء الاجتماع. يمكنكم الآن النقاش."
+    },
+    {
+      "id": "30017",
+      "messageText": "🔴 تم إنهاء الاجتماع. جاري توليد المخرجات..."
+    },
+    {
+      "id": "30018",
+      "messageText": "⚠️ لم يتم توليد المخرجات تلقائياً. يمكنك توليدها يدوياً لاحقاً."
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tmessageText\n30012\t🟢 تم بدء الاجتماع. يمكنكم الآن النقاش.\n30017\t🔴 تم إنهاء الاجتماع. جاري توليد المخرجات...\n30018\t⚠️ لم يتم توليد المخرجات تلقائياً. يمكنك توليدها يدوياً لاحقاً.\n",
+  "stderr": "",
+  "execution_time_ms": 1488
+}

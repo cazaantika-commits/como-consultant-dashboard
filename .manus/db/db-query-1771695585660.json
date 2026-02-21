@@ -1,0 +1,61 @@
+{
+  "query": "SELECT * FROM tasks ORDER BY id DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT * FROM tasks ORDER BY id DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "30004",
+      "title": "مراجعة عروض الاستشاريين وتعبئة قيمة الاتعاب في اللوحة في الاتعاب المالية",
+      "description": "تسجيل اتعاب الاستشاريين لكافة المشاريع",
+      "project": "عام",
+      "category": "NULL",
+      "owner": "هذه مهمة للوكلاء",
+      "priority": "high",
+      "status": "new",
+      "progress": "0",
+      "dueDate": "NULL",
+      "attachment": "NULL",
+      "source": "command",
+      "sourceAgent": "سلوى-تيليجرام",
+      "createdAt": "2026-02-18 19:23:47",
+      "updatedAt": "2026-02-18 19:23:47"
+    },
+    {
+      "id": "30001",
+      "title": "الحصول على عروض اسعار للمسح الطوبغرافي لكافة الاراضي",
+      "description": "الحصول على عروض اسعار للمسح الطوبغرافي لكافة الاراضي",
+      "project": "عام",
+      "category": "NULL",
+      "owner": "عبدالرحمن",
+      "priority": "medium",
+      "status": "new",
+      "progress": "0",
+      "dueDate": "NULL",
+      "attachment": "NULL",
+      "source": "agent",
+      "sourceAgent": "سلوى-تيليجرام",
+      "createdAt": "2026-02-18 18:22:41",
+      "updatedAt": "2026-02-18 18:22:41"
+    },
+    {
+      "id": "1",
+      "title": "انسحاب وائل وحسام من شركة كومو ودخول الشيغ عيسى ",
+      "description": "NULL",
+      "project": "إداري",
+      "category": "قانوني",
+      "owner": "وائل و حسام ",
+      "priority": "medium",
+      "status": "new",
+      "progress": "0",
+      "dueDate": "2026-03-06",
+      "attachment": "NULL",
+      "source": "manual",
+      "sourceAgent": "NULL",
+      "createdAt": "2026-02-18 15:53:37",
+      "updatedAt": "2026-02-18 15:53:37"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitle\tdescription\tproject\tcategory\towner\tpriority\tstatus\tprogress\tdueDate\tattachment\tsource\tsourceAgent\tcreatedAt\tupdatedAt\n30004\tمراجعة عروض الاستشاريين وتعبئة قيمة الاتعاب في اللوحة في الاتعاب المالية\tتسجيل اتعاب الاستشاريين لكافة المشاريع\tعام\tNULL\tهذه مهمة للوكلاء\thigh\tnew\t0\tNULL\tNULL\tcommand\tسلوى-تيليجرام\t2026-02-18 19:23:47\t2026-02-18 19:23:47\n30001\tالحصول على عروض اسعار للمسح الطوبغرافي لكافة الاراضي\tالحصول على عروض اسعار للمسح الطوبغرافي لكافة الاراضي\tعام\tNULL\tعبدالرحمن\tmedium\tnew\t0\tNULL\tNULL\tagent\tسلوى-تيليجرام\t2026-02-18 18:22:41\t2026-02-18 18:22:41\n1\tانسحاب وائل وحسام من شركة كومو ودخول الشيغ عيسى \tNULL\tإداري\tقانوني\tوائل و حسام \tmedium\tnew\t0\t2026-03-06\tNULL\tmanual\tNULL\t2026-02-18 15:53:37\t2026-02-18 15:53:37\n",
+  "stderr": "",
+  "execution_time_ms": 1540
+}

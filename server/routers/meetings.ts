@@ -189,7 +189,9 @@ export const meetingsRouter = router({
         messageText: "🔴 تم إنهاء الاجتماع. جاري توليد المخرجات...",
       });
 
-      // === AUTO-GENERATE MINUTES ===
+      // === STEP 1: GENERATE MINUTES ===
+      let minutes: any = null;
+      let minutesGenerated = false;
       try {
         const allMessages = await db.select().from(meetingMessages)
           .where(eq(meetingMessages.meetingId, meetingId))
@@ -213,7 +215,12 @@ export const meetingsRouter = router({
           return `${speaker}: ${m.messageText}`;
         }).join("\n\n");
 
-        if (allMessages.filter(m => m.speakerType !== "agent" || m.speakerId !== "system").length > 0) {
+        // Fix: use AND instead of OR to filter out system messages
+        const hasRealMessages = allMessages.filter(m => !(m.speakerId === "system" && m.speakerType === "agent")).length > 0;
+
+        if (hasRealMessages) {
+          const meetingData = (await db.select().from(meetings).where(eq(meetings.id, meetingId)))[0];
+          
           // Generate minutes via LLM
           const response = await invokeLLM({
             messages: [
@@ -223,7 +230,7 @@ export const meetingsRouter = router({
               },
               {
                 role: "user",
-                content: `اجتماع: ${(await db.select().from(meetings).where(eq(meetings.id, meetingId)))[0]?.title || ""}\nالموضوع: ${(await db.select().from(meetings).where(eq(meetings.id, meetingId)))[0]?.topic || "عام"}\nالمشاركون: ${participantsList.map(p => `${p.agentName} (${p.agentRole})`).join("، ")} + المدير\nالملفات: ${files.map(f => f.fileName).join("، ") || "لا يوجد"}\n\nالنص الكامل:\n${transcript}`
+                content: `اجتماع: ${meetingData?.title || ""}\nالموضوع: ${meetingData?.topic || "عام"}\nالمشاركون: ${participantsList.map(p => `${p.agentName} (${p.agentRole})`).join("، ")} + المدير\nالملفات: ${files.map(f => f.fileName).join("، ") || "لا يوجد"}\n\nالنص الكامل:\n${transcript}`
               }
             ],
             response_format: {
@@ -287,7 +294,6 @@ export const meetingsRouter = router({
           });
 
           const content = response.choices[0]?.message?.content;
-          let minutes;
           try {
             minutes = typeof content === "string" ? JSON.parse(content) : content;
           } catch {
@@ -303,25 +309,62 @@ export const meetingsRouter = router({
             fullTranscript: transcript,
           }).where(eq(meetings.id, meetingId));
 
-          // === AUTO-SAVE TO KNOWLEDGE BASE ===
-          if (minutes.knowledgeItems?.length > 0) {
-            for (const item of minutes.knowledgeItems) {
-              const validTypes = ["decision", "evaluation", "pattern", "insight", "lesson"];
-              const itemType = validTypes.includes(item.type) ? item.type : "insight";
-              await db.insert(knowledgeBase).values({
-                userId: ctx.user.id,
-                type: itemType,
-                title: item.title,
-                content: item.content,
-                importance: "medium",
-                sourceAgent: "meeting",
-                tags: JSON.stringify([`meeting-${meetingId}`]),
-              });
-            }
-          }
+          minutesGenerated = true;
+          console.log(`[Meeting] Minutes generated for meeting ${meetingId}`);
 
-          // === SAVE MEETING SUMMARY TO EACH AGENT'S CHAT HISTORY ===
-          const meetingMemory = `📋 [ذاكرة اجتماع] عنوان: ${(await db.select().from(meetings).where(eq(meetings.id, meetingId)))[0]?.title}\n` +
+          // Success message for minutes
+          await db.insert(meetingMessages).values({
+            meetingId,
+            speakerId: "system",
+            speakerType: "agent",
+            messageText: "✅ تم توليد محضر الاجتماع والمخرجات تلقائياً. اضغط على 'المخرجات' لعرضها.",
+          });
+        }
+      } catch (err) {
+        console.error("[Meeting] Minutes generation failed:", err);
+        await db.insert(meetingMessages).values({
+          meetingId,
+          speakerId: "system",
+          speakerType: "agent",
+          messageText: "⚠️ لم يتم توليد المحضر تلقائياً. يمكنك الضغط على 'إعادة توليد' لاحقاً.",
+        });
+      }
+
+      // === STEP 2: SAVE TO KNOWLEDGE BASE (independent) ===
+      if (minutesGenerated && minutes?.knowledgeItems?.length > 0) {
+        try {
+          for (const item of minutes.knowledgeItems) {
+            const validTypes = ["decision", "evaluation", "pattern", "insight", "lesson"];
+            const itemType = validTypes.includes(item.type) ? item.type : "insight";
+            await db.insert(knowledgeBase).values({
+              userId: ctx.user.id,
+              type: itemType,
+              title: item.title,
+              content: item.content,
+              importance: "medium",
+              sourceAgent: "meeting",
+              tags: JSON.stringify([`meeting-${meetingId}`]),
+            });
+          }
+          console.log(`[Meeting] Knowledge items saved for meeting ${meetingId}`);
+        } catch (err) {
+          console.error("[Meeting] Knowledge base save failed:", err);
+        }
+      }
+
+      // === STEP 3: SAVE TO AGENT CHAT HISTORY (independent) ===
+      if (minutesGenerated && minutes) {
+        try {
+          const participantsList = await db.select({
+            agentName: agents.name,
+            agentNameEn: agents.nameEn,
+          })
+            .from(meetingParticipants)
+            .innerJoin(agents, eq(meetingParticipants.agentId, agents.id))
+            .where(eq(meetingParticipants.meetingId, meetingId));
+
+          const meetingData = (await db.select().from(meetings).where(eq(meetings.id, meetingId)))[0];
+          const meetingMemory = `📋 [ذاكرة اجتماع] عنوان: ${meetingData?.title}\n` +
             `📅 التاريخ: ${new Date().toLocaleDateString("ar-SA")}\n` +
             `👥 المشاركون: ${participantsList.map(p => p.agentName).join("، ")}\n` +
             `📝 الملخص: ${minutes.summary}\n` +
@@ -332,7 +375,6 @@ export const meetingsRouter = router({
           for (const participant of participantsList) {
             const agentKey = participant.agentNameEn?.toLowerCase() || "";
             if (agentKey) {
-              // Save as system message in agent's chat history
               await db.insert(chatHistory).values({
                 userId: ctx.user.id,
                 agent: agentKey,
@@ -341,100 +383,172 @@ export const meetingsRouter = router({
               });
             }
           }
+          console.log(`[Meeting] Chat history saved for meeting ${meetingId}`);
+        } catch (err) {
+          console.error("[Meeting] Chat history save failed:", err);
+        }
+      }
 
-          // Update system message with success
+      // === STEP 4: CREATE AND EXECUTE TASKS (independent) ===
+      if (minutesGenerated && minutes?.tasks?.length > 0) {
+        try {
           await db.insert(meetingMessages).values({
             meetingId,
             speakerId: "system",
             speakerType: "agent",
-            messageText: "✅ تم توليد محضر الاجتماع والمخرجات تلقائياً. اضغط على 'المخرجات' لعرضها.",
+            messageText: `⚙️ جاري إنشاء وتنفيذ ${minutes.tasks.length} مهام مستخرجة من الاجتماع...`,
           });
 
-          // === AUTO-CREATE AND EXECUTE TASKS ===
-          if (minutes.tasks?.length > 0) {
-            await db.insert(meetingMessages).values({
-              meetingId,
-              speakerId: "system",
-              speakerType: "agent",
-              messageText: `⚙️ جاري إنشاء وتنفيذ ${minutes.tasks.length} مهام مستخرجة من الاجتماع...`,
-            });
+          const meetingData = (await db.select().from(meetings).where(eq(meetings.id, meetingId)))[0];
+          const taskResults = await createTasksFromMeeting(
+            meetingId,
+            ctx.user.id,
+            meetingData?.title || "",
+            minutes.tasks
+          );
 
-            try {
-              // Step 1: Create tasks in the task system
-              const meetingData = (await db.select().from(meetings).where(eq(meetings.id, meetingId)))[0];
-              const taskResults = await createTasksFromMeeting(
-                meetingId,
-                ctx.user.id,
-                meetingData?.title || "",
-                minutes.tasks
-              );
+          const createdCount = taskResults.filter(r => r.status === "created").length;
+          console.log(`[Meeting] Created ${createdCount} tasks for meeting ${meetingId}`);
+          
+          await db.insert(meetingMessages).values({
+            meetingId,
+            speakerId: "system",
+            speakerType: "agent",
+            messageText: `📋 تم إنشاء ${createdCount} مهام في نظام المهام. جاري إسنادها للوكلاء للتنفيذ...`,
+          });
 
-              const createdCount = taskResults.filter(r => r.status === "created").length;
-              await db.insert(meetingMessages).values({
-                meetingId,
-                speakerId: "system",
-                speakerType: "agent",
-                messageText: `📋 تم إنشاء ${createdCount} مهام في نظام المهام. جاري إسنادها للوكلاء للتنفيذ...`,
-              });
-
-              // Step 2: Execute tasks by agents (async - don't block the response)
-              // We run this in background so the user gets the response immediately
-              const contextSummary = `عنوان الاجتماع: ${meetingData?.title}\nالملخص: ${minutes.summary}\nالقرارات: ${minutes.decisions?.map((d: any) => d.decision).join(", ") || "لا يوجد"}`;
-              
-              executeTasksByAgents(
-                meetingId,
-                ctx.user.id,
-                meetingData?.title || "",
-                taskResults,
-                contextSummary
-              ).then(async (executionResults) => {
-                const report = generateExecutionReport(executionResults);
-                const dbInner = await getDb();
-                if (dbInner) {
-                  await dbInner.insert(meetingMessages).values({
-                    meetingId,
-                    speakerId: "system",
-                    speakerType: "agent",
-                    messageText: report,
-                  });
-                }
-                // Send Telegram notification to owner
-                await notifyOwnerViaTelegram(meetingData?.title || "", executionResults);
-              }).catch(async (err) => {
-                console.error("[MeetingTaskExecutor] Background execution failed:", err);
-                const dbInner = await getDb();
-                if (dbInner) {
-                  await dbInner.insert(meetingMessages).values({
-                    meetingId,
-                    speakerId: "system",
-                    speakerType: "agent",
-                    messageText: `⚠️ فشل تنفيذ بعض المهام تلقائياً. يمكنك مراجعة المهام في لوحة المهام وطلب تنفيذها يدوياً.`,
-                  });
-                }
-              });
-
-            } catch (taskErr) {
-              console.error("[Meeting] Task creation failed:", taskErr);
-              await db.insert(meetingMessages).values({
+          // Execute tasks in background (don't block the response)
+          const contextSummary = `عنوان الاجتماع: ${meetingData?.title}\nالملخص: ${minutes.summary}\nالقرارات: ${minutes.decisions?.map((d: any) => d.decision).join(", ") || "لا يوجد"}`;
+          
+          executeTasksByAgents(
+            meetingId,
+            ctx.user.id,
+            meetingData?.title || "",
+            taskResults,
+            contextSummary
+          ).then(async (executionResults) => {
+            const report = generateExecutionReport(executionResults);
+            const dbInner = await getDb();
+            if (dbInner) {
+              await dbInner.insert(meetingMessages).values({
                 meetingId,
                 speakerId: "system",
                 speakerType: "agent",
-                messageText: "⚠️ لم يتم إنشاء المهام تلقائياً. يمكنك إنشاؤها يدوياً من لوحة المهام.",
+                messageText: report,
               });
             }
-          }
+            await notifyOwnerViaTelegram(meetingData?.title || "", executionResults);
+          }).catch(async (err) => {
+            console.error("[MeetingTaskExecutor] Background execution failed:", err);
+            const dbInner = await getDb();
+            if (dbInner) {
+              await dbInner.insert(meetingMessages).values({
+                meetingId,
+                speakerId: "system",
+                speakerType: "agent",
+                messageText: `⚠️ فشل تنفيذ بعض المهام تلقائياً. يمكنك الضغط على 'إعادة تنفيذ المهام' لإعادة المحاولة.`,
+              });
+            }
+          });
+
+        } catch (taskErr) {
+          console.error("[Meeting] Task creation failed:", taskErr);
+          await db.insert(meetingMessages).values({
+            meetingId,
+            speakerId: "system",
+            speakerType: "agent",
+            messageText: "⚠️ لم يتم إنشاء المهام تلقائياً. يمكنك الضغط على 'إعادة تنفيذ المهام' لإعادة المحاولة.",
+          });
         }
-      } catch (err) {
-        console.error("[Meeting] Auto-generate minutes failed:", err);
-        await db.insert(meetingMessages).values({
-          meetingId,
-          speakerId: "system",
-          speakerType: "agent",
-          messageText: "⚠️ لم يتم توليد المخرجات تلقائياً. يمكنك توليدها يدوياً لاحقاً.",
-        });
       }
 
-      return { success: true };
+      return { success: true, minutesGenerated };
+    }),
+
+  // Retry task creation and execution from existing meeting outputs
+  retryTaskExecution: protectedProcedure
+    .input(z.number())
+    .mutation(async ({ ctx, input: meetingId }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+      // Get meeting with existing outputs
+      const [meeting] = await db.select().from(meetings)
+        .where(and(eq(meetings.id, meetingId), eq(meetings.userId, ctx.user.id)));
+      if (!meeting) throw new TRPCError({ code: "NOT_FOUND", message: "الاجتماع غير موجود" });
+
+      // Parse existing tasks from meeting outputs
+      let extractedTasks: any[] = [];
+      try {
+        extractedTasks = meeting.extractedTasksJson ? JSON.parse(meeting.extractedTasksJson) : [];
+      } catch {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "لا توجد مهام مستخرجة من هذا الاجتماع. قم بتوليد المحضر أولاً." });
+      }
+
+      if (extractedTasks.length === 0) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "لا توجد مهام مستخرجة من هذا الاجتماع." });
+      }
+
+      await db.insert(meetingMessages).values({
+        meetingId,
+        speakerId: "system",
+        speakerType: "agent",
+        messageText: `🔄 إعادة إنشاء وتنفيذ ${extractedTasks.length} مهام...`,
+      });
+
+      // Create tasks
+      const taskResults = await createTasksFromMeeting(
+        meetingId,
+        ctx.user.id,
+        meeting.title,
+        extractedTasks
+      );
+
+      const createdCount = taskResults.filter(r => r.status === "created").length;
+      console.log(`[Meeting] Retry: Created ${createdCount} tasks for meeting ${meetingId}`);
+
+      await db.insert(meetingMessages).values({
+        meetingId,
+        speakerId: "system",
+        speakerType: "agent",
+        messageText: `📋 تم إنشاء ${createdCount} مهام. جاري إسنادها للوكلاء...`,
+      });
+
+      // Execute in background
+      const contextSummary = `عنوان الاجتماع: ${meeting.title}\nالملخص: ${meeting.minutesSummary || ""}\nالقرارات: ${meeting.decisionsJson ? JSON.parse(meeting.decisionsJson).map((d: any) => d.decision).join(", ") : "لا يوجد"}`;
+
+      executeTasksByAgents(
+        meetingId,
+        ctx.user.id,
+        meeting.title,
+        taskResults,
+        contextSummary
+      ).then(async (executionResults) => {
+        const report = generateExecutionReport(executionResults);
+        const dbInner = await getDb();
+        if (dbInner) {
+          await dbInner.insert(meetingMessages).values({
+            meetingId,
+            speakerId: "system",
+            speakerType: "agent",
+            messageText: report,
+          });
+        }
+        await notifyOwnerViaTelegram(meeting.title, executionResults);
+      }).catch(async (err) => {
+        console.error("[MeetingTaskExecutor] Retry execution failed:", err);
+        const dbInner = await getDb();
+        if (dbInner) {
+          await dbInner.insert(meetingMessages).values({
+            meetingId,
+            speakerId: "system",
+            speakerType: "agent",
+            messageText: `⚠️ فشل تنفيذ المهام. حاول مرة أخرى لاحقاً.`,
+          });
+        }
+      });
+
+      return { success: true, createdCount, totalTasks: extractedTasks.length };
     }),
 
   // Upload a file to a meeting
