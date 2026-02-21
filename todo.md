@@ -521,3 +521,9 @@
 - [x] بناء سجل تنفيذ مفصل (execution log) لكل مهمة + جدول taskExecutionLogs
 - [x] بناء لوحة متابعة العمليات (operations dashboard) + إحصائيات أداء الوكلاء
 - [ ] اختبار شامل مع سيناريوهات حقيقية (يحتاج اجتماع جديد للاختبار)
+
+## ربط Google Drive بالوكلاء - فبراير 21
+- [x] إضافة أدوات Google Drive كـ agent tools (list_drive_folders, list_drive_files, search_drive_files, get_drive_file_info, copy_drive_file, create_drive_folder)
+- [x] ربط الأدوات بخازن (كل الأدوات - قراءة وكتابة) + سلوى وفاروق (قراءة فقط)
+- [x] تحديث taskExecutionEngine بقدرات Drive لخازن
+- [x] اختبار الأدوات والتحقق من عملها (12 tests passed)

@@ -14,6 +14,10 @@ import {
   meetings, meetingParticipants, meetingFiles, meetingMessages,
   knowledgeBase
 } from "../drizzle/schema";
+import {
+  listSharedDrives, listFilesInFolder, searchFiles as searchDriveFiles,
+  copyFile, createFolder, getFileMetadata
+} from "./googleDrive";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 
 // ═══════════════════════════════════════════════════
@@ -441,6 +445,94 @@ export const AGENT_TOOLS = [
       },
     },
   },
+  // ─── GOOGLE DRIVE TOOLS ───
+  {
+    type: "function" as const,
+    function: {
+      name: "list_drive_folders",
+      description: "عرض المجلدات الرئيسية المشتركة في Google Drive - استخدم هذه الأداة أولاً لمعرفة المجلدات المتاحة قبل استعراض محتوياتها",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "list_drive_files",
+      description: "عرض الملفات والمجلدات داخل مجلد معين في Google Drive - أدخل معرف المجلد (folderId) لاستعراض محتوياته",
+      parameters: {
+        type: "object",
+        properties: {
+          folderId: { type: "string", description: "معرف المجلد في Google Drive" },
+        },
+        required: ["folderId"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "search_drive_files",
+      description: "بحث عن ملفات في Google Drive بالاسم - يبحث في جميع المجلدات المشتركة أو في مجلد محدد",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "نص البحث (اسم الملف أو جزء منه)" },
+          folderId: { type: "string", description: "معرف المجلد للبحث فيه فقط (اختياري - إذا لم يُحدد يبحث في الكل)" },
+        },
+        required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "get_drive_file_info",
+      description: "الحصول على معلومات تفصيلية عن ملف أو مجلد في Google Drive (الاسم، النوع، الحجم، تاريخ التعديل، رابط المشاهدة)",
+      parameters: {
+        type: "object",
+        properties: {
+          fileId: { type: "string", description: "معرف الملف في Google Drive" },
+        },
+        required: ["fileId"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "copy_drive_file",
+      description: "نسخ ملف من مكان لآخر في Google Drive - مفيد لتنظيم الملفات ونقلها بين المجلدات",
+      parameters: {
+        type: "object",
+        properties: {
+          fileId: { type: "string", description: "معرف الملف المراد نسخه" },
+          destinationFolderId: { type: "string", description: "معرف المجلد الهدف" },
+          newName: { type: "string", description: "اسم جديد للملف (اختياري)" },
+        },
+        required: ["fileId", "destinationFolderId"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "create_drive_folder",
+      description: "إنشاء مجلد جديد داخل مجلد موجود في Google Drive - مفيد لتنظيم الملفات في هيكل مجلدات منظم",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "اسم المجلد الجديد" },
+          parentFolderId: { type: "string", description: "معرف المجلد الأب" },
+        },
+        required: ["name", "parentFolderId"],
+      },
+    },
+  },
+  // ─── INTER-AGENT ───
   {
     type: "function" as const,
     function: {
@@ -488,7 +580,7 @@ const WRITE_TOOL_NAMES = new Set([
   "add_consultant", "update_consultant", "add_consultant_to_project",
   "remove_consultant_from_project", "set_evaluation_score", "set_financial_data",
   "add_project", "add_task", "update_task_status", "update_consultant_profile",
-  "add_consultant_note"
+  "add_consultant_note", "copy_drive_file", "create_drive_folder"
 ]);
 
 // Current agent context for assignment logging
@@ -1039,6 +1131,89 @@ async function _executeToolInternal(
         return JSON.stringify({ success: true, ...searchResults });
       }
 
+      // ─── GOOGLE DRIVE ───
+      case "list_drive_folders": {
+        const folders = await listSharedDrives();
+        if (folders.length === 0) return JSON.stringify({ message: "لا توجد مجلدات مشتركة", data: [] });
+        return JSON.stringify({
+          message: `${folders.length} مجلد مشترك في Google Drive`,
+          data: folders.map(f => ({ id: f.id, name: f.name, type: f.mimeType === 'application/vnd.google-apps.folder' ? 'مجلد' : 'ملف' }))
+        });
+      }
+
+      case "list_drive_files": {
+        const { folderId } = args;
+        if (!folderId) return JSON.stringify({ error: "يجب تحديد معرف المجلد (folderId)" });
+        const result = await listFilesInFolder(folderId);
+        if (result.files.length === 0) return JSON.stringify({ message: "المجلد فارغ", data: [] });
+        return JSON.stringify({
+          message: `${result.files.length} ملف/مجلد`,
+          data: result.files.map(f => ({
+            id: f.id, name: f.name,
+            type: f.mimeType === 'application/vnd.google-apps.folder' ? 'مجلد' : f.mimeType,
+            size: f.size ? `${Math.round(parseInt(f.size) / 1024)} KB` : undefined,
+            modified: f.modifiedTime,
+            link: f.webViewLink,
+          })),
+          hasMore: !!result.nextPageToken,
+        });
+      }
+
+      case "search_drive_files": {
+        const { query, folderId } = args;
+        if (!query) return JSON.stringify({ error: "يجب تحديد نص البحث (query)" });
+        const files = await searchDriveFiles(query, folderId);
+        if (files.length === 0) return JSON.stringify({ message: `لم يتم العثور على ملفات تطابق "${query}"`, data: [] });
+        return JSON.stringify({
+          message: `${files.length} نتيجة للبحث عن "${query}"`,
+          data: files.map(f => ({
+            id: f.id, name: f.name,
+            type: f.mimeType === 'application/vnd.google-apps.folder' ? 'مجلد' : f.mimeType,
+            size: f.size ? `${Math.round(parseInt(f.size) / 1024)} KB` : undefined,
+            modified: f.modifiedTime,
+            link: f.webViewLink,
+          }))
+        });
+      }
+
+      case "get_drive_file_info": {
+        const { fileId } = args;
+        if (!fileId) return JSON.stringify({ error: "يجب تحديد معرف الملف (fileId)" });
+        const file = await getFileMetadata(fileId);
+        return JSON.stringify({
+          message: `معلومات الملف: ${file.name}`,
+          data: {
+            id: file.id, name: file.name,
+            type: file.mimeType === 'application/vnd.google-apps.folder' ? 'مجلد' : file.mimeType,
+            size: file.size ? `${Math.round(parseInt(file.size) / 1024)} KB` : undefined,
+            created: file.createdTime,
+            modified: file.modifiedTime,
+            link: file.webViewLink,
+          }
+        });
+      }
+
+      case "copy_drive_file": {
+        const { fileId, destinationFolderId, newName } = args;
+        if (!fileId || !destinationFolderId) return JSON.stringify({ error: "يجب تحديد معرف الملف ومعرف المجلد الهدف" });
+        const copied = await copyFile(fileId, destinationFolderId, newName);
+        return JSON.stringify({
+          message: `تم نسخ الملف بنجاح: ${copied.name}`,
+          data: { id: copied.id, name: copied.name, link: copied.webViewLink }
+        });
+      }
+
+      case "create_drive_folder": {
+        const { name, parentFolderId } = args;
+        if (!name || !parentFolderId) return JSON.stringify({ error: "يجب تحديد اسم المجلد ومعرف المجلد الأب" });
+        const folder = await createFolder(name, parentFolderId);
+        return JSON.stringify({
+          message: `تم إنشاء المجلد بنجاح: ${folder.name}`,
+          data: { id: folder.id, name: folder.name }
+        });
+      }
+
+      // ─── INTER-AGENT ───
       case "ask_another_agent": {
         // Agent-to-agent communication - import agentChat and call it
         const { targetAgent, question } = args;
@@ -1125,6 +1300,8 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "get_evaluator_scores", "get_feasibility_study",
     "list_meetings", "get_meeting_details", "get_meeting_tasks_status",
     "search_all_data", "query_institutional_memory",
+    "list_drive_folders", "list_drive_files", "search_drive_files",
+    "get_drive_file_info",
     "ask_another_agent",
   ],
   farouq: [
@@ -1134,6 +1311,8 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "set_evaluation_score", "set_financial_data", "add_consultant_note",
     "update_consultant_profile", "add_consultant",
     "list_meetings", "get_meeting_details", "query_institutional_memory",
+    "list_drive_folders", "list_drive_files", "search_drive_files",
+    "get_drive_file_info",
     "ask_another_agent",
   ],
   khaled: [
@@ -1176,6 +1355,8 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "list_projects", "list_consultants", "get_consultant_profile",
     "add_consultant_note", "list_tasks",
     "list_meetings", "get_meeting_details", "query_institutional_memory",
+    "list_drive_folders", "list_drive_files", "search_drive_files",
+    "get_drive_file_info", "copy_drive_file", "create_drive_folder",
     "ask_another_agent",
   ],
 };

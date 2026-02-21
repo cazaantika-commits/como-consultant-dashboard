@@ -80,7 +80,7 @@ const AGENT_WRITE_CAPABILITIES: Record<AgentType, string[]> = {
   khaled: ["set_evaluation_score", "add_consultant_note"],
   alina: ["set_financial_data"],
   buraq: ["add_task", "update_task_status"],
-  khazen: ["add_consultant_note"],
+  khazen: ["add_consultant_note", "copy_drive_file", "create_drive_folder", "list_drive_files", "search_drive_files"],
   baz: ["add_task"],
   joelle: [],
 };
@@ -91,7 +91,7 @@ const AGENT_READ_CAPABILITIES: Record<AgentType, string[]> = {
   khaled: ["list_projects", "list_consultants", "get_project_consultants", "get_evaluation_scores", "get_evaluator_scores", "get_financial_data", "get_evaluation_criteria", "get_consultant_profile", "list_meetings", "get_meeting_details", "query_institutional_memory"],
   alina: ["list_projects", "list_consultants", "get_project_consultants", "get_financial_data", "get_evaluation_scores", "get_evaluation_criteria", "get_feasibility_study", "get_consultant_profile", "list_meetings", "get_meeting_details", "query_institutional_memory"],
   buraq: ["list_projects", "list_consultants", "list_tasks", "get_project_consultants", "list_meetings", "get_meeting_tasks_status", "query_institutional_memory"],
-  khazen: ["list_projects", "list_consultants", "get_consultant_profile", "list_tasks", "list_meetings", "get_meeting_details", "query_institutional_memory"],
+  khazen: ["list_projects", "list_consultants", "get_consultant_profile", "list_tasks", "list_meetings", "get_meeting_details", "query_institutional_memory", "list_drive_folders", "list_drive_files", "search_drive_files", "get_drive_file_info"],
   baz: ["list_projects", "list_consultants", "get_project_consultants", "get_evaluation_scores", "get_financial_data", "get_evaluation_criteria", "get_consultant_profile", "get_committee_decision", "list_tasks", "list_meetings", "get_meeting_details", "query_institutional_memory"],
   joelle: ["list_projects", "list_consultants", "get_project_consultants", "get_financial_data", "get_evaluation_scores", "get_evaluation_criteria", "get_feasibility_study", "get_consultant_profile", "get_committee_decision", "list_meetings", "get_meeting_details", "query_institutional_memory"],
 };
