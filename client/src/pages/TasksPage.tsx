@@ -46,10 +46,12 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { toast } from "sonner";
+import { Settings } from "lucide-react";
 
-const PROJECTS = [
+// Fallback defaults (used while loading from DB)
+const DEFAULT_PROJECTS = [
   "إداري",
   "ند الشبا",
   "الجداف",
@@ -58,7 +60,7 @@ const PROJECTS = [
   "مبنى مجان",
 ];
 
-const CATEGORIES = [
+const DEFAULT_CATEGORIES = [
   "تصميم",
   "تراخيص",
   "قانوني",
@@ -121,6 +123,16 @@ export default function TasksPage() {
   const { data: stats } = trpc.tasks.stats.useQuery();
   const { data: agentStats } = trpc.tasks.agentStats.useQuery();
   const { data: agentActivity = [] } = trpc.tasks.agentActivity.useQuery();
+
+  // Dynamic projects & categories from DB
+  const { data: dbProjects } = trpc.taskSettings.listProjects.useQuery();
+  const { data: dbCategories } = trpc.taskSettings.listCategories.useQuery();
+  const PROJECTS = (dbProjects && dbProjects.length > 0)
+    ? dbProjects.filter((p: any) => p.isActive === 'true').map((p: any) => p.name)
+    : DEFAULT_PROJECTS;
+  const CATEGORIES = (dbCategories && dbCategories.length > 0)
+    ? dbCategories.filter((c: any) => c.isActive === 'true').map((c: any) => c.name)
+    : DEFAULT_CATEGORIES;
 
   const createMutation = trpc.tasks.create.useMutation({
     onSuccess: () => {
@@ -340,6 +352,16 @@ export default function TasksPage() {
               <Plus className="w-4 h-4 ml-1" />
               مهمة جديدة
             </Button>
+            <Link href="/task-settings">
+              <Button
+                variant="outline"
+                className="text-white border-white/50 hover:bg-white/10"
+                size="sm"
+              >
+                <Settings className="w-4 h-4 ml-1" />
+                إعدادات
+              </Button>
+            </Link>
             <Button
               variant="outline"
               onClick={() => navigate("/")}

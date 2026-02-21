@@ -360,3 +360,31 @@ export const agentAssignments = mysqlTable('agentAssignments', {
 
 export type AgentAssignment = typeof agentAssignments.$inferSelect;
 export type InsertAgentAssignment = typeof agentAssignments.$inferInsert;
+
+// Task Projects - المشاريع (ديناميكية)
+export const taskProjects = mysqlTable('taskProjects', {
+  id: int('id').primaryKey().autoincrement(),
+  name: varchar('name', { length: 255 }).notNull().unique(),
+  color: varchar('color', { length: 50 }).default('#6366f1'),
+  icon: varchar('icon', { length: 50 }),
+  isActive: mysqlEnum('isActive', ['true', 'false']).default('true').notNull(),
+  sortOrder: int('sortOrder').default(0),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+
+export type TaskProject = typeof taskProjects.$inferSelect;
+export type InsertTaskProject = typeof taskProjects.$inferInsert;
+
+// Task Categories - التصنيفات (ديناميكية)
+export const taskCategories = mysqlTable('taskCategories', {
+  id: int('id').primaryKey().autoincrement(),
+  name: varchar('name', { length: 255 }).notNull().unique(),
+  color: varchar('color', { length: 50 }).default('#8b5cf6'),
+  icon: varchar('icon', { length: 50 }),
+  isActive: mysqlEnum('isActive', ['true', 'false']).default('true').notNull(),
+  sortOrder: int('sortOrder').default(0),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+
+export type TaskCategory = typeof taskCategories.$inferSelect;
+export type InsertTaskCategory = typeof taskCategories.$inferInsert;

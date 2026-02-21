@@ -22,6 +22,7 @@ import ConsultantCommitteePage from "./pages/ConsultantCommitteePage";
 import ModelStatsPage from "./pages/ModelStatsPage";
 import AgentAssignmentsPage from "./pages/AgentAssignmentsPage";
 import ConversationHistoryPage from "./pages/ConversationHistoryPage";
+import TaskSettingsPage from "./pages/TaskSettingsPage";
 
 function Router() {
   return (
@@ -44,6 +45,7 @@ function Router() {
       <Route path="/model-stats" component={ModelStatsPage} />
       <Route path="/agent-assignments" component={AgentAssignmentsPage} />
       <Route path="/conversation-history" component={ConversationHistoryPage} />
+      <Route path="/task-settings" component={TaskSettingsPage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

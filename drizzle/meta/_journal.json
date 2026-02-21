@@ -85,6 +85,13 @@
       "when": 1771626750540,
       "tag": "0011_bored_stranger",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1771663536674,
+      "tag": "0012_rapid_stark_industries",
+      "breakpoints": true
     }
   ]
 }
