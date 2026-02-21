@@ -31,6 +31,7 @@ import {
   Target,
   Activity,
   ClipboardList,
+  BookOpen,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { AgentChatBox, AgentType } from "@/components/AgentChatBox";
