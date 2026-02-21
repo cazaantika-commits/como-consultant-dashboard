@@ -8,7 +8,7 @@ import { TRPCError } from "@trpc/server";
 import { handleAgentChat } from "../agentChat";
 import { transcribeAudio } from "../_core/voiceTranscription";
 import { invokeLLM } from "../_core/llm";
-import { createTasksFromMeeting, executeTasksByAgents, generateExecutionReport } from "../meetingTaskExecutor";
+import { createTasksFromMeeting, executeTasksByAgents, generateExecutionReport, notifyOwnerViaTelegram } from "../meetingTaskExecutor";
 
 const agentNameEnum = z.enum(["salwa", "farouq", "khazen", "buraq", "khaled", "alina", "baz", "joelle"]);
 
@@ -398,6 +398,8 @@ export const meetingsRouter = router({
                     messageText: report,
                   });
                 }
+                // Send Telegram notification to owner
+                await notifyOwnerViaTelegram(meetingData?.title || "", executionResults);
               }).catch(async (err) => {
                 console.error("[MeetingTaskExecutor] Background execution failed:", err);
                 const dbInner = await getDb();

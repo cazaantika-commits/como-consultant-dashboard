@@ -10,7 +10,9 @@ import {
   consultants, projects, projectConsultants, financialData,
   evaluationScores, evaluatorScores, committeeDecisions,
   consultantDetails, consultantProfiles, consultantNotes,
-  tasks, feasibilityStudies, agents, agentAssignments
+  tasks, feasibilityStudies, agents, agentAssignments,
+  meetings, meetingParticipants, meetingFiles, meetingMessages,
+  knowledgeBase
 } from "../drizzle/schema";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 
@@ -377,6 +379,63 @@ export const AGENT_TOOLS = [
             description: "نوع المعرفة المطلوبة (اختياري - افتراضياً: all)" 
           },
           limit: { type: "number", description: "عدد النتائج المطلوبة (افتراضياً: 10)" },
+        },
+        required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "list_meetings",
+      description: "عرض جميع الاجتماعات المسجلة في المنصة مع تفاصيلها (العنوان، الحالة، المشاركون، التاريخ). استخدم هذه الأداة للإجابة عن أي سؤال يتعلق بالاجتماعات السابقة أو الحالية.",
+      parameters: {
+        type: "object",
+        properties: {
+          status: { type: "string", enum: ["active", "ended", "all"], description: "حالة الاجتماعات (افتراضياً: all)" },
+          limit: { type: "number", description: "عدد النتائج (افتراضياً: 20)" },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "get_meeting_details",
+      description: "عرض تفاصيل اجتماع محدد بما في ذلك المشاركون، الملفات المرفقة، الرسائل، المخرجات (محضر، قرارات، مهام)، والمعرفة المستخرجة. استخدم هذه الأداة عند السؤال عن اجتماع معين أو ما تم مناقشته فيه.",
+      parameters: {
+        type: "object",
+        properties: {
+          meetingId: { type: "number", description: "رقم الاجتماع" },
+        },
+        required: ["meetingId"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "get_meeting_tasks_status",
+      description: "عرض حالة تنفيذ المهام المستخرجة من اجتماع معين - هل تم تنفيذها أم لا، ومن المسؤول عن كل مهمة ونتيجة التنفيذ.",
+      parameters: {
+        type: "object",
+        properties: {
+          meetingId: { type: "number", description: "رقم الاجتماع" },
+        },
+        required: ["meetingId"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "search_all_data",
+      description: "بحث شامل في جميع بيانات المنصة - المشاريع، الاستشاريين، المهام، الاجتماعات، قاعدة المعرفة، القرارات، الأتعاب. استخدم هذه الأداة عندما لا تعرف أين تبحث أو تحتاج نظرة شاملة.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "كلمات البحث" },
         },
         required: ["query"],
       },
@@ -876,6 +935,110 @@ async function _executeToolInternal(
         });
       }
 
+      case "list_meetings": {
+        const db = await getDb();
+        if (!db) return JSON.stringify({ error: "قاعدة البيانات غير متاحة" });
+        const statusFilter = args.status || "all";
+        const limitNum = args.limit || 20;
+        let meetingsList;
+        if (statusFilter === "all") {
+          meetingsList = await db.select().from(meetings).orderBy(desc(meetings.createdAt)).limit(limitNum);
+        } else {
+          meetingsList = await db.select().from(meetings).where(eq(meetings.status, statusFilter)).orderBy(desc(meetings.createdAt)).limit(limitNum);
+        }
+        // Get participants for each meeting
+        const results = [];
+        for (const m of meetingsList) {
+          const participants = await db.select().from(meetingParticipants).where(eq(meetingParticipants.meetingId, m.id));
+          results.push({
+            id: m.id,
+            title: m.title,
+            agenda: m.agenda,
+            status: m.status,
+            participants: participants.map(p => p.agentId).join(", "),
+            createdAt: m.createdAt,
+            endedAt: m.endedAt,
+          });
+        }
+        return JSON.stringify({ success: true, count: results.length, meetings: results });
+      }
+
+      case "get_meeting_details": {
+        const db = await getDb();
+        if (!db) return JSON.stringify({ error: "قاعدة البيانات غير متاحة" });
+        const { meetingId } = args;
+        const [meeting] = await db.select().from(meetings).where(eq(meetings.id, meetingId));
+        if (!meeting) return JSON.stringify({ error: "الاجتماع غير موجود" });
+        const participants = await db.select().from(meetingParticipants).where(eq(meetingParticipants.meetingId, meetingId));
+        const files = await db.select().from(meetingFiles).where(eq(meetingFiles.meetingId, meetingId));
+        const msgs = await db.select().from(meetingMessages).where(eq(meetingMessages.meetingId, meetingId)).orderBy(meetingMessages.createdAt).limit(100);
+        // Get related tasks
+        const relatedTasks = await db.select().from(tasks).where(eq(tasks.source, `meeting-${meetingId}`));
+        return JSON.stringify({
+          success: true,
+          meeting: {
+            id: meeting.id,
+            title: meeting.title,
+            agenda: meeting.agenda,
+            status: meeting.status,
+            minutes: meeting.minutes,
+            decisions: meeting.decisions,
+            createdAt: meeting.createdAt,
+            endedAt: meeting.endedAt,
+          },
+          participants: participants.map(p => ({ agent: p.agentId, role: p.role })),
+          files: files.map(f => ({ name: f.fileName, type: f.fileType, analysis: f.aiAnalysis })),
+          messages: msgs.map(m => ({ sender: m.senderType === "user" ? "المدير" : m.senderAgent || "unknown", content: m.content, time: m.createdAt })),
+          tasks: relatedTasks.map(t => ({ id: t.id, title: t.title, status: t.status, assignedTo: t.assignedTo })),
+          totalMessages: msgs.length,
+        });
+      }
+
+      case "get_meeting_tasks_status": {
+        const db = await getDb();
+        if (!db) return JSON.stringify({ error: "قاعدة البيانات غير متاحة" });
+        const relatedTasks = await db.select().from(tasks).where(eq(tasks.source, `meeting-${args.meetingId}`));
+        if (relatedTasks.length === 0) {
+          return JSON.stringify({ success: true, message: "لا توجد مهام مرتبطة بهذا الاجتماع", tasks: [] });
+        }
+        const completed = relatedTasks.filter(t => t.status === "completed").length;
+        const pending = relatedTasks.filter(t => t.status === "pending").length;
+        const inProgress = relatedTasks.filter(t => t.status === "in_progress").length;
+        return JSON.stringify({
+          success: true,
+          summary: { total: relatedTasks.length, completed, pending, inProgress, completionRate: Math.round((completed / relatedTasks.length) * 100) + "%" },
+          tasks: relatedTasks.map(t => ({ id: t.id, title: t.title, status: t.status, assignedTo: t.assignedTo, description: t.description })),
+        });
+      }
+
+      case "search_all_data": {
+        const db = await getDb();
+        if (!db) return JSON.stringify({ error: "قاعدة البيانات غير متاحة" });
+        const q = args.query;
+        const searchResults: any = { query: q };
+        // Search projects
+        const matchedProjects = await db.select().from(projects).where(sql`${projects.name} LIKE ${`%${q}%`} OR ${projects.description} LIKE ${`%${q}%`}`).limit(5);
+        if (matchedProjects.length > 0) searchResults.projects = matchedProjects.map(p => ({ id: p.id, name: p.name, description: p.description }));
+        // Search consultants
+        const matchedConsultants = await db.select().from(consultants).where(sql`${consultants.name} LIKE ${`%${q}%`} OR ${consultants.email} LIKE ${`%${q}%`}`).limit(5);
+        if (matchedConsultants.length > 0) searchResults.consultants = matchedConsultants.map(c => ({ id: c.id, name: c.name, email: c.email }));
+        // Search tasks
+        const matchedTasks = await db.select().from(tasks).where(sql`${tasks.title} LIKE ${`%${q}%`} OR ${tasks.description} LIKE ${`%${q}%`}`).limit(5);
+        if (matchedTasks.length > 0) searchResults.tasks = matchedTasks.map(t => ({ id: t.id, title: t.title, status: t.status, assignedTo: t.assignedTo }));
+        // Search meetings
+        const matchedMeetings = await db.select().from(meetings).where(sql`${meetings.title} LIKE ${`%${q}%`} OR ${meetings.agenda} LIKE ${`%${q}%`} OR ${meetings.minutes} LIKE ${`%${q}%`}`).limit(5);
+        if (matchedMeetings.length > 0) searchResults.meetings = matchedMeetings.map(m => ({ id: m.id, title: m.title, status: m.status }));
+        // Search knowledge base
+        const matchedKnowledge = await db.select().from(knowledgeBase).where(sql`${knowledgeBase.title} LIKE ${`%${q}%`} OR ${knowledgeBase.content} LIKE ${`%${q}%`}`).limit(5);
+        if (matchedKnowledge.length > 0) searchResults.knowledge = matchedKnowledge.map(k => ({ id: k.id, title: k.title, type: k.type, summary: k.summary }));
+        // Search financial data
+        const matchedFees = await db.select().from(financialData).limit(10);
+        if (matchedFees.length > 0) searchResults.financialRecords = matchedFees.length + " سجل مالي متاح";
+        const totalResults = (searchResults.projects?.length || 0) + (searchResults.consultants?.length || 0) + (searchResults.tasks?.length || 0) + (searchResults.meetings?.length || 0) + (searchResults.knowledge?.length || 0);
+        searchResults.totalResults = totalResults;
+        return JSON.stringify({ success: true, ...searchResults });
+      }
+
       case "ask_another_agent": {
         // Agent-to-agent communication - import agentChat and call it
         const { targetAgent, question } = args;
@@ -958,44 +1121,62 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "get_evaluation_scores", "get_financial_data", "get_evaluation_criteria",
     "list_tasks", "add_consultant", "add_consultant_to_project",
     "add_project", "add_task", "update_task_status",
-    "get_consultant_profile", "get_committee_decision", "ask_another_agent",
+    "get_consultant_profile", "get_committee_decision",
+    "get_evaluator_scores", "get_feasibility_study",
+    "list_meetings", "get_meeting_details", "get_meeting_tasks_status",
+    "search_all_data", "query_institutional_memory",
+    "ask_another_agent",
   ],
   farouq: [
     "list_projects", "list_consultants", "get_project_consultants",
     "get_evaluation_scores", "get_evaluator_scores", "get_financial_data",
     "get_evaluation_criteria", "get_consultant_profile", "get_committee_decision",
     "set_evaluation_score", "set_financial_data", "add_consultant_note",
-    "update_consultant_profile", "add_consultant", "ask_another_agent",
+    "update_consultant_profile", "add_consultant",
+    "list_meetings", "get_meeting_details", "query_institutional_memory",
+    "ask_another_agent",
   ],
   khaled: [
     "list_projects", "list_consultants", "get_project_consultants",
     "get_evaluation_scores", "get_evaluator_scores", "get_financial_data",
     "get_evaluation_criteria", "get_consultant_profile",
-    "set_evaluation_score", "add_consultant_note", "ask_another_agent",
+    "set_evaluation_score", "add_consultant_note",
+    "list_meetings", "get_meeting_details", "query_institutional_memory",
+    "ask_another_agent",
   ],
   alina: [
     "list_projects", "list_consultants", "get_project_consultants",
     "get_financial_data", "get_evaluation_scores", "get_evaluation_criteria",
-    "get_feasibility_study", "set_financial_data", "get_consultant_profile", "ask_another_agent",
+    "get_feasibility_study", "set_financial_data", "get_consultant_profile",
+    "list_meetings", "get_meeting_details", "query_institutional_memory",
+    "ask_another_agent",
   ],
   joelle: [
     "list_projects", "list_consultants", "get_project_consultants",
     "get_financial_data", "get_evaluation_scores", "get_evaluation_criteria",
-    "get_feasibility_study", "get_consultant_profile", "get_committee_decision", "ask_another_agent",
+    "get_feasibility_study", "get_consultant_profile", "get_committee_decision",
+    "list_meetings", "get_meeting_details", "query_institutional_memory",
+    "ask_another_agent",
   ],
   baz: [
     "list_projects", "list_consultants", "get_project_consultants",
     "get_evaluation_scores", "get_financial_data", "get_evaluation_criteria",
     "get_consultant_profile", "get_committee_decision", "list_tasks",
-    "add_task", "ask_another_agent",
+    "add_task",
+    "list_meetings", "get_meeting_details", "query_institutional_memory",
+    "ask_another_agent",
   ],
   buraq: [
     "list_projects", "list_consultants", "list_tasks",
-    "add_task", "update_task_status", "get_project_consultants", "ask_another_agent",
+    "add_task", "update_task_status", "get_project_consultants",
+    "list_meetings", "get_meeting_tasks_status", "query_institutional_memory",
+    "ask_another_agent",
   ],
   khazen: [
     "list_projects", "list_consultants", "get_consultant_profile",
-    "add_consultant_note", "list_tasks", "ask_another_agent",
+    "add_consultant_note", "list_tasks",
+    "list_meetings", "get_meeting_details", "query_institutional_memory",
+    "ask_another_agent",
   ],
 };
 

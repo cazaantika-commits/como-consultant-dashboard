@@ -28,6 +28,7 @@ import ProposalsPage from "./pages/ProposalsPage";
 import MeetingsListPage from "./pages/MeetingsListPage";
 import NewMeetingPage from "./pages/NewMeetingPage";
 import MeetingRoomPage from "./pages/MeetingRoomPage";
+import MeetingTrackingPage from "./pages/MeetingTrackingPage";
 
 function Router() {
   return (
@@ -55,6 +56,7 @@ function Router() {
       <Route path="/proposals" component={ProposalsPage} />
       <Route path="/meetings" component={MeetingsListPage} />
       <Route path="/meetings/new" component={NewMeetingPage} />
+      <Route path="/meetings/tracking" component={MeetingTrackingPage} />
       <Route path="/meetings/:id" component={MeetingRoomPage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

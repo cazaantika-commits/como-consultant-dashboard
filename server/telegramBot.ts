@@ -32,6 +32,31 @@ let isInitialized = false;
 // Authorized chat IDs (can be expanded via admin commands)
 const authorizedChats = new Set<number>();
 
+/**
+ * Get all authorized chat IDs for sending notifications
+ */
+export function getAuthorizedChats(): number[] {
+  return Array.from(authorizedChats);
+}
+
+/**
+ * Send notification to all authorized Telegram users (owner)
+ */
+export async function sendNotificationToOwner(text: string, parseMode?: "Markdown" | "HTML"): Promise<boolean> {
+  const chats = getAuthorizedChats();
+  if (chats.length === 0 || !bot) return false;
+  let success = false;
+  for (const chatId of chats) {
+    try {
+      await bot.sendMessage(chatId, text, { parse_mode: parseMode });
+      success = true;
+    } catch (err) {
+      console.error(`[TelegramBot] Failed to notify chat ${chatId}:`, err);
+    }
+  }
+  return success;
+}
+
 // Conversation state for multi-step interactions
 interface ConversationState {
   step: string;

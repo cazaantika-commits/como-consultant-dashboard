@@ -2,7 +2,7 @@ import { invokeLLM } from "./_core/llm";
 import { ENV } from "./_core/env";
 import { checkLast48HoursEmails } from "./emailIntegration";
 import { getDb } from "./db";
-import { consultants, projects, agents, evaluationScores, financialData, modelUsageLog } from "../drizzle/schema";
+import { consultants, projects, agents, evaluationScores, financialData, modelUsageLog, meetings, tasks, knowledgeBase } from "../drizzle/schema";
 import { like, eq, desc } from "drizzle-orm";
 import { getToolsForAgent, executeAgentTool, AGENT_TOOLS, setAgentContext } from "./agentTools";
 
@@ -34,15 +34,24 @@ const AGENT_PROMPTS: Record<AgentType, string> = {
   salwa: `أنتِ سلوى، المنسقة الرئيسية لفريق كومو الذكي في شركة Como Developments للتطوير العقاري في دبي.
 عمرك 27 سنة، شابة محجبة طموحة ومنظمة.
 شخصيتك: ودودة جداً، مرحة لكن مهنية، تستخدمين إيموجي بشكل طبيعي، تتحدثين بأسلوب عربي دافئ.
+
+❗❗❗ قاعدة ذهبية: لا تقولي أبداً "لا أعرف" أو "ليس لدي معلومات". إذا سُئلتِ عن أي شيء، استخدمي الأدوات المتاحة للبحث في قاعدة البيانات أولاً. استخدمي search_all_data للبحث الشامل، وlist_meetings وget_meeting_details للاجتماعات، وquery_institutional_memory للمعرفة المؤسسية، وask_another_agent لسؤال وكيل متخصص. يجب أن تجدي الإجابة دائماً!
+
 مهامك الأساسية:
 - فحص الإيميل وإدارة المراسلات والتنسيق بين الوكلاء
 - متابعة المهام وتوزيع العمل على الفريق
 - تقديم التقارير الدورية وتحليل البريد الإلكتروني
 - التواصل عبر تيليجرام مع الفريق والاستشاريين
+- متابعة الاجتماعات ومخرجاتها وتنفيذ المهام
+- البحث في قاعدة المعرفة المؤسسية والذاكرة التاريخية
+- معرفة كل شيء عن المشاريع والاستشاريين والأتعاب والتقييمات
+
 عند السؤال عن الإيميل أو البريد، قومي بفحصه فوراً.
+عند السؤال عن اجتماع أو قرار أو مهمة، استخدمي الأدوات لجلب البيانات الحقيقية من قاعدة البيانات.
+عند السؤال عن شيء لا تعرفيه، استخدمي search_all_data أولاً ثم query_institutional_memory ثم ask_another_agent إذا لزم الأمر.
 أجيبي بشكل شخصي ودافئ كأنك زميلة عمل حقيقية. استخدمي "أنا" و"إن شاء الله" و"الحمد لله" بشكل طبيعي.
 أنتِ تعرفين كل شيء عن المنصة وتقدرين توجهين المستخدم لأي قسم يحتاجه.
-إذا سألك عن شيء خارج تخصصك، وجهيه للوكيل المناسب (فاروق للعقود، ألينا للمالية، خازن للأرشفة، إلخ).`,
+إذا سألك عن شيء خارج تخصصك، استخدمي ask_another_agent لسؤال الوكيل المناسب (فاروق للعقود، ألينا للمالية، خازن للأرشفة، إلخ) وأعطي الإجابة بنفسك.`,
 
   farouq: `أنت فاروق، المحلل القانوني والمالي الخبير في شركة Como Developments للتطوير العقاري في دبي.
 عمرك 52 سنة، سوداني الجنسية، خبرة عقود في التطوير العقاري والعقود.
@@ -578,6 +587,36 @@ async function getPlatformContext(agent: AgentType): Promise<string> {
         }
       } catch {}
     }
+
+    // Add meetings context for all agents, especially Salwa
+    try {
+      const recentMeetings = await db.select().from(meetings).orderBy(desc(meetings.createdAt)).limit(5);
+      if (recentMeetings.length > 0) {
+        contextData += `\n\n🏢 الاجتماعات الأخيرة:`;
+        for (const m of recentMeetings) {
+          contextData += `\n- ${m.title} (ID: ${m.id}, الحالة: ${m.status === 'ended' ? 'منتهي' : 'نشط'})`;
+        }
+      }
+    } catch {}
+
+    // Add recent tasks context
+    try {
+      const recentTasks = await db.select().from(tasks).orderBy(desc(tasks.createdAt)).limit(10);
+      if (recentTasks.length > 0) {
+        const pendingCount = recentTasks.filter(t => t.status === 'pending').length;
+        const completedCount = recentTasks.filter(t => t.status === 'completed').length;
+        const inProgressCount = recentTasks.filter(t => t.status === 'in_progress').length;
+        contextData += `\n\n✅ المهام: ${recentTasks.length} مهمة (مكتملة: ${completedCount}, قيد التنفيذ: ${inProgressCount}, معلقة: ${pendingCount})`;
+      }
+    } catch {}
+
+    // Add knowledge base context
+    try {
+      const knowledgeItems = await db.select().from(knowledgeBase).orderBy(desc(knowledgeBase.createdAt)).limit(5);
+      if (knowledgeItems.length > 0) {
+        contextData += `\n\n📚 قاعدة المعرفة: ${knowledgeItems.length} عنصر متاح (استخدم query_institutional_memory للبحث)`;
+      }
+    } catch {}
 
   } catch (err) {
     console.error("[AgentChat] Context fetch error:", err);

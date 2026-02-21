@@ -12,6 +12,7 @@ import { getDb } from "./db";
 import { tasks, agents, meetings, meetingMessages } from "../drizzle/schema";
 import { eq, like } from "drizzle-orm";
 import { handleAgentChat, AgentType } from "./agentChat";
+import { sendNotificationToOwner } from "./telegramBot";
 
 // Map Arabic agent names to agent keys
 const AGENT_NAME_MAP: Record<string, AgentType> = {
@@ -263,6 +264,41 @@ ${meetingContext.substring(0, 2000)}
 نفّذ المهمة الآن وأبلغني بالنتيجة.`;
 
   return basePrompt;
+}
+
+/**
+ * Send Telegram notification with execution report to owner
+ */
+export async function notifyOwnerViaTelegram(
+  meetingTitle: string,
+  results: TaskExecutionResult[]
+): Promise<void> {
+  const completed = results.filter(r => r.status === "completed");
+  const failed = results.filter(r => r.status === "failed");
+  
+  let message = `🏢 *تقرير تنفيذ مهام الاجتماع*\n\n`;
+  message += `📋 الاجتماع: ${meetingTitle}\n`;
+  message += `📊 إجمالي المهام: ${results.length}\n`;
+  message += `✅ تم تنفيذها: ${completed.length}\n`;
+  if (failed.length > 0) message += `❌ فشلت: ${failed.length}\n`;
+  message += `\n`;
+  
+  for (const r of completed) {
+    message += `✅ ${r.taskTitle} (${r.assignee})\n`;
+  }
+  
+  for (const r of failed) {
+    message += `❌ ${r.taskTitle} (${r.assignee})\n`;
+  }
+  
+  message += `\n💡 يمكنك مراجعة التفاصيل في لوحة متابعة الاجتماعات على المنصة.`;
+  
+  try {
+    await sendNotificationToOwner(message, "Markdown");
+    console.log("[MeetingTaskExecutor] Telegram notification sent successfully");
+  } catch (err) {
+    console.error("[MeetingTaskExecutor] Failed to send Telegram notification:", err);
+  }
 }
 
 /**

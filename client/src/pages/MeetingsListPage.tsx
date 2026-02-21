@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
 import {
   Users, Plus, Calendar, MessageSquare, FileText, Clock,
-  CheckCircle, XCircle, ArrowRight, Home, Trash2, PlayCircle
+  CheckCircle, XCircle, ArrowRight, Home, Trash2, PlayCircle, BarChart3
 } from "lucide-react";
 
 const statusMap: Record<string, { label: string; color: string; icon: any }> = {
@@ -47,13 +47,23 @@ export default function MeetingsListPage() {
               </div>
             </div>
           </div>
-          <Button
-            onClick={() => setLocation("/meetings/new")}
-            className="bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white shadow-lg shadow-violet-200"
-          >
-            <Plus className="w-4 h-4 ml-2" />
-            اجتماع جديد
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setLocation("/meetings/tracking")}
+              className="border-violet-200 text-violet-600 hover:bg-violet-50"
+            >
+              <BarChart3 className="w-4 h-4 ml-2" />
+              لوحة المتابعة
+            </Button>
+            <Button
+              onClick={() => setLocation("/meetings/new")}
+              className="bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white shadow-lg shadow-violet-200"
+            >
+              <Plus className="w-4 h-4 ml-2" />
+              اجتماع جديد
+            </Button>
+          </div>
         </div>
       </header>
 
