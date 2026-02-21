@@ -18,6 +18,7 @@ import {
   Gauge,
   ShieldCheck,
   Calculator,
+  MessageSquare,
   Rocket,
   BarChart2,
   Send,
