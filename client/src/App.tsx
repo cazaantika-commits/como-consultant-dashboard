@@ -29,6 +29,7 @@ import MeetingsListPage from "./pages/MeetingsListPage";
 import NewMeetingPage from "./pages/NewMeetingPage";
 import MeetingRoomPage from "./pages/MeetingRoomPage";
 import MeetingTrackingPage from "./pages/MeetingTrackingPage";
+import ExecutionDashboardPage from "./pages/ExecutionDashboardPage";
 
 function Router() {
   return (
@@ -57,6 +58,7 @@ function Router() {
       <Route path="/meetings" component={MeetingsListPage} />
       <Route path="/meetings/new" component={NewMeetingPage} />
       <Route path="/meetings/tracking" component={MeetingTrackingPage} />
+      <Route path="/execution-dashboard" component={ExecutionDashboardPage} />
       <Route path="/meetings/:id" component={MeetingRoomPage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

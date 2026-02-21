@@ -8,7 +8,7 @@ import { TRPCError } from "@trpc/server";
 import { handleAgentChat } from "../agentChat";
 import { transcribeAudio } from "../_core/voiceTranscription";
 import { invokeLLM } from "../_core/llm";
-import { createTasksFromMeeting, executeTasksByAgents, generateExecutionReport, notifyOwnerViaTelegram } from "../meetingTaskExecutor";
+import { createTasksFromMeeting, executeTasksByAgents, generateExecutionReport, notifyOwnerViaTelegram } from "../taskExecutionEngine";
 
 const agentNameEnum = z.enum(["salwa", "farouq", "khazen", "buraq", "khaled", "alina", "baz", "joelle"]);
 

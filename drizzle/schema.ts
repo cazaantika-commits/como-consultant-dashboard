@@ -530,3 +530,56 @@ export const meetingMessages = mysqlTable('meetingMessages', {
 
 export type MeetingMessage = typeof meetingMessages.$inferSelect;
 export type InsertMeetingMessage = typeof meetingMessages.$inferInsert;
+
+
+// ==========================================
+// محرك تنفيذ المهام - Task Execution Engine
+// ==========================================
+
+// Task Execution Logs - سجل تنفيذ المهام التفصيلي
+export const taskExecutionLogs = mysqlTable('taskExecutionLogs', {
+  id: int('id').primaryKey().autoincrement(),
+  taskId: int('taskId').references(() => tasks.id),
+  meetingId: int('meetingId').references(() => meetings.id),
+  agent: varchar('agent', { length: 50 }).notNull(), // الوكيل المنفذ
+  taskTitle: varchar('taskTitle', { length: 500 }).notNull(),
+  
+  // Action Plan
+  actionPlanJson: text('actionPlanJson'), // JSON - خطة العمل المهيكلة
+  totalSteps: int('totalSteps').default(0).notNull(),
+  completedSteps: int('completedSteps').default(0).notNull(),
+  
+  // Execution Details
+  status: mysqlEnum('executionStatus', ['planning', 'executing', 'verifying', 'completed', 'partial', 'failed', 'retrying']).default('planning').notNull(),
+  attempt: int('attempt').default(1).notNull(), // رقم المحاولة
+  maxAttempts: int('maxAttempts').default(2).notNull(),
+  
+  // Tool Usage Tracking
+  toolsUsedJson: text('toolsUsedJson'), // JSON array - الأدوات المستخدمة فعلياً
+  toolCallCount: int('toolCallCount').default(0).notNull(), // عدد استدعاءات الأدوات
+  writeToolCount: int('writeToolCount').default(0).notNull(), // عدد أدوات الكتابة المستخدمة
+  
+  // Step Results
+  stepResultsJson: text('stepResultsJson'), // JSON array - نتائج كل خطوة
+  
+  // Verification
+  verified: int('verified').default(0).notNull(), // 0 = لم يتحقق, 1 = تحقق بنجاح
+  verificationDetails: text('verificationDetails'),
+  
+  // Data Changes
+  dataChangesJson: text('dataChangesJson'), // JSON array - التغييرات الفعلية على البيانات
+  
+  // Agent Response
+  agentResponse: text('agentResponse'), // الرد النهائي من الوكيل
+  errorMessage: text('errorMessage'), // رسالة الخطأ إن وجدت
+  
+  // Timing
+  startedAt: timestamp('startedAt').defaultNow().notNull(),
+  completedAt: timestamp('completedAt'),
+  durationMs: int('durationMs'), // مدة التنفيذ بالمللي ثانية
+  
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+
+export type TaskExecutionLog = typeof taskExecutionLogs.$inferSelect;
+export type InsertTaskExecutionLog = typeof taskExecutionLogs.$inferInsert;
