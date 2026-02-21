@@ -8,6 +8,7 @@ import { TRPCError } from "@trpc/server";
 import { handleAgentChat } from "../agentChat";
 import { transcribeAudio } from "../_core/voiceTranscription";
 import { invokeLLM } from "../_core/llm";
+import { createTasksFromMeeting, executeTasksByAgents, generateExecutionReport } from "../meetingTaskExecutor";
 
 const agentNameEnum = z.enum(["salwa", "farouq", "khazen", "buraq", "khaled", "alina", "baz", "joelle"]);
 
@@ -348,6 +349,78 @@ export const meetingsRouter = router({
             speakerType: "agent",
             messageText: "✅ تم توليد محضر الاجتماع والمخرجات تلقائياً. اضغط على 'المخرجات' لعرضها.",
           });
+
+          // === AUTO-CREATE AND EXECUTE TASKS ===
+          if (minutes.tasks?.length > 0) {
+            await db.insert(meetingMessages).values({
+              meetingId,
+              speakerId: "system",
+              speakerType: "agent",
+              messageText: `⚙️ جاري إنشاء وتنفيذ ${minutes.tasks.length} مهام مستخرجة من الاجتماع...`,
+            });
+
+            try {
+              // Step 1: Create tasks in the task system
+              const meetingData = (await db.select().from(meetings).where(eq(meetings.id, meetingId)))[0];
+              const taskResults = await createTasksFromMeeting(
+                meetingId,
+                ctx.user.id,
+                meetingData?.title || "",
+                minutes.tasks
+              );
+
+              const createdCount = taskResults.filter(r => r.status === "created").length;
+              await db.insert(meetingMessages).values({
+                meetingId,
+                speakerId: "system",
+                speakerType: "agent",
+                messageText: `📋 تم إنشاء ${createdCount} مهام في نظام المهام. جاري إسنادها للوكلاء للتنفيذ...`,
+              });
+
+              // Step 2: Execute tasks by agents (async - don't block the response)
+              // We run this in background so the user gets the response immediately
+              const contextSummary = `عنوان الاجتماع: ${meetingData?.title}\nالملخص: ${minutes.summary}\nالقرارات: ${minutes.decisions?.map((d: any) => d.decision).join(", ") || "لا يوجد"}`;
+              
+              executeTasksByAgents(
+                meetingId,
+                ctx.user.id,
+                meetingData?.title || "",
+                taskResults,
+                contextSummary
+              ).then(async (executionResults) => {
+                const report = generateExecutionReport(executionResults);
+                const dbInner = await getDb();
+                if (dbInner) {
+                  await dbInner.insert(meetingMessages).values({
+                    meetingId,
+                    speakerId: "system",
+                    speakerType: "agent",
+                    messageText: report,
+                  });
+                }
+              }).catch(async (err) => {
+                console.error("[MeetingTaskExecutor] Background execution failed:", err);
+                const dbInner = await getDb();
+                if (dbInner) {
+                  await dbInner.insert(meetingMessages).values({
+                    meetingId,
+                    speakerId: "system",
+                    speakerType: "agent",
+                    messageText: `⚠️ فشل تنفيذ بعض المهام تلقائياً. يمكنك مراجعة المهام في لوحة المهام وطلب تنفيذها يدوياً.`,
+                  });
+                }
+              });
+
+            } catch (taskErr) {
+              console.error("[Meeting] Task creation failed:", taskErr);
+              await db.insert(meetingMessages).values({
+                meetingId,
+                speakerId: "system",
+                speakerType: "agent",
+                messageText: "⚠️ لم يتم إنشاء المهام تلقائياً. يمكنك إنشاؤها يدوياً من لوحة المهام.",
+              });
+            }
+          }
         }
       } catch (err) {
         console.error("[Meeting] Auto-generate minutes failed:", err);

@@ -684,25 +684,52 @@ export default function MeetingRoomPage() {
                 </div>
               )}
 
-              {/* Tasks */}
+              {/* Tasks - with execution status */}
               {meeting.extractedTasksJson?.length > 0 && (
                 <div>
                   <h3 className="text-sm font-bold text-stone-700 mb-2 flex items-center gap-2">
-                    📌 المهام المستخرجة
+                    📌 المهام المستخرجة وحالة التنفيذ
                   </h3>
+                  <div className="mb-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200">
+                    <div className="text-xs text-amber-700 flex items-center gap-1">
+                      ⚙️ المهام يتم إنشاؤها تلقائياً في نظام المهام ويتم تنفيذها بواسطة الوكلاء المسؤولين. راجع لوحة المهام للتفاصيل.
+                    </div>
+                  </div>
                   <div className="space-y-2">
                     {meeting.extractedTasksJson.map((t: any, i: number) => (
                       <div key={i} className="flex items-start gap-2 p-2.5 rounded-lg bg-blue-50 border border-blue-100">
-                        <Clock className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                        <div>
+                        <div className="mt-0.5 flex-shrink-0">
+                          {meeting.status === "completed" ? (
+                            <CheckCircle className="w-4 h-4 text-green-500" />
+                          ) : (
+                            <Clock className="w-4 h-4 text-blue-500" />
+                          )}
+                        </div>
+                        <div className="flex-1">
                           <div className="text-sm text-stone-700">{t.task}</div>
-                          <div className="text-xs text-stone-500 mt-0.5">
-                            المسؤول: {t.assignee} | الموعد: {t.deadline} | الأولوية: {t.priority}
+                          <div className="text-xs text-stone-500 mt-0.5 flex items-center gap-2 flex-wrap">
+                            <span>المسؤول: <strong>{t.assignee}</strong></span>
+                            <span>|الموعد: {t.deadline}</span>
+                            <span>| الأولوية: {t.priority}</span>
                           </div>
+                          {meeting.status === "completed" && (
+                            <div className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                              ✅ تم إنشاء المهمة وإسنادها للتنفيذ
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
                   </div>
+                  {meeting.status === "completed" && (
+                    <Button
+                      onClick={() => setLocation("/tasks")}
+                      variant="outline"
+                      className="mt-3 text-sm border-blue-200 text-blue-600 hover:bg-blue-50 w-full"
+                    >
+                      📋 عرض المهام في لوحة المهام
+                    </Button>
+                  )}
                 </div>
               )}
 
