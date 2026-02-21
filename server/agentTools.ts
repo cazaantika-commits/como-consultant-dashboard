@@ -362,6 +362,25 @@ export const AGENT_TOOLS = [
       },
     },
   },
+  {
+    type: "function" as const,
+    function: {
+      name: "ask_another_agent",
+      description: "طلب مساعدة من وكيل آخر - استخدم هذه الأداة عندما تحتاج معلومات أو مساعدة من وكيل متخصص آخر. مثلاً: سلوى تسأل خالد عن معايير التقييم، أو ألينا تسأل فاروق عن تحليل مالي. الوكلاء المتاحون: salwa (المنسقة), farouq (المحلل القانوني والمالي), khazen (مدير الأرشفة), buraq (مراقب التنفيذ), khaled (مدقق الجودة), alina (المديرة المالية), baz (المستشار الاستراتيجي), joelle (محللة دراسات الجدوى)",
+      parameters: {
+        type: "object",
+        properties: {
+          targetAgent: { 
+            type: "string", 
+            enum: ["salwa", "farouq", "khazen", "buraq", "khaled", "alina", "baz", "joelle"],
+            description: "الوكيل المستهدف" 
+          },
+          question: { type: "string", description: "السؤال أو الطلب الموجه للوكيل الآخر" },
+        },
+        required: ["targetAgent", "question"],
+      },
+    },
+  },
 ];
 
 // ═══════════════════════════════════════════════════
@@ -798,6 +817,24 @@ async function _executeToolInternal(
         return JSON.stringify({ success: true, message: "تم إضافة الملاحظة بنجاح" });
       }
 
+      case "ask_another_agent": {
+        // Agent-to-agent communication - import agentChat and call it
+        const { targetAgent, question } = args;
+        const { agentChat } = await import("./agentChat");
+        const response = await agentChat({
+          agent: targetAgent,
+          message: `[طلب من ${_currentAgent || "unknown"}] ${question}`,
+          conversationHistory: [],
+          userId,
+        });
+        return JSON.stringify({ 
+          success: true, 
+          agent: targetAgent, 
+          question, 
+          response: response.response 
+        });
+      }
+
       default:
         return JSON.stringify({ error: `أداة غير معروفة: ${toolName}` });
     }
@@ -862,44 +899,44 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "get_evaluation_scores", "get_financial_data", "get_evaluation_criteria",
     "list_tasks", "add_consultant", "add_consultant_to_project",
     "add_project", "add_task", "update_task_status",
-    "get_consultant_profile", "get_committee_decision",
+    "get_consultant_profile", "get_committee_decision", "ask_another_agent",
   ],
   farouq: [
     "list_projects", "list_consultants", "get_project_consultants",
     "get_evaluation_scores", "get_evaluator_scores", "get_financial_data",
     "get_evaluation_criteria", "get_consultant_profile", "get_committee_decision",
     "set_evaluation_score", "set_financial_data", "add_consultant_note",
-    "update_consultant_profile", "add_consultant",
+    "update_consultant_profile", "add_consultant", "ask_another_agent",
   ],
   khaled: [
     "list_projects", "list_consultants", "get_project_consultants",
     "get_evaluation_scores", "get_evaluator_scores", "get_financial_data",
     "get_evaluation_criteria", "get_consultant_profile",
-    "set_evaluation_score", "add_consultant_note",
+    "set_evaluation_score", "add_consultant_note", "ask_another_agent",
   ],
   alina: [
     "list_projects", "list_consultants", "get_project_consultants",
     "get_financial_data", "get_evaluation_scores", "get_evaluation_criteria",
-    "get_feasibility_study", "set_financial_data", "get_consultant_profile",
+    "get_feasibility_study", "set_financial_data", "get_consultant_profile", "ask_another_agent",
   ],
   joelle: [
     "list_projects", "list_consultants", "get_project_consultants",
     "get_financial_data", "get_evaluation_scores", "get_evaluation_criteria",
-    "get_feasibility_study", "get_consultant_profile", "get_committee_decision",
+    "get_feasibility_study", "get_consultant_profile", "get_committee_decision", "ask_another_agent",
   ],
   baz: [
     "list_projects", "list_consultants", "get_project_consultants",
     "get_evaluation_scores", "get_financial_data", "get_evaluation_criteria",
     "get_consultant_profile", "get_committee_decision", "list_tasks",
-    "add_task",
+    "add_task", "ask_another_agent",
   ],
   buraq: [
     "list_projects", "list_consultants", "list_tasks",
-    "add_task", "update_task_status", "get_project_consultants",
+    "add_task", "update_task_status", "get_project_consultants", "ask_another_agent",
   ],
   khazen: [
     "list_projects", "list_consultants", "get_consultant_profile",
-    "add_consultant_note", "list_tasks",
+    "add_consultant_note", "list_tasks", "ask_another_agent",
   ],
 };
 

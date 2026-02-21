@@ -281,6 +281,7 @@ export default function Home() {
                   { label: "المكاتب الاستشارية", emoji: "🏛️", icon: Users, path: "/consultant-portal", gradient: "linear-gradient(135deg, #78716c, #57534e)", shadow: "rgba(120, 113, 108, 0.25)" },
                   { label: "دراسة الجدوى", emoji: "📊", icon: Calculator, path: "/feasibility-study", gradient: "linear-gradient(135deg, #ef4444, #dc2626)", shadow: "rgba(239, 68, 68, 0.25)" },
                   { label: "تكليفات الوكلاء", emoji: "📋", icon: ClipboardList, path: "/agent-assignments", gradient: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245, 158, 11, 0.25)" },
+                  { label: "سجل المحادثات", emoji: "💬", icon: MessageSquare, path: "/conversation-history", gradient: "linear-gradient(135deg, #ec4899, #db2777)", shadow: "rgba(236, 72, 153, 0.25)" },
                 ].map((item, i) => (
                   <button
                     key={i}

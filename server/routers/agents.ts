@@ -91,6 +91,17 @@ export const agentsRouter = router({
       return { success: true };
     }),
 
+  // Get all conversations for the current user
+  getAllConversations: publicProcedure.query(async ({ ctx }) => {
+    if (!ctx.user) return [];
+    const db = await getDb();
+    if (!db) return [];
+    const history = await db.select().from(chatHistory)
+      .where(eq(chatHistory.userId, ctx.user.id))
+      .orderBy(desc(chatHistory.createdAt));
+    return history;
+  }),
+
   // Chat with an agent
   chat: publicProcedure
     .input(z.object({

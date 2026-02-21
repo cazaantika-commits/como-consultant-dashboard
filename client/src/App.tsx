@@ -21,6 +21,7 @@ import ConsultantRecommendPage from "./pages/ConsultantRecommendPage";
 import ConsultantCommitteePage from "./pages/ConsultantCommitteePage";
 import ModelStatsPage from "./pages/ModelStatsPage";
 import AgentAssignmentsPage from "./pages/AgentAssignmentsPage";
+import ConversationHistoryPage from "./pages/ConversationHistoryPage";
 
 function Router() {
   return (
@@ -42,6 +43,7 @@ function Router() {
       <Route path="/consultant-committee" component={ConsultantCommitteePage} />
       <Route path="/model-stats" component={ModelStatsPage} />
       <Route path="/agent-assignments" component={AgentAssignmentsPage} />
+      <Route path="/conversation-history" component={ConversationHistoryPage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
