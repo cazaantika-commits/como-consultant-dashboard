@@ -25,6 +25,9 @@ import ConversationHistoryPage from "./pages/ConversationHistoryPage";
 import TaskSettingsPage from "./pages/TaskSettingsPage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 import ProposalsPage from "./pages/ProposalsPage";
+import MeetingsListPage from "./pages/MeetingsListPage";
+import NewMeetingPage from "./pages/NewMeetingPage";
+import MeetingRoomPage from "./pages/MeetingRoomPage";
 
 function Router() {
   return (
@@ -50,6 +53,9 @@ function Router() {
       <Route path="/task-settings" component={TaskSettingsPage} />
       <Route path="/knowledge-base" component={KnowledgeBasePage} />
       <Route path="/proposals" component={ProposalsPage} />
+      <Route path="/meetings" component={MeetingsListPage} />
+      <Route path="/meetings/new" component={NewMeetingPage} />
+      <Route path="/meetings/:id" component={MeetingRoomPage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

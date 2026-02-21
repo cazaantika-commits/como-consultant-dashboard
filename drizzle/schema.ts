@@ -457,3 +457,76 @@ export const proposalComparisons = mysqlTable('proposalComparisons', {
 
 export type ProposalComparison = typeof proposalComparisons.$inferSelect;
 export type InsertProposalComparison = typeof proposalComparisons.$inferInsert;
+
+
+// ==========================================
+// غرفة الاجتماعات التفاعلية - Meeting Room
+// ==========================================
+
+// Meetings - الاجتماعات
+export const meetings = mysqlTable('meetings', {
+  id: int('id').primaryKey().autoincrement(),
+  userId: int('userId').notNull().references(() => users.id),
+  title: varchar('title', { length: 500 }).notNull(),
+  topic: text('topic'), // موضوع النقاش
+  status: mysqlEnum('meetingStatus', ['preparing', 'in_progress', 'completed', 'cancelled']).default('preparing').notNull(),
+  createdBy: varchar('createdBy', { length: 100 }).default('user').notNull(), // user or agent name
+  startedAt: timestamp('startedAt'),
+  endedAt: timestamp('endedAt'),
+  // Meeting outputs
+  minutesSummary: text('minutesSummary'), // محضر الاجتماع
+  decisionsJson: text('decisionsJson'), // JSON array of decisions
+  extractedTasksJson: text('extractedTasksJson'), // JSON array of tasks
+  knowledgeItemsJson: text('knowledgeItemsJson'), // JSON array of knowledge items saved
+  audioRecordingUrl: varchar('audioRecordingUrl', { length: 1000 }), // S3 URL for full recording
+  fullTranscript: text('fullTranscript'), // النص الكامل للاجتماع
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type Meeting = typeof meetings.$inferSelect;
+export type InsertMeeting = typeof meetings.$inferInsert;
+
+// Meeting Participants - المشاركون في الاجتماع
+export const meetingParticipants = mysqlTable('meetingParticipants', {
+  id: int('id').primaryKey().autoincrement(),
+  meetingId: int('meetingId').notNull().references(() => meetings.id, { onDelete: 'cascade' }),
+  agentId: int('agentId').notNull().references(() => agents.id),
+  role: mysqlEnum('participantRole', ['participant', 'observer']).default('participant').notNull(),
+  joinedAt: timestamp('joinedAt').defaultNow().notNull(),
+});
+
+export type MeetingParticipant = typeof meetingParticipants.$inferSelect;
+export type InsertMeetingParticipant = typeof meetingParticipants.$inferInsert;
+
+// Meeting Files - ملفات الاجتماع
+export const meetingFiles = mysqlTable('meetingFiles', {
+  id: int('id').primaryKey().autoincrement(),
+  meetingId: int('meetingId').notNull().references(() => meetings.id, { onDelete: 'cascade' }),
+  fileName: varchar('fileName', { length: 255 }).notNull(),
+  fileUrl: varchar('fileUrl', { length: 1000 }).notNull(), // S3 URL
+  fileKey: varchar('fileKey', { length: 500 }).notNull(), // S3 key
+  fileType: varchar('fileType', { length: 50 }).notNull(), // pdf, word, excel, image, audio
+  mimeType: varchar('mimeType', { length: 100 }),
+  fileSize: int('fileSize'), // bytes
+  extractedText: text('extractedText'), // النص المستخرج
+  uploadedAt: timestamp('uploadedAt').defaultNow().notNull(),
+});
+
+export type MeetingFile = typeof meetingFiles.$inferSelect;
+export type InsertMeetingFile = typeof meetingFiles.$inferInsert;
+
+// Meeting Messages - رسائل الاجتماع (المحادثة)
+export const meetingMessages = mysqlTable('meetingMessages', {
+  id: int('id').primaryKey().autoincrement(),
+  meetingId: int('meetingId').notNull().references(() => meetings.id, { onDelete: 'cascade' }),
+  speakerId: varchar('speakerId', { length: 100 }).notNull(), // agentName or 'user'
+  speakerType: mysqlEnum('speakerType', ['user', 'agent']).notNull(),
+  messageText: text('messageText').notNull(),
+  audioUrl: varchar('audioUrl', { length: 1000 }), // S3 URL if voice message
+  replyToId: int('replyToId'), // reply to another message
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+
+export type MeetingMessage = typeof meetingMessages.$inferSelect;
+export type InsertMeetingMessage = typeof meetingMessages.$inferInsert;
