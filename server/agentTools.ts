@@ -365,6 +365,26 @@ export const AGENT_TOOLS = [
   {
     type: "function" as const,
     function: {
+      name: "query_institutional_memory",
+      description: "البحث في الذاكرة المؤسسية للمنظمة - استرجاع القرارات السابقة، التقييمات، الأنماط، والدروس المستفادة من التاريخ. استخدم هذه الأداة للتعلم من التجارب السابقة والحصول على سياق تاريخي قبل اتخاذ قرارات جديدة.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "سؤال أو كلمات بحث للبحث في الذاكرة المؤسسية" },
+          type: { 
+            type: "string", 
+            enum: ["decision", "evaluation", "pattern", "insight", "lesson", "all"],
+            description: "نوع المعرفة المطلوبة (اختياري - افتراضياً: all)" 
+          },
+          limit: { type: "number", description: "عدد النتائج المطلوبة (افتراضياً: 10)" },
+        },
+        required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
       name: "ask_another_agent",
       description: "طلب مساعدة من وكيل آخر - استخدم هذه الأداة عندما تحتاج معلومات أو مساعدة من وكيل متخصص آخر. مثلاً: سلوى تسأل خالد عن معايير التقييم، أو ألينا تسأل فاروق عن تحليل مالي. الوكلاء المتاحون: salwa (المنسقة), farouq (المحلل القانوني والمالي), khazen (مدير الأرشفة), buraq (مراقب التنفيذ), khaled (مدقق الجودة), alina (المديرة المالية), baz (المستشار الاستراتيجي), joelle (محللة دراسات الجدوى)",
       parameters: {
@@ -815,6 +835,45 @@ async function _executeToolInternal(
           category: category || "general"
         });
         return JSON.stringify({ success: true, message: "تم إضافة الملاحظة بنجاح" });
+      }
+
+      case "query_institutional_memory": {
+        // Query institutional memory
+        const { query, type, limit } = args;
+        const { searchKnowledgeBase } = await import("./db");
+        
+        const results = await searchKnowledgeBase(userId, query, limit || 10);
+        
+        if (results.length === 0) {
+          return JSON.stringify({ 
+            message: "لم يتم العثور على نتائج في الذاكرة المؤسسية",
+            results: [] 
+          });
+        }
+        
+        // Filter by type if specified
+        const filteredResults = type && type !== 'all' 
+          ? results.filter((r: any) => r.type === type)
+          : results;
+        
+        // Format results for agent
+        const formattedResults = filteredResults.map((item: any) => ({
+          id: item.id,
+          type: item.type,
+          title: item.title,
+          summary: item.summary || item.content.substring(0, 200) + "...",
+          importance: item.importance,
+          sourceAgent: item.sourceAgent,
+          createdAt: item.createdAt,
+          tags: item.tags,
+        }));
+        
+        return JSON.stringify({
+          success: true,
+          count: formattedResults.length,
+          results: formattedResults,
+          message: `تم العثور على ${formattedResults.length} نتيجة في الذاكرة المؤسسية`
+        });
       }
 
       case "ask_another_agent": {

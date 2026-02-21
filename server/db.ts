@@ -301,3 +301,294 @@ export async function getAllConsultants() {
   if (!db) return [];
   return await db.select().from(consultants);
 }
+
+// ==================== Knowledge Base Queries ====================
+
+export async function createKnowledgeItem(data: {
+  userId: number;
+  type: 'decision' | 'evaluation' | 'pattern' | 'insight' | 'lesson';
+  title: string;
+  content: string;
+  summary?: string;
+  tags?: string[];
+  relatedProjectId?: number;
+  relatedConsultantId?: number;
+  relatedAgentAssignmentId?: number;
+  sourceAgent?: string;
+  importance?: 'low' | 'medium' | 'high' | 'critical';
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { knowledgeBase } = await import("../drizzle/schema");
+  
+  const result = await db.insert(knowledgeBase).values({
+    userId: data.userId,
+    type: data.type,
+    title: data.title,
+    content: data.content,
+    summary: data.summary,
+    tags: data.tags ? JSON.stringify(data.tags) : null,
+    relatedProjectId: data.relatedProjectId,
+    relatedConsultantId: data.relatedConsultantId,
+    relatedAgentAssignmentId: data.relatedAgentAssignmentId,
+    sourceAgent: data.sourceAgent,
+    importance: data.importance || 'medium',
+    viewCount: 0,
+  });
+  
+  return result;
+}
+
+export async function getKnowledgeItems(userId: number, filters?: {
+  type?: string;
+  importance?: string;
+  sourceAgent?: string;
+  search?: string;
+  limit?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const { knowledgeBase } = await import("../drizzle/schema");
+  
+  let query = db.select().from(knowledgeBase).where(eq(knowledgeBase.userId, userId));
+  
+  // Apply filters if provided
+  // Note: This is a simplified version. For complex filtering, use drizzle's query builder more extensively
+  
+  const results = await query.orderBy(desc(knowledgeBase.createdAt)).limit(filters?.limit || 100);
+  
+  // Parse tags from JSON
+  return results.map(item => ({
+    ...item,
+    tags: item.tags ? JSON.parse(item.tags) : [],
+  }));
+}
+
+export async function getKnowledgeItemById(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const { knowledgeBase } = await import("../drizzle/schema");
+  
+  const result = await db.select().from(knowledgeBase)
+    .where(and(eq(knowledgeBase.id, id), eq(knowledgeBase.userId, userId)))
+    .limit(1);
+  
+  if (result.length === 0) return null;
+  
+  // Increment view count
+  await db.update(knowledgeBase)
+    .set({ viewCount: (result[0].viewCount || 0) + 1 })
+    .where(eq(knowledgeBase.id, id));
+  
+  return {
+    ...result[0],
+    tags: result[0].tags ? JSON.parse(result[0].tags) : [],
+  };
+}
+
+export async function searchKnowledgeBase(userId: number, searchTerm: string, limit: number = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const { knowledgeBase } = await import("../drizzle/schema");
+  
+  // Search in title, content, and summary
+  const results = await db.select().from(knowledgeBase)
+    .where(
+      and(
+        eq(knowledgeBase.userId, userId),
+        or(
+          like(knowledgeBase.title, `%${searchTerm}%`),
+          like(knowledgeBase.content, `%${searchTerm}%`),
+          like(knowledgeBase.summary, `%${searchTerm}%`)
+        )
+      )
+    )
+    .orderBy(desc(knowledgeBase.createdAt))
+    .limit(limit);
+  
+  return results.map(item => ({
+    ...item,
+    tags: item.tags ? JSON.parse(item.tags) : [],
+  }));
+}
+
+// ==================== Consultant Proposals Queries ====================
+
+export async function createProposal(data: {
+  userId: number;
+  consultantId?: number;
+  projectId?: number;
+  title: string;
+  fileUrl: string;
+  fileKey: string;
+  fileName: string;
+  fileSize?: number;
+  mimeType?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { consultantProposals } = await import("../drizzle/schema");
+  
+  const result = await db.insert(consultantProposals).values({
+    userId: data.userId,
+    consultantId: data.consultantId,
+    projectId: data.projectId,
+    title: data.title,
+    fileUrl: data.fileUrl,
+    fileKey: data.fileKey,
+    fileName: data.fileName,
+    fileSize: data.fileSize,
+    mimeType: data.mimeType,
+    analysisStatus: 'pending',
+  });
+  
+  return result;
+}
+
+export async function getProposals(userId: number, filters?: {
+  consultantId?: number;
+  projectId?: number;
+  analysisStatus?: string;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const { consultantProposals } = await import("../drizzle/schema");
+  
+  let conditions = [eq(consultantProposals.userId, userId)];
+  
+  if (filters?.consultantId) {
+    conditions.push(eq(consultantProposals.consultantId, filters.consultantId));
+  }
+  if (filters?.projectId) {
+    conditions.push(eq(consultantProposals.projectId, filters.projectId));
+  }
+  
+  const results = await db.select().from(consultantProposals)
+    .where(and(...conditions))
+    .orderBy(desc(consultantProposals.createdAt));
+  
+  return results;
+}
+
+export async function getProposalById(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const { consultantProposals } = await import("../drizzle/schema");
+  
+  const result = await db.select().from(consultantProposals)
+    .where(and(eq(consultantProposals.id, id), eq(consultantProposals.userId, userId)))
+    .limit(1);
+  
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function updateProposalAnalysis(id: number, userId: number, analysis: {
+  aiSummary?: string;
+  aiKeyPoints?: string[];
+  aiStrengths?: string[];
+  aiWeaknesses?: string[];
+  aiRecommendation?: string;
+  aiScore?: number;
+  extractedText?: string;
+  analysisStatus: 'processing' | 'completed' | 'failed';
+  analysisError?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { consultantProposals } = await import("../drizzle/schema");
+  
+  await db.update(consultantProposals)
+    .set({
+      aiSummary: analysis.aiSummary,
+      aiKeyPoints: analysis.aiKeyPoints ? JSON.stringify(analysis.aiKeyPoints) : null,
+      aiStrengths: analysis.aiStrengths ? JSON.stringify(analysis.aiStrengths) : null,
+      aiWeaknesses: analysis.aiWeaknesses ? JSON.stringify(analysis.aiWeaknesses) : null,
+      aiRecommendation: analysis.aiRecommendation,
+      aiScore: analysis.aiScore,
+      extractedText: analysis.extractedText,
+      analysisStatus: analysis.analysisStatus,
+      analysisError: analysis.analysisError,
+    })
+    .where(and(eq(consultantProposals.id, id), eq(consultantProposals.userId, userId)));
+}
+
+// ==================== Proposal Comparisons Queries ====================
+
+export async function createComparison(data: {
+  userId: number;
+  projectId?: number;
+  title: string;
+  proposalIds: number[];
+  comparisonResult?: any;
+  aiRecommendation?: string;
+  winnerProposalId?: number;
+  notes?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { proposalComparisons } = await import("../drizzle/schema");
+  
+  const result = await db.insert(proposalComparisons).values({
+    userId: data.userId,
+    projectId: data.projectId,
+    title: data.title,
+    proposalIds: JSON.stringify(data.proposalIds),
+    comparisonResult: data.comparisonResult ? JSON.stringify(data.comparisonResult) : null,
+    aiRecommendation: data.aiRecommendation,
+    winnerProposalId: data.winnerProposalId,
+    notes: data.notes,
+  });
+  
+  return result;
+}
+
+export async function getComparisons(userId: number, projectId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const { proposalComparisons } = await import("../drizzle/schema");
+  
+  let conditions = [eq(proposalComparisons.userId, userId)];
+  
+  if (projectId) {
+    conditions.push(eq(proposalComparisons.projectId, projectId));
+  }
+  
+  const results = await db.select().from(proposalComparisons)
+    .where(and(...conditions))
+    .orderBy(desc(proposalComparisons.createdAt));
+  
+  return results.map(item => ({
+    ...item,
+    proposalIds: JSON.parse(item.proposalIds),
+    comparisonResult: item.comparisonResult ? JSON.parse(item.comparisonResult) : null,
+  }));
+}
+
+export async function getComparisonById(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const { proposalComparisons } = await import("../drizzle/schema");
+  
+  const result = await db.select().from(proposalComparisons)
+    .where(and(eq(proposalComparisons.id, id), eq(proposalComparisons.userId, userId)))
+    .limit(1);
+  
+  if (result.length === 0) return null;
+  
+  return {
+    ...result[0],
+    proposalIds: JSON.parse(result[0].proposalIds),
+    comparisonResult: result[0].comparisonResult ? JSON.parse(result[0].comparisonResult) : null,
+  };
+}

@@ -283,6 +283,8 @@ export default function Home() {
                   { label: "دراسة الجدوى", emoji: "📊", icon: Calculator, path: "/feasibility-study", gradient: "linear-gradient(135deg, #ef4444, #dc2626)", shadow: "rgba(239, 68, 68, 0.25)" },
                   { label: "تكليفات الوكلاء", emoji: "📋", icon: ClipboardList, path: "/agent-assignments", gradient: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245, 158, 11, 0.25)" },
                   { label: "سجل المحادثات", emoji: "💬", icon: MessageSquare, path: "/conversation-history", gradient: "linear-gradient(135deg, #ec4899, #db2777)", shadow: "rgba(236, 72, 153, 0.25)" },
+                  { label: "قاعدة المعرفة", emoji: "📚", icon: BookOpen, path: "/knowledge-base", gradient: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)" },
+                  { label: "عروض الاستشاريين", emoji: "📄", icon: FileText, path: "/proposals", gradient: "linear-gradient(135deg, #3b82f6, #2563eb)", shadow: "rgba(59, 130, 246, 0.25)" },
                 ].map((item, i) => (
                   <button
                     key={i}

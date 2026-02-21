@@ -388,3 +388,72 @@ export const taskCategories = mysqlTable('taskCategories', {
 
 export type TaskCategory = typeof taskCategories.$inferSelect;
 export type InsertTaskCategory = typeof taskCategories.$inferInsert;
+
+// Knowledge Base - قاعدة المعرفة المؤسسية
+export const knowledgeBase = mysqlTable('knowledgeBase', {
+  id: int('id').primaryKey().autoincrement(),
+  userId: int('userId').notNull(),
+  type: mysqlEnum('knowledgeType', ['decision', 'evaluation', 'pattern', 'insight', 'lesson']).notNull(),
+  title: varchar('title', { length: 500 }).notNull(),
+  content: text('content').notNull(), // المحتوى الأساسي
+  summary: text('summary'), // ملخص AI-generated
+  tags: text('tags'), // JSON array of tags for search
+  relatedProjectId: int('relatedProjectId').references(() => projects.id),
+  relatedConsultantId: int('relatedConsultantId').references(() => consultants.id),
+  relatedAgentAssignmentId: int('relatedAgentAssignmentId').references(() => agentAssignments.id),
+  sourceAgent: varchar('sourceAgent', { length: 50 }), // الوكيل الذي أنشأ المعرفة
+  importance: mysqlEnum('importance', ['low', 'medium', 'high', 'critical']).default('medium').notNull(),
+  viewCount: int('viewCount').default(0),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type KnowledgeBaseItem = typeof knowledgeBase.$inferSelect;
+export type InsertKnowledgeBaseItem = typeof knowledgeBase.$inferInsert;
+
+// Consultant Proposals - عروض الاستشاريين
+export const consultantProposals = mysqlTable('consultantProposals', {
+  id: int('id').primaryKey().autoincrement(),
+  userId: int('userId').notNull(),
+  consultantId: int('consultantId').references(() => consultants.id),
+  projectId: int('projectId').references(() => projects.id),
+  title: varchar('title', { length: 500 }).notNull(),
+  fileUrl: varchar('fileUrl', { length: 1000 }).notNull(), // S3 URL
+  fileKey: varchar('fileKey', { length: 500 }).notNull(), // S3 key
+  fileName: varchar('fileName', { length: 255 }).notNull(),
+  fileSize: int('fileSize'), // bytes
+  mimeType: varchar('mimeType', { length: 100 }),
+  // AI Analysis results
+  aiSummary: text('aiSummary'), // ملخص العرض
+  aiKeyPoints: text('aiKeyPoints'), // JSON array - النقاط الرئيسية
+  aiStrengths: text('aiStrengths'), // JSON array - نقاط القوة
+  aiWeaknesses: text('aiWeaknesses'), // JSON array - نقاط الضعف
+  aiRecommendation: text('aiRecommendation'), // التوصية
+  aiScore: int('aiScore'), // 0-100
+  extractedText: text('extractedText'), // النص المستخرج من PDF
+  analysisStatus: mysqlEnum('analysisStatus', ['pending', 'processing', 'completed', 'failed']).default('pending').notNull(),
+  analysisError: text('analysisError'),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type ConsultantProposal = typeof consultantProposals.$inferSelect;
+export type InsertConsultantProposal = typeof consultantProposals.$inferInsert;
+
+// Proposal Comparisons - مقارنات العروض
+export const proposalComparisons = mysqlTable('proposalComparisons', {
+  id: int('id').primaryKey().autoincrement(),
+  userId: int('userId').notNull(),
+  projectId: int('projectId').references(() => projects.id),
+  title: varchar('title', { length: 500 }).notNull(),
+  proposalIds: text('proposalIds').notNull(), // JSON array of proposal IDs
+  comparisonResult: text('comparisonResult'), // JSON - نتيجة المقارنة التفصيلية
+  aiRecommendation: text('aiRecommendation'), // التوصية النهائية
+  winnerProposalId: int('winnerProposalId').references(() => consultantProposals.id),
+  notes: text('notes'),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type ProposalComparison = typeof proposalComparisons.$inferSelect;
+export type InsertProposalComparison = typeof proposalComparisons.$inferInsert;
