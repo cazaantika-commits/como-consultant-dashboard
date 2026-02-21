@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { meetings, meetingParticipants, meetingFiles, meetingMessages, agents, knowledgeBase } from "../../drizzle/schema";
+import { meetings, meetingParticipants, meetingFiles, meetingMessages, agents, knowledgeBase, chatHistory } from "../../drizzle/schema";
 import { eq, desc, sql, and } from "drizzle-orm";
 import { storagePut } from "../storage";
 import { TRPCError } from "@trpc/server";
@@ -185,8 +185,179 @@ export const meetingsRouter = router({
         meetingId,
         speakerId: "system",
         speakerType: "agent",
-        messageText: "🔴 تم إنهاء الاجتماع.",
+        messageText: "🔴 تم إنهاء الاجتماع. جاري توليد المخرجات...",
       });
+
+      // === AUTO-GENERATE MINUTES ===
+      try {
+        const allMessages = await db.select().from(meetingMessages)
+          .where(eq(meetingMessages.meetingId, meetingId))
+          .orderBy(meetingMessages.createdAt);
+
+        const files = await db.select().from(meetingFiles)
+          .where(eq(meetingFiles.meetingId, meetingId));
+
+        const participantsList = await db.select({
+          agentId: meetingParticipants.agentId,
+          agentName: agents.name,
+          agentNameEn: agents.nameEn,
+          agentRole: agents.role,
+        })
+          .from(meetingParticipants)
+          .innerJoin(agents, eq(meetingParticipants.agentId, agents.id))
+          .where(eq(meetingParticipants.meetingId, meetingId));
+
+        const transcript = allMessages.map(m => {
+          const speaker = m.speakerId === "user" ? "المدير (عبدالرحمن)" : m.speakerId;
+          return `${speaker}: ${m.messageText}`;
+        }).join("\n\n");
+
+        if (allMessages.filter(m => m.speakerType !== "agent" || m.speakerId !== "system").length > 0) {
+          // Generate minutes via LLM
+          const response = await invokeLLM({
+            messages: [
+              {
+                role: "system",
+                content: `أنت مساعد ذكي لتوليد محاضر الاجتماعات. قم بتحليل النص التالي وإنتاج:\n1. ملخص تنفيذي للاجتماع (3-5 جمل)\n2. القرارات المتخذة (قائمة)\n3. المهام المستخرجة (مع المسؤول والموعد إن وُجد)\n4. النقاط الرئيسية التي تم مناقشتها\n5. المعرفة المؤسسية المستفادة (دروس، أنماط، رؤى)\n\nأجب بصيغة JSON فقط.`
+              },
+              {
+                role: "user",
+                content: `اجتماع: ${(await db.select().from(meetings).where(eq(meetings.id, meetingId)))[0]?.title || ""}\nالموضوع: ${(await db.select().from(meetings).where(eq(meetings.id, meetingId)))[0]?.topic || "عام"}\nالمشاركون: ${participantsList.map(p => `${p.agentName} (${p.agentRole})`).join("، ")} + المدير\nالملفات: ${files.map(f => f.fileName).join("، ") || "لا يوجد"}\n\nالنص الكامل:\n${transcript}`
+              }
+            ],
+            response_format: {
+              type: "json_schema",
+              json_schema: {
+                name: "meeting_minutes",
+                strict: true,
+                schema: {
+                  type: "object",
+                  properties: {
+                    summary: { type: "string", description: "ملخص تنفيذي" },
+                    decisions: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          decision: { type: "string" },
+                          responsible: { type: "string" },
+                        },
+                        required: ["decision", "responsible"],
+                        additionalProperties: false,
+                      }
+                    },
+                    tasks: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          task: { type: "string" },
+                          assignee: { type: "string" },
+                          deadline: { type: "string" },
+                          priority: { type: "string" },
+                        },
+                        required: ["task", "assignee", "deadline", "priority"],
+                        additionalProperties: false,
+                      }
+                    },
+                    keyPoints: {
+                      type: "array",
+                      items: { type: "string" }
+                    },
+                    knowledgeItems: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          type: { type: "string" },
+                          title: { type: "string" },
+                          content: { type: "string" },
+                        },
+                        required: ["type", "title", "content"],
+                        additionalProperties: false,
+                      }
+                    },
+                  },
+                  required: ["summary", "decisions", "tasks", "keyPoints", "knowledgeItems"],
+                  additionalProperties: false,
+                }
+              }
+            }
+          });
+
+          const content = response.choices[0]?.message?.content;
+          let minutes;
+          try {
+            minutes = typeof content === "string" ? JSON.parse(content) : content;
+          } catch {
+            minutes = { summary: "لم يتم توليد الملخص", decisions: [], tasks: [], keyPoints: [], knowledgeItems: [] };
+          }
+
+          // Save minutes to meeting
+          await db.update(meetings).set({
+            minutesSummary: minutes.summary,
+            decisionsJson: JSON.stringify(minutes.decisions),
+            extractedTasksJson: JSON.stringify(minutes.tasks),
+            knowledgeItemsJson: JSON.stringify(minutes.knowledgeItems),
+            fullTranscript: transcript,
+          }).where(eq(meetings.id, meetingId));
+
+          // === AUTO-SAVE TO KNOWLEDGE BASE ===
+          if (minutes.knowledgeItems?.length > 0) {
+            for (const item of minutes.knowledgeItems) {
+              const validTypes = ["decision", "evaluation", "pattern", "insight", "lesson"];
+              const itemType = validTypes.includes(item.type) ? item.type : "insight";
+              await db.insert(knowledgeBase).values({
+                userId: ctx.user.id,
+                type: itemType,
+                title: item.title,
+                content: item.content,
+                importance: "medium",
+                sourceAgent: "meeting",
+                tags: JSON.stringify([`meeting-${meetingId}`]),
+              });
+            }
+          }
+
+          // === SAVE MEETING SUMMARY TO EACH AGENT'S CHAT HISTORY ===
+          const meetingMemory = `📋 [ذاكرة اجتماع] عنوان: ${(await db.select().from(meetings).where(eq(meetings.id, meetingId)))[0]?.title}\n` +
+            `📅 التاريخ: ${new Date().toLocaleDateString("ar-SA")}\n` +
+            `👥 المشاركون: ${participantsList.map(p => p.agentName).join("، ")}\n` +
+            `📝 الملخص: ${minutes.summary}\n` +
+            (minutes.decisions?.length > 0 ? `✅ القرارات: ${minutes.decisions.map((d: any) => d.decision).join(" | ")}\n` : "") +
+            (minutes.tasks?.length > 0 ? `📌 المهام: ${minutes.tasks.map((t: any) => `${t.task} (${t.assignee})`).join(" | ")}\n` : "") +
+            (minutes.keyPoints?.length > 0 ? `🔑 النقاط الرئيسية: ${minutes.keyPoints.join(" | ")}` : "");
+
+          for (const participant of participantsList) {
+            const agentKey = participant.agentNameEn?.toLowerCase() || "";
+            if (agentKey) {
+              // Save as system message in agent's chat history
+              await db.insert(chatHistory).values({
+                userId: ctx.user.id,
+                agent: agentKey,
+                role: "assistant",
+                content: meetingMemory,
+              });
+            }
+          }
+
+          // Update system message with success
+          await db.insert(meetingMessages).values({
+            meetingId,
+            speakerId: "system",
+            speakerType: "agent",
+            messageText: "✅ تم توليد محضر الاجتماع والمخرجات تلقائياً. اضغط على 'المخرجات' لعرضها.",
+          });
+        }
+      } catch (err) {
+        console.error("[Meeting] Auto-generate minutes failed:", err);
+        await db.insert(meetingMessages).values({
+          meetingId,
+          speakerId: "system",
+          speakerType: "agent",
+          messageText: "⚠️ لم يتم توليد المخرجات تلقائياً. يمكنك توليدها يدوياً لاحقاً.",
+        });
+      }
 
       return { success: true };
     }),
