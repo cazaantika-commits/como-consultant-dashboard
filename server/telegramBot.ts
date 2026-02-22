@@ -65,6 +65,88 @@ interface ConversationState {
 }
 const conversations = new Map<number, ConversationState>();
 
+// ─── Delete Approval System ───
+interface PendingDeleteApproval {
+  fileId: string;
+  fileName: string;
+  reason: string;
+  requestedBy: string;
+  timestamp: number;
+  resolve: (approved: boolean) => void;
+}
+const pendingDeleteApprovals = new Map<string, PendingDeleteApproval>();
+
+/**
+ * Request owner approval to delete a file via Telegram inline buttons.
+ * Returns a Promise that resolves to true (approved) or false (rejected).
+ * Times out after 5 minutes and auto-rejects.
+ */
+export async function requestDeleteApproval(
+  fileId: string,
+  fileName: string,
+  reason: string,
+  requestedBy: string
+): Promise<boolean> {
+  const telegramBot = getBot();
+  const chats = getAuthorizedChats();
+  if (!telegramBot || chats.length === 0) {
+    console.error("[DeleteApproval] No bot or authorized chats available");
+    return false;
+  }
+
+  const requestId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+  return new Promise<boolean>(async (resolve) => {
+    // Store the pending approval
+    pendingDeleteApprovals.set(requestId, {
+      fileId, fileName, reason, requestedBy,
+      timestamp: Date.now(),
+      resolve,
+    });
+
+    // Auto-reject after 5 minutes
+    setTimeout(() => {
+      const pending = pendingDeleteApprovals.get(requestId);
+      if (pending) {
+        pending.resolve(false);
+        pendingDeleteApprovals.delete(requestId);
+        // Notify that it timed out
+        for (const chatId of chats) {
+          telegramBot.sendMessage(chatId, `⏰ انتهت مهلة الموافقة على حذف "${fileName}". تم الرفض تلقائياً.`).catch(() => {});
+        }
+      }
+    }, 5 * 60 * 1000);
+
+    // Send approval request to all authorized chats
+    const message = `🗑️ *طلب حذف ملف*\n\n` +
+      `📄 الملف: *${fileName}*\n` +
+      `🆔 المعرف: \`${fileId}\`\n` +
+      `📝 السبب: ${reason}\n` +
+      `🤖 الطالب: ${requestedBy}\n\n` +
+      `⏰ ينتهي الطلب خلال 5 دقائق`;
+
+    const keyboard = {
+      inline_keyboard: [
+        [
+          { text: "✅ موافق - احذف", callback_data: `delete_approve_${requestId}` },
+          { text: "❌ رفض", callback_data: `delete_reject_${requestId}` },
+        ],
+      ],
+    };
+
+    for (const chatId of chats) {
+      try {
+        await telegramBot.sendMessage(chatId, message, {
+          parse_mode: "Markdown",
+          reply_markup: keyboard,
+        });
+      } catch (err) {
+        console.error(`[DeleteApproval] Failed to send to chat ${chatId}:`, err);
+      }
+    }
+  });
+}
+
 // Known projects for matching
 const KNOWN_PROJECTS = [
   "الجداف", "Al Jaddaf",
@@ -713,6 +795,22 @@ export function registerCallbackHandler(bot: TelegramBot) {
         await bot.answerCallbackQuery(query.id, { text: "خطأ في معالجة الإيميل" });
         return;
       }
+    }
+
+    // Handle file delete approval callbacks
+    if (data.startsWith("delete_approve_") || data.startsWith("delete_reject_")) {
+      const requestId = data.replace("delete_approve_", "").replace("delete_reject_", "");
+      const pending = pendingDeleteApprovals.get(requestId);
+      if (!pending) {
+        await bot.answerCallbackQuery(query.id, { text: "انتهت صلاحية الطلب" });
+        return;
+      }
+      const approved = data.startsWith("delete_approve_");
+      pending.resolve(approved);
+      pendingDeleteApprovals.delete(requestId);
+      await bot.answerCallbackQuery(query.id, { text: approved ? "✅ تمت الموافقة" : "❌ تم الرفض" });
+      await bot.sendMessage(chatId, approved ? "✅ تمت الموافقة على الحذف. جاري التنفيذ..." : "❌ تم رفض طلب الحذف.");
+      return;
     }
 
     const convo = conversations.get(chatId);

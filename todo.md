@@ -557,3 +557,14 @@
 - [x] إجبار استخدام list_drive_files/search_drive_files قبل القراءة
 - [x] تحديث prompt التنفيذ في generateActionPlan ليشمل أدوات Drive الكاملة
 - [x] تحديث AGENT_READ_CAPABILITIES و AGENT_WRITE_CAPABILITIES لكل الوكلاء
+
+## أدوات إدارة ملفات Drive (rename, move, delete) - فبراير 22
+- [x] إضافة وظيفة renameFile في googleDrive.ts
+- [x] إضافة وظيفة moveFile في googleDrive.ts
+- [x] إضافة وظيفة deleteFile في googleDrive.ts
+- [x] إضافة أداة rename_drive_file لخازن (مباشر بدون موافقة)
+- [x] إضافة أداة move_drive_file لخازن (مباشر بدون موافقة)
+- [x] إضافة أداة delete_drive_file لخازن (يتطلب موافقة المالك عبر تيليجرام)
+- [x] بناء نظام موافقة الحذف عبر تيليجرام (inline buttons + timeout 5 دقائق)
+- [x] تحديث taskExecutionEngine بالأدوات الجديدة لخازن
+- [x] اختبار الأدوات (15 tests passed)

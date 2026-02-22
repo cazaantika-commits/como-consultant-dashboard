@@ -80,7 +80,7 @@ const AGENT_WRITE_CAPABILITIES: Record<AgentType, string[]> = {
   khaled: ["set_evaluation_score", "add_consultant_note"],
   alina: ["set_financial_data", "create_drive_document", "create_drive_spreadsheet"],
   buraq: ["add_task", "update_task_status"],
-  khazen: ["add_consultant_note", "copy_drive_file", "create_drive_folder", "create_drive_document", "create_drive_spreadsheet", "upload_text_file", "update_drive_file", "list_drive_files", "search_drive_files"],
+  khazen: ["add_consultant_note", "copy_drive_file", "create_drive_folder", "create_drive_document", "create_drive_spreadsheet", "upload_text_file", "update_drive_file", "rename_drive_file", "move_drive_file", "delete_drive_file", "list_drive_files", "search_drive_files"],
   baz: ["add_task"],
   joelle: [],
 };

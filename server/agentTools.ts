@@ -17,7 +17,8 @@ import {
 import {
   listSharedDrives, listFilesInFolder, searchFiles as searchDriveFiles,
   copyFile, createFolder, getFileMetadata, readFileContent,
-  uploadTextFile, createGoogleDoc, createGoogleSheet, updateFileContent
+  uploadTextFile, createGoogleDoc, createGoogleSheet, updateFileContent,
+  renameFile, moveFile, deleteFile
 } from "./googleDrive";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 
@@ -615,6 +616,52 @@ export const AGENT_TOOLS = [
       },
     },
   },
+  // ─── FILE MANAGEMENT (rename, move, delete) ───
+  {
+    type: "function" as const,
+    function: {
+      name: "rename_drive_file",
+      description: "تغيير اسم ملف أو مجلد في Google Drive",
+      parameters: {
+        type: "object",
+        properties: {
+          fileId: { type: "string", description: "معرف الملف أو المجلد المراد تغيير اسمه" },
+          newName: { type: "string", description: "الاسم الجديد" },
+        },
+        required: ["fileId", "newName"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "move_drive_file",
+      description: "نقل ملف أو مجلد إلى مجلد آخر في Google Drive",
+      parameters: {
+        type: "object",
+        properties: {
+          fileId: { type: "string", description: "معرف الملف أو المجلد المراد نقله" },
+          newParentFolderId: { type: "string", description: "معرف المجلد الجديد (الوجهة)" },
+        },
+        required: ["fileId", "newParentFolderId"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "delete_drive_file",
+      description: "حذف ملف أو مجلد من Google Drive - ⚠️ هذه العملية تتطلب موافقة المالك. سيتم إرسال طلب موافقة عبر تيليجرام وانتظار الرد قبل التنفيذ.",
+      parameters: {
+        type: "object",
+        properties: {
+          fileId: { type: "string", description: "معرف الملف أو المجلد المراد حذفه" },
+          reason: { type: "string", description: "سبب الحذف - سيُعرض على المالك في طلب الموافقة" },
+        },
+        required: ["fileId", "reason"],
+      },
+    },
+  },
   // ─── INTER-AGENT ───
   {
     type: "function" as const,
@@ -664,7 +711,8 @@ const WRITE_TOOL_NAMES = new Set([
   "remove_consultant_from_project", "set_evaluation_score", "set_financial_data",
   "add_project", "add_task", "update_task_status", "update_consultant_profile",
   "add_consultant_note", "copy_drive_file", "create_drive_folder",
-  "create_drive_document", "create_drive_spreadsheet", "upload_text_file", "update_drive_file"
+  "create_drive_document", "create_drive_spreadsheet", "upload_text_file", "update_drive_file",
+  "rename_drive_file", "move_drive_file", "delete_drive_file"
 ]);
 
 // Current agent context for assignment logging
@@ -1386,6 +1434,71 @@ async function _executeToolInternal(
         }
       }
 
+      // ─── FILE MANAGEMENT (rename, move, delete) ───
+      case "rename_drive_file": {
+        const { fileId: renameFileId, newName: renameNewName } = args;
+        if (!renameFileId || !renameNewName) return JSON.stringify({ error: "يجب تحديد معرف الملف والاسم الجديد" });
+        try {
+          const file = await renameFile(renameFileId, renameNewName);
+          return JSON.stringify({
+            success: true,
+            message: `تم تغيير الاسم بنجاح إلى: ${file.name}`,
+            data: { id: file.id, name: file.name, webViewLink: file.webViewLink }
+          });
+        } catch (e: any) {
+          return JSON.stringify({ error: `فشل تغيير الاسم: ${e.message}` });
+        }
+      }
+
+      case "move_drive_file": {
+        const { fileId: moveFileId, newParentFolderId: moveTarget } = args;
+        if (!moveFileId || !moveTarget) return JSON.stringify({ error: "يجب تحديد معرف الملف ومعرف المجلد الجديد" });
+        try {
+          const file = await moveFile(moveFileId, moveTarget);
+          return JSON.stringify({
+            success: true,
+            message: `تم نقل "${file.name}" بنجاح`,
+            data: { id: file.id, name: file.name, newParents: file.parents, webViewLink: file.webViewLink }
+          });
+        } catch (e: any) {
+          return JSON.stringify({ error: `فشل نقل الملف: ${e.message}` });
+        }
+      }
+
+      case "delete_drive_file": {
+        const { fileId: delFileId, reason: delReason } = args;
+        if (!delFileId || !delReason) return JSON.stringify({ error: "يجب تحديد معرف الملف وسبب الحذف" });
+        try {
+          // Get file info first
+          const fileMeta = await getFileMetadata(delFileId);
+          
+          // Request approval from owner via Telegram
+          const { requestDeleteApproval } = await import("./telegramBot");
+          const approved = await requestDeleteApproval(
+            delFileId,
+            fileMeta.name,
+            delReason,
+            _currentAgent || "unknown"
+          );
+
+          if (!approved) {
+            return JSON.stringify({
+              success: false,
+              message: `❌ تم رفض طلب حذف "${fileMeta.name}" من قبل المالك (أو انتهت المهلة)`
+            });
+          }
+
+          // Approved - proceed with deletion
+          await deleteFile(delFileId);
+          return JSON.stringify({
+            success: true,
+            message: `✅ تم حذف "${fileMeta.name}" بعد موافقة المالك`
+          });
+        } catch (e: any) {
+          return JSON.stringify({ error: `فشل عملية الحذف: ${e.message}` });
+        }
+      }
+
       // ─── INTER-AGENT ───
       case "ask_another_agent": {
         // Agent-to-agent communication - import agentChat and call it
@@ -1538,6 +1651,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "copy_drive_file", "create_drive_folder",
     "create_drive_document", "create_drive_spreadsheet",
     "upload_text_file", "update_drive_file",
+    "rename_drive_file", "move_drive_file", "delete_drive_file",
     "ask_another_agent",
   ],
 };

@@ -666,3 +666,85 @@ export async function updateFileContent(
     webViewLink: res.data.webViewLink || undefined,
   };
 }
+
+
+// ═══════════════════════════════════════════════════
+// File Management: Rename, Move, Delete
+// ═══════════════════════════════════════════════════
+
+/**
+ * Rename a file or folder in Google Drive
+ */
+export async function renameFile(
+  fileId: string,
+  newName: string
+): Promise<DriveFile> {
+  const drive = getDriveClient();
+  const res = await drive.files.update({
+    fileId,
+    requestBody: { name: newName },
+    fields: "id, name, mimeType, size, modifiedTime, createdTime, parents, webViewLink",
+    supportsAllDrives: true,
+  });
+
+  return {
+    id: res.data.id!,
+    name: res.data.name!,
+    mimeType: res.data.mimeType!,
+    size: res.data.size || undefined,
+    modifiedTime: res.data.modifiedTime || undefined,
+    createdTime: res.data.createdTime || undefined,
+    parents: res.data.parents || undefined,
+    webViewLink: res.data.webViewLink || undefined,
+  };
+}
+
+/**
+ * Move a file or folder to a different parent folder in Google Drive
+ */
+export async function moveFile(
+  fileId: string,
+  newParentFolderId: string
+): Promise<DriveFile> {
+  const drive = getDriveClient();
+
+  // Get current parents to remove them
+  const current = await drive.files.get({
+    fileId,
+    fields: "parents",
+    supportsAllDrives: true,
+  });
+  const previousParents = (current.data.parents || []).join(",");
+
+  const res = await drive.files.update({
+    fileId,
+    addParents: newParentFolderId,
+    removeParents: previousParents,
+    fields: "id, name, mimeType, size, modifiedTime, createdTime, parents, webViewLink",
+    supportsAllDrives: true,
+  });
+
+  return {
+    id: res.data.id!,
+    name: res.data.name!,
+    mimeType: res.data.mimeType!,
+    size: res.data.size || undefined,
+    modifiedTime: res.data.modifiedTime || undefined,
+    createdTime: res.data.createdTime || undefined,
+    parents: res.data.parents || undefined,
+    webViewLink: res.data.webViewLink || undefined,
+  };
+}
+
+/**
+ * Delete a file or folder from Google Drive (moves to trash)
+ */
+export async function deleteFile(fileId: string): Promise<{ success: boolean; fileId: string }> {
+  const drive = getDriveClient();
+  await drive.files.update({
+    fileId,
+    requestBody: { trashed: true },
+    supportsAllDrives: true,
+  });
+  return { success: true, fileId };
+}
