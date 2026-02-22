@@ -394,18 +394,22 @@ async function callOpenAI(
     }
   }
 
+  // Extract content safely
+  const content = assistantMessage?.content || data?.choices?.[0]?.message?.content;
+  
   // If content is empty but we had tool calls, provide a summary
-  if (!assistantMessage?.content && lastToolResults.length > 0) {
+  if (!content && lastToolResults.length > 0) {
     console.warn("[OpenAI] Empty content after tool calls. Tool results:", lastToolResults);
     return `تم تنفيذ الأدوات المطلوبة بنجاح. النتائج:\n${lastToolResults.join('\n')}`;
   }
 
-  if (!assistantMessage?.content) {
+  if (!content || content.trim() === '') {
     console.error("[OpenAI] Empty response. Full data:", JSON.stringify(data).slice(0, 500));
+    console.error("[OpenAI] assistantMessage:", assistantMessage);
     return `واجهت مشكلة في توليد الرد. حاول إعادة صياغة طلبك.`;
   }
 
-  return assistantMessage.content;
+  return content;
 }
 
 // Call Anthropic Claude with tool support
