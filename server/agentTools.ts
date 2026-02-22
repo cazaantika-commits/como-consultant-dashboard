@@ -16,7 +16,7 @@ import {
 } from "../drizzle/schema";
 import {
   listSharedDrives, listFilesInFolder, searchFiles as searchDriveFiles,
-  copyFile, createFolder, getFileMetadata
+  copyFile, createFolder, getFileMetadata, readFileContent
 } from "./googleDrive";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 
@@ -529,6 +529,21 @@ export const AGENT_TOOLS = [
           parentFolderId: { type: "string", description: "معرف المجلد الأب" },
         },
         required: ["name", "parentFolderId"],
+      },
+    },
+  },
+  // ─── FILE CONTENT READING ───
+  {
+    type: "function" as const,
+    function: {
+      name: "read_drive_file_content",
+      description: "قراءة محتوى ملف من Google Drive - يدعم Google Docs (نص)، Google Sheets (CSV)، PDF (استخراج نص)، وملفات نصية (txt, csv, json, xml, html, md). استخدم هذه الأداة عندما تحتاج فعلياً لقراءة ما بداخل ملف وليس فقط معرفة اسمه. مثال: قراءة عرض سعر PDF، أو جدول بيانات Sheet، أو مستند Doc.",
+      parameters: {
+        type: "object",
+        properties: {
+          fileId: { type: "string", description: "معرف الملف في Google Drive (يمكن الحصول عليه من list_drive_files أو search_drive_files)" },
+        },
+        required: ["fileId"],
       },
     },
   },
@@ -1213,6 +1228,34 @@ async function _executeToolInternal(
         });
       }
 
+      // ─── FILE CONTENT READING ───
+      case "read_drive_file_content": {
+        const { fileId: readFileId } = args;
+        if (!readFileId) return JSON.stringify({ error: "يجب تحديد معرف الملف (fileId)" });
+        try {
+          const result = await readFileContent(readFileId);
+          if (result.error) {
+            return JSON.stringify({
+              success: false,
+              fileName: result.fileName,
+              mimeType: result.mimeType,
+              error: result.error,
+            });
+          }
+          return JSON.stringify({
+            success: true,
+            fileName: result.fileName,
+            mimeType: result.mimeType,
+            contentType: result.contentType,
+            truncated: result.truncated,
+            totalChars: result.totalChars,
+            content: result.content,
+          });
+        } catch (e: any) {
+          return JSON.stringify({ error: `فشل قراءة الملف: ${e.message}` });
+        }
+      }
+
       // ─── INTER-AGENT ───
       case "ask_another_agent": {
         // Agent-to-agent communication - import agentChat and call it
@@ -1301,7 +1344,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "list_meetings", "get_meeting_details", "get_meeting_tasks_status",
     "search_all_data", "query_institutional_memory",
     "list_drive_folders", "list_drive_files", "search_drive_files",
-    "get_drive_file_info",
+    "get_drive_file_info", "read_drive_file_content",
     "ask_another_agent",
   ],
   farouq: [
@@ -1312,7 +1355,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "update_consultant_profile", "add_consultant",
     "list_meetings", "get_meeting_details", "query_institutional_memory",
     "list_drive_folders", "list_drive_files", "search_drive_files",
-    "get_drive_file_info",
+    "get_drive_file_info", "read_drive_file_content",
     "ask_another_agent",
   ],
   khaled: [
@@ -1321,6 +1364,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "get_evaluation_criteria", "get_consultant_profile",
     "set_evaluation_score", "add_consultant_note",
     "list_meetings", "get_meeting_details", "query_institutional_memory",
+    "read_drive_file_content",
     "ask_another_agent",
   ],
   alina: [
@@ -1328,6 +1372,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "get_financial_data", "get_evaluation_scores", "get_evaluation_criteria",
     "get_feasibility_study", "set_financial_data", "get_consultant_profile",
     "list_meetings", "get_meeting_details", "query_institutional_memory",
+    "read_drive_file_content",
     "ask_another_agent",
   ],
   joelle: [
@@ -1335,6 +1380,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "get_financial_data", "get_evaluation_scores", "get_evaluation_criteria",
     "get_feasibility_study", "get_consultant_profile", "get_committee_decision",
     "list_meetings", "get_meeting_details", "query_institutional_memory",
+    "read_drive_file_content",
     "ask_another_agent",
   ],
   baz: [
@@ -1356,7 +1402,8 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "add_consultant_note", "list_tasks",
     "list_meetings", "get_meeting_details", "query_institutional_memory",
     "list_drive_folders", "list_drive_files", "search_drive_files",
-    "get_drive_file_info", "copy_drive_file", "create_drive_folder",
+    "get_drive_file_info", "read_drive_file_content",
+    "copy_drive_file", "create_drive_folder",
     "ask_another_agent",
   ],
 };

@@ -247,6 +247,230 @@ export async function searchFiles(
   }));
 }
 
+// ═══════════════════════════════════════════════════
+// File Content Reading
+// ═══════════════════════════════════════════════════
+
+// Google Workspace MIME types that need export
+const GOOGLE_DOC_MIME = "application/vnd.google-apps.document";
+const GOOGLE_SHEET_MIME = "application/vnd.google-apps.spreadsheet";
+const GOOGLE_SLIDES_MIME = "application/vnd.google-apps.presentation";
+const GOOGLE_DRAWING_MIME = "application/vnd.google-apps.drawing";
+
+// Export formats for Google Workspace files
+const EXPORT_FORMATS: Record<string, { mimeType: string; label: string }> = {
+  [GOOGLE_DOC_MIME]: { mimeType: "text/plain", label: "Google Doc → نص" },
+  [GOOGLE_SHEET_MIME]: { mimeType: "text/csv", label: "Google Sheet → CSV" },
+  [GOOGLE_SLIDES_MIME]: { mimeType: "text/plain", label: "Google Slides → نص" },
+  [GOOGLE_DRAWING_MIME]: { mimeType: "image/png", label: "Google Drawing → صورة" },
+};
+
+// Max content size to return to agent (prevent token overflow)
+const MAX_CONTENT_CHARS = 15000;
+
+export interface FileContentResult {
+  fileId: string;
+  fileName: string;
+  mimeType: string;
+  contentType: "text" | "csv" | "unsupported";
+  content: string;
+  truncated: boolean;
+  totalChars: number;
+  error?: string;
+}
+
+/**
+ * Read the text content of a file from Google Drive.
+ * Supports:
+ * - Google Docs → exported as plain text
+ * - Google Sheets → exported as CSV
+ * - Google Slides → exported as plain text
+ * - PDF files → text extracted via pdf-parse
+ * - Plain text files (txt, csv, json, xml, html, md, etc.) → downloaded directly
+ * - Excel files (.xlsx) → not supported yet (returns metadata only)
+ */
+export async function readFileContent(fileId: string): Promise<FileContentResult> {
+  const drive = getDriveClient();
+
+  // Step 1: Get file metadata
+  const meta = await drive.files.get({
+    fileId,
+    fields: "id, name, mimeType, size",
+    supportsAllDrives: true,
+  });
+
+  const fileName = meta.data.name || "unknown";
+  const mimeType = meta.data.mimeType || "unknown";
+  const fileSize = parseInt(meta.data.size || "0", 10);
+
+  // Step 2: Check if it's a Google Workspace file that needs export
+  const exportFormat = EXPORT_FORMATS[mimeType];
+  if (exportFormat) {
+    try {
+      const res = await drive.files.export(
+        { fileId, mimeType: exportFormat.mimeType },
+        { responseType: "text" }
+      );
+
+      let content = String(res.data);
+      const totalChars = content.length;
+      const truncated = totalChars > MAX_CONTENT_CHARS;
+      if (truncated) {
+        content = content.substring(0, MAX_CONTENT_CHARS) + "\n\n... [تم اقتطاع المحتوى - الملف يحتوي على " + totalChars + " حرف]";
+      }
+
+      return {
+        fileId,
+        fileName,
+        mimeType,
+        contentType: mimeType === GOOGLE_SHEET_MIME ? "csv" : "text",
+        content,
+        truncated,
+        totalChars,
+      };
+    } catch (e: any) {
+      return {
+        fileId,
+        fileName,
+        mimeType,
+        contentType: "text",
+        content: "",
+        truncated: false,
+        totalChars: 0,
+        error: `فشل تصدير ${exportFormat.label}: ${e.message}`,
+      };
+    }
+  }
+
+  // Step 3: Handle PDF files
+  if (mimeType === "application/pdf") {
+    // Limit PDF size to 10MB
+    if (fileSize > 10 * 1024 * 1024) {
+      return {
+        fileId,
+        fileName,
+        mimeType,
+        contentType: "text",
+        content: "",
+        truncated: false,
+        totalChars: 0,
+        error: `ملف PDF كبير جداً (${Math.round(fileSize / 1024 / 1024)} MB). الحد الأقصى 10 MB.`,
+      };
+    }
+
+    try {
+      const res = await drive.files.get(
+        { fileId, alt: "media", supportsAllDrives: true },
+        { responseType: "arraybuffer" }
+      );
+
+      const pdfParse = (await import("pdf-parse")).default;
+      const pdfData = await pdfParse(Buffer.from(res.data as ArrayBuffer));
+
+      let content = pdfData.text || "";
+      const totalChars = content.length;
+      const truncated = totalChars > MAX_CONTENT_CHARS;
+      if (truncated) {
+        content = content.substring(0, MAX_CONTENT_CHARS) + "\n\n... [تم اقتطاع المحتوى - الملف يحتوي على " + totalChars + " حرف]";
+      }
+
+      return {
+        fileId,
+        fileName,
+        mimeType,
+        contentType: "text",
+        content: content || "(ملف PDF فارغ أو يحتوي على صور فقط)",
+        truncated,
+        totalChars,
+      };
+    } catch (e: any) {
+      return {
+        fileId,
+        fileName,
+        mimeType,
+        contentType: "text",
+        content: "",
+        truncated: false,
+        totalChars: 0,
+        error: `فشل قراءة PDF: ${e.message}`,
+      };
+    }
+  }
+
+  // Step 4: Handle plain text files
+  const textMimeTypes = [
+    "text/plain", "text/csv", "text/html", "text/xml",
+    "application/json", "application/xml",
+    "text/markdown", "text/tab-separated-values",
+  ];
+  const textExtensions = [".txt", ".csv", ".json", ".xml", ".html", ".md", ".yml", ".yaml", ".log", ".tsv"];
+  const isTextFile = textMimeTypes.includes(mimeType) ||
+    textExtensions.some(ext => fileName.toLowerCase().endsWith(ext));
+
+  if (isTextFile) {
+    // Limit text file size to 5MB
+    if (fileSize > 5 * 1024 * 1024) {
+      return {
+        fileId,
+        fileName,
+        mimeType,
+        contentType: "text",
+        content: "",
+        truncated: false,
+        totalChars: 0,
+        error: `ملف نصي كبير جداً (${Math.round(fileSize / 1024 / 1024)} MB). الحد الأقصى 5 MB.`,
+      };
+    }
+
+    try {
+      const res = await drive.files.get(
+        { fileId, alt: "media", supportsAllDrives: true },
+        { responseType: "text" }
+      );
+
+      let content = String(res.data);
+      const totalChars = content.length;
+      const truncated = totalChars > MAX_CONTENT_CHARS;
+      if (truncated) {
+        content = content.substring(0, MAX_CONTENT_CHARS) + "\n\n... [تم اقتطاع المحتوى - الملف يحتوي على " + totalChars + " حرف]";
+      }
+
+      return {
+        fileId,
+        fileName,
+        mimeType,
+        contentType: mimeType === "text/csv" || fileName.endsWith(".csv") ? "csv" : "text",
+        content,
+        truncated,
+        totalChars,
+      };
+    } catch (e: any) {
+      return {
+        fileId,
+        fileName,
+        mimeType,
+        contentType: "text",
+        content: "",
+        truncated: false,
+        totalChars: 0,
+        error: `فشل قراءة الملف النصي: ${e.message}`,
+      };
+    }
+  }
+
+  // Step 5: Unsupported file type
+  return {
+    fileId,
+    fileName,
+    mimeType,
+    contentType: "unsupported",
+    content: "",
+    truncated: false,
+    totalChars: 0,
+    error: `نوع الملف غير مدعوم للقراءة: ${mimeType}. الأنواع المدعومة: Google Docs, Google Sheets, PDF, ملفات نصية (txt, csv, json, xml, html, md)`,
+  };
+}
+
 /**
  * Verify connection to Google Drive - returns service account email and shared files count
  */

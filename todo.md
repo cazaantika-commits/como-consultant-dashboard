@@ -527,3 +527,16 @@
 - [x] ربط الأدوات بخازن (كل الأدوات - قراءة وكتابة) + سلوى وفاروق (قراءة فقط)
 - [x] تحديث taskExecutionEngine بقدرات Drive لخازن
 - [x] اختبار الأدوات والتحقق من عملها (12 tests passed)
+
+## أداة قراءة محتوى الملفات من Drive - فبراير 22
+- [x] إضافة وظيفة readFileContent في googleDrive.ts
+- [x] دعم Google Docs (تصدير كنص)
+- [x] دعم Google Sheets (تصدير كـ CSV)
+- [x] دعم Google Slides (تصدير كنص)
+- [x] دعم PDF (تحميل واستخراج النص عبر pdf-parse)
+- [x] دعم ملفات نصية عادية (txt, csv, json, xml, html, md, yml, yaml, log, tsv)
+- [x] حماية من الملفات الكبيرة (PDF: 10MB, نصي: 5MB) واقتطاع المحتوى (15000 حرف)
+- [x] إضافة أداة read_drive_file_content كـ agent tool
+- [x] ربط الأداة بـ 7 وكلاء (سلوى، فاروق، خالد، ألينا، جويل، باز، خازن)
+- [x] تحديث taskExecutionEngine بالأداة الجديدة لكل الوكلاء
+- [x] اختبار الأداة (21 tests passed)
