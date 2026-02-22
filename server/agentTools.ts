@@ -534,12 +534,39 @@ export const AGENT_TOOLS = [
       },
     },
   },
+  // ─── BATCH COPY ───
+  {
+    type: "function" as const,
+    function: {
+      name: "batch_copy_drive_file",
+      description: "نسخ ملف واحد إلى عدة مجلدات (مشاريع) بأسماء مختلفة دفعة واحدة - مثالي لما يكون عرض استشاري واحد يخص عدة مشاريع. استخدم هذه الأداة بدل من نسخ كل ملف على حدة.",
+      parameters: {
+        type: "object",
+        properties: {
+          fileId: { type: "string", description: "معرف الملف الأصلي المراد نسخه" },
+          destinations: {
+            type: "array",
+            description: "قائمة الوجهات - كل وجهة فيها معرف المجلد والاسم الجديد",
+            items: {
+              type: "object",
+              properties: {
+                folderId: { type: "string", description: "معرف مجلد المشروع الهدف" },
+                fileName: { type: "string", description: "اسم الملف الجديد حسب دستور الأرشفة" },
+              },
+              required: ["folderId", "fileName"],
+            },
+          },
+        },
+        required: ["fileId", "destinations"],
+      },
+    },
+  },
   // ─── FILE CONTENT READING ───
   {
     type: "function" as const,
     function: {
       name: "read_drive_file_content",
-      description: "قراءة محتوى ملف من Google Drive - يدعم Google Docs (نص)، Google Sheets (CSV)، PDF (استخراج نص)، وملفات نصية (txt, csv, json, xml, html, md). استخدم هذه الأداة عندما تحتاج فعلياً لقراءة ما بداخل ملف وليس فقط معرفة اسمه. مثال: قراءة عرض سعر PDF، أو جدول بيانات Sheet، أو مستند Doc.",
+      description: "قراءة محتوى ملف من Google Drive - يدعم Google Docs (نص)، Google Sheets (CSV)، PDF حتى 50 MB (استخراج نص ذكي)، وملفات نصية (txt, csv, json, xml, html, md). استخدم هذه الأداة عندما تحتاج فعلياً لقراءة ما بداخل ملف وليس فقط معرفة اسمه. يقدر يقرأ ملفات كبيرة مثل عروض الاستشاريين والعقود. مثال: قراءة عرض سعر PDF، أو جدول بيانات Sheet، أو مستند Doc.",
       parameters: {
         type: "object",
         properties: {
@@ -1335,6 +1362,28 @@ async function _executeToolInternal(
         });
       }
 
+      case "batch_copy_drive_file": {
+        const { fileId: batchFileId, destinations } = args;
+        if (!batchFileId || !destinations || !Array.isArray(destinations) || destinations.length === 0) {
+          return JSON.stringify({ error: "يجب تحديد معرف الملف وقائمة الوجهات (destinations)" });
+        }
+        const results: any[] = [];
+        const errors: any[] = [];
+        for (const dest of destinations) {
+          try {
+            const copied = await copyFile(batchFileId, dest.folderId, dest.fileName);
+            results.push({ fileName: copied.name, folderId: dest.folderId, id: copied.id, link: copied.webViewLink });
+          } catch (e: any) {
+            errors.push({ fileName: dest.fileName, folderId: dest.folderId, error: e.message });
+          }
+        }
+        return JSON.stringify({
+          message: `تم نسخ الملف إلى ${results.length} مجلد بنجاح${errors.length > 0 ? ` (${errors.length} أخطاء)` : ''}`,
+          copied: results,
+          errors: errors.length > 0 ? errors : undefined,
+        });
+      }
+
       case "create_drive_folder": {
         const { name, parentFolderId } = args;
         if (!name || !parentFolderId) return JSON.stringify({ error: "يجب تحديد اسم المجلد ومعرف المجلد الأب" });
@@ -1648,7 +1697,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "list_meetings", "get_meeting_details", "query_institutional_memory",
     "list_drive_folders", "list_drive_files", "search_drive_files",
     "get_drive_file_info", "read_drive_file_content",
-    "copy_drive_file", "create_drive_folder",
+    "copy_drive_file", "batch_copy_drive_file", "create_drive_folder",
     "create_drive_document", "create_drive_spreadsheet",
     "upload_text_file", "update_drive_file",
     "rename_drive_file", "move_drive_file", "delete_drive_file",

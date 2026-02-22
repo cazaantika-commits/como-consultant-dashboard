@@ -266,7 +266,9 @@ const EXPORT_FORMATS: Record<string, { mimeType: string; label: string }> = {
 };
 
 // Max content size to return to agent (prevent token overflow)
-const MAX_CONTENT_CHARS = 15000;
+const MAX_CONTENT_CHARS = 50000;
+// Max PDF file size (50MB - handles large engineering proposals)
+const MAX_PDF_SIZE = 50 * 1024 * 1024;
 
 export interface FileContentResult {
   fileId: string;
@@ -344,8 +346,8 @@ export async function readFileContent(fileId: string): Promise<FileContentResult
 
   // Step 3: Handle PDF files
   if (mimeType === "application/pdf") {
-    // Limit PDF size to 10MB
-    if (fileSize > 10 * 1024 * 1024) {
+    // Limit PDF size to 50MB
+    if (fileSize > MAX_PDF_SIZE) {
       return {
         fileId,
         fileName,
@@ -354,25 +356,43 @@ export async function readFileContent(fileId: string): Promise<FileContentResult
         content: "",
         truncated: false,
         totalChars: 0,
-        error: `ملف PDF كبير جداً (${Math.round(fileSize / 1024 / 1024)} MB). الحد الأقصى 10 MB.`,
+        error: `ملف PDF كبير جداً (${Math.round(fileSize / 1024 / 1024)} MB). الحد الأقصى 50 MB.`,
       };
     }
 
     try {
+      console.log(`[Drive] Downloading PDF: ${fileName} (${Math.round(fileSize / 1024 / 1024)} MB)...`);
       const res = await drive.files.get(
         { fileId, alt: "media", supportsAllDrives: true },
         { responseType: "arraybuffer" }
       );
 
+      const pdfBuffer = Buffer.from(res.data as ArrayBuffer);
+      console.log(`[Drive] PDF downloaded successfully. Extracting text...`);
+
       const pdfParse = (await import("pdf-parse")).default;
-      const pdfData = await pdfParse(Buffer.from(res.data as ArrayBuffer));
+      const pdfData = await pdfParse(pdfBuffer);
 
       let content = pdfData.text || "";
       const totalChars = content.length;
+      const totalPages = pdfData.numpages || 0;
       const truncated = totalChars > MAX_CONTENT_CHARS;
+      
+      // Add metadata header
+      const header = `📄 الملف: ${fileName}\n📊 الحجم: ${Math.round(fileSize / 1024 / 1024)} MB | الصفحات: ${totalPages} | الأحرف: ${totalChars.toLocaleString()}\n${'─'.repeat(50)}\n\n`;
+      
       if (truncated) {
-        content = content.substring(0, MAX_CONTENT_CHARS) + "\n\n... [تم اقتطاع المحتوى - الملف يحتوي على " + totalChars + " حرف]";
+        // Smart truncation: take beginning and end for context
+        const beginChars = Math.floor(MAX_CONTENT_CHARS * 0.7);
+        const endChars = Math.floor(MAX_CONTENT_CHARS * 0.25);
+        const beginContent = content.substring(0, beginChars);
+        const endContent = content.substring(totalChars - endChars);
+        content = header + beginContent + "\n\n... [تم اقتطاع الجزء الأوسط - الملف يحتوي على " + totalChars.toLocaleString() + " حرف و " + totalPages + " صفحة] ...\n\n" + endContent;
+      } else {
+        content = header + content;
       }
+
+      console.log(`[Drive] PDF text extracted: ${totalChars} chars, ${totalPages} pages`);
 
       return {
         fileId,
@@ -384,6 +404,7 @@ export async function readFileContent(fileId: string): Promise<FileContentResult
         totalChars,
       };
     } catch (e: any) {
+      console.error(`[Drive] PDF read error for ${fileName}:`, e.message);
       return {
         fileId,
         fileName,
