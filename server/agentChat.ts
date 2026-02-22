@@ -333,22 +333,34 @@ async function callOpenAI(
   }
 
   let data = await response.json();
-  let assistantMessage = data.choices[0]?.message;
-
-  // Handle tool calls - up to 5 rounds
+  let assistantMessage = data.choi  // Handle tool calls - up to 5 rounds
   let toolRounds = 0;
+  let lastToolResults: string[] = [];
   while (assistantMessage?.tool_calls && toolRounds < 5) {
     toolRounds++;
     console.log(`[OpenAI] Tool call round ${toolRounds}: ${assistantMessage.tool_calls.length} tools`);
     
     messages.push(assistantMessage);
+    lastToolResults = [];
 
     for (const toolCall of assistantMessage.tool_calls) {
       const fnName = toolCall.function.name;
-      const fnArgs = JSON.parse(toolCall.function.arguments || "{}");
-      console.log(`[OpenAI] Executing tool: ${fnName}`, fnArgs);
+      let fnArgs: any = {};
+      try {
+        fnArgs = JSON.parse(toolCall.function.arguments || "{}");
+      } catch (e) {
+        console.error(`[OpenAI] Failed to parse tool args for ${fnName}:`, toolCall.function.arguments);
+      }
+      console.log(`[OpenAI] Executing tool: ${fnName}`, JSON.stringify(fnArgs).slice(0, 200));
       
-      const result = await executeAgentTool(fnName, fnArgs, userId || 0);
+      let result: string;
+      try {
+        result = await executeAgentTool(fnName, fnArgs, userId || 0);
+      } catch (toolErr: any) {
+        result = `Error executing ${fnName}: ${toolErr.message || 'Unknown error'}`;
+        console.error(`[OpenAI] Tool execution error:`, toolErr);
+      }
+      lastToolResults.push(`${fnName}: ${result.slice(0, 200)}`);
       messages.push({
         role: "tool",
         tool_call_id: toolCall.id,
@@ -357,29 +369,46 @@ async function callOpenAI(
     }
 
     // Call again with tool results
-    const followUp = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({ model: "gpt-4o", messages, max_tokens: 2048, temperature: 0.8, tools, tool_choice: "auto" }),
-    });
+    try {
+      const followUp = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({ model: "gpt-4o", messages, max_tokens: 2048, temperature: 0.8, tools, tool_choice: "auto" }),
+      });
 
-    if (!followUp.ok) {
-      const errorText = await followUp.text();
-      console.error("[OpenAI] Follow-up error:", followUp.status, errorText);
-      break;
+      if (!followUp.ok) {
+        const errorText = await followUp.text();
+        console.error("[OpenAI] Follow-up error:", followUp.status, errorText);
+        // Return a useful message instead of breaking silently
+        return `واجهت مشكلة تقنية أثناء معالجة طلبك (خطأ ${followUp.status}). حاول مرة أخرى.`;
+      }
+
+      data = await followUp.json();
+      assistantMessage = data.choices[0]?.message;
+    } catch (fetchErr: any) {
+      console.error("[OpenAI] Follow-up fetch error:", fetchErr);
+      return `واجهت مشكلة في الاتصال أثناء معالجة طلبك. حاول مرة أخرى.`;
     }
-
-    data = await followUp.json();
-    assistantMessage = data.choices[0]?.message;
   }
 
-  return assistantMessage?.content || "عذراً، لم أتمكن من الرد.";
+  // If content is empty but we had tool calls, provide a summary
+  if (!assistantMessage?.content && lastToolResults.length > 0) {
+    console.warn("[OpenAI] Empty content after tool calls. Tool results:", lastToolResults);
+    return `تم تنفيذ الأدوات المطلوبة بنجاح. النتائج:\n${lastToolResults.join('\n')}`;
+  }
+
+  if (!assistantMessage?.content) {
+    console.error("[OpenAI] Empty response. Full data:", JSON.stringify(data).slice(0, 500));
+    return `واجهت مشكلة في توليد الرد. حاول إعادة صياغة طلبك.`;
+  }
+
+  return assistantMessage.content;
 }
 
-// Call Anthropic Claude with tool use
+// Call Anthropic Claude with tool support
 async function callClaude(
   systemPrompt: string,
   userMessage: string,
@@ -702,7 +731,15 @@ async function getPlatformContext(agent: AgentType): Promise<string> {
 
     const projectList = await db.select().from(projects).limit(10);
     if (projectList.length > 0) {
-      contextData += `\n\n📋 المشاريع الحالية في كومو:\n${projectList.map(p => `- ${p.name} (ID: ${p.id})`).join("\n")}`;
+      if (["khazen", "farouq", "alina", "joelle"].includes(agent)) {
+        // Full project mapping with plot numbers, area codes, and Drive folder IDs
+        contextData += `\n\n📋 خريطة المشاريع (كود_المنطقة | رقم_القطعة | معرف_مجلد_Drive):`;
+        for (const p of projectList) {
+          contextData += `\n- ${p.name} → كود: ${p.areaCode || 'غير محدد'} | قطعة: ${p.plotNumber || 'غير محدد'} | مجلد Drive: ${p.driveFolderId || 'غير محدد'}`;
+        }
+      } else {
+        contextData += `\n\n📋 المشاريع الحالية في كومو:\n${projectList.map(p => `- ${p.name} (ID: ${p.id})`).join("\n")}`;
+      }
     }
 
     const consultantList = await db.select().from(consultants).limit(15);

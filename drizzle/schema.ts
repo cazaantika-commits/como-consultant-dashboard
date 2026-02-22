@@ -31,6 +31,9 @@ export const projects = mysqlTable('projects', {
   userId: int('userId').notNull().references(() => users.id),
   name: varchar('name', { length: 255 }).notNull(),
   description: text('description'),
+  plotNumber: varchar('plotNumber', { length: 50 }), // رقم القطعة مثل 6185392
+  areaCode: varchar('areaCode', { length: 50 }), // كود المنطقة مثل Nas-R, Maj-M, Jadaf
+  driveFolderId: varchar('driveFolderId', { length: 100 }), // معرف مجلد المشروع في Google Drive
   bua: int('bua'), // Building area in sqft
   pricePerSqft: int('pricePerSqft'), // Price per square foot in AED
   notes: text('notes'),
