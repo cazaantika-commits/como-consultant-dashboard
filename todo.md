@@ -540,3 +540,20 @@
 - [x] ربط الأداة بـ 7 وكلاء (سلوى، فاروق، خالد، ألينا، جويل، باز، خازن)
 - [x] تحديث taskExecutionEngine بالأداة الجديدة لكل الوكلاء
 - [x] اختبار الأداة (21 tests passed)
+
+## أداة رفع/إنشاء ملفات على Drive - فبراير 22
+- [x] إضافة وظيفة uploadTextFile في googleDrive.ts
+- [x] إضافة وظيفة createGoogleDoc في googleDrive.ts
+- [x] إضافة وظيفة createGoogleSheet في googleDrive.ts
+- [x] إضافة وظيفة updateFileContent في googleDrive.ts
+- [x] إضافة 4 أدوات جديدة: create_drive_document, create_drive_spreadsheet, upload_text_file, update_drive_file
+- [x] ربط الأدوات بالوكلاء المناسبين (خازن = كل الأدوات، سلوى/ألينا = إنشاء مستندات وجداول)
+- [x] تحديث taskExecutionEngine بقدرات الكتابة الجديدة + TASK_TYPE_TOOLS لمهام الملفات
+- [x] اختبار الأدوات (15 tests passed)
+
+## ربط قراءة الملفات بمحرك التنفيذ - فبراير 22
+- [x] تحديث TASK_TYPE_TOOLS لإضافة أنواع مهام مراجعة الملفات (review_files, review_quotation, analyze_document, organize_files, create_report, create_comparison, upload_file)
+- [x] إجبار استخدام read_drive_file_content في مهام مراجعة الملفات والعروض
+- [x] إجبار استخدام list_drive_files/search_drive_files قبل القراءة
+- [x] تحديث prompt التنفيذ في generateActionPlan ليشمل أدوات Drive الكاملة
+- [x] تحديث AGENT_READ_CAPABILITIES و AGENT_WRITE_CAPABILITIES لكل الوكلاء

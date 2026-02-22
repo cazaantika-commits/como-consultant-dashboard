@@ -75,12 +75,12 @@ interface TaskExecutionResult {
 // ═══════════════════════════════════════════════════
 
 const AGENT_WRITE_CAPABILITIES: Record<AgentType, string[]> = {
-  salwa: ["add_consultant", "add_consultant_to_project", "add_project", "add_task", "update_task_status"],
+  salwa: ["add_consultant", "add_consultant_to_project", "add_project", "add_task", "update_task_status", "create_drive_document", "create_drive_spreadsheet"],
   farouq: ["set_evaluation_score", "set_financial_data", "add_consultant_note", "update_consultant_profile", "add_consultant"],
   khaled: ["set_evaluation_score", "add_consultant_note"],
-  alina: ["set_financial_data"],
+  alina: ["set_financial_data", "create_drive_document", "create_drive_spreadsheet"],
   buraq: ["add_task", "update_task_status"],
-  khazen: ["add_consultant_note", "copy_drive_file", "create_drive_folder", "list_drive_files", "search_drive_files"],
+  khazen: ["add_consultant_note", "copy_drive_file", "create_drive_folder", "create_drive_document", "create_drive_spreadsheet", "upload_text_file", "update_drive_file", "list_drive_files", "search_drive_files"],
   baz: ["add_task"],
   joelle: [],
 };
@@ -107,6 +107,13 @@ const TASK_TYPE_TOOLS: Record<string, string[]> = {
   "update_task": ["update_task_status"],
   "add_project": ["add_project"],
   "general_review": ["search_all_data", "query_institutional_memory"],
+  "review_files": ["list_drive_files", "search_drive_files", "read_drive_file_content"],
+  "review_quotation": ["list_drive_files", "search_drive_files", "read_drive_file_content", "get_financial_data"],
+  "analyze_document": ["read_drive_file_content", "search_drive_files"],
+  "organize_files": ["list_drive_files", "search_drive_files", "copy_drive_file", "create_drive_folder"],
+  "create_report": ["create_drive_document", "list_consultants", "get_financial_data"],
+  "create_comparison": ["create_drive_spreadsheet", "list_consultants", "get_financial_data", "get_evaluation_scores"],
+  "upload_file": ["upload_text_file", "create_drive_document", "create_drive_spreadsheet"],
 };
 
 // Arabic agent name → key mapping
@@ -154,6 +161,19 @@ async function generateActionPlan(
     { name: "add_task", desc: "إضافة مهمة", params: '{"title": string, "project": string, "owner": string, "description?": string, "priority?": "high"|"medium"|"low", "dueDate?": "YYYY-MM-DD"}' },
     { name: "update_task_status", desc: "تحديث حالة مهمة", params: '{"taskId": number, "status": "new"|"progress"|"hold"|"done"|"cancelled", "progress?": 0-100}' },
     { name: "add_project", desc: "إضافة مشروع", params: '{"name": string, "description?": string, "bua?": number, "pricePerSqft?": number}' },
+    // Drive read tools
+    { name: "list_drive_folders", desc: "استعراض مجلدات Google Drive", params: '{}' },
+    { name: "list_drive_files", desc: "استعراض ملفات مجلد", params: '{"folderId": string}' },
+    { name: "search_drive_files", desc: "بحث في ملفات Drive", params: '{"query": string}' },
+    { name: "read_drive_file_content", desc: "قراءة محتوى ملف (PDF, Doc, Sheet, نصي)", params: '{"fileId": string}' },
+    { name: "get_drive_file_info", desc: "معلومات ملف (metadata)", params: '{"fileId": string}' },
+    // Drive write tools
+    { name: "copy_drive_file", desc: "نسخ ملف لمجلد آخر", params: '{"fileId": string, "destinationFolderId": string, "newName?": string}' },
+    { name: "create_drive_folder", desc: "إنشاء مجلد جديد", params: '{"name": string, "parentFolderId": string}' },
+    { name: "create_drive_document", desc: "إنشاء مستند Google Doc", params: '{"title": string, "content": string, "parentFolderId": string, "contentType?": "text"|"html"}' },
+    { name: "create_drive_spreadsheet", desc: "إنشاء جدول Google Sheet من CSV", params: '{"title": string, "csvContent": string, "parentFolderId": string}' },
+    { name: "upload_text_file", desc: "رفع ملف نصي", params: '{"fileName": string, "content": string, "parentFolderId": string, "mimeType?": string}' },
+    { name: "update_drive_file", desc: "تحديث محتوى ملف موجود", params: '{"fileId": string, "content": string, "mimeType?": string}' },
   ];
 
   const agentCapabilities = Object.entries(AGENT_WRITE_CAPABILITIES)
@@ -193,6 +213,9 @@ ${agentCapabilities}
 - اختر الوكيل الذي لديه أدوات الكتابة المطلوبة
 - إذا كانت المهمة تحتاج بيانات غير متوفرة في المنصة، أنشئ خطوة لإضافتها
 - إذا كانت المهمة مراجعة أو تحليل فقط (بدون تغيير بيانات)، استخدم أدوات القراءة + add_consultant_note لتسجيل النتائج
+- إذا كانت المهمة تتضمن "مراجعة ملفات" أو "عروض أسعار" أو "مستندات" أو "تحليل ملف": يجب أن تبدأ بـ search_drive_files أو list_drive_files للعثور على الملفات، ثم read_drive_file_content لقراءة محتواها فعلياً. لا تكتفي بالكلام عن الملفات - اقرأها!
+- إذا كانت المهمة تتضمن "إنشاء تقرير" أو "ملخص" أو "جدول مقارنة": استخدم create_drive_document أو create_drive_spreadsheet لحفظ النتيجة في Drive
+- إذا كانت المهمة تتضمن "تنظيم ملفات" أو "أرشفة": استخدم create_drive_folder و copy_drive_file لنقل الملفات فعلياً
 
 أجب بـ JSON فقط بالصيغة التالية:
 {

@@ -496,3 +496,173 @@ export async function verifyConnection(): Promise<{
     sharedFilesCount: res.data.files?.length || 0,
   };
 }
+
+
+// ═══════════════════════════════════════════════════
+// File Upload & Creation
+// ═══════════════════════════════════════════════════
+
+/**
+ * Upload a text-based file to Google Drive
+ * Supports: plain text, CSV, JSON, HTML, Markdown
+ */
+export async function uploadTextFile(
+  fileName: string,
+  content: string,
+  parentFolderId: string,
+  mimeType: string = "text/plain"
+): Promise<DriveFile> {
+  const drive = getDriveClient();
+  const { Readable } = await import("stream");
+
+  const stream = new Readable();
+  stream.push(content);
+  stream.push(null);
+
+  const res = await drive.files.create({
+    requestBody: {
+      name: fileName,
+      mimeType,
+      parents: [parentFolderId],
+    },
+    media: {
+      mimeType,
+      body: stream,
+    },
+    fields: "id, name, mimeType, size, modifiedTime, createdTime, parents, webViewLink",
+    supportsAllDrives: true,
+  });
+
+  return {
+    id: res.data.id!,
+    name: res.data.name!,
+    mimeType: res.data.mimeType!,
+    size: res.data.size || undefined,
+    modifiedTime: res.data.modifiedTime || undefined,
+    createdTime: res.data.createdTime || undefined,
+    parents: res.data.parents || undefined,
+    webViewLink: res.data.webViewLink || undefined,
+  };
+}
+
+/**
+ * Create a Google Doc with content (converts from text/HTML)
+ * The content can be plain text or HTML - Google will convert it
+ */
+export async function createGoogleDoc(
+  title: string,
+  content: string,
+  parentFolderId: string,
+  contentType: "text" | "html" = "text"
+): Promise<DriveFile> {
+  const drive = getDriveClient();
+  const { Readable } = await import("stream");
+
+  const mimeType = contentType === "html" ? "text/html" : "text/plain";
+  const stream = new Readable();
+  stream.push(content);
+  stream.push(null);
+
+  const res = await drive.files.create({
+    requestBody: {
+      name: title,
+      mimeType: "application/vnd.google-apps.document", // Convert to Google Doc
+      parents: [parentFolderId],
+    },
+    media: {
+      mimeType,
+      body: stream,
+    },
+    fields: "id, name, mimeType, size, modifiedTime, createdTime, parents, webViewLink",
+    supportsAllDrives: true,
+  });
+
+  return {
+    id: res.data.id!,
+    name: res.data.name!,
+    mimeType: res.data.mimeType!,
+    size: res.data.size || undefined,
+    modifiedTime: res.data.modifiedTime || undefined,
+    createdTime: res.data.createdTime || undefined,
+    parents: res.data.parents || undefined,
+    webViewLink: res.data.webViewLink || undefined,
+  };
+}
+
+/**
+ * Create a Google Sheet from CSV data
+ */
+export async function createGoogleSheet(
+  title: string,
+  csvContent: string,
+  parentFolderId: string
+): Promise<DriveFile> {
+  const drive = getDriveClient();
+  const { Readable } = await import("stream");
+
+  const stream = new Readable();
+  stream.push(csvContent);
+  stream.push(null);
+
+  const res = await drive.files.create({
+    requestBody: {
+      name: title,
+      mimeType: "application/vnd.google-apps.spreadsheet", // Convert to Google Sheet
+      parents: [parentFolderId],
+    },
+    media: {
+      mimeType: "text/csv",
+      body: stream,
+    },
+    fields: "id, name, mimeType, size, modifiedTime, createdTime, parents, webViewLink",
+    supportsAllDrives: true,
+  });
+
+  return {
+    id: res.data.id!,
+    name: res.data.name!,
+    mimeType: res.data.mimeType!,
+    size: res.data.size || undefined,
+    modifiedTime: res.data.modifiedTime || undefined,
+    createdTime: res.data.createdTime || undefined,
+    parents: res.data.parents || undefined,
+    webViewLink: res.data.webViewLink || undefined,
+  };
+}
+
+/**
+ * Update (overwrite) the content of an existing file
+ */
+export async function updateFileContent(
+  fileId: string,
+  content: string,
+  mimeType: string = "text/plain"
+): Promise<DriveFile> {
+  const drive = getDriveClient();
+  const { Readable } = await import("stream");
+
+  const stream = new Readable();
+  stream.push(content);
+  stream.push(null);
+
+  const res = await drive.files.update({
+    fileId,
+    media: {
+      mimeType,
+      body: stream,
+    },
+    fields: "id, name, mimeType, size, modifiedTime, createdTime, parents, webViewLink",
+    supportsAllDrives: true,
+  });
+
+  return {
+    id: res.data.id!,
+    name: res.data.name!,
+    mimeType: res.data.mimeType!,
+    size: res.data.size || undefined,
+    modifiedTime: res.data.modifiedTime || undefined,
+    createdTime: res.data.createdTime || undefined,
+    parents: res.data.parents || undefined,
+    webViewLink: res.data.webViewLink || undefined,
+  };
+}

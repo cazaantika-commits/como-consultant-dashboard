@@ -16,7 +16,8 @@ import {
 } from "../drizzle/schema";
 import {
   listSharedDrives, listFilesInFolder, searchFiles as searchDriveFiles,
-  copyFile, createFolder, getFileMetadata, readFileContent
+  copyFile, createFolder, getFileMetadata, readFileContent,
+  uploadTextFile, createGoogleDoc, createGoogleSheet, updateFileContent
 } from "./googleDrive";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 
@@ -547,6 +548,73 @@ export const AGENT_TOOLS = [
       },
     },
   },
+  // ─── FILE CREATION & UPLOAD ───
+  {
+    type: "function" as const,
+    function: {
+      name: "create_drive_document",
+      description: "إنشاء مستند Google Doc جديد في Google Drive - استخدم هذه الأداة لإنشاء تقارير، ملخصات، محاضر اجتماعات، أو أي مستند نصي. المحتوى يمكن أن يكون نص عادي أو HTML لتنسيق أفضل.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "عنوان المستند" },
+          content: { type: "string", description: "محتوى المستند (نص عادي أو HTML)" },
+          parentFolderId: { type: "string", description: "معرف المجلد الذي سيُحفظ فيه المستند" },
+          contentType: { type: "string", enum: ["text", "html"], description: "نوع المحتوى - text لنص عادي، html لتنسيق غني" },
+        },
+        required: ["title", "content", "parentFolderId"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "create_drive_spreadsheet",
+      description: "إنشاء جدول بيانات Google Sheet جديد - استخدم هذه الأداة لإنشاء جداول مقارنة، تقارير مالية، أو أي بيانات مهيكلة. أرسل البيانات بصيغة CSV.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "عنوان جدول البيانات" },
+          csvContent: { type: "string", description: "البيانات بصيغة CSV - السطر الأول عناوين الأعمدة" },
+          parentFolderId: { type: "string", description: "معرف المجلد الذي سيُحفظ فيه الجدول" },
+        },
+        required: ["title", "csvContent", "parentFolderId"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "upload_text_file",
+      description: "رفع ملف نصي عادي إلى Google Drive - لرفع ملفات txt, csv, json, xml, html, md وغيرها. استخدم create_drive_document لإنشاء Google Docs بدلاً.",
+      parameters: {
+        type: "object",
+        properties: {
+          fileName: { type: "string", description: "اسم الملف مع الامتداد (مثل: report.txt, data.csv, config.json)" },
+          content: { type: "string", description: "محتوى الملف" },
+          parentFolderId: { type: "string", description: "معرف المجلد الذي سيُحفظ فيه الملف" },
+          mimeType: { type: "string", description: "نوع الملف (text/plain, text/csv, application/json, text/html, text/markdown). افتراضي: text/plain" },
+        },
+        required: ["fileName", "content", "parentFolderId"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "update_drive_file",
+      description: "تحديث محتوى ملف موجود في Google Drive - استبدل محتوى ملف نصي موجود بمحتوى جديد.",
+      parameters: {
+        type: "object",
+        properties: {
+          fileId: { type: "string", description: "معرف الملف المراد تحديثه" },
+          content: { type: "string", description: "المحتوى الجديد" },
+          mimeType: { type: "string", description: "نوع المحتوى (text/plain, text/csv, text/html). افتراضي: text/plain" },
+        },
+        required: ["fileId", "content"],
+      },
+    },
+  },
   // ─── INTER-AGENT ───
   {
     type: "function" as const,
@@ -595,7 +663,8 @@ const WRITE_TOOL_NAMES = new Set([
   "add_consultant", "update_consultant", "add_consultant_to_project",
   "remove_consultant_from_project", "set_evaluation_score", "set_financial_data",
   "add_project", "add_task", "update_task_status", "update_consultant_profile",
-  "add_consultant_note", "copy_drive_file", "create_drive_folder"
+  "add_consultant_note", "copy_drive_file", "create_drive_folder",
+  "create_drive_document", "create_drive_spreadsheet", "upload_text_file", "update_drive_file"
 ]);
 
 // Current agent context for assignment logging
@@ -1256,6 +1325,67 @@ async function _executeToolInternal(
         }
       }
 
+      // ─── FILE CREATION & UPLOAD ───
+      case "create_drive_document": {
+        const { title: docTitle, content: docContent, parentFolderId: docParent, contentType: docType } = args;
+        if (!docTitle || !docContent || !docParent) return JSON.stringify({ error: "يجب تحديد العنوان والمحتوى ومعرف المجلد" });
+        try {
+          const doc = await createGoogleDoc(docTitle, docContent, docParent, docType || "text");
+          return JSON.stringify({
+            success: true,
+            message: `تم إنشاء المستند بنجاح: ${doc.name}`,
+            data: { id: doc.id, name: doc.name, webViewLink: doc.webViewLink }
+          });
+        } catch (e: any) {
+          return JSON.stringify({ error: `فشل إنشاء المستند: ${e.message}` });
+        }
+      }
+
+      case "create_drive_spreadsheet": {
+        const { title: sheetTitle, csvContent: sheetCsv, parentFolderId: sheetParent } = args;
+        if (!sheetTitle || !sheetCsv || !sheetParent) return JSON.stringify({ error: "يجب تحديد العنوان والبيانات ومعرف المجلد" });
+        try {
+          const sheet = await createGoogleSheet(sheetTitle, sheetCsv, sheetParent);
+          return JSON.stringify({
+            success: true,
+            message: `تم إنشاء جدول البيانات بنجاح: ${sheet.name}`,
+            data: { id: sheet.id, name: sheet.name, webViewLink: sheet.webViewLink }
+          });
+        } catch (e: any) {
+          return JSON.stringify({ error: `فشل إنشاء جدول البيانات: ${e.message}` });
+        }
+      }
+
+      case "upload_text_file": {
+        const { fileName: uploadName, content: uploadContent, parentFolderId: uploadParent, mimeType: uploadMime } = args;
+        if (!uploadName || !uploadContent || !uploadParent) return JSON.stringify({ error: "يجب تحديد اسم الملف والمحتوى ومعرف المجلد" });
+        try {
+          const file = await uploadTextFile(uploadName, uploadContent, uploadParent, uploadMime || "text/plain");
+          return JSON.stringify({
+            success: true,
+            message: `تم رفع الملف بنجاح: ${file.name}`,
+            data: { id: file.id, name: file.name, webViewLink: file.webViewLink }
+          });
+        } catch (e: any) {
+          return JSON.stringify({ error: `فشل رفع الملف: ${e.message}` });
+        }
+      }
+
+      case "update_drive_file": {
+        const { fileId: updateFileId, content: updateContent, mimeType: updateMime } = args;
+        if (!updateFileId || !updateContent) return JSON.stringify({ error: "يجب تحديد معرف الملف والمحتوى الجديد" });
+        try {
+          const file = await updateFileContent(updateFileId, updateContent, updateMime || "text/plain");
+          return JSON.stringify({
+            success: true,
+            message: `تم تحديث الملف بنجاح: ${file.name}`,
+            data: { id: file.id, name: file.name, webViewLink: file.webViewLink }
+          });
+        } catch (e: any) {
+          return JSON.stringify({ error: `فشل تحديث الملف: ${e.message}` });
+        }
+      }
+
       // ─── INTER-AGENT ───
       case "ask_another_agent": {
         // Agent-to-agent communication - import agentChat and call it
@@ -1345,6 +1475,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "search_all_data", "query_institutional_memory",
     "list_drive_folders", "list_drive_files", "search_drive_files",
     "get_drive_file_info", "read_drive_file_content",
+    "create_drive_document", "create_drive_spreadsheet",
     "ask_another_agent",
   ],
   farouq: [
@@ -1373,6 +1504,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "get_feasibility_study", "set_financial_data", "get_consultant_profile",
     "list_meetings", "get_meeting_details", "query_institutional_memory",
     "read_drive_file_content",
+    "create_drive_document", "create_drive_spreadsheet",
     "ask_another_agent",
   ],
   joelle: [
@@ -1404,6 +1536,8 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "list_drive_folders", "list_drive_files", "search_drive_files",
     "get_drive_file_info", "read_drive_file_content",
     "copy_drive_file", "create_drive_folder",
+    "create_drive_document", "create_drive_spreadsheet",
+    "upload_text_file", "update_drive_file",
     "ask_another_agent",
   ],
 };
