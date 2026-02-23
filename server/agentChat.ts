@@ -387,25 +387,40 @@ async function callOpenAI(
       }
 
       data = await followUp.json();
-      assistantMessage = data.choices[0]?.message;
+      assistantMessage = data.choices?.[0]?.message;
+      
+      // Log the response for debugging
+      if (!assistantMessage) {
+        console.error("[OpenAI] No message in follow-up response. Full data:", JSON.stringify(data).slice(0, 500));
+      }
     } catch (fetchErr: any) {
       console.error("[OpenAI] Follow-up fetch error:", fetchErr);
       return `واجهت مشكلة في الاتصال أثناء معالجة طلبك. حاول مرة أخرى.`;
     }
   }
 
-  // Extract content safely
-  const content = assistantMessage?.content || data?.choices?.[0]?.message?.content;
+  // Extract content safely with multiple fallbacks
+  let content = assistantMessage?.content;
   
-  // If content is empty but we had tool calls, provide a summary
-  if (!content && lastToolResults.length > 0) {
-    console.warn("[OpenAI] Empty content after tool calls. Tool results:", lastToolResults);
-    return `تم تنفيذ الأدوات المطلوبة بنجاح. النتائج:\n${lastToolResults.join('\n')}`;
+  // Fallback 1: Try to get from data.choices[0].message.content
+  if (!content) {
+    content = data?.choices?.[0]?.message?.content;
+  }
+  
+  // Fallback 2: If still empty but we had successful tool execution, create a summary
+  if ((!content || content.trim() === '') && lastToolResults.length > 0) {
+    console.warn("[OpenAI] Empty content after tool calls. Providing tool results summary.");
+    console.warn("[OpenAI] Tool results:", lastToolResults);
+    console.warn("[OpenAI] Full response data:", JSON.stringify(data).slice(0, 1000));
+    return `تم تنفيذ الأدوات بنجاح:\n${lastToolResults.map(r => `✓ ${r}`).join('\n')}`;
   }
 
+  // Final check: if content is still empty, log and return error
   if (!content || content.trim() === '') {
-    console.error("[OpenAI] Empty response. Full data:", JSON.stringify(data).slice(0, 500));
-    console.error("[OpenAI] assistantMessage:", assistantMessage);
+    console.error("[OpenAI] Empty response after all fallbacks.");
+    console.error("[OpenAI] Full data:", JSON.stringify(data).slice(0, 1000));
+    console.error("[OpenAI] assistantMessage:", JSON.stringify(assistantMessage).slice(0, 500));
+    console.error("[OpenAI] lastToolResults:", lastToolResults);
     return `واجهت مشكلة في توليد الرد. حاول إعادة صياغة طلبك.`;
   }
 
