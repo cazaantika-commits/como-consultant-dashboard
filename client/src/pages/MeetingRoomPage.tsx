@@ -47,9 +47,14 @@ export default function MeetingRoomPage() {
   const [autoVoice, setAutoVoice] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const isUserScrolledUpRef = useRef(false);
+  const prevMessageCountRef = useRef(0);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const { data: meeting, refetch: refetchMeeting } = trpc.meetings.get.useQuery(meetingId, {
     enabled: meetingId > 0,
@@ -81,9 +86,35 @@ export default function MeetingRoomPage() {
   const [isRetryingTasks, setIsRetryingTasks] = useState(false);
   const textToSpeech = trpc.agents.textToSpeech.useMutation();
 
-  // Auto-scroll to bottom
+  // Track if user has scrolled up manually
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      // Consider "at bottom" if within 150px of the bottom
+      const isAtBottom = scrollHeight - scrollTop - clientHeight < 150;
+      isUserScrolledUpRef.current = !isAtBottom;
+      setShowScrollToBottom(!isAtBottom);
+      if (isAtBottom) setUnreadCount(0);
+    };
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Auto-scroll to bottom only when user is at the bottom OR when user sends a new message
+  useEffect(() => {
+    const currentCount = (messages || []).length;
+    const prevCount = prevMessageCountRef.current;
+    const newMsgCount = currentCount - prevCount;
+    prevMessageCountRef.current = currentCount;
+    
+    if (newMsgCount > 0 && !isUserScrolledUpRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    } else if (newMsgCount > 0 && isUserScrolledUpRef.current) {
+      // User is scrolled up, increment unread count by number of new messages
+      setUnreadCount(prev => prev + newMsgCount);
+    }
   }, [messages]);
 
   // Get agent info by name
@@ -100,6 +131,8 @@ export default function MeetingRoomPage() {
     setMessage("");
     setIsSending(true);
     setIsAskingAgents(true);
+    // Reset scroll lock when user sends a message - they want to see responses
+    isUserScrolledUpRef.current = false;
 
     try {
       // Send user message
@@ -473,7 +506,7 @@ export default function MeetingRoomPage() {
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col">
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3">
             {(messages || meeting.messages)?.map((msg: Message) => {
               const isUser = msg.speakerType === "user" || msg.speakerId === "user";
               const isSystem = msg.speakerId === "system";
@@ -566,6 +599,24 @@ export default function MeetingRoomPage() {
 
             <div ref={messagesEndRef} />
           </div>
+
+          {/* Scroll to bottom button */}
+          {showScrollToBottom && (
+            <div className="relative">
+              <button
+                onClick={() => {
+                  isUserScrolledUpRef.current = false;
+                  setShowScrollToBottom(false);
+                  setUnreadCount(0);
+                  messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="absolute -top-12 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 bg-violet-600 text-white px-4 py-2 rounded-full shadow-lg hover:bg-violet-700 transition-all text-xs"
+              >
+                <ChevronDown className="w-3.5 h-3.5" />
+                {unreadCount > 0 ? `${unreadCount} رسائل جديدة` : "العودة للأسفل"}
+              </button>
+            </div>
+          )}
 
           {/* Input Area */}
           {(isActive || isPreparing) && (
