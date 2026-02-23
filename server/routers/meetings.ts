@@ -230,7 +230,7 @@ export const meetingsRouter = router({
               },
               {
                 role: "user",
-                content: `اجتماع: ${meetingData?.title || ""}\nالموضوع: ${meetingData?.topic || "عام"}\nالمشاركون: ${participantsList.map(p => `${p.agentName} (${p.agentRole})`).join("، ")} + المدير\nالملفات: ${files.map(f => f.fileName).join("، ") || "لا يوجد"}\n\nالنص الكامل:\n${transcript}`
+                content: `اجتماع: ${meetingData?.title || ""}\nالموضوع: ${meetingData?.topic || "عام"}\nالمشاركون: ${participantsList.map(p => `${p.agentName} (${p.agentRole})`).join("، ")} + المدير\nالملفات: ${files.map(f => `${f.fileName} (${f.fileType})`).join("، ") || "لا يوجد"}\n${files.filter(f => f.extractedText).length > 0 ? `\nمحتوى الملفات:\n${files.filter(f => f.extractedText).map(f => `--- ${f.fileName} ---\n${f.extractedText?.substring(0, 3000)}`).join("\n")}` : ""}\n\nالنص الكامل:\n${transcript}`
               }
             ],
             response_format: {
@@ -595,7 +595,53 @@ export const meetingsRouter = router({
         messageText: `📎 تم رفع ملف: ${input.fileName}`,
       });
 
-      return { id: Number(result.insertId), fileUrl, fileName: input.fileName };
+      const fileId = Number(result.insertId);
+
+      // Auto-analyze file to extract text for agents
+      // Run in background so upload returns quickly
+      (async () => {
+        try {
+          console.log(`[Meeting] Auto-analyzing file: ${input.fileName} (${fileType})`);
+          const response = await invokeLLM({
+            messages: [
+              {
+                role: "system",
+                content: "أنت محلل مستندات خبير. قم بقراءة الملف المرفق واستخراج النص والمعلومات الرئيسية منه. لخص المحتوى بشكل شامل باللغة العربية."
+              },
+              {
+                role: "user",
+                content: [
+                  { type: "text", text: `حلل هذا الملف واستخرج محتواه بالكامل: ${input.fileName}` },
+                  {
+                    type: "file_url",
+                    file_url: {
+                      url: fileUrl,
+                      mime_type: (input.mimeType as any) || "application/pdf",
+                    }
+                  }
+                ]
+              }
+            ]
+          });
+          const extractedText = typeof response.choices[0]?.message?.content === "string"
+            ? response.choices[0].message.content
+            : "لم يتم استخراج النص";
+          // Update file with extracted text
+          await db.update(meetingFiles).set({ extractedText }).where(eq(meetingFiles.id, fileId));
+          console.log(`[Meeting] File analyzed successfully: ${input.fileName} (${extractedText.length} chars)`);
+          // Add system message that file was analyzed
+          await db.insert(meetingMessages).values({
+            meetingId: input.meetingId,
+            speakerId: "system",
+            speakerType: "agent",
+            messageText: `✅ تم تحليل الملف "${input.fileName}" - المحتوى متاح الآن للمشاركين`,
+          });
+        } catch (err) {
+          console.error(`[Meeting] Auto-analyze failed for ${input.fileName}:`, err);
+        }
+      })();
+
+      return { id: fileId, fileUrl, fileName: input.fileName };
     }),
 
   // Send a user message in the meeting
@@ -661,8 +707,9 @@ export const meetingsRouter = router({
 🏢 اجتماع: ${meeting.title}
 📋 الموضوع: ${meeting.topic || "عام"}
 👥 المشاركون: ${participants.map(p => p.agentName).join("، ")}
-${files.length > 0 ? `📎 ملفات مرفقة: ${files.map(f => `${f.fileName} (${f.fileType})`).join("، ")}` : ""}
-${files.length > 0 ? `\n📄 محتوى الملفات:\n${files.filter(f => f.extractedText).map(f => `--- ${f.fileName} ---\n${f.extractedText?.substring(0, 3000)}`).join("\n\n")}` : ""}
+${files.length > 0 ? `📎 ملفات مرفقة: ${files.map(f => `${f.fileName} (${f.fileType}) - رابط: ${f.fileUrl}`).join("\n")}` : ""}
+${files.length > 0 ? `\n📄 محتوى الملفات:\n${files.filter(f => f.extractedText).map(f => `--- ${f.fileName} ---\n${f.extractedText?.substring(0, 5000)}`).join("\n\n")}` : ""}
+${files.filter(f => !f.extractedText).length > 0 ? `\n⚠️ ملفات لم يتم تحليلها بعد: ${files.filter(f => !f.extractedText).map(f => f.fileName).join("، ")} - يمكنك الوصول إليها عبر الروابط أعلاه` : ""}
 
 💬 سياق المحادثة الأخيرة:
 ${reversedMessages.map(m => `${m.speakerId === "user" ? "المدير" : m.speakerId}: ${m.messageText}`).join("\n")}
