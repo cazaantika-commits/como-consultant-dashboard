@@ -254,8 +254,48 @@ MAJ_6457956_FEASIBILITY_V01
 4. انتظر الموافقة قبل التنفيذ
 
 ❗❗❗ قاعدة ذهبية - الاستقلالية:
-لا تطلب أبداً من المالك معرفات المجلدات (Folder IDs) أو أي معلومات تقنية. أنت تملك الأدوات اللازمة للبحث بنفسك!
-عندما تحتاج مجلد مشروع:
+لا تطلب أبداً من المالك معرفات المجلدات (Folder IDs) أو أي معلومات تقنية.
+
+📌 معرفات المجلدات المباشرة (استخدمها مباشرة في search_drive_files و list_drive_files):
+
+مجلد العروض والعقود الرئيسي: 1Q4IwTgJkzJMOKDqOQKCtRvjQVApFPcHv
+
+JAD_3260885 (الجداف):
+  PCA: 1P8AlxoabTktrFKmJ6h6qU5sa-w5huG7K
+  Proposals: 1OPXsnMTtTce_niOwQwzQIDcp_JBq31GC
+  Contracts: 1ZvONS3acpJ0tbOXin6PXZ2lf36BG-qiN
+
+NAD_6185392 (ند الشبا - سكني):
+  PCA: 1RcDTcqK9XLUpEKkBNMQnGbmCvzMqgJYL
+  Proposals: 1EySnGu_28xXXzX7fCfC9qx8RaJzPaLIy
+  Contracts: 1oXVmjjRmLipG67_zTARgKcaq49cl7oVq
+
+NAD_6182776 (ند الشبا - قطعة 2):
+  PCA: 1Cq17UsAPAKnSFyOm28SSgFrh25Q_Te0K
+  Proposals: 1vT59nz5UceUB7fxI3-YFc7o4S-Qb5sMg
+  Contracts: 16T5ccbFHB-d9Z7iVPRa79x_9bdrbPfsh
+
+NAD_6180578 (ند الشبا - الفلل):
+  PCA: 1q-NynLm0O8yPjr7QV93yhHvi7rytHhuS
+  Proposals: 1XRuIUOqJgaKZj5s7Z0tyw6MhlthjJA_E
+  Contracts: 19bWMB2cmc4LoE5Px-4Kni2DJyVfEslo4
+
+MAJ_6457956 (المجان - متعدد الاستخدامات):
+  PCA: 1ZR1tT3U1h2QiqMwoAM0nKXXamh4c2IrV
+  Proposals: 1s2ITQVVYfMwM1v3kTf3S5SHm2i3n4HFH
+  Contracts: 1e-ZeX7MgYCQlnJdWahgmKosz-804buyN
+
+MAJ_6457879 (المجان):
+  PCA: 18Bga-rwJqOic1wKaESFqxdmdDTaV5sAW
+  Proposals: 12gi-ndWRu_0uhmlnczbkTMMEB0biKYlz
+  Contracts: 1PttLusNH3_g9mKfiOfvsSPHgQAz0e_Tz
+
+Design & Drawings:
+  JAD_3260885_DD: 1HlMjusjMAUF3dj-qSxzxFSWHMmWjvAvG
+
+عندما تحتاج ملفات مشروع معين، استخدم معرف مجلد Proposals مباشرة مع list_drive_files.
+مثال: لعرض ملفات الجداف → list_drive_files({folderId: "1OPXsnMTtTce_niOwQwzQIDcp_JBq31GC"})
+إذا لم تجد المجلد في القائمة أعلاه:
 1. استخدم search_drive_files للبحث عن اسم المشروع أو رقم القطعة
 2. استخدم list_drive_folders لتصفح المجلدات
 3. استخدم list_drive_files لرؤية محتويات المجلد
@@ -267,6 +307,25 @@ MAJ_6457956_FEASIBILITY_V01
 1. حاول حلها بنفسك أولاً باستخدام أدواتك
 2. إذا فشلت، أبلغ سلوى عبر ask_another_agent وهي ستنسق الحل
 3. لا تزعج المالك بمشاكل تقنية - المالك يهتم بالنتائج فقط
+
+📊 استخراج الأتعاب وتحديث المنصة:
+عندما يُطلب منك تحديث أتعاب الاستشاريين لمشروع معين:
+1. ابحث عن مجلد PCA الخاص بالمشروع في 02_Proposals Contracts & Agreements
+2. اعرض الملفات في مجلد Proposals
+3. لكل ملف عرض (PRO-ENG, PRO-SOIL, PRO-FEAS):
+   أ. اقرأ محتوى الملف باستخدام read_drive_file_content
+   ب. حدد نوع الأتعاب: هل هي نسبة مئوية (pct) أم مبلغ مقطوع (lump)؟
+   ج. استخرج قيمة التصميم وقيمة الإشراف بشكل منفصل
+   د. ⚠️ مهم جداً: بعض العروض تشمل عدة مشاريع في ملف واحد - استخرج الأتعاب الخاصة بالمشروع المطلوب فقط
+4. استخدم list_projects و list_consultants لمعرفة أرقام المشاريع والاستشاريين
+5. تأكد أن الاستشاري مربوط بالمشروع (get_project_consultants) - إذا لم يكن مربوطاً، استخدم add_consultant_to_project
+6. استخدم set_financial_data لتسجيل الأتعاب:
+   - designType: 'pct' إذا نسبة، 'lump' إذا مقطوع
+   - designValue: الرقم (مثلاً 2 لنسبة 2%، أو 400000 لمبلغ مقطوع)
+   - supervisionType: نفس المنطق
+   - supervisionValue: نفس المنطق
+7. إذا كان الإشراف شهرياً (مثل 35,000/شهر × 18 شهر)، احسب الإجمالي وسجله كمبلغ مقطوع
+8. اعرض ملخص النتائج على المالك قبل التسجيل
 
 🚫 ممنوعات:
 • لا تحذف أي ملف بدون موافقة المالك
@@ -411,17 +470,36 @@ async function callOpenAI(
     body: JSON.stringify(body),
   });
 
+  let data: any;
   if (!response.ok) {
     const errorText = await response.text();
-    console.error("[OpenAI] Error:", response.status, errorText);
-    throw new Error(`OpenAI API error: ${response.status}`);
+    if (response.status === 429) {
+      console.warn("[OpenAI] Rate limited on initial call. Waiting 20s and retrying...");
+      await new Promise(r => setTimeout(r, 20000));
+      const retryResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+        body: JSON.stringify(body),
+      });
+      if (!retryResponse.ok) {
+        const retryError = await retryResponse.text();
+        console.error("[OpenAI] Retry also failed:", retryResponse.status, retryError);
+        throw new Error(`OpenAI API error after retry: ${retryResponse.status}`);
+      }
+      data = await retryResponse.json();
+    } else {
+      console.error("[OpenAI] Error:", response.status, errorText);
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
+  } else {
+    data = await response.json();
   }
 
-  let data = await response.json();
-  let assistantMessage = data.choi  // Handle tool calls - up to 5 rounds
+  let assistantMessage = data.choices[0]?.message;
+  // Handle tool calls - up to 5 rounds
   let toolRounds = 0;
   let lastToolResults: string[] = [];
-  while (assistantMessage?.tool_calls && toolRounds < 5) {
+  while (assistantMessage?.tool_calls && toolRounds < 10) {
     toolRounds++;
     console.log(`[OpenAI] Tool call round ${toolRounds}: ${assistantMessage.tool_calls.length} tools`);
     
@@ -466,12 +544,27 @@ async function callOpenAI(
 
       if (!followUp.ok) {
         const errorText = await followUp.text();
-        console.error("[OpenAI] Follow-up error:", followUp.status, errorText);
-        // Return a useful message instead of breaking silently
-        return `واجهت مشكلة تقنية أثناء معالجة طلبك (خطأ ${followUp.status}). حاول مرة أخرى.`;
+        if (followUp.status === 429) {
+          console.warn(`[OpenAI] Rate limited on round ${toolRounds}. Waiting 20s and retrying...`);
+          await new Promise(r => setTimeout(r, 20000));
+          const retryFollowUp = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+            body: JSON.stringify({ model: "gpt-4o", messages, max_tokens: 2048, temperature: 0.8, tools, tool_choice: "auto" }),
+          });
+          if (!retryFollowUp.ok) {
+            const retryError = await retryFollowUp.text();
+            console.error("[OpenAI] Follow-up retry also failed:", retryFollowUp.status, retryError);
+            return `واجهت مشكلة تقنية أثناء معالجة طلبك (خطأ ${retryFollowUp.status}). حاول مرة أخرى.`;
+          }
+          data = await retryFollowUp.json();
+        } else {
+          console.error("[OpenAI] Follow-up error:", followUp.status, errorText);
+          return `واجهت مشكلة تقنية أثناء معالجة طلبك (خطأ ${followUp.status}). حاول مرة أخرى.`;
+        }
+      } else {
+        data = await followUp.json();
       }
-
-      data = await followUp.json();
       assistantMessage = data.choices[0]?.message;
     } catch (fetchErr: any) {
       console.error("[OpenAI] Follow-up fetch error:", fetchErr);

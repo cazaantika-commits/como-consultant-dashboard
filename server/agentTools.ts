@@ -1693,6 +1693,9 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
   ],
   khazen: [
     "list_projects", "list_consultants", "get_consultant_profile",
+    "get_project_consultants", "get_financial_data",
+    "set_financial_data", "add_consultant_to_project",
+    "add_consultant",
     "add_consultant_note", "list_tasks",
     "list_meetings", "get_meeting_details", "query_institutional_memory",
     "list_drive_folders", "list_drive_files", "search_drive_files",

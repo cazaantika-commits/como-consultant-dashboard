@@ -370,7 +370,11 @@ export async function readFileContent(fileId: string): Promise<FileContentResult
       const pdfBuffer = Buffer.from(res.data as ArrayBuffer);
       console.log(`[Drive] PDF downloaded successfully. Extracting text...`);
 
-      const pdfParse = (await import("pdf-parse")).default;
+      const pdfModule = await import("pdf-parse");
+      const pdfParse = typeof pdfModule.default === 'function' ? pdfModule.default : (pdfModule as any);
+      if (typeof pdfParse !== 'function') {
+        throw new Error(`pdf-parse module loaded but is not a function (type: ${typeof pdfParse})`);
+      }
       const pdfData = await pdfParse(pdfBuffer);
 
       let content = pdfData.text || "";
