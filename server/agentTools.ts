@@ -20,6 +20,7 @@ import {
   uploadTextFile, createGoogleDoc, createGoogleSheet, updateFileContent,
   renameFile, moveFile, deleteFile
 } from "./googleDrive";
+import { getOAuthClientForUser } from "./googleOAuthClient";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 
 // ═══════════════════════════════════════════════════
@@ -1355,7 +1356,11 @@ async function _executeToolInternal(
       case "copy_drive_file": {
         const { fileId, destinationFolderId, newName } = args;
         if (!fileId || !destinationFolderId) return JSON.stringify({ error: "يجب تحديد معرف الملف ومعرف المجلد الهدف" });
-        const copied = await copyFile(fileId, destinationFolderId, newName);
+        
+        // Try to use OAuth client for user delegation
+        const oauthClient = await getOAuthClientForUser(userId);
+        const copied = await copyFile(fileId, destinationFolderId, newName, oauthClient || undefined);
+        
         return JSON.stringify({
           message: `تم نسخ الملف بنجاح: ${copied.name}`,
           data: { id: copied.id, name: copied.name, link: copied.webViewLink }
@@ -1369,9 +1374,12 @@ async function _executeToolInternal(
         }
         const results: any[] = [];
         const errors: any[] = [];
+        // Try to use OAuth client for user delegation
+        const oauthClient = await getOAuthClientForUser(userId);
+        
         for (const dest of destinations) {
           try {
-            const copied = await copyFile(batchFileId, dest.folderId, dest.fileName);
+            const copied = await copyFile(batchFileId, dest.folderId, dest.fileName, oauthClient || undefined);
             results.push({ fileName: copied.name, folderId: dest.folderId, id: copied.id, link: copied.webViewLink });
           } catch (e: any) {
             errors.push({ fileName: dest.fileName, folderId: dest.folderId, error: e.message });

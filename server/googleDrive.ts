@@ -151,26 +151,39 @@ export async function getFileMetadata(fileId: string): Promise<DriveFile> {
 export async function copyFile(
   fileId: string,
   destinationFolderId: string,
-  newName?: string
+  newName?: string,
+  oauthClient?: any // OAuth2Client from googleapis
 ): Promise<DriveFile> {
-  const drive = getDriveClient();
+  const drive = oauthClient 
+    ? google.drive({ version: 'v3', auth: oauthClient })
+    : getDriveClient();
 
-  // Get original file info if no new name provided
-  let name = newName;
-  if (!name) {
-    const original = await drive.files.get({
-      fileId,
-      fields: "name",
-      supportsAllDrives: true,
-    });
-    name = original.data.name!;
-  }
-
-  const res = await drive.files.copy({
+  // Get original file metadata
+  const original = await drive.files.get({
     fileId,
+    fields: "name, mimeType",
+    supportsAllDrives: true,
+  });
+  
+  const name = newName || original.data.name!;
+  const mimeType = original.data.mimeType!;
+
+  // For Shared Drives: download then upload instead of copy
+  // This avoids the "Service Accounts do not have storage quota" error
+  const fileData = await drive.files.get(
+    { fileId, alt: 'media', supportsAllDrives: true },
+    { responseType: 'stream' }
+  );
+
+  const res = await drive.files.create({
     requestBody: {
       name,
+      mimeType,
       parents: [destinationFolderId],
+    },
+    media: {
+      mimeType,
+      body: fileData.data,
     },
     fields: "id, name, mimeType, size, modifiedTime, createdTime, parents, webViewLink",
     supportsAllDrives: true,

@@ -586,3 +586,19 @@ export const taskExecutionLogs = mysqlTable('taskExecutionLogs', {
 
 export type TaskExecutionLog = typeof taskExecutionLogs.$inferSelect;
 export type InsertTaskExecutionLog = typeof taskExecutionLogs.$inferInsert;
+
+// OAuth Tokens - Google Drive OAuth tokens for user delegation
+export const oauthTokens = mysqlTable('oauthTokens', {
+  id: int('id').primaryKey().autoincrement(),
+  userId: int('userId').notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
+  provider: varchar('provider', { length: 50 }).notNull(), // 'google'
+  accessToken: text('accessToken').notNull(),
+  refreshToken: text('refreshToken'),
+  expiresAt: timestamp('expiresAt'), // When access token expires
+  scope: text('scope'), // Granted scopes
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type OAuthToken = typeof oauthTokens.$inferSelect;
+export type InsertOAuthToken = typeof oauthTokens.$inferInsert;

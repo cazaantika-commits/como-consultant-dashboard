@@ -625,3 +625,10 @@
 - [x] إصلاح Gemini tool execution (نفس مشكلة OpenAI - multiple fallbacks)
 - [x] إضافة context لسلوى: رؤية جميع محادثات المالك مع الوكلاء (حفظ ask_another_agent في knowledge base)
 - [x] التحقق من غرفة الاجتماعات: المشاركين يفهمون ويستمعون بشكل صحيح (تستخدم handleAgentChat المُصلح)
+
+## إصلاح Google Drive - نسخ الملفات - فبراير 23
+- [x] فحص خطأ copy_drive_file في اللوغات (Service Account quota issue)
+- [x] إضافة OAuth 2.0 user delegation لـ Google Drive
+- [x] تخزين وتحديث OAuth tokens (oauthTokens table + googleOAuthRouter)
+- [x] تحديث copyFile لاستخدام OAuth client
+- [ ] اختبار خازن ينسخ ملف XYZ للمشاريع الثلاثة بنجاح
