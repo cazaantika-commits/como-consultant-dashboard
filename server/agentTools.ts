@@ -21,6 +21,7 @@ import {
   renameFile, moveFile, deleteFile
 } from "./googleDrive";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
+import { invokeLLM } from "./_core/llm";
 
 // ═══════════════════════════════════════════════════
 // Tool Definitions (OpenAI function calling format)
@@ -558,6 +559,22 @@ export const AGENT_TOOLS = [
           },
         },
         required: ["fileId", "destinations"],
+      },
+    },
+  },
+  // ─── PROPOSAL FEE EXTRACTION ───
+  {
+    type: "function" as const,
+    function: {
+      name: "extract_proposal_fees",
+      description: "استخراج الأتعاب من عرض استشاري PDF في Google Drive. يقرأ الملف ويستخرج تلقائياً: نوع الأتعاب (نسبة أو مقطوع)، أتعاب التصميم، أتعاب الإشراف، العملة، وVAT. استخدم هذه الأداة بدل read_drive_file_content عند الحاجة لاستخراج أتعاب من عروض الاستشاريين.",
+      parameters: {
+        type: "object",
+        properties: {
+          fileId: { type: "string", description: "معرف ملف العرض في Google Drive" },
+          projectName: { type: "string", description: "اسم المشروع أو رقم القطعة (مثل JAD_3260885) - مهم إذا كان العرض يشمل عدة مشاريع" },
+        },
+        required: ["fileId"],
       },
     },
   },
@@ -1692,19 +1709,13 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "ask_another_agent",
   ],
   khazen: [
-    "list_projects", "list_consultants", "get_consultant_profile",
+    "list_projects", "list_consultants",
     "get_project_consultants", "get_financial_data",
     "set_financial_data", "add_consultant_to_project",
-    "add_consultant",
-    "add_consultant_note", "list_tasks",
-    "list_meetings", "get_meeting_details", "query_institutional_memory",
-    "list_drive_folders", "list_drive_files", "search_drive_files",
-    "get_drive_file_info", "read_drive_file_content",
-    "copy_drive_file", "batch_copy_drive_file", "create_drive_folder",
-    "create_drive_document", "create_drive_spreadsheet",
-    "upload_text_file", "update_drive_file",
-    "rename_drive_file", "move_drive_file", "delete_drive_file",
-    "ask_another_agent",
+    "list_drive_files", "read_drive_file_content",
+    "extract_proposal_fees",
+    "rename_drive_file", "move_drive_file",
+    "query_institutional_memory",
   ],
 };
 

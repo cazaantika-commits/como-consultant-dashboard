@@ -165,16 +165,18 @@ describe("Agent Tool Access Control", () => {
     expect(names).toContain("add_task");
   });
 
-  it("khazen should have limited access (archive manager)", () => {
+  it("khazen should have archive + fee extraction access", () => {
     const tools = getToolsForAgent("khazen");
     const names = tools.map(t => t.function.name);
     
     expect(names).toContain("list_consultants");
-    expect(names).toContain("get_consultant_profile");
-    expect(names).toContain("add_consultant_note");
-    // Should NOT have evaluation or financial access
+    expect(names).toContain("list_drive_files");
+    expect(names).toContain("read_drive_file_content");
+    expect(names).toContain("extract_proposal_fees");
+    expect(names).toContain("set_financial_data");
+    expect(names).toContain("get_financial_data");
+    // Should NOT have evaluation access
     expect(names).not.toContain("set_evaluation_score");
-    expect(names).not.toContain("set_financial_data");
     expect(names).not.toContain("add_project");
   });
 

@@ -164,8 +164,8 @@ describe("Agent Assignments System", () => {
       const { getToolsForAgent, AGENT_TOOLS } = await import("./agentTools");
       
       const khazenTools = getToolsForAgent("khazen");
-      // Khazen (archiver) should not have financial tools
-      expect(khazenTools.some(t => t.function.name === "set_financial_data")).toBe(false);
+      // Khazen (archiver) now has financial tools for fee extraction workflow
+      expect(khazenTools.some(t => t.function.name === "set_financial_data")).toBe(true);
       
       // No agent should have all tools
       expect(khazenTools.length).toBeLessThan(AGENT_TOOLS.length);

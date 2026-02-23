@@ -69,14 +69,18 @@ describe("Drive Upload/Create Agent Tools", () => {
   });
 
   describe("Agent Permissions", () => {
-    it("khazen should have all Drive write tools", async () => {
+    it("khazen should have focused Drive tools (read, rename, move)", async () => {
       const { getToolsForAgent } = await import("./agentTools");
       const tools = getToolsForAgent("khazen" as any);
       const toolNames = tools.map(t => t.function.name);
-      expect(toolNames).toContain("create_drive_document");
-      expect(toolNames).toContain("create_drive_spreadsheet");
-      expect(toolNames).toContain("upload_text_file");
-      expect(toolNames).toContain("update_drive_file");
+      expect(toolNames).toContain("list_drive_files");
+      expect(toolNames).toContain("read_drive_file_content");
+      expect(toolNames).toContain("rename_drive_file");
+      expect(toolNames).toContain("move_drive_file");
+      expect(toolNames).toContain("extract_proposal_fees");
+      // Should NOT have full write tools anymore
+      expect(toolNames).not.toContain("create_drive_document");
+      expect(toolNames).not.toContain("upload_text_file");
     });
 
     it("salwa should have create_drive_document and create_drive_spreadsheet", async () => {
@@ -185,14 +189,11 @@ describe("Drive Upload/Create Agent Tools", () => {
   });
 
   describe("Write Tool Classification", () => {
-    it("new Drive write tools should be in WRITE_TOOL_NAMES", async () => {
-      // We can't directly access the Set, but we can verify the tools are treated as write tools
-      // by checking they're in the agent's allowed tools and the execution works
-      const { getToolsForAgent } = await import("./agentTools");
-      const khazenTools = getToolsForAgent("khazen" as any);
+    it("Drive write tools should exist in AGENT_TOOLS", async () => {
+      const { AGENT_TOOLS } = await import("./agentTools");
       const writeToolNames = ["create_drive_document", "create_drive_spreadsheet", "upload_text_file", "update_drive_file"];
       for (const name of writeToolNames) {
-        expect(khazenTools.find(t => t.function.name === name)).toBeDefined();
+        expect(AGENT_TOOLS.find(t => t.function.name === name)).toBeDefined();
       }
     });
   });

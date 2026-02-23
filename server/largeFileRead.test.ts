@@ -190,11 +190,10 @@ describe("Large File Reading System", () => {
 
   describe("Batch Copy Tool Definition", () => {
     it("should have batch_copy_drive_file in AGENT_TOOLS", async () => {
-      const { getToolsForAgent } = await import("./agentTools");
+      const { AGENT_TOOLS } = await import("./agentTools");
 
-      // Khazen should have the batch copy tool
-      const khazenTools = getToolsForAgent("khazen");
-      const batchCopyTool = khazenTools.find(
+      // batch_copy_drive_file should exist in the global tools list
+      const batchCopyTool = AGENT_TOOLS.find(
         (t) => t.function.name === "batch_copy_drive_file"
       );
 
@@ -203,7 +202,7 @@ describe("Large File Reading System", () => {
       expect(batchCopyTool!.function.parameters.required).toContain("destinations");
     });
 
-    it("should have batch_copy_drive_file only for khazen", async () => {
+    it("khazen should NOT have batch_copy_drive_file (simplified access)", async () => {
       const { getToolsForAgent } = await import("./agentTools");
 
       // Other agents should NOT have batch copy
@@ -213,12 +212,12 @@ describe("Large File Reading System", () => {
       );
       expect(batchInFarouq).toBeUndefined();
 
-      // Khazen should have it
+      // Khazen also no longer has batch copy (simplified tool set)
       const khazenTools = getToolsForAgent("khazen");
       const batchInKhazen = khazenTools.find(
         (t) => t.function.name === "batch_copy_drive_file"
       );
-      expect(batchInKhazen).toBeDefined();
+      expect(batchInKhazen).toBeUndefined();
     });
   });
 
