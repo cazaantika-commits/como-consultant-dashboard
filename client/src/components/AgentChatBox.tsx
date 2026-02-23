@@ -381,10 +381,10 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
   const { isRecording, recordingTime, isTranscribing, startRecording, stopRecording, cancelRecording } = useVoiceRecorder();
   const { playingMessageIdx, loadingMessageIdx, isSpeaking, playAudio, stopAudio } = useTTSPlayer();
 
-  // Load chat history
+  // Load chat history - always refetch on mount to get latest messages
   const { data: chatHistoryData } = trpc.agents.getChatHistory.useQuery(
-    { agent, limit: 50 },
-    { enabled: !historyLoaded }
+    { agent, limit: 100 },
+    { enabled: !historyLoaded, staleTime: 0, refetchOnMount: 'always' as const, gcTime: 0 }
   );
 
   useEffect(() => {

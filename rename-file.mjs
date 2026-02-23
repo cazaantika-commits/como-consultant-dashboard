@@ -15,45 +15,41 @@ oauth2Client.setCredentials({
   expiry_date: token.expiresAt ? new Date(token.expiresAt).getTime() : undefined,
 });
 
+// Force refresh the token
 try {
   const { credentials } = await oauth2Client.refreshAccessToken();
   oauth2Client.setCredentials(credentials);
+  // Update token in DB
   if (credentials.access_token) {
     await connection.execute(
       'UPDATE oauthTokens SET accessToken = ?, expiresAt = ? WHERE refreshToken = ?',
       [credentials.access_token, credentials.expiry_date ? new Date(credentials.expiry_date) : null, token.refreshToken]
     );
+    console.log('✅ Token refreshed');
   }
-} catch (e) {}
+} catch (e) {
+  console.error('⚠️ Token refresh failed:', e.message);
+}
 
 const drive = google.drive({ version: 'v3', auth: oauth2Client });
 
-// COMO Projects Management folder ID from URL
-const rootFolderId = process.argv[2] || '1PLhYCKU08CMKJWfPK44IjNAw_V3oOawD';
+const fileId = process.argv[2];
+const newName = process.argv[3];
 
-async function listFolder(folderId, path = '', depth = 0) {
-  const res = await drive.files.list({
-    q: `'${folderId}' in parents and trashed=false`,
-    fields: 'files(id, name, mimeType)',
-    orderBy: 'name',
-    pageSize: 200,
-    supportsAllDrives: true,
-    includeItemsFromAllDrives: true,
-  });
-
-  for (const file of res.data.files || []) {
-    const indent = '  '.repeat(depth);
-    const isFolder = file.mimeType === 'application/vnd.google-apps.folder';
-    const icon = isFolder ? '📁' : '📄';
-    console.log(`${indent}${icon} ${file.name} (${file.id})`);
-    
-    if (isFolder && depth < 2) {
-      await listFolder(file.id, `${path}/${file.name}`, depth + 1);
-    }
-  }
+if (!fileId || !newName) {
+  console.log('Usage: npx tsx rename-file.mjs <fileId> <newName>');
+  process.exit(1);
 }
 
-console.log('📁 01. COMO _Projects Management');
-await listFolder(rootFolderId);
+try {
+  const result = await drive.files.update({
+    fileId: fileId,
+    requestBody: { name: newName },
+    supportsAllDrives: true,
+  });
+  console.log(`✅ Renamed to: ${result.data.name}`);
+} catch (error) {
+  console.error(`❌ Error: ${error.message}`);
+}
 
 await connection.end();

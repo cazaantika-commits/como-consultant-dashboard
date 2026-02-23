@@ -38,6 +38,17 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+  // Google OAuth callback for Drive integration
+  app.get("/api/google/oauth/callback", async (req, res) => {
+    const code = req.query.code as string;
+    if (!code) {
+      res.status(400).send("Missing code");
+      return;
+    }
+    // Redirect to frontend with the code so it can exchange via tRPC
+    res.redirect(302, `/google-connect?code=${encodeURIComponent(code)}`);
+  });
+
   // Dashboard data API (for original HTML page)
   app.use("/api/dashboard-data", dashboardDataRoute);
   // Agent API (for Qasim, Salwa, and other agents)

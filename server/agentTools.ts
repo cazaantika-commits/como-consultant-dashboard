@@ -20,8 +20,8 @@ import {
   uploadTextFile, createGoogleDoc, createGoogleSheet, updateFileContent,
   renameFile, moveFile, deleteFile
 } from "./googleDrive";
+import { getOAuthClientForUser } from "./googleOAuthClient";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
-import { invokeLLM } from "./_core/llm";
 
 // ═══════════════════════════════════════════════════
 // Tool Definitions (OpenAI function calling format)
@@ -559,22 +559,6 @@ export const AGENT_TOOLS = [
           },
         },
         required: ["fileId", "destinations"],
-      },
-    },
-  },
-  // ─── PROPOSAL FEE EXTRACTION ───
-  {
-    type: "function" as const,
-    function: {
-      name: "extract_proposal_fees",
-      description: "استخراج الأتعاب من عرض استشاري PDF في Google Drive. يقرأ الملف ويستخرج تلقائياً: نوع الأتعاب (نسبة أو مقطوع)، أتعاب التصميم، أتعاب الإشراف، العملة، وVAT. استخدم هذه الأداة بدل read_drive_file_content عند الحاجة لاستخراج أتعاب من عروض الاستشاريين.",
-      parameters: {
-        type: "object",
-        properties: {
-          fileId: { type: "string", description: "معرف ملف العرض في Google Drive" },
-          projectName: { type: "string", description: "اسم المشروع أو رقم القطعة (مثل JAD_3260885) - مهم إذا كان العرض يشمل عدة مشاريع" },
-        },
-        required: ["fileId"],
       },
     },
   },
@@ -1372,7 +1356,11 @@ async function _executeToolInternal(
       case "copy_drive_file": {
         const { fileId, destinationFolderId, newName } = args;
         if (!fileId || !destinationFolderId) return JSON.stringify({ error: "يجب تحديد معرف الملف ومعرف المجلد الهدف" });
-        const copied = await copyFile(fileId, destinationFolderId, newName);
+        
+        // Try to use OAuth client for user delegation
+        const oauthClient = await getOAuthClientForUser(userId);
+        const copied = await copyFile(fileId, destinationFolderId, newName, oauthClient || undefined);
+        
         return JSON.stringify({
           message: `تم نسخ الملف بنجاح: ${copied.name}`,
           data: { id: copied.id, name: copied.name, link: copied.webViewLink }
@@ -1386,9 +1374,12 @@ async function _executeToolInternal(
         }
         const results: any[] = [];
         const errors: any[] = [];
+        // Try to use OAuth client for user delegation
+        const oauthClient = await getOAuthClientForUser(userId);
+        
         for (const dest of destinations) {
           try {
-            const copied = await copyFile(batchFileId, dest.folderId, dest.fileName);
+            const copied = await copyFile(batchFileId, dest.folderId, dest.fileName, oauthClient || undefined);
             results.push({ fileName: copied.name, folderId: dest.folderId, id: copied.id, link: copied.webViewLink });
           } catch (e: any) {
             errors.push({ fileName: dest.fileName, folderId: dest.folderId, error: e.message });
@@ -1576,6 +1567,21 @@ async function _executeToolInternal(
           conversationHistory: [],
           userId,
         });
+        
+        // Log to knowledge base so Salwa can see past agent interactions
+        try {
+          const { saveToKnowledgeBase } = await import("./knowledgeBase");
+          await saveToKnowledgeBase({
+            category: "agent_interactions",
+            title: `${_currentAgent} ← ${targetAgent}: ${question.slice(0, 100)}`,
+            content: `**السؤال من ${_currentAgent}:**\n${question}\n\n**رد ${targetAgent}:**\n${response.response}`,
+            tags: [_currentAgent, targetAgent, "inter_agent"],
+            userId,
+          });
+        } catch (kbError) {
+          console.warn("[ask_another_agent] Failed to log to KB:", kbError);
+        }
+        
         return JSON.stringify({ 
           success: true, 
           agent: targetAgent, 
@@ -1709,13 +1715,16 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "ask_another_agent",
   ],
   khazen: [
-    "list_projects", "list_consultants",
-    "get_project_consultants", "get_financial_data",
-    "set_financial_data", "add_consultant_to_project",
-    "list_drive_files", "read_drive_file_content",
-    "extract_proposal_fees",
-    "rename_drive_file", "move_drive_file",
-    "query_institutional_memory",
+    "list_projects", "list_consultants", "get_consultant_profile",
+    "add_consultant_note", "list_tasks",
+    "list_meetings", "get_meeting_details", "query_institutional_memory",
+    "list_drive_folders", "list_drive_files", "search_drive_files",
+    "get_drive_file_info", "read_drive_file_content",
+    "copy_drive_file", "batch_copy_drive_file", "create_drive_folder",
+    "create_drive_document", "create_drive_spreadsheet",
+    "upload_text_file", "update_drive_file",
+    "rename_drive_file", "move_drive_file", "delete_drive_file",
+    "ask_another_agent",
   ],
 };
 

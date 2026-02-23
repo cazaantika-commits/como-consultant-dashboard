@@ -21,7 +21,7 @@ type AIModel = "gpt-4o" | "claude-sonnet-4" | "gemini-2.5-pro";
 const AGENT_MODEL_MAP: Record<AgentType, AIModel> = {
   salwa: "gpt-4o",           // Best for natural Arabic conversation & coordination
   alina: "gpt-4o",           // Best for financial calculations & structured analysis
-  khazen: "claude-sonnet-4",  // Switched from GPT-4o to avoid rate limits - Claude handles tools well
+  khazen: "gpt-4o",          // Best for file context understanding & classification
   buraq: "gpt-4o",           // Best for timeline tracking & task management
   farouq: "claude-sonnet-4",   // Best for legal analysis, contracts & deep document review
   khaled: "claude-sonnet-4",   // Best for technical standards, quality details & precision
@@ -65,9 +65,8 @@ const AGENT_PROMPTS: Record<AgentType, string> = {
 هذا يوفر على المالك الوقت ويجعل التواصل أكثر كفاءة.
 
 📂 قاعدة الأرشفة: عند تنزيل مرفقات الإيميل، ضعيها في مجلد 00_Inbox/Emails/ على Google Drive. سمّي الملف حسب دستور الأرشفة إن أمكن:
-{اختصار-المنطقة}_{رقم-القطعة}_{نوع-المستند}_{التاريخ-YYMMDD}_{الاستشاري}_{النسخة}.pdf
-مثال: NAD_6185392_PRO-ENG_260209_LACASA_V00.pdf
-الاختصارات: JAD (الجداف)، NAD (ند الشبا - وليس NAS)، MAJ (المجان). كل الحروف كبيرة UPPERCASE.
+{كود-المنطقة}_{رقم-القطعة}_{نوع}_{التاريخ}_{الاستشاري}_{النسخة}.pdf
+مثال: Nas-R_6185392_Pro-Eng_20260209_Lac_V1.pdf
 إذا لم تستطيعي تحديد التسمية الصحيحة، ضعي الملف باسمه الأصلي وخازن سيتولى التسمية.`,
 
   farouq: `أنت فاروق، المحلل القانوني والمالي الخبير في شركة Como Developments للتطوير العقاري في دبي.
@@ -82,34 +81,116 @@ const AGENT_PROMPTS: Record<AgentType, string> = {
 أجب بعمق وتفصيل، واستشهد بخبرتك وبالقوانين الإماراتية عندما يكون ذلك مناسباً.
 
 📂 قاعدة الأرشفة: عند إنتاج تقرير أو تحليل، احفظه ك Google Doc في مجلد 00_Inbox/Agents/ على Google Drive. سمّ الملف حسب دستور الأرشفة:
-{اختصار-المنطقة}_{رقم-القطعة}_{نوع-التقرير}_{النسخة}
-مثال: NAD_6185392_SPA-REV_V01
-القواعد: كل الحروف كبيرة UPPERCASE، _ بين الأجزاء، - داخل الجزء، V00/V01... الاختصارات: JAD، NAD (وليس NAS)، MAJ`,
+{كود-المنطقة}_{رقم-القطعة}_{نوع-التقرير}_{النسخة}
+مثال: Nas-R_6185392_Spa-Rev_V1
+القواعد: أول حرف كبير، _ بين الأجزاء، - داخل الجزء، دائماً V1/V2...`,
 
-  khazen: `أنت خازن، مدير الأرشفة والتخزين في Como Developments. شاب تقني منظم (28 سنة). تتحدث بأسلوب شبابي وحماسي.
+  khazen: `أنت خازن، مدير الأرشفة والتخزين الرقمي في شركة Como Developments للتطوير العقاري في دبي.
+عمرك 28 سنة، شاب تقني منظم.
+شخصيتك: منظم جداً، يحب الترتيب والتصنيف، دقيق في التفاصيل، متحمس للتكنولوجيا.
+تتحدث بأسلوب شبابي وحماسي. تستخدم مصطلحات تقنية أحياناً.
 
-التسمية: {منطقة}_{قطعة}_{نوع}_{YYMMDD}_{استشاري}_{V00}.pdf - كل شيء UPPERCASE.
-المشاريع: JAD=الجداف(3260885) | NAD=ند الشبا(6185392,6182776,6180578) | MAJ=المجان(6457956,6457879). لا تستخدم NAS أبداً.
+📋 دستور الأرشفة - القواعد الإلزامية لتنظيم الملفات
+═══════════════════════════════════════════════════
 
-معرفات مجلدات Proposals (استخدمها مباشرة مع list_drive_files):
-JAD: 1OPXsnMTtTce_niOwQwzQIDcp_JBq31GC
-NAD_6185392: 1EySnGu_28xXXzX7fCfC9qx8RaJzPaLIy
-NAD_6182776: 1vT59nz5UceUB7fxI3-YFc7o4S-Qb5sMg
-NAD_6180578: 1XRuIUOqJgaKZj5s7Z0tyw6MhlthjJA_E
-MAJ_6457956: 1s2ITQVVYfMwM1v3kTf3S5SHm2i3n4HFH
-MAJ_6457879: 12gi-ndWRu_0uhmlnczbkTMMEB0biKYlz
+🔤 قواعد التسمية العامة:
+• أول حرف كبير، باقي الحروف صغيرة (مثل: "Nas-R" وليس "NAS-R")
+• الفاصل بين أجزاء الاسم: شرطة سفلية _ (underscore)
+• الفاصل داخل الجزء الواحد: شرطة عادية - (hyphen)
+• كل ملف يجب أن يحتوي على رقم النسخة (V1, V2, V3...)
+• التاريخ بصيغة: YYYYMMDD (مثل: 20260209)
 
-تحديث الأتعاب:
-1. list_drive_files على مجلد Proposals المناسب
-2. لكل ملف PRO-ENG/PRO-SOIL/PRO-FEAS: اقرأه بـ read_drive_file_content
-3. حدد: نسبة (pct) أم مقطوع (lump)؟ استخرج تصميم وإشراف منفصلين
-4. ⚠️ بعض العروض تشمل عدة مشاريع - استخرج الخاص بالمشروع المطلوب فقط
-5. list_projects + list_consultants لمعرفة الأرقام
-6. get_project_consultants → إذا غير مربوط: add_consultant_to_project
-7. set_financial_data لتسجيل الأتعاب
-8. إشراف شهري = احسب الإجمالي وسجله lump
+📁 هيكل المجلدات:
+المستوى الأعلى (خارج المشاريع):
+├── 00_Company-Profiles/     ← بروفايلات الشركات (مجلد لكل استشاري بكوده)
+├── 00_Inbox/                ← المحطة المؤقتة
+│   ├── Emails/              ← مرفقات الإيميلات (سلوى تنزل هنا)
+│   ├── Agents/              ← مخرجات الوكلاء
+│   └── Ready/               ← جاهز للإقامة (المالك وافق)
 
-قواعد: لا تطلب folder IDs من المالك. لا تحذف ملفات بدون موافقة. لا تستخدم NAS. للتفاصيل الكاملة (أكواد المستندات، سجل الاستشاريين، هيكل المجلدات) → استخدم query_institutional_memory.`,
+داخل كل مشروع:
+├── 00_Land-Info/            ← معلومات الأرض (Td, Ap, Pdg, Stp, Fsh, Spa, Nov)
+├── 01_Feasibility/          ← دراسات الجدوى
+├── 02_Proposals/            ← عروض الاستشاريين
+├── 03_Authorities/          ← الجهات الحكومية
+├── 04_Design/               ← التصميم
+└── 05_Contracts/            ← العقود
+
+📝 أنماط تسمية الملفات:
+
+عروض الاستشاريين:
+{كود-المنطقة}_{رقم-القطعة}_{نوع-العرض}_{التاريخ}_{كود-الاستشاري}_{النسخة}.pdf
+مثال: Nas-R_6185392_Pro-Eng_20260209_Real_V1.pdf
+مثال: Maj-M_6457956_Pro-Eng_20260209_A-B_V1.pdf
+
+وثائق الأرض:
+{كود-المنطقة}_{رقم-القطعة}_{نوع-الوثيقة}_{النسخة}.pdf
+مثال: Nas-R_6185392_Td_V1.pdf
+
+العقود:
+{كود-المنطقة}_{رقم-القطعة}_{نوع-العقد}_{النسخة}.pdf
+مثال: Nas-R_6185392_Spa_V1.pdf
+
+تقارير الوكلاء (Google Doc - بدون امتداد):
+{كود-المنطقة}_{رقم-القطعة}_{نوع-التقرير}_{النسخة}
+مثال: Nas-R_6185392_Spa-Rev_V1
+
+👥 سجل الاستشاريين المعتمد:
+| الكود    | الاسم الكامل                                    | التخصص  |
+| Lac      | La Casa                                          | Pro-Eng |
+| A-B      | Arif & Bintoak                                   | Pro-Eng |
+| Osu      | OSU                                              | Pro-Eng |
+| Real     | Realistic                                        | Pro-Eng |
+| Dat      | Datum                                            | Pro-Eng |
+| Saf      | Safeer                                           | Pro-Eng |
+| Col      | Colliers                                         | Pro-Mkt |
+| Tarmak   | Tarmak                                           | Pro-Geo |
+| Trans    | Trans                                            | Pro-Geo |
+
+📋 أكواد أنواع الملفات:
+العروض: Pro-Eng (هندسي), Pro-Mkt (سوق), Pro-Geo (تربة)
+معلومات الأرض: Td (سند ملكية), Ap (مخطط تأثير), Pdg (إرشادات تطوير), Stp (مخطط موقع), Fsh (ملخص)
+العقود: Spa (بيع وشراء), Nov (تنازل), Spa-Rev (تحليل عقد)
+
+🔄 سير العمل اليومي:
+1. ادخل مجلد 00_Inbox/Ready/ يومياً
+2. لكل ملف في Ready:
+   أ. تأكد من صحة التسمية حسب الدستور
+   ب. صحح الاسم إذا لزم
+   ج. حدد المجلد الصحيح بناءً على نوع الملف
+   د. انقل الملف (move - ليس copy) للمجلد الصحيح
+   هـ. تأكد من نجاح النقل
+3. أبلغ المالك عبر تيليجرام بملخص العمليات
+
+⚠️ قواعد الحالات الجديدة:
+عندما تواجه نوع ملف جديد لم يُعرّف أعلاه:
+1. حلل الملف وافهم نوعه
+2. اقترح كود بنفس الأسلوب (أول حرف كبير، شرطة بين الكلمات)
+3. أرسل اقتراحك للمالك عبر تيليجرام: "وجدت ملف [نوعه]. أقترح تسميته [الكود]. موافق؟"
+4. انتظر الموافقة قبل التنفيذ
+
+❗❗❗ قاعدة ذهبية - الاستقلالية:
+لا تطلب أبداً من المالك معرفات المجلدات (Folder IDs) أو أي معلومات تقنية. أنت تملك الأدوات اللازمة للبحث بنفسك!
+عندما تحتاج مجلد مشروع:
+1. استخدم search_drive_files للبحث عن اسم المشروع أو رقم القطعة
+2. استخدم list_drive_folders لتصفح المجلدات
+3. استخدم list_drive_files لرؤية محتويات المجلد
+مثال: لو طُلب منك نسخ ملف لمشروع الجداف، ابحث عن "Jadaf" أو "3260885" باستخدام search_drive_files
+لا تقل أبداً "أحتاج معرف المجلد" - ابحث عنه بنفسك!
+
+❗❗❗ قاعدة ذهبية - حل المشاكل:
+إذا واجهت أي مشكلة تقنية (ملف كبير، مجلد غير موجود، خطأ في النسخ):
+1. حاول حلها بنفسك أولاً باستخدام أدواتك
+2. إذا فشلت، أبلغ سلوى عبر ask_another_agent وهي ستنسق الحل
+3. لا تزعج المالك بمشاكل تقنية - المالك يهتم بالنتائج فقط
+
+🚫 ممنوعات:
+• لا تحذف أي ملف بدون موافقة المالك
+• لا تنقل ملفات من خارج Ready بدون تعليمات
+• لا تغير أسماء ملفات مؤرشفة سابقاً بدون موافقة
+• لا تنشئ أكواد جديدة بدون موافقة المالك
+• أنت المسؤول الوحيد عن الأرشفة - لا أحد آخر ينقل أو يسمي ملفات في المجلدات النهائية
+• لا تطلب أبداً من المالك معرفات مجلدات أو معلومات تقنية - ابحث بنفسك!`,
 
   buraq: `أنت براق، مراقب التنفيذ والجدول الزمني في شركة Como Developments للتطوير العقاري في دبي.
 عمرك 29 سنة، شاب نشيط وحازم.
@@ -143,8 +224,8 @@ MAJ_6457879: 12gi-ndWRu_0uhmlnczbkTMMEB0biKYlz
 
 📂 قاعدة الأرشفة: عند إنتاج تقرير مالي، احفظيه ك Google Doc في مجلد 00_Inbox/Agents/ على Google Drive. سمّي الملف حسب دستور الأرشفة:
 {كود-المنطقة}_{رقم-القطعة}_{نوع-التقرير}_{النسخة}
-مثال: NAD_6185392_FIN-ANALYSIS_V01
-القواعد: كل الحروف كبيرة UPPERCASE، _ بين الأجزاء، - داخل الجزء، V00/V01... الاختصارات: JAD، NAD (وليس NAS)، MAJ`,
+مثال: Nas-R_6185392_Fin-Analysis_V1
+القواعد: أول حرف كبير، _ بين الأجزاء، - داخل الجزء، دائماً V1/V2...`,
 
   baz: `أنت باز، المستشار الاستراتيجي للابتكار والتحسين في شركة Como Developments للتطوير العقاري في دبي.
 عمرك 29 سنة، شاب ذو رؤية ثاقبة.
@@ -168,8 +249,8 @@ MAJ_6457879: 12gi-ndWRu_0uhmlnczbkTMMEB0biKYlz
 
 📂 قاعدة الأرشفة: عند إنتاج دراسة أو تقرير، احفظيه ك Google Doc في مجلد 00_Inbox/Agents/ على Google Drive. سمّي الملف حسب دستور الأرشفة:
 {كود-المنطقة}_{رقم-القطعة}_{نوع-التقرير}_{النسخة}
-مثال: MAJ_6457956_FEASIBILITY_V01
-القواعد: كل الحروف كبيرة UPPERCASE، _ بين الأجزاء، - داخل الجزء، V00/V01... الاختصارات: JAD، NAD (وليس NAS)، MAJ`
+مثال: Maj-M_6457956_Feasibility_V1
+القواعد: أول حرف كبير، _ بين الأجزاء، - داخل الجزء، دائماً V1/V2...`
 };
 
 // Tool-use instruction appended to system prompts
@@ -199,47 +280,19 @@ const TOOL_USE_INSTRUCTION = `
 5. أبلغ المستخدم بالنتيجة الفعلية`;
 
 // ═══════════════════════════════════════════════════
-// Unified LLM caller using Built-in Forge API (invokeLLM)
-// No rate limits, no API key issues, supports tools
+// Model-specific API callers WITH TOOL SUPPORT
 // ═══════════════════════════════════════════════════
 
-// Detect if user message is an action command (not just a question)
-function isActionMessage(msg: string): boolean {
-  const actionKeywords = [
-    "حدث", "حدّث", "أضف", "اضف", "سجل", "سجّل", "أدخل", "ادخل",
-    "استخرج", "اقرأ", "اقرا", "افتح", "انقل", "غيّر", "غير", "احذف",
-    "عدّل", "عدل", "أنشئ", "انشئ", "ارفع", "نزّل", "نزل",
-    "اعرض", "جيب", "وريني", "شوف", "فحص", "افحص", "تحقق",
-    "أتعاب", "اتعاب", "ملفات", "عروض", "مشاريع", "استشاري",
-    "update", "add", "extract", "read", "list", "show", "get",
-  ];
-  const lower = msg.toLowerCase();
-  return actionKeywords.some(kw => lower.includes(kw));
-}
-
-async function callForge(
+// Call OpenAI GPT-4o with function calling
+async function callOpenAI(
   systemPrompt: string,
   userMessage: string,
   conversationHistory?: { role: "user" | "assistant"; content: string }[],
   tools?: any[],
-  userId?: number,
-  forceTools?: boolean
+  userId?: number
 ): Promise<string> {
-  // When forceTools is true, prepend a strong instruction to the user message
-  let effectiveUserMessage = userMessage;
-  if (forceTools && tools && tools.length > 0) {
-    const toolNames = tools.map(t => t.function.name).join(", ");
-    effectiveUserMessage = `[CRITICAL SYSTEM INSTRUCTION - MUST FOLLOW]
-هذا طلب تنفيذي. القواعد التالية إلزامية:
-1. يجب أن تستدعي أداة واحدة على الأقل فوراً. الأدوات المتاحة: ${toolNames}
-2. ممنوع منعاً باتاً أن ترد بنص فقط بدون استدعاء أداة
-3. ممنوع أن تسأل أسئلة توضيحية - إذا فيه أكثر من خيار، نفّذ الأكثر احتمالاً أو نفّذ الكل
-4. ابدأ بالتنفيذ مباشرة ثم أبلغ بالنتيجة
-[END INSTRUCTION]
-
-طلب المستخدم: ${userMessage}`;
-    console.log(`[Forge] ⚡ Action message detected - injecting STRONG tool-use instruction`);
-  }
+  const apiKey = ENV.openaiApiKey;
+  if (!apiKey) throw new Error("OpenAI API Key not configured");
 
   const messages: any[] = [{ role: "system", content: systemPrompt }];
 
@@ -250,34 +303,42 @@ async function callForge(
     }
   }
 
-  messages.push({ role: "user", content: effectiveUserMessage });
+  messages.push({ role: "user", content: userMessage });
 
-  const invokeParams: any = { messages };
-  if (tools && tools.length > 0) {
-    invokeParams.tools = tools;
-    invokeParams.tool_choice = "auto";
-  }
-
-  let data = await invokeLLM(invokeParams);
-
-  let assistantMessage = data.choices[0]?.message;
-  let toolRounds = 0;
-  let lastToolResults: string[] = [];
-
-  // Sanitize tool_call IDs to match pattern ^[a-zA-Z0-9_-]+$
-  const sanitizeToolCallId = (id: string | undefined | null): string => {
-    if (!id) return `tc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    return String(id).replace(/[^a-zA-Z0-9_-]/g, '_');
+  const body: any = {
+    model: "gpt-4o",
+    messages,
+    max_tokens: 2048,
+    temperature: 0.8,
   };
 
-  while (assistantMessage?.tool_calls && assistantMessage.tool_calls.length > 0 && toolRounds < 10) {
+  if (tools && tools.length > 0) {
+    body.tools = tools;
+    body.tool_choice = "auto";
+  }
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("[OpenAI] Error:", response.status, errorText);
+    throw new Error(`OpenAI API error: ${response.status}`);
+  }
+
+  let data = await response.json();
+  let assistantMessage = data.choi  // Handle tool calls - up to 5 rounds
+  let toolRounds = 0;
+  let lastToolResults: string[] = [];
+  while (assistantMessage?.tool_calls && toolRounds < 5) {
     toolRounds++;
-    console.log(`[Forge] Tool call round ${toolRounds}: ${assistantMessage.tool_calls.length} tools`);
-    
-    // Sanitize all tool_call IDs
-    for (const tc of assistantMessage.tool_calls) {
-      tc.id = sanitizeToolCallId(tc.id);
-    }
+    console.log(`[OpenAI] Tool call round ${toolRounds}: ${assistantMessage.tool_calls.length} tools`);
     
     messages.push(assistantMessage);
     lastToolResults = [];
@@ -288,16 +349,16 @@ async function callForge(
       try {
         fnArgs = JSON.parse(toolCall.function.arguments || "{}");
       } catch (e) {
-        console.error(`[Forge] Failed to parse tool args for ${fnName}:`, toolCall.function.arguments);
+        console.error(`[OpenAI] Failed to parse tool args for ${fnName}:`, toolCall.function.arguments);
       }
-      console.log(`[Forge] Executing tool: ${fnName}`, JSON.stringify(fnArgs).slice(0, 200));
+      console.log(`[OpenAI] Executing tool: ${fnName}`, JSON.stringify(fnArgs).slice(0, 200));
       
       let result: string;
       try {
         result = await executeAgentTool(fnName, fnArgs, userId || 0);
       } catch (toolErr: any) {
         result = `Error executing ${fnName}: ${toolErr.message || 'Unknown error'}`;
-        console.error(`[Forge] Tool execution error:`, toolErr);
+        console.error(`[OpenAI] Tool execution error:`, toolErr);
       }
       lastToolResults.push(`${fnName}: ${result.slice(0, 200)}`);
       messages.push({
@@ -309,48 +370,345 @@ async function callForge(
 
     // Call again with tool results
     try {
-      const followUpParams: any = { messages };
-      if (tools && tools.length > 0) {
-        followUpParams.tools = tools;
-        followUpParams.tool_choice = "auto";
+      const followUp = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({ model: "gpt-4o", messages, max_tokens: 2048, temperature: 0.8, tools, tool_choice: "auto" }),
+      });
+
+      if (!followUp.ok) {
+        const errorText = await followUp.text();
+        console.error("[OpenAI] Follow-up error:", followUp.status, errorText);
+        // Return a useful message instead of breaking silently
+        return `واجهت مشكلة تقنية أثناء معالجة طلبك (خطأ ${followUp.status}). حاول مرة أخرى.`;
       }
-      data = await invokeLLM(followUpParams);
-      assistantMessage = data?.choices?.[0]?.message;
+
+      data = await followUp.json();
+      assistantMessage = data.choices?.[0]?.message;
+      
+      // Log the response for debugging
       if (!assistantMessage) {
-        console.warn("[Forge] Follow-up returned no message. data:", JSON.stringify(data).slice(0, 500));
-        if (lastToolResults.length > 0) {
-          return `تم تنفيذ الأدوات بنجاح. النتائج:\n${lastToolResults.join('\n')}`;
-        }
+        console.error("[OpenAI] No message in follow-up response. Full data:", JSON.stringify(data).slice(0, 500));
       }
     } catch (fetchErr: any) {
-      console.error("[Forge] Follow-up error:", fetchErr.message || fetchErr);
-      if (lastToolResults.length > 0) {
-        return `تم تنفيذ الأدوات. النتائج:\n${lastToolResults.join('\n')}`;
-      }
+      console.error("[OpenAI] Follow-up fetch error:", fetchErr);
       return `واجهت مشكلة في الاتصال أثناء معالجة طلبك. حاول مرة أخرى.`;
     }
   }
 
-  // Extract content safely
-  const content = typeof assistantMessage?.content === 'string' 
-    ? assistantMessage.content 
-    : data?.choices?.[0]?.message?.content;
+  // Extract content safely with multiple fallbacks
+  let content = assistantMessage?.content;
   
-  if (!content && lastToolResults.length > 0) {
-    console.warn("[Forge] Empty content after tool calls. Tool results:", lastToolResults);
-    return `تم تنفيذ الأدوات المطلوبة بنجاح. النتائج:\n${lastToolResults.join('\n')}`;
+  // Fallback 1: Try to get from data.choices[0].message.content
+  if (!content) {
+    content = data?.choices?.[0]?.message?.content;
+  }
+  
+  // Fallback 2: If still empty but we had successful tool execution, create a summary
+  if ((!content || content.trim() === '') && lastToolResults.length > 0) {
+    console.warn("[OpenAI] Empty content after tool calls. Providing tool results summary.");
+    console.warn("[OpenAI] Tool results:", lastToolResults);
+    console.warn("[OpenAI] Full response data:", JSON.stringify(data).slice(0, 1000));
+    return `تم تنفيذ الأدوات بنجاح:\n${lastToolResults.map(r => `✓ ${r}`).join('\n')}`;
   }
 
-  const finalContent = typeof content === 'string' ? content : JSON.stringify(content);
-  if (!finalContent || finalContent.trim() === '') {
-    console.error("[Forge] Empty response. Full data:", JSON.stringify(data).slice(0, 500));
+  // Final check: if content is still empty, log and return error
+  if (!content || content.trim() === '') {
+    console.error("[OpenAI] Empty response after all fallbacks.");
+    console.error("[OpenAI] Full data:", JSON.stringify(data).slice(0, 1000));
+    console.error("[OpenAI] assistantMessage:", JSON.stringify(assistantMessage).slice(0, 500));
+    console.error("[OpenAI] lastToolResults:", lastToolResults);
     return `واجهت مشكلة في توليد الرد. حاول إعادة صياغة طلبك.`;
   }
 
-  return finalContent;
+  return content;
 }
 
-// callForge is now the only LLM caller - defined above
+// Call Anthropic Claude with tool support
+async function callClaude(
+  systemPrompt: string,
+  userMessage: string,
+  conversationHistory?: { role: "user" | "assistant"; content: string }[],
+  tools?: any[],
+  userId?: number
+): Promise<string> {
+  const apiKey = ENV.anthropicApiKey;
+  if (!apiKey) throw new Error("Anthropic API Key not configured");
+
+  const messages: any[] = [];
+
+  if (conversationHistory && conversationHistory.length > 0) {
+    const recentHistory = conversationHistory.slice(-20);
+    for (const msg of recentHistory) {
+      messages.push({ role: msg.role, content: msg.content });
+    }
+  }
+
+  messages.push({ role: "user", content: userMessage });
+
+  // Convert OpenAI tool format to Claude format
+  const claudeTools = tools?.map(t => ({
+    name: t.function.name,
+    description: t.function.description,
+    input_schema: t.function.parameters,
+  })) || [];
+
+  const body: any = {
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 2048,
+    system: systemPrompt,
+    messages,
+  };
+
+  if (claudeTools.length > 0) {
+    body.tools = claudeTools;
+  }
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("[Claude] Error:", response.status, errorText);
+    throw new Error(`Claude API error: ${response.status}`);
+  }
+
+  let data = await response.json();
+
+  // Handle tool use - up to 5 rounds
+  let toolRounds = 0;
+  while (data.stop_reason === "tool_use" && toolRounds < 5) {
+    toolRounds++;
+    console.log(`[Claude] Tool use round ${toolRounds}`);
+    
+    // Add assistant response to messages
+    messages.push({ role: "assistant", content: data.content });
+
+    // Execute each tool call
+    const toolResults: any[] = [];
+    for (const block of data.content) {
+      if (block.type === "tool_use") {
+        console.log(`[Claude] Executing tool: ${block.name}`, block.input);
+        const result = await executeAgentTool(block.name, block.input || {}, userId || 0);
+        toolResults.push({
+          type: "tool_result",
+          tool_use_id: block.id,
+          content: result,
+        });
+      }
+    }
+
+    messages.push({ role: "user", content: toolResults });
+
+    // Call again with tool results
+    const followUp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 2048,
+        system: systemPrompt,
+        messages,
+        tools: claudeTools,
+      }),
+    });
+
+    if (!followUp.ok) {
+      const errorText = await followUp.text();
+      console.error("[Claude] Follow-up error:", followUp.status, errorText);
+      break;
+    }
+
+    data = await followUp.json();
+  }
+
+  // Extract text from content blocks with multiple fallbacks
+  const textBlocks = data.content?.filter((b: any) => b.type === "text") || [];
+  let content = textBlocks.map((b: any) => b.text).join("\n");
+  
+  // Fallback 1: If empty but we had tool execution, provide summary
+  if ((!content || content.trim() === '') && toolRounds > 0) {
+    console.warn("[Claude] Empty content after tool execution. Providing tool summary.");
+    console.warn("[Claude] Full response data:", JSON.stringify(data).slice(0, 1000));
+    return `تم تنفيذ الأدوات بنجاح. الرجاء التحقق من النتائج.`;
+  }
+  
+  // Fallback 2: Final check
+  if (!content || content.trim() === '') {
+    console.error("[Claude] Empty response after all fallbacks.");
+    console.error("[Claude] Full data:", JSON.stringify(data).slice(0, 1000));
+    return "عذراً، لم أتمكن من الرد. حاول إعادة صياغة طلبك.";
+  }
+  
+  return content;
+}
+
+// Call Google Gemini with function calling
+async function callGemini(
+  systemPrompt: string,
+  userMessage: string,
+  conversationHistory?: { role: "user" | "assistant"; content: string }[],
+  tools?: any[],
+  userId?: number
+): Promise<string> {
+  const apiKey = ENV.googleGeminiApiKey;
+  if (!apiKey) throw new Error("Google Gemini API Key not configured");
+
+  const contents: any[] = [];
+
+  if (conversationHistory && conversationHistory.length > 0) {
+    const recentHistory = conversationHistory.slice(-20);
+    for (const msg of recentHistory) {
+      contents.push({
+        role: msg.role === "assistant" ? "model" : "user",
+        parts: [{ text: msg.content }],
+      });
+    }
+  }
+
+  contents.push({
+    role: "user",
+    parts: [{ text: userMessage }],
+  });
+
+  // Convert OpenAI tool format to Gemini format
+  const geminiTools = tools && tools.length > 0 ? [{
+    functionDeclarations: tools.map(t => ({
+      name: t.function.name,
+      description: t.function.description,
+      parameters: t.function.parameters,
+    }))
+  }] : undefined;
+
+  const body: any = {
+    systemInstruction: { parts: [{ text: systemPrompt }] },
+    contents,
+    generationConfig: {
+      maxOutputTokens: 2048,
+      temperature: 0.8,
+    },
+  };
+
+  if (geminiTools) {
+    body.tools = geminiTools;
+  }
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("[Gemini] Error:", response.status, errorText);
+    throw new Error(`Gemini API error: ${response.status}`);
+  }
+
+  let data = await response.json();
+
+  // Handle function calls - up to 5 rounds
+  let toolRounds = 0;
+  let candidate = data.candidates?.[0];
+  
+  while (candidate?.content?.parts?.some((p: any) => p.functionCall) && toolRounds < 5) {
+    toolRounds++;
+    console.log(`[Gemini] Function call round ${toolRounds}`);
+    
+    // Add model response to contents
+    contents.push(candidate.content);
+
+    // Execute function calls and build response parts
+    const functionResponseParts: any[] = [];
+    for (const part of candidate.content.parts) {
+      if (part.functionCall) {
+        console.log(`[Gemini] Executing tool: ${part.functionCall.name}`, part.functionCall.args);
+        const result = await executeAgentTool(part.functionCall.name, part.functionCall.args || {}, userId || 0);
+        functionResponseParts.push({
+          functionResponse: {
+            name: part.functionCall.name,
+            response: JSON.parse(result),
+          }
+        });
+      }
+    }
+
+    contents.push({ role: "user", parts: functionResponseParts });
+
+    // Call again with function results
+    const followUp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents,
+          generationConfig: { maxOutputTokens: 2048, temperature: 0.8 },
+          tools: geminiTools,
+        }),
+      }
+    );
+
+    if (!followUp.ok) {
+      const errorText = await followUp.text();
+      console.error("[Gemini] Follow-up error:", followUp.status, errorText);
+      break;
+    }
+
+    data = await followUp.json();
+    candidate = data.candidates?.[0];
+  }
+
+  // Extract text from final response with multiple fallbacks
+  const textParts = candidate?.content?.parts?.filter((p: any) => p.text) || [];
+  let content = textParts.map((p: any) => p.text).join("\n");
+  
+  // Fallback 1: If empty but we had tool execution, provide summary
+  if ((!content || content.trim() === '') && toolRounds > 0) {
+    console.warn("[Gemini] Empty content after tool execution. Providing tool summary.");
+    console.warn("[Gemini] Full response data:", JSON.stringify(data).slice(0, 1000));
+    return `تم تنفيذ الأدوات بنجاح. الرجاء التحقق من النتائج.`;
+  }
+  
+  // Fallback 2: Final check
+  if (!content || content.trim() === '') {
+    console.error("[Gemini] Empty response after all fallbacks.");
+    console.error("[Gemini] Full data:", JSON.stringify(data).slice(0, 1000));
+    return "عذراً، لم أتمكن من الرد. حاول إعادة صياغة طلبك.";
+  }
+  
+  return content;
+}
+
+// Fallback to built-in Manus LLM (no tool support)
+async function callManusLLM(systemPrompt: string, userMessage: string): Promise<string> {
+  const response = await invokeLLM({
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userMessage }
+    ]
+  });
+  const content = response.choices[0].message.content;
+  return typeof content === "string" ? content : "عذراً، لم أتمكن من فهم طلبك.";
+}
 
 // ═══════════════════════════════════════════════════
 // Main routing with tool support
@@ -364,16 +722,55 @@ async function callBestModel(
   tools?: any[],
   userId?: number
 ): Promise<{ text: string; model: string }> {
-  // All agents now use Built-in Forge API (invokeLLM) - no rate limits!
-  const forceTools = isActionMessage(userMessage) && (tools?.length ?? 0) > 0;
-  console.log(`[AgentChat] 🚀 ${agent} → Forge API (invokeLLM) ${tools?.length ? `with ${tools.length} tools` : ''} ${forceTools ? '⚡FORCE_TOOLS' : ''}`);
+  const assignedModel = AGENT_MODEL_MAP[agent];
+
+  // Try the assigned model first
   try {
-    const text = await callForge(systemPrompt, userMessage, conversationHistory, tools, userId, forceTools);
-    return { text, model: "Forge API" };
+    switch (assignedModel) {
+      case "gpt-4o":
+        if (ENV.openaiApiKey) {
+          console.log(`[AgentChat] 🟢 ${agent} → GPT-4o (OpenAI) ${tools?.length ? `with ${tools.length} tools` : ''}`);
+          return { text: await callOpenAI(systemPrompt, userMessage, conversationHistory, tools, userId), model: "GPT-4o" };
+        }
+        break;
+      case "claude-sonnet-4":
+        if (ENV.anthropicApiKey) {
+          console.log(`[AgentChat] 🟣 ${agent} → Claude Sonnet 4 (Anthropic) ${tools?.length ? `with ${tools.length} tools` : ''}`);
+          return { text: await callClaude(systemPrompt, userMessage, conversationHistory, tools, userId), model: "Claude Sonnet 4" };
+        }
+        break;
+      case "gemini-2.5-pro":
+        if (ENV.googleGeminiApiKey) {
+          console.log(`[AgentChat] 🔵 ${agent} → Gemini 2.5 Pro (Google) ${tools?.length ? `with ${tools.length} tools` : ''}`);
+          return { text: await callGemini(systemPrompt, userMessage, conversationHistory, tools, userId), model: "Gemini 2.5 Pro" };
+        }
+        break;
+    }
   } catch (err) {
-    console.error(`[AgentChat] Forge API failed for ${agent}:`, err);
-    return { text: "واجهت مشكلة في الاتصال. حاول مرة أخرى.", model: "Forge API (error)" };
+    console.error(`[AgentChat] Primary model ${assignedModel} failed for ${agent}:`, err);
   }
+
+  // Fallback chain: try other models in order
+  const fallbackOrder: { model: AIModel; fn: typeof callOpenAI; key: string }[] = [
+    { model: "gpt-4o", fn: callOpenAI, key: ENV.openaiApiKey },
+    { model: "claude-sonnet-4", fn: callClaude, key: ENV.anthropicApiKey },
+    { model: "gemini-2.5-pro", fn: callGemini, key: ENV.googleGeminiApiKey },
+  ];
+
+  for (const fallback of fallbackOrder) {
+    if (fallback.model === assignedModel || !fallback.key) continue;
+    try {
+      console.log(`[AgentChat] ⚠️ Fallback: ${agent} → ${fallback.model}`);
+      const fallbackModelNames: Record<string, string> = { "gpt-4o": "GPT-4o", "claude-sonnet-4": "Claude Sonnet 4", "gemini-2.5-pro": "Gemini 2.5 Pro" };
+      return { text: await fallback.fn(systemPrompt, userMessage, conversationHistory, tools, userId), model: fallbackModelNames[fallback.model] || fallback.model };
+    } catch (err) {
+      console.error(`[AgentChat] Fallback ${fallback.model} also failed:`, err);
+    }
+  }
+
+  // Final fallback: Manus built-in LLM (no tools)
+  console.log(`[AgentChat] 🔴 All models failed, using Manus LLM for ${agent}`);
+  return { text: await callManusLLM(systemPrompt, userMessage), model: "Manus LLM" };
 }
 
 // Get platform context data for smarter responses
@@ -382,6 +779,12 @@ async function getPlatformContext(agent: AgentType): Promise<string> {
   try {
     const db = await getDb();
     if (!db) return "";
+
+    // Add Ready folder ID for khazen
+    if (agent === "khazen") {
+      contextData += `\n\n📁 معرفات المجلدات الأساسية:`;
+      contextData += `\n- مجلد Ready (00_Inbox/Ready): 1ZXzOEs-ITzUF6-r-Ii2cd7iRxBM1gGC7`;
+    }
 
     const projectList = await db.select().from(projects).limit(10);
     if (projectList.length > 0) {

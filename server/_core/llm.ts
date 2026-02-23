@@ -30,7 +30,6 @@ export type Message = {
   content: MessageContent | MessageContent[];
   name?: string;
   tool_call_id?: string;
-  tool_calls?: ToolCall[];
 };
 
 export type Tool = {
@@ -150,18 +149,6 @@ const normalizeMessage = (message: Message) => {
       name,
       tool_call_id,
       content,
-    };
-  }
-
-  // Preserve assistant messages with tool_calls as-is
-  if (role === "assistant" && message.tool_calls && message.tool_calls.length > 0) {
-    const content = message.content
-      ? (typeof message.content === "string" ? message.content : ensureArray(message.content).map(normalizeContentPart))
-      : null;
-    return {
-      role,
-      content,
-      tool_calls: message.tool_calls,
     };
   }
 

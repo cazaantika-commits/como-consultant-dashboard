@@ -608,54 +608,46 @@
 - [x] إصلاح المشكلة نهائياً - فحص محسّن للمحتوى مع fallback لـ data.choices[0].message.content
 - [x] اختبار شامل قبل التسليم (339 اختبار ناجح)
 
-## تحديث دستور الأرشفة ليطابق التسمية الفعلية - فبراير 23
-- [x] تحديث system prompt خازن: تغيير Nas-R إلى NAD، Pro-Eng إلى PRO-ENG، التاريخ YYMMDD بدل YYYYMMDD
-- [x] تحديث سجل الاستشاريين: إضافة ARTEC, SED, ALSARH, ALAALAMIA, CV-INVEST, XYZ, ARTOAK
-- [x] تحديث أكواد أنواع الملفات: PRO-ENG, PRO-SOIL, QTN-SOIL, DWG-ARCH, DWG-CONCEPT, PRO-FEAS, FACT-SHEET, RPT, إلخ
-- [x] تحديث أمثلة التسمية لتطابق الملفات الفعلية (NAD_6185392_PRO-ENG_260209_REALISTIC_V00.pdf)
-- [x] تحديث prompts سلوى وفاروق وألينا وجويل بنفس التسمية الجديدة
-- [x] إضافة بيانات شاملة في قاعدة المعرفة (naming conventions, project mapping, consultant codes)
-- [x] التحقق من عمل خازن بالتسمية الجديدة - NAD_6185392_PRO-ENG_260215_ARTEC_V00.pdf ✅
+## إصلاح تنسيق التقييم الفني - فبراير 23
+- [x] إصلاح عرض "10 نقاط" لتكون جنب بعض (whitespace-nowrap على الرقم والكلمة معاً)
 
-## تجربة سير العمل: JAD_3731853 (الجداف) - فبراير 23
-- [x] قراءة مجلد 02_PCA الخاص بالجداف من Drive وجمع قائمة العروض (6 عروض + 1 fact sheet)
-- [x] استخراج الأتعاب من كل عرض PDF (SAFEER 1.5%+1.5%, REALISTIC 1.5%+1.5%, OSUS 400K+630K, DATUM 850K+850K, ARTEC 2%+2%, XYZ 3.08M)
-- [ ] عرض البيانات المستخرجة على المالك للمراجعة قبل التحديث
-- [ ] تحديث المنصة: ربط الاستشاريين بالمشروع + إدخال الأتعاب
-- [x] حفظ checkpoint بعد التحديث
+## إصلاح خازن - معالجة الأدوات - فبراير 23
+- [x] إصلاح استخراج المحتوى بعد تنفيذ الأدوات (multiple fallbacks + detailed logging)
+- [x] إضافة fallback لعرض نتائج الأدوات إذا كان الرد فارغاً
+- [x] تحسين error logging لتشخيص المشاكل المستقبلية
 
-## إصلاح استخراج الأتعاب - فبراير 23
-- [x] فهم نظام التقييم في المنصة: نسبة vs مبلغ مقطوع
-- [x] إعادة استخراج أتعاب JAD بشكل صحيح (نسبة أم مقطوع لكل استشاري)
-- [x] عرض النتائج المصححة على المالك
-- [x] برمجة قدرة استخراج الأتعاب داخل خازن (أدوات + folder IDs + PDF reading + retry logic)
-- [x] اختبار خازن يعمل بشكل مستقل - نجح في عرض 7 ملفات + قراءة SAFEER واستخراج 1.5% تصميم + 1.5% إشراف ✅
+## إصلاح خازن - مجلد Ready - فبراير 23
+- [x] إضافة ID مجلد Ready إلى platform context لخازن (1ZXzOEs-ITzUF6-r-Ii2cd7iRxBM1gGC7)
+- [x] التأكد من أن خازن يستطيع رؤية الملفات في مجلد Ready مباشرة
 
-## إصلاح خازن - خطأ 429 rate limit - فبراير 23
-- [x] تحويل خازن من GPT-4o إلى نموذج بديل → تم التحويل للـ Forge API
-- [x] تحسين retry logic → لم يعد مطلوب (Forge API بدون rate limit)
-- [x] اختبار خازن يعمل بأمر بسيط بدون شرح → نجح! استدعى list_drive_files وعرض 7 ملفات
+## إصلاح شامل - جميع الوكلاء والاجتماعات - فبراير 23
+- [x] إصلاح Claude tool execution (نفس مشكلة OpenAI - multiple fallbacks)
+- [x] إصلاح Gemini tool execution (نفس مشكلة OpenAI - multiple fallbacks)
+- [x] إضافة context لسلوى: رؤية جميع محادثات المالك مع الوكلاء (حفظ ask_another_agent في knowledge base)
+- [x] التحقق من غرفة الاجتماعات: المشاركين يفهمون ويستمعون بشكل صحيح (تستخدم handleAgentChat المُصلح)
 
-## تحويل الوكلاء لـ Built-in Forge API - فبراير 23
-- [x] تحويل callOpenAI و callClaude و callGemini لاستخدام invokeLLM (Forge API)
-- [x] حذف 400+ سطر من كود API المباشر واستبدالها بـ callForge الموحد
-- [x] تحديث callBestModel ليستخدم Forge API مباشرة بدون fallback chain
-- [x] إصلاح 8 اختبارات فاشلة (تحديث توقعات أدوات خازن)
-- [x] جميع الاختبارات ناجحة (339/339)
-- [x] حفظ checkpoint
+## إصلاح Google Drive - نسخ الملفات - فبراير 23
+- [x] فحص خطأ copy_drive_file في اللوغات (Service Account quota issue)
+- [x] إضافة OAuth 2.0 user delegation لـ Google Drive
+- [x] تخزين وتحديث OAuth tokens (oauthTokens table + googleOAuthRouter)
+- [x] تحديث copyFile لاستخدام OAuth client
+- [ ] اختبار خازن ينسخ ملف XYZ للمشاريع الثلاثة بنجاح
 
-## إدخال أتعاب الجداف يدوياً - فبراير 23
-- [ ] ربط الاستشاريين الستة بمشروع الجداف
-- [ ] إدخال أتعاب كل استشاري (SAFEER, REALISTIC, OSUS, DATUM, ARTEC, XYZ)
-- [ ] التحقق من ظهور البيانات في صفحة التقييم
+## ترتيب ملفات Google Drive - فبراير 23
+- [ ] فحص الهيكل الحالي وتحديد المشاكل (Proposal مع العقود، تسميات خاطئة)
+- [ ] فصل مجلد Proposal عن مجلد العقود
+- [ ] إنشاء هيكل المجلدات الصحيح حسب دستور الأرشفة
+- [ ] نقل الملفات للمجلدات الصحيحة
+- [ ] إعادة تسمية الملفات حسب المعايير (ProjectCode_PlotNumber_Category_Date_Consultant_Version)
+- [ ] التحقق من التنظيم وتوثيق التغييرات
+
+## إصلاح: خازن أدخل 2 استشاريين فقط من 6 للجداف - فبراير 23
+- [x] فحص قاعدة البيانات: financialData فيها 5 استشاريين بس projectConsultants فيها 2 بس
+- [x] إصلاح set_financial_data ليربط الاستشاري تلقائياً (auto-assign to projectConsultants)
+- [x] إضافة الاستشاريين الأربعة الناقصين يدوياً (Realistic, DATUM, ARTEC, XYZ)
 - [ ] حفظ checkpoint
 
-## إصلاح خازن - إجبار تنفيذ الأدوات بدل الكلام - فبراير 23
-- [x] تغيير tool_choice من auto إلى required لما الطلب يكون تنفيذي
-- [x] إضافة كشف ذكي للطلبات التنفيذية (isActionMessage مع 30+ كلمة مفتاحية)
-- [x] اختبار خازن يشتغل فعلياً - Forge API + tool_choice=required → استدعى list_drive_files بنجاح
-- [x] إصلاح sanitizeToolCallId للتوافق مع Forge API pattern
-- [x] إصلاح normalizeMessage لدعم tool_calls في follow-up
-- [x] تعزيز تعليمات النظام (CRITICAL SYSTEM INSTRUCTION)
-- [x] اختبار حي ناجح: خازن عرض 7 ملفات الجداف بنجاح
-- [ ] حفظ checkpoint
+## إصلاح: آخر رسائل المحادثة تختفي عند الإغلاق والفتح - فبراير 23
+- [x] فحص كود حفظ واسترجاع المحادثات: المشكلة في React Query cache + limit 50
+- [x] إصلاح: staleTime=0, gcTime=0, refetchOnMount='always', limit=100
+- [ ] اختبار والتحقق

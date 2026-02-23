@@ -65,7 +65,7 @@ vi.mock("./_core/llm", () => ({
   invokeLLM: vi.fn(),
 }));
 
-import { executeAgentTool, setAgentContext, getToolsForAgent, AGENT_TOOLS } from "./agentTools";
+import { executeAgentTool, setAgentContext, getToolsForAgent } from "./agentTools";
 
 describe("Drive File Management Tools", () => {
   beforeEach(() => {
@@ -86,10 +86,10 @@ describe("Drive File Management Tools", () => {
       expect(toolNames).toContain("move_drive_file");
     });
 
-    it("khazen should NOT have delete_drive_file tool (simplified access)", () => {
+    it("khazen should have delete_drive_file tool", () => {
       const tools = getToolsForAgent("khazen" as any);
       const toolNames = tools.map(t => t.function.name);
-      expect(toolNames).not.toContain("delete_drive_file");
+      expect(toolNames).toContain("delete_drive_file");
     });
 
     it("salwa should NOT have rename/move/delete tools", () => {
@@ -116,8 +116,9 @@ describe("Drive File Management Tools", () => {
       expect(moveTool!.function.parameters.required).toContain("newParentFolderId");
     });
 
-    it("delete_drive_file tool should exist in AGENT_TOOLS and require reason", () => {
-      const deleteTool = AGENT_TOOLS.find(t => t.function.name === "delete_drive_file");
+    it("delete_drive_file tool should require reason", () => {
+      const tools = getToolsForAgent("khazen" as any);
+      const deleteTool = tools.find(t => t.function.name === "delete_drive_file");
       expect(deleteTool).toBeDefined();
       expect(deleteTool!.function.parameters.required).toContain("fileId");
       expect(deleteTool!.function.parameters.required).toContain("reason");
