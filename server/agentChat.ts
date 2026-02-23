@@ -203,12 +203,27 @@ const TOOL_USE_INSTRUCTION = `
 // No rate limits, no API key issues, supports tools
 // ═══════════════════════════════════════════════════
 
+// Detect if user message is an action command (not just a question)
+function isActionMessage(msg: string): boolean {
+  const actionKeywords = [
+    "حدث", "حدّث", "أضف", "اضف", "سجل", "سجّل", "أدخل", "ادخل",
+    "استخرج", "اقرأ", "اقرا", "افتح", "انقل", "غيّر", "غير", "احذف",
+    "عدّل", "عدل", "أنشئ", "انشئ", "ارفع", "نزّل", "نزل",
+    "اعرض", "جيب", "وريني", "شوف", "فحص", "افحص", "تحقق",
+    "أتعاب", "اتعاب", "ملفات", "عروض", "مشاريع", "استشاري",
+    "update", "add", "extract", "read", "list", "show", "get",
+  ];
+  const lower = msg.toLowerCase();
+  return actionKeywords.some(kw => lower.includes(kw));
+}
+
 async function callForge(
   systemPrompt: string,
   userMessage: string,
   conversationHistory?: { role: "user" | "assistant"; content: string }[],
   tools?: any[],
-  userId?: number
+  userId?: number,
+  forceTools?: boolean
 ): Promise<string> {
   const messages: any[] = [{ role: "system", content: systemPrompt }];
 
@@ -224,7 +239,11 @@ async function callForge(
   const invokeParams: any = { messages };
   if (tools && tools.length > 0) {
     invokeParams.tools = tools;
-    invokeParams.tool_choice = "auto";
+    // Force tool use on first call when message is an action command
+    invokeParams.tool_choice = forceTools ? "required" : "auto";
+    if (forceTools) {
+      console.log(`[Forge] ⚡ tool_choice=required (action message detected)`);
+    }
   }
 
   let data = await invokeLLM(invokeParams);
@@ -317,9 +336,10 @@ async function callBestModel(
   userId?: number
 ): Promise<{ text: string; model: string }> {
   // All agents now use Built-in Forge API (invokeLLM) - no rate limits!
-  console.log(`[AgentChat] 🚀 ${agent} → Forge API (invokeLLM) ${tools?.length ? `with ${tools.length} tools` : ''}`);
+  const forceTools = isActionMessage(userMessage) && (tools?.length ?? 0) > 0;
+  console.log(`[AgentChat] 🚀 ${agent} → Forge API (invokeLLM) ${tools?.length ? `with ${tools.length} tools` : ''} ${forceTools ? '⚡FORCE_TOOLS' : ''}`);
   try {
-    const text = await callForge(systemPrompt, userMessage, conversationHistory, tools, userId);
+    const text = await callForge(systemPrompt, userMessage, conversationHistory, tools, userId, forceTools);
     return { text, model: "Forge API" };
   } catch (err) {
     console.error(`[AgentChat] Forge API failed for ${agent}:`, err);
