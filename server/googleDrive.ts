@@ -383,12 +383,13 @@ export async function readFileContent(fileId: string): Promise<FileContentResult
       const pdfBuffer = Buffer.from(res.data as ArrayBuffer);
       console.log(`[Drive] PDF downloaded successfully. Extracting text...`);
 
-      const pdfParse = (await import("pdf-parse")).default;
-      const pdfData = await pdfParse(pdfBuffer);
+      const { PDFParse } = await import("pdf-parse");
+      const parser = new PDFParse({ data: pdfBuffer });
+      const pdfData = await parser.getText();
 
       let content = pdfData.text || "";
       const totalChars = content.length;
-      const totalPages = pdfData.numpages || 0;
+      const totalPages = Array.isArray(pdfData.pages) ? pdfData.pages.length : 0;
       const truncated = totalChars > MAX_CONTENT_CHARS;
       
       // Add metadata header

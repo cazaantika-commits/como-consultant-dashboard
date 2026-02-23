@@ -710,10 +710,32 @@ export const AGENT_TOOLS = [
       },
     },
   },
+  // ─── SALWA: VIEW OTHER AGENTS' CONVERSATIONS ───
+  {
+    type: "function" as const,
+    function: {
+      name: "view_agent_conversations",
+      description: "عرض محادثات المستخدم مع وكيل آخر - استخدمي هذه الأداة للاطلاع على ما دار بين المستخدم وأي وكيل آخر (فاروق، خازن، براق، خالد، ألينا، باز، جويل). يمكنك رؤية آخر الرسائل ومعرفة ما طلبه المستخدم وما رد عليه الوكيل.",
+      parameters: {
+        type: "object",
+        properties: {
+          targetAgent: {
+            type: "string",
+            enum: ["farouq", "khazen", "buraq", "khaled", "alina", "baz", "joelle", "all"],
+            description: "الوكيل المطلوب عرض محادثاته - استخدم 'all' لعرض آخر رسائل جميع الوكلاء"
+          },
+          limit: {
+            type: "number",
+            description: "عدد الرسائل المطلوب عرضها (افتراضياً: 20)"
+          },
+        },
+        required: ["targetAgent"],
+      },
+    },
+  },
 ];
-
 // ═══════════════════════════════════════════════════
-// Evaluation Criteria (shared with frontend)
+// Evaluation Criteria (shared with frontend))
 // ═══════════════════════════════════════════════════
 
 const EVALUATION_CRITERIA = [
@@ -1556,26 +1578,82 @@ async function _executeToolInternal(
         }
       }
 
+      // ─── SALWA: VIEW AGENT CONVERSATIONS ───
+      case "view_agent_conversations": {
+        const { targetAgent: viewTarget, limit: msgLimit } = args;
+        const chatLimit = msgLimit || 20;
+        const db = await getDb();
+        if (!db) return JSON.stringify({ error: "قاعدة البيانات غير متاحة" });
+        
+        const { chatHistory } = await import("../drizzle/schema");
+        
+        if (viewTarget === "all") {
+          // Get last 5 messages from each agent
+          const allAgents = ["farouq", "khazen", "buraq", "khaled", "alina", "baz", "joelle"];
+          const results: Record<string, any[]> = {};
+          for (const ag of allAgents) {
+            const msgs = await db.select()
+              .from(chatHistory)
+              .where(and(eq(chatHistory.userId, userId), eq(chatHistory.agent, ag)))
+              .orderBy(desc(chatHistory.createdAt))
+              .limit(5);
+            if (msgs.length > 0) {
+              results[ag] = msgs.reverse().map((m: any) => ({
+                role: m.role,
+                content: m.content.substring(0, 300),
+                time: m.createdAt,
+              }));
+            }
+          }
+          return JSON.stringify({ 
+            success: true, 
+            summary: "آخر المحادثات مع جميع الوكلاء",
+            conversations: results 
+          });
+        } else {
+          const msgs = await db.select()
+            .from(chatHistory)
+            .where(and(eq(chatHistory.userId, userId), eq(chatHistory.agent, viewTarget)))
+            .orderBy(desc(chatHistory.createdAt))
+            .limit(chatLimit);
+          return JSON.stringify({
+            success: true,
+            agent: viewTarget,
+            messageCount: msgs.length,
+            messages: msgs.reverse().map((m: any) => ({
+              role: m.role,
+              content: m.content,
+              time: m.createdAt,
+            })),
+          });
+        }
+      }
+
       // ─── INTER-AGENT ───
       case "ask_another_agent": {
-        // Agent-to-agent communication - import agentChat and call it
+        // Agent-to-agent communication - use handleAgentChat
         const { targetAgent, question } = args;
-        const { agentChat } = await import("./agentChat");
-        const response = await agentChat({
+        if (targetAgent === _currentAgent) {
+          return JSON.stringify({ error: "لا يمكنك التواصل مع نفسك" });
+        }
+        console.log(`[InterAgent] ${_currentAgent} → ${targetAgent}: ${question.substring(0, 100)}`);
+        const { handleAgentChat } = await import("./agentChat");
+        const response = await handleAgentChat({
           agent: targetAgent,
           message: `[طلب من ${_currentAgent || "unknown"}] ${question}`,
           conversationHistory: [],
           userId,
         });
+        console.log(`[InterAgent] ${targetAgent} responded (${response.text.length} chars)`);
         
         // Log to knowledge base so Salwa can see past agent interactions
         try {
           const { saveToKnowledgeBase } = await import("./knowledgeBase");
           await saveToKnowledgeBase({
             category: "agent_interactions",
-            title: `${_currentAgent} ← ${targetAgent}: ${question.slice(0, 100)}`,
-            content: `**السؤال من ${_currentAgent}:**\n${question}\n\n**رد ${targetAgent}:**\n${response.response}`,
-            tags: [_currentAgent, targetAgent, "inter_agent"],
+            title: `${_currentAgent} → ${targetAgent}: ${question.slice(0, 100)}`,
+            content: `**السؤال من ${_currentAgent}:**\n${question}\n\n**رد ${targetAgent}:**\n${response.text}`,
+            tags: [_currentAgent || "unknown", targetAgent, "inter_agent"],
             userId,
           });
         } catch (kbError) {
@@ -1586,7 +1664,7 @@ async function _executeToolInternal(
           success: true, 
           agent: targetAgent, 
           question, 
-          response: response.response 
+          response: response.text 
         });
       }
 
@@ -1662,6 +1740,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "get_drive_file_info", "read_drive_file_content",
     "create_drive_document", "create_drive_spreadsheet",
     "ask_another_agent",
+    "view_agent_conversations",
   ],
   farouq: [
     "list_projects", "list_consultants", "get_project_consultants",

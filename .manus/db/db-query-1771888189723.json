@@ -1,0 +1,118 @@
+{
+  "query": "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE();",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE();",
+  "rows": [
+    {
+      "TABLE_NAME": "__drizzle_migrations"
+    },
+    {
+      "TABLE_NAME": "users"
+    },
+    {
+      "TABLE_NAME": "consultants"
+    },
+    {
+      "TABLE_NAME": "evaluationScores"
+    },
+    {
+      "TABLE_NAME": "financialData"
+    },
+    {
+      "TABLE_NAME": "projectConsultants"
+    },
+    {
+      "TABLE_NAME": "projects"
+    },
+    {
+      "TABLE_NAME": "dashboardData"
+    },
+    {
+      "TABLE_NAME": "consultantNotes"
+    },
+    {
+      "TABLE_NAME": "consultantProfiles"
+    },
+    {
+      "TABLE_NAME": "tasks"
+    },
+    {
+      "TABLE_NAME": "agentActivityLog"
+    },
+    {
+      "TABLE_NAME": "agents"
+    },
+    {
+      "TABLE_NAME": "feasibilityStudies"
+    },
+    {
+      "TABLE_NAME": "evaluatorScores"
+    },
+    {
+      "TABLE_NAME": "committeeDecisions"
+    },
+    {
+      "TABLE_NAME": "consultantDetails"
+    },
+    {
+      "TABLE_NAME": "projectPhases"
+    },
+    {
+      "TABLE_NAME": "projectCapitalSettings"
+    },
+    {
+      "TABLE_NAME": "emailLog"
+    },
+    {
+      "TABLE_NAME": "emailCheckLog"
+    },
+    {
+      "TABLE_NAME": "consultantPortfolio"
+    },
+    {
+      "TABLE_NAME": "chatHistory"
+    },
+    {
+      "TABLE_NAME": "modelUsageLog"
+    },
+    {
+      "TABLE_NAME": "agentAssignments"
+    },
+    {
+      "TABLE_NAME": "taskProjects"
+    },
+    {
+      "TABLE_NAME": "taskCategories"
+    },
+    {
+      "TABLE_NAME": "knowledgeBase"
+    },
+    {
+      "TABLE_NAME": "consultantProposals"
+    },
+    {
+      "TABLE_NAME": "proposalComparisons"
+    },
+    {
+      "TABLE_NAME": "meetings"
+    },
+    {
+      "TABLE_NAME": "meetingParticipants"
+    },
+    {
+      "TABLE_NAME": "meetingFiles"
+    },
+    {
+      "TABLE_NAME": "meetingMessages"
+    },
+    {
+      "TABLE_NAME": "taskExecutionLogs"
+    },
+    {
+      "TABLE_NAME": "oauthTokens"
+    }
+  ],
+  "messages": [],
+  "stdout": "TABLE_NAME\n__drizzle_migrations\nusers\nconsultants\nevaluationScores\nfinancialData\nprojectConsultants\nprojects\ndashboardData\nconsultantNotes\nconsultantProfiles\ntasks\nagentActivityLog\nagents\nfeasibilityStudies\nevaluatorScores\ncommitteeDecisions\nconsultantDetails\nprojectPhases\nprojectCapitalSettings\nemailLog\nemailCheckLog\nconsultantPortfolio\nchatHistory\nmodelUsageLog\nagentAssignments\ntaskProjects\ntaskCategories\nknowledgeBase\nconsultantProposals\nproposalComparisons\nmeetings\nmeetingParticipants\nmeetingFiles\nmeetingMessages\ntaskExecutionLogs\noauthTokens\n",
+  "stderr": "",
+  "execution_time_ms": 1610
+}

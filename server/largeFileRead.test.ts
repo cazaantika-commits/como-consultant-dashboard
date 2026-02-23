@@ -32,9 +32,12 @@ vi.mock("googleapis", () => {
   };
 });
 
-// Mock pdf-parse
+// Mock pdf-parse v2 (class-based API with getText method)
+const mockGetText = vi.fn();
 vi.mock("pdf-parse", () => ({
-  default: vi.fn(),
+  PDFParse: vi.fn().mockImplementation(() => ({
+    getText: mockGetText,
+  })),
 }));
 
 // Set env before importing modules
@@ -51,7 +54,6 @@ describe("Large File Reading System", () => {
     it("should accept PDF files up to 50MB", async () => {
       const { readFileContent, resetDriveClient } = await import("./googleDrive");
       const { google } = await import("googleapis");
-      const pdfParse = (await import("pdf-parse")).default as any;
 
       resetDriveClient();
       const drive = google.drive({ version: "v3" }) as any;
@@ -71,10 +73,10 @@ describe("Large File Reading System", () => {
         });
       });
 
-      // Mock pdf-parse to return text
-      pdfParse.mockResolvedValue({
+      // Mock pdf-parse v2 getText response
+      mockGetText.mockResolvedValue({
         text: "This is a test PDF content for a large engineering proposal.",
-        numpages: 50,
+        pages: Array.from({ length: 50 }, (_, i) => ({ text: `Page ${i + 1}`, num: i + 1 })),
       });
 
       const result = await readFileContent("test-file-id");
@@ -112,7 +114,6 @@ describe("Large File Reading System", () => {
     it("should include both beginning and end of large PDFs", async () => {
       const { readFileContent, resetDriveClient } = await import("./googleDrive");
       const { google } = await import("googleapis");
-      const pdfParse = (await import("pdf-parse")).default as any;
 
       resetDriveClient();
       const drive = google.drive({ version: "v3" }) as any;
@@ -137,9 +138,9 @@ describe("Large File Reading System", () => {
       const endText = "Z".repeat(20000) + " END_MARKER";
       const fullText = beginText + middleText + endText;
 
-      pdfParse.mockResolvedValue({
+      mockGetText.mockResolvedValue({
         text: fullText,
-        numpages: 100,
+        pages: Array.from({ length: 100 }, (_, i) => ({ text: `Page ${i + 1}`, num: i + 1 })),
       });
 
       const result = await readFileContent("test-file-id");
@@ -156,7 +157,6 @@ describe("Large File Reading System", () => {
     it("should add metadata header to PDF content", async () => {
       const { readFileContent, resetDriveClient } = await import("./googleDrive");
       const { google } = await import("googleapis");
-      const pdfParse = (await import("pdf-parse")).default as any;
 
       resetDriveClient();
       const drive = google.drive({ version: "v3" }) as any;
@@ -175,9 +175,9 @@ describe("Large File Reading System", () => {
         });
       });
 
-      pdfParse.mockResolvedValue({
+      mockGetText.mockResolvedValue({
         text: "Short content",
-        numpages: 5,
+        pages: Array.from({ length: 5 }, (_, i) => ({ text: `Page ${i + 1}`, num: i + 1 })),
       });
 
       const result = await readFileContent("test-file-id");
@@ -245,6 +245,30 @@ describe("Large File Reading System", () => {
       );
 
       expect(readTool!.function.description).toContain("50 MB");
+    });
+  });
+
+  describe("Salwa Agent Conversations Tool", () => {
+    it("should have view_agent_conversations available for Salwa", async () => {
+      const { getToolsForAgent } = await import("./agentTools");
+      const salwaTools = getToolsForAgent("salwa");
+      const viewTool = salwaTools.find(
+        (t) => t.function.name === "view_agent_conversations"
+      );
+      expect(viewTool).toBeDefined();
+      expect(viewTool!.function.parameters.required).toContain("targetAgent");
+    });
+
+    it("should NOT have view_agent_conversations for other agents", async () => {
+      const { getToolsForAgent } = await import("./agentTools");
+      const otherAgents = ["farouq", "khazen", "buraq", "khaled", "alina", "baz", "joelle"] as const;
+      for (const agent of otherAgents) {
+        const tools = getToolsForAgent(agent);
+        const viewTool = tools.find(
+          (t) => t.function.name === "view_agent_conversations"
+        );
+        expect(viewTool).toBeUndefined();
+      }
     });
   });
 });
