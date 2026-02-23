@@ -346,7 +346,8 @@ async function callOpenAI(
   }
 
   let data = await response.json();
-  let assistantMessage = data.choi  // Handle tool calls - up to 5 rounds
+  let assistantMessage = data.choices?.[0]?.message;
+  // Handle tool calls - up to 5 rounds
   let toolRounds = 0;
   let lastToolResults: string[] = [];
   while (assistantMessage?.tool_calls && toolRounds < 5) {

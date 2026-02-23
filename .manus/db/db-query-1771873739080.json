@@ -1,0 +1,52 @@
+{
+  "query": "SELECT id, userId, name, plotNumber, areaCode FROM projects ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, userId, name, plotNumber, areaCode FROM projects ORDER BY id;",
+  "rows": [
+    {
+      "id": "1",
+      "userId": "1",
+      "name": "مركز مجان التجاري (G+4)",
+      "plotNumber": "6457956",
+      "areaCode": "Maj-M"
+    },
+    {
+      "id": "2",
+      "userId": "1",
+      "name": "مجان متعدد الاستخدامات (G+4P+25)",
+      "plotNumber": "6457879",
+      "areaCode": "Maj-M"
+    },
+    {
+      "id": "3",
+      "userId": "1",
+      "name": "مبنى الجداف السكني (G+7)",
+      "plotNumber": "3260885",
+      "areaCode": "Jadaf"
+    },
+    {
+      "id": "4",
+      "userId": "1",
+      "name": "ند الشبا — قطعة 1 (6185392)",
+      "plotNumber": "6185392",
+      "areaCode": "Nas-R"
+    },
+    {
+      "id": "5",
+      "userId": "1",
+      "name": "ند الشبا — قطعة 2 المدمجة (6182776)",
+      "plotNumber": "6182776",
+      "areaCode": "Nas-R"
+    },
+    {
+      "id": "6",
+      "userId": "1",
+      "name": "ند الشبا — قطعة 3 الفلل (6180578)",
+      "plotNumber": "6180578",
+      "areaCode": "Nas-R"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId\tname\tplotNumber\tareaCode\n1\t1\tمركز مجان التجاري (G+4)\t6457956\tMaj-M\n2\t1\tمجان متعدد الاستخدامات (G+4P+25)\t6457879\tMaj-M\n3\t1\tمبنى الجداف السكني (G+7)\t3260885\tJadaf\n4\t1\tند الشبا — قطعة 1 (6185392)\t6185392\tNas-R\n5\t1\tند الشبا — قطعة 2 المدمجة (6182776)\t6182776\tNas-R\n6\t1\tند الشبا — قطعة 3 الفلل (6180578)\t6180578\tNas-R\n",
+  "stderr": "",
+  "execution_time_ms": 1585
+}

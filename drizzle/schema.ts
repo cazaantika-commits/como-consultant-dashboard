@@ -36,6 +36,74 @@ export const projects = mysqlTable('projects', {
   driveFolderId: varchar('driveFolderId', { length: 100 }), // معرف مجلد المشروع في Google Drive
   bua: int('bua'), // Building area in sqft
   pricePerSqft: int('pricePerSqft'), // Price per square foot in AED
+  
+  // === القسم الأول: البيانات الأساسية للقطعة (Fact Sheet) ===
+  // 1.1 أرقام التعريف
+  titleDeedNumber: varchar('titleDeedNumber', { length: 100 }), // رقم سند الملكية
+  ddaNumber: varchar('ddaNumber', { length: 100 }), // رقم DDA (هيئة دبي للتطوير)
+  masterDevRef: varchar('masterDevRef', { length: 100 }), // الرقم المرجعي للمطور الرئيسي
+  
+  // 1.2 المساحات
+  plotAreaSqm: decimal('plotAreaSqm', { precision: 12, scale: 2 }), // مساحة الأرض بالمتر المربع
+  plotAreaSqft: decimal('plotAreaSqft', { precision: 12, scale: 2 }), // مساحة الأرض بالقدم المربع
+  gfaSqm: decimal('gfaSqm', { precision: 12, scale: 2 }), // المساحة الإجمالية المسموح بناؤها بالمتر
+  gfaSqft: decimal('gfaSqft', { precision: 12, scale: 2 }), // المساحة الإجمالية المسموح بناؤها بالقدم
+  
+  // 1.3 الاستخدام ونوع الملكية
+  permittedUse: varchar('permittedUse', { length: 255 }), // الاستخدام المسموح
+  ownershipType: varchar('ownershipType', { length: 255 }), // نوع الملكية
+  subdivisionRestrictions: text('subdivisionRestrictions'), // قيود التجزئة
+  
+  // === القسم الثاني: الأطراف الرئيسية ===
+  // 2.1 المطور الرئيسي
+  masterDevName: varchar('masterDevName', { length: 255 }), // اسم المطور الرئيسي
+  masterDevAddress: varchar('masterDevAddress', { length: 500 }), // عنوان المطور
+  
+  // 2.2 البائع (المالك السابق)
+  sellerName: varchar('sellerName', { length: 255 }),
+  sellerAddress: varchar('sellerAddress', { length: 500 }),
+  
+  // 2.3 المشتري (المالك الحالي)
+  buyerName: varchar('buyerName', { length: 255 }),
+  buyerNationality: varchar('buyerNationality', { length: 100 }),
+  buyerPassport: varchar('buyerPassport', { length: 50 }),
+  buyerAddress: varchar('buyerAddress', { length: 500 }),
+  buyerPhone: varchar('buyerPhone', { length: 50 }),
+  buyerEmail: varchar('buyerEmail', { length: 320 }),
+  
+  // === القسم الثالث: البنية التحتية والتخصيصات ===
+  // 3.1 تخصيصات المرافق
+  electricityAllocation: varchar('electricityAllocation', { length: 100 }), // كيلوواط
+  waterAllocation: varchar('waterAllocation', { length: 100 }), // م³/يوم
+  sewageAllocation: varchar('sewageAllocation', { length: 100 }), // م³/يوم
+  
+  // 3.2 تخصيصات الحركة المرورية
+  tripAM: varchar('tripAM', { length: 50 }), // صباحاً
+  tripLT: varchar('tripLT', { length: 50 }), // نهاراً
+  tripPM: varchar('tripPM', { length: 50 }), // مساءً
+  
+  // === القسم الرابع: الجدول الزمني للإنشاءات ===
+  effectiveDate: varchar('effectiveDate', { length: 50 }), // تاريخ السريان
+  constructionPeriod: varchar('constructionPeriod', { length: 255 }), // فترة البناء الإجمالية
+  constructionStartDate: varchar('constructionStartDate', { length: 255 }), // تاريخ بدء الإنشاء
+  completionDate: varchar('completionDate', { length: 255 }), // تاريخ الإنجاز
+  constructionConditions: text('constructionConditions'), // شروط بدء الإنشاء
+  
+  // === القسم الخامس: الالتزامات والقيود ===
+  saleRestrictions: text('saleRestrictions'), // قيود البيع والتصرف
+  resaleConditions: text('resaleConditions'), // إعادة البيع المستقبلية
+  communityCharges: text('communityCharges'), // رسوم المجتمع
+  
+  // === القسم السادس: المستندات والتسجيل ===
+  registrationAuthority: varchar('registrationAuthority', { length: 255 }), // جهة التسجيل
+  adminFee: int('adminFee'), // رسوم إدارية
+  clearanceFee: int('clearanceFee'), // رسوم شهادة التخليص
+  compensationAmount: int('compensationAmount'), // مبلغ تعويض
+  
+  // === القسم السابع: القانون الحاكم ===
+  governingLaw: text('governingLaw'), // القانون الساري
+  disputeResolution: text('disputeResolution'), // تسوية النزاعات
+  
   notes: text('notes'),
   createdAt: timestamp('createdAt').defaultNow().notNull(),
   updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),

@@ -1,0 +1,118 @@
+{
+  "query": "SELECT * FROM financialData WHERE projectId = 3",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT * FROM financialData WHERE projectId = 3",
+  "rows": [
+    {
+      "id": "30077",
+      "projectId": "3",
+      "consultantId": "1",
+      "designType": "lump",
+      "designValue": "400000.00",
+      "supervisionType": "lump",
+      "supervisionValue": "630000.00",
+      "proposalLink": "https://drive.google.com/file/d/13iHIObmTE8epvB4oW1IxVGcOs5kF4wx9/view",
+      "createdAt": "2026-02-19 00:13:23",
+      "updatedAt": "2026-02-23 16:42:53"
+    },
+    {
+      "id": "30078",
+      "projectId": "3",
+      "consultantId": "2",
+      "designType": "pct",
+      "designValue": "1.50",
+      "supervisionType": "lump",
+      "supervisionValue": "600000.00",
+      "proposalLink": "https://drive.google.com/file/d/1yJf0AaNnzRUXkFlN3D-yE8XReXqIKLBk/view",
+      "createdAt": "2026-02-19 00:13:23",
+      "updatedAt": "2026-02-23 16:44:16"
+    },
+    {
+      "id": "30079",
+      "projectId": "3",
+      "consultantId": "4",
+      "designType": "pct",
+      "designValue": "2.00",
+      "supervisionType": "pct",
+      "supervisionValue": "2.00",
+      "proposalLink": "https://drive.google.com/file/d/1P3xXM8yJE5W3D4CN_nUxqaDymW4pwKEj/view",
+      "createdAt": "2026-02-19 00:13:23",
+      "updatedAt": "2026-02-23 16:44:48"
+    },
+    {
+      "id": "30080",
+      "projectId": "3",
+      "consultantId": "3",
+      "designType": "lump",
+      "designValue": "850000.00",
+      "supervisionType": "lump",
+      "supervisionValue": "850000.00",
+      "proposalLink": "https://drive.google.com/file/d/15II8e1viJ3cTs5eZS73M8oHqih72abti/view",
+      "createdAt": "2026-02-19 00:13:23",
+      "updatedAt": "2026-02-23 16:44:37"
+    },
+    {
+      "id": "60008",
+      "projectId": "3",
+      "consultantId": "1",
+      "designType": "lump",
+      "designValue": "400000.00",
+      "supervisionType": "lump",
+      "supervisionValue": "630000.00",
+      "proposalLink": "https://drive.google.com/file/d/13iHIObmTE8epvB4oW1IxVGcOs5kF4wx9/view",
+      "createdAt": "2026-02-19 06:42:00",
+      "updatedAt": "2026-02-23 16:42:53"
+    },
+    {
+      "id": "60009",
+      "projectId": "3",
+      "consultantId": "2",
+      "designType": "pct",
+      "designValue": "1.50",
+      "supervisionType": "lump",
+      "supervisionValue": "600000.00",
+      "proposalLink": "https://drive.google.com/file/d/1yJf0AaNnzRUXkFlN3D-yE8XReXqIKLBk/view",
+      "createdAt": "2026-02-19 06:42:00",
+      "updatedAt": "2026-02-23 16:44:16"
+    },
+    {
+      "id": "60010",
+      "projectId": "3",
+      "consultantId": "4",
+      "designType": "pct",
+      "designValue": "2.00",
+      "supervisionType": "pct",
+      "supervisionValue": "2.00",
+      "proposalLink": "https://drive.google.com/file/d/1P3xXM8yJE5W3D4CN_nUxqaDymW4pwKEj/view",
+      "createdAt": "2026-02-19 06:42:00",
+      "updatedAt": "2026-02-23 16:44:48"
+    },
+    {
+      "id": "60011",
+      "projectId": "3",
+      "consultantId": "3",
+      "designType": "lump",
+      "designValue": "850000.00",
+      "supervisionType": "lump",
+      "supervisionValue": "850000.00",
+      "proposalLink": "https://drive.google.com/file/d/15II8e1viJ3cTs5eZS73M8oHqih72abti/view",
+      "createdAt": "2026-02-19 06:42:00",
+      "updatedAt": "2026-02-23 16:44:37"
+    },
+    {
+      "id": "120001",
+      "projectId": "3",
+      "consultantId": "10",
+      "designType": "pct",
+      "designValue": "1.50",
+      "supervisionType": "pct",
+      "supervisionValue": "1.50",
+      "proposalLink": "NULL",
+      "createdAt": "2026-02-23 14:15:21",
+      "updatedAt": "2026-02-23 14:15:21"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tprojectId\tconsultantId\tdesignType\tdesignValue\tsupervisionType\tsupervisionValue\tproposalLink\tcreatedAt\tupdatedAt\n30077\t3\t1\tlump\t400000.00\tlump\t630000.00\thttps://drive.google.com/file/d/13iHIObmTE8epvB4oW1IxVGcOs5kF4wx9/view\t2026-02-19 00:13:23\t2026-02-23 16:42:53\n30078\t3\t2\tpct\t1.50\tlump\t600000.00\thttps://drive.google.com/file/d/1yJf0AaNnzRUXkFlN3D-yE8XReXqIKLBk/view\t2026-02-19 00:13:23\t2026-02-23 16:44:16\n30079\t3\t4\tpct\t2.00\tpct\t2.00\thttps://drive.google.com/file/d/1P3xXM8yJE5W3D4CN_nUxqaDymW4pwKEj/view\t2026-02-19 00:13:23\t2026-02-23 16:44:48\n30080\t3\t3\tlump\t850000.00\tlump\t850000.00\thttps://drive.google.com/file/d/15II8e1viJ3cTs5eZS73M8oHqih72abti/view\t2026-02-19 00:13:23\t2026-02-23 16:44:37\n60008\t3\t1\tlump\t400000.00\tlump\t630000.00\thttps://drive.google.com/file/d/13iHIObmTE8epvB4oW1IxVGcOs5kF4wx9/view\t2026-02-19 06:42:00\t2026-02-23 16:42:53\n60009\t3\t2\tpct\t1.50\tlump\t600000.00\thttps://drive.google.com/file/d/1yJf0AaNnzRUXkFlN3D-yE8XReXqIKLBk/view\t2026-02-19 06:42:00\t2026-02-23 16:44:16\n60010\t3\t4\tpct\t2.00\tpct\t2.00\thttps://drive.google.com/file/d/1P3xXM8yJE5W3D4CN_nUxqaDymW4pwKEj/view\t2026-02-19 06:42:00\t2026-02-23 16:44:48\n60011\t3\t3\tlump\t850000.00\tlump\t850000.00\thttps://drive.google.com/file/d/15II8e1viJ3cTs5eZS73M8oHqih72abti/view\t2026-02-19 06:42:00\t2026-02-23 16:44:37\n120001\t3\t10\tpct\t1.50\tpct\t1.50\tNULL\t2026-02-23 14:15:21\t2026-02-23 14:15:21\n",
+  "stderr": "",
+  "execution_time_ms": 1507
+}

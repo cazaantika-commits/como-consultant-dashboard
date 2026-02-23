@@ -1,0 +1,58 @@
+{
+  "query": "SELECT id, name, plotNumber, areaCode, driveFolderId, titleDeedNumber FROM projects ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, name, plotNumber, areaCode, driveFolderId, titleDeedNumber FROM projects ORDER BY id;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "مركز مجان التجاري (G+4)",
+      "plotNumber": "6457956",
+      "areaCode": "Maj-M",
+      "driveFolderId": "1ZR1tT3U1h2QiqMwoAM0nKXXamh4c2IrV",
+      "titleDeedNumber": "NULL"
+    },
+    {
+      "id": "2",
+      "name": "مجان متعدد الاستخدامات (G+4P+25)",
+      "plotNumber": "6457879",
+      "areaCode": "Maj-M",
+      "driveFolderId": "18Bga-rwJqOic1wKaESFqxdmdDTaV5sAW",
+      "titleDeedNumber": "NULL"
+    },
+    {
+      "id": "3",
+      "name": "مبنى الجداف السكني (G+7)",
+      "plotNumber": "3260885",
+      "areaCode": "Jadaf",
+      "driveFolderId": "1P8AlxoabTktrFKmJ6h6qU5sa-w5huG7K",
+      "titleDeedNumber": "NULL"
+    },
+    {
+      "id": "4",
+      "name": "ند الشبا — قطعة 1 (6185392)",
+      "plotNumber": "6185392",
+      "areaCode": "Nas-R",
+      "driveFolderId": "1RcDTcqK9XLUpEKkBNMQnGbmCvzMqgJYL",
+      "titleDeedNumber": "NULL"
+    },
+    {
+      "id": "5",
+      "name": "ند الشبا — قطعة 2 المدمجة (6182776)",
+      "plotNumber": "6182776",
+      "areaCode": "Nas-R",
+      "driveFolderId": "1Cq17UsAPAKnSFyOm28SSgFrh25Q_Te0K",
+      "titleDeedNumber": "NULL"
+    },
+    {
+      "id": "6",
+      "name": "ند الشبا — قطعة 3 الفلل (6180578)",
+      "plotNumber": "6180578",
+      "areaCode": "Nas-R",
+      "driveFolderId": "1q-NynLm0O8yPjr7QV93yhHvi7rytHhuS",
+      "titleDeedNumber": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tplotNumber\tareaCode\tdriveFolderId\ttitleDeedNumber\n1\tمركز مجان التجاري (G+4)\t6457956\tMaj-M\t1ZR1tT3U1h2QiqMwoAM0nKXXamh4c2IrV\tNULL\n2\tمجان متعدد الاستخدامات (G+4P+25)\t6457879\tMaj-M\t18Bga-rwJqOic1wKaESFqxdmdDTaV5sAW\tNULL\n3\tمبنى الجداف السكني (G+7)\t3260885\tJadaf\t1P8AlxoabTktrFKmJ6h6qU5sa-w5huG7K\tNULL\n4\tند الشبا — قطعة 1 (6185392)\t6185392\tNas-R\t1RcDTcqK9XLUpEKkBNMQnGbmCvzMqgJYL\tNULL\n5\tند الشبا — قطعة 2 المدمجة (6182776)\t6182776\tNas-R\t1Cq17UsAPAKnSFyOm28SSgFrh25Q_Te0K\tNULL\n6\tند الشبا — قطعة 3 الفلل (6180578)\t6180578\tNas-R\t1q-NynLm0O8yPjr7QV93yhHvi7rytHhuS\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1541
+}

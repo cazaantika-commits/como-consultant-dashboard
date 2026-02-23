@@ -277,6 +277,7 @@ export default function Home() {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 {[
+                  { label: "إدارة المشاريع", emoji: "🏗️", icon: Building2, path: "/project-management", gradient: "linear-gradient(135deg, #059669, #047857)", shadow: "rgba(5, 150, 105, 0.25)" },
                   { label: "لوحة الوكلاء", emoji: "🤖", icon: Bot, path: "/agent-dashboard", gradient: "linear-gradient(135deg, #6366f1, #8b5cf6)", shadow: "rgba(99, 102, 241, 0.25)" },
                   { label: "المهام", emoji: "📝", icon: FileText, path: "/tasks", gradient: "linear-gradient(135deg, #06b6d4, #0891b2)", shadow: "rgba(6, 182, 212, 0.25)" },
                   { label: "ملفات Drive", emoji: "📂", icon: Archive, path: "/drive", gradient: "linear-gradient(135deg, #10b981, #059669)", shadow: "rgba(16, 185, 129, 0.25)" },
@@ -511,6 +512,7 @@ export default function Home() {
       {/* ── Agent Chat Box ── */}
       {activeAgent && (
         <AgentChatBox
+          key={activeAgent}
           agent={activeAgent}
           agentData={agentsList.find((a: any) => (a.nameEn || a.name).toLowerCase() === activeAgent)}
           onClose={() => setActiveAgent(null)}

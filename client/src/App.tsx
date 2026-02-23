@@ -31,6 +31,8 @@ import MeetingRoomPage from "./pages/MeetingRoomPage";
 import MeetingTrackingPage from "./pages/MeetingTrackingPage";
 import ExecutionDashboardPage from "./pages/ExecutionDashboardPage";
 import GoogleConnectPage from "./pages/GoogleConnectPage";
+import ProjectManagementPage from "./pages/ProjectManagementPage";
+import ProjectDetailPage from "./pages/ProjectDetailPage";
 
 function Router() {
   return (
@@ -61,6 +63,8 @@ function Router() {
       <Route path="/meetings/tracking" component={MeetingTrackingPage} />
       <Route path="/execution-dashboard" component={ExecutionDashboardPage} />
       <Route path="/google-connect" component={GoogleConnectPage} />
+      <Route path="/project-management" component={ProjectManagementPage} />
+      <Route path="/project/:id" component={ProjectDetailPage} />
       <Route path="/meetings/:id" component={MeetingRoomPage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
