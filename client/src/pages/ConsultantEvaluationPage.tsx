@@ -764,25 +764,20 @@ export default function ConsultantEvaluationPage() {
                                         <SelectValue placeholder="اختر التقييم" />
                                       </SelectTrigger>
                                       <SelectContent className="w-[500px] max-w-[90vw]">
-                                         {criterion.options.map((option: { score: number; label: string }) => {
-                                           const parts = option.label.match(/^(\d+)\s*(نقاط):\s*(.*)$/);
-                                           return (
-                                             <SelectItem
-                                               key={option.score}
-                                               value={option.score.toString()}
-                                               className="whitespace-normal text-sm leading-relaxed py-3"
-                                             >
-                                               {parts ? (
-                                                 <span>
-                                                   <span className="font-bold text-blue-700 inline-block">
-                                                     <span className="whitespace-nowrap">{parts[1]} {parts[2]}:</span>
-                                                   </span>
-                                                   {' '}{parts[3]}
-                                                 </span>
-                                               ) : option.label}
-                                             </SelectItem>
-                                           );
-                                         })}
+                                        {criterion.options.map((option: { score: number; label: string }) => {
+                                          const parts = option.label.match(/^(\d+\s*\u0646\u0642\u0627\u0637):\s*(.*)$/);
+                                          return (
+                                            <SelectItem
+                                              key={option.score}
+                                              value={option.score.toString()}
+                                              className="whitespace-normal text-sm leading-relaxed py-3"
+                                            >
+                                              {parts ? (
+                                                <span><span className="font-bold whitespace-nowrap text-blue-700">{parts[1]}:</span> {parts[2]}</span>
+                                              ) : option.label}
+                                            </SelectItem>
+                                          );
+                                        })}
                                       </SelectContent>
                                     </Select>
                                   </td>

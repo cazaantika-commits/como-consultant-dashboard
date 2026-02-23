@@ -608,27 +608,11 @@
 - [x] إصلاح المشكلة نهائياً - فحص محسّن للمحتوى مع fallback لـ data.choices[0].message.content
 - [x] اختبار شامل قبل التسليم (339 اختبار ناجح)
 
-## إصلاح تنسيق التقييم الفني - فبراير 23
-- [x] إصلاح عرض "10 نقاط" لتكون جنب بعض (whitespace-nowrap على الرقم والكلمة معاً)
-
-## إصلاح خازن - معالجة الأدوات - فبراير 23
-- [x] إصلاح استخراج المحتوى بعد تنفيذ الأدوات (multiple fallbacks + detailed logging)
-- [x] إضافة fallback لعرض نتائج الأدوات إذا كان الرد فارغاً
-- [x] تحسين error logging لتشخيص المشاكل المستقبلية
-
-## إصلاح خازن - مجلد Ready - فبراير 23
-- [x] إضافة ID مجلد Ready إلى platform context لخازن (1ZXzOEs-ITzUF6-r-Ii2cd7iRxBM1gGC7)
-- [x] التأكد من أن خازن يستطيع رؤية الملفات في مجلد Ready مباشرة
-
-## إصلاح شامل - جميع الوكلاء والاجتماعات - فبراير 23
-- [x] إصلاح Claude tool execution (نفس مشكلة OpenAI - multiple fallbacks)
-- [x] إصلاح Gemini tool execution (نفس مشكلة OpenAI - multiple fallbacks)
-- [x] إضافة context لسلوى: رؤية جميع محادثات المالك مع الوكلاء (حفظ ask_another_agent في knowledge base)
-- [x] التحقق من غرفة الاجتماعات: المشاركين يفهمون ويستمعون بشكل صحيح (تستخدم handleAgentChat المُصلح)
-
-## إصلاح Google Drive - نسخ الملفات - فبراير 23
-- [x] فحص خطأ copy_drive_file في اللوغات (Service Account quota issue)
-- [x] إضافة OAuth 2.0 user delegation لـ Google Drive
-- [x] تخزين وتحديث OAuth tokens (oauthTokens table + googleOAuthRouter)
-- [x] تحديث copyFile لاستخدام OAuth client
-- [ ] اختبار خازن ينسخ ملف XYZ للمشاريع الثلاثة بنجاح
+## تحديث دستور الأرشفة ليطابق التسمية الفعلية - فبراير 23
+- [x] تحديث system prompt خازن: تغيير Nas-R إلى NAD، Pro-Eng إلى PRO-ENG، التاريخ YYMMDD بدل YYYYMMDD
+- [x] تحديث سجل الاستشاريين: إضافة ARTEC, SED, ALSARH, ALAALAMIA, CV-INVEST, XYZ, ARTOAK
+- [x] تحديث أكواد أنواع الملفات: PRO-ENG, PRO-SOIL, QTN-SOIL, DWG-ARCH, DWG-CONCEPT, PRO-FEAS, FACT-SHEET, RPT, إلخ
+- [x] تحديث أمثلة التسمية لتطابق الملفات الفعلية (NAD_6185392_PRO-ENG_260209_REALISTIC_V00.pdf)
+- [x] تحديث prompts سلوى وفاروق وألينا وجويل بنفس التسمية الجديدة
+- [x] إضافة بيانات شاملة في قاعدة المعرفة (naming conventions, project mapping, consultant codes)
+- [x] التحقق من عمل خازن بالتسمية الجديدة - NAD_6185392_PRO-ENG_260215_ARTEC_V00.pdf ✅

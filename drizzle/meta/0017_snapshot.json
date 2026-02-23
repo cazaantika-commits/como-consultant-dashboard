@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "d00729ad-4aa8-4832-8e35-941ed7250301",
+  "id": "70d62eba-7845-4d15-a983-75ec1849f48c",
   "prevId": "60edf0e2-8127-4fb1-9a32-57183f6cce8a",
   "tables": {
     "agentAssignments": {
@@ -1929,8 +1929,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "knowledgeType": {
-          "name": "knowledgeType",
+        "type": {
+          "name": "type",
           "type": "enum('decision','evaluation','pattern','insight','lesson')",
           "primaryKey": false,
           "notNull": true,
@@ -2586,110 +2586,6 @@
         }
       },
       "uniqueConstraints": {},
-      "checkConstraint": {}
-    },
-    "oauthTokens": {
-      "name": "oauthTokens",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "int",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "userId": {
-          "name": "userId",
-          "type": "int",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "provider": {
-          "name": "provider",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "accessToken": {
-          "name": "accessToken",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "refreshToken": {
-          "name": "refreshToken",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "expiresAt": {
-          "name": "expiresAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "scope": {
-          "name": "scope",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "(now())"
-        },
-        "updatedAt": {
-          "name": "updatedAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "onUpdate": true,
-          "default": "(now())"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "oauthTokens_userId_users_id_fk": {
-          "name": "oauthTokens_userId_users_id_fk",
-          "tableFrom": "oauthTokens",
-          "tableTo": "users",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "oauthTokens_id": {
-          "name": "oauthTokens_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
-      "uniqueConstraints": {
-        "oauthTokens_userId_unique": {
-          "name": "oauthTokens_userId_unique",
-          "columns": [
-            "userId"
-          ]
-        }
-      },
       "checkConstraint": {}
     },
     "projectConsultants": {
@@ -3609,7 +3505,9 @@
   "_meta": {
     "schemas": {},
     "tables": {},
-    "columns": {}
+    "columns": {
+      "\"knowledgeBase\".\"knowledgeType\"": "\"knowledgeBase\".\"type\""
+    }
   },
   "internal": {
     "tables": {},

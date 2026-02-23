@@ -1,0 +1,1 @@
+ALTER TABLE `knowledgeBase` RENAME COLUMN `knowledgeType` TO `type`;
