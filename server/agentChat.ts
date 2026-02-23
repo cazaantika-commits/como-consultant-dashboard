@@ -748,6 +748,12 @@ async function getPlatformContext(agent: AgentType): Promise<string> {
     const db = await getDb();
     if (!db) return "";
 
+    // Add Ready folder ID for khazen
+    if (agent === "khazen") {
+      contextData += `\n\n📁 معرفات المجلدات الأساسية:`;
+      contextData += `\n- مجلد Ready (00_Inbox/Ready): 1ZXzOEs-ITzUF6-r-Ii2cd7iRxBM1gGC7`;
+    }
+
     const projectList = await db.select().from(projects).limit(10);
     if (projectList.length > 0) {
       if (["khazen", "farouq", "alina", "joelle"].includes(agent)) {

@@ -615,3 +615,7 @@
 - [x] إصلاح استخراج المحتوى بعد تنفيذ الأدوات (multiple fallbacks + detailed logging)
 - [x] إضافة fallback لعرض نتائج الأدوات إذا كان الرد فارغاً
 - [x] تحسين error logging لتشخيص المشاكل المستقبلية
+
+## إصلاح خازن - مجلد Ready - فبراير 23
+- [x] إضافة ID مجلد Ready إلى platform context لخازن (1ZXzOEs-ITzUF6-r-Ii2cd7iRxBM1gGC7)
+- [x] التأكد من أن خازن يستطيع رؤية الملفات في مجلد Ready مباشرة
