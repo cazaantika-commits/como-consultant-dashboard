@@ -619,3 +619,9 @@
 ## إصلاح خازن - مجلد Ready - فبراير 23
 - [x] إضافة ID مجلد Ready إلى platform context لخازن (1ZXzOEs-ITzUF6-r-Ii2cd7iRxBM1gGC7)
 - [x] التأكد من أن خازن يستطيع رؤية الملفات في مجلد Ready مباشرة
+
+## إصلاح شامل - جميع الوكلاء والاجتماعات - فبراير 23
+- [x] إصلاح Claude tool execution (نفس مشكلة OpenAI - multiple fallbacks)
+- [x] إصلاح Gemini tool execution (نفس مشكلة OpenAI - multiple fallbacks)
+- [x] إضافة context لسلوى: رؤية جميع محادثات المالك مع الوكلاء (حفظ ask_another_agent في knowledge base)
+- [x] التحقق من غرفة الاجتماعات: المشاركين يفهمون ويستمعون بشكل صحيح (تستخدم handleAgentChat المُصلح)

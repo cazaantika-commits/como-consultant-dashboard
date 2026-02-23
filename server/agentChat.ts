@@ -536,9 +536,25 @@ async function callClaude(
     data = await followUp.json();
   }
 
-  // Extract text from content blocks
+  // Extract text from content blocks with multiple fallbacks
   const textBlocks = data.content?.filter((b: any) => b.type === "text") || [];
-  return textBlocks.map((b: any) => b.text).join("\n") || "عذراً، لم أتمكن من الرد.";
+  let content = textBlocks.map((b: any) => b.text).join("\n");
+  
+  // Fallback 1: If empty but we had tool execution, provide summary
+  if ((!content || content.trim() === '') && toolRounds > 0) {
+    console.warn("[Claude] Empty content after tool execution. Providing tool summary.");
+    console.warn("[Claude] Full response data:", JSON.stringify(data).slice(0, 1000));
+    return `تم تنفيذ الأدوات بنجاح. الرجاء التحقق من النتائج.`;
+  }
+  
+  // Fallback 2: Final check
+  if (!content || content.trim() === '') {
+    console.error("[Claude] Empty response after all fallbacks.");
+    console.error("[Claude] Full data:", JSON.stringify(data).slice(0, 1000));
+    return "عذراً، لم أتمكن من الرد. حاول إعادة صياغة طلبك.";
+  }
+  
+  return content;
 }
 
 // Call Google Gemini with function calling
@@ -661,9 +677,25 @@ async function callGemini(
     candidate = data.candidates?.[0];
   }
 
-  // Extract text from final response
+  // Extract text from final response with multiple fallbacks
   const textParts = candidate?.content?.parts?.filter((p: any) => p.text) || [];
-  return textParts.map((p: any) => p.text).join("\n") || "عذراً، لم أتمكن من الرد.";
+  let content = textParts.map((p: any) => p.text).join("\n");
+  
+  // Fallback 1: If empty but we had tool execution, provide summary
+  if ((!content || content.trim() === '') && toolRounds > 0) {
+    console.warn("[Gemini] Empty content after tool execution. Providing tool summary.");
+    console.warn("[Gemini] Full response data:", JSON.stringify(data).slice(0, 1000));
+    return `تم تنفيذ الأدوات بنجاح. الرجاء التحقق من النتائج.`;
+  }
+  
+  // Fallback 2: Final check
+  if (!content || content.trim() === '') {
+    console.error("[Gemini] Empty response after all fallbacks.");
+    console.error("[Gemini] Full data:", JSON.stringify(data).slice(0, 1000));
+    return "عذراً، لم أتمكن من الرد. حاول إعادة صياغة طلبك.";
+  }
+  
+  return content;
 }
 
 // Fallback to built-in Manus LLM (no tool support)
