@@ -634,7 +634,7 @@
 ## إصلاح خازن - خطأ 429 rate limit - فبراير 23
 - [x] تحويل خازن من GPT-4o إلى نموذج بديل → تم التحويل للـ Forge API
 - [x] تحسين retry logic → لم يعد مطلوب (Forge API بدون rate limit)
-- [ ] اختبار خازن يعمل بأمر بسيط بدون شرح
+- [x] اختبار خازن يعمل بأمر بسيط بدون شرح → نجح! استدعى list_drive_files وعرض 7 ملفات
 
 ## تحويل الوكلاء لـ Built-in Forge API - فبراير 23
 - [x] تحويل callOpenAI و callClaude و callGemini لاستخدام invokeLLM (Forge API)
@@ -654,4 +654,8 @@
 - [x] تغيير tool_choice من auto إلى required لما الطلب يكون تنفيذي
 - [x] إضافة كشف ذكي للطلبات التنفيذية (isActionMessage مع 30+ كلمة مفتاحية)
 - [x] اختبار خازن يشتغل فعلياً - Forge API + tool_choice=required → استدعى list_drive_files بنجاح
+- [x] إصلاح sanitizeToolCallId للتوافق مع Forge API pattern
+- [x] إصلاح normalizeMessage لدعم tool_calls في follow-up
+- [x] تعزيز تعليمات النظام (CRITICAL SYSTEM INSTRUCTION)
+- [x] اختبار حي ناجح: خازن عرض 7 ملفات الجداف بنجاح
 - [ ] حفظ checkpoint

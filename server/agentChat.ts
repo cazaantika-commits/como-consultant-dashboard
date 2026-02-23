@@ -225,6 +225,22 @@ async function callForge(
   userId?: number,
   forceTools?: boolean
 ): Promise<string> {
+  // When forceTools is true, prepend a strong instruction to the user message
+  let effectiveUserMessage = userMessage;
+  if (forceTools && tools && tools.length > 0) {
+    const toolNames = tools.map(t => t.function.name).join(", ");
+    effectiveUserMessage = `[CRITICAL SYSTEM INSTRUCTION - MUST FOLLOW]
+هذا طلب تنفيذي. القواعد التالية إلزامية:
+1. يجب أن تستدعي أداة واحدة على الأقل فوراً. الأدوات المتاحة: ${toolNames}
+2. ممنوع منعاً باتاً أن ترد بنص فقط بدون استدعاء أداة
+3. ممنوع أن تسأل أسئلة توضيحية - إذا فيه أكثر من خيار، نفّذ الأكثر احتمالاً أو نفّذ الكل
+4. ابدأ بالتنفيذ مباشرة ثم أبلغ بالنتيجة
+[END INSTRUCTION]
+
+طلب المستخدم: ${userMessage}`;
+    console.log(`[Forge] ⚡ Action message detected - injecting STRONG tool-use instruction`);
+  }
+
   const messages: any[] = [{ role: "system", content: systemPrompt }];
 
   if (conversationHistory && conversationHistory.length > 0) {
@@ -234,16 +250,12 @@ async function callForge(
     }
   }
 
-  messages.push({ role: "user", content: userMessage });
+  messages.push({ role: "user", content: effectiveUserMessage });
 
   const invokeParams: any = { messages };
   if (tools && tools.length > 0) {
     invokeParams.tools = tools;
-    // Force tool use on first call when message is an action command
-    invokeParams.tool_choice = forceTools ? "required" : "auto";
-    if (forceTools) {
-      console.log(`[Forge] ⚡ tool_choice=required (action message detected)`);
-    }
+    invokeParams.tool_choice = "auto";
   }
 
   let data = await invokeLLM(invokeParams);
@@ -252,9 +264,20 @@ async function callForge(
   let toolRounds = 0;
   let lastToolResults: string[] = [];
 
+  // Sanitize tool_call IDs to match pattern ^[a-zA-Z0-9_-]+$
+  const sanitizeToolCallId = (id: string | undefined | null): string => {
+    if (!id) return `tc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    return String(id).replace(/[^a-zA-Z0-9_-]/g, '_');
+  };
+
   while (assistantMessage?.tool_calls && assistantMessage.tool_calls.length > 0 && toolRounds < 10) {
     toolRounds++;
     console.log(`[Forge] Tool call round ${toolRounds}: ${assistantMessage.tool_calls.length} tools`);
+    
+    // Sanitize all tool_call IDs
+    for (const tc of assistantMessage.tool_calls) {
+      tc.id = sanitizeToolCallId(tc.id);
+    }
     
     messages.push(assistantMessage);
     lastToolResults = [];
@@ -292,9 +315,15 @@ async function callForge(
         followUpParams.tool_choice = "auto";
       }
       data = await invokeLLM(followUpParams);
-      assistantMessage = data.choices[0]?.message;
+      assistantMessage = data?.choices?.[0]?.message;
+      if (!assistantMessage) {
+        console.warn("[Forge] Follow-up returned no message. data:", JSON.stringify(data).slice(0, 500));
+        if (lastToolResults.length > 0) {
+          return `تم تنفيذ الأدوات بنجاح. النتائج:\n${lastToolResults.join('\n')}`;
+        }
+      }
     } catch (fetchErr: any) {
-      console.error("[Forge] Follow-up error:", fetchErr);
+      console.error("[Forge] Follow-up error:", fetchErr.message || fetchErr);
       if (lastToolResults.length > 0) {
         return `تم تنفيذ الأدوات. النتائج:\n${lastToolResults.join('\n')}`;
       }
