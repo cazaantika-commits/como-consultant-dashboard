@@ -530,6 +530,16 @@ export const consultantProposals = mysqlTable('consultantProposals', {
   aiWeaknesses: text('aiWeaknesses'), // JSON array - نقاط الضعف
   aiRecommendation: text('aiRecommendation'), // التوصية
   aiScore: int('aiScore'), // 0-100
+  // Detailed proposal content analysis
+  aiScope: text('aiScope'), // JSON - نطاق الأعمال المشمولة
+  aiExclusions: text('aiExclusions'), // JSON - الاستثناءات والأعمال غير المشمولة
+  aiAdditionalWorks: text('aiAdditionalWorks'), // JSON - الأعمال الإضافية وتكلفتها
+  aiSupervisionTerms: text('aiSupervisionTerms'), // JSON - شروط وأتعاب الإشراف
+  aiTimeline: text('aiTimeline'), // JSON - الجدول الزمني والمراحل
+  aiPaymentTerms: text('aiPaymentTerms'), // JSON - شروط الدفع
+  aiConditions: text('aiConditions'), // JSON - الشروط العامة والخاصة
+  aiTeamComposition: text('aiTeamComposition'), // JSON - تكوين الفريق
+  aiDeliverables: text('aiDeliverables'), // JSON - المخرجات والتسليمات
   extractedText: text('extractedText'), // النص المستخرج من PDF
   analysisStatus: mysqlEnum('analysisStatus', ['pending', 'processing', 'completed', 'failed']).default('pending').notNull(),
   analysisError: text('analysisError'),

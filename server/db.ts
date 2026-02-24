@@ -512,34 +512,43 @@ export async function getProposalById(id: number, userId: number) {
   return result.length > 0 ? result[0] : null;
 }
 
-export async function updateProposalAnalysis(id: number, userId: number, analysis: {
-  aiSummary?: string;
-  aiKeyPoints?: string[];
-  aiStrengths?: string[];
-  aiWeaknesses?: string[];
-  aiRecommendation?: string;
-  aiScore?: number;
-  extractedText?: string;
-  analysisStatus: 'processing' | 'completed' | 'failed';
-  analysisError?: string;
-}) {
+export async function updateProposalAnalysis(id: number, userId: number, analysis: Record<string, any>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
   const { consultantProposals } = await import("../drizzle/schema");
   
+  // Build update object dynamically - only set fields that are provided
+  const updateData: Record<string, any> = {};
+  const fieldMap: Record<string, string> = {
+    aiSummary: 'aiSummary',
+    aiKeyPoints: 'aiKeyPoints',
+    aiStrengths: 'aiStrengths',
+    aiWeaknesses: 'aiWeaknesses',
+    aiRecommendation: 'aiRecommendation',
+    aiScore: 'aiScore',
+    aiScope: 'aiScope',
+    aiExclusions: 'aiExclusions',
+    aiAdditionalWorks: 'aiAdditionalWorks',
+    aiSupervisionTerms: 'aiSupervisionTerms',
+    aiTimeline: 'aiTimeline',
+    aiPaymentTerms: 'aiPaymentTerms',
+    aiConditions: 'aiConditions',
+    aiTeamComposition: 'aiTeamComposition',
+    aiDeliverables: 'aiDeliverables',
+    extractedText: 'extractedText',
+    analysisStatus: 'analysisStatus',
+    analysisError: 'analysisError',
+  };
+  
+  for (const [key, dbField] of Object.entries(fieldMap)) {
+    if (key in analysis && analysis[key] !== undefined) {
+      updateData[dbField] = analysis[key];
+    }
+  }
+  
   await db.update(consultantProposals)
-    .set({
-      aiSummary: analysis.aiSummary,
-      aiKeyPoints: analysis.aiKeyPoints ? JSON.stringify(analysis.aiKeyPoints) : null,
-      aiStrengths: analysis.aiStrengths ? JSON.stringify(analysis.aiStrengths) : null,
-      aiWeaknesses: analysis.aiWeaknesses ? JSON.stringify(analysis.aiWeaknesses) : null,
-      aiRecommendation: analysis.aiRecommendation,
-      aiScore: analysis.aiScore,
-      extractedText: analysis.extractedText,
-      analysisStatus: analysis.analysisStatus,
-      analysisError: analysis.analysisError,
-    })
+    .set(updateData)
     .where(and(eq(consultantProposals.id, id), eq(consultantProposals.userId, userId)));
 }
 
