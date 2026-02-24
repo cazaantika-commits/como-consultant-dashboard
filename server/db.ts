@@ -1,6 +1,6 @@
 import { eq, and, inArray, or, like, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, projects, InsertProject, consultants, InsertConsultant, projectConsultants, InsertProjectConsultant, financialData, InsertFinancialData, evaluationScores, InsertEvaluationScore, evaluatorScores, InsertEvaluatorScore, committeeDecisions, InsertCommitteeDecision, consultantDetails, InsertConsultantDetail } from "../drizzle/schema";
+import { InsertUser, users, projects, InsertProject, consultants, InsertConsultant, projectConsultants, InsertProjectConsultant, financialData, InsertFinancialData, evaluationScores, InsertEvaluationScore, evaluatorScores, InsertEvaluatorScore, committeeDecisions, InsertCommitteeDecision, consultantDetails, InsertConsultantDetail, aiAdvisoryScores, InsertAiAdvisoryScore } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -262,6 +262,29 @@ export async function upsertCommitteeDecision(projectId: number, data: Partial<I
     return await db.update(committeeDecisions).set(data).where(eq(committeeDecisions.projectId, projectId));
   }
   return await db.insert(committeeDecisions).values({ projectId, ...data } as InsertCommitteeDecision);
+}
+
+// AI Advisory Scores
+export async function getAiAdvisoryScores(projectId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(aiAdvisoryScores).where(eq(aiAdvisoryScores.projectId, projectId));
+}
+
+export async function upsertAiAdvisoryScore(data: { projectId: number; consultantId: number; criterionId: number; suggestedScore: number; reasoning: string }) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const existing = await db.select().from(aiAdvisoryScores).where(
+    and(
+      eq(aiAdvisoryScores.projectId, data.projectId),
+      eq(aiAdvisoryScores.consultantId, data.consultantId),
+      eq(aiAdvisoryScores.criterionId, data.criterionId)
+    )
+  ).limit(1);
+  if (existing.length > 0) {
+    return await db.update(aiAdvisoryScores).set({ suggestedScore: data.suggestedScore, reasoning: data.reasoning }).where(eq(aiAdvisoryScores.id, existing[0].id));
+  }
+  return await db.insert(aiAdvisoryScores).values(data as InsertAiAdvisoryScore);
 }
 
 // Consultant details

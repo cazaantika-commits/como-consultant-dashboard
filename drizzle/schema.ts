@@ -339,17 +339,39 @@ export const committeeDecisions = mysqlTable('committeeDecisions', {
   id: int('id').autoincrement().primaryKey(),
   projectId: int('projectId').notNull().references(() => projects.id, { onDelete: 'cascade' }),
   selectedConsultantId: int('selectedConsultantId').references(() => consultants.id),
-  decisionType: varchar('decisionType', { length: 50 }), // 'selected', 'negotiate', 'pending'
+  decisionType: varchar('decisionType', { length: 50 }), // 'selected', 'negotiate', 'pending', 'rejected'
+  decisionBasis: varchar('decisionBasis', { length: 100 }), // 'highest_technical', 'best_value', 'lowest_fee', 'highest_fee_with_negotiation', 'other'
+  justification: text('justification'), // مبررات اللجنة التفصيلية
   negotiationTarget: text('negotiationTarget'), // التارجت
+  negotiationConditions: text('negotiationConditions'), // شروط التفاوض
   committeeNotes: text('committeeNotes'), // ملاحظات اللجنة
   aiAnalysis: text('aiAnalysis'), // تحليل الذكاء الاصطناعي
   aiRecommendation: text('aiRecommendation'), // توصية الذكاء الاصطناعي
+  aiPostDecisionAnalysis: text('aiPostDecisionAnalysis'), // تحليل AI بعد القرار
+  isConfirmed: int('isConfirmed').default(0), // هل تم تأكيد القرار (0=لا, 1=نعم)
+  confirmedAt: timestamp('confirmedAt'), // تاريخ التأكيد
+  confirmedBy: varchar('confirmedBy', { length: 255 }), // من أكد القرار
   createdAt: timestamp('createdAt').defaultNow().notNull(),
   updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
 });
 
 export type CommitteeDecision = typeof committeeDecisions.$inferSelect;
 export type InsertCommitteeDecision = typeof committeeDecisions.$inferInsert;
+
+// AI Advisory scores per criterion per consultant per project
+export const aiAdvisoryScores = mysqlTable('aiAdvisoryScores', {
+  id: int('id').autoincrement().primaryKey(),
+  projectId: int('projectId').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  consultantId: int('consultantId').notNull().references(() => consultants.id, { onDelete: 'cascade' }),
+  criterionId: int('criterionId').notNull(),
+  suggestedScore: int('suggestedScore'), // الدرجة المقترحة من AI
+  reasoning: text('reasoning'), // مبررات AI
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type AiAdvisoryScore = typeof aiAdvisoryScores.$inferSelect;
+export type InsertAiAdvisoryScore = typeof aiAdvisoryScores.$inferInsert;
 
 // Extended consultant details (for "تعرف على الاستشاري")
 export const consultantDetails = mysqlTable('consultantDetails', {
