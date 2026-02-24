@@ -125,7 +125,7 @@ function Section({ title, icon: Icon, children, color = "amber" }: {
   );
 }
 
-export default function FactSheetPage() {
+export default function FactSheetPage({ embedded = false }: { embedded?: boolean }) {
   const { user, loading: authLoading } = useAuth();
   const [, navigate] = useLocation();
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
@@ -342,17 +342,21 @@ export default function FactSheetPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-stone-50 to-white" dir="rtl">
+    <div className={embedded ? "bg-gradient-to-b from-stone-50 to-white" : "min-h-screen bg-gradient-to-b from-stone-50 to-white"} dir="rtl">
       {/* Header */}
-      <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-stone-200">
+      <div className={`sticky ${embedded ? 'top-[105px]' : 'top-0'} z-20 bg-white/80 backdrop-blur-md border-b border-stone-200`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="text-muted-foreground hover:text-foreground">
-                <ChevronLeft className="h-4 w-4 ml-1" />
-                الرئيسية
-              </Button>
-              <Separator orientation="vertical" className="h-6" />
+              {!embedded && (
+                <>
+                  <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="text-muted-foreground hover:text-foreground">
+                    <ChevronLeft className="h-4 w-4 ml-1" />
+                    الرئيسية
+                  </Button>
+                  <Separator orientation="vertical" className="h-6" />
+                </>
+              )}
               <div className="flex items-center gap-2">
                 <div className="h-8 w-8 rounded-lg bg-amber-100 flex items-center justify-center">
                   <FileText className="h-4 w-4 text-amber-700" />
