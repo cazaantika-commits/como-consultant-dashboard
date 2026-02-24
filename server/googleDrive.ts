@@ -783,3 +783,46 @@ export async function deleteFile(fileId: string): Promise<{ success: boolean; fi
   });
   return { success: true, fileId };
 }
+
+/**
+ * Upload a binary file (Buffer) to Google Drive
+ * Used for email attachments, images, PDFs, etc.
+ */
+export async function uploadBinaryFile(
+  fileName: string,
+  content: Buffer,
+  parentFolderId: string,
+  mimeType: string = "application/octet-stream"
+): Promise<DriveFile> {
+  const drive = getDriveClient();
+  const { Readable } = await import("stream");
+
+  const stream = new Readable();
+  stream.push(content);
+  stream.push(null);
+
+  const res = await drive.files.create({
+    requestBody: {
+      name: fileName,
+      mimeType,
+      parents: [parentFolderId],
+    },
+    media: {
+      mimeType,
+      body: stream,
+    },
+    fields: "id, name, mimeType, size, modifiedTime, createdTime, parents, webViewLink",
+    supportsAllDrives: true,
+  });
+
+  return {
+    id: res.data.id!,
+    name: res.data.name!,
+    mimeType: res.data.mimeType!,
+    size: res.data.size || undefined,
+    modifiedTime: res.data.modifiedTime || undefined,
+    createdTime: res.data.createdTime || undefined,
+    parents: res.data.parents || undefined,
+    webViewLink: res.data.webViewLink || undefined,
+  };
+}

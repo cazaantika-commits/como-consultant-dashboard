@@ -18,7 +18,7 @@ import {
   listSharedDrives, listFilesInFolder, searchFiles as searchDriveFiles,
   copyFile, createFolder, getFileMetadata, readFileContent,
   uploadTextFile, createGoogleDoc, createGoogleSheet, updateFileContent,
-  renameFile, moveFile, deleteFile
+  renameFile, moveFile, deleteFile, uploadBinaryFile
 } from "./googleDrive";
 import { getOAuthClientForUser } from "./googleOAuthClient";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
@@ -950,6 +950,22 @@ export const AGENT_TOOLS = [
       },
     },
   },
+  {
+    type: "function" as const,
+    function: {
+      name: "download_email_attachments",
+      description: "تنزيل مرفقات إيميل محدد وحفظها في Google Drive - استخدمي هذه الأداة لتنزيل مرفقات رسالة بريد إلكتروني ورفعها على Google Drive في مجلد 00_Inbox/Emails/. تحتاجين رقم UID الخاص بالرسالة (من check_email). يمكنك تحديد مجلد مخصص أو تركه للمجلد الافتراضي.",
+      parameters: {
+        type: "object",
+        properties: {
+          uid: { type: "number", description: "رقم UID الخاص بالرسالة التي تحتوي على المرفقات" },
+          targetFolderId: { type: "string", description: "معرف مجلد Google Drive المستهدف (اختياري - افتراضياً 00_Inbox/Emails/)" },
+          renamePattern: { type: "string", description: "نمط إعادة تسمية الملفات حسب دستور الأرشفة (اختياري - مثال: Nas-R_6185392_Pro-Eng_20260209_Lac_V1)" },
+        },
+        required: ["uid"],
+      },
+    },
+  },
   // ─── INTER-AGENT ───
   {
     type: "function" as const,
@@ -1023,7 +1039,8 @@ const WRITE_TOOL_NAMES = new Set([
   "add_consultant_note", "copy_drive_file", "create_drive_folder",
   "create_drive_document", "create_drive_spreadsheet", "upload_text_file", "update_drive_file",
   "rename_drive_file", "move_drive_file", "delete_drive_file",
-  "reply_email", "compose_email"
+  "reply_email", "compose_email",
+  "download_email_attachments"
 ]);
 
 // Current agent context for assignment logging
@@ -2192,6 +2209,118 @@ async function _executeToolInternal(
         }
       }
 
+      case "download_email_attachments": {
+        const { uid: dlUid, targetFolderId, renamePattern } = args;
+        try {
+          // 1. Fetch the email with full attachment content
+          const email = await fetchEmailByUID(dlUid);
+          if (!email) {
+            return JSON.stringify({ error: `لم يتم العثور على رسالة برقم UID: ${dlUid}` });
+          }
+          
+          if (!email.attachments || email.attachments.length === 0) {
+            return JSON.stringify({ error: "هذه الرسالة لا تحتوي على مرفقات" });
+          }
+          
+          // 2. Find or create the target folder
+          let folderId = targetFolderId;
+          if (!folderId) {
+            // Search for 00_Inbox/Emails folder
+            try {
+              const searchResult = await searchDriveFiles("00_Inbox");
+              const inboxFolder = searchResult.find(f => f.name === "00_Inbox" && f.mimeType === "application/vnd.google-apps.folder");
+              if (inboxFolder) {
+                // Look for Emails subfolder inside 00_Inbox
+                const subfolders = await listFilesInFolder(inboxFolder.id);
+                const emailsFolder = subfolders.find(f => f.name === "Emails" && f.mimeType === "application/vnd.google-apps.folder");
+                if (emailsFolder) {
+                  folderId = emailsFolder.id;
+                } else {
+                  // Create Emails subfolder
+                  const newFolder = await createFolder("Emails", inboxFolder.id);
+                  folderId = newFolder.id;
+                }
+              }
+            } catch (searchErr) {
+              console.error("[AgentTools] Error finding 00_Inbox/Emails folder:", searchErr);
+            }
+          }
+          
+          if (!folderId) {
+            return JSON.stringify({ error: "لم يتم العثور على مجلد 00_Inbox/Emails على Google Drive. يرجى تحديد targetFolderId يدوياً." });
+          }
+          
+          // 3. Upload each attachment
+          const uploadedFiles: any[] = [];
+          const errors: string[] = [];
+          const emailDate = email.date;
+          const dateStr = `${emailDate.getFullYear()}${String(emailDate.getMonth()+1).padStart(2,'0')}${String(emailDate.getDate()).padStart(2,'0')}`;
+          
+          for (let i = 0; i < email.attachments.length; i++) {
+            const att = email.attachments[i];
+            if (!att.content) {
+              errors.push(`${att.filename}: لا يوجد محتوى للتنزيل`);
+              continue;
+            }
+            
+            try {
+              // Determine filename
+              let fileName = att.filename;
+              if (renamePattern) {
+                // Use the rename pattern with index suffix if multiple
+                const ext = att.filename.split('.').pop() || 'bin';
+                fileName = email.attachments.length > 1 
+                  ? `${renamePattern}_${i+1}.${ext}`
+                  : `${renamePattern}.${ext}`;
+              } else {
+                // Add date prefix for traceability
+                const senderName = email.fromName.split('@')[0].replace(/[^a-zA-Z0-9]/g, '');
+                const ext = att.filename.split('.').pop() || 'bin';
+                const baseName = att.filename.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_');
+                fileName = `${dateStr}_${senderName}_${baseName}.${ext}`;
+              }
+              
+              const uploaded = await uploadBinaryFile(
+                fileName,
+                att.content,
+                folderId,
+                att.contentType
+              );
+              
+              uploadedFiles.push({
+                originalName: att.filename,
+                uploadedName: fileName,
+                driveFileId: uploaded.id,
+                webViewLink: uploaded.webViewLink,
+                size: att.size,
+                contentType: att.contentType,
+              });
+              
+              console.log(`[AgentTools] Uploaded attachment: ${fileName} -> Drive ID: ${uploaded.id}`);
+            } catch (uploadErr: any) {
+              errors.push(`${att.filename}: ${uploadErr.message}`);
+              console.error(`[AgentTools] Failed to upload ${att.filename}:`, uploadErr);
+            }
+          }
+          
+          // 4. Return results
+          const summary = uploadedFiles.length > 0
+            ? `تم رفع ${uploadedFiles.length} مرفق بنجاح إلى Google Drive`
+            : "لم يتم رفع أي مرفق";
+          
+          return JSON.stringify({
+            success: uploadedFiles.length > 0,
+            message: summary,
+            emailSubject: email.subject,
+            emailFrom: email.from,
+            uploadedFiles,
+            errors: errors.length > 0 ? errors : undefined,
+          });
+        } catch (error: any) {
+          return JSON.stringify({ error: `خطأ في تنزيل المرفقات: ${error.message}` });
+        }
+      }
+
       default:
         return JSON.stringify({ error: `أداة غير معروفة: ${toolName}` });
     }
@@ -2266,6 +2395,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "ask_another_agent",
     "view_agent_conversations",
     "check_email", "read_email", "reply_email", "compose_email",
+    "download_email_attachments",
   ],
   farouq: [
     "list_projects", "list_consultants", "get_project_consultants",
@@ -2333,6 +2463,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "rename_drive_file", "move_drive_file", "delete_drive_file",
     "update_project_fact_sheet",
     "ask_another_agent",
+    "download_email_attachments",
   ],
 };
 
