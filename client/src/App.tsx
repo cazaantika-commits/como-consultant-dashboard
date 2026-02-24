@@ -21,6 +21,7 @@ import ConsultantRecommendPage from "./pages/ConsultantRecommendPage";
 import ConsultantCommitteePage from "./pages/ConsultantCommitteePage";
 import ModelStatsPage from "./pages/ModelStatsPage";
 import AgentAssignmentsPage from "./pages/AgentAssignmentsPage";
+import AgentAssignmentsSummaryPage from "./pages/AgentAssignmentsSummaryPage";
 import ConversationHistoryPage from "./pages/ConversationHistoryPage";
 import TaskSettingsPage from "./pages/TaskSettingsPage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
@@ -57,6 +58,7 @@ function Router() {
       <Route path="/consultant-committee" component={ConsultantCommitteePage} />
       <Route path="/model-stats" component={ModelStatsPage} />
       <Route path="/agent-assignments" component={AgentAssignmentsPage} />
+      <Route path="/agent-assignments-summary" component={AgentAssignmentsSummaryPage} />
       <Route path="/conversation-history" component={ConversationHistoryPage} />
       <Route path="/task-settings" component={TaskSettingsPage} />
       <Route path="/knowledge-base" component={KnowledgeBasePage} />

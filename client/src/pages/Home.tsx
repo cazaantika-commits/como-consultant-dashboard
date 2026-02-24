@@ -32,9 +32,13 @@ import {
   Activity,
   ClipboardList,
   BookOpen,
+  Mail,
+  Mic,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { AgentChatBox, AgentType } from "@/components/AgentChatBox";
+
+const SALWA_AVATAR_URL = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/VHJEpCATvCSDFToI.png";
 
 const AGENT_ICONS: Record<string, any> = {
   crown: Crown,
@@ -121,58 +125,121 @@ export default function Home() {
       </header>
 
       <main>
-        {/* ── Hero Section ── */}
-        <section className="relative py-20 lg:py-28 overflow-hidden">
-          {/* Colorful background blobs */}
-          <div className="absolute inset-0 pattern-overlay opacity-40" />
-          <div className="absolute top-10 right-1/4 w-[400px] h-[400px] rounded-full bg-amber-500/8 blur-[100px]" />
-          <div className="absolute bottom-10 left-1/4 w-[300px] h-[300px] rounded-full bg-stone-500/8 blur-[100px]" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-primary/5 blur-[120px]" />
+        {/* ══════════════════════════════════════════════════════════════ */}
+        {/* ── SALWA - Prominent Section at Top ── */}
+        {/* ══════════════════════════════════════════════════════════════ */}
+        {isAuthenticated && (
+          <section className="relative py-10 lg:py-14 overflow-hidden">
+            {/* Warm background blobs */}
+            <div className="absolute inset-0 pattern-overlay opacity-30" />
+            <div className="absolute top-0 right-1/4 w-[400px] h-[400px] rounded-full bg-amber-500/8 blur-[100px]" />
+            <div className="absolute bottom-0 left-1/3 w-[300px] h-[300px] rounded-full bg-orange-400/6 blur-[80px]" />
 
-          <div className="relative max-w-7xl mx-auto px-6">
-            <div className="max-w-3xl mx-auto text-center">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-amber-500/10 to-stone-500/10 border border-amber-500/20 text-primary text-xs font-medium mb-6 fade-in">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
-                </span>
-                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                مدعوم بالذكاء الاصطناعي
-              </div>
+            <div className="relative max-w-5xl mx-auto px-6">
+              <button
+                onClick={() => setActiveAgent("salwa" as AgentType)}
+                className="w-full cursor-pointer group"
+              >
+                <div className="relative bg-gradient-to-br from-white to-amber-50/50 dark:from-card dark:to-amber-950/10 rounded-3xl border border-amber-200/60 dark:border-amber-800/30 shadow-xl shadow-amber-500/10 p-8 lg:p-10 overflow-hidden transition-all duration-500 hover:shadow-2xl hover:shadow-amber-500/15 hover:border-amber-300/80">
+                  {/* Gold accent bar at top */}
+                  <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-400" />
+                  
+                  {/* Decorative corner elements */}
+                  <div className="absolute top-4 left-4 w-16 h-16 border-t-2 border-l-2 border-amber-300/30 rounded-tl-2xl" />
+                  <div className="absolute bottom-4 right-4 w-16 h-16 border-b-2 border-r-2 border-amber-300/30 rounded-br-2xl" />
 
-              <h1 className="text-4xl lg:text-5xl font-extrabold text-foreground leading-tight mb-5 fade-in">
-                إدارة مشاريع كومو بذكاء
-                <br />
-                <span className="text-gold-gradient">مع فريق الوكلاء الفنيين</span>
-              </h1>
+                  <div className="flex flex-col lg:flex-row items-center gap-8">
+                    {/* Salwa's Large Avatar */}
+                    <div className="relative shrink-0">
+                      <div className="w-40 h-40 lg:w-48 lg:h-48 rounded-full overflow-hidden ring-[5px] ring-amber-400/80 ring-offset-4 ring-offset-background shadow-2xl shadow-amber-500/20 transition-all duration-500 group-hover:scale-105 group-hover:ring-amber-500">
+                        <img
+                          src={SALWA_AVATAR_URL}
+                          alt="سلوى"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      {/* Online indicator */}
+                      <span className="absolute bottom-2 right-2 w-6 h-6 bg-emerald-500 rounded-full border-4 border-white dark:border-card shadow-lg">
+                        <span className="absolute inset-0 w-full h-full rounded-full bg-emerald-500 animate-ping opacity-40" />
+                      </span>
+                      {/* Crown badge */}
+                      <span className="absolute -top-2 right-1/2 translate-x-1/2 text-3xl drop-shadow-lg">👑</span>
+                    </div>
 
-              <p className="text-lg text-muted-foreground leading-relaxed mb-8 max-w-2xl mx-auto fade-in">
-                منصة متكاملة تجمع بين الذكاء الاصطناعي وإدارة المشاريع لتقديم تجربة
-                احترافية لفريق التطوير العقاري
-              </p>
+                    {/* Salwa's Info */}
+                    <div className="flex-1 text-center lg:text-right">
+                      <div className="flex items-center justify-center lg:justify-start gap-3 mb-3 flex-wrap">
+                        <h2 className="text-3xl lg:text-4xl font-extrabold text-foreground">سلوى</h2>
+                        <span className="text-sm px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500/15 to-yellow-500/15 text-amber-700 dark:text-amber-400 font-bold border border-amber-300/40">
+                          المنسقة الرئيسية
+                        </span>
+                      </div>
+                      <p className="text-lg text-muted-foreground leading-relaxed mb-4 max-w-xl">
+                        المساعدة التنفيذية الذكية — تدير فريق الوكلاء، تفحص البريد الإلكتروني، تنسق المهام، وتتابع كل شيء نيابة عنك
+                      </p>
+                      
+                      {/* Capabilities */}
+                      <div className="flex flex-wrap gap-2 justify-center lg:justify-start mb-5">
+                        {[
+                          { icon: Mail, label: "فحص وإدارة الإيميل", color: "bg-blue-50 text-blue-700 border-blue-200" },
+                          { icon: Archive, label: "أرشفة على Drive", color: "bg-green-50 text-green-700 border-green-200" },
+                          { icon: FileText, label: "تحليل المستندات", color: "bg-purple-50 text-purple-700 border-purple-200" },
+                          { icon: Users, label: "تنسيق الفريق", color: "bg-orange-50 text-orange-700 border-orange-200" },
+                          { icon: Mic, label: "صوتي", color: "bg-pink-50 text-pink-700 border-pink-200" },
+                          { icon: Send, label: "تيليجرام", color: "bg-cyan-50 text-cyan-700 border-cyan-200" },
+                        ].map((cap, idx) => (
+                          <span key={idx} className={`text-xs px-3 py-1.5 rounded-full border font-medium flex items-center gap-1.5 ${cap.color}`}>
+                            <cap.icon className="w-3.5 h-3.5" />
+                            {cap.label}
+                          </span>
+                        ))}
+                      </div>
 
-              <div className="flex items-center justify-center gap-3 fade-in">
-                {isAuthenticated ? (
-                  <>
-                    <Button
-                      size="lg"
-                      onClick={() => navigate("/agent-dashboard")}
-                      className="gap-2 px-6 shadow-lg shadow-primary/20 bg-gradient-to-r from-stone-700 to-stone-900 hover:from-stone-800 hover:to-stone-950"
-                    >
-                      <Bot className="w-4 h-4" />
-                      لوحة تحكم الوكلاء
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      onClick={() => navigate("/tasks")}
-                      className="gap-2 px-6"
-                    >
-                      <FileText className="w-4 h-4" />
-                      المهام
-                    </Button>
-                  </>
-                ) : (
+                      {/* CTA */}
+                      <div className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold shadow-lg shadow-amber-500/25 transition-all duration-300 group-hover:shadow-xl group-hover:shadow-amber-500/35 group-hover:from-amber-600 group-hover:to-amber-700">
+                        <MessageSquare className="w-5 h-5" />
+                        تحدث مع سلوى
+                        <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </section>
+        )}
+
+        {/* ── Hero Section (for non-authenticated) ── */}
+        {!isAuthenticated && (
+          <section className="relative py-20 lg:py-28 overflow-hidden">
+            <div className="absolute inset-0 pattern-overlay opacity-40" />
+            <div className="absolute top-10 right-1/4 w-[400px] h-[400px] rounded-full bg-amber-500/8 blur-[100px]" />
+            <div className="absolute bottom-10 left-1/4 w-[300px] h-[300px] rounded-full bg-stone-500/8 blur-[100px]" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-primary/5 blur-[120px]" />
+
+            <div className="relative max-w-7xl mx-auto px-6">
+              <div className="max-w-3xl mx-auto text-center">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-amber-500/10 to-stone-500/10 border border-amber-500/20 text-primary text-xs font-medium mb-6 fade-in">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+                  </span>
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                  مدعوم بالذكاء الاصطناعي
+                </div>
+
+                <h1 className="text-4xl lg:text-5xl font-extrabold text-foreground leading-tight mb-5 fade-in">
+                  إدارة مشاريع كومو بذكاء
+                  <br />
+                  <span className="text-gold-gradient">مع فريق الوكلاء الفنيين</span>
+                </h1>
+
+                <p className="text-lg text-muted-foreground leading-relaxed mb-8 max-w-2xl mx-auto fade-in">
+                  منصة متكاملة تجمع بين الذكاء الاصطناعي وإدارة المشاريع لتقديم تجربة
+                  احترافية لفريق التطوير العقاري
+                </p>
+
+                <div className="flex items-center justify-center gap-3 fade-in">
                   <Button
                     size="lg"
                     onClick={() => (window.location.href = getLoginUrl())}
@@ -181,11 +248,11 @@ export default function Home() {
                     ابدأ الآن
                     <ArrowLeft className="w-4 h-4" />
                   </Button>
-                )}
+                </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* ── Features Grid ── */}
         <section className="py-16 border-t border-border/50">
@@ -207,7 +274,6 @@ export default function Home() {
                   gradient: "linear-gradient(135deg, #6366f1, #8b5cf6)",
                   shadow: "rgba(99, 102, 241, 0.3)",
                   emoji: "🤖",
-                  borderColor: "#6366f1",
                 },
                 {
                   icon: Shield,
@@ -216,7 +282,6 @@ export default function Home() {
                   gradient: "linear-gradient(135deg, #06b6d4, #0891b2)",
                   shadow: "rgba(6, 182, 212, 0.3)",
                   emoji: "🛡️",
-                  borderColor: "#06b6d4",
                 },
                 {
                   icon: TrendingUp,
@@ -225,7 +290,6 @@ export default function Home() {
                   gradient: "linear-gradient(135deg, #10b981, #059669)",
                   shadow: "rgba(16, 185, 129, 0.3)",
                   emoji: "💰",
-                  borderColor: "#10b981",
                 },
                 {
                   icon: Layers,
@@ -234,7 +298,6 @@ export default function Home() {
                   gradient: "linear-gradient(135deg, #f59e0b, #d97706)",
                   shadow: "rgba(245, 158, 11, 0.3)",
                   emoji: "📁",
-                  borderColor: "#f59e0b",
                 },
               ].map((feature, i) => (
                 <div
@@ -242,7 +305,6 @@ export default function Home() {
                   className="premium-card p-6 hover-lift fade-in group relative overflow-hidden"
                   style={{ animationDelay: `${i * 0.1}s` }}
                 >
-                  {/* Colored top accent bar */}
                   <div
                     className="absolute top-0 left-0 right-0 h-1 rounded-t-xl"
                     style={{ background: feature.gradient }}
@@ -256,7 +318,7 @@ export default function Home() {
                         <span className="ml-1.5">{feature.emoji}</span>
                         {feature.title}
                       </h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed">{feature.desc}</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{feature.desc}</p>
                     </div>
                   </div>
                 </div>
@@ -283,13 +345,12 @@ export default function Home() {
                   { label: "ملفات Drive", emoji: "📂", icon: Archive, path: "/drive", gradient: "linear-gradient(135deg, #10b981, #059669)", shadow: "rgba(16, 185, 129, 0.25)" },
                   { label: "المكاتب الاستشارية", emoji: "🏛️", icon: Users, path: "/consultant-portal", gradient: "linear-gradient(135deg, #78716c, #57534e)", shadow: "rgba(120, 113, 108, 0.25)" },
                   { label: "دراسة الجدوى", emoji: "📊", icon: Calculator, path: "/feasibility-study", gradient: "linear-gradient(135deg, #ef4444, #dc2626)", shadow: "rgba(239, 68, 68, 0.25)" },
-                  { label: "تكليفات الوكلاء", emoji: "📋", icon: ClipboardList, path: "/agent-assignments", gradient: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245, 158, 11, 0.25)" },
+                  { label: "ملخص التكليفات", emoji: "📊", icon: BarChart3, path: "/agent-assignments-summary", gradient: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245, 158, 11, 0.25)" },
+                  { label: "سجل التكليفات", emoji: "📋", icon: ClipboardList, path: "/agent-assignments", gradient: "linear-gradient(135deg, #78716c, #57534e)", shadow: "rgba(120, 113, 108, 0.25)" },
                   { label: "سجل المحادثات", emoji: "💬", icon: MessageSquare, path: "/conversation-history", gradient: "linear-gradient(135deg, #ec4899, #db2777)", shadow: "rgba(236, 72, 153, 0.25)" },
                   { label: "قاعدة المعرفة", emoji: "📚", icon: BookOpen, path: "/knowledge-base", gradient: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)" },
-                  { label: "عروض الاستشاريين", emoji: "📄", icon: FileText, path: "/proposals", gradient: "linear-gradient(135deg, #3b82f6, #2563eb)", shadow: "rgba(59, 130, 246, 0.25)" },
                   { label: "غرفة الاجتماعات", emoji: "🎙️", icon: Users, path: "/meetings", gradient: "linear-gradient(135deg, #a855f7, #7c3aed)", shadow: "rgba(168, 85, 247, 0.25)" },
                   { label: "سجل العقود", emoji: "⚖️", icon: Scale, path: "/contracts", gradient: "linear-gradient(135deg, #0ea5e9, #0284c7)", shadow: "rgba(14, 165, 233, 0.25)" },
-                  { label: "بطاقة بيانات المشروع", emoji: "📋", icon: FileText, path: "/fact-sheet", gradient: "linear-gradient(135deg, #d97706, #b45309)", shadow: "rgba(217, 119, 6, 0.25)" },
                   { label: "مراقبة التنفيذ", emoji: "⚡", icon: Activity, path: "/execution-dashboard", gradient: "linear-gradient(135deg, #f97316, #ea580c)", shadow: "rgba(249, 115, 22, 0.25)" },
                 ].map((item, i) => (
                   <button
@@ -297,7 +358,6 @@ export default function Home() {
                     onClick={() => navigate(item.path)}
                     className="premium-card p-5 text-right hover-lift group relative overflow-hidden"
                   >
-                    {/* Subtle gradient overlay on hover */}
                     <div
                       className="absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-300 rounded-xl"
                       style={{ background: item.gradient }}
@@ -319,8 +379,8 @@ export default function Home() {
           </section>
         )}
 
-        {/* ── Agent Team Section ── */}
-        {isAuthenticated && agentsList.length > 0 && (
+        {/* ── Agent Team Section (without Salwa) ── */}
+        {isAuthenticated && teamAgents.length > 0 && (
           <section className="py-16 border-t border-border/50 bg-muted/30">
             <div className="max-w-7xl mx-auto px-6">
               <div className="flex items-center justify-between mb-8">
@@ -331,7 +391,7 @@ export default function Home() {
                   <div>
                     <h2 className="text-2xl font-bold text-foreground">فريق الوكلاء</h2>
                     <p className="text-muted-foreground text-sm">
-                      {agentsList.length} وكيل متخصص يعملون تحت إشراف سلوى
+                      {teamAgents.length} وكيل متخصص يعملون تحت إشراف سلوى
                     </p>
                   </div>
                 </div>
@@ -346,67 +406,7 @@ export default function Home() {
                 </Button>
               </div>
 
-              {/* Coordinator Card */}
-              {coordinator && (
-                <button
-                  onClick={() => setActiveAgent("salwa" as AgentType)}
-                  className="premium-card p-6 mb-6 gold-glow fade-in relative overflow-hidden cursor-pointer text-right w-full"
-                >
-                  {/* Gold accent bar */}
-                  <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-400" />
-                  <div className="flex items-center gap-5">
-                    {/* Salwa's Avatar */}
-                    <div className="relative shrink-0">
-                      {coordinator.avatarUrl ? (
-                        <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-amber-400 ring-offset-2 ring-offset-background shadow-xl transition-all duration-300 hover:scale-110">
-                          <img src={coordinator.avatarUrl} alt={coordinator.name} className="w-full h-full object-cover" />
-                        </div>
-                      ) : (
-                        <div
-                          className="w-24 h-24 rounded-full flex items-center justify-center shadow-lg"
-                          style={{
-                            background: `linear-gradient(135deg, ${coordinator.color || '#6366f1'}, ${coordinator.color || '#6366f1'}cc)`,
-                          }}
-                        >
-                          {(() => {
-                            const IconComp = AGENT_ICONS[coordinator.icon || "crown"] || Crown;
-                            return <IconComp className="w-10 h-10 text-white" />;
-                          })()}
-                        </div>
-                      )}
-                      <span className="absolute bottom-0 right-0 w-5 h-5 bg-emerald-500 rounded-full border-3 border-background shadow-md" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <h3 className="text-lg font-bold text-foreground">{coordinator.name}</h3>
-                        <span className="text-[11px] px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500/10 to-stone-500/10 text-amber-700 font-semibold border border-amber-200">
-                          👑 المنسقة
-                        </span>
-                        <span className="text-[11px] px-2.5 py-1 rounded-full bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-600 border border-emerald-200 flex items-center gap-1 font-semibold">
-                          <Send className="w-3 h-3" />
-                          تيليجرام
-                        </span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">{coordinator.role}</p>
-                      <p className="text-xs text-muted-foreground/70 mt-1.5 leading-relaxed">{coordinator.description}</p>
-                      {coordinator.capabilities && coordinator.capabilities.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border">
-                          {coordinator.capabilities.map((cap: string, idx: number) => (
-                            <span
-                              key={idx}
-                              className="text-[11px] px-2.5 py-1 rounded-full bg-muted text-muted-foreground font-medium"
-                            >
-                              {cap}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              )}
-
-              {/* Team Agents Grid - with avatars */}
+              {/* Team Agents Grid - without Salwa */}
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-6">
                 {teamAgents.map((agent: any, i: number) => {
                   const IconComp = AGENT_ICONS[agent.icon || "bot"] || Bot;
@@ -450,7 +450,7 @@ export default function Home() {
                       <p className="text-xs text-muted-foreground leading-relaxed mb-3 line-clamp-2">
                         {agent.role}
                       </p>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 justify-center">
                         <div className="relative">
                           <div
                             className={`w-2 h-2 rounded-full ${
@@ -508,8 +508,6 @@ export default function Home() {
           </p>
         </div>
       </footer>
-
-
 
       {/* ── Agent Chat Box ── */}
       {activeAgent && (
