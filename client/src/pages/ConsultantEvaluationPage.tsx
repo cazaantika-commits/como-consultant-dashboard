@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, Fragment } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -1302,7 +1302,7 @@ export default function ConsultantEvaluationPage() {
                               const buildingCost = (selectedProject?.bua || 0) * (selectedProject?.pricePerSqft || 0);
                               const dev = feeDeviations.consultants[consultant.id];
                               return (
-                                <React.Fragment key={consultant.id}>
+                                <Fragment key={consultant.id}>
                                   <FinancialRow
                                     consultant={consultant}
                                     fin={fin}
@@ -1311,7 +1311,7 @@ export default function ConsultantEvaluationPage() {
                                     updateFinancialMutation={updateFinancialMutation}
                                     onTotalChange={() => {}}
                                   />
-                                </React.Fragment>
+                                </Fragment>
                               );
                             })}
                         </tbody>
