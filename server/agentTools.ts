@@ -12,7 +12,7 @@ import {
   consultantDetails, consultantProfiles, consultantNotes,
   tasks, feasibilityStudies, agents, agentAssignments,
   meetings, meetingParticipants, meetingFiles, meetingMessages,
-  knowledgeBase
+  knowledgeBase, contractTypes, projectContracts
 } from "../drizzle/schema";
 import {
   listSharedDrives, listFilesInFolder, searchFiles as searchDriveFiles,
@@ -687,6 +687,135 @@ export const AGENT_TOOLS = [
           reason: { type: "string", description: "سبب الحذف - سيُعرض على المالك في طلب الموافقة" },
         },
         required: ["fileId", "reason"],
+      },
+    },
+  },
+  // ─── FACT SHEET UPDATE ───
+  {
+    type: "function" as const,
+    function: {
+      name: "update_project_fact_sheet",
+      description: "تحديث بيانات Fact Sheet لمشروع - استخدم هذه الأداة بعد قراءة مستندات الأرض (Affection Plan, Title Deed, Plots Guidelines, Site Plan, SPA) لتعبئة بيانات المشروع تلقائياً. أرسل فقط الحقول التي استخرجتها من المستند.",
+      parameters: {
+        type: "object",
+        properties: {
+          projectId: { type: "number", description: "معرف المشروع" },
+          // البيانات الأساسية
+          plotNumber: { type: "string", description: "رقم القطعة" },
+          areaCode: { type: "string", description: "كود المنطقة" },
+          bua: { type: "number", description: "مساحة البناء (قدم²)" },
+          // أرقام التعريف
+          titleDeedNumber: { type: "string", description: "رقم سند الملكية" },
+          ddaNumber: { type: "string", description: "رقم DDA" },
+          masterDevRef: { type: "string", description: "الرقم المرجعي للمطور الرئيسي" },
+          // المساحات
+          plotAreaSqm: { type: "string", description: "مساحة الأرض (م²)" },
+          plotAreaSqft: { type: "string", description: "مساحة الأرض (قدم²)" },
+          gfaSqm: { type: "string", description: "المساحة الإجمالية GFA (م²)" },
+          gfaSqft: { type: "string", description: "المساحة الإجمالية GFA (قدم²)" },
+          // الاستخدام والملكية
+          permittedUse: { type: "string", description: "الاستخدام المسموح" },
+          ownershipType: { type: "string", description: "نوع الملكية" },
+          subdivisionRestrictions: { type: "string", description: "قيود التجزئة" },
+          // الأطراف
+          masterDevName: { type: "string", description: "اسم المطور الرئيسي" },
+          masterDevAddress: { type: "string", description: "عنوان المطور" },
+          sellerName: { type: "string", description: "اسم البائع" },
+          buyerName: { type: "string", description: "اسم المشتري" },
+          buyerNationality: { type: "string", description: "جنسية المشتري" },
+          buyerPassport: { type: "string", description: "رقم جواز المشتري" },
+          buyerPhone: { type: "string", description: "هاتف المشتري" },
+          buyerEmail: { type: "string", description: "بريد المشتري" },
+          // البنية التحتية
+          electricityAllocation: { type: "string", description: "تخصيص الكهرباء" },
+          waterAllocation: { type: "string", description: "تخصيص المياه" },
+          sewageAllocation: { type: "string", description: "تخصيص الصرف الصحي" },
+          tripAM: { type: "string", description: "رحلات صباحية" },
+          tripLT: { type: "string", description: "رحلات نهارية" },
+          tripPM: { type: "string", description: "رحلات مسائية" },
+          // الجدول الزمني
+          effectiveDate: { type: "string", description: "تاريخ السريان" },
+          constructionPeriod: { type: "string", description: "فترة البناء" },
+          constructionStartDate: { type: "string", description: "تاريخ بدء الإنشاء" },
+          completionDate: { type: "string", description: "تاريخ الإنجاز" },
+          constructionConditions: { type: "string", description: "شروط بدء الإنشاء" },
+          // الالتزامات
+          saleRestrictions: { type: "string", description: "قيود البيع" },
+          resaleConditions: { type: "string", description: "شروط إعادة البيع" },
+          communityCharges: { type: "string", description: "رسوم المجتمع" },
+          // التسجيل
+          registrationAuthority: { type: "string", description: "جهة التسجيل" },
+          adminFee: { type: "number", description: "رسوم إدارية" },
+          clearanceFee: { type: "number", description: "رسوم شهادة التخليص" },
+          compensationAmount: { type: "number", description: "مبلغ تعويض" },
+          // القانون
+          governingLaw: { type: "string", description: "القانون الساري" },
+          disputeResolution: { type: "string", description: "تسوية النزاعات" },
+        },
+        required: ["projectId"],
+      },
+    },
+  },
+  // ─── CONTRACT REGISTRY ───
+  {
+    type: "function" as const,
+    function: {
+      name: "list_contract_types",
+      description: "عرض أنواع العقود المتاحة في سجل العقود - يعرض قائمة بجميع أنواع العقود (31 نوع افتراضي + أي أنواع مخصصة) مع التصنيف والكود.",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "list_project_contracts",
+      description: "عرض عقود مشروع معين - يعرض جميع العقود المرتبطة بمشروع محدد مع حالة التحليل والتفاصيل.",
+      parameters: {
+        type: "object",
+        properties: {
+          projectId: { type: "number", description: "معرف المشروع" },
+        },
+        required: ["projectId"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "get_contract_details",
+      description: "عرض تفاصيل عقد محدد - يعرض كل بيانات العقد بما في ذلك تحليل فاروق إن وجد (الملخص، المواعيد، الغرامات، الالتزامات، المخاطر).",
+      parameters: {
+        type: "object",
+        properties: {
+          contractId: { type: "number", description: "معرف العقد" },
+        },
+        required: ["contractId"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "save_contract_analysis",
+      description: "حفظ تحليل عقد في قاعدة البيانات - استخدم هذه الأداة بعد تحليل عقد لحفظ النتائج (الملخص، المواعيد، الغرامات، الالتزامات، المخاطر، شروط الإنهاء، الملاحظات).",
+      parameters: {
+        type: "object",
+        properties: {
+          contractId: { type: "number", description: "معرف العقد" },
+          summary: { type: "string", description: "ملخص شامل للعقد" },
+          keyDates: { type: "string", description: "JSON array للمواعيد المهمة [{date, description, importance}]" },
+          penalties: { type: "string", description: "JSON array للغرامات [{type, amount, condition, severity}]" },
+          obligations: { type: "string", description: "JSON array للالتزامات [{party, obligation, deadline}]" },
+          risks: { type: "string", description: "JSON array للمخاطر [{risk, severity, recommendation}]" },
+          parties: { type: "string", description: "JSON array للأطراف [{name, role, responsibilities}]" },
+          terminationClauses: { type: "string", description: "شروط الإنهاء والفسخ" },
+          notes: { type: "string", description: "ملاحظات وتوصيات فاروق" },
+        },
+        required: ["contractId", "summary"],
       },
     },
   },
@@ -1668,6 +1797,106 @@ async function _executeToolInternal(
         });
       }
 
+      // ─── FACT SHEET UPDATE TOOL ───
+      case "update_project_fact_sheet": {
+        const { projectId: fsProjectId, ...fsFields } = args;
+        if (!fsProjectId) return JSON.stringify({ error: "يجب تحديد معرف المشروع" });
+        // Build update object with only provided fields
+        const updateData: Record<string, any> = {};
+        const allowedFields = [
+          'plotNumber', 'areaCode', 'bua', 'titleDeedNumber', 'ddaNumber', 'masterDevRef',
+          'plotAreaSqm', 'plotAreaSqft', 'gfaSqm', 'gfaSqft',
+          'permittedUse', 'ownershipType', 'subdivisionRestrictions',
+          'masterDevName', 'masterDevAddress', 'sellerName', 'sellerAddress',
+          'buyerName', 'buyerNationality', 'buyerPassport', 'buyerAddress', 'buyerPhone', 'buyerEmail',
+          'electricityAllocation', 'waterAllocation', 'sewageAllocation',
+          'tripAM', 'tripLT', 'tripPM',
+          'effectiveDate', 'constructionPeriod', 'constructionStartDate', 'completionDate', 'constructionConditions',
+          'saleRestrictions', 'resaleConditions', 'communityCharges',
+          'registrationAuthority', 'adminFee', 'clearanceFee', 'compensationAmount',
+          'governingLaw', 'disputeResolution'
+        ];
+        for (const key of allowedFields) {
+          if (fsFields[key] !== undefined && fsFields[key] !== null && fsFields[key] !== '') {
+            updateData[key] = fsFields[key];
+          }
+        }
+        if (Object.keys(updateData).length === 0) return JSON.stringify({ error: "لم يتم تقديم أي حقول للتحديث" });
+        await db.update(projects).set(updateData).where(eq(projects.id, fsProjectId));
+        return JSON.stringify({ 
+          success: true, 
+          message: `تم تحديث ${Object.keys(updateData).length} حقل في Fact Sheet`,
+          updatedFields: Object.keys(updateData)
+        });
+      }
+
+      // ─── CONTRACT REGISTRY TOOLS ───
+      case "list_contract_types": {
+        const types = await db.select().from(contractTypes).orderBy(contractTypes.category, contractTypes.sortOrder);
+        return JSON.stringify({ contractTypes: types.map((t: any) => ({ id: t.id, name: t.name, nameEn: t.nameEn, code: t.code, category: t.category, description: t.description })) });
+      }
+
+      case "list_project_contracts": {
+        const { projectId: pcProjectId } = args;
+        if (!pcProjectId) return JSON.stringify({ error: "يجب تحديد معرف المشروع" });
+        const pContracts = await db.select()
+          .from(projectContracts)
+          .leftJoin(contractTypes, eq(projectContracts.contractTypeId, contractTypes.id))
+          .leftJoin(projects, eq(projectContracts.projectId, projects.id))
+          .where(eq(projectContracts.projectId, pcProjectId));
+        return JSON.stringify({ contracts: pContracts.map((r: any) => ({
+          id: r.project_contracts.id,
+          title: r.project_contracts.title,
+          contractNumber: r.project_contracts.contractNumber,
+          status: r.project_contracts.status,
+          analysisStatus: r.project_contracts.analysisStatus,
+          partyA: r.project_contracts.partyA,
+          partyB: r.project_contracts.partyB,
+          contractValue: r.project_contracts.contractValue,
+          signDate: r.project_contracts.signDate,
+          endDate: r.project_contracts.endDate,
+          contractType: r.contract_types?.name,
+          projectName: r.projects?.name,
+        })) });
+      }
+
+      case "get_contract_details": {
+        const { contractId: cdId } = args;
+        if (!cdId) return JSON.stringify({ error: "يجب تحديد معرف العقد" });
+        const [cDetail] = await db.select()
+          .from(projectContracts)
+          .leftJoin(contractTypes, eq(projectContracts.contractTypeId, contractTypes.id))
+          .leftJoin(projects, eq(projectContracts.projectId, projects.id))
+          .where(eq(projectContracts.id, cdId));
+        if (!cDetail) return JSON.stringify({ error: "العقد غير موجود" });
+        return JSON.stringify({
+          contract: {
+            ...cDetail.project_contracts,
+            contractType: cDetail.contract_types?.name,
+            contractTypeCode: cDetail.contract_types?.code,
+            projectName: cDetail.projects?.name,
+          }
+        });
+      }
+
+      case "save_contract_analysis": {
+        const { contractId: saId, summary: saSummary, keyDates, penalties, obligations, risks, parties, terminationClauses, notes: saNotes } = args;
+        if (!saId || !saSummary) return JSON.stringify({ error: "يجب تحديد معرف العقد والملخص" });
+        await db.update(projectContracts).set({
+          analysisStatus: "completed",
+          analysisSummary: saSummary,
+          analysisKeyDates: keyDates || null,
+          analysisPenalties: penalties || null,
+          analysisObligations: obligations || null,
+          analysisRisks: risks || null,
+          analysisParties: parties || null,
+          analysisTermination: terminationClauses || null,
+          analysisNotes: saNotes || null,
+          analyzedAt: Date.now(),
+        }).where(eq(projectContracts.id, saId));
+        return JSON.stringify({ success: true, message: "تم حفظ تحليل العقد بنجاح" });
+      }
+
       default:
         return JSON.stringify({ error: `أداة غير معروفة: ${toolName}` });
     }
@@ -1751,6 +1980,8 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "list_meetings", "get_meeting_details", "query_institutional_memory",
     "list_drive_folders", "list_drive_files", "search_drive_files",
     "get_drive_file_info", "read_drive_file_content",
+    "create_drive_document",
+    "list_contract_types", "list_project_contracts", "get_contract_details", "save_contract_analysis",
     "ask_another_agent",
   ],
   khaled: [
@@ -1803,6 +2034,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "create_drive_document", "create_drive_spreadsheet",
     "upload_text_file", "update_drive_file",
     "rename_drive_file", "move_drive_file", "delete_drive_file",
+    "update_project_fact_sheet",
     "ask_another_agent",
   ],
 };

@@ -33,6 +33,7 @@ import ExecutionDashboardPage from "./pages/ExecutionDashboardPage";
 import GoogleConnectPage from "./pages/GoogleConnectPage";
 import ProjectManagementPage from "./pages/ProjectManagementPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
+import ContractsRegistryPage from "./pages/ContractsRegistryPage";
 
 function Router() {
   return (
@@ -65,6 +66,7 @@ function Router() {
       <Route path="/google-connect" component={GoogleConnectPage} />
       <Route path="/project-management" component={ProjectManagementPage} />
       <Route path="/project/:id" component={ProjectDetailPage} />
+      <Route path="/contracts" component={ContractsRegistryPage} />
       <Route path="/meetings/:id" component={MeetingRoomPage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

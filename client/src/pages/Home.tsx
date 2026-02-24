@@ -288,6 +288,7 @@ export default function Home() {
                   { label: "قاعدة المعرفة", emoji: "📚", icon: BookOpen, path: "/knowledge-base", gradient: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)" },
                   { label: "عروض الاستشاريين", emoji: "📄", icon: FileText, path: "/proposals", gradient: "linear-gradient(135deg, #3b82f6, #2563eb)", shadow: "rgba(59, 130, 246, 0.25)" },
                   { label: "غرفة الاجتماعات", emoji: "🎙️", icon: Users, path: "/meetings", gradient: "linear-gradient(135deg, #a855f7, #7c3aed)", shadow: "rgba(168, 85, 247, 0.25)" },
+                  { label: "سجل العقود", emoji: "⚖️", icon: Scale, path: "/contracts", gradient: "linear-gradient(135deg, #0ea5e9, #0284c7)", shadow: "rgba(14, 165, 233, 0.25)" },
                   { label: "مراقبة التنفيذ", emoji: "⚡", icon: Activity, path: "/execution-dashboard", gradient: "linear-gradient(135deg, #f97316, #ea580c)", shadow: "rgba(249, 115, 22, 0.25)" },
                 ].map((item, i) => (
                   <button

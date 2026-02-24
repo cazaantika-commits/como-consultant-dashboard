@@ -670,3 +670,75 @@ export const oauthTokens = mysqlTable('oauthTokens', {
 
 export type OAuthToken = typeof oauthTokens.$inferSelect;
 export type InsertOAuthToken = typeof oauthTokens.$inferInsert;
+
+// ==========================================
+// سجل العقود - Contracts Registry
+// ==========================================
+
+// أنواع العقود (قابلة للإضافة والتعديل والحذف)
+export const contractTypes = mysqlTable('contractTypes', {
+  id: int('id').primaryKey().autoincrement(),
+  userId: int('userId').notNull().references(() => users.id),
+  name: varchar('name', { length: 255 }).notNull(), // اسم نوع العقد
+  nameEn: varchar('nameEn', { length: 255 }), // الاسم بالإنجليزية
+  code: varchar('code', { length: 50 }), // كود مختصر مثل SPA, NOV, PMC
+  category: varchar('category', { length: 100 }), // التصنيف: land, construction, consultant, government, sales, other
+  description: text('description'), // وصف نوع العقد
+  isDefault: int('isDefault').default(0).notNull(), // 1 = نوع افتراضي من النظام
+  sortOrder: int('sortOrder').default(0).notNull(),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type ContractType = typeof contractTypes.$inferSelect;
+export type InsertContractType = typeof contractTypes.$inferInsert;
+
+// عقود المشاريع (العقد الفعلي المرتبط بمشروع)
+export const projectContracts = mysqlTable('projectContracts', {
+  id: int('id').primaryKey().autoincrement(),
+  userId: int('userId').notNull().references(() => users.id),
+  projectId: int('projectId').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  contractTypeId: int('contractTypeId').notNull().references(() => contractTypes.id),
+  
+  // بيانات العقد الأساسية
+  title: varchar('title', { length: 500 }).notNull(), // عنوان العقد
+  contractNumber: varchar('contractNumber', { length: 100 }), // رقم العقد
+  partyA: varchar('partyA', { length: 255 }), // الطرف الأول
+  partyB: varchar('partyB', { length: 255 }), // الطرف الثاني
+  contractValue: decimal('contractValue', { precision: 15, scale: 2 }), // قيمة العقد
+  currency: varchar('currency', { length: 10 }).default('AED'), // العملة
+  
+  // التواريخ
+  signDate: varchar('signDate', { length: 50 }), // تاريخ التوقيع
+  startDate: varchar('startDate', { length: 50 }), // تاريخ البدء
+  endDate: varchar('endDate', { length: 50 }), // تاريخ الانتهاء
+  
+  // الملف
+  fileUrl: varchar('fileUrl', { length: 1000 }), // رابط ملف العقد (S3)
+  fileKey: varchar('fileKey', { length: 500 }), // مفتاح S3
+  fileName: varchar('fileName', { length: 255 }), // اسم الملف الأصلي
+  driveFileId: varchar('driveFileId', { length: 100 }), // معرف الملف في Google Drive
+  
+  // حالة العقد
+  status: mysqlEnum('contractStatus', ['draft', 'active', 'expired', 'terminated', 'renewed', 'pending']).default('draft').notNull(),
+  
+  // تحليل فاروق
+  analysisStatus: mysqlEnum('contractAnalysisStatus', ['not_analyzed', 'analyzing', 'completed', 'failed']).default('not_analyzed').notNull(),
+  analysisSummary: text('analysisSummary'), // ملخص التحليل
+  analysisKeyDates: text('analysisKeyDates'), // JSON: المواعيد المهمة
+  analysisPenalties: text('analysisPenalties'), // JSON: الغرامات والجزاءات
+  analysisObligations: text('analysisObligations'), // JSON: الالتزامات
+  analysisRisks: text('analysisRisks'), // JSON: المخاطر القانونية
+  analysisParties: text('analysisParties'), // JSON: الأطراف وأدوارهم
+  analysisTermination: text('analysisTermination'), // شروط الإنهاء
+  analysisNotes: text('analysisNotes'), // ملاحظات فاروق
+  analysisFullJson: text('analysisFullJson'), // التحليل الكامل JSON
+  analyzedAt: timestamp('analyzedAt'), // تاريخ التحليل
+  
+  notes: text('notes'), // ملاحظات عامة
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type ProjectContract = typeof projectContracts.$inferSelect;
+export type InsertProjectContract = typeof projectContracts.$inferInsert;
