@@ -30,7 +30,11 @@ import {
   AlertCircle,
   Percent,
   Ruler,
+  Sparkles,
+  RefreshCw,
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 
 // Field component for consistent styling
 function Field({ label, value, onChange, type = "text", placeholder, readOnly = false, suffix }: {
@@ -127,6 +131,11 @@ export default function FactSheetPage() {
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [hasChanges, setHasChanges] = useState(false);
+  const [khazenLoading, setKhazenLoading] = useState(false);
+  const [khazenStatus, setKhazenStatus] = useState<"idle" | "analyzing" | "done" | "error">("idle");
+  const [khazenMessage, setKhazenMessage] = useState("");
+  const [khazenDialogOpen, setKhazenDialogOpen] = useState(false);
+  const [khazenProgress, setKhazenProgress] = useState(0);
 
   // Queries
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: !!user });
@@ -144,6 +153,62 @@ export default function FactSheetPage() {
     },
     onError: (err) => toast.error("خطأ في الحفظ: " + err.message),
   });
+
+  // Khazen agent chat mutation
+  const khazenChat = trpc.agents.chat.useMutation();
+
+  const handleKhazenAutoFill = async () => {
+    if (!selectedProjectId || !projectQuery.data) return;
+    setKhazenDialogOpen(true);
+    setKhazenLoading(true);
+    setKhazenStatus("analyzing");
+    setKhazenMessage("جاري إرسال الطلب لخازن...");
+    setKhazenProgress(10);
+
+    try {
+      const projectName = projectQuery.data.name;
+      const prompt = `أنا بحاجة لتعبئة بطاقة بيانات المشروع "${projectName}" (معرف المشروع: ${selectedProjectId}). ` +
+        `أرجو منك البحث في Google Drive عن مستندات هذا المشروع (Affection Plan, Title Deed, Plots Guidelines, Site Plan, DDA) ` +
+        `واستخراج البيانات التالية وتحديث بطاقة البيانات مباشرة باستخدام أداة update_project_fact_sheet:\n\n` +
+        `- أرقام التعريف: رقم القطعة، كود المنطقة، رقم سند الملكية، رقم DDA، الرقم المرجعي للمطور\n` +
+        `- المساحات: مساحة الأرض (م²/قدم²)، GFA (م²/قدم²)، BUA\n` +
+        `- الاستخدام: الاستخدام المسموح، نوع الملكية، قيود التقسيم\n` +
+        `- المطور الرئيسي: الاسم والعنوان\n` +
+        `- البائع: الاسم والعنوان\n` +
+        `- البنية التحتية: تخصيص الكهرباء والمياه والصرف الصحي\n` +
+        `- حركة المرور: الرحلات الصباحية والظهيرة والمسائية\n` +
+        `- الجدول الزمني: تاريخ السريان، فترة البناء، تاريخ البدء والانتهاء\n` +
+        `- القيود: قيود البيع، شروط إعادة البيع، رسوم المجتمع\n` +
+        `- الرسوم: جهة التسجيل، الرسوم الإدارية، رسوم المخالصة\n` +
+        `- القانون: القانون الحاكم، آلية حل النزاعات\n\n` +
+        `ابحث في كل المستندات المتاحة واستخرج أكبر قدر ممكن من البيانات.`;
+
+      setKhazenProgress(30);
+      setKhazenMessage("خازن يبحث في مستندات المشروع على Google Drive...");
+
+      const result = await khazenChat.mutateAsync({
+        agent: "khazen",
+        message: prompt,
+      });
+
+      setKhazenProgress(90);
+      setKhazenMessage("خازن أنهى التحليل. جاري تحديث البيانات...");
+
+      // Refetch project data to get updated fields
+      await projectQuery.refetch();
+
+      setKhazenProgress(100);
+      setKhazenStatus("done");
+      setKhazenMessage(result.text || "تم تعبئة البيانات بنجاح");
+      toast.success("تم تعبئة بطاقة البيانات من خازن بنجاح");
+    } catch (err: any) {
+      setKhazenStatus("error");
+      setKhazenMessage("حدث خطأ أثناء التعبئة: " + (err.message || "خطأ غير معروف"));
+      toast.error("فشل في تعبئة البيانات من خازن");
+    } finally {
+      setKhazenLoading(false);
+    }
+  };
 
   // Load project data into form
   useEffect(() => {
@@ -331,6 +396,22 @@ export default function FactSheetPage() {
                     {completeness >= 80 ? <CheckCircle2 className="h-3 w-3 ml-1" /> : <AlertCircle className="h-3 w-3 ml-1" />}
                     {completeness}% مكتمل ({filledCount}/{totalCount})
                   </Badge>
+
+                  {/* Khazen auto-fill button */}
+                  <Button
+                    onClick={handleKhazenAutoFill}
+                    disabled={khazenLoading}
+                    variant="outline"
+                    size="sm"
+                    className="border-purple-300 text-purple-700 hover:bg-purple-50 hover:text-purple-800"
+                  >
+                    {khazenLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin ml-1" />
+                    ) : (
+                      <Sparkles className="h-4 w-4 ml-1" />
+                    )}
+                    تعبئة تلقائية من خازن
+                  </Button>
 
                   {/* Save button */}
                   <Button
@@ -559,6 +640,109 @@ export default function FactSheetPage() {
           </div>
         )}
       </div>
+
+      {/* Khazen Auto-Fill Dialog */}
+      <Dialog open={khazenDialogOpen} onOpenChange={(open) => {
+        if (!khazenLoading) {
+          setKhazenDialogOpen(open);
+          if (!open) {
+            setKhazenStatus("idle");
+            setKhazenProgress(0);
+          }
+        }
+      }}>
+        <DialogContent className="sm:max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-right">
+              <div className="h-8 w-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                <Bot className="h-4 w-4 text-purple-700" />
+              </div>
+              تعبئة تلقائية من خازن
+            </DialogTitle>
+            <DialogDescription className="text-right">
+              خازن يبحث في مستندات المشروع ويستخرج البيانات تلقائياً
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Status indicator */}
+            <div className="flex items-center gap-3">
+              {khazenStatus === "analyzing" && (
+                <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
+                  <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+                </div>
+              )}
+              {khazenStatus === "done" && (
+                <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                </div>
+              )}
+              {khazenStatus === "error" && (
+                <div className="h-10 w-10 rounded-full bg-rose-100 flex items-center justify-center">
+                  <AlertCircle className="h-5 w-5 text-rose-600" />
+                </div>
+              )}
+              <div className="flex-1">
+                <p className="text-sm font-medium">
+                  {khazenStatus === "analyzing" ? "جاري التحليل..." :
+                   khazenStatus === "done" ? "اكتمل بنجاح" :
+                   khazenStatus === "error" ? "حدث خطأ" : ""}
+                </p>
+                <p className="text-xs text-muted-foreground">{khazenMessage}</p>
+              </div>
+            </div>
+
+            {/* Progress bar */}
+            {khazenStatus === "analyzing" && (
+              <Progress value={khazenProgress} className="h-2" />
+            )}
+
+            {/* Success details */}
+            {khazenStatus === "done" && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                <p className="text-xs text-emerald-700 leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto">
+                  {khazenMessage}
+                </p>
+              </div>
+            )}
+
+            {/* Error details */}
+            {khazenStatus === "error" && (
+              <div className="bg-rose-50 border border-rose-200 rounded-lg p-3">
+                <p className="text-xs text-rose-700">{khazenMessage}</p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="flex gap-2 sm:justify-start">
+            {khazenStatus === "done" && (
+              <Button
+                onClick={() => {
+                  setKhazenDialogOpen(false);
+                  setKhazenStatus("idle");
+                  setKhazenProgress(0);
+                }}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                size="sm"
+              >
+                <CheckCircle2 className="h-4 w-4 ml-1" />
+                تم
+              </Button>
+            )}
+            {khazenStatus === "error" && (
+              <Button
+                onClick={handleKhazenAutoFill}
+                variant="outline"
+                size="sm"
+                className="border-purple-300 text-purple-700"
+              >
+                <RefreshCw className="h-4 w-4 ml-1" />
+                إعادة المحاولة
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
