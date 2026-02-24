@@ -1,6 +1,7 @@
 import { invokeLLM } from "./_core/llm";
 import { ENV } from "./_core/env";
 import { checkLast48HoursEmails } from "./emailIntegration";
+import { fetchRecentEmails, fetchEmailsSince } from "./emailMonitor";
 import { getDb } from "./db";
 import { consultants, projects, agents, evaluationScores, financialData, modelUsageLog, meetings, tasks, knowledgeBase } from "../drizzle/schema";
 import { like, eq, desc } from "drizzle-orm";
@@ -974,18 +975,50 @@ async function getPlatformContext(agent: AgentType): Promise<string> {
 export async function handleAgentChat(req: AgentChatRequest): Promise<{ text: string; model: string }> {
   const { agent, message, conversationHistory } = req;
 
-  // Special handling for Salwa's email commands
+  // Special handling for Salwa's email commands - direct IMAP access (no Telegram dependency)
   if (agent === "salwa") {
     const lowerMsg = message.toLowerCase();
-    if (lowerMsg.includes("ايميل") || lowerMsg.includes("إيميل") || lowerMsg.includes("بريد") || lowerMsg.includes("رسائل") || lowerMsg.includes("email")) {
+    if (lowerMsg.includes("ايميل") || lowerMsg.includes("إيميل") || lowerMsg.includes("بريد") || lowerMsg.includes("رسائل") || lowerMsg.includes("email") || lowerMsg.includes("اميل") || lowerMsg.includes("إميل")) {
       try {
-        const count = await checkLast48HoursEmails();
-        if (count === 0) {
-          return { text: "✅ فحصت الإيميل الحين يا عبدالرحمن! ما فيه رسائل جديدة في آخر 48 ساعة. إن شاء الله أول ما يوصل شي بخبرك 📧", model: "GPT-4o" };
+        // Fetch emails directly via IMAP - no Telegram bot dependency
+        const emails = await fetchEmailsSince(48);
+        if (emails.length === 0) {
+          return { text: "✅ فحصت الإيميل الحين يا عبدالرحمن! ما فيه رسائل في آخر 48 ساعة. إن شاء الله أول ما يوصل شي بخبرك 📧", model: "GPT-4o" };
         }
-        return { text: `📧 فحصت الإيميل! وجدت ${count} رسائل في آخر 48 ساعة. شوف الإشعارات أو تيليجرام للتفاصيل الكاملة إن شاء الله 💪`, model: "GPT-4o" };
-      } catch (error) {
-        // Don't return error for email - let the AI handle the conversation
+        
+        const readCount = emails.filter(e => e.isRead).length;
+        const unreadCount = emails.filter(e => !e.isRead).length;
+        const withAttachments = emails.filter(e => e.attachments.length > 0).length;
+        
+        let emailSummary = `📧 فحصت الإيميل! وجدت ${emails.length} رسالة في آخر 48 ساعة\n\n`;
+        emailSummary += `📊 **الإحصائيات:**\n`;
+        emailSummary += `• غير مقروء: ${unreadCount} 🔴\n`;
+        emailSummary += `• مقروء: ${readCount} ✅\n`;
+        emailSummary += `• مع مرفقات: ${withAttachments} 📎\n\n`;
+        emailSummary += `📋 **آخر الرسائل:**\n`;
+        
+        for (const email of emails.slice(0, 15)) {
+          const readIcon = email.isRead ? "✅" : "🔴";
+          const attachIcon = email.attachments.length > 0 ? " 📎" : "";
+          const dateStr = email.date.toLocaleDateString("ar-AE", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+          const subjectShort = email.subject.length > 50 ? email.subject.substring(0, 50) + "..." : email.subject;
+          emailSummary += `${readIcon} **${email.fromName}** — ${subjectShort}${attachIcon} (${dateStr})\n`;
+        }
+        
+        if (emails.length > 15) {
+          emailSummary += `\n... و ${emails.length - 15} رسالة أخرى`;
+        }
+        
+        emailSummary += `\n\n💡 إذا تبي تفاصيل عن رسالة معينة، قولي اسم المرسل أو الموضوع وأجيبك إن شاء الله 💪`;
+        
+        // Also try to notify via Telegram if available
+        try { await checkLast48HoursEmails(); } catch (_) { /* Telegram not available, that's fine */ }
+        
+        return { text: emailSummary, model: "GPT-4o" };
+      } catch (error: any) {
+        console.error("[AgentChat] Salwa email check error:", error.message);
+        // If IMAP fails, provide a helpful error message
+        return { text: `⚠️ واجهت مشكلة في الاتصال بالإيميل: ${error.message}\n\nممكن يكون السيرفر مشغول، جرب مرة ثانية بعد شوي يا عبدالرحمن 🙏`, model: "GPT-4o" };
       }
     }
   }
