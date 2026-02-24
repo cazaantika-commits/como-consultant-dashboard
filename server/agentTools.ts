@@ -891,7 +891,7 @@ export const AGENT_TOOLS = [
     type: "function" as const,
     function: {
       name: "check_email",
-      description: "فحص الإيميل وعرض قائمة بالرسائل الأخيرة - استخدمي هذه الأداة عندما يطلب المستخدم فحص البريد أو معرفة الرسائل الجديدة. ترجع قائمة بالإيميلات مع المرسل والموضوع والتاريخ وحالة القراءة.",
+      description: "فحص الإيميل وعرض قائمة بالرسائل الأخيرة مع أرقام UID. استخدميها لفحص البريد أو لإيجاد UID رسالة شخص معين قبل استخدام read_email. ترجع قائمة بالإيميلات مع المرسل والموضوع والتاريخ وحالة القراءة وعدد المرفقات وأسمائها.",
       parameters: {
         type: "object",
         properties: {
@@ -905,7 +905,7 @@ export const AGENT_TOOLS = [
     type: "function" as const,
     function: {
       name: "read_email",
-      description: "قراءة محتوى إيميل محدد بالتفصيل - استخدمي هذه الأداة عندما يطلب المستخدم تفاصيل رسالة معينة. تحتاجين رقم UID الخاص بالرسالة (تحصلين عليه من check_email).",
+      description: "قراءة المحتوى الكامل لإيميل محدد بما فيه النص والمرفقات. يجب استخدامها دائماً بعد check_email عندما يطلب المستخدم محتوى أو تفاصيل رسالة معينة. ترجع: المرسل، الموضوع، النص الكامل، وقائمة المرفقات (اسم الملف ونوعه وحجمه). تحتاجين UID (من check_email).",
       parameters: {
         type: "object",
         properties: {
@@ -2137,8 +2137,15 @@ async function _executeToolInternal(
           if (!email) {
             return JSON.stringify({ error: `لم يتم العثور على رسالة برقم UID: ${uid}` });
           }
+          const attachmentList = email.attachments.map(a => ({
+            filename: a.filename,
+            contentType: a.contentType,
+            size: a.size,
+            sizeFormatted: a.size > 1048576 ? `${(a.size / 1048576).toFixed(1)} MB` : a.size > 1024 ? `${(a.size / 1024).toFixed(0)} KB` : `${a.size} bytes`,
+          }));
+          const hasAttachments = attachmentList.length > 0;
           return JSON.stringify({
-            message: "تفاصيل الرسالة",
+            message: `تفاصيل الرسالة من ${email.fromName} (${email.from})${hasAttachments ? ` - فيها ${attachmentList.length} مرفق` : ' - بدون مرفقات'}`,
             data: {
               uid: email.uid,
               messageId: email.messageId,
@@ -2148,13 +2155,14 @@ async function _executeToolInternal(
               cc: email.cc,
               subject: email.subject,
               date: email.date.toISOString(),
-              body: email.textBody ? email.textBody.substring(0, 3000) : "(لا يوجد نص)",
+              body: email.textBody ? email.textBody.substring(0, 3000) : (email.htmlBody ? "الرسالة بصيغة HTML فقط - المحتوى موجود لكن بدون نص عادي" : "(لا يوجد نص)"),
               isRead: email.isRead,
-              attachments: email.attachments.map(a => ({
-                filename: a.filename,
-                contentType: a.contentType,
-                size: a.size,
-              })),
+              hasAttachments: hasAttachments,
+              attachmentCount: attachmentList.length,
+              attachments: attachmentList,
+              attachmentSummary: hasAttachments 
+                ? `📎 المرفقات (${attachmentList.length}): ${attachmentList.map(a => `${a.filename} (${a.sizeFormatted})`).join(', ')}`
+                : "لا توجد مرفقات",
             }
           });
         } catch (error: any) {
