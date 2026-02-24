@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Plus, Trash2, Download, Star, BarChart3, DollarSign, Users, Award, ExternalLink, Link2, TrendingUp, Target, CheckCircle2, Building, FileDown, ChevronLeft, ChevronRight, Sparkles, AlertTriangle, Shield, Info, Gavel, Brain, ArrowLeft } from "lucide-react";
+import { Loader2, Plus, Trash2, Download, Star, BarChart3, DollarSign, Users, Award, ExternalLink, Link2, TrendingUp, Target, CheckCircle2, Building, FileDown, ChevronLeft, ChevronRight, Sparkles, AlertTriangle, Shield, Info, Gavel, Brain, ArrowLeft, Scale, Calculator, SlidersHorizontal, Eye } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 import { generateEvaluationPDF } from "@/lib/pdfExport";
 
 // FinancialRow component with local state - saves ONLY on blur
@@ -387,6 +388,10 @@ export default function ConsultantEvaluationPage() {
   const [isGeneratingAdvisory, setIsGeneratingAdvisory] = useState(false);
   const [postDecisionAnalysis, setPostDecisionAnalysis] = useState('');
   const [isPostAnalyzing, setIsPostAnalyzing] = useState(false);
+  // Value Analysis weights (Item 5: adjustable T%/F%)
+  const [technicalWeight, setTechnicalWeight] = useState(65);
+  const financialWeight = 100 - technicalWeight;
+  const [showValueFormulas, setShowValueFormulas] = useState(false);
 
   // Queries
   const projectsQuery = trpc.projects.list.useQuery();
@@ -624,6 +629,58 @@ export default function ConsultantEvaluationPage() {
     const filled = allScores.filter((s: any) => s.score > 0).length;
     return Math.round((filled / totalPossible) * 100);
   }, [selectedProjectId, projectDetailsQuery.data, evaluatorScoresQuery.data]);
+
+  // Value Analysis (Item 5: Financial Score + Adjusted Financial Score + Value Score)
+  const valueAnalysis = useMemo(() => {
+    const fees = Object.entries(financialTotals).filter(([_, v]) => v > 0);
+    if (fees.length === 0) return { lowestFee: 0, consultants: {} as Record<number, { financialScore: number; penalty: number; adjustedFinancialScore: number; valueScore: number }> };
+
+    const lowestFee = Math.min(...fees.map(([_, v]) => v));
+    const result: Record<number, { financialScore: number; penalty: number; adjustedFinancialScore: number; valueScore: number }> = {};
+
+    fees.forEach(([id, fee]) => {
+      // Financial Score = (Lowest Fee / Consultant Fee) × 100
+      const financialScore = (lowestFee / fee) * 100;
+
+      // Penalty from fee deviation zones (in points, not percentage)
+      const dev = feeDeviations.consultants[parseInt(id)];
+      let penalty = 0;
+      if (dev) {
+        if (dev.zone === 'extreme_high') penalty = 15;
+        else if (dev.zone === 'moderate_high') penalty = 7;
+        // extreme_low and normal: no penalty
+      }
+
+      // Adjusted Financial Score = Financial Score - Penalty
+      const adjustedFinancialScore = Math.max(0, financialScore - penalty);
+
+      // Technical Score for this consultant
+      const techScore = consultantScores[parseInt(id)]?.weighted || 0;
+
+      // Value Score = (Technical Score × T%) + (Adjusted Financial Score × F%)
+      const valueScore = (techScore * technicalWeight / 100) + (adjustedFinancialScore * financialWeight / 100);
+
+      result[parseInt(id)] = {
+        financialScore: Math.round(financialScore * 10) / 10,
+        penalty,
+        adjustedFinancialScore: Math.round(adjustedFinancialScore * 10) / 10,
+        valueScore: Math.round(valueScore * 10) / 10,
+      };
+    });
+
+    return { lowestFee, consultants: result };
+  }, [financialTotals, feeDeviations, consultantScores, technicalWeight, financialWeight]);
+
+  // Value Rankings (sorted by Value Score)
+  const valueRankings = useMemo(() => {
+    return [...rankings].map(r => ({
+      ...r,
+      financialScore: valueAnalysis.consultants[r.id]?.financialScore || 0,
+      penalty: valueAnalysis.consultants[r.id]?.penalty || 0,
+      adjustedFinancialScore: valueAnalysis.consultants[r.id]?.adjustedFinancialScore || 0,
+      valueScore: valueAnalysis.consultants[r.id]?.valueScore || 0,
+    })).sort((a, b) => b.valueScore - a.valueScore);
+  }, [rankings, valueAnalysis]);
 
   const projects = projectsQuery.data || [];
   const consultants = consultantsQuery.data || [];
@@ -952,7 +1009,7 @@ export default function ConsultantEvaluationPage() {
 
             {/* Main Tabs: Technical | Financial | Committee Decision */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-6 h-14 bg-white shadow-lg rounded-xl border-0">
+              <TabsList className="grid w-full grid-cols-4 mb-6 h-14 bg-white shadow-lg rounded-xl border-0">
                 <TabsTrigger value="evaluation" className="flex items-center gap-2 text-sm font-semibold data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-purple-600 data-[state=active]:text-white rounded-lg">
                   <BarChart3 className="w-4 h-4" />
                   التقييم الفني
@@ -960,6 +1017,10 @@ export default function ConsultantEvaluationPage() {
                 <TabsTrigger value="financial" className="flex items-center gap-2 text-sm font-semibold data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-600 data-[state=active]:to-teal-600 data-[state=active]:text-white rounded-lg">
                   <DollarSign className="w-4 h-4" />
                   الأتعاب المالية
+                </TabsTrigger>
+                <TabsTrigger value="value" className="flex items-center gap-2 text-sm font-semibold data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-600 data-[state=active]:to-blue-600 data-[state=active]:text-white rounded-lg">
+                  <Scale className="w-4 h-4" />
+                  تحليل القيمة
                 </TabsTrigger>
                 <TabsTrigger value="decision" className="flex items-center gap-2 text-sm font-semibold data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-600 data-[state=active]:to-orange-600 data-[state=active]:text-white rounded-lg">
                   <Gavel className="w-4 h-4" />
@@ -1333,6 +1394,316 @@ export default function ConsultantEvaluationPage() {
                           );
                         })}
                       </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* ============ VALUE ANALYSIS TAB (Item 5) ============ */}
+              <TabsContent value="value">
+                <Card className="shadow-xl border-0">
+                  <CardHeader className="bg-gradient-to-r from-cyan-50 via-blue-50 to-indigo-50 border-b">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2 text-slate-800 text-lg">
+                        <Scale className="w-5 h-5 text-cyan-600" />
+                        تحليل القيمة (مرجع فقط — ليس ملزماً)
+                      </CardTitle>
+                      <button onClick={() => setShowValueFormulas(!showValueFormulas)} className="flex items-center gap-1.5 text-xs text-cyan-700 bg-cyan-100 hover:bg-cyan-200 px-3 py-1.5 rounded-lg border border-cyan-300 transition-colors">
+                        <Calculator className="w-3.5 h-3.5" />
+                        {showValueFormulas ? 'إخفاء المعادلات' : 'عرض المعادلات'}
+                      </button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    {/* Philosophy Notice */}
+                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-xl border border-amber-200 mb-6">
+                      <div className="flex items-start gap-3">
+                        <Shield className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-sm font-bold text-amber-900 mb-1">تنبيه مهم</p>
+                          <p className="text-xs text-amber-700 leading-relaxed">
+                            تحليل القيمة هو <span className="font-bold">مرجع استرشادي فقط</span> ولا يُلزم اللجنة باتخاذ أي قرار بناءً عليه.
+                            حتى لو رتّب Value Score الاستشاري (أ) أولاً، يمكن للجنة اختيار الاستشاري (ب) مع توثيق المبررات.
+                            الهدف هو تقديم صورة شفافة عن العلاقة بين الجودة والتكلفة.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Formulas Section */}
+                    {showValueFormulas && (
+                      <div className="bg-gradient-to-r from-slate-50 to-gray-50 p-5 rounded-xl border border-slate-200 mb-6">
+                        <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                          <Calculator className="w-4 h-4 text-slate-600" />
+                          المعادلات المستخدمة
+                        </h4>
+                        <div className="space-y-3 text-sm">
+                          <div className="bg-white p-3 rounded-lg border border-slate-200">
+                            <p className="font-mono text-blue-800 font-bold">Financial Score = (Lowest Fee ÷ Consultant Fee) × 100</p>
+                            <p className="text-slate-500 text-xs mt-1">كلما كانت الأتعاب أقرب لأقل عرض، كلما ارتفعت الدرجة المالية</p>
+                          </div>
+                          <div className="bg-white p-3 rounded-lg border border-slate-200">
+                            <p className="font-mono text-purple-800 font-bold">Adjusted Financial Score = Financial Score − Penalty</p>
+                            <p className="text-slate-500 text-xs mt-1">العقوبة تُطبق فقط على الدرجة المالية (لا تمس الدرجة الفنية أبداً)</p>
+                            <div className="mt-2 grid grid-cols-4 gap-2 text-xs">
+                              <div className="bg-emerald-50 border border-emerald-200 p-1.5 rounded text-center">
+                                <p className="font-bold text-emerald-700">طبيعي</p>
+                                <p className="text-emerald-600">0 نقطة</p>
+                              </div>
+                              <div className="bg-amber-50 border border-amber-200 p-1.5 rounded text-center">
+                                <p className="font-bold text-amber-700">مرتفع معتدل</p>
+                                <p className="text-amber-600">−7 نقاط</p>
+                              </div>
+                              <div className="bg-red-50 border border-red-200 p-1.5 rounded text-center">
+                                <p className="font-bold text-red-700">مرتفع شديد</p>
+                                <p className="text-red-600">−15 نقطة</p>
+                              </div>
+                              <div className="bg-blue-50 border border-blue-200 p-1.5 rounded text-center">
+                                <p className="font-bold text-blue-700">منخفض شديد</p>
+                                <p className="text-blue-600">0 + تحذير</p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="bg-white p-3 rounded-lg border-2 border-cyan-200">
+                            <p className="font-mono text-cyan-800 font-bold">Value Score = (Technical × {technicalWeight}%) + (Adjusted Financial × {financialWeight}%)</p>
+                            <p className="text-slate-500 text-xs mt-1">مؤشر مركب يجمع الجودة والتكلفة — الأوزان قابلة للتعديل أدناه</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Weight Adjustment Slider */}
+                    <div className="bg-gradient-to-r from-cyan-50 to-blue-50 p-5 rounded-xl border border-cyan-200 mb-6">
+                      <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                        <SlidersHorizontal className="w-4 h-4 text-cyan-600" />
+                        أوزان تحليل القيمة
+                      </h4>
+                      <div className="flex items-center gap-6">
+                        <div className="flex-1">
+                          <div className="flex justify-between mb-2">
+                            <span className="text-sm font-bold text-blue-700">الجودة الفنية: {technicalWeight}%</span>
+                            <span className="text-sm font-bold text-emerald-700">الانضباط المالي: {financialWeight}%</span>
+                          </div>
+                          <Slider
+                            value={[technicalWeight]}
+                            onValueChange={(v) => setTechnicalWeight(v[0])}
+                            min={30}
+                            max={90}
+                            step={5}
+                            className="w-full"
+                          />
+                          <div className="flex justify-between mt-1 text-[10px] text-slate-400">
+                            <span>30%</span>
+                            <span>50%</span>
+                            <span>65% (افتراضي)</span>
+                            <span>80%</span>
+                            <span>90%</span>
+                          </div>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={() => setTechnicalWeight(65)} className="text-xs whitespace-nowrap">
+                          إعادة للافتراضي
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* No financial data warning */}
+                    {Object.keys(valueAnalysis.consultants).length === 0 && (
+                      <div className="text-center py-12 bg-slate-50 rounded-xl border border-slate-200">
+                        <DollarSign className="w-12 h-12 mx-auto text-slate-300 mb-3" />
+                        <p className="text-slate-500 text-lg font-semibold">لا توجد بيانات مالية بعد</p>
+                        <p className="text-slate-400 text-sm mt-1">أدخل الأتعاب في تبويب "الأتعاب المالية" أولاً</p>
+                      </div>
+                    )}
+
+                    {/* Value Analysis Table */}
+                    {Object.keys(valueAnalysis.consultants).length > 0 && (
+                      <>
+                        <div className="overflow-x-auto border-2 border-slate-200 rounded-2xl shadow-lg mb-6">
+                          <table className="border-collapse w-full min-w-[900px]">
+                            <thead>
+                              <tr className="bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 text-white">
+                                <th className="border border-cyan-700 p-3 text-right text-sm font-bold" style={{ width: '14%' }}>الاستشاري</th>
+                                <th className="border border-cyan-700 p-3 text-center text-xs font-bold" style={{ width: '12%' }}>الدرجة الفنية</th>
+                                <th className="border border-cyan-700 p-3 text-center text-xs font-bold" style={{ width: '12%' }}>الأتعاب</th>
+                                <th className="border border-cyan-700 p-3 text-center text-xs font-bold" style={{ width: '12%' }}>الدرجة المالية</th>
+                                <th className="border border-cyan-700 p-3 text-center text-xs font-bold" style={{ width: '8%' }}>العقوبة</th>
+                                <th className="border border-cyan-700 p-3 text-center text-xs font-bold" style={{ width: '14%' }}>المالية المعدلة</th>
+                                <th className="border border-cyan-700 p-3 text-center text-sm font-bold bg-cyan-700" style={{ width: '14%' }}>Value Score</th>
+                                <th className="border border-cyan-700 p-3 text-center text-xs font-bold" style={{ width: '8%' }}>الترتيب</th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white">
+                              {valueRankings.map((r, idx) => {
+                                const dev = feeDeviations.consultants[r.id];
+                                return (
+                                  <tr key={r.id} className={`border-b transition-colors ${
+                                    idx === 0 ? 'bg-gradient-to-r from-cyan-50 to-blue-50' : 'hover:bg-slate-50'
+                                  }`}>
+                                    <td className="border border-slate-200 p-3 text-right font-bold text-slate-800">{r.name}</td>
+                                    <td className="border border-slate-200 p-3 text-center">
+                                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-sm font-bold bg-blue-100 text-blue-800">
+                                        {r.technicalScore.toFixed(1)}
+                                      </span>
+                                    </td>
+                                    <td className="border border-slate-200 p-3 text-center">
+                                      <div className="text-sm font-bold text-slate-700">{r.totalFee.toLocaleString()}</div>
+                                      <div className="text-[10px] text-slate-400">AED</div>
+                                    </td>
+                                    <td className="border border-slate-200 p-3 text-center">
+                                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-sm font-bold bg-emerald-100 text-emerald-800">
+                                        {r.financialScore.toFixed(1)}
+                                      </span>
+                                    </td>
+                                    <td className="border border-slate-200 p-3 text-center">
+                                      {r.penalty > 0 ? (
+                                        <span className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold bg-red-100 text-red-700">
+                                          −{r.penalty}
+                                        </span>
+                                      ) : (
+                                        <span className="text-xs text-slate-400">—</span>
+                                      )}
+                                    </td>
+                                    <td className="border border-slate-200 p-3 text-center">
+                                      <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-sm font-bold ${
+                                        r.penalty > 0 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+                                      }`}>
+                                        {r.adjustedFinancialScore.toFixed(1)}
+                                      </span>
+                                    </td>
+                                    <td className="border border-slate-200 p-3 text-center bg-gradient-to-r from-cyan-50 to-blue-50">
+                                      <span className="text-xl font-bold text-cyan-700">{r.valueScore.toFixed(1)}</span>
+                                    </td>
+                                    <td className="border border-slate-200 p-3 text-center">
+                                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mx-auto shadow-md ${
+                                        idx === 0 ? 'bg-gradient-to-br from-cyan-500 to-blue-600 text-white' :
+                                        idx === 1 ? 'bg-gradient-to-br from-slate-400 to-gray-500 text-white' :
+                                        'bg-slate-200 text-slate-600'
+                                      }`}>{idx + 1}</div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Lowest Fee Reference */}
+                        <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 mb-6 text-sm text-slate-600">
+                          <span className="font-semibold">أقل أتعاب (مرجع الحساب):</span> {valueAnalysis.lowestFee.toLocaleString()} AED
+                          <span className="mx-2">|</span>
+                          <span className="font-semibold">متوسط الأتعاب:</span> {feeDeviations.average.toLocaleString()} AED
+                        </div>
+
+                        {/* Visual Comparison Cards */}
+                        <h4 className="text-base font-bold text-slate-800 mb-3 flex items-center gap-2">
+                          <Eye className="w-5 h-5 text-cyan-600" />
+                          المقارنة البصرية
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                          {valueRankings.map((r, idx) => {
+                            const dev = feeDeviations.consultants[r.id];
+                            const maxValueScore = valueRankings[0]?.valueScore || 1;
+                            const barWidth = (r.valueScore / maxValueScore) * 100;
+                            return (
+                              <div key={r.id} className={`bg-white p-4 rounded-2xl border-2 shadow-md transition-all hover:shadow-lg ${
+                                idx === 0 ? 'border-cyan-400 ring-2 ring-cyan-200' : 'border-slate-200'
+                              }`}>
+                                <div className="flex items-center justify-between mb-3">
+                                  <div className="flex items-center gap-2">
+                                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${
+                                      idx === 0 ? 'bg-cyan-500 text-white' : 'bg-slate-200 text-slate-600'
+                                    }`}>{idx + 1}</div>
+                                    <h5 className="font-bold text-slate-800 text-sm">{r.name}</h5>
+                                  </div>
+                                  {dev?.flag && (
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                                      dev.zone === 'extreme_high' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
+                                    }`}>{dev.flag}</span>
+                                  )}
+                                </div>
+                                {/* Value Score Bar */}
+                                <div className="mb-3">
+                                  <div className="flex justify-between text-xs mb-1">
+                                    <span className="text-slate-500">Value Score</span>
+                                    <span className="font-bold text-cyan-700">{r.valueScore.toFixed(1)}</span>
+                                  </div>
+                                  <div className="w-full bg-slate-100 rounded-full h-3">
+                                    <div className="bg-gradient-to-r from-cyan-500 to-blue-500 h-3 rounded-full transition-all duration-500" style={{ width: `${barWidth}%` }} />
+                                  </div>
+                                </div>
+                                {/* Breakdown */}
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                  <div className="bg-blue-50 p-2 rounded-lg text-center">
+                                    <p className="text-blue-500 font-medium">فني</p>
+                                    <p className="text-blue-800 font-bold text-sm">{r.technicalScore.toFixed(1)}</p>
+                                    <p className="text-blue-400 text-[10px]">× {technicalWeight}%</p>
+                                  </div>
+                                  <div className="bg-emerald-50 p-2 rounded-lg text-center">
+                                    <p className="text-emerald-500 font-medium">مالي معدل</p>
+                                    <p className="text-emerald-800 font-bold text-sm">{r.adjustedFinancialScore.toFixed(1)}</p>
+                                    <p className="text-emerald-400 text-[10px]">× {financialWeight}%</p>
+                                  </div>
+                                </div>
+                                <div className="mt-2 pt-2 border-t border-slate-100 flex justify-between text-xs text-slate-500">
+                                  <span>الأتعاب: {r.totalFee.toLocaleString()} AED</span>
+                                  {r.penalty > 0 && <span className="text-red-500 font-bold">عقوبة: −{r.penalty}</span>}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Trade-off Analysis */}
+                        {valueRankings.length >= 2 && (
+                          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-5 rounded-xl border border-indigo-200">
+                            <h4 className="text-sm font-bold text-indigo-800 mb-3 flex items-center gap-2">
+                              <Info className="w-4 h-4" />
+                              تحليل المقايضات
+                            </h4>
+                            <div className="space-y-3 text-sm text-indigo-700">
+                              {(() => {
+                                const techBest = [...valueRankings].sort((a, b) => b.technicalScore - a.technicalScore)[0];
+                                const feeBest = [...valueRankings].sort((a, b) => a.totalFee - b.totalFee)[0];
+                                const valueBest = valueRankings[0];
+                                const insights: string[] = [];
+
+                                if (techBest.id === feeBest.id) {
+                                  insights.push(`✅ ${techBest.name} هو الأعلى فنياً والأقل تكلفة — لا مقايضة مطلوبة.`);
+                                } else {
+                                  const techDiff = techBest.technicalScore - feeBest.technicalScore;
+                                  const feeDiff = techBest.totalFee - feeBest.totalFee;
+                                  insights.push(`📊 الأعلى فنياً: ${techBest.name} (${techBest.technicalScore.toFixed(1)}) — الأقل تكلفة: ${feeBest.name} (${feeBest.totalFee.toLocaleString()} AED)`);
+                                  insights.push(`⚖️ فرق الجودة: ${techDiff.toFixed(1)} نقطة — فرق التكلفة: ${Math.abs(feeDiff).toLocaleString()} AED`);
+                                  if (techDiff > 5 && feeDiff > 0) {
+                                    insights.push(`💡 الفارق الفني (${techDiff.toFixed(1)} نقطة) ملحوظ. اختيار الأقل تكلفة يعني التنازل عن جودة واضحة.`);
+                                  } else if (techDiff <= 2 && feeDiff > 0) {
+                                    insights.push(`💡 الفارق الفني ضئيل (${techDiff.toFixed(1)} نقطة). الأقل تكلفة قد يكون خياراً عملياً.`);
+                                  }
+                                }
+
+                                if (valueBest.id !== techBest.id) {
+                                  insights.push(`📈 تحليل القيمة يرتب ${valueBest.name} أولاً بينما الأعلى فنياً هو ${techBest.name}. هذا يعني أن الميزة المالية لـ ${valueBest.name} تعوض الفارق الفني.`);
+                                }
+
+                                // Check for extreme deviations
+                                valueRankings.forEach(r => {
+                                  const dev = feeDeviations.consultants[r.id];
+                                  if (dev?.zone === 'extreme_high') {
+                                    insights.push(`⚠️ ${r.name}: أتعاب مرتفعة جداً (+${dev.deviation}%). يجب التفاوض قبل الاعتماد.`);
+                                  }
+                                  if (dev?.zone === 'extreme_low') {
+                                    insights.push(`⚠️ ${r.name}: أتعاب منخفضة جداً (${dev.deviation}%). يجب التحقق من شمولية نطاق العمل.`);
+                                  }
+                                });
+
+                                return insights.map((insight, i) => (
+                                  <p key={i} className="leading-relaxed">{insight}</p>
+                                ));
+                              })()}
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </CardContent>
                 </Card>

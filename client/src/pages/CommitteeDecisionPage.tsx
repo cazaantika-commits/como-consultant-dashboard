@@ -22,8 +22,8 @@ import { Link } from "wouter";
 const FEE_ZONES = {
   EXTREME_LOW: { label: "خطر رسوم منخفضة", color: "text-blue-600 bg-blue-50 border-blue-200", icon: TrendingDown, penalty: 0, flag: "Low Fee Risk" },
   NORMAL: { label: "نطاق طبيعي", color: "text-green-600 bg-green-50 border-green-200", icon: CheckCircle2, penalty: 0, flag: null },
-  MODERATE_HIGH: { label: "انحراف معتدل", color: "text-amber-600 bg-amber-50 border-amber-200", icon: TrendingUp, penalty: 0.05, flag: null },
-  EXTREME_HIGH: { label: "خطر تكلفة عالية", color: "text-red-600 bg-red-50 border-red-200", icon: AlertTriangle, penalty: 0.15, flag: "High Cost Risk" },
+  MODERATE_HIGH: { label: "انحراف معتدل", color: "text-amber-600 bg-amber-50 border-amber-200", icon: TrendingUp, penalty: 7, flag: null },
+  EXTREME_HIGH: { label: "خطر تكلفة عالية", color: "text-red-600 bg-red-50 border-red-200", icon: AlertTriangle, penalty: 15, flag: "High Cost Risk" },
 } as const;
 
 type FeeZoneKey = keyof typeof FEE_ZONES;
@@ -165,9 +165,7 @@ export default function CommitteeDecisionPage() {
       const avgFee = feeDeviation?.averageFee || 0;
       const feeZoneInfo = calculateFeeZone(fee, avgFee);
 
-      // Value score (technical adjusted by fee zone penalty)
       const feeZoneDef = FEE_ZONES[feeZoneInfo.zone];
-      const valueScore = technicalScore * (1 - feeZoneDef.penalty);
 
       return {
         consultantId: c.consultantId,
@@ -176,11 +174,36 @@ export default function CommitteeDecisionPage() {
         fee,
         feeZone: feeZoneInfo.zone,
         feeDeviation: Math.round(feeZoneInfo.deviation * 10) / 10,
-        valueScore: Math.round(valueScore * 10) / 10,
+        penalty: feeZoneDef.penalty,
         flag: feeZoneDef.flag,
       };
     }).sort((a: any, b: any) => b.technicalScore - a.technicalScore);
   }, [consultants, scores, fees, criteria, feeDeviation]);
+
+  // Calculate Value Scores with correct formula
+  const valueRankings = useMemo(() => {
+    if (!rankings.length) return [];
+    const feesWithValues = rankings.filter(r => r.fee > 0);
+    const lowestFee = feesWithValues.length > 0 ? Math.min(...feesWithValues.map(r => r.fee)) : 0;
+    const T_WEIGHT = 65; // Technical weight %
+    const F_WEIGHT = 35; // Financial weight %
+
+    return rankings.map(r => {
+      // Financial Score = (Lowest Fee / Consultant Fee) × 100
+      const financialScore = r.fee > 0 && lowestFee > 0 ? (lowestFee / r.fee) * 100 : 0;
+      // Adjusted Financial Score = Financial Score - Penalty (points)
+      const adjustedFinancialScore = Math.max(0, financialScore - r.penalty);
+      // Value Score = (Technical × T%) + (Adjusted Financial × F%)
+      const valueScore = (r.technicalScore * T_WEIGHT / 100) + (adjustedFinancialScore * F_WEIGHT / 100);
+
+      return {
+        ...r,
+        financialScore: Math.round(financialScore * 10) / 10,
+        adjustedFinancialScore: Math.round(adjustedFinancialScore * 10) / 10,
+        valueScore: Math.round(valueScore * 10) / 10,
+      };
+    }).sort((a, b) => b.valueScore - a.valueScore);
+  }, [rankings]);
 
   // Load existing decision data
   useMemo(() => {
@@ -429,7 +452,7 @@ export default function CommitteeDecisionPage() {
                           </div>
                           {zone.penalty > 0 && (
                             <Badge variant="outline" className="text-xs">
-                              خصم قيمة: {zone.penalty * 100}%
+                              عقوبة: −{zone.penalty} نقطة
                             </Badge>
                           )}
                         </div>
@@ -450,11 +473,11 @@ export default function CommitteeDecisionPage() {
                       </div>
                       <div className="flex items-center gap-2 p-2 rounded bg-amber-50 border border-amber-200">
                         <TrendingUp className="h-3 w-3 text-amber-600" />
-                        <span>انحراف معتدل (+15-30%): خصم 5%</span>
+                        <span>انحراف معتدل (+15-30%): عقوبة −7 نقاط</span>
                       </div>
                       <div className="flex items-center gap-2 p-2 rounded bg-red-50 border border-red-200">
                         <AlertTriangle className="h-3 w-3 text-red-600" />
-                        <span>تكلفة عالية (+30%+): خصم 15%</span>
+                        <span>تكلفة عالية (+30%+): عقوبة −15 نقطة</span>
                       </div>
                       <div className="flex items-center gap-2 p-2 rounded bg-blue-50 border border-blue-200">
                         <TrendingDown className="h-3 w-3 text-blue-600" />
@@ -470,16 +493,18 @@ export default function CommitteeDecisionPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Target className="h-5 w-5 text-emerald-500" />
-                    تصنيف القيمة (فني + تحليل الأتعاب)
+                    تصنيف القيمة (مرجعي فقط)
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    يجمع بين التقييم الفني وتحليل انحراف الأتعاب. هذا التصنيف مرجعي فقط ولا يلزم اللجنة.
-                  </p>
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+                    <p className="text-xs text-amber-700">
+                      <span className="font-bold">الصيغة:</span> Value Score = (فني × 65%) + (مالي معدل × 35%) — هذا التصنيف مرجعي فقط ولا يلزم اللجنة.
+                    </p>
+                  </div>
                   <div className="space-y-3">
-                    {[...rankings].sort((a, b) => b.valueScore - a.valueScore).map((r, idx) => (
-                      <div key={r.consultantId} className="flex items-center gap-4 p-3 rounded-lg border bg-white">
+                    {valueRankings.map((r, idx) => (
+                      <div key={r.consultantId} className="flex items-center gap-4 p-4 rounded-lg border bg-white">
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
                           idx === 0 ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground"
                         }`}>
@@ -487,6 +512,11 @@ export default function CommitteeDecisionPage() {
                         </div>
                         <div className="flex-1">
                           <p className="font-semibold">{r.consultantName}</p>
+                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                            <span>مالي: {r.financialScore}</span>
+                            {r.penalty > 0 && <span className="text-red-500">عقوبة: −{r.penalty}</span>}
+                            <span>معدل: {r.adjustedFinancialScore}</span>
+                          </div>
                         </div>
                         <div className="flex items-center gap-6 text-sm">
                           <div>
@@ -495,7 +525,7 @@ export default function CommitteeDecisionPage() {
                           </div>
                           <div>
                             <span className="text-muted-foreground">قيمة: </span>
-                            <span className="font-bold text-lg text-emerald-600">{r.valueScore}%</span>
+                            <span className="font-bold text-lg text-emerald-600">{r.valueScore}</span>
                           </div>
                         </div>
                       </div>
