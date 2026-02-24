@@ -34,6 +34,10 @@ import {
   BookOpen,
   Mail,
   Mic,
+  CalendarPlus,
+  CheckCircle2,
+  Loader2,
+  X,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { AgentChatBox, AgentType } from "@/components/AgentChatBox";
@@ -66,16 +70,144 @@ function ColorIcon({ children, bg, shadow }: { children: React.ReactNode; bg: st
   );
 }
 
+/* Quick Action Button */
+function QuickActionButton({
+  icon: Icon,
+  label,
+  color,
+  borderColor,
+  isLoading,
+  onClick,
+}: {
+  icon: any;
+  label: string;
+  color: string;
+  borderColor: string;
+  isLoading: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={isLoading}
+      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all duration-200 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-wait ${color} ${borderColor}`}
+    >
+      {isLoading ? (
+        <Loader2 className="w-4 h-4 animate-spin" />
+      ) : (
+        <Icon className="w-4 h-4" />
+      )}
+      {label}
+    </button>
+  );
+}
+
+/* Quick Action Result Panel */
+function QuickActionResult({
+  title,
+  content,
+  onClose,
+}: {
+  title: string;
+  content: string;
+  onClose: () => void;
+}) {
+  return (
+    <div className="mt-6 bg-white dark:bg-card rounded-2xl border border-amber-200/60 dark:border-amber-800/30 shadow-lg overflow-hidden animate-in slide-in-from-top-2 duration-300">
+      <div className="flex items-center justify-between px-5 py-3 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 border-b border-amber-200/40">
+        <div className="flex items-center gap-2">
+          <img src={SALWA_AVATAR_URL} alt="سلوى" className="w-7 h-7 rounded-full ring-2 ring-amber-400/50" />
+          <span className="font-bold text-sm text-foreground">{title}</span>
+        </div>
+        <button onClick={onClose} className="p-1 rounded-lg hover:bg-amber-200/30 transition-colors">
+          <X className="w-4 h-4 text-muted-foreground" />
+        </button>
+      </div>
+      <div className="p-5 text-sm text-foreground leading-relaxed whitespace-pre-wrap max-h-[400px] overflow-y-auto" dir="rtl">
+        {content}
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const { user, loading, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const [activeAgent, setActiveAgent] = useState<AgentType | null>(null);
+  const [quickActionLoading, setQuickActionLoading] = useState<string | null>(null);
+  const [quickActionResult, setQuickActionResult] = useState<{ title: string; content: string } | null>(null);
   const { data: agentsList = [] } = trpc.agents.list.useQuery(undefined, {
     enabled: isAuthenticated,
   });
+  const chatMutation = trpc.agents.chat.useMutation();
 
   const coordinator = agentsList.find((a: any) => a.isCoordinator === 1);
   const teamAgents = agentsList.filter((a: any) => a.isCoordinator !== 1);
+
+  const executeQuickAction = async (actionId: string, message: string, title: string) => {
+    setQuickActionLoading(actionId);
+    setQuickActionResult(null);
+    try {
+      const result = await chatMutation.mutateAsync({
+        agent: "salwa",
+        message,
+        conversationHistory: [],
+      });
+      setQuickActionResult({ title, content: result.text });
+    } catch (err: any) {
+      setQuickActionResult({ title: "خطأ", content: `حدث خطأ: ${err.message || "حاول مرة أخرى"}` });
+    } finally {
+      setQuickActionLoading(null);
+    }
+  };
+
+  const QUICK_ACTIONS = [
+    {
+      id: "check-email",
+      icon: Mail,
+      label: "شيكي على الإيميل",
+      color: "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400",
+      borderColor: "border-blue-200 dark:border-blue-800",
+      message: "شيكي على الإيميل",
+      resultTitle: "📧 فحص الإيميل",
+    },
+    {
+      id: "task-summary",
+      icon: FileText,
+      label: "ملخص المهام",
+      color: "bg-cyan-50 text-cyan-700 dark:bg-cyan-950/30 dark:text-cyan-400",
+      borderColor: "border-cyan-200 dark:border-cyan-800",
+      message: "لخصي لي وضع المهام الحالية",
+      resultTitle: "📝 ملخص المهام",
+    },
+    {
+      id: "agent-tasks-summary",
+      icon: Bot,
+      label: "ملخص تكليفات الوكلاء",
+      color: "bg-purple-50 text-purple-700 dark:bg-purple-950/30 dark:text-purple-400",
+      borderColor: "border-purple-200 dark:border-purple-800",
+      message: "لخصي لي وضع مهام وتكليفات الوكلاء",
+      resultTitle: "🤖 ملخص تكليفات الوكلاء",
+    },
+    {
+      id: "schedule-meeting",
+      icon: CalendarPlus,
+      label: "حجز موعد",
+      color: "bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400",
+      borderColor: "border-green-200 dark:border-green-800",
+      message: "أريد حجز موعد اجتماع عبر Google Calendar",
+      resultTitle: "📅 حجز موعد",
+    },
+    {
+      id: "drive-status",
+      icon: Archive,
+      label: "وضع ملفات Drive",
+      color: "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400",
+      borderColor: "border-amber-200 dark:border-amber-800",
+      message: "شو وضع ملفات Drive؟ لخصي لي آخر الملفات",
+      resultTitle: "📂 ملفات Drive",
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
@@ -125,90 +257,6 @@ export default function Home() {
       </header>
 
       <main>
-        {/* ══════════════════════════════════════════════════════════════ */}
-        {/* ── SALWA - Prominent Section at Top ── */}
-        {/* ══════════════════════════════════════════════════════════════ */}
-        {isAuthenticated && (
-          <section className="relative py-10 lg:py-14 overflow-hidden">
-            {/* Warm background blobs */}
-            <div className="absolute inset-0 pattern-overlay opacity-30" />
-            <div className="absolute top-0 right-1/4 w-[400px] h-[400px] rounded-full bg-amber-500/8 blur-[100px]" />
-            <div className="absolute bottom-0 left-1/3 w-[300px] h-[300px] rounded-full bg-orange-400/6 blur-[80px]" />
-
-            <div className="relative max-w-5xl mx-auto px-6">
-              <button
-                onClick={() => setActiveAgent("salwa" as AgentType)}
-                className="w-full cursor-pointer group"
-              >
-                <div className="relative bg-gradient-to-br from-white to-amber-50/50 dark:from-card dark:to-amber-950/10 rounded-3xl border border-amber-200/60 dark:border-amber-800/30 shadow-xl shadow-amber-500/10 p-8 lg:p-10 overflow-hidden transition-all duration-500 hover:shadow-2xl hover:shadow-amber-500/15 hover:border-amber-300/80">
-                  {/* Gold accent bar at top */}
-                  <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-400" />
-                  
-                  {/* Decorative corner elements */}
-                  <div className="absolute top-4 left-4 w-16 h-16 border-t-2 border-l-2 border-amber-300/30 rounded-tl-2xl" />
-                  <div className="absolute bottom-4 right-4 w-16 h-16 border-b-2 border-r-2 border-amber-300/30 rounded-br-2xl" />
-
-                  <div className="flex flex-col lg:flex-row items-center gap-8">
-                    {/* Salwa's Large Avatar */}
-                    <div className="relative shrink-0">
-                      <div className="w-40 h-40 lg:w-48 lg:h-48 rounded-full overflow-hidden ring-[5px] ring-amber-400/80 ring-offset-4 ring-offset-background shadow-2xl shadow-amber-500/20 transition-all duration-500 group-hover:scale-105 group-hover:ring-amber-500">
-                        <img
-                          src={SALWA_AVATAR_URL}
-                          alt="سلوى"
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      {/* Online indicator */}
-                      <span className="absolute bottom-2 right-2 w-6 h-6 bg-emerald-500 rounded-full border-4 border-white dark:border-card shadow-lg">
-                        <span className="absolute inset-0 w-full h-full rounded-full bg-emerald-500 animate-ping opacity-40" />
-                      </span>
-                      {/* Crown badge */}
-                      <span className="absolute -top-2 right-1/2 translate-x-1/2 text-3xl drop-shadow-lg">👑</span>
-                    </div>
-
-                    {/* Salwa's Info */}
-                    <div className="flex-1 text-center lg:text-right">
-                      <div className="flex items-center justify-center lg:justify-start gap-3 mb-3 flex-wrap">
-                        <h2 className="text-3xl lg:text-4xl font-extrabold text-foreground">سلوى</h2>
-                        <span className="text-sm px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500/15 to-yellow-500/15 text-amber-700 dark:text-amber-400 font-bold border border-amber-300/40">
-                          المنسقة الرئيسية
-                        </span>
-                      </div>
-                      <p className="text-lg text-muted-foreground leading-relaxed mb-4 max-w-xl">
-                        المساعدة التنفيذية الذكية — تدير فريق الوكلاء، تفحص البريد الإلكتروني، تنسق المهام، وتتابع كل شيء نيابة عنك
-                      </p>
-                      
-                      {/* Capabilities */}
-                      <div className="flex flex-wrap gap-2 justify-center lg:justify-start mb-5">
-                        {[
-                          { icon: Mail, label: "فحص وإدارة الإيميل", color: "bg-blue-50 text-blue-700 border-blue-200" },
-                          { icon: Archive, label: "أرشفة على Drive", color: "bg-green-50 text-green-700 border-green-200" },
-                          { icon: FileText, label: "تحليل المستندات", color: "bg-purple-50 text-purple-700 border-purple-200" },
-                          { icon: Users, label: "تنسيق الفريق", color: "bg-orange-50 text-orange-700 border-orange-200" },
-                          { icon: Mic, label: "صوتي", color: "bg-pink-50 text-pink-700 border-pink-200" },
-                          { icon: Send, label: "تيليجرام", color: "bg-cyan-50 text-cyan-700 border-cyan-200" },
-                        ].map((cap, idx) => (
-                          <span key={idx} className={`text-xs px-3 py-1.5 rounded-full border font-medium flex items-center gap-1.5 ${cap.color}`}>
-                            <cap.icon className="w-3.5 h-3.5" />
-                            {cap.label}
-                          </span>
-                        ))}
-                      </div>
-
-                      {/* CTA */}
-                      <div className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold shadow-lg shadow-amber-500/25 transition-all duration-300 group-hover:shadow-xl group-hover:shadow-amber-500/35 group-hover:from-amber-600 group-hover:to-amber-700">
-                        <MessageSquare className="w-5 h-5" />
-                        تحدث مع سلوى
-                        <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </button>
-            </div>
-          </section>
-        )}
-
         {/* ── Hero Section (for non-authenticated) ── */}
         {!isAuthenticated && (
           <section className="relative py-20 lg:py-28 overflow-hidden">
@@ -219,7 +267,7 @@ export default function Home() {
 
             <div className="relative max-w-7xl mx-auto px-6">
               <div className="max-w-3xl mx-auto text-center">
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-amber-500/10 to-stone-500/10 border border-amber-500/20 text-primary text-xs font-medium mb-6 fade-in">
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-sm font-medium mb-6">
                   <span className="relative flex h-2.5 w-2.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
@@ -326,6 +374,84 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {/* ══════════════════════════════════════════════════════════════ */}
+        {/* ── SALWA - Below Capabilities with Quick Actions ── */}
+        {/* ══════════════════════════════════════════════════════════════ */}
+        {isAuthenticated && (
+          <section className="py-12 border-t border-border/50">
+            <div className="max-w-5xl mx-auto px-6">
+              <div className="relative bg-gradient-to-br from-white to-amber-50/50 dark:from-card dark:to-amber-950/10 rounded-3xl border border-amber-200/60 dark:border-amber-800/30 shadow-xl shadow-amber-500/10 p-8 lg:p-10 overflow-hidden">
+                {/* Gold accent bar at top */}
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-400" />
+
+                <div className="flex flex-col lg:flex-row items-center gap-8">
+                  {/* Salwa's Avatar - no crown */}
+                  <div className="relative shrink-0">
+                    <div className="w-32 h-32 lg:w-36 lg:h-36 rounded-full overflow-hidden ring-4 ring-amber-400/60 ring-offset-4 ring-offset-background shadow-2xl shadow-amber-500/20">
+                      <img
+                        src={SALWA_AVATAR_URL}
+                        alt="سلوى"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    {/* Online indicator */}
+                    <span className="absolute bottom-1 right-1 w-5 h-5 bg-emerald-500 rounded-full border-3 border-white dark:border-card shadow-lg">
+                      <span className="absolute inset-0 w-full h-full rounded-full bg-emerald-500 animate-ping opacity-40" />
+                    </span>
+                  </div>
+
+                  {/* Salwa's Info & Quick Actions */}
+                  <div className="flex-1 text-center lg:text-right">
+                    <div className="flex items-center justify-center lg:justify-start gap-3 mb-2 flex-wrap">
+                      <h2 className="text-2xl lg:text-3xl font-extrabold text-foreground">سلوى</h2>
+                      <span className="text-xs px-3 py-1 rounded-full bg-gradient-to-r from-amber-500/15 to-yellow-500/15 text-amber-700 dark:text-amber-400 font-bold border border-amber-300/40">
+                        المنسقة الرئيسية
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed mb-5 max-w-xl">
+                      المساعدة التنفيذية الذكية — نفذي أوامر سريعة أو تحدث معها مباشرة
+                    </p>
+
+                    {/* Quick Action Buttons - Real commands */}
+                    <div className="flex flex-wrap gap-2 justify-center lg:justify-start mb-5">
+                      {QUICK_ACTIONS.map((action) => (
+                        <QuickActionButton
+                          key={action.id}
+                          icon={action.icon}
+                          label={action.label}
+                          color={action.color}
+                          borderColor={action.borderColor}
+                          isLoading={quickActionLoading === action.id}
+                          onClick={() => executeQuickAction(action.id, action.message, action.resultTitle)}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Chat with Salwa button */}
+                    <button
+                      onClick={() => setActiveAgent("salwa" as AgentType)}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold shadow-lg shadow-amber-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-amber-500/35 hover:from-amber-600 hover:to-amber-700 text-sm"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      تحدث مع سلوى
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Quick Action Result */}
+                {quickActionResult && (
+                  <QuickActionResult
+                    title={quickActionResult.title}
+                    content={quickActionResult.content}
+                    onClose={() => setQuickActionResult(null)}
+                  />
+                )}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* ── Quick Navigation (Authenticated) ── */}
         {isAuthenticated && (
