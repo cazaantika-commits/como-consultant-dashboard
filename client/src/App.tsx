@@ -34,6 +34,7 @@ import GoogleConnectPage from "./pages/GoogleConnectPage";
 import ProjectManagementPage from "./pages/ProjectManagementPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
 import ContractsRegistryPage from "./pages/ContractsRegistryPage";
+import FactSheetPage from "./pages/FactSheetPage";
 
 function Router() {
   return (
@@ -67,6 +68,7 @@ function Router() {
       <Route path="/project-management" component={ProjectManagementPage} />
       <Route path="/project/:id" component={ProjectDetailPage} />
       <Route path="/contracts" component={ContractsRegistryPage} />
+      <Route path="/fact-sheet" component={FactSheetPage} />
       <Route path="/meetings/:id" component={MeetingRoomPage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
