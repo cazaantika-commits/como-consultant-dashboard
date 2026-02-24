@@ -980,52 +980,73 @@ async function getPlatformContext(agent: AgentType): Promise<string> {
 export async function handleAgentChat(req: AgentChatRequest): Promise<{ text: string; model: string }> {
   const { agent, message, conversationHistory } = req;
 
-  // Special handling for Salwa's email commands - direct IMAP access (no Telegram dependency)
+  // Special handling for Salwa's simple email check - direct IMAP access (no Telegram dependency)
+  // ONLY intercept simple "check email" requests. Any specific request (read content, reply, download, etc.) goes to AI with tools.
   if (agent === "salwa") {
     const lowerMsg = message.toLowerCase();
-    if (lowerMsg.includes("ايميل") || lowerMsg.includes("إيميل") || lowerMsg.includes("بريد") || lowerMsg.includes("رسائل") || lowerMsg.includes("email") || lowerMsg.includes("اميل") || lowerMsg.includes("إميل")) {
-      try {
-        // Fetch emails directly via IMAP - no Telegram bot dependency
-        const emails = await fetchEmailsSince(48);
-        if (emails.length === 0) {
-          return { text: "✅ فحصت الإيميل الحين يا عبدالرحمن! ما فيه رسائل في آخر 48 ساعة. إن شاء الله أول ما يوصل شي بخبرك 📧", model: "GPT-4o" };
+    const hasEmailKeyword = lowerMsg.includes("ايميل") || lowerMsg.includes("إيميل") || lowerMsg.includes("بريد") || lowerMsg.includes("رسائل") || lowerMsg.includes("email") || lowerMsg.includes("اميل") || lowerMsg.includes("إميل");
+    
+    // Detect if this is a SPECIFIC email request (read content, reply, download, forward, etc.)
+    const isSpecificRequest = lowerMsg.includes("محتوى") || lowerMsg.includes("تفاصيل") || lowerMsg.includes("اقر") || lowerMsg.includes("اقرأ") || lowerMsg.includes("اقرئي")
+      || lowerMsg.includes("رد") || lowerMsg.includes("ردي") || lowerMsg.includes("reply") || lowerMsg.includes("ارسل") || lowerMsg.includes("أرسل") || lowerMsg.includes("ارسلي")
+      || lowerMsg.includes("نزل") || lowerMsg.includes("نزلي") || lowerMsg.includes("download") || lowerMsg.includes("مرفق") || lowerMsg.includes("حمل") || lowerMsg.includes("حملي")
+      || lowerMsg.includes("تبع") || lowerMsg.includes("حق") || lowerMsg.includes("من ") || lowerMsg.includes("عن ")
+      || lowerMsg.includes("forward") || lowerMsg.includes("وجه") || lowerMsg.includes("وجهي") || lowerMsg.includes("حول") || lowerMsg.includes("حولي")
+      || lowerMsg.includes("شو ") || lowerMsg.includes("ايش") || lowerMsg.includes("وش ") || lowerMsg.includes("ماذا") || lowerMsg.includes("what")
+      || lowerMsg.includes("كميل") || lowerMsg.includes("kamil") || lowerMsg.includes("colliers") || lowerMsg.includes("glass")
+      || /uid|#\d/.test(lowerMsg);
+    
+    // Only intercept simple check/list requests - everything else goes to AI with tools
+    if (hasEmailKeyword && !isSpecificRequest) {
+      // Simple patterns: "شيكي الإيميل", "فحص البريد", "شوفي الإيميل", "check email"
+      const isSimpleCheck = lowerMsg.includes("شيك") || lowerMsg.includes("فحص") || lowerMsg.includes("شوف") || lowerMsg.includes("check")
+        || lowerMsg.includes("فتح") || lowerMsg.includes("افتح") || lowerMsg.includes("نشيك") || lowerMsg.includes("تشيك")
+        || (hasEmailKeyword && message.trim().length < 30); // Short messages with email keyword = simple check
+      
+      if (isSimpleCheck) {
+        try {
+          // Fetch emails directly via IMAP - no Telegram bot dependency
+          const emails = await fetchEmailsSince(48);
+          if (emails.length === 0) {
+            return { text: "✅ فحصت الإيميل الحين يا عبدالرحمن! ما فيه رسائل في آخر 48 ساعة. إن شاء الله أول ما يوصل شي بخبرك 📧", model: "GPT-4o" };
+          }
+          
+          const readCount = emails.filter(e => e.isRead).length;
+          const unreadCount = emails.filter(e => !e.isRead).length;
+          const withAttachments = emails.filter(e => e.attachments.length > 0).length;
+          
+          let emailSummary = `📧 فحصت الإيميل! وجدت ${emails.length} رسالة في آخر 48 ساعة\n\n`;
+          emailSummary += `📊 **الإحصائيات:**\n`;
+          emailSummary += `• غير مقروء: ${unreadCount} 🔴\n`;
+          emailSummary += `• مقروء: ${readCount} ✅\n`;
+          emailSummary += `• مع مرفقات: ${withAttachments} 📎\n\n`;
+          emailSummary += `📋 **آخر الرسائل:**\n`;
+          
+          for (const email of emails.slice(0, 15)) {
+            const readIcon = email.isRead ? "✅" : "🔴";
+            const attachIcon = email.attachments.length > 0 ? " 📎" : "";
+            const dateStr = email.date.toLocaleDateString("ar-AE", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+            const subjectShort = email.subject.length > 50 ? email.subject.substring(0, 50) + "..." : email.subject;
+            emailSummary += `${readIcon} **${email.fromName}** — ${subjectShort}${attachIcon} (UID: ${email.uid}) (${dateStr})\n`;
+          }
+          
+          if (emails.length > 15) {
+            emailSummary += `\n... و ${emails.length - 15} رسالة أخرى`;
+          }
+          
+          emailSummary += `\n\n💡 إذا تبي تفاصيل أو محتوى رسالة معينة، قولي اسم المرسل أو الموضوع وأقرأها لك بالتفصيل إن شاء الله 💪`;
+          
+          // Also try to notify via Telegram if available
+          try { await checkLast48HoursEmails(); } catch (_) { /* Telegram not available, that's fine */ }
+          
+          return { text: emailSummary, model: "GPT-4o" };
+        } catch (error: any) {
+          console.error("[AgentChat] Salwa email check error:", error.message);
+          // If IMAP fails, fall through to AI with tools
         }
-        
-        const readCount = emails.filter(e => e.isRead).length;
-        const unreadCount = emails.filter(e => !e.isRead).length;
-        const withAttachments = emails.filter(e => e.attachments.length > 0).length;
-        
-        let emailSummary = `📧 فحصت الإيميل! وجدت ${emails.length} رسالة في آخر 48 ساعة\n\n`;
-        emailSummary += `📊 **الإحصائيات:**\n`;
-        emailSummary += `• غير مقروء: ${unreadCount} 🔴\n`;
-        emailSummary += `• مقروء: ${readCount} ✅\n`;
-        emailSummary += `• مع مرفقات: ${withAttachments} 📎\n\n`;
-        emailSummary += `📋 **آخر الرسائل:**\n`;
-        
-        for (const email of emails.slice(0, 15)) {
-          const readIcon = email.isRead ? "✅" : "🔴";
-          const attachIcon = email.attachments.length > 0 ? " 📎" : "";
-          const dateStr = email.date.toLocaleDateString("ar-AE", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-          const subjectShort = email.subject.length > 50 ? email.subject.substring(0, 50) + "..." : email.subject;
-          emailSummary += `${readIcon} **${email.fromName}** — ${subjectShort}${attachIcon} (${dateStr})\n`;
-        }
-        
-        if (emails.length > 15) {
-          emailSummary += `\n... و ${emails.length - 15} رسالة أخرى`;
-        }
-        
-        emailSummary += `\n\n💡 إذا تبي تفاصيل عن رسالة معينة، قولي اسم المرسل أو الموضوع وأجيبك إن شاء الله 💪`;
-        
-        // Also try to notify via Telegram if available
-        try { await checkLast48HoursEmails(); } catch (_) { /* Telegram not available, that's fine */ }
-        
-        return { text: emailSummary, model: "GPT-4o" };
-      } catch (error: any) {
-        console.error("[AgentChat] Salwa email check error:", error.message);
-        // If IMAP fails, provide a helpful error message
-        return { text: `⚠️ واجهت مشكلة في الاتصال بالإيميل: ${error.message}\n\nممكن يكون السيرفر مشغول، جرب مرة ثانية بعد شوي يا عبدالرحمن 🙏`, model: "GPT-4o" };
       }
     }
+    // All specific email requests (read content, reply, download, etc.) fall through to AI with tools below
   }
 
   // Get platform context
