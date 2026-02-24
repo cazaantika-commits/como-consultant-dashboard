@@ -24,8 +24,15 @@ import {
   PieChart,
   Loader2,
   ChevronLeft,
+  Sparkles,
+  Copy,
+  Brain,
+  Globe,
+  FolderOpen,
 } from "lucide-react";
+import { Streamdown } from "streamdown";
 import { useLocation } from "wouter";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Helper to format numbers with commas
 function fmt(n: number | null | undefined): string {
@@ -174,11 +181,17 @@ export default function FeasibilityStudyPage() {
   const { user, loading, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const [selectedStudyId, setSelectedStudyId] = useState<number | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("all");
   const [activeTab, setActiveTab] = useState("info");
 
   // Form state
   const [form, setForm] = useState<Record<string, any>>({});
   const [isDirty, setIsDirty] = useState(false);
+
+  // Projects query for linking
+  const projectsQuery = trpc.projects.list.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
 
   // Queries
   const studiesQuery = trpc.feasibility2.list.useQuery(undefined, {
@@ -187,6 +200,14 @@ export default function FeasibilityStudyPage() {
   const studyQuery = trpc.feasibility2.getById.useQuery(selectedStudyId || 0, {
     enabled: !!selectedStudyId,
   });
+
+  // Filter studies by project
+  const filteredStudies = useMemo(() => {
+    const studies = studiesQuery.data || [];
+    if (selectedProjectId === "all") return studies;
+    if (selectedProjectId === "unlinked") return studies.filter((s: any) => !s.projectId);
+    return studies.filter((s: any) => s.projectId === Number(selectedProjectId));
+  }, [studiesQuery.data, selectedProjectId]);
 
   // Mutations
   const createMutation = trpc.feasibility2.create.useMutation({
@@ -215,6 +236,36 @@ export default function FeasibilityStudyPage() {
       setForm({});
       toast.success("تم حذف الدراسة");
     },
+  });
+
+  // Joelle AI Summary
+  const aiSummaryMutation = trpc.feasibility2.generateAiSummary.useMutation({
+    onSuccess: (data) => {
+      studyQuery.refetch();
+      setForm((prev: Record<string, any>) => ({ ...prev, aiSummary: data.summary }));
+      toast.success("تم إنشاء الملخص الذكي بنجاح");
+    },
+    onError: (err) => toast.error(err.message || "فشل في إنشاء الملخص"),
+  });
+
+  // Joelle Market Analysis
+  const marketAnalysisMutation = trpc.feasibility2.generateMarketAnalysis.useMutation({
+    onSuccess: (data) => {
+      studyQuery.refetch();
+      setForm((prev: Record<string, any>) => ({ ...prev, marketAnalysis: data.analysis }));
+      toast.success("تم تحليل السوق بنجاح");
+    },
+    onError: (err) => toast.error(err.message || "فشل في تحليل السوق"),
+  });
+
+  // Duplicate as scenario
+  const duplicateScenarioMutation = trpc.feasibility2.duplicateAsScenario.useMutation({
+    onSuccess: (data) => {
+      studiesQuery.refetch();
+      setSelectedStudyId(data.id);
+      toast.success("تم إنشاء السيناريو الجديد");
+    },
+    onError: () => toast.error("خطأ في إنشاء السيناريو"),
   });
 
   // Load study data into form when selected
@@ -445,35 +496,76 @@ export default function FeasibilityStudyPage() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-        {/* Study selector */}
-        <div className="flex items-center gap-3 mb-6">
-          <Label className="text-sm font-medium whitespace-nowrap">اختر الدراسة:</Label>
-          <select
-            className="flex-1 h-10 rounded-lg border border-input bg-background px-3 text-sm"
-            value={selectedStudyId || ""}
-            onChange={(e) => setSelectedStudyId(e.target.value ? Number(e.target.value) : null)}
-          >
-            <option value="">-- اختر دراسة جدوى --</option>
-            {(studiesQuery.data || []).map((s: any) => (
-              <option key={s.id} value={s.id}>
-                {s.projectName}
-              </option>
-            ))}
-          </select>
-          {selectedStudyId && (
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-10 w-10 text-destructive hover:bg-destructive/10"
-              onClick={() => {
-                if (confirm("هل أنت متأكد من حذف هذه الدراسة؟")) {
-                  deleteMutation.mutate(selectedStudyId);
-                }
+        {/* Project filter + Study selector */}
+        <div className="space-y-3 mb-6">
+          {/* Project filter */}
+          <div className="flex items-center gap-3">
+            <Label className="text-sm font-medium whitespace-nowrap flex items-center gap-1.5">
+              <FolderOpen className="w-4 h-4" />
+              فلتر حسب المشروع:
+            </Label>
+            <select
+              className="flex-1 h-10 rounded-lg border border-input bg-background px-3 text-sm"
+              value={selectedProjectId}
+              onChange={(e) => {
+                setSelectedProjectId(e.target.value);
+                setSelectedStudyId(null);
               }}
             >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          )}
+              <option value="all">كل الدراسات</option>
+              <option value="unlinked">غير مربوطة بمشروع</option>
+              {(projectsQuery.data || []).map((p: any) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Study selector */}
+          <div className="flex items-center gap-3">
+            <Label className="text-sm font-medium whitespace-nowrap">اختر الدراسة:</Label>
+            <select
+              className="flex-1 h-10 rounded-lg border border-input bg-background px-3 text-sm"
+              value={selectedStudyId || ""}
+              onChange={(e) => setSelectedStudyId(e.target.value ? Number(e.target.value) : null)}
+            >
+              <option value="">-- اختر دراسة جدوى --</option>
+              {filteredStudies.map((s: any) => (
+                <option key={s.id} value={s.id}>
+                  {s.projectName}{s.scenarioName ? ` (سيناريو: ${s.scenarioName})` : ""}
+                </option>
+              ))}
+            </select>
+            {selectedStudyId && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-xs"
+                  onClick={() => {
+                    const name = prompt("اسم السيناريو الجديد (مثل: متفائل، متشائم، متوسط):");
+                    if (name) {
+                      duplicateScenarioMutation.mutate({ studyId: selectedStudyId, scenarioName: name });
+                    }
+                  }}
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  نسخ كسيناريو
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-10 w-10 text-destructive hover:bg-destructive/10"
+                  onClick={() => {
+                    if (confirm("هل أنت متأكد من حذف هذه الدراسة؟")) {
+                      deleteMutation.mutate(selectedStudyId);
+                    }
+                  }}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </>
+            )}
+          </div>
         </div>
 
         {!selectedStudyId ? (
@@ -490,9 +582,33 @@ export default function FeasibilityStudyPage() {
           </div>
         ) : (
           <>
-            {/* Project Name Editor */}
+            {/* Project Link + Scenario */}
             <Card className="mb-4">
               <CardContent className="pt-4 pb-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">ربط بمشروع</Label>
+                    <select
+                      className="w-full h-9 rounded-lg border border-input bg-background px-3 text-sm"
+                      value={form.projectId || ""}
+                      onChange={(e) => setField("projectId", e.target.value ? Number(e.target.value) : null)}
+                    >
+                      <option value="">غير مربوطة</option>
+                      {(projectsQuery.data || []).map((p: any) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">اسم السيناريو (اختياري)</Label>
+                    <Input
+                      value={form.scenarioName || ""}
+                      onChange={(e) => setField("scenarioName", e.target.value)}
+                      placeholder="مثال: متفائل، متشائم، متوسط"
+                      className="text-sm h-9"
+                    />
+                  </div>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">المنطقة</Label>
@@ -561,6 +677,14 @@ export default function FeasibilityStudyPage() {
                 <TabsTrigger value="summary" className="gap-1.5 text-xs">
                   <PieChart className="w-3.5 h-3.5" />
                   🎯 الملخص والربحية
+                </TabsTrigger>
+                <TabsTrigger value="ai" className="gap-1.5 text-xs">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  🧠 تحليل جويل
+                </TabsTrigger>
+                <TabsTrigger value="market" className="gap-1.5 text-xs">
+                  <Globe className="w-3.5 h-3.5" />
+                  🌍 تحليل السوق
                 </TabsTrigger>
               </TabsList>
 
@@ -1067,6 +1191,96 @@ export default function FeasibilityStudyPage() {
                       </CardContent>
                     </Card>
                   </div>
+                </div>
+              </TabsContent>
+              {/* ═══ Tab 6: Joelle AI Summary ═══ */}
+              <TabsContent value="ai">
+                <div className="space-y-4">
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <SectionHeader icon={Sparkles} title="ملخص جويل الذكي" />
+                        <Button
+                          onClick={() => {
+                            if (selectedStudyId) {
+                              aiSummaryMutation.mutate(selectedStudyId);
+                            }
+                          }}
+                          disabled={aiSummaryMutation.isPending}
+                          className="gap-2"
+                        >
+                          {aiSummaryMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Brain className="w-4 h-4" />
+                          )}
+                          {aiSummaryMutation.isPending ? "جويل تحلل..." : "اطلب من جويل تحليل"}
+                        </Button>
+                      </div>
+                      {form.aiSummary ? (
+                        <div className="prose prose-sm max-w-none bg-muted/30 rounded-xl p-6 border border-border" dir="rtl">
+                          <Streamdown>{form.aiSummary}</Streamdown>
+                        </div>
+                      ) : (
+                        <div className="text-center py-12 bg-muted/20 rounded-xl border border-dashed border-border">
+                          <Brain className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
+                          <p className="text-sm text-muted-foreground">لم يتم إنشاء ملخص بعد</p>
+                          <p className="text-xs text-muted-foreground/70 mt-1">اضغط "اطلب من جويل تحليل" لإنشاء ملخص ذكي للدراسة</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
+              {/* ═══ Tab 7: Market Analysis ═══ */}
+              <TabsContent value="market">
+                <div className="space-y-4">
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <SectionHeader icon={Globe} title="تحليل السوق العقاري" />
+                        <Button
+                          onClick={() => {
+                            if (selectedStudyId && form.community) {
+                              marketAnalysisMutation.mutate({
+                                studyId: selectedStudyId,
+                                community: form.community,
+                              });
+                            } else {
+                              toast.error("يرجى تحديد المنطقة أولاً في تبويب معلومات المشروع");
+                            }
+                          }}
+                          disabled={marketAnalysisMutation.isPending}
+                          className="gap-2"
+                        >
+                          {marketAnalysisMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Globe className="w-4 h-4" />
+                          )}
+                          {marketAnalysisMutation.isPending ? "جويل تحلل السوق..." : "تحليل السوق"}
+                        </Button>
+                      </div>
+                      {form.community && (
+                        <div className="mb-4 px-3 py-2 bg-primary/5 rounded-lg">
+                          <span className="text-xs text-muted-foreground">المنطقة المستهدفة: </span>
+                          <span className="text-sm font-bold text-primary">{form.community}</span>
+                        </div>
+                      )}
+                      {form.marketAnalysis ? (
+                        <div className="prose prose-sm max-w-none bg-muted/30 rounded-xl p-6 border border-border" dir="rtl">
+                          <Streamdown>{form.marketAnalysis}</Streamdown>
+                        </div>
+                      ) : (
+                        <div className="text-center py-12 bg-muted/20 rounded-xl border border-dashed border-border">
+                          <Globe className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
+                          <p className="text-sm text-muted-foreground">لم يتم تحليل السوق بعد</p>
+                          <p className="text-xs text-muted-foreground/70 mt-1">اضغط "تحليل السوق" ليقوم جويل بتحليل أسعار ومنافسي المنطقة</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
                 </div>
               </TabsContent>
             </Tabs>

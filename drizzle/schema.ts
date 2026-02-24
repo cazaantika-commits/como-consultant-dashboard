@@ -254,6 +254,9 @@ export type InsertAgent = typeof agents.$inferInsert;
 export const feasibilityStudies = mysqlTable('feasibilityStudies', {
   id: int('id').autoincrement().primaryKey(),
   userId: int('userId').notNull().references(() => users.id),
+  projectId: int('projectId').references(() => projects.id, { onDelete: 'set null' }), // ربط بالمشروع
+  scenarioName: varchar('scenarioName', { length: 255 }), // اسم السيناريو (متفائل، متشائم، متوسط)
+  aiSummary: text('aiSummary'), // ملخص ذكي من جويل
   // Project identification
   projectName: varchar('projectName', { length: 500 }).notNull(), // المنطقة _ الوصف _ رقم القطعة
   community: varchar('community', { length: 255 }), // المنطقة
@@ -303,6 +306,10 @@ export const feasibilityStudies = mysqlTable('feasibilityStudies', {
   officesSalePrice: int('officesSalePrice'), // سعر بيع القدم² مكاتب
   // COMO profit share
   comoProfitSharePct: int('comoProfitSharePct').default(15), // حصة COMO من الربح %
+  // Market Analysis
+  marketAnalysis: text('marketAnalysis'), // تحليل السوق من جويل
+  competitorAnalysis: text('competitorAnalysis'), // تحليل المنافسين
+  priceRecommendation: text('priceRecommendation'), // توصيات سعرية
   // Notes
   notes: text('notes'),
   createdAt: timestamp('createdAt').defaultNow().notNull(),

@@ -141,6 +141,13 @@
       "when": 1771928184315,
       "tag": "0019_thin_tombstone",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "5",
+      "when": 1771933887615,
+      "tag": "0020_dry_energizer",
+      "breakpoints": true
     }
   ]
 }

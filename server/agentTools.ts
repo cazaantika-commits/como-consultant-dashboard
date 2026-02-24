@@ -154,6 +154,71 @@ export const AGENT_TOOLS = [
   {
     type: "function" as const,
     function: {
+      name: "create_feasibility_study",
+      description: "إنشاء دراسة جدوى جديدة لمشروع - تتضمن المساحات والتكاليف والإيرادات والأرباح المتوقعة",
+      parameters: {
+        type: "object",
+        properties: {
+          projectName: { type: "string", description: "اسم المشروع" },
+          community: { type: "string", description: "المنطقة/المجتمع" },
+          plotNumber: { type: "string", description: "رقم القطعة" },
+          projectDescription: { type: "string", description: "وصف المشروع" },
+          plotArea: { type: "number", description: "مساحة الأرض بالقدم المربع" },
+          plotAreaM2: { type: "number", description: "مساحة الأرض بالمتر المربع" },
+          gfaResidential: { type: "number", description: "GFA السكني بالقدم المربع" },
+          gfaRetail: { type: "number", description: "GFA التجاري بالقدم المربع" },
+          gfaOffices: { type: "number", description: "GFA المكاتب بالقدم المربع" },
+          estimatedBua: { type: "number", description: "BUA التقديري بالقدم المربع" },
+          numberOfUnits: { type: "number", description: "عدد الوحدات" },
+          landPrice: { type: "number", description: "سعر الأرض بالدرهم" },
+          constructionCostPerSqft: { type: "number", description: "تكلفة البناء لكل قدم مربع" },
+          residentialSalePrice: { type: "number", description: "سعر بيع القدم السكني" },
+          retailSalePrice: { type: "number", description: "سعر بيع القدم التجاري" },
+          officesSalePrice: { type: "number", description: "سعر بيع القدم المكتبي" },
+          notes: { type: "string", description: "ملاحظات" },
+        },
+        required: ["projectName"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "update_feasibility_study",
+      description: "تحديث دراسة جدوى موجودة - تعديل أي حقل من حقول الدراسة",
+      parameters: {
+        type: "object",
+        properties: {
+          studyId: { type: "number", description: "رقم دراسة الجدوى" },
+          projectName: { type: "string", description: "اسم المشروع" },
+          community: { type: "string", description: "المنطقة/المجتمع" },
+          plotNumber: { type: "string", description: "رقم القطعة" },
+          projectDescription: { type: "string", description: "وصف المشروع" },
+          plotArea: { type: "number", description: "مساحة الأرض بالقدم المربع" },
+          plotAreaM2: { type: "number", description: "مساحة الأرض بالمتر المربع" },
+          gfaResidential: { type: "number", description: "GFA السكني" },
+          gfaRetail: { type: "number", description: "GFA التجاري" },
+          gfaOffices: { type: "number", description: "GFA المكاتب" },
+          estimatedBua: { type: "number", description: "BUA التقديري" },
+          numberOfUnits: { type: "number", description: "عدد الوحدات" },
+          landPrice: { type: "number", description: "سعر الأرض" },
+          constructionCostPerSqft: { type: "number", description: "تكلفة البناء لكل قدم" },
+          designFeePct: { type: "number", description: "نسبة أتعاب التصميم %" },
+          supervisionFeePct: { type: "number", description: "نسبة أتعاب الإشراف %" },
+          developerFeePct: { type: "number", description: "نسبة أتعاب المطور %" },
+          residentialSalePrice: { type: "number", description: "سعر بيع القدم السكني" },
+          retailSalePrice: { type: "number", description: "سعر بيع القدم التجاري" },
+          officesSalePrice: { type: "number", description: "سعر بيع القدم المكتبي" },
+          comoProfitSharePct: { type: "number", description: "نسبة حصة كومو من الأرباح %" },
+          notes: { type: "string", description: "ملاحظات" },
+        },
+        required: ["studyId"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
       name: "list_tasks",
       description: "عرض المهام المسجلة في المنصة مع حالتها (جديدة، قيد التنفيذ، معلقة، مكتملة)",
       parameters: {
@@ -1136,6 +1201,60 @@ async function _executeToolInternal(
         });
       }
 
+      // ─── FEASIBILITY STUDY WRITE TOOLS ───
+      case "create_feasibility_study": {
+        const { projectName: fsName, ...fsData } = args;
+        if (!fsName) return JSON.stringify({ error: "يجب تحديد اسم المشروع" });
+        const insertData: Record<string, any> = { projectName: fsName, userId: userId || 1 };
+        const fsAllowedFields = [
+          'community', 'plotNumber', 'projectDescription', 'landUse',
+          'plotArea', 'plotAreaM2', 'gfaResidential', 'gfaRetail', 'gfaOffices', 'totalGfa',
+          'saleableResidentialPct', 'saleableRetailPct', 'saleableOfficesPct',
+          'estimatedBua', 'numberOfUnits', 'landPrice', 'agentCommissionLandPct',
+          'soilInvestigation', 'topographySurvey', 'authoritiesFee',
+          'constructionCostPerSqft', 'communityFee', 'designFeePct', 'supervisionFeePct',
+          'separationFeePerM2', 'contingenciesPct', 'developerFeePct',
+          'agentCommissionSalePct', 'marketingPct', 'reraOffplanFee', 'reraUnitFee',
+          'nocFee', 'escrowFee', 'bankCharges', 'surveyorFees', 'reraAuditFees', 'reraInspectionFees',
+          'residentialSalePrice', 'retailSalePrice', 'officesSalePrice',
+          'comoProfitSharePct', 'notes'
+        ];
+        for (const key of fsAllowedFields) {
+          if (fsData[key] !== undefined && fsData[key] !== null) {
+            insertData[key] = fsData[key];
+          }
+        }
+        const fsResult = await db.insert(feasibilityStudies).values(insertData);
+        return JSON.stringify({ success: true, studyId: Number(fsResult[0].insertId), message: `تم إنشاء دراسة الجدوى لمشروع ${fsName}` });
+      }
+
+      case "update_feasibility_study": {
+        const { studyId: fsUpdateId, ...fsUpdateData } = args;
+        if (!fsUpdateId) return JSON.stringify({ error: "يجب تحديد رقم دراسة الجدوى" });
+        const updateFields: Record<string, any> = {};
+        const fsUpdateAllowed = [
+          'projectName', 'community', 'plotNumber', 'projectDescription', 'landUse',
+          'plotArea', 'plotAreaM2', 'gfaResidential', 'gfaRetail', 'gfaOffices', 'totalGfa',
+          'saleableResidentialPct', 'saleableRetailPct', 'saleableOfficesPct',
+          'estimatedBua', 'numberOfUnits', 'landPrice', 'agentCommissionLandPct',
+          'soilInvestigation', 'topographySurvey', 'authoritiesFee',
+          'constructionCostPerSqft', 'communityFee', 'designFeePct', 'supervisionFeePct',
+          'separationFeePerM2', 'contingenciesPct', 'developerFeePct',
+          'agentCommissionSalePct', 'marketingPct', 'reraOffplanFee', 'reraUnitFee',
+          'nocFee', 'escrowFee', 'bankCharges', 'surveyorFees', 'reraAuditFees', 'reraInspectionFees',
+          'residentialSalePrice', 'retailSalePrice', 'officesSalePrice',
+          'comoProfitSharePct', 'notes'
+        ];
+        for (const key of fsUpdateAllowed) {
+          if (fsUpdateData[key] !== undefined) {
+            updateFields[key] = fsUpdateData[key];
+          }
+        }
+        if (Object.keys(updateFields).length === 0) return JSON.stringify({ error: "لم يتم تحديد حقول للتحديث" });
+        await db.update(feasibilityStudies).set(updateFields).where(eq(feasibilityStudies.id, fsUpdateId));
+        return JSON.stringify({ success: true, message: `تم تحديث ${Object.keys(updateFields).length} حقل في دراسة الجدوى`, updatedFields: Object.keys(updateFields) });
+      }
+
       case "list_tasks": {
         const { status } = args;
         let query = db.select().from(tasks);
@@ -2007,7 +2126,8 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "get_financial_data", "get_evaluation_scores", "get_evaluation_criteria",
     "get_feasibility_study", "get_consultant_profile", "get_committee_decision",
     "list_meetings", "get_meeting_details", "query_institutional_memory",
-    "read_drive_file_content",
+    "browse_drive", "search_drive", "read_drive_file_content",
+    "create_feasibility_study", "update_feasibility_study",
     "ask_another_agent",
   ],
   baz: [
