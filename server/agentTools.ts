@@ -22,6 +22,8 @@ import {
 } from "./googleDrive";
 import { getOAuthClientForUser } from "./googleOAuthClient";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
+import { fetchEmailsSince, fetchEmailByUID, fetchRecentEmails, sendReply } from "./emailMonitor";
+import nodemailer from "nodemailer";
 
 // ═══════════════════════════════════════════════════
 // Tool Definitions (OpenAI function calling format)
@@ -884,6 +886,70 @@ export const AGENT_TOOLS = [
       },
     },
   },
+  // ─── EMAIL TOOLS (Salwa) ───
+  {
+    type: "function" as const,
+    function: {
+      name: "check_email",
+      description: "فحص الإيميل وعرض قائمة بالرسائل الأخيرة - استخدمي هذه الأداة عندما يطلب المستخدم فحص البريد أو معرفة الرسائل الجديدة. ترجع قائمة بالإيميلات مع المرسل والموضوع والتاريخ وحالة القراءة.",
+      parameters: {
+        type: "object",
+        properties: {
+          hours: { type: "number", description: "عدد الساعات للبحث فيها (افتراضياً 48 ساعة)" },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "read_email",
+      description: "قراءة محتوى إيميل محدد بالتفصيل - استخدمي هذه الأداة عندما يطلب المستخدم تفاصيل رسالة معينة. تحتاجين رقم UID الخاص بالرسالة (تحصلين عليه من check_email).",
+      parameters: {
+        type: "object",
+        properties: {
+          uid: { type: "number", description: "رقم UID الخاص بالرسالة" },
+        },
+        required: ["uid"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "reply_email",
+      description: "إرسال رد على إيميل محدد - استخدمي هذه الأداة للرد على رسالة بريد إلكتروني. تحتاجين عنوان المرسل الأصلي والموضوع ونص الرد.",
+      parameters: {
+        type: "object",
+        properties: {
+          to: { type: "string", description: "عنوان البريد الإلكتروني للمستلم" },
+          subject: { type: "string", description: "موضوع الرسالة (سيُضاف Re: تلقائياً)" },
+          body: { type: "string", description: "نص الرد (يدعم HTML)" },
+          inReplyTo: { type: "string", description: "معرف الرسالة الأصلية (Message-ID) للربط بالمحادثة" },
+          cc: { type: "string", description: "عناوين النسخة (CC) مفصولة بفاصلة" },
+        },
+        required: ["to", "subject", "body"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "compose_email",
+      description: "كتابة وإرسال إيميل جديد - استخدمي هذه الأداة لإرسال رسالة بريد إلكتروني جديدة (ليست رداً على رسالة سابقة).",
+      parameters: {
+        type: "object",
+        properties: {
+          to: { type: "string", description: "عنوان البريد الإلكتروني للمستلم" },
+          subject: { type: "string", description: "موضوع الرسالة" },
+          body: { type: "string", description: "نص الرسالة (يدعم HTML)" },
+          cc: { type: "string", description: "عناوين النسخة (CC) مفصولة بفاصلة" },
+        },
+        required: ["to", "subject", "body"],
+      },
+    },
+  },
   // ─── INTER-AGENT ───
   {
     type: "function" as const,
@@ -956,7 +1022,8 @@ const WRITE_TOOL_NAMES = new Set([
   "add_project", "add_task", "update_task_status", "update_consultant_profile",
   "add_consultant_note", "copy_drive_file", "create_drive_folder",
   "create_drive_document", "create_drive_spreadsheet", "upload_text_file", "update_drive_file",
-  "rename_drive_file", "move_drive_file", "delete_drive_file"
+  "rename_drive_file", "move_drive_file", "delete_drive_file",
+  "reply_email", "compose_email"
 ]);
 
 // Current agent context for assignment logging
@@ -2016,6 +2083,115 @@ async function _executeToolInternal(
         return JSON.stringify({ success: true, message: "تم حفظ تحليل العقد بنجاح" });
       }
 
+      // ─── EMAIL TOOLS ───
+      case "check_email": {
+        const hours = args.hours || 48;
+        try {
+          const emails = await fetchEmailsSince(hours);
+          if (emails.length === 0) {
+            return JSON.stringify({ message: `لا توجد رسائل في آخر ${hours} ساعة`, data: [] });
+          }
+          const readCount = emails.filter(e => e.isRead).length;
+          const unreadCount = emails.filter(e => !e.isRead).length;
+          const withAttachments = emails.filter(e => e.attachments.length > 0).length;
+          return JSON.stringify({
+            message: `وجدت ${emails.length} رسالة في آخر ${hours} ساعة (غير مقروء: ${unreadCount}, مقروء: ${readCount}, مع مرفقات: ${withAttachments})`,
+            data: emails.slice(0, 20).map(e => ({
+              uid: e.uid,
+              from: e.from,
+              fromName: e.fromName,
+              subject: e.subject,
+              date: e.date.toISOString(),
+              isRead: e.isRead,
+              hasAttachments: e.attachments.length > 0,
+              attachmentCount: e.attachments.length,
+              attachmentNames: e.attachments.map(a => a.filename).join(", "),
+            }))
+          });
+        } catch (error: any) {
+          return JSON.stringify({ error: `خطأ في فحص الإيميل: ${error.message}` });
+        }
+      }
+
+      case "read_email": {
+        const { uid } = args;
+        try {
+          const email = await fetchEmailByUID(uid);
+          if (!email) {
+            return JSON.stringify({ error: `لم يتم العثور على رسالة برقم UID: ${uid}` });
+          }
+          return JSON.stringify({
+            message: "تفاصيل الرسالة",
+            data: {
+              uid: email.uid,
+              messageId: email.messageId,
+              from: email.from,
+              fromName: email.fromName,
+              to: email.to,
+              cc: email.cc,
+              subject: email.subject,
+              date: email.date.toISOString(),
+              body: email.textBody ? email.textBody.substring(0, 3000) : "(لا يوجد نص)",
+              isRead: email.isRead,
+              attachments: email.attachments.map(a => ({
+                filename: a.filename,
+                contentType: a.contentType,
+                size: a.size,
+              })),
+            }
+          });
+        } catch (error: any) {
+          return JSON.stringify({ error: `خطأ في قراءة الرسالة: ${error.message}` });
+        }
+      }
+
+      case "reply_email": {
+        const { to, subject, body, inReplyTo, cc } = args;
+        try {
+          const success = await sendReply(to, subject, body, inReplyTo, cc);
+          if (success) {
+            return JSON.stringify({ success: true, message: `تم إرسال الرد بنجاح إلى ${to}` });
+          } else {
+            return JSON.stringify({ error: "فشل إرسال الرد" });
+          }
+        } catch (error: any) {
+          return JSON.stringify({ error: `خطأ في إرسال الرد: ${error.message}` });
+        }
+      }
+
+      case "compose_email": {
+        const { to: cTo, subject: cSubject, body: cBody, cc: cCc } = args;
+        try {
+          const EMAIL_HOST = process.env.EMAIL_HOST || "mail.privateemail.com";
+          const EMAIL_USER = process.env.EMAIL_USER || "a.zaqout@comodevelopments.com";
+          const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD || "";
+          
+          if (!EMAIL_PASSWORD) {
+            return JSON.stringify({ error: "كلمة مرور الإيميل غير مهيأة" });
+          }
+          
+          const transporter = nodemailer.createTransport({
+            host: EMAIL_HOST,
+            port: 465,
+            secure: true,
+            auth: { user: EMAIL_USER, pass: EMAIL_PASSWORD },
+          });
+          
+          await transporter.sendMail({
+            from: `"Como Developments" <${EMAIL_USER}>`,
+            to: cTo,
+            subject: cSubject,
+            html: cBody,
+            ...(cCc ? { cc: cCc } : {}),
+          });
+          
+          console.log(`[AgentTools] Email sent to ${cTo}: ${cSubject}`);
+          return JSON.stringify({ success: true, message: `تم إرسال الإيميل بنجاح إلى ${cTo}` });
+        } catch (error: any) {
+          return JSON.stringify({ error: `خطأ في إرسال الإيميل: ${error.message}` });
+        }
+      }
+
       default:
         return JSON.stringify({ error: `أداة غير معروفة: ${toolName}` });
     }
@@ -2089,6 +2265,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "create_drive_document", "create_drive_spreadsheet",
     "ask_another_agent",
     "view_agent_conversations",
+    "check_email", "read_email", "reply_email", "compose_email",
   ],
   farouq: [
     "list_projects", "list_consultants", "get_project_consultants",
