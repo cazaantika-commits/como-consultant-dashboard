@@ -392,6 +392,8 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
   const [showEmailConfirm, setShowEmailConfirm] = useState(false);
   const [emailSending, setEmailSending] = useState(false);
   const [emailSentSuccess, setEmailSentSuccess] = useState<boolean | null>(null);
+  const [editedSubject, setEditedSubject] = useState("");
+  const [editedBody, setEditedBody] = useState("");
   const { isRecording, recordingTime, isTranscribing, startRecording, stopRecording, cancelRecording } = useVoiceRecorder();
   const { playingMessageIdx, loadingMessageIdx, isSpeaking, playAudio, stopAudio } = useTTSPlayer();
 
@@ -441,7 +443,17 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
   // Handle email send with confirmation
   const handleSendEmailClick = () => {
     // Refetch pending draft to get latest
-    pendingDraftQuery.refetch();
+    pendingDraftQuery.refetch().then((result) => {
+      if (result.data) {
+        setEditedSubject(result.data.subject || "");
+        setEditedBody(result.data.body || "");
+      }
+    });
+    // Also set from current data if available
+    if (pendingDraftQuery.data) {
+      setEditedSubject(pendingDraftQuery.data.subject || "");
+      setEditedBody(pendingDraftQuery.data.body || "");
+    }
     setShowEmailConfirm(true);
     setEmailSentSuccess(null);
   };
@@ -464,16 +476,17 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
       const result = await sendEmailMutation.mutateAsync({
         to: draft.to,
         toName: draft.fromName || undefined,
-        subject: draft.subject,
-        body: draft.body,
+        subject: editedSubject || draft.subject,
+        body: editedBody || draft.body,
         inReplyTo: draft.messageId || undefined,
       });
 
       setEmailSentSuccess(result.success);
+      const sentSubject = editedSubject || draft.subject;
       if (result.success) {
         setMessages(prev => [...prev, {
           role: "agent",
-          content: `✅ تم إرسال الرد بنجاح إلى ${draft.fromName || draft.to}!\n\n📧 **الموضوع:** ${draft.subject}\n📬 **إلى:** ${draft.to}\n\n_تم تسجيل الإيميل في سجل الإيميلات المرسلة._`,
+          content: `✅ تم إرسال الرد بنجاح إلى ${draft.fromName || draft.to}!\n\n📧 **الموضوع:** ${sentSubject}\n📬 **إلى:** ${draft.to}\n\n_تم تسجيل الإيميل في سجل الإيميلات المرسلة._${result.followUpTaskId ? `\n\n📌 **مهمة متابعة:** تم إنشاء مهمة متابعة تلقائية (بعد 3 أيام)` : ""}`,
           timestamp: new Date()
         }]);
       } else {
@@ -864,18 +877,28 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
               </p>
             </div>
 
-            {/* Subject */}
+            {/* Subject - Editable */}
             <div className="bg-muted/30 rounded-xl p-3">
-              <p className="text-xs font-medium text-muted-foreground mb-1">الموضوع</p>
-              <p className="text-sm font-semibold text-foreground">{pendingDraftQuery.data.subject}</p>
+              <p className="text-xs font-medium text-muted-foreground mb-1">الموضوع <span className="text-primary">(قابل للتعديل)</span></p>
+              <input
+                type="text"
+                value={editedSubject}
+                onChange={(e) => setEditedSubject(e.target.value)}
+                className="w-full text-sm font-semibold text-foreground bg-white dark:bg-background border border-border/50 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+                dir="auto"
+              />
             </div>
 
-            {/* Body Preview */}
+            {/* Body - Editable */}
             <div className="bg-muted/30 rounded-xl p-3">
-              <p className="text-xs font-medium text-muted-foreground mb-1">نص الرد</p>
-              <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed max-h-40 overflow-y-auto">
-                {pendingDraftQuery.data.body}
-              </p>
+              <p className="text-xs font-medium text-muted-foreground mb-1">نص الرد <span className="text-primary">(قابل للتعديل)</span></p>
+              <textarea
+                value={editedBody}
+                onChange={(e) => setEditedBody(e.target.value)}
+                rows={6}
+                className="w-full text-sm text-foreground bg-white dark:bg-background border border-border/50 rounded-lg px-3 py-2 leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+                dir="auto"
+              />
             </div>
 
             {/* Success/Error indicator */}

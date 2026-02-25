@@ -1,4 +1,5 @@
 import { int, mysqlEnum, mysqlTable, text, mediumtext, longtext, timestamp, varchar, decimal } from "drizzle-orm/mysql-core";
+import { bigint as bigintCol } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -964,3 +965,18 @@ export const sentEmails = mysqlTable('sent_emails', {
 });
 export type SentEmail = typeof sentEmails.$inferSelect;
 export type InsertSentEmail = typeof sentEmails.$inferInsert;
+
+// ─── Email Notifications ──────────────────────────────────────
+export const emailNotifications = mysqlTable("email_notifications", {
+  id: int("id").primaryKey().autoincrement(),
+  userId: int("user_id").notNull(),
+  emailUid: int("email_uid").notNull(),
+  fromEmail: varchar("from_email", { length: 255 }).notNull(),
+  fromName: varchar("from_name", { length: 255 }),
+  subject: varchar("subject", { length: 500 }).notNull(),
+  preview: text("preview"),
+  receivedAt: bigintCol("received_at", { mode: "number" }).notNull(),
+  isRead: int("is_read").default(0),
+  isDismissed: int("is_dismissed").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});

@@ -3,6 +3,8 @@ import { protectedProcedure, router } from "../_core/trpc";
 import { logSentEmail, getSentEmails, getSentEmailsCount, getSentEmailById } from "../db";
 import { sendReply } from "../emailMonitor";
 import { getPendingEmailDraft, clearPendingEmailDraft } from "../agentChat";
+import { getDb } from "../db";
+import { tasks } from "../../drizzle/schema";
 
 /**
  * Sent Emails Router - سجل الإيميلات المرسلة
@@ -100,10 +102,43 @@ export const sentEmailsRouter = router({
       // مسح المسودة المعلقة بعد الإرسال
       clearPendingEmailDraft(ctx.user.id);
 
+      // إنشاء مهمة متابعة تلقائية عند الإرسال الناجح
+      let followUpTaskId: number | null = null;
+      if (status === "sent") {
+        try {
+          const db = await getDb();
+          if (db) {
+            const recipientName = input.toName || input.to;
+            const dueDate = new Date();
+            dueDate.setDate(dueDate.getDate() + 3); // متابعة بعد 3 أيام
+            const dueDateStr = dueDate.toISOString().split('T')[0];
+
+            const taskResult = await db.insert(tasks).values({
+              title: `متابعة رد إيميل: ${input.subject}`,
+              description: `تم إرسال رد إلى ${recipientName} (${input.to}) بخصوص: ${input.subject}\n\nالمطلوب: متابعة الرد والتأكد من استلام الرسالة.\nرقم سجل الإيميل: #${logId}`,
+              project: 'إدارة المراسلات',
+              category: 'متابعة إيميل',
+              owner: ctx.user.name || 'المالك',
+              priority: 'medium',
+              status: 'new',
+              progress: 0,
+              dueDate: dueDateStr,
+              source: 'agent',
+              sourceAgent: 'salwa',
+            });
+            followUpTaskId = taskResult[0].insertId;
+            console.log(`[مهمة متابعة] تم إنشاء مهمة #${followUpTaskId} لمتابعة الرد على ${recipientName}`);
+          }
+        } catch (taskErr: any) {
+          console.error(`[مهمة متابعة] فشل إنشاء المهمة:`, taskErr.message);
+        }
+      }
+
       return {
         success: status === "sent",
         logId,
         errorMessage,
+        followUpTaskId,
       };
     }),
 });

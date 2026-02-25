@@ -42,6 +42,7 @@ import {
 import { useLocation } from "wouter";
 import { AgentChatBox, AgentType } from "@/components/AgentChatBox";
 import { Streamdown } from "streamdown";
+import NotificationBell from "@/components/NotificationBell";
 
 const SALWA_AVATAR_URL = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/dKjNMGCYtHDQQPse.png";
 
@@ -233,6 +234,7 @@ export default function Home() {
                 <span className="text-sm text-muted-foreground hidden sm:inline">
                   مرحباً، <span className="font-medium text-foreground">{user?.name}</span>
                 </span>
+                <NotificationBell />
                 <Button
                   variant="outline"
                   size="sm"

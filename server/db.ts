@@ -668,3 +668,87 @@ export async function getSentEmailById(id: number, userId: number) {
     .limit(1);
   return result[0] || null;
 }
+
+// ─── Email Notifications ──────────────────────────────────────
+import { emailNotifications } from "../drizzle/schema";
+
+export async function createEmailNotification(data: {
+  userId: number;
+  emailUid: number;
+  fromEmail: string;
+  fromName?: string;
+  subject: string;
+  preview?: string;
+  receivedAt: number;
+}) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.insert(emailNotifications).values({
+    ...data,
+    fromName: data.fromName || null,
+    preview: data.preview || null,
+  });
+  return result[0].insertId;
+}
+
+export async function getUnreadNotifications(userId: number, limit: number = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select()
+    .from(emailNotifications)
+    .where(and(
+      eq(emailNotifications.userId, userId),
+      eq(emailNotifications.isDismissed, 0)
+    ))
+    .orderBy(desc(emailNotifications.createdAt))
+    .limit(limit);
+}
+
+export async function getUnreadNotificationCount(userId: number) {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db.select({ count: sql<number>`count(*)` })
+    .from(emailNotifications)
+    .where(and(
+      eq(emailNotifications.userId, userId),
+      eq(emailNotifications.isRead, 0),
+      eq(emailNotifications.isDismissed, 0)
+    ));
+  return result[0]?.count || 0;
+}
+
+export async function markNotificationRead(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) return false;
+  await db.update(emailNotifications)
+    .set({ isRead: 1 })
+    .where(and(eq(emailNotifications.id, id), eq(emailNotifications.userId, userId)));
+  return true;
+}
+
+export async function markAllNotificationsRead(userId: number) {
+  const db = await getDb();
+  if (!db) return false;
+  await db.update(emailNotifications)
+    .set({ isRead: 1 })
+    .where(and(eq(emailNotifications.userId, userId), eq(emailNotifications.isRead, 0)));
+  return true;
+}
+
+export async function dismissNotification(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) return false;
+  await db.update(emailNotifications)
+    .set({ isDismissed: 1 })
+    .where(and(eq(emailNotifications.id, id), eq(emailNotifications.userId, userId)));
+  return true;
+}
+
+export async function isEmailAlreadyNotified(emailUid: number) {
+  const db = await getDb();
+  if (!db) return false;
+  const result = await db.select({ count: sql<number>`count(*)` })
+    .from(emailNotifications)
+    .where(eq(emailNotifications.emailUid, emailUid));
+  return (result[0]?.count || 0) > 0;
+}

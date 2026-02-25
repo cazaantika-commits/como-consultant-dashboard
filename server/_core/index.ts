@@ -10,6 +10,7 @@ import agentApiRoute from "../agentApi";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { initTelegramBot, registerCallbackHandler, getBotInfo } from "../telegramBot";
+import { startEmailNotificationService } from "../emailNotificationService";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -93,6 +94,9 @@ async function startServer() {
   } catch (error) {
     console.warn("[TelegramBot] Failed to start:", error);
   }
+
+  // Start email notification background service
+  startEmailNotificationService();
 }
 
 startServer().catch(console.error);
