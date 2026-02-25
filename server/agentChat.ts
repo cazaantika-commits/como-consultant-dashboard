@@ -952,24 +952,22 @@ async function callOpenAI(
   userId?: number
 ): Promise<string> {
   const apiKey = ENV.openaiApiKey;
-  if (!apiKey) throw new Error("OpenAI API Key not configured");
+   if (!apiKey) throw new Error("OpenAI API Key not configured");
 
   const messages: any[] = [{ role: "system", content: systemPrompt }];
-
   if (conversationHistory && conversationHistory.length > 0) {
-    const recentHistory = conversationHistory.slice(-20);
+    const recentHistory = conversationHistory.slice(-6);
     for (const msg of recentHistory) {
       messages.push({ role: msg.role, content: msg.content });
     }
   }
-
   messages.push({ role: "user", content: userMessage });
 
   const body: any = {
     model: "gpt-4o",
     messages,
-    max_tokens: 2048,
-    temperature: 0.8,
+    max_tokens: 1024,
+    temperature: 0.7,
   };
 
   if (tools && tools.length > 0) {
@@ -997,7 +995,7 @@ async function callOpenAI(
   // Handle tool calls - up to 5 rounds
   let toolRounds = 0;
   let lastToolResults: string[] = [];
-  while (assistantMessage?.tool_calls && toolRounds < 5) {
+  while (assistantMessage?.tool_calls && toolRounds < 3) {
     toolRounds++;
     console.log(`[OpenAI] Tool call round ${toolRounds}: ${assistantMessage.tool_calls.length} tools`);
     
@@ -1037,7 +1035,7 @@ async function callOpenAI(
           "Content-Type": "application/json",
           "Authorization": `Bearer ${apiKey}`,
         },
-        body: JSON.stringify({ model: "gpt-4o", messages, max_tokens: 2048, temperature: 0.8, tools, tool_choice: "auto" }),
+        body: JSON.stringify({ model: "gpt-4o", messages, max_tokens: 1024, temperature: 0.7, tools, tool_choice: "auto" }),
       }, "OpenAI-followup");
 
       if (!followUp.ok) {
@@ -1102,7 +1100,7 @@ async function callClaude(
   const messages: any[] = [];
 
   if (conversationHistory && conversationHistory.length > 0) {
-    const recentHistory = conversationHistory.slice(-20);
+    const recentHistory = conversationHistory.slice(-6);
     for (const msg of recentHistory) {
       messages.push({ role: msg.role, content: msg.content });
     }
@@ -1119,7 +1117,7 @@ async function callClaude(
 
   const body: any = {
     model: "claude-sonnet-4-20250514",
-    max_tokens: 2048,
+    max_tokens: 1024,
     system: systemPrompt,
     messages,
   };
@@ -1148,7 +1146,7 @@ async function callClaude(
 
   // Handle tool use - up to 5 rounds
   let toolRounds = 0;
-  while (data.stop_reason === "tool_use" && toolRounds < 5) {
+  while (data.stop_reason === "tool_use" && toolRounds < 3) {
     toolRounds++;
     console.log(`[Claude] Tool use round ${toolRounds}`);
     
@@ -1181,7 +1179,7 @@ async function callClaude(
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 2048,
+        max_tokens: 1024,
         system: systemPrompt,
         messages,
         tools: claudeTools,
@@ -1232,7 +1230,7 @@ async function callGemini(
   const contents: any[] = [];
 
   if (conversationHistory && conversationHistory.length > 0) {
-    const recentHistory = conversationHistory.slice(-20);
+    const recentHistory = conversationHistory.slice(-6);
     for (const msg of recentHistory) {
       contents.push({
         role: msg.role === "assistant" ? "model" : "user",
@@ -1259,8 +1257,8 @@ async function callGemini(
     systemInstruction: { parts: [{ text: systemPrompt }] },
     contents,
     generationConfig: {
-      maxOutputTokens: 2048,
-      temperature: 0.8,
+      maxOutputTokens: 1024,
+      temperature: 0.7,
     },
   };
 
@@ -1290,7 +1288,7 @@ async function callGemini(
   let toolRounds = 0;
   let candidate = data.candidates?.[0];
   
-  while (candidate?.content?.parts?.some((p: any) => p.functionCall) && toolRounds < 5) {
+  while (candidate?.content?.parts?.some((p: any) => p.functionCall) && toolRounds < 3) {
     toolRounds++;
     console.log(`[Gemini] Function call round ${toolRounds}`);
     
@@ -1323,7 +1321,7 @@ async function callGemini(
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: systemPrompt }] },
           contents,
-          generationConfig: { maxOutputTokens: 2048, temperature: 0.8 },
+          generationConfig: { maxOutputTokens: 1024, temperature: 0.7 },
           tools: geminiTools,
         }),
       },
@@ -1449,71 +1447,50 @@ async function getPlatformContext(agent: AgentType): Promise<string> {
       contextData += `\n- مجلد Ready (00_Inbox/Ready): 1ZXzOEs-ITzUF6-r-Ii2cd7iRxBM1gGC7`;
     }
 
-    const projectList = await db.select().from(projects).limit(10);
+    // Run ALL DB queries in parallel instead of sequentially
+    const [projectList, consultantList, feesList, scoresList, meetingsList, tasksList, knowledgeList] = await Promise.all([
+      db.select().from(projects).limit(10).catch(() => []),
+      db.select().from(consultants).limit(15).catch(() => []),
+      ["alina", "farouq", "joelle"].includes(agent) ? db.select().from(financialData).limit(20).catch(() => []) : Promise.resolve([]),
+      ["farouq", "khaled", "alina", "joelle", "baz"].includes(agent) ? db.select().from(evaluationScores).limit(10).catch(() => []) : Promise.resolve([]),
+      db.select().from(meetings).orderBy(desc(meetings.createdAt)).limit(5).catch(() => []),
+      db.select().from(tasks).orderBy(desc(tasks.createdAt)).limit(10).catch(() => []),
+      db.select().from(knowledgeBase).orderBy(desc(knowledgeBase.createdAt)).limit(5).catch(() => []),
+    ]);
+
     if (projectList.length > 0) {
       if (["khazen", "farouq", "alina", "joelle"].includes(agent)) {
-        // Full project mapping with plot numbers, area codes, and Drive folder IDs
-        contextData += `\n\n📋 خريطة المشاريع (كود_المنطقة | رقم_القطعة | معرف_مجلد_Drive):`;
+        contextData += `\n\n📋 خريطة المشاريع:`;
         for (const p of projectList) {
-          contextData += `\n- ${p.name} → كود: ${p.areaCode || 'غير محدد'} | قطعة: ${p.plotNumber || 'غير محدد'} | مجلد Drive: ${p.driveFolderId || 'غير محدد'}`;
+          contextData += `\n- ${p.name} → كود: ${p.areaCode || '-'} | قطعة: ${p.plotNumber || '-'} | Drive: ${p.driveFolderId || '-'}`;
         }
       } else {
-        contextData += `\n\n📋 المشاريع الحالية في كومو:\n${projectList.map(p => `- ${p.name} (ID: ${p.id})`).join("\n")}`;
+        contextData += `\n\n📋 المشاريع:\n${projectList.map(p => `- ${p.name} (${p.id})`).join("\n")}`;
       }
     }
 
-    const consultantList = await db.select().from(consultants).limit(15);
     if (consultantList.length > 0) {
-      contextData += `\n\n🏛️ الاستشاريون المسجلون:\n${consultantList.map(c => `- ${c.name} (ID: ${c.id})`).join("\n")}`;
+      contextData += `\n\n🏛️ الاستشاريون:\n${consultantList.map(c => `- ${c.name} (${c.id})`).join("\n")}`;
     }
 
-    if (["alina", "farouq", "joelle"].includes(agent)) {
-      try {
-        const fees = await db.select().from(financialData).limit(20);
-        if (fees.length > 0) {
-          contextData += `\n\n💰 بيانات الأتعاب المسجلة: ${fees.length} سجل متاح`;
-        }
-      } catch {}
+    if (feesList.length > 0) contextData += `\n\n💰 أتعاب: ${feesList.length} سجل`;
+    if (scoresList.length > 0) contextData += `\n\n📊 تقييمات: ${scoresList.length}`;
+
+    if (meetingsList.length > 0) {
+      contextData += `\n\n🏢 اجتماعات:`;
+      for (const m of meetingsList) {
+        contextData += `\n- ${m.title} (${m.id}, ${m.status === 'ended' ? 'منتهي' : 'نشط'})`;
+      }
     }
 
-    if (["farouq", "khaled", "alina", "joelle", "baz"].includes(agent)) {
-      try {
-        const scores = await db.select().from(evaluationScores).limit(10);
-        if (scores.length > 0) {
-          contextData += `\n\n📊 تقييمات مسجلة: ${scores.length} تقييم`;
-        }
-      } catch {}
+    if (tasksList.length > 0) {
+      const pending = tasksList.filter((t: any) => t.status === 'pending').length;
+      const done = tasksList.filter((t: any) => t.status === 'completed').length;
+      const prog = tasksList.filter((t: any) => t.status === 'in_progress').length;
+      contextData += `\n\n✅ مهام: ${tasksList.length} (مكتملة: ${done}, تنفيذ: ${prog}, معلقة: ${pending})`;
     }
 
-    // Add meetings context for all agents, especially Salwa
-    try {
-      const recentMeetings = await db.select().from(meetings).orderBy(desc(meetings.createdAt)).limit(5);
-      if (recentMeetings.length > 0) {
-        contextData += `\n\n🏢 الاجتماعات الأخيرة:`;
-        for (const m of recentMeetings) {
-          contextData += `\n- ${m.title} (ID: ${m.id}, الحالة: ${m.status === 'ended' ? 'منتهي' : 'نشط'})`;
-        }
-      }
-    } catch {}
-
-    // Add recent tasks context
-    try {
-      const recentTasks = await db.select().from(tasks).orderBy(desc(tasks.createdAt)).limit(10);
-      if (recentTasks.length > 0) {
-        const pendingCount = recentTasks.filter(t => t.status === 'pending').length;
-        const completedCount = recentTasks.filter(t => t.status === 'completed').length;
-        const inProgressCount = recentTasks.filter(t => t.status === 'in_progress').length;
-        contextData += `\n\n✅ المهام: ${recentTasks.length} مهمة (مكتملة: ${completedCount}, قيد التنفيذ: ${inProgressCount}, معلقة: ${pendingCount})`;
-      }
-    } catch {}
-
-    // Add knowledge base context
-    try {
-      const knowledgeItems = await db.select().from(knowledgeBase).orderBy(desc(knowledgeBase.createdAt)).limit(5);
-      if (knowledgeItems.length > 0) {
-        contextData += `\n\n📚 قاعدة المعرفة: ${knowledgeItems.length} عنصر متاح (استخدم query_institutional_memory للبحث)`;
-      }
-    } catch {}
+    if (knowledgeList.length > 0) contextData += `\n\n📚 معرفة: ${knowledgeList.length} عنصر`;
 
   } catch (err) {
     console.error("[AgentChat] Context fetch error:", err);

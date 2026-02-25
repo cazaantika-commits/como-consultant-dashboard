@@ -1151,3 +1151,12 @@
 - [x] فحص system prompt لبراق وفهم سبب رفضه الاتصال الخارجي
 - [x] تعديل إعدادات براق ليتمكن من الوصول لمصادر خارجية
 - [x] اختبار براق بعد التعديل
+
+## Bug: tRPC API returning HTML instead of JSON
+- [x] Fix tRPC query error on homepage - "Unexpected token '<', <!doctype is not valid JSON"
+
+## تحسين أداء الوكلاء (بطء + محدودية)
+- [x] فحص نماذج الذكاء الاصطناعي المستخدمة لكل وكيل
+- [x] تحسين سرعة الاستجابة وتقليل وقت الانتظار
+- [x] تعزيز قدرات خالد وباقي الوكلاء
+- [x] إصلاح خطأ tRPC HTML response
