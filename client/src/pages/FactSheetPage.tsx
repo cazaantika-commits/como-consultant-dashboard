@@ -157,6 +157,56 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
   // Khazen agent chat mutation
   const khazenChat = trpc.agents.chat.useMutation();
 
+  // Calculate completeness - moved here so handleKhazenAutoFill can reference FACT_SHEET_KEYS
+  const FACT_SHEET_KEYS = [
+    "titleDeedNumber", "ddaNumber", "masterDevRef",
+    "plotAreaSqm", "plotAreaSqft", "gfaSqm", "gfaSqft",
+    "permittedUse", "ownershipType", "subdivisionRestrictions",
+    "masterDevName", "masterDevAddress",
+    "sellerName", "sellerAddress",
+    "buyerName", "buyerNationality", "buyerPassport", "buyerAddress", "buyerPhone", "buyerEmail",
+    "electricityAllocation", "waterAllocation", "sewageAllocation",
+    "tripAM", "tripLT", "tripPM",
+    "effectiveDate", "constructionPeriod", "constructionStartDate", "completionDate", "constructionConditions",
+    "saleRestrictions", "resaleConditions", "communityCharges",
+    "registrationAuthority", "adminFee", "clearanceFee", "compensationAmount",
+    "governingLaw", "disputeResolution",
+  ];
+
+  // Field labels for the report
+  const FIELD_LABELS: Record<string, string> = {
+    titleDeedNumber: "رقم سند الملكية", ddaNumber: "رقم DDA", masterDevRef: "الرقم المرجعي للمطور",
+    plotNumber: "رقم القطعة", areaCode: "كود المنطقة",
+    plotAreaSqm: "مساحة الأرض (م²)", plotAreaSqft: "مساحة الأرض (قدم²)",
+    gfaSqm: "GFA (م²)", gfaSqft: "GFA (قدم²)", bua: "BUA",
+    permittedUse: "الاستخدام المسموح", ownershipType: "نوع الملكية", subdivisionRestrictions: "قيود التقسيم",
+    masterDevName: "اسم المطور الرئيسي", masterDevAddress: "عنوان المطور الرئيسي",
+    sellerName: "اسم البائع", sellerAddress: "عنوان البائع",
+    buyerName: "اسم المشتري", buyerNationality: "جنسية المشتري", buyerPassport: "جواز المشتري",
+    buyerAddress: "عنوان المشتري", buyerPhone: "هاتف المشتري", buyerEmail: "إيميل المشتري",
+    electricityAllocation: "تخصيص الكهرباء", waterAllocation: "تخصيص المياه", sewageAllocation: "تخصيص الصرف",
+    tripAM: "رحلات صباحية", tripLT: "رحلات ظهيرة", tripPM: "رحلات مسائية",
+    effectiveDate: "تاريخ السريان", constructionPeriod: "فترة البناء",
+    constructionStartDate: "تاريخ بدء البناء", completionDate: "تاريخ الانتهاء",
+    constructionConditions: "شروط البناء",
+    saleRestrictions: "قيود البيع", resaleConditions: "شروط إعادة البيع", communityCharges: "رسوم المجتمع",
+    registrationAuthority: "جهة التسجيل", adminFee: "الرسوم الإدارية",
+    clearanceFee: "رسوم المخالصة", compensationAmount: "مبلغ التعويض",
+    governingLaw: "القانون الحاكم", disputeResolution: "آلية حل النزاعات",
+  };
+
+  // Report state
+  const [khazenReport, setKhazenReport] = useState<{
+    filledFields: string[];
+    emptyFields: string[];
+    newlyFilled: string[];
+    beforeCount: number;
+    afterCount: number;
+  } | null>(null);
+
+  // Salwa notification mutation
+  const salwaChat = trpc.agents.chat.useMutation();
+
   const handleKhazenAutoFill = async () => {
     if (!selectedProjectId || !projectQuery.data) return;
     setKhazenDialogOpen(true);
@@ -164,6 +214,14 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
     setKhazenStatus("analyzing");
     setKhazenMessage("جاري إرسال الطلب لخازن...");
     setKhazenProgress(10);
+    setKhazenReport(null);
+
+    // Snapshot before: which fields were filled
+    const beforeSnapshot: Record<string, boolean> = {};
+    for (const key of FACT_SHEET_KEYS) {
+      beforeSnapshot[key] = !!(formData[key] && String(formData[key]).trim() !== "");
+    }
+    const beforeCount = Object.values(beforeSnapshot).filter(Boolean).length;
 
     try {
       const projectName = projectQuery.data.name;
@@ -191,20 +249,71 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
         message: prompt,
       });
 
-      setKhazenProgress(90);
+      setKhazenProgress(80);
       setKhazenMessage("خازن أنهى التحليل. جاري تحديث البيانات...");
 
       // Refetch project data to get updated fields
-      await projectQuery.refetch();
+      const refetched = await projectQuery.refetch();
+      const updatedProject = refetched.data;
+
+      // Build after snapshot and report
+      const filledFields: string[] = [];
+      const emptyFields: string[] = [];
+      const newlyFilled: string[] = [];
+
+      if (updatedProject) {
+        for (const key of FACT_SHEET_KEYS) {
+          const val = (updatedProject as any)[key];
+          const isFilled = !!(val && String(val).trim() !== "");
+          if (isFilled) {
+            filledFields.push(key);
+            if (!beforeSnapshot[key]) {
+              newlyFilled.push(key);
+            }
+          } else {
+            emptyFields.push(key);
+          }
+        }
+      }
+
+      const afterCount = filledFields.length;
+
+      setKhazenReport({
+        filledFields,
+        emptyFields,
+        newlyFilled,
+        beforeCount,
+        afterCount,
+      });
 
       setKhazenProgress(100);
       setKhazenStatus("done");
       setKhazenMessage(result.response || "تم تعبئة البيانات بنجاح");
-      toast.success("تم تعبئة بطاقة البيانات من خازن بنجاح");
+
+      // Notify user via Salwa
+      const notifMessage = `خازن أنهى تعبئة بطاقة بيانات المشروع "${projectName}".\n` +
+        `📊 النتيجة: ${afterCount}/${FACT_SHEET_KEYS.length} حقل مكتمل (${Math.round((afterCount / FACT_SHEET_KEYS.length) * 100)}%)\n` +
+        `✅ حقول جديدة تم تعبئتها: ${newlyFilled.length}\n` +
+        (emptyFields.length > 0 ? `⚠️ حقول لم يتم تعبئتها (${emptyFields.length}): ${emptyFields.slice(0, 5).map(k => FIELD_LABELS[k] || k).join("، ")}${emptyFields.length > 5 ? " وغيرها..." : ""}\n` : "") +
+        (emptyFields.length > 0 ? `💡 السبب المحتمل: البيانات غير متوفرة في مستندات Drive أو تحتاج إدخال يدوي` : "");
+
+      // Send notification via Salwa (fire and forget)
+      salwaChat.mutateAsync({
+        agent: "salwa",
+        message: `أبلغي المستخدم بالتالي: ${notifMessage}`,
+      }).catch(() => { /* silent fail for notification */ });
+
+      toast.success(`تم تعبئة ${newlyFilled.length} حقل جديد من خازن`);
     } catch (err: any) {
       setKhazenStatus("error");
       setKhazenMessage("حدث خطأ أثناء التعبئة: " + (err.message || "خطأ غير معروف"));
       toast.error("فشل في تعبئة البيانات من خازن");
+
+      // Notify Salwa about the error too
+      salwaChat.mutateAsync({
+        agent: "salwa",
+        message: `أبلغي المستخدم أن خازن واجه مشكلة أثناء تعبئة بطاقة بيانات المشروع: ${err.message || "خطأ غير معروف"}. يرجى المحاولة مرة أخرى.`,
+      }).catch(() => {});
     } finally {
       setKhazenLoading(false);
     }
@@ -295,22 +404,7 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
     updateProject.mutate(payload as any);
   };
 
-  // Calculate completeness
-  const FACT_SHEET_KEYS = [
-    "titleDeedNumber", "ddaNumber", "masterDevRef",
-    "plotAreaSqm", "plotAreaSqft", "gfaSqm", "gfaSqft",
-    "permittedUse", "ownershipType", "subdivisionRestrictions",
-    "masterDevName", "masterDevAddress",
-    "sellerName", "sellerAddress",
-    "buyerName", "buyerNationality", "buyerPassport", "buyerAddress", "buyerPhone", "buyerEmail",
-    "electricityAllocation", "waterAllocation", "sewageAllocation",
-    "tripAM", "tripLT", "tripPM",
-    "effectiveDate", "constructionPeriod", "constructionStartDate", "completionDate", "constructionConditions",
-    "saleRestrictions", "resaleConditions", "communityCharges",
-    "registrationAuthority", "adminFee", "clearanceFee", "compensationAmount",
-    "governingLaw", "disputeResolution",
-  ];
-
+  // Calculate completeness (FACT_SHEET_KEYS defined above)
   const filledCount = FACT_SHEET_KEYS.filter(k => formData[k] && String(formData[k]).trim() !== "").length;
   const totalCount = FACT_SHEET_KEYS.length;
   const completeness = totalCount > 0 ? Math.round((filledCount / totalCount) * 100) : 0;
@@ -701,8 +795,74 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
               <Progress value={khazenProgress} className="h-2" />
             )}
 
-            {/* Success details */}
-            {khazenStatus === "done" && (
+            {/* Success - Detailed Report */}
+            {khazenStatus === "done" && khazenReport && (
+              <div className="space-y-3">
+                {/* Summary Stats */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2.5 text-center">
+                    <div className="text-lg font-bold text-emerald-700">{khazenReport.newlyFilled.length}</div>
+                    <div className="text-[10px] text-emerald-600">حقل جديد تم تعبئته</div>
+                  </div>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-2.5 text-center">
+                    <div className="text-lg font-bold text-blue-700">{khazenReport.afterCount}/{FACT_SHEET_KEYS.length}</div>
+                    <div className="text-[10px] text-blue-600">إجمالي المكتمل</div>
+                  </div>
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-center">
+                    <div className="text-lg font-bold text-amber-700">{khazenReport.emptyFields.length}</div>
+                    <div className="text-[10px] text-amber-600">حقل فارغ</div>
+                  </div>
+                </div>
+
+                {/* Newly Filled Fields */}
+                {khazenReport.newlyFilled.length > 0 && (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                    <p className="text-xs font-semibold text-emerald-800 mb-2 flex items-center gap-1">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      حقول تم تعبئتها جديداً ({khazenReport.newlyFilled.length})
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {khazenReport.newlyFilled.map(key => (
+                        <Badge key={key} variant="outline" className="text-[10px] bg-emerald-100 text-emerald-700 border-emerald-300">
+                          {FIELD_LABELS[key] || key}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Empty Fields */}
+                {khazenReport.emptyFields.length > 0 && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <p className="text-xs font-semibold text-amber-800 mb-2 flex items-center gap-1">
+                      <AlertCircle className="h-3.5 w-3.5" />
+                      حقول لم يتم تعبئتها ({khazenReport.emptyFields.length})
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {khazenReport.emptyFields.map(key => (
+                        <Badge key={key} variant="outline" className="text-[10px] bg-amber-100 text-amber-700 border-amber-300">
+                          {FIELD_LABELS[key] || key}
+                        </Badge>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-amber-600 mt-2">
+                      💡 السبب المحتمل: البيانات غير متوفرة في مستندات Drive أو تحتاج إدخال يدوي
+                    </p>
+                  </div>
+                )}
+
+                {/* Salwa notification note */}
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-2.5 flex items-center gap-2">
+                  <Bot className="h-4 w-4 text-purple-600 flex-shrink-0" />
+                  <p className="text-[10px] text-purple-700">
+                    تم إرسال تقرير النتائج لسلوى لإبلاغك بالتفاصيل
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Success without report (fallback) */}
+            {khazenStatus === "done" && !khazenReport && (
               <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
                 <p className="text-xs text-emerald-700 leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto">
                   {khazenMessage}
@@ -712,8 +872,16 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
 
             {/* Error details */}
             {khazenStatus === "error" && (
-              <div className="bg-rose-50 border border-rose-200 rounded-lg p-3">
-                <p className="text-xs text-rose-700">{khazenMessage}</p>
+              <div className="space-y-2">
+                <div className="bg-rose-50 border border-rose-200 rounded-lg p-3">
+                  <p className="text-xs text-rose-700">{khazenMessage}</p>
+                </div>
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-2.5 flex items-center gap-2">
+                  <Bot className="h-4 w-4 text-purple-600 flex-shrink-0" />
+                  <p className="text-[10px] text-purple-700">
+                    تم إبلاغ سلوى بالمشكلة للمتابعة
+                  </p>
+                </div>
               </div>
             )}
           </div>
