@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { AgentChatBox, AgentType } from "@/components/AgentChatBox";
+import { Streamdown } from "streamdown";
 
 const SALWA_AVATAR_URL = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/VHJEpCATvCSDFToI.png";
 
@@ -123,8 +124,8 @@ function QuickActionResult({
           <X className="w-4 h-4 text-muted-foreground" />
         </button>
       </div>
-      <div className="p-5 text-sm text-foreground leading-relaxed whitespace-pre-wrap max-h-[400px] overflow-y-auto" dir="rtl">
-        {content}
+      <div className="p-5 text-sm text-foreground leading-relaxed max-h-[400px] overflow-y-auto" dir="rtl">
+        <Streamdown>{content}</Streamdown>
       </div>
     </div>
   );
@@ -153,7 +154,7 @@ export default function Home() {
         message,
         conversationHistory: [],
       });
-      setQuickActionResult({ title, content: result.text });
+      setQuickActionResult({ title, content: (result as any).response || result.text || "" });
     } catch (err: any) {
       setQuickActionResult({ title: "خطأ", content: `حدث خطأ: ${err.message || "حاول مرة أخرى"}` });
     } finally {
