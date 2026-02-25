@@ -159,8 +159,8 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
 
   // Calculate completeness - moved here so handleKhazenAutoFill can reference FACT_SHEET_KEYS
   const FACT_SHEET_KEYS = [
-    "titleDeedNumber", "ddaNumber", "masterDevRef",
-    "plotAreaSqm", "plotAreaSqft", "gfaSqm", "gfaSqft",
+    "plotNumber", "areaCode", "titleDeedNumber", "ddaNumber", "masterDevRef",
+    "plotAreaSqm", "plotAreaSqft", "gfaSqm", "gfaSqft", "bua",
     "permittedUse", "ownershipType", "subdivisionRestrictions",
     "masterDevName", "masterDevAddress",
     "sellerName", "sellerAddress",

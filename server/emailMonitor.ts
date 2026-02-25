@@ -586,22 +586,113 @@ export async function sendReply(
   });
 
   try {
+    const finalSubject = subject.startsWith("Re:") ? subject : `Re: ${subject}`;
     const mailOptions: nodemailer.SendMailOptions = {
       from: `"Como Developments" <${EMAIL_USER}>`,
       to,
-      subject: subject.startsWith("Re:") ? subject : `Re: ${subject}`,
+      subject: finalSubject,
       html: body,
       ...(inReplyTo ? { inReplyTo, references: inReplyTo } : {}),
       ...(cc ? { cc } : {}),
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`[EmailMonitor] Reply sent to ${to}: ${subject}`);
+    console.log(`[EmailMonitor] Reply sent to ${to}: ${finalSubject}`);
+
+    // Save a copy to the Sent folder via IMAP so it appears in the user's email client
+    try {
+      await saveSentEmailToIMAP(to, finalSubject, body, inReplyTo, cc);
+      console.log(`[EmailMonitor] Saved copy to Sent folder`);
+    } catch (imapErr) {
+      console.warn(`[EmailMonitor] Failed to save to Sent folder (email was still sent):`, imapErr);
+    }
+
     return true;
   } catch (error) {
     console.error("[EmailMonitor] SMTP send error:", error);
     return false;
   }
+}
+
+/**
+ * Save a sent email to the IMAP Sent folder so it appears in the user's email client
+ */
+function saveSentEmailToIMAP(
+  to: string,
+  subject: string,
+  htmlBody: string,
+  inReplyTo?: string,
+  cc?: string
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (!EMAIL_PASSWORD) {
+      reject(new Error("EMAIL_PASSWORD not configured"));
+      return;
+    }
+
+    const imap = new Imap({
+      user: EMAIL_USER,
+      password: EMAIL_PASSWORD,
+      host: EMAIL_HOST,
+      port: 993,
+      tls: true,
+      tlsOptions: { rejectUnauthorized: false },
+    });
+
+    // Build the raw email message (RFC 2822 format)
+    const date = new Date().toUTCString();
+    const boundary = `----=_Part_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    
+    let rawMessage = `From: "Como Developments" <${EMAIL_USER}>\r\n`;
+    rawMessage += `To: ${to}\r\n`;
+    if (cc) rawMessage += `Cc: ${cc}\r\n`;
+    rawMessage += `Subject: ${subject}\r\n`;
+    rawMessage += `Date: ${date}\r\n`;
+    rawMessage += `MIME-Version: 1.0\r\n`;
+    if (inReplyTo) {
+      rawMessage += `In-Reply-To: ${inReplyTo}\r\n`;
+      rawMessage += `References: ${inReplyTo}\r\n`;
+    }
+    rawMessage += `Content-Type: multipart/alternative; boundary="${boundary}"\r\n`;
+    rawMessage += `\r\n`;
+    rawMessage += `--${boundary}\r\n`;
+    rawMessage += `Content-Type: text/html; charset=utf-8\r\n`;
+    rawMessage += `Content-Transfer-Encoding: quoted-printable\r\n`;
+    rawMessage += `\r\n`;
+    rawMessage += `${htmlBody}\r\n`;
+    rawMessage += `--${boundary}--\r\n`;
+
+    imap.once("ready", () => {
+      // Try common Sent folder names
+      const sentFolderNames = ["Sent", "INBOX.Sent", "Sent Items", "Sent Messages", "INBOX.Sent Items"];
+      
+      const tryAppend = (folders: string[], index: number) => {
+        if (index >= folders.length) {
+          imap.end();
+          reject(new Error("Could not find Sent folder"));
+          return;
+        }
+        
+        imap.append(rawMessage, { mailbox: folders[index], flags: ["\\Seen"] }, (err: Error | null) => {
+          if (err) {
+            // Try next folder name
+            tryAppend(folders, index + 1);
+          } else {
+            imap.end();
+            resolve();
+          }
+        });
+      };
+
+      tryAppend(sentFolderNames, 0);
+    });
+
+    imap.once("error", (err: Error) => {
+      reject(err);
+    });
+
+    imap.connect();
+  });
 }
 
 /**
