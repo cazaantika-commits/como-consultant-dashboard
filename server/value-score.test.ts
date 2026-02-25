@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, test } from "vitest";
 
 // Replicate the exact calculation logic from ConsultantEvaluationPage and CommitteeDecisionPage
 
@@ -548,5 +548,131 @@ describe("Chart Data Preparation", () => {
       expect(data[1].zone).toBe("extreme_high");
       expect(data[2].zone).toBe("extreme_low");
     });
+  });
+});
+
+
+// ============ CHART FILTER LOGIC TESTS ============
+
+describe("Chart Filter Logic", () => {
+  // Simulate the filter state and logic from ConsultantEvaluationPage
+  type FilterState = Record<number, boolean>;
+
+  function isVisible(id: number, state: FilterState): boolean {
+    return state[id] !== false; // default is visible (undefined = true)
+  }
+
+  function filterRankings<T extends { id: number }>(rankings: T[], state: FilterState): T[] {
+    return rankings.filter(r => isVisible(r.id, state));
+  }
+
+  const mockRankings = [
+    { id: 1, name: "DATUM", technicalScore: 88.5 },
+    { id: 2, name: "SSH", technicalScore: 82.3 },
+    { id: 3, name: "Lacasa", technicalScore: 79.1 },
+    { id: 4, name: "Dewan", technicalScore: 85.7 },
+    { id: 5, name: "AE7", technicalScore: 90.2 },
+  ];
+
+  test("all consultants visible by default (empty state)", () => {
+    const state: FilterState = {};
+    const visible = filterRankings(mockRankings, state);
+    expect(visible).toHaveLength(5);
+    expect(visible.map(r => r.id)).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  test("hiding a single consultant", () => {
+    const state: FilterState = { 2: false };
+    const visible = filterRankings(mockRankings, state);
+    expect(visible).toHaveLength(4);
+    expect(visible.map(r => r.name)).not.toContain("SSH");
+  });
+
+  test("hiding multiple consultants", () => {
+    const state: FilterState = { 1: false, 3: false, 5: false };
+    const visible = filterRankings(mockRankings, state);
+    expect(visible).toHaveLength(2);
+    expect(visible.map(r => r.name)).toEqual(["SSH", "Dewan"]);
+  });
+
+  test("hiding all consultants", () => {
+    const state: FilterState = { 1: false, 2: false, 3: false, 4: false, 5: false };
+    const visible = filterRankings(mockRankings, state);
+    expect(visible).toHaveLength(0);
+  });
+
+  test("show all button resets all to visible", () => {
+    // Simulate: start with some hidden
+    let state: FilterState = { 1: false, 3: false };
+    expect(filterRankings(mockRankings, state)).toHaveLength(3);
+
+    // Simulate "show all" click
+    const newState: FilterState = {};
+    mockRankings.forEach(r => { newState[r.id] = true; });
+    state = newState;
+
+    const visible = filterRankings(mockRankings, state);
+    expect(visible).toHaveLength(5);
+  });
+
+  test("hide all button hides all", () => {
+    let state: FilterState = {};
+    expect(filterRankings(mockRankings, state)).toHaveLength(5);
+
+    // Simulate "hide all" click
+    const newState: FilterState = {};
+    mockRankings.forEach(r => { newState[r.id] = false; });
+    state = newState;
+
+    expect(filterRankings(mockRankings, state)).toHaveLength(0);
+  });
+
+  test("toggling a consultant on/off preserves other states", () => {
+    let state: FilterState = { 1: true, 2: false, 3: true, 4: false, 5: true };
+
+    // Toggle consultant 2 to visible
+    state = { ...state, 2: true };
+    expect(isVisible(2, state)).toBe(true);
+    expect(isVisible(4, state)).toBe(false); // unchanged
+
+    // Toggle consultant 3 to hidden
+    state = { ...state, 3: false };
+    expect(isVisible(3, state)).toBe(false);
+    expect(isVisible(1, state)).toBe(true); // unchanged
+  });
+
+  test("filter preserves original order of rankings", () => {
+    const state: FilterState = { 2: false, 4: false };
+    const visible = filterRankings(mockRankings, state);
+    expect(visible.map(r => r.id)).toEqual([1, 3, 5]); // order preserved
+  });
+
+  test("visible count calculation", () => {
+    const state: FilterState = { 1: false, 3: false };
+    const visible = filterRankings(mockRankings, state);
+    const visibleCount = visible.length;
+    const totalCount = mockRankings.length;
+    expect(visibleCount).toBe(3);
+    expect(totalCount).toBe(5);
+    expect(`${visibleCount}/${totalCount}`).toBe("3/5");
+  });
+
+  test("allVisible and noneVisible flags", () => {
+    // All visible
+    const stateAll: FilterState = {};
+    const allVisible = mockRankings.every(r => isVisible(r.id, stateAll));
+    expect(allVisible).toBe(true);
+
+    // None visible
+    const stateNone: FilterState = { 1: false, 2: false, 3: false, 4: false, 5: false };
+    const noneVisible = filterRankings(mockRankings, stateNone).length === 0;
+    expect(noneVisible).toBe(true);
+
+    // Partial
+    const statePartial: FilterState = { 1: false };
+    const partialAllVisible = mockRankings.every(r => isVisible(r.id, statePartial));
+    const partialNoneVisible = filterRankings(mockRankings, statePartial).length === 0;
+    expect(partialAllVisible).toBe(false);
+    expect(partialNoneVisible).toBe(false);
   });
 });
