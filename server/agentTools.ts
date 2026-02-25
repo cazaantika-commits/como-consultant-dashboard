@@ -1097,6 +1097,46 @@ export const AGENT_TOOLS = [
       },
     },
   },
+  // ─── WEB SEARCH & BROWSE TOOLS ───
+  {
+    type: "function" as const,
+    function: {
+      name: "web_search",
+      description: "البحث في الإنترنت عن معلومات محدّثة - يمكن البحث عن أي موضوع: قوانين، إجراءات، أسعار، شركات، أخبار، معلومات تقنية، إلخ. استخدم هذه الأداة عندما تحتاج معلومات غير متوفرة في بيانات المنصة.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description: "نص البحث - اكتب بالإنجليزية للحصول على نتائج أفضل، أو بالعربية حسب الحاجة",
+          },
+          language: {
+            type: "string",
+            description: "لغة النتائج المطلوبة: ar للعربية، en للإنجليزية",
+            enum: ["ar", "en"],
+          },
+        },
+        required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "browse_webpage",
+      description: "قراءة محتوى صفحة ويب كاملة من رابط URL - استخدمها بعد web_search لقراءة تفاصيل صفحة معينة من نتائج البحث",
+      parameters: {
+        type: "object",
+        properties: {
+          url: {
+            type: "string",
+            description: "رابط الصفحة المراد قراءتها",
+          },
+        },
+        required: ["url"],
+      },
+    },
+  },
 ];
 // ═══════════════════════════════════════════════════
 // Evaluation Criteria (shared with frontend))
@@ -2578,6 +2618,68 @@ async function _executeToolInternal(
         });
       }
 
+      case "web_search": {
+        const { webSearch } = await import("./webSearchService");
+        const searchQuery = args.query;
+        const lang = args.language || "en";
+        console.log(`[AgentTools] web_search: "${searchQuery}" (lang: ${lang})`);
+        const searchResults = await webSearch(searchQuery, lang);
+        if (searchResults.results.length === 0) {
+          return JSON.stringify({
+            message: `لم يتم العثور على نتائج لـ: "${searchQuery}". استخدم معرفتك المهنية للإجابة.`,
+            query: searchQuery,
+            results: [],
+          });
+        }
+        return JSON.stringify({
+          message: `تم العثور على ${searchResults.results.length} نتيجة`,
+          query: searchQuery,
+          results: searchResults.results.map(r => ({
+            title: r.title,
+            url: r.link,
+            snippet: r.snippet,
+          })),
+          tip: "يمكنك استخدام browse_webpage لقراءة محتوى أي رابط بالتفصيل",
+        });
+      }
+
+      case "browse_webpage": {
+        const { default: fetchContent } = await import("./webSearchService").then(m => ({ default: m.searchAndRead }));
+        // Use simpler direct fetch for single URL
+        const targetUrl = args.url;
+        console.log(`[AgentTools] browse_webpage: ${targetUrl}`);
+        try {
+          const response = await fetch(targetUrl, {
+            headers: {
+              "User-Agent": "Mozilla/5.0 (compatible; ComoDevBot/1.0)",
+              "Accept": "text/html,application/xhtml+xml",
+            },
+            signal: AbortSignal.timeout(15000),
+          });
+          if (!response.ok) {
+            return JSON.stringify({ error: `فشل تحميل الصفحة: ${response.status}` });
+          }
+          const html = await response.text();
+          let text = html
+            .replace(/<script[\s\S]*?<\/script>/gi, "")
+            .replace(/<style[\s\S]*?<\/style>/gi, "")
+            .replace(/<[^>]+>/g, " ")
+            .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+            .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+          if (text.length > 6000) {
+            text = text.substring(0, 6000) + "\n\n[تم اقتطاع المحتوى - الصفحة طويلة]";
+          }
+          return JSON.stringify({
+            url: targetUrl,
+            content: text || "لم يتم العثور على محتوى نصي",
+          });
+        } catch (e: any) {
+          return JSON.stringify({ error: `خطأ في تحميل الصفحة: ${e.message}` });
+        }
+      }
+
       default:
         return JSON.stringify({ error: `أداة غير معروفة: ${toolName}` });
     }
@@ -2638,6 +2740,7 @@ type AgentType = "salwa" | "farouq" | "khazen" | "buraq" | "khaled" | "alina" | 
 
 const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
   salwa: [
+    "web_search", "browse_webpage",
     "list_projects", "list_consultants", "get_project_consultants",
     "get_evaluation_scores", "get_financial_data", "get_evaluation_criteria",
     "list_tasks", "add_consultant", "add_consultant_to_project",
@@ -2656,6 +2759,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "search_indexed_documents", "get_document_content", "index_drive_file", "search_knowledge", "get_index_stats",
   ],
   farouq: [
+    "web_search", "browse_webpage",
     "list_projects", "list_consultants", "get_project_consultants",
     "get_evaluation_scores", "get_evaluator_scores", "get_financial_data",
     "get_evaluation_criteria", "get_consultant_profile", "get_committee_decision",
@@ -2670,6 +2774,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "search_indexed_documents", "get_document_content", "index_drive_file", "search_knowledge", "get_index_stats",
   ],
   khaled: [
+    "web_search", "browse_webpage",
     "list_projects", "list_consultants", "get_project_consultants",
     "get_evaluation_scores", "get_evaluator_scores", "get_financial_data",
     "get_evaluation_criteria", "get_consultant_profile",
@@ -2680,6 +2785,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "search_indexed_documents", "get_document_content", "index_drive_file", "search_knowledge", "get_index_stats",
   ],
   alina: [
+    "web_search", "browse_webpage",
     "list_projects", "list_consultants", "get_project_consultants",
     "get_financial_data", "get_evaluation_scores", "get_evaluation_criteria",
     "get_feasibility_study", "set_financial_data", "get_consultant_profile",
@@ -2690,6 +2796,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "search_indexed_documents", "get_document_content", "index_drive_file", "search_knowledge", "get_index_stats",
   ],
   joelle: [
+    "web_search", "browse_webpage",
     "list_projects", "list_consultants", "get_project_consultants",
     "get_financial_data", "get_evaluation_scores", "get_evaluation_criteria",
     "get_feasibility_study", "get_consultant_profile", "get_committee_decision",
@@ -2700,6 +2807,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "search_indexed_documents", "get_document_content", "index_drive_file", "search_knowledge", "get_index_stats",
   ],
   baz: [
+    "web_search", "browse_webpage",
     "list_projects", "list_consultants", "get_project_consultants",
     "get_evaluation_scores", "get_financial_data", "get_evaluation_criteria",
     "get_consultant_profile", "get_committee_decision", "list_tasks",
@@ -2709,6 +2817,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "search_indexed_documents", "get_document_content", "search_knowledge", "get_index_stats",
   ],
   buraq: [
+    "web_search", "browse_webpage",
     "list_projects", "list_consultants", "list_tasks",
     "add_task", "update_task_status", "get_project_consultants",
     "list_meetings", "get_meeting_tasks_status", "query_institutional_memory",
@@ -2716,6 +2825,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "search_indexed_documents", "get_document_content", "search_knowledge", "get_index_stats",
   ],
   khazen: [
+    "web_search", "browse_webpage",
     "list_projects", "list_consultants", "get_consultant_profile",
     "add_consultant_note", "list_tasks",
     "list_meetings", "get_meeting_details", "query_institutional_memory",
