@@ -1,0 +1,127 @@
+{
+  "query": "SHOW TABLES",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SHOW TABLES",
+  "rows": [
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "__drizzle_migrations"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "agentActivityLog"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "agentAssignments"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "agents"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "aiAdvisoryScores"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "chatHistory"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "committeeDecisions"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "consultantDetails"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "consultantNotes"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "consultantPortfolio"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "consultantProfiles"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "consultantProposals"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "consultants"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "contractTypes"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "dashboardData"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "emailCheckLog"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "emailLog"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "evaluationScores"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "evaluatorScores"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "feasibilityStudies"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "financialData"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "knowledgeBase"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "meetingFiles"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "meetingMessages"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "meetingParticipants"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "meetings"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "modelUsageLog"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "oauthTokens"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "projectCapitalSettings"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "projectConsultants"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "projectContracts"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "projectPhases"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "projects"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "proposalComparisons"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "taskCategories"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "taskExecutionLogs"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "taskProjects"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "tasks"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "users"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_Q366eAYG4Q7iaM8VuAmmFX\n__drizzle_migrations\nagentActivityLog\nagentAssignments\nagents\naiAdvisoryScores\nchatHistory\ncommitteeDecisions\nconsultantDetails\nconsultantNotes\nconsultantPortfolio\nconsultantProfiles\nconsultantProposals\nconsultants\ncontractTypes\ndashboardData\nemailCheckLog\nemailLog\nevaluationScores\nevaluatorScores\nfeasibilityStudies\nfinancialData\nknowledgeBase\nmeetingFiles\nmeetingMessages\nmeetingParticipants\nmeetings\nmodelUsageLog\noauthTokens\nprojectCapitalSettings\nprojectConsultants\nprojectContracts\nprojectPhases\nprojects\nproposalComparisons\ntaskCategories\ntaskExecutionLogs\ntaskProjects\ntasks\nusers\n",
+  "stderr": "",
+  "execution_time_ms": 1604
+}

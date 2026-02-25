@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, mediumtext, longtext, timestamp, varchar, decimal } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -781,3 +781,157 @@ export const projectContracts = mysqlTable('projectContracts', {
 
 export type ProjectContract = typeof projectContracts.$inferSelect;
 export type InsertProjectContract = typeof projectContracts.$inferInsert;
+
+
+// ═══════════════════════════════════════════════════════════════
+// نظام فهرسة المستندات المشترك (Shared Document Index)
+// ═══════════════════════════════════════════════════════════════
+
+export const documentIndex = mysqlTable('documentIndex', {
+  id: int('id').autoincrement().primaryKey(),
+  
+  // مصدر الملف
+  sourceType: mysqlEnum('sourceType', ['google_drive', 'email_attachment', 'upload', 'agent_output']).notNull(),
+  sourceId: varchar('sourceId', { length: 255 }), // Google Drive file ID, email UID, etc.
+  sourcePath: varchar('sourcePath', { length: 1000 }), // Full path in Drive or S3 URL
+  sourceName: varchar('sourceName', { length: 500 }).notNull(), // Original filename
+  
+  // نوع الملف
+  fileType: mysqlEnum('fileType', ['pdf', 'excel', 'word', 'image', 'text', 'google_doc', 'google_sheet', 'google_slides', 'csv', 'other']).notNull(),
+  mimeType: varchar('mimeType', { length: 255 }),
+  fileSizeBytes: int('fileSizeBytes'),
+  
+  // المحتوى المستخرج
+  extractedText: longtext('extractedText'), // النص الكامل المستخرج
+  extractedTextLength: int('extractedTextLength'), // طول النص (للإحصائيات)
+  structuredData: longtext('structuredData'), // JSON: بيانات مهيكلة (جداول Excel، حقول مستخرجة)
+  summary: text('summary'), // ملخص AI للمستند
+  
+  // التصنيف
+  category: varchar('category', { length: 100 }), // proposal, contract, title_deed, feasibility, etc.
+  projectId: int('projectId'), // ربط بالمشروع إن وجد
+  consultantId: int('consultantId'), // ربط بالاستشاري إن وجد
+  tags: text('tags'), // JSON array of tags
+  language: varchar('language', { length: 10 }), // ar, en, mixed
+  
+  // حالة الفهرسة
+  indexStatus: mysqlEnum('indexStatus', ['pending', 'processing', 'indexed', 'failed', 'needs_update']).default('pending').notNull(),
+  indexError: text('indexError'), // سبب الفشل
+  indexedBy: varchar('indexedBy', { length: 50 }), // اسم الوكيل الذي فهرس الملف
+  
+  // البحث
+  searchVector: text('searchVector'), // كلمات مفتاحية للبحث السريع
+  
+  // التتبع
+  lastAccessedAt: timestamp('lastAccessedAt'), // آخر وصول
+  accessCount: int('accessCount').default(0), // عدد مرات الوصول
+  
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+export type DocumentIndex = typeof documentIndex.$inferSelect;
+export type InsertDocumentIndex = typeof documentIndex.$inferInsert;
+
+// ═══════════════════════════════════════════════════════════════
+// سجل نشاط الوكلاء (Agent Activity Log)
+// ═══════════════════════════════════════════════════════════════
+
+export const agentActivityLog = mysqlTable('agentActivityLog', {
+  id: int('id').autoincrement().primaryKey(),
+  
+  // الوكيل
+  agentName: varchar('agentName', { length: 50 }).notNull(), // salwa, farouq, khazen, etc.
+  agentModel: varchar('agentModel', { length: 50 }), // GPT-4o, Claude Sonnet 4, Gemini 2.5 Pro
+  
+  // العملية
+  actionType: mysqlEnum('actionType', [
+    'tool_call',      // استدعاء أداة
+    'chat_response',  // رد على محادثة
+    'file_read',      // قراءة ملف
+    'file_write',     // كتابة ملف
+    'db_read',        // قراءة من قاعدة البيانات
+    'db_write',       // كتابة في قاعدة البيانات
+    'email_action',   // عملية إيميل
+    'drive_action',   // عملية Google Drive
+    'agent_comm',     // تواصل بين وكلاء
+    'task_execution', // تنفيذ مهمة
+    'meeting_action', // عملية اجتماع
+    'analysis',       // تحليل مستند
+    'error'           // خطأ
+  ]).notNull(),
+  
+  // التفاصيل
+  toolName: varchar('toolName', { length: 100 }), // اسم الأداة المستخدمة
+  inputSummary: text('inputSummary'), // ملخص المدخلات (أول 500 حرف)
+  outputSummary: text('outputSummary'), // ملخص المخرجات (أول 500 حرف)
+  fullInput: mediumtext('fullInput'), // المدخلات الكاملة (JSON)
+  fullOutput: mediumtext('fullOutput'), // المخرجات الكاملة (JSON)
+  
+  // النتيجة
+  status: mysqlEnum('activityStatus', ['success', 'failure', 'partial', 'pending']).notNull(),
+  errorMessage: text('errorMessage'), // رسالة الخطأ إن وجدت
+  errorDetails: text('errorDetails'), // تفاصيل الخطأ (stack trace)
+  
+  // السياق
+  triggerSource: varchar('triggerSource', { length: 100 }), // chat, meeting, task, email, telegram, scheduled
+  relatedEntityType: varchar('relatedEntityType', { length: 50 }), // project, consultant, contract, meeting, task
+  relatedEntityId: int('relatedEntityId'),
+  userId: int('userId'), // المستخدم الذي طلب العملية
+  
+  // الأداء
+  durationMs: int('durationMs'), // مدة التنفيذ بالميلي ثانية
+  tokensUsed: int('tokensUsed'), // عدد التوكنات المستخدمة (تقريبي)
+  
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+export type AgentActivityLog = typeof agentActivityLog.$inferSelect;
+export type InsertAgentActivityLog = typeof agentActivityLog.$inferInsert;
+
+// ═══════════════════════════════════════════════════════════════
+// قاعدة المعرفة المتخصصة (Specialist Knowledge)
+// ═══════════════════════════════════════════════════════════════
+
+export const specialistKnowledge = mysqlTable('specialistKnowledge', {
+  id: int('id').autoincrement().primaryKey(),
+  
+  // التصنيف
+  domain: mysqlEnum('knowledgeDomain', [
+    'rera_law',           // قوانين RERA
+    'dubai_municipality',  // معايير بلدية دبي
+    'building_codes',      // كودات البناء
+    'market_prices',       // أسعار السوق
+    'como_context',        // سياق COMO
+    'como_people',         // أشخاص COMO
+    'como_preferences',    // تفضيلات COMO
+    'como_workflow',       // طريقة عمل COMO
+    'consultant_info',     // معلومات الاستشاريين
+    'project_standards',   // معايير المشاريع
+    'general'              // عام
+  ]).notNull(),
+  
+  category: varchar('category', { length: 100 }).notNull(), // فئة فرعية
+  title: varchar('title', { length: 500 }).notNull(),
+  content: longtext('content').notNull(), // المحتوى الكامل
+  
+  // البحث
+  keywords: text('keywords'), // كلمات مفتاحية (JSON array)
+  
+  // المصدر
+  source: varchar('source', { length: 255 }), // المصدر (قانون رقم X، موقع RERA، إلخ)
+  sourceUrl: varchar('sourceUrl', { length: 1000 }),
+  
+  // الصلاحية
+  isActive: int('isActive').default(1).notNull(), // 1 = نشط، 0 = غير نشط
+  validFrom: timestamp('validFrom'),
+  validUntil: timestamp('validUntil'),
+  
+  // التتبع
+  addedBy: varchar('addedBy', { length: 50 }), // من أضاف (admin, agent, system)
+  lastUsedAt: timestamp('lastUsedAt'),
+  useCount: int('useCount').default(0),
+  
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+export type SpecialistKnowledge = typeof specialistKnowledge.$inferSelect;
+export type InsertSpecialistKnowledge = typeof specialistKnowledge.$inferInsert;

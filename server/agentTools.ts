@@ -14,6 +14,9 @@ import {
   meetings, meetingParticipants, meetingFiles, meetingMessages,
   knowledgeBase, contractTypes, projectContracts
 } from "../drizzle/schema";
+import { logToolCall } from "./activityLogger";
+import { searchDocuments, getDocumentContent, indexDriveFile, getIndexStats } from "./documentIndexService";
+import { searchKnowledge as searchKnowledgeService } from "./knowledgeService";
 import {
   listSharedDrives, listFilesInFolder, searchFiles as searchDriveFiles,
   copyFile, createFolder, getFileMetadata, readFileContent,
@@ -1009,6 +1012,89 @@ export const AGENT_TOOLS = [
       },
     },
   },
+  // ═══════════════════════════════════════════════════
+  // أدوات فهرسة المستندات والبحث في المعرفة
+  // ═══════════════════════════════════════════════════
+  {
+    type: "function" as const,
+    function: {
+      name: "search_indexed_documents",
+      description: "البحث في جميع المستندات المفهرسة (PDF, Excel, Word, Google Docs) - يبحث في النص الكامل المستخرج والملخصات والكلمات المفتاحية. استخدم هذه الأداة قبل قراءة أي ملف من Drive لأنها أسرع وأشمل.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "نص البحث - كلمات مفتاحية أو عبارة" },
+          projectId: { type: "number", description: "رقم المشروع للتصفية (اختياري)" },
+          consultantId: { type: "number", description: "رقم الاستشاري للتصفية (اختياري)" },
+          category: { type: "string", description: "تصنيف المستند: proposal, contract, title_deed, feasibility, report, etc. (اختياري)" },
+          fileType: { type: "string", description: "نوع الملف: pdf, excel, word, google_doc, google_sheet, image, text (اختياري)" },
+        },
+        required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "get_document_content",
+      description: "جلب المحتوى الكامل لمستند مفهرس بالرقم التعريفي - استخدمها بعد search_indexed_documents للحصول على النص الكامل",
+      parameters: {
+        type: "object",
+        properties: {
+          documentId: { type: "number", description: "رقم المستند المفهرس (من نتائج البحث)" },
+        },
+        required: ["documentId"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "index_drive_file",
+      description: "فهرسة ملف من Google Drive - يستخرج النص الكامل ويحفظه في الفهرس المشترك ليتمكن كل الوكلاء من البحث فيه. استخدمها عند قراءة ملف جديد لأول مرة.",
+      parameters: {
+        type: "object",
+        properties: {
+          fileId: { type: "string", description: "معرف الملف في Google Drive" },
+          projectId: { type: "number", description: "رقم المشروع المرتبط (اختياري)" },
+          consultantId: { type: "number", description: "رقم الاستشاري المرتبط (اختياري)" },
+          category: { type: "string", description: "تصنيف: proposal, contract, title_deed, feasibility, report, etc. (اختياري)" },
+        },
+        required: ["fileId"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "search_knowledge",
+      description: "البحث في قاعدة المعرفة المتخصصة - تشمل قوانين RERA، معايير بلدية دبي، كودات البناء، أسعار السوق، سياق COMO وطريقة عملها",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "نص البحث" },
+          domain: {
+            type: "string",
+            description: "مجال المعرفة: rera_law, dubai_municipality, building_codes, market_prices, como_context, como_people, como_preferences, como_workflow, consultant_info, project_standards, general",
+            enum: ["rera_law", "dubai_municipality", "building_codes", "market_prices", "como_context", "como_people", "como_preferences", "como_workflow", "consultant_info", "project_standards", "general"]
+          },
+        },
+        required: ["query"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "get_index_stats",
+      description: "عرض إحصائيات فهرسة المستندات - عدد المستندات المفهرسة، الأنواع، الوكلاء الذين فهرسوا",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: [],
+      },
+    },
+  },
 ];
 // ═══════════════════════════════════════════════════
 // Evaluation Criteria (shared with frontend))
@@ -1060,50 +1146,55 @@ export async function executeAgentTool(
   const db = await getDb();
   if (!db) return JSON.stringify({ error: "قاعدة البيانات غير متاحة" });
 
-  try {
-    // Auto-log write operations as assignments
-    let assignmentId: number | null = null;
-    if (WRITE_TOOL_NAMES.has(toolName)) {
-      try {
-        const [inserted] = await db.insert(agentAssignments).values({
-          userId,
-          agent: _currentAgent || "unknown",
-          userMessage: _currentUserMessage || "(direct tool call)",
-          toolUsed: toolName,
-          toolArgs: JSON.stringify(args),
-          status: "executing",
-        });
-        assignmentId = inserted.insertId;
-        console.log(`[AgentAssignment] Created #${assignmentId}: ${toolName} by ${_currentAgent}`);
-      } catch (e) {
-        console.error("[AgentAssignment] Failed to create:", e);
+  // Use activity logger to wrap every tool call
+  return logToolCall(
+    _currentAgent || 'unknown',
+    toolName,
+    args,
+    async () => {
+      // Auto-log write operations as assignments
+      let assignmentId: number | null = null;
+      if (WRITE_TOOL_NAMES.has(toolName)) {
+        try {
+          const [inserted] = await db.insert(agentAssignments).values({
+            userId,
+            agent: _currentAgent || "unknown",
+            userMessage: _currentUserMessage || "(direct tool call)",
+            toolUsed: toolName,
+            toolArgs: JSON.stringify(args),
+            status: "executing",
+          });
+          assignmentId = inserted.insertId;
+          console.log(`[AgentAssignment] Created #${assignmentId}: ${toolName} by ${_currentAgent}`);
+        } catch (e) {
+          console.error("[AgentAssignment] Failed to create:", e);
+        }
       }
-    }
 
-    const result = await _executeToolInternal(db, toolName, args, userId);
+      const result = await _executeToolInternal(db, toolName, args, userId);
 
-    // Update assignment status
-    if (assignmentId) {
-      try {
-        const parsed = JSON.parse(result);
-        const status = parsed.error ? "failed" : "completed";
-        await db.update(agentAssignments)
-          .set({ 
-            toolResult: result.substring(0, 2000),
-            status,
-            completedAt: new Date(),
-          })
-          .where(eq(agentAssignments.id, assignmentId));
-      } catch (e) {
-        console.error("[AgentAssignment] Failed to update:", e);
+      // Update assignment status
+      if (assignmentId) {
+        try {
+          const parsed = JSON.parse(result);
+          const status = parsed.error ? "failed" : "completed";
+          await db.update(agentAssignments)
+            .set({ 
+              toolResult: result.substring(0, 2000),
+              status,
+              completedAt: new Date(),
+            })
+            .where(eq(agentAssignments.id, assignmentId));
+        } catch (e) {
+          console.error("[AgentAssignment] Failed to update:", e);
+        }
       }
-    }
 
-    return result;
-  } catch (error: any) {
-    console.error(`[AgentTools] Error executing ${toolName}:`, error);
-    return JSON.stringify({ error: `خطأ في تنفيذ الأداة: ${error.message}` });
-  }
+      return result;
+    },
+    userId,
+    'chat'
+  );
 }
 
 async function _executeToolInternal(
@@ -2335,6 +2426,94 @@ async function _executeToolInternal(
         }
       }
 
+      // ─── DOCUMENT INDEX & KNOWLEDGE ───
+      case "search_indexed_documents": {
+        const results = await searchDocuments(args.query, {
+          projectId: args.projectId,
+          consultantId: args.consultantId,
+          category: args.category,
+          fileType: args.fileType,
+          limit: 10,
+        });
+        if (results.length === 0) {
+          return JSON.stringify({ message: `لم يتم العثور على مستندات مطابقة لـ: ${args.query}`, data: [] });
+        }
+        return JSON.stringify({
+          message: `تم العثور على ${results.length} مستند`,
+          data: results.map(r => ({
+            id: r.id,
+            sourceName: r.sourceName,
+            sourceType: r.sourceType,
+            fileType: r.fileType,
+            category: r.category,
+            summary: r.summary,
+            textLength: r.extractedTextLength,
+            snippet: r.relevanceSnippet,
+            projectId: r.projectId,
+            consultantId: r.consultantId,
+          }))
+        });
+      }
+
+      case "get_document_content": {
+        const doc = await getDocumentContent(args.documentId);
+        if (!doc) {
+          return JSON.stringify({ error: `لم يتم العثور على المستند رقم ${args.documentId}` });
+        }
+        // Truncate very long texts
+        const text = doc.extractedText && doc.extractedText.length > 15000
+          ? doc.extractedText.substring(0, 15000) + `\n\n... [تم اقتطاع النص - الطول الكامل: ${doc.extractedText.length} حرف]`
+          : doc.extractedText;
+        return JSON.stringify({
+          message: `محتوى المستند: ${doc.sourceName}`,
+          data: { ...doc, extractedText: text }
+        });
+      }
+
+      case "index_drive_file": {
+        const result = await indexDriveFile(args.fileId, userId, _currentAgent || 'unknown', {
+          projectId: args.projectId,
+          consultantId: args.consultantId,
+          category: args.category,
+        });
+        if (!result.success) {
+          return JSON.stringify({ error: result.error || "فشل في فهرسة الملف" });
+        }
+        return JSON.stringify({
+          message: `تم فهرسة الملف بنجاح - رقم المستند: ${result.documentId}`,
+          documentId: result.documentId
+        });
+      }
+
+      case "search_knowledge": {
+        const results = await searchKnowledgeService(args.query, {
+          domain: args.domain,
+          limit: 5,
+        });
+        if (results.length === 0) {
+          return JSON.stringify({ message: `لم يتم العثور على معرفة مطابقة لـ: ${args.query}`, data: [] });
+        }
+        return JSON.stringify({
+          message: `تم العثور على ${results.length} نتيجة في قاعدة المعرفة`,
+          data: results.map(r => ({
+            id: r.id,
+            domain: r.domain,
+            category: r.category,
+            title: r.title,
+            content: r.content.length > 2000 ? r.content.substring(0, 2000) + '...' : r.content,
+            source: r.source,
+          }))
+        });
+      }
+
+      case "get_index_stats": {
+        const stats = await getIndexStats();
+        return JSON.stringify({
+          message: "إحصائيات فهرسة المستندات",
+          data: stats
+        });
+      }
+
       default:
         return JSON.stringify({ error: `أداة غير معروفة: ${toolName}` });
     }
@@ -2410,6 +2589,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "view_agent_conversations",
     "check_email", "read_email", "reply_email", "compose_email",
     "download_email_attachments",
+    "search_indexed_documents", "get_document_content", "index_drive_file", "search_knowledge", "get_index_stats",
   ],
   farouq: [
     "list_projects", "list_consultants", "get_project_consultants",
@@ -2423,6 +2603,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "create_drive_document",
     "list_contract_types", "list_project_contracts", "get_contract_details", "save_contract_analysis",
     "ask_another_agent",
+    "search_indexed_documents", "get_document_content", "index_drive_file", "search_knowledge", "get_index_stats",
   ],
   khaled: [
     "list_projects", "list_consultants", "get_project_consultants",
@@ -2432,6 +2613,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "list_meetings", "get_meeting_details", "query_institutional_memory",
     "read_drive_file_content",
     "ask_another_agent",
+    "search_indexed_documents", "get_document_content", "index_drive_file", "search_knowledge", "get_index_stats",
   ],
   alina: [
     "list_projects", "list_consultants", "get_project_consultants",
@@ -2441,6 +2623,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "read_drive_file_content",
     "create_drive_document", "create_drive_spreadsheet",
     "ask_another_agent",
+    "search_indexed_documents", "get_document_content", "index_drive_file", "search_knowledge", "get_index_stats",
   ],
   joelle: [
     "list_projects", "list_consultants", "get_project_consultants",
@@ -2450,6 +2633,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "list_drive_folders", "list_drive_files", "search_drive_files", "read_drive_file_content",
     "create_feasibility_study", "update_feasibility_study",
     "ask_another_agent",
+    "search_indexed_documents", "get_document_content", "index_drive_file", "search_knowledge", "get_index_stats",
   ],
   baz: [
     "list_projects", "list_consultants", "get_project_consultants",
@@ -2458,12 +2642,14 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "add_task",
     "list_meetings", "get_meeting_details", "query_institutional_memory",
     "ask_another_agent",
+    "search_indexed_documents", "get_document_content", "search_knowledge", "get_index_stats",
   ],
   buraq: [
     "list_projects", "list_consultants", "list_tasks",
     "add_task", "update_task_status", "get_project_consultants",
     "list_meetings", "get_meeting_tasks_status", "query_institutional_memory",
     "ask_another_agent",
+    "search_indexed_documents", "get_document_content", "search_knowledge", "get_index_stats",
   ],
   khazen: [
     "list_projects", "list_consultants", "get_consultant_profile",
@@ -2478,6 +2664,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "update_project_fact_sheet",
     "ask_another_agent",
     "download_email_attachments",
+    "search_indexed_documents", "get_document_content", "index_drive_file", "search_knowledge", "get_index_stats",
   ],
 };
 
