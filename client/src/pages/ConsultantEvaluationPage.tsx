@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Plus, Trash2, Download, Star, BarChart3, DollarSign, Users, Award, ExternalLink, Link2, TrendingUp, Target, CheckCircle2, Building, FileDown, ChevronLeft, ChevronRight, Sparkles, AlertTriangle, Shield, Info, Gavel, Brain, ArrowLeft, Scale, Calculator, SlidersHorizontal, Eye, EyeOff, Filter } from "lucide-react";
+import { Loader2, Plus, Trash2, Download, Star, BarChart3, DollarSign, Users, Award, ExternalLink, Link2, TrendingUp, Target, CheckCircle2, Building, FileDown, ChevronLeft, ChevronRight, Sparkles, AlertTriangle, Shield, Info, Gavel, Brain, ArrowLeft, Scale, Calculator, SlidersHorizontal, Eye, EyeOff, Filter, Grip, Flame } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { generateEvaluationPDF } from "@/lib/pdfExport";
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, ScatterChart, Scatter, ZAxis, Cell, ReferenceLine } from 'recharts';
@@ -403,6 +403,8 @@ export default function ConsultantEvaluationPage() {
   const financialWeight = 100 - technicalWeight;
   const [showValueFormulas, setShowValueFormulas] = useState(false);
   const [chartVisibleConsultants, setChartVisibleConsultants] = useState<Record<number, boolean>>({});
+  const [quickCompareMode, setQuickCompareMode] = useState(false);
+  const [quickCompareSelection, setQuickCompareSelection] = useState<number[]>([]);
 
   // Queries
   const projectsQuery = trpc.projects.list.useQuery();
@@ -1079,15 +1081,15 @@ export default function ConsultantEvaluationPage() {
                           <p className="text-xs text-slate-500 mb-2 font-medium">← اسحب لليسار لرؤية باقي الاستشاريين</p>
                         )}
                         <div className="overflow-x-auto border-2 border-slate-200 rounded-2xl shadow-lg" style={{ maxWidth: '100%' }}>
-                          <table className="border-collapse w-max">
+                          <table className="border-collapse" style={{ width: 'max-content', minWidth: '100%' }}>
                             <thead>
                               <tr className="bg-gradient-to-r from-slate-700 via-slate-800 to-slate-900 text-white">
-                                <th className="border border-slate-600 p-4 text-right sticky right-0 bg-slate-800 z-10 font-bold" style={{ minWidth: '200px' }}>
+                                <th className="border border-slate-600 p-3 text-right sticky right-0 bg-slate-800 z-10 font-bold text-sm" style={{ minWidth: '160px', maxWidth: '220px' }}>
                                   المعيار (الوزن)
                                 </th>
                                 {projectConsultants.map((consultant: any) => (
-                                  <th key={consultant.id} className="border border-slate-600 p-4 text-center font-bold" style={{ minWidth: '200px' }}>
-                                    <span className="whitespace-normal leading-tight text-base">{consultant.name}</span>
+                                  <th key={consultant.id} className="border border-slate-600 p-2 text-center font-bold text-xs" style={{ minWidth: '120px', maxWidth: '180px' }}>
+                                    <span className="whitespace-normal leading-tight">{consultant.name}</span>
                                   </th>
                                 ))}
                               </tr>
@@ -1095,7 +1097,7 @@ export default function ConsultantEvaluationPage() {
                             <tbody>
                               {CRITERIA.map((criterion) => (
                                 <tr key={criterion.id} className="border-b hover:bg-blue-50/50 transition-colors">
-                                  <td className="border border-slate-200 p-4 py-5 bg-gradient-to-l from-slate-50 to-white font-bold text-right sticky right-0 z-10 whitespace-normal leading-relaxed" style={{ minWidth: '200px' }}>
+                                  <td className="border border-slate-200 p-3 py-4 bg-gradient-to-l from-slate-50 to-white font-bold text-right sticky right-0 z-10 whitespace-normal leading-relaxed text-sm" style={{ minWidth: '160px', maxWidth: '220px' }}>
                                     <div className="flex items-center gap-2">
                                       <ScoringGuide criterion={criterion} />
                                       <div>
@@ -1110,7 +1112,7 @@ export default function ConsultantEvaluationPage() {
                                       (s: any) => s.consultantId === consultant.id && s.criterionId === criterion.id && s.evaluatorName === activeEvaluator
                                     );
                                     return (
-                                      <td key={consultant.id} className="border border-slate-200 p-3 py-4 text-center" style={{ minWidth: '200px' }}>
+                                      <td key={consultant.id} className="border border-slate-200 p-2 py-3 text-center" style={{ minWidth: '120px', maxWidth: '180px' }}>
                                         <Select value={currentScore?.score?.toString() || ""} onValueChange={(value) => {
                                           updateEvaluatorScoreMutation.mutate({
                                             projectId: selectedProject.id,
@@ -1120,7 +1122,7 @@ export default function ConsultantEvaluationPage() {
                                             score: parseInt(value),
                                           });
                                         }}>
-                                          <SelectTrigger className="w-full text-sm h-auto min-h-[3.5rem] py-3 whitespace-normal leading-relaxed text-right cursor-pointer bg-white border-slate-300 font-medium">
+                                          <SelectTrigger className="w-full text-xs h-auto min-h-[2.5rem] py-2 whitespace-normal leading-snug text-right cursor-pointer bg-white border-slate-300 font-medium">
                                             <SelectValue placeholder="اختر التقييم" />
                                           </SelectTrigger>
                                           <SelectContent className="w-[500px] max-w-[90vw]">
@@ -1251,12 +1253,12 @@ export default function ConsultantEvaluationPage() {
                         المتوسط النهائي (من المقيّمين الثلاثة) — فني فقط
                       </h3>
                       <div className="overflow-x-auto border-2 border-amber-200 rounded-2xl shadow-lg">
-                        <table className="border-collapse w-max">
+                        <table className="border-collapse" style={{ width: 'max-content', minWidth: '100%' }}>
                           <thead>
                             <tr className="bg-gradient-to-r from-amber-100 via-amber-50 to-orange-50">
-                              <th className="border border-amber-200 p-3 text-right font-bold text-amber-900 sticky right-0 bg-amber-100 z-10" style={{ minWidth: '200px' }}>المعيار</th>
+                              <th className="border border-amber-200 p-2 text-right font-bold text-amber-900 sticky right-0 bg-amber-100 z-10 text-sm" style={{ minWidth: '160px', maxWidth: '220px' }}>المعيار</th>
                               {projectConsultants.map((consultant: any) => (
-                                <th key={consultant.id} className="border border-amber-200 p-3 text-center font-bold text-amber-900" style={{ minWidth: '180px' }}>
+                                <th key={consultant.id} className="border border-amber-200 p-2 text-center font-bold text-amber-900 text-xs" style={{ minWidth: '100px', maxWidth: '160px' }}>
                                   <span className="whitespace-normal leading-tight">{consultant.name}</span>
                                 </th>
                               ))}
@@ -1265,13 +1267,13 @@ export default function ConsultantEvaluationPage() {
                           <tbody>
                             {CRITERIA.map((criterion, critIdx) => (
                               <tr key={criterion.id} className="border-b hover:bg-amber-50/30 transition-colors">
-                                <td className="border border-amber-200 p-3 bg-gradient-to-l from-amber-50 to-white font-bold text-right text-sm sticky right-0 z-10" style={{ minWidth: '200px' }}>
+                                <td className="border border-amber-200 p-2 bg-gradient-to-l from-amber-50 to-white font-bold text-right text-xs sticky right-0 z-10" style={{ minWidth: '160px', maxWidth: '220px' }}>
                                   {criterion.name} ({criterion.weight}%)
                                 </td>
                                 {projectConsultants.map((consultant: any) => {
                                   const avgScore = consultantScores[consultant.id]?.scores[critIdx] || 0;
                                   return (
-                                    <td key={consultant.id} className="border border-amber-200 p-3 text-center">
+                                    <td key={consultant.id} className="border border-amber-200 p-2 text-center" style={{ minWidth: '100px', maxWidth: '160px' }}>
                                       <span className={`inline-flex items-center px-3 py-1.5 rounded-xl text-sm font-bold shadow-sm ${
                                         avgScore >= 75 ? 'bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-800' :
                                         avgScore >= 50 ? 'bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800' :
@@ -1286,9 +1288,9 @@ export default function ConsultantEvaluationPage() {
                               </tr>
                             ))}
                             <tr className="bg-gradient-to-r from-slate-100 to-slate-200 font-bold">
-                              <td className="border border-amber-200 p-4 text-right sticky right-0 bg-slate-200 z-10 text-lg">المجموع المرجح</td>
+                              <td className="border border-amber-200 p-3 text-right sticky right-0 bg-slate-200 z-10 text-base font-bold">المجموع المرجح</td>
                               {projectConsultants.map((consultant: any) => (
-                                <td key={consultant.id} className="border border-amber-200 p-4 text-center text-xl font-bold text-slate-800">
+                                <td key={consultant.id} className="border border-amber-200 p-3 text-center text-lg font-bold text-slate-800">
                                   {consultantScores[consultant.id]?.weighted.toFixed(1) || 0}%
                                 </td>
                               ))}
@@ -1518,7 +1520,7 @@ export default function ConsultantEvaluationPage() {
                     {Object.keys(valueAnalysis.consultants).length > 0 && (
                       <>
                         <div className="overflow-x-auto border-2 border-slate-200 rounded-2xl shadow-lg mb-6">
-                          <table className="border-collapse w-full min-w-[900px]">
+                          <table className="border-collapse w-full min-w-[700px]">
                             <thead>
                               <tr className="bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 text-white">
                                 <th className="border border-cyan-700 p-3 text-right text-sm font-bold" style={{ width: '14%' }}>الاستشاري</th>
@@ -1739,14 +1741,16 @@ export default function ConsultantEvaluationPage() {
                             <Filter className="w-4 h-4 text-indigo-500" />
                             اختر الاستشاريين للمقارنة
                           </h4>
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 flex-wrap">
                             <button
                               onClick={() => {
                                 const newState: Record<number, boolean> = {};
                                 valueRankings.forEach(r => { newState[r.id] = true; });
                                 setChartVisibleConsultants(newState);
+                                setQuickCompareMode(false);
+                                setQuickCompareSelection([]);
                               }}
-                              className={`text-xs px-3 py-1.5 rounded-lg border transition-all duration-200 flex items-center gap-1.5 ${allVisible ? 'bg-indigo-100 text-indigo-700 border-indigo-300 font-bold' : 'bg-white text-slate-600 border-slate-300 hover:bg-indigo-50 hover:border-indigo-300'}`}
+                              className={`text-xs px-3 py-1.5 rounded-lg border transition-all duration-200 flex items-center gap-1.5 ${allVisible && !quickCompareMode ? 'bg-indigo-100 text-indigo-700 border-indigo-300 font-bold' : 'bg-white text-slate-600 border-slate-300 hover:bg-indigo-50 hover:border-indigo-300'}`}
                             >
                               <Eye className="w-3.5 h-3.5" />
                               إظهار الكل
@@ -1756,39 +1760,104 @@ export default function ConsultantEvaluationPage() {
                                 const newState: Record<number, boolean> = {};
                                 valueRankings.forEach(r => { newState[r.id] = false; });
                                 setChartVisibleConsultants(newState);
+                                setQuickCompareMode(false);
+                                setQuickCompareSelection([]);
                               }}
                               className="text-xs px-3 py-1.5 rounded-lg border bg-white text-slate-600 border-slate-300 hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-all duration-200 flex items-center gap-1.5"
                             >
                               <EyeOff className="w-3.5 h-3.5" />
                               إخفاء الكل
                             </button>
+                            <button
+                              onClick={() => {
+                                if (quickCompareMode) {
+                                  setQuickCompareMode(false);
+                                  setQuickCompareSelection([]);
+                                  const newState: Record<number, boolean> = {};
+                                  valueRankings.forEach(r => { newState[r.id] = true; });
+                                  setChartVisibleConsultants(newState);
+                                } else {
+                                  setQuickCompareMode(true);
+                                  setQuickCompareSelection([]);
+                                  const newState: Record<number, boolean> = {};
+                                  valueRankings.forEach(r => { newState[r.id] = false; });
+                                  setChartVisibleConsultants(newState);
+                                }
+                              }}
+                              className={`text-xs px-3 py-1.5 rounded-lg border transition-all duration-200 flex items-center gap-1.5 ${quickCompareMode ? 'bg-purple-100 text-purple-700 border-purple-300 font-bold ring-2 ring-purple-200' : 'bg-white text-slate-600 border-slate-300 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-600'}`}
+                            >
+                              <Grip className="w-3.5 h-3.5" />
+                              {quickCompareMode ? 'إلغاء المقارنة الثنائية' : 'مقارنة ثنائية سريعة'}
+                            </button>
                           </div>
                         </div>
+                        {quickCompareMode && (
+                          <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-3">
+                            <p className="text-xs text-purple-700 font-bold mb-1 flex items-center gap-1.5">
+                              <Grip className="w-3.5 h-3.5" />
+                              وضع المقارنة الثنائية — اختر استشاريين اثنين للمقارنة المباشرة
+                            </p>
+                            <p className="text-[10px] text-purple-500">
+                              {quickCompareSelection.length === 0 ? 'اختر الاستشاري الأول' : quickCompareSelection.length === 1 ? 'اختر الاستشاري الثاني' : 'تم اختيار استشاريين — الرسوم تعرض المقارنة الآن'}
+                            </p>
+                          </div>
+                        )}
                         <div className="flex flex-wrap gap-2">
                           {valueRankings.map((r, i) => {
                             const color = CHART_COLORS[i % CHART_COLORS.length];
                             const visible = isVisible(r.id);
+                            const isQuickSelected = quickCompareSelection.includes(r.id);
                             return (
                               <button
                                 key={r.id}
-                                onClick={() => setChartVisibleConsultants(prev => ({ ...prev, [r.id]: !visible }))}
+                                onClick={() => {
+                                  if (quickCompareMode) {
+                                    setQuickCompareSelection(prev => {
+                                      if (prev.includes(r.id)) {
+                                        const newSel = prev.filter(id => id !== r.id);
+                                        const newState: Record<number, boolean> = {};
+                                        valueRankings.forEach(vr => { newState[vr.id] = newSel.includes(vr.id); });
+                                        setChartVisibleConsultants(newState);
+                                        return newSel;
+                                      } else if (prev.length < 2) {
+                                        const newSel = [...prev, r.id];
+                                        const newState: Record<number, boolean> = {};
+                                        valueRankings.forEach(vr => { newState[vr.id] = newSel.includes(vr.id); });
+                                        setChartVisibleConsultants(newState);
+                                        return newSel;
+                                      }
+                                      return prev;
+                                    });
+                                  } else {
+                                    setChartVisibleConsultants(prev => ({ ...prev, [r.id]: !visible }));
+                                  }
+                                }}
                                 className={`group relative flex items-center gap-2 px-3.5 py-2 rounded-xl border-2 transition-all duration-300 text-sm font-medium ${
-                                  visible
-                                    ? 'shadow-md hover:shadow-lg scale-100'
-                                    : 'opacity-50 grayscale hover:opacity-75 hover:grayscale-0 scale-95'
+                                  quickCompareMode
+                                    ? isQuickSelected
+                                      ? 'shadow-lg scale-100 ring-2 ring-purple-300'
+                                      : quickCompareSelection.length >= 2
+                                        ? 'opacity-30 scale-90 cursor-not-allowed'
+                                        : 'opacity-70 hover:opacity-90 scale-95'
+                                    : visible
+                                      ? 'shadow-md hover:shadow-lg scale-100'
+                                      : 'opacity-50 grayscale hover:opacity-75 hover:grayscale-0 scale-95'
                                 }`}
                                 style={{
-                                  borderColor: visible ? color : '#cbd5e1',
-                                  backgroundColor: visible ? `${color}12` : '#f8fafc',
-                                  color: visible ? color : '#94a3b8',
+                                  borderColor: (quickCompareMode ? isQuickSelected : visible) ? color : '#cbd5e1',
+                                  backgroundColor: (quickCompareMode ? isQuickSelected : visible) ? `${color}12` : '#f8fafc',
+                                  color: (quickCompareMode ? isQuickSelected : visible) ? color : '#94a3b8',
                                 }}
+                                disabled={quickCompareMode && quickCompareSelection.length >= 2 && !isQuickSelected}
                               >
                                 <span
-                                  className={`w-3 h-3 rounded-full transition-all duration-300 ${visible ? 'scale-100' : 'scale-75'}`}
-                                  style={{ backgroundColor: visible ? color : '#cbd5e1' }}
+                                  className={`w-3 h-3 rounded-full transition-all duration-300 ${(quickCompareMode ? isQuickSelected : visible) ? 'scale-100' : 'scale-75'}`}
+                                  style={{ backgroundColor: (quickCompareMode ? isQuickSelected : visible) ? color : '#cbd5e1' }}
                                 />
                                 <span className="whitespace-nowrap">{r.name}</span>
-                                {visible ? (
+                                {quickCompareMode ? (
+                                  isQuickSelected ? <CheckCircle2 className="w-3.5 h-3.5" /> : <span className="w-3.5 h-3.5 rounded-full border-2 border-current inline-block" />
+                                ) : visible ? (
                                   <Eye className="w-3.5 h-3.5 opacity-60" />
                                 ) : (
                                   <EyeOff className="w-3.5 h-3.5 opacity-40" />
@@ -1800,8 +1869,11 @@ export default function ConsultantEvaluationPage() {
                             );
                           })}
                         </div>
-                        {noneVisible && (
+                        {noneVisible && !quickCompareMode && (
                           <p className="text-center text-sm text-slate-400 mt-3 py-2">اختر استشارياً واحداً على الأقل لعرض الرسوم البيانية</p>
+                        )}
+                        {quickCompareMode && quickCompareSelection.length < 2 && (
+                          <p className="text-center text-sm text-purple-400 mt-3 py-2">اختر {2 - quickCompareSelection.length === 2 ? 'استشاريين' : 'استشارياً آخر'} للمقارنة</p>
                         )}
                       </div>
 
@@ -1994,6 +2066,108 @@ export default function ConsultantEvaluationPage() {
                             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-red-500 inline-block"></span> انحراف مرتفع</span>
                             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> انحراف منخفض</span>
                           </div>
+                        </div>
+                      </div>
+                      )}
+
+                      {/* === 4. Heatmap: Criteria Scores by Consultant === */}
+                      {!noneVisible && (
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-700 mb-1 flex items-center gap-2">
+                          <Flame className="w-4 h-4 text-orange-500" />
+                          الخريطة الحرارية — درجات كل استشاري في كل معيار
+                        </h4>
+                        <p className="text-xs text-slate-500 mb-4">الألوان الأكثر دفئاً (أخضر داكن) تعني درجة أعلى — الألوان الباردة (أحمر) تعني درجة أقل</p>
+                        <div className="overflow-x-auto bg-white rounded-xl border border-slate-200">
+                          <table className="border-collapse w-full" style={{ minWidth: Math.max(400, visibleRankings.length * 100 + 200) }}>
+                            <thead>
+                              <tr>
+                                <th className="p-2.5 text-right text-xs font-bold text-slate-700 bg-slate-50 border-b border-slate-200 sticky right-0 z-10" style={{ minWidth: '140px' }}>المعيار</th>
+                                {visibleRankings.map((r) => {
+                                  const origIdx = valueRankings.findIndex(vr => vr.id === r.id);
+                                  return (
+                                    <th key={r.id} className="p-2.5 text-center text-xs font-bold border-b border-slate-200" style={{ minWidth: '80px', color: CHART_COLORS[origIdx % CHART_COLORS.length] }}>
+                                      {r.name.length > 14 ? r.name.substring(0, 14) + '…' : r.name}
+                                    </th>
+                                  );
+                                })}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {CRITERIA.map((criterion, critIdx) => (
+                                <tr key={criterion.id}>
+                                  <td className="p-2 text-right text-xs font-medium text-slate-600 border-b border-slate-100 bg-slate-50/50 sticky right-0 z-10">
+                                    {criterion.name}
+                                    <span className="text-slate-400 mr-1">({criterion.weight}%)</span>
+                                  </td>
+                                  {visibleRankings.map((r) => {
+                                    const scores = consultantScores[r.id];
+                                    const score = scores ? scores.scores[critIdx] : 0;
+                                    const allScoresForCriterion = visibleRankings.map(vr => consultantScores[vr.id]?.scores[critIdx] || 0);
+                                    const maxScore = Math.max(...allScoresForCriterion);
+                                    const minScore = Math.min(...allScoresForCriterion.filter(s => s > 0));
+                                    const isMax = score === maxScore && score > 0;
+                                    const isMin = score === minScore && score > 0 && maxScore !== minScore;
+                                    
+                                    // Color gradient: red (0) -> yellow (50) -> green (100)
+                                    const getHeatColor = (val: number) => {
+                                      if (val === 0) return { bg: '#f1f5f9', text: '#94a3b8' };
+                                      if (val >= 90) return { bg: '#065f46', text: '#ffffff' };
+                                      if (val >= 85) return { bg: '#047857', text: '#ffffff' };
+                                      if (val >= 80) return { bg: '#059669', text: '#ffffff' };
+                                      if (val >= 75) return { bg: '#10b981', text: '#ffffff' };
+                                      if (val >= 70) return { bg: '#34d399', text: '#065f46' };
+                                      if (val >= 65) return { bg: '#6ee7b7', text: '#065f46' };
+                                      if (val >= 60) return { bg: '#fbbf24', text: '#78350f' };
+                                      if (val >= 50) return { bg: '#f59e0b', text: '#78350f' };
+                                      if (val >= 40) return { bg: '#f97316', text: '#ffffff' };
+                                      return { bg: '#ef4444', text: '#ffffff' };
+                                    };
+                                    const heatColor = getHeatColor(score);
+                                    
+                                    return (
+                                      <td key={r.id} className="p-1.5 text-center border-b border-slate-100" style={{ minWidth: '80px' }}>
+                                        <div
+                                          className="relative rounded-lg px-2 py-2.5 font-bold text-sm transition-all duration-300"
+                                          style={{ backgroundColor: heatColor.bg, color: heatColor.text }}
+                                          title={`${r.name}: ${score.toFixed(0)}% في ${criterion.name}`}
+                                        >
+                                          {score > 0 ? score.toFixed(0) : '—'}
+                                          {isMax && <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-yellow-400 rounded-full flex items-center justify-center text-[8px] text-yellow-900 font-black shadow-sm">★</span>}
+                                          {isMin && <span className="absolute -top-1 -left-1 w-3.5 h-3.5 bg-red-400 rounded-full flex items-center justify-center text-[8px] text-white font-black shadow-sm">▼</span>}
+                                        </div>
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              ))}
+                              {/* Total row */}
+                              <tr className="bg-slate-100">
+                                <td className="p-2.5 text-right text-xs font-bold text-slate-800 sticky right-0 z-10 bg-slate-100">المجموع المرجح</td>
+                                {visibleRankings.map((r) => {
+                                  const origIdx = valueRankings.findIndex(vr => vr.id === r.id);
+                                  return (
+                                    <td key={r.id} className="p-2.5 text-center">
+                                      <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-black shadow-sm" style={{ backgroundColor: `${CHART_COLORS[origIdx % CHART_COLORS.length]}20`, color: CHART_COLORS[origIdx % CHART_COLORS.length] }}>
+                                        {(consultantScores[r.id]?.weighted || 0).toFixed(1)}%
+                                      </span>
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                        {/* Heatmap Legend */}
+                        <div className="flex flex-wrap justify-center gap-3 mt-3 text-[10px] text-slate-500">
+                          <span className="flex items-center gap-1"><span className="w-5 h-3 rounded" style={{ backgroundColor: '#ef4444' }}></span> &lt;50%</span>
+                          <span className="flex items-center gap-1"><span className="w-5 h-3 rounded" style={{ backgroundColor: '#f59e0b' }}></span> 50-64%</span>
+                          <span className="flex items-center gap-1"><span className="w-5 h-3 rounded" style={{ backgroundColor: '#6ee7b7' }}></span> 65-74%</span>
+                          <span className="flex items-center gap-1"><span className="w-5 h-3 rounded" style={{ backgroundColor: '#10b981' }}></span> 75-84%</span>
+                          <span className="flex items-center gap-1"><span className="w-5 h-3 rounded" style={{ backgroundColor: '#047857' }}></span> 85-89%</span>
+                          <span className="flex items-center gap-1"><span className="w-5 h-3 rounded" style={{ backgroundColor: '#065f46' }}></span> 90%+</span>
+                          <span className="flex items-center gap-1 mr-3">★ الأعلى</span>
+                          <span className="flex items-center gap-1">▼ الأدنى</span>
                         </div>
                       </div>
                       )}

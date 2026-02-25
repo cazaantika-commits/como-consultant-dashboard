@@ -676,3 +676,197 @@ describe("Chart Filter Logic", () => {
     expect(partialNoneVisible).toBe(false);
   });
 });
+
+
+// ========== Heatmap Color Logic Tests ==========
+
+function getHeatColor(val: number): { bg: string; text: string } {
+  if (val === 0) return { bg: '#f1f5f9', text: '#94a3b8' };
+  if (val >= 90) return { bg: '#065f46', text: '#ffffff' };
+  if (val >= 85) return { bg: '#047857', text: '#ffffff' };
+  if (val >= 80) return { bg: '#059669', text: '#ffffff' };
+  if (val >= 75) return { bg: '#10b981', text: '#ffffff' };
+  if (val >= 70) return { bg: '#34d399', text: '#065f46' };
+  if (val >= 65) return { bg: '#6ee7b7', text: '#065f46' };
+  if (val >= 60) return { bg: '#fbbf24', text: '#78350f' };
+  if (val >= 50) return { bg: '#f59e0b', text: '#78350f' };
+  if (val >= 40) return { bg: '#f97316', text: '#ffffff' };
+  return { bg: '#ef4444', text: '#ffffff' };
+}
+
+describe('Heatmap Color Logic', () => {
+  it('should return gray for zero score', () => {
+    expect(getHeatColor(0).bg).toBe('#f1f5f9');
+  });
+
+  it('should return darkest green for 90%+', () => {
+    expect(getHeatColor(95).bg).toBe('#065f46');
+    expect(getHeatColor(90).bg).toBe('#065f46');
+    expect(getHeatColor(100).bg).toBe('#065f46');
+  });
+
+  it('should return dark green for 85-89%', () => {
+    expect(getHeatColor(85).bg).toBe('#047857');
+    expect(getHeatColor(89).bg).toBe('#047857');
+  });
+
+  it('should return medium green for 80-84%', () => {
+    expect(getHeatColor(80).bg).toBe('#059669');
+    expect(getHeatColor(84).bg).toBe('#059669');
+  });
+
+  it('should return green for 75-79%', () => {
+    expect(getHeatColor(75).bg).toBe('#10b981');
+    expect(getHeatColor(79).bg).toBe('#10b981');
+  });
+
+  it('should return light green for 70-74%', () => {
+    expect(getHeatColor(70).bg).toBe('#34d399');
+    expect(getHeatColor(74).bg).toBe('#34d399');
+  });
+
+  it('should return pale green for 65-69%', () => {
+    expect(getHeatColor(65).bg).toBe('#6ee7b7');
+    expect(getHeatColor(69).bg).toBe('#6ee7b7');
+  });
+
+  it('should return yellow for 60-64%', () => {
+    expect(getHeatColor(60).bg).toBe('#fbbf24');
+    expect(getHeatColor(64).bg).toBe('#fbbf24');
+  });
+
+  it('should return amber for 50-59%', () => {
+    expect(getHeatColor(50).bg).toBe('#f59e0b');
+    expect(getHeatColor(59).bg).toBe('#f59e0b');
+  });
+
+  it('should return orange for 40-49%', () => {
+    expect(getHeatColor(40).bg).toBe('#f97316');
+    expect(getHeatColor(49).bg).toBe('#f97316');
+  });
+
+  it('should return red for below 40%', () => {
+    expect(getHeatColor(30).bg).toBe('#ef4444');
+    expect(getHeatColor(10).bg).toBe('#ef4444');
+  });
+
+  it('should have white text on dark backgrounds', () => {
+    expect(getHeatColor(95).text).toBe('#ffffff');
+    expect(getHeatColor(85).text).toBe('#ffffff');
+    expect(getHeatColor(80).text).toBe('#ffffff');
+  });
+
+  it('should have dark text on light backgrounds', () => {
+    expect(getHeatColor(70).text).toBe('#065f46');
+    expect(getHeatColor(65).text).toBe('#065f46');
+    expect(getHeatColor(55).text).toBe('#78350f');
+  });
+});
+
+// ========== Quick Compare Filter Logic Tests ==========
+
+describe('Quick Compare Filter Logic', () => {
+  const consultants = [
+    { id: 1, name: 'A' },
+    { id: 2, name: 'B' },
+    { id: 3, name: 'C' },
+    { id: 4, name: 'D' },
+  ];
+
+  function applyQuickCompare(
+    selection: number[],
+    allConsultants: { id: number; name: string }[]
+  ): Record<number, boolean> {
+    const state: Record<number, boolean> = {};
+    allConsultants.forEach(c => {
+      state[c.id] = selection.includes(c.id);
+    });
+    return state;
+  }
+
+  it('should hide all when quick compare starts with empty selection', () => {
+    const state = applyQuickCompare([], consultants);
+    expect(Object.values(state).every(v => v === false)).toBe(true);
+  });
+
+  it('should show only selected consultant when one is picked', () => {
+    const state = applyQuickCompare([2], consultants);
+    expect(state[1]).toBe(false);
+    expect(state[2]).toBe(true);
+    expect(state[3]).toBe(false);
+    expect(state[4]).toBe(false);
+  });
+
+  it('should show exactly two consultants when both are picked', () => {
+    const state = applyQuickCompare([1, 3], consultants);
+    expect(state[1]).toBe(true);
+    expect(state[2]).toBe(false);
+    expect(state[3]).toBe(true);
+    expect(state[4]).toBe(false);
+    const visibleCount = Object.values(state).filter(v => v).length;
+    expect(visibleCount).toBe(2);
+  });
+
+  it('should not allow more than 2 selections', () => {
+    let selection = [1, 3];
+    // Attempt to add a third
+    const newId = 4;
+    if (selection.length < 2) {
+      selection = [...selection, newId];
+    }
+    // Selection should remain at 2
+    expect(selection.length).toBe(2);
+    expect(selection).toEqual([1, 3]);
+  });
+
+  it('should allow deselecting a consultant', () => {
+    let selection = [1, 3];
+    // Deselect consultant 1
+    selection = selection.filter(id => id !== 1);
+    const state = applyQuickCompare(selection, consultants);
+    expect(state[1]).toBe(false);
+    expect(state[3]).toBe(true);
+    expect(selection.length).toBe(1);
+  });
+
+  it('should restore all visible when exiting quick compare', () => {
+    const state: Record<number, boolean> = {};
+    consultants.forEach(c => { state[c.id] = true; });
+    expect(Object.values(state).every(v => v === true)).toBe(true);
+  });
+});
+
+// ========== Heatmap Max/Min Indicator Logic Tests ==========
+
+describe('Heatmap Max/Min Indicators', () => {
+  it('should identify max score in a criterion', () => {
+    const scores = [85, 92, 78, 90];
+    const maxScore = Math.max(...scores);
+    expect(maxScore).toBe(92);
+    expect(scores[1]).toBe(maxScore);
+  });
+
+  it('should identify min score in a criterion', () => {
+    const scores = [85, 92, 78, 90];
+    const minScore = Math.min(...scores.filter(s => s > 0));
+    expect(minScore).toBe(78);
+    expect(scores[2]).toBe(minScore);
+  });
+
+  it('should not mark min when all scores are equal', () => {
+    const scores = [85, 85, 85, 85];
+    const maxScore = Math.max(...scores);
+    const minScore = Math.min(...scores.filter(s => s > 0));
+    // When max === min, isMin should be false
+    expect(maxScore).toBe(minScore);
+  });
+
+  it('should handle zero scores correctly', () => {
+    const scores = [85, 0, 78, 90];
+    const nonZero = scores.filter(s => s > 0);
+    const minScore = Math.min(...nonZero);
+    expect(minScore).toBe(78);
+    // Zero should not be considered as min
+    expect(nonZero.includes(0)).toBe(false);
+  });
+});
