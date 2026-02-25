@@ -136,6 +136,14 @@ export default function ContractsRegistryPage() {
 
   const uploadFileMutation = trpc.contracts.uploadFile.useMutation();
 
+  const saveToDriveMutation = trpc.contracts.saveToDrive.useMutation({
+    onSuccess: (data) => {
+      toast.success(data.message);
+      utils.contracts.list.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
   // Filtered contracts
   const filteredContracts = useMemo(() => {
     return contracts.filter((c: any) => {
@@ -270,9 +278,35 @@ export default function ContractsRegistryPage() {
                   <AddContractForm
                     projects={projects}
                     contractTypes={contractTypes}
-                    onSave={(data) => addContractMutation.mutate(data)}
+                    onSave={async (data) => {
+                      const file = data._file;
+                      delete data._file;
+                      addContractMutation.mutate(data, {
+                        onSuccess: async (result) => {
+                          if (file && result?.id) {
+                            const reader = new FileReader();
+                            reader.onload = async () => {
+                              const base64 = (reader.result as string).split(",")[1];
+                              try {
+                                await uploadFileMutation.mutateAsync({
+                                  contractId: result.id,
+                                  fileName: file.name,
+                                  fileBase64: base64,
+                                  contentType: file.type || "application/pdf",
+                                });
+                                toast.success("تم رفع الملف بنجاح");
+                                utils.contracts.list.invalidate();
+                              } catch (err: any) {
+                                toast.error("فشل رفع الملف: " + err.message);
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        },
+                      });
+                    }}
                     onCancel={() => setShowAddContract(false)}
-                    saving={addContractMutation.isPending}
+                    saving={addContractMutation.isPending || uploadFileMutation.isPending}
                     uploadFile={uploadFileMutation}
                   />
                 </DialogContent>
@@ -402,7 +436,9 @@ export default function ContractsRegistryPage() {
                       setSelectedContract(contract);
                       setShowAnalysis(true);
                     }}
+                    onSaveToDrive={() => saveToDriveMutation.mutate({ contractId: contract.id })}
                     analyzing={analyzeMutation.isPending}
+                    savingToDrive={saveToDriveMutation.isPending}
                   />
                 ))}
               </div>
@@ -540,12 +576,14 @@ export default function ContractsRegistryPage() {
 // Contract Card Component
 // ═══════════════════════════════════════════════════
 
-function ContractCard({ contract, onAnalyze, onDelete, onViewAnalysis, analyzing }: {
+function ContractCard({ contract, onAnalyze, onDelete, onViewAnalysis, onSaveToDrive, analyzing, savingToDrive }: {
   contract: any;
   onAnalyze: () => void;
   onDelete: () => void;
   onViewAnalysis: () => void;
+  onSaveToDrive: () => void;
   analyzing: boolean;
+  savingToDrive: boolean;
 }) {
   const status = STATUS_MAP[contract.status] || STATUS_MAP.draft;
   const analysisStatus = ANALYSIS_STATUS_MAP[contract.analysisStatus] || ANALYSIS_STATUS_MAP.not_analyzed;
@@ -657,6 +695,33 @@ function ContractCard({ contract, onAnalyze, onDelete, onViewAnalysis, analyzing
                 {analysisStatus.label}
               </Badge>
 
+              {/* Save to Google Drive button */}
+              {contract.fileUrl && (
+                contract.driveFileId ? (
+                  <Button variant="outline" size="sm" className="h-7 text-xs gap-1 text-green-600" asChild>
+                    <a href={`https://drive.google.com/file/d/${contract.driveFileId}/view`} target="_blank" rel="noopener noreferrer">
+                      <FolderOpen className="w-3 h-3" />
+                      على Drive
+                    </a>
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs gap-1 text-amber-600"
+                    onClick={onSaveToDrive}
+                    disabled={savingToDrive}
+                  >
+                    {savingToDrive ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Upload className="w-3 h-3" />
+                    )}
+                    حفظ على Drive
+                  </Button>
+                )
+              )}
+
               <div className="mr-auto">
                 <Button
                   variant="ghost"
@@ -709,7 +774,8 @@ function AddContractForm({ projects, contractTypes, onSave, onCancel, saving, up
       toast.error("يرجى ملء الحقول المطلوبة: المشروع، نوع العقد، العنوان");
       return;
     }
-    onSave(form);
+    // Pass the file along with form data so the parent can handle upload after creation
+    onSave({ ...form, _file: selectedFile });
   };
 
   return (
@@ -820,6 +886,48 @@ function AddContractForm({ projects, contractTypes, onSave, onCancel, saving, up
       <div>
         <label className="text-sm font-medium mb-1 block">ملاحظات</label>
         <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="ملاحظات إضافية..." rows={3} />
+      </div>
+
+      {/* File Upload */}
+      <div>
+        <label className="text-sm font-medium mb-1 block">ملف العقد (PDF)</label>
+        <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-emerald-400 transition-colors cursor-pointer"
+          onClick={() => document.getElementById('contract-file-input')?.click()}
+        >
+          <input
+            id="contract-file-input"
+            type="file"
+            accept=".pdf,.doc,.docx"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                if (file.size > 16 * 1024 * 1024) {
+                  toast.error("حجم الملف يجب أن يكون أقل من 16MB");
+                  return;
+                }
+                setSelectedFile(file);
+              }
+            }}
+          />
+          {selectedFile ? (
+            <div className="flex items-center justify-center gap-2 text-sm text-emerald-600">
+              <FileText className="w-5 h-5" />
+              <span>{selectedFile.name}</span>
+              <span className="text-xs text-muted-foreground">({(selectedFile.size / 1024).toFixed(0)} KB)</span>
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-400" onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }}>
+                <XCircle className="w-4 h-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="text-muted-foreground">
+              <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground/40" />
+              <p className="text-sm">اضغط لاختيار ملف العقد</p>
+              <p className="text-xs text-muted-foreground/60">PDF, DOC, DOCX - حد أقصى 16MB</p>
+            </div>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">بعد رفع الملف، يمكنك طلب تحليل فاروق للعقد</p>
       </div>
 
       <DialogFooter className="gap-2">

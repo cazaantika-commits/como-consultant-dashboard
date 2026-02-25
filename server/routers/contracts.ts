@@ -5,6 +5,7 @@ import { contractTypes, projectContracts, projects } from "../../drizzle/schema"
 import { eq, and, desc } from "drizzle-orm";
 import { invokeLLM } from "../_core/llm";
 import { storagePut } from "../storage";
+import { uploadBinaryFile, searchFiles as driveSearchFiles, createFolder as driveCreateFolder, listFilesInFolder } from "../googleDrive";
 
 // ═══════════════════════════════════════════════════
 // Default contract types (31 types for real estate development)
@@ -411,7 +412,8 @@ ${contract.contractValue ? `قيمة العقد: ${contract.contractValue} ${con
           ],
         });
 
-        const content = response.choices[0]?.message?.content || "{}";
+        const rawContent = response.choices[0]?.message?.content || "{}";
+        const content = typeof rawContent === "string" ? rawContent : JSON.stringify(rawContent);
         const jsonMatch = content.match(/\{[\s\S]*\}/);
         
         if (!jsonMatch) throw new Error("فشل في استخراج التحليل");
@@ -441,6 +443,81 @@ ${contract.contractValue ? `قيمة العقد: ${contract.contractValue} ${con
           .set({ analysisStatus: "failed" })
           .where(eq(projectContracts.id, input.contractId));
         throw new Error(`فشل تحليل العقد: ${err.message}`);
+      }
+    }),
+
+  // ═══════════════════════════════════════════════════
+  // Save to Google Drive
+  // ═══════════════════════════════════════════════════
+
+  saveToDrive: protectedProcedure
+    .input(z.object({ contractId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      
+      // Get contract with project info
+      const [contract] = await db.select().from(projectContracts)
+        .where(and(eq(projectContracts.id, input.contractId), eq(projectContracts.userId, ctx.user.id)));
+      
+      if (!contract) throw new Error("العقد غير موجود");
+      if (!contract.fileUrl) throw new Error("لا يوجد ملف مرفق بالعقد");
+
+      // Get project info for folder naming
+      const [project] = await db.select().from(projects)
+        .where(eq(projects.id, contract.projectId));
+
+      try {
+        // Download the file from S3
+        const response = await fetch(contract.fileUrl);
+        if (!response.ok) throw new Error("فشل في تحميل الملف من التخزين");
+        const buffer = Buffer.from(await response.arrayBuffer());
+
+        // Find the project folder in Google Drive
+        const projectName = project?.name || "Unknown";
+        const projectResults = await driveSearchFiles(projectName);
+        let projectFolder = (projectResults as any)?.files?.find?.((f: any) => f.mimeType === "application/vnd.google-apps.folder") || (Array.isArray(projectResults) ? (projectResults as any[]).find((f: any) => f.mimeType === "application/vnd.google-apps.folder") : null);
+        
+        let contractsFolderId: string;
+        
+        if (projectFolder) {
+          // Look for 05_Contracts subfolder
+          const subFoldersResult = await listFilesInFolder(projectFolder.id);
+          const subFolders = (subFoldersResult as any)?.files || (Array.isArray(subFoldersResult) ? subFoldersResult : []);
+          const contractsFolder = subFolders.find((f: any) => f.name === "05_Contracts" && f.mimeType === "application/vnd.google-apps.folder");
+          
+          if (contractsFolder) {
+            contractsFolderId = contractsFolder.id;
+          } else {
+            // Create 05_Contracts folder
+            const newFolder = await driveCreateFolder("05_Contracts", projectFolder.id);
+            contractsFolderId = newFolder.id;
+          }
+        } else {
+          throw new Error(`لم يتم العثور على مجلد المشروع "${projectName}" في Google Drive. يرجى التأكد من وجود المجلد.`);
+        }
+
+        // Upload the file
+        const fileName = contract.fileName || `${contract.title}.pdf`;
+        const driveFile = await uploadBinaryFile(
+          fileName,
+          buffer,
+          contractsFolderId,
+          "application/pdf"
+        );
+
+        // Update contract with Drive file ID
+        await db.update(projectContracts)
+          .set({ driveFileId: driveFile.id })
+          .where(eq(projectContracts.id, input.contractId));
+
+        return {
+          success: true,
+          driveFileId: driveFile.id,
+          driveLink: driveFile.webViewLink,
+          message: `تم رفع العقد "${contract.title}" إلى مجلد 05_Contracts في Google Drive`
+        };
+      } catch (err: any) {
+        throw new Error(`فشل رفع العقد إلى Google Drive: ${err.message}`);
       }
     }),
 
