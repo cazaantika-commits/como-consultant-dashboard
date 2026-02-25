@@ -26,7 +26,8 @@ import {
 import { getOAuthClientForUser } from "./googleOAuthClient";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { fetchEmailsSince, fetchEmailByUID, fetchRecentEmails, sendReply } from "./emailMonitor";
-import { setPendingEmailDraft } from "./agentChat";
+import { setPendingEmailDraft, clearPendingEmailDraft } from "./agentChat";
+import { logSentEmail } from "./db";
 import nodemailer from "nodemailer";
 
 // ═══════════════════════════════════════════════════
@@ -2302,12 +2303,44 @@ async function _executeToolInternal(
         const { to, subject, body, inReplyTo, cc } = args;
         try {
           const success = await sendReply(to, subject, body, inReplyTo, cc);
+          // Log to sent emails database
+          if (userId) {
+            logSentEmail({
+              userId,
+              toEmail: to,
+              subject,
+              body,
+              inReplyTo,
+              cc,
+              status: success ? "sent" : "failed",
+              errorMessage: success ? undefined : "فشل إرسال الرد",
+              sentBy: "salwa",
+              agentName: _currentAgent || "salwa",
+            }).catch(e => console.error("[SentEmails] Failed to log:", e));
+            // Clear pending draft after sending
+            clearPendingEmailDraft(userId);
+          }
           if (success) {
-            return JSON.stringify({ success: true, message: `تم إرسال الرد بنجاح إلى ${to}` });
+            return JSON.stringify({ success: true, message: `تم إرسال الرد بنجاح إلى ${to} ✅ (مسجل في السجل)` });
           } else {
             return JSON.stringify({ error: "فشل إرسال الرد" });
           }
         } catch (error: any) {
+          // Log failure too
+          if (userId) {
+            logSentEmail({
+              userId,
+              toEmail: to,
+              subject,
+              body,
+              inReplyTo,
+              cc,
+              status: "failed",
+              errorMessage: error.message,
+              sentBy: "salwa",
+              agentName: _currentAgent || "salwa",
+            }).catch(e => console.error("[SentEmails] Failed to log:", e));
+          }
           return JSON.stringify({ error: `خطأ في إرسال الرد: ${error.message}` });
         }
       }

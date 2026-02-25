@@ -1,4 +1,4 @@
-import { eq, and, inArray, or, like, desc } from "drizzle-orm";
+import { eq, and, inArray, or, like, desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, projects, InsertProject, consultants, InsertConsultant, projectConsultants, InsertProjectConsultant, financialData, InsertFinancialData, evaluationScores, InsertEvaluationScore, evaluatorScores, InsertEvaluatorScore, committeeDecisions, InsertCommitteeDecision, consultantDetails, InsertConsultantDetail, aiAdvisoryScores, InsertAiAdvisoryScore } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -623,4 +623,48 @@ export async function getComparisonById(id: number, userId: number) {
     proposalIds: JSON.parse(result[0].proposalIds),
     comparisonResult: result[0].comparisonResult ? JSON.parse(result[0].comparisonResult) : null,
   };
+}
+
+
+// ═══════════════════════════════════════════════════
+// Sent Emails Log - سجل الإيميلات المرسلة
+// ═══════════════════════════════════════════════════
+
+import { sentEmails, InsertSentEmail } from "../drizzle/schema";
+
+export async function logSentEmail(data: InsertSentEmail) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.insert(sentEmails).values(data);
+  return result[0].insertId;
+}
+
+export async function getSentEmails(userId: number, limit = 50, offset = 0) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select()
+    .from(sentEmails)
+    .where(eq(sentEmails.userId, userId))
+    .orderBy(desc(sentEmails.createdAt))
+    .limit(limit)
+    .offset(offset);
+}
+
+export async function getSentEmailsCount(userId: number) {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db.select({ count: sql<number>`count(*)` })
+    .from(sentEmails)
+    .where(eq(sentEmails.userId, userId));
+  return result[0]?.count || 0;
+}
+
+export async function getSentEmailById(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select()
+    .from(sentEmails)
+    .where(and(eq(sentEmails.id, id), eq(sentEmails.userId, userId)))
+    .limit(1);
+  return result[0] || null;
 }

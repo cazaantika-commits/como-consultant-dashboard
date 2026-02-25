@@ -169,6 +169,13 @@
       "when": 1772024329140,
       "tag": "0023_orange_nitro",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "5",
+      "when": 1772036468513,
+      "tag": "0024_greedy_sugar_man",
+      "breakpoints": true
     }
   ]
 }

@@ -1,8 +1,15 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { X, Send, Loader2, Trash2, History, Mic, MicOff, Square, Volume2, VolumeX, Pause } from "lucide-react";
+import { X, Send, Loader2, Trash2, History, Mic, MicOff, Square, Volume2, VolumeX, Pause, Mail, CheckCircle2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Card } from "./ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "./ui/dialog";
 import { trpc } from "@/lib/trpc";
 import { Streamdown } from "streamdown";
 import { SalwaAvatar, SalwaSpeakingIndicator } from "./SalwaAvatar";
@@ -378,6 +385,13 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
 
   const chatMutation = trpc.agents.chat.useMutation();
   const clearHistoryMutation = trpc.agents.clearChatHistory.useMutation();
+  const sendEmailMutation = trpc.sentEmails.sendWithConfirmation.useMutation();
+  const pendingDraftQuery = trpc.sentEmails.getPendingDraft.useQuery(undefined, { enabled: isSalwa });
+
+  // Email confirmation dialog state
+  const [showEmailConfirm, setShowEmailConfirm] = useState(false);
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailSentSuccess, setEmailSentSuccess] = useState<boolean | null>(null);
   const { isRecording, recordingTime, isTranscribing, startRecording, stopRecording, cancelRecording } = useVoiceRecorder();
   const { playingMessageIdx, loadingMessageIdx, isSpeaking, playAudio, stopAudio } = useTTSPlayer();
 
@@ -412,6 +426,75 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Detect if a message contains an email draft (from Salwa's email analysis)
+  const isEmailDraftMessage = (content: string) => {
+    return isSalwa && (
+      (content.includes("📧") && content.includes("الرد المقترح")) ||
+      (content.includes("✉️") && content.includes("مسودة الرد")) ||
+      (content.includes("📨") && content.includes("الرد المقترح")) ||
+      (content.includes("Draft Reply") || content.includes("Suggested Reply")) ||
+      (content.includes("البيانات التقنية") && content.includes("reply_to"))
+    );
+  };
+
+  // Handle email send with confirmation
+  const handleSendEmailClick = () => {
+    // Refetch pending draft to get latest
+    pendingDraftQuery.refetch();
+    setShowEmailConfirm(true);
+    setEmailSentSuccess(null);
+  };
+
+  const handleConfirmSendEmail = async () => {
+    const draft = pendingDraftQuery.data;
+    if (!draft) {
+      // If no pending draft, tell user to ask Salwa to check email first
+      setMessages(prev => [...prev, {
+        role: "agent",
+        content: "⚠️ لا توجد مسودة رد جاهزة. قولي لي \"شيكي على الإيميل\" أولاً حتى أحلل الرسائل وأجهز الرد.",
+        timestamp: new Date()
+      }]);
+      setShowEmailConfirm(false);
+      return;
+    }
+
+    setEmailSending(true);
+    try {
+      const result = await sendEmailMutation.mutateAsync({
+        to: draft.to,
+        toName: draft.fromName || undefined,
+        subject: draft.subject,
+        body: draft.body,
+        inReplyTo: draft.messageId || undefined,
+      });
+
+      setEmailSentSuccess(result.success);
+      if (result.success) {
+        setMessages(prev => [...prev, {
+          role: "agent",
+          content: `✅ تم إرسال الرد بنجاح إلى ${draft.fromName || draft.to}!\n\n📧 **الموضوع:** ${draft.subject}\n📬 **إلى:** ${draft.to}\n\n_تم تسجيل الإيميل في سجل الإيميلات المرسلة._`,
+          timestamp: new Date()
+        }]);
+      } else {
+        setMessages(prev => [...prev, {
+          role: "agent",
+          content: `❌ فشل إرسال الرد: ${result.errorMessage || "خطأ غير معروف"}`,
+          timestamp: new Date()
+        }]);
+      }
+      setTimeout(() => setShowEmailConfirm(false), 1500);
+    } catch (err: any) {
+      setEmailSentSuccess(false);
+      setMessages(prev => [...prev, {
+        role: "agent",
+        content: `❌ خطأ في الإرسال: ${err.message || "حاول مرة أخرى"}`,
+        timestamp: new Date()
+      }]);
+    } finally {
+      setEmailSending(false);
+    }
+  };
 
   const handleClearHistory = async () => {
     stopAudio();
@@ -510,6 +593,7 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
   };
 
   return (
+    <>
     <Card className="fixed bottom-4 left-4 w-[420px] h-[650px] shadow-2xl flex flex-col z-50 overflow-hidden border-0 rounded-2xl">
       {/* Header */}
       <div className={`bg-gradient-to-r ${defaults.gradient} text-white p-4 flex items-center justify-between`}>
@@ -612,6 +696,22 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
                 <div className="text-sm"><Streamdown>{msg.content}</Streamdown></div>
               ) : (
                 <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+              )}
+              {/* Email Send Button - appears after draft messages */}
+              {msg.role === "agent" && isEmailDraftMessage(msg.content) && (
+                <div className="mt-3 pt-2 border-t border-border/50">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSendEmailClick();
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold text-sm shadow-md shadow-emerald-500/25 transition-all duration-200 hover:shadow-lg hover:from-emerald-600 hover:to-emerald-700 active:scale-[0.98]"
+                  >
+                    <Send className="w-4 h-4" />
+                    أرسلي الرد
+                    <Mail className="w-4 h-4" />
+                  </button>
+                </div>
               )}
               <div className="flex items-center justify-between mt-1.5 gap-2">
                 <div className="flex items-center gap-1.5">
@@ -737,5 +837,93 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
         </p>
       </div>
     </Card>
+
+    {/* Email Confirmation Dialog */}
+    <Dialog open={showEmailConfirm} onOpenChange={setShowEmailConfirm}>
+      <DialogContent className="max-w-md" dir="rtl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <Mail className="w-5 h-5 text-primary" />
+            تأكيد إرسال الرد
+          </DialogTitle>
+        </DialogHeader>
+
+        {pendingDraftQuery.isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : pendingDraftQuery.data ? (
+          <div className="space-y-4">
+            {/* Recipient */}
+            <div className="bg-muted/30 rounded-xl p-3">
+              <p className="text-xs font-medium text-muted-foreground mb-1">المرسل إليه</p>
+              <p className="text-sm font-semibold text-foreground">
+                {pendingDraftQuery.data.fromName
+                  ? `${pendingDraftQuery.data.fromName} (${pendingDraftQuery.data.to})`
+                  : pendingDraftQuery.data.to}
+              </p>
+            </div>
+
+            {/* Subject */}
+            <div className="bg-muted/30 rounded-xl p-3">
+              <p className="text-xs font-medium text-muted-foreground mb-1">الموضوع</p>
+              <p className="text-sm font-semibold text-foreground">{pendingDraftQuery.data.subject}</p>
+            </div>
+
+            {/* Body Preview */}
+            <div className="bg-muted/30 rounded-xl p-3">
+              <p className="text-xs font-medium text-muted-foreground mb-1">نص الرد</p>
+              <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed max-h-40 overflow-y-auto">
+                {pendingDraftQuery.data.body}
+              </p>
+            </div>
+
+            {/* Success/Error indicator */}
+            {emailSentSuccess === true && (
+              <div className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-950/20 rounded-xl">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">تم الإرسال بنجاح!</span>
+              </div>
+            )}
+            {emailSentSuccess === false && (
+              <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950/20 rounded-xl">
+                <X className="w-5 h-5 text-red-600" />
+                <span className="text-sm font-medium text-red-700 dark:text-red-400">فشل الإرسال</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-center py-6">
+            <Mail className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground">لا توجد مسودة رد جاهزة</p>
+            <p className="text-xs text-muted-foreground mt-1">قولي لسلوى "شيكي على الإيميل" أولاً</p>
+          </div>
+        )}
+
+        <DialogFooter className="flex gap-2 sm:justify-start">
+          <Button
+            variant="outline"
+            onClick={() => setShowEmailConfirm(false)}
+            disabled={emailSending}
+          >
+            إلغاء
+          </Button>
+          {pendingDraftQuery.data && emailSentSuccess === null && (
+            <Button
+              onClick={handleConfirmSendEmail}
+              disabled={emailSending}
+              className="gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700"
+            >
+              {emailSending ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> جاري الإرسال...</>
+              ) : (
+                <><Send className="w-4 h-4" /> تأكيد الإرسال</>
+              )}
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

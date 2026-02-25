@@ -935,3 +935,32 @@ export const specialistKnowledge = mysqlTable('specialistKnowledge', {
 });
 export type SpecialistKnowledge = typeof specialistKnowledge.$inferSelect;
 export type InsertSpecialistKnowledge = typeof specialistKnowledge.$inferInsert;
+
+// سجل الإيميلات المرسلة عبر سلوى
+export const sentEmails = mysqlTable('sent_emails', {
+  id: int('id').autoincrement().primaryKey(),
+  userId: int('userId').notNull().references(() => users.id),
+  
+  // بيانات الإرسال
+  toEmail: varchar('toEmail', { length: 320 }).notNull(), // عنوان المرسل إليه
+  toName: varchar('toName', { length: 255 }), // اسم المرسل إليه
+  subject: varchar('subject', { length: 500 }).notNull(), // الموضوع
+  body: longtext('body').notNull(), // نص الرد
+  
+  // بيانات الإيميل الأصلي
+  inReplyTo: varchar('inReplyTo', { length: 500 }), // messageId للإيميل الأصلي
+  originalEmailUid: int('originalEmailUid'), // UID الإيميل الأصلي
+  cc: varchar('cc', { length: 1000 }), // نسخة كربونية
+  
+  // الحالة
+  status: mysqlEnum('status', ['sent', 'failed', 'pending']).default('sent').notNull(),
+  errorMessage: text('errorMessage'), // رسالة الخطأ في حالة الفشل
+  
+  // من أرسل
+  sentBy: varchar('sentBy', { length: 50 }).default('salwa').notNull(), // salwa, user, system
+  agentName: varchar('agentName', { length: 50 }).default('salwa'), // اسم الوكيل
+  
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+export type SentEmail = typeof sentEmails.$inferSelect;
+export type InsertSentEmail = typeof sentEmails.$inferInsert;

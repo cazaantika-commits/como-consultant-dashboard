@@ -39,6 +39,7 @@ import FactSheetPage from "./pages/FactSheetPage";
 import CommitteeDecisionPage from "./pages/CommitteeDecisionPage";
 import ActivityMonitorPage from "./pages/ActivityMonitorPage";
 import SpecialistKnowledgePage from "./pages/SpecialistKnowledgePage";
+import SentEmailsPage from "./pages/SentEmailsPage";
 
 function Router() {
   return (
@@ -77,6 +78,7 @@ function Router() {
       <Route path="/committee-decision" component={CommitteeDecisionPage} />
       <Route path="/activity-monitor" component={ActivityMonitorPage} />
       <Route path="/specialist-knowledge" component={SpecialistKnowledgePage} />
+      <Route path="/sent-emails" component={SentEmailsPage} />
       <Route path="/meetings/:id" component={MeetingRoomPage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
