@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -20,6 +20,10 @@ import {
   ArrowRight,
   CalendarDays,
   Mail,
+  Volume2,
+  VolumeX,
+  Bell,
+  BellRing,
 } from "lucide-react";
 import { AgentChatBox } from "@/components/AgentChatBox";
 
@@ -247,6 +251,52 @@ function StatCard({ label, value, icon, trend }: { label: string; value: string 
   );
 }
 
+/* ─── Urgent Alert Toast ─── */
+function UrgentAlertToast({ tasks, onDismiss, onView }: {
+  tasks: { id: number; title: string }[];
+  onDismiss: () => void;
+  onView: () => void;
+}) {
+  if (!tasks.length) return null;
+  return (
+    <div className="fixed top-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-96 z-[100] animate-in slide-in-from-top duration-500">
+      <div className="bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-2xl shadow-2xl shadow-red-500/30 p-4 border border-red-400/50">
+        <div className="flex items-start gap-3">
+          <div className="flex-shrink-0 bg-white/20 rounded-full p-2 animate-pulse">
+            <BellRing className="w-5 h-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="font-bold text-sm mb-1">🚨 مهام عاجلة جديدة!</h4>
+            {tasks.slice(0, 3).map(t => (
+              <p key={t.id} className="text-xs text-white/90 truncate">• {t.title}</p>
+            ))}
+            {tasks.length > 3 && (
+              <p className="text-xs text-white/70 mt-1">و {tasks.length - 3} مهام أخرى...</p>
+            )}
+          </div>
+          <button onClick={onDismiss} className="flex-shrink-0 text-white/70 hover:text-white p-1">
+            <span className="text-lg leading-none">&times;</span>
+          </button>
+        </div>
+        <div className="flex gap-2 mt-3">
+          <button
+            onClick={onView}
+            className="flex-1 bg-white/20 hover:bg-white/30 text-white text-xs font-bold py-2 rounded-xl transition-colors"
+          >
+            عرض التفاصيل
+          </button>
+          <button
+            onClick={onDismiss}
+            className="flex-1 bg-white/10 hover:bg-white/20 text-white/80 text-xs py-2 rounded-xl transition-colors"
+          >
+            تجاهل
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════════
    ─── MAIN PAGE ───
    ═══════════════════════════════════════════════════ */
@@ -256,14 +306,92 @@ export default function ExecutiveVIPPage() {
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [showChat, setShowChat] = useState(false);
 
-  // Fetch data from platform
-  const { data: tasks } = trpc.tasks.list.useQuery();
+  // ─── Audio notification state ───
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    try { return localStorage.getItem("vip-sound-enabled") !== "false"; } catch { return true; }
+  });
+  const [alertTasks, setAlertTasks] = useState<{ id: number; title: string }[]>([]);
+  const prevUrgentIdsRef = useRef<Set<number>>(new Set());
+  const isFirstLoadRef = useRef(true);
+
+  // Persist sound preference
+  useEffect(() => {
+    try { localStorage.setItem("vip-sound-enabled", String(soundEnabled)); } catch {}
+  }, [soundEnabled]);
+
+  // Notification sound - pleasant but attention-grabbing alert chime
+  const playAlertSound = useCallback(() => {
+    if (!soundEnabled) return;
+    try {
+      const ctx = new AudioContext();
+      const now = ctx.currentTime;
+      // Three-tone ascending chime
+      [0, 0.15, 0.3].forEach((offset, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = "sine";
+        osc.frequency.value = [660, 880, 1100][i];
+        gain.gain.setValueAtTime(0, now + offset);
+        gain.gain.linearRampToValueAtTime(0.25, now + offset + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.4);
+        osc.start(now + offset);
+        osc.stop(now + offset + 0.4);
+      });
+      // Second set after a short pause for emphasis
+      setTimeout(() => {
+        try {
+          const ctx2 = new AudioContext();
+          const now2 = ctx2.currentTime;
+          [0, 0.12, 0.24].forEach((offset, i) => {
+            const osc = ctx2.createOscillator();
+            const gain = ctx2.createGain();
+            osc.connect(gain);
+            gain.connect(ctx2.destination);
+            osc.type = "sine";
+            osc.frequency.value = [880, 1100, 1320][i];
+            gain.gain.setValueAtTime(0, now2 + offset);
+            gain.gain.linearRampToValueAtTime(0.2, now2 + offset + 0.04);
+            gain.gain.exponentialRampToValueAtTime(0.001, now2 + offset + 0.35);
+            osc.start(now2 + offset);
+            osc.stop(now2 + offset + 0.35);
+          });
+        } catch {}
+      }, 600);
+    } catch {}
+  }, [soundEnabled]);
+
+  // Fetch data from platform with polling
+  const { data: tasks } = trpc.tasks.list.useQuery(undefined, { refetchInterval: 30000 });
   const { data: projects } = trpc.projects.listWithStats.useQuery();
-  const { data: taskStats } = trpc.tasks.stats.useQuery();
+  const { data: taskStats } = trpc.tasks.stats.useQuery(undefined, { refetchInterval: 30000 });
 
   // Derive counts
   const urgentTasks = useMemo(() => tasks?.filter(t => t.priority === "urgent" && t.status !== "done") || [], [tasks]);
   const importantTasks = useMemo(() => tasks?.filter(t => t.priority === "high" && t.status !== "done") || [], [tasks]);
+
+  // ─── Detect NEW urgent tasks and trigger alert ───
+  useEffect(() => {
+    if (!tasks) return;
+    const currentUrgentIds = new Set(urgentTasks.map(t => t.id));
+    
+    if (isFirstLoadRef.current) {
+      // First load - just record current state, don't alert
+      prevUrgentIdsRef.current = currentUrgentIds;
+      isFirstLoadRef.current = false;
+      return;
+    }
+
+    // Find truly new urgent tasks (not seen before)
+    const newUrgent = urgentTasks.filter(t => !prevUrgentIdsRef.current.has(t.id));
+    if (newUrgent.length > 0) {
+      playAlertSound();
+      setAlertTasks(newUrgent.map(t => ({ id: t.id, title: t.title })));
+    }
+
+    prevUrgentIdsRef.current = currentUrgentIds;
+  }, [tasks, urgentTasks, playAlertSound]);
 
   // Derive news ticker items from real data
   const tickerItems = useMemo(() => {
@@ -450,6 +578,13 @@ export default function ExecutiveVIPPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-amber-50/30 to-orange-50/20 relative overflow-hidden" dir="rtl">
       <FloatingParticles />
 
+      {/* Urgent task alert toast */}
+      <UrgentAlertToast
+        tasks={alertTasks}
+        onDismiss={() => setAlertTasks([])}
+        onView={() => { setAlertTasks([]); setActiveSection("urgent"); }}
+      />
+
       {/* CSS animations */}
       <style>{`
         @keyframes floatBubble {
@@ -480,12 +615,27 @@ export default function ExecutiveVIPPage() {
               {new Date().toLocaleDateString("ar-AE", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
             </p>
           </div>
-          <button
-            onClick={() => navigate("/")}
-            className="w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center hover:shadow-lg transition-all"
-          >
-            <ChevronLeft className="w-5 h-5 text-gray-600 rotate-180" />
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Sound toggle */}
+            <button
+              onClick={() => setSoundEnabled(prev => !prev)}
+              className={`w-10 h-10 rounded-full shadow-md flex items-center justify-center hover:shadow-lg transition-all ${
+                soundEnabled
+                  ? "bg-gradient-to-br from-amber-400 to-orange-500 text-white"
+                  : "bg-white text-gray-400"
+              }`}
+              title={soundEnabled ? "إيقاف الصوت" : "تفعيل الصوت"}
+            >
+              {soundEnabled ? <Volume2 className="w-4.5 h-4.5" /> : <VolumeX className="w-4.5 h-4.5" />}
+            </button>
+            {/* Back button */}
+            <button
+              onClick={() => navigate("/")}
+              className="w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center hover:shadow-lg transition-all"
+            >
+              <ChevronLeft className="w-5 h-5 text-gray-600 rotate-180" />
+            </button>
+          </div>
         </div>
 
         {/* Salwa greeting */}
