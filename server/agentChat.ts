@@ -9,6 +9,28 @@ import { getToolsForAgent, executeAgentTool, AGENT_TOOLS, setAgentContext } from
 
 export type AgentType = "salwa" | "farouq" | "khazen" | "buraq" | "khaled" | "alina" | "baz" | "joelle";
 
+// Retry helper with exponential backoff for rate limit (429) errors
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  label: string,
+  maxRetries: number = 3
+): Promise<Response> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const response = await fetch(url, options);
+    if (response.status === 429 && attempt < maxRetries) {
+      const retryAfter = response.headers.get('retry-after');
+      const waitMs = retryAfter ? parseInt(retryAfter) * 1000 : Math.min(1000 * Math.pow(2, attempt + 1), 30000);
+      console.warn(`[${label}] Rate limited (429). Retry ${attempt + 1}/${maxRetries} after ${waitMs}ms`);
+      await new Promise(resolve => setTimeout(resolve, waitMs));
+      continue;
+    }
+    return response;
+  }
+  // Should not reach here, but just in case
+  return fetch(url, options);
+}
+
 interface AgentChatRequest {
   agent: AgentType;
   message: string;
@@ -442,14 +464,14 @@ async function callOpenAI(
     body.tool_choice = "auto";
   }
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  const response = await fetchWithRetry("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${apiKey}`,
     },
     body: JSON.stringify(body),
-  });
+  }, "OpenAI");
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -496,14 +518,14 @@ async function callOpenAI(
 
     // Call again with tool results
     try {
-      const followUp = await fetch("https://api.openai.com/v1/chat/completions", {
+      const followUp = await fetchWithRetry("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${apiKey}`,
         },
         body: JSON.stringify({ model: "gpt-4o", messages, max_tokens: 2048, temperature: 0.8, tools, tool_choice: "auto" }),
-      });
+      }, "OpenAI-followup");
 
       if (!followUp.ok) {
         const errorText = await followUp.text();
@@ -593,7 +615,7 @@ async function callClaude(
     body.tools = claudeTools;
   }
 
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
+  const response = await fetchWithRetry("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -601,7 +623,7 @@ async function callClaude(
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify(body),
-  });
+  }, "Claude");
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -637,7 +659,7 @@ async function callClaude(
     messages.push({ role: "user", content: toolResults });
 
     // Call again with tool results
-    const followUp = await fetch("https://api.anthropic.com/v1/messages", {
+    const followUp = await fetchWithRetry("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -651,7 +673,7 @@ async function callClaude(
         messages,
         tools: claudeTools,
       }),
-    });
+    }, "Claude-followup");
 
     if (!followUp.ok) {
       const errorText = await followUp.text();
@@ -733,13 +755,14 @@ async function callGemini(
     body.tools = geminiTools;
   }
 
-  const response = await fetch(
+  const response = await fetchWithRetry(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
-    }
+    },
+    "Gemini"
   );
 
   if (!response.ok) {
@@ -779,7 +802,7 @@ async function callGemini(
     contents.push({ role: "user", parts: functionResponseParts });
 
     // Call again with function results
-    const followUp = await fetch(
+    const followUp = await fetchWithRetry(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
       {
         method: "POST",
@@ -790,7 +813,8 @@ async function callGemini(
           generationConfig: { maxOutputTokens: 2048, temperature: 0.8 },
           tools: geminiTools,
         }),
-      }
+      },
+      "Gemini-followup"
     );
 
     if (!followUp.ok) {
