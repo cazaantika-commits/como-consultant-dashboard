@@ -2208,19 +2208,34 @@ async function _executeToolInternal(
           const readCount = emails.filter(e => e.isRead).length;
           const unreadCount = emails.filter(e => !e.isRead).length;
           const withAttachments = emails.filter(e => e.attachments.length > 0).length;
+          // Emails are already sorted newest-first by fetchEmailsSince
+          const latest = emails[0];
+          const emailList = emails.slice(0, 20).map((e, idx) => ({
+            rank: idx + 1,
+            label: idx === 0 ? "⭐ آخر إيميل (الأحدث)" : `رسالة #${idx + 1}`,
+            uid: e.uid,
+            from: e.from,
+            fromName: e.fromName,
+            subject: e.subject,
+            date: e.date.toISOString(),
+            isRead: e.isRead,
+            hasAttachments: e.attachments.length > 0,
+            attachmentCount: e.attachments.length,
+            attachmentNames: e.attachments.map(a => a.filename).join(", "),
+          }));
           return JSON.stringify({
             message: `وجدت ${emails.length} رسالة في آخر ${hours} ساعة (غير مقروء: ${unreadCount}, مقروء: ${readCount}, مع مرفقات: ${withAttachments})`,
-            data: emails.slice(0, 20).map(e => ({
-              uid: e.uid,
-              from: e.from,
-              fromName: e.fromName,
-              subject: e.subject,
-              date: e.date.toISOString(),
-              isRead: e.isRead,
-              hasAttachments: e.attachments.length > 0,
-              attachmentCount: e.attachments.length,
-              attachmentNames: e.attachments.map(a => a.filename).join(", "),
-            }))
+            latest_email: {
+              notice: "⚠️ هذا هو آخر إيميل وصلنا - يجب ذكره أولاً عند سؤال المستخدم عن آخر إيميل",
+              fromName: latest.fromName,
+              from: latest.from,
+              subject: latest.subject,
+              date: latest.date.toISOString(),
+              uid: latest.uid,
+              hasAttachments: latest.attachments.length > 0,
+              attachmentCount: latest.attachments.length,
+            },
+            data: emailList
           });
         } catch (error: any) {
           return JSON.stringify({ error: `خطأ في فحص الإيميل: ${error.message}` });
