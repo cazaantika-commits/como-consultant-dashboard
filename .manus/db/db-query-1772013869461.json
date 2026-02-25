@@ -1,0 +1,55 @@
+{
+  "query": "SELECT id, name, COALESCE(driveFolderId, 'NULL') as driveFolderId FROM projects;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, name, COALESCE(driveFolderId, 'NULL') as driveFolderId FROM projects;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "مركز مجان التجاري (G+4)",
+      "driveFolderId": "1ZR1tT3U1h2QiqMwoAM0nKXXamh4c2IrV"
+    },
+    {
+      "id": "2",
+      "name": "مجان متعدد الاستخدامات (G+4P+25)",
+      "driveFolderId": "18Bga-rwJqOic1wKaESFqxdmdDTaV5sAW"
+    },
+    {
+      "id": "3",
+      "name": "مبنى الجداف السكني (G+7)",
+      "driveFolderId": "1P8AlxoabTktrFKmJ6h6qU5sa-w5huG7K"
+    },
+    {
+      "id": "4",
+      "name": "ند الشبا — قطعة 1 (6185392)",
+      "driveFolderId": "1RcDTcqK9XLUpEKkBNMQnGbmCvzMqgJYL"
+    },
+    {
+      "id": "5",
+      "name": "ند الشبا — قطعة 2 المدمجة (6182776)",
+      "driveFolderId": "1Cq17UsAPAKnSFyOm28SSgFrh25Q_Te0K"
+    },
+    {
+      "id": "6",
+      "name": "ند الشبا — قطعة 3 الفلل (6180578)",
+      "driveFolderId": "1q-NynLm0O8yPjr7QV93yhHvi7rytHhuS"
+    },
+    {
+      "id": "60001",
+      "name": "مشروع آلات البيع في ميسيسوجا، أونتاريو",
+      "driveFolderId": "NULL"
+    },
+    {
+      "id": "60002",
+      "name": "مشروع آلات البيع في ميسيسوجا، أونتاريو",
+      "driveFolderId": "NULL"
+    },
+    {
+      "id": "60003",
+      "name": "آلات البيع في كلية طب الأسنان",
+      "driveFolderId": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tdriveFolderId\n1\tمركز مجان التجاري (G+4)\t1ZR1tT3U1h2QiqMwoAM0nKXXamh4c2IrV\n2\tمجان متعدد الاستخدامات (G+4P+25)\t18Bga-rwJqOic1wKaESFqxdmdDTaV5sAW\n3\tمبنى الجداف السكني (G+7)\t1P8AlxoabTktrFKmJ6h6qU5sa-w5huG7K\n4\tند الشبا — قطعة 1 (6185392)\t1RcDTcqK9XLUpEKkBNMQnGbmCvzMqgJYL\n5\tند الشبا — قطعة 2 المدمجة (6182776)\t1Cq17UsAPAKnSFyOm28SSgFrh25Q_Te0K\n6\tند الشبا — قطعة 3 الفلل (6180578)\t1q-NynLm0O8yPjr7QV93yhHvi7rytHhuS\n60001\tمشروع آلات البيع في ميسيسوجا، أونتاريو\tNULL\n60002\tمشروع آلات البيع في ميسيسوجا، أونتاريو\tNULL\n60003\tآلات البيع في كلية طب الأسنان\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1517
+}

@@ -1122,6 +1122,8 @@ async function _executeToolInternal(
           message: `${result.length} مشروع مسجل`,
           data: result.map((p: any) => ({
             id: p.id, name: p.name, description: p.description,
+            plotNumber: p.plotNumber, areaCode: p.areaCode,
+            driveFolderId: p.driveFolderId,
             bua: p.bua, pricePerSqft: p.pricePerSqft, notes: p.notes
           }))
         });

@@ -140,7 +140,7 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
   // Queries
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: !!user });
   const projectQuery = trpc.projects.getById.useQuery(
-    { id: selectedProjectId! },
+    selectedProjectId!,
     { enabled: !!selectedProjectId }
   );
 

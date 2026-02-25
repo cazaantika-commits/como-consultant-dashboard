@@ -1002,3 +1002,10 @@
 - [x] فاروق يلخص أهم نقاط العقد (مواعيد، غرامات، التزامات)
 - [x] إضافة زر حفظ العقد على Google Drive بعد التحليل (saveToDrive procedure)
 - [x] اختبار النظام الكامل (8 اختبارات ناجحة)
+
+## تشخيص مشكلة خازن لا يعبئ بطاقات المشاريع - فبراير 25
+- [x] فحص كود التعبئة التلقائية من خازن في FactSheetPage
+- [x] فحص الـ API المسؤول عن التعبئة (agents.chat مع خازن)
+- [x] تشخيص: list_projects لا يرجع driveFolderId + projects.getById يتوقع number ويستلم object
+- [x] إصلاح: إضافة driveFolderId/plotNumber/areaCode لـ list_projects + إصلاح getById query
+- [x] اختبار التعبئة التلقائية - نجاح! خازن عبّأ 12/40 حقل (30%)
