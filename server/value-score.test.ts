@@ -382,3 +382,171 @@ describe("Full Evaluation Flow: Percentages → Weighted Score → Value Score",
     expect(valueScore).toBeLessThan(100);
   });
 });
+
+
+// ============ CHART DATA PREPARATION TESTS ============
+
+describe("Chart Data Preparation", () => {
+  // Simulates the data transformation used for the Grouped Bar Chart
+  function prepareBarChartData(consultants: Array<{ name: string; technicalScore: number; adjustedFinancialScore: number; valueScore: number }>) {
+    return consultants.map(r => ({
+      name: r.name.length > 18 ? r.name.substring(0, 18) + '…' : r.name,
+      fullName: r.name,
+      technical: Math.round(r.technicalScore * 10) / 10,
+      financial: r.adjustedFinancialScore,
+      value: r.valueScore,
+    }));
+  }
+
+  // Simulates the data transformation used for the Radar Chart
+  function prepareRadarChartData(
+    criteria: Array<{ name: string; weight: number }>,
+    consultants: Array<{ name: string; scores: number[] }>
+  ) {
+    return criteria.map((criterion, idx) => {
+      const entry: Record<string, any> = {
+        criterion: criterion.name.length > 12 ? criterion.name.substring(0, 12) + '…' : criterion.name,
+        fullName: criterion.name,
+        weight: criterion.weight,
+      };
+      consultants.forEach(c => {
+        entry[c.name] = c.scores[idx] || 0;
+      });
+      return entry;
+    });
+  }
+
+  // Simulates the data transformation used for the Scatter Chart
+  function prepareScatterChartData(consultants: Array<{ name: string; totalFee: number; technicalScore: number; valueScore: number; zone: string; zoneLabel: string }>) {
+    return consultants.map(r => ({
+      name: r.name,
+      fee: r.totalFee,
+      technical: Math.round(r.technicalScore * 10) / 10,
+      value: r.valueScore,
+      zone: r.zone,
+      zoneLabel: r.zoneLabel,
+    }));
+  }
+
+  describe("Bar Chart Data", () => {
+    it("should truncate long consultant names to 18 characters", () => {
+      const data = prepareBarChartData([
+        { name: "شركة الاستشارات الهندسية المتقدمة", technicalScore: 85, adjustedFinancialScore: 90, valueScore: 86 },
+      ]);
+      expect(data[0].name.length).toBeLessThanOrEqual(19); // 18 + '…'
+      expect(data[0].fullName).toBe("شركة الاستشارات الهندسية المتقدمة");
+    });
+
+    it("should keep short names unchanged", () => {
+      const data = prepareBarChartData([
+        { name: "DATUM", technicalScore: 85, adjustedFinancialScore: 90, valueScore: 86 },
+      ]);
+      expect(data[0].name).toBe("DATUM");
+    });
+
+    it("should round technical scores to 1 decimal", () => {
+      const data = prepareBarChartData([
+        { name: "Test", technicalScore: 85.456, adjustedFinancialScore: 90, valueScore: 86 },
+      ]);
+      expect(data[0].technical).toBe(85.5);
+    });
+
+    it("should include all three score types for each consultant", () => {
+      const data = prepareBarChartData([
+        { name: "A", technicalScore: 88, adjustedFinancialScore: 92, valueScore: 88.8 },
+        { name: "B", technicalScore: 75, adjustedFinancialScore: 100, valueScore: 80 },
+      ]);
+      expect(data).toHaveLength(2);
+      data.forEach(d => {
+        expect(d).toHaveProperty("technical");
+        expect(d).toHaveProperty("financial");
+        expect(d).toHaveProperty("value");
+      });
+    });
+  });
+
+  describe("Radar Chart Data", () => {
+    const criteria = [
+      { name: "الهوية المعمارية وجودة التصميم", weight: 14.6 },
+      { name: "القدرات التقنية", weight: 14.6 },
+      { name: "كفاءة التخطيط", weight: 13.6 },
+    ];
+
+    it("should create one entry per criterion", () => {
+      const data = prepareRadarChartData(criteria, [
+        { name: "DATUM", scores: [90, 85, 92] },
+      ]);
+      expect(data).toHaveLength(3);
+    });
+
+    it("should include each consultant as a separate key", () => {
+      const data = prepareRadarChartData(criteria, [
+        { name: "DATUM", scores: [90, 85, 92] },
+        { name: "Khatib", scores: [88, 91, 80] },
+      ]);
+      expect(data[0]["DATUM"]).toBe(90);
+      expect(data[0]["Khatib"]).toBe(88);
+      expect(data[1]["DATUM"]).toBe(85);
+      expect(data[1]["Khatib"]).toBe(91);
+    });
+
+    it("should truncate long criterion names to 12 characters", () => {
+      const data = prepareRadarChartData(criteria, [
+        { name: "Test", scores: [90, 85, 92] },
+      ]);
+      expect(data[0].criterion.length).toBeLessThanOrEqual(13); // 12 + '…'
+      expect(data[0].fullName).toBe("الهوية المعمارية وجودة التصميم");
+    });
+
+    it("should include weight for each criterion", () => {
+      const data = prepareRadarChartData(criteria, [
+        { name: "Test", scores: [90, 85, 92] },
+      ]);
+      expect(data[0].weight).toBe(14.6);
+      expect(data[2].weight).toBe(13.6);
+    });
+
+    it("should default to 0 for missing scores", () => {
+      const data = prepareRadarChartData(criteria, [
+        { name: "Test", scores: [90] }, // only 1 score for 3 criteria
+      ]);
+      expect(data[0]["Test"]).toBe(90);
+      expect(data[1]["Test"]).toBe(0);
+      expect(data[2]["Test"]).toBe(0);
+    });
+  });
+
+  describe("Scatter Chart Data", () => {
+    it("should map all required fields", () => {
+      const data = prepareScatterChartData([
+        { name: "DATUM", totalFee: 5000000, technicalScore: 88.5, valueScore: 86.2, zone: "normal", zoneLabel: "طبيعي" },
+      ]);
+      expect(data[0]).toEqual({
+        name: "DATUM",
+        fee: 5000000,
+        technical: 88.5,
+        value: 86.2,
+        zone: "normal",
+        zoneLabel: "طبيعي",
+      });
+    });
+
+    it("should round technical score to 1 decimal", () => {
+      const data = prepareScatterChartData([
+        { name: "Test", totalFee: 3000000, technicalScore: 92.456, valueScore: 90, zone: "normal", zoneLabel: "طبيعي" },
+      ]);
+      expect(data[0].technical).toBe(92.5);
+    });
+
+    it("should preserve zone information for color coding", () => {
+      const data = prepareScatterChartData([
+        { name: "A", totalFee: 5000000, technicalScore: 85, valueScore: 80, zone: "normal", zoneLabel: "طبيعي" },
+        { name: "B", totalFee: 8000000, technicalScore: 90, valueScore: 75, zone: "extreme_high", zoneLabel: "انحراف مرتفع جداً" },
+        { name: "C", totalFee: 2000000, technicalScore: 70, valueScore: 72, zone: "extreme_low", zoneLabel: "انحراف منخفض جداً" },
+      ]);
+      expect(data[0].zone).toBe("normal");
+      expect(data[1].zone).toBe("extreme_high");
+      expect(data[2].zone).toBe("extreme_low");
+    });
+  });
+});

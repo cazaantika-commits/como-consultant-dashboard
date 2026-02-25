@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Plus, Trash2, Download, Star, BarChart3, DollarSign, Users, Award, ExternalLink, Link2, TrendingUp, Target, CheckCircle2, Building, FileDown, ChevronLeft, ChevronRight, Sparkles, AlertTriangle, Shield, Info, Gavel, Brain, ArrowLeft, Scale, Calculator, SlidersHorizontal, Eye } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { generateEvaluationPDF } from "@/lib/pdfExport";
+import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, ScatterChart, Scatter, ZAxis, Cell, ReferenceLine } from 'recharts';
 
 // FinancialRow component with local state - saves ONLY on blur
 function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, updateFinancialMutation, onTotalChange }: {
@@ -1704,6 +1705,204 @@ export default function ConsultantEvaluationPage() {
                     )}
                   </CardContent>
                 </Card>
+
+                {/* ============ PERFORMANCE COMPARISON CHARTS ============ */}
+                {valueRankings.length > 0 && (
+                  <Card className="shadow-xl border-0 mt-6">
+                    <CardHeader className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 border-b">
+                      <CardTitle className="flex items-center gap-2 text-slate-800 text-lg">
+                        <BarChart3 className="w-5 h-5 text-indigo-600" />
+                        مقارنة الأداء الفني والمالي — رسوم بيانية
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-8">
+
+                      {/* === 1. Grouped Bar Chart: Technical vs Financial vs Value Score === */}
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-700 mb-1 flex items-center gap-2">
+                          <Target className="w-4 h-4 text-indigo-500" />
+                          مقارنة الدرجات: الفنية — المالية — القيمة المركبة
+                        </h4>
+                        <p className="text-xs text-slate-500 mb-4">كل عمود يمثل درجة الاستشاري في المحور المحدد (من 100)</p>
+                        <div className="bg-white rounded-xl border border-slate-200 p-4" style={{ direction: 'ltr' }}>
+                          <ResponsiveContainer width="100%" height={Math.max(320, valueRankings.length * 60)}>
+                            <BarChart
+                              data={valueRankings.map(r => ({
+                                name: r.name.length > 18 ? r.name.substring(0, 18) + '…' : r.name,
+                                fullName: r.name,
+                                technical: Math.round(r.technicalScore * 10) / 10,
+                                financial: r.adjustedFinancialScore,
+                                value: r.valueScore,
+                              }))}
+                              layout="vertical"
+                              margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
+                            >
+                              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                              <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: '#64748b' }} />
+                              <YAxis dataKey="name" type="category" width={140} tick={{ fontSize: 11, fill: '#334155', fontWeight: 600 }} />
+                              <RechartsTooltip
+                                contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', direction: 'rtl', textAlign: 'right' }}
+                                formatter={(value: number, name: string) => {
+                                  const labels: Record<string, string> = { technical: 'الدرجة الفنية', financial: 'الدرجة المالية المعدلة', value: 'درجة القيمة المركبة' };
+                                  return [`${value}%`, labels[name] || name];
+                                }}
+                                labelFormatter={(label) => {
+                                  const item = valueRankings.find(r => (r.name.length > 18 ? r.name.substring(0, 18) + '…' : r.name) === label);
+                                  return item?.name || label;
+                                }}
+                              />
+                              <Legend
+                                formatter={(value: string) => {
+                                  const labels: Record<string, string> = { technical: 'الدرجة الفنية', financial: 'المالية المعدلة', value: 'القيمة المركبة' };
+                                  return <span style={{ fontSize: 12, color: '#475569' }}>{labels[value] || value}</span>;
+                                }}
+                              />
+                              <Bar dataKey="technical" fill="#6366f1" radius={[0, 6, 6, 0]} barSize={14} name="technical" />
+                              <Bar dataKey="financial" fill="#10b981" radius={[0, 6, 6, 0]} barSize={14} name="financial" />
+                              <Bar dataKey="value" fill="#f59e0b" radius={[0, 6, 6, 0]} barSize={14} name="value" />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+
+                      {/* === 2. Radar Chart: Technical Criteria Breakdown === */}
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-700 mb-1 flex items-center gap-2">
+                          <Star className="w-4 h-4 text-purple-500" />
+                          البصمة الفنية — مقارنة المعايير التسعة
+                        </h4>
+                        <p className="text-xs text-slate-500 mb-4">كل محور يمثل معياراً فنياً — المساحة الأكبر تعني أداءً أشمل</p>
+                        <div className="bg-white rounded-xl border border-slate-200 p-4" style={{ direction: 'ltr' }}>
+                          <ResponsiveContainer width="100%" height={420}>
+                            <RadarChart
+                              data={CRITERIA.map((criterion, idx) => {
+                                const entry: Record<string, any> = {
+                                  criterion: criterion.name.length > 12 ? criterion.name.substring(0, 12) + '…' : criterion.name,
+                                  fullName: criterion.name,
+                                  weight: criterion.weight,
+                                };
+                                valueRankings.forEach(r => {
+                                  const scores = consultantScores[r.id];
+                                  entry[r.name] = scores ? Math.round(scores.scores[idx] * 10) / 10 : 0;
+                                });
+                                return entry;
+                              })}
+                            >
+                              <PolarGrid stroke="#e2e8f0" />
+                              <PolarAngleAxis
+                                dataKey="criterion"
+                                tick={{ fontSize: 10, fill: '#475569' }}
+                              />
+                              <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 9, fill: '#94a3b8' }} />
+                              <RechartsTooltip
+                                contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', direction: 'rtl', textAlign: 'right' }}
+                                formatter={(value: number, name: string) => [`${value}%`, name]}
+                                labelFormatter={(label) => {
+                                  const item = CRITERIA.find(c => (c.name.length > 12 ? c.name.substring(0, 12) + '…' : c.name) === label);
+                                  return item ? `${item.name} (وزن: ${item.weight}%)` : label;
+                                }}
+                              />
+                              <Legend
+                                formatter={(value: string) => <span style={{ fontSize: 12, color: '#475569' }}>{value}</span>}
+                              />
+                              {(() => {
+                                const colors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
+                                return valueRankings.map((r, i) => (
+                                  <Radar
+                                    key={r.id}
+                                    name={r.name}
+                                    dataKey={r.name}
+                                    stroke={colors[i % colors.length]}
+                                    fill={colors[i % colors.length]}
+                                    fillOpacity={0.12}
+                                    strokeWidth={2}
+                                  />
+                                ));
+                              })()}
+                            </RadarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+
+                      {/* === 3. Scatter Chart: Quality vs Cost === */}
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-700 mb-1 flex items-center gap-2">
+                          <Scale className="w-4 h-4 text-teal-500" />
+                          خريطة الجودة مقابل التكلفة
+                        </h4>
+                        <p className="text-xs text-slate-500 mb-4">الموقع الأمثل: أعلى يسار (جودة عالية + تكلفة منخفضة)</p>
+                        <div className="bg-white rounded-xl border border-slate-200 p-4" style={{ direction: 'ltr' }}>
+                          <ResponsiveContainer width="100%" height={380}>
+                            <ScatterChart margin={{ top: 20, right: 30, bottom: 20, left: 20 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                              <XAxis
+                                type="number"
+                                dataKey="fee"
+                                name="الأتعاب"
+                                tick={{ fontSize: 11, fill: '#64748b' }}
+                                tickFormatter={(v) => v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `${(v / 1000).toFixed(0)}K` : String(v)}
+                                label={{ value: 'إجمالي الأتعاب (AED)', position: 'bottom', offset: 0, style: { fontSize: 11, fill: '#64748b' } }}
+                              />
+                              <YAxis
+                                type="number"
+                                dataKey="technical"
+                                name="الدرجة الفنية"
+                                domain={[0, 100]}
+                                tick={{ fontSize: 11, fill: '#64748b' }}
+                                label={{ value: 'الدرجة الفنية %', angle: -90, position: 'insideLeft', style: { fontSize: 11, fill: '#64748b' } }}
+                              />
+                              <ZAxis type="number" dataKey="value" range={[200, 600]} name="القيمة" />
+                              <RechartsTooltip
+                                contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', direction: 'rtl', textAlign: 'right' }}
+                                content={({ payload }) => {
+                                  if (!payload || payload.length === 0) return null;
+                                  const d = payload[0].payload;
+                                  return (
+                                    <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-lg text-right" dir="rtl">
+                                      <p className="font-bold text-sm text-slate-800 mb-2">{d.name}</p>
+                                      <p className="text-xs text-slate-600">الدرجة الفنية: <span className="font-bold text-indigo-600">{d.technical}%</span></p>
+                                      <p className="text-xs text-slate-600">الأتعاب: <span className="font-bold text-emerald-600">{d.fee?.toLocaleString()} AED</span></p>
+                                      <p className="text-xs text-slate-600">درجة القيمة: <span className="font-bold text-amber-600">{d.value}%</span></p>
+                                      <p className="text-xs mt-1 text-slate-500">منطقة الانحراف: <span className={`font-bold ${d.zone === 'normal' ? 'text-emerald-600' : d.zone === 'moderate_high' ? 'text-amber-600' : 'text-red-600'}`}>{d.zoneLabel}</span></p>
+                                    </div>
+                                  );
+                                }}
+                              />
+                              {/* Average fee reference line */}
+                              {feeDeviations.average > 0 && (
+                                <ReferenceLine x={feeDeviations.average} stroke="#94a3b8" strokeDasharray="5 5" label={{ value: 'متوسط الأتعاب', position: 'top', style: { fontSize: 10, fill: '#94a3b8' } }} />
+                              )}
+                              <Scatter
+                                data={valueRankings.map(r => ({
+                                  name: r.name,
+                                  fee: r.totalFee,
+                                  technical: Math.round(r.technicalScore * 10) / 10,
+                                  value: r.valueScore,
+                                  zone: feeDeviations.consultants[r.id]?.zone || 'normal',
+                                  zoneLabel: feeDeviations.consultants[r.id]?.zoneLabel || 'طبيعي',
+                                }))}
+                              >
+                                {valueRankings.map((r, i) => {
+                                  const zone = feeDeviations.consultants[r.id]?.zone || 'normal';
+                                  const color = zone === 'normal' ? '#10b981' : zone === 'moderate_high' ? '#f59e0b' : zone === 'extreme_high' ? '#ef4444' : zone === 'extreme_low' ? '#3b82f6' : '#6366f1';
+                                  return <Cell key={r.id} fill={color} stroke={color} strokeWidth={2} />;
+                                })}
+                              </Scatter>
+                            </ScatterChart>
+                          </ResponsiveContainer>
+                          {/* Legend for scatter colors */}
+                          <div className="flex flex-wrap justify-center gap-4 mt-3 text-xs">
+                            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> النطاق الطبيعي</span>
+                            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-amber-500 inline-block"></span> انحراف معتدل</span>
+                            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-red-500 inline-block"></span> انحراف مرتفع</span>
+                            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> انحراف منخفض</span>
+                          </div>
+                        </div>
+                      </div>
+
+                    </CardContent>
+                  </Card>
+                )}
               </TabsContent>
 
               {/* ============ COMMITTEE DECISION TAB (Item 5, 6, 9) ============ */}
