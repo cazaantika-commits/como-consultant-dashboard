@@ -8,12 +8,12 @@ import { checkAndNotifyEmails } from "./emailIntegration";
 let schedulerInterval: ReturnType<typeof setInterval> | null = null;
 let isRunning = false;
 
-const SCHEDULE_TIMES_UTC = [
-  { hour: 5, minute: 30 },
-  { hour: 7, minute: 30 },
-  { hour: 10, minute: 0 },
-  { hour: 17, minute: 0 },
-];
+// Check every hour from 7 AM to 10 PM Dubai time (UTC+4)
+// That's UTC 3:00 to 18:00
+const SCHEDULE_TIMES_UTC: { hour: number; minute: number }[] = [];
+for (let dubaiHour = 7; dubaiHour <= 22; dubaiHour++) {
+  SCHEDULE_TIMES_UTC.push({ hour: (dubaiHour - 4 + 24) % 24, minute: 0 });
+}
 
 let lastCheckKey = "";
 
@@ -53,7 +53,7 @@ async function checkSchedule() {
 
 export function startEmailScheduler() {
   if (schedulerInterval) return;
-  console.log("[EmailScheduler] Starting - Schedule (Dubai): 9:30, 11:30, 14:00, 21:00");
+  console.log("[EmailScheduler] Starting - Schedule: every hour from 7 AM to 10 PM Dubai time");
   schedulerInterval = setInterval(checkSchedule, 60 * 1000);
   checkSchedule();
 }
@@ -85,13 +85,11 @@ export function getSchedulerStatus() {
   const now = new Date();
   const dubaiHour = (now.getUTCHours() + 4) % 24;
   const dubaiMinute = now.getUTCMinutes();
-  const dubaiTimes = [
-    { hour: 9, minute: 30 },
-    { hour: 11, minute: 30 },
-    { hour: 14, minute: 0 },
-    { hour: 21, minute: 0 },
-  ];
-  let nextCheck = "غداً 9:30 صباحاً";
+  const dubaiTimes: { hour: number; minute: number }[] = [];
+  for (let h = 7; h <= 22; h++) {
+    dubaiTimes.push({ hour: h, minute: 0 });
+  }
+  let nextCheck = "غداً 7:00 صباحاً";
   for (const t of dubaiTimes) {
     if (t.hour > dubaiHour || (t.hour === dubaiHour && t.minute > dubaiMinute)) {
       nextCheck = t.hour + ":" + (t.minute === 0 ? "00" : t.minute);
