@@ -185,8 +185,8 @@ export default function CommitteeDecisionPage() {
     if (!rankings.length) return [];
     const feesWithValues = rankings.filter(r => r.fee > 0);
     const lowestFee = feesWithValues.length > 0 ? Math.min(...feesWithValues.map(r => r.fee)) : 0;
-    const T_WEIGHT = 65; // Technical weight %
-    const F_WEIGHT = 35; // Financial weight %
+    const T_WEIGHT = 80; // Technical weight %
+    const F_WEIGHT = 20; // Financial weight %
 
     return rankings.map(r => {
       // Financial Score = (Lowest Fee / Consultant Fee) × 100
@@ -499,7 +499,7 @@ export default function CommitteeDecisionPage() {
                 <CardContent>
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
                     <p className="text-xs text-amber-700">
-                      <span className="font-bold">الصيغة:</span> Value Score = (فني × 65%) + (مالي معدل × 35%) — هذا التصنيف مرجعي فقط ولا يلزم اللجنة.
+                      <span className="font-bold">الصيغة:</span> Value Score = (فني × 80%) + (مالي معدل × 20%) — هذا التصنيف مرجعي فقط ولا يلزم اللجنة.
                     </p>
                   </div>
                   <div className="space-y-3">

@@ -26,17 +26,35 @@ function calculateFinancialScore(fee: number, lowestFee: number): number {
   return (lowestFee / fee) * 100;
 }
 
+// Updated default weights: 80% technical, 20% financial
 function calculateValueScore(
   technicalScore: number,
   financialScore: number,
   penalty: number,
-  tWeight: number = 65,
-  fWeight: number = 35
+  tWeight: number = 80,
+  fWeight: number = 20
 ): { adjustedFinancialScore: number; valueScore: number } {
   const adjustedFinancialScore = Math.max(0, financialScore - penalty);
   const valueScore = (technicalScore * tWeight / 100) + (adjustedFinancialScore * fWeight / 100);
   return { adjustedFinancialScore, valueScore };
 }
+
+// New: Weighted technical score calculation using percentages
+// Each criterion has a weight (%) and the evaluator selects a converted percentage (%)
+// Result for each criterion = converted_percentage × weight / 100
+// Total = sum of all criteria results
+function calculateWeightedTechnicalScore(
+  criteriaWeights: number[],
+  selectedPercentages: number[]
+): number {
+  if (criteriaWeights.length !== selectedPercentages.length) return 0;
+  return criteriaWeights.reduce((total, weight, idx) => {
+    return total + (selectedPercentages[idx] * weight / 100);
+  }, 0);
+}
+
+// The 9 criteria weights from the evaluation document
+const CRITERIA_WEIGHTS = [14.6, 14.6, 13.6, 10.7, 9.7, 9.7, 9.7, 9.2, 8.2];
 
 describe("Fee Zone Calculation", () => {
   it("should return NORMAL zone for fees within ±15% of average", () => {
@@ -116,8 +134,6 @@ describe("Financial Score Calculation", () => {
   });
 
   it("should calculate correctly for real-world fees", () => {
-    // DATUM: 10,700,000 (lowest)
-    // ARTEC: 12,639,332
     const datumScore = calculateFinancialScore(10700000, 10700000);
     expect(datumScore).toBe(100);
 
@@ -126,36 +142,36 @@ describe("Financial Score Calculation", () => {
   });
 });
 
-describe("Value Score Calculation", () => {
-  it("should calculate correctly with default weights (65/35)", () => {
-    const result = calculateValueScore(80, 100, 0);
-    // Value = (80 × 0.65) + (100 × 0.35) = 52 + 35 = 87
-    expect(result.valueScore).toBe(87);
+describe("Value Score Calculation (80/20 default weights)", () => {
+  it("should calculate correctly with default weights (80/20)", () => {
+    const result = calculateValueScore(85, 100, 0);
+    // Value = (85 × 0.80) + (100 × 0.20) = 68 + 20 = 88
+    expect(result.valueScore).toBe(88);
     expect(result.adjustedFinancialScore).toBe(100);
   });
 
   it("should apply penalty correctly to financial score", () => {
-    const result = calculateValueScore(80, 100, 7);
+    const result = calculateValueScore(85, 100, 7);
     // Adjusted Financial = 100 - 7 = 93
-    // Value = (80 × 0.65) + (93 × 0.35) = 52 + 32.55 = 84.55
+    // Value = (85 × 0.80) + (93 × 0.20) = 68 + 18.6 = 86.6
     expect(result.adjustedFinancialScore).toBe(93);
-    expect(result.valueScore).toBeCloseTo(84.55, 1);
+    expect(result.valueScore).toBeCloseTo(86.6, 1);
   });
 
   it("should apply extreme penalty correctly", () => {
-    const result = calculateValueScore(80, 100, 15);
+    const result = calculateValueScore(85, 100, 15);
     // Adjusted Financial = 100 - 15 = 85
-    // Value = (80 × 0.65) + (85 × 0.35) = 52 + 29.75 = 81.75
+    // Value = (85 × 0.80) + (85 × 0.20) = 68 + 17 = 85
     expect(result.adjustedFinancialScore).toBe(85);
-    expect(result.valueScore).toBeCloseTo(81.75, 1);
+    expect(result.valueScore).toBe(85);
   });
 
   it("should not let adjusted financial go below 0", () => {
     const result = calculateValueScore(80, 5, 15);
     // Adjusted Financial = max(0, 5 - 15) = 0
-    // Value = (80 × 0.65) + (0 × 0.35) = 52
+    // Value = (80 × 0.80) + (0 × 0.20) = 64
     expect(result.adjustedFinancialScore).toBe(0);
-    expect(result.valueScore).toBe(52);
+    expect(result.valueScore).toBe(64);
   });
 
   it("should work with custom weights (50/50)", () => {
@@ -172,14 +188,14 @@ describe("Value Score Calculation", () => {
 
   it("should handle zero technical score", () => {
     const result = calculateValueScore(0, 100, 0);
-    // Value = (0 × 0.65) + (100 × 0.35) = 0 + 35 = 35
-    expect(result.valueScore).toBe(35);
+    // Value = (0 × 0.80) + (100 × 0.20) = 0 + 20 = 20
+    expect(result.valueScore).toBe(20);
   });
 
   it("should handle zero financial score", () => {
     const result = calculateValueScore(80, 0, 0);
-    // Value = (80 × 0.65) + (0 × 0.35) = 52 + 0 = 52
-    expect(result.valueScore).toBe(52);
+    // Value = (80 × 0.80) + (0 × 0.20) = 64 + 0 = 64
+    expect(result.valueScore).toBe(64);
   });
 
   it("should handle both scores at zero", () => {
@@ -207,14 +223,77 @@ describe("Penalty Values", () => {
   });
 });
 
-describe("End-to-End Value Ranking Scenario", () => {
+describe("Weighted Technical Score (Percentage-Based System)", () => {
+  it("should calculate correctly with all criteria at 90%", () => {
+    const percentages = [90, 90, 90, 90, 90, 90, 90, 90, 90];
+    const score = calculateWeightedTechnicalScore(CRITERIA_WEIGHTS, percentages);
+    // 90% × (14.6+14.6+13.6+10.7+9.7+9.7+9.7+9.2+8.2)/100 = 90% × 100/100 = 90
+    expect(score).toBeCloseTo(90, 0);
+  });
+
+  it("should calculate correctly with all criteria at 95%", () => {
+    const percentages = [95, 95, 95, 95, 95, 95, 95, 95, 95];
+    const score = calculateWeightedTechnicalScore(CRITERIA_WEIGHTS, percentages);
+    expect(score).toBeCloseTo(95, 0);
+  });
+
+  it("should calculate correctly with mixed percentages (user example)", () => {
+    // Example from user: DATUM evaluation
+    const percentages = [90, 91, 92, 85, 89, 86, 85, 90, 90];
+    const score = calculateWeightedTechnicalScore(CRITERIA_WEIGHTS, percentages);
+    // Manual: 90×14.6/100 + 91×14.6/100 + 92×13.6/100 + 85×10.7/100 + 89×9.7/100 + 86×9.7/100 + 85×9.7/100 + 90×9.2/100 + 90×8.2/100
+    // = 13.14 + 13.286 + 12.512 + 9.095 + 8.633 + 8.342 + 8.245 + 8.28 + 7.38
+    // = 88.913
+    expect(score).toBeCloseTo(88.91, 0);
+  });
+
+  it("should handle all criteria at minimum (worst case)", () => {
+    // Worst possible scores from the document
+    const percentages = [50, 15, 35, 30, 30, 35, 30, 55, 60];
+    const score = calculateWeightedTechnicalScore(CRITERIA_WEIGHTS, percentages);
+    // Should be a low score
+    expect(score).toBeLessThan(40);
+    expect(score).toBeGreaterThan(0);
+  });
+
+  it("should handle all criteria at maximum (best case)", () => {
+    const percentages = [95, 95, 95, 95, 95, 95, 95, 95, 95];
+    const score = calculateWeightedTechnicalScore(CRITERIA_WEIGHTS, percentages);
+    expect(score).toBeCloseTo(95, 0);
+  });
+
+  it("should return 0 for mismatched array lengths", () => {
+    const score = calculateWeightedTechnicalScore([14.6, 14.6], [90]);
+    expect(score).toBe(0);
+  });
+
+  it("criteria weights should sum to 100%", () => {
+    const totalWeight = CRITERIA_WEIGHTS.reduce((sum, w) => sum + w, 0);
+    expect(totalWeight).toBeCloseTo(100, 0);
+  });
+
+  it("should correctly weight higher-weight criteria more", () => {
+    // If only the first criterion (14.6%) is high and rest are low
+    const highFirst = [95, 50, 50, 50, 50, 50, 50, 50, 50];
+    const highLast = [50, 50, 50, 50, 50, 50, 50, 50, 95];
+    
+    const scoreHighFirst = calculateWeightedTechnicalScore(CRITERIA_WEIGHTS, highFirst);
+    const scoreHighLast = calculateWeightedTechnicalScore(CRITERIA_WEIGHTS, highLast);
+    
+    // First criterion (14.6%) has more weight than last (8.2%)
+    // So having 95% on first should give higher total than 95% on last
+    expect(scoreHighFirst).toBeGreaterThan(scoreHighLast);
+  });
+});
+
+describe("End-to-End Value Ranking Scenario (80/20 weights)", () => {
   it("should correctly rank consultants with real data", () => {
     const consultants = [
-      { name: "DATUM", technicalScore: 85, fee: 10700000 },
-      { name: "ARTEC", technicalScore: 82, fee: 12639332 },
-      { name: "LACASA", technicalScore: 78, fee: 14931980 },
-      { name: "XYZ", technicalScore: 75, fee: 16492280 },
-      { name: "Al Diwan", technicalScore: 70, fee: 0 },
+      { name: "DATUM", technicalScore: 88.9, fee: 10700000 },
+      { name: "ARTEC", technicalScore: 82.5, fee: 12639332 },
+      { name: "LACASA", technicalScore: 78.3, fee: 14931980 },
+      { name: "XYZ", technicalScore: 75.0, fee: 16492280 },
+      { name: "Al Diwan", technicalScore: 70.0, fee: 0 },
     ];
 
     const feesWithValues = consultants.filter(c => c.fee > 0);
@@ -246,8 +325,8 @@ describe("End-to-End Value Ranking Scenario", () => {
     expect(results[0].financialScore).toBe(100);
     expect(results[0].penalty).toBe(0);
     expect(results[0].adjustedFinancialScore).toBe(100);
-    // Value = (85 × 0.65) + (100 × 0.35) = 55.25 + 35 = 90.25
-    expect(results[0].valueScore).toBeCloseTo(90.3, 0);
+    // Value = (88.9 × 0.80) + (100 × 0.20) = 71.12 + 20 = 91.12
+    expect(results[0].valueScore).toBeCloseTo(91.1, 0);
 
     // ARTEC: financial = 10700000/12639332 × 100 ≈ 84.7
     expect(results[1].financialScore).toBeCloseTo(84.7, 0);
@@ -260,11 +339,46 @@ describe("End-to-End Value Ranking Scenario", () => {
     // Al Diwan: no fee → financial=0
     expect(results[4].financialScore).toBe(0);
     expect(results[4].adjustedFinancialScore).toBe(0);
-    // Value = (70 × 0.65) + (0 × 0.35) = 45.5
-    expect(results[4].valueScore).toBe(45.5);
+    // Value = (70 × 0.80) + (0 × 0.20) = 56
+    expect(results[4].valueScore).toBe(56);
 
     // Sort by value score descending
     const sorted = [...results].sort((a, b) => b.valueScore - a.valueScore);
     expect(sorted[0].name).toBe("DATUM"); // Highest value
+  });
+});
+
+describe("Full Evaluation Flow: Percentages → Weighted Score → Value Score", () => {
+  it("should calculate end-to-end from evaluator selections to final value score", () => {
+    // Simulating 3 evaluators for DATUM
+    const evaluator1 = [90, 91, 92, 85, 89, 86, 85, 90, 90]; // ~88.9%
+    const evaluator2 = [93, 95, 87, 91, 82, 80, 91, 82, 82]; // ~88.2%
+    const evaluator3 = [85, 84, 82, 85, 95, 92, 85, 95, 95]; // ~87.8%
+
+    // Average each criterion across evaluators
+    const avgPercentages = CRITERIA_WEIGHTS.map((_, idx) => {
+      return (evaluator1[idx] + evaluator2[idx] + evaluator3[idx]) / 3;
+    });
+
+    // Calculate weighted technical score
+    const technicalScore = calculateWeightedTechnicalScore(CRITERIA_WEIGHTS, avgPercentages);
+    expect(technicalScore).toBeGreaterThan(80);
+    expect(technicalScore).toBeLessThan(95);
+
+    // Now calculate value score with financial data
+    const fee = 10700000;
+    const lowestFee = 10700000;
+    const avgFee = 13000000;
+
+    const financialScore = calculateFinancialScore(fee, lowestFee);
+    expect(financialScore).toBe(100);
+
+    const feeZone = calculateFeeZone(fee, avgFee);
+    expect(feeZone.zone).toBe("NORMAL");
+
+    const { valueScore } = calculateValueScore(technicalScore, financialScore, 0);
+    // With 80/20 weights: (technicalScore × 0.80) + (100 × 0.20)
+    expect(valueScore).toBeGreaterThan(85);
+    expect(valueScore).toBeLessThan(100);
   });
 });

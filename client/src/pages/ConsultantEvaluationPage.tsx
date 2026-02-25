@@ -153,67 +153,77 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
 // Weights redistributed proportionally from original 87.25% to 100%
 const CRITERIA = [
   { id: 0, name: 'الهوية المعمارية وجودة التصميم', weight: 14.6, description: 'تقييم جودة التصميم المعماري والهوية البصرية للمشروع ومدى تميزه في السوق', options: [
-    { score: 100, label: '100 نقطة: مستوى معلم بارز — هوية أيقونية قوية، عامل تمييز في السوق، عمارة لا تُنسى' },
-    { score: 75, label: '75 نقطة: جودة عالية — هوية مميزة، سرد تصميمي واضح، حضور سوقي فوق المتوسط' },
-    { score: 50, label: '50 نقطة: جودة متوسطة — كفء لكن عام، لا يوجد تمييز قوي' },
-    { score: 25, label: '25 نقطة: هوية ضعيفة — يفتقر للوضوح، جاذبية سوقية محدودة' },
-    { score: 0, label: '0 نقطة: تصميم ضعيف — لا توجد هوية متماسكة، ضعيف بصرياً' },
+    { score: 95, label: 'طرح معماري مرجعي ذو هوية واضحة ومتماسكة بالكامل — فكرة تصميمية عميقة — لغة معمارية قابلة للتسويق والتميّز' },
+    { score: 93, label: 'هوية قوية جداً — فكرة واضحة ومترابطة — معالجة الكتل والواجهات مدروسة' },
+    { score: 90, label: 'هوية واضحة ومنظمة — تصميم متماسك' },
+    { score: 85, label: 'تصميم جيد بفكرة مفهومة مع بعض التحفظات' },
+    { score: 80, label: 'تصميم مقبول يفي بالأساسيات دون تميز' },
+    { score: 68, label: 'طرح تقليدي أو غير مكتمل' },
+    { score: 50, label: 'غياب واضح للهوية أو طرح غير مقنع' },
   ]},
   { id: 1, name: 'القدرات التقنية والتكامل مع BIM', weight: 14.6, description: 'تقييم مستوى استخدام تقنيات BIM والقدرات التقنية الرقمية في التصميم والتنسيق', options: [
-    { score: 100, label: '100 نقطة: ممارسة BIM متقدمة — سير عمل BIM كامل، تنسيق تصميم LOD 300-350، إدارة تضارب قوية' },
-    { score: 75, label: '75 نقطة: ممارسة BIM جيدة — استخدام BIM بشكل متسق، تنسيق جيد' },
-    { score: 50, label: '50 نقطة: استخدام BIM أساسي — BIM محدود في النمذجة فقط' },
-    { score: 25, label: '25 نقطة: تكامل BIM ضئيل — تنسيق معتمد على 2D في الغالب' },
-    { score: 0, label: '0 نقطة: لا توجد قدرة BIM' },
+    { score: 95, label: 'BIM متكامل لكافة التخصصات — LOD 350+ — تقارير Clash Detection — BEP موثقة' },
+    { score: 91, label: 'BIM متقدم — LOD 300–350 — تنسيق فعال بين التخصصات' },
+    { score: 84, label: 'BIM جيد — LOD 300 مع تنسيق أساسي' },
+    { score: 72, label: 'استخدام BIM جزئي أو غير مكتمل' },
+    { score: 45, label: 'نمذجة شكلية دون تكامل فعلي' },
+    { score: 15, label: 'لا يوجد استخدام حقيقي لـ BIM' },
   ]},
   { id: 3, name: 'كفاءة التخطيط وتحسين المساحات', weight: 13.6, description: 'تقييم مدى كفاءة استخدام المساحات وتحسين التخطيط الداخلي والخارجي', options: [
-    { score: 100, label: '100 نقطة: كفاءة استثنائية — منطق تخطيط ممتاز، استخدام أمثل للمساحة، الحد الأدنى من الفراغات الميتة' },
-    { score: 75, label: '75 نقطة: كفاءة قوية — تخطيط مساحات جيد جداً، عدم كفاءة طفيف' },
-    { score: 50, label: '50 نقطة: كفاءة مقبولة — تخطيط وظيفي لكن تقليدي، بعض المساحات المفقودة' },
-    { score: 25, label: '25 نقطة: كفاءة ضعيفة — منطق حركة ضعيف، مساحات مهدرة ملحوظة' },
-    { score: 0, label: '0 نقطة: كفاءة ضعيفة جداً — تخطيط غير فعال، فقدان كبير في المساحة' },
+    { score: 95, label: 'تخطيط استثنائي يعظم العائد والمساحات القابلة للبيع' },
+    { score: 92, label: 'تخطيط ممتاز جداً بعائد قوي' },
+    { score: 87, label: 'تخطيط قوي ومنطقي' },
+    { score: 82, label: 'تخطيط جيد مع بعض التحسينات الممكنة' },
+    { score: 76, label: 'تخطيط مقبول وظيفياً' },
+    { score: 58, label: 'تخطيط ضعيف أو هدر ملحوظ' },
+    { score: 35, label: 'تخطيط غير مناسب يؤثر على الجدوى' },
   ]},
   { id: 4, name: 'التحكم في التكاليف والوعي بالميزانية', weight: 10.7, description: 'تقييم مدى وعي الاستشاري بالتكاليف وقدرته على التصميم ضمن الميزانية', options: [
-    { score: 100, label: '100 نقطة: ذكاء تكلفة قوي — قرارات التصميم تعكس الوعي بالميزانية' },
-    { score: 75, label: '75 نقطة: حساسية تكلفة جيدة' },
-    { score: 50, label: '50 نقطة: محايد' },
-    { score: 25, label: '25 نقطة: وعي تكلفة ضعيف' },
-    { score: 0, label: '0 نقطة: مخاطر تصميم مكلفة' },
+    { score: 95, label: 'قرارات تصميم تحقق أعلى جودة بأقل تكلفة — تطبيق Value Engineering فعلي' },
+    { score: 91, label: 'وعي قوي جداً بالتكلفة مع بدائل واضحة' },
+    { score: 85, label: 'التزام جيد بالميزانية' },
+    { score: 74, label: 'التزام عام دون تحسينات قوية' },
+    { score: 52, label: 'قرارات قد ترفع التكلفة دون دراسة كافية' },
+    { score: 30, label: 'تجاهل واضح للميزانية — تضخم مالي خطير' },
   ]},
   { id: 5, name: 'الخبرة في مشاريع مشابهة', weight: 9.7, description: 'تقييم سجل الاستشاري في تنفيذ مشاريع مشابهة من حيث الحجم والنوع', options: [
-    { score: 100, label: '100 نقطة: خبرة واسعة ذات صلة — مشاريع متعددة مكتملة بنفس الحجم والنوع' },
-    { score: 75, label: '75 نقطة: خبرة قوية — محفظة جيدة ذات صلة مع تسليم مثبت' },
-    { score: 50, label: '50 نقطة: خبرة متوسطة — بعض المشاريع ذات الصلة لكن ليست قابلة للمقارنة بالكامل' },
-    { score: 25, label: '25 نقطة: خبرة محدودة — مراجع مشابهة قليلة' },
-    { score: 0, label: '0 نقطة: لا توجد خبرة ذات صلة' },
+    { score: 95, label: 'تنفيذ عدة مشاريع مماثلة بالحجم والتعقيد مثبتة النتائج' },
+    { score: 89, label: 'مشروعان قريبان جداً من حيث الحجم والتعقيد' },
+    { score: 82, label: 'مشروع واحد مماثل بالحجم' },
+    { score: 74, label: 'خبرة في مشاريع أقل حجماً من نفس الفئة' },
+    { score: 58, label: 'خبرة عامة غير مماثلة' },
+    { score: 30, label: 'لا يوجد Evidence حقيقي مناسب' },
   ]},
   { id: 6, name: 'قوة فريق المشروع', weight: 9.7, description: 'تقييم كفاءة وخبرة الفريق المخصص للمشروع ومستوى القيادة', options: [
-    { score: 100, label: '100 نقطة: فريق مخصص ذو خبرة عالية — قيادة عليا مشاركة مباشرة' },
-    { score: 75, label: '75 نقطة: فريق قوي — خبرة جيدة مع دعم قادر' },
-    { score: 50, label: '50 نقطة: فريق متوسط' },
-    { score: 25, label: '25 نقطة: تكليف ضعيف' },
-    { score: 0, label: '0 نقطة: فريق غير واضح أو عديم الخبرة' },
+    { score: 95, label: 'فريق خبير متكامل بقيادة مباشرة من الشركاء' },
+    { score: 92, label: 'فريق قوي جداً متعدد التخصصات' },
+    { score: 86, label: 'فريق مكتمل وجيد' },
+    { score: 80, label: 'فريق متوسط جيد' },
+    { score: 74, label: 'فريق مقبول بخبرة محدودة' },
+    { score: 58, label: 'نقص واضح في التخصصات أو الخبرة' },
+    { score: 35, label: 'فريق غير مؤهل لإدارة مشروع بالحجم المطلوب' },
   ]},
-  { id: 7, name: 'إدارة الوقت والتحكم في البرنامج', weight: 9.7, description: 'تقييم سجل الاستشاري في الالتزام بالجداول الزمنية وسرعة الاستجابة', options: [
-    { score: 100, label: '100 نقطة: سجل ممتاز — انضباط جدولة قوي، موافقات سريعة مثبتة' },
-    { score: 75, label: '75 نقطة: تحكم جيد' },
-    { score: 50, label: '50 نقطة: مقبول' },
-    { score: 25, label: '25 نقطة: تأخيرات محتملة' },
-    { score: 0, label: '0 نقطة: تحكم ضعيف' },
+  { id: 7, name: 'إدارة الوقت والانضباط بالبرنامج', weight: 9.7, description: 'تقييم سجل الاستشاري في الالتزام بالجداول الزمنية وسرعة الاستجابة', options: [
+    { score: 95, label: 'سجل ممتاز جداً في الالتزام بالجداول الزمنية' },
+    { score: 91, label: 'سجل قوي مع تأخيرات طفيفة' },
+    { score: 85, label: 'التزام جيد إجمالاً' },
+    { score: 74, label: 'تأخيرات محدودة يمكن السيطرة عليها' },
+    { score: 55, label: 'تأخيرات متكررة' },
+    { score: 30, label: 'سجل خطير في عدم الالتزام' },
   ]},
-  { id: 8, name: 'الاهتمام الخاص بالمشروع ومرونة التعامل', weight: 9.2, description: 'تقييم مدى اهتمام الاستشاري بالمشروع ومرونته في التواصل والاستجابة', options: [
-    { score: 100, label: '100 نقطة: المشروع أولوية قصوى، اهتمام خاص جداً، متابعة مستمرة، ومرونة عالية' },
-    { score: 75, label: '75 نقطة: المشروع ذو أهمية خاصة، اهتمام واضح، وتواصل جيد ومرن' },
-    { score: 50, label: '50 نقطة: المشروع يلقى اهتمام جيد، استجابة مقبولة وتعاون معقول' },
-    { score: 25, label: '25 نقطة: المشروع أحد مشاريع الشركة العادية، اهتمام محدود' },
-    { score: 0, label: '0 نقطة: المشروع ليس ذو أهمية، استجابة ضعيفة واهتمام منخفض' },
+  { id: 8, name: 'الاهتمام بالمشروع', weight: 9.2, description: 'تقييم مدى اهتمام الاستشاري بالمشروع ومستوى مشاركة الإدارة العليا', options: [
+    { score: 95, label: 'اعتبار المشروع أولوية قصوى — مشاركة الإدارة العليا' },
+    { score: 90, label: 'اهتمام خاص واضح وتفاعل سريع' },
+    { score: 82, label: 'اهتمام عادي مقبول' },
+    { score: 70, label: 'تفاعل محدود أو بطيء' },
+    { score: 55, label: 'ضعف واضح في الاهتمام' },
   ]},
   { id: 9, name: 'مرونة التعاقد', weight: 8.2, description: 'تقييم مرونة الاستشاري في شروط التعاقد والتعديلات والأعمال الإضافية', options: [
-    { score: 100, label: '100 نقطة: لا أعمال إضافية غير مبررة، مرونة ممتازة في التعديلات، شروط عادلة وواضحة' },
-    { score: 75, label: '75 نقطة: مرونة ممتازة في التعديلات، مع بعض القيود المنطقية' },
-    { score: 50, label: '50 نقطة: مرونة متوسطة، يقبل التعديلات لكن بإجراءات رسمية' },
-    { score: 25, label: '25 نقطة: رسمي في التعاقد، يميل لتقييد التعديلات' },
-    { score: 0, label: '0 نقطة: مبالغ في تكاليف التعديلات والأعمال الإضافية' },
+    { score: 95, label: 'مرونة عالية جداً واستعداد لتعديل الشروط' },
+    { score: 90, label: 'مرونة جيدة' },
+    { score: 82, label: 'موقف تعاقدي قياسي' },
+    { score: 72, label: 'تشدد نسبي في بعض البنود' },
+    { score: 60, label: 'جمود واضح وصعوبة تفاوض' },
   ]},
 ];
 
@@ -344,12 +354,11 @@ function ScoringGuide({ criterion }: { criterion: typeof CRITERIA[0] }) {
             <p className="text-xs font-semibold text-slate-500 mb-2">الوزن: {criterion.weight}%</p>
             <div className="space-y-2">
               {criterion.options.map(opt => {
-                const parts = opt.label.match(/^(\d+)\s*(نقطة|نقاط):\s*(.*)$/);
-                const bgColor = opt.score >= 75 ? 'bg-emerald-50 border-emerald-200' : opt.score >= 50 ? 'bg-amber-50 border-amber-200' : opt.score >= 25 ? 'bg-orange-50 border-orange-200' : 'bg-red-50 border-red-200';
+                const bgColor = opt.score >= 85 ? 'bg-emerald-50 border-emerald-200' : opt.score >= 70 ? 'bg-amber-50 border-amber-200' : opt.score >= 50 ? 'bg-orange-50 border-orange-200' : 'bg-red-50 border-red-200';
                 return (
                   <div key={opt.score} className={`p-3 rounded-xl border ${bgColor}`}>
-                    <span className="font-bold text-blue-700">{parts ? `${parts[1]} ${parts[2]}` : opt.score}</span>
-                    <span className="text-sm text-slate-700 mr-2">{parts ? parts[3] : opt.label}</span>
+                    <span className="font-bold text-blue-700 inline-block min-w-[3rem]">{opt.score}%</span>
+                    <span className="text-sm text-slate-700 mr-2">{opt.label}</span>
                   </div>
                 );
               })}
@@ -389,7 +398,7 @@ export default function ConsultantEvaluationPage() {
   const [postDecisionAnalysis, setPostDecisionAnalysis] = useState('');
   const [isPostAnalyzing, setIsPostAnalyzing] = useState(false);
   // Value Analysis weights (Item 5: adjustable T%/F%)
-  const [technicalWeight, setTechnicalWeight] = useState(65);
+  const [technicalWeight, setTechnicalWeight] = useState(80);
   const financialWeight = 100 - technicalWeight;
   const [showValueFormulas, setShowValueFormulas] = useState(false);
 
@@ -1113,21 +1122,14 @@ export default function ConsultantEvaluationPage() {
                                             <SelectValue placeholder="اختر التقييم" />
                                           </SelectTrigger>
                                           <SelectContent className="w-[500px] max-w-[90vw]">
-                                            {criterion.options.map((option) => {
-                                              const parts = option.label.match(/^(\d+)\s*(نقطة|نقاط):\s*(.*)$/);
-                                              return (
+                                            {criterion.options.map((option) => (
                                                 <SelectItem key={option.score} value={option.score.toString()} className="whitespace-normal text-sm leading-relaxed py-3">
-                                                  {parts ? (
-                                                    <span>
-                                                      <span className="font-bold text-blue-700 inline-block">
-                                                        <span className="whitespace-nowrap">{parts[1]} {parts[2]}:</span>
-                                                      </span>
-                                                      {' '}{parts[3]}
-                                                    </span>
-                                                  ) : option.label}
+                                                  <span>
+                                                    <span className="font-bold text-blue-700 inline-block whitespace-nowrap">{option.score}%</span>
+                                                    {' — '}{option.label}
+                                                  </span>
                                                 </SelectItem>
-                                              );
-                                            })}
+                                            ))}
                                           </SelectContent>
                                         </Select>
                                       </td>
@@ -1223,19 +1225,14 @@ export default function ConsultantEvaluationPage() {
                                     <SelectValue placeholder="اختر التقييم لهذا المعيار" />
                                   </SelectTrigger>
                                   <SelectContent className="w-[500px] max-w-[90vw]">
-                                    {CRITERIA[currentCriterionIdx].options.map((option) => {
-                                      const parts = option.label.match(/^(\d+)\s*(نقطة|نقاط):\s*(.*)$/);
-                                      return (
+                                    {CRITERIA[currentCriterionIdx].options.map((option) => (
                                         <SelectItem key={option.score} value={option.score.toString()} className="whitespace-normal text-sm leading-relaxed py-3">
-                                          {parts ? (
-                                            <span>
-                                              <span className="font-bold text-blue-700"><span className="whitespace-nowrap">{parts[1]} {parts[2]}:</span></span>
-                                              {' '}{parts[3]}
-                                            </span>
-                                          ) : option.label}
+                                          <span>
+                                            <span className="font-bold text-blue-700 inline-block whitespace-nowrap">{option.score}%</span>
+                                            {' — '}{option.label}
+                                          </span>
                                         </SelectItem>
-                                      );
-                                    })}
+                                    ))}
                                   </SelectContent>
                                 </Select>
                               </div>
@@ -1290,7 +1287,7 @@ export default function ConsultantEvaluationPage() {
                               <td className="border border-amber-200 p-4 text-right sticky right-0 bg-slate-200 z-10 text-lg">المجموع المرجح</td>
                               {projectConsultants.map((consultant: any) => (
                                 <td key={consultant.id} className="border border-amber-200 p-4 text-center text-xl font-bold text-slate-800">
-                                  {consultantScores[consultant.id]?.weighted.toFixed(1) || 0} / 100
+                                  {consultantScores[consultant.id]?.weighted.toFixed(1) || 0}%
                                 </td>
                               ))}
                             </tr>
@@ -1500,7 +1497,7 @@ export default function ConsultantEvaluationPage() {
                             <span>90%</span>
                           </div>
                         </div>
-                        <Button variant="outline" size="sm" onClick={() => setTechnicalWeight(65)} className="text-xs whitespace-nowrap">
+                        <Button variant="outline" size="sm" onClick={() => setTechnicalWeight(80)} className="text-xs whitespace-nowrap">
                           إعادة للافتراضي
                         </Button>
                       </div>
@@ -1673,11 +1670,11 @@ export default function ConsultantEvaluationPage() {
                                   const techDiff = techBest.technicalScore - feeBest.technicalScore;
                                   const feeDiff = techBest.totalFee - feeBest.totalFee;
                                   insights.push(`📊 الأعلى فنياً: ${techBest.name} (${techBest.technicalScore.toFixed(1)}) — الأقل تكلفة: ${feeBest.name} (${feeBest.totalFee.toLocaleString()} AED)`);
-                                  insights.push(`⚖️ فرق الجودة: ${techDiff.toFixed(1)} نقطة — فرق التكلفة: ${Math.abs(feeDiff).toLocaleString()} AED`);
+                                  insights.push(`⚖️ فرق الجودة: ${techDiff.toFixed(1)}% — فرق التكلفة: ${Math.abs(feeDiff).toLocaleString()} AED`);
                                   if (techDiff > 5 && feeDiff > 0) {
-                                    insights.push(`💡 الفارق الفني (${techDiff.toFixed(1)} نقطة) ملحوظ. اختيار الأقل تكلفة يعني التنازل عن جودة واضحة.`);
+                                    insights.push(`💡 الفارق الفني (${techDiff.toFixed(1)}%) ملحوظ. اختيار الأقل تكلفة يعني التنازل عن جودة واضحة.`);
                                   } else if (techDiff <= 2 && feeDiff > 0) {
-                                    insights.push(`💡 الفارق الفني ضئيل (${techDiff.toFixed(1)} نقطة). الأقل تكلفة قد يكون خياراً عملياً.`);
+                                    insights.push(`💡 الفارق الفني ضئيل (${techDiff.toFixed(1)}%). الأقل تكلفة قد يكون خياراً عملياً.`);
                                   }
                                 }
 
@@ -1767,7 +1764,7 @@ export default function ConsultantEvaluationPage() {
                                   }`}>{index + 1}</div>
                                   <div>
                                     <p className="text-base font-bold text-slate-800">{r.name}</p>
-                                    <p className="text-sm text-slate-600">فني: <span className="font-bold text-blue-700">{r.technicalScore.toFixed(1)}/100</span></p>
+                                    <p className="text-sm text-slate-600">فني: <span className="font-bold text-blue-700">{r.technicalScore.toFixed(1)}%</span></p>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-4">
