@@ -2441,7 +2441,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "get_financial_data", "get_evaluation_scores", "get_evaluation_criteria",
     "get_feasibility_study", "get_consultant_profile", "get_committee_decision",
     "list_meetings", "get_meeting_details", "query_institutional_memory",
-    "browse_drive", "search_drive", "read_drive_file_content",
+    "list_drive_folders", "list_drive_files", "search_drive_files", "read_drive_file_content",
     "create_feasibility_study", "update_feasibility_study",
     "ask_another_agent",
   ],

@@ -136,7 +136,7 @@ describe("Telegram API Direct Tests", () => {
     const data = await res.json();
     expect(data.ok).toBe(true);
     expect(data.result).toHaveProperty("url");
-  });
+  }, 30000);
 
   it("should support getMyCommands", async () => {
     const res = await fetch(`${baseUrl}/getMyCommands`);

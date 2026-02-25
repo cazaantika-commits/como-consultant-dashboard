@@ -1,0 +1,98 @@
+{
+  "query": "SELECT id, name, nameEn, role, roleEn, agentStatus, icon, isCoordinator, gender FROM agents ORDER BY id",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, name, nameEn, role, roleEn, agentStatus, icon, isCoordinator, gender FROM agents ORDER BY id",
+  "rows": [
+    {
+      "id": "1",
+      "name": "سلوى",
+      "nameEn": "Salwa",
+      "role": "المنسقة والمساعدة التنفيذية الذكية",
+      "roleEn": "AI Executive Assistant & Coordinator",
+      "agentStatus": "active",
+      "icon": "crown",
+      "isCoordinator": "1",
+      "gender": "female"
+    },
+    {
+      "id": "2",
+      "name": "خازن",
+      "nameEn": "Khazen",
+      "role": "مدير الأرشفة والتخزين",
+      "roleEn": "Archive & Storage Manager",
+      "agentStatus": "active",
+      "icon": "archive",
+      "isCoordinator": "0",
+      "gender": "male"
+    },
+    {
+      "id": "3",
+      "name": "فاروق",
+      "nameEn": "Farouq",
+      "role": "محامي خبير - العقود والقانون",
+      "roleEn": "Expert Lawyer - Contracts & Legal",
+      "agentStatus": "active",
+      "icon": "scale",
+      "isCoordinator": "0",
+      "gender": "male"
+    },
+    {
+      "id": "4",
+      "name": "براق",
+      "nameEn": "Buraq",
+      "role": "مراقب التنفيذ والجدول الزمني",
+      "roleEn": "Execution & Timeline Monitor",
+      "agentStatus": "active",
+      "icon": "gauge",
+      "isCoordinator": "0",
+      "gender": "male"
+    },
+    {
+      "id": "5",
+      "name": "خالد",
+      "nameEn": "Khaled",
+      "role": "مدقق الجودة والامتثال الفني",
+      "roleEn": "Quality & Technical Compliance Auditor",
+      "agentStatus": "active",
+      "icon": "shield-check",
+      "isCoordinator": "0",
+      "gender": "male"
+    },
+    {
+      "id": "6",
+      "name": "ألينا",
+      "nameEn": "Alina",
+      "role": "المديرة المالية ومراقبة التكاليف",
+      "roleEn": "Financial Director & Cost Controller",
+      "agentStatus": "active",
+      "icon": "calculator",
+      "isCoordinator": "0",
+      "gender": "female"
+    },
+    {
+      "id": "7",
+      "name": "باز",
+      "nameEn": "Baz",
+      "role": "المستشار الاستراتيجي للابتكار والتحسين",
+      "roleEn": "Strategic Innovation & Improvement Advisor",
+      "agentStatus": "active",
+      "icon": "rocket",
+      "isCoordinator": "0",
+      "gender": "male"
+    },
+    {
+      "id": "8",
+      "name": "جويل",
+      "nameEn": "Joelle",
+      "role": "محللة دراسات الجدوى والسوق",
+      "roleEn": "Feasibility & Market Analysis Specialist",
+      "agentStatus": "active",
+      "icon": "bar-chart-2",
+      "isCoordinator": "0",
+      "gender": "female"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tnameEn\trole\troleEn\tagentStatus\ticon\tisCoordinator\tgender\n1\tسلوى\tSalwa\tالمنسقة والمساعدة التنفيذية الذكية\tAI Executive Assistant & Coordinator\tactive\tcrown\t1\tfemale\n2\tخازن\tKhazen\tمدير الأرشفة والتخزين\tArchive & Storage Manager\tactive\tarchive\t0\tmale\n3\tفاروق\tFarouq\tمحامي خبير - العقود والقانون\tExpert Lawyer - Contracts & Legal\tactive\tscale\t0\tmale\n4\tبراق\tBuraq\tمراقب التنفيذ والجدول الزمني\tExecution & Timeline Monitor\tactive\tgauge\t0\tmale\n5\tخالد\tKhaled\tمدقق الجودة والامتثال الفني\tQuality & Technical Compliance Auditor\tactive\tshield-check\t0\tmale\n6\tألينا\tAlina\tالمديرة المالية ومراقبة التكاليف\tFinancial Director & Cost Controller\tactive\tcalculator\t0\tfemale\n7\tباز\tBaz\tالمستشار الاستراتيجي للابتكار والتحسين\tStrategic Innovation & Improvement Advisor\tactive\trocket\t0\tmale\n8\tجويل\tJoelle\tمحللة دراسات الجدوى والسوق\tFeasibility & Market Analysis Specialist\tactive\tbar-chart-2\t0\tfemale\n",
+  "stderr": "",
+  "execution_time_ms": 1507
+}

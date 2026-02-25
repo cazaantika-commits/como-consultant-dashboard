@@ -83,10 +83,12 @@ describe("Email Attachment Download Tool", () => {
   it("should include download_email_attachments in Salwa's system prompt", async () => {
     const fs = await import("fs");
     const path = await import("path");
-    const source = fs.readFileSync(path.join(process.cwd(), "server/agentChat.ts"), "utf-8");
-    expect(source).toContain("download_email_attachments");
-    expect(source).toContain("00_Inbox/Emails/");
-    expect(source).toContain("renamePattern");
+    const agentChatSource = fs.readFileSync(path.join(process.cwd(), "server/agentChat.ts"), "utf-8");
+    expect(agentChatSource).toContain("download_email_attachments");
+    expect(agentChatSource).toContain("00_Inbox/Emails/");
+    // renamePattern is defined in agentTools.ts, not agentChat.ts
+    const agentToolsSource = fs.readFileSync(path.join(process.cwd(), "server/agentTools.ts"), "utf-8");
+    expect(agentToolsSource).toContain("renamePattern");
   });
 
   // ─── Tool Execution: with attachments (integration test) ───
