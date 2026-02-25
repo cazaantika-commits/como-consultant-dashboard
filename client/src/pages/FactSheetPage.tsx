@@ -199,7 +199,7 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
 
       setKhazenProgress(100);
       setKhazenStatus("done");
-      setKhazenMessage(result.text || "تم تعبئة البيانات بنجاح");
+      setKhazenMessage(result.response || "تم تعبئة البيانات بنجاح");
       toast.success("تم تعبئة بطاقة البيانات من خازن بنجاح");
     } catch (err: any) {
       setKhazenStatus("error");

@@ -1980,14 +1980,18 @@ async function _executeToolInternal(
         
         // Log to knowledge base so Salwa can see past agent interactions
         try {
-          const { saveToKnowledgeBase } = await import("./knowledgeBase");
-          await saveToKnowledgeBase({
-            category: "agent_interactions",
-            title: `${_currentAgent} → ${targetAgent}: ${question.slice(0, 100)}`,
-            content: `**السؤال من ${_currentAgent}:**\n${question}\n\n**رد ${targetAgent}:**\n${response.text}`,
-            tags: [_currentAgent || "unknown", targetAgent, "inter_agent"],
-            userId,
-          });
+          const kbDb = await getDb();
+          if (kbDb) {
+            await kbDb.insert(knowledgeBase).values({
+              userId,
+              type: "insight",
+              title: `${_currentAgent} → ${targetAgent}: ${question.slice(0, 100)}`,
+              content: `**السؤال من ${_currentAgent}:**\n${question}\n\n**رد ${targetAgent}:**\n${response.text}`,
+              summary: `تواصل بين ${_currentAgent} و ${targetAgent}`,
+              tags: JSON.stringify([_currentAgent || "unknown", targetAgent, "inter_agent"]),
+              category: "agent_interactions",
+            });
+          }
         } catch (kbError) {
           console.warn("[ask_another_agent] Failed to log to KB:", kbError);
         }
