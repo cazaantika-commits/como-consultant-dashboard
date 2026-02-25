@@ -10,12 +10,18 @@ import { sql } from "drizzle-orm";
 
 const router = Router();
 
-// Project ID mapping: old HTML uses p1-p6, DB uses numeric IDs 1-6
+// Dynamic project ID mapping: old HTML uses p1-pN, DB uses numeric IDs
+function getProjectKey(id: number): string {
+  return `p${id}`;
+}
+function parseProjectKey(key: string): number | null {
+  if (!key.startsWith("p")) return null;
+  const num = parseInt(key.slice(1), 10);
+  return isNaN(num) ? null : num;
+}
+// Legacy mapping kept for backward compatibility
 const PROJECT_ID_MAP: Record<string, number> = {
   p1: 1, p2: 2, p3: 3, p4: 4, p5: 5, p6: 6,
-};
-const REVERSE_PROJECT_MAP: Record<number, string> = {
-  1: "p1", 2: "p2", 3: "p3", 4: "p4", 5: "p5", 6: "p6",
 };
 
 // Ensure the dashboardData table exists (for legacy saves)
@@ -104,8 +110,7 @@ async function buildDataFromStructuredTables(): Promise<any> {
 
   // Build per-project data
   for (const project of projectRows) {
-    const pKey = REVERSE_PROJECT_MAP[project.id];
-    if (!pKey) continue;
+    const pKey = getProjectKey(project.id);
 
     // Get consultants for this project (in order)
     const projectConsultants = pcRows
@@ -186,6 +191,38 @@ async function buildDataFromStructuredTables(): Promise<any> {
 
   return result;
 }
+
+// GET /api/dashboard-data/projects - list all projects with their consultants for the HTML page
+router.get("/projects", async (_req, res) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.json([]);
+
+    const [projectRows] = (await db.execute(
+      sql`SELECT id, name FROM projects ORDER BY id`
+    )) as any[];
+
+    const [pcRows] = (await db.execute(
+      sql`SELECT pc.projectId, c.name as consultantName 
+          FROM projectConsultants pc 
+          JOIN consultants c ON pc.consultantId = c.id 
+          ORDER BY pc.projectId, pc.id`
+    )) as any[];
+
+    const projects = projectRows.map((p: any) => ({
+      id: getProjectKey(p.id),
+      name: p.name,
+      consultants: pcRows
+        .filter((pc: any) => pc.projectId === p.id)
+        .map((pc: any) => pc.consultantName),
+    }));
+
+    return res.json(projects);
+  } catch (e) {
+    console.error("[DashboardData] GET /projects error:", e);
+    return res.status(500).json([]);
+  }
+});
 
 // GET /api/dashboard-data - retrieve data from structured tables
 router.get("/", async (_req, res) => {
@@ -273,7 +310,7 @@ async function syncToStructuredTables(db: any, data: any) {
 
   for (const [pKey, pData] of Object.entries(data)) {
     if (!pKey.startsWith("p")) continue;
-    const projectId = PROJECT_ID_MAP[pKey];
+    const projectId = parseProjectKey(pKey) ?? PROJECT_ID_MAP[pKey];
     if (!projectId) continue;
 
     const pd = pData as any;

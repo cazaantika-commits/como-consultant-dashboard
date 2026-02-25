@@ -29,6 +29,23 @@ import { startEmailScheduler, stopEmailScheduler, forceEmailCheck, getSchedulerS
 let bot: TelegramBot | null = null;
 let isInitialized = false;
 
+// Message deduplication: track processed message IDs to prevent duplicate replies
+const processedMessages = new Set<number>();
+const MAX_PROCESSED_MESSAGES = 500;
+
+function isMessageProcessed(messageId: number): boolean {
+  if (processedMessages.has(messageId)) return true;
+  processedMessages.add(messageId);
+  // Cleanup old entries to prevent memory leak
+  if (processedMessages.size > MAX_PROCESSED_MESSAGES) {
+    const entries = Array.from(processedMessages);
+    for (let i = 0; i < entries.length - MAX_PROCESSED_MESSAGES / 2; i++) {
+      processedMessages.delete(entries[i]);
+    }
+  }
+  return false;
+}
+
 // Authorized chat IDs (can be expanded via admin commands)
 const authorizedChats = new Set<number>();
 
@@ -658,12 +675,14 @@ function registerCommands(bot: TelegramBot) {
 
   // Handle voice messages (audio transcription)
   bot.on("voice", async (msg) => {
+    if (isMessageProcessed(msg.message_id)) return;
     const chatId = msg.chat.id;
     await handleVoiceMessage(bot!, chatId, msg);
   });
 
   // Handle audio files (audio transcription)
   bot.on("audio", async (msg) => {
+    if (isMessageProcessed(msg.message_id)) return;
     const chatId = msg.chat.id;
     await handleVoiceMessage(bot!, chatId, msg);
   });
@@ -671,6 +690,11 @@ function registerCommands(bot: TelegramBot) {
   // Handle all text messages (for conversations and free-text AI analysis)
   bot.on("message", async (msg) => {
     if (!msg.text || msg.text.startsWith("/")) return;
+    // Dedup: skip if this message was already processed
+    if (isMessageProcessed(msg.message_id)) {
+      console.log(`[TelegramBot] Skipping duplicate message ${msg.message_id}`);
+      return;
+    }
     const chatId = msg.chat.id;
     const text = msg.text.trim();
 

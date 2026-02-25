@@ -109,7 +109,7 @@ describe("Email Agent Tools - Salwa Platform Email Access", () => {
     expect(source).toContain("read_email");
     expect(source).toContain("reply_email");
     expect(source).toContain("compose_email");
-    expect(source).toContain("اعرضي المسودة على المستخدم");
+    expect(source).toContain("اعرضي المسودة أولاً واطلبي الموافقة قبل الإرسال");
   });
 
   // ─── Write tools logged as assignments ───
