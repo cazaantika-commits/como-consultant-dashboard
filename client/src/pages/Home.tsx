@@ -236,6 +236,14 @@ export default function Home() {
                 </span>
                 <NotificationBell />
                 <Button
+                  size="sm"
+                  onClick={() => navigate("/executive")}
+                  className="text-xs gap-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white border-0 shadow-lg shadow-amber-500/25"
+                >
+                  <Crown className="w-3.5 h-3.5" />
+                  مركز القيادة
+                </Button>
+                <Button
                   variant="outline"
                   size="sm"
                   onClick={() => navigate("/agent-dashboard")}
