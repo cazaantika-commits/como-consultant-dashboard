@@ -870,3 +870,129 @@ describe('Heatmap Max/Min Indicators', () => {
     expect(nonZero.includes(0)).toBe(false);
   });
 });
+
+
+// ===== Executive Summary Logic Tests =====
+
+describe('Executive Summary - Data Extraction', () => {
+  const consultants = [
+    { id: 1, name: 'ARTEC', technicalScore: 86.4, totalFee: 5_200_000, feeDeviation: 8.3, feeZone: 'normal' as const, feeFlag: null },
+    { id: 2, name: 'DATUM', technicalScore: 84.7, totalFee: 4_800_000, feeDeviation: -0.1, feeZone: 'normal' as const, feeFlag: null },
+    { id: 3, name: 'Realistic', technicalScore: 83.0, totalFee: 6_500_000, feeDeviation: 35.4, feeZone: 'extreme_high' as const, feeFlag: 'مخاطر تكلفة عالية' },
+    { id: 4, name: 'Safeer', technicalScore: 82.3, totalFee: 3_200_000, feeDeviation: -33.3, feeZone: 'extreme_low' as const, feeFlag: 'مخاطر سعر منخفض' },
+  ];
+
+  it('should identify the top technical consultant', () => {
+    const sorted = [...consultants].sort((a, b) => b.technicalScore - a.technicalScore);
+    expect(sorted[0].name).toBe('ARTEC');
+    expect(sorted[0].technicalScore).toBe(86.4);
+  });
+
+  it('should identify the lowest fee consultant', () => {
+    const sorted = [...consultants].filter(c => c.totalFee > 0).sort((a, b) => a.totalFee - b.totalFee);
+    expect(sorted[0].name).toBe('Safeer');
+    expect(sorted[0].totalFee).toBe(3_200_000);
+  });
+
+  it('should calculate average technical score', () => {
+    const avg = consultants.reduce((s, c) => s + c.technicalScore, 0) / consultants.length;
+    expect(avg).toBeCloseTo(84.1, 1);
+  });
+
+  it('should calculate technical gap between highest and lowest', () => {
+    const sorted = [...consultants].sort((a, b) => b.technicalScore - a.technicalScore);
+    const gap = sorted[0].technicalScore - sorted[sorted.length - 1].technicalScore;
+    expect(gap).toBeCloseTo(4.1, 1);
+  });
+
+  it('should calculate fee gap between highest and lowest', () => {
+    const fees = consultants.filter(c => c.totalFee > 0);
+    const gap = Math.max(...fees.map(c => c.totalFee)) - Math.min(...fees.map(c => c.totalFee));
+    expect(gap).toBe(3_300_000);
+  });
+
+  it('should identify penalized consultants (moderate_high or extreme_high)', () => {
+    const penalized = consultants.filter(c => c.feeZone === 'moderate_high' || c.feeZone === 'extreme_high');
+    expect(penalized.length).toBe(1);
+    expect(penalized[0].name).toBe('Realistic');
+  });
+
+  it('should identify flagged low consultants (extreme_low)', () => {
+    const flaggedLow = consultants.filter(c => c.feeZone === 'extreme_low');
+    expect(flaggedLow.length).toBe(1);
+    expect(flaggedLow[0].name).toBe('Safeer');
+  });
+});
+
+describe('Executive Summary - Strength/Weakness Detection', () => {
+  const CRITERIA_NAMES = [
+    'الهوية المعمارية', 'BIM', 'التخطيط', 'التكاليف', 'الخبرة',
+    'الفريق', 'إدارة الوقت', 'الاهتمام', 'مرونة التعاقد'
+  ];
+
+  it('should find the strongest criterion for a consultant', () => {
+    const scores = [85, 72, 92, 89, 89, 70, 85, 95, 86];
+    let maxIdx = 0;
+    scores.forEach((s, i) => { if (s > scores[maxIdx]) maxIdx = i; });
+    expect(CRITERIA_NAMES[maxIdx]).toBe('الاهتمام');
+    expect(scores[maxIdx]).toBe(95);
+  });
+
+  it('should find the weakest criterion for a consultant', () => {
+    const scores = [85, 72, 92, 89, 89, 70, 85, 95, 86];
+    let minIdx = 0;
+    scores.forEach((s, i) => { if (s > 0 && (scores[minIdx] === 0 || s < scores[minIdx])) minIdx = i; });
+    expect(CRITERIA_NAMES[minIdx]).toBe('الفريق');
+    expect(scores[minIdx]).toBe(70);
+  });
+
+  it('should handle all-zero scores gracefully', () => {
+    const scores = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+    let maxIdx = 0;
+    scores.forEach((s, i) => { if (s > scores[maxIdx]) maxIdx = i; });
+    expect(scores[maxIdx]).toBe(0);
+  });
+
+  it('should detect when top technical differs from top value', () => {
+    // Scenario: ARTEC is top technical but DATUM has better value score
+    const topTechnical = { name: 'ARTEC', technicalScore: 86.4 };
+    const topValue = { name: 'DATUM', valueScore: 85.2 };
+    const differs = topTechnical.name !== topValue.name;
+    expect(differs).toBe(true);
+  });
+
+  it('should detect when top technical equals top value', () => {
+    const topTechnical = { name: 'ARTEC', technicalScore: 86.4 };
+    const topValue = { name: 'ARTEC', valueScore: 87.1 };
+    const differs = topTechnical.name !== topValue.name;
+    expect(differs).toBe(false);
+  });
+});
+
+describe('Executive Summary - Value Ranking Table', () => {
+  it('should rank consultants by value score descending', () => {
+    const valueRankings = [
+      { name: 'ARTEC', valueScore: 87.1 },
+      { name: 'DATUM', valueScore: 85.2 },
+      { name: 'Realistic', valueScore: 78.5 },
+      { name: 'Safeer', valueScore: 82.0 },
+    ].sort((a, b) => b.valueScore - a.valueScore);
+
+    expect(valueRankings[0].name).toBe('ARTEC');
+    expect(valueRankings[1].name).toBe('DATUM');
+    expect(valueRankings[2].name).toBe('Safeer');
+    expect(valueRankings[3].name).toBe('Realistic');
+  });
+
+  it('should calculate gap from first place correctly', () => {
+    const sorted = [
+      { name: 'ARTEC', valueScore: 87.1 },
+      { name: 'DATUM', valueScore: 85.2 },
+      { name: 'Safeer', valueScore: 82.0 },
+    ];
+    const gaps = sorted.map((r, i) => i === 0 ? 0 : sorted[0].valueScore - r.valueScore);
+    expect(gaps[0]).toBe(0);
+    expect(gaps[1]).toBeCloseTo(1.9, 1);
+    expect(gaps[2]).toBeCloseTo(5.1, 1);
+  });
+});

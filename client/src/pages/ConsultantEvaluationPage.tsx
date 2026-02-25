@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Plus, Trash2, Download, Star, BarChart3, DollarSign, Users, Award, ExternalLink, Link2, TrendingUp, Target, CheckCircle2, Building, FileDown, ChevronLeft, ChevronRight, Sparkles, AlertTriangle, Shield, Info, Gavel, Brain, ArrowLeft, Scale, Calculator, SlidersHorizontal, Eye, EyeOff, Filter, Grip, Flame } from "lucide-react";
+import { Loader2, Plus, Trash2, Download, Star, BarChart3, DollarSign, Users, Award, ExternalLink, Link2, TrendingUp, TrendingDown, Target, CheckCircle2, Building, FileDown, ChevronLeft, ChevronRight, Sparkles, AlertTriangle, Shield, Info, Gavel, Brain, ArrowLeft, Scale, Calculator, SlidersHorizontal, Eye, EyeOff, Filter, Grip, Flame, FileText, Trophy, ClipboardList } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { generateEvaluationPDF } from "@/lib/pdfExport";
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, ScatterChart, Scatter, ZAxis, Cell, ReferenceLine } from 'recharts';
@@ -1430,6 +1430,302 @@ export default function ConsultantEvaluationPage() {
                         </div>
                       </div>
                     </div>
+
+                    {/* ===== EXECUTIVE SUMMARY ===== */}
+                    {valueRankings.length > 0 && evaluationProgress > 0 && (() => {
+                      // Compute summary data
+                      const topTechnical = [...rankings].sort((a, b) => b.technicalScore - a.technicalScore)[0];
+                      const lowestFeeConsultant = [...rankings].filter(r => r.totalFee > 0).sort((a, b) => a.totalFee - b.totalFee)[0];
+                      const topValue = valueRankings[0];
+                      const avgTechnical = rankings.length > 0 ? rankings.reduce((s, r) => s + r.technicalScore, 0) / rankings.length : 0;
+                      const avgFee = feeDeviations.average;
+                      const penalizedConsultants = rankings.filter(r => {
+                        const dev = feeDeviations.consultants[r.id];
+                        return dev && (dev.zone === 'moderate_high' || dev.zone === 'extreme_high');
+                      });
+                      const flaggedLow = rankings.filter(r => {
+                        const dev = feeDeviations.consultants[r.id];
+                        return dev && dev.zone === 'extreme_low';
+                      });
+                      // Best criterion per consultant
+                      const consultantStrengths: Record<number, { criterion: string; score: number }> = {};
+                      const consultantWeaknesses: Record<number, { criterion: string; score: number }> = {};
+                      rankings.forEach(r => {
+                        const scores = consultantScores[r.id]?.scores || [];
+                        if (scores.length > 0) {
+                          let maxIdx = 0, minIdx = 0;
+                          scores.forEach((s, i) => {
+                            if (s > scores[maxIdx]) maxIdx = i;
+                            if (s > 0 && (scores[minIdx] === 0 || s < scores[minIdx])) minIdx = i;
+                          });
+                          consultantStrengths[r.id] = { criterion: CRITERIA[maxIdx]?.name || '', score: scores[maxIdx] };
+                          consultantWeaknesses[r.id] = { criterion: CRITERIA[minIdx]?.name || '', score: scores[minIdx] };
+                        }
+                      });
+                      // Gap analysis
+                      const techGap = rankings.length >= 2 ? rankings[0].technicalScore - rankings[rankings.length - 1].technicalScore : 0;
+                      const feeRange = rankings.filter(r => r.totalFee > 0);
+                      const feeGap = feeRange.length >= 2 ? Math.max(...feeRange.map(r => r.totalFee)) - Math.min(...feeRange.map(r => r.totalFee)) : 0;
+
+                      return (
+                        <div className="bg-gradient-to-br from-slate-50 via-white to-blue-50 rounded-2xl border-2 border-slate-200 shadow-lg mb-8 overflow-hidden">
+                          {/* Header */}
+                          <div className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 px-6 py-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg">
+                                  <FileText className="w-5 h-5 text-white" />
+                                </div>
+                                <div>
+                                  <h3 className="text-white font-bold text-lg">الملخص التنفيذي</h3>
+                                  <p className="text-slate-300 text-xs">تقرير آلي — مشروع {selectedProject?.name || ''}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="bg-amber-500/20 text-amber-300 text-xs px-3 py-1 rounded-full border border-amber-500/30">
+                                  اكتمال التقييم: {evaluationProgress}%
+                                </span>
+                                <span className="bg-slate-600 text-slate-200 text-xs px-3 py-1 rounded-full">
+                                  {rankings.length} استشاريين
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="p-6 space-y-6">
+                            {/* Top 3 Cards */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              {/* Best Technical */}
+                              <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-4 border border-emerald-200">
+                                <div className="flex items-center gap-2 mb-3">
+                                  <Trophy className="w-5 h-5 text-emerald-600" />
+                                  <span className="text-sm font-bold text-emerald-800">الأعلى فنياً</span>
+                                </div>
+                                {topTechnical ? (
+                                  <>
+                                    <p className="text-lg font-bold text-emerald-900 mb-1">{topTechnical.name}</p>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-2xl font-black text-emerald-700">{topTechnical.technicalScore.toFixed(1)}%</span>
+                                      <span className="text-xs text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">
+                                        {topTechnical.technicalScore >= 90 ? 'ممتاز' : topTechnical.technicalScore >= 80 ? 'جيد جداً' : topTechnical.technicalScore >= 70 ? 'جيد' : 'مقبول'}
+                                      </span>
+                                    </div>
+                                  </>
+                                ) : <p className="text-sm text-slate-400">لا توجد بيانات</p>}
+                              </div>
+
+                              {/* Lowest Fee */}
+                              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-4 border border-blue-200">
+                                <div className="flex items-center gap-2 mb-3">
+                                  <DollarSign className="w-5 h-5 text-blue-600" />
+                                  <span className="text-sm font-bold text-blue-800">الأقل أتعاباً</span>
+                                </div>
+                                {lowestFeeConsultant ? (
+                                  <>
+                                    <p className="text-lg font-bold text-blue-900 mb-1">{lowestFeeConsultant.name}</p>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-2xl font-black text-blue-700">{(lowestFeeConsultant.totalFee / 1000000).toFixed(2)}M</span>
+                                      <span className="text-xs text-blue-600">د.إ</span>
+                                    </div>
+                                  </>
+                                ) : <p className="text-sm text-slate-400">لا توجد بيانات مالية</p>}
+                              </div>
+
+                              {/* Best Value */}
+                              <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-4 border border-purple-200">
+                                <div className="flex items-center gap-2 mb-3">
+                                  <Scale className="w-5 h-5 text-purple-600" />
+                                  <span className="text-sm font-bold text-purple-800">الأفضل قيمة مركبة</span>
+                                </div>
+                                {topValue ? (
+                                  <>
+                                    <p className="text-lg font-bold text-purple-900 mb-1">{topValue.name}</p>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-2xl font-black text-purple-700">{topValue.valueScore.toFixed(1)}</span>
+                                      <span className="text-xs text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full">
+                                        فني {topValue.technicalScore.toFixed(0)}% + مالي {topValue.adjustedFinancialScore.toFixed(0)}%
+                                      </span>
+                                    </div>
+                                  </>
+                                ) : <p className="text-sm text-slate-400">لا توجد بيانات</p>}
+                              </div>
+                            </div>
+
+                            {/* Narrative Summary */}
+                            <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+                              <div className="flex items-center gap-2 mb-4">
+                                <ClipboardList className="w-5 h-5 text-slate-600" />
+                                <h4 className="font-bold text-slate-800">ملخص النتائج</h4>
+                              </div>
+                              <div className="text-sm text-slate-700 leading-relaxed space-y-3" dir="rtl">
+                                <p>
+                                  تم تقييم <span className="font-bold text-slate-900">{rankings.length} استشاريين</span> لمشروع{' '}
+                                  <span className="font-bold text-slate-900">{selectedProject?.name || ''}</span> بنسبة اكتمال{' '}
+                                  <span className="font-bold text-emerald-700">{evaluationProgress}%</span>.
+                                  {topTechnical && <> حصل <span className="font-bold text-emerald-700">{topTechnical.name}</span> على أعلى تقييم فني بنسبة <span className="font-bold">{topTechnical.technicalScore.toFixed(1)}%</span></>}
+                                  {rankings.length >= 2 && <> بفارق <span className="font-bold">{techGap.toFixed(1)} نقطة</span> عن أدنى تقييم</>}.
+                                  {avgTechnical > 0 && <> المتوسط العام للتقييم الفني <span className="font-bold">{avgTechnical.toFixed(1)}%</span>.</>}
+                                </p>
+
+                                {avgFee > 0 && (
+                                  <p>
+                                    على الصعيد المالي، بلغ متوسط الأتعاب <span className="font-bold text-blue-700">{(avgFee / 1000000).toFixed(2)} مليون د.إ</span>
+                                    {lowestFeeConsultant && <> وكان <span className="font-bold text-blue-700">{lowestFeeConsultant.name}</span> الأقل أتعاباً بمبلغ <span className="font-bold">{(lowestFeeConsultant.totalFee / 1000000).toFixed(2)} مليون د.إ</span></>}
+                                    {feeGap > 0 && <> مع فارق <span className="font-bold">{(feeGap / 1000000).toFixed(2)} مليون د.إ</span> بين الأعلى والأدنى</>}.
+                                  </p>
+                                )}
+
+                                {penalizedConsultants.length > 0 && (
+                                  <p className="bg-red-50 p-3 rounded-lg border border-red-200">
+                                    <AlertTriangle className="w-4 h-4 text-red-500 inline ml-1" />
+                                    <span className="font-bold text-red-700">تنبيه مالي: </span>
+                                    {penalizedConsultants.map((c, i) => (
+                                      <span key={c.id}>
+                                        <span className="font-bold">{c.name}</span>
+                                        {' '}({feeDeviations.consultants[c.id]?.zoneLabel} — عقوبة {feeDeviations.consultants[c.id]?.zone === 'extreme_high' ? '15' : '7'} نقطة)
+                                        {i < penalizedConsultants.length - 1 ? '، ' : '.'}
+                                      </span>
+                                    ))}
+                                  </p>
+                                )}
+
+                                {flaggedLow.length > 0 && (
+                                  <p className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                                    <AlertTriangle className="w-4 h-4 text-amber-500 inline ml-1" />
+                                    <span className="font-bold text-amber-700">تحذير سعر منخفض: </span>
+                                    {flaggedLow.map((c, i) => (
+                                      <span key={c.id}>
+                                        <span className="font-bold">{c.name}</span>
+                                        {' '}(انحراف {feeDeviations.consultants[c.id]?.deviation.toFixed(1)}% تحت المتوسط — قد يشير لنقص في نطاق العمل)
+                                        {i < flaggedLow.length - 1 ? '، ' : '.'}
+                                      </span>
+                                    ))}
+                                  </p>
+                                )}
+
+                                {topValue && topTechnical && topValue.name !== topTechnical.name && (
+                                  <p className="bg-indigo-50 p-3 rounded-lg border border-indigo-200">
+                                    <Info className="w-4 h-4 text-indigo-500 inline ml-1" />
+                                    <span className="font-bold text-indigo-700">ملاحظة: </span>
+                                    الأعلى فنياً (<span className="font-bold">{topTechnical.name}</span>) يختلف عن الأفضل قيمة مركبة (<span className="font-bold">{topValue.name}</span>).
+                                    هذا يعني أن العامل المالي أثّر على الترتيب — يُنصح بمراجعة المقايضة بين الجودة والتكلفة.
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Strength & Weakness per Consultant */}
+                            <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+                              <div className="flex items-center gap-2 mb-4">
+                                <Target className="w-5 h-5 text-slate-600" />
+                                <h4 className="font-bold text-slate-800">نقاط القوة والضعف لكل استشاري</h4>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {rankings.map((r, idx) => {
+                                  const strength = consultantStrengths[r.id];
+                                  const weakness = consultantWeaknesses[r.id];
+                                  return (
+                                    <div key={r.id} className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                                      <div className="flex items-center justify-between mb-2">
+                                        <span className="font-bold text-slate-800 text-sm">{r.name}</span>
+                                        <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                                          idx === 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-200 text-slate-600'
+                                        }`}>
+                                          #{idx + 1} — {r.technicalScore.toFixed(1)}%
+                                        </span>
+                                      </div>
+                                      <div className="space-y-1.5">
+                                        {strength && strength.score > 0 && (
+                                          <div className="flex items-start gap-2">
+                                            <TrendingUp className="w-3.5 h-3.5 text-emerald-500 mt-0.5 shrink-0" />
+                                            <span className="text-xs text-slate-600">
+                                              <span className="font-bold text-emerald-700">أقوى في:</span> {strength.criterion} ({strength.score.toFixed(0)}%)
+                                            </span>
+                                          </div>
+                                        )}
+                                        {weakness && weakness.score > 0 && weakness.criterion !== strength?.criterion && (
+                                          <div className="flex items-start gap-2">
+                                            <TrendingDown className="w-3.5 h-3.5 text-red-400 mt-0.5 shrink-0" />
+                                            <span className="text-xs text-slate-600">
+                                              <span className="font-bold text-red-600">أضعف في:</span> {weakness.criterion} ({weakness.score.toFixed(0)}%)
+                                            </span>
+                                          </div>
+                                        )}
+                                        {r.totalFee > 0 && (
+                                          <div className="flex items-start gap-2">
+                                            <DollarSign className="w-3.5 h-3.5 text-blue-400 mt-0.5 shrink-0" />
+                                            <span className="text-xs text-slate-600">
+                                              الأتعاب: <span className="font-bold">{(r.totalFee / 1000000).toFixed(2)}M د.إ</span>
+                                              {feeDeviations.consultants[r.id] && (
+                                                <span className={`mr-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                                  feeDeviations.consultants[r.id].zone === 'normal' ? 'bg-emerald-100 text-emerald-700' :
+                                                  feeDeviations.consultants[r.id].zone === 'moderate_high' ? 'bg-amber-100 text-amber-700' :
+                                                  feeDeviations.consultants[r.id].zone === 'extreme_high' ? 'bg-red-100 text-red-700' :
+                                                  'bg-orange-100 text-orange-700'
+                                                }`}>
+                                                  {feeDeviations.consultants[r.id].zoneLabel}
+                                                </span>
+                                              )}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {/* Value Ranking Table */}
+                            <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+                              <div className="flex items-center gap-2 mb-4">
+                                <Award className="w-5 h-5 text-slate-600" />
+                                <h4 className="font-bold text-slate-800">ترتيب القيمة المركبة ({technicalWeight}% فني / {financialWeight}% مالي)</h4>
+                              </div>
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-sm" dir="rtl">
+                                  <thead>
+                                    <tr className="bg-slate-100">
+                                      <th className="px-3 py-2 text-right font-bold text-slate-700 rounded-tr-lg">#</th>
+                                      <th className="px-3 py-2 text-right font-bold text-slate-700">الاستشاري</th>
+                                      <th className="px-3 py-2 text-center font-bold text-emerald-700">فني</th>
+                                      <th className="px-3 py-2 text-center font-bold text-blue-700">مالي معدل</th>
+                                      <th className="px-3 py-2 text-center font-bold text-purple-700">القيمة المركبة</th>
+                                      <th className="px-3 py-2 text-center font-bold text-slate-700 rounded-tl-lg">الفارق عن الأول</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {valueRankings.map((r, idx) => (
+                                      <tr key={r.id} className={`border-b border-slate-100 ${idx === 0 ? 'bg-amber-50/50' : ''}`}>
+                                        <td className="px-3 py-2.5 text-right">
+                                          {idx === 0 ? <span className="text-amber-500">🥇</span> : idx === 1 ? <span className="text-slate-400">🥈</span> : idx === 2 ? <span className="text-amber-700">🥉</span> : <span className="text-slate-400">{idx + 1}</span>}
+                                        </td>
+                                        <td className="px-3 py-2.5 text-right font-bold text-slate-800">{r.name}</td>
+                                        <td className="px-3 py-2.5 text-center">
+                                          <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-xs font-bold">{r.technicalScore.toFixed(1)}%</span>
+                                        </td>
+                                        <td className="px-3 py-2.5 text-center">
+                                          <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold">{r.adjustedFinancialScore.toFixed(1)}%</span>
+                                          {r.penalty > 0 && <span className="text-red-500 text-[10px] mr-1">(-{r.penalty})</span>}
+                                        </td>
+                                        <td className="px-3 py-2.5 text-center">
+                                          <span className={`px-2.5 py-1 rounded-full text-xs font-black ${idx === 0 ? 'bg-purple-200 text-purple-800' : 'bg-purple-100 text-purple-700'}`}>
+                                            {r.valueScore.toFixed(1)}
+                                          </span>
+                                        </td>
+                                        <td className="px-3 py-2.5 text-center text-xs text-slate-500">
+                                          {idx === 0 ? '—' : `${(valueRankings[0].valueScore - r.valueScore).toFixed(1)}-`}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {/* Formulas Section */}
                     {showValueFormulas && (
