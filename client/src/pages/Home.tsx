@@ -43,7 +43,7 @@ import { useLocation } from "wouter";
 import { AgentChatBox, AgentType } from "@/components/AgentChatBox";
 import { Streamdown } from "streamdown";
 
-const SALWA_AVATAR_URL = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/VHJEpCATvCSDFToI.png";
+const SALWA_AVATAR_URL = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/dKjNMGCYtHDQQPse.png";
 
 const AGENT_ICONS: Record<string, any> = {
   crown: Crown,
@@ -389,7 +389,7 @@ export default function Home() {
                 <div className="flex flex-col lg:flex-row items-center gap-8">
                   {/* Salwa's Avatar - no crown */}
                   <div className="relative shrink-0">
-                    <div className="w-32 h-32 lg:w-36 lg:h-36 rounded-full overflow-hidden ring-4 ring-amber-400/60 ring-offset-4 ring-offset-background shadow-2xl shadow-amber-500/20">
+                    <div className="w-44 h-44 lg:w-52 lg:h-52 rounded-full overflow-hidden ring-4 ring-amber-400/60 ring-offset-4 ring-offset-background shadow-2xl shadow-amber-500/20">
                       <img
                         src={SALWA_AVATAR_URL}
                         alt="سلوى"
