@@ -26,6 +26,7 @@ import {
 import { getOAuthClientForUser } from "./googleOAuthClient";
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { fetchEmailsSince, fetchEmailByUID, fetchRecentEmails, sendReply } from "./emailMonitor";
+import { setPendingEmailDraft } from "./agentChat";
 import nodemailer from "nodemailer";
 
 // ═══════════════════════════════════════════════════
@@ -2256,6 +2257,21 @@ async function _executeToolInternal(
             sizeFormatted: a.size > 1048576 ? `${(a.size / 1048576).toFixed(1)} MB` : a.size > 1024 ? `${(a.size / 1024).toFixed(0)} KB` : `${a.size} bytes`,
           }));
           const hasAttachments = attachmentList.length > 0;
+          
+          // Save email data as pending draft for approval flow
+          // When user says "موافق" later, the system will have the email data ready
+          if (userId) {
+            setPendingEmailDraft(userId, {
+              to: email.from,
+              fromName: email.fromName,
+              subject: email.subject,
+              messageId: email.messageId,
+              uid: email.uid,
+              body: "", // Will be filled when Salwa generates the draft reply
+              timestamp: Date.now(),
+            });
+          }
+          
           return JSON.stringify({
             message: `تفاصيل الرسالة من ${email.fromName} (${email.from})${hasAttachments ? ` - فيها ${attachmentList.length} مرفق` : ' - بدون مرفقات'}`,
             data: {

@@ -38,6 +38,43 @@ interface AgentChatRequest {
   conversationHistory?: { role: "user" | "assistant"; content: string }[];
 }
 
+// ═══════════════════════════════════════════════════
+// Pending Email Draft Cache - stores last email draft per user
+// so when user says "موافق" the data is available
+// ═══════════════════════════════════════════════════
+interface PendingEmailDraft {
+  to: string;
+  fromName: string;
+  subject: string;
+  body: string;
+  messageId?: string;
+  uid?: number;
+  timestamp: number;
+}
+
+const pendingEmailDrafts = new Map<number, PendingEmailDraft>();
+
+export function setPendingEmailDraft(userId: number, draft: PendingEmailDraft) {
+  pendingEmailDrafts.set(userId, draft);
+  console.log(`[EmailDraft] Saved draft for user ${userId}: to=${draft.to}, subject=${draft.subject}`);
+  // Auto-expire after 30 minutes
+  setTimeout(() => {
+    const current = pendingEmailDrafts.get(userId);
+    if (current && current.timestamp === draft.timestamp) {
+      pendingEmailDrafts.delete(userId);
+      console.log(`[EmailDraft] Expired draft for user ${userId}`);
+    }
+  }, 30 * 60 * 1000);
+}
+
+export function getPendingEmailDraft(userId: number): PendingEmailDraft | undefined {
+  return pendingEmailDrafts.get(userId);
+}
+
+export function clearPendingEmailDraft(userId: number) {
+  pendingEmailDrafts.delete(userId);
+}
+
 // Model assignment per agent based on quality analysis
 type AIModel = "gpt-4o" | "claude-sonnet-4" | "gemini-2.5-pro";
 
@@ -102,14 +139,17 @@ const AGENT_PROMPTS: Record<AgentType, string> = {
   ثم اطلبي من خازن أرشفتها: ask_another_agent("خازن", "أرشف المرفقات التالية: [filenames] من إيميل [sender] بخصوص [subject]")
 
 الخطوة 4️⃣ اعرضي للمستخدم تقرير كامل بهذا الشكل:
-  📨 إيميل جديد من: [fromName]
+  📨 إيميل جديد من: [fromName] ([from]) ← ❗ يجب ذكر عنوان الإيميل الكامل
   📋 الموضوع: [subject]
   📅 التاريخ: [date]
+  🔑 UID: [uid] | Message-ID: [messageId]
   🗒️ ملخص المحتوى: [ملخص من 2-3 سطور لمحتوى الإيميل]
   📎 المرفقات: [اسم كل مرفق + ملخص محتواه إن أمكن]
   🎯 الطلب المتوقع: [ماذا يريد المرسل؟ عرض سعر؟ متابعة؟ طلب معلومات؟]
   💡 الرد المقترح: [مسودة رد جاهزة بالإنجليزية المهنية]
   👤 الوكيل المختص: [من يجب إشراكه؟ فاروق للعقود، ألينا للمالية، خالد للجودة]
+  
+  ⚠️ بيانات الإرسال (ضرورية للرد): to=[from], subject=[subject], inReplyTo=[messageId]
 
 الخطوة 5️⃣ إنشاء مهمة تلقائياً (إذا الإيميل يتطلب متابعة):
   إذا كان الإيميل يحتوي على طلب أو عرض سعر أو موعد نهائي أو طلب مستندات:
@@ -132,6 +172,20 @@ const AGENT_PROMPTS: Record<AgentType, string> = {
   ❗ اعرضي المسودة أولاً واطلبي الموافقة قبل الإرسال
 ▸ إيميل جديد: compose_email
   ❗ اعرضي المسودة أولاً واطلبي الموافقة قبل الإرسال
+
+🚨🚨🚨 قاعدة الموافقة على الإرسال (القاعدة الأهم على الإطلاق):
+عندما يقول المستخدم أي من هذه الكلمات بعد عرض مسودة الرد:
+"موافق" / "أرسلي" / "أرسل" / "OK" / "send" / "تمام" / "ابعثي" / "نعم" / "yes" / "يلا" / "go" / "اوكي" / "اوك" / "ماشي" / "خلاص" / "امشي"
+
+→ هذا يعني المستخدم وافق على إرسال المسودة!
+→ الخطوات المطلوبة فوراً:
+   1. ارجعي لرسالتك السابقة في المحادثة واستخرجي: عنوان الإيميل (to), الموضوع (subject), ونص المسودة (body), وmessageId (inReplyTo)
+   2. استدعي reply_email فوراً بهذه البيانات
+   3. إذا لم تجدي البيانات في المحادثة، استخدمي read_email لجلبها من جديد ثم أرسلي
+→ لا تسألي مرة ثانية - المستخدم وافق بالفعل!
+→ لا تقولي "مشكلة تقنية" أو "لا أستطيع" - نفذي الإرسال!
+→ إذا فشل الإرسال: أعيدي المحاولة مرة واحدة، وإذا فشل مرة ثانية أبلغي المستخدم بالخطأ التقني بالتفصيل
+→ بعد الإرسال الناجح: أكدي "✅ تم إرسال الرد بنجاح إلى [الاسم]"
 
 📋 المهمة 2: متابعة المهام والتنسيق
 ─────────────────────────────────
@@ -1493,8 +1547,30 @@ export async function handleAgentChat(req: AgentChatRequest): Promise<{ text: st
   // Get tools for this agent
   const agentTools = getToolsForAgent(agent);
 
+  // Check if there's a pending email draft for this user (for approval flow)
+  let pendingDraftContext = "";
+  if (agent === "salwa" && req.userId) {
+    const lowerMsg = message.toLowerCase().trim();
+    const isApproval = ["موافق", "أرسلي", "أرسل", "ok", "send", "تمام", "ابعثي", "نعم", "yes", "يلا", "go", "اوكي", "اوك", "ماشي", "خلاص", "امشي", "ارسلي", "ارسل"].some(w => lowerMsg === w || lowerMsg.startsWith(w + " "));
+    const draft = getPendingEmailDraft(req.userId);
+    if (draft && isApproval) {
+      pendingDraftContext = `\n\n🚨🚨🚨 المستخدم وافق على إرسال المسودة! نفذي reply_email فوراً بهذه البيانات:
+- to: ${draft.to}
+- subject: ${draft.subject}
+- body: ${draft.body}
+- inReplyTo: ${draft.messageId || ''}
+لا تسألي - نفذي الإرسال مباشرة!`;
+      console.log(`[AgentChat] Injecting pending email draft for user ${req.userId}: to=${draft.to}`);
+      // Clear the draft after injecting it
+      clearPendingEmailDraft(req.userId);
+    } else if (draft) {
+      // Draft exists but message is not approval - add it as context anyway
+      pendingDraftContext = `\n\n📝 ملاحظة: يوجد مسودة رد إيميل معلقة إلى ${draft.fromName} (${draft.to}) بخصوص "${draft.subject}". إذا وافق المستخدم على الإرسال، استخدمي هذه البيانات.`;
+    }
+  }
+
   // Build system prompt with context and tool instructions
-  const systemPrompt = AGENT_PROMPTS[agent] + contextData + TOOL_USE_INSTRUCTION +
+  const systemPrompt = AGENT_PROMPTS[agent] + contextData + TOOL_USE_INSTRUCTION + pendingDraftContext +
     "\n\nتعليمات مهمة: أجب بشكل طبيعي وشخصي كزميل عمل حقيقي. استخدم الأدوات دائماً لجلب البيانات الحقيقية من المنصة. إذا طُلب منك تنفيذ مهمة (خاصة من اجتماع): يجب أن تستدعي أدوات الكتابة فعلياً لتغيير البيانات على المنصة. الكلام بدون فعل = فشل.";
 
   // Set agent context for assignment logging
@@ -1520,6 +1596,39 @@ export async function handleAgentChat(req: AgentChatRequest): Promise<{ text: st
     logModelUsage(req.userId, agent, success ? (result!.model || "unknown") : "failed", responseTimeMs, success, isFallback).catch(e => 
       console.error("[ModelUsage] Failed to log:", e)
     );
+  }
+  
+  // After Salwa responds with email analysis + draft, extract the draft body and update pending draft
+  if (agent === "salwa" && req.userId && result.text) {
+    const existingDraft = getPendingEmailDraft(req.userId);
+    if (existingDraft && existingDraft.body === "") {
+      // Try to extract the suggested reply from Salwa's response
+      const responseText = result.text;
+      // Look for common patterns: "الرد المقترح" section or English email text
+      const draftPatterns = [
+        /الرد المقترح[:\s]*\n([\s\S]*?)(?=\n(?:بيانات|الوكيل|الخطوة|👤|✅|❗|$))/i,
+        /💡[^\n]*\n([\s\S]*?)(?=\n(?:👤|❗|⚠|✅|$))/i,
+        /(?:Dear|Hi|Hello|Thank)[\s\S]*?(?:regards|sincerely|best|thanks)[,.]?\s*\n[^\n]*/i,
+      ];
+      
+      let draftBody = "";
+      for (const pattern of draftPatterns) {
+        const match = responseText.match(pattern);
+        if (match) {
+          draftBody = match[1] || match[0];
+          draftBody = draftBody.trim();
+          break;
+        }
+      }
+      
+      // If we found a draft body, update the pending draft
+      if (draftBody && draftBody.length > 20) {
+        existingDraft.body = draftBody;
+        existingDraft.timestamp = Date.now(); // Refresh timestamp
+        setPendingEmailDraft(req.userId, existingDraft);
+        console.log(`[AgentChat] Updated pending draft body for user ${req.userId}: ${draftBody.substring(0, 100)}...`);
+      }
+    }
   }
   
   return result;
