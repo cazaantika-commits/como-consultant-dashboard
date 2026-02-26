@@ -1069,21 +1069,29 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
         throw new TRPCError({ code: "BAD_REQUEST", message: "حجم الملف الصوتي يتجاوز 16 ميجابايت" });
       }
 
-      const ext = input.mimeType.includes("webm") ? "webm" : input.mimeType.includes("mp4") ? "m4a" : "wav";
+      // Handle various audio formats from different browsers/devices
+      const mimeClean = input.mimeType.split(";")[0].trim();
+      const extMap: Record<string, string> = { "audio/webm": "webm", "audio/mp4": "m4a", "audio/ogg": "ogg", "audio/wav": "wav", "audio/mpeg": "mp3", "audio/x-m4a": "m4a", "video/webm": "webm" };
+      const ext = extMap[mimeClean] || "webm";
+      console.log(`[Voice] Transcribe: mime=${input.mimeType}, ext=${ext}, size=${sizeMB.toFixed(2)}MB`);
+      
       const fileKey = `cc-voice/${member.memberId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { url: audioUrl } = await storagePut(fileKey, audioBuffer, input.mimeType);
+      const contentType = mimeClean || "audio/webm";
+      const { url: audioUrl } = await storagePut(fileKey, audioBuffer, contentType);
+      console.log(`[Voice] Uploaded to S3: ${audioUrl.substring(0, 80)}...`);
 
       const result = await transcribeAudio({
         audioUrl,
         language: input.language,
         prompt: "تحويل الكلام العربي إلى نص",
       });
+      console.log(`[Voice] Whisper result:`, JSON.stringify(result).substring(0, 300));
 
       if ("error" in result) {
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: (result as any).error });
       }
 
-      return { text: (result as any).text, language: (result as any).language, duration: (result as any).duration };
+      return { text: (result as any).text || "", language: (result as any).language || "ar", duration: (result as any).duration || 0 };
     }),
 
   // ─── Text-to-Speech for Command Center ───

@@ -55,6 +55,37 @@ import { Streamdown } from "streamdown";
 const SALWA_AVATAR_URL = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/dKjNMGCYtHDQQPse.png";
 
 // ─── Voice Recording Hook ───
+function getSupportedMimeType(): string {
+  // Safari/iOS prefers mp4, Chrome/Firefox prefer webm
+  const types = [
+    "audio/webm;codecs=opus",
+    "audio/webm",
+    "audio/mp4",
+    "audio/ogg;codecs=opus",
+    "audio/ogg",
+    "", // fallback: let browser decide
+  ];
+  for (const t of types) {
+    if (t === "") return "";
+    try { if (MediaRecorder.isTypeSupported(t)) return t; } catch { /* skip */ }
+  }
+  return "";
+}
+
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      const base64 = result.split(",")[1];
+      if (base64) resolve(base64);
+      else reject(new Error("Failed to convert audio to base64"));
+    };
+    reader.onerror = () => reject(new Error("FileReader error"));
+    reader.readAsDataURL(blob);
+  });
+}
+
 function useVoiceRecorder() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -66,20 +97,25 @@ function useVoiceRecorder() {
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-          ? "audio/webm;codecs=opus" : "audio/webm",
-      });
+      const mimeType = getSupportedMimeType();
+      console.log("[Voice] Starting recording, mimeType:", mimeType || "browser-default");
+      const options: MediaRecorderOptions = mimeType ? { mimeType } : {};
+      const mediaRecorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
+      mediaRecorder.onerror = (e) => {
+        console.error("[Voice] MediaRecorder error:", e);
+      };
       mediaRecorder.start(250);
       setIsRecording(true);
       setRecordingTime(0);
       timerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000);
+      console.log("[Voice] Recording started successfully");
     } catch (err: any) {
+      console.error("[Voice] Failed to start recording:", err);
       throw new Error(err.message || "لم يتم السماح بالوصول للميكروفون");
     }
   }, []);
@@ -88,11 +124,17 @@ function useVoiceRecorder() {
     return new Promise((resolve, reject) => {
       const mediaRecorder = mediaRecorderRef.current;
       if (!mediaRecorder || mediaRecorder.state === "inactive") {
+        console.error("[Voice] No active recording to stop");
         reject(new Error("No active recording")); return;
       }
       mediaRecorder.onstop = () => {
         mediaRecorder.stream.getTracks().forEach(t => t.stop());
-        const blob = new Blob(chunksRef.current, { type: mediaRecorder.mimeType });
+        const actualMime = mediaRecorder.mimeType || "audio/webm";
+        const blob = new Blob(chunksRef.current, { type: actualMime });
+        console.log("[Voice] Recording stopped, blob size:", blob.size, "type:", actualMime, "chunks:", chunksRef.current.length);
+        if (blob.size < 100) {
+          reject(new Error("التسجيل قصير جداً، حاول مرة أخرى")); return;
+        }
         resolve(blob);
       };
       mediaRecorder.stop();
@@ -345,6 +387,7 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const { isRecording, recordingTime, isTranscribing, setIsTranscribing, startRecording, stopRecording, cancelRecording } = useVoiceRecorder();
+  const autoStopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const chatHistory = trpc.commandCenter.getChatHistory.useQuery({ token }, { enabled: isOpen });
   const chatMutation = trpc.commandCenter.chatWithSalwa.useMutation();
@@ -406,45 +449,90 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
     }
   };
 
+  // Voice: Process recorded audio blob
+  const processVoiceBlob = async (blob: Blob) => {
+    try {
+      console.log("[Voice] Got blob:", blob.size, "bytes, type:", blob.type);
+      setIsTranscribing(true);
+      toast.info("جاري تحويل الصوت إلى نص...");
+      
+      // Convert blob to base64
+      const base64 = await blobToBase64(blob);
+      console.log("[Voice] Base64 length:", base64.length);
+      
+      const mimeType = blob.type || "audio/webm";
+      console.log("[Voice] Sending to transcription, mimeType:", mimeType);
+      
+      const result = await transcribeMutation.mutateAsync({
+        token,
+        audioBase64: base64,
+        mimeType,
+        language: "ar",
+      });
+      
+      console.log("[Voice] Transcription result:", result);
+      setIsTranscribing(false);
+      
+      if (result.text && result.text.trim()) {
+        toast.success(`تم التعرف: "${result.text.substring(0, 50)}${result.text.length > 50 ? '...' : ''}"`);
+        // Set the message in the input so user can see it
+        setMessage(result.text);
+        // Auto-send after brief delay
+        setTimeout(() => {
+          handleSend(result.text);
+        }, 300);
+      } else {
+        setMicError("لم يتم التعرف على كلام، حاول مرة أخرى");
+        toast.error("لم يتم التعرف على كلام");
+        setTimeout(() => setMicError(null), 4000);
+      }
+    } catch (err: any) {
+      console.error("[Voice] Error in voice flow:", err);
+      setIsTranscribing(false);
+      const errMsg = err.message || "فشل التحويل الصوتي";
+      setMicError(errMsg);
+      toast.error(errMsg);
+      setTimeout(() => setMicError(null), 4000);
+    }
+  };
+
   // Voice: Mic click handler
   const handleMicClick = async () => {
     setMicError(null);
     if (isRecording) {
+      // Clear auto-stop timer
+      if (autoStopRef.current) { clearTimeout(autoStopRef.current); autoStopRef.current = null; }
       try {
+        console.log("[Voice] Stopping recording...");
         const blob = await stopRecording();
-        setIsTranscribing(true);
-        // Convert blob to base64
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          const base64 = (reader.result as string).split(",")[1];
-          try {
-            const result = await transcribeMutation.mutateAsync({
-              token,
-              audioBase64: base64,
-              mimeType: blob.type,
-              language: "ar",
-            });
-            setIsTranscribing(false);
-            if (result.text) {
-              handleSend(result.text);
-            }
-          } catch (err: any) {
-            setIsTranscribing(false);
-            setMicError("فشل التحويل الصوتي");
-            setTimeout(() => setMicError(null), 3000);
-          }
-        };
-        reader.readAsDataURL(blob);
+        await processVoiceBlob(blob);
       } catch (err: any) {
+        console.error("[Voice] Stop error:", err);
+        setIsTranscribing(false);
         setMicError(err.message || "فشل التحويل الصوتي");
-        setTimeout(() => setMicError(null), 3000);
+        setTimeout(() => setMicError(null), 4000);
       }
     } else {
       try {
+        console.log("[Voice] Starting recording...");
         await startRecording();
+        toast.info("جاري التسجيل... اضغط مرة أخرى للإيقاف");
+        // Auto-stop after 30 seconds
+        autoStopRef.current = setTimeout(async () => {
+          console.log("[Voice] Auto-stopping after 30s");
+          try {
+            const blob = await stopRecording();
+            toast.info("تم إيقاف التسجيل تلقائياً (30 ثانية)");
+            await processVoiceBlob(blob);
+          } catch (e) {
+            console.error("[Voice] Auto-stop error:", e);
+          }
+        }, 30000);
       } catch (err: any) {
+        console.error("[Voice] Failed to start:", err);
         setMicError(err.message || "لم يتم السماح بالوصول للميكروفون");
-        setTimeout(() => setMicError(null), 3000);
+        toast.error("لم يتم السماح بالوصول للميكروفون. تأكد من الإعدادات.");
+        setTimeout(() => setMicError(null), 4000);
       }
     }
   };
