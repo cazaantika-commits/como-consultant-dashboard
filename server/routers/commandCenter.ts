@@ -12,6 +12,8 @@ import {
   projects,
   consultants,
   projectConsultants,
+  projectMilestones,
+  projectKpis,
 } from "../../drizzle/schema";
 import { eq, desc, sql, and, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -204,7 +206,7 @@ export const commandCenterRouter = router({
     .query(async ({ input }) => {
       const member = await verifyToken(input.token);
       const db = await getDb();
-      if (!db) return { reports: 0, requests: 0, meeting_minutes: 0, evaluations: 0, announcements: 0, unread: 0 };
+      if (!db) return { reports: 0, requests: 0, meeting_minutes: 0, evaluations: 0, announcements: 0, milestones_kpis: 0, unread: 0 };
       
       const [items, notifications] = await Promise.all([
         db.select().from(commandCenterItems).where(eq(commandCenterItems.status, "active")),
@@ -221,9 +223,15 @@ export const commandCenterRouter = router({
         } catch { return true; }
       });
       
-      const counts = { reports: 0, requests: 0, meeting_minutes: 0, evaluations: 0, announcements: 0, unread: notifications.length };
+      // Count milestones and KPIs
+      const [milestones, kpis] = await Promise.all([
+        db.select().from(projectMilestones),
+        db.select().from(projectKpis),
+      ]);
+      
+      const counts: Record<string, number> = { reports: 0, requests: 0, meeting_minutes: 0, evaluations: 0, announcements: 0, milestones_kpis: milestones.length + kpis.length, unread: notifications.length };
       accessible.forEach(item => {
-        counts[item.bubbleType as keyof typeof counts]++;
+        if (counts[item.bubbleType] !== undefined) counts[item.bubbleType]++;
       });
       
       return counts;
@@ -697,6 +705,297 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       await db.delete(commandCenterChat).where(eq(commandCenterChat.memberId, member.memberId));
+      return { success: true };
+    }),
+
+  // ═══ Milestones & KPIs ═══
+
+  // Get milestones for a project
+  getMilestones: publicProcedure
+    .input(z.object({
+      token: z.string(),
+      projectId: z.number().optional(),
+    }))
+    .query(async ({ input }) => {
+      await verifyToken(input.token);
+      const db = await getDb();
+      if (!db) return [];
+      
+      if (input.projectId) {
+        return db.select().from(projectMilestones)
+          .where(eq(projectMilestones.projectId, input.projectId))
+          .orderBy(projectMilestones.sortOrder, projectMilestones.plannedStartDate);
+      }
+      return db.select().from(projectMilestones)
+        .orderBy(projectMilestones.sortOrder, projectMilestones.plannedStartDate);
+    }),
+
+  // Get milestones summary across all projects (for bubble dashboard)
+  getMilestonesSummary: publicProcedure
+    .input(z.object({ token: z.string() }))
+    .query(async ({ input }) => {
+      await verifyToken(input.token);
+      const db = await getDb();
+      if (!db) return { total: 0, completed: 0, inProgress: 0, delayed: 0, notStarted: 0, onHold: 0, projects: [] };
+      
+      const allMilestones = await db.select().from(projectMilestones);
+      const allProjects = await db.select({ id: projects.id, name: projects.name }).from(projects);
+      const projectMap = Object.fromEntries(allProjects.map(p => [p.id, p.name]));
+      
+      const total = allMilestones.length;
+      const completed = allMilestones.filter(m => m.status === 'completed').length;
+      const inProgress = allMilestones.filter(m => m.status === 'in_progress').length;
+      const delayed = allMilestones.filter(m => m.status === 'delayed').length;
+      const notStarted = allMilestones.filter(m => m.status === 'not_started').length;
+      const onHold = allMilestones.filter(m => m.status === 'on_hold').length;
+      
+      // Group by project
+      const projectGroups: Record<number, { name: string; milestones: typeof allMilestones; progress: number }> = {};
+      allMilestones.forEach(m => {
+        if (!projectGroups[m.projectId]) {
+          projectGroups[m.projectId] = { name: projectMap[m.projectId] || 'Unknown', milestones: [], progress: 0 };
+        }
+        projectGroups[m.projectId].milestones.push(m);
+      });
+      
+      // Calculate average progress per project
+      Object.values(projectGroups).forEach(g => {
+        g.progress = g.milestones.length > 0
+          ? Math.round(g.milestones.reduce((sum, m) => sum + m.progressPercent, 0) / g.milestones.length)
+          : 0;
+      });
+      
+      return {
+        total,
+        completed,
+        inProgress,
+        delayed,
+        notStarted,
+        onHold,
+        overallProgress: total > 0 ? Math.round(allMilestones.reduce((sum, m) => sum + m.progressPercent, 0) / total) : 0,
+        projects: Object.entries(projectGroups).map(([id, g]) => ({
+          projectId: Number(id),
+          projectName: g.name,
+          milestoneCount: g.milestones.length,
+          progress: g.progress,
+          delayed: g.milestones.filter(m => m.status === 'delayed').length,
+        })),
+      };
+    }),
+
+  // Create a milestone
+  createMilestone: publicProcedure
+    .input(z.object({
+      token: z.string(),
+      projectId: z.number(),
+      title: z.string(),
+      titleAr: z.string().optional(),
+      description: z.string().optional(),
+      category: z.enum(['planning', 'design', 'permits', 'construction', 'handover', 'sales', 'other']).default('other'),
+      plannedStartDate: z.string().optional(),
+      plannedEndDate: z.string().optional(),
+      priority: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
+      assignedTo: z.string().optional(),
+      sortOrder: z.number().default(0),
+    }))
+    .mutation(async ({ input }) => {
+      const member = await verifyToken(input.token);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      
+      const [inserted] = await db.insert(projectMilestones).values({
+        projectId: input.projectId,
+        title: input.title,
+        titleAr: input.titleAr || null,
+        description: input.description || null,
+        category: input.category,
+        plannedStartDate: input.plannedStartDate || null,
+        plannedEndDate: input.plannedEndDate || null,
+        priority: input.priority,
+        assignedTo: input.assignedTo || null,
+        sortOrder: input.sortOrder,
+        createdByMemberId: member.memberId,
+      });
+      
+      return { id: inserted.insertId, success: true };
+    }),
+
+  // Update a milestone
+  updateMilestone: publicProcedure
+    .input(z.object({
+      token: z.string(),
+      id: z.number(),
+      title: z.string().optional(),
+      titleAr: z.string().optional(),
+      description: z.string().optional(),
+      category: z.enum(['planning', 'design', 'permits', 'construction', 'handover', 'sales', 'other']).optional(),
+      plannedStartDate: z.string().optional(),
+      plannedEndDate: z.string().optional(),
+      actualStartDate: z.string().optional(),
+      actualEndDate: z.string().optional(),
+      progressPercent: z.number().min(0).max(100).optional(),
+      status: z.enum(['not_started', 'in_progress', 'delayed', 'completed', 'on_hold', 'cancelled']).optional(),
+      priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+      assignedTo: z.string().optional(),
+      notes: z.string().optional(),
+      sortOrder: z.number().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      await verifyToken(input.token);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      
+      const { token, id, ...updates } = input;
+      // Filter out undefined values
+      const cleanUpdates: Record<string, any> = {};
+      Object.entries(updates).forEach(([key, val]) => {
+        if (val !== undefined) cleanUpdates[key] = val;
+      });
+      
+      if (Object.keys(cleanUpdates).length === 0) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'No fields to update' });
+      }
+      
+      await db.update(projectMilestones).set(cleanUpdates).where(eq(projectMilestones.id, id));
+      return { success: true };
+    }),
+
+  // Delete a milestone
+  deleteMilestone: publicProcedure
+    .input(z.object({ token: z.string(), id: z.number() }))
+    .mutation(async ({ input }) => {
+      await verifyToken(input.token);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      await db.delete(projectMilestones).where(eq(projectMilestones.id, input.id));
+      return { success: true };
+    }),
+
+  // ─── KPIs ───
+
+  // Get KPIs for a project
+  getKpis: publicProcedure
+    .input(z.object({
+      token: z.string(),
+      projectId: z.number().optional(),
+    }))
+    .query(async ({ input }) => {
+      await verifyToken(input.token);
+      const db = await getDb();
+      if (!db) return [];
+      
+      if (input.projectId) {
+        return db.select().from(projectKpis)
+          .where(eq(projectKpis.projectId, input.projectId))
+          .orderBy(projectKpis.category, projectKpis.name);
+      }
+      return db.select().from(projectKpis)
+        .orderBy(projectKpis.category, projectKpis.name);
+    }),
+
+  // Get KPIs summary across all projects (for bubble dashboard)
+  getKpisSummary: publicProcedure
+    .input(z.object({ token: z.string() }))
+    .query(async ({ input }) => {
+      await verifyToken(input.token);
+      const db = await getDb();
+      if (!db) return { total: 0, onTrack: 0, atRisk: 0, offTrack: 0, achieved: 0, categories: {} };
+      
+      const allKpis = await db.select().from(projectKpis);
+      
+      return {
+        total: allKpis.length,
+        onTrack: allKpis.filter(k => k.status === 'on_track').length,
+        atRisk: allKpis.filter(k => k.status === 'at_risk').length,
+        offTrack: allKpis.filter(k => k.status === 'off_track').length,
+        achieved: allKpis.filter(k => k.status === 'achieved').length,
+        notStarted: allKpis.filter(k => k.status === 'not_started').length,
+        categories: allKpis.reduce((acc, k) => {
+          acc[k.category] = (acc[k.category] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>),
+      };
+    }),
+
+  // Create a KPI
+  createKpi: publicProcedure
+    .input(z.object({
+      token: z.string(),
+      projectId: z.number(),
+      name: z.string(),
+      nameAr: z.string().optional(),
+      description: z.string().optional(),
+      category: z.enum(['financial', 'timeline', 'quality', 'safety', 'sales', 'customer', 'operational']).default('operational'),
+      targetValue: z.string().optional(),
+      currentValue: z.string().optional(),
+      unit: z.string().optional(),
+      status: z.enum(['on_track', 'at_risk', 'off_track', 'achieved', 'not_started']).default('not_started'),
+    }))
+    .mutation(async ({ input }) => {
+      const member = await verifyToken(input.token);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      
+      const [inserted] = await db.insert(projectKpis).values({
+        projectId: input.projectId,
+        name: input.name,
+        nameAr: input.nameAr || null,
+        description: input.description || null,
+        category: input.category,
+        targetValue: input.targetValue || null,
+        currentValue: input.currentValue || null,
+        unit: input.unit || null,
+        status: input.status,
+        createdByMemberId: member.memberId,
+      });
+      
+      return { id: inserted.insertId, success: true };
+    }),
+
+  // Update a KPI
+  updateKpi: publicProcedure
+    .input(z.object({
+      token: z.string(),
+      id: z.number(),
+      name: z.string().optional(),
+      nameAr: z.string().optional(),
+      description: z.string().optional(),
+      category: z.enum(['financial', 'timeline', 'quality', 'safety', 'sales', 'customer', 'operational']).optional(),
+      targetValue: z.string().optional(),
+      currentValue: z.string().optional(),
+      unit: z.string().optional(),
+      trend: z.enum(['up', 'down', 'stable', 'na']).optional(),
+      status: z.enum(['on_track', 'at_risk', 'off_track', 'achieved', 'not_started']).optional(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const member = await verifyToken(input.token);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      
+      const { token, id, ...updates } = input;
+      const cleanUpdates: Record<string, any> = {};
+      Object.entries(updates).forEach(([key, val]) => {
+        if (val !== undefined) cleanUpdates[key] = val;
+      });
+      cleanUpdates.lastUpdatedBy = member.nameAr || member.name;
+      
+      if (Object.keys(cleanUpdates).length <= 1) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'No fields to update' });
+      }
+      
+      await db.update(projectKpis).set(cleanUpdates).where(eq(projectKpis.id, id));
+      return { success: true };
+    }),
+
+  // Delete a KPI
+  deleteKpi: publicProcedure
+    .input(z.object({ token: z.string(), id: z.number() }))
+    .mutation(async ({ input }) => {
+      await verifyToken(input.token);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      await db.delete(projectKpis).where(eq(projectKpis.id, input.id));
       return { success: true };
     }),
 

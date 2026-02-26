@@ -227,3 +227,187 @@ describe("commandCenter.listMembers (admin only)", () => {
     expect(memberIds).toContain("sheikh_issa");
   });
 });
+
+// ─── Milestones & KPIs Tests ───
+
+const ABDULRAHMAN_TOKEN = "cc_abdulrahman_2026_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2g3h4i5j6k7l8m9n0";
+
+describe("commandCenter.milestones", () => {
+  let createdMilestoneId: number;
+
+  it("returns milestones list (may be empty initially)", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.commandCenter.getMilestones({
+      token: ABDULRAHMAN_TOKEN,
+    });
+    expect(Array.isArray(result)).toBe(true);
+  });
+
+  it("returns milestones summary", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.commandCenter.getMilestonesSummary({
+      token: ABDULRAHMAN_TOKEN,
+    });
+    expect(result).toBeDefined();
+    expect(typeof result.total).toBe("number");
+    expect(typeof result.completed).toBe("number");
+    expect(typeof result.inProgress).toBe("number");
+    expect(typeof result.delayed).toBe("number");
+    expect(typeof result.overallProgress).toBe("number");
+  });
+
+  it("creates a new milestone", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.commandCenter.createMilestone({
+      token: ABDULRAHMAN_TOKEN,
+      projectId: 1,
+      title: "Test Milestone",
+      titleAr: "مرحلة اختبار",
+      description: "This is a test milestone from vitest",
+      category: "construction",
+      priority: "high",
+      assignedTo: "Test Engineer",
+    });
+    expect(result).toBeDefined();
+    expect(result.id).toBeDefined();
+    createdMilestoneId = result.id;
+  });
+
+  it("filters milestones by project", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.commandCenter.getMilestones({
+      token: ABDULRAHMAN_TOKEN,
+      projectId: 1,
+    });
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBeGreaterThan(0);
+    result.forEach((m: any) => {
+      expect(m.projectId).toBe(1);
+    });
+  });
+
+  it("updates a milestone", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.commandCenter.updateMilestone({
+      token: ABDULRAHMAN_TOKEN,
+      id: createdMilestoneId,
+      status: "completed",
+      progressPercent: 100,
+    });
+    expect(result).toBeDefined();
+    expect(result.success).toBe(true);
+  });
+
+  it("deletes a milestone", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.commandCenter.deleteMilestone({
+      token: ABDULRAHMAN_TOKEN,
+      id: createdMilestoneId,
+    });
+    expect(result).toBeDefined();
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid token for milestones", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(
+      caller.commandCenter.getMilestones({ token: "bad_token" })
+    ).rejects.toThrow();
+  });
+});
+
+describe("commandCenter.kpis", () => {
+  let createdKpiId: number;
+
+  it("returns KPIs list (may be empty initially)", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.commandCenter.getKpis({
+      token: ABDULRAHMAN_TOKEN,
+    });
+    expect(Array.isArray(result)).toBe(true);
+  });
+
+  it("returns KPIs summary", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.commandCenter.getKpisSummary({
+      token: ABDULRAHMAN_TOKEN,
+    });
+    expect(result).toBeDefined();
+    expect(typeof result.total).toBe("number");
+    expect(typeof result.onTrack).toBe("number");
+    expect(typeof result.atRisk).toBe("number");
+    expect(typeof result.offTrack).toBe("number");
+  });
+
+  it("creates a new KPI", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.commandCenter.createKpi({
+      token: ABDULRAHMAN_TOKEN,
+      projectId: 1,
+      name: "Test KPI",
+      nameAr: "مؤشر أداء اختبار",
+      description: "This is a test KPI from vitest",
+      category: "financial",
+      status: "on_track",
+      targetValue: "100",
+      currentValue: "50",
+      unit: "%",
+    });
+    expect(result).toBeDefined();
+    expect(result.id).toBeDefined();
+    createdKpiId = result.id;
+  });
+
+  it("filters KPIs by project", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.commandCenter.getKpis({
+      token: ABDULRAHMAN_TOKEN,
+      projectId: 1,
+    });
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBeGreaterThan(0);
+    result.forEach((k: any) => {
+      expect(k.projectId).toBe(1);
+    });
+  });
+
+  it("updates a KPI", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.commandCenter.updateKpi({
+      token: ABDULRAHMAN_TOKEN,
+      id: createdKpiId,
+      currentValue: "75",
+      status: "at_risk",
+    });
+    expect(result).toBeDefined();
+    expect(result.success).toBe(true);
+  });
+
+  it("deletes a KPI", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.commandCenter.deleteKpi({
+      token: ABDULRAHMAN_TOKEN,
+      id: createdKpiId,
+    });
+    expect(result).toBeDefined();
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid token for KPIs", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    await expect(
+      caller.commandCenter.getKpis({ token: "bad_token" })
+    ).rejects.toThrow();
+  });
+});
+
+describe("commandCenter.getBubbleCounts includes milestones_kpis", () => {
+  it("returns milestones_kpis count in bubble counts", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const result = await caller.commandCenter.getBubbleCounts({
+      token: ABDULRAHMAN_TOKEN,
+    });
+    expect(result).toBeDefined();
+    expect(typeof result.milestones_kpis).toBe("number");
+  });
+});

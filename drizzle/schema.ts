@@ -1130,3 +1130,118 @@ export const commandCenterChat = mysqlTable('commandCenterChat', {
 });
 export type CommandCenterChatMsg = typeof commandCenterChat.$inferSelect;
 export type InsertCommandCenterChatMsg = typeof commandCenterChat.$inferInsert;
+
+
+// ═══════════════════════════════════════════════════════════════
+// مراحل المشاريع ومؤشرات الأداء - Project Milestones & KPIs
+// ═══════════════════════════════════════════════════════════════
+
+// مراحل المشروع - Project Milestones
+export const projectMilestones = mysqlTable('projectMilestones', {
+  id: int('id').autoincrement().primaryKey(),
+  projectId: int('projectId').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  
+  // بيانات المرحلة
+  title: varchar('title', { length: 500 }).notNull(), // اسم المرحلة
+  titleAr: varchar('titleAr', { length: 500 }), // الاسم بالعربي
+  description: text('description'), // وصف المرحلة
+  
+  // الفئة
+  category: mysqlEnum('milestoneCategory', [
+    'planning',        // التخطيط
+    'design',          // التصميم
+    'permits',         // التراخيص
+    'construction',    // البناء
+    'handover',        // التسليم
+    'sales',           // المبيعات
+    'other'            // أخرى
+  ]).default('other').notNull(),
+  
+  // التواريخ
+  plannedStartDate: varchar('plannedStartDate', { length: 50 }), // تاريخ البدء المخطط
+  plannedEndDate: varchar('plannedEndDate', { length: 50 }), // تاريخ الانتهاء المخطط
+  actualStartDate: varchar('actualStartDate', { length: 50 }), // تاريخ البدء الفعلي
+  actualEndDate: varchar('actualEndDate', { length: 50 }), // تاريخ الانتهاء الفعلي
+  
+  // التقدم والحالة
+  progressPercent: int('progressPercent').default(0).notNull(), // نسبة الإنجاز 0-100
+  status: mysqlEnum('milestoneStatus', [
+    'not_started',   // لم تبدأ
+    'in_progress',   // جارية
+    'delayed',       // متأخرة
+    'completed',     // مكتملة
+    'on_hold',       // معلقة
+    'cancelled'      // ملغاة
+  ]).default('not_started').notNull(),
+  
+  // الأولوية والترتيب
+  priority: mysqlEnum('milestonePriority', ['low', 'medium', 'high', 'critical']).default('medium').notNull(),
+  sortOrder: int('sortOrder').default(0).notNull(), // ترتيب العرض
+  
+  // المسؤول
+  assignedTo: varchar('assignedTo', { length: 255 }), // المسؤول عن المرحلة
+  
+  // ملاحظات
+  notes: text('notes'),
+  
+  // من أنشأ (عضو مركز القيادة)
+  createdByMemberId: varchar('createdByMemberId', { length: 50 }),
+  
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+export type ProjectMilestone = typeof projectMilestones.$inferSelect;
+export type InsertProjectMilestone = typeof projectMilestones.$inferInsert;
+
+// مؤشرات الأداء الرئيسية - Key Performance Indicators
+export const projectKpis = mysqlTable('projectKpis', {
+  id: int('id').autoincrement().primaryKey(),
+  projectId: int('projectId').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  
+  // بيانات المؤشر
+  name: varchar('name', { length: 500 }).notNull(), // اسم المؤشر
+  nameAr: varchar('nameAr', { length: 500 }), // الاسم بالعربي
+  description: text('description'), // وصف المؤشر
+  
+  // الفئة
+  category: mysqlEnum('kpiCategory', [
+    'financial',       // مالي
+    'timeline',        // زمني
+    'quality',         // جودة
+    'safety',          // سلامة
+    'sales',           // مبيعات
+    'customer',        // رضا العملاء
+    'operational'      // تشغيلي
+  ]).default('operational').notNull(),
+  
+  // القيم
+  targetValue: decimal('targetValue', { precision: 15, scale: 2 }), // القيمة المستهدفة
+  currentValue: decimal('currentValue', { precision: 15, scale: 2 }), // القيمة الحالية
+  unit: varchar('unit', { length: 50 }), // الوحدة (%, AED, days, sqft, etc.)
+  
+  // الاتجاه
+  trend: mysqlEnum('kpiTrend', ['up', 'down', 'stable', 'na']).default('na').notNull(), // اتجاه المؤشر
+  
+  // الحالة (محسوبة أو يدوية)
+  status: mysqlEnum('kpiStatus', [
+    'on_track',      // على المسار
+    'at_risk',       // في خطر
+    'off_track',     // خارج المسار
+    'achieved',      // تم تحقيقه
+    'not_started'    // لم يبدأ
+  ]).default('not_started').notNull(),
+  
+  // التحديث
+  lastUpdatedBy: varchar('lastUpdatedBy', { length: 255 }), // من حدّث آخر مرة
+  
+  // ملاحظات
+  notes: text('notes'),
+  
+  // من أنشأ (عضو مركز القيادة)
+  createdByMemberId: varchar('createdByMemberId', { length: 50 }),
+  
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+export type ProjectKpi = typeof projectKpis.$inferSelect;
+export type InsertProjectKpi = typeof projectKpis.$inferInsert;

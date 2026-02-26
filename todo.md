@@ -1219,3 +1219,18 @@
 - [x] Add command center link to Home page
 - [x] Write vitest tests for command center router (17 tests passed)
 - [x] Create checkpoint and deliver
+
+## فقاعة مراحل المشاريع ومؤشرات الأداء - Milestones & KPIs Bubble
+
+- [x] Database: Add milestones table (project phases with dates, status, progress)
+- [x] Database: Add KPIs table (key performance indicators per project)
+- [x] Backend: Add milestones CRUD procedures to commandCenter router
+- [x] Backend: Add KPIs CRUD procedures to commandCenter router
+- [x] Backend: Update getBubbleCounts to include milestones_kpis type
+- [x] Frontend: Add new bubble icon (milestones_kpis) to Command Center dashboard
+- [x] Frontend: Build milestones detail view with timeline/progress visualization
+- [x] Frontend: Build KPIs dashboard with visual indicators
+- [x] Frontend: Add create/edit milestone form (admin only)
+- [x] Frontend: Add create/edit KPI form (admin only)
+- [x] Update bubble type enum to include milestones_kpis
+- [x] Write vitest tests for milestones/KPIs procedures (32 tests all passed)

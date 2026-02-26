@@ -24,6 +24,18 @@ import {
   User,
   Trash2,
   ArrowLeft,
+  Target,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Calendar,
+  BarChart3,
+  Plus,
+  Pencil,
+  Flag,
+  Activity,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -120,6 +132,7 @@ const BUBBLES = [
   { type: "requests" as const, label: "الطلبات", icon: ClipboardList, color: "from-amber-600 to-amber-800", bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700" },
   { type: "meeting_minutes" as const, label: "محاضر الاجتماعات", icon: BookOpen, color: "from-emerald-600 to-emerald-800", bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700" },
   { type: "evaluations" as const, label: "تقييم الاستشاريين", icon: Star, color: "from-purple-600 to-purple-800", bg: "bg-purple-50", border: "border-purple-200", text: "text-purple-700" },
+  { type: "milestones_kpis" as const, label: "المراحل والأداء", icon: Target, color: "from-cyan-600 to-teal-700", bg: "bg-cyan-50", border: "border-cyan-200", text: "text-cyan-700" },
   { type: "announcements" as const, label: "الإعلانات", icon: Megaphone, color: "from-rose-600 to-rose-800", bg: "bg-rose-50", border: "border-rose-200", text: "text-rose-700" },
 ];
 
@@ -128,7 +141,46 @@ const BUBBLE_LABELS: Record<string, string> = {
   requests: "الطلبات",
   meeting_minutes: "محاضر الاجتماعات",
   evaluations: "تقييم الاستشاريين",
+  milestones_kpis: "المراحل والأداء",
   announcements: "الإعلانات",
+};
+
+// ─── Milestone/KPI Helpers ───
+const MILESTONE_STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
+  not_started: { label: "لم تبدأ", color: "bg-slate-100 text-slate-600 border-slate-200", icon: Clock },
+  in_progress: { label: "جارية", color: "bg-blue-100 text-blue-700 border-blue-200", icon: Activity },
+  delayed: { label: "متأخرة", color: "bg-red-100 text-red-700 border-red-200", icon: AlertTriangle },
+  completed: { label: "مكتملة", color: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: CheckCircle2 },
+  on_hold: { label: "معلقة", color: "bg-amber-100 text-amber-700 border-amber-200", icon: Clock },
+  cancelled: { label: "ملغاة", color: "bg-gray-100 text-gray-500 border-gray-200", icon: X },
+};
+
+const KPI_STATUS_CONFIG: Record<string, { label: string; color: string; dotColor: string }> = {
+  on_track: { label: "على المسار", color: "bg-emerald-100 text-emerald-700 border-emerald-200", dotColor: "bg-emerald-500" },
+  at_risk: { label: "في خطر", color: "bg-amber-100 text-amber-700 border-amber-200", dotColor: "bg-amber-500" },
+  off_track: { label: "خارج المسار", color: "bg-red-100 text-red-700 border-red-200", dotColor: "bg-red-500" },
+  achieved: { label: "تم تحقيقه", color: "bg-blue-100 text-blue-700 border-blue-200", dotColor: "bg-blue-500" },
+  not_started: { label: "لم يبدأ", color: "bg-slate-100 text-slate-600 border-slate-200", dotColor: "bg-slate-400" },
+};
+
+const MILESTONE_CATEGORY_LABELS: Record<string, string> = {
+  planning: "التخطيط",
+  design: "التصميم",
+  permits: "التراخيص",
+  construction: "البناء",
+  handover: "التسليم",
+  sales: "المبيعات",
+  other: "أخرى",
+};
+
+const KPI_CATEGORY_LABELS: Record<string, string> = {
+  financial: "مالي",
+  timeline: "زمني",
+  quality: "جودة",
+  safety: "سلامة",
+  sales: "مبيعات",
+  customer: "رضا العملاء",
+  operational: "تشغيلي",
 };
 
 const PRIORITY_LABELS: Record<string, { label: string; color: string }> = {
@@ -483,6 +535,634 @@ function ItemCard({ item, token }: { item: any; token: string }) {
 }
 
 // ═══════════════════════════════════════════════════════
+// MILESTONES & KPIs VIEW
+// ═══════════════════════════════════════════════════════
+function MilestonesKpisView({ token, onBack }: { token: string; onBack: () => void }) {
+  const [activeTab, setActiveTab] = useState<'milestones' | 'kpis'>('milestones');
+  const [selectedProject, setSelectedProject] = useState<number | undefined>(undefined);
+  const [showAddMilestone, setShowAddMilestone] = useState(false);
+  const [showAddKpi, setShowAddKpi] = useState(false);
+  const [editingMilestone, setEditingMilestone] = useState<any>(null);
+  const [editingKpi, setEditingKpi] = useState<any>(null);
+
+  const milestoneSummary = trpc.commandCenter.getMilestonesSummary.useQuery({ token });
+  const kpiSummary = trpc.commandCenter.getKpisSummary.useQuery({ token });
+  const milestones = trpc.commandCenter.getMilestones.useQuery({ token, projectId: selectedProject });
+  const kpis = trpc.commandCenter.getKpis.useQuery({ token, projectId: selectedProject });
+  const projectsData = trpc.commandCenter.getProjectsWithConsultants.useQuery({ token });
+  const utils = trpc.useUtils();
+
+  const deleteMilestoneMut = trpc.commandCenter.deleteMilestone.useMutation({
+    onSuccess: () => {
+      utils.commandCenter.getMilestones.invalidate();
+      utils.commandCenter.getMilestonesSummary.invalidate();
+      utils.commandCenter.getBubbleCounts.invalidate();
+      toast.success("تم حذف المرحلة");
+    },
+  });
+
+  const deleteKpiMut = trpc.commandCenter.deleteKpi.useMutation({
+    onSuccess: () => {
+      utils.commandCenter.getKpis.invalidate();
+      utils.commandCenter.getKpisSummary.invalidate();
+      utils.commandCenter.getBubbleCounts.invalidate();
+      toast.success("تم حذف المؤشر");
+    },
+  });
+
+  const mSummary = milestoneSummary.data;
+  const kSummary = kpiSummary.data;
+
+  return (
+    <div className="space-y-6 fade-in" dir="rtl">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500 hover:text-slate-700 -mr-2">
+          <ArrowLeft className="w-5 h-5" />
+        </Button>
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-600 to-teal-700 flex items-center justify-center shadow-md">
+          <Target className="w-5 h-5 text-white" />
+        </div>
+        <div>
+          <h2 className="text-lg font-bold text-slate-800">مراحل المشاريع ومؤشرات الأداء</h2>
+          <p className="text-xs text-slate-500">Project Milestones & KPIs</p>
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Card className="p-3 rounded-xl border border-slate-200 text-center">
+          <p className="text-2xl font-bold text-cyan-700">{mSummary?.total || 0}</p>
+          <p className="text-[11px] text-slate-500">إجمالي المراحل</p>
+        </Card>
+        <Card className="p-3 rounded-xl border border-emerald-200 bg-emerald-50/50 text-center">
+          <p className="text-2xl font-bold text-emerald-700">{mSummary?.completed || 0}</p>
+          <p className="text-[11px] text-emerald-600">مكتملة</p>
+        </Card>
+        <Card className="p-3 rounded-xl border border-blue-200 bg-blue-50/50 text-center">
+          <p className="text-2xl font-bold text-blue-700">{mSummary?.inProgress || 0}</p>
+          <p className="text-[11px] text-blue-600">جارية</p>
+        </Card>
+        <Card className="p-3 rounded-xl border border-red-200 bg-red-50/50 text-center">
+          <p className="text-2xl font-bold text-red-700">{mSummary?.delayed || 0}</p>
+          <p className="text-[11px] text-red-600">متأخرة</p>
+        </Card>
+      </div>
+
+      {/* Overall Progress */}
+      {mSummary && mSummary.total > 0 && (
+        <Card className="p-4 rounded-xl border border-slate-200">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-slate-700">التقدم العام</span>
+            <span className="text-sm font-bold text-cyan-700">{mSummary.overallProgress}%</span>
+          </div>
+          <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-l from-cyan-500 to-teal-500 rounded-full transition-all duration-500"
+              style={{ width: `${mSummary.overallProgress}%` }}
+            />
+          </div>
+        </Card>
+      )}
+
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-slate-200 pb-1">
+        <button
+          onClick={() => setActiveTab('milestones')}
+          className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+            activeTab === 'milestones'
+              ? 'bg-cyan-50 text-cyan-700 border-b-2 border-cyan-600'
+              : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+          }`}
+        >
+          <Flag className="w-4 h-4 inline ml-1.5" />
+          المراحل ({milestones.data?.length || 0})
+        </button>
+        <button
+          onClick={() => setActiveTab('kpis')}
+          className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+            activeTab === 'kpis'
+              ? 'bg-teal-50 text-teal-700 border-b-2 border-teal-600'
+              : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+          }`}
+        >
+          <BarChart3 className="w-4 h-4 inline ml-1.5" />
+          مؤشرات الأداء ({kpis.data?.length || 0})
+        </button>
+      </div>
+
+      {/* Project Filter */}
+      <div className="flex items-center gap-3">
+        <select
+          value={selectedProject ?? ''}
+          onChange={(e) => setSelectedProject(e.target.value ? Number(e.target.value) : undefined)}
+          className="flex-1 h-9 rounded-lg border border-slate-200 bg-white text-sm px-3 text-slate-700 focus:border-cyan-400 focus:ring-cyan-400/20"
+        >
+          <option value="">جميع المشاريع</option>
+          {projectsData.data?.map((p: any) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
+        {activeTab === 'milestones' ? (
+          <Button
+            size="sm"
+            onClick={() => { setEditingMilestone(null); setShowAddMilestone(true); }}
+            className="bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 text-white rounded-lg shadow-sm h-9 px-3 text-xs"
+          >
+            <Plus className="w-3.5 h-3.5 ml-1" /> إضافة مرحلة
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            onClick={() => { setEditingKpi(null); setShowAddKpi(true); }}
+            className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-lg shadow-sm h-9 px-3 text-xs"
+          >
+            <Plus className="w-3.5 h-3.5 ml-1" /> إضافة مؤشر
+          </Button>
+        )}
+      </div>
+
+      {/* Milestones Tab */}
+      {activeTab === 'milestones' && (
+        <div className="space-y-3">
+          {milestones.isLoading ? (
+            <div className="space-y-3">
+              {[1,2,3].map(i => <div key={i} className="h-24 rounded-xl shimmer" />)}
+            </div>
+          ) : milestones.data?.length === 0 ? (
+            <div className="text-center py-12">
+              <Flag className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+              <p className="text-slate-500 font-medium">لا توجد مراحل حالياً</p>
+              <p className="text-slate-400 text-sm mt-1">أضف مرحلة جديدة لتتبع تقدم المشروع</p>
+            </div>
+          ) : (
+            milestones.data?.map((m: any) => {
+              const statusConf = MILESTONE_STATUS_CONFIG[m.status] || MILESTONE_STATUS_CONFIG.not_started;
+              const StatusIcon = statusConf.icon;
+              const projectName = projectsData.data?.find((p: any) => p.id === m.projectId)?.name;
+              return (
+                <Card key={m.id} className="p-4 rounded-xl border border-slate-200 hover:border-cyan-200 transition-all hover:shadow-md">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                        <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${statusConf.color}`}>
+                          <StatusIcon className="w-3 h-3 ml-0.5" />
+                          {statusConf.label}
+                        </Badge>
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-slate-50 text-slate-500 border-slate-200">
+                          {MILESTONE_CATEGORY_LABELS[m.category] || m.category}
+                        </Badge>
+                        {m.priority === 'critical' && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-red-50 text-red-600 border-red-200">حرج</Badge>
+                        )}
+                        {m.priority === 'high' && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-amber-50 text-amber-600 border-amber-200">مرتفع</Badge>
+                        )}
+                      </div>
+                      <h4 className="font-semibold text-slate-800 text-sm">{m.titleAr || m.title}</h4>
+                      {projectName && <p className="text-[11px] text-slate-400 mt-0.5">{projectName}</p>}
+                      {m.description && <p className="text-xs text-slate-500 mt-1 line-clamp-2">{m.description}</p>}
+                      
+                      {/* Progress bar */}
+                      <div className="mt-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] text-slate-400">التقدم</span>
+                          <span className="text-[10px] font-bold text-cyan-700">{m.progressPercent}%</span>
+                        </div>
+                        <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              m.status === 'delayed' ? 'bg-red-500' :
+                              m.status === 'completed' ? 'bg-emerald-500' :
+                              'bg-gradient-to-l from-cyan-500 to-teal-500'
+                            }`}
+                            style={{ width: `${m.progressPercent}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Dates */}
+                      {(m.plannedStartDate || m.plannedEndDate) && (
+                        <div className="flex items-center gap-3 mt-2 text-[10px] text-slate-400">
+                          <Calendar className="w-3 h-3" />
+                          {m.plannedStartDate && <span>بداية: {m.plannedStartDate}</span>}
+                          {m.plannedEndDate && <span>نهاية: {m.plannedEndDate}</span>}
+                        </div>
+                      )}
+                      {m.assignedTo && (
+                        <div className="flex items-center gap-1 mt-1 text-[10px] text-slate-400">
+                          <User className="w-3 h-3" />
+                          <span>{m.assignedTo}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-slate-400 hover:text-cyan-600" onClick={() => { setEditingMilestone(m); setShowAddMilestone(true); }}>
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-slate-400 hover:text-red-500" onClick={() => deleteMilestoneMut.mutate({ token, id: m.id })}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {/* KPIs Tab */}
+      {activeTab === 'kpis' && (
+        <div className="space-y-3">
+          {/* KPI Summary Bar */}
+          {kSummary && kSummary.total > 0 && (
+            <div className="flex gap-2 flex-wrap">
+              {Object.entries(KPI_STATUS_CONFIG).map(([key, conf]) => {
+                const count = key === 'on_track' ? kSummary.onTrack :
+                              key === 'at_risk' ? kSummary.atRisk :
+                              key === 'off_track' ? kSummary.offTrack :
+                              key === 'achieved' ? kSummary.achieved :
+                              (kSummary as any).notStarted || 0;
+                if (!count) return null;
+                return (
+                  <Badge key={key} variant="outline" className={`text-[10px] px-2 py-0.5 ${conf.color}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${conf.dotColor} inline-block ml-1`} />
+                    {conf.label}: {count}
+                  </Badge>
+                );
+              })}
+            </div>
+          )}
+
+          {kpis.isLoading ? (
+            <div className="space-y-3">
+              {[1,2,3].map(i => <div key={i} className="h-20 rounded-xl shimmer" />)}
+            </div>
+          ) : kpis.data?.length === 0 ? (
+            <div className="text-center py-12">
+              <BarChart3 className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+              <p className="text-slate-500 font-medium">لا توجد مؤشرات أداء حالياً</p>
+              <p className="text-slate-400 text-sm mt-1">أضف مؤشر أداء لتتبع الأهداف</p>
+            </div>
+          ) : (
+            kpis.data?.map((k: any) => {
+              const statusConf = KPI_STATUS_CONFIG[k.status] || KPI_STATUS_CONFIG.not_started;
+              const projectName = projectsData.data?.find((p: any) => p.id === k.projectId)?.name;
+              const target = parseFloat(k.targetValue) || 0;
+              const current = parseFloat(k.currentValue) || 0;
+              const progress = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0;
+              const TrendIcon = k.trend === 'up' ? TrendingUp : k.trend === 'down' ? TrendingDown : Minus;
+              const trendColor = k.trend === 'up' ? 'text-emerald-600' : k.trend === 'down' ? 'text-red-600' : 'text-slate-400';
+
+              return (
+                <Card key={k.id} className="p-4 rounded-xl border border-slate-200 hover:border-teal-200 transition-all hover:shadow-md">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                        <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${statusConf.color}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${statusConf.dotColor} inline-block ml-0.5`} />
+                          {statusConf.label}
+                        </Badge>
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-slate-50 text-slate-500 border-slate-200">
+                          {KPI_CATEGORY_LABELS[k.category] || k.category}
+                        </Badge>
+                        <TrendIcon className={`w-3.5 h-3.5 ${trendColor}`} />
+                      </div>
+                      <h4 className="font-semibold text-slate-800 text-sm">{k.nameAr || k.name}</h4>
+                      {projectName && <p className="text-[11px] text-slate-400 mt-0.5">{projectName}</p>}
+                      {k.description && <p className="text-xs text-slate-500 mt-1 line-clamp-2">{k.description}</p>}
+
+                      {/* Value bar */}
+                      <div className="mt-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] text-slate-400">
+                            الحالي: <span className="font-bold text-slate-700">{current}{k.unit ? ` ${k.unit}` : ''}</span>
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            المستهدف: <span className="font-bold text-teal-700">{target}{k.unit ? ` ${k.unit}` : ''}</span>
+                          </span>
+                        </div>
+                        {target > 0 && (
+                          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                k.status === 'off_track' ? 'bg-red-500' :
+                                k.status === 'at_risk' ? 'bg-amber-500' :
+                                k.status === 'achieved' ? 'bg-blue-500' :
+                                'bg-gradient-to-l from-teal-500 to-emerald-500'
+                              }`}
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                      {k.lastUpdatedBy && (
+                        <p className="text-[10px] text-slate-400 mt-2">آخر تحديث: {k.lastUpdatedBy}</p>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-slate-400 hover:text-teal-600" onClick={() => { setEditingKpi(k); setShowAddKpi(true); }}>
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-slate-400 hover:text-red-500" onClick={() => deleteKpiMut.mutate({ token, id: k.id })}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {/* Add/Edit Milestone Modal */}
+      {showAddMilestone && (
+        <MilestoneForm
+          token={token}
+          milestone={editingMilestone}
+          projects={projectsData.data || []}
+          onClose={() => { setShowAddMilestone(false); setEditingMilestone(null); }}
+          onSuccess={() => {
+            setShowAddMilestone(false);
+            setEditingMilestone(null);
+            utils.commandCenter.getMilestones.invalidate();
+            utils.commandCenter.getMilestonesSummary.invalidate();
+            utils.commandCenter.getBubbleCounts.invalidate();
+          }}
+        />
+      )}
+
+      {/* Add/Edit KPI Modal */}
+      {showAddKpi && (
+        <KpiForm
+          token={token}
+          kpi={editingKpi}
+          projects={projectsData.data || []}
+          onClose={() => { setShowAddKpi(false); setEditingKpi(null); }}
+          onSuccess={() => {
+            setShowAddKpi(false);
+            setEditingKpi(null);
+            utils.commandCenter.getKpis.invalidate();
+            utils.commandCenter.getKpisSummary.invalidate();
+            utils.commandCenter.getBubbleCounts.invalidate();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Milestone Form ───
+function MilestoneForm({ token, milestone, projects, onClose, onSuccess }: {
+  token: string; milestone: any; projects: any[]; onClose: () => void; onSuccess: () => void;
+}) {
+  const isEdit = !!milestone;
+  const [form, setForm] = useState({
+    projectId: milestone?.projectId || (projects[0]?.id || 0),
+    title: milestone?.title || '',
+    titleAr: milestone?.titleAr || '',
+    description: milestone?.description || '',
+    category: milestone?.category || 'other',
+    plannedStartDate: milestone?.plannedStartDate || '',
+    plannedEndDate: milestone?.plannedEndDate || '',
+    actualStartDate: milestone?.actualStartDate || '',
+    actualEndDate: milestone?.actualEndDate || '',
+    progressPercent: milestone?.progressPercent ?? 0,
+    status: milestone?.status || 'not_started',
+    priority: milestone?.priority || 'medium',
+    assignedTo: milestone?.assignedTo || '',
+    notes: milestone?.notes || '',
+    sortOrder: milestone?.sortOrder ?? 0,
+  });
+
+  const createMut = trpc.commandCenter.createMilestone.useMutation({ onSuccess });
+  const updateMut = trpc.commandCenter.updateMilestone.useMutation({ onSuccess });
+
+  const handleSubmit = () => {
+    if (!form.title.trim()) { toast.error("يرجى إدخال عنوان المرحلة"); return; }
+    if (!form.projectId) { toast.error("يرجى اختيار المشروع"); return; }
+    if (isEdit) {
+      updateMut.mutate({ token, id: milestone.id, ...form });
+    } else {
+      createMut.mutate({ token, ...form } as any);
+    }
+  };
+
+  const isPending = createMut.isPending || updateMut.isPending;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl p-6" onClick={e => e.stopPropagation()} dir="rtl">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-bold text-slate-800">{isEdit ? 'تعديل المرحلة' : 'إضافة مرحلة جديدة'}</h3>
+          <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0"><X className="w-4 h-4" /></Button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">المشروع *</label>
+            <select value={form.projectId} onChange={e => setForm(f => ({...f, projectId: Number(e.target.value)}))} className="w-full h-9 rounded-lg border border-slate-200 bg-white text-sm px-3">
+              {projects.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">العنوان (EN) *</label>
+              <Input value={form.title} onChange={e => setForm(f => ({...f, title: e.target.value}))} className="h-9 text-sm" dir="ltr" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">العنوان (عربي)</label>
+              <Input value={form.titleAr} onChange={e => setForm(f => ({...f, titleAr: e.target.value}))} className="h-9 text-sm" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">الوصف</label>
+            <Textarea value={form.description} onChange={e => setForm(f => ({...f, description: e.target.value}))} rows={2} className="text-sm" />
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">الفئة</label>
+              <select value={form.category} onChange={e => setForm(f => ({...f, category: e.target.value}))} className="w-full h-9 rounded-lg border border-slate-200 bg-white text-sm px-2">
+                {Object.entries(MILESTONE_CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">الحالة</label>
+              <select value={form.status} onChange={e => setForm(f => ({...f, status: e.target.value}))} className="w-full h-9 rounded-lg border border-slate-200 bg-white text-sm px-2">
+                {Object.entries(MILESTONE_STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">الأولوية</label>
+              <select value={form.priority} onChange={e => setForm(f => ({...f, priority: e.target.value}))} className="w-full h-9 rounded-lg border border-slate-200 bg-white text-sm px-2">
+                <option value="low">منخفض</option>
+                <option value="medium">متوسط</option>
+                <option value="high">مرتفع</option>
+                <option value="critical">حرج</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">بداية مخططة</label>
+              <Input type="date" value={form.plannedStartDate} onChange={e => setForm(f => ({...f, plannedStartDate: e.target.value}))} className="h-9 text-sm" dir="ltr" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">نهاية مخططة</label>
+              <Input type="date" value={form.plannedEndDate} onChange={e => setForm(f => ({...f, plannedEndDate: e.target.value}))} className="h-9 text-sm" dir="ltr" />
+            </div>
+          </div>
+          {isEdit && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">بداية فعلية</label>
+                <Input type="date" value={form.actualStartDate} onChange={e => setForm(f => ({...f, actualStartDate: e.target.value}))} className="h-9 text-sm" dir="ltr" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">نهاية فعلية</label>
+                <Input type="date" value={form.actualEndDate} onChange={e => setForm(f => ({...f, actualEndDate: e.target.value}))} className="h-9 text-sm" dir="ltr" />
+              </div>
+            </div>
+          )}
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">نسبة الإنجاز: {form.progressPercent}%</label>
+            <input type="range" min="0" max="100" step="5" value={form.progressPercent} onChange={e => setForm(f => ({...f, progressPercent: Number(e.target.value)}))} className="w-full accent-cyan-600" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">المسؤول</label>
+            <Input value={form.assignedTo} onChange={e => setForm(f => ({...f, assignedTo: e.target.value}))} className="h-9 text-sm" placeholder="اسم المسؤول" />
+          </div>
+        </div>
+
+        <div className="flex gap-2 mt-6">
+          <Button onClick={handleSubmit} disabled={isPending} className="flex-1 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 text-white rounded-xl h-10">
+            {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : isEdit ? 'تحديث' : 'إضافة'}
+          </Button>
+          <Button variant="outline" onClick={onClose} className="rounded-xl h-10">إلغاء</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── KPI Form ───
+function KpiForm({ token, kpi, projects, onClose, onSuccess }: {
+  token: string; kpi: any; projects: any[]; onClose: () => void; onSuccess: () => void;
+}) {
+  const isEdit = !!kpi;
+  const [form, setForm] = useState({
+    projectId: kpi?.projectId || (projects[0]?.id || 0),
+    name: kpi?.name || '',
+    nameAr: kpi?.nameAr || '',
+    description: kpi?.description || '',
+    category: kpi?.category || 'operational',
+    targetValue: kpi?.targetValue || '',
+    currentValue: kpi?.currentValue || '',
+    unit: kpi?.unit || '',
+    trend: kpi?.trend || 'na',
+    status: kpi?.status || 'not_started',
+    notes: kpi?.notes || '',
+  });
+
+  const createMut = trpc.commandCenter.createKpi.useMutation({ onSuccess });
+  const updateMut = trpc.commandCenter.updateKpi.useMutation({ onSuccess });
+
+  const handleSubmit = () => {
+    if (!form.name.trim()) { toast.error("يرجى إدخال اسم المؤشر"); return; }
+    if (!form.projectId) { toast.error("يرجى اختيار المشروع"); return; }
+    if (isEdit) {
+      updateMut.mutate({ token, id: kpi.id, ...form });
+    } else {
+      createMut.mutate({ token, ...form } as any);
+    }
+  };
+
+  const isPending = createMut.isPending || updateMut.isPending;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl p-6" onClick={e => e.stopPropagation()} dir="rtl">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-bold text-slate-800">{isEdit ? 'تعديل المؤشر' : 'إضافة مؤشر أداء جديد'}</h3>
+          <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0"><X className="w-4 h-4" /></Button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">المشروع *</label>
+            <select value={form.projectId} onChange={e => setForm(f => ({...f, projectId: Number(e.target.value)}))} className="w-full h-9 rounded-lg border border-slate-200 bg-white text-sm px-3">
+              {projects.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">اسم المؤشر (EN) *</label>
+              <Input value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} className="h-9 text-sm" dir="ltr" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">اسم المؤشر (عربي)</label>
+              <Input value={form.nameAr} onChange={e => setForm(f => ({...f, nameAr: e.target.value}))} className="h-9 text-sm" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">الوصف</label>
+            <Textarea value={form.description} onChange={e => setForm(f => ({...f, description: e.target.value}))} rows={2} className="text-sm" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">الفئة</label>
+              <select value={form.category} onChange={e => setForm(f => ({...f, category: e.target.value}))} className="w-full h-9 rounded-lg border border-slate-200 bg-white text-sm px-2">
+                {Object.entries(KPI_CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">الحالة</label>
+              <select value={form.status} onChange={e => setForm(f => ({...f, status: e.target.value}))} className="w-full h-9 rounded-lg border border-slate-200 bg-white text-sm px-2">
+                {Object.entries(KPI_STATUS_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">القيمة المستهدفة</label>
+              <Input type="number" value={form.targetValue} onChange={e => setForm(f => ({...f, targetValue: e.target.value}))} className="h-9 text-sm" dir="ltr" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">القيمة الحالية</label>
+              <Input type="number" value={form.currentValue} onChange={e => setForm(f => ({...f, currentValue: e.target.value}))} className="h-9 text-sm" dir="ltr" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">الوحدة</label>
+              <Input value={form.unit} onChange={e => setForm(f => ({...f, unit: e.target.value}))} className="h-9 text-sm" dir="ltr" placeholder="%, AED, days" />
+            </div>
+          </div>
+          {isEdit && (
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">الاتجاه</label>
+              <select value={form.trend} onChange={e => setForm(f => ({...f, trend: e.target.value}))} className="w-full h-9 rounded-lg border border-slate-200 bg-white text-sm px-2">
+                <option value="na">غير محدد</option>
+                <option value="up">↑ صاعد</option>
+                <option value="down">↓ هابط</option>
+                <option value="stable">↔ مستقر</option>
+              </select>
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-2 mt-6">
+          <Button onClick={handleSubmit} disabled={isPending} className="flex-1 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl h-10">
+            {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : isEdit ? 'تحديث' : 'إضافة'}
+          </Button>
+          <Button variant="outline" onClick={onClose} className="rounded-xl h-10">إلغاء</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
 // EVALUATION VIEW
 // ═══════════════════════════════════════════════════════
 function EvaluationView({ token, memberRole, memberId }: { token: string; memberRole: string; memberId: string }) {
@@ -763,6 +1443,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
   const [activeBubble, setActiveBubble] = useState<string | null>(null);
   const [showSalwa, setShowSalwa] = useState(false);
   const [showEvaluation, setShowEvaluation] = useState(false);
+  const [showMilestonesKpis, setShowMilestonesKpis] = useState(false);
 
   const counts = trpc.commandCenter.getBubbleCounts.useQuery({ token });
   const notifications = trpc.commandCenter.getNotifications.useQuery({ token });
@@ -776,7 +1457,23 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
     utils.commandCenter.getNotifications.invalidate({ token });
   };
 
-  // If viewing a specific bubble
+  // If viewing milestones & KPIs
+  if (activeBubble === "milestones_kpis" && showMilestonesKpis) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white" dir="rtl">
+        <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
+        <div className="max-w-3xl mx-auto px-4 py-6">
+          <MilestonesKpisView
+            token={token}
+            onBack={() => { setActiveBubble(null); setShowMilestonesKpis(false); }}
+          />
+        </div>
+        <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
+      </div>
+    );
+  }
+
+  // If viewing evaluations
   if (activeBubble === "evaluations" && showEvaluation) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white" dir="rtl">
@@ -828,14 +1525,17 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
         </div>
 
         {/* Smart Bubbles Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-10">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-10">
           {BUBBLES.map(bubble => {
             const count = counts.data?.[bubble.type as keyof typeof counts.data] || 0;
             return (
               <button
                 key={bubble.type}
                 onClick={() => {
-                  if (bubble.type === "evaluations") {
+                  if (bubble.type === "milestones_kpis") {
+                    setActiveBubble("milestones_kpis");
+                    setShowMilestonesKpis(true);
+                  } else if (bubble.type === "evaluations") {
                     setActiveBubble("evaluations");
                     setShowEvaluation(true);
                   } else {
