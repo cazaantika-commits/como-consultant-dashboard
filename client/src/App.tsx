@@ -41,6 +41,7 @@ import ActivityMonitorPage from "./pages/ActivityMonitorPage";
 import SpecialistKnowledgePage from "./pages/SpecialistKnowledgePage";
 import SentEmailsPage from "./pages/SentEmailsPage";
 import ExecutiveVIPPage from "./pages/ExecutiveVIPPage";
+import CommandCenterPage from "./pages/CommandCenterPage";
 
 function Router() {
   return (
@@ -81,6 +82,7 @@ function Router() {
       <Route path="/specialist-knowledge" component={SpecialistKnowledgePage} />
       <Route path="/sent-emails" component={SentEmailsPage} />
       <Route path="/executive" component={ExecutiveVIPPage} />
+      <Route path="/command-center" component={CommandCenterPage} />
       <Route path="/meetings/:id" component={MeetingRoomPage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

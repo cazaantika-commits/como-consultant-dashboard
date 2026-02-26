@@ -980,3 +980,153 @@ export const emailNotifications = mysqlTable("email_notifications", {
   isDismissed: int("is_dismissed").default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+
+// ═══════════════════════════════════════════════════════════════
+// مركز القيادة - Command Center (Executive Communication Hub)
+// ═══════════════════════════════════════════════════════════════
+
+// أعضاء مركز القيادة - Command Center Members
+export const commandCenterMembers = mysqlTable('commandCenterMembers', {
+  id: int('id').autoincrement().primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(), // الاسم الكامل
+  nameAr: varchar('nameAr', { length: 255 }).notNull(), // الاسم بالعربي (للترحيب)
+  role: mysqlEnum('memberRole', ['admin', 'executive']).notNull(), // admin = عبدالرحمن, executive = وائل/الشيخ عيسى
+  memberId: varchar('memberId', { length: 50 }).notNull().unique(), // معرف فريد: abdulrahman, wael, sheikh_issa
+  accessToken: varchar('accessToken', { length: 128 }).notNull().unique(), // توكن الدخول الفريد
+  greeting: varchar('greeting', { length: 500 }), // رسالة الترحيب المخصصة
+  avatarUrl: varchar('avatarUrl', { length: 1000 }), // صورة العضو
+  isActive: int('isActive').default(1).notNull(), // 1 = نشط
+  lastAccessAt: timestamp('lastAccessAt'),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+export type CommandCenterMember = typeof commandCenterMembers.$inferSelect;
+export type InsertCommandCenterMember = typeof commandCenterMembers.$inferInsert;
+
+// عناصر الفقاعات الذكية - Smart Bubble Items
+export const commandCenterItems = mysqlTable('commandCenterItems', {
+  id: int('id').autoincrement().primaryKey(),
+  
+  // نوع الفقاعة
+  bubbleType: mysqlEnum('bubbleType', ['reports', 'requests', 'meeting_minutes', 'evaluations', 'announcements']).notNull(),
+  
+  // المحتوى
+  title: varchar('title', { length: 500 }).notNull(),
+  content: longtext('content'), // المحتوى الرئيسي (HTML أو Markdown)
+  summary: text('summary'), // ملخص قصير يظهر في الفقاعة
+  
+  // الأولوية والحالة
+  priority: mysqlEnum('itemPriority', ['normal', 'important', 'urgent']).default('normal').notNull(),
+  status: mysqlEnum('itemStatus', ['active', 'archived', 'pending_response', 'resolved']).default('active').notNull(),
+  
+  // من أنشأ ولمن
+  createdByMemberId: varchar('createdByMemberId', { length: 50 }).notNull(), // من أنشأ العنصر
+  targetMemberIds: text('targetMemberIds'), // JSON array: لمن يظهر (null = الكل)
+  
+  // الطلبات والردود
+  requiresResponse: int('requiresResponse').default(0).notNull(), // 1 = يحتاج رد
+  responseDeadline: timestamp('responseDeadline'), // موعد الرد النهائي
+  
+  // مرفقات
+  attachments: text('attachments'), // JSON array of {name, url, type}
+  
+  // ربط بالمشروع
+  projectId: int('projectId').references(() => projects.id),
+  consultantId: int('consultantId').references(() => consultants.id),
+  
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+export type CommandCenterItem = typeof commandCenterItems.$inferSelect;
+export type InsertCommandCenterItem = typeof commandCenterItems.$inferInsert;
+
+// ردود أعضاء مركز القيادة على العناصر
+export const commandCenterResponses = mysqlTable('commandCenterResponses', {
+  id: int('id').autoincrement().primaryKey(),
+  itemId: int('itemId').notNull().references(() => commandCenterItems.id, { onDelete: 'cascade' }),
+  memberId: varchar('memberId', { length: 50 }).notNull(), // من رد
+  responseText: text('responseText').notNull(),
+  responseType: mysqlEnum('responseType', ['approval', 'rejection', 'comment', 'question']).default('comment').notNull(),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+export type CommandCenterResponse = typeof commandCenterResponses.$inferSelect;
+export type InsertCommandCenterResponse = typeof commandCenterResponses.$inferInsert;
+
+// تقييمات مركز القيادة (التقييم المستقل)
+export const commandCenterEvaluations = mysqlTable('commandCenterEvaluations', {
+  id: int('id').autoincrement().primaryKey(),
+  
+  // جلسة التقييم
+  sessionId: varchar('sessionId', { length: 100 }).notNull(), // معرف جلسة التقييم (لربط تقييمات نفس الجلسة)
+  projectId: int('projectId').notNull().references(() => projects.id),
+  consultantId: int('consultantId').notNull().references(() => consultants.id),
+  
+  // المقيّم
+  memberId: varchar('memberId', { length: 50 }).notNull(), // من قيّم
+  
+  // الدرجات (JSON: {criterionId: score, ...})
+  scoresJson: text('scoresJson').notNull(), // JSON object with criterion scores
+  totalScore: decimal('totalScore', { precision: 5, scale: 2 }), // المجموع المرجح
+  
+  // ملاحظات
+  notes: text('notes'), // ملاحظات المقيّم
+  
+  // الحالة
+  isComplete: int('isComplete').default(0).notNull(), // 1 = أكمل التقييم
+  
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+export type CommandCenterEvaluation = typeof commandCenterEvaluations.$inferSelect;
+export type InsertCommandCenterEvaluation = typeof commandCenterEvaluations.$inferInsert;
+
+// جلسات التقييم (لتتبع اكتمال التقييمات الثلاثة)
+export const evaluationSessions = mysqlTable('evaluationSessions', {
+  id: int('id').autoincrement().primaryKey(),
+  sessionId: varchar('sessionId', { length: 100 }).notNull().unique(),
+  projectId: int('projectId').notNull().references(() => projects.id),
+  consultantId: int('consultantId').notNull().references(() => consultants.id),
+  
+  title: varchar('title', { length: 500 }).notNull(), // عنوان جلسة التقييم
+  description: text('description'), // وصف
+  
+  // حالة الاكتمال
+  isRevealed: int('isRevealed').default(0).notNull(), // 1 = تم كشف النتائج (بعد اكتمال الثلاثة)
+  completedCount: int('completedCount').default(0).notNull(), // عدد من أكمل التقييم
+  requiredCount: int('requiredCount').default(3).notNull(), // عدد المطلوب (3)
+  
+  // من أنشأ الجلسة
+  createdByMemberId: varchar('createdByMemberId', { length: 50 }).notNull(),
+  
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+export type EvaluationSession = typeof evaluationSessions.$inferSelect;
+export type InsertEvaluationSession = typeof evaluationSessions.$inferInsert;
+
+// إشعارات مركز القيادة
+export const commandCenterNotifications = mysqlTable('commandCenterNotifications', {
+  id: int('id').autoincrement().primaryKey(),
+  memberId: varchar('memberId', { length: 50 }).notNull(), // لمن الإشعار
+  title: varchar('title', { length: 500 }).notNull(),
+  message: text('message'),
+  type: mysqlEnum('notificationType', ['new_item', 'response', 'evaluation', 'urgent', 'system']).default('system').notNull(),
+  relatedItemId: int('relatedItemId'), // ربط بعنصر
+  isRead: int('isRead').default(0).notNull(),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+export type CommandCenterNotification = typeof commandCenterNotifications.$inferSelect;
+export type InsertCommandCenterNotification = typeof commandCenterNotifications.$inferInsert;
+
+// محادثات سلوى في مركز القيادة (منفصلة عن المحادثات العادية)
+export const commandCenterChat = mysqlTable('commandCenterChat', {
+  id: int('id').autoincrement().primaryKey(),
+  memberId: varchar('memberId', { length: 50 }).notNull(), // العضو المتحدث
+  role: mysqlEnum('chatRole', ['member', 'salwa']).notNull(),
+  content: text('content').notNull(),
+  metadata: text('metadata'), // JSON: بيانات إضافية (أوامر سلوى، نتائج أدوات)
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+export type CommandCenterChatMsg = typeof commandCenterChat.$inferSelect;
+export type InsertCommandCenterChatMsg = typeof commandCenterChat.$inferInsert;

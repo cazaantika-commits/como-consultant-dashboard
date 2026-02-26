@@ -1160,3 +1160,62 @@
 - [x] تحسين سرعة الاستجابة وتقليل وقت الانتظار
 - [x] تعزيز قدرات خالد وباقي الوكلاء
 - [x] إصلاح خطأ tRPC HTML response
+
+## إعادة بناء مركز القيادة - قناة تواصل رسمية ذكية
+### قاعدة البيانات
+- [ ] جدول أعضاء مركز القيادة (عبدالرحمن، وائل، الشيخ عيسى) مع token دخول فريد
+- [ ] جدول عناصر مركز القيادة (تقارير، طلبات، محاضر) مع نوع الفقاعة والمرسل والمستقبل
+- [ ] جدول تقييمات الاستشاريين (عضو، مشروع، استشاري، درجات لكل معيار)
+- [ ] جدول إشعارات مركز القيادة
+
+### الباك إند
+- [ ] نظام دخول بـ token فريد لكل عضو (بدون حساب على المنصة)
+- [ ] tRPC routes لإدارة عناصر الفقاعات (CRUD)
+- [ ] tRPC routes لنظام التقييم المستقل (حفظ، جلب، كشف بعد اكتمال الثلاثة)
+- [ ] ربط سلوى بمركز القيادة (إرسال عناصر للفقاعات، استقبال طلبات)
+
+### الواجهة - إعادة تصميم احترافي
+- [ ] تصميم احترافي راقي (ليس طفولي) - فقاعات أصغر، ألوان هادئة، يليق برجال أعمال
+- [ ] ترحيب شخصي باسم العضو المسجل دخوله
+- [ ] فقاعات ذكية: تقارير، طلبات، محاضر اجتماعات، تقييم الاستشاريين
+- [ ] سلوى متاحة للجميع - ذكية وسريعة
+- [ ] كل عضو يرى فقط ما يخصه (محكوم بعبدالرحمن)
+
+### تقييم الاستشاريين
+- [ ] فقاعة تقييم الاستشاريين داخل مركز القيادة
+- [ ] كل عضو يقيّم بشكل مستقل بنفس المعايير الموجودة
+- [ ] النتائج مخفية حتى يكمل الثلاثة تقييماتهم
+- [ ] بعد الاكتمال تظهر النتائج المجمّعة مكشوفة للجميع
+
+### سلوى ثنائية الاتجاه
+- [ ] سلوى تستقبل أوامر عبدالرحمن وتوزع على الفقاعات
+- [ ] سلوى تستقبل طلبات وائل والشيخ وتبلغ عبدالرحمن
+- [ ] سلوى ترد على استفسارات الجميع بذكاء وسرعة
+
+
+## مركز القيادة الجديد - Command Center (فبراير 26)
+- [x] Database schema: Command Center tables (members, items, responses, evaluations, sessions, notifications, chat)
+- [x] Push database migrations
+- [x] Backend: Command Center router with token authentication
+- [x] Backend: Smart bubble items CRUD (create, read, filter by type/status)
+- [x] Backend: Bubble counts for dashboard
+- [x] Backend: Notification system (create, read, mark as read)
+- [x] Backend: Blind evaluation system (sessions, submit, reveal)
+- [x] Backend: Salwa AI chat integration with LLM
+- [x] Backend: Chat history management
+- [x] Register commandCenter router in main routers.ts
+- [x] Frontend: Login screen with token authentication
+- [x] Frontend: Main dashboard with smart bubbles grid
+- [x] Frontend: Bubble detail view with items list
+- [x] Frontend: Item cards with expand/collapse and responses
+- [x] Frontend: Evaluation sessions list
+- [x] Frontend: Blind evaluation form with all 9 criteria
+- [x] Frontend: Evaluation results view (revealed after all 3 complete)
+- [x] Frontend: Salwa chat panel (floating button + modal)
+- [x] Frontend: Notifications display
+- [x] Frontend: Dashboard header with member info
+- [x] Add route /command-center in App.tsx
+- [x] Initialize 3 members in database (abdulrahman, wael, sheikh_issa)
+- [x] Add command center link to Home page
+- [x] Write vitest tests for command center router (17 tests passed)
+- [x] Create checkpoint and deliver

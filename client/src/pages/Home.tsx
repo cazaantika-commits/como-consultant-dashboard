@@ -237,7 +237,7 @@ export default function Home() {
                 <NotificationBell />
                 <Button
                   size="sm"
-                  onClick={() => navigate("/executive")}
+                  onClick={() => navigate("/command-center")}
                   className="text-xs gap-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white border-0 shadow-lg shadow-amber-500/25"
                 >
                   <Crown className="w-3.5 h-3.5" />
