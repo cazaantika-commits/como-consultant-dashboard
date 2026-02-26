@@ -411,3 +411,145 @@ describe("commandCenter.getBubbleCounts includes milestones_kpis", () => {
     expect(typeof result.milestones_kpis).toBe("number");
   });
 });
+
+describe("commandCenter.evaluationSessions (full flow)", () => {
+  const adminToken = "cc_abdulrahman_2026_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2g3h4i5j6k7l8m9n0";
+  const waelToken = "cc_wael_2026_z9y8x7w6v5u4t3s2r1q0p9o8n7m6l5k4j3i2h1g0f9e8d7c6b5a4z3y2x1w0v9u8t7s6r5q4p3o2n1";
+  
+  it("creates an evaluation session (admin only)", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const projects = await caller.commandCenter.getProjectsWithConsultants({ token: adminToken });
+    
+    if (projects.length > 0 && projects[0].consultants.length > 0) {
+      const result = await caller.commandCenter.createEvaluationSession({
+        token: adminToken,
+        projectId: Number(projects[0].id),
+        consultantId: Number(projects[0].consultants[0].id),
+        title: "جلسة تقييم تجريبية للاختبار",
+      });
+      expect(result).toBeDefined();
+      expect(result.success).toBe(true);
+      expect(result.sessionId).toBeDefined();
+    }
+  });
+
+  it("gets evaluation sessions list with details", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const sessions = await caller.commandCenter.getEvaluationSessions({ token: adminToken });
+    expect(Array.isArray(sessions)).toBe(true);
+    if (sessions.length > 0) {
+      const session = sessions[0];
+      expect(session).toHaveProperty("projectName");
+      expect(session).toHaveProperty("consultantName");
+      expect(session).toHaveProperty("completedCount");
+      expect(session).toHaveProperty("requiredCount");
+    }
+  });
+
+  it("submits an evaluation for a session", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const sessions = await caller.commandCenter.getEvaluationSessions({ token: adminToken });
+    
+    if (sessions.length > 0) {
+      const sessionId = sessions[0].sessionId; // use sessionId string, not id number
+      const scores = {
+        architectural_identity: 90,
+        bim_technology: 91,
+        planning_efficiency: 87,
+        cost_control: 85,
+        similar_experience: 89,
+        team_strength: 92,
+        timeline_commitment: 91,
+        project_interest: 90,
+        contract_flexibility: 90,
+      };
+      
+      // Calculate weighted total score
+      const totalScore = 87.6;
+      const result = await caller.commandCenter.submitEvaluation({
+        token: adminToken,
+        sessionId,
+        scores,
+        totalScore,
+        notes: "تقييم تجريبي من الاختبار",
+      });
+      expect(result).toBeDefined();
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it("prevents duplicate evaluation from same member", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const sessions = await caller.commandCenter.getEvaluationSessions({ token: adminToken });
+    
+    if (sessions.length > 0) {
+      const sessionId = sessions[0].sessionId; // use sessionId string
+      const scores = {
+        architectural_identity: 85,
+        bim_technology: 85,
+        planning_efficiency: 85,
+        cost_control: 85,
+        similar_experience: 85,
+        team_strength: 85,
+        timeline_commitment: 85,
+        project_interest: 85,
+        contract_flexibility: 85,
+      };
+      
+      await expect(
+        caller.commandCenter.submitEvaluation({
+          token: adminToken,
+          sessionId,
+          scores,
+          totalScore: 85,
+          notes: "تقييم مكرر",
+        })
+      ).rejects.toThrow();
+    }
+  });
+
+  it("gets evaluation results (blind - should show pending until all complete)", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const sessions = await caller.commandCenter.getEvaluationSessions({ token: adminToken });
+    
+    if (sessions.length > 0) {
+      const result = await caller.commandCenter.getEvaluationResults({
+        token: adminToken,
+        sessionId: sessions[0].sessionId,
+      });
+      expect(result).toBeDefined();
+      expect(result.isRevealed).toBe(false);
+      // allEvaluations should be null since not revealed
+      expect(result.allEvaluations).toBeNull();
+    }
+  });
+
+  it("rejects non-admin creating evaluation session", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const projects = await caller.commandCenter.getProjectsWithConsultants({ token: waelToken });
+    
+    if (projects.length > 0 && projects[0].consultants.length > 0) {
+      await expect(
+        caller.commandCenter.createEvaluationSession({
+          token: waelToken,
+          projectId: Number(projects[0].id),
+          consultantId: Number(projects[0].consultants[0].id),
+          title: "محاولة غير مصرح بها",
+        })
+      ).rejects.toThrow();
+    }
+  });
+});
+
+describe("commandCenter.newsTicker (announcements)", () => {
+  const adminToken = "cc_abdulrahman_2026_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2g3h4i5j6k7l8m9n0";
+
+  it("returns announcements for news ticker", async () => {
+    const caller = appRouter.createCaller(createPublicContext());
+    const items = await caller.commandCenter.getItems({
+      token: adminToken,
+      bubbleType: "announcements",
+    });
+    expect(Array.isArray(items)).toBe(true);
+  });
+});

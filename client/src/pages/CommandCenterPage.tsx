@@ -334,14 +334,14 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-md">
               <img
-                src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/sFWezOzuQFJxzpKl.png"
+                src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/dKjNMGCYtHDQQPse.png"
                 alt="سلوى"
                 className="w-10 h-10 rounded-full object-cover"
               />
             </div>
             <div>
               <h3 className="font-bold text-slate-800 text-sm">سلوى</h3>
-              <p className="text-xs text-slate-500">السكرتيرة التنفيذية الذكية</p>
+              <p className="text-xs text-slate-500">المنسقة الرئيسية</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -1165,9 +1165,82 @@ function KpiForm({ token, kpi, projects, onClose, onSuccess }: {
 // ═══════════════════════════════════════════════════════
 // EVALUATION VIEW
 // ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+// NEWS TICKER
+// ═══════════════════════════════════════════════════════
+function NewsTicker({ token }: { token: string }) {
+  const items = trpc.commandCenter.getItems.useQuery({ token, bubbleType: "announcements" as any, status: "active" });
+  const newsItems = items.data || [];
+  
+  // Default news if no announcements exist
+  const defaultNews = [
+    "مرحباً بكم في مركز القيادة — COMO Developments Command Center",
+    "تابعوا آخر التطورات في مشاريعنا العقارية",
+    "للتواصل مع سلوى اضغط على الزر العائم",
+  ];
+  
+  const tickerItems = newsItems.length > 0
+    ? newsItems.map((n: any) => n.title)
+    : defaultNews;
+  
+  return (
+    <div className="bg-gradient-to-l from-slate-800 via-slate-900 to-slate-800 text-white overflow-hidden border-b border-slate-700">
+      <div className="flex items-center h-9">
+        <div className="flex-shrink-0 bg-amber-500 text-white px-4 h-full flex items-center gap-1.5 text-xs font-bold z-10 shadow-md">
+          <Megaphone className="w-3.5 h-3.5" />
+          أخبار
+        </div>
+        <div className="flex-1 overflow-hidden relative">
+          <div className="animate-marquee whitespace-nowrap flex items-center h-9">
+            {[...tickerItems, ...tickerItems].map((text, i) => (
+              <span key={i} className="inline-flex items-center text-xs text-slate-200 mx-8">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 ml-3 flex-shrink-0" />
+                {text}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EvaluationView({ token, memberRole, memberId }: { token: string; memberRole: string; memberId: string }) {
   const sessions = trpc.commandCenter.getEvaluationSessions.useQuery({ token });
+  const projectsData = trpc.commandCenter.getProjectsWithConsultants.useQuery({ token });
+  const createSession = trpc.commandCenter.createEvaluationSession.useMutation();
+  const utils = trpc.useUtils();
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [newProjectId, setNewProjectId] = useState<number | null>(null);
+  const [newConsultantId, setNewConsultantId] = useState<number | null>(null);
+  const [newTitle, setNewTitle] = useState("");
+
+  const selectedProjectConsultants = projectsData.data?.find((p: any) => p.id === newProjectId)?.consultants || [];
+
+  const handleCreateSession = async () => {
+    if (!newProjectId || !newConsultantId || !newTitle.trim()) {
+      toast.error("يرجى تعبئة جميع الحقول");
+      return;
+    }
+    try {
+      await createSession.mutateAsync({
+        token,
+        projectId: newProjectId,
+        consultantId: newConsultantId,
+        title: newTitle,
+      });
+      toast.success("تم إنشاء جلسة التقييم بنجاح");
+      utils.commandCenter.getEvaluationSessions.invalidate({ token });
+      utils.commandCenter.getBubbleCounts.invalidate({ token });
+      setShowCreate(false);
+      setNewProjectId(null);
+      setNewConsultantId(null);
+      setNewTitle("");
+    } catch (err: any) {
+      toast.error(err.message || "خطأ في إنشاء الجلسة");
+    }
+  };
 
   if (selectedSession) {
     return (
@@ -1181,54 +1254,190 @@ function EvaluationView({ token, memberRole, memberId }: { token: string; member
   }
 
   return (
-    <div className="space-y-4" dir="rtl">
-      <h3 className="font-bold text-slate-800">جلسات التقييم</h3>
-      
+    <div className="space-y-5" dir="rtl">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-purple-800 flex items-center justify-center shadow-md">
+            <Star className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className="font-bold text-slate-800 text-lg">تقييم الاستشاريين</h3>
+            <p className="text-xs text-slate-500">تقييم مستقل لكل عضو — النتائج تظهر بعد اكتمال الثلاثة</p>
+          </div>
+        </div>
+        {memberRole === "admin" && (
+          <Button
+            size="sm"
+            onClick={() => setShowCreate(!showCreate)}
+            className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl shadow-md text-xs px-4"
+          >
+            <Plus className="w-3.5 h-3.5 ml-1" />
+            جلسة جديدة
+          </Button>
+        )}
+      </div>
+
+      {/* Create Session Form (Admin) */}
+      {showCreate && memberRole === "admin" && (
+        <Card className="p-5 rounded-xl border-2 border-purple-200 bg-purple-50/30 space-y-4">
+          <h4 className="font-bold text-purple-800 text-sm flex items-center gap-2">
+            <Plus className="w-4 h-4" />
+            إنشاء جلسة تقييم جديدة
+          </h4>
+          
+          {/* Project Selection */}
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">اختر المشروع</label>
+            <select
+              value={newProjectId ?? ''}
+              onChange={(e) => {
+                setNewProjectId(e.target.value ? Number(e.target.value) : null);
+                setNewConsultantId(null);
+                // Auto-generate title
+                const proj = projectsData.data?.find((p: any) => p.id === Number(e.target.value));
+                if (proj) setNewTitle(`تقييم استشاري - ${proj.name}`);
+              }}
+              className="w-full h-10 rounded-lg border border-slate-200 bg-white text-sm px-3 text-slate-700 focus:border-purple-400 focus:ring-purple-400/20"
+            >
+              <option value="">اختر المشروع...</option>
+              {projectsData.data?.filter((p: any) => p.consultants.length > 0).map((p: any) => (
+                <option key={p.id} value={p.id}>{p.name} ({p.consultants.length} استشاري)</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Consultant Selection */}
+          {newProjectId && (
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">اختر الاستشاري</label>
+              <select
+                value={newConsultantId ?? ''}
+                onChange={(e) => {
+                  setNewConsultantId(e.target.value ? Number(e.target.value) : null);
+                  const cons = selectedProjectConsultants.find((c: any) => c.id === Number(e.target.value));
+                  const proj = projectsData.data?.find((p: any) => p.id === newProjectId);
+                  if (cons && proj) setNewTitle(`تقييم ${cons.name} - ${proj.name}`);
+                }}
+                className="w-full h-10 rounded-lg border border-slate-200 bg-white text-sm px-3 text-slate-700 focus:border-purple-400 focus:ring-purple-400/20"
+              >
+                <option value="">اختر الاستشاري...</option>
+                {selectedProjectConsultants.map((c: any) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Session Title */}
+          {newConsultantId && (
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">عنوان الجلسة</label>
+              <Input
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                placeholder="عنوان جلسة التقييم..."
+                className="rounded-lg border-slate-200 text-sm"
+              />
+            </div>
+          )}
+
+          {/* Submit */}
+          <div className="flex items-center gap-2 pt-1">
+            <Button
+              onClick={handleCreateSession}
+              disabled={!newProjectId || !newConsultantId || !newTitle.trim() || createSession.isPending}
+              className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-lg shadow-sm text-xs px-5"
+            >
+              {createSession.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "إنشاء الجلسة"}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setShowCreate(false)} className="text-xs text-slate-500">
+              إلغاء
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* Sessions List */}
       {sessions.isLoading ? (
         <div className="space-y-3">
-          {[1,2].map(i => <div key={i} className="h-20 rounded-xl shimmer" />)}
+          {[1,2].map(i => <div key={i} className="h-24 rounded-xl shimmer" />)}
         </div>
       ) : sessions.data?.length === 0 ? (
         <div className="text-center py-12">
-          <Star className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-500">لا توجد جلسات تقييم حالياً</p>
+          <Star className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+          <p className="text-slate-500 font-medium">لا توجد جلسات تقييم حالياً</p>
+          <p className="text-slate-400 text-sm mt-1">
+            {memberRole === "admin" ? "أنشئ جلسة تقييم جديدة لبدء تقييم الاستشاريين" : "سيتم إشعارك عند إنشاء جلسة تقييم جديدة"}
+          </p>
         </div>
       ) : (
-        sessions.data?.map((session: any) => (
-          <Card
-            key={session.id}
-            className="p-4 rounded-xl border border-slate-200 hover:border-purple-300 transition-all cursor-pointer hover:shadow-md"
-            onClick={() => setSelectedSession(session.sessionId)}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="font-semibold text-slate-800 text-sm">{session.title}</h4>
-                <p className="text-xs text-slate-500 mt-1">
-                  {session.completedCount}/{session.requiredCount} أكملوا التقييم
-                </p>
+        <div className="space-y-3">
+          {sessions.data?.map((session: any) => (
+            <Card
+              key={session.id}
+              className="p-4 rounded-xl border border-slate-200 hover:border-purple-300 transition-all cursor-pointer hover:shadow-md group"
+              onClick={() => setSelectedSession(session.sessionId)}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-semibold text-slate-800 text-sm group-hover:text-purple-700 transition-colors">{session.title}</h4>
+                  <div className="flex items-center gap-3 mt-1.5">
+                    {session.projectName && (
+                      <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                        <FileText className="w-3 h-3" />
+                        {session.projectName}
+                      </span>
+                    )}
+                    {session.consultantName && (
+                      <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                        <User className="w-3 h-3" />
+                        {session.consultantName}
+                      </span>
+                    )}
+                  </div>
+                  {/* Progress bar */}
+                  <div className="mt-2.5 flex items-center gap-2">
+                    <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          session.completedCount === session.requiredCount
+                            ? 'bg-emerald-500'
+                            : session.completedCount > 0
+                              ? 'bg-amber-500'
+                              : 'bg-slate-300'
+                        }`}
+                        style={{ width: `${(session.completedCount / session.requiredCount) * 100}%` }}
+                      />
+                    </div>
+                    <span className="text-[10px] text-slate-400 flex-shrink-0">
+                      {session.completedCount}/{session.requiredCount}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-1.5">
+                  {session.myEvaluationComplete ? (
+                    <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px]">
+                      <CheckCircle2 className="w-3 h-3 ml-1" />
+                      مكتمل
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] animate-pulse">
+                      <Clock className="w-3 h-3 ml-1" />
+                      بانتظار تقييمك
+                    </Badge>
+                  )}
+                  {session.canViewResults && (
+                    <Badge className="bg-purple-100 text-purple-700 border-purple-200 text-[10px]">
+                      <Eye className="w-3 h-3 ml-1" />
+                      النتائج متاحة
+                    </Badge>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                {session.myEvaluationComplete ? (
-                  <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px]">
-                    <CheckCircle2 className="w-3 h-3 ml-1" />
-                    مكتمل
-                  </Badge>
-                ) : (
-                  <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px]">
-                    <Clock className="w-3 h-3 ml-1" />
-                    بانتظار تقييمك
-                  </Badge>
-                )}
-                {session.canViewResults && (
-                  <Badge className="bg-purple-100 text-purple-700 border-purple-200 text-[10px]">
-                    <Eye className="w-3 h-3 ml-1" />
-                    النتائج متاحة
-                  </Badge>
-                )}
-              </div>
-            </div>
-          </Card>
-        ))
+            </Card>
+          ))}
+        </div>
       )}
     </div>
   );
@@ -1515,6 +1724,9 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white" dir="rtl">
       <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
 
+      {/* News Ticker */}
+      <NewsTicker token={token} />
+
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Greeting */}
         <div className="mb-10">
@@ -1601,14 +1813,14 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
       {/* Floating Salwa Button */}
       <button
         onClick={() => setShowSalwa(true)}
-        className="fixed bottom-6 left-6 w-14 h-14 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 shadow-lg shadow-amber-500/30 flex items-center justify-center hover:scale-110 transition-all z-40 group"
+        className="fixed bottom-6 left-6 w-16 h-16 rounded-full shadow-lg shadow-amber-500/30 flex items-center justify-center hover:scale-110 transition-all z-40 group overflow-hidden ring-3 ring-amber-400/50 ring-offset-2 ring-offset-white"
       >
         <img
-          src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/sFWezOzuQFJxzpKl.png"
+          src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/dKjNMGCYtHDQQPse.png"
           alt="سلوى"
-          className="w-10 h-10 rounded-full object-cover"
+          className="w-full h-full object-cover"
         />
-        <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-400 rounded-full border-2 border-white" />
+        <div className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-emerald-400 rounded-full border-2 border-white animate-pulse" />
       </button>
 
       <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />

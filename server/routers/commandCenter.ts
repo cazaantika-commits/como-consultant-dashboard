@@ -391,7 +391,7 @@ export const commandCenterRouter = router({
       const sessions = await db.select().from(evaluationSessions)
         .orderBy(desc(evaluationSessions.createdAt));
       
-      // For each session, check if this member has completed their evaluation
+      // For each session, check completion status
       const sessionsWithStatus = await Promise.all(sessions.map(async (session) => {
         const myEval = await db.select().from(commandCenterEvaluations)
           .where(and(
@@ -399,9 +399,32 @@ export const commandCenterRouter = router({
             eq(commandCenterEvaluations.memberId, member.memberId)
           ));
         
+        // Count total completed evaluations
+        const allEvals = await db.select().from(commandCenterEvaluations)
+          .where(and(
+            eq(commandCenterEvaluations.sessionId, session.sessionId),
+            eq(commandCenterEvaluations.isComplete, 1)
+          ));
+        
+        // Get project and consultant names
+        let projectName = '';
+        let consultantName = '';
+        if (session.projectId) {
+          const proj = await db.select().from(projects).where(eq(projects.id, session.projectId));
+          if (proj.length > 0) projectName = proj[0].name;
+        }
+        if (session.consultantId) {
+          const cons = await db.select().from(consultants).where(eq(consultants.id, session.consultantId));
+          if (cons.length > 0) consultantName = cons[0].name;
+        }
+        
         return {
           ...session,
+          projectName,
+          consultantName,
           myEvaluationComplete: myEval.length > 0 && myEval[0].isComplete === 1,
+          completedCount: allEvals.length,
+          requiredCount: 3,
           canViewResults: session.isRevealed === 1,
         };
       }));
