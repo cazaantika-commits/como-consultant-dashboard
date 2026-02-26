@@ -36,6 +36,12 @@ import {
   Activity,
   ChevronDown,
   ChevronUp,
+  Mic,
+  MicOff,
+  Square,
+  Volume2,
+  VolumeX,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -45,6 +51,69 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { Streamdown } from "streamdown";
+
+const SALWA_AVATAR_URL = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/dKjNMGCYtHDQQPse.png";
+
+// ─── Voice Recording Hook ───
+function useVoiceRecorder() {
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+          ? "audio/webm;codecs=opus" : "audio/webm",
+      });
+      mediaRecorderRef.current = mediaRecorder;
+      chunksRef.current = [];
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      mediaRecorder.start(250);
+      setIsRecording(true);
+      setRecordingTime(0);
+      timerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000);
+    } catch (err: any) {
+      throw new Error(err.message || "لم يتم السماح بالوصول للميكروفون");
+    }
+  }, []);
+
+  const stopRecording = useCallback((): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const mediaRecorder = mediaRecorderRef.current;
+      if (!mediaRecorder || mediaRecorder.state === "inactive") {
+        reject(new Error("No active recording")); return;
+      }
+      mediaRecorder.onstop = () => {
+        mediaRecorder.stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(chunksRef.current, { type: mediaRecorder.mimeType });
+        resolve(blob);
+      };
+      mediaRecorder.stop();
+      setIsRecording(false);
+      if (timerRef.current) clearInterval(timerRef.current);
+    });
+  }, []);
+
+  const cancelRecording = useCallback(() => {
+    const mediaRecorder = mediaRecorderRef.current;
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.stream.getTracks().forEach(t => t.stop());
+      mediaRecorder.stop();
+    }
+    setIsRecording(false);
+    setRecordingTime(0);
+    if (timerRef.current) clearInterval(timerRef.current);
+  }, []);
+
+  return { isRecording, recordingTime, isTranscribing, setIsTranscribing, startRecording, stopRecording, cancelRecording };
+}
 
 // ─── Token Management ───
 function getStoredToken(): string | null {
@@ -264,17 +333,24 @@ function LoginScreen({ onLogin }: { onLogin: (token: string) => void }) {
 }
 
 // ═══════════════════════════════════════════════════════
-// SALWA CHAT PANEL
+// SALWA CHAT PANEL (with Voice)
 // ═══════════════════════════════════════════════════════
 function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memberName: string; isOpen: boolean; onClose: () => void }) {
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [micError, setMicError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const { isRecording, recordingTime, isTranscribing, setIsTranscribing, startRecording, stopRecording, cancelRecording } = useVoiceRecorder();
 
   const chatHistory = trpc.commandCenter.getChatHistory.useQuery({ token }, { enabled: isOpen });
   const chatMutation = trpc.commandCenter.chatWithSalwa.useMutation();
   const clearMutation = trpc.commandCenter.clearChatHistory.useMutation();
+  const transcribeMutation = trpc.commandCenter.transcribeVoice.useMutation();
+  const ttsMutation = trpc.commandCenter.textToSpeech.useMutation();
   const utils = trpc.useUtils();
 
   const messages = chatHistory.data || [];
@@ -291,9 +367,18 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
     }
   }, [isOpen]);
 
-  const handleSend = async () => {
-    if (!message.trim() || isLoading) return;
-    const msg = message.trim();
+  // Stop audio on close
+  useEffect(() => {
+    if (!isOpen && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setIsSpeaking(false);
+    }
+  }, [isOpen]);
+
+  const handleSend = async (text?: string) => {
+    const msg = (text || message).trim();
+    if (!msg || isLoading) return;
     setMessage("");
     setIsLoading(true);
 
@@ -308,6 +393,7 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
   };
 
   const handleClear = async () => {
+    if (audioRef.current) { audioRef.current.pause(); setIsSpeaking(false); }
     await clearMutation.mutateAsync({ token });
     utils.commandCenter.getChatHistory.invalidate({ token });
     toast.success("تم مسح المحادثة");
@@ -320,31 +406,100 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
     }
   };
 
+  // Voice: Mic click handler
+  const handleMicClick = async () => {
+    setMicError(null);
+    if (isRecording) {
+      try {
+        const blob = await stopRecording();
+        setIsTranscribing(true);
+        // Convert blob to base64
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const base64 = (reader.result as string).split(",")[1];
+          try {
+            const result = await transcribeMutation.mutateAsync({
+              token,
+              audioBase64: base64,
+              mimeType: blob.type,
+              language: "ar",
+            });
+            setIsTranscribing(false);
+            if (result.text) {
+              handleSend(result.text);
+            }
+          } catch (err: any) {
+            setIsTranscribing(false);
+            setMicError("فشل التحويل الصوتي");
+            setTimeout(() => setMicError(null), 3000);
+          }
+        };
+        reader.readAsDataURL(blob);
+      } catch (err: any) {
+        setMicError(err.message || "فشل التحويل الصوتي");
+        setTimeout(() => setMicError(null), 3000);
+      }
+    } else {
+      try {
+        await startRecording();
+      } catch (err: any) {
+        setMicError(err.message || "لم يتم السماح بالوصول للميكروفون");
+        setTimeout(() => setMicError(null), 3000);
+      }
+    }
+  };
+
+  // TTS: Play Salwa's response
+  const handlePlayResponse = async (text: string) => {
+    if (isSpeaking && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setIsSpeaking(false);
+      return;
+    }
+    try {
+      const stripped = text.replace(/[#*_~`>\[\]()]/g, "").slice(0, 4096);
+      const result = await ttsMutation.mutateAsync({ token, text: stripped });
+      const audioBlob = new Blob(
+        [Uint8Array.from(atob(result.audioBase64), c => c.charCodeAt(0))],
+        { type: "audio/mpeg" }
+      );
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+      audio.onplay = () => setIsSpeaking(true);
+      audio.onended = () => { setIsSpeaking(false); URL.revokeObjectURL(audioUrl); };
+      audio.onerror = () => { setIsSpeaking(false); URL.revokeObjectURL(audioUrl); };
+      audio.play();
+    } catch {
+      toast.error("فشل تشغيل الصوت");
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg h-[85vh] sm:h-[70vh] flex flex-col shadow-2xl overflow-hidden"
+        className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg h-[90vh] sm:h-[75vh] flex flex-col shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         dir="rtl"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b bg-gradient-to-l from-amber-50 to-white">
+        <div className="flex items-center justify-between px-4 py-3 border-b bg-gradient-to-l from-amber-50 to-white">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-md">
-              <img
-                src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/dKjNMGCYtHDQQPse.png"
-                alt="سلوى"
-                className="w-10 h-10 rounded-full object-cover"
-              />
+            <div className="w-11 h-11 rounded-full overflow-hidden ring-2 ring-amber-400/50 shadow-md">
+              <img src={SALWA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover" />
             </div>
             <div>
               <h3 className="font-bold text-slate-800 text-sm">سلوى</h3>
-              <p className="text-xs text-slate-500">المنسقة الرئيسية</p>
+              <p className="text-[11px] text-emerald-600 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                متصلة الآن
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <Button variant="ghost" size="sm" onClick={handleClear} className="text-slate-400 hover:text-red-500 h-8 w-8 p-0">
               <Trash2 className="w-4 h-4" />
             </Button>
@@ -355,20 +510,30 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
         </div>
 
         {/* Messages */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
           {messages.length === 0 && !isLoading && (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
-                <MessageCircle className="w-7 h-7 text-amber-600" />
+            <div className="text-center py-10">
+              <div className="w-20 h-20 rounded-full overflow-hidden ring-3 ring-amber-400/40 mx-auto mb-4 shadow-lg">
+                <img src={SALWA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover" />
               </div>
-              <p className="text-slate-600 font-medium mb-1">مرحباً {memberName}</p>
+              <p className="text-slate-700 font-semibold mb-1">مرحباً {memberName}</p>
               <p className="text-slate-400 text-sm">كيف يمكنني مساعدتك اليوم؟</p>
+              <p className="text-slate-400 text-xs mt-2">يمكنك الكتابة أو استخدام الميكروفون 🎙️</p>
             </div>
           )}
 
-          {messages.map((msg, i) => (
-            <div key={msg.id || i} className={`flex ${msg.role === "member" ? "justify-start" : "justify-end"}`}>
-              <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+          {messages.map((msg: any, i: number) => (
+            <div key={msg.id || i} className={`flex ${msg.role === "member" ? "justify-start" : "justify-end"} gap-2`}>
+              {msg.role === "salwa" && (
+                <button
+                  onClick={() => handlePlayResponse(msg.content)}
+                  className="self-end mb-1 p-1.5 rounded-full hover:bg-amber-100 transition-colors flex-shrink-0"
+                  title="استمع للرد"
+                >
+                  {isSpeaking ? <VolumeX className="w-3.5 h-3.5 text-amber-600" /> : <Volume2 className="w-3.5 h-3.5 text-amber-500" />}
+                </button>
+              )}
+              <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                 msg.role === "member"
                   ? "bg-slate-100 text-slate-800 rounded-br-md"
                   : "bg-gradient-to-l from-amber-500 to-amber-600 text-white rounded-bl-md shadow-md"
@@ -398,21 +563,60 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
           )}
         </div>
 
+        {/* Recording indicator */}
+        {(isRecording || isTranscribing) && (
+          <div className="px-4 py-2 bg-red-50 border-t border-red-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {isRecording && <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />}
+              <span className="text-xs text-red-600 font-medium">
+                {isTranscribing ? "جاري التحويل..." : `تسجيل... ${recordingTime}ث`}
+              </span>
+            </div>
+            {isRecording && (
+              <button onClick={cancelRecording} className="text-xs text-red-500 hover:text-red-700">إلغاء</button>
+            )}
+          </div>
+        )}
+
+        {/* Mic error */}
+        {micError && (
+          <div className="px-4 py-1.5 bg-red-50 text-xs text-red-600 text-center">{micError}</div>
+        )}
+
         {/* Input */}
         <div className="border-t bg-white p-3">
           <div className="flex items-end gap-2">
+            {/* Mic button */}
+            <button
+              onClick={handleMicClick}
+              disabled={isLoading || isTranscribing}
+              className={`h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-all border ${
+                isRecording
+                  ? "bg-red-500 text-white border-red-500 animate-pulse"
+                  : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-amber-600"
+              }`}
+            >
+              {isTranscribing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : isRecording ? (
+                <Square className="w-4 h-4" />
+              ) : (
+                <Mic className="w-4 h-4" />
+              )}
+            </button>
             <Textarea
               ref={inputRef}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="اكتب رسالتك لسلوى..."
+              placeholder={isRecording ? "اضغط الميكروفون لإيقاف التسجيل..." : "اكتب رسالتك لسلوى..."}
               className="flex-1 min-h-[44px] max-h-[120px] resize-none rounded-xl border-slate-200 text-sm focus:border-amber-400 focus:ring-amber-400/20"
               rows={1}
+              disabled={isRecording || isTranscribing}
             />
             <Button
-              onClick={handleSend}
-              disabled={!message.trim() || isLoading}
+              onClick={() => handleSend()}
+              disabled={!message.trim() || isLoading || isRecording}
               className="h-11 w-11 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-md p-0 flex-shrink-0"
             >
               <Send className="w-4 h-4 text-white" />
@@ -1727,17 +1931,49 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
       {/* News Ticker */}
       <NewsTicker token={token} />
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Greeting */}
-        <div className="mb-10">
-          <h1 className="text-2xl font-bold text-slate-800 mb-1">{member.greeting}</h1>
-          <p className="text-slate-500 text-sm">
-            {new Date().toLocaleDateString("ar-AE", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
-          </p>
+      <div className="max-w-4xl mx-auto px-4 py-6">
+        {/* ─── Salwa Hero Section (same as main platform) ─── */}
+        <div className="bg-gradient-to-l from-amber-50 via-white to-amber-50/30 rounded-2xl border border-amber-200/50 p-5 sm:p-6 mb-6 shadow-sm">
+          <div className="flex flex-col sm:flex-row items-center gap-5">
+            {/* Salwa Large Image */}
+            <div className="relative flex-shrink-0">
+              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden ring-4 ring-amber-400/40 shadow-xl shadow-amber-500/20">
+                <img src={SALWA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover" />
+              </div>
+              <div className="absolute bottom-1 right-1 w-5 h-5 bg-emerald-400 rounded-full border-3 border-white animate-pulse" />
+            </div>
+
+            {/* Salwa Info + Actions */}
+            <div className="flex-1 text-center sm:text-right">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-0.5">{member.greeting}</h2>
+              <p className="text-slate-500 text-sm mb-1">
+                {new Date().toLocaleDateString("ar-AE", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+              </p>
+              <p className="text-amber-700 text-sm font-medium mb-4">سلوى — المنسقة الرئيسية لمشاريع COMO</p>
+
+              {/* Quick action buttons */}
+              <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                <button
+                  onClick={() => setShowSalwa(true)}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white text-sm font-semibold shadow-md shadow-amber-500/20 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  تحدث مع سلوى
+                </button>
+                <button
+                  onClick={() => setShowSalwa(true)}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-amber-300 bg-amber-50 text-amber-700 text-sm font-medium hover:bg-amber-100 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all"
+                >
+                  <Mic className="w-4 h-4" />
+                  رسالة صوتية
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Smart Bubbles Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-10">
+        {/* ─── Smart Bubbles Grid (mobile-friendly) ─── */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
           {BUBBLES.map(bubble => {
             const count = counts.data?.[bubble.type as keyof typeof counts.data] || 0;
             return (
@@ -1754,17 +1990,17 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                     setActiveBubble(bubble.type);
                   }
                 }}
-                className="group relative bg-white rounded-2xl border border-slate-200 p-5 text-center transition-all duration-300 hover:shadow-lg hover:border-slate-300 hover:-translate-y-1"
+                className="group relative bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 text-center transition-all duration-300 hover:shadow-lg hover:border-slate-300 active:scale-[0.97]"
               >
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${bubble.color} flex items-center justify-center mx-auto mb-3 shadow-md group-hover:scale-110 transition-transform`}>
-                  <bubble.icon className="w-6 h-6 text-white" />
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${bubble.color} flex items-center justify-center mx-auto mb-2 sm:mb-3 shadow-md group-hover:scale-110 transition-transform`}>
+                  <bubble.icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
-                <p className="font-semibold text-slate-700 text-sm mb-1">{bubble.label}</p>
-                <p className="text-xs text-slate-400">
+                <p className="font-semibold text-slate-700 text-xs sm:text-sm mb-0.5">{bubble.label}</p>
+                <p className="text-[10px] sm:text-xs text-slate-400">
                   {counts.isLoading ? "..." : `${count} عنصر`}
                 </p>
                 {typeof count === "number" && count > 0 && (
-                  <div className="absolute -top-1.5 -left-1.5 w-6 h-6 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center shadow-md">
+                  <div className="absolute -top-1 -left-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-red-500 text-white text-[9px] sm:text-[10px] font-bold flex items-center justify-center shadow-md">
                     {count}
                   </div>
                 )}
@@ -1773,11 +2009,11 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           })}
         </div>
 
-        {/* Recent Notifications */}
+        {/* ─── Recent Notifications ─── */}
         {notifications.data && notifications.data.length > 0 && (
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold text-slate-800 flex items-center gap-2">
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-bold text-slate-800 text-sm flex items-center gap-2">
                 <Bell className="w-4 h-4 text-slate-400" />
                 آخر الإشعارات
               </h2>
@@ -1810,16 +2046,12 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
         )}
       </div>
 
-      {/* Floating Salwa Button */}
+      {/* Floating Salwa Button (large, prominent, mobile-friendly) */}
       <button
         onClick={() => setShowSalwa(true)}
-        className="fixed bottom-6 left-6 w-16 h-16 rounded-full shadow-lg shadow-amber-500/30 flex items-center justify-center hover:scale-110 transition-all z-40 group overflow-hidden ring-3 ring-amber-400/50 ring-offset-2 ring-offset-white"
+        className="fixed bottom-5 left-5 sm:bottom-6 sm:left-6 w-16 h-16 sm:w-18 sm:h-18 rounded-full shadow-xl shadow-amber-500/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-40 group overflow-hidden ring-3 ring-amber-400/50 ring-offset-2 ring-offset-white"
       >
-        <img
-          src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/dKjNMGCYtHDQQPse.png"
-          alt="سلوى"
-          className="w-full h-full object-cover"
-        />
+        <img src={SALWA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover" />
         <div className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-emerald-400 rounded-full border-2 border-white animate-pulse" />
       </button>
 

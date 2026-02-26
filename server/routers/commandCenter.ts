@@ -19,6 +19,8 @@ import { eq, desc, sql, and, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import crypto from "crypto";
 import { invokeLLM } from "../_core/llm";
+import { transcribeAudio } from "../_core/voiceTranscription";
+import { storagePut } from "../storage";
 
 // ─── Helper: Verify Command Center access token ───
 async function verifyToken(token: string) {
@@ -1047,5 +1049,77 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
           .filter(Boolean)
           .map(c => ({ id: c!.id, name: c!.name, specialization: c!.specialization })),
       }));
+    }),
+
+  // ─── Voice Transcription for Command Center ───
+  transcribeVoice: publicProcedure
+    .input(z.object({
+      token: z.string(),
+      audioBase64: z.string(),
+      mimeType: z.string().default("audio/webm"),
+      language: z.string().optional().default("ar"),
+    }))
+    .mutation(async ({ input }) => {
+      const member = await verifyToken(input.token);
+      if (!member) throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid token" });
+
+      const audioBuffer = Buffer.from(input.audioBase64, "base64");
+      const sizeMB = audioBuffer.length / (1024 * 1024);
+      if (sizeMB > 16) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "حجم الملف الصوتي يتجاوز 16 ميجابايت" });
+      }
+
+      const ext = input.mimeType.includes("webm") ? "webm" : input.mimeType.includes("mp4") ? "m4a" : "wav";
+      const fileKey = `cc-voice/${member.memberId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { url: audioUrl } = await storagePut(fileKey, audioBuffer, input.mimeType);
+
+      const result = await transcribeAudio({
+        audioUrl,
+        language: input.language,
+        prompt: "تحويل الكلام العربي إلى نص",
+      });
+
+      if ("error" in result) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: (result as any).error });
+      }
+
+      return { text: (result as any).text, language: (result as any).language, duration: (result as any).duration };
+    }),
+
+  // ─── Text-to-Speech for Command Center ───
+  textToSpeech: publicProcedure
+    .input(z.object({
+      token: z.string(),
+      text: z.string().min(1).max(4096),
+    }))
+    .mutation(async ({ input }) => {
+      const member = await verifyToken(input.token);
+      if (!member) throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid token" });
+
+      const openaiKey = process.env.OPENAI_API_KEY;
+      if (!openaiKey) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "OpenAI API key not configured" });
+
+      const response = await fetch("https://api.openai.com/v1/audio/speech", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${openaiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "tts-1-hd",
+          input: input.text,
+          voice: "nova",
+          response_format: "mp3",
+          speed: 1.0,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "فشل تحويل النص إلى صوت" });
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      const base64 = Buffer.from(arrayBuffer).toString("base64");
+      return { audioBase64: base64, mimeType: "audio/mpeg" };
     }),
 });
