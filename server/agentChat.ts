@@ -83,9 +83,9 @@ const AGENT_MODEL_MAP: Record<AgentType, AIModel> = {
   alina: "gpt-4o",           // Best for financial calculations & structured analysis
   khazen: "gpt-4o",          // Best for file context understanding & classification
   buraq: "gpt-4o",           // Best for timeline tracking & task management
-  farouq: "claude-sonnet-4",   // Best for legal analysis, contracts & deep document review
-  khaled: "claude-sonnet-4",   // Best for technical standards, quality details & precision
-  baz: "claude-sonnet-4",      // Best for strategic thinking & multi-dimensional analysis
+  farouq: "gpt-4o",   // Switched from Claude (credits issue) - GPT-4o fallback
+  khaled: "gpt-4o",   // Switched from Claude (credits issue) - GPT-4o fallback
+  baz: "gpt-4o",      // Switched from Claude (credits issue) - GPT-4o fallback
   joelle: "gemini-2.5-pro",      // Gemini 2.5 Pro - best for deep analysis, market research & data
 };
 

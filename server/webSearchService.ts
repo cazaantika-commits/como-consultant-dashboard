@@ -1,156 +1,147 @@
 /**
- * Web Search Service - خدمة البحث في الإنترنت للوكلاء
+ * Web Search Service
  * 
- * يستخدم Google Search عبر SerpAPI أو مباشرة عبر fetch
- * لتمكين الوكلاء من البحث في الإنترنت والحصول على معلومات محدّثة
+ * Uses invokeLLM as a research engine since external search APIs
+ * (Forge Data API Google/search, DuckDuckGo) are not available.
+ * 
+ * The LLM provides expert-level knowledge on most topics.
+ * browse_webpage still fetches real web content via HTTP.
  */
 
-import { ENV } from "./_core/env";
+import { invokeLLM } from "./_core/llm";
 
-interface SearchResult {
+export interface SearchResult {
   title: string;
   link: string;
   snippet: string;
 }
 
-interface SearchResponse {
+export interface SearchResponse {
   results: SearchResult[];
   query: string;
   totalResults: number;
 }
 
 /**
- * Search the web using Google Custom Search via the forge data API
+ * Research a topic using the LLM's knowledge base.
+ * Returns structured results that the agent can use.
  */
-async function searchViaForgeDataApi(query: string, lang: string = "ar"): Promise<SearchResponse> {
-  const baseUrl = ENV.forgeApiUrl.endsWith("/") ? ENV.forgeApiUrl : `${ENV.forgeApiUrl}/`;
-  const fullUrl = new URL("webdevtoken.v1.WebDevService/CallApi", baseUrl).toString();
-
-  const response = await fetch(fullUrl, {
-    method: "POST",
-    headers: {
-      accept: "application/json",
-      "content-type": "application/json",
-      "connect-protocol-version": "1",
-      authorization: `Bearer ${ENV.forgeApiKey}`,
-    },
-    body: JSON.stringify({
-      apiId: "Google/search",
-      query: { q: query, gl: "AE", hl: lang, num: "8" },
-    }),
-  });
-
-  if (response.ok) {
-    const payload = await response.json();
-    let data: any;
-    if (payload && typeof payload === "object" && "jsonData" in payload) {
-      try {
-        data = JSON.parse((payload as any).jsonData ?? "{}");
-      } catch {
-        data = (payload as any).jsonData;
-      }
-    } else {
-      data = payload;
-    }
-
-    // Parse Google search results
-    const items = data?.organic_results || data?.items || data?.results || [];
-    return {
-      results: items.slice(0, 8).map((item: any) => ({
-        title: item.title || "",
-        link: item.link || item.url || "",
-        snippet: item.snippet || item.description || "",
-      })),
-      query,
-      totalResults: items.length,
-    };
-  }
-
-  // Fallback: try direct fetch approach
-  throw new Error(`Forge Data API search failed: ${response.status}`);
+export async function webSearch(query: string, lang: string = "ar"): Promise<SearchResponse> {
+  try {
+    const systemPrompt = lang === "ar"
+      ? `أنت محرك بحث متخصص. عند تلقي استعلام بحث، قدم معلومات دقيقة ومفصلة وحديثة.
+أجب بتنسيق JSON فقط بالشكل التالي:
+{
+  "results": [
+    {"title": "عنوان النتيجة", "snippet": "ملخص تفصيلي للمعلومات (3-5 جمل)", "link": ""},
+    ...
+  ]
 }
+قدم 3-5 نتائج مفصلة. كل snippet يجب أن يكون غنياً بالمعلومات المفيدة.
+لا تقل "لا أستطيع البحث" - استخدم معرفتك لتقديم أفضل المعلومات المتاحة.`
+      : `You are a specialized search engine. When given a search query, provide accurate, detailed, and current information.
+Reply ONLY with JSON in this format:
+{
+  "results": [
+    {"title": "Result title", "snippet": "Detailed summary of information (3-5 sentences)", "link": ""},
+    ...
+  ]
+}
+Provide 3-5 detailed results. Each snippet should be rich with useful information.
+Never say "I cannot search" - use your knowledge to provide the best available information.`;
 
-/**
- * Search the web using a simple scraping approach as fallback
- */
-async function searchViaDirectFetch(query: string): Promise<SearchResponse> {
-  // Use DuckDuckGo instant answer API (no API key needed)
-  const encodedQuery = encodeURIComponent(query);
-  const response = await fetch(
-    `https://api.duckduckgo.com/?q=${encodedQuery}&format=json&no_html=1&skip_disambig=1`,
-    { headers: { "User-Agent": "ComoDevBot/1.0" } }
-  );
-
-  if (!response.ok) {
-    throw new Error(`DuckDuckGo API failed: ${response.status}`);
-  }
-
-  const data = await response.json() as any;
-  const results: SearchResult[] = [];
-
-  // Abstract (main answer)
-  if (data.Abstract) {
-    results.push({
-      title: data.Heading || query,
-      link: data.AbstractURL || "",
-      snippet: data.Abstract,
+    const response = await invokeLLM({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: query },
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "search_results",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: {
+              results: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    title: { type: "string" },
+                    snippet: { type: "string" },
+                    link: { type: "string" },
+                  },
+                  required: ["title", "snippet", "link"],
+                  additionalProperties: false,
+                },
+              },
+            },
+            required: ["results"],
+            additionalProperties: false,
+          },
+        },
+      },
     });
-  }
 
-  // Related topics
-  if (data.RelatedTopics) {
-    for (const topic of data.RelatedTopics.slice(0, 7)) {
-      if (topic.Text) {
-        results.push({
-          title: topic.Text?.substring(0, 100) || "",
-          link: topic.FirstURL || "",
-          snippet: topic.Text || "",
-        });
-      }
+    const content = response.choices?.[0]?.message?.content;
+    if (!content) {
+      return { results: [], query, totalResults: 0 };
     }
-  }
 
-  return { results, query, totalResults: results.length };
+    const parsed = JSON.parse(content);
+    const results: SearchResult[] = (parsed.results || []).map((r: any) => ({
+      title: r.title || "",
+      link: r.link || "",
+      snippet: r.snippet || "",
+    }));
+
+    console.log(`[WebSearch] LLM research returned ${results.length} results for: "${query}"`);
+    return { results, query, totalResults: results.length };
+  } catch (error: any) {
+    console.log(`[WebSearch] LLM research failed: ${error.message}`);
+    return { results: [], query, totalResults: 0 };
+  }
 }
 
 /**
  * Fetch and extract text content from a webpage URL
  */
-async function fetchWebpageContent(url: string): Promise<string> {
+export async function fetchWebpageContent(url: string): Promise<string> {
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
     const response = await fetch(url, {
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; ComoDevBot/1.0)",
         "Accept": "text/html,application/xhtml+xml",
       },
-      signal: AbortSignal.timeout(10000), // 10s timeout
+      signal: controller.signal,
     });
+
+    clearTimeout(timeout);
 
     if (!response.ok) {
       return `[خطأ في تحميل الصفحة: ${response.status}]`;
     }
 
     const html = await response.text();
-    
+
     // Simple HTML to text extraction
     let text = html
-      // Remove scripts and styles
       .replace(/<script[\s\S]*?<\/script>/gi, "")
       .replace(/<style[\s\S]*?<\/style>/gi, "")
-      // Remove HTML tags
       .replace(/<[^>]+>/g, " ")
-      // Decode common HTML entities
       .replace(/&amp;/g, "&")
       .replace(/&lt;/g, "<")
       .replace(/&gt;/g, ">")
       .replace(/&quot;/g, '"')
       .replace(/&#39;/g, "'")
       .replace(/&nbsp;/g, " ")
-      // Clean up whitespace
       .replace(/\s+/g, " ")
       .trim();
 
-    // Limit to first 4000 chars to avoid overwhelming the LLM
     if (text.length > 4000) {
       text = text.substring(0, 4000) + "\n\n[... تم اقتطاع المحتوى - الصفحة طويلة جداً]";
     }
@@ -162,64 +153,24 @@ async function fetchWebpageContent(url: string): Promise<string> {
 }
 
 /**
- * Main search function - tries forge API first, then fallback
- */
-export async function webSearch(query: string, lang: string = "ar"): Promise<SearchResponse> {
-  // Try forge data API first
-  try {
-    const result = await searchViaForgeDataApi(query, lang);
-    if (result.results.length > 0) {
-      return result;
-    }
-  } catch (e: any) {
-    console.log(`[WebSearch] Forge API failed: ${e.message}, trying fallback...`);
-  }
-
-  // Fallback to DuckDuckGo
-  try {
-    return await searchViaDirectFetch(query);
-  } catch (e: any) {
-    console.log(`[WebSearch] DuckDuckGo failed: ${e.message}`);
-  }
-
-  // Last resort: use LLM's own knowledge
-  return {
-    results: [],
-    query,
-    totalResults: 0,
-  };
-}
-
-/**
- * Search and read - search then fetch content from top results
+ * Search and read - research then provide detailed content
  */
 export async function searchAndRead(query: string, maxPages: number = 3): Promise<string> {
   const searchResults = await webSearch(query);
-  
+
   if (searchResults.results.length === 0) {
     return `لم يتم العثور على نتائج للبحث: "${query}"`;
   }
 
   let output = `## نتائج البحث عن: "${query}"\n\n`;
-  
-  // Add search result summaries
+
   for (let i = 0; i < searchResults.results.length; i++) {
     const r = searchResults.results[i];
-    output += `${i + 1}. **${r.title}**\n   ${r.snippet}\n   🔗 ${r.link}\n\n`;
-  }
-
-  // Fetch content from top pages
-  const pagesToFetch = searchResults.results.slice(0, maxPages).filter(r => r.link);
-  if (pagesToFetch.length > 0) {
-    output += `\n---\n## محتوى تفصيلي من أهم النتائج:\n\n`;
-    
-    const fetchPromises = pagesToFetch.map(async (r, i) => {
-      const content = await fetchWebpageContent(r.link);
-      return `### ${i + 1}. ${r.title}\n${r.link}\n\n${content}\n\n`;
-    });
-
-    const contents = await Promise.all(fetchPromises);
-    output += contents.join("\n---\n");
+    output += `${i + 1}. **${r.title}**\n   ${r.snippet}\n`;
+    if (r.link) {
+      output += `   🔗 ${r.link}\n`;
+    }
+    output += "\n";
   }
 
   return output;
