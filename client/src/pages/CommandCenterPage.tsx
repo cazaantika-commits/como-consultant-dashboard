@@ -42,6 +42,14 @@ import {
   Volume2,
   VolumeX,
   MessageSquare,
+  DollarSign,
+  Award,
+  Gavel,
+  Building,
+  Scale,
+  Trophy,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -1498,444 +1506,531 @@ function NewsTicker({ token }: { token: string }) {
 }
 
 function EvaluationView({ token, memberRole, memberId }: { token: string; memberRole: string; memberId: string }) {
-  const sessions = trpc.commandCenter.getEvaluationSessions.useQuery({ token });
-  const projectsData = trpc.commandCenter.getProjectsWithConsultants.useQuery({ token });
-  const createSession = trpc.commandCenter.createEvaluationSession.useMutation();
-  const utils = trpc.useUtils();
-  const [selectedSession, setSelectedSession] = useState<string | null>(null);
-  const [showCreate, setShowCreate] = useState(false);
-  const [newProjectId, setNewProjectId] = useState<number | null>(null);
-  const [newConsultantId, setNewConsultantId] = useState<number | null>(null);
-  const [newTitle, setNewTitle] = useState("");
+  const projectsQuery = trpc.commandCenter.getProjectsForEvaluation.useQuery({ token });
+  const [selectedProject, setSelectedProject] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<'financial' | 'technical' | 'committee' | null>(null);
 
-  const selectedProjectConsultants = projectsData.data?.find((p: any) => p.id === newProjectId)?.consultants || [];
+  if (selectedProject && activeTab === 'financial') {
+    return <FinancialEvaluationView token={token} projectId={selectedProject} onBack={() => setActiveTab(null)} />;
+  }
+  if (selectedProject && activeTab === 'technical') {
+    return <TechnicalEvaluationView token={token} projectId={selectedProject} memberId={memberId} onBack={() => setActiveTab(null)} />;
+  }
+  if (selectedProject && activeTab === 'committee') {
+    return <CommitteeDecisionView token={token} projectId={selectedProject} memberId={memberId} onBack={() => setActiveTab(null)} />;
+  }
 
-  const handleCreateSession = async () => {
-    if (!newProjectId || !newConsultantId || !newTitle.trim()) {
-      toast.error("يرجى تعبئة جميع الحقول");
-      return;
-    }
-    try {
-      await createSession.mutateAsync({
-        token,
-        projectId: newProjectId,
-        consultantId: newConsultantId,
-        title: newTitle,
-      });
-      toast.success("تم إنشاء جلسة التقييم بنجاح");
-      utils.commandCenter.getEvaluationSessions.invalidate({ token });
-      utils.commandCenter.getBubbleCounts.invalidate({ token });
-      setShowCreate(false);
-      setNewProjectId(null);
-      setNewConsultantId(null);
-      setNewTitle("");
-    } catch (err: any) {
-      toast.error(err.message || "خطأ في إنشاء الجلسة");
-    }
-  };
-
-  if (selectedSession) {
+  if (selectedProject) {
+    const project = projectsQuery.data?.find((p: any) => p.id === selectedProject);
     return (
-      <EvaluationForm
-        token={token}
-        sessionId={selectedSession}
-        memberId={memberId}
-        onBack={() => setSelectedSession(null)}
-      />
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={() => setSelectedProject(null)} className="text-slate-500">
+            <ArrowLeft className="w-4 h-4 ml-1" /> العودة
+          </Button>
+          <h2 className="text-xl font-bold text-slate-800">{project?.name}</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* التقييم المالي */}
+          <button onClick={() => setActiveTab('financial')} className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 p-6 text-white shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] text-right">
+            <div className="absolute top-3 left-3 opacity-20 group-hover:opacity-30 transition-opacity">
+              <DollarSign className="w-16 h-16" />
+            </div>
+            <div className="relative z-10">
+              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center mb-4">
+                <DollarSign className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold mb-1">التقييم المالي</h3>
+              <p className="text-emerald-100 text-sm">الأتعاب والسكور المالي</p>
+              {project?.hasFinancial && <Badge className="mt-2 bg-white/20 text-white border-0">بيانات متوفرة</Badge>}
+            </div>
+          </button>
+
+          {/* التقييم الفني */}
+          <button onClick={() => setActiveTab('technical')} className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 p-6 text-white shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] text-right">
+            <div className="absolute top-3 left-3 opacity-20 group-hover:opacity-30 transition-opacity">
+              <Award className="w-16 h-16" />
+            </div>
+            <div className="relative z-10">
+              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center mb-4">
+                <Award className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold mb-1">التقييم الفني</h3>
+              <p className="text-blue-100 text-sm">تقييم المعايير الفنية</p>
+              <div className="mt-2 flex gap-1">
+                {project?.evaluatorStatus?.map((e: any) => (
+                  <span key={e.name} className={`inline-block w-3 h-3 rounded-full ${e.isComplete ? 'bg-green-400' : e.completed > 0 ? 'bg-yellow-400' : 'bg-white/30'}`} title={e.name} />
+                ))}
+              </div>
+            </div>
+          </button>
+
+          {/* قرار اللجنة */}
+          <button onClick={() => setActiveTab('committee')} className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-500 to-purple-700 p-6 text-white shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] text-right">
+            <div className="absolute top-3 left-3 opacity-20 group-hover:opacity-30 transition-opacity">
+              <Gavel className="w-16 h-16" />
+            </div>
+            <div className="relative z-10">
+              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center mb-4">
+                <Gavel className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold mb-1">قرار اللجنة</h3>
+              <p className="text-purple-100 text-sm">التقرير الشامل والقرار</p>
+              {project?.isDecisionConfirmed && <Badge className="mt-2 bg-white/20 text-white border-0">مؤكد ✅</Badge>}
+            </div>
+          </button>
+        </div>
+      </div>
     );
   }
 
+  // Project list view
   return (
-    <div className="space-y-5" dir="rtl">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-purple-800 flex items-center justify-center shadow-md">
-            <Star className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h3 className="font-bold text-slate-800 text-lg">تقييم الاستشاريين</h3>
-            <p className="text-xs text-slate-500">تقييم مستقل لكل عضو — النتائج تظهر بعد اكتمال الثلاثة</p>
+    <div className="space-y-6">
+      <div className="flex items-center gap-3 mb-4">
+        <Star className="w-6 h-6 text-purple-600" />
+        <h2 className="text-xl font-bold text-slate-800">تقييم الاستشاريين</h2>
+      </div>
+      {projectsQuery.isLoading && (
+        <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-purple-500" /></div>
+      )}
+      {projectsQuery.data?.length === 0 && (
+        <div className="text-center py-12 text-slate-400">
+          <Building className="w-12 h-12 mx-auto mb-3 opacity-50" />
+          <p>لا توجد مشاريع للتقييم</p>
+        </div>
+      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {projectsQuery.data?.map((project: any) => {
+          const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
+            not_started: { label: 'لم يبدأ', color: 'bg-slate-100 text-slate-600', icon: Lock },
+            in_progress: { label: 'قيد التقييم', color: 'bg-amber-100 text-amber-700', icon: Loader2 },
+            evaluation_complete: { label: 'التقييم مكتمل', color: 'bg-blue-100 text-blue-700', icon: CheckCircle2 },
+            decided: { label: 'تم اتخاذ القرار', color: 'bg-green-100 text-green-700', icon: Trophy },
+          };
+          const st = statusConfig[project.status] || statusConfig.not_started;
+          const StatusIcon = st.icon;
+          return (
+            <button key={project.id} onClick={() => setSelectedProject(project.id)} className="group text-right bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-all hover:border-purple-300 hover:scale-[1.01]">
+              <div className="flex items-start justify-between mb-3">
+                <Badge className={`${st.color} border-0 text-xs`}>
+                  <StatusIcon className={`w-3 h-3 ml-1 ${project.status === 'in_progress' ? 'animate-spin' : ''}`} />
+                  {st.label}
+                </Badge>
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center">
+                  <Building className="w-5 h-5 text-white" />
+                </div>
+              </div>
+              <h3 className="font-bold text-slate-800 mb-1 group-hover:text-purple-700 transition-colors">{project.name}</h3>
+              <p className="text-sm text-slate-500">{project.consultantCount} استشاري</p>
+              <div className="mt-3 flex gap-1">
+                {project.evaluatorStatus?.map((e: any) => (
+                  <div key={e.name} className="flex items-center gap-1">
+                    <span className={`w-2.5 h-2.5 rounded-full ${e.isComplete ? 'bg-green-500' : e.completed > 0 ? 'bg-amber-400' : 'bg-slate-300'}`} />
+                    <span className="text-[10px] text-slate-400">{e.name === 'sheikh_issa' ? 'ش.ع' : e.name === 'wael' ? 'و' : 'ع'}</span>
+                  </div>
+                ))}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ═══ Financial Evaluation View ═══
+function FinancialEvaluationView({ token, projectId, onBack }: { token: string; projectId: number; onBack: () => void }) {
+  const data = trpc.commandCenter.getProjectFinancialEvaluation.useQuery({ token, projectId });
+  
+  if (data.isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-emerald-500" /></div>;
+  
+  const project = data.data?.project;
+  const consultantsList = data.data?.consultants || [];
+  const sorted = [...consultantsList].sort((a, b) => b.financialScore - a.financialScore);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500">
+          <ArrowLeft className="w-4 h-4 ml-1" /> العودة
+        </Button>
+        <DollarSign className="w-5 h-5 text-emerald-600" />
+        <h2 className="text-lg font-bold text-slate-800">التقييم المالي - {project?.name}</h2>
+      </div>
+      
+      {project && (
+        <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200">
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <p className="text-xs text-emerald-600">المساحة (BUA)</p>
+              <p className="font-bold text-emerald-800">{project.bua?.toLocaleString()} قدم²</p>
+            </div>
+            <div>
+              <p className="text-xs text-emerald-600">سعر القدم</p>
+              <p className="font-bold text-emerald-800">{project.pricePerSqft?.toLocaleString()} د.إ</p>
+            </div>
+            <div>
+              <p className="text-xs text-emerald-600">تكلفة البناء</p>
+              <p className="font-bold text-emerald-800">{project.constructionCost?.toLocaleString()} د.إ</p>
+            </div>
           </div>
         </div>
-        {memberRole === "admin" && (
-          <Button
-            size="sm"
-            onClick={() => setShowCreate(!showCreate)}
-            className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl shadow-md text-xs px-4"
-          >
-            <Plus className="w-3.5 h-3.5 ml-1" />
-            جلسة جديدة
-          </Button>
+      )}
+
+      <div className="space-y-3">
+        {sorted.map((c, i) => (
+          <div key={c.id} className={`bg-white rounded-xl border p-4 ${i === 0 ? 'border-emerald-300 shadow-md' : 'border-slate-200'}`}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                {i === 0 && <Trophy className="w-5 h-5 text-emerald-500" />}
+                <span className="font-bold text-slate-800">{c.name}</span>
+              </div>
+              <Badge className={`${i === 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'} border-0`}>
+                سكور: {c.financialScore}%
+              </Badge>
+            </div>
+            <div className="grid grid-cols-3 gap-3 text-sm">
+              <div className="bg-slate-50 rounded-lg p-2 text-center">
+                <p className="text-[10px] text-slate-500">التصميم</p>
+                <p className="font-semibold text-slate-700">{c.designAmount?.toLocaleString()}</p>
+              </div>
+              <div className="bg-slate-50 rounded-lg p-2 text-center">
+                <p className="text-[10px] text-slate-500">الإشراف</p>
+                <p className="font-semibold text-slate-700">{c.supervisionAmount?.toLocaleString()}</p>
+              </div>
+              <div className="bg-emerald-50 rounded-lg p-2 text-center">
+                <p className="text-[10px] text-emerald-600">الإجمالي</p>
+                <p className="font-bold text-emerald-700">{c.totalFees?.toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ═══ Technical Evaluation View (Blind) ═══
+function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token: string; projectId: number; memberId: string; onBack: () => void }) {
+  const data = trpc.commandCenter.getProjectTechnicalEvaluation.useQuery({ token, projectId });
+  const submitScore = trpc.commandCenter.submitTechnicalScore.useMutation();
+  const utils = trpc.useUtils();
+  const [expandedConsultant, setExpandedConsultant] = useState<number | null>(null);
+
+  if (data.isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>;
+
+  const evalData = data.data;
+  if (!evalData) return <div className="text-center py-12 text-slate-400">لا توجد بيانات</div>;
+
+  const { project, consultants: consultantsList, evaluatorStatus, allComplete, myEvaluatorName, myStatus } = evalData;
+
+  const handleScore = async (consultantId: number, criterionId: number, score: number) => {
+    await submitScore.mutateAsync({ token, projectId, consultantId, criterionId, score });
+    utils.commandCenter.getProjectTechnicalEvaluation.invalidate({ token, projectId });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500">
+          <ArrowLeft className="w-4 h-4 ml-1" /> العودة
+        </Button>
+        <Award className="w-5 h-5 text-blue-600" />
+        <h2 className="text-lg font-bold text-slate-800">التقييم الفني - {project?.name}</h2>
+      </div>
+
+      {/* Evaluator Status Bar */}
+      <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+        <p className="text-sm font-semibold text-blue-800 mb-3">حالة التقييم</p>
+        <div className="flex gap-4">
+          {evaluatorStatus?.map((e: any) => (
+            <div key={e.name} className="flex items-center gap-2">
+              <span className={`w-3 h-3 rounded-full ${e.isComplete ? 'bg-green-500' : e.completed > 0 ? 'bg-amber-400' : 'bg-slate-300'}`} />
+              <span className="text-sm text-slate-700">{e.nameAr}</span>
+              {e.isComplete ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Lock className="w-4 h-4 text-slate-400" />}
+            </div>
+          ))}
+        </div>
+        {!allComplete && (
+          <p className="text-xs text-blue-600 mt-2 flex items-center gap-1">
+            <Lock className="w-3 h-3" /> النتائج ستظهر بعد اكتمال تقييم جميع الأعضاء
+          </p>
+        )}
+        {allComplete && (
+          <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+            <Unlock className="w-3 h-3" /> اكتمل التقييم - النتائج متاحة
+          </p>
         )}
       </div>
 
-      {/* Create Session Form (Admin) */}
-      {showCreate && memberRole === "admin" && (
-        <Card className="p-5 rounded-xl border-2 border-purple-200 bg-purple-50/30 space-y-4">
-          <h4 className="font-bold text-purple-800 text-sm flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            إنشاء جلسة تقييم جديدة
-          </h4>
-          
-          {/* Project Selection */}
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1.5">اختر المشروع</label>
-            <select
-              value={newProjectId ?? ''}
-              onChange={(e) => {
-                setNewProjectId(e.target.value ? Number(e.target.value) : null);
-                setNewConsultantId(null);
-                // Auto-generate title
-                const proj = projectsData.data?.find((p: any) => p.id === Number(e.target.value));
-                if (proj) setNewTitle(`تقييم استشاري - ${proj.name}`);
-              }}
-              className="w-full h-10 rounded-lg border border-slate-200 bg-white text-sm px-3 text-slate-700 focus:border-purple-400 focus:ring-purple-400/20"
-            >
-              <option value="">اختر المشروع...</option>
-              {projectsData.data?.filter((p: any) => p.consultants.length > 0).map((p: any) => (
-                <option key={p.id} value={p.id}>{p.name} ({p.consultants.length} استشاري)</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Consultant Selection */}
-          {newProjectId && (
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1.5">اختر الاستشاري</label>
-              <select
-                value={newConsultantId ?? ''}
-                onChange={(e) => {
-                  setNewConsultantId(e.target.value ? Number(e.target.value) : null);
-                  const cons = selectedProjectConsultants.find((c: any) => c.id === Number(e.target.value));
-                  const proj = projectsData.data?.find((p: any) => p.id === newProjectId);
-                  if (cons && proj) setNewTitle(`تقييم ${cons.name} - ${proj.name}`);
-                }}
-                className="w-full h-10 rounded-lg border border-slate-200 bg-white text-sm px-3 text-slate-700 focus:border-purple-400 focus:ring-purple-400/20"
-              >
-                <option value="">اختر الاستشاري...</option>
-                {selectedProjectConsultants.map((c: any) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Session Title */}
-          {newConsultantId && (
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1.5">عنوان الجلسة</label>
-              <Input
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                placeholder="عنوان جلسة التقييم..."
-                className="rounded-lg border-slate-200 text-sm"
-              />
-            </div>
-          )}
-
-          {/* Submit */}
-          <div className="flex items-center gap-2 pt-1">
-            <Button
-              onClick={handleCreateSession}
-              disabled={!newProjectId || !newConsultantId || !newTitle.trim() || createSession.isPending}
-              className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-lg shadow-sm text-xs px-5"
-            >
-              {createSession.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "إنشاء الجلسة"}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => setShowCreate(false)} className="text-xs text-slate-500">
-              إلغاء
-            </Button>
-          </div>
-        </Card>
-      )}
-
-      {/* Sessions List */}
-      {sessions.isLoading ? (
-        <div className="space-y-3">
-          {[1,2].map(i => <div key={i} className="h-24 rounded-xl shimmer" />)}
-        </div>
-      ) : sessions.data?.length === 0 ? (
-        <div className="text-center py-12">
-          <Star className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-          <p className="text-slate-500 font-medium">لا توجد جلسات تقييم حالياً</p>
-          <p className="text-slate-400 text-sm mt-1">
-            {memberRole === "admin" ? "أنشئ جلسة تقييم جديدة لبدء تقييم الاستشاريين" : "سيتم إشعارك عند إنشاء جلسة تقييم جديدة"}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {sessions.data?.map((session: any) => (
-            <Card
-              key={session.id}
-              className="p-4 rounded-xl border border-slate-200 hover:border-purple-300 transition-all cursor-pointer hover:shadow-md group"
-              onClick={() => setSelectedSession(session.sessionId)}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-slate-800 text-sm group-hover:text-purple-700 transition-colors">{session.title}</h4>
-                  <div className="flex items-center gap-3 mt-1.5">
-                    {session.projectName && (
-                      <span className="text-[11px] text-slate-500 flex items-center gap-1">
-                        <FileText className="w-3 h-3" />
-                        {session.projectName}
-                      </span>
-                    )}
-                    {session.consultantName && (
-                      <span className="text-[11px] text-slate-500 flex items-center gap-1">
-                        <User className="w-3 h-3" />
-                        {session.consultantName}
-                      </span>
-                    )}
-                  </div>
-                  {/* Progress bar */}
-                  <div className="mt-2.5 flex items-center gap-2">
-                    <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          session.completedCount === session.requiredCount
-                            ? 'bg-emerald-500'
-                            : session.completedCount > 0
-                              ? 'bg-amber-500'
-                              : 'bg-slate-300'
-                        }`}
-                        style={{ width: `${(session.completedCount / session.requiredCount) * 100}%` }}
-                      />
-                    </div>
-                    <span className="text-[10px] text-slate-400 flex-shrink-0">
-                      {session.completedCount}/{session.requiredCount}
-                    </span>
-                  </div>
+      {/* My Evaluation Form */}
+      {!myStatus?.isComplete && (
+        <div className="bg-white rounded-xl border border-blue-200 p-4">
+          <h3 className="font-bold text-blue-800 mb-4 flex items-center gap-2">
+            <Pencil className="w-4 h-4" /> تقييمك الفني
+          </h3>
+          {consultantsList?.map((consultant: any) => (
+            <div key={consultant.id} className="mb-4">
+              <button onClick={() => setExpandedConsultant(expandedConsultant === consultant.id ? null : consultant.id)} className="w-full text-right bg-slate-50 rounded-lg p-3 flex items-center justify-between hover:bg-slate-100 transition-colors">
+                <span className="font-semibold text-slate-800">{consultant.name}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500">{consultant.myScores?.filter((s: any) => s.score).length || 0}/9</span>
+                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${expandedConsultant === consultant.id ? 'rotate-180' : ''}`} />
                 </div>
-                <div className="flex flex-col items-end gap-1.5">
-                  {session.myEvaluationComplete ? (
-                    <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px]">
-                      <CheckCircle2 className="w-3 h-3 ml-1" />
-                      مكتمل
-                    </Badge>
-                  ) : (
-                    <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px] animate-pulse">
-                      <Clock className="w-3 h-3 ml-1" />
-                      بانتظار تقييمك
-                    </Badge>
-                  )}
-                  {session.canViewResults && (
-                    <Badge className="bg-purple-100 text-purple-700 border-purple-200 text-[10px]">
-                      <Eye className="w-3 h-3 ml-1" />
-                      النتائج متاحة
-                    </Badge>
-                  )}
+              </button>
+              {expandedConsultant === consultant.id && (
+                <div className="mt-2 space-y-2 pr-4">
+                  {CRITERIA.map((criterion) => {
+                    const myScore = consultant.myScores?.find((s: any) => s.criterionId === criterion.id);
+                    return (
+                      <div key={criterion.id} className="bg-white border border-slate-100 rounded-lg p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-slate-700">{criterion.name}</span>
+                          <span className="text-xs text-slate-400">الوزن: {criterion.weight}%</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {criterion.options.map((opt) => (
+                            <button key={opt.score} onClick={() => handleScore(consultant.id, criterion.id, opt.score)}
+                              className={`text-xs px-2 py-1 rounded-lg border transition-all ${myScore?.score === opt.score ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'}`}
+                              title={opt.label}>
+                              {opt.score}
+                            </button>
+                          ))}
+                        </div>
+                        {myScore?.score && (
+                          <p className="text-[10px] text-blue-600 mt-1">{criterion.options.find(o => o.score === myScore.score)?.label}</p>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
-            </Card>
+              )}
+            </div>
           ))}
         </div>
       )}
+
+      {myStatus?.isComplete && !allComplete && (
+        <div className="bg-green-50 rounded-xl border border-green-200 p-6 text-center">
+          <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-2" />
+          <p className="font-bold text-green-800">تم إكمال تقييمك الفني</p>
+          <p className="text-sm text-green-600 mt-1">في انتظار اكتمال تقييم باقي الأعضاء</p>
+        </div>
+      )}
+
+      {/* Results - Only shown when ALL evaluators complete */}
+      {allComplete && evalData.allEvaluatorData && (
+        <div className="space-y-4">
+          <h3 className="font-bold text-slate-800 flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-blue-600" /> نتائج التقييم الفني
+          </h3>
+          {consultantsList?.map((consultant: any) => {
+            let totalWeighted = 0;
+            return (
+              <div key={consultant.id} className="bg-white rounded-xl border border-slate-200 p-4">
+                <h4 className="font-bold text-slate-800 mb-3">{consultant.name}</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200">
+                        <th className="text-right py-2 text-slate-600">المعيار</th>
+                        <th className="text-center py-2 text-slate-600">الوزن</th>
+                        {evalData.allEvaluatorData.map((ev: any) => (
+                          <th key={ev.evaluatorName} className="text-center py-2 text-slate-600">{ev.nameAr}</th>
+                        ))}
+                        <th className="text-center py-2 text-blue-700 font-bold">المتوسط</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {CRITERIA.map((criterion) => {
+                        const scores = evalData.allEvaluatorData.map((ev: any) => {
+                          const s = ev.scores.find((s: any) => s.consultantId === consultant.id && s.criterionId === criterion.id);
+                          return s?.score || 0;
+                        });
+                        const avg = scores.reduce((a: number, b: number) => a + b, 0) / scores.length;
+                        totalWeighted += (avg * criterion.weight) / 100;
+                        return (
+                          <tr key={criterion.id} className="border-b border-slate-100">
+                            <td className="py-2 text-slate-700 text-xs">{criterion.name}</td>
+                            <td className="text-center py-2 text-slate-500 text-xs">{criterion.weight}%</td>
+                            {scores.map((s: number, i: number) => (
+                              <td key={i} className="text-center py-2 font-medium">{s}</td>
+                            ))}
+                            <td className="text-center py-2 font-bold text-blue-700">{avg.toFixed(1)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-blue-50">
+                        <td colSpan={2 + evalData.allEvaluatorData.length} className="py-2 font-bold text-blue-800 text-right">المجموع المرجح</td>
+                        <td className="text-center py-2 font-bold text-blue-800">{totalWeighted.toFixed(2)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
 
-function EvaluationForm({ token, sessionId, memberId, onBack }: { token: string; sessionId: string; memberId: string; onBack: () => void }) {
-  const results = trpc.commandCenter.getEvaluationResults.useQuery({ token, sessionId });
-  const submitMutation = trpc.commandCenter.submitEvaluation.useMutation();
+// ═══ Committee Decision View ═══
+function CommitteeDecisionView({ token, projectId, memberId, onBack }: { token: string; projectId: number; memberId: string; onBack: () => void }) {
+  const report = trpc.commandCenter.getComprehensiveReport.useQuery({ token, projectId });
+  const decision = trpc.commandCenter.getProjectCommitteeDecision.useQuery({ token, projectId });
+  const saveDecision = trpc.commandCenter.saveCommitteeDecision.useMutation();
+  const confirmDecision = trpc.commandCenter.confirmDecision.useMutation();
   const utils = trpc.useUtils();
-  const [scores, setScores] = useState<Record<string, number>>({});
-  const [notes, setNotes] = useState("");
+  const [selectedConsultant, setSelectedConsultant] = useState<number | null>(null);
+  const [decisionType, setDecisionType] = useState('approve');
+  const [justification, setJustification] = useState('');
+  const [notes, setNotes] = useState('');
 
-  const session = results.data?.session;
-  const myEval = results.data?.myEvaluation;
-  const isRevealed = results.data?.isRevealed;
-  const allEvals = results.data?.allEvaluations;
+  if (report.isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-purple-500" /></div>;
 
-  // Calculate total
-  const totalScore = useMemo(() => {
-    let total = 0;
-    CRITERIA.forEach(c => {
-      const s = scores[String(c.id)];
-      if (s !== undefined) {
-        total += (s * c.weight) / 100;
-      }
-    });
-    return Math.round(total * 100) / 100;
-  }, [scores]);
+  const reportData = report.data;
+  const decisionData = decision.data;
 
-  const handleSubmit = async () => {
-    const unanswered = CRITERIA.filter(c => scores[String(c.id)] === undefined);
-    if (unanswered.length > 0) {
-      toast.error(`يرجى تقييم جميع المعايير (${unanswered.length} متبقي)`);
-      return;
-    }
-
-    try {
-      const result = await submitMutation.mutateAsync({
-        token,
-        sessionId,
-        scores,
-        totalScore,
-        notes: notes || undefined,
-      });
-      toast.success("تم حفظ التقييم بنجاح");
-      if (result.isRevealed) {
-        toast.success("جميع الأعضاء أكملوا التقييم — النتائج متاحة الآن");
-      }
-      utils.commandCenter.getEvaluationSessions.invalidate({ token });
-      utils.commandCenter.getEvaluationResults.invalidate({ token, sessionId });
-    } catch (err: any) {
-      toast.error(err.message || "خطأ في حفظ التقييم");
-    }
-  };
-
-  if (results.isLoading) {
-    return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>;
-  }
-
-  // If already completed and not revealed
-  if (myEval?.isComplete === 1 && !isRevealed) {
-    return (
-      <div className="space-y-6 fade-in" dir="rtl">
-        <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500">
-          <ArrowLeft className="w-4 h-4 ml-1" /> رجوع
-        </Button>
-        <div className="text-center py-12">
-          <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
-          <h3 className="font-bold text-slate-800 text-lg mb-2">تم حفظ تقييمك</h3>
-          <p className="text-slate-500">
-            بانتظار اكتمال تقييمات باقي الأعضاء ({results.data?.completedCount}/3)
-          </p>
-          <div className="flex items-center justify-center gap-2 mt-4">
-            <EyeOff className="w-4 h-4 text-slate-400" />
-            <span className="text-sm text-slate-400">النتائج مخفية حتى يكمل الجميع</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // If revealed - show all results
-  if (isRevealed && allEvals) {
-    return (
-      <div className="space-y-6 fade-in" dir="rtl">
-        <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500">
-          <ArrowLeft className="w-4 h-4 ml-1" /> رجوع
-        </Button>
-        <div className="text-center mb-6">
-          <Eye className="w-8 h-8 text-purple-500 mx-auto mb-2" />
-          <h3 className="font-bold text-slate-800 text-lg">نتائج التقييم المكشوفة</h3>
-          <p className="text-slate-500 text-sm">{session?.title}</p>
-        </div>
-
-        {/* Summary table */}
-        <Card className="p-4 rounded-xl border overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="text-right py-2 px-3 text-slate-500 font-medium">المعيار</th>
-                {allEvals.map((e: any) => (
-                  <th key={e.memberId} className="text-center py-2 px-3 text-slate-500 font-medium">{e.memberName}</th>
-                ))}
-                <th className="text-center py-2 px-3 text-purple-600 font-bold">المتوسط</th>
-              </tr>
-            </thead>
-            <tbody>
-              {CRITERIA.map(c => {
-                const memberScores = allEvals.map((e: any) => e.scores[String(c.id)] || 0);
-                const avg = memberScores.reduce((a: number, b: number) => a + b, 0) / memberScores.length;
-                return (
-                  <tr key={c.id} className="border-b border-slate-50">
-                    <td className="py-2 px-3 text-slate-700 text-xs">{c.name}</td>
-                    {memberScores.map((s: number, i: number) => (
-                      <td key={i} className="text-center py-2 px-3 font-medium">{s}</td>
-                    ))}
-                    <td className="text-center py-2 px-3 font-bold text-purple-700">{avg.toFixed(0)}</td>
-                  </tr>
-                );
-              })}
-              <tr className="bg-slate-50 font-bold">
-                <td className="py-3 px-3 text-slate-800">المجموع المرجح</td>
-                {allEvals.map((e: any) => (
-                  <td key={e.memberId} className="text-center py-3 px-3 text-slate-800">
-                    {Number(e.totalScore).toFixed(1)}%
-                  </td>
-                ))}
-                <td className="text-center py-3 px-3 text-purple-700">
-                  {(allEvals.reduce((a: number, e: any) => a + Number(e.totalScore), 0) / allEvals.length).toFixed(1)}%
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </Card>
-      </div>
-    );
-  }
-
-  // Evaluation form
   return (
-    <div className="space-y-6 fade-in" dir="rtl">
-      <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500">
-        <ArrowLeft className="w-4 h-4 ml-1" /> رجوع
-      </Button>
-      
-      <div>
-        <h3 className="font-bold text-slate-800 text-lg">{session?.title}</h3>
-        <p className="text-sm text-slate-500 mt-1">قيّم كل معيار بشكل مستقل — النتائج مخفية حتى يكمل الجميع</p>
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500">
+          <ArrowLeft className="w-4 h-4 ml-1" /> العودة
+        </Button>
+        <Gavel className="w-5 h-5 text-purple-600" />
+        <h2 className="text-lg font-bold text-slate-800">قرار اللجنة - {reportData?.project?.name}</h2>
       </div>
 
-      <div className="space-y-4">
-        {CRITERIA.map(criterion => (
-          <Card key={criterion.id} className="p-4 rounded-xl border border-slate-200">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="font-semibold text-slate-800 text-sm">{criterion.name}</h4>
-              <span className="text-xs text-slate-400">الوزن: {criterion.weight}%</span>
+      {/* Comprehensive Report */}
+      {!reportData?.isReady ? (
+        <div className="bg-amber-50 rounded-xl border border-amber-200 p-6 text-center">
+          <Lock className="w-10 h-10 text-amber-500 mx-auto mb-2" />
+          <p className="font-bold text-amber-800">التقرير الشامل غير متاح</p>
+          <p className="text-sm text-amber-600 mt-1">يجب اكتمال التقييم الفني من جميع الأعضاء أولاً</p>
+        </div>
+      ) : (
+        <>
+          <div className="bg-white rounded-xl border border-slate-200 p-4">
+            <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-purple-600" /> التقرير الشامل
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b-2 border-purple-200 bg-purple-50">
+                    <th className="text-right py-3 px-2 text-purple-800">المركز</th>
+                    <th className="text-right py-3 px-2 text-purple-800">الاستشاري</th>
+                    <th className="text-center py-3 px-2 text-purple-800">الفني (20%)</th>
+                    <th className="text-center py-3 px-2 text-purple-800">المالي (80%)</th>
+                    <th className="text-center py-3 px-2 text-purple-800">النتيجة النهائية</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reportData.results?.map((r: any) => (
+                    <tr key={r.id} className={`border-b border-slate-100 ${r.rank === 1 ? 'bg-green-50' : ''}`}>
+                      <td className="py-3 px-2">
+                        <div className="flex items-center gap-1">
+                          {r.rank === 1 && <Trophy className="w-4 h-4 text-yellow-500" />}
+                          <span className={`font-bold ${r.rank === 1 ? 'text-green-700' : 'text-slate-600'}`}>#{r.rank}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-2 font-medium text-slate-800">{r.name}</td>
+                      <td className="text-center py-3 px-2 text-blue-700 font-medium">{r.technicalScore}</td>
+                      <td className="text-center py-3 px-2 text-emerald-700 font-medium">{r.financialScore}%</td>
+                      <td className="text-center py-3 px-2">
+                        <span className={`font-bold text-lg ${r.rank === 1 ? 'text-green-700' : 'text-slate-700'}`}>{r.finalScore}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <div className="grid grid-cols-1 gap-1.5">
-              {criterion.options.map(opt => (
-                <button
-                  key={opt.score}
-                  onClick={() => setScores(prev => ({ ...prev, [String(criterion.id)]: opt.score }))}
-                  className={`text-right px-3 py-2 rounded-lg text-xs transition-all border ${
-                    scores[String(criterion.id)] === opt.score
-                      ? "bg-purple-50 border-purple-300 text-purple-800 font-medium shadow-sm"
-                      : "bg-white border-slate-100 text-slate-600 hover:bg-slate-50 hover:border-slate-200"
-                  }`}
-                >
-                  <span className="font-bold ml-2">{opt.score}</span>
-                  {opt.label}
-                </button>
+          </div>
+
+          {/* AI Advisory */}
+          {decisionData?.aiScores && decisionData.aiScores.length > 0 && (
+            <div className="bg-indigo-50 rounded-xl border border-indigo-200 p-4">
+              <h3 className="font-bold text-indigo-800 mb-2 flex items-center gap-2">
+                <Star className="w-4 h-4" /> رأي الوكيل الذكي
+              </h3>
+              {decisionData.aiScores.map((ai: any) => (
+                <div key={ai.id} className="text-sm text-indigo-700 mb-1">
+                  <span className="font-medium">{ai.consultantId}:</span> {ai.recommendation || 'لا توجد توصية'}
+                </div>
               ))}
             </div>
-          </Card>
-        ))}
-      </div>
+          )}
 
-      {/* Notes */}
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">ملاحظات (اختياري)</label>
-        <Textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="أضف ملاحظاتك هنا..."
-          className="rounded-xl border-slate-200 text-sm"
-          rows={3}
-        />
-      </div>
+          {/* Committee Decision Form */}
+          {!decisionData?.decision?.isConfirmed && (
+            <div className="bg-white rounded-xl border border-purple-200 p-4">
+              <h3 className="font-bold text-purple-800 mb-4">اتخاذ القرار</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-slate-700 mb-2 block">اختيار الاستشاري</label>
+                  <div className="flex flex-wrap gap-2">
+                    {reportData.results?.map((r: any) => (
+                      <button key={r.id} onClick={() => setSelectedConsultant(r.id)}
+                        className={`px-4 py-2 rounded-lg border text-sm transition-all ${selectedConsultant === r.id ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-700 border-slate-200 hover:border-purple-300'}`}>
+                        {r.name} (#{r.rank})
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 mb-2 block">المبررات</label>
+                  <Textarea value={justification} onChange={(e) => setJustification(e.target.value)} placeholder="أدخل مبررات القرار..." className="min-h-[80px]" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 mb-2 block">ملاحظات اللجنة</label>
+                  <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="ملاحظات إضافية..." className="min-h-[60px]" />
+                </div>
+                <Button onClick={async () => {
+                  if (!selectedConsultant) { toast.error('اختر استشاري أولاً'); return; }
+                  await saveDecision.mutateAsync({ token, projectId, selectedConsultantId: selectedConsultant, decisionType, justification, committeeNotes: notes });
+                  utils.commandCenter.getProjectCommitteeDecision.invalidate({ token, projectId });
+                  toast.success('تم حفظ القرار');
+                }} className="w-full bg-purple-600 hover:bg-purple-700" disabled={saveDecision.isPending}>
+                  {saveDecision.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'حفظ قرار اللجنة'}
+                </Button>
+              </div>
+            </div>
+          )}
 
-      {/* Total & Submit */}
-      <div className="sticky bottom-0 bg-white border-t pt-4 pb-2 flex items-center justify-between">
-        <div>
-          <span className="text-sm text-slate-500">المجموع المرجح:</span>
-          <span className="text-xl font-bold text-purple-700 mr-2">{totalScore.toFixed(1)}%</span>
-        </div>
-        <Button
-          onClick={handleSubmit}
-          disabled={submitMutation.isPending}
-          className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl px-6 shadow-md"
-        >
-          {submitMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ التقييم"}
-        </Button>
-      </div>
+          {/* Sheikh Issa Confirmation */}
+          {decisionData?.decision && !decisionData.decision.isConfirmed && memberId === 'sheikh_issa' && (
+            <div className="bg-amber-50 rounded-xl border border-amber-300 p-4">
+              <h3 className="font-bold text-amber-800 mb-3">تأكيد القرار - الشيخ عيسى</h3>
+              <p className="text-sm text-amber-700 mb-4">قرار اللجنة بانتظار تأكيدكم</p>
+              <Button onClick={async () => {
+                await confirmDecision.mutateAsync({ token, projectId });
+                utils.commandCenter.getProjectCommitteeDecision.invalidate({ token, projectId });
+                utils.commandCenter.getProjectsForEvaluation.invalidate({ token });
+                toast.success('تم تأكيد القرار');
+              }} className="w-full bg-amber-600 hover:bg-amber-700" disabled={confirmDecision.isPending}>
+                {confirmDecision.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'تأكيد القرار النهائي'}
+              </Button>
+            </div>
+          )}
+
+          {decisionData?.decision?.isConfirmed && (
+            <div className="bg-green-50 rounded-xl border border-green-300 p-6 text-center">
+              <Trophy className="w-12 h-12 text-green-500 mx-auto mb-2" />
+              <p className="font-bold text-green-800 text-lg">تم تأكيد القرار</p>
+              <p className="text-sm text-green-600 mt-1">تم التأكيد بواسطة {decisionData.decision.confirmedBy}</p>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
+
 
 // ═══════════════════════════════════════════════════════
 // MAIN DASHBOARD

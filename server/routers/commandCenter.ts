@@ -14,6 +14,10 @@ import {
   projectConsultants,
   projectMilestones,
   projectKpis,
+  financialData,
+  evaluatorScores,
+  committeeDecisions,
+  aiAdvisoryScores,
 } from "../../drizzle/schema";
 import { eq, desc, sql, and, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -1129,5 +1133,226 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       const arrayBuffer = await response.arrayBuffer();
       const base64 = Buffer.from(arrayBuffer).toString("base64");
       return { audioBase64: base64, mimeType: "audio/mpeg" };
+    }),
+
+  // ═══ Project-based Evaluation for Command Center ═══
+  
+  getProjectsForEvaluation: publicProcedure
+    .input(z.object({ token: z.string() }))
+    .query(async ({ input }) => {
+      await verifyToken(input.token);
+      const db = await getDb();
+      if (!db) return [];
+      const allProjects = await db.select().from(projects);
+      const allPc = await db.select().from(projectConsultants);
+      const allConsultants = await db.select().from(consultants);
+      const allFinancial = await db.select().from(financialData);
+      const allEvalScores = await db.select().from(evaluatorScores);
+      const allDecisions = await db.select().from(committeeDecisions);
+      const consultantMap = Object.fromEntries(allConsultants.map(c => [c.id, c]));
+      const projectsWithConsultants = allProjects.filter(p => allPc.some(pc => pc.projectId === p.id));
+      return projectsWithConsultants.map(p => {
+        const pConsultants = allPc.filter(pc => pc.projectId === p.id).map(pc => consultantMap[pc.consultantId]).filter(Boolean);
+        const hasFinancial = allFinancial.some(f => f.projectId === p.id);
+        const projectScores = allEvalScores.filter(s => s.projectId === p.id);
+        const evaluatorNames = ['sheikh_issa', 'wael', 'abdulrahman'];
+        const totalCriteria = 9;
+        const totalNeeded = pConsultants.length * totalCriteria;
+        const evaluatorStatus = evaluatorNames.map(name => {
+          const evScores = projectScores.filter(s => s.evaluatorName === name && s.score !== null);
+          return { name, completed: evScores.length, total: totalNeeded, isComplete: evScores.length >= totalNeeded && totalNeeded > 0 };
+        });
+        const allEvaluatorsComplete = evaluatorStatus.every(e => e.isComplete);
+        const anyEvaluatorStarted = evaluatorStatus.some(e => e.completed > 0);
+        const decision = allDecisions.find(d => d.projectId === p.id);
+        let status: 'not_started' | 'in_progress' | 'evaluation_complete' | 'decided' = 'not_started';
+        if (decision?.isConfirmed === 1) status = 'decided';
+        else if (allEvaluatorsComplete) status = 'evaluation_complete';
+        else if (anyEvaluatorStarted || hasFinancial) status = 'in_progress';
+        return { id: p.id, name: p.name, description: p.description, consultantCount: pConsultants.length, status, hasFinancial, evaluatorStatus, allEvaluatorsComplete, hasDecision: !!decision, isDecisionConfirmed: decision?.isConfirmed === 1 };
+      });
+    }),
+
+  getProjectFinancialEvaluation: publicProcedure
+    .input(z.object({ token: z.string(), projectId: z.number() }))
+    .query(async ({ input }) => {
+      await verifyToken(input.token);
+      const db = await getDb();
+      if (!db) return { consultants: [], project: null };
+      const [project] = await db.select().from(projects).where(eq(projects.id, input.projectId));
+      if (!project) return { consultants: [], project: null };
+      const pcs = await db.select().from(projectConsultants).where(eq(projectConsultants.projectId, input.projectId));
+      const allConsultants = await db.select().from(consultants);
+      const fins = await db.select().from(financialData).where(eq(financialData.projectId, input.projectId));
+      const consultantMap = Object.fromEntries(allConsultants.map(c => [c.id, c]));
+      const constructionCost = (project.bua || 0) * (project.pricePerSqft || 0);
+      const consultantData = pcs.map(pc => {
+        const c = consultantMap[pc.consultantId];
+        const fin = fins.find(f => f.consultantId === pc.consultantId);
+        let designAmount = 0, supervisionAmount = 0;
+        if (fin) {
+          designAmount = fin.designType === 'pct' ? constructionCost * ((fin.designValue || 0) / 100) : (fin.designValue || 0);
+          supervisionAmount = fin.supervisionType === 'pct' ? constructionCost * ((fin.supervisionValue || 0) / 100) : (fin.supervisionValue || 0);
+        }
+        const totalFees = designAmount + supervisionAmount;
+        return { id: c?.id || pc.consultantId, name: c?.name || '\u063a\u064a\u0631 \u0645\u0639\u0631\u0648\u0641', designType: fin?.designType || 'pct', designValue: fin?.designValue || 0, supervisionType: fin?.supervisionType || 'pct', supervisionValue: fin?.supervisionValue || 0, designAmount, supervisionAmount, totalFees, proposalLink: (fin as any)?.proposalLink || null, financialScore: 0 as number };
+      });
+      const sortedByFees = [...consultantData].filter(c => c.totalFees > 0).sort((a, b) => a.totalFees - b.totalFees);
+      const lowestFee = sortedByFees[0]?.totalFees || 1;
+      consultantData.forEach(c => {
+        c.financialScore = c.totalFees > 0 ? Math.round((lowestFee / c.totalFees) * 100 * 100) / 100 : 0;
+      });
+      return { project: { id: project.id, name: project.name, bua: project.bua, pricePerSqft: project.pricePerSqft, constructionCost }, consultants: consultantData };
+    }),
+
+  getProjectTechnicalEvaluation: publicProcedure
+    .input(z.object({ token: z.string(), projectId: z.number() }))
+    .query(async ({ input }) => {
+      const member = await verifyToken(input.token);
+      const db = await getDb();
+      if (!db) return null;
+      const [project] = await db.select().from(projects).where(eq(projects.id, input.projectId));
+      if (!project) return null;
+      const pcs = await db.select().from(projectConsultants).where(eq(projectConsultants.projectId, input.projectId));
+      const allConsultants = await db.select().from(consultants);
+      const allScores = await db.select().from(evaluatorScores).where(eq(evaluatorScores.projectId, input.projectId));
+      const consultantMap = Object.fromEntries(allConsultants.map(c => [c.id, c]));
+      const evaluatorNames = ['sheikh_issa', 'wael', 'abdulrahman'];
+      const totalCriteria = 9;
+      const totalNeeded = pcs.length * totalCriteria;
+      const myEvaluatorName = member.memberId;
+      const evaluatorStatus = evaluatorNames.map(name => {
+        const evScores = allScores.filter(s => s.evaluatorName === name && s.score !== null);
+        return { name, nameAr: name === 'sheikh_issa' ? '\u0627\u0644\u0634\u064a\u062e \u0639\u064a\u0633\u0649' : name === 'wael' ? '\u0648\u0627\u0626\u0644' : '\u0639\u0628\u062f\u0627\u0644\u0631\u062d\u0645\u0646', completed: evScores.length, total: totalNeeded, isComplete: evScores.length >= totalNeeded && totalNeeded > 0 };
+      });
+      const allComplete = evaluatorStatus.every(e => e.isComplete);
+      const myStatus = evaluatorStatus.find(e => e.name === myEvaluatorName);
+      const myScores = allScores.filter(s => s.evaluatorName === myEvaluatorName);
+      const consultantData = pcs.map(pc => {
+        const c = consultantMap[pc.consultantId];
+        const myConsScores = myScores.filter(s => s.consultantId === pc.consultantId);
+        return { id: c?.id || pc.consultantId, name: c?.name || '\u063a\u064a\u0631 \u0645\u0639\u0631\u0648\u0641', myScores: myConsScores.map(s => ({ criterionId: s.criterionId, score: s.score })) };
+      });
+      let allEvaluatorData: any = null;
+      if (allComplete) {
+        allEvaluatorData = evaluatorNames.map(name => {
+          const nameAr = name === 'sheikh_issa' ? '\u0627\u0644\u0634\u064a\u062e \u0639\u064a\u0633\u0649' : name === 'wael' ? '\u0648\u0627\u0626\u0644' : '\u0639\u0628\u062f\u0627\u0644\u0631\u062d\u0645\u0646';
+          const evScores = allScores.filter(s => s.evaluatorName === name);
+          return { evaluatorName: name, nameAr, scores: evScores.map(s => ({ consultantId: s.consultantId, criterionId: s.criterionId, score: s.score })) };
+        });
+      }
+      return { project: { id: project.id, name: project.name }, consultants: consultantData, evaluatorStatus, allComplete, myEvaluatorName, myStatus, allEvaluatorData };
+    }),
+
+  submitTechnicalScore: publicProcedure
+    .input(z.object({ token: z.string(), projectId: z.number(), consultantId: z.number(), criterionId: z.number(), score: z.number().min(0).max(100) }))
+    .mutation(async ({ input }) => {
+      const member = await verifyToken(input.token);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const evaluatorName = member.memberId;
+      const existing = await db.select().from(evaluatorScores)
+        .where(and(eq(evaluatorScores.projectId, input.projectId), eq(evaluatorScores.consultantId, input.consultantId), eq(evaluatorScores.criterionId, input.criterionId), eq(evaluatorScores.evaluatorName, evaluatorName)))
+        .limit(1);
+      if (existing.length > 0) {
+        await db.update(evaluatorScores).set({ score: input.score })
+          .where(and(eq(evaluatorScores.projectId, input.projectId), eq(evaluatorScores.consultantId, input.consultantId), eq(evaluatorScores.criterionId, input.criterionId), eq(evaluatorScores.evaluatorName, evaluatorName)));
+      } else {
+        await db.insert(evaluatorScores).values({ projectId: input.projectId, consultantId: input.consultantId, criterionId: input.criterionId, evaluatorName, score: input.score });
+      }
+      return { success: true };
+    }),
+
+  getComprehensiveReport: publicProcedure
+    .input(z.object({ token: z.string(), projectId: z.number() }))
+    .query(async ({ input }) => {
+      await verifyToken(input.token);
+      const db = await getDb();
+      if (!db) return null;
+      const [project] = await db.select().from(projects).where(eq(projects.id, input.projectId));
+      if (!project) return null;
+      const pcs = await db.select().from(projectConsultants).where(eq(projectConsultants.projectId, input.projectId));
+      const allConsultants = await db.select().from(consultants);
+      const allScores = await db.select().from(evaluatorScores).where(eq(evaluatorScores.projectId, input.projectId));
+      const fins = await db.select().from(financialData).where(eq(financialData.projectId, input.projectId));
+      const consultantMap = Object.fromEntries(allConsultants.map(c => [c.id, c]));
+      const evaluatorNames = ['sheikh_issa', 'wael', 'abdulrahman'];
+      const totalCriteria = 9;
+      const totalNeeded = pcs.length * totalCriteria;
+      const allComplete = evaluatorNames.every(name => {
+        const evScores = allScores.filter(s => s.evaluatorName === name && s.score !== null);
+        return evScores.length >= totalNeeded && totalNeeded > 0;
+      });
+      if (!allComplete) return { isReady: false, project: { id: project.id, name: project.name } };
+      const constructionCost = (project.bua || 0) * (project.pricePerSqft || 0);
+      const CRITERIA_WEIGHTS = [{ id: 0, weight: 14.6 }, { id: 1, weight: 14.6 }, { id: 3, weight: 13.6 }, { id: 4, weight: 10.7 }, { id: 5, weight: 9.7 }, { id: 6, weight: 9.7 }, { id: 7, weight: 9.7 }, { id: 8, weight: 9.2 }, { id: 9, weight: 8.2 }];
+      const results = pcs.map(pc => {
+        const c = consultantMap[pc.consultantId];
+        const fin = fins.find(f => f.consultantId === pc.consultantId);
+        let designAmount = 0, supervisionAmount = 0;
+        if (fin) {
+          designAmount = fin.designType === 'pct' ? constructionCost * ((fin.designValue || 0) / 100) : (fin.designValue || 0);
+          supervisionAmount = fin.supervisionType === 'pct' ? constructionCost * ((fin.supervisionValue || 0) / 100) : (fin.supervisionValue || 0);
+        }
+        const totalFees = designAmount + supervisionAmount;
+        const consScores = allScores.filter(s => s.consultantId === pc.consultantId);
+        let technicalWeighted = 0;
+        CRITERIA_WEIGHTS.forEach(cw => {
+          const evScoresForCriterion = evaluatorNames.map(name => {
+            const s = consScores.find(s => s.evaluatorName === name && s.criterionId === cw.id);
+            return s?.score || 0;
+          });
+          const avg = evScoresForCriterion.reduce((a, b) => a + b, 0) / evaluatorNames.length;
+          technicalWeighted += (avg * cw.weight) / 100;
+        });
+        return { id: c?.id || pc.consultantId, name: c?.name || '\u063a\u064a\u0631 \u0645\u0639\u0631\u0648\u0641', totalFees, technicalScore: Math.round(technicalWeighted * 100) / 100, financialScore: 0 as number, finalScore: 0 as number, rank: 0 as number };
+      });
+      const feesArr = results.filter(r => r.totalFees > 0).map(r => r.totalFees);
+      const lowestFee = Math.min(...feesArr) || 1;
+      results.forEach(r => {
+        r.financialScore = r.totalFees > 0 ? Math.round((lowestFee / r.totalFees) * 100 * 100) / 100 : 0;
+        r.finalScore = Math.round((r.technicalScore * 0.2 + r.financialScore * 0.8) * 100) / 100;
+      });
+      results.sort((a, b) => b.finalScore - a.finalScore);
+      results.forEach((r, i) => { r.rank = i + 1; });
+      return { isReady: true, project: { id: project.id, name: project.name }, results };
+    }),
+
+  getProjectCommitteeDecision: publicProcedure
+    .input(z.object({ token: z.string(), projectId: z.number() }))
+    .query(async ({ input }) => {
+      await verifyToken(input.token);
+      const db = await getDb();
+      if (!db) return null;
+      const [decision] = await db.select().from(committeeDecisions).where(eq(committeeDecisions.projectId, input.projectId));
+      const aiScores = await db.select().from(aiAdvisoryScores).where(eq(aiAdvisoryScores.projectId, input.projectId));
+      return { decision: decision || null, aiScores };
+    }),
+
+  saveCommitteeDecision: publicProcedure
+    .input(z.object({ token: z.string(), projectId: z.number(), selectedConsultantId: z.number().optional(), decisionType: z.string(), justification: z.string().optional(), committeeNotes: z.string().optional() }))
+    .mutation(async ({ input }) => {
+      await verifyToken(input.token);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const [existing] = await db.select().from(committeeDecisions).where(eq(committeeDecisions.projectId, input.projectId));
+      if (existing) {
+        await db.update(committeeDecisions).set({ selectedConsultantId: input.selectedConsultantId || null, decisionType: input.decisionType, justification: input.justification || null, committeeNotes: input.committeeNotes || null }).where(eq(committeeDecisions.projectId, input.projectId));
+      } else {
+        await db.insert(committeeDecisions).values({ projectId: input.projectId, selectedConsultantId: input.selectedConsultantId || null, decisionType: input.decisionType, justification: input.justification || null, committeeNotes: input.committeeNotes || null });
+      }
+      return { success: true };
+    }),
+
+  confirmDecision: publicProcedure
+    .input(z.object({ token: z.string(), projectId: z.number() }))
+    .mutation(async ({ input }) => {
+      const member = await verifyToken(input.token);
+      if (member.memberId !== 'sheikh_issa') throw new TRPCError({ code: "FORBIDDEN", message: "\u0641\u0642\u0637 \u0627\u0644\u0634\u064a\u062e \u0639\u064a\u0633\u0649 \u064a\u0645\u0643\u0646\u0647 \u062a\u0623\u0643\u064a\u062f \u0627\u0644\u0642\u0631\u0627\u0631" });
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await db.update(committeeDecisions).set({ isConfirmed: 1, confirmedAt: new Date(), confirmedBy: '\u0627\u0644\u0634\u064a\u062e \u0639\u064a\u0633\u0649' }).where(eq(committeeDecisions.projectId, input.projectId));
+      await db.insert(commandCenterNotifications).values(['abdulrahman', 'wael', 'sheikh_issa'].map(m => ({ memberId: m, title: '\u062a\u0645 \u062a\u0623\u0643\u064a\u062f \u0642\u0631\u0627\u0631 \u0627\u0644\u0644\u062c\u0646\u0629', message: '\u062a\u0645 \u062a\u0623\u0643\u064a\u062f \u0642\u0631\u0627\u0631 \u0627\u062e\u062a\u064a\u0627\u0631 \u0627\u0644\u0627\u0633\u062a\u0634\u0627\u0631\u064a \u0644\u0644\u0645\u0634\u0631\u0648\u0639', type: 'evaluation' as const })));
+      return { success: true };
     }),
 });
