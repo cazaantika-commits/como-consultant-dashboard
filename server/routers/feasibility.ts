@@ -295,4 +295,56 @@ export const feasibilityRouter = router({
       
       return { id: Number(result[0].insertId) };
     }),
+
+  // Get cash flow data for charts
+  getCashFlowData: publicProcedure
+    .input(z.number())
+    .query(async ({ ctx, input }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      
+      const results = await db.select().from(feasibilityStudies).where(
+        and(eq(feasibilityStudies.id, input), eq(feasibilityStudies.userId, ctx.user.id))
+      );
+      if (!results[0]) throw new Error("Study not found");
+      const study = results[0];
+
+      const saleableRes = (study.gfaResidential || 0) * ((study.saleableResidentialPct || 90) / 100);
+      const saleableRet = (study.gfaRetail || 0) * ((study.saleableRetailPct || 99) / 100);
+      const saleableOff = (study.gfaOffices || 0) * ((study.saleableOfficesPct || 90) / 100);
+      const constructionCost = (study.estimatedBua || 0) * (study.constructionCostPerSqft || 0);
+      const revenueRes = saleableRes * (study.residentialSalePrice || 0);
+      const revenueRet = saleableRet * (study.retailSalePrice || 0);
+      const revenueOff = saleableOff * (study.officesSalePrice || 0);
+      const totalRevenue = revenueRes + revenueRet + revenueOff;
+      const landReg = (study.landPrice || 0) * 0.04;
+      const agentLand = (study.landPrice || 0) * ((study.agentCommissionLandPct || 1) / 100);
+      const designFee = constructionCost * ((study.designFeePct || 2) / 100);
+      const supervisionFee = constructionCost * ((study.supervisionFeePct || 2) / 100);
+      const separationFee = (study.plotAreaM2 || 0) * (study.separationFeePerM2 || 40);
+      const contingencies = constructionCost * ((study.contingenciesPct || 2) / 100);
+      const reraUnits = (study.numberOfUnits || 0) * (study.reraUnitFee || 850);
+      const fixedFees = (study.reraOffplanFee || 0) + (study.nocFee || 0) + (study.escrowFee || 0) + (study.bankCharges || 0) + (study.surveyorFees || 0) + (study.reraAuditFees || 0) + (study.reraInspectionFees || 0);
+      const devFee = totalRevenue * ((study.developerFeePct || 5) / 100);
+      const agentSale = totalRevenue * ((study.agentCommissionSalePct || 5) / 100);
+      const marketing = totalRevenue * ((study.marketingPct || 2) / 100);
+      const totalCosts = (study.landPrice || 0) + landReg + agentLand + constructionCost + designFee + supervisionFee + separationFee + contingencies + reraUnits + fixedFees + (study.soilInvestigation || 0) + (study.topographySurvey || 0) + (study.authoritiesFee || 0) + (study.communityFee || 0) + devFee + agentSale + marketing;
+      const profit = totalRevenue - totalCosts;
+      const fundingRequired = totalCosts - (constructionCost * 0.65);
+      const comoProfit = profit * ((study.comoProfitSharePct || 15) / 100);
+      const investorProfit = profit - comoProfit;
+
+      return {
+        projectName: study.projectName,
+        totalRevenue: Math.round(totalRevenue),
+        totalCosts: Math.round(totalCosts),
+        profit: Math.round(profit),
+        fundingRequired: Math.round(fundingRequired),
+        comoProfit: Math.round(comoProfit),
+        investorProfit: Math.round(investorProfit),
+        profitMargin: totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0,
+        roi: fundingRequired > 0 ? (investorProfit / fundingRequired) * 100 : 0,
+      };
+    }),
 });
