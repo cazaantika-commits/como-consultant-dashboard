@@ -194,10 +194,10 @@ export default function FeasibilityStudyPage() {
   });
 
   // Queries
-  const studiesQuery = trpc.feasibility2.list.useQuery(undefined, {
+  const studiesQuery = trpc.feasibility.list.useQuery(undefined, {
     enabled: isAuthenticated,
   });
-  const studyQuery = trpc.feasibility2.getById.useQuery(selectedStudyId || 0, {
+  const studyQuery = trpc.feasibility.getById.useQuery(selectedStudyId || 0, {
     enabled: !!selectedStudyId,
   });
 
@@ -210,7 +210,7 @@ export default function FeasibilityStudyPage() {
   }, [studiesQuery.data, selectedProjectId]);
 
   // Mutations
-  const createMutation = trpc.feasibility2.create.useMutation({
+  const createMutation = trpc.feasibility.create.useMutation({
     onSuccess: (data) => {
       studiesQuery.refetch();
       setSelectedStudyId(data.id);
@@ -219,7 +219,7 @@ export default function FeasibilityStudyPage() {
     onError: () => toast.error("خطأ في إنشاء الدراسة"),
   });
 
-  const updateMutation = trpc.feasibility2.update.useMutation({
+  const updateMutation = trpc.feasibility.update.useMutation({
     onSuccess: () => {
       studiesQuery.refetch();
       studyQuery.refetch();
@@ -229,7 +229,7 @@ export default function FeasibilityStudyPage() {
     onError: () => toast.error("خطأ في الحفظ"),
   });
 
-  const deleteMutation = trpc.feasibility2.delete.useMutation({
+  const deleteMutation = trpc.feasibility.delete.useMutation({
     onSuccess: () => {
       studiesQuery.refetch();
       setSelectedStudyId(null);
@@ -239,7 +239,7 @@ export default function FeasibilityStudyPage() {
   });
 
   // Joelle AI Summary
-  const aiSummaryMutation = trpc.feasibility2.generateAiSummary.useMutation({
+  const aiSummaryMutation = trpc.feasibility.generateAiSummary.useMutation({
     onSuccess: (data) => {
       studyQuery.refetch();
       setForm((prev: Record<string, any>) => ({ ...prev, aiSummary: data.summary }));
@@ -249,7 +249,7 @@ export default function FeasibilityStudyPage() {
   });
 
   // Joelle Market Analysis
-  const marketAnalysisMutation = trpc.feasibility2.generateMarketAnalysis.useMutation({
+  const marketAnalysisMutation = trpc.feasibility.generateMarketAnalysis.useMutation({
     onSuccess: (data) => {
       studyQuery.refetch();
       setForm((prev: Record<string, any>) => ({ ...prev, marketAnalysis: data.analysis }));
@@ -259,7 +259,7 @@ export default function FeasibilityStudyPage() {
   });
 
   // Duplicate as scenario
-  const duplicateScenarioMutation = trpc.feasibility2.duplicateAsScenario.useMutation({
+  const duplicateScenarioMutation = trpc.feasibility.duplicateAsScenario.useMutation({
     onSuccess: (data) => {
       studiesQuery.refetch();
       setSelectedStudyId(data.id);
