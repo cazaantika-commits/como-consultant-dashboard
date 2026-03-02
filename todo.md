@@ -1278,3 +1278,22 @@
 - [x] اختيار الاستشاري + المبررات + ملاحظات اللجنة + حفظ القرار
 - [x] إضافة backend procedures جديدة (getProjectsForEvaluation, getProjectFinancialData, etc.)
 - [x] لا تضارب بين المنصة ومركز القيادة (المنصة = إدخال، مركز القيادة = تقييم وقرار)
+
+## دمج ميزات Replit في المنصة الأصلية - مارس 2
+- [x] استخراج ملفات Replit (tar.gz, database backup, documentation)
+- [x] نسخ صفحات Replit الجديدة (FeasibilityStudy, DevelopmentStages, ExecutiveCashFlow, ProjectLifecycle)
+- [x] نسخ ملفات الخادم والمسارات من Replit
+- [x] إصلاح الاستيرادات المكررة في App.tsx
+- [x] إضافة المسارات الجديدة للصفحات في App.tsx
+- [x] إنشاء ملف @/lib/api.ts للدوال المفقودة (formatAED, apiRequest, formatNumber)
+- [x] إنشاء ملف @/lib/i18n.ts لدعم اللغات
+- [x] إنشاء ملف @/lib/queryClient.ts لتكوين React Query
+- [x] إنشاء ملف @/hooks/use-toast.ts لدعم التنبيهات
+- [x] إصلاح الاستيراد الخاطئ في DevelopmentStages.tsx
+- [x] تثبيت مكتبة dompurify المفقودة
+- [x] تعطيل صفحات Replit مؤقتاً (لديها تبعيات معقدة تحتاج إلى حل منفصل)
+- [ ] دمج جداول قاعدة البيانات من Replit (بحذر - عدم لمس جداول التقييم) - لاحقاً
+- [ ] استبدال وكلاء Replit بوكلاء المنصة الأصلية (Joelle, Alina, Salwa, Layla) - لاحقاً
+- [ ] إضافة روابط الصفحات الجديدة في القائمة الجانبية والتنقل - لاحقاً
+- [ ] اختبار شامل للتأكد من عدم تأثر نظام تقييم الاستشاريين - لاحقاً
+- [ ] حفظ checkpoint

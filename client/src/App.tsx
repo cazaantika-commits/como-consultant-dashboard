@@ -12,7 +12,6 @@ import DriveBrowserPage from "./pages/DriveBrowserPage";
 import TasksPage from "./pages/TasksPage";
 import AgentDashboardPage from "./pages/AgentDashboardPage";
 import ConsultantEvaluationPage from "./pages/ConsultantEvaluationPage";
-import FeasibilityStudyPage from "./pages/FeasibilityStudyPage";
 import ConsultantPortalPage from "./pages/ConsultantPortalPage";
 import ConsultantGuidePage from "./pages/ConsultantGuidePage";
 import ConsultantProposalsPage from "./pages/ConsultantProposalsPage";
@@ -42,6 +41,11 @@ import SpecialistKnowledgePage from "./pages/SpecialistKnowledgePage";
 import SentEmailsPage from "./pages/SentEmailsPage";
 import ExecutiveVIPPage from "./pages/ExecutiveVIPPage";
 import CommandCenterPage from "./pages/CommandCenterPage";
+// Replit pages - temporarily disabled pending dependency resolution
+// import FeasibilityStudyPageReplit from "./pages/FeasibilityStudy";
+// import DevelopmentStagesPage from "./pages/DevelopmentStages";
+// import ExecutiveCashFlowPage from "./pages/ExecutiveCashFlow";
+// import ProjectLifecyclePage from "./pages/ProjectLifecycle";
 
 function Router() {
   return (
@@ -54,7 +58,11 @@ function Router() {
       <Route path="/tasks" component={TasksPage} />
       <Route path="/agent-dashboard" component={AgentDashboardPage} />
       <Route path="/consultant-evaluation" component={ConsultantEvaluationPage} />
-      <Route path="/feasibility-study" component={FeasibilityStudyPage} />
+      {/* Replit pages - temporarily disabled pending dependency resolution */}
+      {/* <Route path="/feasibility-study" component={FeasibilityStudyPageReplit} />
+      <Route path="/development-stages" component={DevelopmentStagesPage} />
+      <Route path="/cash-flow" component={ExecutiveCashFlowPage} />
+      <Route path="/project-lifecycle" component={ProjectLifecyclePage} /> */}
       <Route path="/consultant-portal" component={ConsultantPortalPage} />
       <Route path="/consultant-guide" component={ConsultantGuidePage} />
       <Route path="/consultant-proposals" component={ConsultantProposalsPage} />
