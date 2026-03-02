@@ -41,11 +41,11 @@ import SpecialistKnowledgePage from "./pages/SpecialistKnowledgePage";
 import SentEmailsPage from "./pages/SentEmailsPage";
 import ExecutiveVIPPage from "./pages/ExecutiveVIPPage";
 import CommandCenterPage from "./pages/CommandCenterPage";
-// Replit pages - temporarily disabled pending dependency resolution
-// import FeasibilityStudyPageReplit from "./pages/FeasibilityStudy";
-// import DevelopmentStagesPage from "./pages/DevelopmentStages";
-// import ExecutiveCashFlowPage from "./pages/ExecutiveCashFlow";
-// import ProjectLifecyclePage from "./pages/ProjectLifecycle";
+// Replit pages - using simplified versions
+import FeasibilityStudyPageReplit from "./pages/FeasibilityStudySimplified";
+import DevelopmentStagesPage from "./pages/DevelopmentStagesSimplified";
+import ExecutiveCashFlowPage from "./pages/ProjectCashFlowSimplified";
+import ProjectLifecyclePage from "./pages/ProjectLifecycleSimplified";
 
 function Router() {
   return (
@@ -58,11 +58,11 @@ function Router() {
       <Route path="/tasks" component={TasksPage} />
       <Route path="/agent-dashboard" component={AgentDashboardPage} />
       <Route path="/consultant-evaluation" component={ConsultantEvaluationPage} />
-      {/* Replit pages - temporarily disabled pending dependency resolution */}
-      {/* <Route path="/feasibility-study" component={FeasibilityStudyPageReplit} />
+      {/* Replit pages - simplified versions */}
+      <Route path="/feasibility-study" component={FeasibilityStudyPageReplit} />
       <Route path="/development-stages" component={DevelopmentStagesPage} />
       <Route path="/cash-flow" component={ExecutiveCashFlowPage} />
-      <Route path="/project-lifecycle" component={ProjectLifecyclePage} /> */}
+      <Route path="/project-lifecycle" component={ProjectLifecyclePage} />
       <Route path="/consultant-portal" component={ConsultantPortalPage} />
       <Route path="/consultant-guide" component={ConsultantGuidePage} />
       <Route path="/consultant-proposals" component={ConsultantProposalsPage} />
