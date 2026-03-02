@@ -686,6 +686,14 @@ export default function FeasibilityStudyPage() {
                   <Globe className="w-3.5 h-3.5" />
                   🌍 تحليل السوق
                 </TabsTrigger>
+                <TabsTrigger value="comprehensive" className="gap-1.5 text-xs">
+                  <FileText className="w-3.5 h-3.5" />
+                  📄 التقرير الشامل
+                </TabsTrigger>
+                <TabsTrigger value="executive" className="gap-1.5 text-xs">
+                  <Brain className="w-3.5 h-3.5" />
+                  👔 تقرير المجلس
+                </TabsTrigger>
               </TabsList>
 
               {/* ═══ Tab 1: Project Info ═══ */}
@@ -1282,6 +1290,102 @@ export default function FeasibilityStudyPage() {
                     </CardContent>
                   </Card>
                 </div>
+              </TabsContent>
+
+              {/* ═══ Tab 8: Comprehensive Report ═══ */}
+              <TabsContent value="comprehensive">
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                          <FileText className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-foreground">التقرير الشامل المهني الاحترافي</h3>
+                          <p className="text-xs text-muted-foreground">تقرير مفصل من جويل يتضمن جميع جوانب المشروع</p>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => {
+                          if (selectedStudyId) {
+                            trpc.feasibility.generateComprehensiveReport.useMutation({
+                              onSuccess: (data) => {
+                                studyQuery.refetch();
+                                setForm((prev: Record<string, any>) => ({ ...prev, competitorAnalysis: data.report }));
+                                toast.success("تم إنشاء التقرير الشامل بنجاح");
+                              },
+                              onError: (err) => toast.error(err.message || "فشل في إنشاء التقرير"),
+                            }).mutate({ id: selectedStudyId });
+                          }
+                        }}
+                        className="gap-2"
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        إنشاء التقرير
+                      </Button>
+                    </div>
+                    {form.competitorAnalysis ? (
+                      <div className="prose prose-sm max-w-none bg-muted/30 rounded-xl p-6 border border-border" dir="rtl">
+                        <Streamdown>{form.competitorAnalysis}</Streamdown>
+                      </div>
+                    ) : (
+                      <div className="text-center py-12 bg-muted/20 rounded-xl border border-dashed border-border">
+                        <FileText className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
+                        <p className="text-sm text-muted-foreground">لم يتم إنشاء التقرير الشامل بعد</p>
+                        <p className="text-xs text-muted-foreground/70 mt-1">اضغط "إنشاء التقرير" ليقوم جويل بإعداد تقرير شامل واحترافي</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* ═══ Tab 9: Executive Report ═══ */}
+              <TabsContent value="executive">
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                          <Brain className="w-5 h-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-foreground">التقرير المختصر لمجلس الإدارة</h3>
+                          <p className="text-xs text-muted-foreground">ملخص موجز وفعال من جويل للقيادة العليا</p>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => {
+                          if (selectedStudyId) {
+                            trpc.feasibility.generateExecutiveReport.useMutation({
+                              onSuccess: (data) => {
+                                studyQuery.refetch();
+                                setForm((prev: Record<string, any>) => ({ ...prev, priceRecommendation: data.report }));
+                                toast.success("تم إنشاء تقرير المجلس بنجاح");
+                              },
+                              onError: (err) => toast.error(err.message || "فشل في إنشاء التقرير"),
+                            }).mutate({ id: selectedStudyId });
+                          }
+                        }}
+                        className="gap-2"
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        إنشاء التقرير
+                      </Button>
+                    </div>
+                    {form.priceRecommendation ? (
+                      <div className="prose prose-sm max-w-none bg-muted/30 rounded-xl p-6 border border-border" dir="rtl">
+                        <Streamdown>{form.priceRecommendation}</Streamdown>
+                      </div>
+                    ) : (
+                      <div className="text-center py-12 bg-muted/20 rounded-xl border border-dashed border-border">
+                        <Brain className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
+                        <p className="text-sm text-muted-foreground">لم يتم إنشاء تقرير المجلس بعد</p>
+                        <p className="text-xs text-muted-foreground/70 mt-1">اضغط "إنشاء التقرير" ليقوم جويل بإعداد ملخص موجز للقيادة العليا</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </TabsContent>
             </Tabs>
           </>

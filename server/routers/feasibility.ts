@@ -296,6 +296,92 @@ export const feasibilityRouter = router({
       return { id: Number(result[0].insertId) };
     }),
 
+  // Generate comprehensive report
+  generateComprehensiveReport: publicProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      
+      const results = await db.select().from(feasibilityStudies).where(
+        and(eq(feasibilityStudies.id, input.id), eq(feasibilityStudies.userId, ctx.user.id))
+      );
+      if (!results[0]) throw new Error("Study not found");
+      const study = results[0];
+
+      const prompt = `أنتِ جويل، محللة دراسات الجدوى المتقدمة في Como Developments. اكتبي تقريراً شاملاً واحترافياً للمشروع: ${study.projectName}. يجب أن يتضمن التقرير:
+
+1. ملخص تنفيذي شامل
+2. تحليل السوق والمنافسة
+3. تقييم المخاطر والفرص
+4. الإسقاطات المالية المفصلة
+5. توصيات استراتيجية
+
+اكتبي التقرير باللغة العربية بشكل احترافي ومفصل.`;
+
+      try {
+        const response = await invokeLLM({
+          messages: [
+            { role: "system", content: "أنتِ جويل، محللة دراسات الجدوى المتقدمة. تقاريرك شاملة واحترافية." },
+            { role: "user", content: prompt },
+          ],
+        });
+        const report = response.choices[0]?.message?.content || "لم يتم إنشاء التقرير";
+        
+        await db.update(feasibilityStudies)
+          .set({ competitorAnalysis: report })
+          .where(eq(feasibilityStudies.id, input.id));
+        
+        return { success: true, report };
+      } catch (error: any) {
+        throw new Error(`فشل في إنشاء التقرير: ${error.message}`);
+      }
+    }),
+
+  // Generate executive report for board
+  generateExecutiveReport: publicProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      
+      const results = await db.select().from(feasibilityStudies).where(
+        and(eq(feasibilityStudies.id, input.id), eq(feasibilityStudies.userId, ctx.user.id))
+      );
+      if (!results[0]) throw new Error("Study not found");
+      const study = results[0];
+
+      const prompt = `أنتِ جويل، محللة دراسات الجدوى. اكتبي تقريراً مختصراً وموجزاً لمجلس الإدارة عن المشروع: ${study.projectName}. يجب أن يكون التقرير:
+
+1. مختصراً (1-2 صفحة)
+2. يركز على النقاط الرئيسية والتوصيات
+3. يتضمن المؤشرات المالية الأساسية
+4. يقيّم المخاطر الرئيسية
+5. يقترح الخطوات التالية
+
+اكتبي التقرير باللغة العربية بشكل موجز واحترافي.`;
+
+      try {
+        const response = await invokeLLM({
+          messages: [
+            { role: "system", content: "أنتِ جويل، محللة دراسات الجدوى. تقاريرك الموجزة واضحة وفعالة." },
+            { role: "user", content: prompt },
+          ],
+        });
+        const report = response.choices[0]?.message?.content || "لم يتم إنشاء التقرير";
+        
+        await db.update(feasibilityStudies)
+          .set({ priceRecommendation: report })
+          .where(eq(feasibilityStudies.id, input.id));
+        
+        return { success: true, report };
+      } catch (error: any) {
+        throw new Error(`فشل في إنشاء التقرير: ${error.message}`);
+      }
+    }),
+
   // Get cash flow data for charts
   getCashFlowData: publicProcedure
     .input(z.number())

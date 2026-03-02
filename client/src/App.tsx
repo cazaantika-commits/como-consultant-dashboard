@@ -41,6 +41,7 @@ import SpecialistKnowledgePage from "./pages/SpecialistKnowledgePage";
 import SentEmailsPage from "./pages/SentEmailsPage";
 import ExecutiveVIPPage from "./pages/ExecutiveVIPPage";
 import CommandCenterPage from "./pages/CommandCenterPage";
+import FeasibilityStudyPage from "./pages/FeasibilityStudyPage";
 // Replit pages - using simplified versions
 import FeasibilityStudyPageReplit from "./pages/FeasibilityStudySimplified";
 import DevelopmentStagesPage from "./pages/DevelopmentStagesSimplified";
@@ -59,7 +60,8 @@ function Router() {
       <Route path="/agent-dashboard" component={AgentDashboardPage} />
       <Route path="/consultant-evaluation" component={ConsultantEvaluationPage} />
       {/* Replit pages - simplified versions */}
-      <Route path="/feasibility-study" component={FeasibilityStudyPageReplit} />
+      <Route path="/feasibility" component={FeasibilityStudyPage} />
+      <Route path="/feasibility-study" component={FeasibilityStudyPage} />
       <Route path="/development-stages" component={DevelopmentStagesPage} />
       <Route path="/cash-flow" component={ExecutiveCashFlowPage} />
       <Route path="/project-lifecycle" component={ProjectLifecyclePage} />

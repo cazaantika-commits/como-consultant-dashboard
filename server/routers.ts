@@ -52,7 +52,7 @@ export const appRouter = router({
   drive: driveRouter,
   tasks: tasksRouter,
   agents: agentsRouter,
-  feasibility2: feasibilityRouter,
+  feasibility: feasibilityRouter,
   evaluatorScores: evaluatorScoresRouter,
   committee: committeeRouter,
   consultantDetails: consultantDetailsRouter,
