@@ -408,11 +408,13 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
   const handleSave = () => {
     if (!selectedProjectId) return;
     const payload: Record<string, any> = { id: selectedProjectId };
+    const numericIntFields = ["bua", "adminFee", "clearanceFee", "compensationAmount"];
     for (const [key, value] of Object.entries(formData)) {
-      if (["bua", "adminFee", "clearanceFee", "compensationAmount"].includes(key)) {
+      if (numericIntFields.includes(key)) {
         payload[key] = value ? Number(value) : undefined;
       } else {
-        payload[key] = value || undefined;
+        // Use null check instead of falsy check to allow '0' values
+        payload[key] = (value !== null && value !== undefined && String(value).trim() !== "") ? value : undefined;
       }
     }
     updateProject.mutate(payload as any);

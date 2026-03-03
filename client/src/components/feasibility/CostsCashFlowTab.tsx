@@ -77,6 +77,14 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
   const projectQuery = trpc.projects.getById.useQuery(projectId || 0, { enabled: !!projectId });
   const project = projectQuery.data;
 
+  // Fetch Tab 1 (Market Overview) data for unit distribution & areas
+  const moQuery = trpc.marketOverview.getByProject.useQuery(projectId || 0, { enabled: !!projectId });
+  const mo = moQuery.data;
+
+  // Fetch Tab 2 (Competition Pricing) data for prices
+  const cpQuery = trpc.competitionPricing.getByProject.useQuery(projectId || 0, { enabled: !!projectId });
+  const cp = cpQuery.data;
+
   // Fetch costs data (for smart report and approval status only)
   const costsQuery = trpc.costsCashFlow.getByProject.useQuery(projectId || 0, { enabled: !!projectId });
 
@@ -134,11 +142,63 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
     const plotAreaM2 = plotAreaSqft * 0.0929;
     const totalUnits = feasComputed.totalUnits || 0;
 
-    // --- Source 3: Tab 2 (المنافسة والتسعير) via feasComputed ---
-    const totalRevenue = feasComputed.totalRevenue || 0;
-    const revenueRes = feasComputed.revenueRes || 0;
-    const revenueRet = feasComputed.revenueRet || 0;
-    const revenueOff = feasComputed.revenueOff || 0;
+    // --- Source 3: Tab 2 (المنافسة والتسعير) - حساب مباشر من marketOverview + competitionPricing ---
+    const saleableRes = feasComputed.saleableRes || 0;
+    const saleableRet = feasComputed.saleableRet || 0;
+    const saleableOff = feasComputed.saleableOff || 0;
+
+    // Get active scenario prices from competitionPricing
+    const activeScenario = cp?.activeScenario || "base";
+    const getPrices = () => {
+      if (!cp) return { studioPrice: 0, oneBrPrice: 0, twoBrPrice: 0, threeBrPrice: 0, retailSmallPrice: 0, retailMediumPrice: 0, retailLargePrice: 0, officeSmallPrice: 0, officeMediumPrice: 0, officeLargePrice: 0 };
+      if (activeScenario === "optimistic") return {
+        studioPrice: cp.optStudioPrice || 0, oneBrPrice: cp.opt1brPrice || 0, twoBrPrice: cp.opt2brPrice || 0, threeBrPrice: cp.opt3brPrice || 0,
+        retailSmallPrice: cp.optRetailSmallPrice || 0, retailMediumPrice: cp.optRetailMediumPrice || 0, retailLargePrice: cp.optRetailLargePrice || 0,
+        officeSmallPrice: cp.optOfficeSmallPrice || 0, officeMediumPrice: cp.optOfficeMediumPrice || 0, officeLargePrice: cp.optOfficeLargePrice || 0,
+      };
+      if (activeScenario === "conservative") return {
+        studioPrice: cp.consStudioPrice || 0, oneBrPrice: cp.cons1brPrice || 0, twoBrPrice: cp.cons2brPrice || 0, threeBrPrice: cp.cons3brPrice || 0,
+        retailSmallPrice: cp.consRetailSmallPrice || 0, retailMediumPrice: cp.consRetailMediumPrice || 0, retailLargePrice: cp.consRetailLargePrice || 0,
+        officeSmallPrice: cp.consOfficeSmallPrice || 0, officeMediumPrice: cp.consOfficeMediumPrice || 0, officeLargePrice: cp.consOfficeLargePrice || 0,
+      };
+      return {
+        studioPrice: cp.baseStudioPrice || 0, oneBrPrice: cp.base1brPrice || 0, twoBrPrice: cp.base2brPrice || 0, threeBrPrice: cp.base3brPrice || 0,
+        retailSmallPrice: cp.baseRetailSmallPrice || 0, retailMediumPrice: cp.baseRetailMediumPrice || 0, retailLargePrice: cp.baseRetailLargePrice || 0,
+        officeSmallPrice: cp.baseOfficeSmallPrice || 0, officeMediumPrice: cp.baseOfficeMediumPrice || 0, officeLargePrice: cp.baseOfficeLargePrice || 0,
+      };
+    };
+    const prices = getPrices();
+
+    // Calculate revenue from unit distribution (Tab 1) × prices (Tab 2)
+    const calcTypeRevenue = (pct: number, avgArea: number, pricePerSqft: number, saleable: number) => {
+      const allocated = saleable * (pct / 100);
+      const units = avgArea > 0 ? Math.floor(allocated / avgArea) : 0;
+      return avgArea * pricePerSqft * units;
+    };
+
+    let revenueRes = 0;
+    let revenueRet = 0;
+    let revenueOff = 0;
+
+    if (mo) {
+      // Residential revenue
+      revenueRes += calcTypeRevenue(parseFloat(mo.residentialStudioPct || "0"), mo.residentialStudioAvgArea || 0, prices.studioPrice, saleableRes);
+      revenueRes += calcTypeRevenue(parseFloat(mo.residential1brPct || "0"), mo.residential1brAvgArea || 0, prices.oneBrPrice, saleableRes);
+      revenueRes += calcTypeRevenue(parseFloat(mo.residential2brPct || "0"), mo.residential2brAvgArea || 0, prices.twoBrPrice, saleableRes);
+      revenueRes += calcTypeRevenue(parseFloat(mo.residential3brPct || "0"), mo.residential3brAvgArea || 0, prices.threeBrPrice, saleableRes);
+
+      // Retail revenue
+      revenueRet += calcTypeRevenue(parseFloat(mo.retailSmallPct || "0"), mo.retailSmallAvgArea || 0, prices.retailSmallPrice, saleableRet);
+      revenueRet += calcTypeRevenue(parseFloat(mo.retailMediumPct || "0"), mo.retailMediumAvgArea || 0, prices.retailMediumPrice, saleableRet);
+      revenueRet += calcTypeRevenue(parseFloat(mo.retailLargePct || "0"), mo.retailLargeAvgArea || 0, prices.retailLargePrice, saleableRet);
+
+      // Office revenue
+      revenueOff += calcTypeRevenue(parseFloat(mo.officeSmallPct || "0"), mo.officeSmallAvgArea || 0, prices.officeSmallPrice, saleableOff);
+      revenueOff += calcTypeRevenue(parseFloat(mo.officeMediumPct || "0"), mo.officeMediumAvgArea || 0, prices.officeMediumPrice, saleableOff);
+      revenueOff += calcTypeRevenue(parseFloat(mo.officeLargePct || "0"), mo.officeLargeAvgArea || 0, prices.officeLargePrice, saleableOff);
+    }
+
+    const totalRevenue = revenueRes + revenueRet + revenueOff;
 
     // ═══════════════════════════════════════════
     // CALCULATED COSTS
@@ -204,7 +264,7 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
       totalCosts, profit, profitMargin, roi, costPerSqft, profitPerSqft,
       missing,
     };
-  }, [project, feasForm, feasComputed]);
+  }, [project, mo, cp, feasForm, feasComputed]);
 
   if (!projectId) {
     return (
