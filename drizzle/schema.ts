@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, mediumtext, longtext, timestamp, varchar, decimal } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, mediumtext, longtext, timestamp, varchar, decimal, boolean } from "drizzle-orm/mysql-core";
 import { bigint as bigintCol } from "drizzle-orm/mysql-core";
 
 /**
@@ -1600,3 +1600,41 @@ export const costsCashFlow = mysqlTable('costs_cash_flow', {
 
 export type CostsCashFlow = typeof costsCashFlow.$inferSelect;
 export type InsertCostsCashFlow = typeof costsCashFlow.$inferInsert;
+
+
+// ═══════════════════════════════════════════════════════════════
+// مراحل التطوير - Development Stages
+// ═══════════════════════════════════════════════════════════════
+
+// عناصر المراحل (المهام)
+export const stageItems = mysqlTable('stage_items', {
+  id: int('id').autoincrement().primaryKey(),
+  projectId: int('projectId').notNull().references(() => projects.id),
+  phaseNumber: int('phaseNumber').notNull(), // 2-6
+  sectionKey: varchar('sectionKey', { length: 20 }).notNull(), // e.g. "2.1", "3.2"
+  itemIndex: int('itemIndex').notNull(), // ترتيب المهمة داخل القسم
+  title: text('title').notNull(), // عنوان المهمة
+  status: mysqlEnum('status', ['not_started', 'in_progress', 'completed']).default('not_started').notNull(),
+  isCustom: boolean('isCustom').default(false).notNull(), // هل هي مهمة مخصصة أضافها المستخدم
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type StageItem = typeof stageItems.$inferSelect;
+export type InsertStageItem = typeof stageItems.$inferInsert;
+
+// مستندات المراحل (الملفات المرفقة)
+export const stageDocuments = mysqlTable('stage_documents', {
+  id: int('id').autoincrement().primaryKey(),
+  stageItemId: int('stageItemId').notNull().references(() => stageItems.id),
+  projectId: int('projectId').notNull().references(() => projects.id),
+  fileName: varchar('fileName', { length: 500 }).notNull(),
+  fileUrl: text('fileUrl').notNull(),
+  fileKey: varchar('fileKey', { length: 500 }).notNull(),
+  mimeType: varchar('mimeType', { length: 100 }),
+  fileSize: int('fileSize'), // bytes
+  uploadedAt: timestamp('uploadedAt').defaultNow().notNull(),
+});
+
+export type StageDocument = typeof stageDocuments.$inferSelect;
+export type InsertStageDocument = typeof stageDocuments.$inferInsert;

@@ -28,6 +28,7 @@ import { specialistKnowledgeRouter } from "./routers/specialistKnowledge";
 import { sentEmailsRouter } from "./routers/sentEmails";
 import { notificationsRouter } from "./routers/notifications";
 import { commandCenterRouter } from "./routers/commandCenter";
+import { stagesRouter } from "./routers/stages";
 import { legalSetupRouter, designsAndPermitsRouter } from "./routers/legalAndDesigns";
 import { marketOverviewRouter } from "./routers/marketOverview";
 import { competitionPricingRouter } from "./routers/competitionPricing";
@@ -73,6 +74,7 @@ export const appRouter = router({
   sentEmails: sentEmailsRouter,
   notifications: notificationsRouter,
   commandCenter: commandCenterRouter,
+  stages: stagesRouter,
   legalSetup: legalSetupRouter,
   designsAndPermits: designsAndPermitsRouter,
   marketOverview: marketOverviewRouter,

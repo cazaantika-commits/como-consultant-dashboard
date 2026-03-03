@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Building2, FileText, Rocket, Sparkles, ClipboardList, BarChart3, RefreshCw } from "lucide-react";
 import FactSheetPage from "./FactSheetPage";
 import FeasibilityStudyPage from "./FeasibilityStudyPage";
-import DevelopmentStagesPage from "./DevelopmentStagesSimplified";
+import DevelopmentStagesPage from "./DevelopmentStagesPage";
 import ProjectLifecyclePage from "./ProjectLifecycleSimplified";
 import { LegalSetupTab } from "@/components/feasibility/LegalSetupTab";
 import { DesignsAndPermitsTab } from "@/components/feasibility/DesignsAndPermitsTab";
@@ -123,7 +123,7 @@ export default function ProjectManagementPage() {
       )}
 
       {activeTab === "development-stages" && (
-        <DevelopmentStagesPage />
+        <DevelopmentStagesPage embedded />
       )}
 
       {activeTab === "project-lifecycle" && (

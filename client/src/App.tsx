@@ -42,7 +42,7 @@ import SentEmailsPage from "./pages/SentEmailsPage";
 import ExecutiveVIPPage from "./pages/ExecutiveVIPPage";
 import CommandCenterPage from "./pages/CommandCenterPage";
 import FeasibilityStudyPage from "./pages/FeasibilityStudyPage";
-import DevelopmentStagesPage from "./pages/DevelopmentStagesSimplified";
+import DevelopmentStagesPage from "./pages/DevelopmentStagesPage";
 import ExecutiveCashFlowPage from "./pages/ProjectCashFlowSimplified";
 import ProjectLifecyclePage from "./pages/ProjectLifecycleSimplified";
 
