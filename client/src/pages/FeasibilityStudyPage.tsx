@@ -1,128 +1,78 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
-  Building2,
-  ArrowRight,
-  Save,
-  Plus,
-  Trash2,
-  Calculator,
-  DollarSign,
-  BarChart3,
-  FileText,
-  MapPin,
-  Ruler,
-  TrendingUp,
-  PieChart,
-  Loader2,
-  ChevronLeft,
-  Sparkles,
-  Copy,
-  Brain,
-  Globe,
-  FolderOpen,
+  Building2, Save, Plus, Trash2, Calculator, DollarSign, BarChart3,
+  FileText, MapPin, Ruler, TrendingUp, PieChart, Loader2,
+  Sparkles, Copy, Brain, Globe, FolderOpen, ShieldCheck, Users,
+  Landmark, Percent, ChevronDown, BookOpen, Scale, AlertTriangle,
 } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { useLocation } from "wouter";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-// Helper to format numbers with commas
+// ═══════════════════════════════════════════
+// HELPER COMPONENTS
+// ═══════════════════════════════════════════
+
 function fmt(n: number | null | undefined): string {
   if (n == null || isNaN(n)) return "0";
-  // Preserve decimals for small numbers (percentages), round large numbers
   if (n < 100 && n % 1 !== 0) {
     return n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   }
   return Math.round(n).toLocaleString("en-US");
 }
 
-// Helper to parse number from input
 function parseNum(val: string): number | null {
   const n = parseFloat(val.replace(/,/g, ""));
   return isNaN(n) ? null : n;
 }
 
-// Editable number input component - uses local string state to preserve decimal point while typing
+// Editable number input with local state for decimal support
 function NumInput({
-  label,
-  value,
-  onChange,
-  suffix,
-  prefix,
-  disabled,
-  hint,
+  label, value, onChange, suffix, hint, disabled,
 }: {
-  label: string;
-  value: number | null | undefined;
-  onChange: (v: number | null) => void;
-  suffix?: string;
-  prefix?: string;
-  disabled?: boolean;
-  hint?: string;
+  label: string; value: number | null | undefined;
+  onChange: (v: number | null) => void; suffix?: string;
+  hint?: string; disabled?: boolean;
 }) {
-  const [localValue, setLocalValue] = useState(value != null ? fmt(value) : "");
-  const isFocused = useRef(false);
-  const prevExternalValue = useRef(value);
+  const [localVal, setLocalVal] = useState<string>("");
+  const [focused, setFocused] = useState(false);
 
-  // Sync from external value only when NOT focused (i.e., not typing)
-  useEffect(() => {
-    if (!isFocused.current && value !== prevExternalValue.current) {
-      prevExternalValue.current = value;
-      setLocalValue(value != null ? fmt(value) : "");
-    }
-  }, [value]);
+  const displayVal = focused ? localVal : (value != null ? fmt(value) : "");
 
   return (
     <div className="space-y-1">
-      <Label className="text-xs text-muted-foreground font-medium">{label}</Label>
-      <div className="relative flex items-center">
-        {prefix && (
-          <span className="absolute right-3 text-xs text-muted-foreground">{prefix}</span>
-        )}
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <div className="relative">
         <Input
           type="text"
-          value={localValue}
+          value={displayVal}
           onFocus={() => {
-            isFocused.current = true;
-            // Remove formatting on focus so user can edit raw number
-            if (value != null) {
-              setLocalValue(String(value));
-            }
-          }}
-          onChange={(e) => {
-            const raw = e.target.value;
-            setLocalValue(raw);
-            // Update parent immediately for live calculations, but keep raw string locally
-            const parsed = parseNum(raw);
-            onChange(parsed);
+            setFocused(true);
+            setLocalVal(value != null ? String(value) : "");
           }}
           onBlur={() => {
-            isFocused.current = false;
-            // Format the display value on blur
-            const parsed = parseNum(localValue);
-            if (parsed != null) {
-              setLocalValue(fmt(parsed));
-              onChange(parsed);
-            } else {
-              setLocalValue("");
-              onChange(null);
-            }
-            prevExternalValue.current = parsed;
+            setFocused(false);
+            const parsed = parseNum(localVal);
+            onChange(parsed);
           }}
-          className={`text-left font-mono text-sm h-9 ${prefix ? "pr-14" : ""} ${suffix ? "pl-12" : ""}`}
+          onChange={(e) => {
+            setLocalVal(e.target.value);
+          }}
+          className={`text-sm h-9 text-right ${suffix ? "pl-12" : ""} ${disabled ? "bg-muted/50" : ""}`}
+          placeholder="0"
           disabled={disabled}
           dir="ltr"
         />
         {suffix && (
-          <span className="absolute left-3 text-xs text-muted-foreground">{suffix}</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{suffix}</span>
         )}
       </div>
       {hint && <p className="text-[10px] text-muted-foreground/70">{hint}</p>}
@@ -130,19 +80,12 @@ function NumInput({
   );
 }
 
-// Computed value display
-function ComputedValue({
-  label,
-  value,
-  suffix,
-  highlight,
-  large,
+// Read-only computed value display
+function ReadOnlyValue({
+  label, value, suffix, highlight, large,
 }: {
-  label: string;
-  value: number | null | undefined;
-  suffix?: string;
-  highlight?: boolean;
-  large?: boolean;
+  label: string; value: number | null | undefined;
+  suffix?: string; highlight?: boolean; large?: boolean;
 }) {
   return (
     <div className={`flex items-center justify-between py-2 ${large ? "py-3" : ""}`}>
@@ -151,11 +94,7 @@ function ComputedValue({
       </span>
       <span
         className={`font-mono ${large ? "text-lg font-bold" : "text-sm font-semibold"} ${
-          highlight
-            ? (value ?? 0) >= 0
-              ? "text-emerald-600"
-              : "text-red-600"
-            : "text-foreground"
+          highlight ? ((value ?? 0) >= 0 ? "text-emerald-600" : "text-red-600") : "text-foreground"
         }`}
         dir="ltr"
       >
@@ -166,40 +105,52 @@ function ComputedValue({
 }
 
 // Section header
-function SectionHeader({ icon: Icon, title }: { icon: any; title: string }) {
+function SectionHeader({ icon: Icon, title, subtitle }: { icon: any; title: string; subtitle?: string }) {
   return (
-    <div className="flex items-center gap-2 mb-4 pb-2 border-b border-border">
-      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-        <Icon className="w-4 h-4 text-primary" />
+    <div className="flex items-center gap-3 mb-4 pb-3 border-b border-border">
+      <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+        <Icon className="w-4.5 h-4.5 text-primary" />
       </div>
-      <h3 className="font-bold text-foreground">{title}</h3>
+      <div>
+        <h3 className="font-bold text-foreground">{title}</h3>
+        {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+      </div>
     </div>
   );
 }
+
+// Joelle placeholder (when content not generated yet)
+function JoellePlaceholder({ message, subMessage }: { message: string; subMessage: string }) {
+  return (
+    <div className="text-center py-16 bg-muted/20 rounded-xl border border-dashed border-border">
+      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-pink-100 to-purple-100 flex items-center justify-center mx-auto mb-4">
+        <span className="text-2xl font-bold text-purple-400">ج</span>
+      </div>
+      <p className="text-sm font-medium text-muted-foreground">{message}</p>
+      <p className="text-xs text-muted-foreground/70 mt-1">{subMessage}</p>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// MAIN COMPONENT
+// ═══════════════════════════════════════════
 
 export default function FeasibilityStudyPage() {
   const { user, loading, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const [selectedStudyId, setSelectedStudyId] = useState<number | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("all");
-  const [activeTab, setActiveTab] = useState("info");
-
-  // Form state
+  const [activeTab, setActiveTab] = useState("tab1");
   const [form, setForm] = useState<Record<string, any>>({});
   const [isDirty, setIsDirty] = useState(false);
 
-  // Projects query for linking
-  const projectsQuery = trpc.projects.list.useQuery(undefined, {
-    enabled: isAuthenticated,
-  });
+  // Projects query
+  const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
 
-  // Queries
-  const studiesQuery = trpc.feasibility.list.useQuery(undefined, {
-    enabled: isAuthenticated,
-  });
-  const studyQuery = trpc.feasibility.getById.useQuery(selectedStudyId || 0, {
-    enabled: !!selectedStudyId,
-  });
+  // Studies queries
+  const studiesQuery = trpc.feasibility.list.useQuery(undefined, { enabled: isAuthenticated });
+  const studyQuery = trpc.feasibility.getById.useQuery(selectedStudyId || 0, { enabled: !!selectedStudyId });
 
   // Filter studies by project
   const filteredStudies = useMemo(() => {
@@ -211,69 +162,42 @@ export default function FeasibilityStudyPage() {
 
   // Mutations
   const createMutation = trpc.feasibility.create.useMutation({
-    onSuccess: (data) => {
-      studiesQuery.refetch();
-      setSelectedStudyId(data.id);
-      toast.success("تم إنشاء الدراسة بنجاح");
-    },
+    onSuccess: (data) => { studiesQuery.refetch(); setSelectedStudyId(data.id); toast.success("تم إنشاء الدراسة بنجاح"); },
     onError: () => toast.error("خطأ في إنشاء الدراسة"),
   });
-
   const updateMutation = trpc.feasibility.update.useMutation({
-    onSuccess: () => {
-      studiesQuery.refetch();
-      studyQuery.refetch();
-      setIsDirty(false);
-      toast.success("تم حفظ التغييرات");
-    },
+    onSuccess: () => { studiesQuery.refetch(); studyQuery.refetch(); setIsDirty(false); toast.success("تم حفظ التغييرات"); },
     onError: () => toast.error("خطأ في الحفظ"),
   });
-
   const deleteMutation = trpc.feasibility.delete.useMutation({
-    onSuccess: () => {
-      studiesQuery.refetch();
-      setSelectedStudyId(null);
-      setForm({});
-      toast.success("تم حذف الدراسة");
-    },
+    onSuccess: () => { studiesQuery.refetch(); setSelectedStudyId(null); setForm({}); toast.success("تم حذف الدراسة"); },
   });
-
-  // Joelle AI Summary
   const aiSummaryMutation = trpc.feasibility.generateAiSummary.useMutation({
-    onSuccess: (data) => {
-      studyQuery.refetch();
-      setForm((prev: Record<string, any>) => ({ ...prev, aiSummary: data.summary }));
-      toast.success("تم إنشاء الملخص الذكي بنجاح");
-    },
-    onError: (err) => toast.error(err.message || "فشل في إنشاء الملخص"),
+    onSuccess: (data) => { studyQuery.refetch(); setForm((prev: Record<string, any>) => ({ ...prev, aiSummary: data.summary })); toast.success("تم إنشاء التحليل بنجاح"); },
+    onError: (err) => toast.error(err.message || "فشل في إنشاء التحليل"),
   });
-
-  // Joelle Market Analysis
   const marketAnalysisMutation = trpc.feasibility.generateMarketAnalysis.useMutation({
-    onSuccess: (data) => {
-      studyQuery.refetch();
-      setForm((prev: Record<string, any>) => ({ ...prev, marketAnalysis: data.analysis }));
-      toast.success("تم تحليل السوق بنجاح");
-    },
+    onSuccess: (data) => { studyQuery.refetch(); setForm((prev: Record<string, any>) => ({ ...prev, marketAnalysis: data.analysis })); toast.success("تم تحليل السوق بنجاح"); },
     onError: (err) => toast.error(err.message || "فشل في تحليل السوق"),
   });
-
-  // Duplicate as scenario
+  const comprehensiveReportMutation = trpc.feasibility.generateComprehensiveReport.useMutation({
+    onSuccess: (data) => { studyQuery.refetch(); setForm((prev: Record<string, any>) => ({ ...prev, competitorAnalysis: data.report })); toast.success("تم إنشاء التقرير الشامل"); },
+    onError: (err) => toast.error(err.message || "فشل في إنشاء التقرير"),
+  });
+  const executiveReportMutation = trpc.feasibility.generateExecutiveReport.useMutation({
+    onSuccess: (data) => { studyQuery.refetch(); setForm((prev: Record<string, any>) => ({ ...prev, priceRecommendation: data.report })); toast.success("تم إنشاء تقرير المجلس"); },
+    onError: (err) => toast.error(err.message || "فشل في إنشاء التقرير"),
+  });
   const duplicateScenarioMutation = trpc.feasibility.duplicateAsScenario.useMutation({
-    onSuccess: (data) => {
-      studiesQuery.refetch();
-      setSelectedStudyId(data.id);
-      toast.success("تم إنشاء السيناريو الجديد");
-    },
+    onSuccess: (data) => { studiesQuery.refetch(); setSelectedStudyId(data.id); toast.success("تم إنشاء السيناريو الجديد"); },
     onError: () => toast.error("خطأ في إنشاء السيناريو"),
   });
 
-  // Load study data into form when selected
+  // Load study data into form
   const loadedStudyId = studyQuery.data?.id;
   useMemo(() => {
     if (studyQuery.data && studyQuery.data.id === selectedStudyId) {
-      const d = studyQuery.data;
-      setForm({ ...d });
+      setForm({ ...studyQuery.data });
       setIsDirty(false);
     }
   }, [loadedStudyId, selectedStudyId]);
@@ -285,7 +209,7 @@ export default function FeasibilityStudyPage() {
   }, []);
 
   // ═══════════════════════════════════════════
-  // COMPUTED VALUES - All auto-calculations
+  // COMPUTED VALUES
   // ═══════════════════════════════════════════
   const computed = useMemo(() => {
     const f = form;
@@ -294,538 +218,295 @@ export default function FeasibilityStudyPage() {
     const gfaOff = f.gfaOffices || 0;
     const totalGfa = gfaRes + gfaRet + gfaOff;
 
-    // Saleable areas
     const saleableRes = gfaRes * ((f.saleableResidentialPct || 90) / 100);
     const saleableRet = gfaRet * ((f.saleableRetailPct || 99) / 100);
     const saleableOff = gfaOff * ((f.saleableOfficesPct || 90) / 100);
     const totalSaleable = saleableRes + saleableRet + saleableOff;
 
-    // BUA (manual input)
     const bua = f.estimatedBua || 0;
-
-    // Construction cost (based on BUA, not GFA)
     const constructionCost = bua * (f.constructionCostPerSqft || 0);
-
-    // Land registration (4% of land price)
     const landRegistration = (f.landPrice || 0) * 0.04;
-
-    // Agent commission on land
     const agentCommissionLand = (f.landPrice || 0) * ((f.agentCommissionLandPct || 1) / 100);
-
-    // Design fee
     const designFee = constructionCost * ((f.designFeePct || 2) / 100);
-
-    // Supervision fee
     const supervisionFee = constructionCost * ((f.supervisionFeePct || 2) / 100);
-
-    // Separation fee
     const separationFee = (f.plotAreaM2 || 0) * (f.separationFeePerM2 || 40);
-
-    // Contingencies
     const contingencies = constructionCost * ((f.contingenciesPct || 2) / 100);
-
-    // RERA fees
     const reraUnitTotal = (f.numberOfUnits || 0) * (f.reraUnitFee || 850);
 
-    // Revenue
     const revenueRes = saleableRes * (f.residentialSalePrice || 0);
     const revenueRet = saleableRet * (f.retailSalePrice || 0);
     const revenueOff = saleableOff * (f.officesSalePrice || 0);
     const totalRevenue = revenueRes + revenueRet + revenueOff;
 
-    // Developer fee (% of total sales)
     const developerFee = totalRevenue * ((f.developerFeePct || 5) / 100);
-
-    // Agent commission on sale
     const agentCommissionSale = totalRevenue * ((f.agentCommissionSalePct || 5) / 100);
-
-    // Marketing
     const marketing = totalRevenue * ((f.marketingPct || 2) / 100);
 
-    // Total costs
     const totalCosts =
-      (f.landPrice || 0) +
-      agentCommissionLand +
-      landRegistration +
-      (f.soilInvestigation || 0) +
-      (f.topographySurvey || 0) +
-      designFee +
-      supervisionFee +
-      (f.authoritiesFee || 0) +
-      separationFee +
-      constructionCost +
-      (f.communityFee || 0) +
-      contingencies +
-      developerFee +
-      agentCommissionSale +
-      marketing +
-      (f.reraOffplanFee || 150000) +
-      reraUnitTotal +
-      (f.nocFee || 10000) +
-      (f.escrowFee || 140000) +
-      (f.bankCharges || 20000) +
-      (f.surveyorFees || 12000) +
-      (f.reraAuditFees || 18000) +
-      (f.reraInspectionFees || 70000);
+      (f.landPrice || 0) + agentCommissionLand + landRegistration +
+      (f.soilInvestigation || 0) + (f.topographySurvey || 0) +
+      designFee + supervisionFee + (f.authoritiesFee || 0) + separationFee +
+      constructionCost + (f.communityFee || 0) + contingencies +
+      developerFee + agentCommissionSale + marketing +
+      (f.reraOffplanFee || 150000) + reraUnitTotal +
+      (f.nocFee || 10000) + (f.escrowFee || 140000) +
+      (f.bankCharges || 20000) + (f.surveyorFees || 12000) +
+      (f.reraAuditFees || 18000) + (f.reraInspectionFees || 70000);
 
-    // Profit
     const profit = totalRevenue - totalCosts;
-
-    // Funding required = total cost - 65% of construction cost (covered by off-plan sales)
     const offplanCoverage = constructionCost * 0.65;
     const fundingRequired = totalCosts - offplanCoverage;
-
-    // COMO profit share
     const comoProfit = profit * ((f.comoProfitSharePct || 15) / 100);
     const investorProfit = profit - comoProfit;
-
-    // ROI
     const roi = fundingRequired > 0 ? (investorProfit / fundingRequired) * 100 : 0;
-
-    // Profit margin
     const profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
 
     return {
-      totalGfa,
-      saleableRes,
-      saleableRet,
-      saleableOff,
-      totalSaleable,
-      constructionCost,
-      landRegistration,
-      agentCommissionLand,
-      designFee,
-      supervisionFee,
-      separationFee,
-      contingencies,
-      reraUnitTotal,
-      revenueRes,
-      revenueRet,
-      revenueOff,
-      totalRevenue,
-      developerFee,
-      agentCommissionSale,
-      marketing,
-      totalCosts,
-      profit,
-      offplanCoverage,
-      fundingRequired,
-      comoProfit,
-      investorProfit,
-      roi,
-      profitMargin,
+      totalGfa, saleableRes, saleableRet, saleableOff, totalSaleable,
+      constructionCost, landRegistration, agentCommissionLand,
+      designFee, supervisionFee, separationFee, contingencies, reraUnitTotal,
+      revenueRes, revenueRet, revenueOff, totalRevenue,
+      developerFee, agentCommissionSale, marketing,
+      totalCosts, profit, offplanCoverage, fundingRequired,
+      comoProfit, investorProfit, roi, profitMargin,
     };
   }, [form]);
 
   // Save handler
   const handleSave = () => {
     if (!selectedStudyId) return;
-    const { id, userId, createdAt, updatedAt, ...data } = form;
+    const { id, createdAt, updatedAt, userId, ...data } = form;
     updateMutation.mutate({ id: selectedStudyId, ...data });
   };
 
-  // Create new study
-  const handleCreate = () => {
-    createMutation.mutate({
-      projectName: "دراسة جديدة",
-    });
-  };
-
-  // Login screen
-  if (!loading && !isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6 text-center">
-            <Calculator className="w-12 h-12 mx-auto mb-4 text-primary" />
-            <h2 className="text-xl font-bold mb-2">دراسة الجدوى المالية</h2>
-            <p className="text-muted-foreground mb-6">يرجى تسجيل الدخول للوصول</p>
-            <Button onClick={() => (window.location.href = getLoginUrl())} className="w-full">
-              تسجيل الدخول
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  // Auth check
+  if (loading) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
+  if (!isAuthenticated) return (
+    <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+      <p className="text-muted-foreground">يرجى تسجيل الدخول</p>
+      <Button onClick={() => window.location.href = getLoginUrl()}>تسجيل الدخول</Button>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
-      {/* Header */}
-      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="h-8 w-8">
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-            <div className="flex items-center gap-2">
-              <Calculator className="w-5 h-5 text-primary" />
-              <h1 className="text-base font-bold text-foreground">📊 دراسة الجدوى المالية</h1>
-            </div>
+    <div className="min-h-screen bg-gradient-to-b from-muted/30 to-background" dir="rtl">
+      <div className="container max-w-7xl py-6 space-y-4">
+
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">📊 دراسة الجدوى</h1>
+            <p className="text-sm text-muted-foreground">تحليل شامل لجدوى المشاريع العقارية</p>
           </div>
           <div className="flex items-center gap-2">
             {isDirty && selectedStudyId && (
-              <Button
-                size="sm"
-                onClick={handleSave}
-                disabled={updateMutation.isPending}
-                className="gap-1.5 text-xs"
-              >
-                {updateMutation.isPending ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <Save className="w-3.5 h-3.5" />
-                )}
-                حفظ
+              <Button onClick={handleSave} disabled={updateMutation.isPending} className="gap-2">
+                {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                حفظ التغييرات
               </Button>
             )}
-            <Button size="sm" variant="outline" onClick={handleCreate} className="gap-1.5 text-xs">
-              <Plus className="w-3.5 h-3.5" />
-              دراسة جديدة
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-        {/* Project filter + Study selector */}
-        <div className="space-y-3 mb-6">
-          {/* Project filter */}
-          <div className="flex items-center gap-3">
-            <Label className="text-sm font-medium whitespace-nowrap flex items-center gap-1.5">
-              <FolderOpen className="w-4 h-4" />
-              فلتر حسب المشروع:
-            </Label>
-            <select
-              className="flex-1 h-10 rounded-lg border border-input bg-background px-3 text-sm"
-              value={selectedProjectId}
-              onChange={(e) => {
-                setSelectedProjectId(e.target.value);
-                setSelectedStudyId(null);
-              }}
-            >
-              <option value="all">كل الدراسات</option>
-              <option value="unlinked">غير مربوطة بمشروع</option>
-              {(projectsQuery.data || []).map((p: any) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Study selector */}
-          <div className="flex items-center gap-3">
-            <Label className="text-sm font-medium whitespace-nowrap">اختر الدراسة:</Label>
-            <select
-              className="flex-1 h-10 rounded-lg border border-input bg-background px-3 text-sm"
-              value={selectedStudyId || ""}
-              onChange={(e) => setSelectedStudyId(e.target.value ? Number(e.target.value) : null)}
-            >
-              <option value="">-- اختر دراسة جدوى --</option>
-              {filteredStudies.map((s: any) => (
-                <option key={s.id} value={s.id}>
-                  {s.projectName}{s.scenarioName ? ` (سيناريو: ${s.scenarioName})` : ""}
-                </option>
-              ))}
-            </select>
-            {selectedStudyId && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 text-xs"
-                  onClick={() => {
-                    const name = prompt("اسم السيناريو الجديد (مثل: متفائل، متشائم، متوسط):");
-                    if (name) {
-                      duplicateScenarioMutation.mutate({ studyId: selectedStudyId, scenarioName: name });
-                    }
-                  }}
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                  نسخ كسيناريو
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-10 w-10 text-destructive hover:bg-destructive/10"
-                  onClick={() => {
-                    if (confirm("هل أنت متأكد من حذف هذه الدراسة؟")) {
-                      deleteMutation.mutate(selectedStudyId);
-                    }
-                  }}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </>
-            )}
           </div>
         </div>
 
+        {/* Study Selector */}
+        <Card>
+          <CardContent className="pt-4 pb-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">تصفية حسب المشروع</Label>
+                <select
+                  className="w-full h-9 rounded-lg border border-input bg-background px-3 text-sm"
+                  value={selectedProjectId}
+                  onChange={(e) => setSelectedProjectId(e.target.value)}
+                >
+                  <option value="all">جميع المشاريع</option>
+                  <option value="unlinked">غير مربوطة</option>
+                  {(projectsQuery.data || []).map((p: any) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">اختر دراسة</Label>
+                <select
+                  className="w-full h-9 rounded-lg border border-input bg-background px-3 text-sm"
+                  value={selectedStudyId || ""}
+                  onChange={(e) => setSelectedStudyId(e.target.value ? Number(e.target.value) : null)}
+                >
+                  <option value="">— اختر دراسة —</option>
+                  {filteredStudies.map((s: any) => (
+                    <option key={s.id} value={s.id}>
+                      {s.projectName} {s.scenarioName ? `(${s.scenarioName})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Button
+                onClick={() => {
+                  const name = prompt("اسم المشروع (المنطقة _ الوصف _ رقم القطعة):");
+                  if (name) createMutation.mutate({ projectName: name });
+                }}
+                className="gap-2 h-9"
+                variant="outline"
+              >
+                <Plus className="w-4 h-4" />
+                دراسة جديدة
+              </Button>
+              {selectedStudyId && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1 text-xs"
+                    onClick={() => {
+                      const name = prompt("اسم السيناريو:", "متفائل");
+                      if (name) duplicateScenarioMutation.mutate({ studyId: selectedStudyId, scenarioName: name });
+                    }}
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    نسخ كسيناريو
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 text-destructive hover:bg-destructive/10"
+                    onClick={() => { if (confirm("هل أنت متأكد من حذف هذه الدراسة؟")) deleteMutation.mutate(selectedStudyId); }}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Main Content */}
         {!selectedStudyId ? (
           <div className="text-center py-20">
             <Calculator className="w-16 h-16 mx-auto mb-4 text-muted-foreground/30" />
-            <h2 className="text-xl font-bold text-muted-foreground mb-2">📄 اختر دراسة جدوى أو أنشئ واحدة جديدة</h2>
-            <p className="text-sm text-muted-foreground/70">
-              يمكنك إنشاء دراسات جدوى متعددة لمشاريع مختلفة
-            </p>
+            <h2 className="text-xl font-bold text-muted-foreground mb-2">اختر دراسة جدوى أو أنشئ واحدة جديدة</h2>
+            <p className="text-sm text-muted-foreground/70">يمكنك إنشاء دراسات جدوى متعددة لمشاريع مختلفة</p>
           </div>
         ) : studyQuery.isLoading ? (
-          <div className="text-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
-          </div>
+          <div className="text-center py-20"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></div>
         ) : (
           <>
-            {/* Project Link + Scenario */}
-            <Card className="mb-4">
-              <CardContent className="pt-4 pb-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">ربط بمشروع</Label>
-                    <select
-                      className="w-full h-9 rounded-lg border border-input bg-background px-3 text-sm"
-                      value={form.projectId || ""}
-                      onChange={(e) => setField("projectId", e.target.value ? Number(e.target.value) : null)}
-                    >
-                      <option value="">غير مربوطة</option>
-                      {(projectsQuery.data || []).map((p: any) => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">اسم السيناريو (اختياري)</Label>
-                    <Input
-                      value={form.scenarioName || ""}
-                      onChange={(e) => setField("scenarioName", e.target.value)}
-                      placeholder="مثال: متفائل، متشائم، متوسط"
-                      className="text-sm h-9"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">المنطقة</Label>
-                    <Input
-                      value={form.community || ""}
-                      onChange={(e) => {
-                        setField("community", e.target.value);
-                        setField("projectName", `${e.target.value} _ ${form.projectDescription || ""} _ ${form.plotNumber || ""}`);
-                      }}
-                      placeholder="مثال: ند الشبا الأولى"
-                      className="text-sm h-9"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">الوصف المصرح</Label>
-                    <Input
-                      value={form.projectDescription || ""}
-                      onChange={(e) => {
-                        setField("projectDescription", e.target.value);
-                        setField("projectName", `${form.community || ""} _ ${e.target.value} _ ${form.plotNumber || ""}`);
-                      }}
-                      placeholder="مثال: G+2P+6"
-                      className="text-sm h-9"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">رقم القطعة</Label>
-                    <Input
-                      value={form.plotNumber || ""}
-                      onChange={(e) => {
-                        setField("plotNumber", e.target.value);
-                        setField("projectName", `${form.community || ""} _ ${form.projectDescription || ""} _ ${e.target.value}`);
-                      }}
-                      placeholder="مثال: 6185392"
-                      className="text-sm h-9"
-                      dir="ltr"
-                    />
-                  </div>
-                </div>
-                <div className="mt-2 px-3 py-2 bg-primary/5 rounded-lg">
-                  <span className="text-xs text-muted-foreground">اسم المشروع: </span>
-                  <span className="text-sm font-bold text-primary">{form.projectName || "—"}</span>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Project Name Display */}
+            <div className="px-4 py-3 bg-primary/5 rounded-xl border border-primary/10">
+              <span className="text-xs text-muted-foreground">المشروع: </span>
+              <span className="text-sm font-bold text-primary">{form.projectName || "—"}</span>
+              {form.scenarioName && (
+                <span className="mr-2 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{form.scenarioName}</span>
+              )}
+            </div>
 
-            {/* Tabs */}
+            {/* ═══════════════════════════════════════════ */}
+            {/* 8 TABS - حسب تعليمات المستخدم بالضبط */}
+            {/* ═══════════════════════════════════════════ */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="w-full justify-start mb-4 bg-card border border-border h-auto flex-wrap">
-                <TabsTrigger value="info" className="gap-1.5 text-xs">
-                  <MapPin className="w-3.5 h-3.5" />
-                  📍 معلومات المشروع
+              <TabsList className="w-full justify-start mb-4 bg-card border border-border h-auto flex-wrap gap-1 p-1">
+                <TabsTrigger value="tab1" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  📄 ١. الوثائق والأرض
                 </TabsTrigger>
-                <TabsTrigger value="areas" className="gap-1.5 text-xs">
-                  <Ruler className="w-3.5 h-3.5" />
-                  📐 المساحات
+                <TabsTrigger value="tab2" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  ✏️ ٢. الإدخالات اليدوية
                 </TabsTrigger>
-                <TabsTrigger value="costs" className="gap-1.5 text-xs">
-                  <DollarSign className="w-3.5 h-3.5" />
-                  💵 التكاليف
+                <TabsTrigger value="tab3" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  🌍 ٣. النظرة العامة والسوق
                 </TabsTrigger>
-                <TabsTrigger value="revenue" className="gap-1.5 text-xs">
-                  <TrendingUp className="w-3.5 h-3.5" />
-                  📈 الإيرادات
+                <TabsTrigger value="tab4" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  ⚔️ ٤. المنافسة والتسعير
                 </TabsTrigger>
-                <TabsTrigger value="summary" className="gap-1.5 text-xs">
-                  <PieChart className="w-3.5 h-3.5" />
-                  🎯 الملخص والربحية
+                <TabsTrigger value="tab5" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  💰 ٥. التكاليف والتدفقات
                 </TabsTrigger>
-                <TabsTrigger value="ai" className="gap-1.5 text-xs">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  🧠 تحليل جويل
+                <TabsTrigger value="tab6" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  📊 ٦. التحليل والسيناريوهات
                 </TabsTrigger>
-                <TabsTrigger value="market" className="gap-1.5 text-xs">
-                  <Globe className="w-3.5 h-3.5" />
-                  🌍 تحليل السوق
+                <TabsTrigger value="tab7" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  📋 ٧. التقرير الشامل
                 </TabsTrigger>
-                <TabsTrigger value="comprehensive" className="gap-1.5 text-xs">
-                  <FileText className="w-3.5 h-3.5" />
-                  📄 التقرير الشامل
-                </TabsTrigger>
-                <TabsTrigger value="executive" className="gap-1.5 text-xs">
-                  <Brain className="w-3.5 h-3.5" />
-                  👔 تقرير المجلس
+                <TabsTrigger value="tab8" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  👔 ٨. تقرير المجلس
                 </TabsTrigger>
               </TabsList>
 
-              {/* ═══ Tab 1: Project Info ═══ */}
-              <TabsContent value="info">
-                <Card>
-                  <CardContent className="pt-6">
-                    <SectionHeader icon={MapPin} title="معلومات المشروع من الـ Affection Plan" />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">الاستعمال</Label>
-                        <Input
-                          value={form.landUse || ""}
-                          onChange={(e) => setField("landUse", e.target.value)}
-                          placeholder="مثال: Residential: Apartment + Retail"
-                          className="text-sm h-9"
-                        />
-                      </div>
-                      <NumInput
-                        label="عدد الوحدات"
-                        value={form.numberOfUnits}
-                        onChange={(v) => setField("numberOfUnits", v)}
-                        suffix="وحدة"
-                      />
-                      <NumInput
-                        label="مساحة الأرض (م²)"
-                        value={form.plotAreaM2}
-                        onChange={(v) => {
-                          setField("plotAreaM2", v);
-                          if (v) setField("plotArea", Math.round(v * 10.764));
-                        }}
-                        suffix="م²"
-                      />
-                      <NumInput
-                        label="مساحة الأرض (قدم²)"
-                        value={form.plotArea}
-                        onChange={(v) => setField("plotArea", v)}
-                        suffix="sqft"
-                        disabled
-                        hint="يُحسب تلقائياً من المتر²"
-                      />
-                    </div>
-                    <div className="mt-6">
-                      <Label className="text-xs text-muted-foreground">ملاحظات</Label>
-                      <textarea
-                        className="w-full mt-1 rounded-lg border border-input bg-background px-3 py-2 text-sm min-h-[80px]"
-                        value={form.notes || ""}
-                        onChange={(e) => setField("notes", e.target.value)}
-                        placeholder="ملاحظات إضافية..."
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* ═══ Tab 2: Areas ═══ */}
-              <TabsContent value="areas">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* ═══════════════════════════════════════════ */}
+              {/* التبويب 1: الوثائق والأرض */}
+              {/* حقول بيانات المشروع قابلة للتعديل */}
+              {/* ═══════════════════════════════════════════ */}
+              <TabsContent value="tab1">
+                <div className="space-y-4">
+                  {/* بيانات المشروع الأساسية */}
                   <Card>
                     <CardContent className="pt-6">
-                      <SectionHeader icon={Ruler} title="المساحة الطابقية الإجمالية (GFA)" />
-                      <div className="space-y-4">
-                        <NumInput
-                          label="GFA سكني (قدم²)"
-                          value={form.gfaResidential}
-                          onChange={(v) => setField("gfaResidential", v)}
-                          suffix="sqft"
-                        />
-                        <NumInput
-                          label="GFA تجاري / محلات (قدم²)"
-                          value={form.gfaRetail}
-                          onChange={(v) => setField("gfaRetail", v)}
-                          suffix="sqft"
-                        />
-                        <NumInput
-                          label="GFA مكاتب (قدم²)"
-                          value={form.gfaOffices}
-                          onChange={(v) => setField("gfaOffices", v)}
-                          suffix="sqft"
-                        />
-                        <div className="pt-3 border-t border-border">
-                          <ComputedValue label="إجمالي GFA" value={computed.totalGfa} suffix="sqft" highlight />
+                      <SectionHeader icon={Building2} title="بيانات المشروع" subtitle="المعلومات الأساسية من وثائق المشروع" />
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">المنطقة</Label>
+                          <Input value={form.community || ""} onChange={(e) => {
+                            setField("community", e.target.value);
+                            setField("projectName", `${e.target.value} _ ${form.projectDescription || ""} _ ${form.plotNumber || ""}`);
+                          }} placeholder="مثال: ند الشبا الأولى" className="text-sm h-9" />
                         </div>
-                        <NumInput
-                          label="مساحة البناء التقديرية BUA (قدم²)"
-                          value={form.estimatedBua}
-                          onChange={(v) => setField("estimatedBua", v)}
-                          suffix="sqft"
-                          hint="مساحة البناء الفعلية - تُستخدم لحساب تكلفة البناء"
-                        />
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">الوصف المصرح</Label>
+                          <Input value={form.projectDescription || ""} onChange={(e) => {
+                            setField("projectDescription", e.target.value);
+                            setField("projectName", `${form.community || ""} _ ${e.target.value} _ ${form.plotNumber || ""}`);
+                          }} placeholder="مثال: G+2P+6" className="text-sm h-9" />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">رقم القطعة</Label>
+                          <Input value={form.plotNumber || ""} onChange={(e) => {
+                            setField("plotNumber", e.target.value);
+                            setField("projectName", `${form.community || ""} _ ${form.projectDescription || ""} _ ${e.target.value}`);
+                          }} placeholder="مثال: 6185392" className="text-sm h-9" dir="ltr" />
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
 
+                  {/* معلومات الأرض */}
                   <Card>
                     <CardContent className="pt-6">
-                      <SectionHeader icon={Building2} title="المساحات القابلة للبيع (Saleable Area)" />
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-3">
-                          <NumInput
-                            label="نسبة البيع سكني %"
-                            value={form.saleableResidentialPct}
-                            onChange={(v) => setField("saleableResidentialPct", v)}
-                            suffix="%"
-                          />
-                          <div className="flex items-end pb-1">
-                            <ComputedValue label="=" value={computed.saleableRes} suffix="sqft" />
-                          </div>
+                      <SectionHeader icon={MapPin} title="معلومات الأرض والمساحات" subtitle="من Affection Plan والوثائق الرسمية" />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">الاستعمال</Label>
+                          <Input value={form.landUse || ""} onChange={(e) => setField("landUse", e.target.value)}
+                            placeholder="مثال: Residential: Apartment + Retail" className="text-sm h-9" />
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <NumInput
-                            label="نسبة البيع تجاري %"
-                            value={form.saleableRetailPct}
-                            onChange={(v) => setField("saleableRetailPct", v)}
-                            suffix="%"
-                          />
-                          <div className="flex items-end pb-1">
-                            <ComputedValue label="=" value={computed.saleableRet} suffix="sqft" />
-                          </div>
+                        <NumInput label="عدد الوحدات" value={form.numberOfUnits} onChange={(v) => setField("numberOfUnits", v)} suffix="وحدة" />
+                        <NumInput label="مساحة الأرض (م²)" value={form.plotAreaM2} onChange={(v) => {
+                          setField("plotAreaM2", v);
+                          if (v) setField("plotArea", Math.round(v * 10.764));
+                        }} suffix="م²" />
+                        <NumInput label="مساحة الأرض (قدم²)" value={form.plotArea} onChange={(v) => setField("plotArea", v)} suffix="sqft" disabled hint="يُحسب تلقائياً من المتر²" />
+                        <NumInput label="مساحة البناء التقديرية BUA (قدم²)" value={form.estimatedBua} onChange={(v) => setField("estimatedBua", v)} suffix="sqft" hint="مساحة البناء الفعلية" />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* ربط بمشروع */}
+                  <Card>
+                    <CardContent className="pt-6">
+                      <SectionHeader icon={FolderOpen} title="ربط بمشروع" subtitle="ربط الدراسة بمشروع في المنصة" />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">المشروع</Label>
+                          <select className="w-full h-9 rounded-lg border border-input bg-background px-3 text-sm"
+                            value={form.projectId || ""} onChange={(e) => setField("projectId", e.target.value ? Number(e.target.value) : null)}>
+                            <option value="">غير مربوطة</option>
+                            {(projectsQuery.data || []).map((p: any) => (
+                              <option key={p.id} value={p.id}>{p.name}</option>
+                            ))}
+                          </select>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <NumInput
-                            label="نسبة البيع مكاتب %"
-                            value={form.saleableOfficesPct}
-                            onChange={(v) => setField("saleableOfficesPct", v)}
-                            suffix="%"
-                          />
-                          <div className="flex items-end pb-1">
-                            <ComputedValue label="=" value={computed.saleableOff} suffix="sqft" />
-                          </div>
-                        </div>
-                        <div className="pt-3 border-t border-border">
-                          <ComputedValue label="إجمالي المساحة القابلة للبيع" value={computed.totalSaleable} suffix="sqft" highlight />
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">ملاحظات</Label>
+                          <textarea className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm min-h-[60px]"
+                            value={form.notes || ""} onChange={(e) => setField("notes", e.target.value)} placeholder="ملاحظات إضافية..." />
                         </div>
                       </div>
                     </CardContent>
@@ -833,396 +514,349 @@ export default function FeasibilityStudyPage() {
                 </div>
               </TabsContent>
 
-              {/* ═══ Tab 3: Costs ═══ */}
-              <TabsContent value="costs">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {/* Land & Pre-construction */}
+              {/* ═══════════════════════════════════════════ */}
+              {/* التبويب 2: الإدخالات اليدوية */}
+              {/* 14 حقل يدوي + 3 حقول بقيم افتراضية */}
+              {/* ═══════════════════════════════════════════ */}
+              <TabsContent value="tab2">
+                <div className="space-y-4">
+                  {/* GFA - 3 حقول بقيم افتراضية */}
                   <Card>
                     <CardContent className="pt-6">
-                      <SectionHeader icon={MapPin} title="تكاليف الأرض وما قبل البناء" />
-                      <div className="space-y-3">
-                        <NumInput
-                          label="سعر الأرض"
-                          value={form.landPrice}
-                          onChange={(v) => setField("landPrice", v)}
-                          suffix="AED"
-                        />
-                        <NumInput
-                          label="عمولة وسيط الأرض %"
-                          value={form.agentCommissionLandPct}
-                          onChange={(v) => setField("agentCommissionLandPct", v)}
-                          suffix="%"
-                        />
-                        <ComputedValue label="عمولة الوسيط" value={computed.agentCommissionLand} />
-                        <ComputedValue label="رسوم تسجيل الأرض (4%)" value={computed.landRegistration} />
-                        <NumInput
-                          label="فحص التربة"
-                          value={form.soilInvestigation}
-                          onChange={(v) => setField("soilInvestigation", v)}
-                          suffix="AED"
-                        />
-                        <NumInput
-                          label="المسح الطبوغرافي"
-                          value={form.topographySurvey}
-                          onChange={(v) => setField("topographySurvey", v)}
-                          suffix="AED"
-                        />
+                      <SectionHeader icon={Ruler} title="المساحات الطابقية (GFA)" subtitle="قيم افتراضية من المشروع - قابلة للتعديل" />
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <NumInput label="GFA سكني (قدم²)" value={form.gfaResidential} onChange={(v) => setField("gfaResidential", v)} suffix="sqft" />
+                        <NumInput label="GFA تجاري / محلات (قدم²)" value={form.gfaRetail} onChange={(v) => setField("gfaRetail", v)} suffix="sqft" />
+                        <NumInput label="GFA مكاتب (قدم²)" value={form.gfaOffices} onChange={(v) => setField("gfaOffices", v)} suffix="sqft" />
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-border">
+                        <ReadOnlyValue label="إجمالي GFA" value={computed.totalGfa} suffix="sqft" highlight />
                       </div>
                     </CardContent>
                   </Card>
 
-                  {/* Design & Supervision */}
+                  {/* نسب البيع */}
                   <Card>
                     <CardContent className="pt-6">
-                      <SectionHeader icon={FileText} title="أتعاب التصميم والإشراف" />
-                      <div className="space-y-3">
-                        <NumInput
-                          label="أتعاب التصميم %"
-                          value={form.designFeePct}
-                          onChange={(v) => setField("designFeePct", v)}
-                          suffix="%"
-                          hint="من تكلفة البناء"
-                        />
-                        <ComputedValue label="أتعاب التصميم" value={computed.designFee} />
-                        <NumInput
-                          label="أتعاب الإشراف %"
-                          value={form.supervisionFeePct}
-                          onChange={(v) => setField("supervisionFeePct", v)}
-                          suffix="%"
-                          hint="من تكلفة البناء"
-                        />
-                        <ComputedValue label="أتعاب الإشراف" value={computed.supervisionFee} />
+                      <SectionHeader icon={Percent} title="نسب المساحة القابلة للبيع" subtitle="النسبة المئوية من كل نوع GFA" />
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <NumInput label="نسبة البيع سكني %" value={form.saleableResidentialPct} onChange={(v) => setField("saleableResidentialPct", v)} suffix="%" />
+                          <div className="mt-1"><ReadOnlyValue label="المساحة القابلة للبيع" value={computed.saleableRes} suffix="sqft" /></div>
+                        </div>
+                        <div>
+                          <NumInput label="نسبة البيع تجاري %" value={form.saleableRetailPct} onChange={(v) => setField("saleableRetailPct", v)} suffix="%" />
+                          <div className="mt-1"><ReadOnlyValue label="المساحة القابلة للبيع" value={computed.saleableRet} suffix="sqft" /></div>
+                        </div>
+                        <div>
+                          <NumInput label="نسبة البيع مكاتب %" value={form.saleableOfficesPct} onChange={(v) => setField("saleableOfficesPct", v)} suffix="%" />
+                          <div className="mt-1"><ReadOnlyValue label="المساحة القابلة للبيع" value={computed.saleableOff} suffix="sqft" /></div>
+                        </div>
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-border">
+                        <ReadOnlyValue label="إجمالي المساحة القابلة للبيع" value={computed.totalSaleable} suffix="sqft" highlight />
                       </div>
                     </CardContent>
                   </Card>
 
-                  {/* Construction & Government */}
+                  {/* 14 حقل يدوي - تكاليف */}
                   <Card>
                     <CardContent className="pt-6">
-                      <SectionHeader icon={Building2} title="تكاليف البناء والجهات الحكومية" />
-                      <div className="space-y-3">
+                      <SectionHeader icon={DollarSign} title="التكاليف والنسب اليدوية" subtitle="14 حقل إدخال يدوي" />
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <NumInput label="١. سعر الأرض" value={form.landPrice} onChange={(v) => setField("landPrice", v)} suffix="AED" />
+                        <NumInput label="٢. عمولة وسيط الأرض %" value={form.agentCommissionLandPct} onChange={(v) => setField("agentCommissionLandPct", v)} suffix="%" />
+                        <NumInput label="٣. فحص التربة" value={form.soilInvestigation} onChange={(v) => setField("soilInvestigation", v)} suffix="AED" />
+                        <NumInput label="٤. المسح الطبوغرافي" value={form.topographySurvey} onChange={(v) => setField("topographySurvey", v)} suffix="AED" />
+                        <NumInput label="٥. أتعاب التصميم %" value={form.designFeePct} onChange={(v) => setField("designFeePct", v)} suffix="%" hint="من تكلفة البناء" />
+                        <NumInput label="٦. أتعاب الإشراف %" value={form.supervisionFeePct} onChange={(v) => setField("supervisionFeePct", v)} suffix="%" hint="من تكلفة البناء" />
+                        <NumInput label="٧. رسوم الجهات الحكومية" value={form.authoritiesFee} onChange={(v) => setField("authoritiesFee", v)} suffix="AED" />
+                        <NumInput label="٨. رسوم الفصل لكل م²" value={form.separationFeePerM2} onChange={(v) => setField("separationFeePerM2", v)} suffix="AED/م²" />
+                        <NumInput label="٩. رسوم المجتمع" value={form.communityFee} onChange={(v) => setField("communityFee", v)} suffix="AED" />
+                        <NumInput label="١٠. الاحتياطي والطوارئ %" value={form.contingenciesPct} onChange={(v) => setField("contingenciesPct", v)} suffix="%" hint="من تكلفة البناء" />
+                        <NumInput label="١١. أتعاب المطور (COMO) %" value={form.developerFeePct} onChange={(v) => setField("developerFeePct", v)} suffix="%" hint="من إجمالي المبيعات" />
+                        <NumInput label="١٢. عمولة البيع %" value={form.agentCommissionSalePct} onChange={(v) => setField("agentCommissionSalePct", v)} suffix="%" hint="من إجمالي المبيعات" />
+                        <NumInput label="١٣. التسويق %" value={form.marketingPct} onChange={(v) => setField("marketingPct", v)} suffix="%" hint="من إجمالي المبيعات" />
+                        <NumInput label="١٤. حصة COMO من الربح %" value={form.comoProfitSharePct} onChange={(v) => setField("comoProfitSharePct", v)} suffix="%" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
+              {/* ═══════════════════════════════════════════ */}
+              {/* التبويب 3: النظرة العامة والسوق */}
+              {/* توصيات جويل + حقول قابلة للتعديل */}
+              {/* ═══════════════════════════════════════════ */}
+              <TabsContent value="tab3">
+                <div className="space-y-4">
+                  {/* أسعار البيع - قابلة للتعديل */}
+                  <Card>
+                    <CardContent className="pt-6">
+                      <SectionHeader icon={TrendingUp} title="أسعار البيع لكل قدم مربع" subtitle="حقول قابلة للتعديل - يمكن تحديثها بناءً على توصيات جويل" />
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="p-4 rounded-xl bg-stone-50 border border-stone-200 space-y-3">
+                          <h4 className="font-bold text-sm text-stone-700 flex items-center gap-2">🏠 سكني</h4>
+                          <NumInput label="سعر البيع لكل قدم²" value={form.residentialSalePrice} onChange={(v) => setField("residentialSalePrice", v)} suffix="AED" />
+                          <div className="text-xs text-muted-foreground">المساحة القابلة للبيع: <span className="font-mono font-bold">{fmt(computed.saleableRes)}</span> sqft</div>
+                          <ReadOnlyValue label="إيراد سكني" value={computed.revenueRes} highlight />
+                        </div>
+                        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 space-y-3">
+                          <h4 className="font-bold text-sm text-emerald-700 flex items-center gap-2">🏪 تجاري / محلات</h4>
+                          <NumInput label="سعر البيع لكل قدم²" value={form.retailSalePrice} onChange={(v) => setField("retailSalePrice", v)} suffix="AED" />
+                          <div className="text-xs text-muted-foreground">المساحة القابلة للبيع: <span className="font-mono font-bold">{fmt(computed.saleableRet)}</span> sqft</div>
+                          <ReadOnlyValue label="إيراد تجاري" value={computed.revenueRet} highlight />
+                        </div>
+                        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 space-y-3">
+                          <h4 className="font-bold text-sm text-amber-700 flex items-center gap-2">🏢 مكاتب</h4>
+                          <NumInput label="سعر البيع لكل قدم²" value={form.officesSalePrice} onChange={(v) => setField("officesSalePrice", v)} suffix="AED" />
+                          <div className="text-xs text-muted-foreground">المساحة القابلة للبيع: <span className="font-mono font-bold">{fmt(computed.saleableOff)}</span> sqft</div>
+                          <ReadOnlyValue label="إيراد مكاتب" value={computed.revenueOff} highlight />
+                        </div>
+                      </div>
+                      <div className="mt-4 pt-4 border-t-2 border-primary/20">
+                        <ReadOnlyValue label="إجمالي الإيرادات المتوقعة" value={computed.totalRevenue} highlight large />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* تحليل السوق من جويل */}
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <SectionHeader icon={Globe} title="تحليل السوق من جويل" subtitle="توصيات وتحليل سوقي شامل" />
+                        <Button
+                          onClick={() => {
+                            if (selectedStudyId && form.community) {
+                              marketAnalysisMutation.mutate({ studyId: selectedStudyId, community: form.community });
+                            } else {
+                              toast.error("يرجى تحديد المنطقة أولاً في تبويب الوثائق والأرض");
+                            }
+                          }}
+                          disabled={marketAnalysisMutation.isPending}
+                          className="gap-2"
+                        >
+                          {marketAnalysisMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                          {marketAnalysisMutation.isPending ? "جويل تحلل..." : "اطلب من جويل"}
+                        </Button>
+                      </div>
+                      {form.marketAnalysis ? (
+                        <div className="prose prose-sm max-w-none bg-muted/30 rounded-xl p-6 border border-border" dir="rtl">
+                          <Streamdown>{form.marketAnalysis}</Streamdown>
+                        </div>
+                      ) : (
+                        <JoellePlaceholder message="لم يُنشأ هذا القسم بعد" subMessage="اضغط زر جويل أعلاه لإنشاء المحتوى" />
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
+              {/* ═══════════════════════════════════════════ */}
+              {/* التبويب 4: المنافسة والتسعير */}
+              {/* 3 سيناريوهات + خطة السداد */}
+              {/* ═══════════════════════════════════════════ */}
+              <TabsContent value="tab4">
+                <div className="space-y-4">
+                  {/* السيناريوهات الثلاثة */}
+                  <Card>
+                    <CardContent className="pt-6">
+                      <SectionHeader icon={BarChart3} title="سيناريوهات التسعير" subtitle="3 سيناريوهات: متفائل، أساسي، محافظ" />
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* متفائل */}
+                        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200">
+                          <h4 className="font-bold text-emerald-700 mb-3 text-center">🟢 السيناريو المتفائل</h4>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between"><span className="text-muted-foreground">سعر سكني:</span><span className="font-mono font-bold">{fmt((form.residentialSalePrice || 0) * 1.15)} AED</span></div>
+                            <div className="flex justify-between"><span className="text-muted-foreground">سعر تجاري:</span><span className="font-mono font-bold">{fmt((form.retailSalePrice || 0) * 1.15)} AED</span></div>
+                            <div className="flex justify-between"><span className="text-muted-foreground">سعر مكاتب:</span><span className="font-mono font-bold">{fmt((form.officesSalePrice || 0) * 1.15)} AED</span></div>
+                            <div className="pt-2 border-t border-emerald-200">
+                              <div className="flex justify-between font-bold"><span>الإيرادات:</span><span className="font-mono text-emerald-700">{fmt(computed.totalRevenue * 1.15)} AED</span></div>
+                              <div className="flex justify-between font-bold"><span>الربح:</span><span className="font-mono text-emerald-700">{fmt(computed.totalRevenue * 1.15 - computed.totalCosts)} AED</span></div>
+                            </div>
+                          </div>
+                        </div>
+                        {/* أساسي */}
+                        <div className="p-4 rounded-xl bg-blue-50 border-2 border-blue-300">
+                          <h4 className="font-bold text-blue-700 mb-3 text-center">🔵 السيناريو الأساسي</h4>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between"><span className="text-muted-foreground">سعر سكني:</span><span className="font-mono font-bold">{fmt(form.residentialSalePrice)} AED</span></div>
+                            <div className="flex justify-between"><span className="text-muted-foreground">سعر تجاري:</span><span className="font-mono font-bold">{fmt(form.retailSalePrice)} AED</span></div>
+                            <div className="flex justify-between"><span className="text-muted-foreground">سعر مكاتب:</span><span className="font-mono font-bold">{fmt(form.officesSalePrice)} AED</span></div>
+                            <div className="pt-2 border-t border-blue-200">
+                              <div className="flex justify-between font-bold"><span>الإيرادات:</span><span className="font-mono text-blue-700">{fmt(computed.totalRevenue)} AED</span></div>
+                              <div className="flex justify-between font-bold"><span>الربح:</span><span className="font-mono text-blue-700">{fmt(computed.profit)} AED</span></div>
+                            </div>
+                          </div>
+                        </div>
+                        {/* محافظ */}
+                        <div className="p-4 rounded-xl bg-orange-50 border border-orange-200">
+                          <h4 className="font-bold text-orange-700 mb-3 text-center">🟠 السيناريو المحافظ</h4>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between"><span className="text-muted-foreground">سعر سكني:</span><span className="font-mono font-bold">{fmt((form.residentialSalePrice || 0) * 0.85)} AED</span></div>
+                            <div className="flex justify-between"><span className="text-muted-foreground">سعر تجاري:</span><span className="font-mono font-bold">{fmt((form.retailSalePrice || 0) * 0.85)} AED</span></div>
+                            <div className="flex justify-between"><span className="text-muted-foreground">سعر مكاتب:</span><span className="font-mono font-bold">{fmt((form.officesSalePrice || 0) * 0.85)} AED</span></div>
+                            <div className="pt-2 border-t border-orange-200">
+                              <div className="flex justify-between font-bold"><span>الإيرادات:</span><span className="font-mono text-orange-700">{fmt(computed.totalRevenue * 0.85)} AED</span></div>
+                              <div className="flex justify-between font-bold"><span>الربح:</span><span className="font-mono text-orange-700">{fmt(computed.totalRevenue * 0.85 - computed.totalCosts)} AED</span></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* خطة السداد */}
+                  <Card>
+                    <CardContent className="pt-6">
+                      <SectionHeader icon={Calculator} title="خطة السداد" subtitle="توزيع الدفعات على مراحل المشروع" />
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-border bg-muted/30">
+                              <th className="text-right py-3 px-4 font-bold">المرحلة</th>
+                              <th className="text-center py-3 px-4 font-bold">النسبة</th>
+                              <th className="text-left py-3 px-4 font-bold" dir="ltr">المبلغ (AED)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {[
+                              { phase: "الحجز", pct: 10 },
+                              { phase: "عقد البيع والشراء (SPA)", pct: 10 },
+                              { phase: "أثناء البناء (أقساط)", pct: 45 },
+                              { phase: "عند الإنجاز", pct: 20 },
+                              { phase: "بعد التسليم (6-12 شهر)", pct: 15 },
+                            ].map((row, i) => (
+                              <tr key={i} className="border-b border-border/50 hover:bg-muted/20">
+                                <td className="py-3 px-4">{row.phase}</td>
+                                <td className="py-3 px-4 text-center font-mono font-bold">{row.pct}%</td>
+                                <td className="py-3 px-4 text-left font-mono" dir="ltr">{fmt(computed.totalRevenue * row.pct / 100)}</td>
+                              </tr>
+                            ))}
+                            <tr className="bg-primary/5 font-bold">
+                              <td className="py-3 px-4">الإجمالي</td>
+                              <td className="py-3 px-4 text-center font-mono">100%</td>
+                              <td className="py-3 px-4 text-left font-mono text-primary" dir="ltr">{fmt(computed.totalRevenue)}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
+              {/* ═══════════════════════════════════════════ */}
+              {/* التبويب 5: التكاليف والتدفقات */}
+              {/* حقل واحد قابل للتعديل (سعر القدم) + تقرير READ ONLY */}
+              {/* ═══════════════════════════════════════════ */}
+              <TabsContent value="tab5">
+                <div className="space-y-4">
+                  {/* الإدخال الوحيد: تكلفة البناء */}
+                  <Card className="border-primary/30 bg-primary/5">
+                    <CardContent className="pt-6">
+                      <SectionHeader icon={Sparkles} title="إدخال جويل" subtitle="القيمة الوحيدة القابلة للتعديل في هذا التبويب" />
+                      <div className="max-w-md mx-auto">
                         <NumInput
-                          label="تكلفة البناء لكل قدم²"
+                          label="تكلفة البناء لكل قدم مربع"
                           value={form.constructionCostPerSqft}
                           onChange={(v) => setField("constructionCostPerSqft", v)}
                           suffix="AED/sqft"
                         />
-                        <ComputedValue
-                          label={`تكلفة البناء الإجمالية (BUA: ${fmt(form.estimatedBua || 0)} sqft)`}
-                          value={computed.constructionCost}
-                          highlight
-                        />
-                        <NumInput
-                          label="رسوم الجهات الحكومية"
-                          value={form.authoritiesFee}
-                          onChange={(v) => setField("authoritiesFee", v)}
-                          suffix="AED"
-                        />
-                        <NumInput
-                          label="رسوم الفصل (لكل م²)"
-                          value={form.separationFeePerM2}
-                          onChange={(v) => setField("separationFeePerM2", v)}
-                          suffix="AED/م²"
-                        />
-                        <ComputedValue label="رسوم الفصل الإجمالية" value={computed.separationFee} />
-                        <NumInput
-                          label="رسوم المجتمع"
-                          value={form.communityFee}
-                          onChange={(v) => setField("communityFee", v)}
-                          suffix="AED"
-                        />
-                        <NumInput
-                          label="احتياطي وطوارئ %"
-                          value={form.contingenciesPct}
-                          onChange={(v) => setField("contingenciesPct", v)}
-                          suffix="%"
-                        />
-                        <ComputedValue label="الاحتياطي" value={computed.contingencies} />
+                        <div className="mt-2 text-xs text-muted-foreground text-center">
+                          BUA: {fmt(form.estimatedBua)} sqft × {fmt(form.constructionCostPerSqft)} AED = <span className="font-bold text-foreground">{fmt(computed.constructionCost)} AED</span>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
 
-                  {/* RERA & Fixed Fees */}
+                  {/* جدول تكاليف المشروع - READ ONLY */}
                   <Card>
                     <CardContent className="pt-6">
-                      <SectionHeader icon={DollarSign} title="رسوم RERA والرسوم الثابتة" />
-                      <div className="space-y-3">
-                        <NumInput
-                          label="رسوم RERA Offplan"
-                          value={form.reraOffplanFee}
-                          onChange={(v) => setField("reraOffplanFee", v)}
-                          suffix="AED"
-                        />
-                        <NumInput
-                          label="رسوم تسجيل الوحدة"
-                          value={form.reraUnitFee}
-                          onChange={(v) => setField("reraUnitFee", v)}
-                          suffix="AED/وحدة"
-                        />
-                        <ComputedValue
-                          label={`إجمالي رسوم الوحدات (${form.numberOfUnits || 0} وحدة)`}
-                          value={computed.reraUnitTotal}
-                        />
-                        <NumInput
-                          label="رسوم NOC"
-                          value={form.nocFee}
-                          onChange={(v) => setField("nocFee", v)}
-                          suffix="AED"
-                        />
-                        <NumInput
-                          label="رسوم حساب الضمان (Escrow)"
-                          value={form.escrowFee}
-                          onChange={(v) => setField("escrowFee", v)}
-                          suffix="AED"
-                        />
-                        <NumInput
-                          label="رسوم البنك"
-                          value={form.bankCharges}
-                          onChange={(v) => setField("bankCharges", v)}
-                          suffix="AED"
-                        />
-                        <NumInput
-                          label="أتعاب المساح"
-                          value={form.surveyorFees}
-                          onChange={(v) => setField("surveyorFees", v)}
-                          suffix="AED"
-                        />
-                        <NumInput
-                          label="رسوم تدقيق RERA"
-                          value={form.reraAuditFees}
-                          onChange={(v) => setField("reraAuditFees", v)}
-                          suffix="AED"
-                        />
-                        <NumInput
-                          label="رسوم تفتيش RERA"
-                          value={form.reraInspectionFees}
-                          onChange={(v) => setField("reraInspectionFees", v)}
-                          suffix="AED"
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Sales-based costs */}
-                  <Card className="lg:col-span-2">
-                    <CardContent className="pt-6">
-                      <SectionHeader icon={BarChart3} title="تكاليف مبنية على المبيعات" />
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="space-y-3">
-                          <NumInput
-                            label="أتعاب المطور (COMO) %"
-                            value={form.developerFeePct}
-                            onChange={(v) => setField("developerFeePct", v)}
-                            suffix="%"
-                            hint="من إجمالي المبيعات"
-                          />
-                          <ComputedValue label="أتعاب المطور" value={computed.developerFee} />
-                        </div>
-                        <div className="space-y-3">
-                          <NumInput
-                            label="عمولة البيع %"
-                            value={form.agentCommissionSalePct}
-                            onChange={(v) => setField("agentCommissionSalePct", v)}
-                            suffix="%"
-                            hint="من إجمالي المبيعات"
-                          />
-                          <ComputedValue label="عمولة البيع" value={computed.agentCommissionSale} />
-                        </div>
-                        <div className="space-y-3">
-                          <NumInput
-                            label="التسويق %"
-                            value={form.marketingPct}
-                            onChange={(v) => setField("marketingPct", v)}
-                            suffix="%"
-                            hint="من إجمالي المبيعات"
-                          />
-                          <ComputedValue label="تكلفة التسويق" value={computed.marketing} />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
-
-              {/* ═══ Tab 4: Revenue ═══ */}
-              <TabsContent value="revenue">
-                <Card>
-                  <CardContent className="pt-6">
-                    <SectionHeader icon={TrendingUp} title="الإيرادات - أسعار البيع" />
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      {/* Residential */}
-                      <div className="space-y-3 p-4 rounded-xl bg-stone-50/50 border border-stone-200">
-                        <h4 className="font-bold text-sm text-stone-700">سكني</h4>
-                        <NumInput
-                          label="سعر البيع لكل قدم²"
-                          value={form.residentialSalePrice}
-                          onChange={(v) => setField("residentialSalePrice", v)}
-                          suffix="AED"
-                        />
-                        <div className="text-xs text-muted-foreground">
-                          المساحة القابلة للبيع: <span className="font-mono font-bold">{fmt(computed.saleableRes)}</span> sqft
-                        </div>
-                        <ComputedValue label="إيراد سكني" value={computed.revenueRes} highlight />
-                      </div>
-
-                      {/* Retail */}
-                      <div className="space-y-3 p-4 rounded-xl bg-emerald-50/50 border border-emerald-100">
-                        <h4 className="font-bold text-sm text-emerald-700">تجاري / محلات</h4>
-                        <NumInput
-                          label="سعر البيع لكل قدم²"
-                          value={form.retailSalePrice}
-                          onChange={(v) => setField("retailSalePrice", v)}
-                          suffix="AED"
-                        />
-                        <div className="text-xs text-muted-foreground">
-                          المساحة القابلة للبيع: <span className="font-mono font-bold">{fmt(computed.saleableRet)}</span> sqft
-                        </div>
-                        <ComputedValue label="إيراد تجاري" value={computed.revenueRet} highlight />
-                      </div>
-
-                      {/* Offices */}
-                      <div className="space-y-3 p-4 rounded-xl bg-amber-50/50 border border-amber-100">
-                        <h4 className="font-bold text-sm text-amber-700">مكاتب</h4>
-                        <NumInput
-                          label="سعر البيع لكل قدم²"
-                          value={form.officesSalePrice}
-                          onChange={(v) => setField("officesSalePrice", v)}
-                          suffix="AED"
-                        />
-                        <div className="text-xs text-muted-foreground">
-                          المساحة القابلة للبيع: <span className="font-mono font-bold">{fmt(computed.saleableOff)}</span> sqft
-                        </div>
-                        <ComputedValue label="إيراد مكاتب" value={computed.revenueOff} highlight />
-                      </div>
-                    </div>
-
-                    <div className="mt-6 pt-4 border-t-2 border-primary/20">
-                      <ComputedValue label="إجمالي الإيرادات" value={computed.totalRevenue} highlight large />
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* ═══ Tab 5: Summary ═══ */}
-              <TabsContent value="summary">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {/* Cost Summary */}
-                  <Card>
-                    <CardContent className="pt-6">
-                      <SectionHeader icon={DollarSign} title="ملخص التكاليف" />
+                      <SectionHeader icon={DollarSign} title="جدول تكاليف المشروع" subtitle="محسوب تلقائياً - للعرض فقط" />
                       <div className="space-y-1 divide-y divide-border/50">
-                        <ComputedValue label="سعر الأرض" value={form.landPrice} />
-                        <ComputedValue label="عمولة وسيط الأرض" value={computed.agentCommissionLand} />
-                        <ComputedValue label="رسوم تسجيل الأرض" value={computed.landRegistration} />
-                        <ComputedValue label="فحص التربة" value={form.soilInvestigation} />
-                        <ComputedValue label="المسح الطبوغرافي" value={form.topographySurvey} />
-                        <ComputedValue label="أتعاب التصميم" value={computed.designFee} />
-                        <ComputedValue label="أتعاب الإشراف" value={computed.supervisionFee} />
-                        <ComputedValue label="رسوم الجهات الحكومية" value={form.authoritiesFee} />
-                        <ComputedValue label="رسوم الفصل" value={computed.separationFee} />
-                        <ComputedValue label="تكلفة البناء" value={computed.constructionCost} />
-                        <ComputedValue label="رسوم المجتمع" value={form.communityFee} />
-                        <ComputedValue label="الاحتياطي والطوارئ" value={computed.contingencies} />
-                        <ComputedValue label="أتعاب المطور" value={computed.developerFee} />
-                        <ComputedValue label="عمولة البيع" value={computed.agentCommissionSale} />
-                        <ComputedValue label="التسويق" value={computed.marketing} />
-                        <ComputedValue label="رسوم RERA Offplan" value={form.reraOffplanFee} />
-                        <ComputedValue label="رسوم تسجيل الوحدات" value={computed.reraUnitTotal} />
-                        <ComputedValue label="رسوم NOC" value={form.nocFee} />
-                        <ComputedValue label="حساب الضمان" value={form.escrowFee} />
-                        <ComputedValue label="رسوم البنك" value={form.bankCharges} />
-                        <ComputedValue label="أتعاب المساح" value={form.surveyorFees} />
-                        <ComputedValue label="تدقيق RERA" value={form.reraAuditFees} />
-                        <ComputedValue label="تفتيش RERA" value={form.reraInspectionFees} />
+                        <ReadOnlyValue label="سعر الأرض" value={form.landPrice} />
+                        <ReadOnlyValue label="عمولة وسيط الأرض" value={computed.agentCommissionLand} />
+                        <ReadOnlyValue label="رسوم تسجيل الأرض (4%)" value={computed.landRegistration} />
+                        <ReadOnlyValue label="فحص التربة" value={form.soilInvestigation} />
+                        <ReadOnlyValue label="المسح الطبوغرافي" value={form.topographySurvey} />
+                        <ReadOnlyValue label="أتعاب التصميم" value={computed.designFee} />
+                        <ReadOnlyValue label="أتعاب الإشراف" value={computed.supervisionFee} />
+                        <ReadOnlyValue label="رسوم الجهات الحكومية" value={form.authoritiesFee} />
+                        <ReadOnlyValue label="رسوم الفصل" value={computed.separationFee} />
+                        <ReadOnlyValue label="تكلفة البناء" value={computed.constructionCost} />
+                        <ReadOnlyValue label="رسوم المجتمع" value={form.communityFee} />
+                        <ReadOnlyValue label="الاحتياطي والطوارئ" value={computed.contingencies} />
+                        <ReadOnlyValue label="أتعاب المطور (COMO)" value={computed.developerFee} />
+                        <ReadOnlyValue label="عمولة البيع" value={computed.agentCommissionSale} />
+                        <ReadOnlyValue label="التسويق" value={computed.marketing} />
+                        <ReadOnlyValue label="رسوم RERA Offplan" value={form.reraOffplanFee} />
+                        <ReadOnlyValue label="رسوم تسجيل الوحدات" value={computed.reraUnitTotal} />
+                        <ReadOnlyValue label="رسوم NOC" value={form.nocFee} />
+                        <ReadOnlyValue label="حساب الضمان" value={form.escrowFee} />
+                        <ReadOnlyValue label="رسوم البنك" value={form.bankCharges} />
+                        <ReadOnlyValue label="أتعاب المساح" value={form.surveyorFees} />
+                        <ReadOnlyValue label="تدقيق RERA" value={form.reraAuditFees} />
+                        <ReadOnlyValue label="تفتيش RERA" value={form.reraInspectionFees} />
                       </div>
                       <div className="mt-3 pt-3 border-t-2 border-destructive/20">
-                        <ComputedValue label="إجمالي التكاليف" value={computed.totalCosts} highlight large />
+                        <ReadOnlyValue label="إجمالي التكاليف" value={computed.totalCosts} highlight large />
                       </div>
                     </CardContent>
                   </Card>
 
-                  {/* Profitability */}
-                  <div className="space-y-4">
-                    <Card>
-                      <CardContent className="pt-6">
-                        <SectionHeader icon={TrendingUp} title="الربحية" />
-                        <div className="space-y-1 divide-y divide-border/50">
-                          <ComputedValue label="إجمالي الإيرادات" value={computed.totalRevenue} />
-                          <ComputedValue label="إجمالي التكاليف" value={computed.totalCosts} />
-                        </div>
-                        <div className="mt-3 pt-3 border-t-2 border-primary/20">
-                          <ComputedValue label="صافي الربح" value={computed.profit} highlight large />
-                        </div>
-                        <div className="mt-2 text-xs text-muted-foreground">
-                          هامش الربح: <span className="font-mono font-bold text-foreground">{computed.profitMargin.toFixed(1)}%</span>
-                        </div>
+                  {/* ملخص المؤشرات - READ ONLY */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <Card className="bg-blue-50 border-blue-200">
+                      <CardContent className="pt-4 pb-4 text-center">
+                        <p className="text-xs text-blue-600 mb-1">إجمالي الإيرادات</p>
+                        <p className="text-lg font-bold font-mono text-blue-700" dir="ltr">{fmt(computed.totalRevenue)}</p>
+                        <p className="text-[10px] text-blue-500">AED</p>
                       </CardContent>
                     </Card>
-
-                    <Card>
-                      <CardContent className="pt-6">
-                        <SectionHeader icon={PieChart} title="التمويل المطلوب" />
-                        <div className="space-y-1 divide-y divide-border/50">
-                          <ComputedValue label="إجمالي التكاليف" value={computed.totalCosts} />
-                          <ComputedValue label="تغطية مبيعات الخارطة (65% من البناء)" value={computed.offplanCoverage} />
-                        </div>
-                        <div className="mt-3 pt-3 border-t-2 border-amber-300">
-                          <ComputedValue label="التمويل المطلوب من المستثمر" value={computed.fundingRequired} highlight large />
-                        </div>
+                    <Card className={`${computed.profit >= 0 ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"}`}>
+                      <CardContent className="pt-4 pb-4 text-center">
+                        <p className={`text-xs mb-1 ${computed.profit >= 0 ? "text-emerald-600" : "text-red-600"}`}>صافي الربح</p>
+                        <p className={`text-lg font-bold font-mono ${computed.profit >= 0 ? "text-emerald-700" : "text-red-700"}`} dir="ltr">{fmt(computed.profit)}</p>
+                        <p className={`text-[10px] ${computed.profit >= 0 ? "text-emerald-500" : "text-red-500"}`}>AED</p>
                       </CardContent>
                     </Card>
-
-                    <Card className="border-primary/30 bg-primary/5">
-                      <CardContent className="pt-6">
-                        <SectionHeader icon={Calculator} title="توزيع الأرباح" />
-                        <div className="space-y-3">
-                          <NumInput
-                            label="حصة COMO من الربح %"
-                            value={form.comoProfitSharePct}
-                            onChange={(v) => setField("comoProfitSharePct", v)}
-                            suffix="%"
-                          />
-                          <div className="space-y-1 divide-y divide-border/50">
-                            <ComputedValue label="أرباح COMO" value={computed.comoProfit} highlight />
-                            <ComputedValue label="أرباح المستثمر" value={computed.investorProfit} highlight />
-                          </div>
-                          <div className="mt-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-center">
-                            <div className="text-xs text-emerald-600 mb-1">العائد على الاستثمار (ROI)</div>
-                            <div className="text-3xl font-bold text-emerald-700 font-mono">
-                              {computed.roi.toFixed(1)}%
-                            </div>
-                            <div className="text-xs text-emerald-600 mt-1">
-                              ربح المستثمر / التمويل المطلوب
-                            </div>
-                          </div>
-                        </div>
+                    <Card className="bg-purple-50 border-purple-200">
+                      <CardContent className="pt-4 pb-4 text-center">
+                        <p className="text-xs text-purple-600 mb-1">حصة COMO ({form.comoProfitSharePct || 15}%)</p>
+                        <p className="text-lg font-bold font-mono text-purple-700" dir="ltr">{fmt(computed.comoProfit)}</p>
+                        <p className="text-[10px] text-purple-500">AED</p>
+                      </CardContent>
+                    </Card>
+                    <Card className="bg-amber-50 border-amber-200">
+                      <CardContent className="pt-4 pb-4 text-center">
+                        <p className="text-xs text-amber-600 mb-1">العائد على الاستثمار</p>
+                        <p className="text-lg font-bold font-mono text-amber-700">{computed.roi.toFixed(1)}%</p>
+                        <p className="text-[10px] text-amber-500">ROI</p>
                       </CardContent>
                     </Card>
                   </div>
                 </div>
               </TabsContent>
-              {/* ═══ Tab 6: Joelle AI Summary ═══ */}
-              <TabsContent value="ai">
+
+              {/* ═══════════════════════════════════════════ */}
+              {/* التبويب 6: التحليل والسيناريوهات */}
+              {/* تقرير من جويل: تحليل + مخاطر + توصيات + سجل المصادر + أوزان الترجيح */}
+              {/* ═══════════════════════════════════════════ */}
+              <TabsContent value="tab6">
                 <div className="space-y-4">
+                  {/* التحليل والمخاطر والتوصيات */}
                   <Card>
                     <CardContent className="pt-6">
                       <div className="flex items-center justify-between mb-4">
-                        <SectionHeader icon={Sparkles} title="ملخص جويل الذكي" />
+                        <SectionHeader icon={AlertTriangle} title="التحليل والمخاطر والتوصيات" />
                         <Button
-                          onClick={() => {
-                            if (selectedStudyId) {
-                              aiSummaryMutation.mutate(selectedStudyId);
-                            }
-                          }}
+                          onClick={() => { if (selectedStudyId) aiSummaryMutation.mutate(selectedStudyId); }}
                           disabled={aiSummaryMutation.isPending}
                           className="gap-2"
                         >
-                          {aiSummaryMutation.isPending ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Brain className="w-4 h-4" />
-                          )}
-                          {aiSummaryMutation.isPending ? "جويل تحلل..." : "اطلب من جويل تحليل"}
+                          {aiSummaryMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                          {aiSummaryMutation.isPending ? "جويل تحلل..." : "اطلب من جويل"}
                         </Button>
                       </div>
                       {form.aiSummary ? (
@@ -1230,99 +864,133 @@ export default function FeasibilityStudyPage() {
                           <Streamdown>{form.aiSummary}</Streamdown>
                         </div>
                       ) : (
-                        <div className="text-center py-12 bg-muted/20 rounded-xl border border-dashed border-border">
-                          <Brain className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
-                          <p className="text-sm text-muted-foreground">لم يتم إنشاء ملخص بعد</p>
-                          <p className="text-xs text-muted-foreground/70 mt-1">اضغط "اطلب من جويل تحليل" لإنشاء ملخص ذكي للدراسة</p>
-                        </div>
+                        <JoellePlaceholder message="لم يُنشأ هذا القسم بعد" subMessage="اضغط زر جويل أعلاه لإنشاء المحتوى" />
                       )}
                     </CardContent>
                   </Card>
-                </div>
-              </TabsContent>
 
-              {/* ═══ Tab 7: Market Analysis ═══ */}
-              <TabsContent value="market">
-                <div className="space-y-4">
+                  {/* تحليل السيناريوهات */}
                   <Card>
                     <CardContent className="pt-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <SectionHeader icon={Globe} title="تحليل السوق العقاري" />
-                        <Button
-                          onClick={() => {
-                            if (selectedStudyId && form.community) {
-                              marketAnalysisMutation.mutate({
-                                studyId: selectedStudyId,
-                                community: form.community,
-                              });
-                            } else {
-                              toast.error("يرجى تحديد المنطقة أولاً في تبويب معلومات المشروع");
-                            }
-                          }}
-                          disabled={marketAnalysisMutation.isPending}
-                          className="gap-2"
-                        >
-                          {marketAnalysisMutation.isPending ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Globe className="w-4 h-4" />
-                          )}
-                          {marketAnalysisMutation.isPending ? "جويل تحلل السوق..." : "تحليل السوق"}
-                        </Button>
+                      <SectionHeader icon={BarChart3} title="تحليل السيناريوهات" subtitle="مقارنة بين السيناريوهات الثلاثة" />
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b-2 border-border bg-muted/30">
+                              <th className="text-right py-3 px-4 font-bold">المؤشر</th>
+                              <th className="text-center py-3 px-4 font-bold text-emerald-600">🟢 متفائل (+15%)</th>
+                              <th className="text-center py-3 px-4 font-bold text-blue-600">🔵 أساسي</th>
+                              <th className="text-center py-3 px-4 font-bold text-orange-600">🟠 محافظ (-15%)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {[
+                              { label: "إجمالي الإيرادات", opt: computed.totalRevenue * 1.15, base: computed.totalRevenue, cons: computed.totalRevenue * 0.85 },
+                              { label: "إجمالي التكاليف", opt: computed.totalCosts, base: computed.totalCosts, cons: computed.totalCosts },
+                              { label: "صافي الربح", opt: computed.totalRevenue * 1.15 - computed.totalCosts, base: computed.profit, cons: computed.totalRevenue * 0.85 - computed.totalCosts },
+                              { label: "هامش الربح %", opt: computed.totalRevenue * 1.15 > 0 ? ((computed.totalRevenue * 1.15 - computed.totalCosts) / (computed.totalRevenue * 1.15)) * 100 : 0, base: computed.profitMargin, cons: computed.totalRevenue * 0.85 > 0 ? ((computed.totalRevenue * 0.85 - computed.totalCosts) / (computed.totalRevenue * 0.85)) * 100 : 0 },
+                            ].map((row, i) => (
+                              <tr key={i} className="border-b border-border/50">
+                                <td className="py-3 px-4 font-medium">{row.label}</td>
+                                <td className="py-3 px-4 text-center font-mono text-emerald-600">{i === 3 ? `${row.opt.toFixed(1)}%` : fmt(row.opt)}</td>
+                                <td className="py-3 px-4 text-center font-mono font-bold text-blue-600">{i === 3 ? `${row.base.toFixed(1)}%` : fmt(row.base)}</td>
+                                <td className="py-3 px-4 text-center font-mono text-orange-600">{i === 3 ? `${row.cons.toFixed(1)}%` : fmt(row.cons)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
-                      {form.community && (
-                        <div className="mb-4 px-3 py-2 bg-primary/5 rounded-lg">
-                          <span className="text-xs text-muted-foreground">المنطقة المستهدفة: </span>
-                          <span className="text-sm font-bold text-primary">{form.community}</span>
-                        </div>
-                      )}
-                      {form.marketAnalysis ? (
-                        <div className="prose prose-sm max-w-none bg-muted/30 rounded-xl p-6 border border-border" dir="rtl">
-                          <Streamdown>{form.marketAnalysis}</Streamdown>
-                        </div>
-                      ) : (
-                        <div className="text-center py-12 bg-muted/20 rounded-xl border border-dashed border-border">
-                          <Globe className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
-                          <p className="text-sm text-muted-foreground">لم يتم تحليل السوق بعد</p>
-                          <p className="text-xs text-muted-foreground/70 mt-1">اضغط "تحليل السوق" ليقوم جويل بتحليل أسعار ومنافسي المنطقة</p>
-                        </div>
-                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* سجل المصادر */}
+                  <Card>
+                    <CardContent className="pt-6">
+                      <SectionHeader icon={BookOpen} title="سجل المصادر" subtitle="12 مصدر مسجل — 5 طبقات حسب الموثوقية" />
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b-2 border-border bg-muted/30">
+                              <th className="text-right py-3 px-3 font-bold">المصدر</th>
+                              <th className="text-center py-3 px-3 font-bold">الطبقة</th>
+                              <th className="text-right py-3 px-3 font-bold">البيانات المتاحة</th>
+                              <th className="text-center py-3 px-3 font-bold">التحديث</th>
+                              <th className="text-center py-3 px-3 font-bold">الطريقة</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {[
+                              { name: "Dubai REST", tier: "طبقة 1 — حكومي رسمي", tierColor: "bg-emerald-100 text-emerald-700", data: "e_status, noc_status, escrow_accounts", update: "Real-time", method: "api" },
+                              { name: "DubaiNow", tier: "طبقة 1 — حكومي رسمي", tierColor: "bg-emerald-100 text-emerald-700", data: "bills, government_fees, service_requests", update: "Real-time", method: "api" },
+                              { name: "Data.Dubai (Smart Dubai)", tier: "طبقة 1 — حكومي رسمي", tierColor: "bg-emerald-100 text-emerald-700", data: "density, land_use_data, utility_connections", update: "Monthly", method: "api" },
+                              { name: "Dubai Statistics Center (DSC/DDSE)", tier: "طبقة 1 — حكومي رسمي", tierColor: "bg-emerald-100 text-emerald-700", data: "data, construction_permits, trade_data", update: "Quarterly", method: "manual_file" },
+                              { name: "Bayut", tier: "طبقة 4 — بوابات إعلانات", tierColor: "bg-amber-100 text-amber-700", data: "areas, price_per_sqft, inventory_levels", update: "Real-time", method: "scrape" },
+                              { name: "Property Finder (PF)", tier: "طبقة 4 — بوابات إعلانات", tierColor: "bg-amber-100 text-amber-700", data: "market, agent_listings, area_coverage", update: "Real-time", method: "scrape" },
+                              { name: "Knight Frank (KF)", tier: "طبقة 3 — استشاري مهني", tierColor: "bg-blue-100 text-blue-700", data: "health_report, rental_analysis, capital_values", update: "Quarterly", method: "manual_file" },
+                              { name: "CBRE", tier: "طبقة 3 — استشاري مهني", tierColor: "bg-blue-100 text-blue-700", data: "occupancy_rates, development_pipeline", update: "Quarterly", method: "manual_file" },
+                              { name: "JLL (Jones Lang LaSalle)", tier: "طبقة 3 — استشاري مهني", tierColor: "bg-blue-100 text-blue-700", data: "rates, vacancy_rates, investment_volumes", update: "Quarterly", method: "manual_file" },
+                              { name: "REIDIN", tier: "طبقة 2 — مزود بيانات أولي", tierColor: "bg-purple-100 text-purple-700", data: "historical_trends, comparable_transactions", update: "Monthly", method: "manual_file" },
+                              { name: "Property Monitor (PM)", tier: "طبقة 2 — مزود بيانات أولي", tierColor: "bg-purple-100 text-purple-700", data: "rption_rate, rental_yields, market_trends", update: "Monthly", method: "manual_file" },
+                              { name: "Dubai Land Department (DLD)", tier: "طبقة 1 — حكومي رسمي", tierColor: "bg-emerald-100 text-emerald-700", data: "mber, buyer_nationality, mortgage_data", update: "Daily", method: "manual_file" },
+                            ].map((src, i) => (
+                              <tr key={i} className="border-b border-border/50 hover:bg-muted/20">
+                                <td className="py-2.5 px-3 font-medium">{src.name}</td>
+                                <td className="py-2.5 px-3 text-center"><span className={`text-[10px] px-2 py-1 rounded-full font-bold ${src.tierColor}`}>{src.tier}</span></td>
+                                <td className="py-2.5 px-3 text-xs text-muted-foreground">{src.data}</td>
+                                <td className="py-2.5 px-3 text-center text-xs">{src.update}</td>
+                                <td className="py-2.5 px-3 text-center"><span className={`text-[10px] px-2 py-0.5 rounded font-mono ${src.method === 'api' ? 'text-emerald-600' : src.method === 'scrape' ? 'text-amber-600' : 'text-blue-600'}`}>{src.method}</span></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* جدول أوزان الترجيح */}
+                  <Card>
+                    <CardContent className="pt-6">
+                      <SectionHeader icon={Scale} title="جدول أوزان الترجيح" subtitle="يُطبّق تلقائياً عند مصالحة بيانات من مصادر متعددة" />
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        {[
+                          { title: "المعاملات المسجلة", weights: "DLD 80% · PM 15% · REIDIN 5%", bg: "bg-stone-50" },
+                          { title: "الإيجارات المسجلة", weights: "DLD 80% · PM 15% · Portals 5%", bg: "bg-stone-50" },
+                          { title: "خط الإمداد والمعروض", weights: "PM 45% · REIDIN 45% · DLD 10%", bg: "bg-stone-50" },
+                          { title: "أسعار الطلب", weights: "Brochure 60% · Portals 35% · Calls 5%", bg: "bg-stone-50" },
+                          { title: "البيانات السكانية", weights: "DDSE 80% · Research 20%", bg: "bg-stone-50" },
+                          { title: "التنظيمي / القانوني", weights: "Official 100%", bg: "bg-stone-50" },
+                        ].map((cat, i) => (
+                          <div key={i} className={`p-4 rounded-xl ${cat.bg} border border-border`}>
+                            <h4 className="font-bold text-sm mb-1">{cat.title}</h4>
+                            <p className="text-xs text-muted-foreground font-mono">{cat.weights}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="p-3 rounded-xl bg-red-50 border border-red-200">
+                        <h4 className="font-bold text-sm text-red-700 mb-1">حدود التباين المسموح</h4>
+                        <p className="text-xs text-red-600 font-mono">الإجماليات ±5% · الأسعار الوسطية ±3% · خط الإمداد ±10% · أسعار الطلب ±7%</p>
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
               </TabsContent>
 
-              {/* ═══ Tab 8: Comprehensive Report ═══ */}
-              <TabsContent value="comprehensive">
+              {/* ═══════════════════════════════════════════ */}
+              {/* التبويب 7: التقرير الشامل المهني الاحترافي */}
+              {/* تقرير من جويل - READ ONLY */}
+              {/* ═══════════════════════════════════════════ */}
+              <TabsContent value="tab7">
                 <Card>
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                          <FileText className="w-5 h-5 text-blue-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-foreground">التقرير الشامل المهني الاحترافي</h3>
-                          <p className="text-xs text-muted-foreground">تقرير مفصل من جويل يتضمن جميع جوانب المشروع</p>
-                        </div>
-                      </div>
+                      <SectionHeader icon={FileText} title="التقرير الشامل المهني الاحترافي" subtitle="تقرير مفصل من جويل يتضمن جميع جوانب المشروع" />
                       <Button
-                        onClick={() => {
-                          if (selectedStudyId) {
-                            trpc.feasibility.generateComprehensiveReport.useMutation({
-                              onSuccess: (data) => {
-                                studyQuery.refetch();
-                                setForm((prev: Record<string, any>) => ({ ...prev, competitorAnalysis: data.report }));
-                                toast.success("تم إنشاء التقرير الشامل بنجاح");
-                              },
-                              onError: (err) => toast.error(err.message || "فشل في إنشاء التقرير"),
-                            }).mutate({ id: selectedStudyId });
-                          }
-                        }}
+                        onClick={() => { if (selectedStudyId) comprehensiveReportMutation.mutate({ id: selectedStudyId }); }}
+                        disabled={comprehensiveReportMutation.isPending}
                         className="gap-2"
                       >
-                        <Sparkles className="w-4 h-4" />
-                        إنشاء التقرير
+                        {comprehensiveReportMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                        {comprehensiveReportMutation.isPending ? "جويل تكتب..." : "إنشاء التقرير"}
                       </Button>
                     </div>
                     {form.competitorAnalysis ? (
@@ -1330,47 +998,28 @@ export default function FeasibilityStudyPage() {
                         <Streamdown>{form.competitorAnalysis}</Streamdown>
                       </div>
                     ) : (
-                      <div className="text-center py-12 bg-muted/20 rounded-xl border border-dashed border-border">
-                        <FileText className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
-                        <p className="text-sm text-muted-foreground">لم يتم إنشاء التقرير الشامل بعد</p>
-                        <p className="text-xs text-muted-foreground/70 mt-1">اضغط "إنشاء التقرير" ليقوم جويل بإعداد تقرير شامل واحترافي</p>
-                      </div>
+                      <JoellePlaceholder message="لم يُنشأ هذا القسم بعد" subMessage="اضغط زر جويل أعلاه لإنشاء التقرير الشامل" />
                     )}
                   </CardContent>
                 </Card>
               </TabsContent>
 
-              {/* ═══ Tab 9: Executive Report ═══ */}
-              <TabsContent value="executive">
+              {/* ═══════════════════════════════════════════ */}
+              {/* التبويب 8: التقرير المختصر لمجلس الإدارة */}
+              {/* تقرير من جويل - READ ONLY */}
+              {/* ═══════════════════════════════════════════ */}
+              <TabsContent value="tab8">
                 <Card>
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                          <Brain className="w-5 h-5 text-purple-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-foreground">التقرير المختصر لمجلس الإدارة</h3>
-                          <p className="text-xs text-muted-foreground">ملخص موجز وفعال من جويل للقيادة العليا</p>
-                        </div>
-                      </div>
+                      <SectionHeader icon={Users} title="التقرير المختصر لمجلس الإدارة" subtitle="ملخص موجز وفعال من جويل للقيادة العليا" />
                       <Button
-                        onClick={() => {
-                          if (selectedStudyId) {
-                            trpc.feasibility.generateExecutiveReport.useMutation({
-                              onSuccess: (data) => {
-                                studyQuery.refetch();
-                                setForm((prev: Record<string, any>) => ({ ...prev, priceRecommendation: data.report }));
-                                toast.success("تم إنشاء تقرير المجلس بنجاح");
-                              },
-                              onError: (err) => toast.error(err.message || "فشل في إنشاء التقرير"),
-                            }).mutate({ id: selectedStudyId });
-                          }
-                        }}
+                        onClick={() => { if (selectedStudyId) executiveReportMutation.mutate({ id: selectedStudyId }); }}
+                        disabled={executiveReportMutation.isPending}
                         className="gap-2"
                       >
-                        <Sparkles className="w-4 h-4" />
-                        إنشاء التقرير
+                        {executiveReportMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                        {executiveReportMutation.isPending ? "جويل تكتب..." : "إنشاء التقرير"}
                       </Button>
                     </div>
                     {form.priceRecommendation ? (
@@ -1378,15 +1027,12 @@ export default function FeasibilityStudyPage() {
                         <Streamdown>{form.priceRecommendation}</Streamdown>
                       </div>
                     ) : (
-                      <div className="text-center py-12 bg-muted/20 rounded-xl border border-dashed border-border">
-                        <Brain className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
-                        <p className="text-sm text-muted-foreground">لم يتم إنشاء تقرير المجلس بعد</p>
-                        <p className="text-xs text-muted-foreground/70 mt-1">اضغط "إنشاء التقرير" ليقوم جويل بإعداد ملخص موجز للقيادة العليا</p>
-                      </div>
+                      <JoellePlaceholder message="لم يُنشأ هذا القسم بعد" subMessage="اضغط زر جويل أعلاه لإنشاء تقرير مجلس الإدارة" />
                     )}
                   </CardContent>
                 </Card>
               </TabsContent>
+
             </Tabs>
           </>
         )}
