@@ -770,6 +770,125 @@ export const stagesRouter = router({
       return { sectionProgress, phaseProgress, overall };
     }),
 
+  // Set due date for a stage item
+  setDueDate: publicProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        dueDate: z.string().nullable(), // ISO date string or null to clear
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      const dueDate = input.dueDate ? new Date(input.dueDate) : null;
+
+      await db
+        .update(stageItems)
+        .set({ dueDate })
+        .where(eq(stageItems.id, input.id));
+
+      return { success: true };
+    }),
+
+  // Bulk set due dates for multiple items
+  setBulkDueDates: publicProcedure
+    .input(
+      z.object({
+        items: z.array(
+          z.object({
+            id: z.number(),
+            dueDate: z.string().nullable(),
+          })
+        ),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      for (const item of input.items) {
+        const dueDate = item.dueDate ? new Date(item.dueDate) : null;
+        await db
+          .update(stageItems)
+          .set({ dueDate })
+          .where(eq(stageItems.id, item.id));
+      }
+
+      return { success: true, count: input.items.length };
+    }),
+
+  // Get overdue items for a project
+  getOverdueItems: publicProcedure
+    .input(z.number())
+    .query(async ({ input: projectId }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      const now = new Date();
+
+      const overdueItems = await db
+        .select()
+        .from(stageItems)
+        .where(
+          and(
+            eq(stageItems.projectId, projectId),
+            sql`${stageItems.dueDate} IS NOT NULL`,
+            sql`${stageItems.dueDate} < ${now}`,
+            sql`${stageItems.status} != 'completed'`
+          )
+        )
+        .orderBy(asc(stageItems.dueDate));
+
+      return overdueItems;
+    }),
+
+  // Get overdue stats for a project (counts by phase)
+  getOverdueStats: publicProcedure
+    .input(z.number())
+    .query(async ({ input: projectId }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      const now = new Date();
+
+      // Get all items with due dates for this project
+      const allItems = await db
+        .select()
+        .from(stageItems)
+        .where(
+          and(
+            eq(stageItems.projectId, projectId),
+            sql`${stageItems.dueDate} IS NOT NULL`
+          )
+        );
+
+      let totalWithDueDate = allItems.length;
+      let overdueCount = 0;
+      let dueSoonCount = 0; // Due within 3 days
+      const overdueByPhase: Record<number, number> = {};
+
+      const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+
+      for (const item of allItems) {
+        if (item.status === "completed") continue;
+        if (item.dueDate && item.dueDate < now) {
+          overdueCount++;
+          overdueByPhase[item.phaseNumber] = (overdueByPhase[item.phaseNumber] || 0) + 1;
+        } else if (item.dueDate && item.dueDate < threeDaysFromNow) {
+          dueSoonCount++;
+        }
+      }
+
+      return {
+        totalWithDueDate,
+        overdueCount,
+        dueSoonCount,
+        overdueByPhase,
+      };
+    }),
+
   // Get critical path (in-progress tasks)
   getCriticalPath: publicProcedure
     .input(z.number())

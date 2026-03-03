@@ -1,6 +1,22 @@
 import { describe, it, expect } from "vitest";
 import { DEFAULT_STAGES, SECTION_AGENT_MAP } from "./stages";
 
+// Inline helper functions for testing (mirrors frontend logic)
+function parseDueDate(d: Date | string | null): Date | null {
+  if (!d) return null;
+  const date = typeof d === "string" ? new Date(d) : d;
+  return isNaN(date.getTime()) ? null : date;
+}
+
+function getDueDateStatus(dueDate: Date | null, status: string): "overdue" | "due_soon" | "on_track" | "none" {
+  if (!dueDate || status === "completed") return "none";
+  const now = new Date();
+  if (dueDate < now) return "overdue";
+  const threeDaysFromNow = new Date(now.getTime() + 3 * 86400000);
+  if (dueDate <= threeDaysFromNow) return "due_soon";
+  return "on_track";
+}
+
 describe("Development Stages - DEFAULT_STAGES data", () => {
   it("should have exactly 5 phases (2-6)", () => {
     const phaseNumbers = Object.keys(DEFAULT_STAGES).map(Number);
@@ -184,5 +200,54 @@ describe("Development Stages - Agent Integration", () => {
     for (const key of Object.keys(SECTION_AGENT_MAP)) {
       expect(allSectionKeys.has(key)).toBe(true);
     }
+  });
+});
+
+describe("Development Stages - Due Date Helpers", () => {
+  it("getDueDateStatus returns 'overdue' for past dates on non-completed items", () => {
+    const pastDate = new Date(Date.now() - 86400000); // yesterday
+    expect(getDueDateStatus(pastDate, "in_progress")).toBe("overdue");
+    expect(getDueDateStatus(pastDate, "not_started")).toBe("overdue");
+  });
+
+  it("getDueDateStatus returns 'none' for completed items regardless of date", () => {
+    const pastDate = new Date(Date.now() - 86400000);
+    expect(getDueDateStatus(pastDate, "completed")).toBe("none");
+  });
+
+  it("getDueDateStatus returns 'none' when no due date", () => {
+    expect(getDueDateStatus(null, "in_progress")).toBe("none");
+    expect(getDueDateStatus(null, "not_started")).toBe("none");
+  });
+
+  it("getDueDateStatus returns 'on_track' for future dates beyond 3 days", () => {
+    const futureDate = new Date(Date.now() + 10 * 86400000); // 10 days from now
+    expect(getDueDateStatus(futureDate, "in_progress")).toBe("on_track");
+  });
+
+  it("getDueDateStatus returns 'due_soon' for dates within 3 days", () => {
+    const soonDate = new Date(Date.now() + 2 * 86400000); // 2 days from now
+    expect(getDueDateStatus(soonDate, "in_progress")).toBe("due_soon");
+  });
+
+  it("parseDueDate handles null correctly", () => {
+    expect(parseDueDate(null)).toBeNull();
+  });
+
+  it("parseDueDate handles valid ISO string", () => {
+    const isoStr = "2026-06-15T00:00:00.000Z";
+    const result = parseDueDate(isoStr);
+    expect(result).toBeInstanceOf(Date);
+    expect(result!.toISOString()).toBe(isoStr);
+  });
+
+  it("parseDueDate handles Date objects", () => {
+    const date = new Date("2026-06-15");
+    const result = parseDueDate(date);
+    expect(result).toBeInstanceOf(Date);
+  });
+
+  it("parseDueDate returns null for invalid strings", () => {
+    expect(parseDueDate("not-a-date")).toBeNull();
   });
 });

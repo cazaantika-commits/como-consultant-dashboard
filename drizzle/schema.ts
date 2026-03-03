@@ -1617,6 +1617,7 @@ export const stageItems = mysqlTable('stage_items', {
   status: mysqlEnum('status', ['not_started', 'in_progress', 'completed']).default('not_started').notNull(),
   isCustom: boolean('isCustom').default(false).notNull(), // هل هي مهمة مخصصة أضافها المستخدم
   linkedTaskId: int('linkedTaskId'), // معرف المهمة المرتبطة في نظام المهام
+  dueDate: timestamp('dueDate'), // التاريخ المستهدف للمهمة
   createdAt: timestamp('createdAt').defaultNow().notNull(),
   updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
 });
