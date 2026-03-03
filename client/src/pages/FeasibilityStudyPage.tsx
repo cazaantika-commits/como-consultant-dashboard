@@ -385,23 +385,23 @@ export default function FeasibilityStudyPage({ embedded }: { embedded?: boolean 
             {/* ═══════════════════════════════════════════ */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="w-full justify-start mb-4 bg-card border border-border h-auto flex-wrap gap-1 p-1">
-                <TabsTrigger value="tab3" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  🌍 ١. النظرة العامة والسوق
-                </TabsTrigger>
-                <TabsTrigger value="tab4" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  ⚔️ ٢. المنافسة والتسعير
-                </TabsTrigger>
-                <TabsTrigger value="tab5" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  💰 ٣. التكاليف والتدفقات
-                </TabsTrigger>
-                <TabsTrigger value="tab6" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  📊 ٤. التحليل والسيناريوهات
+                <TabsTrigger value="tab8" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  👔 ٦. تقرير المجلس
                 </TabsTrigger>
                 <TabsTrigger value="tab7" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                   📋 ٥. التقرير الشامل
                 </TabsTrigger>
-                <TabsTrigger value="tab8" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  👔 ٦. تقرير المجلس
+                <TabsTrigger value="tab6" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  📊 ٤. التحليل والسيناريوهات
+                </TabsTrigger>
+                <TabsTrigger value="tab5" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  💰 ٣. التكاليف والتدفقات
+                </TabsTrigger>
+                <TabsTrigger value="tab4" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  ⚔️ ٢. المنافسة والتسعير
+                </TabsTrigger>
+                <TabsTrigger value="tab3" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  🌍 ١. النظرة العامة والسوق
                 </TabsTrigger>
               </TabsList>
 
