@@ -36,7 +36,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 
-// Field component for consistent styling
+// Field component for consistent styling - compact version
 function Field({ label, value, onChange, type = "text", placeholder, readOnly = false, suffix }: {
   label: string;
   value: string | number | null | undefined;
@@ -50,22 +50,22 @@ function Field({ label, value, onChange, type = "text", placeholder, readOnly = 
 
   if (type === "textarea") {
     return (
-      <div className="space-y-1.5">
-        <label className="text-xs font-medium text-muted-foreground">{label}</label>
+      <div className="space-y-1">
+        <label className="text-[11px] font-medium text-muted-foreground">{label}</label>
         <Textarea
           value={displayVal}
           onChange={e => onChange?.(e.target.value)}
           placeholder={placeholder || label}
           readOnly={readOnly}
-          className="min-h-[80px] text-sm bg-white/50 border-stone-200 focus:border-amber-400 focus:ring-amber-400/20 resize-none"
+          className="min-h-[60px] text-xs bg-white/50 border-stone-200 focus:border-amber-400 focus:ring-amber-400/20 resize-none py-1.5 px-2.5"
         />
       </div>
     );
   }
 
   return (
-    <div className="space-y-1.5">
-      <label className="text-xs font-medium text-muted-foreground">{label}</label>
+    <div className="space-y-1">
+      <label className="text-[11px] font-medium text-muted-foreground">{label}</label>
       <div className="relative">
         <Input
           type={type}
@@ -73,10 +73,10 @@ function Field({ label, value, onChange, type = "text", placeholder, readOnly = 
           onChange={e => onChange?.(e.target.value)}
           placeholder={placeholder || label}
           readOnly={readOnly}
-          className="text-sm bg-white/50 border-stone-200 focus:border-amber-400 focus:ring-amber-400/20"
+          className="text-xs h-8 bg-white/50 border-stone-200 focus:border-amber-400 focus:ring-amber-400/20 py-1 px-2.5"
         />
         {suffix && (
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{suffix}</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">{suffix}</span>
         )}
       </div>
     </div>
@@ -112,13 +112,13 @@ function Section({ title, icon: Icon, children, color = "amber" }: {
 
   return (
     <Card className="border border-stone-200/80 shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
-      <CardHeader className={`py-3 px-5 border-b ${colorMap[color]}`}>
-        <CardTitle className="text-sm font-semibold flex items-center gap-2">
-          <Icon className={`h-4 w-4 ${iconColorMap[color]}`} />
+      <CardHeader className={`py-2 px-4 border-b ${colorMap[color]}`}>
+        <CardTitle className="text-xs font-semibold flex items-center gap-2">
+          <Icon className={`h-3.5 w-3.5 ${iconColorMap[color]}`} />
           {title}
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-5">
+      <CardContent className="p-3.5">
         {children}
       </CardContent>
     </Card>
@@ -381,6 +381,20 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
         disputeResolution: p.disputeResolution || "",
         // Notes
         notes: p.notes || "",
+        // الإدخالات اليدوية
+        manualBuaSqft: p.manualBuaSqft || "",
+        soilTestFee: p.soilTestFee || "",
+        topographicSurveyFee: p.topographicSurveyFee || "",
+        reraUnitRegFee: p.reraUnitRegFee || "",
+        developerNocFee: p.developerNocFee || "",
+        escrowAccountFee: p.escrowAccountFee || "",
+        bankFees: p.bankFees || "",
+        communityFees: p.communityFees || "",
+        surveyorFees: p.surveyorFees || "",
+        reraAuditReportFee: p.reraAuditReportFee || "",
+        reraInspectionReportFee: p.reraInspectionReportFee || "",
+        reraProjectRegFee: p.reraProjectRegFee || "",
+        officialBodiesFees: p.officialBodiesFees || "",
       });
       setHasChanges(false);
     }
@@ -549,7 +563,7 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
             <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
           </div>
         ) : (
-          <div className="space-y-5">
+          <div className="space-y-3.5">
             {/* Project Name Banner */}
             <div className="bg-gradient-to-l from-amber-50 via-white to-amber-50 rounded-xl border border-amber-200/50 p-5 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -585,7 +599,7 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
             </div>
 
             {/* Grid layout - 2 columns */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
               
               {/* Section 1: Identification Numbers */}
               <Section title="أرقام التعريف والتسجيل" icon={FileText} color="amber">
@@ -707,7 +721,26 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
                 </div>
               </Section>
 
-              {/* Section 12: Notes */}
+              {/* Section 12: Manual Inputs */}
+              <Section title="الإدخالات اليدوية" icon={FileText} color="orange">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <Field label="مساحة البناء BUA (قدم مربع)" value={formData.manualBuaSqft} onChange={v => updateField("manualBuaSqft", v)} type="number" placeholder="0" suffix="sqft" />
+                  <Field label="رسوم تقرير فحص التربة" value={formData.soilTestFee} onChange={v => updateField("soilTestFee", v)} type="number" placeholder="0" suffix="AED" />
+                  <Field label="أعمال الرفع المساحي الطبوغرافي" value={formData.topographicSurveyFee} onChange={v => updateField("topographicSurveyFee", v)} type="number" placeholder="0" suffix="AED" />
+                  <Field label="رسوم تسجيل الوحدات — ريرا" value={formData.reraUnitRegFee} onChange={v => updateField("reraUnitRegFee", v)} type="number" placeholder="0" suffix="AED" />
+                  <Field label="رسوم عدم ممانعة للبيع — المطور" value={formData.developerNocFee} onChange={v => updateField("developerNocFee", v)} type="number" placeholder="0" suffix="AED" />
+                  <Field label="رسوم فتح حساب الضمان" value={formData.escrowAccountFee} onChange={v => updateField("escrowAccountFee", v)} type="number" placeholder="0" suffix="AED" />
+                  <Field label="الرسوم البنكية" value={formData.bankFees} onChange={v => updateField("bankFees", v)} type="number" placeholder="0" suffix="AED" />
+                  <Field label="رسوم المجتمع" value={formData.communityFees} onChange={v => updateField("communityFees", v)} type="number" placeholder="0" suffix="AED" />
+                  <Field label="أتعاب المسّاح (تأكيد المساحات)" value={formData.surveyorFees} onChange={v => updateField("surveyorFees", v)} type="number" placeholder="0" suffix="AED" />
+                  <Field label="تقارير تدقيق ريرا الدورية" value={formData.reraAuditReportFee} onChange={v => updateField("reraAuditReportFee", v)} type="number" placeholder="0" suffix="AED" />
+                  <Field label="تقارير تفتيش ريرا الدورية" value={formData.reraInspectionReportFee} onChange={v => updateField("reraInspectionReportFee", v)} type="number" placeholder="0" suffix="AED" />
+                  <Field label="رسوم تسجيل المشروع — ريرا" value={formData.reraProjectRegFee} onChange={v => updateField("reraProjectRegFee", v)} type="number" placeholder="0" suffix="AED" />
+                  <Field label="رسوم الجهات الرسمية" value={formData.officialBodiesFees} onChange={v => updateField("officialBodiesFees", v)} type="number" placeholder="0" suffix="AED" />
+                </div>
+              </Section>
+
+              {/* Section 13: Notes */}
               <Section title="ملاحظات إضافية" icon={FileText} color="slate">
                 <Field label="ملاحظات" value={formData.notes} onChange={v => updateField("notes", v)} type="textarea" placeholder="أي ملاحظات إضافية حول المشروع..." />
               </Section>

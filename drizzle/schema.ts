@@ -106,6 +106,22 @@ export const projects = mysqlTable('projects', {
   disputeResolution: text('disputeResolution'), // تسوية النزاعات
   
   notes: text('notes'),
+
+  // === القسم الثامن: الإدخالات اليدوية ===
+  manualBuaSqft: decimal('manualBuaSqft', { precision: 14, scale: 2 }), // مساحة البناء BUA (قدم مربع)
+  soilTestFee: decimal('soilTestFee', { precision: 14, scale: 2 }), // رسوم تقرير فحص التربة
+  topographicSurveyFee: decimal('topographicSurveyFee', { precision: 14, scale: 2 }), // أعمال الرفع المساحي الطبوغرافي
+  reraUnitRegFee: decimal('reraUnitRegFee', { precision: 14, scale: 2 }), // رسوم تسجيل الوحدات — ريرا
+  developerNocFee: decimal('developerNocFee', { precision: 14, scale: 2 }), // رسوم عدم ممانعة للبيع — المطور
+  escrowAccountFee: decimal('escrowAccountFee', { precision: 14, scale: 2 }), // رسوم فتح حساب الضمان
+  bankFees: decimal('bankFees', { precision: 14, scale: 2 }), // الرسوم البنكية
+  communityFees: decimal('communityFees', { precision: 14, scale: 2 }), // رسوم المجتمع
+  surveyorFees: decimal('surveyorFees', { precision: 14, scale: 2 }), // أتعاب المسّاح (تأكيد المساحات)
+  reraAuditReportFee: decimal('reraAuditReportFee', { precision: 14, scale: 2 }), // تقارير تدقيق ريرا الدورية
+  reraInspectionReportFee: decimal('reraInspectionReportFee', { precision: 14, scale: 2 }), // تقارير تفتيش ريرا الدورية
+  reraProjectRegFee: decimal('reraProjectRegFee', { precision: 14, scale: 2 }), // رسوم تسجيل المشروع — ريرا
+  officialBodiesFees: decimal('officialBodiesFees', { precision: 14, scale: 2 }), // رسوم الجهات الرسمية
+
   createdAt: timestamp('createdAt').defaultNow().notNull(),
   updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
 });
