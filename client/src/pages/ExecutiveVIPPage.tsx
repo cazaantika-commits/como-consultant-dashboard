@@ -543,7 +543,7 @@ export default function ExecutiveVIPPage() {
         <DollarSign className="w-12 h-12 text-green-400 mx-auto mb-3" />
         <p className="text-lg font-bold">التدفقات النقدية</p>
         <p className="text-sm text-muted-foreground mt-2 mb-4">تحليل مالي شامل للمشاريع</p>
-        <button onClick={() => navigate("/feasibility-study")} className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-2 rounded-full text-sm font-medium hover:shadow-lg transition-all">
+        <button onClick={() => navigate("/project-management")} className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-2 rounded-full text-sm font-medium hover:shadow-lg transition-all">
           عرض التحليل المالي <ArrowRight className="w-4 h-4 inline mr-1" />
         </button>
       </Card>
