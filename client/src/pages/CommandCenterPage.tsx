@@ -50,7 +50,11 @@ import {
   Trophy,
   Lock,
   Unlock,
+  Brain,
+  Sparkles,
+  SlidersHorizontal,
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -1508,13 +1512,16 @@ function NewsTicker({ token }: { token: string }) {
 function EvaluationView({ token, memberRole, memberId }: { token: string; memberRole: string; memberId: string }) {
   const projectsQuery = trpc.commandCenter.getProjectsForEvaluation.useQuery({ token });
   const [selectedProject, setSelectedProject] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'financial' | 'technical' | 'committee' | null>(null);
+  const [activeTab, setActiveTab] = useState<'financial' | 'technical' | 'committee' | 'value' | null>(null);
 
   if (selectedProject && activeTab === 'financial') {
     return <FinancialEvaluationView token={token} projectId={selectedProject} onBack={() => setActiveTab(null)} />;
   }
   if (selectedProject && activeTab === 'technical') {
     return <TechnicalEvaluationView token={token} projectId={selectedProject} memberId={memberId} onBack={() => setActiveTab(null)} />;
+  }
+  if (selectedProject && activeTab === 'value') {
+    return <ValueAnalysisView token={token} projectId={selectedProject} onBack={() => setActiveTab(null)} />;
   }
   if (selectedProject && activeTab === 'committee') {
     return <CommitteeDecisionView token={token} projectId={selectedProject} memberId={memberId} onBack={() => setActiveTab(null)} />;
@@ -1530,7 +1537,7 @@ function EvaluationView({ token, memberRole, memberId }: { token: string; member
           </Button>
           <h2 className="text-xl font-bold text-slate-800">{project?.name}</h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* التقييم المالي */}
           <button onClick={() => setActiveTab('financial')} className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 p-6 text-white shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] text-right">
             <div className="absolute top-3 left-3 opacity-20 group-hover:opacity-30 transition-opacity">
@@ -1565,6 +1572,20 @@ function EvaluationView({ token, memberRole, memberId }: { token: string; member
             </div>
           </button>
 
+          {/* تحليل القيمة */}
+          <button onClick={() => setActiveTab('value')} className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 p-6 text-white shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] text-right">
+            <div className="absolute top-3 left-3 opacity-20 group-hover:opacity-30 transition-opacity">
+              <SlidersHorizontal className="w-16 h-16" />
+            </div>
+            <div className="relative z-10">
+              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center mb-4">
+                <SlidersHorizontal className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold mb-1">تحليل القيمة</h3>
+              <p className="text-amber-100 text-sm">فني × مالي مع الانحرافات</p>
+            </div>
+          </button>
+
           {/* قرار اللجنة */}
           <button onClick={() => setActiveTab('committee')} className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-500 to-purple-700 p-6 text-white shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] text-right">
             <div className="absolute top-3 left-3 opacity-20 group-hover:opacity-30 transition-opacity">
@@ -1575,7 +1596,7 @@ function EvaluationView({ token, memberRole, memberId }: { token: string; member
                 <Gavel className="w-6 h-6" />
               </div>
               <h3 className="text-lg font-bold mb-1">قرار اللجنة</h3>
-              <p className="text-purple-100 text-sm">التقرير الشامل والقرار</p>
+              <p className="text-purple-100 text-sm">التقرير الشامل + التحليل الذكي</p>
               {project?.isDecisionConfirmed && <Badge className="mt-2 bg-white/20 text-white border-0">مؤكد ✅</Badge>}
             </div>
           </button>
@@ -1879,22 +1900,267 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
   );
 }
 
-// ═══ Committee Decision View ═══
+// ═══ Value Analysis View ═══
+function ValueAnalysisView({ token, projectId, onBack }: { token: string; projectId: number; onBack: () => void }) {
+  const report = trpc.commandCenter.getComprehensiveReport.useQuery({ token, projectId });
+  const financialData = trpc.commandCenter.getProjectFinancialEvaluation.useQuery({ token, projectId });
+  const [technicalWeight, setTechnicalWeight] = useState(60);
+  const financialWeight = 100 - technicalWeight;
+
+  if (report.isLoading || financialData.isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-amber-500" /></div>;
+
+  const reportData = report.data;
+  const finData = financialData.data;
+  if (!reportData?.isReady) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500"><ArrowLeft className="w-4 h-4 ml-1" /> العودة</Button>
+          <SlidersHorizontal className="w-5 h-5 text-amber-600" />
+          <h2 className="text-lg font-bold text-slate-800">تحليل القيمة</h2>
+        </div>
+        <div className="bg-amber-50 rounded-xl border border-amber-200 p-6 text-center">
+          <Lock className="w-10 h-10 text-amber-500 mx-auto mb-2" />
+          <p className="font-bold text-amber-800">تحليل القيمة غير متاح</p>
+          <p className="text-sm text-amber-600 mt-1">يجب اكتمال التقييم الفني والمالي أولاً</p>
+        </div>
+      </div>
+    );
+  }
+
+  const results = reportData.results || [];
+  const consultantsFin = finData?.consultants || [];
+  const feesArr = consultantsFin.filter((c: any) => c.totalFees > 0).map((c: any) => c.totalFees);
+  const avgFee = feesArr.length > 0 ? feesArr.reduce((a: number, b: number) => a + b, 0) / feesArr.length : 0;
+  const lowestFee = feesArr.length > 0 ? Math.min(...feesArr) : 1;
+
+  // Compute value analysis
+  const valueResults = results.map((r: any) => {
+    const fin = consultantsFin.find((c: any) => c.id === r.id);
+    const totalFees = fin?.totalFees || 0;
+    const deviation = avgFee > 0 ? ((totalFees - avgFee) / avgFee) * 100 : 0;
+    let zone = 'النطاق الطبيعي';
+    let zoneColor = 'text-green-700 bg-green-50';
+    let penalty = 0;
+    if (deviation > 30) { zone = 'انحراف مرتفع جداً'; zoneColor = 'text-red-700 bg-red-50'; penalty = 15; }
+    else if (deviation > 15) { zone = 'انحراف مرتفع معتدل'; zoneColor = 'text-amber-700 bg-amber-50'; penalty = 7; }
+    else if (deviation < -30) { zone = 'انحراف منخفض جداً'; zoneColor = 'text-blue-700 bg-blue-50'; }
+    const financialScore = totalFees > 0 ? (lowestFee / totalFees) * 100 : 0;
+    const adjustedFinancialScore = Math.max(0, financialScore - penalty);
+    const valueScore = (r.technicalScore * technicalWeight / 100) + (adjustedFinancialScore * financialWeight / 100);
+    return { ...r, totalFees, deviation: Math.round(deviation * 10) / 10, zone, zoneColor, penalty, financialScore: Math.round(financialScore * 10) / 10, adjustedFinancialScore: Math.round(adjustedFinancialScore * 10) / 10, valueScore: Math.round(valueScore * 10) / 10 };
+  }).sort((a: any, b: any) => b.valueScore - a.valueScore);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500"><ArrowLeft className="w-4 h-4 ml-1" /> العودة</Button>
+        <SlidersHorizontal className="w-5 h-5 text-amber-600" />
+        <h2 className="text-lg font-bold text-slate-800">تحليل القيمة - {reportData.project?.name}</h2>
+      </div>
+
+      {/* Disclaimer */}
+      <div className="bg-amber-50 rounded-xl border border-amber-200 p-4">
+        <p className="text-sm text-amber-800"><span className="font-bold">تنبيه:</span> تحليل القيمة هو <span className="font-bold">مرجع استرشادي فقط</span> ولا يُلزم اللجنة باتخاذ أي قرار بناءً عليه.</p>
+      </div>
+
+      {/* Weight Sliders */}
+      <div className="bg-white rounded-xl border border-slate-200 p-4">
+        <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2"><SlidersHorizontal className="w-4 h-4 text-amber-600" /> أوزان تحليل القيمة</h3>
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
+            <div className="flex justify-between text-sm mb-1">
+              <span className="text-blue-700 font-medium">الفني: {technicalWeight}%</span>
+              <span className="text-emerald-700 font-medium">المالي: {financialWeight}%</span>
+            </div>
+            <input type="range" min={10} max={90} value={technicalWeight} onChange={e => setTechnicalWeight(Number(e.target.value))} className="w-full accent-amber-500" />
+          </div>
+        </div>
+      </div>
+
+      {/* Value Rankings Table */}
+      <div className="bg-white rounded-xl border border-slate-200 p-4">
+        <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Trophy className="w-5 h-5 text-amber-600" /> ترتيب القيمة</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b-2 border-amber-200 bg-amber-50">
+                <th className="text-right py-3 px-2 text-amber-800">#</th>
+                <th className="text-right py-3 px-2 text-amber-800">الاستشاري</th>
+                <th className="text-center py-3 px-2 text-blue-800">الفني</th>
+                <th className="text-center py-3 px-2 text-emerald-800">المالي</th>
+                <th className="text-center py-3 px-2 text-red-800">الخصم</th>
+                <th className="text-center py-3 px-2 text-emerald-800">المالي المعدل</th>
+                <th className="text-center py-3 px-2 text-amber-800">القيمة</th>
+              </tr>
+            </thead>
+            <tbody>
+              {valueResults.map((r: any, idx: number) => (
+                <tr key={r.id} className={`border-b border-slate-100 ${idx === 0 ? 'bg-green-50' : ''}`}>
+                  <td className="py-3 px-2">
+                    <div className="flex items-center gap-1">
+                      {idx === 0 && <Trophy className="w-4 h-4 text-yellow-500" />}
+                      <span className={`font-bold ${idx === 0 ? 'text-green-700' : 'text-slate-600'}`}>#{idx + 1}</span>
+                    </div>
+                  </td>
+                  <td className="py-3 px-2 font-medium text-slate-800">{r.name}</td>
+                  <td className="text-center py-3 px-2 text-blue-700 font-medium">{r.technicalScore}</td>
+                  <td className="text-center py-3 px-2 text-emerald-700">{r.financialScore}%</td>
+                  <td className="text-center py-3 px-2 text-red-600">{r.penalty > 0 ? `-${r.penalty}` : '-'}</td>
+                  <td className="text-center py-3 px-2 text-emerald-700 font-medium">{r.adjustedFinancialScore}%</td>
+                  <td className="text-center py-3 px-2"><span className={`font-bold text-lg ${idx === 0 ? 'text-green-700' : 'text-slate-700'}`}>{r.valueScore}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Fee Deviation Analysis */}
+      <div className="bg-white rounded-xl border border-slate-200 p-4">
+        <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-amber-600" /> تحليل انحراف الأتعاب</h3>
+        <p className="text-sm text-slate-500 mb-3">متوسط الأتعاب: <span className="font-bold text-slate-800">{Math.round(avgFee).toLocaleString()} د.إ</span></p>
+        <div className="space-y-2">
+          {valueResults.map((r: any) => (
+            <div key={r.id} className="flex items-center justify-between bg-slate-50 rounded-lg p-3">
+              <span className="font-medium text-slate-700">{r.name}</span>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-slate-600">{r.totalFees?.toLocaleString()} د.إ</span>
+                <Badge className={`${r.zoneColor} border-0 text-xs`}>
+                  {r.deviation > 0 ? '+' : ''}{r.deviation}% • {r.zone}
+                </Badge>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Insights */}
+      {valueResults.length >= 2 && (
+        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-200 p-4">
+          <h3 className="font-bold text-indigo-800 mb-3 flex items-center gap-2"><Sparkles className="w-4 h-4" /> ملخص تنفيذي</h3>
+          <div className="space-y-2 text-sm text-indigo-700">
+            <p>الأفضل قيمة: <span className="font-bold">{valueResults[0].name}</span> بنتيجة {valueResults[0].valueScore}</p>
+            {valueResults[0].name !== results.sort((a: any, b: any) => b.technicalScore - a.technicalScore)[0]?.name && (
+              <p>الأعلى فنياً: <span className="font-bold">{results.sort((a: any, b: any) => b.technicalScore - a.technicalScore)[0]?.name}</span> — الميزة المالية لـ {valueResults[0].name} تعوض الفارق الفني</p>
+            )}
+            {valueResults.length > 1 && <p>الفارق بين الأول والثاني: <span className="font-bold">{(valueResults[0].valueScore - valueResults[1].valueScore).toFixed(1)} نقطة</span></p>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══ Committee Decision View (Enhanced with AI) ═══
 function CommitteeDecisionView({ token, projectId, memberId, onBack }: { token: string; projectId: number; memberId: string; onBack: () => void }) {
   const report = trpc.commandCenter.getComprehensiveReport.useQuery({ token, projectId });
   const decision = trpc.commandCenter.getProjectCommitteeDecision.useQuery({ token, projectId });
+  const financialData = trpc.commandCenter.getProjectFinancialEvaluation.useQuery({ token, projectId });
   const saveDecision = trpc.commandCenter.saveCommitteeDecision.useMutation();
   const confirmDecision = trpc.commandCenter.confirmDecision.useMutation();
+  const recommendationMutation = trpc.committee.getRecommendation.useMutation();
+  const analyzeDecisionMutation = trpc.committee.analyzeDecision.useMutation();
+  const postDecisionMutation = trpc.committee.postDecisionAnalysis.useMutation();
   const utils = trpc.useUtils();
   const [selectedConsultant, setSelectedConsultant] = useState<number | null>(null);
-  const [decisionType, setDecisionType] = useState('approve');
+  const [decisionType, setDecisionType] = useState('selected');
+  const [decisionBasis, setDecisionBasis] = useState('best_value');
   const [justification, setJustification] = useState('');
   const [notes, setNotes] = useState('');
+  const [negotiationTarget, setNegotiationTarget] = useState('');
+  const [negotiationConditions, setNegotiationConditions] = useState('');
+  const [aiRecommendation, setAiRecommendation] = useState('');
+  const [aiAnalysis, setAiAnalysis] = useState('');
+  const [postDecisionAnalysis, setPostDecisionAnalysis] = useState('');
+  const [isGettingRecommendation, setIsGettingRecommendation] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isPostAnalyzing, setIsPostAnalyzing] = useState(false);
+
+  // Load existing decision data
+  useEffect(() => {
+    if (decision.data?.decision) {
+      const d = decision.data.decision;
+      if (d.selectedConsultantId) setSelectedConsultant(d.selectedConsultantId);
+      if (d.decisionType) setDecisionType(d.decisionType);
+      if (d.decisionBasis) setDecisionBasis(d.decisionBasis);
+      if (d.justification) setJustification(d.justification);
+      if (d.committeeNotes) setNotes(d.committeeNotes);
+      if (d.negotiationTarget) setNegotiationTarget(d.negotiationTarget);
+      if (d.negotiationConditions) setNegotiationConditions(d.negotiationConditions);
+      if (d.aiRecommendation) setAiRecommendation(d.aiRecommendation);
+      if (d.aiAnalysis) setAiAnalysis(d.aiAnalysis);
+      if (d.aiPostDecisionAnalysis) setPostDecisionAnalysis(d.aiPostDecisionAnalysis);
+    }
+  }, [decision.data]);
 
   if (report.isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-purple-500" /></div>;
 
   const reportData = report.data;
   const decisionData = decision.data;
+  const consultantsFin = financialData.data?.consultants || [];
+  const isDecisionConfirmed = decisionData?.decision?.isConfirmed === 1;
+
+  // Build rankings for AI
+  const rankings = (reportData?.results || []).map((r: any, i: number) => {
+    const fin = consultantsFin.find((c: any) => c.id === r.id);
+    return { id: r.id, name: r.name, rank: i + 1, technicalScore: r.technicalScore, totalFee: fin?.totalFees || 0, feeDeviation: 0, feeZone: 'normal' };
+  });
+
+  const handleGetRecommendation = async () => {
+    if (!reportData?.project) return;
+    setIsGettingRecommendation(true);
+    try {
+      const result = await recommendationMutation.mutateAsync({
+        projectName: reportData.project.name,
+        projectBua: financialData.data?.project?.bua || 0,
+        projectPricePerSqft: financialData.data?.project?.pricePerSqft || 0,
+        consultants: rankings.map((r: any) => ({ name: r.name, technicalScore: r.technicalScore, totalFee: r.totalFee, feeDeviation: r.feeDeviation, feeZone: r.feeZone })),
+      });
+      setAiRecommendation(result.recommendation);
+      await saveDecision.mutateAsync({ token, projectId, selectedConsultantId: selectedConsultant || undefined, decisionType, aiRecommendation: result.recommendation });
+    } catch { toast.error('فشل في الحصول على التوصية'); } finally { setIsGettingRecommendation(false); }
+  };
+
+  const handleAnalyzeDecision = async () => {
+    if (!reportData?.project || !selectedConsultant) return;
+    const selectedName = rankings.find((r: any) => r.id === selectedConsultant)?.name || '';
+    setIsAnalyzing(true);
+    try {
+      const result = await analyzeDecisionMutation.mutateAsync({
+        projectName: reportData.project.name,
+        selectedConsultantName: selectedName,
+        decisionType, decisionBasis,
+        rankings: rankings.map((r: any) => ({ name: r.name, rank: r.rank, technicalScore: r.technicalScore, totalFee: r.totalFee, feeDeviation: r.feeDeviation, feeZone: r.feeZone })),
+        negotiationTarget, negotiationConditions,
+      });
+      setAiAnalysis(result.analysis);
+      await saveDecision.mutateAsync({ token, projectId, selectedConsultantId: selectedConsultant, decisionType, aiAnalysis: result.analysis });
+    } catch { toast.error('فشل في التحليل'); } finally { setIsAnalyzing(false); }
+  };
+
+  const handlePostDecisionAnalysis = async () => {
+    if (!reportData?.project || !selectedConsultant) return;
+    const selectedName = rankings.find((r: any) => r.id === selectedConsultant)?.name || '';
+    setIsPostAnalyzing(true);
+    try {
+      const result = await postDecisionMutation.mutateAsync({
+        projectId, projectName: reportData.project.name,
+        selectedConsultantName: selectedName,
+        decisionType, decisionBasis, justification,
+        rankings: rankings.map((r: any) => ({ name: r.name, rank: r.rank, technicalScore: r.technicalScore, totalFee: r.totalFee })),
+        negotiationTarget, negotiationConditions,
+      });
+      setPostDecisionAnalysis(result.analysis);
+    } catch { toast.error('فشل في التحليل'); } finally { setIsPostAnalyzing(false); }
+  };
+
+  const handleSaveDecision = async () => {
+    if (!selectedConsultant) { toast.error('اختر استشاري أولاً'); return; }
+    await saveDecision.mutateAsync({ token, projectId, selectedConsultantId: selectedConsultant, decisionType, decisionBasis, justification, committeeNotes: notes, negotiationTarget, negotiationConditions, aiAnalysis, aiRecommendation });
+    utils.commandCenter.getProjectCommitteeDecision.invalidate({ token, projectId });
+    toast.success('تم حفظ القرار');
+  };
 
   return (
     <div className="space-y-6">
@@ -1906,7 +2172,6 @@ function CommitteeDecisionView({ token, projectId, memberId, onBack }: { token: 
         <h2 className="text-lg font-bold text-slate-800">قرار اللجنة - {reportData?.project?.name}</h2>
       </div>
 
-      {/* Comprehensive Report */}
       {!reportData?.isReady ? (
         <div className="bg-amber-50 rounded-xl border border-amber-200 p-6 text-center">
           <Lock className="w-10 h-10 text-amber-500 mx-auto mb-2" />
@@ -1915,114 +2180,171 @@ function CommitteeDecisionView({ token, projectId, memberId, onBack }: { token: 
         </div>
       ) : (
         <>
+          {/* Comprehensive Report Table */}
           <div className="bg-white rounded-xl border border-slate-200 p-4">
             <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-purple-600" /> التقرير الشامل
+              <BarChart3 className="w-5 h-5 text-purple-600" /> التقرير الشامل (مرجع)
             </h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b-2 border-purple-200 bg-purple-50">
-                    <th className="text-right py-3 px-2 text-purple-800">المركز</th>
-                    <th className="text-right py-3 px-2 text-purple-800">الاستشاري</th>
-                    <th className="text-center py-3 px-2 text-purple-800">الفني (20%)</th>
-                    <th className="text-center py-3 px-2 text-purple-800">المالي (80%)</th>
-                    <th className="text-center py-3 px-2 text-purple-800">النتيجة النهائية</th>
+                    <th className="text-right py-2 px-2 text-purple-800">#</th>
+                    <th className="text-right py-2 px-2 text-purple-800">الاستشاري</th>
+                    <th className="text-center py-2 px-2 text-purple-800">الفني</th>
+                    <th className="text-center py-2 px-2 text-purple-800">الأتعاب</th>
+                    <th className="text-center py-2 px-2 text-purple-800">النتيجة</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {reportData.results?.map((r: any) => (
-                    <tr key={r.id} className={`border-b border-slate-100 ${r.rank === 1 ? 'bg-green-50' : ''}`}>
-                      <td className="py-3 px-2">
-                        <div className="flex items-center gap-1">
-                          {r.rank === 1 && <Trophy className="w-4 h-4 text-yellow-500" />}
-                          <span className={`font-bold ${r.rank === 1 ? 'text-green-700' : 'text-slate-600'}`}>#{r.rank}</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-2 font-medium text-slate-800">{r.name}</td>
-                      <td className="text-center py-3 px-2 text-blue-700 font-medium">{r.technicalScore}</td>
-                      <td className="text-center py-3 px-2 text-emerald-700 font-medium">{r.financialScore}%</td>
-                      <td className="text-center py-3 px-2">
-                        <span className={`font-bold text-lg ${r.rank === 1 ? 'text-green-700' : 'text-slate-700'}`}>{r.finalScore}</span>
-                      </td>
-                    </tr>
-                  ))}
+                  {reportData.results?.map((r: any) => {
+                    const fin = consultantsFin.find((c: any) => c.id === r.id);
+                    return (
+                      <tr key={r.id} className={`border-b border-slate-100 ${r.rank === 1 ? 'bg-green-50' : ''}`}>
+                        <td className="py-2 px-2"><span className={`font-bold ${r.rank === 1 ? 'text-green-700' : 'text-slate-600'}`}>#{r.rank}</span></td>
+                        <td className="py-2 px-2 font-medium text-slate-800">{r.name}</td>
+                        <td className="text-center py-2 px-2 text-blue-700">{r.technicalScore}</td>
+                        <td className="text-center py-2 px-2 text-emerald-700">{fin?.totalFees?.toLocaleString() || '-'} د.إ</td>
+                        <td className="text-center py-2 px-2"><span className={`font-bold ${r.rank === 1 ? 'text-green-700' : 'text-slate-700'}`}>{r.finalScore}</span></td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           </div>
 
-          {/* AI Advisory */}
-          {decisionData?.aiScores && decisionData.aiScores.length > 0 && (
-            <div className="bg-indigo-50 rounded-xl border border-indigo-200 p-4">
-              <h3 className="font-bold text-indigo-800 mb-2 flex items-center gap-2">
-                <Star className="w-4 h-4" /> رأي الوكيل الذكي
-              </h3>
-              {decisionData.aiScores.map((ai: any) => (
-                <div key={ai.id} className="text-sm text-indigo-700 mb-1">
-                  <span className="font-medium">{ai.consultantId}:</span> {ai.recommendation || 'لا توجد توصية'}
-                </div>
-              ))}
+          {/* AI Recommendation */}
+          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-200 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-bold text-purple-800 flex items-center gap-2"><Brain className="w-5 h-5" /> تحليل وتوصية AI</h3>
+              {!isDecisionConfirmed && (
+                <Button onClick={handleGetRecommendation} disabled={isGettingRecommendation || rankings.length === 0} size="sm" className="gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700">
+                  {isGettingRecommendation ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
+                  طلب توصية
+                </Button>
+              )}
             </div>
-          )}
+            {aiRecommendation ? (
+              <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed bg-white/50 rounded-lg p-3">{aiRecommendation}</div>
+            ) : (
+              <p className="text-sm text-purple-400">اضغط "طلب توصية" للحصول على تحليل ذكي شامل</p>
+            )}
+          </div>
 
           {/* Committee Decision Form */}
-          {!decisionData?.decision?.isConfirmed && (
-            <div className="bg-white rounded-xl border border-purple-200 p-4">
-              <h3 className="font-bold text-purple-800 mb-4">اتخاذ القرار</h3>
-              <div className="space-y-4">
+          {!isDecisionConfirmed && (
+            <div className="bg-white rounded-xl border-2 border-purple-200 p-5 shadow-lg">
+              <h3 className="font-bold text-purple-800 mb-4 flex items-center gap-2"><Gavel className="w-5 h-5 text-amber-600" /> اتخاذ القرار</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="text-sm font-medium text-slate-700 mb-2 block">اختيار الاستشاري</label>
-                  <div className="flex flex-wrap gap-2">
-                    {reportData.results?.map((r: any) => (
-                      <button key={r.id} onClick={() => setSelectedConsultant(r.id)}
-                        className={`px-4 py-2 rounded-lg border text-sm transition-all ${selectedConsultant === r.id ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-slate-700 border-slate-200 hover:border-purple-300'}`}>
-                        {r.name} (#{r.rank})
-                      </button>
-                    ))}
+                  <label className="text-sm font-semibold text-slate-700 mb-1 block">الاستشاري المختار</label>
+                  <Select value={selectedConsultant?.toString() || ''} onValueChange={v => setSelectedConsultant(parseInt(v))}>
+                    <SelectTrigger className="bg-white border-slate-300"><SelectValue placeholder="اختر الاستشاري" /></SelectTrigger>
+                    <SelectContent>
+                      {reportData.results?.map((r: any) => (
+                        <SelectItem key={r.id} value={r.id.toString()}>{r.name} (#{r.rank})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-slate-700 mb-1 block">نوع القرار</label>
+                  <Select value={decisionType} onValueChange={setDecisionType}>
+                    <SelectTrigger className="bg-white border-slate-300"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="selected">اختيار مباشر</SelectItem>
+                      <SelectItem value="negotiate">التفاوض أولاً</SelectItem>
+                      <SelectItem value="pending">قيد الدراسة</SelectItem>
+                      <SelectItem value="rejected_all">رفض جميع العروض</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-slate-700 mb-1 block">أساس القرار</label>
+                  <Select value={decisionBasis} onValueChange={setDecisionBasis}>
+                    <SelectTrigger className="bg-white border-slate-300"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="highest_technical">الأعلى فنياً</SelectItem>
+                      <SelectItem value="best_value">أفضل قيمة (فني + مالي)</SelectItem>
+                      <SelectItem value="lowest_fee">الأقل تكلفة</SelectItem>
+                      <SelectItem value="highest_fee_with_negotiation">الأعلى تكلفة مع تفاوض</SelectItem>
+                      <SelectItem value="other">أسباب أخرى</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {(decisionType === 'negotiate' || decisionBasis === 'highest_fee_with_negotiation') && (
+                  <div>
+                    <label className="text-sm font-semibold text-slate-700 mb-1 block">التارجت المالي</label>
+                    <Input value={negotiationTarget} onChange={e => setNegotiationTarget(e.target.value)} placeholder="مثلاً: 2,000,000 AED" className="bg-white border-slate-300" />
                   </div>
+                )}
+              </div>
+              {(decisionType === 'negotiate' || decisionBasis === 'highest_fee_with_negotiation') && (
+                <div className="mb-4">
+                  <label className="text-sm font-semibold text-slate-700 mb-1 block">شروط التفاوض</label>
+                  <Textarea value={negotiationConditions} onChange={e => setNegotiationConditions(e.target.value)} placeholder="حدد شروط التفاوض..." className="bg-white border-slate-300" rows={3} />
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-slate-700 mb-2 block">المبررات</label>
-                  <Textarea value={justification} onChange={(e) => setJustification(e.target.value)} placeholder="أدخل مبررات القرار..." className="min-h-[80px]" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-slate-700 mb-2 block">ملاحظات اللجنة</label>
-                  <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="ملاحظات إضافية..." className="min-h-[60px]" />
-                </div>
+              )}
+              <div className="mb-4">
+                <label className="text-sm font-semibold text-slate-700 mb-1 block">مبررات القرار</label>
+                <Textarea value={justification} onChange={e => setJustification(e.target.value)} placeholder="اكتب مبررات اللجنة..." className="bg-white border-slate-300" rows={3} />
+              </div>
+              <div className="mb-4">
+                <label className="text-sm font-semibold text-slate-700 mb-1 block">ملاحظات اللجنة</label>
+                <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="ملاحظات إضافية..." className="bg-white border-slate-300" rows={2} />
+              </div>
+              <div className="flex gap-3 flex-wrap">
+                <Button onClick={handleSaveDecision} className="gap-2 bg-blue-600 hover:bg-blue-700" disabled={saveDecision.isPending}>
+                  {saveDecision.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} حفظ القرار
+                </Button>
+                <Button onClick={handleAnalyzeDecision} disabled={isAnalyzing || !selectedConsultant} variant="outline" className="gap-2 text-purple-700 border-purple-300 hover:bg-purple-50">
+                  {isAnalyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />} تحليل AI للقرار
+                </Button>
                 <Button onClick={async () => {
-                  if (!selectedConsultant) { toast.error('اختر استشاري أولاً'); return; }
-                  await saveDecision.mutateAsync({ token, projectId, selectedConsultantId: selectedConsultant, decisionType, justification, committeeNotes: notes });
+                  if (!selectedConsultant || !decisionType) { toast.error('اختر استشاري ونوع القرار'); return; }
+                  if (!confirm('هل أنت متأكد من تأكيد القرار؟ لا يمكن التراجع بعد التأكيد.')) return;
+                  await handleSaveDecision();
+                  await confirmDecision.mutateAsync({ token, projectId });
                   utils.commandCenter.getProjectCommitteeDecision.invalidate({ token, projectId });
-                  toast.success('تم حفظ القرار');
-                }} className="w-full bg-purple-600 hover:bg-purple-700" disabled={saveDecision.isPending}>
-                  {saveDecision.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'حفظ قرار اللجنة'}
+                  utils.commandCenter.getProjectsForEvaluation.invalidate({ token });
+                  toast.success('تم تأكيد القرار');
+                }} disabled={!selectedConsultant || !decisionType || confirmDecision.isPending} className="gap-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 mr-auto">
+                  {confirmDecision.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Gavel className="w-4 h-4" />} تأكيد القرار النهائي
                 </Button>
               </div>
             </div>
           )}
 
-          {/* Sheikh Issa Confirmation */}
-          {decisionData?.decision && !decisionData.decision.isConfirmed && memberId === 'sheikh_issa' && (
-            <div className="bg-amber-50 rounded-xl border border-amber-300 p-4">
-              <h3 className="font-bold text-amber-800 mb-3">تأكيد القرار - الشيخ عيسى</h3>
-              <p className="text-sm text-amber-700 mb-4">قرار اللجنة بانتظار تأكيدكم</p>
-              <Button onClick={async () => {
-                await confirmDecision.mutateAsync({ token, projectId });
-                utils.commandCenter.getProjectCommitteeDecision.invalidate({ token, projectId });
-                utils.commandCenter.getProjectsForEvaluation.invalidate({ token });
-                toast.success('تم تأكيد القرار');
-              }} className="w-full bg-amber-600 hover:bg-amber-700" disabled={confirmDecision.isPending}>
-                {confirmDecision.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'تأكيد القرار النهائي'}
-              </Button>
+          {/* AI Analysis Display */}
+          {aiAnalysis && (
+            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-200 p-4">
+              <h4 className="text-sm font-bold text-purple-800 mb-2 flex items-center gap-2"><Brain className="w-4 h-4" /> تحليل AI للقرار</h4>
+              <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{aiAnalysis}</div>
             </div>
           )}
 
-          {decisionData?.decision?.isConfirmed && (
+          {/* Post-Decision Analysis */}
+          {isDecisionConfirmed && (
+            <div className="space-y-4">
+              <Button onClick={handlePostDecisionAnalysis} disabled={isPostAnalyzing} className="gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700">
+                {isPostAnalyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />} تحليل ما بعد القرار
+              </Button>
+              {postDecisionAnalysis && (
+                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-200 p-4">
+                  <h4 className="text-sm font-bold text-emerald-800 mb-2 flex items-center gap-2"><Brain className="w-4 h-4" /> تحليل ما بعد القرار</h4>
+                  <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{postDecisionAnalysis}</div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Confirmed Decision Banner */}
+          {isDecisionConfirmed && (
             <div className="bg-green-50 rounded-xl border border-green-300 p-6 text-center">
               <Trophy className="w-12 h-12 text-green-500 mx-auto mb-2" />
               <p className="font-bold text-green-800 text-lg">تم تأكيد القرار</p>
-              <p className="text-sm text-green-600 mt-1">تم التأكيد بواسطة {decisionData.decision.confirmedBy}</p>
+              <p className="text-sm text-green-600 mt-1">تم التأكيد بواسطة {decisionData?.decision?.confirmedBy}</p>
             </div>
           )}
         </>

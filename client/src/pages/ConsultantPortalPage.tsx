@@ -2,11 +2,8 @@ import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Link } from "wouter";
 import {
-  Star,
   FileText,
-  UserCircle,
   Lightbulb,
-  ClipboardCheck,
   BookOpen,
   ArrowLeft,
   Building2,
@@ -14,17 +11,6 @@ import {
 } from "lucide-react";
 
 const PORTAL_ICONS = [
-  {
-    id: "evaluation",
-    title: "تقييم الاستشاريين",
-    description: "نظام التقييم الفني من لجنة مكونة من ثلاثة أعضاء مع حساب المتوسط والترتيب",
-    icon: Star,
-    color: "from-amber-500 to-orange-600",
-    bgLight: "bg-amber-50",
-    textColor: "text-amber-700",
-    borderColor: "border-amber-200",
-    href: "/consultant-evaluation",
-  },
   {
     id: "proposals",
     title: "عروض الاستشاريين",
@@ -37,17 +23,6 @@ const PORTAL_ICONS = [
     href: "/consultant-proposals",
   },
   {
-    id: "know",
-    title: "تعرف على الاستشاري",
-    description: "معلومات شاملة عن كل مكتب استشاري: الموقع، التصنيف، الخبرة، وبيانات التواصل",
-    icon: UserCircle,
-    color: "from-violet-500 to-purple-600",
-    bgLight: "bg-violet-50",
-    textColor: "text-violet-700",
-    borderColor: "border-violet-200",
-    href: "/consultant-know",
-  },
-  {
     id: "recommend",
     title: "ماذا تقترح؟",
     description: "توصيات ذكية مبنية على بيانات التقييم والأتعاب حسب طبيعة كل مشروع",
@@ -57,17 +32,6 @@ const PORTAL_ICONS = [
     textColor: "text-sky-700",
     borderColor: "border-sky-200",
     href: "/consultant-recommend",
-  },
-  {
-    id: "committee",
-    title: "قرارات اللجنة",
-    description: "القرارات النهائية للجنة مع تحليل ذكي لأسباب الاختيار والتفاوض",
-    icon: ClipboardCheck,
-    color: "from-rose-500 to-pink-600",
-    bgLight: "bg-rose-50",
-    textColor: "text-rose-700",
-    borderColor: "border-rose-200",
-    href: "/consultant-committee",
   },
   {
     id: "guide",

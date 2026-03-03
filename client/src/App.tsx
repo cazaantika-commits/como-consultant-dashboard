@@ -11,13 +11,11 @@ import ConsultantDetailPage from "./pages/ConsultantDetailPage";
 import DriveBrowserPage from "./pages/DriveBrowserPage";
 import TasksPage from "./pages/TasksPage";
 import AgentDashboardPage from "./pages/AgentDashboardPage";
-import ConsultantEvaluationPage from "./pages/ConsultantEvaluationPage";
 import ConsultantPortalPage from "./pages/ConsultantPortalPage";
 import ConsultantGuidePage from "./pages/ConsultantGuidePage";
 import ConsultantProposalsPage from "./pages/ConsultantProposalsPage";
 import ConsultantKnowPage from "./pages/ConsultantKnowPage";
 import ConsultantRecommendPage from "./pages/ConsultantRecommendPage";
-import ConsultantCommitteePage from "./pages/ConsultantCommitteePage";
 import ModelStatsPage from "./pages/ModelStatsPage";
 import AgentAssignmentsPage from "./pages/AgentAssignmentsPage";
 import AgentAssignmentsSummaryPage from "./pages/AgentAssignmentsSummaryPage";
@@ -35,7 +33,6 @@ import ProjectManagementPage from "./pages/ProjectManagementPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
 import ContractsRegistryPage from "./pages/ContractsRegistryPage";
 import FactSheetPage from "./pages/FactSheetPage";
-import CommitteeDecisionPage from "./pages/CommitteeDecisionPage";
 import ActivityMonitorPage from "./pages/ActivityMonitorPage";
 import SpecialistKnowledgePage from "./pages/SpecialistKnowledgePage";
 import SentEmailsPage from "./pages/SentEmailsPage";
@@ -56,7 +53,6 @@ function Router() {
       <Route path="/drive" component={DriveBrowserPage} />
       <Route path="/tasks" component={TasksPage} />
       <Route path="/agent-dashboard" component={AgentDashboardPage} />
-      <Route path="/consultant-evaluation" component={ConsultantEvaluationPage} />
       {/* These pages are also accessible as tabs inside Project Management */}
       <Route path="/feasibility" component={FeasibilityStudyPage} />
       <Route path="/feasibility-study" component={FeasibilityStudyPage} />
@@ -68,7 +64,6 @@ function Router() {
       <Route path="/consultant-proposals" component={ConsultantProposalsPage} />
       <Route path="/consultant-know" component={ConsultantKnowPage} />
       <Route path="/consultant-recommend" component={ConsultantRecommendPage} />
-      <Route path="/consultant-committee" component={ConsultantCommitteePage} />
       <Route path="/model-stats" component={ModelStatsPage} />
       <Route path="/agent-assignments" component={AgentAssignmentsPage} />
       <Route path="/agent-assignments-summary" component={AgentAssignmentsSummaryPage} />
@@ -85,7 +80,6 @@ function Router() {
       <Route path="/project/:id" component={ProjectDetailPage} />
       <Route path="/contracts" component={ContractsRegistryPage} />
       <Route path="/fact-sheet" component={FactSheetPage} />
-      <Route path="/committee-decision" component={CommitteeDecisionPage} />
       <Route path="/activity-monitor" component={ActivityMonitorPage} />
       <Route path="/specialist-knowledge" component={SpecialistKnowledgePage} />
       <Route path="/sent-emails" component={SentEmailsPage} />

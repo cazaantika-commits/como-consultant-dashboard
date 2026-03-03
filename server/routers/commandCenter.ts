@@ -1330,16 +1330,22 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
     }),
 
   saveCommitteeDecision: publicProcedure
-    .input(z.object({ token: z.string(), projectId: z.number(), selectedConsultantId: z.number().optional(), decisionType: z.string(), justification: z.string().optional(), committeeNotes: z.string().optional() }))
+    .input(z.object({ token: z.string(), projectId: z.number(), selectedConsultantId: z.number().optional(), decisionType: z.string(), decisionBasis: z.string().optional(), justification: z.string().optional(), committeeNotes: z.string().optional(), negotiationTarget: z.string().optional(), negotiationConditions: z.string().optional(), aiAnalysis: z.string().optional(), aiRecommendation: z.string().optional() }))
     .mutation(async ({ input }) => {
       await verifyToken(input.token);
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const updateData: any = { selectedConsultantId: input.selectedConsultantId || null, decisionType: input.decisionType, justification: input.justification || null, committeeNotes: input.committeeNotes || null };
+      if (input.decisionBasis !== undefined) updateData.decisionBasis = input.decisionBasis;
+      if (input.negotiationTarget !== undefined) updateData.negotiationTarget = input.negotiationTarget;
+      if (input.negotiationConditions !== undefined) updateData.negotiationConditions = input.negotiationConditions;
+      if (input.aiAnalysis !== undefined) updateData.aiAnalysis = input.aiAnalysis;
+      if (input.aiRecommendation !== undefined) updateData.aiRecommendation = input.aiRecommendation;
       const [existing] = await db.select().from(committeeDecisions).where(eq(committeeDecisions.projectId, input.projectId));
       if (existing) {
-        await db.update(committeeDecisions).set({ selectedConsultantId: input.selectedConsultantId || null, decisionType: input.decisionType, justification: input.justification || null, committeeNotes: input.committeeNotes || null }).where(eq(committeeDecisions.projectId, input.projectId));
+        await db.update(committeeDecisions).set(updateData).where(eq(committeeDecisions.projectId, input.projectId));
       } else {
-        await db.insert(committeeDecisions).values({ projectId: input.projectId, selectedConsultantId: input.selectedConsultantId || null, decisionType: input.decisionType, justification: input.justification || null, committeeNotes: input.committeeNotes || null });
+        await db.insert(committeeDecisions).values({ projectId: input.projectId, ...updateData });
       }
       return { success: true };
     }),
