@@ -118,7 +118,7 @@ function Section({ title, icon: Icon, children, color = "amber" }: {
           {title}
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-3.5">
+      <CardContent className="p-2.5">
         {children}
       </CardContent>
     </Card>
@@ -563,7 +563,7 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
             <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
           </div>
         ) : (
-          <div className="space-y-3.5">
+          <div className="space-y-2.5">
             {/* Project Name Banner */}
             <div className="bg-gradient-to-l from-amber-50 via-white to-amber-50 rounded-xl border border-amber-200/50 p-5 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -599,11 +599,11 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
             </div>
 
             {/* Grid layout - 2 columns */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
               
               {/* Section 1: Identification Numbers */}
               <Section title="أرقام التعريف والتسجيل" icon={FileText} color="amber">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <Field label="رقم القطعة" value={formData.plotNumber} onChange={v => updateField("plotNumber", v)} placeholder="مثال: 6185392" />
                   <Field label="كود المنطقة" value={formData.areaCode} onChange={v => updateField("areaCode", v)} placeholder="مثال: Nas-R" />
                   <Field label="رقم سند الملكية (Title Deed)" value={formData.titleDeedNumber} onChange={v => updateField("titleDeedNumber", v)} />
@@ -614,7 +614,7 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
 
               {/* Section 2: Areas */}
               <Section title="المساحات" icon={Ruler} color="blue">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <Field label="مساحة الأرض (م²)" value={formData.plotAreaSqm} onChange={v => updateField("plotAreaSqm", v)} placeholder="بالمتر المربع" />
                   <Field label="مساحة الأرض (قدم²)" value={formData.plotAreaSqft} onChange={v => updateField("plotAreaSqft", v)} placeholder="بالقدم المربع" />
                   <Field label="GFA المسموح (م²)" value={formData.gfaSqm} onChange={v => updateField("gfaSqm", v)} placeholder="المساحة الإجمالية" />
@@ -625,7 +625,7 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
 
               {/* Section 3: Usage & Ownership */}
               <Section title="الاستخدام ونوع الملكية" icon={Landmark} color="purple">
-                <div className="space-y-4">
+                <div className="space-y-2.5">
                   <Field label="الاستخدام المسموح" value={formData.permittedUse} onChange={v => updateField("permittedUse", v)} placeholder="سكني، تجاري، مختلط..." />
                   <Field label="نوع الملكية" value={formData.ownershipType} onChange={v => updateField("ownershipType", v)} placeholder="تملك حر، إيجار طويل..." />
                   <Field label="قيود التجزئة" value={formData.subdivisionRestrictions} onChange={v => updateField("subdivisionRestrictions", v)} type="textarea" />
@@ -634,7 +634,7 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
 
               {/* Section 4: Master Developer */}
               <Section title="المطور الرئيسي" icon={Building2} color="emerald">
-                <div className="space-y-4">
+                <div className="space-y-2.5">
                   <Field label="اسم المطور الرئيسي" value={formData.masterDevName} onChange={v => updateField("masterDevName", v)} />
                   <Field label="عنوان المطور" value={formData.masterDevAddress} onChange={v => updateField("masterDevAddress", v)} />
                 </div>
@@ -642,7 +642,7 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
 
               {/* Section 5: Seller */}
               <Section title="البائع (المالك السابق)" icon={Users} color="orange">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <Field label="اسم البائع" value={formData.sellerName} onChange={v => updateField("sellerName", v)} />
                   <Field label="عنوان البائع" value={formData.sellerAddress} onChange={v => updateField("sellerAddress", v)} />
                 </div>
@@ -650,7 +650,7 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
 
               {/* Section 6: Buyer */}
               <Section title="المشتري (المالك الحالي)" icon={Users} color="blue">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <Field label="اسم المشتري" value={formData.buyerName} onChange={v => updateField("buyerName", v)} />
                   <Field label="الجنسية" value={formData.buyerNationality} onChange={v => updateField("buyerNationality", v)} />
                   <Field label="رقم جواز السفر" value={formData.buyerPassport} onChange={v => updateField("buyerPassport", v)} />
@@ -662,16 +662,16 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
 
               {/* Section 7: Infrastructure */}
               <Section title="البنية التحتية والمرافق" icon={Zap} color="amber">
-                <div className="space-y-4">
+                <div className="space-y-2.5">
                   <h4 className="text-xs font-semibold text-stone-500 uppercase tracking-wider">تخصيصات المرافق</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     <Field label="الكهرباء (كيلوواط)" value={formData.electricityAllocation} onChange={v => updateField("electricityAllocation", v)} />
                     <Field label="المياه (م³/يوم)" value={formData.waterAllocation} onChange={v => updateField("waterAllocation", v)} />
                     <Field label="الصرف الصحي (م³/يوم)" value={formData.sewageAllocation} onChange={v => updateField("sewageAllocation", v)} />
                   </div>
                   <Separator className="my-2" />
                   <h4 className="text-xs font-semibold text-stone-500 uppercase tracking-wider">تخصيصات الحركة المرورية</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     <Field label="رحلات صباحية (AM)" value={formData.tripAM} onChange={v => updateField("tripAM", v)} />
                     <Field label="رحلات نهارية (LT)" value={formData.tripLT} onChange={v => updateField("tripLT", v)} />
                     <Field label="رحلات مسائية (PM)" value={formData.tripPM} onChange={v => updateField("tripPM", v)} />
@@ -681,8 +681,8 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
 
               {/* Section 8: Construction Timeline */}
               <Section title="الجدول الزمني للإنشاءات" icon={Calendar} color="emerald">
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <Field label="تاريخ السريان" value={formData.effectiveDate} onChange={v => updateField("effectiveDate", v)} />
                     <Field label="فترة البناء الإجمالية" value={formData.constructionPeriod} onChange={v => updateField("constructionPeriod", v)} />
                     <Field label="تاريخ بدء الإنشاء" value={formData.constructionStartDate} onChange={v => updateField("constructionStartDate", v)} />
@@ -694,7 +694,7 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
 
               {/* Section 9: Restrictions & Obligations */}
               <Section title="الالتزامات والقيود" icon={ShieldAlert} color="rose">
-                <div className="space-y-4">
+                <div className="space-y-2.5">
                   <Field label="قيود البيع والتصرف" value={formData.saleRestrictions} onChange={v => updateField("saleRestrictions", v)} type="textarea" />
                   <Field label="شروط إعادة البيع" value={formData.resaleConditions} onChange={v => updateField("resaleConditions", v)} type="textarea" />
                   <Field label="رسوم المجتمع" value={formData.communityCharges} onChange={v => updateField("communityCharges", v)} type="textarea" />
@@ -703,9 +703,9 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
 
               {/* Section 10: Registration & Fees */}
               <Section title="المستندات والرسوم" icon={Landmark} color="slate">
-                <div className="space-y-4">
+                <div className="space-y-2.5">
                   <Field label="جهة التسجيل" value={formData.registrationAuthority} onChange={v => updateField("registrationAuthority", v)} />
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                     <Field label="رسوم إدارية (AED)" value={formData.adminFee} onChange={v => updateField("adminFee", v)} type="number" />
                     <Field label="رسوم شهادة التخليص (AED)" value={formData.clearanceFee} onChange={v => updateField("clearanceFee", v)} type="number" />
                     <Field label="مبلغ التعويض (AED)" value={formData.compensationAmount} onChange={v => updateField("compensationAmount", v)} type="number" />
@@ -715,7 +715,7 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
 
               {/* Section 11: Governing Law */}
               <Section title="القانون الحاكم وتسوية النزاعات" icon={Scale} color="purple">
-                <div className="space-y-4">
+                <div className="space-y-2.5">
                   <Field label="القانون الساري" value={formData.governingLaw} onChange={v => updateField("governingLaw", v)} type="textarea" />
                   <Field label="آلية تسوية النزاعات" value={formData.disputeResolution} onChange={v => updateField("disputeResolution", v)} type="textarea" />
                 </div>
