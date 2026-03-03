@@ -424,14 +424,14 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
         agentCommissionLandPct: p.agentCommissionLandPct || "",
         // تكلفة البناء التقديرية
         estimatedConstructionPricePerSqft: p.estimatedConstructionPricePerSqft || "",
-        // نسب التكاليف المتغيرة
-        designFeePct: p.designFeePct || "",
-        supervisionFeePct: p.supervisionFeePct || "",
-        separationFeePerM2: p.separationFeePerM2 || "",
-        salesCommissionPct: p.salesCommissionPct || "",
-        marketingPct: p.marketingPct || "",
-        developerFeePhase1Pct: p.developerFeePhase1Pct || "",
-        developerFeePhase2Pct: p.developerFeePhase2Pct || "",
+        // نسب التكاليف المتغيرة (قيم افتراضية إذا لم تُدخل)
+        designFeePct: p.designFeePct ?? "2",
+        supervisionFeePct: p.supervisionFeePct ?? "2",
+        separationFeePerM2: p.separationFeePerM2 ?? "40",
+        salesCommissionPct: p.salesCommissionPct ?? "5",
+        marketingPct: p.marketingPct ?? "2",
+        developerFeePhase1Pct: p.developerFeePhase1Pct ?? "2",
+        developerFeePhase2Pct: p.developerFeePhase2Pct ?? "3",
       });
       setHasChanges(false);
     }

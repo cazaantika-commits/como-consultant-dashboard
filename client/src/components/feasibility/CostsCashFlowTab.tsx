@@ -128,13 +128,13 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
     const surveyorFees = parseFloat(p.surveyorFees || "0");
     const reraAuditReportFee = parseFloat(p.reraAuditReportFee || "0");
     const reraInspectionReportFee = parseFloat(p.reraInspectionReportFee || "0");
-    const designFeePct = parseFloat(p.designFeePct || "0");
-    const supervisionFeePct = parseFloat(p.supervisionFeePct || "0");
-    const separationFeePerM2 = parseFloat(p.separationFeePerM2 || "0");
-    const salesCommissionPct = parseFloat(p.salesCommissionPct || "0");
-    const marketingPct = parseFloat(p.marketingPct || "0");
-    const developerFeePhase1Pct = parseFloat(p.developerFeePhase1Pct || "0");
-    const developerFeePhase2Pct = parseFloat(p.developerFeePhase2Pct || "0");
+    const designFeePct = parseFloat(p.designFeePct ?? "2");
+    const supervisionFeePct = parseFloat(p.supervisionFeePct ?? "2");
+    const separationFeePerM2 = parseFloat(p.separationFeePerM2 ?? "40");
+    const salesCommissionPct = parseFloat(p.salesCommissionPct ?? "5");
+    const marketingPct = parseFloat(p.marketingPct ?? "2");
+    const developerFeePhase1Pct = parseFloat(p.developerFeePhase1Pct ?? "2");
+    const developerFeePhase2Pct = parseFloat(p.developerFeePhase2Pct ?? "3");
 
     // --- Source 2: Fact Sheet areas ---
     const bua = manualBuaSqft;
