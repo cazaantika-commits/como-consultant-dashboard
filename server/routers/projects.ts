@@ -60,8 +60,12 @@ const factSheetFields = {
   governingLaw: z.string().optional(),
   disputeResolution: z.string().optional(),
   notes: z.string().optional(),
+  // بيانات الشراء
+  landPrice: z.string().optional(),
+  agentCommissionLandPct: z.string().optional(),
   // الإدخالات اليدوية
   manualBuaSqft: z.string().optional(),
+  estimatedConstructionPricePerSqft: z.string().optional(),
   soilTestFee: z.string().optional(),
   topographicSurveyFee: z.string().optional(),
   reraUnitRegFee: z.string().optional(),
@@ -74,6 +78,14 @@ const factSheetFields = {
   reraInspectionReportFee: z.string().optional(),
   reraProjectRegFee: z.string().optional(),
   officialBodiesFees: z.string().optional(),
+  // نسب التكاليف المتغيرة
+  designFeePct: z.string().optional(),
+  supervisionFeePct: z.string().optional(),
+  separationFeePerM2: z.string().optional(),
+  salesCommissionPct: z.string().optional(),
+  marketingPct: z.string().optional(),
+  developerFeePhase1Pct: z.string().optional(),
+  developerFeePhase2Pct: z.string().optional(),
 };
 
 // All Fact Sheet field keys for completeness calculation

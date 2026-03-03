@@ -721,22 +721,69 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
                 </div>
               </Section>
 
-              {/* Section 12: Manual Inputs */}
+              {/* Section 12: Purchase Data - Land Price */}
+              <Section title="بيانات الشراء" icon={Landmark} color="emerald">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Field label="سعر الأرض (AED)" value={formData.landPrice} onChange={v => updateField("landPrice", v)} type="number" placeholder="0" suffix="AED" />
+                  <Field label="عمولة وسيط الأرض (%)" value={formData.agentCommissionLandPct} onChange={v => updateField("agentCommissionLandPct", v)} type="number" placeholder="1" suffix="%" />
+                </div>
+              </Section>
+
+              {/* Section 13: Manual Inputs */}
               <Section title="الإدخالات اليدوية" icon={FileText} color="orange">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  <Field label="مساحة البناء BUA (قدم مربع)" value={formData.manualBuaSqft} onChange={v => updateField("manualBuaSqft", v)} type="number" placeholder="0" suffix="sqft" />
-                  <Field label="رسوم تقرير فحص التربة" value={formData.soilTestFee} onChange={v => updateField("soilTestFee", v)} type="number" placeholder="0" suffix="AED" />
-                  <Field label="أعمال الرفع المساحي الطبوغرافي" value={formData.topographicSurveyFee} onChange={v => updateField("topographicSurveyFee", v)} type="number" placeholder="0" suffix="AED" />
-                  <Field label="رسوم تسجيل الوحدات — ريرا" value={formData.reraUnitRegFee} onChange={v => updateField("reraUnitRegFee", v)} type="number" placeholder="0" suffix="AED" />
-                  <Field label="رسوم عدم ممانعة للبيع — المطور" value={formData.developerNocFee} onChange={v => updateField("developerNocFee", v)} type="number" placeholder="0" suffix="AED" />
-                  <Field label="رسوم فتح حساب الضمان" value={formData.escrowAccountFee} onChange={v => updateField("escrowAccountFee", v)} type="number" placeholder="0" suffix="AED" />
-                  <Field label="الرسوم البنكية" value={formData.bankFees} onChange={v => updateField("bankFees", v)} type="number" placeholder="0" suffix="AED" />
-                  <Field label="رسوم المجتمع" value={formData.communityFees} onChange={v => updateField("communityFees", v)} type="number" placeholder="0" suffix="AED" />
-                  <Field label="أتعاب المسّاح (تأكيد المساحات)" value={formData.surveyorFees} onChange={v => updateField("surveyorFees", v)} type="number" placeholder="0" suffix="AED" />
-                  <Field label="تقارير تدقيق ريرا الدورية" value={formData.reraAuditReportFee} onChange={v => updateField("reraAuditReportFee", v)} type="number" placeholder="0" suffix="AED" />
-                  <Field label="تقارير تفتيش ريرا الدورية" value={formData.reraInspectionReportFee} onChange={v => updateField("reraInspectionReportFee", v)} type="number" placeholder="0" suffix="AED" />
-                  <Field label="رسوم تسجيل المشروع — ريرا" value={formData.reraProjectRegFee} onChange={v => updateField("reraProjectRegFee", v)} type="number" placeholder="0" suffix="AED" />
-                  <Field label="رسوم الجهات الرسمية" value={formData.officialBodiesFees} onChange={v => updateField("officialBodiesFees", v)} type="number" placeholder="0" suffix="AED" />
+                <div className="space-y-4">
+                  {/* BUA + Estimated Construction Price */}
+                  <h4 className="text-xs font-semibold text-stone-500 uppercase tracking-wider">مساحة البناء والتكلفة التقديرية</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                    <Field label="مساحة البناء BUA (قدم²)" value={formData.manualBuaSqft} onChange={v => updateField("manualBuaSqft", v)} type="number" placeholder="0" suffix="sqft" />
+                    <Field label="السعر التقديري للقدم² (بناء)" value={formData.estimatedConstructionPricePerSqft} onChange={v => updateField("estimatedConstructionPricePerSqft", v)} type="number" placeholder="0" suffix="AED" />
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-center">
+                      <div className="text-xs text-emerald-600 mb-1">التكلفة التقديرية للبناء</div>
+                      <div className="text-lg font-bold text-emerald-700">
+                        {(parseFloat(formData.manualBuaSqft || '0') * parseFloat(formData.estimatedConstructionPricePerSqft || '0')).toLocaleString('en-US')} AED
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator className="my-2" />
+
+                  {/* Pre-construction fees */}
+                  <h4 className="text-xs font-semibold text-stone-500 uppercase tracking-wider">رسوم ما قبل البناء</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <Field label="رسوم تقرير فحص التربة" value={formData.soilTestFee} onChange={v => updateField("soilTestFee", v)} type="number" placeholder="0" suffix="AED" />
+                    <Field label="أعمال الرفع المساحي الطبوغرافي" value={formData.topographicSurveyFee} onChange={v => updateField("topographicSurveyFee", v)} type="number" placeholder="0" suffix="AED" />
+                    <Field label="رسوم الجهات الرسمية" value={formData.officialBodiesFees} onChange={v => updateField("officialBodiesFees", v)} type="number" placeholder="0" suffix="AED" />
+                  </div>
+
+                  <Separator className="my-2" />
+
+                  {/* Regulatory fees */}
+                  <h4 className="text-xs font-semibold text-stone-500 uppercase tracking-wider">الرسوم التنظيمية</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <Field label="رسوم تسجيل الوحدات — ريرا" value={formData.reraUnitRegFee} onChange={v => updateField("reraUnitRegFee", v)} type="number" placeholder="0" suffix="AED" />
+                    <Field label="رسوم تسجيل المشروع — ريرا" value={formData.reraProjectRegFee} onChange={v => updateField("reraProjectRegFee", v)} type="number" placeholder="0" suffix="AED" />
+                    <Field label="رسوم عدم ممانعة للبيع — المطور" value={formData.developerNocFee} onChange={v => updateField("developerNocFee", v)} type="number" placeholder="0" suffix="AED" />
+                    <Field label="رسوم فتح حساب الضمان" value={formData.escrowAccountFee} onChange={v => updateField("escrowAccountFee", v)} type="number" placeholder="0" suffix="AED" />
+                    <Field label="الرسوم البنكية" value={formData.bankFees} onChange={v => updateField("bankFees", v)} type="number" placeholder="0" suffix="AED" />
+                    <Field label="رسوم المجتمع" value={formData.communityFees} onChange={v => updateField("communityFees", v)} type="number" placeholder="0" suffix="AED" />
+                    <Field label="أتعاب المسّاح (تأكيد المساحات)" value={formData.surveyorFees} onChange={v => updateField("surveyorFees", v)} type="number" placeholder="0" suffix="AED" />
+                    <Field label="تقارير تدقيق ريرا الدورية" value={formData.reraAuditReportFee} onChange={v => updateField("reraAuditReportFee", v)} type="number" placeholder="0" suffix="AED" />
+                    <Field label="تقارير تفتيش ريرا الدورية" value={formData.reraInspectionReportFee} onChange={v => updateField("reraInspectionReportFee", v)} type="number" placeholder="0" suffix="AED" />
+                  </div>
+
+                  <Separator className="my-2" />
+
+                  {/* Variable cost percentages */}
+                  <h4 className="text-xs font-semibold text-stone-500 uppercase tracking-wider">نسب التكاليف المتغيرة</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <Field label="أتعاب التصميم (%)" value={formData.designFeePct} onChange={v => updateField("designFeePct", v)} type="number" placeholder="2" suffix="%" />
+                    <Field label="أتعاب الإشراف (%)" value={formData.supervisionFeePct} onChange={v => updateField("supervisionFeePct", v)} type="number" placeholder="2" suffix="%" />
+                    <Field label="رسوم الفرز لكل م²" value={formData.separationFeePerM2} onChange={v => updateField("separationFeePerM2", v)} type="number" placeholder="40" suffix="AED/m²" />
+                    <Field label="عمولة البيع (%)" value={formData.salesCommissionPct} onChange={v => updateField("salesCommissionPct", v)} type="number" placeholder="5" suffix="%" />
+                    <Field label="التسويق (%)" value={formData.marketingPct} onChange={v => updateField("marketingPct", v)} type="number" placeholder="2" suffix="%" />
+                    <Field label="أتعاب المطور المرحلة الأولى (%)" value={formData.developerFeePhase1Pct} onChange={v => updateField("developerFeePhase1Pct", v)} type="number" placeholder="2" suffix="%" />
+                    <Field label="أتعاب المطور المرحلة الثانية (%)" value={formData.developerFeePhase2Pct} onChange={v => updateField("developerFeePhase2Pct", v)} type="number" placeholder="3" suffix="%" />
+                  </div>
                 </div>
               </Section>
 

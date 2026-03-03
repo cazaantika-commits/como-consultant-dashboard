@@ -1,10 +1,9 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Loader2, Sparkles, Save, ShieldCheck, DollarSign, TrendingUp, BarChart3, Calendar, Percent, Building2 } from "lucide-react";
+import { Loader2, Sparkles, ShieldCheck, DollarSign, TrendingUp, BarChart3, Building2, Percent, FileWarning } from "lucide-react";
 import { Streamdown } from "streamdown";
 
 const JOEL_AVATAR = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/mCOkEovAXTtxsABs.png";
@@ -15,42 +14,50 @@ function fmt(n: number | null | undefined): string {
   return Math.round(n).toLocaleString("en-US");
 }
 
-function EditableNum({ value, onChange, suffix, disabled, className }: { value: number; onChange: (v: number) => void; suffix?: string; disabled?: boolean; className?: string }) {
-  const [localVal, setLocalVal] = useState("");
-  const [focused, setFocused] = useState(false);
-  const displayVal = focused ? localVal : (value ? fmt(value) : "");
+/* ─── Read-only cost row ─── */
+function CostRow({ label, value, suffix, highlight, indent, pct }: {
+  label: string; value: number; suffix?: string; highlight?: boolean; indent?: boolean; pct?: boolean;
+}) {
   return (
-    <div className="relative">
-      <Input
-        type="text"
-        value={displayVal}
-        onFocus={() => { setFocused(true); setLocalVal(value ? String(value) : ""); }}
-        onBlur={() => { setFocused(false); const n = parseFloat(localVal.replace(/,/g, "")); if (!isNaN(n)) onChange(n); }}
-        onChange={(e) => setLocalVal(e.target.value)}
-        className={`h-8 text-sm text-center ${className || ""}`}
-        disabled={disabled}
-        dir="ltr"
-      />
-      {suffix && <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">{suffix}</span>}
+    <div className={`flex items-center justify-between py-2 px-3 ${highlight ? "bg-primary/5 rounded-lg font-bold" : ""} ${indent ? "pr-8" : ""}`}>
+      <span className={`text-sm text-right flex-1 ${indent ? "text-muted-foreground" : ""}`}>
+        {indent && "← "}{label}
+      </span>
+      <span className={`text-sm font-mono ${highlight ? "text-primary text-base" : "text-muted-foreground"}`} dir="ltr">
+        {pct ? `${value.toFixed(1)}%` : `${fmt(value)} ${suffix || "AED"}`}
+      </span>
     </div>
   );
 }
 
-function CostRow({ label, value, editable, onChange, suffix, pct, highlight }: {
-  label: string; value: number; editable?: boolean; onChange?: (v: number) => void;
-  suffix?: string; pct?: boolean; highlight?: boolean;
-}) {
+/* ─── Section Card ─── */
+function CostSection({ title, icon: Icon, children }: { title: string; icon: any; children: React.ReactNode }) {
   return (
-    <div className={`flex items-center justify-between py-2 px-3 ${highlight ? "bg-primary/5 rounded-lg font-bold" : ""}`}>
-      <span className="text-sm text-right flex-1">{label}</span>
-      <div className="w-40 text-left" dir="ltr">
-        {editable && onChange ? (
-          <EditableNum value={value} onChange={onChange} suffix={pct ? "%" : suffix || "AED"} />
-        ) : (
-          <span className={`text-sm font-mono ${highlight ? "text-primary text-base" : "text-muted-foreground"}`}>
-            {pct ? `${value}%` : `${fmt(value)} ${suffix || "AED"}`}
-          </span>
-        )}
+    <Card>
+      <CardContent className="pt-4">
+        <div className="flex items-center gap-2 mb-3 border-b pb-2">
+          <Icon className="w-4 h-4 text-primary" />
+          <h3 className="font-bold text-sm">{title}</h3>
+        </div>
+        <div className="space-y-0.5 divide-y divide-border/30">
+          {children}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ─── Missing data warning ─── */
+function MissingDataWarning({ items }: { items: string[] }) {
+  if (items.length === 0) return null;
+  return (
+    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
+      <FileWarning className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+      <div>
+        <p className="text-xs font-bold text-amber-700 mb-1">بيانات ناقصة - يرجى إكمالها في بطاقة المشروع:</p>
+        <ul className="text-xs text-amber-600 space-y-0.5">
+          {items.map((item, i) => <li key={i}>• {item}</li>)}
+        </ul>
       </div>
     </div>
   );
@@ -65,75 +72,19 @@ interface CostsCashFlowTabProps {
 
 export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, computed: feasComputed }: CostsCashFlowTabProps) {
   const [smartReport, setSmartReport] = useState("");
-  const [isDirty, setIsDirty] = useState(false);
 
-  const [fields, setFields] = useState({
-    landPrice: 0,
-    agentCommissionLandPct: 1,
-    landRegistrationPct: 4,
-    soilInvestigation: 0,
-    topographySurvey: 0,
-    designFeePct: 2,
-    supervisionFeePct: 2,
-    authoritiesFee: 0,
-    separationFeePerM2: 40,
-    constructionCostPerSqft: 0,
-    communityFee: 0,
-    contingenciesPct: 2,
-    developerFeePct: 5,
-    agentCommissionSalePct: 5,
-    marketingPct: 2,
-    reraOffplanFee: 150000,
-    reraUnitFee: 850,
-    nocFee: 10000,
-    escrowFee: 140000,
-    bankCharges: 20000,
-    surveyorFees: 12000,
-    reraAuditFees: 18000,
-    reraInspectionFees: 70000,
-    comoProfitSharePct: 15,
-    projectDurationMonths: 36,
-    constructionStartMonth: 6,
-    constructionDurationMonths: 24,
-    salesStartMonth: 1,
-    salesDurationMonths: 30,
-    salesPhase1Pct: 30,
-    salesPhase2Pct: 40,
-    salesPhase3Pct: 30,
-  });
+  // Fetch project data (Fact Sheet) for cost fields
+  const projectQuery = trpc.projects.getById.useQuery(projectId || 0, { enabled: !!projectId });
+  const project = projectQuery.data;
 
-  const setField = (key: keyof typeof fields, val: number) => {
-    setFields(prev => ({ ...prev, [key]: val }));
-    setIsDirty(true);
-  };
-
-  // Query & mutations
+  // Fetch costs data (for smart report and approval status only)
   const costsQuery = trpc.costsCashFlow.getByProject.useQuery(projectId || 0, { enabled: !!projectId });
-  const saveMutation = trpc.costsCashFlow.save.useMutation({
-    onSuccess: () => { costsQuery.refetch(); toast.success("تم حفظ بيانات التكاليف"); setIsDirty(false); },
-    onError: () => toast.error("خطأ في الحفظ"),
-  });
+
   const smartReportMutation = trpc.costsCashFlow.generateSmartReport.useMutation({
     onSuccess: (data) => {
       costsQuery.refetch();
       setSmartReport(data.smartReport);
-      try {
-        const recs = JSON.parse(data.recommendations);
-        setFields(prev => ({
-          ...prev,
-          constructionCostPerSqft: recs.constructionCostPerSqft || prev.constructionCostPerSqft,
-          designFeePct: recs.designFeePct || prev.designFeePct,
-          supervisionFeePct: recs.supervisionFeePct || prev.supervisionFeePct,
-          contingenciesPct: recs.contingenciesPct || prev.contingenciesPct,
-          projectDurationMonths: recs.projectDurationMonths || prev.projectDurationMonths,
-          constructionStartMonth: recs.constructionStartMonth || prev.constructionStartMonth,
-          constructionDurationMonths: recs.constructionDurationMonths || prev.constructionDurationMonths,
-          salesStartMonth: recs.salesStartMonth || prev.salesStartMonth,
-          salesDurationMonths: recs.salesDurationMonths || prev.salesDurationMonths,
-        }));
-        setIsDirty(true);
-      } catch { /* ignore parse errors */ }
-      toast.success("تم إنشاء التقرير وتعبئة الحقول تلقائياً");
+      toast.success("تم إنشاء تقرير التكاليف");
     },
     onError: (err) => toast.error(err.message || "فشل في إنشاء التقرير"),
   });
@@ -141,99 +92,134 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
     onSuccess: () => { costsQuery.refetch(); toast.success("تم تحديث حالة الاعتماد"); },
   });
 
-  // Load data from DB
+  // Load smart report from DB
   useEffect(() => {
-    const d = costsQuery.data;
-    if (!d) return;
-    setFields({
-      landPrice: d.landPrice || 0,
-      agentCommissionLandPct: parseFloat(String(d.agentCommissionLandPct || "1")),
-      landRegistrationPct: parseFloat(String(d.landRegistrationPct || "4")),
-      soilInvestigation: d.soilInvestigation || 0,
-      topographySurvey: d.topographySurvey || 0,
-      designFeePct: parseFloat(String(d.designFeePct || "2")),
-      supervisionFeePct: parseFloat(String(d.supervisionFeePct || "2")),
-      authoritiesFee: d.authoritiesFee || 0,
-      separationFeePerM2: d.separationFeePerM2 || 40,
-      constructionCostPerSqft: d.constructionCostPerSqft || 0,
-      communityFee: d.communityFee || 0,
-      contingenciesPct: parseFloat(String(d.contingenciesPct || "2")),
-      developerFeePct: parseFloat(String(d.developerFeePct || "5")),
-      agentCommissionSalePct: parseFloat(String(d.agentCommissionSalePct || "5")),
-      marketingPct: parseFloat(String(d.marketingPct || "2")),
-      reraOffplanFee: d.reraOffplanFee || 150000,
-      reraUnitFee: d.reraUnitFee || 850,
-      nocFee: d.nocFee || 10000,
-      escrowFee: d.escrowFee || 140000,
-      bankCharges: d.bankCharges || 20000,
-      surveyorFees: d.surveyorFees || 12000,
-      reraAuditFees: d.reraAuditFees || 18000,
-      reraInspectionFees: d.reraInspectionFees || 70000,
-      comoProfitSharePct: parseFloat(String(d.comoProfitSharePct || "15")),
-      projectDurationMonths: d.projectDurationMonths || 36,
-      constructionStartMonth: d.constructionStartMonth || 6,
-      constructionDurationMonths: d.constructionDurationMonths || 24,
-      salesStartMonth: d.salesStartMonth || 1,
-      salesDurationMonths: d.salesDurationMonths || 30,
-      salesPhase1Pct: parseFloat(String(d.salesPhase1Pct || "30")),
-      salesPhase2Pct: parseFloat(String(d.salesPhase2Pct || "40")),
-      salesPhase3Pct: parseFloat(String(d.salesPhase3Pct || "30")),
-    });
-    if (d.aiSmartReport) setSmartReport(d.aiSmartReport);
+    if (costsQuery.data?.aiSmartReport) setSmartReport(costsQuery.data.aiSmartReport);
   }, [costsQuery.data]);
 
-  // Computed values
-  const computed = useMemo(() => {
-    const bua = feasForm.estimatedBua || feasComputed.estimatedBua || 0;
-    const plotAreaM2 = (feasForm.plotArea || 0) * 0.0929;
+  // ═══════════════════════════════════════════
+  // PULL ALL DATA FROM SOURCES (READ ONLY)
+  // ═══════════════════════════════════════════
+  const costs = useMemo(() => {
+    const p = project || {} as any;
+
+    // --- Source 1: Fact Sheet (بطاقة البيانات) ---
+    const landPrice = parseFloat(p.landPrice || "0");
+    const agentCommissionLandPct = parseFloat(p.agentCommissionLandPct || "0");
+    const manualBuaSqft = parseFloat(p.manualBuaSqft || "0");
+    const estimatedConstructionPricePerSqft = parseFloat(p.estimatedConstructionPricePerSqft || "0");
+    const soilTestFee = parseFloat(p.soilTestFee || "0");
+    const topographicSurveyFee = parseFloat(p.topographicSurveyFee || "0");
+    const officialBodiesFees = parseFloat(p.officialBodiesFees || "0");
+    const reraUnitRegFee = parseFloat(p.reraUnitRegFee || "0");
+    const reraProjectRegFee = parseFloat(p.reraProjectRegFee || "0");
+    const developerNocFee = parseFloat(p.developerNocFee || "0");
+    const escrowAccountFee = parseFloat(p.escrowAccountFee || "0");
+    const bankFees = parseFloat(p.bankFees || "0");
+    const communityFees = parseFloat(p.communityFees || "0");
+    const surveyorFees = parseFloat(p.surveyorFees || "0");
+    const reraAuditReportFee = parseFloat(p.reraAuditReportFee || "0");
+    const reraInspectionReportFee = parseFloat(p.reraInspectionReportFee || "0");
+    const designFeePct = parseFloat(p.designFeePct || "0");
+    const supervisionFeePct = parseFloat(p.supervisionFeePct || "0");
+    const separationFeePerM2 = parseFloat(p.separationFeePerM2 || "0");
+    const salesCommissionPct = parseFloat(p.salesCommissionPct || "0");
+    const marketingPct = parseFloat(p.marketingPct || "0");
+    const developerFeePhase1Pct = parseFloat(p.developerFeePhase1Pct || "0");
+    const developerFeePhase2Pct = parseFloat(p.developerFeePhase2Pct || "0");
+
+    // --- Source 2: Tab 1 (النظرة العامة) via feasForm ---
+    const bua = manualBuaSqft || feasForm.estimatedBua || feasComputed.estimatedBua || 0;
+    const plotAreaSqft = parseFloat(p.plotAreaSqft || "0");
+    const plotAreaM2 = plotAreaSqft * 0.0929;
     const totalUnits = feasComputed.totalUnits || 0;
+
+    // --- Source 3: Tab 2 (المنافسة والتسعير) via feasComputed ---
     const totalRevenue = feasComputed.totalRevenue || 0;
+    const revenueRes = feasComputed.revenueRes || 0;
+    const revenueRet = feasComputed.revenueRet || 0;
+    const revenueOff = feasComputed.revenueOff || 0;
 
-    const agentCommissionLand = fields.landPrice * (fields.agentCommissionLandPct / 100);
-    const landRegistration = fields.landPrice * (fields.landRegistrationPct / 100);
-    const designFee = (bua * fields.constructionCostPerSqft) * (fields.designFeePct / 100);
-    const supervisionFee = (bua * fields.constructionCostPerSqft) * (fields.supervisionFeePct / 100);
-    const separationFee = plotAreaM2 * fields.separationFeePerM2;
-    const constructionCost = bua * fields.constructionCostPerSqft;
-    const contingencies = constructionCost * (fields.contingenciesPct / 100);
-    const developerFee = totalRevenue * (fields.developerFeePct / 100);
-    const agentCommissionSale = totalRevenue * (fields.agentCommissionSalePct / 100);
-    const marketing = totalRevenue * (fields.marketingPct / 100);
-    const reraUnitTotal = totalUnits * fields.reraUnitFee;
+    // ═══════════════════════════════════════════
+    // CALCULATED COSTS
+    // ═══════════════════════════════════════════
 
-    const totalCosts = fields.landPrice + agentCommissionLand + landRegistration +
-      fields.soilInvestigation + fields.topographySurvey +
-      designFee + supervisionFee + fields.authoritiesFee + separationFee +
-      constructionCost + fields.communityFee + contingencies +
-      developerFee + agentCommissionSale + marketing +
-      fields.reraOffplanFee + reraUnitTotal + fields.nocFee +
-      fields.escrowFee + fields.bankCharges + fields.surveyorFees +
-      fields.reraAuditFees + fields.reraInspectionFees;
+    // تكاليف الأرض
+    const agentCommissionLand = landPrice * (agentCommissionLandPct / 100);
+    const landRegistration = landPrice * 0.04; // 4% ثابتة
+    const totalLandCosts = landPrice + agentCommissionLand + landRegistration;
 
+    // تكاليف ما قبل البناء
+    const constructionCost = bua * estimatedConstructionPricePerSqft;
+    const designFee = constructionCost * (designFeePct / 100);
+    const supervisionFee = constructionCost * (supervisionFeePct / 100);
+    const separationFee = plotAreaM2 * separationFeePerM2;
+    const totalPreConstruction = soilTestFee + topographicSurveyFee + officialBodiesFees + designFee + supervisionFee + separationFee;
+
+    // تكاليف البناء
+    const contingencies = constructionCost * 0.02; // 2% ثابتة
+    const totalConstruction = constructionCost + communityFees + contingencies;
+
+    // تكاليف البيع والتسويق (نسب من إجمالي المبيعات)
+    const developerFeePhase1 = totalRevenue * (developerFeePhase1Pct / 100);
+    const developerFeePhase2 = totalRevenue * (developerFeePhase2Pct / 100);
+    const totalDeveloperFee = developerFeePhase1 + developerFeePhase2;
+    const salesCommission = totalRevenue * (salesCommissionPct / 100);
+    const marketingCost = totalRevenue * (marketingPct / 100);
+    const totalSalesMarketing = totalDeveloperFee + salesCommission + marketingCost;
+
+    // الرسوم التنظيمية
+    const totalRegulatory = reraUnitRegFee + reraProjectRegFee + developerNocFee + escrowAccountFee + bankFees + surveyorFees + reraAuditReportFee + reraInspectionReportFee;
+
+    // الإجماليات
+    const totalCosts = totalLandCosts + totalPreConstruction + totalConstruction + totalSalesMarketing + totalRegulatory;
     const profit = totalRevenue - totalCosts;
-    const roi = totalCosts > 0 ? (profit / totalCosts) * 100 : 0;
-    const comoProfit = profit * (fields.comoProfitSharePct / 100);
     const profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
+    const roi = totalCosts > 0 ? (profit / totalCosts) * 100 : 0;
+    const costPerSqft = bua > 0 ? totalCosts / bua : 0;
+    const profitPerSqft = bua > 0 ? profit / bua : 0;
+
+    // بيانات ناقصة
+    const missing: string[] = [];
+    if (!landPrice) missing.push("سعر الأرض");
+    if (!estimatedConstructionPricePerSqft) missing.push("السعر التقديري للقدم² (بناء)");
+    if (!bua) missing.push("مساحة البناء BUA");
+    if (!totalRevenue) missing.push("إجمالي الإيرادات (أكمل تبويب المنافسة والتسعير)");
 
     return {
-      bua, totalRevenue, totalUnits, plotAreaM2,
-      agentCommissionLand, landRegistration, designFee, supervisionFee,
-      separationFee, constructionCost, contingencies, developerFee,
-      agentCommissionSale, marketing, reraUnitTotal, totalCosts,
-      profit, roi, comoProfit, profitMargin,
+      // Sources
+      landPrice, agentCommissionLandPct, manualBuaSqft, estimatedConstructionPricePerSqft,
+      soilTestFee, topographicSurveyFee, officialBodiesFees,
+      reraUnitRegFee, reraProjectRegFee, developerNocFee, escrowAccountFee,
+      bankFees, communityFees, surveyorFees, reraAuditReportFee, reraInspectionReportFee,
+      designFeePct, supervisionFeePct, separationFeePerM2,
+      salesCommissionPct, marketingPct, developerFeePhase1Pct, developerFeePhase2Pct,
+      bua, plotAreaM2, totalUnits, totalRevenue, revenueRes, revenueRet, revenueOff,
+      // Calculated
+      agentCommissionLand, landRegistration, totalLandCosts,
+      constructionCost, designFee, supervisionFee, separationFee, totalPreConstruction,
+      contingencies, totalConstruction,
+      developerFeePhase1, developerFeePhase2, totalDeveloperFee, salesCommission, marketingCost, totalSalesMarketing,
+      totalRegulatory,
+      totalCosts, profit, profitMargin, roi, costPerSqft, profitPerSqft,
+      missing,
     };
-  }, [fields, feasForm, feasComputed]);
-
-  const handleSave = () => {
-    if (!projectId) return;
-    saveMutation.mutate({ projectId, ...fields });
-  };
+  }, [project, feasForm, feasComputed]);
 
   if (!projectId) {
     return (
       <div className="text-center py-12 text-muted-foreground">
         <DollarSign className="w-12 h-12 mx-auto mb-3 opacity-30" />
         <p>اختر مشروعاً لعرض التكاليف والتدفقات النقدية</p>
+      </div>
+    );
+  }
+
+  if (projectQuery.isLoading) {
+    return (
+      <div className="text-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
+        <p className="text-sm text-muted-foreground mt-2">جاري تحميل البيانات...</p>
       </div>
     );
   }
@@ -256,11 +242,13 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
             {isApproved ? "معتمد ✓" : "اعتماد"}
           </Button>
         </div>
-        <Button size="sm" onClick={handleSave} disabled={saveMutation.isPending || !isDirty} className="gap-1.5">
-          {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          حفظ التكاليف
-        </Button>
+        <div className="text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
+          📋 تقرير مُحتسب تلقائياً — لتعديل البيانات ارجع لبطاقة المشروع
+        </div>
       </div>
+
+      {/* تحذير البيانات الناقصة */}
+      <MissingDataWarning items={costs.missing} />
 
       {/* تقرير جويل */}
       {smartReport && (
@@ -282,35 +270,34 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
         <Card className="bg-blue-50 border-blue-200">
           <CardContent className="pt-4 pb-4 text-center">
             <p className="text-xs text-blue-600 mb-1">إجمالي الإيرادات</p>
-            <p className="text-lg font-bold font-mono text-blue-700" dir="ltr">{fmt(computed.totalRevenue)}</p>
+            <p className="text-lg font-bold font-mono text-blue-700" dir="ltr">{fmt(costs.totalRevenue)}</p>
             <p className="text-[10px] text-blue-500">AED</p>
           </CardContent>
         </Card>
         <Card className="bg-red-50 border-red-200">
           <CardContent className="pt-4 pb-4 text-center">
             <p className="text-xs text-red-600 mb-1">إجمالي التكاليف</p>
-            <p className="text-lg font-bold font-mono text-red-700" dir="ltr">{fmt(computed.totalCosts)}</p>
+            <p className="text-lg font-bold font-mono text-red-700" dir="ltr">{fmt(costs.totalCosts)}</p>
             <p className="text-[10px] text-red-500">AED</p>
           </CardContent>
         </Card>
-        <Card className={computed.profit >= 0 ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"}>
+        <Card className={costs.profit >= 0 ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"}>
           <CardContent className="pt-4 pb-4 text-center">
-            <p className={`text-xs mb-1 ${computed.profit >= 0 ? "text-emerald-600" : "text-red-600"}`}>صافي الربح</p>
-            <p className={`text-lg font-bold font-mono ${computed.profit >= 0 ? "text-emerald-700" : "text-red-700"}`} dir="ltr">{fmt(computed.profit)}</p>
-            <p className={`text-[10px] ${computed.profit >= 0 ? "text-emerald-500" : "text-red-500"}`}>AED</p>
+            <p className={`text-xs mb-1 ${costs.profit >= 0 ? "text-emerald-600" : "text-red-600"}`}>صافي الربح</p>
+            <p className={`text-lg font-bold font-mono ${costs.profit >= 0 ? "text-emerald-700" : "text-red-700"}`} dir="ltr">{fmt(costs.profit)}</p>
+            <p className={`text-[10px] ${costs.profit >= 0 ? "text-emerald-500" : "text-red-500"}`}>AED</p>
           </CardContent>
         </Card>
         <Card className="bg-purple-50 border-purple-200">
           <CardContent className="pt-4 pb-4 text-center">
-            <p className="text-xs text-purple-600 mb-1">حصة COMO ({fields.comoProfitSharePct}%)</p>
-            <p className="text-lg font-bold font-mono text-purple-700" dir="ltr">{fmt(computed.comoProfit)}</p>
-            <p className="text-[10px] text-purple-500">AED</p>
+            <p className="text-xs text-purple-600 mb-1">هامش الربح</p>
+            <p className={`text-lg font-bold font-mono ${costs.profitMargin >= 0 ? "text-purple-700" : "text-red-700"}`}>{costs.profitMargin.toFixed(1)}%</p>
           </CardContent>
         </Card>
         <Card className="bg-amber-50 border-amber-200">
           <CardContent className="pt-4 pb-4 text-center">
             <p className="text-xs text-amber-600 mb-1">العائد على الاستثمار</p>
-            <p className="text-lg font-bold font-mono text-amber-700">{computed.roi.toFixed(1)}%</p>
+            <p className="text-lg font-bold font-mono text-amber-700">{costs.roi.toFixed(1)}%</p>
             <p className="text-[10px] text-amber-500">ROI</p>
           </CardContent>
         </Card>
@@ -319,106 +306,57 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
       {/* جدول التكاليف التفصيلي */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="space-y-4">
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-2 mb-3 border-b pb-2">
-                <Building2 className="w-4 h-4 text-primary" />
-                <h3 className="font-bold text-sm">تكاليف الأرض</h3>
-              </div>
-              <div className="space-y-1 divide-y divide-border/30">
-                <CostRow label="سعر الأرض" value={fields.landPrice} editable onChange={v => setField("landPrice", v)} />
-                <CostRow label="عمولة وسيط الأرض" value={fields.agentCommissionLandPct} editable pct onChange={v => setField("agentCommissionLandPct", v)} />
-                <CostRow label="← قيمة العمولة" value={computed.agentCommissionLand} />
-                <CostRow label="نسبة تسجيل الأرض" value={fields.landRegistrationPct} editable pct onChange={v => setField("landRegistrationPct", v)} />
-                <CostRow label="← رسوم التسجيل" value={computed.landRegistration} />
-              </div>
-            </CardContent>
-          </Card>
+          {/* تكاليف الأرض */}
+          <CostSection title="تكاليف الأرض" icon={Building2}>
+            <CostRow label="سعر الأرض" value={costs.landPrice} />
+            <CostRow label={`عمولة وسيط الأرض (${costs.agentCommissionLandPct}%)`} value={costs.agentCommissionLand} indent />
+            <CostRow label="رسوم تسجيل الأرض (4%)" value={costs.landRegistration} indent />
+            <CostRow label="إجمالي تكاليف الأرض" value={costs.totalLandCosts} highlight />
+          </CostSection>
 
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-2 mb-3 border-b pb-2">
-                <BarChart3 className="w-4 h-4 text-primary" />
-                <h3 className="font-bold text-sm">تكاليف ما قبل البناء</h3>
-              </div>
-              <div className="space-y-1 divide-y divide-border/30">
-                <CostRow label="فحص التربة" value={fields.soilInvestigation} editable onChange={v => setField("soilInvestigation", v)} />
-                <CostRow label="المسح الطبوغرافي" value={fields.topographySurvey} editable onChange={v => setField("topographySurvey", v)} />
-                <CostRow label="نسبة أتعاب التصميم" value={fields.designFeePct} editable pct onChange={v => setField("designFeePct", v)} />
-                <CostRow label="← أتعاب التصميم" value={computed.designFee} />
-                <CostRow label="نسبة أتعاب الإشراف" value={fields.supervisionFeePct} editable pct onChange={v => setField("supervisionFeePct", v)} />
-                <CostRow label="← أتعاب الإشراف" value={computed.supervisionFee} />
-                <CostRow label="رسوم الجهات الحكومية" value={fields.authoritiesFee} editable onChange={v => setField("authoritiesFee", v)} />
-                <CostRow label="رسوم الفصل (لكل م²)" value={fields.separationFeePerM2} editable onChange={v => setField("separationFeePerM2", v)} suffix="AED/m²" />
-                <CostRow label="← إجمالي رسوم الفصل" value={computed.separationFee} />
-              </div>
-            </CardContent>
-          </Card>
+          {/* تكاليف ما قبل البناء */}
+          <CostSection title="تكاليف ما قبل البناء" icon={BarChart3}>
+            <CostRow label="فحص التربة" value={costs.soilTestFee} />
+            <CostRow label="المسح الطبوغرافي" value={costs.topographicSurveyFee} />
+            <CostRow label="رسوم الجهات الرسمية" value={costs.officialBodiesFees} />
+            <CostRow label={`أتعاب التصميم (${costs.designFeePct}% من البناء)`} value={costs.designFee} indent />
+            <CostRow label={`أتعاب الإشراف (${costs.supervisionFeePct}% من البناء)`} value={costs.supervisionFee} indent />
+            <CostRow label={`رسوم الفرز (${costs.separationFeePerM2} AED/م²)`} value={costs.separationFee} indent />
+            <CostRow label="إجمالي ما قبل البناء" value={costs.totalPreConstruction} highlight />
+          </CostSection>
 
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-2 mb-3 border-b pb-2">
-                <DollarSign className="w-4 h-4 text-primary" />
-                <h3 className="font-bold text-sm">تكاليف البناء</h3>
-              </div>
-              <div className="space-y-1 divide-y divide-border/30">
-                <CostRow label="تكلفة البناء / قدم²" value={fields.constructionCostPerSqft} editable onChange={v => setField("constructionCostPerSqft", v)} suffix="AED/sqft" />
-                <CostRow label={`← تكلفة البناء (BUA: ${fmt(computed.bua)} sqft)`} value={computed.constructionCost} />
-                <CostRow label="رسوم المجتمع" value={fields.communityFee} editable onChange={v => setField("communityFee", v)} />
-                <CostRow label="نسبة الاحتياطي والطوارئ" value={fields.contingenciesPct} editable pct onChange={v => setField("contingenciesPct", v)} />
-                <CostRow label="← الاحتياطي والطوارئ" value={computed.contingencies} />
-              </div>
-            </CardContent>
-          </Card>
+          {/* تكاليف البناء */}
+          <CostSection title="تكاليف البناء" icon={DollarSign}>
+            <CostRow label={`تكلفة البناء (${fmt(costs.bua)} قدم² × ${fmt(costs.estimatedConstructionPricePerSqft)} AED)`} value={costs.constructionCost} />
+            <CostRow label="رسوم المجتمع" value={costs.communityFees} />
+            <CostRow label="احتياطي وطوارئ (2%)" value={costs.contingencies} indent />
+            <CostRow label="إجمالي تكاليف البناء" value={costs.totalConstruction} highlight />
+          </CostSection>
         </div>
 
         <div className="space-y-4">
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-2 mb-3 border-b pb-2">
-                <TrendingUp className="w-4 h-4 text-primary" />
-                <h3 className="font-bold text-sm">تكاليف البيع والتسويق</h3>
-              </div>
-              <div className="space-y-1 divide-y divide-border/30">
-                <CostRow label="نسبة أتعاب المطور (COMO)" value={fields.developerFeePct} editable pct onChange={v => setField("developerFeePct", v)} />
-                <CostRow label="← أتعاب المطور" value={computed.developerFee} />
-                <CostRow label="نسبة عمولة البيع" value={fields.agentCommissionSalePct} editable pct onChange={v => setField("agentCommissionSalePct", v)} />
-                <CostRow label="← عمولة البيع" value={computed.agentCommissionSale} />
-                <CostRow label="نسبة التسويق" value={fields.marketingPct} editable pct onChange={v => setField("marketingPct", v)} />
-                <CostRow label="← التسويق" value={computed.marketing} />
-              </div>
-            </CardContent>
-          </Card>
+          {/* تكاليف البيع والتسويق */}
+          <CostSection title="تكاليف البيع والتسويق" icon={TrendingUp}>
+            <CostRow label={`أتعاب المطور - المرحلة الأولى (${costs.developerFeePhase1Pct}%)`} value={costs.developerFeePhase1} indent />
+            <CostRow label={`أتعاب المطور - المرحلة الثانية (${costs.developerFeePhase2Pct}%)`} value={costs.developerFeePhase2} indent />
+            <CostRow label="إجمالي أتعاب المطور" value={costs.totalDeveloperFee} />
+            <CostRow label={`عمولة البيع (${costs.salesCommissionPct}%)`} value={costs.salesCommission} indent />
+            <CostRow label={`التسويق (${costs.marketingPct}%)`} value={costs.marketingCost} indent />
+            <CostRow label="إجمالي البيع والتسويق" value={costs.totalSalesMarketing} highlight />
+          </CostSection>
 
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-2 mb-3 border-b pb-2">
-                <Percent className="w-4 h-4 text-primary" />
-                <h3 className="font-bold text-sm">الرسوم التنظيمية والإدارية</h3>
-              </div>
-              <div className="space-y-1 divide-y divide-border/30">
-                <CostRow label="رسوم RERA Offplan" value={fields.reraOffplanFee} editable onChange={v => setField("reraOffplanFee", v)} />
-                <CostRow label="رسوم تسجيل الوحدة" value={fields.reraUnitFee} editable onChange={v => setField("reraUnitFee", v)} suffix="AED/unit" />
-                <CostRow label={`← إجمالي تسجيل الوحدات (${computed.totalUnits} وحدة)`} value={computed.reraUnitTotal} />
-                <CostRow label="رسوم NOC" value={fields.nocFee} editable onChange={v => setField("nocFee", v)} />
-                <CostRow label="حساب الضمان (Escrow)" value={fields.escrowFee} editable onChange={v => setField("escrowFee", v)} />
-                <CostRow label="رسوم البنك" value={fields.bankCharges} editable onChange={v => setField("bankCharges", v)} />
-                <CostRow label="أتعاب المساح" value={fields.surveyorFees} editable onChange={v => setField("surveyorFees", v)} />
-                <CostRow label="تدقيق RERA" value={fields.reraAuditFees} editable onChange={v => setField("reraAuditFees", v)} />
-                <CostRow label="تفتيش RERA" value={fields.reraInspectionFees} editable onChange={v => setField("reraInspectionFees", v)} />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center gap-2 mb-3 border-b pb-2">
-                <DollarSign className="w-4 h-4 text-primary" />
-                <h3 className="font-bold text-sm">حصة الأرباح</h3>
-              </div>
-              <CostRow label="نسبة حصة COMO من الأرباح" value={fields.comoProfitSharePct} editable pct onChange={v => setField("comoProfitSharePct", v)} />
-            </CardContent>
-          </Card>
+          {/* الرسوم التنظيمية */}
+          <CostSection title="الرسوم التنظيمية والإدارية" icon={Percent}>
+            <CostRow label="رسوم تسجيل الوحدات — ريرا" value={costs.reraUnitRegFee} />
+            <CostRow label="رسوم تسجيل المشروع — ريرا" value={costs.reraProjectRegFee} />
+            <CostRow label="رسوم عدم ممانعة — المطور" value={costs.developerNocFee} />
+            <CostRow label="حساب الضمان (Escrow)" value={costs.escrowAccountFee} />
+            <CostRow label="الرسوم البنكية" value={costs.bankFees} />
+            <CostRow label="أتعاب المسّاح" value={costs.surveyorFees} />
+            <CostRow label="تدقيق ريرا" value={costs.reraAuditReportFee} />
+            <CostRow label="تفتيش ريرا" value={costs.reraInspectionReportFee} />
+            <CostRow label="إجمالي الرسوم التنظيمية" value={costs.totalRegulatory} highlight />
+          </CostSection>
         </div>
       </div>
 
@@ -427,73 +365,44 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
         <CardContent className="pt-4">
           <div className="flex items-center justify-between">
             <span className="font-bold text-lg">إجمالي تكاليف المشروع</span>
-            <span className="text-2xl font-bold font-mono text-primary" dir="ltr">{fmt(computed.totalCosts)} AED</span>
+            <span className="text-2xl font-bold font-mono text-primary" dir="ltr">{fmt(costs.totalCosts)} AED</span>
           </div>
-          <div className="mt-2 grid grid-cols-3 gap-4 text-center text-sm">
+          <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-4 text-center text-sm border-t pt-3">
             <div>
               <p className="text-muted-foreground text-xs">هامش الربح</p>
-              <p className={`font-bold ${computed.profitMargin >= 0 ? "text-emerald-600" : "text-red-600"}`}>{computed.profitMargin.toFixed(1)}%</p>
+              <p className={`font-bold ${costs.profitMargin >= 0 ? "text-emerald-600" : "text-red-600"}`}>{costs.profitMargin.toFixed(1)}%</p>
             </div>
             <div>
               <p className="text-muted-foreground text-xs">التكلفة / قدم² (BUA)</p>
-              <p className="font-bold text-primary" dir="ltr">{computed.bua > 0 ? fmt(computed.totalCosts / computed.bua) : "0"} AED</p>
+              <p className="font-bold text-primary" dir="ltr">{fmt(costs.costPerSqft)} AED</p>
             </div>
             <div>
               <p className="text-muted-foreground text-xs">الربح / قدم² (BUA)</p>
-              <p className={`font-bold ${computed.profit >= 0 ? "text-emerald-600" : "text-red-600"}`} dir="ltr">
-                {computed.bua > 0 ? fmt(computed.profit / computed.bua) : "0"} AED
-              </p>
+              <p className={`font-bold ${costs.profitPerSqft >= 0 ? "text-emerald-600" : "text-red-600"}`} dir="ltr">{fmt(costs.profitPerSqft)} AED</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-xs">العائد ROI</p>
+              <p className="font-bold text-amber-600">{costs.roi.toFixed(1)}%</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* الجدول الزمني */}
+      {/* تفصيل الإيرادات */}
       <Card>
         <CardContent className="pt-4">
-          <div className="flex items-center gap-2 mb-4 border-b pb-2">
-            <Calendar className="w-4 h-4 text-primary" />
-            <h3 className="font-bold text-sm">الجدول الزمني للمشروع</h3>
+          <div className="flex items-center gap-2 mb-3 border-b pb-2">
+            <TrendingUp className="w-4 h-4 text-blue-600" />
+            <h3 className="font-bold text-sm">تفصيل الإيرادات (من تبويب المنافسة والتسعير)</h3>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold text-muted-foreground">المشروع</h4>
-              <CostRow label="مدة المشروع (شهر)" value={fields.projectDurationMonths} editable onChange={v => setField("projectDurationMonths", v)} suffix="شهر" />
-            </div>
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold text-muted-foreground">البناء</h4>
-              <CostRow label="بدء البناء (شهر)" value={fields.constructionStartMonth} editable onChange={v => setField("constructionStartMonth", v)} suffix="شهر" />
-              <CostRow label="مدة البناء (شهر)" value={fields.constructionDurationMonths} editable onChange={v => setField("constructionDurationMonths", v)} suffix="شهر" />
-            </div>
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold text-muted-foreground">المبيعات</h4>
-              <CostRow label="بدء المبيعات (شهر)" value={fields.salesStartMonth} editable onChange={v => setField("salesStartMonth", v)} suffix="شهر" />
-              <CostRow label="مدة المبيعات (شهر)" value={fields.salesDurationMonths} editable onChange={v => setField("salesDurationMonths", v)} suffix="شهر" />
-            </div>
-          </div>
-          <div className="mt-4 pt-3 border-t">
-            <h4 className="text-xs font-bold text-muted-foreground mb-2">توزيع المبيعات على المراحل</h4>
-            <div className="grid grid-cols-3 gap-3">
-              <CostRow label="المرحلة 1" value={fields.salesPhase1Pct} editable pct onChange={v => setField("salesPhase1Pct", v)} />
-              <CostRow label="المرحلة 2" value={fields.salesPhase2Pct} editable pct onChange={v => setField("salesPhase2Pct", v)} />
-              <CostRow label="المرحلة 3" value={fields.salesPhase3Pct} editable pct onChange={v => setField("salesPhase3Pct", v)} />
-            </div>
-            {Math.abs(fields.salesPhase1Pct + fields.salesPhase2Pct + fields.salesPhase3Pct - 100) > 0.1 && (
-              <p className="text-xs text-red-500 mt-1 text-center">
-                ⚠️ مجموع نسب المراحل = {(fields.salesPhase1Pct + fields.salesPhase2Pct + fields.salesPhase3Pct).toFixed(0)}% (يجب أن يكون 100%)
-              </p>
-            )}
+          <div className="space-y-0.5 divide-y divide-border/30">
+            <CostRow label="إيرادات سكنية" value={costs.revenueRes} />
+            <CostRow label="إيرادات محلات تجارية" value={costs.revenueRet} />
+            <CostRow label="إيرادات مكاتب" value={costs.revenueOff} />
+            <CostRow label="إجمالي الإيرادات" value={costs.totalRevenue} highlight />
           </div>
         </CardContent>
       </Card>
-
-      {/* زر الحفظ السفلي */}
-      <div className="flex justify-center gap-3 pt-2">
-        <Button size="sm" onClick={handleSave} disabled={saveMutation.isPending || !isDirty} className="gap-1.5 min-w-[140px]">
-          {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          حفظ التكاليف
-        </Button>
-      </div>
     </div>
   );
 }

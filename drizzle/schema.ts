@@ -107,8 +107,13 @@ export const projects = mysqlTable('projects', {
   
   notes: text('notes'),
 
+  // === قسم بيانات الشراء ===
+  landPrice: decimal('landPrice', { precision: 14, scale: 2 }), // سعر الأرض
+  agentCommissionLandPct: decimal('agentCommissionLandPct', { precision: 5, scale: 2 }), // عمولة وسيط الأرض %
+
   // === القسم الثامن: الإدخالات اليدوية ===
   manualBuaSqft: decimal('manualBuaSqft', { precision: 14, scale: 2 }), // مساحة البناء BUA (قدم مربع)
+  estimatedConstructionPricePerSqft: decimal('estimatedConstructionPricePerSqft', { precision: 14, scale: 2 }), // السعر التقديري للقدم المربع (بناء)
   soilTestFee: decimal('soilTestFee', { precision: 14, scale: 2 }), // رسوم تقرير فحص التربة
   topographicSurveyFee: decimal('topographicSurveyFee', { precision: 14, scale: 2 }), // أعمال الرفع المساحي الطبوغرافي
   reraUnitRegFee: decimal('reraUnitRegFee', { precision: 14, scale: 2 }), // رسوم تسجيل الوحدات — ريرا
@@ -121,6 +126,14 @@ export const projects = mysqlTable('projects', {
   reraInspectionReportFee: decimal('reraInspectionReportFee', { precision: 14, scale: 2 }), // تقارير تفتيش ريرا الدورية
   reraProjectRegFee: decimal('reraProjectRegFee', { precision: 14, scale: 2 }), // رسوم تسجيل المشروع — ريرا
   officialBodiesFees: decimal('officialBodiesFees', { precision: 14, scale: 2 }), // رسوم الجهات الرسمية
+  // نسب التكاليف المتغيرة
+  designFeePct: decimal('designFeePct', { precision: 5, scale: 2 }), // أتعاب التصميم %
+  supervisionFeePct: decimal('supervisionFeePct', { precision: 5, scale: 2 }), // أتعاب الإشراف %
+  separationFeePerM2: decimal('separationFeePerM2', { precision: 10, scale: 2 }), // رسوم الفرز لكل م²
+  salesCommissionPct: decimal('salesCommissionPct', { precision: 5, scale: 2 }), // عمولة البيع %
+  marketingPct: decimal('marketingPct', { precision: 5, scale: 2 }), // التسويق %
+  developerFeePhase1Pct: decimal('developerFeePhase1Pct', { precision: 5, scale: 2 }).default("2"), // أتعاب المطور المرحلة الأولى %
+  developerFeePhase2Pct: decimal('developerFeePhase2Pct', { precision: 5, scale: 2 }).default("3"), // أتعاب المطور المرحلة الثانية %
 
   createdAt: timestamp('createdAt').defaultNow().notNull(),
   updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
