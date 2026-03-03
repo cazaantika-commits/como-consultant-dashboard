@@ -78,6 +78,9 @@ export default function CompetitionPricingTab({ projectId, studyId, form: feasFo
     onSuccess: () => { pricingQuery.refetch(); toast.success("تم حفظ البيانات"); setIsDirty(false); },
     onError: () => toast.error("خطأ في الحفظ"),
   });
+  // Flag to trigger auto-save after applying recs
+  const [pendingAutoSave, setPendingAutoSave] = useState<any>(null);
+
   const smartReportMutation = trpc.competitionPricing.generateSmartReport.useMutation({
     onSuccess: (data) => {
       pricingQuery.refetch();
@@ -88,6 +91,8 @@ export default function CompetitionPricingTab({ projectId, studyId, form: feasFo
         // Auto-apply recommendations immediately
         applyRecsToFields(recs);
         setRecsApplied(true);
+        // Trigger auto-save with the recs data
+        setPendingAutoSave(recs);
         toast.success("تم إنشاء تقرير المنافسة والتسعير وتطبيق الأسعار تلقائياً");
       } catch { /* ignore */ }
     },
@@ -240,8 +245,8 @@ export default function CompetitionPricingTab({ projectId, studyId, form: feasFo
           if (allPricesZero && recs.scenarios) {
             applyRecsToFields(recs);
             setRecsApplied(true);
-            // Mark as dirty so user can save
-            setIsDirty(true);
+            // Trigger auto-save
+            setPendingAutoSave(recs);
             return; // skip setIsDirty(false) below
           }
           setRecsApplied(true);
@@ -250,6 +255,60 @@ export default function CompetitionPricingTab({ projectId, studyId, form: feasFo
       setIsDirty(false);
     }
   }, [pricingQuery.data, applyRecsToFields]);
+
+  // Auto-save after applying recommendations
+  useEffect(() => {
+    if (!pendingAutoSave || !projectId) return;
+    const recs = pendingAutoSave;
+    setPendingAutoSave(null);
+    // Build save payload directly from recs (not from state, which may not have updated yet)
+    const opt = recs.scenarios?.optimistic || {};
+    const base = recs.scenarios?.base || {};
+    const cons = recs.scenarios?.conservative || {};
+    const pp = recs.paymentPlan || {};
+    saveMutation.mutate({
+      projectId,
+      optStudioPrice: opt.residential?.studio || 0,
+      opt1brPrice: opt.residential?.oneBr || 0,
+      opt2brPrice: opt.residential?.twoBr || 0,
+      opt3brPrice: opt.residential?.threeBr || 0,
+      optRetailSmallPrice: opt.retail?.small || 0,
+      optRetailMediumPrice: opt.retail?.medium || 0,
+      optRetailLargePrice: opt.retail?.large || 0,
+      optOfficeSmallPrice: opt.offices?.small || 0,
+      optOfficeMediumPrice: opt.offices?.medium || 0,
+      optOfficeLargePrice: opt.offices?.large || 0,
+      baseStudioPrice: base.residential?.studio || 0,
+      base1brPrice: base.residential?.oneBr || 0,
+      base2brPrice: base.residential?.twoBr || 0,
+      base3brPrice: base.residential?.threeBr || 0,
+      baseRetailSmallPrice: base.retail?.small || 0,
+      baseRetailMediumPrice: base.retail?.medium || 0,
+      baseRetailLargePrice: base.retail?.large || 0,
+      baseOfficeSmallPrice: base.offices?.small || 0,
+      baseOfficeMediumPrice: base.offices?.medium || 0,
+      baseOfficeLargePrice: base.offices?.large || 0,
+      consStudioPrice: cons.residential?.studio || 0,
+      cons1brPrice: cons.residential?.oneBr || 0,
+      cons2brPrice: cons.residential?.twoBr || 0,
+      cons3brPrice: cons.residential?.threeBr || 0,
+      consRetailSmallPrice: cons.retail?.small || 0,
+      consRetailMediumPrice: cons.retail?.medium || 0,
+      consRetailLargePrice: cons.retail?.large || 0,
+      consOfficeSmallPrice: cons.offices?.small || 0,
+      consOfficeMediumPrice: cons.offices?.medium || 0,
+      consOfficeLargePrice: cons.offices?.large || 0,
+      paymentBookingPct: pp.booking?.pct || 10,
+      paymentBookingTiming: pp.booking?.timing || "عند التوقيع",
+      paymentConstructionPct: pp.construction?.pct || 60,
+      paymentConstructionTiming: pp.construction?.timing || "أثناء الإنشاء",
+      paymentHandoverPct: pp.handover?.pct || 30,
+      paymentHandoverTiming: pp.handover?.timing || "عند التسليم",
+      paymentDeferredPct: pp.deferred?.pct || 0,
+      paymentDeferredTiming: pp.deferred?.timing || "",
+      activeScenario,
+    });
+  }, [pendingAutoSave, projectId, activeScenario, saveMutation]);
 
   const setScenarioField = useCallback((scenario: ScenarioKey, key: string, value: number) => {
     setScenarios(prev => ({ ...prev, [scenario]: { ...prev[scenario], [key]: value } }));
