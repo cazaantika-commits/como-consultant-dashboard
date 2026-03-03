@@ -85,9 +85,11 @@ export default function CompetitionPricingTab({ projectId, studyId, form: feasFo
       try {
         const recs = JSON.parse(data.recommendations);
         setRecommendations(recs);
-        setRecsApplied(false);
+        // Auto-apply recommendations immediately
+        applyRecsToFields(recs);
+        setRecsApplied(true);
+        toast.success("تم إنشاء تقرير المنافسة والتسعير وتطبيق الأسعار تلقائياً");
       } catch { /* ignore */ }
-      toast.success("تم إنشاء تقرير المنافسة والتسعير");
     },
     onError: (err) => toast.error(err.message || "فشل في إنشاء التقرير"),
   });
@@ -173,11 +175,24 @@ export default function CompetitionPricingTab({ projectId, studyId, form: feasFo
       if (d.activeScenario) setActiveScenario(d.activeScenario as ScenarioKey);
       if (d.aiSmartReport) setSmartReport(d.aiSmartReport);
       if (d.aiRecommendationsJson) {
-        try { setRecommendations(JSON.parse(d.aiRecommendationsJson)); setRecsApplied(true); } catch { /* ignore */ }
+        try {
+          const recs = JSON.parse(d.aiRecommendationsJson);
+          setRecommendations(recs);
+          // Auto-apply if all prices are zero but recommendations exist
+          const allPricesZero = !d.baseStudioPrice && !d.base1brPrice && !d.base2brPrice && !d.base3brPrice && !d.baseRetailSmallPrice;
+          if (allPricesZero && recs.scenarios) {
+            applyRecsToFields(recs);
+            setRecsApplied(true);
+            // Mark as dirty so user can save
+            setIsDirty(true);
+            return; // skip setIsDirty(false) below
+          }
+          setRecsApplied(true);
+        } catch { /* ignore */ }
       }
       setIsDirty(false);
     }
-  }, [pricingQuery.data]);
+  }, [pricingQuery.data, applyRecsToFields]);
 
   const setScenarioField = useCallback((scenario: ScenarioKey, key: string, value: number) => {
     setScenarios(prev => ({ ...prev, [scenario]: { ...prev[scenario], [key]: value } }));
@@ -255,10 +270,8 @@ export default function CompetitionPricingTab({ projectId, studyId, form: feasFo
 
   const paymentTotal = payment.bookingPct + payment.constructionPct + payment.handoverPct + payment.deferredPct;
 
-  // Apply recommendations
-  const handleApplyRecs = () => {
-    if (!recommendations) return;
-    const recs = recommendations;
+  // Shared function to apply recs to scenario fields
+  const applyRecsToFields = useCallback((recs: any) => {
     try {
       setScenarios({
         optimistic: {
@@ -310,10 +323,16 @@ export default function CompetitionPricingTab({ projectId, studyId, form: feasFo
           deferredTiming: recs.paymentPlan.deferred?.timing || "",
         });
       }
-      setRecsApplied(true);
       setIsDirty(true);
-      toast.success("تم تطبيق التوصيات على الحقول");
-    } catch { toast.error("خطأ في تطبيق التوصيات"); }
+    } catch { /* ignore */ }
+  }, []);
+
+  // Apply recommendations (manual button)
+  const handleApplyRecs = () => {
+    if (!recommendations) return;
+    applyRecsToFields(recommendations);
+    setRecsApplied(true);
+    toast.success("تم تطبيق التوصيات على الحقول");
   };
 
   const handleSave = () => {
