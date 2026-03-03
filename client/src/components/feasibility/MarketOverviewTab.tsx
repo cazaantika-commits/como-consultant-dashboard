@@ -46,34 +46,6 @@ interface MarketOverviewTabProps {
 }
 
 export default function MarketOverviewTab({ projectId, studyId, form: feasForm, computed }: MarketOverviewTabProps) {
-  // Market overview data
-  const moQuery = trpc.marketOverview.getByProject.useQuery(projectId || 0, { enabled: !!projectId });
-  const saveMutation = trpc.marketOverview.save.useMutation({
-    onSuccess: () => { moQuery.refetch(); toast.success("تم حفظ البيانات"); setIsDirty(false); },
-    onError: () => toast.error("خطأ في الحفظ"),
-  });
-  const smartReportMutation = trpc.marketOverview.generateSmartReport.useMutation({
-    onSuccess: (data) => {
-      moQuery.refetch();
-      setSmartReport(data.smartReport);
-      try {
-        const recs = JSON.parse(data.recommendations);
-        setRecommendations(recs);
-        setRecsApplied(false);
-      } catch { /* ignore parse errors */ }
-      toast.success("تم إنشاء التقرير الذكي بنجاح");
-    },
-    onError: (err) => toast.error(err.message || "فشل في إنشاء التقرير"),
-  });
-  const applyRecsMutation = trpc.marketOverview.applyRecommendations.useMutation({
-    onSuccess: () => { moQuery.refetch(); setRecsApplied(true); toast.success("تم تطبيق التوصيات على الحقول"); },
-    onError: () => toast.error("خطأ في تطبيق التوصيات"),
-  });
-  const approvalMutation = trpc.marketOverview.toggleApproval.useMutation({
-    onSuccess: () => { moQuery.refetch(); toast.success("تم تحديث حالة الاعتماد"); },
-    onError: () => toast.error("خطأ في تحديث الاعتماد"),
-  });
-
   // Local state
   const [smartReport, setSmartReport] = useState<string>("");
   const [recommendations, setRecommendations] = useState<any>(null);
@@ -93,6 +65,85 @@ export default function MarketOverviewTab({ projectId, studyId, form: feasForm, 
     officeMediumPct: 0, officeMediumAvgArea: 0,
     officeLargePct: 0, officeLargeAvgArea: 0,
     finishingQuality: "ممتاز",
+  });
+
+  // Helper: apply recommendations directly to local fields state
+  const applyRecsToLocalFields = useCallback((recs: any) => {
+    setFields(prev => {
+      const updated = { ...prev };
+      if (recs.residential) {
+        updated.residentialStudioPct = recs.residential.studio?.recommended ? (recs.residential.studio.pct || 0) : 0;
+        updated.residentialStudioAvgArea = recs.residential.studio?.recommended ? (recs.residential.studio.avgArea || 0) : 0;
+        updated.residential1brPct = recs.residential.oneBr?.recommended ? (recs.residential.oneBr.pct || 0) : 0;
+        updated.residential1brAvgArea = recs.residential.oneBr?.recommended ? (recs.residential.oneBr.avgArea || 0) : 0;
+        updated.residential2brPct = recs.residential.twoBr?.recommended ? (recs.residential.twoBr.pct || 0) : 0;
+        updated.residential2brAvgArea = recs.residential.twoBr?.recommended ? (recs.residential.twoBr.avgArea || 0) : 0;
+        updated.residential3brPct = recs.residential.threeBr?.recommended ? (recs.residential.threeBr.pct || 0) : 0;
+        updated.residential3brAvgArea = recs.residential.threeBr?.recommended ? (recs.residential.threeBr.avgArea || 0) : 0;
+      }
+      if (recs.retail) {
+        updated.retailSmallPct = recs.retail.hasRetail ? (recs.retail.small?.pct || 0) : 0;
+        updated.retailSmallAvgArea = recs.retail.hasRetail ? (recs.retail.small?.avgArea || 0) : 0;
+        updated.retailMediumPct = recs.retail.hasRetail ? (recs.retail.medium?.pct || 0) : 0;
+        updated.retailMediumAvgArea = recs.retail.hasRetail ? (recs.retail.medium?.avgArea || 0) : 0;
+        updated.retailLargePct = recs.retail.hasRetail ? (recs.retail.large?.pct || 0) : 0;
+        updated.retailLargeAvgArea = recs.retail.hasRetail ? (recs.retail.large?.avgArea || 0) : 0;
+      }
+      if (recs.offices) {
+        updated.officeSmallPct = recs.offices.hasOffices ? (recs.offices.small?.pct || 0) : 0;
+        updated.officeSmallAvgArea = recs.offices.hasOffices ? (recs.offices.small?.avgArea || 0) : 0;
+        updated.officeMediumPct = recs.offices.hasOffices ? (recs.offices.medium?.pct || 0) : 0;
+        updated.officeMediumAvgArea = recs.offices.hasOffices ? (recs.offices.medium?.avgArea || 0) : 0;
+        updated.officeLargePct = recs.offices.hasOffices ? (recs.offices.large?.pct || 0) : 0;
+        updated.officeLargeAvgArea = recs.offices.hasOffices ? (recs.offices.large?.avgArea || 0) : 0;
+      }
+      if (recs.finishingQuality) {
+        updated.finishingQuality = recs.finishingQuality;
+      }
+      return updated;
+    });
+  }, []);
+
+  // Market overview data
+  const moQuery = trpc.marketOverview.getByProject.useQuery(projectId || 0, { enabled: !!projectId });
+  const saveMutation = trpc.marketOverview.save.useMutation({
+    onSuccess: () => { moQuery.refetch(); toast.success("تم حفظ البيانات"); setIsDirty(false); },
+    onError: () => toast.error("خطأ في الحفظ"),
+  });
+  const smartReportMutation = trpc.marketOverview.generateSmartReport.useMutation({
+    onSuccess: (data) => {
+      moQuery.refetch();
+      setSmartReport(data.smartReport);
+      try {
+        const recs = JSON.parse(data.recommendations);
+        setRecommendations(recs);
+        // Auto-apply recommendations immediately to fields AND save to DB
+        applyRecsToLocalFields(recs);
+        setRecsApplied(true);
+        // Also save to DB
+        if (projectId) {
+          applyRecsMutation.mutate({ projectId, recommendations: data.recommendations });
+        }
+      } catch { /* ignore parse errors */ }
+      toast.success("تم إنشاء التقرير الذكي وتعبئة الحقول تلقائياً");
+    },
+    onError: (err) => toast.error(err.message || "فشل في إنشاء التقرير"),
+  });
+  const applyRecsMutation = trpc.marketOverview.applyRecommendations.useMutation({
+    onSuccess: () => {
+      moQuery.refetch();
+      setRecsApplied(true);
+      // Directly update local fields from recommendations to avoid stale cache
+      if (recommendations) {
+        applyRecsToLocalFields(recommendations);
+      }
+      toast.success("تم تطبيق التوصيات على الحقول");
+    },
+    onError: () => toast.error("خطأ في تطبيق التوصيات"),
+  });
+  const approvalMutation = trpc.marketOverview.toggleApproval.useMutation({
+    onSuccess: () => { moQuery.refetch(); toast.success("تم تحديث حالة الاعتماد"); },
+    onError: () => toast.error("خطأ في تحديث الاعتماد"),
   });
 
   // Load data from query
