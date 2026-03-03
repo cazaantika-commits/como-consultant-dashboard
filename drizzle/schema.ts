@@ -1513,3 +1513,73 @@ export const competitionPricing = mysqlTable('competition_pricing', {
 
 export type CompetitionPricing = typeof competitionPricing.$inferSelect;
 export type InsertCompetitionPricing = typeof competitionPricing.$inferInsert;
+
+
+// ═══════════════════════════════════════════
+// التكاليف والتدفقات النقدية
+// ═══════════════════════════════════════════
+export const costsCashFlow = mysqlTable('costs_cash_flow', {
+  id: int('id').autoincrement().primaryKey(),
+  projectId: int('projectId').notNull().references(() => projects.id),
+  userId: int('userId').notNull().references(() => users.id),
+
+  // === تكاليف الأرض ===
+  landPrice: int('landPrice').default(0),
+  agentCommissionLandPct: decimal('agentCommissionLandPct', { precision: 5, scale: 2 }).default("1"),
+  landRegistrationPct: decimal('landRegistrationPct', { precision: 5, scale: 2 }).default("4"),
+
+  // === تكاليف ما قبل البناء ===
+  soilInvestigation: int('soilInvestigation').default(0),
+  topographySurvey: int('topographySurvey').default(0),
+  designFeePct: decimal('designFeePct', { precision: 5, scale: 2 }).default("2"),
+  supervisionFeePct: decimal('supervisionFeePct', { precision: 5, scale: 2 }).default("2"),
+  authoritiesFee: int('authoritiesFee').default(0),
+  separationFeePerM2: int('separationFeePerM2').default(40),
+
+  // === تكاليف البناء ===
+  constructionCostPerSqft: int('constructionCostPerSqft').default(0),
+  communityFee: int('communityFee').default(0),
+  contingenciesPct: decimal('contingenciesPct', { precision: 5, scale: 2 }).default("2"),
+
+  // === تكاليف البيع والتسويق ===
+  developerFeePct: decimal('developerFeePct', { precision: 5, scale: 2 }).default("5"),
+  agentCommissionSalePct: decimal('agentCommissionSalePct', { precision: 5, scale: 2 }).default("5"),
+  marketingPct: decimal('marketingPct', { precision: 5, scale: 2 }).default("2"),
+
+  // === رسوم تنظيمية ===
+  reraOffplanFee: int('reraOffplanFee').default(150000),
+  reraUnitFee: int('reraUnitFee').default(850),
+  nocFee: int('nocFee').default(10000),
+  escrowFee: int('escrowFee').default(140000),
+  bankCharges: int('bankCharges').default(20000),
+  surveyorFees: int('surveyorFees').default(12000),
+  reraAuditFees: int('reraAuditFees').default(18000),
+  reraInspectionFees: int('reraInspectionFees').default(70000),
+
+  // === حصة الأرباح ===
+  comoProfitSharePct: decimal('comoProfitSharePct', { precision: 5, scale: 2 }).default("15"),
+
+  // === الجدول الزمني ===
+  projectDurationMonths: int('projectDurationMonths').default(36),
+  constructionStartMonth: int('constructionStartMonth').default(6),
+  constructionDurationMonths: int('constructionDurationMonths').default(24),
+  salesStartMonth: int('salesStartMonth').default(1),
+  salesDurationMonths: int('salesDurationMonths').default(30),
+  salesPhase1Pct: decimal('salesPhase1Pct', { precision: 5, scale: 2 }).default("30"),
+  salesPhase2Pct: decimal('salesPhase2Pct', { precision: 5, scale: 2 }).default("40"),
+  salesPhase3Pct: decimal('salesPhase3Pct', { precision: 5, scale: 2 }).default("30"),
+
+  // === تقرير جويل الذكي ===
+  aiSmartReport: text('aiSmartReport'),
+  aiRecommendationsJson: text('aiRecommendationsJson'),
+
+  // === حالة الاعتماد ===
+  isApproved: int('isApproved').default(0).notNull(),
+  approvedAt: timestamp('approvedAt'),
+
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type CostsCashFlow = typeof costsCashFlow.$inferSelect;
+export type InsertCostsCashFlow = typeof costsCashFlow.$inferInsert;

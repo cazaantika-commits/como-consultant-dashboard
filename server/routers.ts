@@ -31,6 +31,7 @@ import { commandCenterRouter } from "./routers/commandCenter";
 import { legalSetupRouter, designsAndPermitsRouter } from "./routers/legalAndDesigns";
 import { marketOverviewRouter } from "./routers/marketOverview";
 import { competitionPricingRouter } from "./routers/competitionPricing";
+import { costsCashFlowRouter } from "./routers/costsCashFlow";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -76,6 +77,7 @@ export const appRouter = router({
   designsAndPermits: designsAndPermitsRouter,
   marketOverview: marketOverviewRouter,
   competitionPricing: competitionPricingRouter,
+  costsCashFlow: costsCashFlowRouter,
 });
 
 export type AppRouter = typeof appRouter;

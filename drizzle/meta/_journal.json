@@ -225,6 +225,13 @@
       "when": 1772538065620,
       "tag": "0031_crazy_scrambler",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "5",
+      "when": 1772544979987,
+      "tag": "0032_cold_cardiac",
+      "breakpoints": true
     }
   ]
 }

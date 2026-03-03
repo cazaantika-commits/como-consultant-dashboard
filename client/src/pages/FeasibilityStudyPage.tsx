@@ -18,6 +18,7 @@ import { Streamdown } from "streamdown";
 import { useLocation } from "wouter";
 import MarketOverviewTab from "@/components/feasibility/MarketOverviewTab";
 import CompetitionPricingTab from "@/components/feasibility/CompetitionPricingTab";
+import CostsCashFlowTab from "@/components/feasibility/CostsCashFlowTab";
 
 // ═══════════════════════════════════════════
 // HELPER COMPONENTS
@@ -428,93 +429,10 @@ export default function FeasibilityStudyPage({ embedded }: { embedded?: boolean 
               {/* حقل واحد قابل للتعديل (سعر القدم) + تقرير READ ONLY */}
               {/* ═══════════════════════════════════════════ */}
               <TabsContent value="tab5">
-                <div className="space-y-4">
-                  {/* الإدخال الوحيد: تكلفة البناء */}
-                  <Card className="border-primary/30 bg-primary/5">
-                    <CardContent className="pt-6">
-                      <SectionHeader icon={Sparkles} title="إدخال جويل" subtitle="القيمة الوحيدة القابلة للتعديل في هذا التبويب" />
-                      <div className="max-w-md mx-auto">
-                        <NumInput
-                          label="تكلفة البناء لكل قدم مربع"
-                          value={form.constructionCostPerSqft}
-                          onChange={(v) => setField("constructionCostPerSqft", v)}
-                          suffix="AED/sqft"
-                        />
-                        <div className="mt-2 text-xs text-muted-foreground text-center">
-                          BUA: {fmt(form.estimatedBua)} sqft × {fmt(form.constructionCostPerSqft)} AED = <span className="font-bold text-foreground">{fmt(computed.constructionCost)} AED</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* جدول تكاليف المشروع - READ ONLY */}
-                  <Card>
-                    <CardContent className="pt-6">
-                      <SectionHeader icon={DollarSign} title="جدول تكاليف المشروع" subtitle="محسوب تلقائياً - للعرض فقط" />
-                      <div className="space-y-1 divide-y divide-border/50">
-                        <ReadOnlyValue label="سعر الأرض" value={form.landPrice} />
-                        <ReadOnlyValue label="عمولة وسيط الأرض" value={computed.agentCommissionLand} />
-                        <ReadOnlyValue label="رسوم تسجيل الأرض (4%)" value={computed.landRegistration} />
-                        <ReadOnlyValue label="فحص التربة" value={form.soilInvestigation} />
-                        <ReadOnlyValue label="المسح الطبوغرافي" value={form.topographySurvey} />
-                        <ReadOnlyValue label="أتعاب التصميم" value={computed.designFee} />
-                        <ReadOnlyValue label="أتعاب الإشراف" value={computed.supervisionFee} />
-                        <ReadOnlyValue label="رسوم الجهات الحكومية" value={form.authoritiesFee} />
-                        <ReadOnlyValue label="رسوم الفصل" value={computed.separationFee} />
-                        <ReadOnlyValue label="تكلفة البناء" value={computed.constructionCost} />
-                        <ReadOnlyValue label="رسوم المجتمع" value={form.communityFee} />
-                        <ReadOnlyValue label="الاحتياطي والطوارئ" value={computed.contingencies} />
-                        <ReadOnlyValue label="أتعاب المطور (COMO)" value={computed.developerFee} />
-                        <ReadOnlyValue label="عمولة البيع" value={computed.agentCommissionSale} />
-                        <ReadOnlyValue label="التسويق" value={computed.marketing} />
-                        <ReadOnlyValue label="رسوم RERA Offplan" value={form.reraOffplanFee} />
-                        <ReadOnlyValue label="رسوم تسجيل الوحدات" value={computed.reraUnitTotal} />
-                        <ReadOnlyValue label="رسوم NOC" value={form.nocFee} />
-                        <ReadOnlyValue label="حساب الضمان" value={form.escrowFee} />
-                        <ReadOnlyValue label="رسوم البنك" value={form.bankCharges} />
-                        <ReadOnlyValue label="أتعاب المساح" value={form.surveyorFees} />
-                        <ReadOnlyValue label="تدقيق RERA" value={form.reraAuditFees} />
-                        <ReadOnlyValue label="تفتيش RERA" value={form.reraInspectionFees} />
-                      </div>
-                      <div className="mt-3 pt-3 border-t-2 border-destructive/20">
-                        <ReadOnlyValue label="إجمالي التكاليف" value={computed.totalCosts} highlight large />
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* ملخص المؤشرات - READ ONLY */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <Card className="bg-blue-50 border-blue-200">
-                      <CardContent className="pt-4 pb-4 text-center">
-                        <p className="text-xs text-blue-600 mb-1">إجمالي الإيرادات</p>
-                        <p className="text-lg font-bold font-mono text-blue-700" dir="ltr">{fmt(computed.totalRevenue)}</p>
-                        <p className="text-[10px] text-blue-500">AED</p>
-                      </CardContent>
-                    </Card>
-                    <Card className={`${computed.profit >= 0 ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"}`}>
-                      <CardContent className="pt-4 pb-4 text-center">
-                        <p className={`text-xs mb-1 ${computed.profit >= 0 ? "text-emerald-600" : "text-red-600"}`}>صافي الربح</p>
-                        <p className={`text-lg font-bold font-mono ${computed.profit >= 0 ? "text-emerald-700" : "text-red-700"}`} dir="ltr">{fmt(computed.profit)}</p>
-                        <p className={`text-[10px] ${computed.profit >= 0 ? "text-emerald-500" : "text-red-500"}`}>AED</p>
-                      </CardContent>
-                    </Card>
-                    <Card className="bg-purple-50 border-purple-200">
-                      <CardContent className="pt-4 pb-4 text-center">
-                        <p className="text-xs text-purple-600 mb-1">حصة COMO ({form.comoProfitSharePct || 15}%)</p>
-                        <p className="text-lg font-bold font-mono text-purple-700" dir="ltr">{fmt(computed.comoProfit)}</p>
-                        <p className="text-[10px] text-purple-500">AED</p>
-                      </CardContent>
-                    </Card>
-                    <Card className="bg-amber-50 border-amber-200">
-                      <CardContent className="pt-4 pb-4 text-center">
-                        <p className="text-xs text-amber-600 mb-1">العائد على الاستثمار</p>
-                        <p className="text-lg font-bold font-mono text-amber-700">{computed.roi.toFixed(1)}%</p>
-                        <p className="text-[10px] text-amber-500">ROI</p>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </div>
+                <CostsCashFlowTab projectId={selectedProjectId} studyId={selectedStudyId} form={form} computed={computed} />
               </TabsContent>
+
+
 
               {/* ═══════════════════════════════════════════ */}
               {/* التبويب 6: التحليل والسيناريوهات */}
