@@ -1245,3 +1245,107 @@ export const projectKpis = mysqlTable('projectKpis', {
 });
 export type ProjectKpi = typeof projectKpis.$inferSelect;
 export type InsertProjectKpi = typeof projectKpis.$inferInsert;
+
+
+// ═══════════════════════════════════════════════════════════════
+// الإعداد القانوني وتسجيل المشروع - Legal Setup & Project Registration
+// ═══════════════════════════════════════════════════════════════
+
+export const legalSetupRecords = mysqlTable('legalSetupRecords', {
+  id: int('id').autoincrement().primaryKey(),
+  userId: int('userId').notNull().references(() => users.id),
+  projectId: int('projectId').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  
+  // === الوثائق الأساسية ===
+  titleDeedStatus: varchar('titleDeedStatus', { length: 100 }), // حالة سند الملكية: مكتمل، قيد الإجراء، معلق
+  titleDeedNumber: varchar('titleDeedNumber', { length: 100 }), // رقم سند الملكية
+  titleDeedDate: varchar('titleDeedDate', { length: 50 }), // تاريخ سند الملكية
+  
+  // === التسجيل لدى الجهات الحكومية ===
+  ddaRegistrationStatus: varchar('ddaRegistrationStatus', { length: 100 }), // حالة التسجيل لدى هيئة دبي للتطوير
+  ddaRegistrationNumber: varchar('ddaRegistrationNumber', { length: 100 }), // رقم التسجيل
+  ddaRegistrationDate: varchar('ddaRegistrationDate', { length: 50 }), // تاريخ التسجيل
+  
+  municipalityApprovalStatus: varchar('municipalityApprovalStatus', { length: 100 }), // حالة موافقة البلدية
+  municipalityApprovalNumber: varchar('municipalityApprovalNumber', { length: 100 }), // رقم الموافقة
+  municipalityApprovalDate: varchar('municipalityApprovalDate', { length: 50 }), // تاريخ الموافقة
+  
+  // === الالتزامات والشروط ===
+  legalObligations: text('legalObligations'), // الالتزامات القانونية (JSON array)
+  restrictionsAndConditions: text('restrictionsAndConditions'), // القيود والشروط (JSON array)
+  
+  // === الرسوم والتكاليف ===
+  registrationFees: int('registrationFees'), // رسوم التسجيل
+  legalConsultationFees: int('legalConsultationFees'), // أتعاب الاستشارة القانونية
+  governmentFeesTotal: int('governmentFeesTotal'), // إجمالي الرسوم الحكومية
+  
+  // === ملاحظات وتعليقات ===
+  legalNotes: text('legalNotes'), // ملاحظات قانونية عامة
+  farouqAnalysis: text('farouqAnalysis'), // تحليل فاروق (المحامي)
+  
+  // === حالة الإعداد ===
+  completionStatus: varchar('completionStatus', { length: 100 }).default('pending'), // pending, in_progress, completed
+  
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type LegalSetupRecord = typeof legalSetupRecords.$inferSelect;
+export type InsertLegalSetupRecord = typeof legalSetupRecords.$inferInsert;
+
+
+// ═══════════════════════════════════════════════════════════════
+// التصاميم وتصريح البناء - Designs & Building Permit
+// ═══════════════════════════════════════════════════════════════
+
+export const designsAndPermits = mysqlTable('designsAndPermits', {
+  id: int('id').autoincrement().primaryKey(),
+  userId: int('userId').notNull().references(() => users.id),
+  projectId: int('projectId').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  
+  // === التصاميم المعمارية ===
+  architecturalDesignStatus: varchar('architecturalDesignStatus', { length: 100 }), // حالة التصميم: مكتمل، قيد الإعداد، معلق
+  architecturalDesignDate: varchar('architecturalDesignDate', { length: 50 }), // تاريخ إنجاز التصميم
+  architecturalDesignFileUrl: varchar('architecturalDesignFileUrl', { length: 1000 }), // رابط ملف التصميم
+  architecturalDesignFileKey: varchar('architecturalDesignFileKey', { length: 500 }), // مفتاح S3
+  
+  // === التصاميم الهندسية ===
+  engineeringDesignStatus: varchar('engineeringDesignStatus', { length: 100 }), // حالة التصميم الهندسي
+  engineeringDesignDate: varchar('engineeringDesignDate', { length: 50 }), // تاريخ إنجاز التصميم الهندسي
+  engineeringDesignFileUrl: varchar('engineeringDesignFileUrl', { length: 1000 }), // رابط ملف التصميم الهندسي
+  engineeringDesignFileKey: varchar('engineeringDesignFileKey', { length: 500 }), // مفتاح S3
+  
+  // === تصريح البناء ===
+  buildingPermitStatus: varchar('buildingPermitStatus', { length: 100 }), // حالة التصريح: مكتمل، قيد الانتظار، معلق
+  buildingPermitNumber: varchar('buildingPermitNumber', { length: 100 }), // رقم تصريح البناء
+  buildingPermitDate: varchar('buildingPermitDate', { length: 50 }), // تاريخ التصريح
+  buildingPermitExpiryDate: varchar('buildingPermitExpiryDate', { length: 50 }), // تاريخ انتهاء التصريح
+  buildingPermitFileUrl: varchar('buildingPermitFileUrl', { length: 1000 }), // رابط ملف التصريح
+  buildingPermitFileKey: varchar('buildingPermitFileKey', { length: 500 }), // مفتاح S3
+  
+  // === الموافقات المتعلقة بالتصاميم ===
+  municipalityDesignApprovalStatus: varchar('municipalityDesignApprovalStatus', { length: 100 }), // حالة موافقة البلدية على التصاميم
+  municipalityDesignApprovalDate: varchar('municipalityDesignApprovalDate', { length: 50 }), // تاريخ الموافقة
+  
+  // === المتطلبات والشروط ===
+  designRequirements: text('designRequirements'), // متطلبات التصميم (JSON array)
+  buildingConditions: text('buildingConditions'), // شروط البناء (JSON array)
+  
+  // === الرسوم والتكاليف ===
+  designConsultationFees: int('designConsultationFees'), // أتعاب الاستشارة التصميمية
+  buildingPermitFees: int('buildingPermitFees'), // رسوم تصريح البناء
+  municipalityDesignReviewFees: int('municipalityDesignReviewFees'), // رسوم مراجعة التصاميم من البلدية
+  
+  // === ملاحظات وتعليقات ===
+  designNotes: text('designNotes'), // ملاحظات عامة على التصاميم
+  consultantAnalysis: text('consultantAnalysis'), // تحليل الاستشاري المعماري
+  
+  // === حالة الإعداد ===
+  completionStatus: varchar('completionStatus', { length: 100 }).default('pending'), // pending, in_progress, completed
+  
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type DesignAndPermit = typeof designsAndPermits.$inferSelect;
+export type InsertDesignAndPermit = typeof designsAndPermits.$inferInsert;

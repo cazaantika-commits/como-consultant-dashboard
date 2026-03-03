@@ -197,6 +197,13 @@
       "when": 1772098785384,
       "tag": "0027_wakeful_avengers",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "5",
+      "when": 1772529161460,
+      "tag": "0028_chubby_turbo",
+      "breakpoints": true
     }
   ]
 }

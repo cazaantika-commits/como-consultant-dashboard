@@ -6,8 +6,10 @@ import FactSheetPage from "./FactSheetPage";
 import FeasibilityStudyPage from "./FeasibilityStudyPage";
 import DevelopmentStagesPage from "./DevelopmentStagesSimplified";
 import ProjectLifecyclePage from "./ProjectLifecycleSimplified";
+import { LegalSetupTab } from "@/components/feasibility/LegalSetupTab";
+import { DesignsAndPermitsTab } from "@/components/feasibility/DesignsAndPermitsTab";
 
-type Tab = "fact-sheet" | "feasibility" | "development-stages" | "project-lifecycle" | "coming-soon";
+type Tab = "fact-sheet" | "feasibility" | "development-stages" | "project-lifecycle" | "legal-setup" | "designs-permits" | "coming-soon";
 
 export default function ProjectManagementPage() {
   const [, navigate] = useLocation();
@@ -39,6 +41,18 @@ export default function ProjectManagementPage() {
       color: "teal",
     },
     {
+      id: "legal-setup",
+      label: "الإعداد القانوني",
+      icon: <FileText className="w-4 h-4" />,
+      color: "red",
+    },
+    {
+      id: "designs-permits",
+      label: "التصاميم والتصاريح",
+      icon: <Building2 className="w-4 h-4" />,
+      color: "orange",
+    },
+    {
       id: "coming-soon",
       label: "أدوات إضافية",
       icon: <Rocket className="w-4 h-4" />,
@@ -54,6 +68,8 @@ export default function ProjectManagementPage() {
       purple: "border-purple-500 text-purple-700 dark:text-purple-400",
       teal: "border-teal-500 text-teal-700 dark:text-teal-400",
       emerald: "border-emerald-500 text-emerald-700 dark:text-emerald-400",
+      red: "border-red-500 text-red-700 dark:text-red-400",
+      orange: "border-orange-500 text-orange-700 dark:text-orange-400",
     };
     return colorMap[color] || colorMap.amber;
   };
@@ -112,6 +128,18 @@ export default function ProjectManagementPage() {
 
       {activeTab === "project-lifecycle" && (
         <ProjectLifecyclePage />
+      )}
+
+      {activeTab === "legal-setup" && (
+        <main className="max-w-7xl mx-auto px-6 py-8">
+          <LegalSetupTab projectId={null} />
+        </main>
+      )}
+
+      {activeTab === "designs-permits" && (
+        <main className="max-w-7xl mx-auto px-6 py-8">
+          <DesignsAndPermitsTab projectId={null} />
+        </main>
       )}
 
       {activeTab === "coming-soon" && (
