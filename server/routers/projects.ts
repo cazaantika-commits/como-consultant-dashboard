@@ -26,6 +26,10 @@ const factSheetFields = {
   plotAreaSqft: z.string().optional(),
   gfaSqm: z.string().optional(),
   gfaSqft: z.string().optional(),
+  // GFA حسب النوع (قدم²)
+  gfaResidentialSqft: z.string().optional(),
+  gfaRetailSqft: z.string().optional(),
+  gfaOfficesSqft: z.string().optional(),
   permittedUse: z.string().optional(),
   ownershipType: z.string().optional(),
   subdivisionRestrictions: z.string().optional(),

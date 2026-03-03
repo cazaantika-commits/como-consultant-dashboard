@@ -161,6 +161,7 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
   const FACT_SHEET_KEYS = [
     "plotNumber", "areaCode", "titleDeedNumber", "ddaNumber", "masterDevRef",
     "plotAreaSqm", "plotAreaSqft", "gfaSqm", "gfaSqft", "bua",
+    "gfaResidentialSqft", "gfaRetailSqft", "gfaOfficesSqft",
     "permittedUse", "ownershipType", "subdivisionRestrictions",
     "masterDevName", "masterDevAddress",
     "sellerName", "sellerAddress",
@@ -355,6 +356,10 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
         gfaSqm: p.gfaSqm || "",
         gfaSqft: p.gfaSqft || "",
         bua: p.bua || "",
+        // GFA حسب النوع
+        gfaResidentialSqft: p.gfaResidentialSqft || "",
+        gfaRetailSqft: p.gfaRetailSqft || "",
+        gfaOfficesSqft: p.gfaOfficesSqft || "",
         // Section 1: Usage
         permittedUse: p.permittedUse || "",
         ownershipType: p.ownershipType || "",
@@ -648,12 +653,52 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
 
               {/* Section 2: Areas */}
               <Section title="المساحات" icon={Ruler} color="blue">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <Field label="مساحة الأرض (م²)" value={formData.plotAreaSqm} onChange={v => updateField("plotAreaSqm", v)} placeholder="بالمتر المربع" />
-                  <Field label="مساحة الأرض (قدم²)" value={formData.plotAreaSqft} onChange={v => updateField("plotAreaSqft", v)} placeholder="بالقدم المربع" />
-                  <Field label="GFA المسموح (م²)" value={formData.gfaSqm} onChange={v => updateField("gfaSqm", v)} placeholder="المساحة الإجمالية" />
-                  <Field label="GFA المسموح (قدم²)" value={formData.gfaSqft} onChange={v => updateField("gfaSqft", v)} placeholder="المساحة الإجمالية" />
-                  <Field label="مساحة البناء BUA (قدم²)" value={formData.bua} onChange={v => updateField("bua", v)} type="number" />
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <Field label="مساحة الأرض (م²)" value={formData.plotAreaSqm} onChange={v => updateField("plotAreaSqm", v)} placeholder="بالمتر المربع" />
+                    <Field label="مساحة الأرض (قدم²)" value={formData.plotAreaSqft} onChange={v => updateField("plotAreaSqft", v)} placeholder="بالقدم المربع" />
+                    <Field label="GFA المسموح (م²)" value={formData.gfaSqm} onChange={v => updateField("gfaSqm", v)} placeholder="المساحة الإجمالية" />
+                    <Field label="GFA المسموح (قدم²)" value={formData.gfaSqft} onChange={v => updateField("gfaSqft", v)} placeholder="المساحة الإجمالية" />
+                  </div>
+                  <Separator className="my-1" />
+                  <h4 className="text-xs font-semibold text-blue-600 uppercase tracking-wider">GFA حسب النوع (قدم²)</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <Field label="GFA سكني (قدم²)" value={formData.gfaResidentialSqft} onChange={v => updateField("gfaResidentialSqft", v)} type="number" placeholder="0" suffix="sqft" />
+                    <Field label="GFA محلات (قدم²)" value={formData.gfaRetailSqft} onChange={v => updateField("gfaRetailSqft", v)} type="number" placeholder="0" suffix="sqft" />
+                    <Field label="GFA مكاتب (قدم²)" value={formData.gfaOfficesSqft} onChange={v => updateField("gfaOfficesSqft", v)} type="number" placeholder="0" suffix="sqft" />
+                  </div>
+                  {/* المساحات القابلة للبيع - حساب تلقائي */}
+                  {(parseFloat(formData.gfaResidentialSqft || '0') > 0 || parseFloat(formData.gfaRetailSqft || '0') > 0 || parseFloat(formData.gfaOfficesSqft || '0') > 0) && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <h4 className="text-xs font-semibold text-blue-700 mb-2">المساحات القابلة للبيع (حساب تلقائي)</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
+                        {parseFloat(formData.gfaResidentialSqft || '0') > 0 && (
+                          <div>
+                            <div className="text-[10px] text-blue-500">سكني (95%)</div>
+                            <div className="text-sm font-bold text-blue-700 font-mono" dir="ltr">
+                              {Math.round(parseFloat(formData.gfaResidentialSqft || '0') * 0.95).toLocaleString('en-US')} sqft
+                            </div>
+                          </div>
+                        )}
+                        {parseFloat(formData.gfaRetailSqft || '0') > 0 && (
+                          <div>
+                            <div className="text-[10px] text-blue-500">محلات (97%)</div>
+                            <div className="text-sm font-bold text-blue-700 font-mono" dir="ltr">
+                              {Math.round(parseFloat(formData.gfaRetailSqft || '0') * 0.97).toLocaleString('en-US')} sqft
+                            </div>
+                          </div>
+                        )}
+                        {parseFloat(formData.gfaOfficesSqft || '0') > 0 && (
+                          <div>
+                            <div className="text-[10px] text-blue-500">مكاتب (95%)</div>
+                            <div className="text-sm font-bold text-blue-700 font-mono" dir="ltr">
+                              {Math.round(parseFloat(formData.gfaOfficesSqft || '0') * 0.95).toLocaleString('en-US')} sqft
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </Section>
 

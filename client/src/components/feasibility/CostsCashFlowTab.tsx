@@ -136,16 +136,21 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
     const developerFeePhase1Pct = parseFloat(p.developerFeePhase1Pct || "0");
     const developerFeePhase2Pct = parseFloat(p.developerFeePhase2Pct || "0");
 
-    // --- Source 2: Tab 1 (النظرة العامة) via feasForm ---
-    const bua = manualBuaSqft || feasForm.estimatedBua || feasComputed.estimatedBua || 0;
+    // --- Source 2: Fact Sheet areas ---
+    const bua = manualBuaSqft;
     const plotAreaSqft = parseFloat(p.plotAreaSqft || "0");
     const plotAreaM2 = plotAreaSqft * 0.0929;
-    const totalUnits = feasComputed.totalUnits || 0;
 
-    // --- Source 3: Tab 2 (المنافسة والتسعير) - حساب مباشر من marketOverview + competitionPricing ---
-    const saleableRes = feasComputed.saleableRes || 0;
-    const saleableRet = feasComputed.saleableRet || 0;
-    const saleableOff = feasComputed.saleableOff || 0;
+    // --- Saleable areas from GFA by type (Fact Sheet) ---
+    const gfaResSqft = parseFloat(p.gfaResidentialSqft || "0");
+    const gfaRetSqft = parseFloat(p.gfaRetailSqft || "0");
+    const gfaOffSqft = parseFloat(p.gfaOfficesSqft || "0");
+    const saleableRes = gfaResSqft * 0.95;
+    const saleableRet = gfaRetSqft * 0.97;
+    const saleableOff = gfaOffSqft * 0.95;
+
+    // Total units from Tab 1 distribution
+    let totalUnits = 0;
 
     // Get active scenario prices from competitionPricing
     const activeScenario = cp?.activeScenario || "base";
@@ -200,6 +205,24 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
 
     const totalRevenue = revenueRes + revenueRet + revenueOff;
 
+    // Calculate total units from Tab 1 distribution
+    if (mo) {
+      const calcUnits = (pct: number, avgArea: number, saleable: number) => {
+        const allocated = saleable * (pct / 100);
+        return avgArea > 0 ? Math.floor(allocated / avgArea) : 0;
+      };
+      totalUnits += calcUnits(parseFloat(mo.residentialStudioPct || "0"), mo.residentialStudioAvgArea || 0, saleableRes);
+      totalUnits += calcUnits(parseFloat(mo.residential1brPct || "0"), mo.residential1brAvgArea || 0, saleableRes);
+      totalUnits += calcUnits(parseFloat(mo.residential2brPct || "0"), mo.residential2brAvgArea || 0, saleableRes);
+      totalUnits += calcUnits(parseFloat(mo.residential3brPct || "0"), mo.residential3brAvgArea || 0, saleableRes);
+      totalUnits += calcUnits(parseFloat(mo.retailSmallPct || "0"), mo.retailSmallAvgArea || 0, saleableRet);
+      totalUnits += calcUnits(parseFloat(mo.retailMediumPct || "0"), mo.retailMediumAvgArea || 0, saleableRet);
+      totalUnits += calcUnits(parseFloat(mo.retailLargePct || "0"), mo.retailLargeAvgArea || 0, saleableRet);
+      totalUnits += calcUnits(parseFloat(mo.officeSmallPct || "0"), mo.officeSmallAvgArea || 0, saleableOff);
+      totalUnits += calcUnits(parseFloat(mo.officeMediumPct || "0"), mo.officeMediumAvgArea || 0, saleableOff);
+      totalUnits += calcUnits(parseFloat(mo.officeLargePct || "0"), mo.officeLargeAvgArea || 0, saleableOff);
+    }
+
     // ═══════════════════════════════════════════
     // CALCULATED COSTS
     // ═══════════════════════════════════════════
@@ -241,10 +264,11 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
 
     // بيانات ناقصة
     const missing: string[] = [];
-    if (!landPrice) missing.push("سعر الأرض");
-    if (!estimatedConstructionPricePerSqft) missing.push("السعر التقديري للقدم² (بناء)");
-    if (!bua) missing.push("مساحة البناء BUA");
-    if (!totalRevenue) missing.push("إجمالي الإيرادات (أكمل تبويب المنافسة والتسعير)");
+    if (!landPrice) missing.push("سعر الأرض (بطاقة المشروع)");
+    if (!estimatedConstructionPricePerSqft) missing.push("السعر التقديري للقدم² (بطاقة المشروع)");
+    if (!bua) missing.push("مساحة البناء BUA (بطاقة المشروع)");
+    if (!gfaResSqft && !gfaRetSqft && !gfaOffSqft) missing.push("GFA حسب النوع (بطاقة المشروع → قسم المساحات)");
+    if (!totalRevenue) missing.push("إجمالي الإيرادات (أكمل Tab 1 و Tab 2)");
 
     return {
       // Sources
@@ -264,7 +288,7 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
       totalCosts, profit, profitMargin, roi, costPerSqft, profitPerSqft,
       missing,
     };
-  }, [project, mo, cp, feasForm, feasComputed]);
+  }, [project, mo, cp]);
 
   if (!projectId) {
     return (

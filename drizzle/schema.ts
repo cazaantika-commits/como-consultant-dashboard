@@ -49,6 +49,10 @@ export const projects = mysqlTable('projects', {
   plotAreaSqft: decimal('plotAreaSqft', { precision: 12, scale: 2 }), // مساحة الأرض بالقدم المربع
   gfaSqm: decimal('gfaSqm', { precision: 12, scale: 2 }), // المساحة الإجمالية المسموح بناؤها بالمتر
   gfaSqft: decimal('gfaSqft', { precision: 12, scale: 2 }), // المساحة الإجمالية المسموح بناؤها بالقدم
+  // 1.2.1 GFA حسب النوع (قدم²)
+  gfaResidentialSqft: decimal('gfaResidentialSqft', { precision: 14, scale: 2 }), // GFA سكني بالقدم²
+  gfaRetailSqft: decimal('gfaRetailSqft', { precision: 14, scale: 2 }), // GFA محلات تجارية بالقدم²
+  gfaOfficesSqft: decimal('gfaOfficesSqft', { precision: 14, scale: 2 }), // GFA مكاتب بالقدم²
   
   // 1.3 الاستخدام ونوع الملكية
   permittedUse: varchar('permittedUse', { length: 255 }), // الاستخدام المسموح

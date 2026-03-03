@@ -52,6 +52,10 @@ export default function MarketOverviewTab({ projectId, studyId, form: feasForm, 
   const [recsApplied, setRecsApplied] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
+  // Fetch project data (Fact Sheet) for GFA by type
+  const projectQuery = trpc.projects.getById.useQuery(projectId || 0, { enabled: !!projectId });
+  const project = projectQuery.data;
+
   // Editable fields state
   const [fields, setFields] = useState({
     residentialStudioPct: 0, residentialStudioAvgArea: 0,
@@ -186,10 +190,19 @@ export default function MarketOverviewTab({ projectId, studyId, form: feasForm, 
     setIsDirty(true);
   }, []);
 
-  // Computed values
-  const saleableRes = computed.saleableRes || 0;
-  const saleableRet = computed.saleableRet || 0;
-  const saleableOff = computed.saleableOff || 0;
+  // Compute saleable areas from project GFA fields (Fact Sheet) instead of old feasibilityStudies
+  const saleableRes = useMemo(() => {
+    const gfa = parseFloat(project?.gfaResidentialSqft || '0');
+    return gfa * 0.95;
+  }, [project?.gfaResidentialSqft]);
+  const saleableRet = useMemo(() => {
+    const gfa = parseFloat(project?.gfaRetailSqft || '0');
+    return gfa * 0.97;
+  }, [project?.gfaRetailSqft]);
+  const saleableOff = useMemo(() => {
+    const gfa = parseFloat(project?.gfaOfficesSqft || '0');
+    return gfa * 0.95;
+  }, [project?.gfaOfficesSqft]);
 
   const resTotalPct = fields.residentialStudioPct + fields.residential1brPct + fields.residential2brPct + fields.residential3brPct;
   const retTotalPct = fields.retailSmallPct + fields.retailMediumPct + fields.retailLargePct;

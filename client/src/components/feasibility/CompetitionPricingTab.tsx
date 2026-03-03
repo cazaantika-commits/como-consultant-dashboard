@@ -70,6 +70,10 @@ export default function CompetitionPricingTab({ projectId, studyId, form: feasFo
   const pricingQuery = trpc.competitionPricing.getByProject.useQuery(projectId || 0, { enabled: !!projectId });
   const moQuery = trpc.marketOverview.getByProject.useQuery(projectId || 0, { enabled: !!projectId });
 
+  // Fetch project data (Fact Sheet) for GFA by type
+  const projectQuery = trpc.projects.getById.useQuery(projectId || 0, { enabled: !!projectId });
+  const project = projectQuery.data;
+
   const saveMutation = trpc.competitionPricing.save.useMutation({
     onSuccess: () => { pricingQuery.refetch(); toast.success("تم حفظ البيانات"); setIsDirty(false); },
     onError: () => toast.error("خطأ في الحفظ"),
@@ -215,9 +219,10 @@ export default function CompetitionPricingTab({ projectId, studyId, form: feasFo
     ].filter(r => r.pct > 0);
   }, [mo]);
 
-  const saleableRes = computed.saleableRes || 0;
-  const saleableRet = computed.saleableRet || 0;
-  const saleableOff = computed.saleableOff || 0;
+  // Compute saleable areas from project GFA fields (Fact Sheet)
+  const saleableRes = useMemo(() => parseFloat(project?.gfaResidentialSqft || '0') * 0.95, [project?.gfaResidentialSqft]);
+  const saleableRet = useMemo(() => parseFloat(project?.gfaRetailSqft || '0') * 0.97, [project?.gfaRetailSqft]);
+  const saleableOff = useMemo(() => parseFloat(project?.gfaOfficesSqft || '0') * 0.95, [project?.gfaOfficesSqft]);
 
   // Current scenario prices
   const currentPrices = scenarios[activeScenario];
