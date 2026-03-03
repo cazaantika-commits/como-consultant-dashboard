@@ -1,0 +1,23 @@
+{
+  "query": "SELECT * FROM stage_items WHERE linkedTaskId IS NOT NULL",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT * FROM stage_items WHERE linkedTaskId IS NOT NULL",
+  "rows": [
+    {
+      "id": "2",
+      "projectId": "1",
+      "phaseNumber": "2",
+      "sectionKey": "2.1",
+      "itemIndex": "1",
+      "title": "فتح حساب بنكي للشركة",
+      "status": "in_progress",
+      "isCustom": "0",
+      "createdAt": "2026-03-03 21:58:05",
+      "updatedAt": "2026-03-03 22:16:19",
+      "linkedTaskId": "150001"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tprojectId\tphaseNumber\tsectionKey\titemIndex\ttitle\tstatus\tisCustom\tcreatedAt\tupdatedAt\tlinkedTaskId\n2\t1\t2\t2.1\t1\tفتح حساب بنكي للشركة\tin_progress\t0\t2026-03-03 21:58:05\t2026-03-03 22:16:19\t150001\n",
+  "stderr": "",
+  "execution_time_ms": 1563
+}

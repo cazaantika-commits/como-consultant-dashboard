@@ -13,7 +13,7 @@ import {
   Building2, ChevronDown, ChevronRight, CheckCircle2, Circle, Clock,
   Plus, Trash2, Upload, FileText, Loader2, AlertTriangle, X,
   Zap, BarChart3, FolderOpen, Shield, Briefcase, HardHat, Home,
-  Paperclip, Download, Eye,
+  Paperclip, Download, Eye, Bot, ExternalLink, Users,
 } from "lucide-react";
 import { useLocation } from "wouter";
 
@@ -30,8 +30,44 @@ type StageItem = {
   title: string;
   status: "not_started" | "in_progress" | "completed";
   isCustom: boolean;
+  linkedTaskId: number | null;
   createdAt: Date;
   updatedAt: Date;
+};
+
+type LinkedTaskInfo = {
+  id: number;
+  title: string;
+  status: string;
+  owner: string;
+  priority: string;
+  source: string;
+  sourceAgent: string | null;
+};
+
+// Agent mapping for UI display (mirrors server-side mapping)
+const SECTION_AGENT_MAP: Record<string, { primary: string; secondary?: string }> = {
+  "2.1": { primary: "فاروق" }, "2.2": { primary: "فاروق" },
+  "2.3": { primary: "فاروق" }, "2.4": { primary: "فاروق", secondary: "خالد" },
+  "3.1": { primary: "خالد", secondary: "باز" }, "3.2": { primary: "خالد" },
+  "3.3": { primary: "خالد", secondary: "فاروق" }, "3.4": { primary: "خالد", secondary: "ألينا" },
+  "4.1": { primary: "ألينا", secondary: "جويل" }, "4.2": { primary: "باز" },
+  "4.3": { primary: "ألينا" },
+  "5.1": { primary: "براق" }, "5.2": { primary: "براق", secondary: "خالد" },
+  "5.3": { primary: "براق", secondary: "خالد" }, "5.4": { primary: "خالد", secondary: "براق" },
+  "6.1": { primary: "براق", secondary: "فاروق" }, "6.2": { primary: "خالد" },
+  "6.3": { primary: "سلوى", secondary: "خالد" },
+};
+
+const AGENT_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  "فاروق": { bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200" },
+  "خالد": { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200" },
+  "باز": { bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200" },
+  "ألينا": { bg: "bg-pink-50", text: "text-pink-700", border: "border-pink-200" },
+  "جويل": { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200" },
+  "براق": { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-200" },
+  "سلوى": { bg: "bg-yellow-50", text: "text-yellow-700", border: "border-yellow-200" },
+  "خازن": { bg: "bg-teal-50", text: "text-teal-700", border: "border-teal-200" },
 };
 
 type StageDocument = {
@@ -163,6 +199,7 @@ function TaskItem({
   onUpload,
   onDeleteDoc,
   isUpdating,
+  linkedTaskInfo,
 }: {
   item: StageItem;
   documents: StageDocument[];
@@ -171,11 +208,16 @@ function TaskItem({
   onUpload: (itemId: number, file: File) => void;
   onDeleteDoc: (docId: number) => void;
   isUpdating: boolean;
+  linkedTaskInfo?: { taskId: number; owner: string; status: string } | null;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showDocs, setShowDocs] = useState(false);
   const statusConf = STATUS_CONFIG[item.status];
   const StatusIcon = statusConf.icon;
+
+  // Get agent info for this section
+  const agentMapping = SECTION_AGENT_MAP[item.sectionKey];
+  const agentColor = agentMapping ? AGENT_COLORS[agentMapping.primary] : null;
 
   return (
     <div className={`group rounded-lg border transition-all hover:shadow-sm ${
@@ -204,6 +246,27 @@ function TaskItem({
         }`}>
           {item.title}
         </span>
+
+        {/* Agent badge - shows which agent is responsible */}
+        {agentMapping && item.status !== "not_started" && (
+          <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+            agentColor ? `${agentColor.bg} ${agentColor.text} ${agentColor.border}` : "bg-gray-50 text-gray-600 border-gray-200"
+          }`} title={`الوكيل المسؤول: ${agentMapping.primary}${agentMapping.secondary ? ` + ${agentMapping.secondary}` : ""}`}>
+            <Bot className="w-3 h-3" />
+            {agentMapping.primary}
+          </span>
+        )}
+
+        {/* Linked task indicator */}
+        {linkedTaskInfo && (
+          <span
+            className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 cursor-pointer hover:bg-indigo-100 transition-colors"
+            title={`مهمة مرتبطة #${linkedTaskInfo.taskId} - ${linkedTaskInfo.owner}`}
+          >
+            <ExternalLink className="w-3 h-3" />
+            مهمة #{linkedTaskInfo.taskId}
+          </span>
+        )}
 
         {/* Status badge */}
         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusConf.badge}`}>
@@ -315,6 +378,8 @@ function SectionBlock({
   onAddTask,
   updatingIds,
   phaseColor,
+  linkedTasks,
+  taskDetails,
 }: {
   sectionKey: string;
   sectionMeta: { title: string; titleEn: string };
@@ -327,6 +392,8 @@ function SectionBlock({
   onAddTask: (sectionKey: string, title: string) => void;
   updatingIds: Set<number>;
   phaseColor: string;
+  linkedTasks: Record<number, number>;
+  taskDetails: Record<number, any>;
 }) {
   const [isOpen, setIsOpen] = useState(true);
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -356,6 +423,20 @@ function SectionBlock({
           </div>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
+          {/* Agent responsible for this section */}
+          {SECTION_AGENT_MAP[sectionKey] && (
+            <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+              AGENT_COLORS[SECTION_AGENT_MAP[sectionKey].primary]
+                ? `${AGENT_COLORS[SECTION_AGENT_MAP[sectionKey].primary].bg} ${AGENT_COLORS[SECTION_AGENT_MAP[sectionKey].primary].text} ${AGENT_COLORS[SECTION_AGENT_MAP[sectionKey].primary].border}`
+                : "bg-gray-50 text-gray-600 border-gray-200"
+            }`}>
+              <Bot className="w-3 h-3" />
+              {SECTION_AGENT_MAP[sectionKey].primary}
+              {SECTION_AGENT_MAP[sectionKey].secondary && (
+                <span className="opacity-60">+ {SECTION_AGENT_MAP[sectionKey].secondary}</span>
+              )}
+            </span>
+          )}
           <span className="text-xs font-bold text-muted-foreground">
             {completed}/{total}
           </span>
@@ -371,18 +452,24 @@ function SectionBlock({
       {/* Section content */}
       {isOpen && (
         <div className="px-5 pb-4 space-y-2">
-          {items.map((item) => (
-            <TaskItem
-              key={item.id}
-              item={item}
-              documents={documents[item.id] || []}
-              onStatusChange={onStatusChange}
-              onDelete={onDelete}
-              onUpload={onUpload}
-              onDeleteDoc={onDeleteDoc}
-              isUpdating={updatingIds.has(item.id)}
-            />
-          ))}
+          {items.map((item) => {
+            const taskId = linkedTasks[item.id];
+            const taskDetail = taskId ? taskDetails[taskId] : null;
+            const linkedInfo = taskDetail ? { taskId, owner: taskDetail.owner, status: taskDetail.status } : null;
+            return (
+              <TaskItem
+                key={item.id}
+                item={item}
+                documents={documents[item.id] || []}
+                onStatusChange={onStatusChange}
+                onDelete={onDelete}
+                onUpload={onUpload}
+                onDeleteDoc={onDeleteDoc}
+                isUpdating={updatingIds.has(item.id)}
+                linkedTaskInfo={linkedInfo}
+              />
+            );
+          })}
 
           {/* Add custom task */}
           {showAddTask ? (
@@ -457,6 +544,8 @@ function PhaseBlock({
   onDeleteDoc,
   onAddTask,
   updatingIds,
+  linkedTasks,
+  taskDetails,
 }: {
   phaseNumber: number;
   items: StageItem[];
@@ -467,6 +556,8 @@ function PhaseBlock({
   onDeleteDoc: (docId: number) => void;
   onAddTask: (sectionKey: string, title: string) => void;
   updatingIds: Set<number>;
+  linkedTasks: Record<number, number>;
+  taskDetails: Record<number, any>;
 }) {
   const [isOpen, setIsOpen] = useState(true);
   const meta = PHASE_META[phaseNumber];
@@ -572,6 +663,8 @@ function PhaseBlock({
               onAddTask={onAddTask}
               updatingIds={updatingIds}
               phaseColor={meta.color}
+              linkedTasks={linkedTasks}
+              taskDetails={taskDetails}
             />
           ))}
         </div>
@@ -640,6 +733,11 @@ export default function DevelopmentStagesPage({ embedded }: { embedded?: boolean
     enabled: !!selectedProjectId && activeView === "critical",
   });
 
+  // Linked tasks query
+  const linkedTasksQuery = trpc.stages.getLinkedTasks.useQuery(selectedProjectId || 0, {
+    enabled: !!selectedProjectId,
+  });
+
   // Initialize mutation
   const initMutation = trpc.stages.initializeProject.useMutation({
     onSuccess: (data) => {
@@ -663,9 +761,17 @@ export default function DevelopmentStagesPage({ embedded }: { embedded?: boolean
     onMutate: ({ id }) => {
       setUpdatingIds((prev) => new Set(prev).add(id));
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       stagesQuery.refetch();
+      linkedTasksQuery.refetch();
       if (activeView === "critical") criticalPathQuery.refetch();
+      // Show toast about agent assignment
+      if (data.linkedTaskId && data.agentName) {
+        toast.success(
+          `تم إنشاء مهمة #${data.linkedTaskId} وتعيينها للوكيل ${data.agentName}${data.agentSecondary ? ` (مساعد: ${data.agentSecondary})` : ""}`,
+          { duration: 4000 }
+        );
+      }
     },
     onSettled: (_, __, { id }) => {
       setUpdatingIds((prev) => {
@@ -951,6 +1057,8 @@ export default function DevelopmentStagesPage({ embedded }: { embedded?: boolean
                     onDeleteDoc={handleDeleteDoc}
                     onAddTask={handleAddTask}
                     updatingIds={updatingIds}
+                    linkedTasks={linkedTasksQuery.data?.linkedTasks || {}}
+                    taskDetails={linkedTasksQuery.data?.taskDetails || {}}
                   />
                 ))}
               </div>

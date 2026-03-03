@@ -1,9 +1,143 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { stageItems, stageDocuments, projects } from "../../drizzle/schema";
-import { eq, and, sql, desc, asc } from "drizzle-orm";
+import { stageItems, stageDocuments, projects, tasks, agents, agentActivityLog } from "../../drizzle/schema";
+import { eq, and, sql, desc, asc, inArray } from "drizzle-orm";
 import { storagePut } from "../storage";
+
+// ═══════════════════════════════════════════════════════════════
+// Agent mapping per phase/section - which agent handles what
+// ═══════════════════════════════════════════════════════════════
+
+// Map each section to the responsible agent(s)
+export const SECTION_AGENT_MAP: Record<string, { primary: string; secondary?: string; category: string }> = {
+  // Phase 2: Legal Setup - فاروق (المحامي)
+  "2.1": { primary: "فاروق", category: "قانوني" },
+  "2.2": { primary: "فاروق", category: "قانوني" },
+  "2.3": { primary: "فاروق", category: "قانوني" },
+  "2.4": { primary: "فاروق", secondary: "خالد", category: "امتثال" },
+  // Phase 3: Design & Permits - خالد (الجودة) + باز (الاستراتيجي)
+  "3.1": { primary: "خالد", secondary: "باز", category: "تصميم" },
+  "3.2": { primary: "خالد", category: "هندسة" },
+  "3.3": { primary: "خالد", secondary: "فاروق", category: "تصاريح" },
+  "3.4": { primary: "خالد", secondary: "ألينا", category: "مواصفات" },
+  // Phase 4: Financing & Marketing - ألينا (المالية) + جويل (الجدوى)
+  "4.1": { primary: "ألينا", secondary: "جويل", category: "تمويل" },
+  "4.2": { primary: "باز", category: "تسويق" },
+  "4.3": { primary: "ألينا", category: "مبيعات" },
+  // Phase 5: Construction - براق (مراقب التنفيذ)
+  "5.1": { primary: "براق", category: "بناء" },
+  "5.2": { primary: "براق", secondary: "خالد", category: "إنشاءات" },
+  "5.3": { primary: "براق", secondary: "خالد", category: "تشطيبات" },
+  "5.4": { primary: "خالد", secondary: "براق", category: "جودة" },
+  // Phase 6: Handover - خالد (الجودة) + براق
+  "6.1": { primary: "براق", secondary: "فاروق", category: "تسليم" },
+  "6.2": { primary: "خالد", category: "إدارة مرافق" },
+  "6.3": { primary: "سلوى", secondary: "خالد", category: "خدمة عملاء" },
+};
+
+// Helper: Create a task in the tasks system when a stage item status changes
+async function createLinkedTask(
+  db: any,
+  stageItem: { id: number; title: string; sectionKey: string; phaseNumber: number; projectId: number },
+  newStatus: string,
+  projectName: string
+): Promise<number | null> {
+  const mapping = SECTION_AGENT_MAP[stageItem.sectionKey];
+  if (!mapping) return null;
+
+  // Determine task details based on status change
+  let taskTitle = "";
+  let taskDescription = "";
+  let taskPriority: "high" | "medium" | "low" = "medium";
+  let taskStatus: "new" | "progress" = "new";
+
+  const phaseData = DEFAULT_STAGES[stageItem.phaseNumber as keyof typeof DEFAULT_STAGES];
+  const phaseName = phaseData?.title || `المرحلة ${stageItem.phaseNumber}`;
+  const sectionData = phaseData?.sections[stageItem.sectionKey as keyof typeof phaseData.sections];
+  const sectionName = sectionData?.title || stageItem.sectionKey;
+
+  if (newStatus === "in_progress") {
+    taskTitle = `⚡ متابعة: ${stageItem.title}`;
+    taskDescription = `تم بدء العمل على "${stageItem.title}" في ${sectionName} (${phaseName}).\n\n` +
+      `المطلوب من ${mapping.primary}:\n` +
+      `- متابعة تنفيذ هذه المهمة\n` +
+      `- التأكد من استيفاء جميع المتطلبات\n` +
+      `- الإبلاغ عن أي عوائق أو تأخيرات`;
+    taskPriority = "high";
+    taskStatus = "progress";
+  } else if (newStatus === "completed") {
+    taskTitle = `✅ مراجعة اكتمال: ${stageItem.title}`;
+    taskDescription = `تم إكمال "${stageItem.title}" في ${sectionName} (${phaseName}).\n\n` +
+      `المطلوب من ${mapping.primary}:\n` +
+      `- مراجعة والتحقق من اكتمال المهمة\n` +
+      `- التأكد من توفر جميع المستندات المطلوبة\n` +
+      `- تحديث السجلات وإغلاق الملف`;
+    taskPriority = "medium";
+    taskStatus = "new";
+  } else {
+    return null; // No task for not_started
+  }
+
+  // Create the task
+  const result = await db.insert(tasks).values({
+    title: taskTitle,
+    description: taskDescription,
+    project: projectName,
+    category: mapping.category,
+    owner: mapping.primary,
+    priority: taskPriority,
+    status: taskStatus,
+    progress: newStatus === "in_progress" ? 10 : 0,
+    source: "agent" as const,
+    sourceAgent: "سلوى",
+  });
+
+  const taskId = Number(result[0].insertId);
+
+  // Log agent activity
+  try {
+    await db.insert(agentActivityLog).values({
+      agentName: "سلوى",
+      agentModel: "System",
+      actionType: "task_execution" as const,
+      toolName: "stage_task_link",
+      inputSummary: `ربط مرحلة التطوير: ${stageItem.title} → ${newStatus}`,
+      outputSummary: `تم إنشاء مهمة #${taskId} وتعيينها لـ ${mapping.primary}`,
+      status: "success" as const,
+      triggerSource: "stage_update",
+      relatedEntityType: "task",
+      relatedEntityId: taskId,
+    });
+  } catch (e) {
+    // Don't fail if activity log fails
+    console.error("Failed to log agent activity:", e);
+  }
+
+  // If there's a secondary agent, create a notification task for them too
+  if (mapping.secondary && newStatus === "in_progress") {
+    try {
+      await db.insert(tasks).values({
+        title: `📋 إشعار: ${stageItem.title} - بدأ التنفيذ`,
+        description: `تنبيه: تم بدء العمل على "${stageItem.title}" في ${sectionName}.\n` +
+          `الوكيل الرئيسي: ${mapping.primary}\n` +
+          `دورك: المتابعة والدعم حسب تخصصك.`,
+        project: projectName,
+        category: mapping.category,
+        owner: mapping.secondary,
+        priority: "low",
+        status: "new",
+        progress: 0,
+        source: "agent" as const,
+        sourceAgent: "سلوى",
+      });
+    } catch (e) {
+      console.error("Failed to create secondary task:", e);
+    }
+  }
+
+  return taskId;
+}
 
 // ═══════════════════════════════════════════════════════════════
 // Default stages data - 5 phases (2-6), 18 sections, 97 tasks
@@ -341,7 +475,7 @@ export const stagesRouter = router({
       return { items, documents: docsByItem };
     }),
 
-  // Update task status
+  // Update task status - with automatic task creation for agents
   updateStatus: publicProcedure
     .input(
       z.object({
@@ -353,13 +487,118 @@ export const stagesRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
+      // Get the stage item details first
+      const [item] = await db
+        .select()
+        .from(stageItems)
+        .where(eq(stageItems.id, input.id));
+
+      if (!item) throw new Error("Stage item not found");
+
+      // Get project name
+      const [project] = await db
+        .select({ name: projects.name })
+        .from(projects)
+        .where(eq(projects.id, item.projectId));
+
+      const projectName = project?.name || `مشروع #${item.projectId}`;
+
+      // Update the status
       await db
         .update(stageItems)
         .set({ status: input.status })
         .where(eq(stageItems.id, input.id));
 
-      return { success: true };
+      // Create linked task if status changed to in_progress or completed
+      let linkedTaskId: number | null = null;
+      let agentName: string | null = null;
+
+      if (input.status !== "not_started") {
+        try {
+          linkedTaskId = await createLinkedTask(
+            db,
+            { id: item.id, title: item.title, sectionKey: item.sectionKey, phaseNumber: item.phaseNumber, projectId: item.projectId },
+            input.status,
+            projectName
+          );
+
+          if (linkedTaskId) {
+            // Update the stage item with the linked task ID
+            await db
+              .update(stageItems)
+              .set({ linkedTaskId })
+              .where(eq(stageItems.id, input.id));
+          }
+
+          agentName = SECTION_AGENT_MAP[item.sectionKey]?.primary || null;
+        } catch (e) {
+          console.error("Failed to create linked task:", e);
+        }
+      } else {
+        // If reverting to not_started, clear linked task
+        await db
+          .update(stageItems)
+          .set({ linkedTaskId: null })
+          .where(eq(stageItems.id, input.id));
+      }
+
+      return {
+        success: true,
+        linkedTaskId,
+        agentName,
+        agentSecondary: SECTION_AGENT_MAP[item.sectionKey]?.secondary || null,
+      };
     }),
+
+  // Get linked tasks for a project's stage items
+  getLinkedTasks: publicProcedure
+    .input(z.number())
+    .query(async ({ input: projectId }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // Get all stage items with linked tasks
+      const itemsWithTasks = await db
+        .select({
+          stageItemId: stageItems.id,
+          linkedTaskId: stageItems.linkedTaskId,
+          sectionKey: stageItems.sectionKey,
+        })
+        .from(stageItems)
+        .where(
+          and(
+            eq(stageItems.projectId, projectId),
+            sql`${stageItems.linkedTaskId} IS NOT NULL`
+          )
+        );
+
+      if (itemsWithTasks.length === 0) return { linkedTasks: {}, taskDetails: {} };
+
+      // Get the actual task details
+      const taskIds = itemsWithTasks.map(i => i.linkedTaskId!).filter(Boolean);
+      const taskList = taskIds.length > 0
+        ? await db.select().from(tasks).where(inArray(tasks.id, taskIds))
+        : [];
+
+      // Map by stageItemId
+      const linkedTasks: Record<number, number> = {};
+      for (const item of itemsWithTasks) {
+        if (item.linkedTaskId) linkedTasks[item.stageItemId] = item.linkedTaskId;
+      }
+
+      // Map task details by task ID
+      const taskDetails: Record<number, typeof taskList[0]> = {};
+      for (const task of taskList) {
+        taskDetails[task.id] = task;
+      }
+
+      return { linkedTasks, taskDetails };
+    }),
+
+  // Get agent mapping info (for UI display)
+  getAgentMapping: publicProcedure.query(() => {
+    return SECTION_AGENT_MAP;
+  }),
 
   // Add custom task
   addCustomTask: publicProcedure

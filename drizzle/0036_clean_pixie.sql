@@ -1,0 +1,1 @@
+ALTER TABLE `stage_items` ADD `linkedTaskId` int;
