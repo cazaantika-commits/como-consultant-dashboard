@@ -171,6 +171,13 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
     "saleRestrictions", "resaleConditions", "communityCharges",
     "registrationAuthority", "adminFee", "clearanceFee", "compensationAmount",
     "governingLaw", "disputeResolution",
+    "landPrice", "agentCommissionLandPct",
+    "estimatedConstructionPricePerSqft", "manualBuaSqft",
+    "designFeePct", "supervisionFeePct", "separationFeePerM2",
+    "salesCommissionPct", "marketingPct", "developerFeePhase1Pct", "developerFeePhase2Pct",
+    "soilTestFee", "topographicSurveyFee", "officialBodiesFees",
+    "reraUnitRegFee", "reraProjectRegFee", "developerNocFee", "escrowAccountFee",
+    "bankFees", "communityFees", "surveyorFees", "reraAuditReportFee", "reraInspectionReportFee",
   ];
 
   // Field labels for the report
@@ -193,6 +200,18 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
     registrationAuthority: "جهة التسجيل", adminFee: "الرسوم الإدارية",
     clearanceFee: "رسوم المخالصة", compensationAmount: "مبلغ التعويض",
     governingLaw: "القانون الحاكم", disputeResolution: "آلية حل النزاعات",
+    landPrice: "سعر الأرض", agentCommissionLandPct: "عمولة وسيط الأرض",
+    estimatedConstructionPricePerSqft: "سعر القدم² التقديري", manualBuaSqft: "مساحة البناء (إدخال يدوي)",
+    designFeePct: "أتعاب التصميم%", supervisionFeePct: "أتعاب الإشراف%",
+    separationFeePerM2: "رسوم الفرز/م²", salesCommissionPct: "عمولة البيع%",
+    marketingPct: "التسويق%", developerFeePhase1Pct: "أتعاب المطور مرحلة 1",
+    developerFeePhase2Pct: "أتعاب المطور مرحلة 2",
+    soilTestFee: "فحص التربة", topographicSurveyFee: "الرفع المساحي",
+    officialBodiesFees: "رسوم الجهات", reraUnitRegFee: "تسجيل ريرا وحدات",
+    reraProjectRegFee: "تسجيل ريرا مشروع", developerNocFee: "رسوم NOC",
+    escrowAccountFee: "حساب الضمان", bankFees: "الرسوم البنكية",
+    communityFees: "رسوم المجتمع", surveyorFees: "أتعاب المساح",
+    reraAuditReportFee: "تدقيق ريرا", reraInspectionReportFee: "تفتيش ريرا",
   };
 
   // Report state
@@ -395,6 +414,19 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
         reraInspectionReportFee: p.reraInspectionReportFee || "",
         reraProjectRegFee: p.reraProjectRegFee || "",
         officialBodiesFees: p.officialBodiesFees || "",
+        // بيانات الشراء
+        landPrice: p.landPrice || "",
+        agentCommissionLandPct: p.agentCommissionLandPct || "",
+        // تكلفة البناء التقديرية
+        estimatedConstructionPricePerSqft: p.estimatedConstructionPricePerSqft || "",
+        // نسب التكاليف المتغيرة
+        designFeePct: p.designFeePct || "",
+        supervisionFeePct: p.supervisionFeePct || "",
+        separationFeePerM2: p.separationFeePerM2 || "",
+        salesCommissionPct: p.salesCommissionPct || "",
+        marketingPct: p.marketingPct || "",
+        developerFeePhase1Pct: p.developerFeePhase1Pct || "",
+        developerFeePhase2Pct: p.developerFeePhase2Pct || "",
       });
       setHasChanges(false);
     }
