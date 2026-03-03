@@ -623,6 +623,102 @@ export default function CompetitionPricingTab({ projectId, studyId, form: feasFo
       </Card>
 
       {/* ═══════════════════════════════════════════ */}
+      {/* القسم 3.5: حقول أسعار السيناريو المختار */}
+      {/* ═══════════════════════════════════════════ */}
+      <Card className={`border-2 ${scenarioConfig[activeScenario].borderColor}`}>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className={`font-bold text-sm flex items-center gap-2 ${scenarioConfig[activeScenario].color}`}>
+              💰 أسعار القدم² — {scenarioConfig[activeScenario].label}
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* أسعار السكني */}
+            <div className="bg-muted/20 rounded-lg p-3 border border-border">
+              <h4 className="text-xs font-bold text-muted-foreground mb-2 text-center">سكني (AED/قدم²)</h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium min-w-[80px]">استديو</span>
+                  <div className="w-28">
+                    <EditableNum value={currentPrices.studioPrice} onChange={(v) => setScenarioField(activeScenario, 'studioPrice', v)} />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium min-w-[80px]">غرفة وصالة</span>
+                  <div className="w-28">
+                    <EditableNum value={currentPrices.oneBrPrice} onChange={(v) => setScenarioField(activeScenario, 'oneBrPrice', v)} />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium min-w-[80px]">غرفتان وصالة</span>
+                  <div className="w-28">
+                    <EditableNum value={currentPrices.twoBrPrice} onChange={(v) => setScenarioField(activeScenario, 'twoBrPrice', v)} />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium min-w-[80px]">ثلاث غرف وصالة</span>
+                  <div className="w-28">
+                    <EditableNum value={currentPrices.threeBrPrice} onChange={(v) => setScenarioField(activeScenario, 'threeBrPrice', v)} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* أسعار المحلات */}
+            <div className="bg-muted/20 rounded-lg p-3 border border-border">
+              <h4 className="text-xs font-bold text-muted-foreground mb-2 text-center">تجاري (AED/قدم²)</h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium min-w-[80px]">صغيرة</span>
+                  <div className="w-28">
+                    <EditableNum value={currentPrices.retailSmallPrice} onChange={(v) => setScenarioField(activeScenario, 'retailSmallPrice', v)} />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium min-w-[80px]">متوسطة</span>
+                  <div className="w-28">
+                    <EditableNum value={currentPrices.retailMediumPrice} onChange={(v) => setScenarioField(activeScenario, 'retailMediumPrice', v)} />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium min-w-[80px]">كبيرة</span>
+                  <div className="w-28">
+                    <EditableNum value={currentPrices.retailLargePrice} onChange={(v) => setScenarioField(activeScenario, 'retailLargePrice', v)} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* أسعار المكاتب */}
+            <div className="bg-muted/20 rounded-lg p-3 border border-border">
+              <h4 className="text-xs font-bold text-muted-foreground mb-2 text-center">مكاتب (AED/قدم²)</h4>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium min-w-[80px]">صغيرة</span>
+                  <div className="w-28">
+                    <EditableNum value={currentPrices.officeSmallPrice} onChange={(v) => setScenarioField(activeScenario, 'officeSmallPrice', v)} />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium min-w-[80px]">متوسطة</span>
+                  <div className="w-28">
+                    <EditableNum value={currentPrices.officeMediumPrice} onChange={(v) => setScenarioField(activeScenario, 'officeMediumPrice', v)} />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium min-w-[80px]">كبيرة</span>
+                  <div className="w-28">
+                    <EditableNum value={currentPrices.officeLargePrice} onChange={(v) => setScenarioField(activeScenario, 'officeLargePrice', v)} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ═══════════════════════════════════════════ */}
       {/* القسم الرابع: جداول الإيرادات */}
       {/* ═══════════════════════════════════════════ */}
       {resData.length > 0 && (
