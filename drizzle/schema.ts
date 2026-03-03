@@ -1365,3 +1365,68 @@ export const designsAndPermits = mysqlTable('designsAndPermits', {
 
 export type DesignAndPermit = typeof designsAndPermits.$inferSelect;
 export type InsertDesignAndPermit = typeof designsAndPermits.$inferInsert;
+
+
+// ═══════════════════════════════════════════════════════════════
+// النظرة العامة والسوق - Market Overview (Tab 1 in Feasibility)
+// ═══════════════════════════════════════════════════════════════
+
+export const marketOverview = mysqlTable('marketOverview', {
+  id: int('id').autoincrement().primaryKey(),
+  userId: int('userId').notNull().references(() => users.id),
+  projectId: int('projectId').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  
+  // === تقرير جويل الذكي ===
+  aiSmartReport: longtext('aiSmartReport'), // التقرير الذكي الحر من جويل
+  aiRecommendationsJson: text('aiRecommendationsJson'), // JSON: التوصيات المهيكلة
+  aiReportGeneratedAt: timestamp('aiReportGeneratedAt'), // تاريخ إنشاء التقرير
+  
+  // === توزيع الوحدات السكنية ===
+  // استديو
+  residentialStudioPct: decimal('residentialStudioPct', { precision: 5, scale: 2 }).default('0'), // نسبة الاستديو %
+  residentialStudioAvgArea: int('residentialStudioAvgArea').default(0), // متوسط مساحة الاستديو sqft
+  // غرفة وصالة
+  residential1brPct: decimal('residential1brPct', { precision: 5, scale: 2 }).default('0'), // نسبة غرفة وصالة %
+  residential1brAvgArea: int('residential1brAvgArea').default(0), // متوسط مساحة غرفة وصالة sqft
+  // غرفتان وصالة
+  residential2brPct: decimal('residential2brPct', { precision: 5, scale: 2 }).default('0'), // نسبة غرفتان وصالة %
+  residential2brAvgArea: int('residential2brAvgArea').default(0), // متوسط مساحة غرفتان وصالة sqft
+  // ثلاث غرف وصالة
+  residential3brPct: decimal('residential3brPct', { precision: 5, scale: 2 }).default('0'), // نسبة ثلاث غرف وصالة %
+  residential3brAvgArea: int('residential3brAvgArea').default(0), // متوسط مساحة ثلاث غرف وصالة sqft
+  
+  // === توزيع المحلات التجارية ===
+  // صغيرة
+  retailSmallPct: decimal('retailSmallPct', { precision: 5, scale: 2 }).default('0'), // نسبة المحلات الصغيرة %
+  retailSmallAvgArea: int('retailSmallAvgArea').default(0), // متوسط مساحة المحل الصغير sqft
+  // متوسطة
+  retailMediumPct: decimal('retailMediumPct', { precision: 5, scale: 2 }).default('0'), // نسبة المحلات المتوسطة %
+  retailMediumAvgArea: int('retailMediumAvgArea').default(0), // متوسط مساحة المحل المتوسط sqft
+  // كبيرة
+  retailLargePct: decimal('retailLargePct', { precision: 5, scale: 2 }).default('0'), // نسبة المحلات الكبيرة %
+  retailLargeAvgArea: int('retailLargeAvgArea').default(0), // متوسط مساحة المحل الكبير sqft
+  
+  // === توزيع المكاتب ===
+  // صغيرة
+  officeSmallPct: decimal('officeSmallPct', { precision: 5, scale: 2 }).default('0'), // نسبة المكاتب الصغيرة %
+  officeSmallAvgArea: int('officeSmallAvgArea').default(0), // متوسط مساحة المكتب الصغير sqft
+  // متوسطة
+  officeMediumPct: decimal('officeMediumPct', { precision: 5, scale: 2 }).default('0'), // نسبة المكاتب المتوسطة %
+  officeMediumAvgArea: int('officeMediumAvgArea').default(0), // متوسط مساحة المكتب المتوسط sqft
+  // كبيرة
+  officeLargePct: decimal('officeLargePct', { precision: 5, scale: 2 }).default('0'), // نسبة المكاتب الكبيرة %
+  officeLargeAvgArea: int('officeLargeAvgArea').default(0), // متوسط مساحة المكتب الكبير sqft
+  
+  // === جودة التشطيب ===
+  finishingQuality: varchar('finishingQuality', { length: 100 }).default('ممتاز'), // ممتاز / جيد / عادي
+  
+  // === حالة الاعتماد ===
+  isApproved: int('isApproved').default(0).notNull(), // 0 = لم يعتمد، 1 = معتمد
+  approvedAt: timestamp('approvedAt'),
+  
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type MarketOverview = typeof marketOverview.$inferSelect;
+export type InsertMarketOverview = typeof marketOverview.$inferInsert;

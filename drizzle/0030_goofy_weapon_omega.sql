@@ -1,0 +1,37 @@
+CREATE TABLE `marketOverview` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`userId` int NOT NULL,
+	`projectId` int NOT NULL,
+	`aiSmartReport` longtext,
+	`aiRecommendationsJson` text,
+	`aiReportGeneratedAt` timestamp,
+	`residentialStudioPct` decimal(5,2) DEFAULT '0',
+	`residentialStudioAvgArea` int DEFAULT 0,
+	`residential1brPct` decimal(5,2) DEFAULT '0',
+	`residential1brAvgArea` int DEFAULT 0,
+	`residential2brPct` decimal(5,2) DEFAULT '0',
+	`residential2brAvgArea` int DEFAULT 0,
+	`residential3brPct` decimal(5,2) DEFAULT '0',
+	`residential3brAvgArea` int DEFAULT 0,
+	`retailSmallPct` decimal(5,2) DEFAULT '0',
+	`retailSmallAvgArea` int DEFAULT 0,
+	`retailMediumPct` decimal(5,2) DEFAULT '0',
+	`retailMediumAvgArea` int DEFAULT 0,
+	`retailLargePct` decimal(5,2) DEFAULT '0',
+	`retailLargeAvgArea` int DEFAULT 0,
+	`officeSmallPct` decimal(5,2) DEFAULT '0',
+	`officeSmallAvgArea` int DEFAULT 0,
+	`officeMediumPct` decimal(5,2) DEFAULT '0',
+	`officeMediumAvgArea` int DEFAULT 0,
+	`officeLargePct` decimal(5,2) DEFAULT '0',
+	`officeLargeAvgArea` int DEFAULT 0,
+	`finishingQuality` varchar(100) DEFAULT 'ممتاز',
+	`isApproved` int NOT NULL DEFAULT 0,
+	`approvedAt` timestamp,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `marketOverview_id` PRIMARY KEY(`id`)
+);
+--> statement-breakpoint
+ALTER TABLE `marketOverview` ADD CONSTRAINT `marketOverview_userId_users_id_fk` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `marketOverview` ADD CONSTRAINT `marketOverview_projectId_projects_id_fk` FOREIGN KEY (`projectId`) REFERENCES `projects`(`id`) ON DELETE cascade ON UPDATE no action;

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { useLocation } from "wouter";
+import MarketOverviewTab from "@/components/feasibility/MarketOverviewTab";
 
 // ═══════════════════════════════════════════
 // HELPER COMPONENTS
@@ -141,7 +142,7 @@ export default function FeasibilityStudyPage({ embedded }: { embedded?: boolean 
   const [, navigate] = useLocation();
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [selectedStudyId, setSelectedStudyId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState("tab1");
+  const [activeTab, setActiveTab] = useState("tab3");
   const [form, setForm] = useState<Record<string, any>>({});
   const [isDirty, setIsDirty] = useState(false);
   const [autoCreating, setAutoCreating] = useState(false);
@@ -410,67 +411,7 @@ export default function FeasibilityStudyPage({ embedded }: { embedded?: boolean 
               {/* توصيات جويل + حقول قابلة للتعديل */}
               {/* ═══════════════════════════════════════════ */}
               <TabsContent value="tab3">
-                <div className="space-y-4">
-                  {/* أسعار البيع - قابلة للتعديل */}
-                  <Card>
-                    <CardContent className="pt-6">
-                      <SectionHeader icon={TrendingUp} title="أسعار البيع لكل قدم مربع" subtitle="حقول قابلة للتعديل - يمكن تحديثها بناءً على توصيات جويل" />
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="p-4 rounded-xl bg-stone-50 border border-stone-200 space-y-3">
-                          <h4 className="font-bold text-sm text-stone-700 flex items-center gap-2">🏠 سكني</h4>
-                          <NumInput label="سعر البيع لكل قدم²" value={form.residentialSalePrice} onChange={(v) => setField("residentialSalePrice", v)} suffix="AED" />
-                          <div className="text-xs text-muted-foreground">المساحة القابلة للبيع: <span className="font-mono font-bold">{fmt(computed.saleableRes)}</span> sqft</div>
-                          <ReadOnlyValue label="إيراد سكني" value={computed.revenueRes} highlight />
-                        </div>
-                        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 space-y-3">
-                          <h4 className="font-bold text-sm text-emerald-700 flex items-center gap-2">🏪 تجاري / محلات</h4>
-                          <NumInput label="سعر البيع لكل قدم²" value={form.retailSalePrice} onChange={(v) => setField("retailSalePrice", v)} suffix="AED" />
-                          <div className="text-xs text-muted-foreground">المساحة القابلة للبيع: <span className="font-mono font-bold">{fmt(computed.saleableRet)}</span> sqft</div>
-                          <ReadOnlyValue label="إيراد تجاري" value={computed.revenueRet} highlight />
-                        </div>
-                        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 space-y-3">
-                          <h4 className="font-bold text-sm text-amber-700 flex items-center gap-2">🏢 مكاتب</h4>
-                          <NumInput label="سعر البيع لكل قدم²" value={form.officesSalePrice} onChange={(v) => setField("officesSalePrice", v)} suffix="AED" />
-                          <div className="text-xs text-muted-foreground">المساحة القابلة للبيع: <span className="font-mono font-bold">{fmt(computed.saleableOff)}</span> sqft</div>
-                          <ReadOnlyValue label="إيراد مكاتب" value={computed.revenueOff} highlight />
-                        </div>
-                      </div>
-                      <div className="mt-4 pt-4 border-t-2 border-primary/20">
-                        <ReadOnlyValue label="إجمالي الإيرادات المتوقعة" value={computed.totalRevenue} highlight large />
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* تحليل السوق من جويل */}
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <SectionHeader icon={Globe} title="تحليل السوق من جويل" subtitle="توصيات وتحليل سوقي شامل" />
-                        <Button
-                          onClick={() => {
-                            if (selectedStudyId && form.community) {
-                              marketAnalysisMutation.mutate({ studyId: selectedStudyId, community: form.community });
-                            } else {
-                              toast.error("يرجى تحديد المنطقة أولاً في تبويب الوثائق والأرض");
-                            }
-                          }}
-                          disabled={marketAnalysisMutation.isPending}
-                          className="gap-2"
-                        >
-                          {marketAnalysisMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                          {marketAnalysisMutation.isPending ? "جويل تحلل..." : "اطلب من جويل"}
-                        </Button>
-                      </div>
-                      {form.marketAnalysis ? (
-                        <div className="prose prose-sm max-w-none bg-muted/30 rounded-xl p-6 border border-border" dir="rtl">
-                          <Streamdown>{form.marketAnalysis}</Streamdown>
-                        </div>
-                      ) : (
-                        <JoellePlaceholder message="لم يُنشأ هذا القسم بعد" subMessage="اضغط زر جويل أعلاه لإنشاء المحتوى" />
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
+                <MarketOverviewTab projectId={selectedProjectId} studyId={selectedStudyId} form={form} computed={computed} />
               </TabsContent>
 
               {/* ═══════════════════════════════════════════ */}

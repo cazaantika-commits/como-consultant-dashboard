@@ -211,6 +211,13 @@
       "when": 1772531003653,
       "tag": "0029_safe_donald_blake",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "5",
+      "when": 1772535972187,
+      "tag": "0030_goofy_weapon_omega",
+      "breakpoints": true
     }
   ]
 }
