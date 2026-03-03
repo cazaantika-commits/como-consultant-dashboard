@@ -1,14 +1,62 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Building2, FileText, Rocket, Sparkles } from "lucide-react";
+import { ArrowRight, Building2, FileText, Rocket, Sparkles, ClipboardList, BarChart3, RefreshCw } from "lucide-react";
 import FactSheetPage from "./FactSheetPage";
+import FeasibilityStudyPage from "./FeasibilityStudyPage";
+import DevelopmentStagesPage from "./DevelopmentStagesSimplified";
+import ProjectLifecyclePage from "./ProjectLifecycleSimplified";
 
-type Tab = "fact-sheet" | "coming-soon";
+type Tab = "fact-sheet" | "feasibility" | "development-stages" | "project-lifecycle" | "coming-soon";
 
 export default function ProjectManagementPage() {
   const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<Tab>("fact-sheet");
+
+  const tabs: { id: Tab; label: string; icon: React.ReactNode; color: string }[] = [
+    {
+      id: "fact-sheet",
+      label: "بطاقة بيانات المشروع",
+      icon: <FileText className="w-4 h-4" />,
+      color: "amber",
+    },
+    {
+      id: "feasibility",
+      label: "دراسة الجدوى",
+      icon: <BarChart3 className="w-4 h-4" />,
+      color: "blue",
+    },
+    {
+      id: "development-stages",
+      label: "مراحل التطوير",
+      icon: <ClipboardList className="w-4 h-4" />,
+      color: "purple",
+    },
+    {
+      id: "project-lifecycle",
+      label: "دورة المشروع",
+      icon: <RefreshCw className="w-4 h-4" />,
+      color: "teal",
+    },
+    {
+      id: "coming-soon",
+      label: "أدوات إضافية",
+      icon: <Rocket className="w-4 h-4" />,
+      color: "emerald",
+    },
+  ];
+
+  const getTabColors = (color: string, isActive: boolean) => {
+    if (!isActive) return "border-transparent text-muted-foreground hover:text-foreground hover:border-border";
+    const colorMap: Record<string, string> = {
+      amber: "border-amber-500 text-amber-700 dark:text-amber-400",
+      blue: "border-blue-500 text-blue-700 dark:text-blue-400",
+      purple: "border-purple-500 text-purple-700 dark:text-purple-400",
+      teal: "border-teal-500 text-teal-700 dark:text-teal-400",
+      emerald: "border-emerald-500 text-emerald-700 dark:text-emerald-400",
+    };
+    return colorMap[color] || colorMap.amber;
+  };
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
@@ -32,33 +80,19 @@ export default function ProjectManagementPage() {
       {/* Tabs */}
       <div className="border-b border-border bg-card/50">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="flex gap-1">
-            <button
-              onClick={() => setActiveTab("fact-sheet")}
-              className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === "fact-sheet"
-                  ? "border-amber-500 text-amber-700 dark:text-amber-400"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                بطاقة بيانات المشروع
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab("coming-soon")}
-              className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === "coming-soon"
-                  ? "border-emerald-500 text-emerald-700 dark:text-emerald-400"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Rocket className="w-4 h-4" />
-                أدوات إضافية
-              </div>
-            </button>
+          <div className="flex gap-1 overflow-x-auto scrollbar-hide">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${getTabColors(tab.color, activeTab === tab.id)}`}
+              >
+                <div className="flex items-center gap-2">
+                  {tab.icon}
+                  {tab.label}
+                </div>
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -66,6 +100,18 @@ export default function ProjectManagementPage() {
       {/* Content */}
       {activeTab === "fact-sheet" && (
         <FactSheetPage embedded />
+      )}
+
+      {activeTab === "feasibility" && (
+        <FeasibilityStudyPage embedded />
+      )}
+
+      {activeTab === "development-stages" && (
+        <DevelopmentStagesPage />
+      )}
+
+      {activeTab === "project-lifecycle" && (
+        <ProjectLifecyclePage />
       )}
 
       {activeTab === "coming-soon" && (

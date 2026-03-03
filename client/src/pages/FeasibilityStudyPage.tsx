@@ -136,7 +136,7 @@ function JoellePlaceholder({ message, subMessage }: { message: string; subMessag
 // MAIN COMPONENT
 // ═══════════════════════════════════════════
 
-export default function FeasibilityStudyPage() {
+export default function FeasibilityStudyPage({ embedded }: { embedded?: boolean } = {}) {
   const { user, loading, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
@@ -296,14 +296,14 @@ export default function FeasibilityStudyPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-muted/30 to-background" dir="rtl">
+    <div className={embedded ? "bg-background" : "min-h-screen bg-gradient-to-b from-muted/30 to-background"} dir="rtl">
       <div className="container max-w-7xl py-6 space-y-4">
 
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">📊 دراسة الجدوى</h1>
-            <p className="text-sm text-muted-foreground">تحليل شامل لجدوى المشاريع العقارية</p>
+            {!embedded && <h1 className="text-2xl font-bold text-foreground">📊 دراسة الجدوى</h1>}
+            {!embedded && <p className="text-sm text-muted-foreground">تحليل شامل لجدوى المشاريع العقارية</p>}
           </div>
           <div className="flex items-center gap-2">
             {isDirty && selectedStudyId && (
