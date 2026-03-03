@@ -42,6 +42,9 @@ import SentEmailsPage from "./pages/SentEmailsPage";
 import ExecutiveVIPPage from "./pages/ExecutiveVIPPage";
 import CommandCenterPage from "./pages/CommandCenterPage";
 import FeasibilityStudyPage from "./pages/FeasibilityStudyPage";
+import DevelopmentStagesPage from "./pages/DevelopmentStagesSimplified";
+import ExecutiveCashFlowPage from "./pages/ProjectCashFlowSimplified";
+import ProjectLifecyclePage from "./pages/ProjectLifecycleSimplified";
 
 function Router() {
   return (
@@ -54,9 +57,12 @@ function Router() {
       <Route path="/tasks" component={TasksPage} />
       <Route path="/agent-dashboard" component={AgentDashboardPage} />
       <Route path="/consultant-evaluation" component={ConsultantEvaluationPage} />
-      {/* Feasibility study - also accessible as tab inside Project Management */}
+      {/* These pages are also accessible as tabs inside Project Management */}
       <Route path="/feasibility" component={FeasibilityStudyPage} />
       <Route path="/feasibility-study" component={FeasibilityStudyPage} />
+      <Route path="/development-stages" component={DevelopmentStagesPage} />
+      <Route path="/cash-flow" component={ExecutiveCashFlowPage} />
+      <Route path="/project-lifecycle" component={ProjectLifecyclePage} />
       <Route path="/consultant-portal" component={ConsultantPortalPage} />
       <Route path="/consultant-guide" component={ConsultantGuidePage} />
       <Route path="/consultant-proposals" component={ConsultantProposalsPage} />
