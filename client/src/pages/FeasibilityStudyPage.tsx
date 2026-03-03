@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
@@ -139,38 +139,49 @@ function JoellePlaceholder({ message, subMessage }: { message: string; subMessag
 export default function FeasibilityStudyPage() {
   const { user, loading, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [selectedStudyId, setSelectedStudyId] = useState<number | null>(null);
-  const [selectedProjectId, setSelectedProjectId] = useState<string>("all");
   const [activeTab, setActiveTab] = useState("tab1");
   const [form, setForm] = useState<Record<string, any>>({});
   const [isDirty, setIsDirty] = useState(false);
+  const [autoCreating, setAutoCreating] = useState(false);
 
   // Projects query
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
 
-  // Studies queries
-  const studiesQuery = trpc.feasibility.list.useQuery(undefined, { enabled: isAuthenticated });
+  // Studies query - get studies for selected project
+  const studiesByProjectQuery = trpc.feasibility.listByProject.useQuery(selectedProjectId || 0, { enabled: !!selectedProjectId });
   const studyQuery = trpc.feasibility.getById.useQuery(selectedStudyId || 0, { enabled: !!selectedStudyId });
 
-  // Filter studies by project
-  const filteredStudies = useMemo(() => {
-    const studies = studiesQuery.data || [];
-    if (selectedProjectId === "all") return studies;
-    if (selectedProjectId === "unlinked") return studies.filter((s: any) => !s.projectId);
-    return studies.filter((s: any) => s.projectId === Number(selectedProjectId));
-  }, [studiesQuery.data, selectedProjectId]);
+  // Auto-load or auto-create study when project is selected
+  useEffect(() => {
+    if (!selectedProjectId || studiesByProjectQuery.isLoading) return;
+    const studies = studiesByProjectQuery.data || [];
+    if (studies.length > 0) {
+      // Study exists - load it
+      setSelectedStudyId(studies[0].id);
+      setAutoCreating(false);
+    } else if (!autoCreating) {
+      // No study - auto-create one
+      const project = (projectsQuery.data || []).find((p: any) => p.id === selectedProjectId);
+      if (project) {
+        setAutoCreating(true);
+        createMutation.mutate({ projectName: project.name, projectId: selectedProjectId });
+      }
+    }
+  }, [selectedProjectId, studiesByProjectQuery.data, studiesByProjectQuery.isLoading]);
 
   // Mutations
   const createMutation = trpc.feasibility.create.useMutation({
-    onSuccess: (data) => { studiesQuery.refetch(); setSelectedStudyId(data.id); toast.success("تم إنشاء الدراسة بنجاح"); },
-    onError: () => toast.error("خطأ في إنشاء الدراسة"),
+    onSuccess: (data) => { studiesByProjectQuery.refetch(); setSelectedStudyId(data.id); setAutoCreating(false); toast.success("تم إنشاء الدراسة بنجاح"); },
+    onError: () => { setAutoCreating(false); toast.error("خطأ في إنشاء الدراسة"); },
   });
   const updateMutation = trpc.feasibility.update.useMutation({
-    onSuccess: () => { studiesQuery.refetch(); studyQuery.refetch(); setIsDirty(false); toast.success("تم حفظ التغييرات"); },
+    onSuccess: () => { studiesByProjectQuery.refetch(); studyQuery.refetch(); setIsDirty(false); toast.success("تم حفظ التغييرات"); },
     onError: () => toast.error("خطأ في الحفظ"),
   });
   const deleteMutation = trpc.feasibility.delete.useMutation({
-    onSuccess: () => { studiesQuery.refetch(); setSelectedStudyId(null); setForm({}); toast.success("تم حذف الدراسة"); },
+    onSuccess: () => { studiesByProjectQuery.refetch(); setSelectedStudyId(null); setForm({}); toast.success("تم حذف الدراسة"); },
   });
   const aiSummaryMutation = trpc.feasibility.generateAiSummary.useMutation({
     onSuccess: (data) => { studyQuery.refetch(); setForm((prev: Record<string, any>) => ({ ...prev, aiSummary: data.summary })); toast.success("تم إنشاء التحليل بنجاح"); },
@@ -187,10 +198,6 @@ export default function FeasibilityStudyPage() {
   const executiveReportMutation = trpc.feasibility.generateExecutiveReport.useMutation({
     onSuccess: (data) => { studyQuery.refetch(); setForm((prev: Record<string, any>) => ({ ...prev, priceRecommendation: data.report })); toast.success("تم إنشاء تقرير المجلس"); },
     onError: (err) => toast.error(err.message || "فشل في إنشاء التقرير"),
-  });
-  const duplicateScenarioMutation = trpc.feasibility.duplicateAsScenario.useMutation({
-    onSuccess: (data) => { studiesQuery.refetch(); setSelectedStudyId(data.id); toast.success("تم إنشاء السيناريو الجديد"); },
-    onError: () => toast.error("خطأ في إنشاء السيناريو"),
   });
 
   // Load study data into form
@@ -305,75 +312,46 @@ export default function FeasibilityStudyPage() {
                 حفظ التغييرات
               </Button>
             )}
+            {selectedStudyId && (
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 text-destructive hover:bg-destructive/10"
+                onClick={() => { if (confirm("هل أنت متأكد من حذف هذه الدراسة؟")) deleteMutation.mutate(selectedStudyId); }}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         </div>
 
-        {/* Study Selector */}
+        {/* Project Selector - قائمة منسدلة واحدة فقط */}
         <Card>
           <CardContent className="pt-4 pb-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">تصفية حسب المشروع</Label>
+            <div className="flex items-center gap-4">
+              <div className="flex-1 space-y-1">
+                <Label className="text-xs font-bold text-muted-foreground">اختر المشروع</Label>
                 <select
-                  className="w-full h-9 rounded-lg border border-input bg-background px-3 text-sm"
-                  value={selectedProjectId}
-                  onChange={(e) => setSelectedProjectId(e.target.value)}
+                  className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm font-medium"
+                  value={selectedProjectId || ""}
+                  onChange={(e) => {
+                    const val = e.target.value ? Number(e.target.value) : null;
+                    setSelectedProjectId(val);
+                    setSelectedStudyId(null);
+                    setForm({});
+                    setActiveTab("tab1");
+                  }}
                 >
-                  <option value="all">جميع المشاريع</option>
-                  <option value="unlinked">غير مربوطة</option>
+                  <option value="">— اختر مشروع —</option>
                   {(projectsQuery.data || []).map((p: any) => (
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
                 </select>
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">اختر دراسة</Label>
-                <select
-                  className="w-full h-9 rounded-lg border border-input bg-background px-3 text-sm"
-                  value={selectedStudyId || ""}
-                  onChange={(e) => setSelectedStudyId(e.target.value ? Number(e.target.value) : null)}
-                >
-                  <option value="">— اختر دراسة —</option>
-                  {filteredStudies.map((s: any) => (
-                    <option key={s.id} value={s.id}>
-                      {s.projectName} {s.scenarioName ? `(${s.scenarioName})` : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <Button
-                onClick={() => {
-                  const name = prompt("اسم المشروع (المنطقة _ الوصف _ رقم القطعة):");
-                  if (name) createMutation.mutate({ projectName: name });
-                }}
-                className="gap-2 h-9"
-                variant="outline"
-              >
-                <Plus className="w-4 h-4" />
-                دراسة جديدة
-              </Button>
-              {selectedStudyId && (
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1 text-xs"
-                    onClick={() => {
-                      const name = prompt("اسم السيناريو:", "متفائل");
-                      if (name) duplicateScenarioMutation.mutate({ studyId: selectedStudyId, scenarioName: name });
-                    }}
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                    نسخ كسيناريو
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-9 w-9 text-destructive hover:bg-destructive/10"
-                    onClick={() => { if (confirm("هل أنت متأكد من حذف هذه الدراسة؟")) deleteMutation.mutate(selectedStudyId); }}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+              {autoCreating && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  جاري إنشاء الدراسة...
                 </div>
               )}
             </div>
@@ -381,12 +359,14 @@ export default function FeasibilityStudyPage() {
         </Card>
 
         {/* Main Content */}
-        {!selectedStudyId ? (
+        {!selectedProjectId ? (
           <div className="text-center py-20">
-            <Calculator className="w-16 h-16 mx-auto mb-4 text-muted-foreground/30" />
-            <h2 className="text-xl font-bold text-muted-foreground mb-2">اختر دراسة جدوى أو أنشئ واحدة جديدة</h2>
-            <p className="text-sm text-muted-foreground/70">يمكنك إنشاء دراسات جدوى متعددة لمشاريع مختلفة</p>
+            <Building2 className="w-16 h-16 mx-auto mb-4 text-muted-foreground/30" />
+            <h2 className="text-xl font-bold text-muted-foreground mb-2">اختر مشروع لبدء دراسة الجدوى</h2>
+            <p className="text-sm text-muted-foreground/70">اختر مشروع من القائمة أعلاه وستفتح الدراسة تلقائياً</p>
           </div>
+        ) : !selectedStudyId ? (
+          <div className="text-center py-20"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /><p className="mt-3 text-sm text-muted-foreground">جاري تحميل الدراسة...</p></div>
         ) : studyQuery.isLoading ? (
           <div className="text-center py-20"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></div>
         ) : (
