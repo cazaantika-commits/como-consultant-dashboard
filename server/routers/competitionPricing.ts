@@ -194,10 +194,30 @@ export const competitionPricingRouter = router({
         .where(and(eq(marketOverview.projectId, projectId), eq(marketOverview.userId, ctx.user.id)));
       const mo = moResults[0] || null;
 
+      // ═══════════════════════════════════════════════════════════
+      // Merge data: Fact Sheet (projects table) + Feasibility Study
+      // ═══════════════════════════════════════════════════════════
+      const plotArea = feasStudy?.plotArea || parseFloat(String(project.plotAreaSqft || '0')) || 0;
+      const totalGFA = feasStudy 
+        ? ((feasStudy.gfaResidential || 0) + (feasStudy.gfaRetail || 0) + (feasStudy.gfaOffices || 0))
+        : parseFloat(String(project.gfaSqft || '0')) || 0;
+      const gfaRes = feasStudy?.gfaResidential || 0;
+      const gfaRet = feasStudy?.gfaRetail || 0;
+      const gfaOff = feasStudy?.gfaOffices || 0;
+      const buaFromFactSheet = project.bua || 0;
+      const permittedUse = project.permittedUse || feasStudy?.landUse || 'غير محدد';
+      const community = feasStudy?.community || project.areaCode || 'غير محدد';
+
       const projectType = [];
-      if (feasStudy?.gfaResidential && feasStudy.gfaResidential > 0) projectType.push('سكني');
-      if (feasStudy?.gfaRetail && feasStudy.gfaRetail > 0) projectType.push('تجاري');
-      if (feasStudy?.gfaOffices && feasStudy.gfaOffices > 0) projectType.push('مكاتب');
+      if (gfaRes > 0) projectType.push('سكني');
+      if (gfaRet > 0) projectType.push('تجاري');
+      if (gfaOff > 0) projectType.push('مكاتب');
+      // If no feasibility breakdown, try to infer from permittedUse
+      if (projectType.length === 0 && permittedUse !== 'غير محدد') {
+        if (permittedUse.includes('سكني') || permittedUse.toLowerCase().includes('residential')) projectType.push('سكني');
+        if (permittedUse.includes('تجاري') || permittedUse.toLowerCase().includes('commercial') || permittedUse.toLowerCase().includes('retail')) projectType.push('تجاري');
+        if (permittedUse.includes('مكاتب') || permittedUse.toLowerCase().includes('office')) projectType.push('مكاتب');
+      }
       const projectTypeStr = projectType.length > 0 ? projectType.join(' + ') : 'غير محدد';
 
       // Build unit types info from Tab 1
@@ -213,15 +233,21 @@ export const competitionPricingRouter = router({
 
 معلومات المشروع:
 - الاسم: ${project.name}
-- المنطقة: ${feasStudy?.community || project.areaCode || 'غير محدد'}
+- المنطقة: ${community}
 - نوع المشروع: ${projectTypeStr}
+- الاستعمال المسموح: ${permittedUse}
 - جودة التشطيب: ${mo?.finishingQuality || 'ممتاز'}
 ${unitTypes.length > 0 ? `- أنواع الوحدات: ${unitTypes.join(', ')}` : ''}
 
-المساحات:
-- GFA السكني: ${feasStudy?.gfaResidential?.toLocaleString() || 0} قدم²
-- GFA التجاري: ${feasStudy?.gfaRetail?.toLocaleString() || 0} قدم²
-- GFA المكاتب: ${feasStudy?.gfaOffices?.toLocaleString() || 0} قدم²
+بيانات بطاقة المشروع:
+- مساحة الأرض: ${plotArea > 0 ? plotArea.toLocaleString() : 'غير محدد'} قدم²
+- المساحة الإجمالية GFA: ${totalGFA > 0 ? totalGFA.toLocaleString() : 'غير محدد'} قدم²
+- BUA: ${buaFromFactSheet > 0 ? buaFromFactSheet.toLocaleString() : 'غير محدد'} قدم²
+
+تفصيل المساحات:
+- GFA السكني: ${gfaRes > 0 ? gfaRes.toLocaleString() : 'غير محدد'} قدم²
+- GFA التجاري: ${gfaRet > 0 ? gfaRet.toLocaleString() : 'غير محدد'} قدم²
+- GFA المكاتب: ${gfaOff > 0 ? gfaOff.toLocaleString() : 'غير محدد'} قدم²
 
 اكتبي تقريراً يتضمن:
 1. تحليل المنافسين في المنطقة وأسعارهم
@@ -232,10 +258,14 @@ ${unitTypes.length > 0 ? `- أنواع الوحدات: ${unitTypes.join(', ')}` 
 
 اجعلي التقرير مهنياً (600-1000 كلمة) باللغة العربية.`;
 
-      const recsPrompt = `أنتِ جويل، محللة السوق العقاري في Como Developments. بناءً على تحليلك لمشروع "${project.name}" في "${feasStudy?.community || 'غير محدد'}":
+      const recsPrompt = `أنتِ جويل، محللة السوق العقاري في Como Developments. بناءً على تحليلك لمشروع "${project.name}" في "${community}":
 
 نوع المشروع: ${projectTypeStr}
+الاستعمال المسموح: ${permittedUse}
 جودة التشطيب: ${mo?.finishingQuality || 'ممتاز'}
+مساحة الأرض: ${plotArea > 0 ? plotArea.toLocaleString() : 'غير محدد'} قدم²
+المساحة الإجمالية GFA: ${totalGFA > 0 ? totalGFA.toLocaleString() : 'غير محدد'} قدم²
+BUA: ${buaFromFactSheet > 0 ? buaFromFactSheet.toLocaleString() : 'غير محدد'} قدم²
 ${unitTypes.length > 0 ? `أنواع الوحدات المعتمدة: ${unitTypes.join(', ')}` : ''}
 
 أعطيني توصياتك بصيغة JSON فقط (بدون أي نص إضافي):

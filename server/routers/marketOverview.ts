@@ -147,35 +147,62 @@ export const marketOverviewRouter = router({
         .where(and(eq(feasibilityStudies.projectId, projectId), eq(feasibilityStudies.userId, ctx.user.id)));
       const feasStudy = feasResults[0] || null;
 
+      // ═══════════════════════════════════════════════════════════
+      // Merge data: Fact Sheet (projects table) + Feasibility Study
+      // Fact sheet is the primary source, feasibility study overrides if available
+      // ═══════════════════════════════════════════════════════════
+      const plotArea = feasStudy?.plotArea || parseFloat(String(project.plotAreaSqft || '0')) || 0;
+      const totalGFA = feasStudy 
+        ? ((feasStudy.gfaResidential || 0) + (feasStudy.gfaRetail || 0) + (feasStudy.gfaOffices || 0))
+        : parseFloat(String(project.gfaSqft || '0')) || 0;
+      const gfaRes = feasStudy?.gfaResidential || 0;
+      const gfaRet = feasStudy?.gfaRetail || 0;
+      const gfaOff = feasStudy?.gfaOffices || 0;
+      const buaFromFactSheet = project.bua || 0;
+      const permittedUse = project.permittedUse || feasStudy?.landUse || 'غير محدد';
+      const community = feasStudy?.community || project.areaCode || 'غير محدد';
+      const plotNumber = feasStudy?.plotNumber || project.plotNumber || 'غير محدد';
+      const projectDesc = feasStudy?.projectDescription || project.description || 'غير محدد';
+
       // Build context about the project
       const projectType = [];
-      if (feasStudy?.gfaResidential && feasStudy.gfaResidential > 0) projectType.push('سكني');
-      if (feasStudy?.gfaRetail && feasStudy.gfaRetail > 0) projectType.push('تجاري');
-      if (feasStudy?.gfaOffices && feasStudy.gfaOffices > 0) projectType.push('مكاتب');
+      if (gfaRes > 0) projectType.push('سكني');
+      if (gfaRet > 0) projectType.push('تجاري');
+      if (gfaOff > 0) projectType.push('مكاتب');
+      // If no feasibility breakdown, try to infer from permittedUse
+      if (projectType.length === 0 && permittedUse !== 'غير محدد') {
+        if (permittedUse.includes('سكني') || permittedUse.toLowerCase().includes('residential')) projectType.push('سكني');
+        if (permittedUse.includes('تجاري') || permittedUse.toLowerCase().includes('commercial') || permittedUse.toLowerCase().includes('retail')) projectType.push('تجاري');
+        if (permittedUse.includes('مكاتب') || permittedUse.toLowerCase().includes('office')) projectType.push('مكاتب');
+      }
       const projectTypeStr = projectType.length > 0 ? projectType.join(' + ') : (project.description || 'غير محدد');
 
-      const saleableResArea = feasStudy ? (feasStudy.gfaResidential || 0) * ((feasStudy.saleableResidentialPct || 90) / 100) : 0;
-      const saleableRetArea = feasStudy ? (feasStudy.gfaRetail || 0) * ((feasStudy.saleableRetailPct || 99) / 100) : 0;
-      const saleableOffArea = feasStudy ? (feasStudy.gfaOffices || 0) * ((feasStudy.saleableOfficesPct || 90) / 100) : 0;
+      const saleableResArea = feasStudy ? gfaRes * ((feasStudy.saleableResidentialPct || 90) / 100) : 0;
+      const saleableRetArea = feasStudy ? gfaRet * ((feasStudy.saleableRetailPct || 99) / 100) : 0;
+      const saleableOffArea = feasStudy ? gfaOff * ((feasStudy.saleableOfficesPct || 90) / 100) : 0;
 
       const reportPrompt = `أنتِ جويل، محللة السوق العقاري في شركة Como Developments. اكتبي تقريراً ذكياً شاملاً عن النظرة العامة والسوق للمشروع التالي:
 
 معلومات المشروع:
 - الاسم: ${project.name}
-- المنطقة: ${feasStudy?.community || project.areaCode || 'غير محدد'}
-- رقم القطعة: ${feasStudy?.plotNumber || project.plotNumber || 'غير محدد'}
+- المنطقة: ${community}
+- رقم القطعة: ${plotNumber}
 - نوع المشروع: ${projectTypeStr}
-- الوصف: ${feasStudy?.projectDescription || project.description || 'غير محدد'}
-- الاستعمال: ${feasStudy?.landUse || 'غير محدد'}
+- الوصف: ${projectDesc}
+- الاستعمال المسموح: ${permittedUse}
 
-المساحات:
-- مساحة الأرض: ${feasStudy?.plotArea?.toLocaleString() || 0} قدم²
-- GFA السكني: ${feasStudy?.gfaResidential?.toLocaleString() || 0} قدم²
-- GFA التجاري: ${feasStudy?.gfaRetail?.toLocaleString() || 0} قدم²
-- GFA المكاتب: ${feasStudy?.gfaOffices?.toLocaleString() || 0} قدم²
-- المساحة القابلة للبيع (سكني): ${Math.round(saleableResArea).toLocaleString()} قدم²
-- المساحة القابلة للبيع (تجاري): ${Math.round(saleableRetArea).toLocaleString()} قدم²
-- المساحة القابلة للبيع (مكاتب): ${Math.round(saleableOffArea).toLocaleString()} قدم²
+بيانات بطاقة المشروع:
+- مساحة الأرض (بطاقة): ${plotArea > 0 ? plotArea.toLocaleString() : 'غير محدد'} قدم²
+- المساحة الإجمالية GFA (بطاقة): ${totalGFA > 0 ? totalGFA.toLocaleString() : (parseFloat(String(project.gfaSqft || '0')) > 0 ? parseFloat(String(project.gfaSqft)).toLocaleString() : 'غير محدد')} قدم²
+- BUA (بطاقة): ${buaFromFactSheet > 0 ? buaFromFactSheet.toLocaleString() : 'غير محدد'} قدم²
+
+تفصيل المساحات (دراسة الجدوى):
+- GFA السكني: ${gfaRes > 0 ? gfaRes.toLocaleString() : 'غير محدد'} قدم²
+- GFA التجاري: ${gfaRet > 0 ? gfaRet.toLocaleString() : 'غير محدد'} قدم²
+- GFA المكاتب: ${gfaOff > 0 ? gfaOff.toLocaleString() : 'غير محدد'} قدم²
+- المساحة القابلة للبيع (سكني): ${saleableResArea > 0 ? Math.round(saleableResArea).toLocaleString() : 'غير محدد'} قدم²
+- المساحة القابلة للبيع (تجاري): ${saleableRetArea > 0 ? Math.round(saleableRetArea).toLocaleString() : 'غير محدد'} قدم²
+- المساحة القابلة للبيع (مكاتب): ${saleableOffArea > 0 ? Math.round(saleableOffArea).toLocaleString() : 'غير محدد'} قدم²
 
 اكتبي تقريراً يتضمن:
 1. نظرة عامة على المنطقة وموقع المشروع
@@ -186,12 +213,16 @@ export const marketOverviewRouter = router({
 
 اجعلي التقرير مهنياً ومفصلاً (600-1000 كلمة) باللغة العربية.`;
 
-      const recommendationsPrompt = `أنتِ جويل، محللة السوق العقاري في Como Developments. بناءً على تحليلك لمشروع "${project.name}" في منطقة "${feasStudy?.community || project.areaCode || 'غير محدد'}":
+      const recommendationsPrompt = `أنتِ جويل، محللة السوق العقاري في Como Developments. بناءً على تحليلك لمشروع "${project.name}" في منطقة "${community}":
 
 نوع المشروع: ${projectTypeStr}
-المساحة القابلة للبيع (سكني): ${Math.round(saleableResArea).toLocaleString()} قدم²
-المساحة القابلة للبيع (تجاري): ${Math.round(saleableRetArea).toLocaleString()} قدم²
-المساحة القابلة للبيع (مكاتب): ${Math.round(saleableOffArea).toLocaleString()} قدم²
+الاستعمال المسموح: ${permittedUse}
+مساحة الأرض: ${plotArea > 0 ? plotArea.toLocaleString() : 'غير محدد'} قدم²
+المساحة الإجمالية GFA: ${totalGFA > 0 ? totalGFA.toLocaleString() : 'غير محدد'} قدم²
+BUA: ${buaFromFactSheet > 0 ? buaFromFactSheet.toLocaleString() : 'غير محدد'} قدم²
+المساحة القابلة للبيع (سكني): ${saleableResArea > 0 ? Math.round(saleableResArea).toLocaleString() : 'غير محدد'} قدم²
+المساحة القابلة للبيع (تجاري): ${saleableRetArea > 0 ? Math.round(saleableRetArea).toLocaleString() : 'غير محدد'} قدم²
+المساحة القابلة للبيع (مكاتب): ${saleableOffArea > 0 ? Math.round(saleableOffArea).toLocaleString() : 'غير محدد'} قدم²
 
 أعطيني توصياتك بصيغة JSON فقط (بدون أي نص إضافي) بالشكل التالي:
 {
