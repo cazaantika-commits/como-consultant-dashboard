@@ -218,6 +218,13 @@
       "when": 1772535972187,
       "tag": "0030_goofy_weapon_omega",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "5",
+      "when": 1772538065620,
+      "tag": "0031_crazy_scrambler",
+      "breakpoints": true
     }
   ]
 }

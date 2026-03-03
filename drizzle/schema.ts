@@ -1430,3 +1430,86 @@ export const marketOverview = mysqlTable('marketOverview', {
 
 export type MarketOverview = typeof marketOverview.$inferSelect;
 export type InsertMarketOverview = typeof marketOverview.$inferInsert;
+
+
+// ═══════════════════════════════════════════
+// Competition & Pricing (Tab 2 - المنافسة والتسعير)
+// ═══════════════════════════════════════════
+export const competitionPricing = mysqlTable('competition_pricing', {
+  id: int('id').autoincrement().primaryKey(),
+  userId: int('userId').notNull().references(() => users.id),
+  projectId: int('projectId').notNull().references(() => projects.id),
+
+  // === تقرير جويل الذكي ===
+  aiSmartReport: text('aiSmartReport'), // التقرير الحر عن المنافسة والتسعير
+  aiRecommendationsJson: text('aiRecommendationsJson'), // توصيات JSON (3 سيناريوهات + خطة سداد)
+  aiReportGeneratedAt: timestamp('aiReportGeneratedAt'),
+
+  // === السيناريو المتفائل - أسعار القدم² ===
+  // سكني
+  optStudioPrice: int('optStudioPrice').default(0),
+  opt1brPrice: int('opt1brPrice').default(0),
+  opt2brPrice: int('opt2brPrice').default(0),
+  opt3brPrice: int('opt3brPrice').default(0),
+  // تجاري
+  optRetailSmallPrice: int('optRetailSmallPrice').default(0),
+  optRetailMediumPrice: int('optRetailMediumPrice').default(0),
+  optRetailLargePrice: int('optRetailLargePrice').default(0),
+  // مكاتب
+  optOfficeSmallPrice: int('optOfficeSmallPrice').default(0),
+  optOfficeMediumPrice: int('optOfficeMediumPrice').default(0),
+  optOfficeLargePrice: int('optOfficeLargePrice').default(0),
+
+  // === السيناريو الأساسي - أسعار القدم² ===
+  // سكني
+  baseStudioPrice: int('baseStudioPrice').default(0),
+  base1brPrice: int('base1brPrice').default(0),
+  base2brPrice: int('base2brPrice').default(0),
+  base3brPrice: int('base3brPrice').default(0),
+  // تجاري
+  baseRetailSmallPrice: int('baseRetailSmallPrice').default(0),
+  baseRetailMediumPrice: int('baseRetailMediumPrice').default(0),
+  baseRetailLargePrice: int('baseRetailLargePrice').default(0),
+  // مكاتب
+  baseOfficeSmallPrice: int('baseOfficeSmallPrice').default(0),
+  baseOfficeMediumPrice: int('baseOfficeMediumPrice').default(0),
+  baseOfficeLargePrice: int('baseOfficeLargePrice').default(0),
+
+  // === السيناريو المتحفظ - أسعار القدم² ===
+  // سكني
+  consStudioPrice: int('consStudioPrice').default(0),
+  cons1brPrice: int('cons1brPrice').default(0),
+  cons2brPrice: int('cons2brPrice').default(0),
+  cons3brPrice: int('cons3brPrice').default(0),
+  // تجاري
+  consRetailSmallPrice: int('consRetailSmallPrice').default(0),
+  consRetailMediumPrice: int('consRetailMediumPrice').default(0),
+  consRetailLargePrice: int('consRetailLargePrice').default(0),
+  // مكاتب
+  consOfficeSmallPrice: int('consOfficeSmallPrice').default(0),
+  consOfficeMediumPrice: int('consOfficeMediumPrice').default(0),
+  consOfficeLargePrice: int('consOfficeLargePrice').default(0),
+
+  // === خطة السداد ===
+  paymentBookingPct: decimal('paymentBookingPct', { precision: 5, scale: 2 }).default('10'),
+  paymentBookingTiming: varchar('paymentBookingTiming', { length: 255 }).default('عند التوقيع'),
+  paymentConstructionPct: decimal('paymentConstructionPct', { precision: 5, scale: 2 }).default('60'),
+  paymentConstructionTiming: varchar('paymentConstructionTiming', { length: 255 }).default('أثناء الإنشاء'),
+  paymentHandoverPct: decimal('paymentHandoverPct', { precision: 5, scale: 2 }).default('30'),
+  paymentHandoverTiming: varchar('paymentHandoverTiming', { length: 255 }).default('عند التسليم'),
+  paymentDeferredPct: decimal('paymentDeferredPct', { precision: 5, scale: 2 }).default('0'),
+  paymentDeferredTiming: varchar('paymentDeferredTiming', { length: 255 }),
+
+  // === السيناريو النشط (للعرض) ===
+  activeScenario: varchar('activeScenario', { length: 20 }).default('base'), // 'optimistic' | 'base' | 'conservative'
+
+  // === حالة الاعتماد ===
+  isApproved: int('isApproved').default(0).notNull(),
+  approvedAt: timestamp('approvedAt'),
+
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type CompetitionPricing = typeof competitionPricing.$inferSelect;
+export type InsertCompetitionPricing = typeof competitionPricing.$inferInsert;

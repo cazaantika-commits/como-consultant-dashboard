@@ -17,6 +17,7 @@ import {
 import { Streamdown } from "streamdown";
 import { useLocation } from "wouter";
 import MarketOverviewTab from "@/components/feasibility/MarketOverviewTab";
+import CompetitionPricingTab from "@/components/feasibility/CompetitionPricingTab";
 
 // ═══════════════════════════════════════════
 // HELPER COMPONENTS
@@ -419,93 +420,7 @@ export default function FeasibilityStudyPage({ embedded }: { embedded?: boolean 
               {/* 3 سيناريوهات + خطة السداد */}
               {/* ═══════════════════════════════════════════ */}
               <TabsContent value="tab4">
-                <div className="space-y-4">
-                  {/* السيناريوهات الثلاثة */}
-                  <Card>
-                    <CardContent className="pt-6">
-                      <SectionHeader icon={BarChart3} title="سيناريوهات التسعير" subtitle="3 سيناريوهات: متفائل، أساسي، محافظ" />
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {/* متفائل */}
-                        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200">
-                          <h4 className="font-bold text-emerald-700 mb-3 text-center">🟢 السيناريو المتفائل</h4>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between"><span className="text-muted-foreground">سعر سكني:</span><span className="font-mono font-bold">{fmt((form.residentialSalePrice || 0) * 1.15)} AED</span></div>
-                            <div className="flex justify-between"><span className="text-muted-foreground">سعر تجاري:</span><span className="font-mono font-bold">{fmt((form.retailSalePrice || 0) * 1.15)} AED</span></div>
-                            <div className="flex justify-between"><span className="text-muted-foreground">سعر مكاتب:</span><span className="font-mono font-bold">{fmt((form.officesSalePrice || 0) * 1.15)} AED</span></div>
-                            <div className="pt-2 border-t border-emerald-200">
-                              <div className="flex justify-between font-bold"><span>الإيرادات:</span><span className="font-mono text-emerald-700">{fmt(computed.totalRevenue * 1.15)} AED</span></div>
-                              <div className="flex justify-between font-bold"><span>الربح:</span><span className="font-mono text-emerald-700">{fmt(computed.totalRevenue * 1.15 - computed.totalCosts)} AED</span></div>
-                            </div>
-                          </div>
-                        </div>
-                        {/* أساسي */}
-                        <div className="p-4 rounded-xl bg-blue-50 border-2 border-blue-300">
-                          <h4 className="font-bold text-blue-700 mb-3 text-center">🔵 السيناريو الأساسي</h4>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between"><span className="text-muted-foreground">سعر سكني:</span><span className="font-mono font-bold">{fmt(form.residentialSalePrice)} AED</span></div>
-                            <div className="flex justify-between"><span className="text-muted-foreground">سعر تجاري:</span><span className="font-mono font-bold">{fmt(form.retailSalePrice)} AED</span></div>
-                            <div className="flex justify-between"><span className="text-muted-foreground">سعر مكاتب:</span><span className="font-mono font-bold">{fmt(form.officesSalePrice)} AED</span></div>
-                            <div className="pt-2 border-t border-blue-200">
-                              <div className="flex justify-between font-bold"><span>الإيرادات:</span><span className="font-mono text-blue-700">{fmt(computed.totalRevenue)} AED</span></div>
-                              <div className="flex justify-between font-bold"><span>الربح:</span><span className="font-mono text-blue-700">{fmt(computed.profit)} AED</span></div>
-                            </div>
-                          </div>
-                        </div>
-                        {/* محافظ */}
-                        <div className="p-4 rounded-xl bg-orange-50 border border-orange-200">
-                          <h4 className="font-bold text-orange-700 mb-3 text-center">🟠 السيناريو المحافظ</h4>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between"><span className="text-muted-foreground">سعر سكني:</span><span className="font-mono font-bold">{fmt((form.residentialSalePrice || 0) * 0.85)} AED</span></div>
-                            <div className="flex justify-between"><span className="text-muted-foreground">سعر تجاري:</span><span className="font-mono font-bold">{fmt((form.retailSalePrice || 0) * 0.85)} AED</span></div>
-                            <div className="flex justify-between"><span className="text-muted-foreground">سعر مكاتب:</span><span className="font-mono font-bold">{fmt((form.officesSalePrice || 0) * 0.85)} AED</span></div>
-                            <div className="pt-2 border-t border-orange-200">
-                              <div className="flex justify-between font-bold"><span>الإيرادات:</span><span className="font-mono text-orange-700">{fmt(computed.totalRevenue * 0.85)} AED</span></div>
-                              <div className="flex justify-between font-bold"><span>الربح:</span><span className="font-mono text-orange-700">{fmt(computed.totalRevenue * 0.85 - computed.totalCosts)} AED</span></div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* خطة السداد */}
-                  <Card>
-                    <CardContent className="pt-6">
-                      <SectionHeader icon={Calculator} title="خطة السداد" subtitle="توزيع الدفعات على مراحل المشروع" />
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b border-border bg-muted/30">
-                              <th className="text-right py-3 px-4 font-bold">المرحلة</th>
-                              <th className="text-center py-3 px-4 font-bold">النسبة</th>
-                              <th className="text-left py-3 px-4 font-bold" dir="ltr">المبلغ (AED)</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {[
-                              { phase: "الحجز", pct: 10 },
-                              { phase: "عقد البيع والشراء (SPA)", pct: 10 },
-                              { phase: "أثناء البناء (أقساط)", pct: 45 },
-                              { phase: "عند الإنجاز", pct: 20 },
-                              { phase: "بعد التسليم (6-12 شهر)", pct: 15 },
-                            ].map((row, i) => (
-                              <tr key={i} className="border-b border-border/50 hover:bg-muted/20">
-                                <td className="py-3 px-4">{row.phase}</td>
-                                <td className="py-3 px-4 text-center font-mono font-bold">{row.pct}%</td>
-                                <td className="py-3 px-4 text-left font-mono" dir="ltr">{fmt(computed.totalRevenue * row.pct / 100)}</td>
-                              </tr>
-                            ))}
-                            <tr className="bg-primary/5 font-bold">
-                              <td className="py-3 px-4">الإجمالي</td>
-                              <td className="py-3 px-4 text-center font-mono">100%</td>
-                              <td className="py-3 px-4 text-left font-mono text-primary" dir="ltr">{fmt(computed.totalRevenue)}</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                <CompetitionPricingTab projectId={selectedProjectId} studyId={selectedStudyId} form={form} computed={computed} />
               </TabsContent>
 
               {/* ═══════════════════════════════════════════ */}
