@@ -132,6 +132,63 @@ export default function CompetitionPricingTab({ projectId, studyId, form: feasFo
     deferredPct: 0, deferredTiming: "",
   });
 
+  // Shared function to apply AI recs to scenario fields (defined early so useEffect & mutation can use it)
+  const applyRecsToFields = useCallback((recs: any) => {
+    try {
+      setScenarios({
+        optimistic: {
+          studioPrice: recs.scenarios?.optimistic?.residential?.studio || 0,
+          oneBrPrice: recs.scenarios?.optimistic?.residential?.oneBr || 0,
+          twoBrPrice: recs.scenarios?.optimistic?.residential?.twoBr || 0,
+          threeBrPrice: recs.scenarios?.optimistic?.residential?.threeBr || 0,
+          retailSmallPrice: recs.scenarios?.optimistic?.retail?.small || 0,
+          retailMediumPrice: recs.scenarios?.optimistic?.retail?.medium || 0,
+          retailLargePrice: recs.scenarios?.optimistic?.retail?.large || 0,
+          officeSmallPrice: recs.scenarios?.optimistic?.offices?.small || 0,
+          officeMediumPrice: recs.scenarios?.optimistic?.offices?.medium || 0,
+          officeLargePrice: recs.scenarios?.optimistic?.offices?.large || 0,
+        },
+        base: {
+          studioPrice: recs.scenarios?.base?.residential?.studio || 0,
+          oneBrPrice: recs.scenarios?.base?.residential?.oneBr || 0,
+          twoBrPrice: recs.scenarios?.base?.residential?.twoBr || 0,
+          threeBrPrice: recs.scenarios?.base?.residential?.threeBr || 0,
+          retailSmallPrice: recs.scenarios?.base?.retail?.small || 0,
+          retailMediumPrice: recs.scenarios?.base?.retail?.medium || 0,
+          retailLargePrice: recs.scenarios?.base?.retail?.large || 0,
+          officeSmallPrice: recs.scenarios?.base?.offices?.small || 0,
+          officeMediumPrice: recs.scenarios?.base?.offices?.medium || 0,
+          officeLargePrice: recs.scenarios?.base?.offices?.large || 0,
+        },
+        conservative: {
+          studioPrice: recs.scenarios?.conservative?.residential?.studio || 0,
+          oneBrPrice: recs.scenarios?.conservative?.residential?.oneBr || 0,
+          twoBrPrice: recs.scenarios?.conservative?.residential?.twoBr || 0,
+          threeBrPrice: recs.scenarios?.conservative?.residential?.threeBr || 0,
+          retailSmallPrice: recs.scenarios?.conservative?.retail?.small || 0,
+          retailMediumPrice: recs.scenarios?.conservative?.retail?.medium || 0,
+          retailLargePrice: recs.scenarios?.conservative?.retail?.large || 0,
+          officeSmallPrice: recs.scenarios?.conservative?.offices?.small || 0,
+          officeMediumPrice: recs.scenarios?.conservative?.offices?.medium || 0,
+          officeLargePrice: recs.scenarios?.conservative?.offices?.large || 0,
+        },
+      });
+      if (recs.paymentPlan) {
+        setPayment({
+          bookingPct: recs.paymentPlan.booking?.pct || 10,
+          bookingTiming: recs.paymentPlan.booking?.timing || "عند التوقيع",
+          constructionPct: recs.paymentPlan.construction?.pct || 60,
+          constructionTiming: recs.paymentPlan.construction?.timing || "أثناء الإنشاء",
+          handoverPct: recs.paymentPlan.handover?.pct || 30,
+          handoverTiming: recs.paymentPlan.handover?.timing || "عند التسليم",
+          deferredPct: recs.paymentPlan.deferred?.pct || 0,
+          deferredTiming: recs.paymentPlan.deferred?.timing || "",
+        });
+      }
+      setIsDirty(true);
+    } catch { /* ignore */ }
+  }, []);
+
   // Load data from query
   useEffect(() => {
     if (pricingQuery.data) {
@@ -270,64 +327,7 @@ export default function CompetitionPricingTab({ projectId, studyId, form: feasFo
 
   const paymentTotal = payment.bookingPct + payment.constructionPct + payment.handoverPct + payment.deferredPct;
 
-  // Shared function to apply recs to scenario fields
-  const applyRecsToFields = useCallback((recs: any) => {
-    try {
-      setScenarios({
-        optimistic: {
-          studioPrice: recs.scenarios?.optimistic?.residential?.studio || 0,
-          oneBrPrice: recs.scenarios?.optimistic?.residential?.oneBr || 0,
-          twoBrPrice: recs.scenarios?.optimistic?.residential?.twoBr || 0,
-          threeBrPrice: recs.scenarios?.optimistic?.residential?.threeBr || 0,
-          retailSmallPrice: recs.scenarios?.optimistic?.retail?.small || 0,
-          retailMediumPrice: recs.scenarios?.optimistic?.retail?.medium || 0,
-          retailLargePrice: recs.scenarios?.optimistic?.retail?.large || 0,
-          officeSmallPrice: recs.scenarios?.optimistic?.offices?.small || 0,
-          officeMediumPrice: recs.scenarios?.optimistic?.offices?.medium || 0,
-          officeLargePrice: recs.scenarios?.optimistic?.offices?.large || 0,
-        },
-        base: {
-          studioPrice: recs.scenarios?.base?.residential?.studio || 0,
-          oneBrPrice: recs.scenarios?.base?.residential?.oneBr || 0,
-          twoBrPrice: recs.scenarios?.base?.residential?.twoBr || 0,
-          threeBrPrice: recs.scenarios?.base?.residential?.threeBr || 0,
-          retailSmallPrice: recs.scenarios?.base?.retail?.small || 0,
-          retailMediumPrice: recs.scenarios?.base?.retail?.medium || 0,
-          retailLargePrice: recs.scenarios?.base?.retail?.large || 0,
-          officeSmallPrice: recs.scenarios?.base?.offices?.small || 0,
-          officeMediumPrice: recs.scenarios?.base?.offices?.medium || 0,
-          officeLargePrice: recs.scenarios?.base?.offices?.large || 0,
-        },
-        conservative: {
-          studioPrice: recs.scenarios?.conservative?.residential?.studio || 0,
-          oneBrPrice: recs.scenarios?.conservative?.residential?.oneBr || 0,
-          twoBrPrice: recs.scenarios?.conservative?.residential?.twoBr || 0,
-          threeBrPrice: recs.scenarios?.conservative?.residential?.threeBr || 0,
-          retailSmallPrice: recs.scenarios?.conservative?.retail?.small || 0,
-          retailMediumPrice: recs.scenarios?.conservative?.retail?.medium || 0,
-          retailLargePrice: recs.scenarios?.conservative?.retail?.large || 0,
-          officeSmallPrice: recs.scenarios?.conservative?.offices?.small || 0,
-          officeMediumPrice: recs.scenarios?.conservative?.offices?.medium || 0,
-          officeLargePrice: recs.scenarios?.conservative?.offices?.large || 0,
-        },
-      });
-      if (recs.paymentPlan) {
-        setPayment({
-          bookingPct: recs.paymentPlan.booking?.pct || 10,
-          bookingTiming: recs.paymentPlan.booking?.timing || "عند التوقيع",
-          constructionPct: recs.paymentPlan.construction?.pct || 60,
-          constructionTiming: recs.paymentPlan.construction?.timing || "أثناء الإنشاء",
-          handoverPct: recs.paymentPlan.handover?.pct || 30,
-          handoverTiming: recs.paymentPlan.handover?.timing || "عند التسليم",
-          deferredPct: recs.paymentPlan.deferred?.pct || 0,
-          deferredTiming: recs.paymentPlan.deferred?.timing || "",
-        });
-      }
-      setIsDirty(true);
-    } catch { /* ignore */ }
-  }, []);
-
-  // Apply recommendations (manual button)
+  // Apply recommendations (manual button) - uses applyRecsToFields defined above
   const handleApplyRecs = () => {
     if (!recommendations) return;
     applyRecsToFields(recommendations);
