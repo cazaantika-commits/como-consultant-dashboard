@@ -373,51 +373,44 @@ export default function CompetitionPricingTab({ projectId, studyId, form: feasFo
     conservative: { label: "السيناريو المتحفظ", color: "text-amber-700", bgColor: "bg-amber-50", borderColor: "border-amber-300", icon: TrendingDown },
   };
 
-  // Revenue table component
-  const RevenueTable = ({ title, emoji, rows, totalRevenue: tRev }: { title: string; emoji: string; rows: typeof resRevenue; totalRevenue: number }) => (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-bold text-sm flex items-center gap-2">{emoji} {title}</h3>
-          <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">{fmtAED(tRev)}</span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-right py-2 px-2 font-bold text-muted-foreground">نوع الوحدة</th>
-                <th className="text-center py-2 px-2 font-bold text-muted-foreground">متوسط المساحة</th>
-                <th className="text-center py-2 px-2 font-bold text-muted-foreground">سعر القدم²</th>
-                <th className="text-center py-2 px-2 font-bold text-muted-foreground">سعر الوحدة</th>
-                <th className="text-center py-2 px-2 font-bold text-muted-foreground">عدد</th>
-                <th className="text-center py-2 px-2 font-bold text-muted-foreground">الإيراد</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(r => (
-                <tr key={r.key} className="border-b border-border/50">
-                  <td className="py-1.5 px-2 font-medium">{r.label}</td>
-                  <td className="py-1.5 px-2 text-center font-mono">{fmt(r.avg)}</td>
-                  <td className="py-1.5 px-2">
+  // Revenue table component - matches screenshot design
+  const RevenueTable = ({ title, typeLabel, rows, totalRevenue: tRev }: { title: string; typeLabel: string; rows: typeof resRevenue; totalRevenue: number }) => (
+    <div className="bg-white rounded-xl border border-border/60 overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm border-collapse">
+          <thead>
+            <tr className="border-b border-border bg-muted/30">
+              <th className="text-right py-2.5 px-4 font-bold text-muted-foreground w-[18%]">{typeLabel}</th>
+              <th className="text-center py-2.5 px-3 font-bold text-muted-foreground w-[14%]">متوسط المساحة</th>
+              <th className="text-center py-2.5 px-3 font-bold text-muted-foreground w-[16%]">سعر القدم²</th>
+              <th className="text-center py-2.5 px-3 font-bold text-muted-foreground w-[18%]">سعر الوحدة</th>
+              <th className="text-center py-2.5 px-3 font-bold text-muted-foreground w-[10%]">عدد</th>
+              <th className="text-center py-2.5 px-3 font-bold text-muted-foreground w-[24%]">الإيراد</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(r => (
+              <tr key={r.key} className="border-b border-border/40 hover:bg-muted/10 transition-colors">
+                <td className="py-2 px-4 font-medium text-foreground">{r.label}</td>
+                <td className="py-2 px-3 text-center text-muted-foreground">{fmt(r.avg)}</td>
+                <td className="py-2 px-3">
+                  <div className="max-w-[100px] mx-auto">
                     <EditableNum value={r.pricePerSqft} onChange={(v) => setScenarioField(activeScenario, r.priceKey, v)} />
-                  </td>
-                  <td className="py-1.5 px-2 text-center font-mono">{fmtAED(r.unitPrice)}</td>
-                  <td className="py-1.5 px-2 text-center font-bold text-primary">{r.units}</td>
-                  <td className="py-1.5 px-2 text-center font-mono">{fmtAED(r.revenue)}</td>
-                </tr>
-              ))}
-              <tr className="border-t-2 border-primary/30 font-bold">
-                <td className="py-2 px-2" colSpan={2}>إجمالي {title}</td>
-                <td className="py-2 px-2 text-center">—</td>
-                <td className="py-2 px-2 text-center">—</td>
-                <td className="py-2 px-2 text-center text-primary">{rows.reduce((s, r) => s + r.units, 0)}</td>
-                <td className="py-2 px-2 text-center text-emerald-600">{fmtAED(tRev)}</td>
+                  </div>
+                </td>
+                <td className="py-2 px-3 text-center font-mono text-foreground">{fmtAED(r.unitPrice)}</td>
+                <td className="py-2 px-3 text-center font-bold text-primary">{r.units}</td>
+                <td className="py-2 px-3 text-center font-mono text-foreground">{fmtAED(r.revenue)}</td>
               </tr>
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
+            ))}
+            <tr className="bg-emerald-50/60 border-t border-emerald-200">
+              <td className="py-2.5 px-4 font-bold text-emerald-700" colSpan={5}>{title}</td>
+              <td className="py-2.5 px-3 text-center font-bold text-emerald-700">{fmtAED(tRev)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 
   return (
@@ -623,114 +616,18 @@ export default function CompetitionPricingTab({ projectId, studyId, form: feasFo
       </Card>
 
       {/* ═══════════════════════════════════════════ */}
-      {/* القسم 3.5: حقول أسعار السيناريو المختار */}
-      {/* ═══════════════════════════════════════════ */}
-      <Card className={`border-2 ${scenarioConfig[activeScenario].borderColor}`}>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className={`font-bold text-sm flex items-center gap-2 ${scenarioConfig[activeScenario].color}`}>
-              💰 أسعار القدم² — {scenarioConfig[activeScenario].label}
-            </h3>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* أسعار السكني */}
-            <div className="bg-muted/20 rounded-lg p-3 border border-border">
-              <h4 className="text-xs font-bold text-muted-foreground mb-2 text-center">سكني (AED/قدم²)</h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-medium min-w-[80px]">استديو</span>
-                  <div className="w-28">
-                    <EditableNum value={currentPrices.studioPrice} onChange={(v) => setScenarioField(activeScenario, 'studioPrice', v)} />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-medium min-w-[80px]">غرفة وصالة</span>
-                  <div className="w-28">
-                    <EditableNum value={currentPrices.oneBrPrice} onChange={(v) => setScenarioField(activeScenario, 'oneBrPrice', v)} />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-medium min-w-[80px]">غرفتان وصالة</span>
-                  <div className="w-28">
-                    <EditableNum value={currentPrices.twoBrPrice} onChange={(v) => setScenarioField(activeScenario, 'twoBrPrice', v)} />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-medium min-w-[80px]">ثلاث غرف وصالة</span>
-                  <div className="w-28">
-                    <EditableNum value={currentPrices.threeBrPrice} onChange={(v) => setScenarioField(activeScenario, 'threeBrPrice', v)} />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* أسعار المحلات */}
-            <div className="bg-muted/20 rounded-lg p-3 border border-border">
-              <h4 className="text-xs font-bold text-muted-foreground mb-2 text-center">تجاري (AED/قدم²)</h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-medium min-w-[80px]">صغيرة</span>
-                  <div className="w-28">
-                    <EditableNum value={currentPrices.retailSmallPrice} onChange={(v) => setScenarioField(activeScenario, 'retailSmallPrice', v)} />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-medium min-w-[80px]">متوسطة</span>
-                  <div className="w-28">
-                    <EditableNum value={currentPrices.retailMediumPrice} onChange={(v) => setScenarioField(activeScenario, 'retailMediumPrice', v)} />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-medium min-w-[80px]">كبيرة</span>
-                  <div className="w-28">
-                    <EditableNum value={currentPrices.retailLargePrice} onChange={(v) => setScenarioField(activeScenario, 'retailLargePrice', v)} />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* أسعار المكاتب */}
-            <div className="bg-muted/20 rounded-lg p-3 border border-border">
-              <h4 className="text-xs font-bold text-muted-foreground mb-2 text-center">مكاتب (AED/قدم²)</h4>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-medium min-w-[80px]">صغيرة</span>
-                  <div className="w-28">
-                    <EditableNum value={currentPrices.officeSmallPrice} onChange={(v) => setScenarioField(activeScenario, 'officeSmallPrice', v)} />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-medium min-w-[80px]">متوسطة</span>
-                  <div className="w-28">
-                    <EditableNum value={currentPrices.officeMediumPrice} onChange={(v) => setScenarioField(activeScenario, 'officeMediumPrice', v)} />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-medium min-w-[80px]">كبيرة</span>
-                  <div className="w-28">
-                    <EditableNum value={currentPrices.officeLargePrice} onChange={(v) => setScenarioField(activeScenario, 'officeLargePrice', v)} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ═══════════════════════════════════════════ */}
-      {/* القسم الرابع: جداول الإيرادات */}
+      {/* القسم الرابع: جداول الإيرادات مع حقول الأسعار */}
       {/* ═══════════════════════════════════════════ */}
       {resData.length > 0 && (
-        <RevenueTable title="الإيراد السكني" emoji="🏠" rows={resRevenue} totalRevenue={totalResRevenue} />
+        <RevenueTable title="إجمالي الإيراد السكني" typeLabel="نوع الوحدة" rows={resRevenue} totalRevenue={totalResRevenue} />
       )}
 
       {retData.length > 0 && (
-        <RevenueTable title="إيراد المحلات" emoji="🏪" rows={retRevenue} totalRevenue={totalRetRevenue} />
+        <RevenueTable title="إجمالي إيراد المحلات" typeLabel="نوع المحل" rows={retRevenue} totalRevenue={totalRetRevenue} />
       )}
 
       {offData.length > 0 && (
-        <RevenueTable title="إيراد المكاتب" emoji="🏢" rows={offRevenue} totalRevenue={totalOffRevenue} />
+        <RevenueTable title="إجمالي إيراد المكاتب" typeLabel="نوع المكتب" rows={offRevenue} totalRevenue={totalOffRevenue} />
       )}
 
       {/* ═══════════════════════════════════════════ */}
