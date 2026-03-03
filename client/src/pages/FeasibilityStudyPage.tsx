@@ -385,187 +385,28 @@ export default function FeasibilityStudyPage({ embedded }: { embedded?: boolean 
             {/* ═══════════════════════════════════════════ */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="w-full justify-start mb-4 bg-card border border-border h-auto flex-wrap gap-1 p-1">
-                <TabsTrigger value="tab1" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  📄 ١. الوثائق والأرض
-                </TabsTrigger>
-                <TabsTrigger value="tab2" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  ✏️ ٢. الإدخالات اليدوية
-                </TabsTrigger>
                 <TabsTrigger value="tab3" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  🌍 ٣. النظرة العامة والسوق
+                  🌍 ١. النظرة العامة والسوق
                 </TabsTrigger>
                 <TabsTrigger value="tab4" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  ⚔️ ٤. المنافسة والتسعير
+                  ⚔️ ٢. المنافسة والتسعير
                 </TabsTrigger>
                 <TabsTrigger value="tab5" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  💰 ٥. التكاليف والتدفقات
+                  💰 ٣. التكاليف والتدفقات
                 </TabsTrigger>
                 <TabsTrigger value="tab6" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  📊 ٦. التحليل والسيناريوهات
+                  📊 ٤. التحليل والسيناريوهات
                 </TabsTrigger>
                 <TabsTrigger value="tab7" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  📋 ٧. التقرير الشامل
+                  📋 ٥. التقرير الشامل
                 </TabsTrigger>
                 <TabsTrigger value="tab8" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  👔 ٨. تقرير المجلس
+                  👔 ٦. تقرير المجلس
                 </TabsTrigger>
               </TabsList>
 
               {/* ═══════════════════════════════════════════ */}
-              {/* التبويب 1: الوثائق والأرض */}
-              {/* حقول بيانات المشروع قابلة للتعديل */}
-              {/* ═══════════════════════════════════════════ */}
-              <TabsContent value="tab1">
-                <div className="space-y-4">
-                  {/* بيانات المشروع الأساسية */}
-                  <Card>
-                    <CardContent className="pt-6">
-                      <SectionHeader icon={Building2} title="بيانات المشروع" subtitle="المعلومات الأساسية من وثائق المشروع" />
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">المنطقة</Label>
-                          <Input value={form.community || ""} onChange={(e) => {
-                            setField("community", e.target.value);
-                            setField("projectName", `${e.target.value} _ ${form.projectDescription || ""} _ ${form.plotNumber || ""}`);
-                          }} placeholder="مثال: ند الشبا الأولى" className="text-sm h-9" />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">الوصف المصرح</Label>
-                          <Input value={form.projectDescription || ""} onChange={(e) => {
-                            setField("projectDescription", e.target.value);
-                            setField("projectName", `${form.community || ""} _ ${e.target.value} _ ${form.plotNumber || ""}`);
-                          }} placeholder="مثال: G+2P+6" className="text-sm h-9" />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">رقم القطعة</Label>
-                          <Input value={form.plotNumber || ""} onChange={(e) => {
-                            setField("plotNumber", e.target.value);
-                            setField("projectName", `${form.community || ""} _ ${form.projectDescription || ""} _ ${e.target.value}`);
-                          }} placeholder="مثال: 6185392" className="text-sm h-9" dir="ltr" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* معلومات الأرض */}
-                  <Card>
-                    <CardContent className="pt-6">
-                      <SectionHeader icon={MapPin} title="معلومات الأرض والمساحات" subtitle="من Affection Plan والوثائق الرسمية" />
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">الاستعمال</Label>
-                          <Input value={form.landUse || ""} onChange={(e) => setField("landUse", e.target.value)}
-                            placeholder="مثال: Residential: Apartment + Retail" className="text-sm h-9" />
-                        </div>
-                        <NumInput label="عدد الوحدات" value={form.numberOfUnits} onChange={(v) => setField("numberOfUnits", v)} suffix="وحدة" />
-                        <NumInput label="مساحة الأرض (م²)" value={form.plotAreaM2} onChange={(v) => {
-                          setField("plotAreaM2", v);
-                          if (v) setField("plotArea", Math.round(v * 10.764));
-                        }} suffix="م²" />
-                        <NumInput label="مساحة الأرض (قدم²)" value={form.plotArea} onChange={(v) => setField("plotArea", v)} suffix="sqft" disabled hint="يُحسب تلقائياً من المتر²" />
-                        <NumInput label="مساحة البناء التقديرية BUA (قدم²)" value={form.estimatedBua} onChange={(v) => setField("estimatedBua", v)} suffix="sqft" hint="مساحة البناء الفعلية" />
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* ربط بمشروع */}
-                  <Card>
-                    <CardContent className="pt-6">
-                      <SectionHeader icon={FolderOpen} title="ربط بمشروع" subtitle="ربط الدراسة بمشروع في المنصة" />
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">المشروع</Label>
-                          <select className="w-full h-9 rounded-lg border border-input bg-background px-3 text-sm"
-                            value={form.projectId || ""} onChange={(e) => setField("projectId", e.target.value ? Number(e.target.value) : null)}>
-                            <option value="">غير مربوطة</option>
-                            {(projectsQuery.data || []).map((p: any) => (
-                              <option key={p.id} value={p.id}>{p.name}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">ملاحظات</Label>
-                          <textarea className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm min-h-[60px]"
-                            value={form.notes || ""} onChange={(e) => setField("notes", e.target.value)} placeholder="ملاحظات إضافية..." />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
-
-              {/* ═══════════════════════════════════════════ */}
-              {/* التبويب 2: الإدخالات اليدوية */}
-              {/* 14 حقل يدوي + 3 حقول بقيم افتراضية */}
-              {/* ═══════════════════════════════════════════ */}
-              <TabsContent value="tab2">
-                <div className="space-y-4">
-                  {/* GFA - 3 حقول بقيم افتراضية */}
-                  <Card>
-                    <CardContent className="pt-6">
-                      <SectionHeader icon={Ruler} title="المساحات الطابقية (GFA)" subtitle="قيم افتراضية من المشروع - قابلة للتعديل" />
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <NumInput label="GFA سكني (قدم²)" value={form.gfaResidential} onChange={(v) => setField("gfaResidential", v)} suffix="sqft" />
-                        <NumInput label="GFA تجاري / محلات (قدم²)" value={form.gfaRetail} onChange={(v) => setField("gfaRetail", v)} suffix="sqft" />
-                        <NumInput label="GFA مكاتب (قدم²)" value={form.gfaOffices} onChange={(v) => setField("gfaOffices", v)} suffix="sqft" />
-                      </div>
-                      <div className="mt-3 pt-3 border-t border-border">
-                        <ReadOnlyValue label="إجمالي GFA" value={computed.totalGfa} suffix="sqft" highlight />
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* نسب البيع */}
-                  <Card>
-                    <CardContent className="pt-6">
-                      <SectionHeader icon={Percent} title="نسب المساحة القابلة للبيع" subtitle="النسبة المئوية من كل نوع GFA" />
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <NumInput label="نسبة البيع سكني %" value={form.saleableResidentialPct} onChange={(v) => setField("saleableResidentialPct", v)} suffix="%" />
-                          <div className="mt-1"><ReadOnlyValue label="المساحة القابلة للبيع" value={computed.saleableRes} suffix="sqft" /></div>
-                        </div>
-                        <div>
-                          <NumInput label="نسبة البيع تجاري %" value={form.saleableRetailPct} onChange={(v) => setField("saleableRetailPct", v)} suffix="%" />
-                          <div className="mt-1"><ReadOnlyValue label="المساحة القابلة للبيع" value={computed.saleableRet} suffix="sqft" /></div>
-                        </div>
-                        <div>
-                          <NumInput label="نسبة البيع مكاتب %" value={form.saleableOfficesPct} onChange={(v) => setField("saleableOfficesPct", v)} suffix="%" />
-                          <div className="mt-1"><ReadOnlyValue label="المساحة القابلة للبيع" value={computed.saleableOff} suffix="sqft" /></div>
-                        </div>
-                      </div>
-                      <div className="mt-3 pt-3 border-t border-border">
-                        <ReadOnlyValue label="إجمالي المساحة القابلة للبيع" value={computed.totalSaleable} suffix="sqft" highlight />
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* 14 حقل يدوي - تكاليف */}
-                  <Card>
-                    <CardContent className="pt-6">
-                      <SectionHeader icon={DollarSign} title="التكاليف والنسب اليدوية" subtitle="14 حقل إدخال يدوي" />
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <NumInput label="١. سعر الأرض" value={form.landPrice} onChange={(v) => setField("landPrice", v)} suffix="AED" />
-                        <NumInput label="٢. عمولة وسيط الأرض %" value={form.agentCommissionLandPct} onChange={(v) => setField("agentCommissionLandPct", v)} suffix="%" />
-                        <NumInput label="٣. فحص التربة" value={form.soilInvestigation} onChange={(v) => setField("soilInvestigation", v)} suffix="AED" />
-                        <NumInput label="٤. المسح الطبوغرافي" value={form.topographySurvey} onChange={(v) => setField("topographySurvey", v)} suffix="AED" />
-                        <NumInput label="٥. أتعاب التصميم %" value={form.designFeePct} onChange={(v) => setField("designFeePct", v)} suffix="%" hint="من تكلفة البناء" />
-                        <NumInput label="٦. أتعاب الإشراف %" value={form.supervisionFeePct} onChange={(v) => setField("supervisionFeePct", v)} suffix="%" hint="من تكلفة البناء" />
-                        <NumInput label="٧. رسوم الجهات الحكومية" value={form.authoritiesFee} onChange={(v) => setField("authoritiesFee", v)} suffix="AED" />
-                        <NumInput label="٨. رسوم الفصل لكل م²" value={form.separationFeePerM2} onChange={(v) => setField("separationFeePerM2", v)} suffix="AED/م²" />
-                        <NumInput label="٩. رسوم المجتمع" value={form.communityFee} onChange={(v) => setField("communityFee", v)} suffix="AED" />
-                        <NumInput label="١٠. الاحتياطي والطوارئ %" value={form.contingenciesPct} onChange={(v) => setField("contingenciesPct", v)} suffix="%" hint="من تكلفة البناء" />
-                        <NumInput label="١١. أتعاب المطور (COMO) %" value={form.developerFeePct} onChange={(v) => setField("developerFeePct", v)} suffix="%" hint="من إجمالي المبيعات" />
-                        <NumInput label="١٢. عمولة البيع %" value={form.agentCommissionSalePct} onChange={(v) => setField("agentCommissionSalePct", v)} suffix="%" hint="من إجمالي المبيعات" />
-                        <NumInput label="١٣. التسويق %" value={form.marketingPct} onChange={(v) => setField("marketingPct", v)} suffix="%" hint="من إجمالي المبيعات" />
-                        <NumInput label="١٤. حصة COMO من الربح %" value={form.comoProfitSharePct} onChange={(v) => setField("comoProfitSharePct", v)} suffix="%" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
-
-              {/* ═══════════════════════════════════════════ */}
-              {/* التبويب 3: النظرة العامة والسوق */}
+              {/* التبويب 1: النظرة العامة والسوق */}
               {/* توصيات جويل + حقول قابلة للتعديل */}
               {/* ═══════════════════════════════════════════ */}
               <TabsContent value="tab3">
