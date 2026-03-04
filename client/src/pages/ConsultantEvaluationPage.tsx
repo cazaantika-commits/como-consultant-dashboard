@@ -76,7 +76,7 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
           <SelectTrigger className="w-full bg-white border-slate-300"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="pct">%</SelectItem>
-            <SelectItem value="fixed">مبلغ</SelectItem>
+            <SelectItem value="lump">مبلغ</SelectItem>
           </SelectContent>
         </Select>
       </td>
@@ -100,7 +100,7 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
           <SelectTrigger className="w-full bg-white border-slate-300"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="pct">%</SelectItem>
-            <SelectItem value="fixed">مبلغ</SelectItem>
+            <SelectItem value="lump">مبلغ</SelectItem>
           </SelectContent>
         </Select>
       </td>
