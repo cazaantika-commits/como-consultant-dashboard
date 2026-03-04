@@ -2,7 +2,7 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { cfProjects, cfCostItems, cfScenarios, cfFiles, projects, feasibilityStudies, projectPhases, phaseActivities, phaseCostLinks } from "../../drizzle/schema";
-import { calculateDualCashFlow } from './cashFlowEngine';
+import { calculateDualCashFlow, type CostItemInput, type ProjectInput } from './cashFlowEngine';
 import { eq, and, desc } from "drizzle-orm";
 import { storagePut } from "../storage";
 
@@ -707,7 +707,7 @@ export const cashFlowProgramRouter = router({
       };
     }),
 
-  // ─── Portfolio View ───
+  // ─── Portfolio View (Dual Engine) ───
   getPortfolioCashFlow: publicProcedure.query(async ({ ctx }) => {
     if (!ctx.user) return null;
     const db = await getDb();
@@ -718,17 +718,23 @@ export const cashFlowProgramRouter = router({
 
     if (allProjects.length === 0) return null;
 
-    // Calculate cash flow for each project and aggregate
+    // Calculate cash flow for each project using dual engine
     const projectResults: Array<{
       id: number;
       name: string;
+      startDate: string;
       totalCost: number;
       totalSales: number;
+      developerExposure: number;
+      escrowBalance: number;
       peakExposure: number;
       peakMonth: number;
-      monthlyOutflow: number[];
-      monthlyInflow: number[];
-      startDate: string;
+      peakMonthLabel: string;
+      totalMonths: number;
+      phases: { preDev: number; construction: number; handover: number };
+      monthlyDeveloperOutflow: number[];
+      monthlyEscrowInflow: number[];
+      monthlyEscrowOutflow: number[];
     }> = [];
 
     // Find the earliest start and latest end across all projects
@@ -742,13 +748,7 @@ export const cashFlowProgramRouter = router({
         globalStartMonth = m;
       }
 
-      const phases = buildTimeline(
-        project.designApprovalMonths,
-        project.reraSetupMonths,
-        project.constructionMonths,
-        project.handoverMonths
-      );
-      const totalMonths = getTotalProjectMonths(phases);
+      const totalMonths = (project.preDevMonths || 6) + (project.constructionMonths || 16) + (project.handoverMonths || 2);
       const endMonth = m + totalMonths - 1;
       const endYear = y + Math.floor((endMonth - 1) / 12);
       const endMonthInYear = ((endMonth - 1) % 12) + 1;
@@ -760,71 +760,96 @@ export const cashFlowProgramRouter = router({
     }
 
     const totalGlobalMonths = (globalEndYear - globalStartYear) * 12 + (globalEndMonth - globalStartMonth + 1);
-    const portfolioOutflow = new Array(totalGlobalMonths).fill(0);
-    const portfolioInflow = new Array(totalGlobalMonths).fill(0);
+    const portfolioDeveloperOutflow = new Array(totalGlobalMonths).fill(0);
+    const portfolioEscrowInflow = new Array(totalGlobalMonths).fill(0);
+    const portfolioEscrowOutflow = new Array(totalGlobalMonths).fill(0);
 
     for (const project of allProjects) {
       const [projYear, projMonth] = project.startDate.split('-').map(Number);
       const offset = (projYear - globalStartYear) * 12 + (projMonth - globalStartMonth);
 
-      const phases = buildTimeline(
-        project.designApprovalMonths,
-        project.reraSetupMonths,
-        project.constructionMonths,
-        project.handoverMonths
-      );
-      const totalMonths = getTotalProjectMonths(phases);
-
       const costItemsRaw = await db.select().from(cfCostItems)
         .where(eq(cfCostItems.cfProjectId, project.id));
 
-      const costItems: CostItemWithPayment[] = costItemsRaw.map(item => ({
+      const costItems: CostItemInput[] = costItemsRaw.map(item => ({
         id: item.id,
         name: item.name,
         category: item.category,
         totalAmount: item.totalAmount,
         paymentType: item.paymentType,
         paymentParams: item.paymentParams ? JSON.parse(item.paymentParams) : {},
+        fundingSource: (item.fundingSource as any) || 'developer',
+        escrowEligible: item.escrowEligible ?? false,
+        phaseTag: (item.phaseTag as any) || 'pre_dev',
       }));
 
-      const outflowByCategory = calculateMonthlyOutflow(costItems, phases, totalMonths);
-      const salesInflow = calculateSalesInflow(project, phases, totalMonths);
-      const totalOutflow = outflowByCategory['total'] || new Array(totalMonths).fill(0);
+      const projectInput: ProjectInput = {
+        startDate: project.startDate,
+        preDevMonths: project.preDevMonths || 6,
+        constructionMonths: project.constructionMonths || 16,
+        handoverMonths: project.handoverMonths || 2,
+        salesEnabled: project.salesEnabled ?? true,
+        salesStartMonth: project.salesStartMonth,
+        totalSalesRevenue: project.totalSalesRevenue,
+        buyerPlanBookingPct: project.buyerPlanBookingPct ?? 20,
+        buyerPlanConstructionPct: project.buyerPlanConstructionPct ?? 50,
+        buyerPlanHandoverPct: project.buyerPlanHandoverPct ?? 30,
+        escrowDepositPct: project.escrowDepositPct ?? 20,
+        contractorAdvancePct: project.contractorAdvancePct ?? 10,
+        liquidityBufferPct: project.liquidityBufferPct ?? 5,
+        constructionCostTotal: project.constructionCostTotal,
+        buaSqft: project.buaSqft,
+        constructionCostPerSqft: project.constructionCostPerSqft,
+      };
 
-      let cumOut = 0, cumIn = 0, cumNet = 0, peakExp = 0, peakM = 0;
-      for (let m = 0; m < totalMonths; m++) {
-        cumOut += totalOutflow[m];
-        cumIn += salesInflow[m];
-        cumNet += salesInflow[m] - totalOutflow[m];
-        if (cumNet < peakExp) { peakExp = cumNet; peakM = m + 1; }
+      const result = calculateDualCashFlow(projectInput, costItems);
 
+      // Map to portfolio timeline
+      for (let m = 0; m < result.totalMonths; m++) {
         if (offset + m < totalGlobalMonths) {
-          portfolioOutflow[offset + m] += totalOutflow[m];
-          portfolioInflow[offset + m] += salesInflow[m];
+          const row = result.monthlyTable[m];
+          portfolioDeveloperOutflow[offset + m] += row.developerOutflow;
+          portfolioEscrowInflow[offset + m] += row.escrowInflow;
+          portfolioEscrowOutflow[offset + m] += row.escrowOutflow;
         }
       }
 
       projectResults.push({
         id: project.id,
         name: project.name,
-        totalCost: cumOut,
-        totalSales: cumIn,
-        peakExposure: Math.abs(peakExp),
-        peakMonth: peakM,
-        monthlyOutflow: totalOutflow,
-        monthlyInflow: salesInflow,
         startDate: project.startDate,
+        totalCost: result.totalProjectCost,
+        totalSales: result.totalSalesRevenue,
+        developerExposure: result.developerMaxExposure,
+        escrowBalance: result.monthlyTable[result.totalMonths - 1]?.escrowBalance || 0,
+        peakExposure: result.developerMaxExposure,
+        peakMonth: result.developerMaxExposureMonth,
+        peakMonthLabel: result.developerMaxExposureLabel,
+        totalMonths: result.totalMonths,
+        phases: {
+          preDev: projectInput.preDevMonths,
+          construction: projectInput.constructionMonths,
+          handover: projectInput.handoverMonths,
+        },
+        monthlyDeveloperOutflow: result.monthlyTable.map(r => r.developerOutflow),
+        monthlyEscrowInflow: result.monthlyTable.map(r => r.escrowInflow),
+        monthlyEscrowOutflow: result.monthlyTable.map(r => r.escrowOutflow),
       });
     }
 
-    // Calculate portfolio cumulative
-    const portfolioCumulativeNet: number[] = [];
-    let cumNet = 0, portfolioPeakExposure = 0, portfolioPeakMonth = 0;
+    // Calculate portfolio cumulative developer exposure
+    const portfolioDeveloperCumulative: number[] = [];
+    const portfolioEscrowBalance: number[] = [];
+    let cumDev = 0, cumEscIn = 0, cumEscOut = 0;
+    let portfolioPeakExposure = 0, portfolioPeakMonth = 0;
     for (let m = 0; m < totalGlobalMonths; m++) {
-      cumNet += portfolioInflow[m] - portfolioOutflow[m];
-      portfolioCumulativeNet.push(cumNet);
-      if (cumNet < portfolioPeakExposure) {
-        portfolioPeakExposure = cumNet;
+      cumDev += portfolioDeveloperOutflow[m];
+      cumEscIn += portfolioEscrowInflow[m];
+      cumEscOut += portfolioEscrowOutflow[m];
+      portfolioDeveloperCumulative.push(cumDev);
+      portfolioEscrowBalance.push(cumEscIn - cumEscOut);
+      if (cumDev > portfolioPeakExposure) {
+        portfolioPeakExposure = cumDev;
         portfolioPeakMonth = m + 1;
       }
     }
@@ -841,14 +866,17 @@ export const cashFlowProgramRouter = router({
     return {
       projects: projectResults,
       monthLabels,
-      portfolioOutflow,
-      portfolioInflow,
-      portfolioCumulativeNet,
-      portfolioPeakExposure: Math.abs(portfolioPeakExposure),
+      portfolioDeveloperOutflow,
+      portfolioDeveloperCumulative,
+      portfolioEscrowInflow,
+      portfolioEscrowOutflow,
+      portfolioEscrowBalance,
+      portfolioPeakExposure,
       portfolioPeakMonth,
       portfolioPeakMonthLabel: monthLabels[portfolioPeakMonth - 1] || '',
       totalPortfolioCost: projectResults.reduce((s, p) => s + p.totalCost, 0),
       totalPortfolioSales: projectResults.reduce((s, p) => s + p.totalSales, 0),
+      totalDeveloperExposure: portfolioPeakExposure,
     };
   }),
 
@@ -918,10 +946,13 @@ export const cashFlowProgramRouter = router({
         paymentType: 'lump_sum' | 'milestone' | 'monthly_fixed' | 'progress_based' | 'sales_linked';
         paymentParams: string;
         sortOrder: number;
+        fundingSource: 'developer' | 'escrow' | 'mixed';
+        escrowEligible: boolean;
+        phaseTag: 'pre_dev' | 'construction' | 'handover' | 'all';
       }> = [];
       let sortOrder = 0;
 
-      // 1. Land
+      // 1. Land — Developer funds, pre-dev phase
       if (feas.landPrice) {
         costItemsToInsert.push({
           cfProjectId,
@@ -931,6 +962,9 @@ export const cashFlowProgramRouter = router({
           paymentType: 'lump_sum',
           paymentParams: JSON.stringify({ paymentMonth: 1 }),
           sortOrder: sortOrder++,
+          fundingSource: 'developer',
+          escrowEligible: false,
+          phaseTag: 'pre_dev',
         });
         const agentComm = feas.landPrice * ((feas.agentCommissionLandPct || 1) / 100);
         if (agentComm > 0) {
@@ -942,11 +976,31 @@ export const cashFlowProgramRouter = router({
             paymentType: 'lump_sum',
             paymentParams: JSON.stringify({ paymentMonth: 1 }),
             sortOrder: sortOrder++,
+            fundingSource: 'developer',
+            escrowEligible: false,
+            phaseTag: 'pre_dev',
+          });
+        }
+
+        // Land registration fee (4%)
+        const landRegFee = feas.landPrice * 0.04;
+        if (landRegFee > 0) {
+          costItemsToInsert.push({
+            cfProjectId,
+            name: 'رسوم تسجيل الأرض (4%)',
+            category: 'authority_fees',
+            totalAmount: Math.round(landRegFee),
+            paymentType: 'lump_sum',
+            paymentParams: JSON.stringify({ paymentMonth: 1 }),
+            sortOrder: sortOrder++,
+            fundingSource: 'developer',
+            escrowEligible: false,
+            phaseTag: 'pre_dev',
           });
         }
       }
 
-      // 2. Design Fee
+      // 2. Design Fee — Developer funds, pre-dev phase
       const designFee = constructionCost * ((feas.designFeePct || 2) / 100);
       if (designFee > 0) {
         costItemsToInsert.push({
@@ -965,10 +1019,13 @@ export const cashFlowProgramRouter = router({
             ],
           }),
           sortOrder: sortOrder++,
+          fundingSource: 'developer',
+          escrowEligible: false,
+          phaseTag: 'pre_dev',
         });
       }
 
-      // 3. Authority fees
+      // 3. Authority fees — Developer funds, pre-dev phase
       if (feas.authoritiesFee) {
         costItemsToInsert.push({
           cfProjectId,
@@ -976,12 +1033,15 @@ export const cashFlowProgramRouter = router({
           category: 'authority_fees',
           totalAmount: feas.authoritiesFee,
           paymentType: 'lump_sum',
-          paymentParams: JSON.stringify({ paymentMonth: 5 }),
+          paymentParams: JSON.stringify({ paymentMonth: input.designApprovalMonths }),
           sortOrder: sortOrder++,
+          fundingSource: 'developer',
+          escrowEligible: false,
+          phaseTag: 'pre_dev',
         });
       }
 
-      // 4. Soil investigation
+      // 4. Soil investigation — Developer funds, pre-dev phase
       if (feas.soilInvestigation) {
         costItemsToInsert.push({
           cfProjectId,
@@ -991,10 +1051,13 @@ export const cashFlowProgramRouter = router({
           paymentType: 'lump_sum',
           paymentParams: JSON.stringify({ paymentMonth: 1 }),
           sortOrder: sortOrder++,
+          fundingSource: 'developer',
+          escrowEligible: false,
+          phaseTag: 'pre_dev',
         });
       }
 
-      // 5. Topography survey
+      // 5. Topography survey — Developer funds, pre-dev phase
       if (feas.topographySurvey) {
         costItemsToInsert.push({
           cfProjectId,
@@ -1004,10 +1067,13 @@ export const cashFlowProgramRouter = router({
           paymentType: 'lump_sum',
           paymentParams: JSON.stringify({ paymentMonth: 1 }),
           sortOrder: sortOrder++,
+          fundingSource: 'developer',
+          escrowEligible: false,
+          phaseTag: 'pre_dev',
         });
       }
 
-      // 6. Construction (Main Contractor)
+      // 6. Construction (Main Contractor) — Mixed: 35% developer + 65% escrow
       if (constructionCost > 0) {
         costItemsToInsert.push({
           cfProjectId,
@@ -1021,10 +1087,13 @@ export const cashFlowProgramRouter = router({
             retentionPct: 5,
           }),
           sortOrder: sortOrder++,
+          fundingSource: 'mixed',
+          escrowEligible: true,
+          phaseTag: 'construction',
         });
       }
 
-      // 7. Supervision
+      // 7. Supervision — Escrow eligible, construction phase
       const supervisionFee = constructionCost * ((feas.supervisionFeePct || 2) / 100);
       if (supervisionFee > 0) {
         costItemsToInsert.push({
@@ -1035,10 +1104,13 @@ export const cashFlowProgramRouter = router({
           paymentType: 'monthly_fixed',
           paymentParams: JSON.stringify({}),
           sortOrder: sortOrder++,
+          fundingSource: 'escrow',
+          escrowEligible: true,
+          phaseTag: 'construction',
         });
       }
 
-      // 8. Marketing
+      // 8. Marketing — Escrow eligible, construction phase
       const marketing = totalRevenue * ((feas.marketingPct || 2) / 100);
       if (marketing > 0) {
         costItemsToInsert.push({
@@ -1049,10 +1121,13 @@ export const cashFlowProgramRouter = router({
           paymentType: 'sales_linked',
           paymentParams: JSON.stringify({ salesPct: 100, salesTiming: 'construction' }),
           sortOrder: sortOrder++,
+          fundingSource: 'escrow',
+          escrowEligible: true,
+          phaseTag: 'construction',
         });
       }
 
-      // 9. Agent commission on sales
+      // 9. Agent commission on sales — Escrow eligible, construction phase
       const agentSales = totalRevenue * ((feas.agentCommissionSalePct || 5) / 100);
       if (agentSales > 0) {
         costItemsToInsert.push({
@@ -1063,10 +1138,13 @@ export const cashFlowProgramRouter = router({
           paymentType: 'sales_linked',
           paymentParams: JSON.stringify({ salesPct: 100, salesTiming: 'booking' }),
           sortOrder: sortOrder++,
+          fundingSource: 'escrow',
+          escrowEligible: true,
+          phaseTag: 'construction',
         });
       }
 
-      // 10. Developer fee
+      // 10. Developer fee — Developer funds (not escrow eligible), spans all phases
       const developerFee = totalRevenue * ((feas.developerFeePct || 5) / 100);
       if (developerFee > 0) {
         costItemsToInsert.push({
@@ -1077,10 +1155,13 @@ export const cashFlowProgramRouter = router({
           paymentType: 'monthly_fixed',
           paymentParams: JSON.stringify({}),
           sortOrder: sortOrder++,
+          fundingSource: 'developer',
+          escrowEligible: false,
+          phaseTag: 'all',
         });
       }
 
-      // 11. Contingency
+      // 11. Contingency — Developer funds, construction phase
       const contingency = constructionCost * ((feas.contingenciesPct || 2) / 100);
       if (contingency > 0) {
         costItemsToInsert.push({
@@ -1091,10 +1172,13 @@ export const cashFlowProgramRouter = router({
           paymentType: 'monthly_fixed',
           paymentParams: JSON.stringify({}),
           sortOrder: sortOrder++,
+          fundingSource: 'developer',
+          escrowEligible: false,
+          phaseTag: 'construction',
         });
       }
 
-      // 12. RERA & regulatory fees
+      // 12. RERA & regulatory fees — Developer funds, pre-dev phase
       const reraFees = (feas.reraOffplanFee || 0) + (totalUnits * (feas.reraUnitFee || 0)) +
         (feas.nocFee || 0) + (feas.escrowFee || 0) + (feas.bankCharges || 0) +
         (feas.surveyorFees || 0) + (feas.reraAuditFees || 0) + (feas.reraInspectionFees || 0);
@@ -1107,10 +1191,13 @@ export const cashFlowProgramRouter = router({
           paymentType: 'lump_sum',
           paymentParams: JSON.stringify({ paymentMonth: input.designApprovalMonths + 1 }),
           sortOrder: sortOrder++,
+          fundingSource: 'developer',
+          escrowEligible: false,
+          phaseTag: 'pre_dev',
         });
       }
 
-      // 13. Separation fee
+      // 13. Separation fee — Developer funds, pre-dev phase
       const separationFee = plotAreaM2 * (feas.separationFeePerM2 || 40);
       if (separationFee > 0) {
         costItemsToInsert.push({
@@ -1119,12 +1206,15 @@ export const cashFlowProgramRouter = router({
           category: 'authority_fees',
           totalAmount: Math.round(separationFee),
           paymentType: 'lump_sum',
-          paymentParams: JSON.stringify({ paymentMonth: input.designApprovalMonths + 2 }),
+          paymentParams: JSON.stringify({ paymentMonth: 2 }),
           sortOrder: sortOrder++,
+          fundingSource: 'developer',
+          escrowEligible: false,
+          phaseTag: 'pre_dev',
         });
       }
 
-      // 14. Community fee
+      // 14. Community fee — Developer funds, pre-dev phase
       if (feas.communityFee) {
         costItemsToInsert.push({
           cfProjectId,
@@ -1134,6 +1224,9 @@ export const cashFlowProgramRouter = router({
           paymentType: 'lump_sum',
           paymentParams: JSON.stringify({ paymentMonth: input.designApprovalMonths }),
           sortOrder: sortOrder++,
+          fundingSource: 'developer',
+          escrowEligible: false,
+          phaseTag: 'pre_dev',
         });
       }
 
@@ -1524,5 +1617,109 @@ export const cashFlowProgramRouter = router({
       
       await db.delete(projectPhases).where(eq(projectPhases.id, phaseId));
       return { success: true };
+    }),
+
+  // ─── Export Cash Flow as Excel ───
+  exportCashFlowExcel: publicProcedure
+    .input(z.object({ cfProjectId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      const projectResults = await db.select().from(cfProjects)
+        .where(and(eq(cfProjects.id, input.cfProjectId), eq(cfProjects.userId, ctx.user.id)));
+      const project = projectResults[0];
+      if (!project) throw new Error("Project not found");
+
+      const costItemsRaw = await db.select().from(cfCostItems)
+        .where(eq(cfCostItems.cfProjectId, input.cfProjectId));
+
+      const costItems: CostItemInput[] = costItemsRaw.map(item => ({
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        totalAmount: item.totalAmount,
+        paymentType: item.paymentType,
+        paymentParams: item.paymentParams ? JSON.parse(item.paymentParams) : {},
+        fundingSource: (item.fundingSource as any) || 'developer',
+        escrowEligible: item.escrowEligible ?? false,
+        phaseTag: (item.phaseTag as any) || 'pre_dev',
+      }));
+
+      const projectInput: ProjectInput = {
+        startDate: project.startDate,
+        preDevMonths: project.preDevMonths || 6,
+        constructionMonths: project.constructionMonths || 16,
+        handoverMonths: project.handoverMonths || 2,
+        salesEnabled: project.salesEnabled ?? true,
+        salesStartMonth: project.salesStartMonth,
+        totalSalesRevenue: project.totalSalesRevenue,
+        buyerPlanBookingPct: project.buyerPlanBookingPct ?? 20,
+        buyerPlanConstructionPct: project.buyerPlanConstructionPct ?? 50,
+        buyerPlanHandoverPct: project.buyerPlanHandoverPct ?? 30,
+        escrowDepositPct: project.escrowDepositPct ?? 20,
+        contractorAdvancePct: project.contractorAdvancePct ?? 10,
+        liquidityBufferPct: project.liquidityBufferPct ?? 5,
+        constructionCostTotal: project.constructionCostTotal,
+        buaSqft: project.buaSqft,
+        constructionCostPerSqft: project.constructionCostPerSqft,
+      };
+
+      const result = calculateDualCashFlow(projectInput, costItems);
+
+      // Build Excel using xlsx
+      const XLSX = await import('xlsx');
+      const wb = XLSX.utils.book_new();
+
+      // Sheet 1: Monthly Cash Flow
+      const monthlyData = result.monthlyTable.map((row: any) => ({
+        'الشهر': row.monthLabel,
+        'المرحلة': row.phase,
+        'تمويل المستثمر': row.developerOutflow,
+        'تمويل المستثمر التراكمي': row.developerCumulative,
+        'إيرادات الإسكرو': row.escrowInflow,
+        'مصروفات الإسكرو': row.escrowOutflow,
+        'رصيد الإسكرو': row.escrowBalance,
+        'إجمالي المصروفات': row.totalOutflow,
+      }));
+      const ws1 = XLSX.utils.json_to_sheet(monthlyData);
+      XLSX.utils.book_append_sheet(wb, ws1, 'التدفق الشهري');
+
+      // Sheet 2: Cost Items
+      const costData = costItemsRaw.map(item => ({
+        'البند': item.name,
+        'الفئة': item.category,
+        'المبلغ': item.totalAmount,
+        'نوع الدفع': item.paymentType,
+        'مصدر التمويل': item.fundingSource || 'developer',
+        'مؤهل للإسكرو': item.escrowEligible ? 'نعم' : 'لا',
+        'المرحلة': item.phaseTag || 'pre_dev',
+      }));
+      const ws2 = XLSX.utils.json_to_sheet(costData);
+      XLSX.utils.book_append_sheet(wb, ws2, 'بنود التكاليف');
+
+      // Sheet 3: Summary
+      const summaryData = [
+        { 'البند': 'إجمالي تكاليف المشروع', 'القيمة': result.totalProjectCost },
+        { 'البند': 'إجمالي الإيرادات', 'القيمة': result.totalSalesRevenue },
+        { 'البند': 'الربح', 'القيمة': result.totalSalesRevenue - result.totalProjectCost },
+        { 'البند': 'تكاليف المستثمر', 'القيمة': result.developerCosts },
+        { 'البند': 'تكاليف الإسكرو', 'القيمة': result.escrowCosts },
+        { 'البند': 'أقصى تعرض للمستثمر', 'القيمة': result.developerMaxExposure },
+        { 'البند': 'شهر الذروة', 'القيمة': result.developerMaxExposureLabel },
+        { 'البند': 'تكلفة البناء', 'القيمة': result.constructionCost },
+        { 'البند': 'مدة المشروع (شهر)', 'القيمة': result.totalMonths },
+      ];
+      const ws3 = XLSX.utils.json_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(wb, ws3, 'ملخص');
+
+      // Convert to base64
+      const buf = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+      return {
+        filename: `${project.name}_cashflow.xlsx`,
+        data: buf,
+        contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      };
     }),
 });

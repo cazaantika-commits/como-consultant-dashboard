@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
+import PortfolioView from "./PortfolioView";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,6 +104,7 @@ function formatFullAED(amount: number): string {
 export default function ProgramCashFlowPage() {
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showPortfolio, setShowPortfolio] = useState(false);
 
   const projectsQuery = trpc.cashFlowProgram.listProjects.useQuery();
   const feasibilityQuery = trpc.cashFlowProgram.importFromFeasibility.useQuery(
@@ -111,6 +113,10 @@ export default function ProgramCashFlowPage() {
   );
 
   const projects = projectsQuery.data || [];
+
+  if (showPortfolio) {
+    return <PortfolioView onBack={() => setShowPortfolio(false)} />;
+  }
 
   if (selectedProjectId) {
     return (
@@ -134,11 +140,19 @@ export default function ProgramCashFlowPage() {
             نموذج تدفق نقدي مزدوج — تمويل المستثمر + حساب الإسكرو
           </p>
         </div>
-        <CreateProjectDialog
-          open={showCreateDialog}
-          onOpenChange={setShowCreateDialog}
-          onCreated={() => projectsQuery.refetch()}
-        />
+        <div className="flex items-center gap-2">
+          {projects.length > 0 && (
+            <Button variant="outline" onClick={() => setShowPortfolio(true)}>
+              <Layers className="h-4 w-4 ml-2" />
+              محفظة المشاريع
+            </Button>
+          )}
+          <CreateProjectDialog
+            open={showCreateDialog}
+            onOpenChange={setShowCreateDialog}
+            onCreated={() => projectsQuery.refetch()}
+          />
+        </div>
       </div>
 
       {/* Project Cards */}
@@ -392,6 +406,7 @@ function ProjectDetailView({ cfProjectId, onBack }: { cfProjectId: number; onBac
           <RefreshCw className="h-4 w-4 ml-1" />
           تحديث
         </Button>
+        <ExportExcelButton cfProjectId={cfProjectId} />
       </div>
 
       {/* Key Numbers Cards */}
@@ -1396,5 +1411,48 @@ function ProjectSettingsTab({ cfProjectId, project, onRefresh }: {
         {updateMutation.isPending ? 'جاري الحفظ...' : 'حفظ الإعدادات'}
       </Button>
     </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Export Excel Button
+// ═══════════════════════════════════════════════════════════════
+
+function ExportExcelButton({ cfProjectId }: { cfProjectId: number }) {
+  const exportMutation = trpc.cashFlowProgram.exportCashFlowExcel.useMutation({
+    onSuccess: (data) => {
+      // Convert base64 to blob and download
+      const byteCharacters = atob(data.data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: data.contentType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = data.filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('تم تصدير التقرير بنجاح');
+    },
+    onError: (err) => {
+      toast.error('فشل التصدير: ' + err.message);
+    },
+  });
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => exportMutation.mutate({ cfProjectId })}
+      disabled={exportMutation.isPending}
+    >
+      <Download className="h-4 w-4 ml-1" />
+      {exportMutation.isPending ? 'جاري التصدير...' : 'تصدير Excel'}
+    </Button>
   );
 }
