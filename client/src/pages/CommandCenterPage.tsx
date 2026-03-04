@@ -1664,69 +1664,123 @@ function EvaluationView({ token, memberRole, memberId }: { token: string; member
 function FinancialEvaluationView({ token, projectId, onBack }: { token: string; projectId: number; onBack: () => void }) {
   const data = trpc.commandCenter.getProjectFinancialEvaluation.useQuery({ token, projectId });
   
-  if (data.isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-emerald-500" /></div>;
+  if (data.isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>;
   
   const project = data.data?.project;
   const consultantsList = data.data?.consultants || [];
   const sorted = [...consultantsList].sort((a, b) => b.financialScore - a.financialScore);
+  const avgFees = sorted.length > 0 ? sorted.reduce((sum, c) => sum + c.totalFees, 0) / sorted.filter(c => c.totalFees > 0).length : 0;
+
+  const formatFeeType = (type: string, value: number) => {
+    if (type === 'pct') return `${value}%`;
+    return `Fixed: ${value?.toLocaleString()} AED`;
+  };
+
+  const getDeviationColor = (fees: number) => {
+    if (fees === 0 || avgFees === 0) return 'text-slate-400';
+    const dev = ((fees - avgFees) / avgFees) * 100;
+    if (dev > 25) return 'text-red-600';
+    if (dev > 10) return 'text-amber-600';
+    if (dev < -25) return 'text-blue-600';
+    return 'text-slate-600';
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500">
-          <ArrowLeft className="w-4 h-4 ml-1" /> العودة
+          <ArrowLeft className="w-4 h-4 ml-1" /> Back
         </Button>
-        <DollarSign className="w-5 h-5 text-emerald-600" />
-        <h2 className="text-lg font-bold text-slate-800">التقييم المالي - {project?.name}</h2>
+        <h2 className="text-lg font-semibold text-slate-800">Financial Evaluation — {project?.name}</h2>
       </div>
       
+      {/* Project Metrics */}
       {project && (
-        <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200">
-          <div className="grid grid-cols-3 gap-4 text-center">
+        <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+          <div className="grid grid-cols-3 gap-3 text-center text-sm">
             <div>
-              <p className="text-xs text-emerald-600">المساحة (BUA)</p>
-              <p className="font-bold text-emerald-800">{project.bua?.toLocaleString()} قدم²</p>
+              <p className="text-[11px] text-slate-500 mb-0.5">BUA</p>
+              <p className="font-semibold text-slate-700">{project.bua?.toLocaleString()} sqft</p>
             </div>
             <div>
-              <p className="text-xs text-emerald-600">سعر القدم</p>
-              <p className="font-bold text-emerald-800">{project.pricePerSqft?.toLocaleString()} د.إ</p>
+              <p className="text-[11px] text-slate-500 mb-0.5">Price / sqft</p>
+              <p className="font-semibold text-slate-700">{project.pricePerSqft?.toLocaleString()} AED</p>
             </div>
             <div>
-              <p className="text-xs text-emerald-600">تكلفة البناء</p>
-              <p className="font-bold text-emerald-800">{project.constructionCost?.toLocaleString()} د.إ</p>
+              <p className="text-[11px] text-slate-500 mb-0.5">Construction Cost</p>
+              <p className="font-semibold text-slate-700">{project.constructionCost?.toLocaleString()} AED</p>
             </div>
           </div>
         </div>
       )}
 
-      <div className="space-y-3">
-        {sorted.map((c, i) => (
-          <div key={c.id} className={`bg-white rounded-xl border p-4 ${i === 0 ? 'border-emerald-300 shadow-md' : 'border-slate-200'}`}>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                {i === 0 && <Trophy className="w-5 h-5 text-emerald-500" />}
-                <span className="font-bold text-slate-800">{c.name}</span>
-              </div>
-              <Badge className={`${i === 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'} border-0`}>
-                سكور: {c.financialScore}%
-              </Badge>
-            </div>
-            <div className="grid grid-cols-3 gap-3 text-sm">
-              <div className="bg-slate-50 rounded-lg p-2 text-center">
-                <p className="text-[10px] text-slate-500">التصميم</p>
-                <p className="font-semibold text-slate-700">{c.designAmount?.toLocaleString()}</p>
-              </div>
-              <div className="bg-slate-50 rounded-lg p-2 text-center">
-                <p className="text-[10px] text-slate-500">الإشراف</p>
-                <p className="font-semibold text-slate-700">{c.supervisionAmount?.toLocaleString()}</p>
-              </div>
-              <div className="bg-emerald-50 rounded-lg p-2 text-center">
-                <p className="text-[10px] text-emerald-600">الإجمالي</p>
-                <p className="font-bold text-emerald-700">{c.totalFees?.toLocaleString()}</p>
-              </div>
-            </div>
-          </div>
-        ))}
+      {/* Comparison Table */}
+      <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-slate-50 border-b border-slate-200">
+              <th className="text-left py-2 px-3 text-slate-600 font-medium text-xs">#</th>
+              <th className="text-left py-2 px-3 text-slate-600 font-medium text-xs">Consultant</th>
+              <th className="text-center py-2 px-3 text-slate-600 font-medium text-xs">Design Fee</th>
+              <th className="text-center py-2 px-3 text-slate-600 font-medium text-xs">Supervision Fee</th>
+              <th className="text-center py-2 px-3 text-slate-600 font-medium text-xs">Total</th>
+              <th className="text-center py-2 px-3 text-slate-600 font-medium text-xs">Deviation</th>
+              <th className="text-center py-2 px-3 text-slate-600 font-medium text-xs">Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((c, i) => {
+              const dev = avgFees > 0 ? ((c.totalFees - avgFees) / avgFees) * 100 : 0;
+              return (
+                <tr key={c.id} className={`border-b border-slate-100 ${i === 0 ? 'bg-emerald-50/40' : 'hover:bg-slate-50/50'}`}>
+                  <td className="py-2 px-3 text-slate-500 text-xs">
+                    {i === 0 ? <Trophy className="w-4 h-4 text-amber-500" /> : <span>{i + 1}</span>}
+                  </td>
+                  <td className="py-2 px-3">
+                    <span className="font-medium text-slate-800 text-xs">{c.name}</span>
+                  </td>
+                  <td className="py-2 px-3 text-center">
+                    <div className="text-xs font-medium text-slate-700">{c.designAmount?.toLocaleString()} AED</div>
+                    <div className="text-[10px] text-slate-400">{formatFeeType(c.designType, c.designValue)}</div>
+                  </td>
+                  <td className="py-2 px-3 text-center">
+                    <div className="text-xs font-medium text-slate-700">{c.supervisionAmount?.toLocaleString()} AED</div>
+                    <div className="text-[10px] text-slate-400">{formatFeeType(c.supervisionType, c.supervisionValue)}</div>
+                  </td>
+                  <td className="py-2 px-3 text-center">
+                    <span className="text-xs font-bold text-slate-800">{c.totalFees?.toLocaleString()} AED</span>
+                  </td>
+                  <td className={`py-2 px-3 text-center text-xs font-medium ${getDeviationColor(c.totalFees)}`}>
+                    {c.totalFees > 0 ? `${dev > 0 ? '+' : ''}${dev.toFixed(1)}%` : '—'}
+                  </td>
+                  <td className="py-2 px-3 text-center">
+                    <span className={`inline-flex items-center justify-center w-12 h-6 rounded text-xs font-bold ${i === 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                      {c.financialScore}%
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+          {sorted.length > 0 && (
+            <tfoot>
+              <tr className="bg-slate-50">
+                <td colSpan={4} className="py-2 px-3 text-xs text-slate-500 font-medium">Average Total Fees</td>
+                <td className="py-2 px-3 text-center text-xs font-bold text-slate-700">{avgFees > 0 ? `${Math.round(avgFees).toLocaleString()} AED` : '—'}</td>
+                <td colSpan={2} className="py-2 px-3"></td>
+              </tr>
+            </tfoot>
+          )}
+        </table>
+      </div>
+
+      {/* Legend */}
+      <div className="flex flex-wrap gap-3 text-[10px] text-slate-400 px-1">
+        <span>Score = Lowest Fee ÷ Consultant Fee × 100</span>
+        <span>|</span>
+        <span className="text-red-500">Red: &gt;25% above avg</span>
+        <span className="text-amber-500">Amber: 10–25% above</span>
+        <span className="text-blue-500">Blue: &gt;25% below avg</span>
       </div>
     </div>
   );
@@ -1738,8 +1792,9 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
   const submitScore = trpc.commandCenter.submitTechnicalScore.useMutation();
   const utils = trpc.useUtils();
   const [expandedConsultant, setExpandedConsultant] = useState<number | null>(null);
+  const [showLegend, setShowLegend] = useState(false);
 
-  if (data.isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>;
+  if (data.isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>;
 
   const evalData = data.data;
   if (!evalData) return <div className="text-center py-12 text-slate-400">لا توجد بيانات</div>;
@@ -1751,76 +1806,118 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
     utils.commandCenter.getProjectTechnicalEvaluation.invalidate({ token, projectId });
   };
 
+  // Score interpretation helper
+  const getScoreLabel = (score: number) => {
+    if (score >= 93) return { label: 'ممتاز', color: 'text-emerald-700 bg-emerald-50' };
+    if (score >= 88) return { label: 'جيد جداً', color: 'text-blue-700 bg-blue-50' };
+    if (score >= 82) return { label: 'جيد', color: 'text-sky-700 bg-sky-50' };
+    if (score >= 74) return { label: 'مقبول', color: 'text-amber-700 bg-amber-50' };
+    if (score >= 60) return { label: 'ضعيف', color: 'text-orange-700 bg-orange-50' };
+    return { label: 'غير مقبول', color: 'text-red-700 bg-red-50' };
+  };
+
+  const getScoreBg = (score: number) => {
+    if (score >= 93) return 'bg-emerald-100 text-emerald-800';
+    if (score >= 88) return 'bg-blue-100 text-blue-800';
+    if (score >= 82) return 'bg-sky-100 text-sky-800';
+    if (score >= 74) return 'bg-amber-100 text-amber-800';
+    if (score >= 60) return 'bg-orange-100 text-orange-800';
+    return 'bg-red-100 text-red-800';
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500">
-          <ArrowLeft className="w-4 h-4 ml-1" /> العودة
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500">
+            <ArrowLeft className="w-4 h-4 ml-1" /> العودة
+          </Button>
+          <h2 className="text-lg font-semibold text-slate-800">التقييم الفني — {project?.name}</h2>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => setShowLegend(!showLegend)} className="text-xs gap-1">
+          <BarChart3 className="w-3.5 h-3.5" /> فهرس النسب
         </Button>
-        <Award className="w-5 h-5 text-blue-600" />
-        <h2 className="text-lg font-bold text-slate-800">التقييم الفني - {project?.name}</h2>
       </div>
 
-      {/* Evaluator Status Bar */}
-      <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
-        <p className="text-sm font-semibold text-blue-800 mb-3">حالة التقييم</p>
-        <div className="flex gap-4">
-          {evaluatorStatus?.map((e: any) => (
-            <div key={e.name} className="flex items-center gap-2">
-              <span className={`w-3 h-3 rounded-full ${e.isComplete ? 'bg-green-500' : e.completed > 0 ? 'bg-amber-400' : 'bg-slate-300'}`} />
-              <span className="text-sm text-slate-700">{e.nameAr}</span>
-              {e.isComplete ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Lock className="w-4 h-4 text-slate-400" />}
-            </div>
-          ))}
+      {/* Score Legend / Index */}
+      {showLegend && (
+        <div className="bg-white rounded-lg border border-slate-200 p-4">
+          <h4 className="text-sm font-semibold text-slate-700 mb-3">دليل تفسير النسب</h4>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            {[
+              { range: '93 – 100', label: 'ممتاز', desc: 'أداء استثنائي مرجعي', color: 'bg-emerald-50 border-emerald-200 text-emerald-700' },
+              { range: '88 – 92', label: 'جيد جداً', desc: 'أداء قوي ومتميز', color: 'bg-blue-50 border-blue-200 text-blue-700' },
+              { range: '82 – 87', label: 'جيد', desc: 'أداء جيد ومنظم', color: 'bg-sky-50 border-sky-200 text-sky-700' },
+              { range: '74 – 81', label: 'مقبول', desc: 'يفي بالأساسيات دون تميز', color: 'bg-amber-50 border-amber-200 text-amber-700' },
+              { range: '60 – 73', label: 'ضعيف', desc: 'أداء دون المطلوب', color: 'bg-orange-50 border-orange-200 text-orange-700' },
+              { range: 'أقل من 60', label: 'غير مقبول', desc: 'لا يستوفي الحد الأدنى', color: 'bg-red-50 border-red-200 text-red-700' },
+            ].map((item) => (
+              <div key={item.range} className={`rounded-lg border p-2.5 ${item.color}`}>
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="text-xs font-bold">{item.label}</span>
+                  <span className="text-[10px] font-mono">{item.range}</span>
+                </div>
+                <p className="text-[10px] opacity-80">{item.desc}</p>
+              </div>
+            ))}
+          </div>
         </div>
-        {!allComplete && (
-          <p className="text-xs text-blue-600 mt-2 flex items-center gap-1">
-            <Lock className="w-3 h-3" /> النتائج ستظهر بعد اكتمال تقييم جميع الأعضاء
-          </p>
-        )}
-        {allComplete && (
-          <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
-            <Unlock className="w-3 h-3" /> اكتمل التقييم - النتائج متاحة
-          </p>
-        )}
+      )}
+
+      {/* Evaluator Status Bar */}
+      <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+        <div className="flex items-center justify-between">
+          <div className="flex gap-4">
+            {evaluatorStatus?.map((e: any) => (
+              <div key={e.name} className="flex items-center gap-1.5">
+                <span className={`w-2.5 h-2.5 rounded-full ${e.isComplete ? 'bg-emerald-500' : e.completed > 0 ? 'bg-amber-400' : 'bg-slate-300'}`} />
+                <span className="text-xs text-slate-600">{e.nameAr}</span>
+                {e.isComplete && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
+              </div>
+            ))}
+          </div>
+          <span className={`text-[10px] px-2 py-0.5 rounded ${allComplete ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+            {allComplete ? 'اكتمل التقييم' : 'قيد التقييم'}
+          </span>
+        </div>
       </div>
 
       {/* My Evaluation Form */}
       {!myStatus?.isComplete && (
-        <div className="bg-white rounded-xl border border-blue-200 p-4">
-          <h3 className="font-bold text-blue-800 mb-4 flex items-center gap-2">
-            <Pencil className="w-4 h-4" /> تقييمك الفني
+        <div className="bg-white rounded-lg border border-slate-200 p-4">
+          <h3 className="font-semibold text-slate-700 mb-3 flex items-center gap-2 text-sm">
+            <Pencil className="w-4 h-4 text-slate-500" /> تقييمك الفني
           </h3>
           {consultantsList?.map((consultant: any) => (
-            <div key={consultant.id} className="mb-4">
-              <button onClick={() => setExpandedConsultant(expandedConsultant === consultant.id ? null : consultant.id)} className="w-full text-right bg-slate-50 rounded-lg p-3 flex items-center justify-between hover:bg-slate-100 transition-colors">
-                <span className="font-semibold text-slate-800">{consultant.name}</span>
+            <div key={consultant.id} className="mb-3">
+              <button onClick={() => setExpandedConsultant(expandedConsultant === consultant.id ? null : consultant.id)} className="w-full text-right bg-slate-50 rounded-lg p-2.5 flex items-center justify-between hover:bg-slate-100 transition-colors">
+                <span className="font-medium text-slate-700 text-sm">{consultant.name}</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-500">{consultant.myScores?.filter((s: any) => s.score).length || 0}/9</span>
+                  <span className="text-xs text-slate-400">{consultant.myScores?.filter((s: any) => s.score).length || 0}/9</span>
                   <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${expandedConsultant === consultant.id ? 'rotate-180' : ''}`} />
                 </div>
               </button>
               {expandedConsultant === consultant.id && (
-                <div className="mt-2 space-y-2 pr-4">
+                <div className="mt-2 space-y-1.5 pr-3">
                   {CRITERIA.map((criterion) => {
                     const myScore = consultant.myScores?.find((s: any) => s.criterionId === criterion.id);
                     return (
-                      <div key={criterion.id} className="bg-white border border-slate-100 rounded-lg p-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-slate-700">{criterion.name}</span>
-                          <span className="text-xs text-slate-400">الوزن: {criterion.weight}%</span>
+                      <div key={criterion.id} className="bg-white border border-slate-100 rounded p-2.5">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs font-medium text-slate-700">{criterion.name}</span>
+                          <span className="text-[10px] text-slate-400">الوزن: {criterion.weight}%</span>
                         </div>
                         <div className="flex flex-wrap gap-1">
                           {criterion.options.map((opt) => (
                             <button key={opt.score} onClick={() => handleScore(consultant.id, criterion.id, opt.score)}
-                              className={`text-xs px-2 py-1 rounded-lg border transition-all ${myScore?.score === opt.score ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'}`}
+                              className={`text-xs px-2 py-1 rounded border transition-all ${myScore?.score === opt.score ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}
                               title={opt.label}>
                               {opt.score}
                             </button>
                           ))}
                         </div>
                         {myScore?.score && (
-                          <p className="text-[10px] text-blue-600 mt-1">{criterion.options.find(o => o.score === myScore.score)?.label}</p>
+                          <p className="text-[10px] text-slate-500 mt-1">{criterion.options.find(o => o.score === myScore.score)?.label}</p>
                         )}
                       </div>
                     );
@@ -1833,69 +1930,166 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
       )}
 
       {myStatus?.isComplete && !allComplete && (
-        <div className="bg-green-50 rounded-xl border border-green-200 p-6 text-center">
-          <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-2" />
-          <p className="font-bold text-green-800">تم إكمال تقييمك الفني</p>
-          <p className="text-sm text-green-600 mt-1">في انتظار اكتمال تقييم باقي الأعضاء</p>
+        <div className="bg-emerald-50 rounded-lg border border-emerald-200 p-5 text-center">
+          <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
+          <p className="font-semibold text-emerald-800 text-sm">تم إكمال تقييمك الفني</p>
+          <p className="text-xs text-emerald-600 mt-1">في انتظار اكتمال تقييم باقي الأعضاء</p>
         </div>
       )}
 
-      {/* Results - Only shown when ALL evaluators complete */}
-      {allComplete && evalData.allEvaluatorData && (
-        <div className="space-y-4">
-          <h3 className="font-bold text-slate-800 flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-blue-600" /> نتائج التقييم الفني
-          </h3>
-          {consultantsList?.map((consultant: any) => {
-            let totalWeighted = 0;
-            return (
-              <div key={consultant.id} className="bg-white rounded-xl border border-slate-200 p-4">
-                <h4 className="font-bold text-slate-800 mb-3">{consultant.name}</h4>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-slate-200">
-                        <th className="text-right py-2 text-slate-600">المعيار</th>
-                        <th className="text-center py-2 text-slate-600">الوزن</th>
-                        {evalData.allEvaluatorData.map((ev: any) => (
-                          <th key={ev.evaluatorName} className="text-center py-2 text-slate-600">{ev.nameAr}</th>
-                        ))}
-                        <th className="text-center py-2 text-blue-700 font-bold">المتوسط</th>
+      {/* Results - All consultants side by side for each criterion */}
+      {allComplete && evalData.allEvaluatorData && (() => {
+        // Compute weighted totals for each consultant
+        const consultantTotals = consultantsList?.map((consultant: any) => {
+          let totalWeighted = 0;
+          CRITERIA.forEach((criterion) => {
+            const scores = evalData.allEvaluatorData.map((ev: any) => {
+              const s = ev.scores.find((s: any) => s.consultantId === consultant.id && s.criterionId === criterion.id);
+              return s?.score || 0;
+            });
+            const avg = scores.reduce((a: number, b: number) => a + b, 0) / scores.length;
+            totalWeighted += (avg * criterion.weight) / 100;
+          });
+          return { id: consultant.id, name: consultant.name, total: totalWeighted };
+        }) || [];
+        const sortedByTotal = [...consultantTotals].sort((a, b) => b.total - a.total);
+
+        return (
+          <div className="space-y-4">
+            <h3 className="font-semibold text-slate-700 flex items-center gap-2 text-sm">
+              <BarChart3 className="w-4 h-4 text-slate-500" /> نتائج التقييم الفني — مقارنة شاملة
+            </h3>
+
+            {/* Unified comparison table - all consultants together */}
+            <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200">
+                      <th className="text-right py-2 px-3 text-slate-600 font-medium whitespace-nowrap">المعيار</th>
+                      <th className="text-center py-2 px-2 text-slate-500 font-medium">الوزن</th>
+                      {sortedByTotal.map((c, i) => (
+                        <th key={c.id} className="text-center py-2 px-2 font-medium text-slate-700 whitespace-nowrap">
+                          {i === 0 && <span className="text-amber-500 ml-0.5">★</span>}
+                          {c.name}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {CRITERIA.map((criterion) => (
+                      <tr key={criterion.id} className="border-b border-slate-100 hover:bg-slate-50/50">
+                        <td className="py-1.5 px-3 text-slate-700 whitespace-nowrap">{criterion.name}</td>
+                        <td className="text-center py-1.5 px-2 text-slate-400">{criterion.weight}%</td>
+                        {sortedByTotal.map((c) => {
+                          const scores = evalData.allEvaluatorData.map((ev: any) => {
+                            const s = ev.scores.find((s: any) => s.consultantId === c.id && s.criterionId === criterion.id);
+                            return s?.score || 0;
+                          });
+                          const avg = scores.reduce((a: number, b: number) => a + b, 0) / scores.length;
+                          const scoreInfo = getScoreLabel(avg);
+                          return (
+                            <td key={c.id} className="text-center py-1.5 px-2">
+                              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${getScoreBg(avg)}`}>
+                                {avg.toFixed(0)}
+                              </span>
+                            </td>
+                          );
+                        })}
                       </tr>
-                    </thead>
-                    <tbody>
-                      {CRITERIA.map((criterion) => {
-                        const scores = evalData.allEvaluatorData.map((ev: any) => {
-                          const s = ev.scores.find((s: any) => s.consultantId === consultant.id && s.criterionId === criterion.id);
-                          return s?.score || 0;
-                        });
-                        const avg = scores.reduce((a: number, b: number) => a + b, 0) / scores.length;
-                        totalWeighted += (avg * criterion.weight) / 100;
-                        return (
-                          <tr key={criterion.id} className="border-b border-slate-100">
-                            <td className="py-2 text-slate-700 text-xs">{criterion.name}</td>
-                            <td className="text-center py-2 text-slate-500 text-xs">{criterion.weight}%</td>
-                            {scores.map((s: number, i: number) => (
-                              <td key={i} className="text-center py-2 font-medium">{s}</td>
-                            ))}
-                            <td className="text-center py-2 font-bold text-blue-700">{avg.toFixed(1)}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                    <tfoot>
-                      <tr className="bg-blue-50">
-                        <td colSpan={2 + evalData.allEvaluatorData.length} className="py-2 font-bold text-blue-800 text-right">المجموع المرجح</td>
-                        <td className="text-center py-2 font-bold text-blue-800">{totalWeighted.toFixed(2)}</td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-slate-50 border-t border-slate-200">
+                      <td className="py-2 px-3 font-semibold text-slate-700">المجموع المرجح</td>
+                      <td className="text-center py-2 px-2 text-slate-400">100%</td>
+                      {sortedByTotal.map((c, i) => (
+                        <td key={c.id} className="text-center py-2 px-2">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded font-bold text-xs ${i === 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'}`}>
+                            {c.total.toFixed(1)}
+                          </span>
+                        </td>
+                      ))}
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
-            );
-          })}
-        </div>
-      )}
+            </div>
+
+            {/* Ranking Summary */}
+            <div className="bg-slate-50 rounded-lg border border-slate-200 p-3">
+              <h4 className="text-xs font-semibold text-slate-600 mb-2">الترتيب الفني</h4>
+              <div className="flex flex-wrap gap-2">
+                {sortedByTotal.map((c, i) => {
+                  const scoreInfo = getScoreLabel(c.total);
+                  return (
+                    <div key={c.id} className="flex items-center gap-1.5 bg-white rounded px-2.5 py-1.5 border border-slate-200">
+                      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-slate-200 text-slate-600' : i === 2 ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-500'}`}>{i + 1}</span>
+                      <span className="text-xs font-medium text-slate-700">{c.name}</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${scoreInfo.color}`}>{c.total.toFixed(1)} — {scoreInfo.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Detailed breakdown per evaluator (collapsible) */}
+            <details className="bg-white rounded-lg border border-slate-200">
+              <summary className="p-3 text-xs font-medium text-slate-600 cursor-pointer hover:bg-slate-50">تفاصيل تقييم كل عضو على حدة</summary>
+              <div className="p-3 pt-0 space-y-3">
+                {consultantsList?.map((consultant: any) => {
+                  let totalWeighted = 0;
+                  return (
+                    <div key={consultant.id} className="border border-slate-100 rounded p-3">
+                      <h5 className="text-xs font-semibold text-slate-700 mb-2">{consultant.name}</h5>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-[11px]">
+                          <thead>
+                            <tr className="border-b border-slate-100">
+                              <th className="text-right py-1.5 text-slate-500 font-medium">المعيار</th>
+                              <th className="text-center py-1.5 text-slate-400">الوزن</th>
+                              {evalData.allEvaluatorData.map((ev: any) => (
+                                <th key={ev.evaluatorName} className="text-center py-1.5 text-slate-500">{ev.nameAr}</th>
+                              ))}
+                              <th className="text-center py-1.5 text-slate-700 font-semibold">المتوسط</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {CRITERIA.map((criterion) => {
+                              const scores = evalData.allEvaluatorData.map((ev: any) => {
+                                const s = ev.scores.find((s: any) => s.consultantId === consultant.id && s.criterionId === criterion.id);
+                                return s?.score || 0;
+                              });
+                              const avg = scores.reduce((a: number, b: number) => a + b, 0) / scores.length;
+                              totalWeighted += (avg * criterion.weight) / 100;
+                              return (
+                                <tr key={criterion.id} className="border-b border-slate-50">
+                                  <td className="py-1 text-slate-600">{criterion.name}</td>
+                                  <td className="text-center py-1 text-slate-400">{criterion.weight}%</td>
+                                  {scores.map((s: number, i: number) => (
+                                    <td key={i} className="text-center py-1 font-medium text-slate-600">{s}</td>
+                                  ))}
+                                  <td className="text-center py-1 font-semibold text-slate-700">{avg.toFixed(1)}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                          <tfoot>
+                            <tr className="bg-slate-50">
+                              <td colSpan={2 + evalData.allEvaluatorData.length} className="py-1.5 font-semibold text-slate-600 text-right">المجموع المرجح</td>
+                              <td className="text-center py-1.5 font-bold text-slate-800">{totalWeighted.toFixed(2)}</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </details>
+          </div>
+        );
+      })()}
     </div>
   );
 }
