@@ -54,6 +54,7 @@ import {
   Brain,
   Sparkles,
   SlidersHorizontal,
+  ShieldCheck,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,17 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Streamdown } from "streamdown";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const SALWA_AVATAR_URL = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/dKjNMGCYtHDQQPse.png";
 
@@ -1823,9 +1835,21 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
   const evalData = data.data;
   if (!evalData) return <div className="text-center py-12 text-slate-400">لا توجد بيانات</div>;
 
-  const { project, consultants: consultantsList, evaluatorStatus, allComplete, myEvaluatorName, myStatus } = evalData;
+  const { project, consultants: consultantsList, evaluatorStatus, allComplete, myEvaluatorName, myStatus, isMyEvaluationApproved, allApprovals } = evalData;
+
+  const approveMutation = trpc.commandCenter.approveTechnicalEvaluation.useMutation({
+    onSuccess: () => {
+      toast.success('تم اعتماد التقييم بنجاح. لا يمكن تعديله بعد الآن.');
+      utils.commandCenter.getProjectTechnicalEvaluation.invalidate({ token, projectId });
+    },
+    onError: (err) => toast.error(err.message),
+  });
 
   const handleScore = async (consultantId: number, criterionId: number, score: number) => {
+    if (isMyEvaluationApproved) {
+      toast.error('التقييم معتمد ولا يمكن تعديله');
+      return;
+    }
     playClickSound();
     await submitScore.mutateAsync({ token, projectId, consultantId, criterionId, score });
     utils.commandCenter.getProjectTechnicalEvaluation.invalidate({ token, projectId });
@@ -2238,10 +2262,74 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
             </details>
           )}
 
-          <div className="flex justify-center">
+          {/* Approval Status Banner */}
+          {isMyEvaluationApproved && (
+            <div className="bg-gradient-to-l from-violet-500 to-indigo-600 rounded-2xl p-4 flex items-center gap-3 text-white shadow-lg">
+              <ShieldCheck className="w-7 h-7" />
+              <div>
+                <p className="font-bold text-base">تم اعتماد تقييمك</p>
+                <p className="text-sm text-white/80">التقييم مقفل ولا يمكن تعديله</p>
+              </div>
+            </div>
+          )}
+
+          {/* Approval Status for All Evaluators */}
+          {allApprovals && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+              <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-indigo-500" /> حالة اعتماد المقيّمين</h4>
+              <div className="flex gap-3">
+                {allApprovals.map((ap: any) => (
+                  <div key={ap.name} className={`flex-1 rounded-xl p-3 text-center border ${
+                    ap.isApproved ? 'bg-violet-50 border-violet-200' : 'bg-slate-50 border-slate-200'
+                  }`}>
+                    <p className="text-xs font-medium text-slate-600">{ap.name === 'sheikh_issa' ? 'الشيخ عيسى' : ap.name === 'wael' ? 'وائل' : 'عبدالرحمن'}</p>
+                    {ap.isApproved ? (
+                      <span className="text-xs font-bold text-violet-600 flex items-center justify-center gap-1 mt-1"><CheckCircle2 className="w-3.5 h-3.5" /> معتمد</span>
+                    ) : (
+                      <span className="text-xs text-slate-400 mt-1 block">مسودة</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-center gap-3">
             <Button variant="outline" size="sm" onClick={() => setCurrentStep(0)} className="gap-1">
               <ArrowRight className="w-4 h-4" /> العودة للمعايير
             </Button>
+
+            {!isMyEvaluationApproved && myStatus?.isComplete && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" className="gap-1 bg-gradient-to-l from-violet-500 to-indigo-600 hover:from-violet-600 hover:to-indigo-700 text-white">
+                    <ShieldCheck className="w-4 h-4" /> اعتماد التقييم
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent dir="rtl">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
+                      <AlertTriangle className="w-5 h-5" /> تحذير: اعتماد التقييم
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="text-right text-slate-600 leading-relaxed">
+                      <span className="block mb-2 font-semibold text-red-600">هذا الإجراء لا يمكن التراجع عنه!</span>
+                      بعد الاعتماد لن تتمكن من تعديل أي درجة في التقييم الفني لهذا المشروع. تأكد من مراجعة جميع الدرجات قبل المتابعة.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter className="flex gap-2 sm:justify-start">
+                    <AlertDialogCancel>حفظ كمسودة</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => approveMutation.mutate({ token, projectId })}
+                      className="bg-gradient-to-l from-violet-500 to-indigo-600 hover:from-violet-600 hover:to-indigo-700"
+                      disabled={approveMutation.isPending}
+                    >
+                      {approveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin ml-1" /> : <ShieldCheck className="w-4 h-4 ml-1" />}
+                      أوافق - اعتمد التقييم
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </div>
         </div>
       )}

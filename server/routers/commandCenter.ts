@@ -18,6 +18,7 @@ import {
   evaluatorScores,
   committeeDecisions,
   aiAdvisoryScores,
+  evaluationApprovals,
 } from "../../drizzle/schema";
 import { eq, desc, sql, and, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -1241,7 +1242,39 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
           return { evaluatorName: name, nameAr, scores: evScores.map(s => ({ consultantId: s.consultantId, criterionId: s.criterionId, score: s.score })) };
         });
       }
-      return { project: { id: project.id, name: project.name }, consultants: consultantData, evaluatorStatus, allComplete, myEvaluatorName, myStatus, allEvaluatorData };
+      // Check approval status for this evaluator
+      const approvals = await db.select().from(evaluationApprovals).where(eq(evaluationApprovals.projectId, input.projectId));
+      const myApproval = approvals.find(a => a.evaluatorName === myEvaluatorName);
+      const isMyEvaluationApproved = myApproval?.isApproved === 1;
+      const allApprovals = evaluatorNames.map(name => {
+        const a = approvals.find(ap => ap.evaluatorName === name);
+        return { name, isApproved: a?.isApproved === 1, approvedAt: a?.approvedAt };
+      });
+      return { project: { id: project.id, name: project.name }, consultants: consultantData, evaluatorStatus, allComplete, myEvaluatorName, myStatus, allEvaluatorData, isMyEvaluationApproved, allApprovals };
+    }),
+
+  // اعتماد التقييم الفني - بعد الاعتماد لا يمكن التعديل
+  approveTechnicalEvaluation: publicProcedure
+    .input(z.object({ token: z.string(), projectId: z.number() }))
+    .mutation(async ({ input }) => {
+      const member = await verifyToken(input.token);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      const evaluatorName = member.memberId;
+      // Check if already approved
+      const existing = await db.select().from(evaluationApprovals)
+        .where(and(eq(evaluationApprovals.projectId, input.projectId), eq(evaluationApprovals.evaluatorName, evaluatorName)))
+        .limit(1);
+      if (existing.length > 0 && existing[0].isApproved === 1) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'التقييم معتمد بالفعل ولا يمكن تعديله' });
+      }
+      if (existing.length > 0) {
+        await db.update(evaluationApprovals).set({ isApproved: 1, approvedAt: new Date() })
+          .where(and(eq(evaluationApprovals.projectId, input.projectId), eq(evaluationApprovals.evaluatorName, evaluatorName)));
+      } else {
+        await db.insert(evaluationApprovals).values({ projectId: input.projectId, evaluatorName, isApproved: 1, approvedAt: new Date() });
+      }
+      return { success: true };
     }),
 
   submitTechnicalScore: publicProcedure
@@ -1249,8 +1282,15 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
     .mutation(async ({ input }) => {
       const member = await verifyToken(input.token);
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
       const evaluatorName = member.memberId;
+      // التحقق من الاعتماد - إذا معتمد لا يمكن التعديل
+      const approvalCheck = await db.select().from(evaluationApprovals)
+        .where(and(eq(evaluationApprovals.projectId, input.projectId), eq(evaluationApprovals.evaluatorName, evaluatorName)))
+        .limit(1);
+      if (approvalCheck.length > 0 && approvalCheck[0].isApproved === 1) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'التقييم معتمد ولا يمكن تعديله' });
+      }
       const existing = await db.select().from(evaluatorScores)
         .where(and(eq(evaluatorScores.projectId, input.projectId), eq(evaluatorScores.consultantId, input.consultantId), eq(evaluatorScores.criterionId, input.criterionId), eq(evaluatorScores.evaluatorName, evaluatorName)))
         .limit(1);

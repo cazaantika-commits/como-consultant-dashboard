@@ -368,6 +368,20 @@ export const evaluatorScores = mysqlTable('evaluatorScores', {
 export type EvaluatorScore = typeof evaluatorScores.$inferSelect;
 export type InsertEvaluatorScore = typeof evaluatorScores.$inferInsert;
 
+// اعتماد التقييم الفني لكل مقيّم في كل مشروع
+export const evaluationApprovals = mysqlTable('evaluationApprovals', {
+  id: int('id').autoincrement().primaryKey(),
+  projectId: int('projectId').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  evaluatorName: varchar('evaluatorName', { length: 100 }).notNull(), // اسم المقيّم
+  isApproved: int('isApproved').default(0).notNull(), // 0 = مسودة، 1 = معتمد
+  approvedAt: timestamp('approvedAt'), // تاريخ الاعتماد
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type EvaluationApproval = typeof evaluationApprovals.$inferSelect;
+export type InsertEvaluationApproval = typeof evaluationApprovals.$inferInsert;
+
 // Committee decisions per project
 export const committeeDecisions = mysqlTable('committeeDecisions', {
   id: int('id').autoincrement().primaryKey(),
