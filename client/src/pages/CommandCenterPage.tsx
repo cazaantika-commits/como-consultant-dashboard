@@ -24,6 +24,7 @@ import {
   User,
   Trash2,
   ArrowLeft,
+  ArrowRight,
   Target,
   TrendingUp,
   TrendingDown,
@@ -1791,14 +1792,14 @@ function FinancialEvaluationView({ token, projectId, onBack }: { token: string; 
   );
 }
 
-// ═══ Technical Evaluation View (Blind) ═══
+// ═══ Technical Evaluation View (Wizard - One Criterion Per Page) ═══
 function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token: string; projectId: number; memberId: string; onBack: () => void }) {
   const data = trpc.commandCenter.getProjectTechnicalEvaluation.useQuery({ token, projectId });
   const submitScore = trpc.commandCenter.submitTechnicalScore.useMutation();
   const utils = trpc.useUtils();
-  const [expandedCriterion, setExpandedCriterion] = useState<number | null>(null);
+  const [currentStep, setCurrentStep] = useState(0);
 
-  if (data.isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>;
+  if (data.isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-teal-500" /></div>;
 
   const evalData = data.data;
   if (!evalData) return <div className="text-center py-12 text-slate-400">لا توجد بيانات</div>;
@@ -1819,288 +1820,373 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
     return { label: 'غير مقبول', color: 'text-red-700 bg-red-50' };
   };
 
-  const getScoreColor = (score: number) => {
-    if (score >= 93) return 'bg-emerald-500 text-white border-emerald-500';
-    if (score >= 88) return 'bg-blue-500 text-white border-blue-500';
-    if (score >= 82) return 'bg-sky-500 text-white border-sky-500';
-    if (score >= 74) return 'bg-amber-500 text-white border-amber-500';
-    if (score >= 60) return 'bg-orange-500 text-white border-orange-500';
-    return 'bg-red-500 text-white border-red-500';
-  };
-
   const sortedCriteria = [...CRITERIA].sort((a, b) => b.weight - a.weight);
+  const totalSteps = sortedCriteria.length;
+  const isResultsPage = currentStep >= totalSteps;
+  const criterion = !isResultsPage ? sortedCriteria[currentStep] : null;
+
+  // Count how many criteria have been scored for all consultants
+  const getCompletedCount = () => {
+    let count = 0;
+    sortedCriteria.forEach((crit) => {
+      const allScored = consultantsList?.every((c: any) => c.myScores?.find((s: any) => s.criterionId === crit.id)?.score > 0);
+      if (allScored) count++;
+    });
+    return count;
+  };
 
   const computeTotals = () => {
     if (!allComplete || !evalData.allEvaluatorData) return [];
     return (consultantsList?.map((consultant: any) => {
       let totalWeighted = 0;
-      CRITERIA.forEach((criterion) => {
+      CRITERIA.forEach((crit) => {
         const scores = evalData.allEvaluatorData.map((ev: any) => {
-          const s = ev.scores.find((s: any) => s.consultantId === consultant.id && s.criterionId === criterion.id);
+          const s = ev.scores.find((s: any) => s.consultantId === consultant.id && s.criterionId === crit.id);
           return s?.score || 0;
         });
         const avg = scores.reduce((a: number, b: number) => a + b, 0) / scores.length;
-        totalWeighted += (avg * criterion.weight) / 100;
+        totalWeighted += (avg * crit.weight) / 100;
       });
       return { id: consultant.id, name: consultant.name, total: totalWeighted };
     }) || []).sort((a, b) => b.total - a.total);
   };
 
   const sortedTotals = computeTotals();
+  const completedCount = getCompletedCount();
+
+  // Accent colors for the wizard
+  const STEP_COLORS = [
+    { bg: 'bg-teal-50', border: 'border-teal-200', header: 'bg-teal-600', text: 'text-teal-700', selected: 'bg-teal-500 text-white border-teal-500 shadow-md shadow-teal-200', ring: 'ring-teal-200' },
+    { bg: 'bg-indigo-50', border: 'border-indigo-200', header: 'bg-indigo-600', text: 'text-indigo-700', selected: 'bg-indigo-500 text-white border-indigo-500 shadow-md shadow-indigo-200', ring: 'ring-indigo-200' },
+    { bg: 'bg-violet-50', border: 'border-violet-200', header: 'bg-violet-600', text: 'text-violet-700', selected: 'bg-violet-500 text-white border-violet-500 shadow-md shadow-violet-200', ring: 'ring-violet-200' },
+    { bg: 'bg-rose-50', border: 'border-rose-200', header: 'bg-rose-600', text: 'text-rose-700', selected: 'bg-rose-500 text-white border-rose-500 shadow-md shadow-rose-200', ring: 'ring-rose-200' },
+    { bg: 'bg-amber-50', border: 'border-amber-200', header: 'bg-amber-600', text: 'text-amber-700', selected: 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-200', ring: 'ring-amber-200' },
+    { bg: 'bg-cyan-50', border: 'border-cyan-200', header: 'bg-cyan-600', text: 'text-cyan-700', selected: 'bg-cyan-500 text-white border-cyan-500 shadow-md shadow-cyan-200', ring: 'ring-cyan-200' },
+    { bg: 'bg-emerald-50', border: 'border-emerald-200', header: 'bg-emerald-600', text: 'text-emerald-700', selected: 'bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-200', ring: 'ring-emerald-200' },
+    { bg: 'bg-orange-50', border: 'border-orange-200', header: 'bg-orange-600', text: 'text-orange-700', selected: 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-200', ring: 'ring-orange-200' },
+    { bg: 'bg-pink-50', border: 'border-pink-200', header: 'bg-pink-600', text: 'text-pink-700', selected: 'bg-pink-500 text-white border-pink-500 shadow-md shadow-pink-200', ring: 'ring-pink-200' },
+  ];
+  const stepColor = criterion ? STEP_COLORS[currentStep % STEP_COLORS.length] : STEP_COLORS[0];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" dir="rtl">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500">
-          <ArrowLeft className="w-4 h-4 ml-1" /> العودة
-        </Button>
-        <h2 className="text-lg font-semibold text-slate-800">التقييم الفني — {project?.name}</h2>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500">
+            <ArrowRight className="w-4 h-4 ml-1" /> العودة
+          </Button>
+          <h2 className="text-lg font-bold text-slate-800">التقييم الفني — {project?.name}</h2>
+        </div>
+        <div className="flex items-center gap-2">
+          {evaluatorStatus?.map((e: any) => (
+            <div key={e.name} className="flex items-center gap-1">
+              <span className={`w-2 h-2 rounded-full ${e.isComplete ? 'bg-emerald-500' : e.completed > 0 ? 'bg-amber-400' : 'bg-slate-300'}`} />
+              <span className="text-[11px] text-slate-500">{e.nameAr}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* Evaluator Status Bar */}
-      <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
-        <div className="flex items-center justify-between">
-          <div className="flex gap-4">
-            {evaluatorStatus?.map((e: any) => (
-              <div key={e.name} className="flex items-center gap-1.5">
-                <span className={`w-2.5 h-2.5 rounded-full ${e.isComplete ? 'bg-emerald-500' : e.completed > 0 ? 'bg-amber-400' : 'bg-slate-300'}`} />
-                <span className="text-xs text-slate-600">{e.nameAr}</span>
-                {e.isComplete && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
-              </div>
-            ))}
-          </div>
-          <span className={`text-[10px] px-2 py-0.5 rounded ${allComplete ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-            {allComplete ? 'اكتمل التقييم' : 'قيد التقييم'}
-          </span>
+      {/* Progress Bar */}
+      <div className="bg-white rounded-xl border border-slate-200 p-3">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-medium text-slate-600">التقدم: {completedCount} / {totalSteps} معايير</span>
+          <span className="text-xs text-slate-400">المعيار {Math.min(currentStep + 1, totalSteps)} من {totalSteps}</span>
+        </div>
+        <div className="flex gap-1">
+          {sortedCriteria.map((_, i) => {
+            const allScored = consultantsList?.every((c: any) => c.myScores?.find((s: any) => s.criterionId === sortedCriteria[i].id)?.score > 0);
+            return (
+              <button
+                key={i}
+                onClick={() => setCurrentStep(i)}
+                className={`h-2 flex-1 rounded-full transition-all cursor-pointer ${
+                  i === currentStep ? 'bg-slate-800 scale-y-150' : allScored ? 'bg-emerald-400' : 'bg-slate-200 hover:bg-slate-300'
+                }`}
+              />
+            );
+          })}
         </div>
       </div>
 
       {myStatus?.isComplete && !allComplete && (
-        <div className="bg-emerald-50 rounded-lg border border-emerald-200 p-4 text-center">
+        <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-4 text-center">
           <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-1" />
           <p className="font-semibold text-emerald-800 text-sm">تم إكمال تقييمك الفني</p>
           <p className="text-xs text-emerald-600 mt-0.5">في انتظار اكتمال تقييم باقي الأعضاء</p>
         </div>
       )}
 
-      {/* ═══ CRITERION-BY-CRITERION SECTIONS ═══ */}
-      {sortedCriteria.map((criterion, criterionIdx) => {
-        const isExpanded = expandedCriterion === criterion.id || expandedCriterion === null;
-        
-        return (
-          <div key={criterion.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-            {/* Criterion Header */}
-            <button
-              onClick={() => setExpandedCriterion(expandedCriterion === criterion.id ? null : criterion.id)}
-              className="w-full text-right px-4 py-2.5 flex items-center justify-between bg-gradient-to-l from-slate-50 to-white hover:from-slate-100 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <span className="w-7 h-7 rounded-lg bg-slate-800 text-white flex items-center justify-center text-xs font-bold">{criterionIdx + 1}</span>
-                <div>
-                  <h3 className="font-bold text-slate-800 text-sm">{criterion.name}</h3>
-                  <p className="text-[11px] text-slate-500">الوزن: {criterion.weight}%</p>
-                </div>
+      {/* ═══ SINGLE CRITERION PAGE ═══ */}
+      {!isResultsPage && criterion && (
+        <div className={`rounded-2xl border-2 ${stepColor.border} ${stepColor.bg} overflow-hidden`}>
+          {/* Criterion Title */}
+          <div className={`${stepColor.header} text-white px-5 py-3 flex items-center justify-between`}>
+            <div className="flex items-center gap-3">
+              <span className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">{currentStep + 1}</span>
+              <div>
+                <h3 className="font-bold text-base">{criterion.name}</h3>
+                <p className="text-white/70 text-xs">الوزن: {criterion.weight}%</p>
               </div>
-              <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-            </button>
+            </div>
+          </div>
 
-            {isExpanded && (
-              <div className="px-4 pb-3">
-                {/* Score Meanings - horizontal guide */}
-                <div className="mb-3 border border-slate-100 rounded-lg overflow-hidden">
-                  <table className="w-full text-[11px]">
-                    <tbody>
-                      {criterion.options.map((opt, oi) => (
-                        <tr key={opt.score} className={oi % 2 === 0 ? 'bg-slate-50/50' : 'bg-white'}>
-                          <td className="py-1 px-3 w-12 text-center font-bold text-slate-800 border-l border-slate-100">{opt.score}</td>
-                          <td className="py-1 px-3 text-slate-600 text-right">{opt.label}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+          {/* Consultant Rows */}
+          <div className="p-4 space-y-2">
+            {consultantsList?.map((consultant: any) => {
+              const myScore = consultant.myScores?.find((s: any) => s.criterionId === criterion.id);
+              const selectedLabel = myScore?.score ? criterion.options.find(o => o.score === myScore.score)?.label : null;
 
-                {/* All Consultants for this criterion */}
-                <div className="space-y-1">
-                  {consultantsList?.map((consultant: any) => {
-                    const myScore = consultant.myScores?.find((s: any) => s.criterionId === criterion.id);
-                    const selectedLabel = myScore?.score ? criterion.options.find(o => o.score === myScore.score)?.label : null;
-                    
-                    let avgScore = 0;
-                    let evaluatorScores: { name: string; score: number }[] = [];
-                    if (allComplete && evalData.allEvaluatorData) {
-                      evaluatorScores = evalData.allEvaluatorData.map((ev: any) => {
-                        const s = ev.scores.find((s: any) => s.consultantId === consultant.id && s.criterionId === criterion.id);
-                        return { name: ev.nameAr, score: s?.score || 0 };
-                      });
-                      avgScore = evaluatorScores.reduce((sum, e) => sum + e.score, 0) / evaluatorScores.length;
-                    }
+              let avgScore = 0;
+              let evaluatorScores: { name: string; score: number }[] = [];
+              if (allComplete && evalData.allEvaluatorData) {
+                evaluatorScores = evalData.allEvaluatorData.map((ev: any) => {
+                  const s = ev.scores.find((s: any) => s.consultantId === consultant.id && s.criterionId === criterion.id);
+                  return { name: ev.nameAr, score: s?.score || 0 };
+                });
+                avgScore = evaluatorScores.reduce((sum, e) => sum + e.score, 0) / evaluatorScores.length;
+              }
+              const scoreInfo = getScoreLabel(avgScore);
 
-                    const scoreInfo = getScoreLabel(avgScore);
+              return (
+                <div key={consultant.id} className="bg-white rounded-xl border border-slate-200 px-4 py-3">
+                  <div className="flex items-center gap-4">
+                    {/* RIGHT: Consultant Name (RTL = right side) */}
+                    <div className="flex items-center gap-2.5 min-w-[200px] shrink-0">
+                      <span className={`w-8 h-8 rounded-full ${stepColor.header} text-white flex items-center justify-center text-xs font-bold`}>
+                        {consultant.name?.charAt(0)}
+                      </span>
+                      <span className="text-sm font-bold text-slate-800">{consultant.name}</span>
+                    </div>
 
-                    return (
-                      <div key={consultant.id} className="rounded-lg border border-slate-100 px-3 py-2 hover:border-slate-200 transition-colors">
-                        <div className="flex items-center gap-3">
-                          {/* Consultant Name - LEFT */}
-                          <div className="flex items-center gap-2 min-w-[180px] shrink-0">
-                            <span className="w-6 h-6 rounded-full bg-slate-700 text-white flex items-center justify-center text-[10px] font-bold">
-                              {consultant.name?.charAt(0)}
-                            </span>
-                            <span className="text-[13px] font-semibold text-slate-800">{consultant.name}</span>
+                    {/* CENTER: Score buttons */}
+                    {!myStatus?.isComplete && (
+                      <div className="flex items-center gap-1.5 flex-1 justify-center" dir="ltr">
+                        {criterion.options.map((opt) => (
+                          <button
+                            key={opt.score}
+                            onClick={() => handleScore(consultant.id, criterion.id, opt.score)}
+                            className={`text-sm w-11 h-11 rounded-full border-2 transition-all font-bold ${
+                              myScore?.score === opt.score
+                                ? stepColor.selected
+                                : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400 hover:scale-105'
+                            }`}
+                          >
+                            {opt.score}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* CENTER: Results (if all complete) */}
+                    {allComplete && (
+                      <div className="flex items-center gap-3 flex-1 justify-center" dir="ltr">
+                        {evaluatorScores.map((ev) => (
+                          <div key={ev.name} className="text-center">
+                            <p className="text-[9px] text-slate-400">{ev.name}</p>
+                            <p className="text-sm font-bold text-slate-700">{ev.score}</p>
                           </div>
-
-                          {/* Score buttons - CENTER */}
-                          {!myStatus?.isComplete && (
-                            <div className="flex items-center gap-1 flex-1 justify-center">
-                              {criterion.options.map((opt) => (
-                                <button
-                                  key={opt.score}
-                                  onClick={() => handleScore(consultant.id, criterion.id, opt.score)}
-                                  className={`text-xs w-10 py-1 rounded-md border transition-all font-semibold ${
-                                    myScore?.score === opt.score
-                                      ? getScoreColor(opt.score)
-                                      : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400 hover:bg-slate-50'
-                                  }`}
-                                >
-                                  {opt.score}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Results (if all complete) */}
-                          {allComplete && (
-                            <div className="flex items-center gap-3 flex-1 justify-center">
-                              <div className="flex items-center gap-2">
-                                {evaluatorScores.map((ev) => (
-                                  <div key={ev.name} className="text-center">
-                                    <p className="text-[9px] text-slate-400">{ev.name}</p>
-                                    <p className="text-xs font-semibold text-slate-700">{ev.score}</p>
-                                  </div>
-                                ))}
-                              </div>
-                              <div className="w-px h-5 bg-slate-200" />
-                              <div className="text-center">
-                                <p className="text-[9px] text-slate-400">المتوسط</p>
-                                <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold ${scoreInfo.color}`}>
-                                  {avgScore.toFixed(0)}
-                                </span>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Selected score meaning - RIGHT */}
-                          {!myStatus?.isComplete && (
-                            <div className="min-w-[180px] text-right shrink-0">
-                              {selectedLabel ? (
-                                <span className="text-[11px] text-slate-600">{selectedLabel}</span>
-                              ) : (
-                                <span className="text-[11px] text-slate-300 italic">اختر التقييم</span>
-                              )}
-                            </div>
-                          )}
+                        ))}
+                        <div className="w-px h-6 bg-slate-200" />
+                        <div className="text-center">
+                          <p className="text-[9px] text-slate-400">المتوسط</p>
+                          <span className={`inline-block px-2.5 py-0.5 rounded-lg text-sm font-bold ${scoreInfo.color}`}>
+                            {avgScore.toFixed(0)}
+                          </span>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      })}
+                    )}
 
-      {/* ═══ FINAL RANKING (after all complete) ═══ */}
-      {allComplete && sortedTotals.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
-          <h3 className="font-bold text-slate-800 text-sm mb-3 flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-amber-500" /> الترتيب الفني النهائي
-          </h3>
-          <div className="space-y-2">
-            {sortedTotals.map((c, i) => {
-              const scoreInfo = getScoreLabel(c.total);
-              const barWidth = sortedTotals[0].total > 0 ? (c.total / sortedTotals[0].total) * 100 : 0;
-              return (
-                <div key={c.id} className="flex items-center gap-3">
-                  <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                    i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-slate-200 text-slate-600' : i === 2 ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-500'
-                  }`}>{i + 1}</span>
-                  <span className="text-sm font-medium text-slate-800 min-w-[140px]">{c.name}</span>
-                  <div className="flex-1 bg-slate-100 rounded-full h-5 overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all ${
-                        i === 0 ? 'bg-emerald-500' : i === 1 ? 'bg-blue-500' : i === 2 ? 'bg-sky-400' : 'bg-slate-400'
-                      }`}
-                      style={{ width: `${barWidth}%` }}
-                    />
-                  </div>
-                  <div className="text-left min-w-[80px]">
-                    <span className="text-sm font-bold text-slate-800">{c.total.toFixed(1)}</span>
-                    <span className={`text-[10px] mr-1 px-1.5 py-0.5 rounded ${scoreInfo.color}`}>{scoreInfo.label}</span>
+                    {/* LEFT: Selected score meaning (RTL = left side) */}
+                    {!myStatus?.isComplete && (
+                      <div className="min-w-[220px] text-left shrink-0" dir="rtl">
+                        {selectedLabel ? (
+                          <span className={`text-xs font-medium ${stepColor.text}`}>{selectedLabel}</span>
+                        ) : (
+                          <span className="text-xs text-slate-300 italic">اختر التقييم</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
             })}
+          </div>
+
+          {/* Navigation Buttons */}
+          <div className="px-4 pb-4 flex items-center justify-between">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+              disabled={currentStep === 0}
+              className="gap-1"
+            >
+              <ArrowRight className="w-4 h-4" /> السابق
+            </Button>
+
+            <div className="text-xs text-slate-500">
+              {currentStep + 1} / {totalSteps}
+            </div>
+
+            <Button
+              size="sm"
+              onClick={() => setCurrentStep(Math.min(totalSteps, currentStep + 1))}
+              className={`gap-1 ${stepColor.header} text-white hover:opacity-90`}
+            >
+              {currentStep < totalSteps - 1 ? 'التالي' : 'عرض النتائج'} <ArrowLeft className="w-4 h-4" />
+            </Button>
           </div>
         </div>
       )}
 
-      {/* Detailed breakdown per evaluator (collapsible) */}
-      {allComplete && evalData.allEvaluatorData && (
-        <details className="bg-white rounded-xl border border-slate-200">
-          <summary className="p-3 text-xs font-medium text-slate-600 cursor-pointer hover:bg-slate-50 rounded-xl">تفاصيل تقييم كل عضو على حدة</summary>
-          <div className="p-3 pt-0 space-y-3">
-            {consultantsList?.map((consultant: any) => {
-              let totalWeighted = 0;
-              return (
-                <div key={consultant.id} className="border border-slate-100 rounded-lg p-3">
-                  <h5 className="text-xs font-semibold text-slate-700 mb-2">{consultant.name}</h5>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-[11px]">
-                      <thead>
-                        <tr className="border-b border-slate-100">
-                          <th className="text-right py-1.5 text-slate-500 font-medium">المعيار</th>
-                          <th className="text-center py-1.5 text-slate-400">الوزن</th>
-                          {evalData.allEvaluatorData.map((ev: any) => (
-                            <th key={ev.evaluatorName} className="text-center py-1.5 text-slate-500">{ev.nameAr}</th>
-                          ))}
-                          <th className="text-center py-1.5 text-slate-700 font-semibold">المتوسط</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {CRITERIA.map((crit) => {
-                          const scores = evalData.allEvaluatorData.map((ev: any) => {
-                            const s = ev.scores.find((s: any) => s.consultantId === consultant.id && s.criterionId === crit.id);
-                            return s?.score || 0;
-                          });
-                          const avg = scores.reduce((a: number, b: number) => a + b, 0) / scores.length;
-                          totalWeighted += (avg * crit.weight) / 100;
-                          return (
-                            <tr key={crit.id} className="border-b border-slate-50">
-                              <td className="py-1 text-slate-600">{crit.name}</td>
-                              <td className="text-center py-1 text-slate-400">{crit.weight}%</td>
-                              {scores.map((s: number, si: number) => (
-                                <td key={si} className="text-center py-1 font-medium text-slate-600">{s}</td>
-                              ))}
-                              <td className="text-center py-1 font-semibold text-slate-700">{avg.toFixed(1)}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                      <tfoot>
-                        <tr className="bg-slate-50">
-                          <td colSpan={2 + evalData.allEvaluatorData.length} className="py-1.5 font-semibold text-slate-600 text-right">المجموع المرجح</td>
-                          <td className="text-center py-1.5 font-bold text-slate-800">{totalWeighted.toFixed(2)}</td>
-                        </tr>
-                      </tfoot>
-                    </table>
-                  </div>
-                </div>
-              );
-            })}
+      {/* ═══ RESULTS PAGE (after navigating past last criterion) ═══ */}
+      {isResultsPage && (
+        <div className="space-y-4">
+          {/* Summary of my scores */}
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+            <div className="bg-slate-800 text-white px-5 py-3">
+              <h3 className="font-bold text-base">ملخص التقييم</h3>
+            </div>
+            <div className="p-4">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200">
+                    <th className="text-right py-2 text-slate-600 font-semibold">المعيار</th>
+                    <th className="text-center py-2 text-slate-400 text-xs">الوزن</th>
+                    {consultantsList?.map((c: any) => (
+                      <th key={c.id} className="text-center py-2 text-slate-600 font-semibold text-xs">{c.name}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedCriteria.map((crit, i) => (
+                    <tr key={crit.id} className={`border-b border-slate-100 ${i % 2 === 0 ? 'bg-slate-50/50' : ''}`}>
+                      <td className="py-2 text-slate-700 text-xs font-medium">
+                        <button onClick={() => setCurrentStep(i)} className="hover:text-teal-600 hover:underline cursor-pointer">
+                          {crit.name}
+                        </button>
+                      </td>
+                      <td className="text-center py-2 text-slate-400 text-xs">{crit.weight}%</td>
+                      {consultantsList?.map((c: any) => {
+                        const score = c.myScores?.find((s: any) => s.criterionId === crit.id)?.score;
+                        const sInfo = score ? getScoreLabel(score) : null;
+                        return (
+                          <td key={c.id} className="text-center py-2">
+                            {score ? (
+                              <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold ${sInfo?.color}`}>{score}</span>
+                            ) : (
+                              <span className="text-slate-300">—</span>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </details>
+
+          {/* Final Ranking (if all complete) */}
+          {allComplete && sortedTotals.length > 0 && (
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+              <div className="bg-amber-500 text-white px-5 py-3 flex items-center gap-2">
+                <Trophy className="w-5 h-5" />
+                <h3 className="font-bold text-base">الترتيب الفني النهائي</h3>
+              </div>
+              <div className="p-4 space-y-3">
+                {sortedTotals.map((c, i) => {
+                  const scoreInfo = getScoreLabel(c.total);
+                  const barWidth = sortedTotals[0].total > 0 ? (c.total / sortedTotals[0].total) * 100 : 0;
+                  return (
+                    <div key={c.id} className="flex items-center gap-3">
+                      <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                        i === 0 ? 'bg-amber-500 text-white' : i === 1 ? 'bg-slate-400 text-white' : i === 2 ? 'bg-orange-400 text-white' : 'bg-slate-200 text-slate-600'
+                      }`}>{i + 1}</span>
+                      <span className="text-sm font-bold text-slate-800 min-w-[160px]">{c.name}</span>
+                      <div className="flex-1 bg-slate-100 rounded-full h-6 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            i === 0 ? 'bg-gradient-to-l from-emerald-400 to-emerald-600' : i === 1 ? 'bg-gradient-to-l from-blue-400 to-blue-600' : i === 2 ? 'bg-gradient-to-l from-sky-400 to-sky-500' : 'bg-slate-400'
+                          }`}
+                          style={{ width: `${barWidth}%` }}
+                        />
+                      </div>
+                      <span className="text-base font-black text-slate-800 min-w-[50px] text-center">{c.total.toFixed(1)}</span>
+                      <span className={`text-xs px-2 py-1 rounded-lg font-semibold ${scoreInfo.color}`}>{scoreInfo.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Detailed breakdown per evaluator (collapsible) */}
+          {allComplete && evalData.allEvaluatorData && (
+            <details className="bg-white rounded-2xl border border-slate-200">
+              <summary className="p-4 text-sm font-medium text-slate-600 cursor-pointer hover:bg-slate-50 rounded-2xl">تفاصيل تقييم كل عضو على حدة</summary>
+              <div className="p-4 pt-0 space-y-3">
+                {consultantsList?.map((consultant: any) => {
+                  let totalWeighted = 0;
+                  return (
+                    <div key={consultant.id} className="border border-slate-100 rounded-xl p-3">
+                      <h5 className="text-sm font-bold text-slate-700 mb-2">{consultant.name}</h5>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="border-b border-slate-100">
+                              <th className="text-right py-1.5 text-slate-500 font-medium">المعيار</th>
+                              <th className="text-center py-1.5 text-slate-400">الوزن</th>
+                              {evalData.allEvaluatorData.map((ev: any) => (
+                                <th key={ev.evaluatorName} className="text-center py-1.5 text-slate-500">{ev.nameAr}</th>
+                              ))}
+                              <th className="text-center py-1.5 text-slate-700 font-semibold">المتوسط</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {CRITERIA.map((crit) => {
+                              const scores = evalData.allEvaluatorData.map((ev: any) => {
+                                const s = ev.scores.find((s: any) => s.consultantId === consultant.id && s.criterionId === crit.id);
+                                return s?.score || 0;
+                              });
+                              const avg = scores.reduce((a: number, b: number) => a + b, 0) / scores.length;
+                              totalWeighted += (avg * crit.weight) / 100;
+                              return (
+                                <tr key={crit.id} className="border-b border-slate-50">
+                                  <td className="py-1 text-slate-600">{crit.name}</td>
+                                  <td className="text-center py-1 text-slate-400">{crit.weight}%</td>
+                                  {scores.map((s: number, si: number) => (
+                                    <td key={si} className="text-center py-1 font-medium text-slate-600">{s}</td>
+                                  ))}
+                                  <td className="text-center py-1 font-semibold text-slate-700">{avg.toFixed(1)}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                          <tfoot>
+                            <tr className="bg-slate-50">
+                              <td colSpan={2 + evalData.allEvaluatorData.length} className="py-1.5 font-semibold text-slate-600 text-right">المجموع المرجح</td>
+                              <td className="text-center py-1.5 font-bold text-slate-800">{totalWeighted.toFixed(2)}</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </details>
+          )}
+
+          {/* Back to criteria button */}
+          <div className="flex justify-center">
+            <Button variant="outline" size="sm" onClick={() => setCurrentStep(0)} className="gap-1">
+              <ArrowRight className="w-4 h-4" /> العودة للمعايير
+            </Button>
+          </div>
+        </div>
       )}
     </div>
   );
