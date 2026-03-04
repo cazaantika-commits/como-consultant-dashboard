@@ -281,6 +281,13 @@
       "when": 1772604481716,
       "tag": "0039_empty_jigsaw",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "5",
+      "when": 1772631166478,
+      "tag": "0040_quiet_toad_men",
+      "breakpoints": true
     }
   ]
 }

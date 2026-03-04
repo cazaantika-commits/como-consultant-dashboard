@@ -12,15 +12,194 @@ import {
 import { storagePut } from "../storage";
 import { invokeLLM } from "../_core/llm";
 
-// Comprehensive proposal analysis prompt - extracts detailed structured data
+// ═══════════════════════════════════════════════════
+// Stage 1: Pre-Processing Agent — تصفية الصفحات قبل التحليل
+// ═══════════════════════════════════════════════════
+
+// Keywords that indicate relevant pages (financial/contractual/scope)
+const RELEVANT_KEYWORDS_EN = [
+  'fee', 'fees', 'payment', 'schedule', 'terms', 'conditions', 'exclusion',
+  'scope', 'deliverable', 'proposal', 'aed', 'usd', 'eur', 'lump sum',
+  'milestone', 'retainer', 'supervision', 'additional', 'insurance',
+  'liability', 'termination', 'duration', 'timeline', 'phase',
+  'design', 'construction', 'rera', 'dld', 'noc', 'permit',
+  'consultant', 'sub-consultant', 'man-month', 'hourly rate',
+  'reimbursable', 'variation', 'amendment', 'penalty', 'delay',
+  'professional', 'indemnity', 'arbitration', 'jurisdiction',
+  'copyright', 'intellectual property', 'confidential',
+  'total', 'amount', 'price', 'cost', 'budget', 'estimate',
+  'vat', 'tax', 'invoice', 'billing',
+];
+
+const RELEVANT_KEYWORDS_AR = [
+  'أتعاب', 'رسوم', 'دفع', 'جدول', 'شروط', 'استثناء', 'نطاق',
+  'مخرجات', 'عرض', 'درهم', 'دولار', 'مبلغ مقطوع', 'مرحلة',
+  'إشراف', 'إضافي', 'تأمين', 'مسؤولية', 'إنهاء', 'مدة',
+  'تصميم', 'بناء', 'ريرا', 'تسليم', 'استشاري', 'ساعة',
+  'تعويض', 'تعديل', 'غرامة', 'تأخير', 'إجمالي', 'سعر',
+  'تكلفة', 'ميزانية', 'ضريبة', 'فاتورة',
+];
+
+// Keywords that indicate promotional/portfolio pages (to skip)
+const SKIP_KEYWORDS = [
+  'our projects', 'portfolio', 'our team', 'about us', 'company profile',
+  'established in', 'years of experience', 'our clients', 'testimonial',
+  'award', 'certificate', 'iso', 'accreditation', 'our vision',
+  'our mission', 'core values', 'organizational chart',
+  'مشاريعنا', 'فريقنا', 'من نحن', 'ملف الشركة', 'عملاؤنا',
+  'شهادة', 'جائزة', 'رؤيتنا', 'رسالتنا', 'الهيكل التنظيمي',
+];
+
+interface PageClassification {
+  pageIndex: number;
+  category: 'financial' | 'contractual' | 'scope' | 'technical' | 'promotional' | 'cv' | 'cover';
+  relevanceScore: number;
+  hasNumbers: boolean;
+  snippet: string;
+}
+
+function classifyPage(pageText: string, pageIndex: number): PageClassification {
+  const textLower = pageText.toLowerCase();
+  const textTrimmed = pageText.trim();
+  
+  // Check if page has meaningful content
+  if (textTrimmed.length < 50) {
+    return { pageIndex, category: 'cover', relevanceScore: 0, hasNumbers: false, snippet: textTrimmed.substring(0, 100) };
+  }
+  
+  // Count relevant keywords
+  let financialScore = 0;
+  let contractualScore = 0;
+  let scopeScore = 0;
+  let promotionalScore = 0;
+  
+  // Check for numbers/currency (strong financial indicator)
+  const hasNumbers = /(?:aed|usd|eur|درهم|دولار|\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+%)/i.test(pageText);
+  const hasCurrencyAmounts = /(?:aed|usd|eur|درهم)\s*[\d,.]+|[\d,.]+\s*(?:aed|usd|eur|درهم)/i.test(pageText);
+  
+  // Financial keywords
+  for (const kw of [...RELEVANT_KEYWORDS_EN.slice(0, 15), ...RELEVANT_KEYWORDS_AR.slice(0, 10)]) {
+    if (textLower.includes(kw.toLowerCase())) financialScore++;
+  }
+  
+  // Contractual keywords
+  for (const kw of [...RELEVANT_KEYWORDS_EN.slice(15, 30), ...RELEVANT_KEYWORDS_AR.slice(10, 20)]) {
+    if (textLower.includes(kw.toLowerCase())) contractualScore++;
+  }
+  
+  // Scope keywords
+  for (const kw of [...RELEVANT_KEYWORDS_EN.slice(5, 12), ...RELEVANT_KEYWORDS_AR.slice(5, 12)]) {
+    if (textLower.includes(kw.toLowerCase())) scopeScore++;
+  }
+  
+  // Promotional/skip keywords
+  for (const kw of SKIP_KEYWORDS) {
+    if (textLower.includes(kw.toLowerCase())) promotionalScore++;
+  }
+  
+  // CV detection
+  const cvIndicators = ['curriculum vitae', 'cv', 'education', 'qualification', 'experience', 'السيرة الذاتية', 'المؤهلات', 'الخبرات'];
+  let cvScore = 0;
+  for (const kw of cvIndicators) {
+    if (textLower.includes(kw.toLowerCase())) cvScore++;
+  }
+  
+  // Determine category
+  if (hasCurrencyAmounts || financialScore >= 3) {
+    return { pageIndex, category: 'financial', relevanceScore: financialScore + (hasCurrencyAmounts ? 5 : 0), hasNumbers: true, snippet: textTrimmed.substring(0, 150) };
+  }
+  if (contractualScore >= 2) {
+    return { pageIndex, category: 'contractual', relevanceScore: contractualScore, hasNumbers, snippet: textTrimmed.substring(0, 150) };
+  }
+  if (scopeScore >= 2) {
+    return { pageIndex, category: 'scope', relevanceScore: scopeScore, hasNumbers, snippet: textTrimmed.substring(0, 150) };
+  }
+  if (cvScore >= 2) {
+    return { pageIndex, category: 'cv', relevanceScore: 0, hasNumbers: false, snippet: textTrimmed.substring(0, 150) };
+  }
+  if (promotionalScore >= 2) {
+    return { pageIndex, category: 'promotional', relevanceScore: 0, hasNumbers: false, snippet: textTrimmed.substring(0, 150) };
+  }
+  
+  // Default: if page has numbers, likely technical; otherwise promotional
+  if (hasNumbers) {
+    return { pageIndex, category: 'technical', relevanceScore: 1, hasNumbers: true, snippet: textTrimmed.substring(0, 150) };
+  }
+  
+  return { pageIndex, category: 'promotional', relevanceScore: 0, hasNumbers: false, snippet: textTrimmed.substring(0, 150) };
+}
+
+function preprocessPages(fullText: string): {
+  filteredText: string;
+  totalPages: number;
+  relevantPages: number;
+  skippedPages: number;
+  classifications: PageClassification[];
+  savingsPercent: number;
+} {
+  // Split by common page separators or by large gaps
+  // PDF.js typically separates pages with multiple newlines
+  const pages = fullText.split(/\n{3,}|\f/).filter(p => p.trim().length > 20);
+  
+  if (pages.length <= 6) {
+    // Small document — send everything
+    return {
+      filteredText: fullText,
+      totalPages: pages.length,
+      relevantPages: pages.length,
+      skippedPages: 0,
+      classifications: pages.map((p, i) => classifyPage(p, i)),
+      savingsPercent: 0,
+    };
+  }
+  
+  const classifications = pages.map((page, idx) => classifyPage(page, idx));
+  
+  // Keep: financial, contractual, scope, technical (with numbers)
+  // Skip: promotional, cv, cover (unless it's the first page)
+  const relevantPages: string[] = [];
+  const relevantClassifications: PageClassification[] = [];
+  
+  classifications.forEach((cls, idx) => {
+    const isRelevant = 
+      cls.category === 'financial' ||
+      cls.category === 'contractual' ||
+      cls.category === 'scope' ||
+      (cls.category === 'technical' && cls.hasNumbers) ||
+      idx === 0; // Always keep first page (usually has consultant name/project)
+    
+    if (isRelevant) {
+      relevantPages.push(pages[idx]);
+      relevantClassifications.push(cls);
+    }
+  });
+  
+  const filteredText = relevantPages.join('\n\n---\n\n');
+  const skippedCount = pages.length - relevantPages.length;
+  const savingsPercent = Math.round((skippedCount / pages.length) * 100);
+  
+  return {
+    filteredText,
+    totalPages: pages.length,
+    relevantPages: relevantPages.length,
+    skippedPages: skippedCount,
+    classifications,
+    savingsPercent,
+  };
+}
+
+// ═══════════════════════════════════════════════════
+// Stage 2: AI Analysis with Smart Warnings
+// ═══════════════════════════════════════════════════
+
 async function analyzeProposalWithAI(extractedText: string, proposalTitle: string) {
   try {
-    const prompt = `أنت محلل خبير في عروض الاستشاريين الهندسيين في قطاع التطوير العقاري. حلل العرض التالي بشكل شامل ومحايد واستخرج كل التفاصيل المهمة.
+    const prompt = `أنت محلل خبير في عروض الاستشاريين الهندسيين في قطاع التطوير العقاري في الإمارات. حلل العرض التالي بشكل شامل ومحايد واستخرج كل التفاصيل المهمة.
 
 عنوان العرض: ${proposalTitle}
 
 محتوى العرض:
-${extractedText.substring(0, 20000)} 
+${extractedText.substring(0, 25000)} 
 
 استخرج المعلومات التالية بدقة وحيادية. إذا لم تجد معلومة معينة في العرض، اكتب "غير مذكور في العرض".
 
@@ -32,6 +211,26 @@ ${extractedText.substring(0, 20000)}
   "weaknesses": ["نقاط الضعف والثغرات"],
   "recommendation": "التوصية النهائية",
   "score": 85,
+  "financialSummary": {
+    "totalFees": "إجمالي الأتعاب بالأرقام (مثال: 7856068)",
+    "totalFeesFormatted": "إجمالي الأتعاب منسق (مثال: 7,856,068 AED)",
+    "currency": "AED أو USD أو EUR",
+    "feeType": "مبلغ مقطوع / نسبة مئوية / man-month / مختلط",
+    "vatIncluded": false,
+    "supervisionFees": "أتعاب الإشراف إن ذُكرت (رقم أو غير محدد)",
+    "supervisionType": "مشمول في الأتعاب / منفصل / غير مشمول / man-month",
+    "optionalItems": [{"item": "وصف البند الاختياري", "amount": "المبلغ"}],
+    "priceValidity": "مدة صلاحية الأسعار"
+  },
+  "warnings": [
+    {
+      "level": "high",
+      "category": "financial",
+      "title": "عنوان التحذير",
+      "detail": "تفصيل التحذير",
+      "impact": "الأثر المحتمل"
+    }
+  ],
   "scope": {
     "items": ["قائمة تفصيلية بكل الأعمال المشمولة في العرض"],
     "phases": ["مراحل العمل إن وجدت"],
@@ -40,6 +239,7 @@ ${extractedText.substring(0, 20000)}
   "exclusions": {
     "items": ["قائمة بكل الأعمال المستثناة وغير المشمولة"],
     "risks": ["المخاطر المترتبة على هذه الاستثناءات"],
+    "count": 0,
     "notes": "ملاحظات عن الاستثناءات"
   },
   "additionalWorks": {
@@ -48,7 +248,7 @@ ${extractedText.substring(0, 20000)}
   },
   "supervisionTerms": {
     "included": true,
-    "type": "نسبة مئوية / مبلغ مقطوع / غير مشمول",
+    "type": "نسبة مئوية / مبلغ مقطوع / man-month / غير مشمول",
     "value": "القيمة أو النسبة",
     "scope": "نطاق أعمال الإشراف المشمولة",
     "duration": "مدة الإشراف",
@@ -77,17 +277,35 @@ ${extractedText.substring(0, 20000)}
   "teamComposition": {
     "members": [{"role": "الدور", "name": "الاسم إن ذُكر", "experience": "الخبرة"}],
     "totalSize": "حجم الفريق",
+    "subConsultants": [{"name": "اسم الاستشاري الفرعي", "discipline": "التخصص"}],
     "notes": "ملاحظات عن الفريق"
   },
   "deliverables": {
     "items": [{"deliverable": "المخرج", "format": "الصيغة", "copies": "عدد النسخ"}],
     "notes": "ملاحظات عن المخرجات"
   }
-}`;
+}
+
+تحذيرات مهمة يجب رصدها:
+- إشراف غير محدد الإجمالي (man-month بدون سقف)
+- استثناءات كثيرة (أكثر من 10)
+- أعمال إضافية بأسعار غير محددة
+- مصاريف قابلة للتعويض (reimbursable) مفتوحة
+- صلاحية أسعار قصيرة
+- عدم وجود تأمين مهني
+- شروط إنهاء غير عادلة
+- حدود مسؤولية منخفضة
+- LOD منخفض (أقل من 350)
+- عدم شمول BIM أو LEED إن كان مطلوباً
+
+مستويات التحذير:
+- high: خطر مالي مباشر أو ثغرة تعاقدية كبيرة
+- medium: نقطة تحتاج توضيح أو تفاوض
+- low: ملاحظة للمعلومية`;
 
     const response = await invokeLLM({
       messages: [
-        { role: "system", content: "أنت محلل خبير ومحايد في عروض الاستشاريين الهندسيين. مهمتك استخراج كل التفاصيل بدقة وحيادية بدون تحيز لأي طرف. أجب دائماً بصيغة JSON صحيحة فقط بدون أي نص إضافي." },
+        { role: "system", content: "أنت محلل خبير ومحايد في عروض الاستشاريين الهندسيين في الإمارات. مهمتك استخراج كل التفاصيل بدقة وحيادية بدون تحيز لأي طرف. أجب دائماً بصيغة JSON صحيحة فقط بدون أي نص إضافي." },
         { role: "user", content: prompt }
       ],
     });
@@ -108,6 +326,8 @@ ${extractedText.substring(0, 20000)}
       aiWeaknesses: analysis.weaknesses || [],
       aiRecommendation: analysis.recommendation || "",
       aiScore: analysis.score || 0,
+      aiFinancialSummary: analysis.financialSummary || null,
+      aiWarnings: analysis.warnings || [],
       aiScope: analysis.scope || null,
       aiExclusions: analysis.exclusions || null,
       aiAdditionalWorks: analysis.additionalWorks || null,
@@ -136,10 +356,12 @@ async function compareProposalsWithAI(proposals: any[]) {
       const timeline = p.aiTimeline ? JSON.stringify(p.aiTimeline) : "غير متوفر";
       const payment = p.aiPaymentTerms ? JSON.stringify(p.aiPaymentTerms) : "غير متوفر";
       const deliverables = p.aiDeliverables ? JSON.stringify(p.aiDeliverables) : "غير متوفر";
+      const financial = p.aiFinancialSummary ? JSON.stringify(p.aiFinancialSummary) : "غير متوفر";
       
       return `=== العرض ${idx + 1}: ${p.title} (استشاري ${idx+1}) ===
 الملخص: ${p.aiSummary || 'غير متوفر'}
 التقييم: ${p.aiScore || 0}/100
+الملخص المالي: ${financial}
 نطاق الأعمال: ${scope}
 الاستثناءات: ${exclusions}
 الإشراف: ${supervision}
@@ -162,7 +384,8 @@ ${proposalsText}
 5. مقارنة الشروط — أي شروط غير معتادة أو مختلفة
 6. مقارنة الجدول الزمني — المدد والمراحل
 7. مقارنة شروط الدفع
-8. ملاحظات مهمة وتحذيرات
+8. مقارنة مالية — الأتعاب والإشراف والبنود الاختيارية
+9. ملاحظات مهمة وتحذيرات
 
 أجب بصيغة JSON:
 {
@@ -173,6 +396,10 @@ ${proposalsText}
   "conditionsComparison": {"summary": "ملخص", "unusualTerms": [{"consultant": "اسم", "term": "الشرط غير المعتاد"}]},
   "timelineComparison": {"summary": "ملخص"},
   "paymentComparison": {"summary": "ملخص"},
+  "financialComparison": {
+    "summary": "ملخص المقارنة المالية",
+    "matrix": [{"aspect": "البند", "values": [{"consultant": "اسم", "value": "القيمة", "status": "أفضل/أسوأ/متوسط"}]}]
+  },
   "warnings": ["تحذيرات مهمة يجب الانتباه لها"],
   "overallSummary": "ملخص شامل للمقارنة",
   "recommendation": "التوصية النهائية مع التبرير",
@@ -241,11 +468,34 @@ export const proposalsRouter = router({
       };
     }),
 
-  // Analyze a proposal with comprehensive detailed extraction
+  // Pre-process extracted text — classify pages and filter
+  preprocess: protectedProcedure
+    .input(z.object({
+      extractedText: z.string(),
+    }))
+    .mutation(async ({ input }) => {
+      const result = preprocessPages(input.extractedText);
+      return {
+        filteredText: result.filteredText,
+        totalPages: result.totalPages,
+        relevantPages: result.relevantPages,
+        skippedPages: result.skippedPages,
+        savingsPercent: result.savingsPercent,
+        classifications: result.classifications.map(c => ({
+          pageIndex: c.pageIndex,
+          category: c.category,
+          relevanceScore: c.relevanceScore,
+          snippet: c.snippet,
+        })),
+      };
+    }),
+
+  // Analyze a proposal with comprehensive detailed extraction (uses pre-processed text)
   analyze: protectedProcedure
     .input(z.object({
       proposalId: z.number(),
-      extractedText: z.string(),
+      extractedText: z.string(), // Full text (for storage)
+      filteredText: z.string().optional(), // Pre-processed text (for AI analysis)
     }))
     .mutation(async ({ ctx, input }) => {
       const proposal = await getProposalById(input.proposalId, ctx.user.id);
@@ -259,7 +509,9 @@ export const proposalsRouter = router({
       });
       
       try {
-        const analysis = await analyzeProposalWithAI(input.extractedText, proposal.title);
+        // Use filtered text if available, otherwise full text
+        const textForAnalysis = input.filteredText || input.extractedText;
+        const analysis = await analyzeProposalWithAI(textForAnalysis, proposal.title);
         
         // Serialize JSON fields for storage
         const dbUpdate: any = {
@@ -278,8 +530,12 @@ export const proposalsRouter = router({
           aiConditions: analysis.aiConditions ? JSON.stringify(analysis.aiConditions) : null,
           aiTeamComposition: analysis.aiTeamComposition ? JSON.stringify(analysis.aiTeamComposition) : null,
           aiDeliverables: analysis.aiDeliverables ? JSON.stringify(analysis.aiDeliverables) : null,
+          // New fields stored as JSON text
+          aiFinancialSummary: analysis.aiFinancialSummary ? JSON.stringify(analysis.aiFinancialSummary) : null,
+          aiWarnings: analysis.aiWarnings ? JSON.stringify(analysis.aiWarnings) : null,
           extractedText: input.extractedText,
           analysisStatus: 'completed',
+          analysisError: null,
         };
         
         await updateProposalAnalysis(input.proposalId, ctx.user.id, dbUpdate);
@@ -293,6 +549,119 @@ export const proposalsRouter = router({
         
         throw error;
       }
+    }),
+
+  // Re-analyze an existing proposal
+  reanalyze: protectedProcedure
+    .input(z.object({
+      proposalId: z.number(),
+      filteredText: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const proposal = await getProposalById(input.proposalId, ctx.user.id);
+      if (!proposal) {
+        throw new Error("Proposal not found");
+      }
+      
+      if (!proposal.extractedText) {
+        throw new Error("لا يوجد نص مستخرج لإعادة التحليل. يرجى رفع العرض مرة أخرى.");
+      }
+      
+      await updateProposalAnalysis(input.proposalId, ctx.user.id, {
+        analysisStatus: 'processing',
+        analysisError: null,
+      });
+      
+      try {
+        const textForAnalysis = input.filteredText || proposal.extractedText;
+        const analysis = await analyzeProposalWithAI(textForAnalysis, proposal.title);
+        
+        const dbUpdate: any = {
+          aiSummary: analysis.aiSummary,
+          aiKeyPoints: JSON.stringify(analysis.aiKeyPoints),
+          aiStrengths: JSON.stringify(analysis.aiStrengths),
+          aiWeaknesses: JSON.stringify(analysis.aiWeaknesses),
+          aiRecommendation: analysis.aiRecommendation,
+          aiScore: analysis.aiScore,
+          aiScope: analysis.aiScope ? JSON.stringify(analysis.aiScope) : null,
+          aiExclusions: analysis.aiExclusions ? JSON.stringify(analysis.aiExclusions) : null,
+          aiAdditionalWorks: analysis.aiAdditionalWorks ? JSON.stringify(analysis.aiAdditionalWorks) : null,
+          aiSupervisionTerms: analysis.aiSupervisionTerms ? JSON.stringify(analysis.aiSupervisionTerms) : null,
+          aiTimeline: analysis.aiTimeline ? JSON.stringify(analysis.aiTimeline) : null,
+          aiPaymentTerms: analysis.aiPaymentTerms ? JSON.stringify(analysis.aiPaymentTerms) : null,
+          aiConditions: analysis.aiConditions ? JSON.stringify(analysis.aiConditions) : null,
+          aiTeamComposition: analysis.aiTeamComposition ? JSON.stringify(analysis.aiTeamComposition) : null,
+          aiDeliverables: analysis.aiDeliverables ? JSON.stringify(analysis.aiDeliverables) : null,
+          aiFinancialSummary: analysis.aiFinancialSummary ? JSON.stringify(analysis.aiFinancialSummary) : null,
+          aiWarnings: analysis.aiWarnings ? JSON.stringify(analysis.aiWarnings) : null,
+          analysisStatus: 'completed',
+          analysisError: null,
+        };
+        
+        await updateProposalAnalysis(input.proposalId, ctx.user.id, dbUpdate);
+        
+        return { success: true, analysis };
+      } catch (error: any) {
+        await updateProposalAnalysis(input.proposalId, ctx.user.id, {
+          analysisStatus: 'failed',
+          analysisError: error.message,
+        });
+        throw error;
+      }
+    }),
+
+  // Delete a proposal
+  delete: protectedProcedure
+    .input(z.object({ proposalId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const { getDb } = await import("../db");
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      
+      const { consultantProposals } = await import("../../drizzle/schema");
+      const { eq, and } = await import("drizzle-orm");
+      
+      // Verify ownership
+      const proposal = await getProposalById(input.proposalId, ctx.user.id);
+      if (!proposal) {
+        throw new Error("العرض غير موجود أو لا تملك صلاحية حذفه");
+      }
+      
+      await db.delete(consultantProposals)
+        .where(and(
+          eq(consultantProposals.id, input.proposalId),
+          eq(consultantProposals.userId, ctx.user.id)
+        ));
+      
+      return { success: true };
+    }),
+
+  // Update financial summary manually (review step)
+  updateFinancials: protectedProcedure
+    .input(z.object({
+      proposalId: z.number(),
+      financialSummary: z.object({
+        totalFees: z.string().optional(),
+        totalFeesFormatted: z.string().optional(),
+        currency: z.string().optional(),
+        feeType: z.string().optional(),
+        vatIncluded: z.boolean().optional(),
+        supervisionFees: z.string().optional(),
+        supervisionType: z.string().optional(),
+        priceValidity: z.string().optional(),
+      }),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const proposal = await getProposalById(input.proposalId, ctx.user.id);
+      if (!proposal) {
+        throw new Error("العرض غير موجود");
+      }
+      
+      await updateProposalAnalysis(input.proposalId, ctx.user.id, {
+        aiFinancialSummary: JSON.stringify(input.financialSummary),
+      });
+      
+      return { success: true };
     }),
 
   // Get all proposals with parsed JSON fields
@@ -319,6 +688,8 @@ export const proposalsRouter = router({
         aiConditions: parseJsonField(p.aiConditions),
         aiTeamComposition: parseJsonField(p.aiTeamComposition),
         aiDeliverables: parseJsonField(p.aiDeliverables),
+        aiFinancialSummary: parseJsonField((p as any).aiFinancialSummary),
+        aiWarnings: parseJsonField((p as any).aiWarnings) || [],
       }));
     }),
 
@@ -343,6 +714,8 @@ export const proposalsRouter = router({
         aiConditions: parseJsonField(proposal.aiConditions),
         aiTeamComposition: parseJsonField(proposal.aiTeamComposition),
         aiDeliverables: parseJsonField(proposal.aiDeliverables),
+        aiFinancialSummary: parseJsonField((proposal as any).aiFinancialSummary),
+        aiWarnings: parseJsonField((proposal as any).aiWarnings) || [],
       };
     }),
 
@@ -372,6 +745,8 @@ export const proposalsRouter = router({
         aiConditions: parseJsonField(p!.aiConditions),
         aiTeamComposition: parseJsonField(p!.aiTeamComposition),
         aiDeliverables: parseJsonField(p!.aiDeliverables),
+        aiFinancialSummary: parseJsonField((p as any)?.aiFinancialSummary),
+        aiWarnings: parseJsonField((p as any)?.aiWarnings) || [],
       }));
       
       if (validProposals.length < 2) {

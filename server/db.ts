@@ -536,7 +536,11 @@ export async function updateProposalAnalysis(id: number, userId: number, analysi
     aiConditions: 'aiConditions',
     aiTeamComposition: 'aiTeamComposition',
     aiDeliverables: 'aiDeliverables',
+    aiFinancialSummary: 'aiFinancialSummary',
+    aiWarnings: 'aiWarnings',
+    preprocessingStats: 'preprocessingStats',
     extractedText: 'extractedText',
+    filteredText: 'filteredText',
     analysisStatus: 'analysisStatus',
     analysisError: 'analysisError',
   };

@@ -1,1764 +1,1248 @@
-import { int, mysqlEnum, mysqlTable, text, mediumtext, longtext, timestamp, varchar, decimal, boolean } from "drizzle-orm/mysql-core";
-import { bigint as bigintCol } from "drizzle-orm/mysql-core";
+import { mysqlTable, mysqlSchema, AnyMySqlColumn, int, varchar, mysqlEnum, text, mediumtext, timestamp, index, foreignKey, bigint, decimal, longtext, tinyint } from "drizzle-orm/mysql-core"
+import { sql } from "drizzle-orm"
 
-/**
- * Core user table backing auth flow.
- * Extend this file with additional tables as your product grows.
- * Columns use camelCase to match both database fields and generated types.
- */
-export const users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
-  id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
-  openId: varchar("openId", { length: 64 }).notNull().unique(),
-  name: text("name"),
-  email: varchar("email", { length: 320 }),
-  loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+export const agentActivityLog = mysqlTable("agentActivityLog", {
+	id: int().autoincrement().notNull(),
+	agentName: varchar({ length: 50 }).notNull(),
+	agentModel: varchar({ length: 50 }),
+	actionType: mysqlEnum(['tool_call','chat_response','file_read','file_write','db_read','db_write','email_action','drive_action','agent_comm','task_execution','meeting_action','analysis','error']).notNull(),
+	toolName: varchar({ length: 100 }),
+	inputSummary: text(),
+	outputSummary: text(),
+	fullInput: mediumtext(),
+	fullOutput: mediumtext(),
+	activityStatus: mysqlEnum(['success','failure','partial','pending']).notNull(),
+	errorMessage: text(),
+	errorDetails: text(),
+	triggerSource: varchar({ length: 100 }),
+	relatedEntityType: varchar({ length: 50 }),
+	relatedEntityId: int(),
+	userId: int(),
+	durationMs: int(),
+	tokensUsed: int(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 });
 
-export type User = typeof users.$inferSelect;
-export type InsertUser = typeof users.$inferInsert;
-
-// Projects table
-export const projects = mysqlTable('projects', {
-  id: int('id').autoincrement().primaryKey(),
-  userId: int('userId').notNull().references(() => users.id),
-  name: varchar('name', { length: 255 }).notNull(),
-  description: text('description'),
-  plotNumber: varchar('plotNumber', { length: 50 }), // رقم القطعة مثل 6185392
-  areaCode: varchar('areaCode', { length: 50 }), // كود المنطقة مثل Nas-R, Maj-M, Jadaf
-  driveFolderId: varchar('driveFolderId', { length: 100 }), // معرف مجلد المشروع في Google Drive
-  bua: int('bua'), // Building area in sqft
-  pricePerSqft: int('pricePerSqft'), // Price per square foot in AED
-  
-  // === القسم الأول: البيانات الأساسية للقطعة (Fact Sheet) ===
-  // 1.1 أرقام التعريف
-  titleDeedNumber: varchar('titleDeedNumber', { length: 100 }), // رقم سند الملكية
-  ddaNumber: varchar('ddaNumber', { length: 100 }), // رقم DDA (هيئة دبي للتطوير)
-  masterDevRef: varchar('masterDevRef', { length: 100 }), // الرقم المرجعي للمطور الرئيسي
-  
-  // 1.2 المساحات
-  plotAreaSqm: decimal('plotAreaSqm', { precision: 12, scale: 2 }), // مساحة الأرض بالمتر المربع
-  plotAreaSqft: decimal('plotAreaSqft', { precision: 12, scale: 2 }), // مساحة الأرض بالقدم المربع
-  gfaSqm: decimal('gfaSqm', { precision: 12, scale: 2 }), // المساحة الإجمالية المسموح بناؤها بالمتر
-  gfaSqft: decimal('gfaSqft', { precision: 12, scale: 2 }), // المساحة الإجمالية المسموح بناؤها بالقدم
-  // 1.2.1 GFA حسب النوع (قدم²)
-  gfaResidentialSqft: decimal('gfaResidentialSqft', { precision: 14, scale: 2 }), // GFA سكني بالقدم²
-  gfaRetailSqft: decimal('gfaRetailSqft', { precision: 14, scale: 2 }), // GFA محلات تجارية بالقدم²
-  gfaOfficesSqft: decimal('gfaOfficesSqft', { precision: 14, scale: 2 }), // GFA مكاتب بالقدم²
-  
-  // 1.3 الاستخدام ونوع الملكية
-  permittedUse: varchar('permittedUse', { length: 255 }), // الاستخدام المسموح
-  ownershipType: varchar('ownershipType', { length: 255 }), // نوع الملكية
-  subdivisionRestrictions: text('subdivisionRestrictions'), // قيود التجزئة
-  
-  // === القسم الثاني: الأطراف الرئيسية ===
-  // 2.1 المطور الرئيسي
-  masterDevName: varchar('masterDevName', { length: 255 }), // اسم المطور الرئيسي
-  masterDevAddress: varchar('masterDevAddress', { length: 500 }), // عنوان المطور
-  
-  // 2.2 البائع (المالك السابق)
-  sellerName: varchar('sellerName', { length: 255 }),
-  sellerAddress: varchar('sellerAddress', { length: 500 }),
-  
-  // 2.3 المشتري (المالك الحالي)
-  buyerName: varchar('buyerName', { length: 255 }),
-  buyerNationality: varchar('buyerNationality', { length: 100 }),
-  buyerPassport: varchar('buyerPassport', { length: 50 }),
-  buyerAddress: varchar('buyerAddress', { length: 500 }),
-  buyerPhone: varchar('buyerPhone', { length: 50 }),
-  buyerEmail: varchar('buyerEmail', { length: 320 }),
-  
-  // === القسم الثالث: البنية التحتية والتخصيصات ===
-  // 3.1 تخصيصات المرافق
-  electricityAllocation: varchar('electricityAllocation', { length: 100 }), // كيلوواط
-  waterAllocation: varchar('waterAllocation', { length: 100 }), // م³/يوم
-  sewageAllocation: varchar('sewageAllocation', { length: 100 }), // م³/يوم
-  
-  // 3.2 تخصيصات الحركة المرورية
-  tripAM: varchar('tripAM', { length: 50 }), // صباحاً
-  tripLT: varchar('tripLT', { length: 50 }), // نهاراً
-  tripPM: varchar('tripPM', { length: 50 }), // مساءً
-  
-  // === القسم الرابع: الجدول الزمني للإنشاءات ===
-  effectiveDate: varchar('effectiveDate', { length: 50 }), // تاريخ السريان
-  constructionPeriod: varchar('constructionPeriod', { length: 255 }), // فترة البناء الإجمالية
-  constructionStartDate: varchar('constructionStartDate', { length: 255 }), // تاريخ بدء الإنشاء
-  completionDate: varchar('completionDate', { length: 255 }), // تاريخ الإنجاز
-  constructionConditions: text('constructionConditions'), // شروط بدء الإنشاء
-  
-  // === القسم الخامس: الالتزامات والقيود ===
-  saleRestrictions: text('saleRestrictions'), // قيود البيع والتصرف
-  resaleConditions: text('resaleConditions'), // إعادة البيع المستقبلية
-  communityCharges: text('communityCharges'), // رسوم المجتمع
-  
-  // === القسم السادس: المستندات والتسجيل ===
-  registrationAuthority: varchar('registrationAuthority', { length: 255 }), // جهة التسجيل
-  adminFee: int('adminFee'), // رسوم إدارية
-  clearanceFee: int('clearanceFee'), // رسوم شهادة التخليص
-  compensationAmount: int('compensationAmount'), // مبلغ تعويض
-  
-  // === القسم السابع: القانون الحاكم ===
-  governingLaw: text('governingLaw'), // القانون الساري
-  disputeResolution: text('disputeResolution'), // تسوية النزاعات
-  
-  notes: text('notes'),
-
-  // === قسم بيانات الشراء ===
-  landPrice: decimal('landPrice', { precision: 14, scale: 2 }), // سعر الأرض
-  agentCommissionLandPct: decimal('agentCommissionLandPct', { precision: 5, scale: 2 }), // عمولة وسيط الأرض %
-
-  // === القسم الثامن: الإدخالات اليدوية ===
-  manualBuaSqft: decimal('manualBuaSqft', { precision: 14, scale: 2 }), // مساحة البناء BUA (قدم مربع)
-  estimatedConstructionPricePerSqft: decimal('estimatedConstructionPricePerSqft', { precision: 14, scale: 2 }), // السعر التقديري للقدم المربع (بناء)
-  soilTestFee: decimal('soilTestFee', { precision: 14, scale: 2 }), // رسوم تقرير فحص التربة
-  topographicSurveyFee: decimal('topographicSurveyFee', { precision: 14, scale: 2 }), // أعمال الرفع المساحي الطبوغرافي
-  reraUnitRegFee: decimal('reraUnitRegFee', { precision: 14, scale: 2 }), // رسوم تسجيل الوحدات — ريرا
-  developerNocFee: decimal('developerNocFee', { precision: 14, scale: 2 }), // رسوم عدم ممانعة للبيع — المطور
-  escrowAccountFee: decimal('escrowAccountFee', { precision: 14, scale: 2 }), // رسوم فتح حساب الضمان
-  bankFees: decimal('bankFees', { precision: 14, scale: 2 }), // الرسوم البنكية
-  communityFees: decimal('communityFees', { precision: 14, scale: 2 }), // رسوم المجتمع
-  surveyorFees: decimal('surveyorFees', { precision: 14, scale: 2 }), // أتعاب المسّاح (تأكيد المساحات)
-  reraAuditReportFee: decimal('reraAuditReportFee', { precision: 14, scale: 2 }), // تقارير تدقيق ريرا الدورية
-  reraInspectionReportFee: decimal('reraInspectionReportFee', { precision: 14, scale: 2 }), // تقارير تفتيش ريرا الدورية
-  reraProjectRegFee: decimal('reraProjectRegFee', { precision: 14, scale: 2 }), // رسوم تسجيل المشروع — ريرا
-  officialBodiesFees: decimal('officialBodiesFees', { precision: 14, scale: 2 }), // رسوم الجهات الرسمية
-  // نسب التكاليف المتغيرة
-  designFeePct: decimal('designFeePct', { precision: 5, scale: 2 }), // أتعاب التصميم %
-  supervisionFeePct: decimal('supervisionFeePct', { precision: 5, scale: 2 }), // أتعاب الإشراف %
-  separationFeePerM2: decimal('separationFeePerM2', { precision: 10, scale: 2 }), // رسوم الفرز لكل م²
-  salesCommissionPct: decimal('salesCommissionPct', { precision: 5, scale: 2 }), // عمولة البيع %
-  marketingPct: decimal('marketingPct', { precision: 5, scale: 2 }), // التسويق %
-  developerFeePhase1Pct: decimal('developerFeePhase1Pct', { precision: 5, scale: 2 }).default("2"), // أتعاب المطور المرحلة الأولى %
-  developerFeePhase2Pct: decimal('developerFeePhase2Pct', { precision: 5, scale: 2 }).default("3"), // أتعاب المطور المرحلة الثانية %
-
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+export const agentAssignments = mysqlTable("agentAssignments", {
+	id: int().autoincrement().notNull(),
+	userId: int().notNull(),
+	agent: varchar({ length: 50 }).notNull(),
+	userMessage: text().notNull(),
+	toolUsed: varchar({ length: 100 }).notNull(),
+	toolArgs: text(),
+	toolResult: text(),
+	assignmentStatus: mysqlEnum(['executing','completed','failed']).default('executing').notNull(),
+	agentResponse: text(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	completedAt: timestamp({ mode: 'string' }),
 });
 
-export type Project = typeof projects.$inferSelect;
-export type InsertProject = typeof projects.$inferInsert;
+export const agents = mysqlTable("agents", {
+	id: int().autoincrement().notNull(),
+	name: varchar({ length: 100 }).notNull(),
+	nameEn: varchar({ length: 100 }),
+	role: varchar({ length: 255 }).notNull(),
+	roleEn: varchar({ length: 255 }),
+	description: text(),
+	color: varchar({ length: 20 }),
+	icon: varchar({ length: 50 }),
+	agentStatus: mysqlEnum(['active','inactive','maintenance']).default('active').notNull(),
+	capabilities: text(),
+	isCoordinator: int().default(0).notNull(),
+	gender: mysqlEnum(['male','female']).default('male').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+	avatarUrl: text(),
+	age: int(),
+},
+(table) => [
+	index("agents_name_unique").on(table.name),
+]);
 
-// Consultants table
-export const consultants = mysqlTable('consultants', {
-  id: int('id').autoincrement().primaryKey(),
-  userId: int('userId').notNull().references(() => users.id),
-  name: varchar('name', { length: 255 }).notNull(),
-  email: varchar('email', { length: 320 }),
-  phone: varchar('phone', { length: 20 }),
-  specialization: varchar('specialization', { length: 255 }),
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+export const aiAdvisoryScores = mysqlTable("aiAdvisoryScores", {
+	id: int().autoincrement().notNull(),
+	projectId: int().notNull().references(() => projects.id, { onDelete: "cascade" } ),
+	consultantId: int().notNull().references(() => consultants.id, { onDelete: "cascade" } ),
+	criterionId: int().notNull(),
+	suggestedScore: int(),
+	reasoning: text(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
-export type Consultant = typeof consultants.$inferSelect;
-export type InsertConsultant = typeof consultants.$inferInsert;
-
-// Project-Consultant relationship
-export const projectConsultants = mysqlTable('projectConsultants', {
-  id: int('id').autoincrement().primaryKey(),
-  projectId: int('projectId').notNull().references(() => projects.id, { onDelete: 'cascade' }),
-  consultantId: int('consultantId').notNull().references(() => consultants.id, { onDelete: 'cascade' }),
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
+export const cfCostItems = mysqlTable("cf_cost_items", {
+	id: int().autoincrement().notNull(),
+	cfProjectId: int().notNull().references(() => cfProjects.id, { onDelete: "cascade" } ),
+	name: varchar({ length: 500 }).notNull(),
+	category: mysqlEnum(['land','consultant_design','authority_fees','contractor','supervision','marketing_sales','developer_fee','contingency','other']).notNull(),
+	totalAmount: bigint({ mode: "number" }).notNull(),
+	paymentType: mysqlEnum(['lump_sum','milestone','monthly_fixed','progress_based','sales_linked']).notNull(),
+	paymentParams: text(),
+	phaseAllocation: text(),
+	sortOrder: int().default(0).notNull(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
-export type ProjectConsultant = typeof projectConsultants.$inferSelect;
-export type InsertProjectConsultant = typeof projectConsultants.$inferInsert;
-
-// Financial data for consultant in project
-export const financialData = mysqlTable('financialData', {
-  id: int('id').autoincrement().primaryKey(),
-  projectId: int('projectId').notNull().references(() => projects.id, { onDelete: 'cascade' }),
-  consultantId: int('consultantId').notNull().references(() => consultants.id, { onDelete: 'cascade' }),
-  designType: varchar('designType', { length: 20 }).default('pct'), // 'pct' or 'lump'
-  designValue: int('designValue'),
-  supervisionType: varchar('supervisionType', { length: 20 }).default('pct'), // 'pct' or 'lump'
-  supervisionValue: int('supervisionValue'),
-  proposalLink: varchar('proposalLink', { length: 500 }),
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+export const cfFiles = mysqlTable("cf_files", {
+	id: int().autoincrement().notNull(),
+	cfProjectId: int().notNull().references(() => cfProjects.id, { onDelete: "cascade" } ),
+	fileName: varchar({ length: 500 }).notNull(),
+	fileUrl: text().notNull(),
+	fileKey: varchar({ length: 500 }).notNull(),
+	mimeType: varchar({ length: 100 }),
+	fileSize: int(),
+	category: varchar({ length: 100 }),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 });
 
-export type FinancialData = typeof financialData.$inferSelect;
-export type InsertFinancialData = typeof financialData.$inferInsert;
-
-// Evaluation scores for consultant in project
-export const evaluationScores = mysqlTable('evaluationScores', {
-  id: int('id').autoincrement().primaryKey(),
-  projectId: int('projectId').notNull().references(() => projects.id, { onDelete: 'cascade' }),
-  consultantId: int('consultantId').notNull().references(() => consultants.id, { onDelete: 'cascade' }),
-  criterionId: int('criterionId').notNull(), // 0-5 for the 6 criteria
-  score: int('score'), // Score value
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+export const cfProjects = mysqlTable("cf_projects", {
+	id: int().autoincrement().notNull(),
+	projectId: int().references(() => projects.id, { onDelete: "cascade" } ),
+	userId: int().notNull().references(() => users.id),
+	name: varchar({ length: 500 }).notNull(),
+	startDate: varchar({ length: 20 }).notNull(),
+	designApprovalMonths: int().default(6).notNull(),
+	reraSetupMonths: int().default(3).notNull(),
+	constructionMonths: int().default(24).notNull(),
+	handoverMonths: int().default(3).notNull(),
+	salesEnabled: tinyint().default(0).notNull(),
+	salesStartMonth: int(),
+	salesVelocityUnits: int(),
+	salesVelocityAed: bigint({ mode: "number" }),
+	salesVelocityType: mysqlEnum(['units','aed']).default('aed'),
+	totalSalesRevenue: bigint({ mode: "number" }),
+	buyerPlanBookingPct: decimal({ precision: 5, scale: 2 }).default('20'),
+	buyerPlanConstructionPct: decimal({ precision: 5, scale: 2 }).default('30'),
+	buyerPlanHandoverPct: decimal({ precision: 5, scale: 2 }).default('50'),
+	notes: text(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
-export type EvaluationScore = typeof evaluationScores.$inferSelect;
-export type InsertEvaluationScore = typeof evaluationScores.$inferInsert;
-
-// Consultant profiles - detailed info
-export const consultantProfiles = mysqlTable('consultantProfiles', {
-  id: int('id').autoincrement().primaryKey(),
-  consultantId: int('consultantId').notNull().references(() => consultants.id, { onDelete: 'cascade' }).unique(),
-  companyNameAr: varchar('companyNameAr', { length: 255 }),
-  founded: varchar('founded', { length: 50 }),
-  headquarters: varchar('headquarters', { length: 255 }),
-  website: varchar('website', { length: 500 }),
-  employeeCount: varchar('employeeCount', { length: 100 }),
-  specializations: text('specializations'), // comma-separated or JSON
-  keyProjects: text('keyProjects'), // JSON array of notable projects
-  certifications: text('certifications'), // ISO, LEED, etc.
-  overview: text('overview'), // general description
-  strengths: text('strengths'),
-  weaknesses: text('weaknesses'),
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+export const cfScenarios = mysqlTable("cf_scenarios", {
+	id: int().autoincrement().notNull(),
+	cfProjectId: int().notNull().references(() => cfProjects.id, { onDelete: "cascade" } ),
+	name: varchar({ length: 255 }).notNull(),
+	isDefault: tinyint().default(0).notNull(),
+	salesStartMonthDelta: int().default(0),
+	constructionDurationDelta: int().default(0),
+	mobilizationPctOverride: decimal({ precision: 5, scale: 2 }),
+	buyerPlanBookingPct: decimal({ precision: 5, scale: 2 }),
+	buyerPlanConstructionPct: decimal({ precision: 5, scale: 2 }),
+	buyerPlanHandoverPct: decimal({ precision: 5, scale: 2 }),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
-export type ConsultantProfile = typeof consultantProfiles.$inferSelect;
-export type InsertConsultantProfile = typeof consultantProfiles.$inferInsert;
-
-// Private notes on consultants
-export const consultantNotes = mysqlTable('consultantNotes', {
-  id: int('id').autoincrement().primaryKey(),
-  consultantId: int('consultantId').notNull().references(() => consultants.id, { onDelete: 'cascade' }),
-  userId: int('userId').notNull().references(() => users.id),
-  title: varchar('title', { length: 255 }),
-  content: text('content').notNull(),
-  category: varchar('category', { length: 100 }), // e.g. 'meeting', 'feedback', 'general'
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+export const chatHistory = mysqlTable("chatHistory", {
+	id: int().autoincrement().notNull(),
+	userId: int().notNull(),
+	agent: varchar({ length: 50 }).notNull(),
+	role: varchar({ length: 20 }).notNull(),
+	content: text().notNull(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 });
 
-export type ConsultantNote = typeof consultantNotes.$inferSelect;
-export type InsertConsultantNote = typeof consultantNotes.$inferInsert;
-// Tasks table for project task management
-export const tasks = mysqlTable('tasks', {
-  id: int('id').autoincrement().primaryKey(),
-  title: varchar('title', { length: 500 }).notNull(),
-  description: text('description'),
-  project: varchar('project', { length: 255 }).notNull(),
-  category: varchar('category', { length: 100 }),
-  owner: varchar('owner', { length: 255 }).notNull(),
-  priority: mysqlEnum('priority', ['high', 'medium', 'low']).default('medium').notNull(),
-  status: mysqlEnum('status', ['new', 'progress', 'hold', 'done', 'cancelled']).default('new').notNull(),
-  progress: int('progress').default(0).notNull(),
-  dueDate: varchar('dueDate', { length: 20 }),
-  attachment: text('attachment'),
-  source: mysqlEnum('source', ['manual', 'agent', 'command']).default('manual').notNull(),
-  sourceAgent: varchar('sourceAgent', { length: 255 }),
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+export const commandCenterChat = mysqlTable("commandCenterChat", {
+	id: int().autoincrement().notNull(),
+	memberId: varchar({ length: 50 }).notNull(),
+	chatRole: mysqlEnum(['member','salwa']).notNull(),
+	content: text().notNull(),
+	metadata: text(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 });
 
-export type Task = typeof tasks.$inferSelect;
-export type InsertTask = typeof tasks.$inferInsert;
-
-// AI Agents table - الوكلاء الذكيون
-export const agents = mysqlTable('agents', {
-  id: int('id').autoincrement().primaryKey(),
-  name: varchar('name', { length: 100 }).notNull().unique(),
-  nameEn: varchar('nameEn', { length: 100 }),
-  role: varchar('role', { length: 255 }).notNull(),
-  roleEn: varchar('roleEn', { length: 255 }),
-  description: text('description'),
-  color: varchar('color', { length: 20 }),
-  icon: varchar('icon', { length: 50 }),
-  status: mysqlEnum('agentStatus', ['active', 'inactive', 'maintenance']).default('active').notNull(),
-  capabilities: text('capabilities'), // JSON array of capabilities
-  isCoordinator: int('isCoordinator').default(0).notNull(), // 1 for سلوى
-  gender: mysqlEnum('gender', ['male', 'female']).default('male').notNull(),
-  avatarUrl: text('avatarUrl'),
-  age: int('age'),
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+export const commandCenterEvaluations = mysqlTable("commandCenterEvaluations", {
+	id: int().autoincrement().notNull(),
+	sessionId: varchar({ length: 100 }).notNull(),
+	projectId: int().notNull().references(() => projects.id),
+	consultantId: int().notNull().references(() => consultants.id),
+	memberId: varchar({ length: 50 }).notNull(),
+	scoresJson: text().notNull(),
+	totalScore: decimal({ precision: 5, scale: 2 }),
+	notes: text(),
+	isComplete: int().default(0).notNull(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
-export type Agent = typeof agents.$inferSelect;
-export type InsertAgent = typeof agents.$inferInsert;
-
-// Feasibility Studies table - دراسة الجدوى المالية
-export const feasibilityStudies = mysqlTable('feasibilityStudies', {
-  id: int('id').autoincrement().primaryKey(),
-  userId: int('userId').notNull().references(() => users.id),
-  projectId: int('projectId').references(() => projects.id, { onDelete: 'set null' }), // ربط بالمشروع
-  scenarioName: varchar('scenarioName', { length: 255 }), // اسم السيناريو (متفائل، متشائم، متوسط)
-  aiSummary: text('aiSummary'), // ملخص ذكي من جويل
-  // Project identification
-  projectName: varchar('projectName', { length: 500 }).notNull(), // المنطقة _ الوصف _ رقم القطعة
-  community: varchar('community', { length: 255 }), // المنطقة
-  plotNumber: varchar('plotNumber', { length: 100 }), // رقم القطعة
-  projectDescription: varchar('projectDescription', { length: 255 }), // وصف المشروع مثل G+2P+6
-  landUse: varchar('landUse', { length: 255 }), // الاستعمال
-  // Areas (stored in sqft)
-  plotArea: int('plotArea'), // مساحة الأرض بالقدم²
-  plotAreaM2: int('plotAreaM2'), // مساحة الأرض بالمتر²
-  gfaResidential: int('gfaResidential'), // GFA سكني بالقدم²
-  gfaRetail: int('gfaRetail'), // GFA تجاري بالقدم²
-  gfaOffices: int('gfaOffices'), // GFA مكاتب بالقدم²
-  totalGfa: int('totalGfa'), // إجمالي GFA بالقدم²
-  saleableResidentialPct: int('saleableResidentialPct').default(90), // نسبة المساحة القابلة للبيع سكني
-  saleableRetailPct: int('saleableRetailPct').default(99), // نسبة المساحة القابلة للبيع تجاري
-  saleableOfficesPct: int('saleableOfficesPct').default(90), // نسبة المساحة القابلة للبيع مكاتب
-  estimatedBua: int('estimatedBua'), // مساحة البناء التقديرية بالقدم²
-  numberOfUnits: int('numberOfUnits'), // عدد الوحدات
-  // Costs - User inputs
-  landPrice: int('landPrice'), // سعر الأرض
-  agentCommissionLandPct: int('agentCommissionLandPct').default(1), // عمولة وسيط الأرض %
-  soilInvestigation: int('soilInvestigation'), // فحص التربة
-  topographySurvey: int('topographySurvey'), // المسح الطبوغرافي
-  authoritiesFee: int('authoritiesFee'), // رسوم الجهات الحكومية
-  constructionCostPerSqft: int('constructionCostPerSqft'), // تكلفة البناء لكل قدم²
-  communityFee: int('communityFee'), // رسوم المجتمع
-  // Percentages (stored as whole numbers, e.g., 2 = 2%)
-  designFeePct: int('designFeePct').default(2), // أتعاب التصميم %
-  supervisionFeePct: int('supervisionFeePct').default(2), // أتعاب الإشراف % (1.75 stored as 175 /100)
-  separationFeePerM2: int('separationFeePerM2').default(40), // رسوم الفصل لكل م²
-  contingenciesPct: int('contingenciesPct').default(2), // احتياطي %
-  developerFeePct: int('developerFeePct').default(5), // أتعاب المطور %
-  agentCommissionSalePct: int('agentCommissionSalePct').default(5), // عمولة البيع %
-  marketingPct: int('marketingPct').default(2), // تسويق %
-  // Fixed fees
-  reraOffplanFee: int('reraOffplanFee').default(150000),
-  reraUnitFee: int('reraUnitFee').default(850), // per unit
-  nocFee: int('nocFee').default(10000),
-  escrowFee: int('escrowFee').default(140000),
-  bankCharges: int('bankCharges').default(20000),
-  surveyorFees: int('surveyorFees').default(12000),
-  reraAuditFees: int('reraAuditFees').default(18000),
-  reraInspectionFees: int('reraInspectionFees').default(70000),
-  // Sale prices per sqft
-  residentialSalePrice: int('residentialSalePrice'), // سعر بيع القدم² سكني
-  retailSalePrice: int('retailSalePrice'), // سعر بيع القدم² تجاري
-  officesSalePrice: int('officesSalePrice'), // سعر بيع القدم² مكاتب
-  // COMO profit share
-  comoProfitSharePct: int('comoProfitSharePct').default(15), // حصة COMO من الربح %
-  // Market Analysis
-  marketAnalysis: text('marketAnalysis'), // تحليل السوق من جويل
-  competitorAnalysis: text('competitorAnalysis'), // تحليل المنافسين
-  priceRecommendation: text('priceRecommendation'), // توصيات سعرية
-  // Notes
-  notes: text('notes'),
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+export const commandCenterItems = mysqlTable("commandCenterItems", {
+	id: int().autoincrement().notNull(),
+	bubbleType: mysqlEnum(['reports','requests','meeting_minutes','evaluations','announcements']).notNull(),
+	title: varchar({ length: 500 }).notNull(),
+	content: longtext(),
+	summary: text(),
+	itemPriority: mysqlEnum(['normal','important','urgent']).default('normal').notNull(),
+	itemStatus: mysqlEnum(['active','archived','pending_response','resolved']).default('active').notNull(),
+	createdByMemberId: varchar({ length: 50 }).notNull(),
+	targetMemberIds: text(),
+	requiresResponse: int().default(0).notNull(),
+	responseDeadline: timestamp({ mode: 'string' }),
+	attachments: text(),
+	projectId: int().references(() => projects.id),
+	consultantId: int().references(() => consultants.id),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
-export type FeasibilityStudy = typeof feasibilityStudies.$inferSelect;
-export type InsertFeasibilityStudy = typeof feasibilityStudies.$inferInsert;
+export const commandCenterMembers = mysqlTable("commandCenterMembers", {
+	id: int().autoincrement().notNull(),
+	name: varchar({ length: 255 }).notNull(),
+	nameAr: varchar({ length: 255 }).notNull(),
+	memberRole: mysqlEnum(['admin','executive']).notNull(),
+	memberId: varchar({ length: 50 }).notNull(),
+	accessToken: varchar({ length: 128 }).notNull(),
+	greeting: varchar({ length: 500 }),
+	avatarUrl: varchar({ length: 1000 }),
+	isActive: int().default(1).notNull(),
+	lastAccessAt: timestamp({ mode: 'string' }),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+	index("commandCenterMembers_memberId_unique").on(table.memberId),
+	index("commandCenterMembers_accessToken_unique").on(table.accessToken),
+]);
 
-// Evaluator scores - 3 evaluators per project/consultant/criterion
-export const evaluatorScores = mysqlTable('evaluatorScores', {
-  id: int('id').autoincrement().primaryKey(),
-  projectId: int('projectId').notNull().references(() => projects.id, { onDelete: 'cascade' }),
-  consultantId: int('consultantId').notNull().references(() => consultants.id, { onDelete: 'cascade' }),
-  criterionId: int('criterionId').notNull(), // 0-5 for the 6 criteria
-  evaluatorName: varchar('evaluatorName', { length: 100 }).notNull(), // الشيخ عيسى، وائل، عبدالرحمن
-  score: int('score'), // Score value (0, 25, 50, 75, 100)
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+export const commandCenterNotifications = mysqlTable("commandCenterNotifications", {
+	id: int().autoincrement().notNull(),
+	memberId: varchar({ length: 50 }).notNull(),
+	title: varchar({ length: 500 }).notNull(),
+	message: text(),
+	notificationType: mysqlEnum(['new_item','response','evaluation','urgent','system']).default('system').notNull(),
+	relatedItemId: int(),
+	isRead: int().default(0).notNull(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 });
 
-export type EvaluatorScore = typeof evaluatorScores.$inferSelect;
-export type InsertEvaluatorScore = typeof evaluatorScores.$inferInsert;
-
-// اعتماد التقييم الفني لكل مقيّم في كل مشروع
-export const evaluationApprovals = mysqlTable('evaluationApprovals', {
-  id: int('id').autoincrement().primaryKey(),
-  projectId: int('projectId').notNull().references(() => projects.id, { onDelete: 'cascade' }),
-  evaluatorName: varchar('evaluatorName', { length: 100 }).notNull(), // اسم المقيّم
-  isApproved: int('isApproved').default(0).notNull(), // 0 = مسودة، 1 = معتمد
-  approvedAt: timestamp('approvedAt'), // تاريخ الاعتماد
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+export const commandCenterResponses = mysqlTable("commandCenterResponses", {
+	id: int().autoincrement().notNull(),
+	itemId: int().notNull().references(() => commandCenterItems.id, { onDelete: "cascade" } ),
+	memberId: varchar({ length: 50 }).notNull(),
+	responseText: text().notNull(),
+	responseType: mysqlEnum(['approval','rejection','comment','question']).default('comment').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 });
 
-export type EvaluationApproval = typeof evaluationApprovals.$inferSelect;
-export type InsertEvaluationApproval = typeof evaluationApprovals.$inferInsert;
-
-// Committee decisions per project
-export const committeeDecisions = mysqlTable('committeeDecisions', {
-  id: int('id').autoincrement().primaryKey(),
-  projectId: int('projectId').notNull().references(() => projects.id, { onDelete: 'cascade' }),
-  selectedConsultantId: int('selectedConsultantId').references(() => consultants.id),
-  decisionType: varchar('decisionType', { length: 50 }), // 'selected', 'negotiate', 'pending', 'rejected'
-  decisionBasis: varchar('decisionBasis', { length: 100 }), // 'highest_technical', 'best_value', 'lowest_fee', 'highest_fee_with_negotiation', 'other'
-  justification: text('justification'), // مبررات اللجنة التفصيلية
-  negotiationTarget: text('negotiationTarget'), // التارجت
-  negotiationConditions: text('negotiationConditions'), // شروط التفاوض
-  committeeNotes: text('committeeNotes'), // ملاحظات اللجنة
-  aiAnalysis: text('aiAnalysis'), // تحليل الذكاء الاصطناعي
-  aiRecommendation: text('aiRecommendation'), // توصية الذكاء الاصطناعي
-  aiPostDecisionAnalysis: text('aiPostDecisionAnalysis'), // تحليل AI بعد القرار
-  isConfirmed: int('isConfirmed').default(0), // هل تم تأكيد القرار (0=لا, 1=نعم)
-  confirmedAt: timestamp('confirmedAt'), // تاريخ التأكيد
-  confirmedBy: varchar('confirmedBy', { length: 255 }), // من أكد القرار
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+export const committeeDecisions = mysqlTable("committeeDecisions", {
+	id: int().autoincrement().notNull(),
+	projectId: int().notNull().references(() => projects.id, { onDelete: "cascade" } ),
+	selectedConsultantId: int().references(() => consultants.id),
+	decisionType: varchar({ length: 50 }),
+	negotiationTarget: text(),
+	committeeNotes: text(),
+	aiAnalysis: text(),
+	aiRecommendation: text(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP'),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow(),
+	decisionBasis: varchar({ length: 100 }),
+	justification: text(),
+	negotiationConditions: text(),
+	aiPostDecisionAnalysis: text(),
+	isConfirmed: int().default(0),
+	confirmedAt: timestamp({ mode: 'string' }),
+	confirmedBy: varchar({ length: 255 }),
+	sessionId: int().references(() => evaluationSessions.id, { onDelete: "cascade" } ),
+	aiPostDecisionAnalysisAr: text(),
 });
 
-export type CommitteeDecision = typeof committeeDecisions.$inferSelect;
-export type InsertCommitteeDecision = typeof committeeDecisions.$inferInsert;
-
-// AI Advisory scores per criterion per consultant per project
-export const aiAdvisoryScores = mysqlTable('aiAdvisoryScores', {
-  id: int('id').autoincrement().primaryKey(),
-  projectId: int('projectId').notNull().references(() => projects.id, { onDelete: 'cascade' }),
-  consultantId: int('consultantId').notNull().references(() => consultants.id, { onDelete: 'cascade' }),
-  criterionId: int('criterionId').notNull(),
-  suggestedScore: int('suggestedScore'), // الدرجة المقترحة من AI
-  reasoning: text('reasoning'), // مبررات AI
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+export const competitionPricing = mysqlTable("competition_pricing", {
+	id: int().autoincrement().notNull(),
+	userId: int().notNull().references(() => users.id),
+	projectId: int().notNull().references(() => projects.id),
+	aiSmartReport: text(),
+	aiRecommendationsJson: text(),
+	aiReportGeneratedAt: timestamp({ mode: 'string' }),
+	optStudioPrice: int().default(0),
+	opt1BrPrice: int().default(0),
+	opt2BrPrice: int().default(0),
+	opt3BrPrice: int().default(0),
+	optRetailSmallPrice: int().default(0),
+	optRetailMediumPrice: int().default(0),
+	optRetailLargePrice: int().default(0),
+	optOfficeSmallPrice: int().default(0),
+	optOfficeMediumPrice: int().default(0),
+	optOfficeLargePrice: int().default(0),
+	baseStudioPrice: int().default(0),
+	base1BrPrice: int().default(0),
+	base2BrPrice: int().default(0),
+	base3BrPrice: int().default(0),
+	baseRetailSmallPrice: int().default(0),
+	baseRetailMediumPrice: int().default(0),
+	baseRetailLargePrice: int().default(0),
+	baseOfficeSmallPrice: int().default(0),
+	baseOfficeMediumPrice: int().default(0),
+	baseOfficeLargePrice: int().default(0),
+	consStudioPrice: int().default(0),
+	cons1BrPrice: int().default(0),
+	cons2BrPrice: int().default(0),
+	cons3BrPrice: int().default(0),
+	consRetailSmallPrice: int().default(0),
+	consRetailMediumPrice: int().default(0),
+	consRetailLargePrice: int().default(0),
+	consOfficeSmallPrice: int().default(0),
+	consOfficeMediumPrice: int().default(0),
+	consOfficeLargePrice: int().default(0),
+	paymentBookingPct: decimal({ precision: 5, scale: 2 }).default('10'),
+	paymentBookingTiming: varchar({ length: 255 }).default('عند التوقيع'),
+	paymentConstructionPct: decimal({ precision: 5, scale: 2 }).default('60'),
+	paymentConstructionTiming: varchar({ length: 255 }).default('أثناء الإنشاء'),
+	paymentHandoverPct: decimal({ precision: 5, scale: 2 }).default('30'),
+	paymentHandoverTiming: varchar({ length: 255 }).default('عند التسليم'),
+	paymentDeferredPct: decimal({ precision: 5, scale: 2 }).default('0'),
+	paymentDeferredTiming: varchar({ length: 255 }),
+	activeScenario: varchar({ length: 20 }).default('base'),
+	isApproved: int().default(0).notNull(),
+	approvedAt: timestamp({ mode: 'string' }),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
-export type AiAdvisoryScore = typeof aiAdvisoryScores.$inferSelect;
-export type InsertAiAdvisoryScore = typeof aiAdvisoryScores.$inferInsert;
+export const consultantDetails = mysqlTable("consultantDetails", {
+	id: int().autoincrement().notNull(),
+	consultantId: int().notNull().references(() => consultants.id, { onDelete: "cascade" } ),
+	phone2: varchar({ length: 20 }),
+	location: varchar({ length: 255 }),
+	classification: varchar({ length: 100 }),
+	weight: varchar({ length: 100 }),
+	yearsOfExperience: int(),
+	numberOfEngineers: int(),
+	notableClients: text(),
+	contactPerson: varchar({ length: 255 }),
+	contactPersonPhone: varchar({ length: 20 }),
+	contactPersonEmail: varchar({ length: 320 }),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP'),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow(),
+},
+(table) => [
+	index("consultantId").on(table.consultantId),
+]);
 
-// Extended consultant details (for "تعرف على الاستشاري")
-export const consultantDetails = mysqlTable('consultantDetails', {
-  id: int('id').autoincrement().primaryKey(),
-  consultantId: int('consultantId').notNull().references(() => consultants.id, { onDelete: 'cascade' }).unique(),
-  phone2: varchar('phone2', { length: 20 }),
-  location: varchar('location', { length: 255 }),
-  classification: varchar('classification', { length: 100 }), // تصنيف
-  weight: varchar('weight', { length: 100 }), // وزن
-  yearsOfExperience: int('yearsOfExperience'),
-  numberOfEngineers: int('numberOfEngineers'),
-  notableClients: text('notableClients'), // عملاء بارزون
-  contactPerson: varchar('contactPerson', { length: 255 }),
-  contactPersonPhone: varchar('contactPersonPhone', { length: 20 }),
-  contactPersonEmail: varchar('contactPersonEmail', { length: 320 }),
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+export const consultantNotes = mysqlTable("consultantNotes", {
+	id: int().autoincrement().notNull(),
+	consultantId: int().notNull().references(() => consultants.id, { onDelete: "cascade" } ),
+	userId: int().notNull().references(() => users.id),
+	title: varchar({ length: 255 }),
+	content: text().notNull(),
+	category: varchar({ length: 100 }),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
-export type ConsultantDetail = typeof consultantDetails.$inferSelect;
-export type InsertConsultantDetail = typeof consultantDetails.$inferInsert;
-
-// Portfolio items for consultant profile
-export const consultantPortfolio = mysqlTable('consultantPortfolio', {
-  id: int('id').autoincrement().primaryKey(),
-  consultantId: int('consultantId').notNull().references(() => consultants.id, { onDelete: 'cascade' }),
-  title: varchar('title', { length: 255 }).notNull(),
-  description: text('description'),
-  imageUrl: varchar('imageUrl', { length: 500 }),
-  projectType: varchar('projectType', { length: 100 }), // residential, commercial, mixed-use
-  location: varchar('location', { length: 255 }),
-  year: varchar('year', { length: 10 }),
-  area: varchar('area', { length: 100 }), // sqft or sqm
-  sortOrder: int('sortOrder').default(0),
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+export const consultantPortfolio = mysqlTable("consultantPortfolio", {
+	id: int().autoincrement().notNull(),
+	consultantId: int().notNull().references(() => consultants.id, { onDelete: "cascade" } ),
+	title: varchar({ length: 255 }).notNull(),
+	description: text(),
+	imageUrl: varchar({ length: 500 }),
+	projectType: varchar({ length: 100 }),
+	location: varchar({ length: 255 }),
+	year: varchar({ length: 10 }),
+	area: varchar({ length: 100 }),
+	sortOrder: int().default(0),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
-export type ConsultantPortfolioItem = typeof consultantPortfolio.$inferSelect;
-export type InsertConsultantPortfolioItem = typeof consultantPortfolio.$inferInsert;
+export const consultantProfiles = mysqlTable("consultantProfiles", {
+	id: int().autoincrement().notNull(),
+	consultantId: int().notNull().references(() => consultants.id, { onDelete: "cascade" } ),
+	companyNameAr: varchar({ length: 255 }),
+	founded: varchar({ length: 50 }),
+	headquarters: varchar({ length: 255 }),
+	website: varchar({ length: 500 }),
+	employeeCount: varchar({ length: 100 }),
+	specializations: text(),
+	keyProjects: text(),
+	certifications: text(),
+	overview: text(),
+	strengths: text(),
+	weaknesses: text(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+	index("consultantProfiles_consultantId_unique").on(table.consultantId),
+]);
 
-// Chat history for agent conversations
-export const chatHistory = mysqlTable('chatHistory', {
-  id: int('id').primaryKey().autoincrement(),
-  userId: int('userId').notNull(),
-  agent: varchar('agent', { length: 50 }).notNull(), // salwa, farouq, etc.
-  role: varchar('role', { length: 20 }).notNull(), // user or assistant
-  content: text('content').notNull(),
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
+export const consultantProposals = mysqlTable("consultantProposals", {
+	id: int().autoincrement().notNull(),
+	userId: int().notNull(),
+	consultantId: int().references(() => consultants.id),
+	projectId: int().references(() => projects.id),
+	title: varchar({ length: 500 }).notNull(),
+	fileUrl: varchar({ length: 1000 }).notNull(),
+	fileKey: varchar({ length: 500 }).notNull(),
+	fileName: varchar({ length: 255 }).notNull(),
+	fileSize: int(),
+	mimeType: varchar({ length: 100 }),
+	aiSummary: text(),
+	aiKeyPoints: text(),
+	aiStrengths: text(),
+	aiWeaknesses: text(),
+	aiRecommendation: text(),
+	aiScore: int(),
+	extractedText: text(),
+	analysisStatus: mysqlEnum(['pending','processing','completed','failed']).default('pending').notNull(),
+	analysisError: text(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+	aiScope: text(),
+	aiExclusions: text(),
+	aiAdditionalWorks: text(),
+	aiSupervisionTerms: text(),
+	aiTimeline: text(),
+	aiPaymentTerms: text(),
+	aiConditions: text(),
+	aiTeamComposition: text(),
+	aiDeliverables: text(),
+	aiFinancialSummary: text(),
+	aiWarnings: text(),
+	preprocessingStats: text(),
+	filteredText: text(),
 });
 
-export type ChatHistoryItem = typeof chatHistory.$inferSelect;
-export type InsertChatHistoryItem = typeof chatHistory.$inferInsert;
-
-// AI Model Usage Log - تتبع استخدام النماذج وأوقات الاستجابة
-export const modelUsageLog = mysqlTable('modelUsageLog', {
-  id: int('id').primaryKey().autoincrement(),
-  userId: int('userId').notNull(),
-  agent: varchar('agent', { length: 50 }).notNull(), // salwa, farouq, etc.
-  model: varchar('model', { length: 100 }).notNull(), // GPT-4o, Claude Sonnet 4, Gemini 2.5 Pro
-  responseTimeMs: int('responseTimeMs').notNull(), // Response time in milliseconds
-  success: mysqlEnum('success', ['true', 'false']).default('true').notNull(),
-  isFallback: mysqlEnum('isFallback', ['true', 'false']).default('false').notNull(),
-  inputTokens: int('inputTokens'), // Approximate input tokens
-  outputTokens: int('outputTokens'), // Approximate output tokens
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
+export const consultants = mysqlTable("consultants", {
+	id: int().autoincrement().notNull(),
+	userId: int().notNull().references(() => users.id),
+	name: varchar({ length: 255 }).notNull(),
+	email: varchar({ length: 320 }),
+	phone: varchar({ length: 20 }),
+	specialization: varchar({ length: 255 }),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
-export type ModelUsageLogItem = typeof modelUsageLog.$inferSelect;
-export type InsertModelUsageLogItem = typeof modelUsageLog.$inferInsert;
-
-// Agent Assignments - تكليفات الوكلاء (منفصل عن المهام)
-export const agentAssignments = mysqlTable('agentAssignments', {
-  id: int('id').primaryKey().autoincrement(),
-  userId: int('userId').notNull(),
-  agent: varchar('agent', { length: 50 }).notNull(), // salwa, farouq, khaled, etc.
-  userMessage: text('userMessage').notNull(), // الطلب الأصلي من المستخدم
-  toolUsed: varchar('toolUsed', { length: 100 }).notNull(), // اسم الأداة المستخدمة
-  toolArgs: text('toolArgs'), // JSON - المعاملات المرسلة للأداة
-  toolResult: text('toolResult'), // JSON - نتيجة تنفيذ الأداة
-  status: mysqlEnum('assignmentStatus', ['executing', 'completed', 'failed']).default('executing').notNull(),
-  agentResponse: text('agentResponse'), // رد الوكيل النهائي
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  completedAt: timestamp('completedAt'),
+export const contractTypes = mysqlTable("contractTypes", {
+	id: int().autoincrement().notNull(),
+	userId: int().notNull().references(() => users.id),
+	name: varchar({ length: 255 }).notNull(),
+	nameEn: varchar({ length: 255 }),
+	code: varchar({ length: 50 }),
+	category: varchar({ length: 100 }),
+	description: text(),
+	isDefault: int().default(0).notNull(),
+	sortOrder: int().default(0).notNull(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
-export type AgentAssignment = typeof agentAssignments.$inferSelect;
-export type InsertAgentAssignment = typeof agentAssignments.$inferInsert;
-
-// Task Projects - المشاريع (ديناميكية)
-export const taskProjects = mysqlTable('taskProjects', {
-  id: int('id').primaryKey().autoincrement(),
-  name: varchar('name', { length: 255 }).notNull().unique(),
-  color: varchar('color', { length: 50 }).default('#6366f1'),
-  icon: varchar('icon', { length: 50 }),
-  isActive: mysqlEnum('isActive', ['true', 'false']).default('true').notNull(),
-  sortOrder: int('sortOrder').default(0),
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
+export const costsCashFlow = mysqlTable("costs_cash_flow", {
+	id: int().autoincrement().notNull(),
+	userId: int().notNull().references(() => users.id),
+	projectId: int().notNull().references(() => projects.id, { onDelete: "cascade" } ),
+	aiSmartReport: text(),
+	aiRecommendationsJson: text(),
+	aiReportGeneratedAt: timestamp({ mode: 'string' }),
+	landPrice: int().default(0),
+	agentCommissionLandPct: decimal({ precision: 5, scale: 2 }).default('1'),
+	landRegistrationPct: decimal({ precision: 5, scale: 2 }).default('4'),
+	soilInvestigation: int().default(0),
+	topographySurvey: int().default(0),
+	designFeePct: decimal({ precision: 5, scale: 2 }).default('2'),
+	supervisionFeePct: decimal({ precision: 5, scale: 2 }).default('2'),
+	authoritiesFee: int().default(0),
+	separationFeePerM2: int().default(40),
+	constructionCostPerSqft: int().default(0),
+	communityFee: int().default(0),
+	contingenciesPct: decimal({ precision: 5, scale: 2 }).default('2'),
+	developerFeePct: decimal({ precision: 5, scale: 2 }).default('5'),
+	agentCommissionSalePct: decimal({ precision: 5, scale: 2 }).default('5'),
+	marketingPct: decimal({ precision: 5, scale: 2 }).default('2'),
+	reraOffplanFee: int().default(150000),
+	reraUnitFee: int().default(850),
+	nocFee: int().default(10000),
+	escrowFee: int().default(140000),
+	bankCharges: int().default(20000),
+	surveyorFees: int().default(12000),
+	reraAuditFees: int().default(18000),
+	reraInspectionFees: int().default(70000),
+	comoProfitSharePct: decimal({ precision: 5, scale: 2 }).default('15'),
+	projectDurationMonths: int().default(36),
+	constructionStartMonth: int().default(6),
+	constructionDurationMonths: int().default(24),
+	salesStartMonth: int().default(1),
+	salesDurationMonths: int().default(30),
+	salesPhase1Pct: decimal({ precision: 5, scale: 2 }).default('30'),
+	salesPhase2Pct: decimal({ precision: 5, scale: 2 }).default('40'),
+	salesPhase3Pct: decimal({ precision: 5, scale: 2 }).default('30'),
+	isApproved: int().default(0).notNull(),
+	approvedAt: timestamp({ mode: 'string' }),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
-export type TaskProject = typeof taskProjects.$inferSelect;
-export type InsertTaskProject = typeof taskProjects.$inferInsert;
+export const dashboardData = mysqlTable("dashboardData", {
+	id: int().autoincrement().notNull(),
+	dataKey: varchar({ length: 255 }).notNull(),
+	dataValue: longtext(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow(),
+},
+(table) => [
+	index("dataKey").on(table.dataKey),
+]);
 
-// Task Categories - التصنيفات (ديناميكية)
-export const taskCategories = mysqlTable('taskCategories', {
-  id: int('id').primaryKey().autoincrement(),
-  name: varchar('name', { length: 255 }).notNull().unique(),
-  color: varchar('color', { length: 50 }).default('#8b5cf6'),
-  icon: varchar('icon', { length: 50 }),
-  isActive: mysqlEnum('isActive', ['true', 'false']).default('true').notNull(),
-  sortOrder: int('sortOrder').default(0),
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
+export const designsAndPermits = mysqlTable("designsAndPermits", {
+	id: int().autoincrement().notNull(),
+	userId: int().notNull().references(() => users.id),
+	projectId: int().notNull().references(() => projects.id, { onDelete: "cascade" } ),
+	architecturalDesignStatus: varchar({ length: 100 }),
+	architecturalDesignDate: varchar({ length: 50 }),
+	architecturalDesignFileUrl: varchar({ length: 1000 }),
+	architecturalDesignFileKey: varchar({ length: 500 }),
+	engineeringDesignStatus: varchar({ length: 100 }),
+	engineeringDesignDate: varchar({ length: 50 }),
+	engineeringDesignFileUrl: varchar({ length: 1000 }),
+	engineeringDesignFileKey: varchar({ length: 500 }),
+	buildingPermitStatus: varchar({ length: 100 }),
+	buildingPermitNumber: varchar({ length: 100 }),
+	buildingPermitDate: varchar({ length: 50 }),
+	buildingPermitExpiryDate: varchar({ length: 50 }),
+	buildingPermitFileUrl: varchar({ length: 1000 }),
+	buildingPermitFileKey: varchar({ length: 500 }),
+	municipalityDesignApprovalStatus: varchar({ length: 100 }),
+	municipalityDesignApprovalDate: varchar({ length: 50 }),
+	designRequirements: text(),
+	buildingConditions: text(),
+	designConsultationFees: int(),
+	buildingPermitFees: int(),
+	municipalityDesignReviewFees: int(),
+	designNotes: text(),
+	consultantAnalysis: text(),
+	completionStatus: varchar({ length: 100 }).default('pending'),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
-export type TaskCategory = typeof taskCategories.$inferSelect;
-export type InsertTaskCategory = typeof taskCategories.$inferInsert;
-
-// Knowledge Base - قاعدة المعرفة المؤسسية
-export const knowledgeBase = mysqlTable('knowledgeBase', {
-  id: int('id').primaryKey().autoincrement(),
-  userId: int('userId').notNull(),
-  type: mysqlEnum('knowledgeType', ['decision', 'evaluation', 'pattern', 'insight', 'lesson']).notNull(),
-  title: varchar('title', { length: 500 }).notNull(),
-  content: text('content').notNull(), // المحتوى الأساسي
-  summary: text('summary'), // ملخص AI-generated
-  tags: text('tags'), // JSON array of tags for search
-  relatedProjectId: int('relatedProjectId').references(() => projects.id),
-  relatedConsultantId: int('relatedConsultantId').references(() => consultants.id),
-  relatedAgentAssignmentId: int('relatedAgentAssignmentId').references(() => agentAssignments.id),
-  sourceAgent: varchar('sourceAgent', { length: 50 }), // الوكيل الذي أنشأ المعرفة
-  importance: mysqlEnum('importance', ['low', 'medium', 'high', 'critical']).default('medium').notNull(),
-  viewCount: int('viewCount').default(0),
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+export const documentIndex = mysqlTable("documentIndex", {
+	id: int().autoincrement().notNull(),
+	sourceType: mysqlEnum(['google_drive','email_attachment','upload','agent_output']).notNull(),
+	sourceId: varchar({ length: 255 }),
+	sourcePath: varchar({ length: 1000 }),
+	sourceName: varchar({ length: 500 }).notNull(),
+	fileType: mysqlEnum(['pdf','excel','word','image','text','google_doc','google_sheet','google_slides','csv','other']).notNull(),
+	mimeType: varchar({ length: 255 }),
+	fileSizeBytes: int(),
+	extractedText: longtext(),
+	extractedTextLength: int(),
+	structuredData: longtext(),
+	summary: text(),
+	category: varchar({ length: 100 }),
+	projectId: int(),
+	consultantId: int(),
+	tags: text(),
+	language: varchar({ length: 10 }),
+	indexStatus: mysqlEnum(['pending','processing','indexed','failed','needs_update']).default('pending').notNull(),
+	indexError: text(),
+	indexedBy: varchar({ length: 50 }),
+	searchVector: text(),
+	lastAccessedAt: timestamp({ mode: 'string' }),
+	accessCount: int().default(0),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
-export type KnowledgeBaseItem = typeof knowledgeBase.$inferSelect;
-export type InsertKnowledgeBaseItem = typeof knowledgeBase.$inferInsert;
+export const emailCheckLog = mysqlTable("emailCheckLog", {
+	id: int().autoincrement().notNull(),
+	status: mysqlEnum(['success','failed']).default('success'),
+	emailCount: int().default(0),
+	error: text(),
+	checkedAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP'),
+},
+(table) => [
+	index("checkedAt").on(table.checkedAt),
+]);
 
-// Consultant Proposals - عروض الاستشاريين
-export const consultantProposals = mysqlTable('consultantProposals', {
-  id: int('id').primaryKey().autoincrement(),
-  userId: int('userId').notNull(),
-  consultantId: int('consultantId').references(() => consultants.id),
-  projectId: int('projectId').references(() => projects.id),
-  title: varchar('title', { length: 500 }).notNull(),
-  fileUrl: varchar('fileUrl', { length: 1000 }).notNull(), // S3 URL
-  fileKey: varchar('fileKey', { length: 500 }).notNull(), // S3 key
-  fileName: varchar('fileName', { length: 255 }).notNull(),
-  fileSize: int('fileSize'), // bytes
-  mimeType: varchar('mimeType', { length: 100 }),
-  // AI Analysis results
-  aiSummary: text('aiSummary'), // ملخص العرض
-  aiKeyPoints: text('aiKeyPoints'), // JSON array - النقاط الرئيسية
-  aiStrengths: text('aiStrengths'), // JSON array - نقاط القوة
-  aiWeaknesses: text('aiWeaknesses'), // JSON array - نقاط الضعف
-  aiRecommendation: text('aiRecommendation'), // التوصية
-  aiScore: int('aiScore'), // 0-100
-  // Detailed proposal content analysis
-  aiScope: text('aiScope'), // JSON - نطاق الأعمال المشمولة
-  aiExclusions: text('aiExclusions'), // JSON - الاستثناءات والأعمال غير المشمولة
-  aiAdditionalWorks: text('aiAdditionalWorks'), // JSON - الأعمال الإضافية وتكلفتها
-  aiSupervisionTerms: text('aiSupervisionTerms'), // JSON - شروط وأتعاب الإشراف
-  aiTimeline: text('aiTimeline'), // JSON - الجدول الزمني والمراحل
-  aiPaymentTerms: text('aiPaymentTerms'), // JSON - شروط الدفع
-  aiConditions: text('aiConditions'), // JSON - الشروط العامة والخاصة
-  aiTeamComposition: text('aiTeamComposition'), // JSON - تكوين الفريق
-  aiDeliverables: text('aiDeliverables'), // JSON - المخرجات والتسليمات
-  extractedText: text('extractedText'), // النص المستخرج من PDF
-  analysisStatus: mysqlEnum('analysisStatus', ['pending', 'processing', 'completed', 'failed']).default('pending').notNull(),
-  analysisError: text('analysisError'),
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
-});
+export const emailLog = mysqlTable("emailLog", {
+	id: int().autoincrement().notNull(),
+	messageId: varchar({ length: 500 }),
+	fromEmail: varchar({ length: 255 }).notNull(),
+	subject: varchar({ length: 500 }),
+	preview: text(),
+	attachmentCount: int().default(0),
+	status: mysqlEnum(['received','approved','replied','archived']).default('received'),
+	receivedAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP'),
+	processedAt: timestamp({ mode: 'string' }),
+},
+(table) => [
+	index("messageId").on(table.messageId),
+]);
 
-export type ConsultantProposal = typeof consultantProposals.$inferSelect;
-export type InsertConsultantProposal = typeof consultantProposals.$inferInsert;
-
-// Proposal Comparisons - مقارنات العروض
-export const proposalComparisons = mysqlTable('proposalComparisons', {
-  id: int('id').primaryKey().autoincrement(),
-  userId: int('userId').notNull(),
-  projectId: int('projectId').references(() => projects.id),
-  title: varchar('title', { length: 500 }).notNull(),
-  proposalIds: text('proposalIds').notNull(), // JSON array of proposal IDs
-  comparisonResult: text('comparisonResult'), // JSON - نتيجة المقارنة التفصيلية
-  aiRecommendation: text('aiRecommendation'), // التوصية النهائية
-  winnerProposalId: int('winnerProposalId').references(() => consultantProposals.id),
-  notes: text('notes'),
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
-});
-
-export type ProposalComparison = typeof proposalComparisons.$inferSelect;
-export type InsertProposalComparison = typeof proposalComparisons.$inferInsert;
-
-
-// ==========================================
-// غرفة الاجتماعات التفاعلية - Meeting Room
-// ==========================================
-
-// Meetings - الاجتماعات
-export const meetings = mysqlTable('meetings', {
-  id: int('id').primaryKey().autoincrement(),
-  userId: int('userId').notNull().references(() => users.id),
-  title: varchar('title', { length: 500 }).notNull(),
-  topic: text('topic'), // موضوع النقاش
-  status: mysqlEnum('meetingStatus', ['preparing', 'in_progress', 'completed', 'cancelled']).default('preparing').notNull(),
-  createdBy: varchar('createdBy', { length: 100 }).default('user').notNull(), // user or agent name
-  startedAt: timestamp('startedAt'),
-  endedAt: timestamp('endedAt'),
-  // Meeting outputs
-  minutesSummary: text('minutesSummary'), // محضر الاجتماع
-  decisionsJson: text('decisionsJson'), // JSON array of decisions
-  extractedTasksJson: text('extractedTasksJson'), // JSON array of tasks
-  knowledgeItemsJson: text('knowledgeItemsJson'), // JSON array of knowledge items saved
-  audioRecordingUrl: varchar('audioRecordingUrl', { length: 1000 }), // S3 URL for full recording
-  fullTranscript: text('fullTranscript'), // النص الكامل للاجتماع
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
-});
-
-export type Meeting = typeof meetings.$inferSelect;
-export type InsertMeeting = typeof meetings.$inferInsert;
-
-// Meeting Participants - المشاركون في الاجتماع
-export const meetingParticipants = mysqlTable('meetingParticipants', {
-  id: int('id').primaryKey().autoincrement(),
-  meetingId: int('meetingId').notNull().references(() => meetings.id, { onDelete: 'cascade' }),
-  agentId: int('agentId').notNull().references(() => agents.id),
-  role: mysqlEnum('participantRole', ['participant', 'observer']).default('participant').notNull(),
-  joinedAt: timestamp('joinedAt').defaultNow().notNull(),
-});
-
-export type MeetingParticipant = typeof meetingParticipants.$inferSelect;
-export type InsertMeetingParticipant = typeof meetingParticipants.$inferInsert;
-
-// Meeting Files - ملفات الاجتماع
-export const meetingFiles = mysqlTable('meetingFiles', {
-  id: int('id').primaryKey().autoincrement(),
-  meetingId: int('meetingId').notNull().references(() => meetings.id, { onDelete: 'cascade' }),
-  fileName: varchar('fileName', { length: 255 }).notNull(),
-  fileUrl: varchar('fileUrl', { length: 1000 }).notNull(), // S3 URL
-  fileKey: varchar('fileKey', { length: 500 }).notNull(), // S3 key
-  fileType: varchar('fileType', { length: 50 }).notNull(), // pdf, word, excel, image, audio
-  mimeType: varchar('mimeType', { length: 100 }),
-  fileSize: int('fileSize'), // bytes
-  extractedText: text('extractedText'), // النص المستخرج
-  uploadedAt: timestamp('uploadedAt').defaultNow().notNull(),
-});
-
-export type MeetingFile = typeof meetingFiles.$inferSelect;
-export type InsertMeetingFile = typeof meetingFiles.$inferInsert;
-
-// Meeting Messages - رسائل الاجتماع (المحادثة)
-export const meetingMessages = mysqlTable('meetingMessages', {
-  id: int('id').primaryKey().autoincrement(),
-  meetingId: int('meetingId').notNull().references(() => meetings.id, { onDelete: 'cascade' }),
-  speakerId: varchar('speakerId', { length: 100 }).notNull(), // agentName or 'user'
-  speakerType: mysqlEnum('speakerType', ['user', 'agent']).notNull(),
-  messageText: text('messageText').notNull(),
-  audioUrl: varchar('audioUrl', { length: 1000 }), // S3 URL if voice message
-  replyToId: int('replyToId'), // reply to another message
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-});
-
-export type MeetingMessage = typeof meetingMessages.$inferSelect;
-export type InsertMeetingMessage = typeof meetingMessages.$inferInsert;
-
-
-// ==========================================
-// محرك تنفيذ المهام - Task Execution Engine
-// ==========================================
-
-// Task Execution Logs - سجل تنفيذ المهام التفصيلي
-export const taskExecutionLogs = mysqlTable('taskExecutionLogs', {
-  id: int('id').primaryKey().autoincrement(),
-  taskId: int('taskId').references(() => tasks.id),
-  meetingId: int('meetingId').references(() => meetings.id),
-  agent: varchar('agent', { length: 50 }).notNull(), // الوكيل المنفذ
-  taskTitle: varchar('taskTitle', { length: 500 }).notNull(),
-  
-  // Action Plan
-  actionPlanJson: text('actionPlanJson'), // JSON - خطة العمل المهيكلة
-  totalSteps: int('totalSteps').default(0).notNull(),
-  completedSteps: int('completedSteps').default(0).notNull(),
-  
-  // Execution Details
-  status: mysqlEnum('executionStatus', ['planning', 'executing', 'verifying', 'completed', 'partial', 'failed', 'retrying']).default('planning').notNull(),
-  attempt: int('attempt').default(1).notNull(), // رقم المحاولة
-  maxAttempts: int('maxAttempts').default(2).notNull(),
-  
-  // Tool Usage Tracking
-  toolsUsedJson: text('toolsUsedJson'), // JSON array - الأدوات المستخدمة فعلياً
-  toolCallCount: int('toolCallCount').default(0).notNull(), // عدد استدعاءات الأدوات
-  writeToolCount: int('writeToolCount').default(0).notNull(), // عدد أدوات الكتابة المستخدمة
-  
-  // Step Results
-  stepResultsJson: text('stepResultsJson'), // JSON array - نتائج كل خطوة
-  
-  // Verification
-  verified: int('verified').default(0).notNull(), // 0 = لم يتحقق, 1 = تحقق بنجاح
-  verificationDetails: text('verificationDetails'),
-  
-  // Data Changes
-  dataChangesJson: text('dataChangesJson'), // JSON array - التغييرات الفعلية على البيانات
-  
-  // Agent Response
-  agentResponse: text('agentResponse'), // الرد النهائي من الوكيل
-  errorMessage: text('errorMessage'), // رسالة الخطأ إن وجدت
-  
-  // Timing
-  startedAt: timestamp('startedAt').defaultNow().notNull(),
-  completedAt: timestamp('completedAt'),
-  durationMs: int('durationMs'), // مدة التنفيذ بالمللي ثانية
-  
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-});
-
-export type TaskExecutionLog = typeof taskExecutionLogs.$inferSelect;
-export type InsertTaskExecutionLog = typeof taskExecutionLogs.$inferInsert;
-
-// OAuth Tokens - Google Drive OAuth tokens for user delegation
-export const oauthTokens = mysqlTable('oauthTokens', {
-  id: int('id').primaryKey().autoincrement(),
-  userId: int('userId').notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
-  provider: varchar('provider', { length: 50 }).notNull(), // 'google'
-  accessToken: text('accessToken').notNull(),
-  refreshToken: text('refreshToken'),
-  expiresAt: timestamp('expiresAt'), // When access token expires
-  scope: text('scope'), // Granted scopes
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
-});
-
-export type OAuthToken = typeof oauthTokens.$inferSelect;
-export type InsertOAuthToken = typeof oauthTokens.$inferInsert;
-
-// ==========================================
-// سجل العقود - Contracts Registry
-// ==========================================
-
-// أنواع العقود (قابلة للإضافة والتعديل والحذف)
-export const contractTypes = mysqlTable('contractTypes', {
-  id: int('id').primaryKey().autoincrement(),
-  userId: int('userId').notNull().references(() => users.id),
-  name: varchar('name', { length: 255 }).notNull(), // اسم نوع العقد
-  nameEn: varchar('nameEn', { length: 255 }), // الاسم بالإنجليزية
-  code: varchar('code', { length: 50 }), // كود مختصر مثل SPA, NOV, PMC
-  category: varchar('category', { length: 100 }), // التصنيف: land, construction, consultant, government, sales, other
-  description: text('description'), // وصف نوع العقد
-  isDefault: int('isDefault').default(0).notNull(), // 1 = نوع افتراضي من النظام
-  sortOrder: int('sortOrder').default(0).notNull(),
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
-});
-
-export type ContractType = typeof contractTypes.$inferSelect;
-export type InsertContractType = typeof contractTypes.$inferInsert;
-
-// عقود المشاريع (العقد الفعلي المرتبط بمشروع)
-export const projectContracts = mysqlTable('projectContracts', {
-  id: int('id').primaryKey().autoincrement(),
-  userId: int('userId').notNull().references(() => users.id),
-  projectId: int('projectId').notNull().references(() => projects.id, { onDelete: 'cascade' }),
-  contractTypeId: int('contractTypeId').notNull().references(() => contractTypes.id),
-  
-  // بيانات العقد الأساسية
-  title: varchar('title', { length: 500 }).notNull(), // عنوان العقد
-  contractNumber: varchar('contractNumber', { length: 100 }), // رقم العقد
-  partyA: varchar('partyA', { length: 255 }), // الطرف الأول
-  partyB: varchar('partyB', { length: 255 }), // الطرف الثاني
-  contractValue: decimal('contractValue', { precision: 15, scale: 2 }), // قيمة العقد
-  currency: varchar('currency', { length: 10 }).default('AED'), // العملة
-  
-  // التواريخ
-  signDate: varchar('signDate', { length: 50 }), // تاريخ التوقيع
-  startDate: varchar('startDate', { length: 50 }), // تاريخ البدء
-  endDate: varchar('endDate', { length: 50 }), // تاريخ الانتهاء
-  
-  // الملف
-  fileUrl: varchar('fileUrl', { length: 1000 }), // رابط ملف العقد (S3)
-  fileKey: varchar('fileKey', { length: 500 }), // مفتاح S3
-  fileName: varchar('fileName', { length: 255 }), // اسم الملف الأصلي
-  driveFileId: varchar('driveFileId', { length: 100 }), // معرف الملف في Google Drive
-  
-  // حالة العقد
-  status: mysqlEnum('contractStatus', ['draft', 'active', 'expired', 'terminated', 'renewed', 'pending']).default('draft').notNull(),
-  
-  // تحليل فاروق
-  analysisStatus: mysqlEnum('contractAnalysisStatus', ['not_analyzed', 'analyzing', 'completed', 'failed']).default('not_analyzed').notNull(),
-  analysisSummary: text('analysisSummary'), // ملخص التحليل
-  analysisKeyDates: text('analysisKeyDates'), // JSON: المواعيد المهمة
-  analysisPenalties: text('analysisPenalties'), // JSON: الغرامات والجزاءات
-  analysisObligations: text('analysisObligations'), // JSON: الالتزامات
-  analysisRisks: text('analysisRisks'), // JSON: المخاطر القانونية
-  analysisParties: text('analysisParties'), // JSON: الأطراف وأدوارهم
-  analysisTermination: text('analysisTermination'), // شروط الإنهاء
-  analysisNotes: text('analysisNotes'), // ملاحظات فاروق
-  analysisFullJson: text('analysisFullJson'), // التحليل الكامل JSON
-  analyzedAt: timestamp('analyzedAt'), // تاريخ التحليل
-  
-  notes: text('notes'), // ملاحظات عامة
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
-});
-
-export type ProjectContract = typeof projectContracts.$inferSelect;
-export type InsertProjectContract = typeof projectContracts.$inferInsert;
-
-
-// ═══════════════════════════════════════════════════════════════
-// نظام فهرسة المستندات المشترك (Shared Document Index)
-// ═══════════════════════════════════════════════════════════════
-
-export const documentIndex = mysqlTable('documentIndex', {
-  id: int('id').autoincrement().primaryKey(),
-  
-  // مصدر الملف
-  sourceType: mysqlEnum('sourceType', ['google_drive', 'email_attachment', 'upload', 'agent_output']).notNull(),
-  sourceId: varchar('sourceId', { length: 255 }), // Google Drive file ID, email UID, etc.
-  sourcePath: varchar('sourcePath', { length: 1000 }), // Full path in Drive or S3 URL
-  sourceName: varchar('sourceName', { length: 500 }).notNull(), // Original filename
-  
-  // نوع الملف
-  fileType: mysqlEnum('fileType', ['pdf', 'excel', 'word', 'image', 'text', 'google_doc', 'google_sheet', 'google_slides', 'csv', 'other']).notNull(),
-  mimeType: varchar('mimeType', { length: 255 }),
-  fileSizeBytes: int('fileSizeBytes'),
-  
-  // المحتوى المستخرج
-  extractedText: longtext('extractedText'), // النص الكامل المستخرج
-  extractedTextLength: int('extractedTextLength'), // طول النص (للإحصائيات)
-  structuredData: longtext('structuredData'), // JSON: بيانات مهيكلة (جداول Excel، حقول مستخرجة)
-  summary: text('summary'), // ملخص AI للمستند
-  
-  // التصنيف
-  category: varchar('category', { length: 100 }), // proposal, contract, title_deed, feasibility, etc.
-  projectId: int('projectId'), // ربط بالمشروع إن وجد
-  consultantId: int('consultantId'), // ربط بالاستشاري إن وجد
-  tags: text('tags'), // JSON array of tags
-  language: varchar('language', { length: 10 }), // ar, en, mixed
-  
-  // حالة الفهرسة
-  indexStatus: mysqlEnum('indexStatus', ['pending', 'processing', 'indexed', 'failed', 'needs_update']).default('pending').notNull(),
-  indexError: text('indexError'), // سبب الفشل
-  indexedBy: varchar('indexedBy', { length: 50 }), // اسم الوكيل الذي فهرس الملف
-  
-  // البحث
-  searchVector: text('searchVector'), // كلمات مفتاحية للبحث السريع
-  
-  // التتبع
-  lastAccessedAt: timestamp('lastAccessedAt'), // آخر وصول
-  accessCount: int('accessCount').default(0), // عدد مرات الوصول
-  
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
-});
-export type DocumentIndex = typeof documentIndex.$inferSelect;
-export type InsertDocumentIndex = typeof documentIndex.$inferInsert;
-
-// ═══════════════════════════════════════════════════════════════
-// سجل نشاط الوكلاء (Agent Activity Log)
-// ═══════════════════════════════════════════════════════════════
-
-export const agentActivityLog = mysqlTable('agentActivityLog', {
-  id: int('id').autoincrement().primaryKey(),
-  
-  // الوكيل
-  agentName: varchar('agentName', { length: 50 }).notNull(), // salwa, farouq, khazen, etc.
-  agentModel: varchar('agentModel', { length: 50 }), // GPT-4o, Claude Sonnet 4, Gemini 2.5 Pro
-  
-  // العملية
-  actionType: mysqlEnum('actionType', [
-    'tool_call',      // استدعاء أداة
-    'chat_response',  // رد على محادثة
-    'file_read',      // قراءة ملف
-    'file_write',     // كتابة ملف
-    'db_read',        // قراءة من قاعدة البيانات
-    'db_write',       // كتابة في قاعدة البيانات
-    'email_action',   // عملية إيميل
-    'drive_action',   // عملية Google Drive
-    'agent_comm',     // تواصل بين وكلاء
-    'task_execution', // تنفيذ مهمة
-    'meeting_action', // عملية اجتماع
-    'analysis',       // تحليل مستند
-    'error'           // خطأ
-  ]).notNull(),
-  
-  // التفاصيل
-  toolName: varchar('toolName', { length: 100 }), // اسم الأداة المستخدمة
-  inputSummary: text('inputSummary'), // ملخص المدخلات (أول 500 حرف)
-  outputSummary: text('outputSummary'), // ملخص المخرجات (أول 500 حرف)
-  fullInput: mediumtext('fullInput'), // المدخلات الكاملة (JSON)
-  fullOutput: mediumtext('fullOutput'), // المخرجات الكاملة (JSON)
-  
-  // النتيجة
-  status: mysqlEnum('activityStatus', ['success', 'failure', 'partial', 'pending']).notNull(),
-  errorMessage: text('errorMessage'), // رسالة الخطأ إن وجدت
-  errorDetails: text('errorDetails'), // تفاصيل الخطأ (stack trace)
-  
-  // السياق
-  triggerSource: varchar('triggerSource', { length: 100 }), // chat, meeting, task, email, telegram, scheduled
-  relatedEntityType: varchar('relatedEntityType', { length: 50 }), // project, consultant, contract, meeting, task
-  relatedEntityId: int('relatedEntityId'),
-  userId: int('userId'), // المستخدم الذي طلب العملية
-  
-  // الأداء
-  durationMs: int('durationMs'), // مدة التنفيذ بالميلي ثانية
-  tokensUsed: int('tokensUsed'), // عدد التوكنات المستخدمة (تقريبي)
-  
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-});
-export type AgentActivityLog = typeof agentActivityLog.$inferSelect;
-export type InsertAgentActivityLog = typeof agentActivityLog.$inferInsert;
-
-// ═══════════════════════════════════════════════════════════════
-// قاعدة المعرفة المتخصصة (Specialist Knowledge)
-// ═══════════════════════════════════════════════════════════════
-
-export const specialistKnowledge = mysqlTable('specialistKnowledge', {
-  id: int('id').autoincrement().primaryKey(),
-  
-  // التصنيف
-  domain: mysqlEnum('knowledgeDomain', [
-    'rera_law',           // قوانين RERA
-    'dubai_municipality',  // معايير بلدية دبي
-    'building_codes',      // كودات البناء
-    'market_prices',       // أسعار السوق
-    'como_context',        // سياق COMO
-    'como_people',         // أشخاص COMO
-    'como_preferences',    // تفضيلات COMO
-    'como_workflow',       // طريقة عمل COMO
-    'consultant_info',     // معلومات الاستشاريين
-    'project_standards',   // معايير المشاريع
-    'general'              // عام
-  ]).notNull(),
-  
-  category: varchar('category', { length: 100 }).notNull(), // فئة فرعية
-  title: varchar('title', { length: 500 }).notNull(),
-  content: longtext('content').notNull(), // المحتوى الكامل
-  
-  // البحث
-  keywords: text('keywords'), // كلمات مفتاحية (JSON array)
-  
-  // المصدر
-  source: varchar('source', { length: 255 }), // المصدر (قانون رقم X، موقع RERA، إلخ)
-  sourceUrl: varchar('sourceUrl', { length: 1000 }),
-  
-  // الصلاحية
-  isActive: int('isActive').default(1).notNull(), // 1 = نشط، 0 = غير نشط
-  validFrom: timestamp('validFrom'),
-  validUntil: timestamp('validUntil'),
-  
-  // التتبع
-  addedBy: varchar('addedBy', { length: 50 }), // من أضاف (admin, agent, system)
-  lastUsedAt: timestamp('lastUsedAt'),
-  useCount: int('useCount').default(0),
-  
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
-});
-export type SpecialistKnowledge = typeof specialistKnowledge.$inferSelect;
-export type InsertSpecialistKnowledge = typeof specialistKnowledge.$inferInsert;
-
-// سجل الإيميلات المرسلة عبر سلوى
-export const sentEmails = mysqlTable('sent_emails', {
-  id: int('id').autoincrement().primaryKey(),
-  userId: int('userId').notNull().references(() => users.id),
-  
-  // بيانات الإرسال
-  toEmail: varchar('toEmail', { length: 320 }).notNull(), // عنوان المرسل إليه
-  toName: varchar('toName', { length: 255 }), // اسم المرسل إليه
-  subject: varchar('subject', { length: 500 }).notNull(), // الموضوع
-  body: longtext('body').notNull(), // نص الرد
-  
-  // بيانات الإيميل الأصلي
-  inReplyTo: varchar('inReplyTo', { length: 500 }), // messageId للإيميل الأصلي
-  originalEmailUid: int('originalEmailUid'), // UID الإيميل الأصلي
-  cc: varchar('cc', { length: 1000 }), // نسخة كربونية
-  
-  // الحالة
-  status: mysqlEnum('status', ['sent', 'failed', 'pending']).default('sent').notNull(),
-  errorMessage: text('errorMessage'), // رسالة الخطأ في حالة الفشل
-  
-  // من أرسل
-  sentBy: varchar('sentBy', { length: 50 }).default('salwa').notNull(), // salwa, user, system
-  agentName: varchar('agentName', { length: 50 }).default('salwa'), // اسم الوكيل
-  
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-});
-export type SentEmail = typeof sentEmails.$inferSelect;
-export type InsertSentEmail = typeof sentEmails.$inferInsert;
-
-// ─── Email Notifications ──────────────────────────────────────
 export const emailNotifications = mysqlTable("email_notifications", {
-  id: int("id").primaryKey().autoincrement(),
-  userId: int("user_id").notNull(),
-  emailUid: int("email_uid").notNull(),
-  fromEmail: varchar("from_email", { length: 255 }).notNull(),
-  fromName: varchar("from_name", { length: 255 }),
-  subject: varchar("subject", { length: 500 }).notNull(),
-  preview: text("preview"),
-  receivedAt: bigintCol("received_at", { mode: "number" }).notNull(),
-  isRead: int("is_read").default(0),
-  isDismissed: int("is_dismissed").default(0),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+	id: int().autoincrement().notNull(),
+	userId: int("user_id").notNull(),
+	emailUid: int("email_uid").notNull(),
+	fromEmail: varchar("from_email", { length: 255 }).notNull(),
+	fromName: varchar("from_name", { length: 255 }),
+	subject: varchar({ length: 500 }).notNull(),
+	preview: text(),
+	receivedAt: bigint("received_at", { mode: "number" }).notNull(),
+	isRead: int("is_read").default(0),
+	isDismissed: int("is_dismissed").default(0),
+	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 });
 
+export const evaluationApprovals = mysqlTable("evaluationApprovals", {
+	id: int().autoincrement().notNull(),
+	projectId: int().notNull().references(() => projects.id, { onDelete: "cascade" } ),
+	evaluatorName: varchar({ length: 100 }).notNull(),
+	isApproved: int().default(0).notNull(),
+	approvedAt: timestamp({ mode: 'string' }),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+	index("unique_project_evaluator").on(table.projectId, table.evaluatorName),
+]);
 
-// ═══════════════════════════════════════════════════════════════
-// مركز القيادة - Command Center (Executive Communication Hub)
-// ═══════════════════════════════════════════════════════════════
-
-// أعضاء مركز القيادة - Command Center Members
-export const commandCenterMembers = mysqlTable('commandCenterMembers', {
-  id: int('id').autoincrement().primaryKey(),
-  name: varchar('name', { length: 255 }).notNull(), // الاسم الكامل
-  nameAr: varchar('nameAr', { length: 255 }).notNull(), // الاسم بالعربي (للترحيب)
-  role: mysqlEnum('memberRole', ['admin', 'executive']).notNull(), // admin = عبدالرحمن, executive = وائل/الشيخ عيسى
-  memberId: varchar('memberId', { length: 50 }).notNull().unique(), // معرف فريد: abdulrahman, wael, sheikh_issa
-  accessToken: varchar('accessToken', { length: 128 }).notNull().unique(), // توكن الدخول الفريد
-  greeting: varchar('greeting', { length: 500 }), // رسالة الترحيب المخصصة
-  avatarUrl: varchar('avatarUrl', { length: 1000 }), // صورة العضو
-  isActive: int('isActive').default(1).notNull(), // 1 = نشط
-  lastAccessAt: timestamp('lastAccessAt'),
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
-});
-export type CommandCenterMember = typeof commandCenterMembers.$inferSelect;
-export type InsertCommandCenterMember = typeof commandCenterMembers.$inferInsert;
-
-// عناصر الفقاعات الذكية - Smart Bubble Items
-export const commandCenterItems = mysqlTable('commandCenterItems', {
-  id: int('id').autoincrement().primaryKey(),
-  
-  // نوع الفقاعة
-  bubbleType: mysqlEnum('bubbleType', ['reports', 'requests', 'meeting_minutes', 'evaluations', 'announcements']).notNull(),
-  
-  // المحتوى
-  title: varchar('title', { length: 500 }).notNull(),
-  content: longtext('content'), // المحتوى الرئيسي (HTML أو Markdown)
-  summary: text('summary'), // ملخص قصير يظهر في الفقاعة
-  
-  // الأولوية والحالة
-  priority: mysqlEnum('itemPriority', ['normal', 'important', 'urgent']).default('normal').notNull(),
-  status: mysqlEnum('itemStatus', ['active', 'archived', 'pending_response', 'resolved']).default('active').notNull(),
-  
-  // من أنشأ ولمن
-  createdByMemberId: varchar('createdByMemberId', { length: 50 }).notNull(), // من أنشأ العنصر
-  targetMemberIds: text('targetMemberIds'), // JSON array: لمن يظهر (null = الكل)
-  
-  // الطلبات والردود
-  requiresResponse: int('requiresResponse').default(0).notNull(), // 1 = يحتاج رد
-  responseDeadline: timestamp('responseDeadline'), // موعد الرد النهائي
-  
-  // مرفقات
-  attachments: text('attachments'), // JSON array of {name, url, type}
-  
-  // ربط بالمشروع
-  projectId: int('projectId').references(() => projects.id),
-  consultantId: int('consultantId').references(() => consultants.id),
-  
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
-});
-export type CommandCenterItem = typeof commandCenterItems.$inferSelect;
-export type InsertCommandCenterItem = typeof commandCenterItems.$inferInsert;
-
-// ردود أعضاء مركز القيادة على العناصر
-export const commandCenterResponses = mysqlTable('commandCenterResponses', {
-  id: int('id').autoincrement().primaryKey(),
-  itemId: int('itemId').notNull().references(() => commandCenterItems.id, { onDelete: 'cascade' }),
-  memberId: varchar('memberId', { length: 50 }).notNull(), // من رد
-  responseText: text('responseText').notNull(),
-  responseType: mysqlEnum('responseType', ['approval', 'rejection', 'comment', 'question']).default('comment').notNull(),
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-});
-export type CommandCenterResponse = typeof commandCenterResponses.$inferSelect;
-export type InsertCommandCenterResponse = typeof commandCenterResponses.$inferInsert;
-
-// تقييمات مركز القيادة (التقييم المستقل)
-export const commandCenterEvaluations = mysqlTable('commandCenterEvaluations', {
-  id: int('id').autoincrement().primaryKey(),
-  
-  // جلسة التقييم
-  sessionId: varchar('sessionId', { length: 100 }).notNull(), // معرف جلسة التقييم (لربط تقييمات نفس الجلسة)
-  projectId: int('projectId').notNull().references(() => projects.id),
-  consultantId: int('consultantId').notNull().references(() => consultants.id),
-  
-  // المقيّم
-  memberId: varchar('memberId', { length: 50 }).notNull(), // من قيّم
-  
-  // الدرجات (JSON: {criterionId: score, ...})
-  scoresJson: text('scoresJson').notNull(), // JSON object with criterion scores
-  totalScore: decimal('totalScore', { precision: 5, scale: 2 }), // المجموع المرجح
-  
-  // ملاحظات
-  notes: text('notes'), // ملاحظات المقيّم
-  
-  // الحالة
-  isComplete: int('isComplete').default(0).notNull(), // 1 = أكمل التقييم
-  
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
-});
-export type CommandCenterEvaluation = typeof commandCenterEvaluations.$inferSelect;
-export type InsertCommandCenterEvaluation = typeof commandCenterEvaluations.$inferInsert;
-
-// جلسات التقييم (لتتبع اكتمال التقييمات الثلاثة)
-export const evaluationSessions = mysqlTable('evaluationSessions', {
-  id: int('id').autoincrement().primaryKey(),
-  sessionId: varchar('sessionId', { length: 100 }).notNull().unique(),
-  projectId: int('projectId').notNull().references(() => projects.id),
-  consultantId: int('consultantId').notNull().references(() => consultants.id),
-  
-  title: varchar('title', { length: 500 }).notNull(), // عنوان جلسة التقييم
-  description: text('description'), // وصف
-  
-  // حالة الاكتمال
-  isRevealed: int('isRevealed').default(0).notNull(), // 1 = تم كشف النتائج (بعد اكتمال الثلاثة)
-  completedCount: int('completedCount').default(0).notNull(), // عدد من أكمل التقييم
-  requiredCount: int('requiredCount').default(3).notNull(), // عدد المطلوب (3)
-  
-  // من أنشأ الجلسة
-  createdByMemberId: varchar('createdByMemberId', { length: 50 }).notNull(),
-  
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
-});
-export type EvaluationSession = typeof evaluationSessions.$inferSelect;
-export type InsertEvaluationSession = typeof evaluationSessions.$inferInsert;
-
-// إشعارات مركز القيادة
-export const commandCenterNotifications = mysqlTable('commandCenterNotifications', {
-  id: int('id').autoincrement().primaryKey(),
-  memberId: varchar('memberId', { length: 50 }).notNull(), // لمن الإشعار
-  title: varchar('title', { length: 500 }).notNull(),
-  message: text('message'),
-  type: mysqlEnum('notificationType', ['new_item', 'response', 'evaluation', 'urgent', 'system']).default('system').notNull(),
-  relatedItemId: int('relatedItemId'), // ربط بعنصر
-  isRead: int('isRead').default(0).notNull(),
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-});
-export type CommandCenterNotification = typeof commandCenterNotifications.$inferSelect;
-export type InsertCommandCenterNotification = typeof commandCenterNotifications.$inferInsert;
-
-// محادثات سلوى في مركز القيادة (منفصلة عن المحادثات العادية)
-export const commandCenterChat = mysqlTable('commandCenterChat', {
-  id: int('id').autoincrement().primaryKey(),
-  memberId: varchar('memberId', { length: 50 }).notNull(), // العضو المتحدث
-  role: mysqlEnum('chatRole', ['member', 'salwa']).notNull(),
-  content: text('content').notNull(),
-  metadata: text('metadata'), // JSON: بيانات إضافية (أوامر سلوى، نتائج أدوات)
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-});
-export type CommandCenterChatMsg = typeof commandCenterChat.$inferSelect;
-export type InsertCommandCenterChatMsg = typeof commandCenterChat.$inferInsert;
-
-
-// ═══════════════════════════════════════════════════════════════
-// مراحل المشاريع ومؤشرات الأداء - Project Milestones & KPIs
-// ═══════════════════════════════════════════════════════════════
-
-// مراحل المشروع - Project Milestones
-export const projectMilestones = mysqlTable('projectMilestones', {
-  id: int('id').autoincrement().primaryKey(),
-  projectId: int('projectId').notNull().references(() => projects.id, { onDelete: 'cascade' }),
-  
-  // بيانات المرحلة
-  title: varchar('title', { length: 500 }).notNull(), // اسم المرحلة
-  titleAr: varchar('titleAr', { length: 500 }), // الاسم بالعربي
-  description: text('description'), // وصف المرحلة
-  
-  // الفئة
-  category: mysqlEnum('milestoneCategory', [
-    'planning',        // التخطيط
-    'design',          // التصميم
-    'permits',         // التراخيص
-    'construction',    // البناء
-    'handover',        // التسليم
-    'sales',           // المبيعات
-    'other'            // أخرى
-  ]).default('other').notNull(),
-  
-  // التواريخ
-  plannedStartDate: varchar('plannedStartDate', { length: 50 }), // تاريخ البدء المخطط
-  plannedEndDate: varchar('plannedEndDate', { length: 50 }), // تاريخ الانتهاء المخطط
-  actualStartDate: varchar('actualStartDate', { length: 50 }), // تاريخ البدء الفعلي
-  actualEndDate: varchar('actualEndDate', { length: 50 }), // تاريخ الانتهاء الفعلي
-  
-  // التقدم والحالة
-  progressPercent: int('progressPercent').default(0).notNull(), // نسبة الإنجاز 0-100
-  status: mysqlEnum('milestoneStatus', [
-    'not_started',   // لم تبدأ
-    'in_progress',   // جارية
-    'delayed',       // متأخرة
-    'completed',     // مكتملة
-    'on_hold',       // معلقة
-    'cancelled'      // ملغاة
-  ]).default('not_started').notNull(),
-  
-  // الأولوية والترتيب
-  priority: mysqlEnum('milestonePriority', ['low', 'medium', 'high', 'critical']).default('medium').notNull(),
-  sortOrder: int('sortOrder').default(0).notNull(), // ترتيب العرض
-  
-  // المسؤول
-  assignedTo: varchar('assignedTo', { length: 255 }), // المسؤول عن المرحلة
-  
-  // ملاحظات
-  notes: text('notes'),
-  
-  // من أنشأ (عضو مركز القيادة)
-  createdByMemberId: varchar('createdByMemberId', { length: 50 }),
-  
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
-});
-export type ProjectMilestone = typeof projectMilestones.$inferSelect;
-export type InsertProjectMilestone = typeof projectMilestones.$inferInsert;
-
-// مؤشرات الأداء الرئيسية - Key Performance Indicators
-export const projectKpis = mysqlTable('projectKpis', {
-  id: int('id').autoincrement().primaryKey(),
-  projectId: int('projectId').notNull().references(() => projects.id, { onDelete: 'cascade' }),
-  
-  // بيانات المؤشر
-  name: varchar('name', { length: 500 }).notNull(), // اسم المؤشر
-  nameAr: varchar('nameAr', { length: 500 }), // الاسم بالعربي
-  description: text('description'), // وصف المؤشر
-  
-  // الفئة
-  category: mysqlEnum('kpiCategory', [
-    'financial',       // مالي
-    'timeline',        // زمني
-    'quality',         // جودة
-    'safety',          // سلامة
-    'sales',           // مبيعات
-    'customer',        // رضا العملاء
-    'operational'      // تشغيلي
-  ]).default('operational').notNull(),
-  
-  // القيم
-  targetValue: decimal('targetValue', { precision: 15, scale: 2 }), // القيمة المستهدفة
-  currentValue: decimal('currentValue', { precision: 15, scale: 2 }), // القيمة الحالية
-  unit: varchar('unit', { length: 50 }), // الوحدة (%, AED, days, sqft, etc.)
-  
-  // الاتجاه
-  trend: mysqlEnum('kpiTrend', ['up', 'down', 'stable', 'na']).default('na').notNull(), // اتجاه المؤشر
-  
-  // الحالة (محسوبة أو يدوية)
-  status: mysqlEnum('kpiStatus', [
-    'on_track',      // على المسار
-    'at_risk',       // في خطر
-    'off_track',     // خارج المسار
-    'achieved',      // تم تحقيقه
-    'not_started'    // لم يبدأ
-  ]).default('not_started').notNull(),
-  
-  // التحديث
-  lastUpdatedBy: varchar('lastUpdatedBy', { length: 255 }), // من حدّث آخر مرة
-  
-  // ملاحظات
-  notes: text('notes'),
-  
-  // من أنشأ (عضو مركز القيادة)
-  createdByMemberId: varchar('createdByMemberId', { length: 50 }),
-  
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
-});
-export type ProjectKpi = typeof projectKpis.$inferSelect;
-export type InsertProjectKpi = typeof projectKpis.$inferInsert;
-
-
-// ═══════════════════════════════════════════════════════════════
-// الإعداد القانوني وتسجيل المشروع - Legal Setup & Project Registration
-// ═══════════════════════════════════════════════════════════════
-
-export const legalSetupRecords = mysqlTable('legalSetupRecords', {
-  id: int('id').autoincrement().primaryKey(),
-  userId: int('userId').notNull().references(() => users.id),
-  projectId: int('projectId').notNull().references(() => projects.id, { onDelete: 'cascade' }),
-  
-  // === الوثائق الأساسية ===
-  titleDeedStatus: varchar('titleDeedStatus', { length: 100 }), // حالة سند الملكية: مكتمل، قيد الإجراء، معلق
-  titleDeedNumber: varchar('titleDeedNumber', { length: 100 }), // رقم سند الملكية
-  titleDeedDate: varchar('titleDeedDate', { length: 50 }), // تاريخ سند الملكية
-  
-  // === التسجيل لدى الجهات الحكومية ===
-  ddaRegistrationStatus: varchar('ddaRegistrationStatus', { length: 100 }), // حالة التسجيل لدى هيئة دبي للتطوير
-  ddaRegistrationNumber: varchar('ddaRegistrationNumber', { length: 100 }), // رقم التسجيل
-  ddaRegistrationDate: varchar('ddaRegistrationDate', { length: 50 }), // تاريخ التسجيل
-  
-  municipalityApprovalStatus: varchar('municipalityApprovalStatus', { length: 100 }), // حالة موافقة البلدية
-  municipalityApprovalNumber: varchar('municipalityApprovalNumber', { length: 100 }), // رقم الموافقة
-  municipalityApprovalDate: varchar('municipalityApprovalDate', { length: 50 }), // تاريخ الموافقة
-  
-  // === الالتزامات والشروط ===
-  legalObligations: text('legalObligations'), // الالتزامات القانونية (JSON array)
-  restrictionsAndConditions: text('restrictionsAndConditions'), // القيود والشروط (JSON array)
-  
-  // === الرسوم والتكاليف ===
-  registrationFees: int('registrationFees'), // رسوم التسجيل
-  legalConsultationFees: int('legalConsultationFees'), // أتعاب الاستشارة القانونية
-  governmentFeesTotal: int('governmentFeesTotal'), // إجمالي الرسوم الحكومية
-  
-  // === ملاحظات وتعليقات ===
-  legalNotes: text('legalNotes'), // ملاحظات قانونية عامة
-  farouqAnalysis: text('farouqAnalysis'), // تحليل فاروق (المحامي)
-  
-  // === حالة الإعداد ===
-  completionStatus: varchar('completionStatus', { length: 100 }).default('pending'), // pending, in_progress, completed
-  
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+export const evaluationResults = mysqlTable("evaluationResults", {
+	id: int().autoincrement().notNull(),
+	sessionId: int().notNull().references(() => evaluationSessions.id, { onDelete: "cascade" } ),
+	projectId: int().notNull().references(() => projects.id, { onDelete: "cascade" } ),
+	consultantId: int().notNull().references(() => consultants.id, { onDelete: "cascade" } ),
+	technicalScoreAverage: decimal({ precision: 5, scale: 2 }),
+	financialScore: decimal({ precision: 5, scale: 2 }),
+	finalScore: decimal({ precision: 5, scale: 2 }),
+	rank: int(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
-export type LegalSetupRecord = typeof legalSetupRecords.$inferSelect;
-export type InsertLegalSetupRecord = typeof legalSetupRecords.$inferInsert;
-
-
-// ═══════════════════════════════════════════════════════════════
-// التصاميم وتصريح البناء - Designs & Building Permit
-// ═══════════════════════════════════════════════════════════════
-
-export const designsAndPermits = mysqlTable('designsAndPermits', {
-  id: int('id').autoincrement().primaryKey(),
-  userId: int('userId').notNull().references(() => users.id),
-  projectId: int('projectId').notNull().references(() => projects.id, { onDelete: 'cascade' }),
-  
-  // === التصاميم المعمارية ===
-  architecturalDesignStatus: varchar('architecturalDesignStatus', { length: 100 }), // حالة التصميم: مكتمل، قيد الإعداد، معلق
-  architecturalDesignDate: varchar('architecturalDesignDate', { length: 50 }), // تاريخ إنجاز التصميم
-  architecturalDesignFileUrl: varchar('architecturalDesignFileUrl', { length: 1000 }), // رابط ملف التصميم
-  architecturalDesignFileKey: varchar('architecturalDesignFileKey', { length: 500 }), // مفتاح S3
-  
-  // === التصاميم الهندسية ===
-  engineeringDesignStatus: varchar('engineeringDesignStatus', { length: 100 }), // حالة التصميم الهندسي
-  engineeringDesignDate: varchar('engineeringDesignDate', { length: 50 }), // تاريخ إنجاز التصميم الهندسي
-  engineeringDesignFileUrl: varchar('engineeringDesignFileUrl', { length: 1000 }), // رابط ملف التصميم الهندسي
-  engineeringDesignFileKey: varchar('engineeringDesignFileKey', { length: 500 }), // مفتاح S3
-  
-  // === تصريح البناء ===
-  buildingPermitStatus: varchar('buildingPermitStatus', { length: 100 }), // حالة التصريح: مكتمل، قيد الانتظار، معلق
-  buildingPermitNumber: varchar('buildingPermitNumber', { length: 100 }), // رقم تصريح البناء
-  buildingPermitDate: varchar('buildingPermitDate', { length: 50 }), // تاريخ التصريح
-  buildingPermitExpiryDate: varchar('buildingPermitExpiryDate', { length: 50 }), // تاريخ انتهاء التصريح
-  buildingPermitFileUrl: varchar('buildingPermitFileUrl', { length: 1000 }), // رابط ملف التصريح
-  buildingPermitFileKey: varchar('buildingPermitFileKey', { length: 500 }), // مفتاح S3
-  
-  // === الموافقات المتعلقة بالتصاميم ===
-  municipalityDesignApprovalStatus: varchar('municipalityDesignApprovalStatus', { length: 100 }), // حالة موافقة البلدية على التصاميم
-  municipalityDesignApprovalDate: varchar('municipalityDesignApprovalDate', { length: 50 }), // تاريخ الموافقة
-  
-  // === المتطلبات والشروط ===
-  designRequirements: text('designRequirements'), // متطلبات التصميم (JSON array)
-  buildingConditions: text('buildingConditions'), // شروط البناء (JSON array)
-  
-  // === الرسوم والتكاليف ===
-  designConsultationFees: int('designConsultationFees'), // أتعاب الاستشارة التصميمية
-  buildingPermitFees: int('buildingPermitFees'), // رسوم تصريح البناء
-  municipalityDesignReviewFees: int('municipalityDesignReviewFees'), // رسوم مراجعة التصاميم من البلدية
-  
-  // === ملاحظات وتعليقات ===
-  designNotes: text('designNotes'), // ملاحظات عامة على التصاميم
-  consultantAnalysis: text('consultantAnalysis'), // تحليل الاستشاري المعماري
-  
-  // === حالة الإعداد ===
-  completionStatus: varchar('completionStatus', { length: 100 }).default('pending'), // pending, in_progress, completed
-  
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+export const evaluationScores = mysqlTable("evaluationScores", {
+	id: int().autoincrement().notNull(),
+	projectId: int().notNull().references(() => projects.id, { onDelete: "cascade" } ),
+	consultantId: int().notNull().references(() => consultants.id, { onDelete: "cascade" } ),
+	criterionId: int().notNull(),
+	score: int(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
-export type DesignAndPermit = typeof designsAndPermits.$inferSelect;
-export type InsertDesignAndPermit = typeof designsAndPermits.$inferInsert;
-
-
-// ═══════════════════════════════════════════════════════════════
-// النظرة العامة والسوق - Market Overview (Tab 1 in Feasibility)
-// ═══════════════════════════════════════════════════════════════
-
-export const marketOverview = mysqlTable('marketOverview', {
-  id: int('id').autoincrement().primaryKey(),
-  userId: int('userId').notNull().references(() => users.id),
-  projectId: int('projectId').notNull().references(() => projects.id, { onDelete: 'cascade' }),
-  
-  // === تقرير جويل الذكي ===
-  aiSmartReport: longtext('aiSmartReport'), // التقرير الذكي الحر من جويل
-  aiRecommendationsJson: text('aiRecommendationsJson'), // JSON: التوصيات المهيكلة
-  aiReportGeneratedAt: timestamp('aiReportGeneratedAt'), // تاريخ إنشاء التقرير
-  
-  // === توزيع الوحدات السكنية ===
-  // استديو
-  residentialStudioPct: decimal('residentialStudioPct', { precision: 5, scale: 2 }).default('0'), // نسبة الاستديو %
-  residentialStudioAvgArea: int('residentialStudioAvgArea').default(0), // متوسط مساحة الاستديو sqft
-  // غرفة وصالة
-  residential1brPct: decimal('residential1brPct', { precision: 5, scale: 2 }).default('0'), // نسبة غرفة وصالة %
-  residential1brAvgArea: int('residential1brAvgArea').default(0), // متوسط مساحة غرفة وصالة sqft
-  // غرفتان وصالة
-  residential2brPct: decimal('residential2brPct', { precision: 5, scale: 2 }).default('0'), // نسبة غرفتان وصالة %
-  residential2brAvgArea: int('residential2brAvgArea').default(0), // متوسط مساحة غرفتان وصالة sqft
-  // ثلاث غرف وصالة
-  residential3brPct: decimal('residential3brPct', { precision: 5, scale: 2 }).default('0'), // نسبة ثلاث غرف وصالة %
-  residential3brAvgArea: int('residential3brAvgArea').default(0), // متوسط مساحة ثلاث غرف وصالة sqft
-  
-  // === توزيع المحلات التجارية ===
-  // صغيرة
-  retailSmallPct: decimal('retailSmallPct', { precision: 5, scale: 2 }).default('0'), // نسبة المحلات الصغيرة %
-  retailSmallAvgArea: int('retailSmallAvgArea').default(0), // متوسط مساحة المحل الصغير sqft
-  // متوسطة
-  retailMediumPct: decimal('retailMediumPct', { precision: 5, scale: 2 }).default('0'), // نسبة المحلات المتوسطة %
-  retailMediumAvgArea: int('retailMediumAvgArea').default(0), // متوسط مساحة المحل المتوسط sqft
-  // كبيرة
-  retailLargePct: decimal('retailLargePct', { precision: 5, scale: 2 }).default('0'), // نسبة المحلات الكبيرة %
-  retailLargeAvgArea: int('retailLargeAvgArea').default(0), // متوسط مساحة المحل الكبير sqft
-  
-  // === توزيع المكاتب ===
-  // صغيرة
-  officeSmallPct: decimal('officeSmallPct', { precision: 5, scale: 2 }).default('0'), // نسبة المكاتب الصغيرة %
-  officeSmallAvgArea: int('officeSmallAvgArea').default(0), // متوسط مساحة المكتب الصغير sqft
-  // متوسطة
-  officeMediumPct: decimal('officeMediumPct', { precision: 5, scale: 2 }).default('0'), // نسبة المكاتب المتوسطة %
-  officeMediumAvgArea: int('officeMediumAvgArea').default(0), // متوسط مساحة المكتب المتوسط sqft
-  // كبيرة
-  officeLargePct: decimal('officeLargePct', { precision: 5, scale: 2 }).default('0'), // نسبة المكاتب الكبيرة %
-  officeLargeAvgArea: int('officeLargeAvgArea').default(0), // متوسط مساحة المكتب الكبير sqft
-  
-  // === جودة التشطيب ===
-  finishingQuality: varchar('finishingQuality', { length: 100 }).default('ممتاز'), // ممتاز / جيد / عادي
-  
-  // === حالة الاعتماد ===
-  isApproved: int('isApproved').default(0).notNull(), // 0 = لم يعتمد، 1 = معتمد
-  approvedAt: timestamp('approvedAt'),
-  
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+export const evaluationSessionMembers = mysqlTable("evaluationSessionMembers", {
+	id: int().autoincrement().notNull(),
+	sessionId: int().notNull().references(() => evaluationSessions.id, { onDelete: "cascade" } ),
+	evaluatorName: varchar({ length: 100 }).notNull(),
+	status: mysqlEnum(['pending','in_progress','completed']).default('pending').notNull(),
+	completedAt: timestamp({ mode: 'string' }),
 });
 
-export type MarketOverview = typeof marketOverview.$inferSelect;
-export type InsertMarketOverview = typeof marketOverview.$inferInsert;
+export const evaluationSessions = mysqlTable("evaluationSessions", {
+	id: int().autoincrement().notNull(),
+	sessionId: varchar({ length: 100 }),
+	projectId: int().notNull().references(() => projects.id, { onDelete: "cascade" } ),
+	consultantId: int().references(() => consultants.id, { onDelete: "cascade" } ),
+	title: varchar({ length: 500 }),
+	description: text(),
+	isRevealed: int().default(0).notNull(),
+	completedCount: int().default(0).notNull(),
+	requiredCount: int().default(3).notNull(),
+	createdByMemberId: varchar({ length: 50 }),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+	status: mysqlEnum(['pending','in_progress','completed']).default('pending').notNull(),
+	completedAt: timestamp({ mode: 'string' }),
+},
+(table) => [
+	index("evaluationSessions_sessionId_unique").on(table.sessionId),
+]);
 
-
-// ═══════════════════════════════════════════
-// Competition & Pricing (Tab 2 - المنافسة والتسعير)
-// ═══════════════════════════════════════════
-export const competitionPricing = mysqlTable('competition_pricing', {
-  id: int('id').autoincrement().primaryKey(),
-  userId: int('userId').notNull().references(() => users.id),
-  projectId: int('projectId').notNull().references(() => projects.id),
-
-  // === تقرير جويل الذكي ===
-  aiSmartReport: text('aiSmartReport'), // التقرير الحر عن المنافسة والتسعير
-  aiRecommendationsJson: text('aiRecommendationsJson'), // توصيات JSON (3 سيناريوهات + خطة سداد)
-  aiReportGeneratedAt: timestamp('aiReportGeneratedAt'),
-
-  // === السيناريو المتفائل - أسعار القدم² ===
-  // سكني
-  optStudioPrice: int('optStudioPrice').default(0),
-  opt1brPrice: int('opt1brPrice').default(0),
-  opt2brPrice: int('opt2brPrice').default(0),
-  opt3brPrice: int('opt3brPrice').default(0),
-  // تجاري
-  optRetailSmallPrice: int('optRetailSmallPrice').default(0),
-  optRetailMediumPrice: int('optRetailMediumPrice').default(0),
-  optRetailLargePrice: int('optRetailLargePrice').default(0),
-  // مكاتب
-  optOfficeSmallPrice: int('optOfficeSmallPrice').default(0),
-  optOfficeMediumPrice: int('optOfficeMediumPrice').default(0),
-  optOfficeLargePrice: int('optOfficeLargePrice').default(0),
-
-  // === السيناريو الأساسي - أسعار القدم² ===
-  // سكني
-  baseStudioPrice: int('baseStudioPrice').default(0),
-  base1brPrice: int('base1brPrice').default(0),
-  base2brPrice: int('base2brPrice').default(0),
-  base3brPrice: int('base3brPrice').default(0),
-  // تجاري
-  baseRetailSmallPrice: int('baseRetailSmallPrice').default(0),
-  baseRetailMediumPrice: int('baseRetailMediumPrice').default(0),
-  baseRetailLargePrice: int('baseRetailLargePrice').default(0),
-  // مكاتب
-  baseOfficeSmallPrice: int('baseOfficeSmallPrice').default(0),
-  baseOfficeMediumPrice: int('baseOfficeMediumPrice').default(0),
-  baseOfficeLargePrice: int('baseOfficeLargePrice').default(0),
-
-  // === السيناريو المتحفظ - أسعار القدم² ===
-  // سكني
-  consStudioPrice: int('consStudioPrice').default(0),
-  cons1brPrice: int('cons1brPrice').default(0),
-  cons2brPrice: int('cons2brPrice').default(0),
-  cons3brPrice: int('cons3brPrice').default(0),
-  // تجاري
-  consRetailSmallPrice: int('consRetailSmallPrice').default(0),
-  consRetailMediumPrice: int('consRetailMediumPrice').default(0),
-  consRetailLargePrice: int('consRetailLargePrice').default(0),
-  // مكاتب
-  consOfficeSmallPrice: int('consOfficeSmallPrice').default(0),
-  consOfficeMediumPrice: int('consOfficeMediumPrice').default(0),
-  consOfficeLargePrice: int('consOfficeLargePrice').default(0),
-
-  // === خطة السداد ===
-  paymentBookingPct: decimal('paymentBookingPct', { precision: 5, scale: 2 }).default('10'),
-  paymentBookingTiming: varchar('paymentBookingTiming', { length: 255 }).default('عند التوقيع'),
-  paymentConstructionPct: decimal('paymentConstructionPct', { precision: 5, scale: 2 }).default('60'),
-  paymentConstructionTiming: varchar('paymentConstructionTiming', { length: 255 }).default('أثناء الإنشاء'),
-  paymentHandoverPct: decimal('paymentHandoverPct', { precision: 5, scale: 2 }).default('30'),
-  paymentHandoverTiming: varchar('paymentHandoverTiming', { length: 255 }).default('عند التسليم'),
-  paymentDeferredPct: decimal('paymentDeferredPct', { precision: 5, scale: 2 }).default('0'),
-  paymentDeferredTiming: varchar('paymentDeferredTiming', { length: 255 }),
-
-  // === السيناريو النشط (للعرض) ===
-  activeScenario: varchar('activeScenario', { length: 20 }).default('base'), // 'optimistic' | 'base' | 'conservative'
-
-  // === حالة الاعتماد ===
-  isApproved: int('isApproved').default(0).notNull(),
-  approvedAt: timestamp('approvedAt'),
-
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+export const evaluatorScores = mysqlTable("evaluatorScores", {
+	id: int().autoincrement().notNull(),
+	projectId: int().notNull().references(() => projects.id, { onDelete: "cascade" } ),
+	consultantId: int().notNull().references(() => consultants.id),
+	criterionId: int().notNull(),
+	evaluatorName: varchar({ length: 100 }).notNull(),
+	score: int(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP'),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow(),
+	sessionId: int().references(() => evaluationSessions.id, { onDelete: "cascade" } ),
 });
 
-export type CompetitionPricing = typeof competitionPricing.$inferSelect;
-export type InsertCompetitionPricing = typeof competitionPricing.$inferInsert;
-
-
-// ═══════════════════════════════════════════
-// التكاليف والتدفقات النقدية
-// ═══════════════════════════════════════════
-export const costsCashFlow = mysqlTable('costs_cash_flow', {
-  id: int('id').autoincrement().primaryKey(),
-  projectId: int('projectId').notNull().references(() => projects.id),
-  userId: int('userId').notNull().references(() => users.id),
-
-  // === تكاليف الأرض ===
-  landPrice: int('landPrice').default(0),
-  agentCommissionLandPct: decimal('agentCommissionLandPct', { precision: 5, scale: 2 }).default("1"),
-  landRegistrationPct: decimal('landRegistrationPct', { precision: 5, scale: 2 }).default("4"),
-
-  // === تكاليف ما قبل البناء ===
-  soilInvestigation: int('soilInvestigation').default(0),
-  topographySurvey: int('topographySurvey').default(0),
-  designFeePct: decimal('designFeePct', { precision: 5, scale: 2 }).default("2"),
-  supervisionFeePct: decimal('supervisionFeePct', { precision: 5, scale: 2 }).default("2"),
-  authoritiesFee: int('authoritiesFee').default(0),
-  separationFeePerM2: int('separationFeePerM2').default(40),
-
-  // === تكاليف البناء ===
-  constructionCostPerSqft: int('constructionCostPerSqft').default(0),
-  communityFee: int('communityFee').default(0),
-  contingenciesPct: decimal('contingenciesPct', { precision: 5, scale: 2 }).default("2"),
-
-  // === تكاليف البيع والتسويق ===
-  developerFeePct: decimal('developerFeePct', { precision: 5, scale: 2 }).default("5"),
-  agentCommissionSalePct: decimal('agentCommissionSalePct', { precision: 5, scale: 2 }).default("5"),
-  marketingPct: decimal('marketingPct', { precision: 5, scale: 2 }).default("2"),
-
-  // === رسوم تنظيمية ===
-  reraOffplanFee: int('reraOffplanFee').default(150000),
-  reraUnitFee: int('reraUnitFee').default(850),
-  nocFee: int('nocFee').default(10000),
-  escrowFee: int('escrowFee').default(140000),
-  bankCharges: int('bankCharges').default(20000),
-  surveyorFees: int('surveyorFees').default(12000),
-  reraAuditFees: int('reraAuditFees').default(18000),
-  reraInspectionFees: int('reraInspectionFees').default(70000),
-
-  // === حصة الأرباح ===
-  comoProfitSharePct: decimal('comoProfitSharePct', { precision: 5, scale: 2 }).default("15"),
-
-  // === الجدول الزمني ===
-  projectDurationMonths: int('projectDurationMonths').default(36),
-  constructionStartMonth: int('constructionStartMonth').default(6),
-  constructionDurationMonths: int('constructionDurationMonths').default(24),
-  salesStartMonth: int('salesStartMonth').default(1),
-  salesDurationMonths: int('salesDurationMonths').default(30),
-  salesPhase1Pct: decimal('salesPhase1Pct', { precision: 5, scale: 2 }).default("30"),
-  salesPhase2Pct: decimal('salesPhase2Pct', { precision: 5, scale: 2 }).default("40"),
-  salesPhase3Pct: decimal('salesPhase3Pct', { precision: 5, scale: 2 }).default("30"),
-
-  // === تقرير جويل الذكي ===
-  aiSmartReport: text('aiSmartReport'),
-  aiRecommendationsJson: text('aiRecommendationsJson'),
-
-  // === حالة الاعتماد ===
-  isApproved: int('isApproved').default(0).notNull(),
-  approvedAt: timestamp('approvedAt'),
-
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+export const feasibilityStudies = mysqlTable("feasibilityStudies", {
+	id: int().autoincrement().notNull(),
+	userId: int().notNull().references(() => users.id),
+	projectName: varchar({ length: 500 }).notNull(),
+	community: varchar({ length: 255 }),
+	plotNumber: varchar({ length: 100 }),
+	projectDescription: varchar({ length: 255 }),
+	landUse: varchar({ length: 255 }),
+	plotArea: int(),
+	plotAreaM2: int(),
+	gfaResidential: int(),
+	gfaRetail: int(),
+	gfaOffices: int(),
+	totalGfa: int(),
+	saleableResidentialPct: int().default(90),
+	saleableRetailPct: int().default(99),
+	saleableOfficesPct: int().default(90),
+	estimatedBua: int(),
+	numberOfUnits: int(),
+	landPrice: int(),
+	agentCommissionLandPct: int().default(1),
+	soilInvestigation: int(),
+	topographySurvey: int(),
+	authoritiesFee: int(),
+	constructionCostPerSqft: int(),
+	communityFee: int(),
+	designFeePct: int().default(2),
+	supervisionFeePct: int().default(2),
+	separationFeePerM2: int().default(40),
+	contingenciesPct: int().default(2),
+	developerFeePct: int().default(5),
+	agentCommissionSalePct: int().default(5),
+	marketingPct: int().default(2),
+	reraOffplanFee: int().default(150000),
+	reraUnitFee: int().default(850),
+	nocFee: int().default(10000),
+	escrowFee: int().default(140000),
+	bankCharges: int().default(20000),
+	surveyorFees: int().default(12000),
+	reraAuditFees: int().default(18000),
+	reraInspectionFees: int().default(70000),
+	residentialSalePrice: int(),
+	retailSalePrice: int(),
+	officesSalePrice: int(),
+	comoProfitSharePct: int().default(15),
+	notes: text(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+	projectId: int().references(() => projects.id, { onDelete: "set null" } ),
+	scenarioName: varchar({ length: 255 }),
+	aiSummary: text(),
+	marketAnalysis: text(),
+	competitorAnalysis: text(),
+	priceRecommendation: text(),
 });
 
-export type CostsCashFlow = typeof costsCashFlow.$inferSelect;
-export type InsertCostsCashFlow = typeof costsCashFlow.$inferInsert;
-
-
-// ═══════════════════════════════════════════════════════════════
-// مراحل التطوير - Development Stages
-// ═══════════════════════════════════════════════════════════════
-
-// عناصر المراحل (المهام)
-export const stageItems = mysqlTable('stage_items', {
-  id: int('id').autoincrement().primaryKey(),
-  projectId: int('projectId').notNull().references(() => projects.id),
-  phaseNumber: int('phaseNumber').notNull(), // 2-6
-  sectionKey: varchar('sectionKey', { length: 20 }).notNull(), // e.g. "2.1", "3.2"
-  itemIndex: int('itemIndex').notNull(), // ترتيب المهمة داخل القسم
-  title: text('title').notNull(), // عنوان المهمة
-  status: mysqlEnum('status', ['not_started', 'in_progress', 'completed']).default('not_started').notNull(),
-  isCustom: boolean('isCustom').default(false).notNull(), // هل هي مهمة مخصصة أضافها المستخدم
-  linkedTaskId: int('linkedTaskId'), // معرف المهمة المرتبطة في نظام المهام
-  dueDate: timestamp('dueDate'), // التاريخ المستهدف للمهمة
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+export const financialData = mysqlTable("financialData", {
+	id: int().autoincrement().notNull(),
+	projectId: int().notNull().references(() => projects.id, { onDelete: "cascade" } ),
+	consultantId: int().notNull().references(() => consultants.id, { onDelete: "cascade" } ),
+	designType: varchar({ length: 20 }).default('pct'),
+	designValue: decimal({ precision: 15, scale: 2 }),
+	supervisionType: varchar({ length: 20 }).default('pct'),
+	supervisionValue: decimal({ precision: 15, scale: 2 }),
+	proposalLink: varchar({ length: 500 }),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
-export type StageItem = typeof stageItems.$inferSelect;
-export type InsertStageItem = typeof stageItems.$inferInsert;
-
-// مستندات المراحل (الملفات المرفقة)
-export const stageDocuments = mysqlTable('stage_documents', {
-  id: int('id').autoincrement().primaryKey(),
-  stageItemId: int('stageItemId').notNull().references(() => stageItems.id),
-  projectId: int('projectId').notNull().references(() => projects.id),
-  fileName: varchar('fileName', { length: 500 }).notNull(),
-  fileUrl: text('fileUrl').notNull(),
-  fileKey: varchar('fileKey', { length: 500 }).notNull(),
-  mimeType: varchar('mimeType', { length: 100 }),
-  fileSize: int('fileSize'), // bytes
-  uploadedAt: timestamp('uploadedAt').defaultNow().notNull(),
+export const knowledgeBase = mysqlTable("knowledgeBase", {
+	id: int().autoincrement().notNull(),
+	userId: int().notNull(),
+	type: mysqlEnum(['decision','evaluation','pattern','insight','lesson']).notNull(),
+	title: varchar({ length: 500 }).notNull(),
+	content: text().notNull(),
+	summary: text(),
+	tags: text(),
+	relatedProjectId: int().references(() => projects.id),
+	relatedConsultantId: int().references(() => consultants.id),
+	relatedAgentAssignmentId: int().references(() => agentAssignments.id),
+	sourceAgent: varchar({ length: 50 }),
+	importance: mysqlEnum(['low','medium','high','critical']).default('medium').notNull(),
+	viewCount: int().default(0),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
-export type StageDocument = typeof stageDocuments.$inferSelect;
-export type InsertStageDocument = typeof stageDocuments.$inferInsert;
-
-
-// ═══════════════════════════════════════════════════════════════
-// Program & Cash Flow Module - برنامج العمل والتدفقات النقدية
-// ═══════════════════════════════════════════════════════════════
-
-// Cash Flow Projects - مشاريع التدفق النقدي
-export const cfProjects = mysqlTable('cf_projects', {
-  id: int('id').autoincrement().primaryKey(),
-  projectId: int('projectId').references(() => projects.id, { onDelete: 'cascade' }),
-  userId: int('userId').notNull().references(() => users.id),
-  name: varchar('name', { length: 500 }).notNull(),
-  startDate: varchar('startDate', { length: 20 }).notNull(), // YYYY-MM format
-  
-  // Phase durations in months
-  designApprovalMonths: int('designApprovalMonths').default(6).notNull(),
-  reraSetupMonths: int('reraSetupMonths').default(3).notNull(),
-  constructionMonths: int('constructionMonths').default(24).notNull(),
-  handoverMonths: int('handoverMonths').default(3).notNull(),
-  
-  // Sales config (optional)
-  salesEnabled: boolean('salesEnabled').default(false).notNull(),
-  salesStartMonth: int('salesStartMonth'), // month offset from project start
-  salesVelocityUnits: int('salesVelocityUnits'), // units per month
-  salesVelocityAed: bigintCol('salesVelocityAed', { mode: 'number' }), // AED per month
-  salesVelocityType: mysqlEnum('salesVelocityType', ['units', 'aed']).default('aed'),
-  totalSalesRevenue: bigintCol('totalSalesRevenue', { mode: 'number' }),
-  
-  // Buyer payment plan percentages
-  buyerPlanBookingPct: decimal('buyerPlanBookingPct', { precision: 5, scale: 2 }).default("20"),
-  buyerPlanConstructionPct: decimal('buyerPlanConstructionPct', { precision: 5, scale: 2 }).default("30"),
-  buyerPlanHandoverPct: decimal('buyerPlanHandoverPct', { precision: 5, scale: 2 }).default("50"),
-  
-  notes: text('notes'),
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+export const legalSetupRecords = mysqlTable("legalSetupRecords", {
+	id: int().autoincrement().notNull(),
+	userId: int().notNull().references(() => users.id),
+	projectId: int().notNull().references(() => projects.id, { onDelete: "cascade" } ),
+	titleDeedStatus: varchar({ length: 100 }),
+	titleDeedNumber: varchar({ length: 100 }),
+	titleDeedDate: varchar({ length: 50 }),
+	ddaRegistrationStatus: varchar({ length: 100 }),
+	ddaRegistrationNumber: varchar({ length: 100 }),
+	ddaRegistrationDate: varchar({ length: 50 }),
+	municipalityApprovalStatus: varchar({ length: 100 }),
+	municipalityApprovalNumber: varchar({ length: 100 }),
+	municipalityApprovalDate: varchar({ length: 50 }),
+	legalObligations: text(),
+	restrictionsAndConditions: text(),
+	registrationFees: int(),
+	legalConsultationFees: int(),
+	governmentFeesTotal: int(),
+	legalNotes: text(),
+	farouqAnalysis: text(),
+	completionStatus: varchar({ length: 100 }).default('pending'),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
-export type CfProject = typeof cfProjects.$inferSelect;
-export type InsertCfProject = typeof cfProjects.$inferInsert;
-
-// Cash Flow Cost Items - عناصر التكلفة
-export const cfCostItems = mysqlTable('cf_cost_items', {
-  id: int('id').autoincrement().primaryKey(),
-  cfProjectId: int('cfProjectId').notNull().references(() => cfProjects.id, { onDelete: 'cascade' }),
-  name: varchar('name', { length: 500 }).notNull(),
-  category: mysqlEnum('category', [
-    'land', 'consultant_design', 'authority_fees', 'contractor',
-    'supervision', 'marketing_sales', 'developer_fee', 'contingency', 'other'
-  ]).notNull(),
-  totalAmount: bigintCol('totalAmount', { mode: 'number' }).notNull(),
-  
-  // Payment logic
-  paymentType: mysqlEnum('paymentType', [
-    'lump_sum', 'milestone', 'monthly_fixed', 'progress_based', 'sales_linked'
-  ]).notNull(),
-  
-  // Payment parameters stored as JSON
-  paymentParams: text('paymentParams'), // JSON string with type-specific parameters
-  
-  // Phase allocation (optional: which phases this cost spans)
-  phaseAllocation: text('phaseAllocation'), // JSON: e.g. {"design": 40, "construction": 60}
-  
-  sortOrder: int('sortOrder').default(0).notNull(),
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+export const marketOverview = mysqlTable("marketOverview", {
+	id: int().autoincrement().notNull(),
+	userId: int().notNull().references(() => users.id),
+	projectId: int().notNull().references(() => projects.id, { onDelete: "cascade" } ),
+	aiSmartReport: longtext(),
+	aiRecommendationsJson: text(),
+	aiReportGeneratedAt: timestamp({ mode: 'string' }),
+	residentialStudioPct: decimal({ precision: 5, scale: 2 }).default('0'),
+	residentialStudioAvgArea: int().default(0),
+	residential1BrPct: decimal({ precision: 5, scale: 2 }).default('0'),
+	residential1BrAvgArea: int().default(0),
+	residential2BrPct: decimal({ precision: 5, scale: 2 }).default('0'),
+	residential2BrAvgArea: int().default(0),
+	residential3BrPct: decimal({ precision: 5, scale: 2 }).default('0'),
+	residential3BrAvgArea: int().default(0),
+	retailSmallPct: decimal({ precision: 5, scale: 2 }).default('0'),
+	retailSmallAvgArea: int().default(0),
+	retailMediumPct: decimal({ precision: 5, scale: 2 }).default('0'),
+	retailMediumAvgArea: int().default(0),
+	retailLargePct: decimal({ precision: 5, scale: 2 }).default('0'),
+	retailLargeAvgArea: int().default(0),
+	officeSmallPct: decimal({ precision: 5, scale: 2 }).default('0'),
+	officeSmallAvgArea: int().default(0),
+	officeMediumPct: decimal({ precision: 5, scale: 2 }).default('0'),
+	officeMediumAvgArea: int().default(0),
+	officeLargePct: decimal({ precision: 5, scale: 2 }).default('0'),
+	officeLargeAvgArea: int().default(0),
+	finishingQuality: varchar({ length: 100 }).default('ممتاز'),
+	isApproved: int().default(0).notNull(),
+	approvedAt: timestamp({ mode: 'string' }),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
-export type CfCostItem = typeof cfCostItems.$inferSelect;
-export type InsertCfCostItem = typeof cfCostItems.$inferInsert;
-
-// Cash Flow Scenarios - سيناريوهات
-export const cfScenarios = mysqlTable('cf_scenarios', {
-  id: int('id').autoincrement().primaryKey(),
-  cfProjectId: int('cfProjectId').notNull().references(() => cfProjects.id, { onDelete: 'cascade' }),
-  name: varchar('name', { length: 255 }).notNull(),
-  isDefault: boolean('isDefault').default(false).notNull(),
-  
-  // Scenario adjustments
-  salesStartMonthDelta: int('salesStartMonthDelta').default(0), // +/- months
-  constructionDurationDelta: int('constructionDurationDelta').default(0), // +/- months
-  mobilizationPctOverride: decimal('mobilizationPctOverride', { precision: 5, scale: 2 }),
-  buyerPlanBookingPct: decimal('buyerPlanBookingPct', { precision: 5, scale: 2 }),
-  buyerPlanConstructionPct: decimal('buyerPlanConstructionPct', { precision: 5, scale: 2 }),
-  buyerPlanHandoverPct: decimal('buyerPlanHandoverPct', { precision: 5, scale: 2 }),
-  
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
-  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+export const meetingFiles = mysqlTable("meetingFiles", {
+	id: int().autoincrement().notNull(),
+	meetingId: int().notNull().references(() => meetings.id, { onDelete: "cascade" } ),
+	fileName: varchar({ length: 255 }).notNull(),
+	fileUrl: varchar({ length: 1000 }).notNull(),
+	fileKey: varchar({ length: 500 }).notNull(),
+	fileType: varchar({ length: 50 }).notNull(),
+	mimeType: varchar({ length: 100 }),
+	fileSize: int(),
+	extractedText: text(),
+	uploadedAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 });
 
-export type CfScenario = typeof cfScenarios.$inferSelect;
-export type InsertCfScenario = typeof cfScenarios.$inferInsert;
-
-// Cash Flow Files - ملفات مرفقة
-export const cfFiles = mysqlTable('cf_files', {
-  id: int('id').autoincrement().primaryKey(),
-  cfProjectId: int('cfProjectId').notNull().references(() => cfProjects.id, { onDelete: 'cascade' }),
-  fileName: varchar('fileName', { length: 500 }).notNull(),
-  fileUrl: text('fileUrl').notNull(),
-  fileKey: varchar('fileKey', { length: 500 }).notNull(),
-  mimeType: varchar('mimeType', { length: 100 }),
-  fileSize: int('fileSize'),
-  category: varchar('category', { length: 100 }), // contract, feasibility, etc.
-  createdAt: timestamp('createdAt').defaultNow().notNull(),
+export const meetingMessages = mysqlTable("meetingMessages", {
+	id: int().autoincrement().notNull(),
+	meetingId: int().notNull().references(() => meetings.id, { onDelete: "cascade" } ),
+	speakerId: varchar({ length: 100 }).notNull(),
+	speakerType: mysqlEnum(['user','agent']).notNull(),
+	messageText: text().notNull(),
+	audioUrl: varchar({ length: 1000 }),
+	replyToId: int(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 });
 
-export type CfFile = typeof cfFiles.$inferSelect;
-export type InsertCfFile = typeof cfFiles.$inferInsert;
+export const meetingParticipants = mysqlTable("meetingParticipants", {
+	id: int().autoincrement().notNull(),
+	meetingId: int().notNull().references(() => meetings.id, { onDelete: "cascade" } ),
+	agentId: int().notNull().references(() => agents.id),
+	participantRole: mysqlEnum(['participant','observer']).default('participant').notNull(),
+	joinedAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+});
+
+export const meetings = mysqlTable("meetings", {
+	id: int().autoincrement().notNull(),
+	userId: int().notNull(),
+	title: varchar({ length: 500 }).notNull(),
+	topic: text(),
+	meetingStatus: mysqlEnum(['preparing','in_progress','completed','cancelled']).default('preparing').notNull(),
+	createdBy: varchar({ length: 100 }).default('user').notNull(),
+	startedAt: timestamp({ mode: 'string' }),
+	endedAt: timestamp({ mode: 'string' }),
+	minutesSummary: text(),
+	decisionsJson: text(),
+	extractedTasksJson: text(),
+	knowledgeItemsJson: text(),
+	audioRecordingUrl: varchar({ length: 1000 }),
+	fullTranscript: text(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const modelUsageLog = mysqlTable("modelUsageLog", {
+	id: int().autoincrement().notNull(),
+	userId: int().notNull(),
+	agent: varchar({ length: 50 }).notNull(),
+	model: varchar({ length: 100 }).notNull(),
+	responseTimeMs: int().notNull(),
+	success: mysqlEnum(['true','false']).default('true').notNull(),
+	isFallback: mysqlEnum(['true','false']).default('false').notNull(),
+	inputTokens: int(),
+	outputTokens: int(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+});
+
+export const oauthTokens = mysqlTable("oauthTokens", {
+	id: int().autoincrement().notNull(),
+	userId: int().notNull().references(() => users.id, { onDelete: "cascade" } ),
+	provider: varchar({ length: 50 }).notNull(),
+	accessToken: text().notNull(),
+	refreshToken: text(),
+	expiresAt: timestamp({ mode: 'string' }),
+	scope: text(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+	index("oauthTokens_userId_unique").on(table.userId),
+]);
+
+export const projectCapitalSettings = mysqlTable("projectCapitalSettings", {
+	id: int().autoincrement().notNull(),
+	projectId: int().notNull().references(() => projects.id, { onDelete: "cascade" } ),
+	startDate: varchar({ length: 10 }).notNull(),
+	totalBudget: decimal({ precision: 15, scale: 2 }),
+	notes: text(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+	index("projectCapitalSettings_projectId_unique").on(table.projectId),
+]);
+
+export const projectConsultants = mysqlTable("projectConsultants", {
+	id: int().autoincrement().notNull(),
+	projectId: int().notNull().references(() => projects.id, { onDelete: "cascade" } ),
+	consultantId: int().notNull().references(() => consultants.id, { onDelete: "cascade" } ),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+});
+
+export const projectContracts = mysqlTable("projectContracts", {
+	id: int().autoincrement().notNull(),
+	userId: int().notNull().references(() => users.id),
+	projectId: int().notNull().references(() => projects.id, { onDelete: "cascade" } ),
+	contractTypeId: int().notNull().references(() => contractTypes.id),
+	title: varchar({ length: 500 }).notNull(),
+	contractNumber: varchar({ length: 100 }),
+	partyA: varchar({ length: 255 }),
+	partyB: varchar({ length: 255 }),
+	contractValue: decimal({ precision: 15, scale: 2 }),
+	currency: varchar({ length: 10 }).default('AED'),
+	signDate: varchar({ length: 50 }),
+	startDate: varchar({ length: 50 }),
+	endDate: varchar({ length: 50 }),
+	fileUrl: varchar({ length: 1000 }),
+	fileKey: varchar({ length: 500 }),
+	fileName: varchar({ length: 255 }),
+	driveFileId: varchar({ length: 100 }),
+	contractStatus: mysqlEnum(['draft','active','expired','terminated','renewed','pending']).default('draft').notNull(),
+	contractAnalysisStatus: mysqlEnum(['not_analyzed','analyzing','completed','failed']).default('not_analyzed').notNull(),
+	analysisSummary: text(),
+	analysisKeyDates: text(),
+	analysisPenalties: text(),
+	analysisObligations: text(),
+	analysisRisks: text(),
+	analysisParties: text(),
+	analysisTermination: text(),
+	analysisNotes: text(),
+	analysisFullJson: text(),
+	analyzedAt: timestamp({ mode: 'string' }),
+	notes: text(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const projectKpis = mysqlTable("projectKpis", {
+	id: int().autoincrement().notNull(),
+	projectId: int().notNull().references(() => projects.id, { onDelete: "cascade" } ),
+	name: varchar({ length: 500 }).notNull(),
+	nameAr: varchar({ length: 500 }),
+	description: text(),
+	kpiCategory: mysqlEnum(['financial','timeline','quality','safety','sales','customer','operational']).default('operational').notNull(),
+	targetValue: decimal({ precision: 15, scale: 2 }),
+	currentValue: decimal({ precision: 15, scale: 2 }),
+	unit: varchar({ length: 50 }),
+	kpiTrend: mysqlEnum(['up','down','stable','na']).default('na').notNull(),
+	kpiStatus: mysqlEnum(['on_track','at_risk','off_track','achieved','not_started']).default('not_started').notNull(),
+	lastUpdatedBy: varchar({ length: 255 }),
+	notes: text(),
+	createdByMemberId: varchar({ length: 50 }),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const projectMilestones = mysqlTable("projectMilestones", {
+	id: int().autoincrement().notNull(),
+	projectId: int().notNull().references(() => projects.id, { onDelete: "cascade" } ),
+	title: varchar({ length: 500 }).notNull(),
+	titleAr: varchar({ length: 500 }),
+	description: text(),
+	milestoneCategory: mysqlEnum(['planning','design','permits','construction','handover','sales','other']).default('other').notNull(),
+	plannedStartDate: varchar({ length: 50 }),
+	plannedEndDate: varchar({ length: 50 }),
+	actualStartDate: varchar({ length: 50 }),
+	actualEndDate: varchar({ length: 50 }),
+	progressPercent: int().default(0).notNull(),
+	milestoneStatus: mysqlEnum(['not_started','in_progress','delayed','completed','on_hold','cancelled']).default('not_started').notNull(),
+	milestonePriority: mysqlEnum(['low','medium','high','critical']).default('medium').notNull(),
+	sortOrder: int().default(0).notNull(),
+	assignedTo: varchar({ length: 255 }),
+	notes: text(),
+	createdByMemberId: varchar({ length: 50 }),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const projectPhases = mysqlTable("projectPhases", {
+	id: int().autoincrement().notNull(),
+	projectId: int().notNull().references(() => projects.id, { onDelete: "cascade" } ),
+	phaseNumber: int().notNull(),
+	phaseName: varchar({ length: 255 }).notNull(),
+	startMonth: int().notNull(),
+	durationMonths: int().notNull(),
+	estimatedCost: decimal({ precision: 15, scale: 2 }),
+	delayMonths: int().default(0).notNull(),
+	notes: text(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const projects = mysqlTable("projects", {
+	id: int().autoincrement().notNull(),
+	userId: int().notNull().references(() => users.id),
+	name: varchar({ length: 255 }).notNull(),
+	description: text(),
+	bua: int(),
+	pricePerSqft: int(),
+	notes: text(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+	plotNumber: varchar({ length: 50 }),
+	areaCode: varchar({ length: 50 }),
+	driveFolderId: varchar({ length: 100 }),
+	titleDeedNumber: varchar({ length: 100 }),
+	ddaNumber: varchar({ length: 100 }),
+	masterDevRef: varchar({ length: 100 }),
+	plotAreaSqm: decimal({ precision: 12, scale: 2 }),
+	plotAreaSqft: decimal({ precision: 12, scale: 2 }),
+	gfaSqm: decimal({ precision: 12, scale: 2 }),
+	gfaSqft: decimal({ precision: 12, scale: 2 }),
+	permittedUse: varchar({ length: 255 }),
+	ownershipType: varchar({ length: 255 }),
+	subdivisionRestrictions: text(),
+	masterDevName: varchar({ length: 255 }),
+	masterDevAddress: varchar({ length: 500 }),
+	sellerName: varchar({ length: 255 }),
+	sellerAddress: varchar({ length: 500 }),
+	buyerName: varchar({ length: 255 }),
+	buyerNationality: varchar({ length: 100 }),
+	buyerPassport: varchar({ length: 50 }),
+	buyerAddress: varchar({ length: 500 }),
+	buyerPhone: varchar({ length: 50 }),
+	buyerEmail: varchar({ length: 320 }),
+	electricityAllocation: varchar({ length: 100 }),
+	waterAllocation: varchar({ length: 100 }),
+	sewageAllocation: varchar({ length: 100 }),
+	tripAm: varchar({ length: 50 }),
+	tripLt: varchar({ length: 50 }),
+	tripPm: varchar({ length: 50 }),
+	effectiveDate: varchar({ length: 50 }),
+	constructionPeriod: varchar({ length: 255 }),
+	constructionStartDate: varchar({ length: 255 }),
+	completionDate: varchar({ length: 255 }),
+	constructionConditions: text(),
+	saleRestrictions: text(),
+	resaleConditions: text(),
+	communityCharges: text(),
+	registrationAuthority: varchar({ length: 255 }),
+	adminFee: int(),
+	clearanceFee: int(),
+	compensationAmount: int(),
+	governingLaw: text(),
+	disputeResolution: text(),
+	manualBuaSqft: decimal({ precision: 14, scale: 2 }),
+	soilTestFee: decimal({ precision: 14, scale: 2 }),
+	topographicSurveyFee: decimal({ precision: 14, scale: 2 }),
+	reraUnitRegFee: decimal({ precision: 14, scale: 2 }),
+	developerNocFee: decimal({ precision: 14, scale: 2 }),
+	escrowAccountFee: decimal({ precision: 14, scale: 2 }),
+	bankFees: decimal({ precision: 14, scale: 2 }),
+	communityFees: decimal({ precision: 14, scale: 2 }),
+	surveyorFees: decimal({ precision: 14, scale: 2 }),
+	reraAuditReportFee: decimal({ precision: 14, scale: 2 }),
+	reraInspectionReportFee: decimal({ precision: 14, scale: 2 }),
+	reraProjectRegFee: decimal({ precision: 14, scale: 2 }),
+	officialBodiesFees: decimal({ precision: 14, scale: 2 }),
+	landPrice: decimal({ precision: 14, scale: 2 }),
+	agentCommissionLandPct: decimal({ precision: 5, scale: 2 }),
+	estimatedConstructionPricePerSqft: decimal({ precision: 14, scale: 2 }),
+	designFeePct: decimal({ precision: 5, scale: 2 }),
+	supervisionFeePct: decimal({ precision: 5, scale: 2 }),
+	separationFeePerM2: decimal({ precision: 10, scale: 2 }),
+	salesCommissionPct: decimal({ precision: 5, scale: 2 }),
+	marketingPct: decimal({ precision: 5, scale: 2 }),
+	developerFeePhase1Pct: decimal({ precision: 5, scale: 2 }).default('2'),
+	developerFeePhase2Pct: decimal({ precision: 5, scale: 2 }).default('3'),
+	gfaResidentialSqft: decimal({ precision: 14, scale: 2 }),
+	gfaRetailSqft: decimal({ precision: 14, scale: 2 }),
+	gfaOfficesSqft: decimal({ precision: 14, scale: 2 }),
+});
+
+export const proposalComparisons = mysqlTable("proposalComparisons", {
+	id: int().autoincrement().notNull(),
+	userId: int().notNull(),
+	projectId: int().references(() => projects.id),
+	title: varchar({ length: 500 }).notNull(),
+	proposalIds: text().notNull(),
+	comparisonResult: text(),
+	aiRecommendation: text(),
+	winnerProposalId: int().references(() => consultantProposals.id),
+	notes: text(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const sentEmails = mysqlTable("sent_emails", {
+	id: int().autoincrement().notNull(),
+	userId: int().notNull().references(() => users.id),
+	toEmail: varchar({ length: 320 }).notNull(),
+	toName: varchar({ length: 255 }),
+	subject: varchar({ length: 500 }).notNull(),
+	body: longtext().notNull(),
+	inReplyTo: varchar({ length: 500 }),
+	originalEmailUid: int(),
+	cc: varchar({ length: 1000 }),
+	status: mysqlEnum(['sent','failed','pending']).default('sent').notNull(),
+	errorMessage: text(),
+	sentBy: varchar({ length: 50 }).default('salwa').notNull(),
+	agentName: varchar({ length: 50 }).default('salwa'),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+});
+
+export const specialistKnowledge = mysqlTable("specialistKnowledge", {
+	id: int().autoincrement().notNull(),
+	knowledgeDomain: mysqlEnum(['rera_law','dubai_municipality','building_codes','market_prices','como_context','como_people','como_preferences','como_workflow','consultant_info','project_standards','general']).notNull(),
+	category: varchar({ length: 100 }).notNull(),
+	title: varchar({ length: 500 }).notNull(),
+	content: longtext().notNull(),
+	keywords: text(),
+	source: varchar({ length: 255 }),
+	sourceUrl: varchar({ length: 1000 }),
+	isActive: int().default(1).notNull(),
+	validFrom: timestamp({ mode: 'string' }),
+	validUntil: timestamp({ mode: 'string' }),
+	addedBy: varchar({ length: 50 }),
+	lastUsedAt: timestamp({ mode: 'string' }),
+	useCount: int().default(0),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const stageDocuments = mysqlTable("stage_documents", {
+	id: int().autoincrement().notNull(),
+	stageItemId: int().notNull(),
+	projectId: int().notNull(),
+	fileName: varchar({ length: 500 }).notNull(),
+	fileUrl: text().notNull(),
+	fileKey: varchar({ length: 500 }).notNull(),
+	mimeType: varchar({ length: 100 }),
+	fileSize: int(),
+	uploadedAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+	index("idx_stage_docs_item").on(table.stageItemId),
+	index("idx_stage_docs_project").on(table.projectId),
+]);
+
+export const stageItems = mysqlTable("stage_items", {
+	id: int().autoincrement().notNull(),
+	projectId: int().notNull(),
+	phaseNumber: int().notNull(),
+	sectionKey: varchar({ length: 20 }).notNull(),
+	itemIndex: int().notNull(),
+	title: text().notNull(),
+	status: mysqlEnum(['not_started','in_progress','completed']).default('not_started').notNull(),
+	isCustom: tinyint().default(0).notNull(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+	linkedTaskId: int(),
+	dueDate: timestamp({ mode: 'string' }),
+},
+(table) => [
+	index("idx_stage_items_project").on(table.projectId),
+	index("idx_stage_items_phase").on(table.projectId, table.phaseNumber),
+	index("idx_stage_items_section").on(table.projectId, table.sectionKey),
+]);
+
+export const taskCategories = mysqlTable("taskCategories", {
+	id: int().autoincrement().notNull(),
+	name: varchar({ length: 255 }).notNull(),
+	color: varchar({ length: 50 }).default('#8b5cf6'),
+	icon: varchar({ length: 50 }),
+	isActive: mysqlEnum(['true','false']).default('true').notNull(),
+	sortOrder: int().default(0),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+	index("name").on(table.name),
+]);
+
+export const taskExecutionLogs = mysqlTable("taskExecutionLogs", {
+	id: int().autoincrement().notNull(),
+	taskId: int().references(() => tasks.id),
+	meetingId: int().references(() => meetings.id),
+	agent: varchar({ length: 50 }).notNull(),
+	taskTitle: varchar({ length: 500 }).notNull(),
+	actionPlanJson: text(),
+	totalSteps: int().default(0).notNull(),
+	completedSteps: int().default(0).notNull(),
+	executionStatus: mysqlEnum(['planning','executing','verifying','completed','partial','failed','retrying']).default('planning').notNull(),
+	attempt: int().default(1).notNull(),
+	maxAttempts: int().default(2).notNull(),
+	toolsUsedJson: text(),
+	toolCallCount: int().default(0).notNull(),
+	writeToolCount: int().default(0).notNull(),
+	stepResultsJson: text(),
+	verified: int().default(0).notNull(),
+	verificationDetails: text(),
+	dataChangesJson: text(),
+	agentResponse: text(),
+	errorMessage: text(),
+	startedAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	completedAt: timestamp({ mode: 'string' }),
+	durationMs: int(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+});
+
+export const taskProjects = mysqlTable("taskProjects", {
+	id: int().autoincrement().notNull(),
+	name: varchar({ length: 255 }).notNull(),
+	color: varchar({ length: 50 }).default('#6366f1'),
+	icon: varchar({ length: 50 }),
+	isActive: mysqlEnum(['true','false']).default('true').notNull(),
+	sortOrder: int().default(0),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+	index("name").on(table.name),
+]);
+
+export const tasks = mysqlTable("tasks", {
+	id: int().autoincrement().notNull(),
+	title: varchar({ length: 500 }).notNull(),
+	description: text(),
+	project: varchar({ length: 255 }).notNull(),
+	category: varchar({ length: 100 }),
+	owner: varchar({ length: 255 }).notNull(),
+	priority: mysqlEnum(['high','medium','low']).default('medium').notNull(),
+	status: mysqlEnum(['new','progress','hold','done','cancelled']).default('new').notNull(),
+	progress: int().default(0).notNull(),
+	dueDate: varchar({ length: 20 }),
+	attachment: varchar({ length: 1000 }),
+	source: mysqlEnum(['manual','agent','command']).default('manual').notNull(),
+	sourceAgent: varchar({ length: 255 }),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const users = mysqlTable("users", {
+	id: int().autoincrement().notNull(),
+	openId: varchar({ length: 64 }).notNull(),
+	name: text(),
+	email: varchar({ length: 320 }),
+	loginMethod: varchar({ length: 64 }),
+	role: mysqlEnum(['user','admin']).default('user').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+	lastSignedIn: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+	index("users_openId_unique").on(table.openId),
+]);

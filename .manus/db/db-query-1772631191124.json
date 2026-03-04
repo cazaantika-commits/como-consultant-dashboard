@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE consultantProposals \n  ADD COLUMN IF NOT EXISTS aiFinancialSummary TEXT,\n  ADD COLUMN IF NOT EXISTS aiWarnings TEXT,\n  ADD COLUMN IF NOT EXISTS preprocessingStats TEXT,\n  ADD COLUMN IF NOT EXISTS filteredText TEXT;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute ALTER TABLE consultantProposals \n  ADD COLUMN IF NOT EXISTS aiFinancialSummary TEXT,\n  ADD COLUMN IF NOT EXISTS aiWarnings TEXT,\n  ADD COLUMN IF NOT EXISTS preprocessingStats TEXT,\n  ADD COLUMN IF NOT EXISTS filteredText TEXT;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 2040
+}
