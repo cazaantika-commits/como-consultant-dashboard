@@ -16,6 +16,9 @@ import ConsultantGuidePage from "./pages/ConsultantGuidePage";
 import ConsultantProposalsPage from "./pages/ConsultantProposalsPage";
 import ConsultantKnowPage from "./pages/ConsultantKnowPage";
 import ConsultantRecommendPage from "./pages/ConsultantRecommendPage";
+import ConsultantEvaluationPage from "./pages/ConsultantEvaluationPage";
+import ConsultantCommitteePage from "./pages/ConsultantCommitteePage";
+import CommitteeDecisionPage from "./pages/CommitteeDecisionPage";
 import ModelStatsPage from "./pages/ModelStatsPage";
 import AgentAssignmentsPage from "./pages/AgentAssignmentsPage";
 import AgentAssignmentsSummaryPage from "./pages/AgentAssignmentsSummaryPage";
@@ -63,7 +66,10 @@ function Router() {
       <Route path="/consultant-guide" component={ConsultantGuidePage} />
       <Route path="/consultant-proposals" component={ConsultantProposalsPage} />
       <Route path="/consultant-know" component={ConsultantKnowPage} />
+      <Route path="/consultant-evaluation" component={ConsultantEvaluationPage} />
       <Route path="/consultant-recommend" component={ConsultantRecommendPage} />
+      <Route path="/consultant-committee" component={ConsultantCommitteePage} />
+      <Route path="/committee-decision" component={CommitteeDecisionPage} />
       <Route path="/model-stats" component={ModelStatsPage} />
       <Route path="/agent-assignments" component={AgentAssignmentsPage} />
       <Route path="/agent-assignments-summary" component={AgentAssignmentsSummaryPage} />
