@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -601,7 +601,10 @@ function ProjectDetailView({
           </TabsList>
 
           <TabsContent value="timeline">
-            <TimelineTab project={project} />
+            <TimelineTab project={project} onRefresh={() => {
+              projectQuery.refetch();
+              cashFlowQuery.refetch();
+            }} />
           </TabsContent>
 
           <TabsContent value="costs">
@@ -646,15 +649,92 @@ function ProjectDetailView({
 // Timeline Tab - Gantt Chart
 // ═══════════════════════════════════════════════════════════════
 
-function TimelineTab({ project }: { project: any }) {
-  const totalDuration = project.designApprovalMonths + project.reraSetupMonths + project.constructionMonths + project.handoverMonths;
+function TimelineTab({ project, onRefresh }: { project: any; onRefresh: () => void }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editStartDate, setEditStartDate] = useState(project.startDate);
+  const [editDesign, setEditDesign] = useState(project.designApprovalMonths);
+  const [editRera, setEditRera] = useState(project.reraSetupMonths);
+  const [editConstruction, setEditConstruction] = useState(project.constructionMonths);
+  const [editHandover, setEditHandover] = useState(project.handoverMonths);
+
+  const updateMutation = trpc.cashFlowProgram.updateProject.useMutation();
+
+  // Sync local state when project data changes
+  useEffect(() => {
+    setEditStartDate(project.startDate);
+    setEditDesign(project.designApprovalMonths);
+    setEditRera(project.reraSetupMonths);
+    setEditConstruction(project.constructionMonths);
+    setEditHandover(project.handoverMonths);
+  }, [project]);
+
+  const displayDesign = isEditing ? editDesign : project.designApprovalMonths;
+  const displayRera = isEditing ? editRera : project.reraSetupMonths;
+  const displayConstruction = isEditing ? editConstruction : project.constructionMonths;
+  const displayHandover = isEditing ? editHandover : project.handoverMonths;
+  const displayStartDate = isEditing ? editStartDate : project.startDate;
+
+  const totalDuration = displayDesign + displayRera + displayConstruction + displayHandover;
 
   const phases = [
-    { name: 'التصميم والموافقات', months: project.designApprovalMonths, color: 'bg-blue-500', icon: <Edit className="w-4 h-4" /> },
-    { name: 'تسجيل ريرا والمبيعات', months: project.reraSetupMonths, color: 'bg-purple-500', icon: <Landmark className="w-4 h-4" /> },
-    { name: 'البناء', months: project.constructionMonths, color: 'bg-amber-500', icon: <Hammer className="w-4 h-4" /> },
-    { name: 'التسليم', months: project.handoverMonths, color: 'bg-emerald-500', icon: <CheckCircle2 className="w-4 h-4" /> },
+    { name: 'التصميم والموافقات', months: displayDesign, color: 'bg-blue-500', icon: <Edit className="w-4 h-4" />, key: 'design' },
+    { name: 'تسجيل ريرا والمبيعات', months: displayRera, color: 'bg-purple-500', icon: <Landmark className="w-4 h-4" />, key: 'rera' },
+    { name: 'البناء', months: displayConstruction, color: 'bg-amber-500', icon: <Hammer className="w-4 h-4" />, key: 'construction' },
+    { name: 'التسليم', months: displayHandover, color: 'bg-emerald-500', icon: <CheckCircle2 className="w-4 h-4" />, key: 'handover' },
   ];
+
+  const handleSave = async () => {
+    try {
+      await updateMutation.mutateAsync({
+        id: project.id,
+        name: project.name,
+        startDate: editStartDate,
+        designApprovalMonths: editDesign,
+        reraSetupMonths: editRera,
+        constructionMonths: editConstruction,
+        handoverMonths: editHandover,
+        salesEnabled: project.salesEnabled || false,
+        salesVelocityType: project.salesVelocityType || 'aed',
+        buyerPlanBookingPct: parseFloat(project.buyerPlanBookingPct) || 20,
+        buyerPlanConstructionPct: parseFloat(project.buyerPlanConstructionPct) || 30,
+        buyerPlanHandoverPct: parseFloat(project.buyerPlanHandoverPct) || 50,
+      });
+      toast.success("تم تحديث الجدول الزمني بنجاح", {
+        description: `المدة الإجمالية: ${totalDuration} شهر — سيتم إعادة حساب التدفق النقدي`,
+      });
+      setIsEditing(false);
+      onRefresh();
+    } catch (e: any) {
+      toast.error(e.message || "فشل في تحديث الجدول الزمني");
+    }
+  };
+
+  const handleCancel = () => {
+    setEditStartDate(project.startDate);
+    setEditDesign(project.designApprovalMonths);
+    setEditRera(project.reraSetupMonths);
+    setEditConstruction(project.constructionMonths);
+    setEditHandover(project.handoverMonths);
+    setIsEditing(false);
+  };
+
+  const handlePhaseChange = (key: string, value: number) => {
+    const v = Math.max(1, value);
+    switch (key) {
+      case 'design': setEditDesign(v); break;
+      case 'rera': setEditRera(v); break;
+      case 'construction': setEditConstruction(v); break;
+      case 'handover': setEditHandover(v); break;
+    }
+  };
+
+  const hasChanges = isEditing && (
+    editStartDate !== project.startDate ||
+    editDesign !== project.designApprovalMonths ||
+    editRera !== project.reraSetupMonths ||
+    editConstruction !== project.constructionMonths ||
+    editHandover !== project.handoverMonths
+  );
 
   let cumMonth = 0;
 
@@ -662,13 +742,59 @@ function TimelineTab({ project }: { project: any }) {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CalendarDays className="w-5 h-5 text-emerald-600" />
-            الجدول الزمني للمشروع
-          </CardTitle>
-          <CardDescription>المدة الإجمالية: {totalDuration} شهر — بداية من {project.startDate}</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarDays className="w-5 h-5 text-emerald-600" />
+                الجدول الزمني للمشروع
+              </CardTitle>
+              <CardDescription>المدة الإجمالية: {totalDuration} شهر — بداية من {displayStartDate}</CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              {isEditing ? (
+                <>
+                  <Button variant="outline" size="sm" onClick={handleCancel} disabled={updateMutation.isPending}>
+                    إلغاء
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={updateMutation.isPending || !hasChanges}
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    {updateMutation.isPending ? (
+                      <RefreshCw className="w-4 h-4 animate-spin ml-1" />
+                    ) : (
+                      <Save className="w-4 h-4 ml-1" />
+                    )}
+                    {updateMutation.isPending ? "جاري الحفظ..." : "حفظ التعديلات"}
+                  </Button>
+                </>
+              ) : (
+                <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                  <Edit className="w-4 h-4 ml-1" />
+                  تعديل المدد
+                </Button>
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
+          {/* Start Date Editor */}
+          {isEditing && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center gap-4">
+                <Label className="text-sm font-semibold text-blue-700 whitespace-nowrap">تاريخ البداية:</Label>
+                <Input
+                  type="month"
+                  value={editStartDate}
+                  onChange={e => setEditStartDate(e.target.value)}
+                  className="w-48 bg-white"
+                />
+              </div>
+            </div>
+          )}
+
           {/* Gantt Chart */}
           <div className="space-y-3">
             {phases.map((phase, idx) => {
@@ -716,20 +842,53 @@ function TimelineTab({ project }: { project: any }) {
             </div>
             <div className="w-20" />
           </div>
+
+          {/* Change indicator */}
+          {hasChanges && (
+            <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600" />
+              <span className="text-sm text-amber-700">لديك تعديلات غير محفوظة — اضغط "حفظ التعديلات" لإعادة حساب التدفق النقدي</span>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Phase Details */}
+      {/* Phase Details - Editable Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {phases.map((phase, idx) => (
-          <Card key={idx} className="text-center">
+          <Card key={idx} className={`text-center transition-all ${isEditing ? 'ring-2 ring-emerald-200 shadow-md' : ''}`}>
             <CardContent className="pt-5 pb-4">
               <div className={`w-12 h-12 rounded-xl ${phase.color} text-white flex items-center justify-center mx-auto mb-3`}>
                 {phase.icon}
               </div>
               <p className="font-semibold text-gray-900 text-sm">{phase.name}</p>
-              <p className="text-2xl font-bold text-gray-700 mt-1">{phase.months}</p>
-              <p className="text-xs text-gray-500">شهر</p>
+              {isEditing ? (
+                <div className="mt-2 flex items-center justify-center gap-2">
+                  <button
+                    onClick={() => handlePhaseChange(phase.key, phase.months - 1)}
+                    className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 font-bold transition-colors"
+                    disabled={phase.months <= 1}
+                  >
+                    −
+                  </button>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={phase.months}
+                    onChange={e => handlePhaseChange(phase.key, parseInt(e.target.value) || 1)}
+                    className="w-16 text-center text-xl font-bold h-10"
+                  />
+                  <button
+                    onClick={() => handlePhaseChange(phase.key, phase.months + 1)}
+                    className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 font-bold transition-colors"
+                  >
+                    +
+                  </button>
+                </div>
+              ) : (
+                <p className="text-2xl font-bold text-gray-700 mt-1">{phase.months}</p>
+              )}
+              <p className="text-xs text-gray-500 mt-1">شهر</p>
             </CardContent>
           </Card>
         ))}
