@@ -1792,14 +1792,14 @@ function FinancialEvaluationView({ token, projectId, onBack }: { token: string; 
   );
 }
 
-// ═══ Technical Evaluation View (Wizard - One Criterion Per Page) ═══
+// ═══ Technical Evaluation View (Wizard - 3 Fixed Columns) ═══
 function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token: string; projectId: number; memberId: string; onBack: () => void }) {
   const data = trpc.commandCenter.getProjectTechnicalEvaluation.useQuery({ token, projectId });
   const submitScore = trpc.commandCenter.submitTechnicalScore.useMutation();
   const utils = trpc.useUtils();
   const [currentStep, setCurrentStep] = useState(0);
 
-  if (data.isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-teal-500" /></div>;
+  if (data.isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-indigo-500" /></div>;
 
   const evalData = data.data;
   if (!evalData) return <div className="text-center py-12 text-slate-400">لا توجد بيانات</div>;
@@ -1812,7 +1812,7 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
   };
 
   const getScoreLabel = (score: number) => {
-    if (score >= 93) return { label: 'ممتاز', color: 'text-emerald-700 bg-emerald-50' };
+    if (score >= 93) return { label: 'ممتاز', color: 'text-violet-700 bg-violet-50' };
     if (score >= 88) return { label: 'جيد جداً', color: 'text-blue-700 bg-blue-50' };
     if (score >= 82) return { label: 'جيد', color: 'text-sky-700 bg-sky-50' };
     if (score >= 74) return { label: 'مقبول', color: 'text-amber-700 bg-amber-50' };
@@ -1820,12 +1820,43 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
     return { label: 'غير مقبول', color: 'text-red-700 bg-red-50' };
   };
 
+  // Each score gets its own unique color (NO GREEN)
+  const SCORE_COLORS: Record<number, { normal: string; selected: string }> = {
+    95: { normal: 'border-violet-300 text-violet-600 bg-violet-50 hover:bg-violet-100', selected: 'bg-violet-500 text-white border-violet-500 shadow-lg shadow-violet-200 scale-110' },
+    93: { normal: 'border-indigo-300 text-indigo-600 bg-indigo-50 hover:bg-indigo-100', selected: 'bg-indigo-500 text-white border-indigo-500 shadow-lg shadow-indigo-200 scale-110' },
+    92: { normal: 'border-blue-300 text-blue-600 bg-blue-50 hover:bg-blue-100', selected: 'bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-200 scale-110' },
+    91: { normal: 'border-blue-300 text-blue-600 bg-blue-50 hover:bg-blue-100', selected: 'bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-200 scale-110' },
+    90: { normal: 'border-sky-300 text-sky-600 bg-sky-50 hover:bg-sky-100', selected: 'bg-sky-500 text-white border-sky-500 shadow-lg shadow-sky-200 scale-110' },
+    89: { normal: 'border-sky-300 text-sky-600 bg-sky-50 hover:bg-sky-100', selected: 'bg-sky-500 text-white border-sky-500 shadow-lg shadow-sky-200 scale-110' },
+    87: { normal: 'border-cyan-300 text-cyan-600 bg-cyan-50 hover:bg-cyan-100', selected: 'bg-cyan-500 text-white border-cyan-500 shadow-lg shadow-cyan-200 scale-110' },
+    86: { normal: 'border-cyan-300 text-cyan-600 bg-cyan-50 hover:bg-cyan-100', selected: 'bg-cyan-500 text-white border-cyan-500 shadow-lg shadow-cyan-200 scale-110' },
+    85: { normal: 'border-amber-300 text-amber-600 bg-amber-50 hover:bg-amber-100', selected: 'bg-amber-500 text-white border-amber-500 shadow-lg shadow-amber-200 scale-110' },
+    84: { normal: 'border-amber-300 text-amber-600 bg-amber-50 hover:bg-amber-100', selected: 'bg-amber-500 text-white border-amber-500 shadow-lg shadow-amber-200 scale-110' },
+    82: { normal: 'border-orange-300 text-orange-600 bg-orange-50 hover:bg-orange-100', selected: 'bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-200 scale-110' },
+    80: { normal: 'border-rose-300 text-rose-500 bg-rose-50 hover:bg-rose-100', selected: 'bg-rose-500 text-white border-rose-500 shadow-lg shadow-rose-200 scale-110' },
+    76: { normal: 'border-rose-300 text-rose-500 bg-rose-50 hover:bg-rose-100', selected: 'bg-rose-500 text-white border-rose-500 shadow-lg shadow-rose-200 scale-110' },
+    74: { normal: 'border-pink-300 text-pink-500 bg-pink-50 hover:bg-pink-100', selected: 'bg-pink-500 text-white border-pink-500 shadow-lg shadow-pink-200 scale-110' },
+    72: { normal: 'border-pink-300 text-pink-500 bg-pink-50 hover:bg-pink-100', selected: 'bg-pink-500 text-white border-pink-500 shadow-lg shadow-pink-200 scale-110' },
+    70: { normal: 'border-red-300 text-red-500 bg-red-50 hover:bg-red-100', selected: 'bg-red-500 text-white border-red-500 shadow-lg shadow-red-200 scale-110' },
+    68: { normal: 'border-red-300 text-red-500 bg-red-50 hover:bg-red-100', selected: 'bg-red-500 text-white border-red-500 shadow-lg shadow-red-200 scale-110' },
+    60: { normal: 'border-slate-300 text-slate-500 bg-slate-50 hover:bg-slate-100', selected: 'bg-slate-600 text-white border-slate-600 shadow-lg shadow-slate-200 scale-110' },
+    58: { normal: 'border-slate-300 text-slate-500 bg-slate-50 hover:bg-slate-100', selected: 'bg-slate-600 text-white border-slate-600 shadow-lg shadow-slate-200 scale-110' },
+    55: { normal: 'border-slate-300 text-slate-500 bg-slate-50 hover:bg-slate-100', selected: 'bg-slate-600 text-white border-slate-600 shadow-lg shadow-slate-200 scale-110' },
+    52: { normal: 'border-slate-300 text-slate-500 bg-slate-50 hover:bg-slate-100', selected: 'bg-slate-600 text-white border-slate-600 shadow-lg shadow-slate-200 scale-110' },
+    50: { normal: 'border-slate-400 text-slate-500 bg-slate-100 hover:bg-slate-200', selected: 'bg-slate-700 text-white border-slate-700 shadow-lg shadow-slate-300 scale-110' },
+    45: { normal: 'border-slate-400 text-slate-500 bg-slate-100 hover:bg-slate-200', selected: 'bg-slate-700 text-white border-slate-700 shadow-lg shadow-slate-300 scale-110' },
+  };
+
+  const getScoreButtonColor = (score: number, isSelected: boolean) => {
+    const colors = SCORE_COLORS[score] || { normal: 'border-slate-300 text-slate-500 bg-white hover:bg-slate-50', selected: 'bg-indigo-500 text-white border-indigo-500 shadow-lg shadow-indigo-200 scale-110' };
+    return isSelected ? colors.selected : colors.normal;
+  };
+
   const sortedCriteria = [...CRITERIA].sort((a, b) => b.weight - a.weight);
   const totalSteps = sortedCriteria.length;
   const isResultsPage = currentStep >= totalSteps;
   const criterion = !isResultsPage ? sortedCriteria[currentStep] : null;
 
-  // Count how many criteria have been scored for all consultants
   const getCompletedCount = () => {
     let count = 0;
     sortedCriteria.forEach((crit) => {
@@ -1854,19 +1885,19 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
   const sortedTotals = computeTotals();
   const completedCount = getCompletedCount();
 
-  // Accent colors for the wizard
-  const STEP_COLORS = [
-    { bg: 'bg-teal-50', border: 'border-teal-200', header: 'bg-teal-600', text: 'text-teal-700', selected: 'bg-teal-500 text-white border-teal-500 shadow-md shadow-teal-200', ring: 'ring-teal-200' },
-    { bg: 'bg-indigo-50', border: 'border-indigo-200', header: 'bg-indigo-600', text: 'text-indigo-700', selected: 'bg-indigo-500 text-white border-indigo-500 shadow-md shadow-indigo-200', ring: 'ring-indigo-200' },
-    { bg: 'bg-violet-50', border: 'border-violet-200', header: 'bg-violet-600', text: 'text-violet-700', selected: 'bg-violet-500 text-white border-violet-500 shadow-md shadow-violet-200', ring: 'ring-violet-200' },
-    { bg: 'bg-rose-50', border: 'border-rose-200', header: 'bg-rose-600', text: 'text-rose-700', selected: 'bg-rose-500 text-white border-rose-500 shadow-md shadow-rose-200', ring: 'ring-rose-200' },
-    { bg: 'bg-amber-50', border: 'border-amber-200', header: 'bg-amber-600', text: 'text-amber-700', selected: 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-200', ring: 'ring-amber-200' },
-    { bg: 'bg-cyan-50', border: 'border-cyan-200', header: 'bg-cyan-600', text: 'text-cyan-700', selected: 'bg-cyan-500 text-white border-cyan-500 shadow-md shadow-cyan-200', ring: 'ring-cyan-200' },
-    { bg: 'bg-emerald-50', border: 'border-emerald-200', header: 'bg-emerald-600', text: 'text-emerald-700', selected: 'bg-emerald-500 text-white border-emerald-500 shadow-md shadow-emerald-200', ring: 'ring-emerald-200' },
-    { bg: 'bg-orange-50', border: 'border-orange-200', header: 'bg-orange-600', text: 'text-orange-700', selected: 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-200', ring: 'ring-orange-200' },
-    { bg: 'bg-pink-50', border: 'border-pink-200', header: 'bg-pink-600', text: 'text-pink-700', selected: 'bg-pink-500 text-white border-pink-500 shadow-md shadow-pink-200', ring: 'ring-pink-200' },
+  // Step header colors (no green)
+  const STEP_HEADER_COLORS = [
+    'bg-gradient-to-l from-indigo-600 to-indigo-700',
+    'bg-gradient-to-l from-violet-600 to-violet-700',
+    'bg-gradient-to-l from-blue-600 to-blue-700',
+    'bg-gradient-to-l from-rose-600 to-rose-700',
+    'bg-gradient-to-l from-amber-600 to-amber-700',
+    'bg-gradient-to-l from-cyan-600 to-cyan-700',
+    'bg-gradient-to-l from-pink-600 to-pink-700',
+    'bg-gradient-to-l from-orange-600 to-orange-700',
+    'bg-gradient-to-l from-sky-600 to-sky-700',
   ];
-  const stepColor = criterion ? STEP_COLORS[currentStep % STEP_COLORS.length] : STEP_COLORS[0];
+  const stepHeaderColor = STEP_HEADER_COLORS[currentStep % STEP_HEADER_COLORS.length];
 
   return (
     <div className="space-y-4" dir="rtl">
@@ -1881,7 +1912,7 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
         <div className="flex items-center gap-2">
           {evaluatorStatus?.map((e: any) => (
             <div key={e.name} className="flex items-center gap-1">
-              <span className={`w-2 h-2 rounded-full ${e.isComplete ? 'bg-emerald-500' : e.completed > 0 ? 'bg-amber-400' : 'bg-slate-300'}`} />
+              <span className={`w-2 h-2 rounded-full ${e.isComplete ? 'bg-violet-500' : e.completed > 0 ? 'bg-amber-400' : 'bg-slate-300'}`} />
               <span className="text-[11px] text-slate-500">{e.nameAr}</span>
             </div>
           ))}
@@ -1901,8 +1932,8 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
               <button
                 key={i}
                 onClick={() => setCurrentStep(i)}
-                className={`h-2 flex-1 rounded-full transition-all cursor-pointer ${
-                  i === currentStep ? 'bg-slate-800 scale-y-150' : allScored ? 'bg-emerald-400' : 'bg-slate-200 hover:bg-slate-300'
+                className={`h-2.5 flex-1 rounded-full transition-all cursor-pointer ${
+                  i === currentStep ? 'bg-indigo-600 scale-y-125' : allScored ? 'bg-violet-400' : 'bg-slate-200 hover:bg-slate-300'
                 }`}
               />
             );
@@ -1911,20 +1942,20 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
       </div>
 
       {myStatus?.isComplete && !allComplete && (
-        <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-4 text-center">
-          <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-1" />
-          <p className="font-semibold text-emerald-800 text-sm">تم إكمال تقييمك الفني</p>
-          <p className="text-xs text-emerald-600 mt-0.5">في انتظار اكتمال تقييم باقي الأعضاء</p>
+        <div className="bg-violet-50 rounded-xl border border-violet-200 p-4 text-center">
+          <CheckCircle2 className="w-8 h-8 text-violet-500 mx-auto mb-1" />
+          <p className="font-semibold text-violet-800 text-sm">تم إكمال تقييمك الفني</p>
+          <p className="text-xs text-violet-600 mt-0.5">في انتظار اكتمال تقييم باقي الأعضاء</p>
         </div>
       )}
 
       {/* ═══ SINGLE CRITERION PAGE ═══ */}
       {!isResultsPage && criterion && (
-        <div className={`rounded-2xl border-2 ${stepColor.border} ${stepColor.bg} overflow-hidden`}>
+        <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
           {/* Criterion Title */}
-          <div className={`${stepColor.header} text-white px-5 py-3 flex items-center justify-between`}>
+          <div className={`${stepHeaderColor} text-white px-5 py-3.5 flex items-center justify-between`}>
             <div className="flex items-center gap-3">
-              <span className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">{currentStep + 1}</span>
+              <span className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-base font-bold">{currentStep + 1}</span>
               <div>
                 <h3 className="font-bold text-base">{criterion.name}</h3>
                 <p className="text-white/70 text-xs">الوزن: {criterion.weight}%</p>
@@ -1932,8 +1963,15 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
             </div>
           </div>
 
-          {/* Consultant Rows */}
-          <div className="p-4 space-y-2">
+          {/* Column Headers */}
+          <div className="grid grid-cols-[220px_1fr_250px] border-b border-slate-100 bg-slate-50 px-4 py-2">
+            <div className="text-xs font-bold text-slate-500 text-right">معنى النسبة</div>
+            <div className="text-xs font-bold text-slate-500 text-center">النسبة</div>
+            <div className="text-xs font-bold text-slate-500 text-left">الاستشاري</div>
+          </div>
+
+          {/* Consultant Rows - 3 FIXED COLUMNS */}
+          <div className="divide-y divide-slate-100">
             {consultantsList?.map((consultant: any) => {
               const myScore = consultant.myScores?.find((s: any) => s.criterionId === criterion.id);
               const selectedLabel = myScore?.score ? criterion.options.find(o => o.score === myScore.score)?.label : null;
@@ -1950,64 +1988,50 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
               const scoreInfo = getScoreLabel(avgScore);
 
               return (
-                <div key={consultant.id} className="bg-white rounded-xl border border-slate-200 px-4 py-3">
-                  <div className="flex items-center gap-4">
-                    {/* RIGHT: Consultant Name (RTL = right side) */}
-                    <div className="flex items-center gap-2.5 min-w-[200px] shrink-0">
-                      <span className={`w-8 h-8 rounded-full ${stepColor.header} text-white flex items-center justify-center text-xs font-bold`}>
-                        {consultant.name?.charAt(0)}
-                      </span>
-                      <span className="text-sm font-bold text-slate-800">{consultant.name}</span>
-                    </div>
-
-                    {/* CENTER: Score buttons */}
+                <div key={consultant.id} className="grid grid-cols-[220px_1fr_250px] items-center px-4 py-3 hover:bg-slate-50/50 transition-colors">
+                  {/* COL 1 (RIGHT in RTL): Meaning of selected score */}
+                  <div className="text-right pr-2 overflow-hidden">
                     {!myStatus?.isComplete && (
-                      <div className="flex items-center gap-1.5 flex-1 justify-center" dir="ltr">
-                        {criterion.options.map((opt) => (
-                          <button
-                            key={opt.score}
-                            onClick={() => handleScore(consultant.id, criterion.id, opt.score)}
-                            className={`text-sm w-11 h-11 rounded-full border-2 transition-all font-bold ${
-                              myScore?.score === opt.score
-                                ? stepColor.selected
-                                : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400 hover:scale-105'
-                            }`}
-                          >
-                            {opt.score}
-                          </button>
-                        ))}
-                      </div>
+                      selectedLabel ? (
+                        <span className="text-xs font-medium text-indigo-700 leading-tight block">{selectedLabel}</span>
+                      ) : (
+                        <span className="text-xs text-slate-300 italic">اختر التقييم</span>
+                      )
                     )}
-
-                    {/* CENTER: Results (if all complete) */}
                     {allComplete && (
-                      <div className="flex items-center gap-3 flex-1 justify-center" dir="ltr">
+                      <div className="flex items-center gap-2 justify-end">
+                        <span className={`text-xs px-2 py-0.5 rounded font-bold ${scoreInfo.color}`}>{avgScore.toFixed(0)}</span>
                         {evaluatorScores.map((ev) => (
-                          <div key={ev.name} className="text-center">
-                            <p className="text-[9px] text-slate-400">{ev.name}</p>
-                            <p className="text-sm font-bold text-slate-700">{ev.score}</p>
-                          </div>
+                          <span key={ev.name} className="text-[10px] text-slate-400">{ev.name}: {ev.score}</span>
                         ))}
-                        <div className="w-px h-6 bg-slate-200" />
-                        <div className="text-center">
-                          <p className="text-[9px] text-slate-400">المتوسط</p>
-                          <span className={`inline-block px-2.5 py-0.5 rounded-lg text-sm font-bold ${scoreInfo.color}`}>
-                            {avgScore.toFixed(0)}
-                          </span>
-                        </div>
                       </div>
                     )}
+                  </div>
 
-                    {/* LEFT: Selected score meaning (RTL = left side) */}
-                    {!myStatus?.isComplete && (
-                      <div className="min-w-[220px] text-left shrink-0" dir="rtl">
-                        {selectedLabel ? (
-                          <span className={`text-xs font-medium ${stepColor.text}`}>{selectedLabel}</span>
-                        ) : (
-                          <span className="text-xs text-slate-300 italic">اختر التقييم</span>
-                        )}
-                      </div>
+                  {/* COL 2 (CENTER): Score buttons - each with unique color */}
+                  <div className="flex items-center gap-1.5 justify-center" dir="ltr">
+                    {!myStatus?.isComplete && criterion.options.map((opt) => (
+                      <button
+                        key={opt.score}
+                        onClick={() => handleScore(consultant.id, criterion.id, opt.score)}
+                        className={`text-xs w-10 h-10 rounded-full border-2 transition-all font-bold ${
+                          getScoreButtonColor(opt.score, myScore?.score === opt.score)
+                        }`}
+                      >
+                        {opt.score}
+                      </button>
+                    ))}
+                    {myStatus?.isComplete && !allComplete && (
+                      <span className="text-sm font-bold text-indigo-600">{myScore?.score || '—'}</span>
                     )}
+                  </div>
+
+                  {/* COL 3 (LEFT in RTL): Consultant Name */}
+                  <div className="flex items-center gap-2.5 justify-end pl-2">
+                    <span className="text-sm font-bold text-slate-800 text-left">{consultant.name}</span>
+                    <span className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                      {consultant.name?.charAt(0)}
+                    </span>
                   </div>
                 </div>
               );
@@ -2015,7 +2039,7 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
           </div>
 
           {/* Navigation Buttons */}
-          <div className="px-4 pb-4 flex items-center justify-between">
+          <div className="px-4 py-3 flex items-center justify-between border-t border-slate-100 bg-slate-50/50">
             <Button
               variant="outline"
               size="sm"
@@ -2026,14 +2050,14 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
               <ArrowRight className="w-4 h-4" /> السابق
             </Button>
 
-            <div className="text-xs text-slate-500">
+            <div className="text-xs text-slate-500 font-medium">
               {currentStep + 1} / {totalSteps}
             </div>
 
             <Button
               size="sm"
               onClick={() => setCurrentStep(Math.min(totalSteps, currentStep + 1))}
-              className={`gap-1 ${stepColor.header} text-white hover:opacity-90`}
+              className={`gap-1 ${stepHeaderColor} text-white hover:opacity-90`}
             >
               {currentStep < totalSteps - 1 ? 'التالي' : 'عرض النتائج'} <ArrowLeft className="w-4 h-4" />
             </Button>
@@ -2041,12 +2065,11 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
         </div>
       )}
 
-      {/* ═══ RESULTS PAGE (after navigating past last criterion) ═══ */}
+      {/* ═══ RESULTS PAGE ═══ */}
       {isResultsPage && (
         <div className="space-y-4">
-          {/* Summary of my scores */}
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-            <div className="bg-slate-800 text-white px-5 py-3">
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+            <div className="bg-gradient-to-l from-indigo-700 to-violet-700 text-white px-5 py-3">
               <h3 className="font-bold text-base">ملخص التقييم</h3>
             </div>
             <div className="p-4">
@@ -2064,7 +2087,7 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
                   {sortedCriteria.map((crit, i) => (
                     <tr key={crit.id} className={`border-b border-slate-100 ${i % 2 === 0 ? 'bg-slate-50/50' : ''}`}>
                       <td className="py-2 text-slate-700 text-xs font-medium">
-                        <button onClick={() => setCurrentStep(i)} className="hover:text-teal-600 hover:underline cursor-pointer">
+                        <button onClick={() => setCurrentStep(i)} className="hover:text-indigo-600 hover:underline cursor-pointer">
                           {crit.name}
                         </button>
                       </td>
@@ -2089,10 +2112,9 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
             </div>
           </div>
 
-          {/* Final Ranking (if all complete) */}
           {allComplete && sortedTotals.length > 0 && (
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-              <div className="bg-amber-500 text-white px-5 py-3 flex items-center gap-2">
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+              <div className="bg-gradient-to-l from-amber-500 to-orange-500 text-white px-5 py-3 flex items-center gap-2">
                 <Trophy className="w-5 h-5" />
                 <h3 className="font-bold text-base">الترتيب الفني النهائي</h3>
               </div>
@@ -2109,7 +2131,7 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
                       <div className="flex-1 bg-slate-100 rounded-full h-6 overflow-hidden">
                         <div
                           className={`h-full rounded-full transition-all ${
-                            i === 0 ? 'bg-gradient-to-l from-emerald-400 to-emerald-600' : i === 1 ? 'bg-gradient-to-l from-blue-400 to-blue-600' : i === 2 ? 'bg-gradient-to-l from-sky-400 to-sky-500' : 'bg-slate-400'
+                            i === 0 ? 'bg-gradient-to-l from-violet-400 to-indigo-600' : i === 1 ? 'bg-gradient-to-l from-blue-400 to-blue-600' : i === 2 ? 'bg-gradient-to-l from-sky-400 to-sky-500' : 'bg-slate-400'
                           }`}
                           style={{ width: `${barWidth}%` }}
                         />
@@ -2123,9 +2145,8 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
             </div>
           )}
 
-          {/* Detailed breakdown per evaluator (collapsible) */}
           {allComplete && evalData.allEvaluatorData && (
-            <details className="bg-white rounded-2xl border border-slate-200">
+            <details className="bg-white rounded-2xl border border-slate-200 shadow-sm">
               <summary className="p-4 text-sm font-medium text-slate-600 cursor-pointer hover:bg-slate-50 rounded-2xl">تفاصيل تقييم كل عضو على حدة</summary>
               <div className="p-4 pt-0 space-y-3">
                 {consultantsList?.map((consultant: any) => {
@@ -2180,7 +2201,6 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
             </details>
           )}
 
-          {/* Back to criteria button */}
           <div className="flex justify-center">
             <Button variant="outline" size="sm" onClick={() => setCurrentStep(0)} className="gap-1">
               <ArrowRight className="w-4 h-4" /> العودة للمعايير
