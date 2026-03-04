@@ -1830,13 +1830,6 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
     } catch { /* silent fallback */ }
   };
 
-  if (data.isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-indigo-500" /></div>;
-
-  const evalData = data.data;
-  if (!evalData) return <div className="text-center py-12 text-slate-400">لا توجد بيانات</div>;
-
-  const { project, consultants: consultantsList, evaluatorStatus, allComplete, myEvaluatorName, myStatus, isMyEvaluationApproved, allApprovals } = evalData;
-
   const approveMutation = trpc.commandCenter.approveTechnicalEvaluation.useMutation({
     onSuccess: () => {
       toast.success('تم اعتماد التقييم بنجاح. لا يمكن تعديله بعد الآن.');
@@ -1844,6 +1837,13 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
     },
     onError: (err) => toast.error(err.message),
   });
+
+  if (data.isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-indigo-500" /></div>;
+
+  const evalData = data.data;
+  if (!evalData) return <div className="text-center py-12 text-slate-400">لا توجد بيانات</div>;
+
+  const { project, consultants: consultantsList, evaluatorStatus, allComplete, myEvaluatorName, myStatus, isMyEvaluationApproved, allApprovals } = evalData;
 
   const handleScore = async (consultantId: number, criterionId: number, score: number) => {
     if (isMyEvaluationApproved) {
