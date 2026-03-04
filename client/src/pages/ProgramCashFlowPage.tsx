@@ -15,7 +15,7 @@ import {
   CalendarDays, Plus, Trash2, Edit, DollarSign, TrendingDown, TrendingUp,
   BarChart3, ArrowRight, Building2, Layers, Settings2, FolderOpen,
   ChevronLeft, Save, RefreshCw, Download, AlertTriangle, CheckCircle2,
-  Clock, Landmark, Briefcase, Hammer, Eye, FileText, Percent
+  Clock, Landmark, Briefcase, Hammer, Eye, FileText, Percent, FileSpreadsheet, GitCompare
 } from "lucide-react";
 
 // ═══════════════════════════════════════════════════════════════
@@ -620,7 +620,7 @@ function ProjectDetailView({
           </TabsContent>
 
           <TabsContent value="cashflow">
-            <CashFlowTab cashFlow={cashFlow} costItems={costItems} isLoading={cashFlowQuery.isLoading} />
+            <CashFlowTab cashFlow={cashFlow} costItems={costItems} isLoading={cashFlowQuery.isLoading} project={project} />
           </TabsContent>
 
           <TabsContent value="scenarios">
@@ -633,6 +633,7 @@ function ProjectDetailView({
                 cashFlowQuery.refetch();
               }}
               onRefresh={() => scenariosQuery.refetch()}
+              project={project}
             />
           </TabsContent>
 
@@ -1073,7 +1074,11 @@ function CostStructureTab({
                             variant="ghost"
                             size="sm"
                             className="text-red-500 hover:text-red-700"
-                            onClick={() => handleDelete(item.id)}
+                            onClick={() => {
+                              if (window.confirm(`هل أنت متأكد من حذف "${item.name}"؟ سيتم إعادة حساب التدفق النقدي.`)) {
+                                handleDelete(item.id);
+                              }
+                            }}
                           >
                             <Trash2 className="w-3 h-3" />
                           </Button>
@@ -1420,12 +1425,73 @@ function CashFlowTab({
   cashFlow,
   costItems,
   isLoading,
+  project,
 }: {
   cashFlow: any;
   costItems: any[];
   isLoading: boolean;
+  project: any;
 }) {
   const [viewMode, setViewMode] = useState<'table' | 'chart'>('chart');
+
+  const handleExportExcel = async () => {
+    try {
+      const XLSX = await import('xlsx');
+      const wb = XLSX.utils.book_new();
+
+      // Sheet 1: Monthly Cash Flow
+      const { monthLabels, totalOutflow, salesInflow, cumulativeOutflow, cumulativeInflow, cumulativeNet, outflowByCategory } = cashFlow;
+      const categories = Object.keys(outflowByCategory).filter(k => k !== 'total');
+      const headers = ['الشهر', ...categories.map(c => CATEGORY_LABELS[c] || c), 'إجمالي المصروفات', 'الإيرادات', 'صافي', 'تراكمي التكاليف', 'تراكمي الإيرادات', 'صافي تراكمي'];
+      const rows = monthLabels.map((label: string, idx: number) => [
+        label,
+        ...categories.map(c => outflowByCategory[c]?.[idx] || 0),
+        totalOutflow[idx],
+        salesInflow[idx],
+        salesInflow[idx] - totalOutflow[idx],
+        cumulativeOutflow[idx],
+        cumulativeInflow[idx],
+        cumulativeNet[idx],
+      ]);
+      const ws1 = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+      ws1['!cols'] = headers.map(() => ({ wch: 18 }));
+      XLSX.utils.book_append_sheet(wb, ws1, 'التدفق الشهري');
+
+      // Sheet 2: Key Numbers
+      const kn = cashFlow.keyNumbers;
+      const summaryData = [
+        ['المؤشر', 'القيمة'],
+        ['اسم المشروع', project?.name || ''],
+        ['إجمالي التكاليف (د.إ)', kn.totalCost],
+        ['إجمالي المبيعات (د.إ)', kn.totalSales],
+        ['أقصى تعرض رأسمالي (د.إ)', kn.peakExposure],
+        ['شهر الذروة', kn.peakMonthLabel],
+        ['صافي الربح (د.إ)', kn.netProfit],
+        ['العائد على الاستثمار %', kn.roi?.toFixed(1)],
+      ];
+      const ws2 = XLSX.utils.aoa_to_sheet(summaryData);
+      ws2['!cols'] = [{ wch: 30 }, { wch: 20 }];
+      XLSX.utils.book_append_sheet(wb, ws2, 'الأرقام الرئيسية');
+
+      // Sheet 3: Cost Items
+      const costHeaders = ['البند', 'الفئة', 'المبلغ (د.إ)', 'نوع الدفع', 'النسبة %'];
+      const costRows = costItems.map(item => [
+        item.name,
+        CATEGORY_LABELS[item.category] || item.category,
+        item.totalAmount,
+        PAYMENT_TYPE_LABELS[item.paymentType] || item.paymentType,
+        kn.totalCost > 0 ? ((item.totalAmount / kn.totalCost) * 100).toFixed(1) + '%' : '0%',
+      ]);
+      const ws3 = XLSX.utils.aoa_to_sheet([costHeaders, ...costRows]);
+      ws3['!cols'] = costHeaders.map(() => ({ wch: 22 }));
+      XLSX.utils.book_append_sheet(wb, ws3, 'بنود التكلفة');
+
+      XLSX.writeFile(wb, `تدفق-نقدي-${project?.name || 'project'}.xlsx`);
+      toast.success('تم تصدير الملف بنجاح');
+    } catch (e: any) {
+      toast.error('فشل في التصدير: ' + (e.message || ''));
+    }
+  };
 
   if (isLoading) {
     return (
@@ -1458,8 +1524,17 @@ function CashFlowTab({
 
   return (
     <div className="space-y-6">
-      {/* View Toggle */}
-      <div className="flex justify-end">
+      {/* View Toggle + Export */}
+      <div className="flex justify-between items-center">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleExportExcel}
+          className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+        >
+          <FileSpreadsheet className="w-4 h-4 ml-1" />
+          تصدير Excel
+        </Button>
         <div className="flex bg-gray-100 rounded-lg p-1">
           <Button
             variant={viewMode === 'chart' ? 'default' : 'ghost'}
@@ -1629,14 +1704,17 @@ function ScenariosTab({
   selectedScenarioId,
   onSelectScenario,
   onRefresh,
+  project,
 }: {
   cfProjectId: number;
   scenarios: any[];
   selectedScenarioId: number | null;
   onSelectScenario: (id: number | null) => void;
   onRefresh: () => void;
+  project: any;
 }) {
   const [showCreate, setShowCreate] = useState(false);
+  const [showComparison, setShowComparison] = useState(false);
   const [name, setName] = useState("");
   const [salesDelta, setSalesDelta] = useState(0);
   const [constructionDelta, setConstructionDelta] = useState(0);
@@ -1768,6 +1846,24 @@ function ScenariosTab({
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {/* Scenario Comparison */}
+          {scenarios.length > 0 && (
+            <div className="mb-6">
+              <Button
+                variant={showComparison ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setShowComparison(!showComparison)}
+                className={showComparison ? 'bg-emerald-600 hover:bg-emerald-700' : 'border-emerald-300 text-emerald-700'}
+              >
+                <GitCompare className="w-4 h-4 ml-1" />
+                {showComparison ? 'إخفاء المقارنة' : 'مقارنة السيناريوهات'}
+              </Button>
+              {showComparison && (
+                <ScenarioComparisonView cfProjectId={cfProjectId} scenarios={scenarios} project={project} />
+              )}
+            </div>
           )}
 
           {/* Scenarios List */}
@@ -1930,6 +2026,275 @@ function DashboardTab({ cashFlow, project }: { cashFlow: any; project: any }) {
                 </div>
               );
             })}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Scenario Comparison View
+// ═══════════════════════════════════════════════════════════════
+
+const SCENARIO_COLORS = ['#059669', '#2563eb', '#dc2626', '#ea580c', '#7c3aed', '#0891b2'];
+
+function ScenarioComparisonView({
+  cfProjectId,
+  scenarios,
+  project,
+}: {
+  cfProjectId: number;
+  scenarios: any[];
+  project: any;
+}) {
+  // Fetch base scenario cash flow
+  const baseCashFlow = trpc.cashFlowProgram.calculateCashFlow.useQuery({
+    cfProjectId,
+    scenarioId: null,
+  });
+
+  // Fetch each scenario's cash flow
+  const scenarioCashFlows = scenarios.map(s =>
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    trpc.cashFlowProgram.calculateCashFlow.useQuery({
+      cfProjectId,
+      scenarioId: s.id,
+    })
+  );
+
+  const allLoaded = baseCashFlow.data && scenarioCashFlows.every(q => q.data);
+
+  if (!allLoaded) {
+    return (
+      <Card className="mt-4">
+        <CardContent className="py-8 text-center">
+          <div className="animate-spin w-6 h-6 border-4 border-emerald-500 border-t-transparent rounded-full mx-auto mb-3" />
+          <p className="text-sm text-gray-500">جاري تحميل بيانات المقارنة...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const baseData = baseCashFlow.data!;
+  const scenarioDataList = scenarioCashFlows.map(q => q.data!);
+
+  // Find the max number of months across all scenarios
+  const maxMonths = Math.max(
+    baseData.monthLabels.length,
+    ...scenarioDataList.map(d => d.monthLabels.length)
+  );
+
+  // Find max cumulative value for chart scaling
+  const allCumulatives = [
+    ...baseData.cumulativeOutflow,
+    ...scenarioDataList.flatMap(d => d.cumulativeOutflow),
+  ];
+  const maxCumVal = Math.max(...allCumulatives, 1);
+
+  // Build SVG paths
+  const buildPath = (data: number[], totalMonths: number) => {
+    if (data.length === 0) return '';
+    const xStep = 800 / Math.max(totalMonths - 1, 1);
+    return data.map((v, i) => {
+      const x = i * xStep;
+      const y = 280 - (v / maxCumVal) * 260;
+      return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+  };
+
+  return (
+    <div className="mt-4 space-y-4">
+      {/* Cumulative Cost Comparison Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <GitCompare className="w-5 h-5 text-emerald-600" />
+            مقارنة التكاليف التراكمية
+          </CardTitle>
+          <CardDescription>مقارنة التدفق النقدي التراكمي بين السيناريو الأساسي والسيناريوهات المختلفة</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <svg viewBox="0 0 840 320" className="w-full h-64 md:h-80">
+              {/* Grid lines */}
+              {[0, 0.25, 0.5, 0.75, 1].map(pct => (
+                <g key={pct}>
+                  <line
+                    x1="0" y1={280 - pct * 260} x2="800" y2={280 - pct * 260}
+                    stroke="#e5e7eb" strokeWidth="0.5" strokeDasharray="4,4"
+                  />
+                  <text x="810" y={285 - pct * 260} fontSize="9" fill="#9ca3af" textAnchor="start">
+                    {formatAED(maxCumVal * pct)}
+                  </text>
+                </g>
+              ))}
+
+              {/* Base scenario line */}
+              <path
+                d={buildPath(baseData.cumulativeOutflow, maxMonths)}
+                fill="none"
+                stroke="#6b7280"
+                strokeWidth="2.5"
+                strokeDasharray="6,3"
+              />
+
+              {/* Scenario lines */}
+              {scenarioDataList.map((data, idx) => (
+                <path
+                  key={scenarios[idx].id}
+                  d={buildPath(data.cumulativeOutflow, maxMonths)}
+                  fill="none"
+                  stroke={SCENARIO_COLORS[idx % SCENARIO_COLORS.length]}
+                  strokeWidth="2"
+                />
+              ))}
+            </svg>
+          </div>
+
+          {/* Legend */}
+          <div className="flex flex-wrap gap-4 mt-3 justify-center">
+            <span className="flex items-center gap-2 text-sm">
+              <span className="w-6 h-0.5 bg-gray-500 block" style={{ borderTop: '2px dashed #6b7280' }} />
+              <span className="text-gray-600">الأساسي</span>
+            </span>
+            {scenarios.map((s, idx) => (
+              <span key={s.id} className="flex items-center gap-2 text-sm">
+                <span className="w-6 h-0.5 block" style={{ backgroundColor: SCENARIO_COLORS[idx % SCENARIO_COLORS.length] }} />
+                <span style={{ color: SCENARIO_COLORS[idx % SCENARIO_COLORS.length] }}>{s.name}</span>
+              </span>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Key Numbers Comparison Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>مقارنة الأرقام الرئيسية</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-gray-500">
+                  <th className="text-right py-2 px-3">المؤشر</th>
+                  <th className="text-right py-2 px-3 bg-gray-50">
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-gray-500" />
+                      الأساسي
+                    </span>
+                  </th>
+                  {scenarios.map((s, idx) => (
+                    <th key={s.id} className="text-right py-2 px-3">
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: SCENARIO_COLORS[idx % SCENARIO_COLORS.length] }} />
+                        {s.name}
+                      </span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b">
+                  <td className="py-2 px-3 font-medium">إجمالي التكاليف</td>
+                  <td className="py-2 px-3 font-mono bg-gray-50">{formatAEDFull(baseData.keyNumbers.totalCost)} د.إ</td>
+                  {scenarioDataList.map((data, idx) => {
+                    const diff = data.keyNumbers.totalCost - baseData.keyNumbers.totalCost;
+                    return (
+                      <td key={scenarios[idx].id} className="py-2 px-3 font-mono">
+                        {formatAEDFull(data.keyNumbers.totalCost)} د.إ
+                        {diff !== 0 && (
+                          <span className={`text-xs mr-1 ${diff > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                            ({diff > 0 ? '+' : ''}{formatAED(diff)})
+                          </span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2 px-3 font-medium">أقصى تعرض رأسمالي</td>
+                  <td className="py-2 px-3 font-mono bg-gray-50">{formatAEDFull(baseData.keyNumbers.peakExposure)} د.إ</td>
+                  {scenarioDataList.map((data, idx) => {
+                    const diff = data.keyNumbers.peakExposure - baseData.keyNumbers.peakExposure;
+                    return (
+                      <td key={scenarios[idx].id} className="py-2 px-3 font-mono">
+                        {formatAEDFull(data.keyNumbers.peakExposure)} د.إ
+                        {diff !== 0 && (
+                          <span className={`text-xs mr-1 ${diff > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                            ({diff > 0 ? '+' : ''}{formatAED(diff)})
+                          </span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2 px-3 font-medium">شهر الذروة</td>
+                  <td className="py-2 px-3 bg-gray-50">{baseData.keyNumbers.peakMonthLabel}</td>
+                  {scenarioDataList.map((data, idx) => (
+                    <td key={scenarios[idx].id} className="py-2 px-3">{data.keyNumbers.peakMonthLabel}</td>
+                  ))}
+                </tr>
+                {baseData.keyNumbers.totalSales > 0 && (
+                  <>
+                    <tr className="border-b">
+                      <td className="py-2 px-3 font-medium">إجمالي المبيعات</td>
+                      <td className="py-2 px-3 font-mono bg-gray-50">{formatAEDFull(baseData.keyNumbers.totalSales)} د.إ</td>
+                      {scenarioDataList.map((data, idx) => (
+                        <td key={scenarios[idx].id} className="py-2 px-3 font-mono">{formatAEDFull(data.keyNumbers.totalSales)} د.إ</td>
+                      ))}
+                    </tr>
+                    <tr className="border-b">
+                      <td className="py-2 px-3 font-medium">صافي الربح</td>
+                      <td className={`py-2 px-3 font-mono bg-gray-50 ${baseData.keyNumbers.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                        {formatAEDFull(baseData.keyNumbers.netProfit)} د.إ
+                      </td>
+                      {scenarioDataList.map((data, idx) => (
+                        <td key={scenarios[idx].id} className={`py-2 px-3 font-mono ${data.keyNumbers.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                          {formatAEDFull(data.keyNumbers.netProfit)} د.إ
+                        </td>
+                      ))}
+                    </tr>
+                    <tr className="border-b">
+                      <td className="py-2 px-3 font-medium">العائد على الاستثمار</td>
+                      <td className="py-2 px-3 font-mono bg-gray-50">{baseData.keyNumbers.roi?.toFixed(1)}%</td>
+                      {scenarioDataList.map((data, idx) => {
+                        const diff = (data.keyNumbers.roi || 0) - (baseData.keyNumbers.roi || 0);
+                        return (
+                          <td key={scenarios[idx].id} className="py-2 px-3 font-mono">
+                            {data.keyNumbers.roi?.toFixed(1)}%
+                            {Math.abs(diff) > 0.1 && (
+                              <span className={`text-xs mr-1 ${diff > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                ({diff > 0 ? '+' : ''}{diff.toFixed(1)}%)
+                              </span>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  </>
+                )}
+                <tr>
+                  <td className="py-2 px-3 font-medium">المدة الإجمالية</td>
+                  <td className="py-2 px-3 bg-gray-50">{baseData.monthLabels.length} شهر</td>
+                  {scenarioDataList.map((data, idx) => {
+                    const diff = data.monthLabels.length - baseData.monthLabels.length;
+                    return (
+                      <td key={scenarios[idx].id} className="py-2 px-3">
+                        {data.monthLabels.length} شهر
+                        {diff !== 0 && (
+                          <span className={`text-xs mr-1 ${diff > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                            ({diff > 0 ? '+' : ''}{diff})
+                          </span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>
