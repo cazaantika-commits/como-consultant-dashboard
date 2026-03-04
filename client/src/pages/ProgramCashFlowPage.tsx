@@ -17,7 +17,8 @@ import {
   BarChart3, ArrowRight, Building2, Layers, Settings2, FolderOpen,
   ChevronLeft, Save, RefreshCw, Download, AlertTriangle, CheckCircle2,
   Clock, Landmark, Briefcase, Hammer, Eye, FileText, Percent, FileSpreadsheet,
-  GitCompare, Wallet, Building, ShieldCheck, ArrowUpDown
+  GitCompare, Wallet, Building, ShieldCheck, ArrowUpDown, Info, ListChecks,
+  CircleDollarSign, LayoutDashboard
 } from "lucide-react";
 
 // ═══════════════════════════════════════════════════════════════
@@ -107,10 +108,13 @@ export default function ProgramCashFlowPage() {
   const [showPortfolio, setShowPortfolio] = useState(false);
 
   const projectsQuery = trpc.cashFlowProgram.listProjects.useQuery();
-  const feasibilityQuery = trpc.cashFlowProgram.importFromFeasibility.useQuery(
-    { projectId: 0 },
-    { enabled: false }
-  );
+  const deleteMutation = trpc.cashFlowProgram.deleteProject.useMutation({
+    onSuccess: () => {
+      toast.success('تم حذف المشروع');
+      projectsQuery.refetch();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
 
   const projects = projectsQuery.data || [];
 
@@ -122,28 +126,69 @@ export default function ProgramCashFlowPage() {
     return (
       <ProjectDetailView
         cfProjectId={selectedProjectId}
-        onBack={() => setSelectedProjectId(null)}
+        onBack={() => { setSelectedProjectId(null); projectsQuery.refetch(); }}
       />
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-5xl mx-auto">
       {/* Header */}
+      <div className="text-center space-y-2 pt-4">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white mb-2">
+          <Wallet className="h-7 w-7" />
+        </div>
+        <h1 className="text-2xl font-bold">برنامج العمل والتدفقات النقدية</h1>
+        <p className="text-muted-foreground max-w-lg mx-auto">
+          أداة لإدارة التدفقات النقدية لمشاريعك العقارية — تتبع التكاليف، المبيعات، وحسابات الإسكرو
+        </p>
+      </div>
+
+      {/* How it works - only show when few or no projects */}
+      {projects.length < 3 && (
+        <Card className="border-amber-200/50 bg-gradient-to-br from-amber-50/50 to-orange-50/30 dark:from-amber-950/20 dark:to-orange-950/10">
+          <CardContent className="p-6">
+            <h3 className="font-semibold text-base mb-4 flex items-center gap-2">
+              <Info className="h-4 w-4 text-amber-600" />
+              كيف تستخدم هذه الأداة؟
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex gap-3">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold text-sm">1</div>
+                <div>
+                  <div className="font-medium text-sm">أنشئ مشروع</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">حدد اسم المشروع، تاريخ البدء، ومدة كل مرحلة (ما قبل البناء، البناء، التسليم)</div>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-sm">2</div>
+                <div>
+                  <div className="font-medium text-sm">أضف بنود التكاليف</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">أضف تكاليف الأرض، المقاول، الاستشاريين، وغيرها مع تحديد مصدر التمويل ونوع الدفع</div>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center font-bold text-sm">3</div>
+                <div>
+                  <div className="font-medium text-sm">شاهد التدفق النقدي</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">النظام يحسب تلقائياً التدفق النقدي الشهري مع الرسوم البيانية والجداول التفصيلية</div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Actions Bar */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Wallet className="h-7 w-7 text-primary" />
-            برنامج العمل والتدفقات النقدية
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            نموذج تدفق نقدي مزدوج — تمويل المستثمر + حساب الإسكرو
-          </p>
+        <div className="flex items-center gap-2">
+          <h2 className="font-semibold text-lg">مشاريعي</h2>
+          <Badge variant="secondary" className="text-xs">{projects.length}</Badge>
         </div>
         <div className="flex items-center gap-2">
-          {projects.length > 0 && (
-            <Button variant="outline" onClick={() => setShowPortfolio(true)}>
-              <Layers className="h-4 w-4 ml-2" />
+          {projects.length > 1 && (
+            <Button variant="outline" size="sm" onClick={() => setShowPortfolio(true)}>
+              <LayoutDashboard className="h-4 w-4 ml-2" />
               محفظة المشاريع
             </Button>
           )}
@@ -157,56 +202,112 @@ export default function ProgramCashFlowPage() {
 
       {/* Project Cards */}
       {projects.length === 0 ? (
-        <Card className="border-dashed">
+        <Card className="border-dashed border-2">
           <CardContent className="flex flex-col items-center justify-center py-16">
-            <Building2 className="h-12 w-12 text-muted-foreground/40 mb-4" />
-            <p className="text-lg font-medium text-muted-foreground mb-2">لا توجد مشاريع</p>
-            <p className="text-sm text-muted-foreground mb-4">أنشئ مشروعاً جديداً أو استورد من دراسة الجدوى</p>
-            <Button onClick={() => setShowCreateDialog(true)}>
-              <Plus className="h-4 w-4 ml-2" />
-              مشروع جديد
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+              <Building2 className="h-8 w-8 text-muted-foreground/40" />
+            </div>
+            <p className="text-lg font-medium mb-1">لا توجد مشاريع بعد</p>
+            <p className="text-sm text-muted-foreground mb-6 max-w-sm text-center">
+              ابدأ بإنشاء مشروعك الأول — يمكنك الاستيراد من دراسة الجدوى أو إنشاء مشروع يدوياً
+            </p>
+            <Button size="lg" onClick={() => setShowCreateDialog(true)}>
+              <Plus className="h-5 w-5 ml-2" />
+              إنشاء أول مشروع
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {projects.map((p: any) => (
-            <Card
-              key={p.id}
-              className="cursor-pointer hover:border-primary/50 transition-colors"
-              onClick={() => setSelectedProjectId(p.id)}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">{p.name}</CardTitle>
-                  <Badge variant="outline" className="text-xs">
-                    {p.startDate}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="bg-amber-500/10 rounded-lg p-2">
-                    <div className="text-xs text-muted-foreground">ما قبل البناء</div>
-                    <div className="font-bold text-amber-600">{p.preDevMonths || p.designApprovalMonths + p.reraSetupMonths} شهر</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {projects.map((p: any) => {
+            const totalMonths = (p.preDevMonths || p.designApprovalMonths + p.reraSetupMonths) + p.constructionMonths + p.handoverMonths;
+            return (
+              <Card
+                key={p.id}
+                className="group hover:border-primary/50 hover:shadow-md transition-all cursor-pointer relative"
+                onClick={() => setSelectedProjectId(p.id)}
+              >
+                <CardHeader className="pb-2">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-lg truncate">{p.name}</CardTitle>
+                      <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                        <CalendarDays className="h-3 w-3" />
+                        <span>بدء: {p.startDate}</span>
+                        <span>·</span>
+                        <span>{totalMonths} شهر</span>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm('هل أنت متأكد من حذف هذا المشروع؟ سيتم حذف جميع البيانات المرتبطة.')) {
+                          deleteMutation.mutate({ id: p.id });
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <div className="bg-blue-500/10 rounded-lg p-2">
-                    <div className="text-xs text-muted-foreground">البناء</div>
-                    <div className="font-bold text-blue-600">{p.constructionMonths} شهر</div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {/* Phase Timeline Mini */}
+                  <div className="flex gap-1 h-2 rounded-full overflow-hidden bg-muted">
+                    <div
+                      className="rounded-full bg-amber-500"
+                      style={{ width: `${((p.preDevMonths || p.designApprovalMonths + p.reraSetupMonths) / totalMonths) * 100}%` }}
+                    />
+                    <div
+                      className="rounded-full bg-blue-500"
+                      style={{ width: `${(p.constructionMonths / totalMonths) * 100}%` }}
+                    />
+                    <div
+                      className="rounded-full bg-green-500"
+                      style={{ width: `${(p.handoverMonths / totalMonths) * 100}%` }}
+                    />
                   </div>
-                  <div className="bg-green-500/10 rounded-lg p-2">
-                    <div className="text-xs text-muted-foreground">التسليم</div>
-                    <div className="font-bold text-green-600">{p.handoverMonths} شهر</div>
+                  <div className="flex justify-between text-[10px] text-muted-foreground">
+                    <span className="text-amber-600">ما قبل البناء {p.preDevMonths || p.designApprovalMonths + p.reraSetupMonths}ش</span>
+                    <span className="text-blue-600">البناء {p.constructionMonths}ش</span>
+                    <span className="text-green-600">التسليم {p.handoverMonths}ش</span>
                   </div>
-                </div>
-                {p.totalSalesRevenue && (
-                  <div className="mt-3 text-sm text-muted-foreground">
-                    الإيرادات: <span className="font-semibold text-foreground">{formatAED(p.totalSalesRevenue)} AED</span>
+
+                  {/* Stats Row */}
+                  <div className="flex items-center gap-3 pt-1 border-t">
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <ListChecks className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-muted-foreground">بنود التكاليف:</span>
+                      <span className="font-semibold">{p.costItemCount || 0}</span>
+                    </div>
+                    {(p.totalCost > 0) && (
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <CircleDollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-muted-foreground">إجمالي:</span>
+                        <span className="font-semibold text-red-600">{formatAED(p.totalCost)} AED</span>
+                      </div>
+                    )}
+                    {p.totalSalesRevenue > 0 && (
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <TrendingUp className="h-3.5 w-3.5 text-green-500" />
+                        <span className="font-semibold text-green-600">{formatAED(p.totalSalesRevenue)} AED</span>
+                      </div>
+                    )}
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+
+                  {/* Status Badge */}
+                  {p.costItemCount === 0 && (
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200/50">
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
+                      <span className="text-xs text-amber-700 dark:text-amber-400">لم تتم إضافة بنود تكاليف بعد — اضغط لإضافتها</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
@@ -237,7 +338,7 @@ function CreateProjectDialog({ open, onOpenChange, onCreated }: {
 
   const createMutation = trpc.cashFlowProgram.createProject.useMutation({
     onSuccess: () => {
-      toast.success('تم إنشاء المشروع');
+      toast.success('تم إنشاء المشروع بنجاح');
       onOpenChange(false);
       onCreated();
     },
@@ -263,20 +364,30 @@ function CreateProjectDialog({ open, onOpenChange, onCreated }: {
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>إنشاء مشروع تدفق نقدي</DialogTitle>
+          <DialogTitle>إنشاء مشروع تدفق نقدي جديد</DialogTitle>
         </DialogHeader>
 
         <Tabs value={mode} onValueChange={(v) => setMode(v as any)}>
           <TabsList className="w-full">
-            <TabsTrigger value="feasibility" className="flex-1">من دراسة الجدوى</TabsTrigger>
-            <TabsTrigger value="manual" className="flex-1">يدوي</TabsTrigger>
+            <TabsTrigger value="feasibility" className="flex-1">
+              <FileText className="h-3.5 w-3.5 ml-1" />
+              من دراسة الجدوى
+            </TabsTrigger>
+            <TabsTrigger value="manual" className="flex-1">
+              <Edit className="h-3.5 w-3.5 ml-1" />
+              يدوي
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="feasibility" className="space-y-4 mt-4">
+            <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200/50 text-xs text-blue-700 dark:text-blue-300">
+              <Info className="h-3.5 w-3.5 inline ml-1" />
+              سيتم استيراد بنود التكاليف تلقائياً من دراسة الجدوى المختارة
+            </div>
             <div>
               <Label>اختر دراسة الجدوى</Label>
               <Select onValueChange={(v) => setSelectedFeasId(Number(v))}>
-                <SelectTrigger><SelectValue placeholder="اختر..." /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="اختر دراسة جدوى..." /></SelectTrigger>
                 <SelectContent>
                   {(feasListQuery.data as any)?.studies?.map((s: any) => (
                     <SelectItem key={s.id} value={String(s.id)}>{s.projectName}</SelectItem>
@@ -321,7 +432,7 @@ function CreateProjectDialog({ open, onOpenChange, onCreated }: {
           <TabsContent value="manual" className="space-y-4 mt-4">
             <div>
               <Label>اسم المشروع</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: مشروع ند الشبا" />
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: مشروع ند الشبا السكني" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -386,8 +497,10 @@ function ProjectDetailView({ cfProjectId, onBack }: { cfProjectId: number; onBac
     );
   }
 
+  const totalMonths = (project.preDevMonths || project.designApprovalMonths + project.reraSetupMonths) + project.constructionMonths + project.handoverMonths;
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-w-5xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={onBack}>
@@ -396,7 +509,7 @@ function ProjectDetailView({ cfProjectId, onBack }: { cfProjectId: number; onBac
         <div className="flex-1">
           <h1 className="text-xl font-bold">{project.name}</h1>
           <p className="text-sm text-muted-foreground">
-            بدء: {project.startDate} · {(project.preDevMonths || project.designApprovalMonths + project.reraSetupMonths) + project.constructionMonths + project.handoverMonths} شهر إجمالي
+            بدء: {project.startDate} · {totalMonths} شهر إجمالي
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => {
@@ -408,6 +521,29 @@ function ProjectDetailView({ cfProjectId, onBack }: { cfProjectId: number; onBac
         </Button>
         <ExportExcelButton cfProjectId={cfProjectId} />
       </div>
+
+      {/* Quick Start Guide - show when no cost items */}
+      {costItems.length === 0 && (
+        <Card className="border-amber-200/50 bg-gradient-to-br from-amber-50/50 to-orange-50/30 dark:from-amber-950/20 dark:to-orange-950/10">
+          <CardContent className="p-5">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center">
+                <Info className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-semibold mb-1">الخطوة التالية: أضف بنود التكاليف</h3>
+                <p className="text-sm text-muted-foreground mb-3">
+                  اذهب إلى تبويب <strong>"بنود التكاليف"</strong> وأضف تكاليف المشروع (الأرض، المقاول، الاستشاريين...) لتفعيل حسابات التدفق النقدي
+                </p>
+                <Button size="sm" variant="outline" onClick={() => setActiveTab('costs')}>
+                  <Plus className="h-4 w-4 ml-1" />
+                  اذهب لبنود التكاليف
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Key Numbers Cards */}
       {dual && <KeyNumbersCards dual={dual} />}
@@ -423,9 +559,12 @@ function ProjectDetailView({ cfProjectId, onBack }: { cfProjectId: number; onBac
             <CalendarDays className="h-3.5 w-3.5" />
             الجدول الزمني
           </TabsTrigger>
-          <TabsTrigger value="costs" className="gap-1">
+          <TabsTrigger value="costs" className="gap-1 relative">
             <DollarSign className="h-3.5 w-3.5" />
             بنود التكاليف
+            {costItems.length === 0 && (
+              <span className="absolute -top-1 -left-1 w-2.5 h-2.5 bg-amber-500 rounded-full animate-pulse" />
+            )}
           </TabsTrigger>
           <TabsTrigger value="monthly" className="gap-1">
             <FileSpreadsheet className="h-3.5 w-3.5" />
@@ -547,11 +686,6 @@ function KeyNumbersCards({ dual }: { dual: any }) {
 function OverviewTab({ dual }: { dual: any }) {
   const table = dual.monthlyTable || [];
 
-  // Build chart data
-  const maxVal = Math.max(
-    ...table.map((r: any) => Math.max(Math.abs(r.developerCumulative), Math.abs(r.escrowBalance), Math.abs(r.cumulativeNet)))
-  );
-
   return (
     <div className="space-y-6">
       {/* Funding Structure */}
@@ -620,26 +754,30 @@ function OverviewTab({ dual }: { dual: any }) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
-            {Object.entries(dual.costByCategory)
-              .sort(([, a]: any, [, b]: any) => b - a)
-              .map(([cat, amount]: [string, any]) => {
-                const pct = dual.totalProjectCost > 0 ? (amount / dual.totalProjectCost) * 100 : 0;
-                return (
-                  <div key={cat} className="flex items-center gap-3">
-                    <div className="w-32 text-sm truncate">{CATEGORY_LABELS[cat] || cat}</div>
-                    <div className="flex-1 h-6 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all"
-                        style={{ width: `${pct}%`, backgroundColor: CATEGORY_COLORS[cat] || '#6b7280' }}
-                      />
+          {Object.keys(dual.costByCategory).length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">أضف بنود تكاليف لعرض التوزيع</p>
+          ) : (
+            <div className="space-y-2">
+              {Object.entries(dual.costByCategory)
+                .sort(([, a]: any, [, b]: any) => b - a)
+                .map(([cat, amount]: [string, any]) => {
+                  const pct = dual.totalProjectCost > 0 ? (amount / dual.totalProjectCost) * 100 : 0;
+                  return (
+                    <div key={cat} className="flex items-center gap-3">
+                      <div className="w-32 text-sm truncate">{CATEGORY_LABELS[cat] || cat}</div>
+                      <div className="flex-1 h-6 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{ width: `${pct}%`, backgroundColor: CATEGORY_COLORS[cat] || '#6b7280' }}
+                        />
+                      </div>
+                      <div className="w-24 text-sm text-left font-mono">{formatAED(amount)}</div>
+                      <div className="w-12 text-xs text-muted-foreground text-left">{pct.toFixed(1)}%</div>
                     </div>
-                    <div className="w-24 text-sm text-left font-mono">{formatAED(amount)}</div>
-                    <div className="w-12 text-xs text-muted-foreground text-left">{pct.toFixed(1)}%</div>
-                  </div>
-                );
-              })}
-          </div>
+                  );
+                })}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -881,54 +1019,74 @@ function CostItemsTab({ cfProjectId, costItems, onRefresh }: {
         <CostItemDialog
           cfProjectId={cfProjectId}
           open={showAdd}
-          onOpenChange={setShowAdd}
+          onOpenChange={(v) => { setShowAdd(v); if (!v) setEditItem(null); }}
           onSaved={onRefresh}
           editItem={editItem}
         />
       </div>
 
-      {/* Developer-funded items */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Wallet className="h-4 w-4 text-amber-500" />
-            تمويل المستثمر
-            <Badge variant="outline" className="mr-auto">{developerItems.length} بند</Badge>
-            <span className="text-muted-foreground font-normal">
-              {formatFullAED(developerItems.reduce((s: number, i: any) => s + i.totalAmount, 0))} AED
-            </span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <CostItemsList
-            items={developerItems}
-            onEdit={(item) => { setEditItem(item); setShowAdd(true); }}
-            onDelete={(id) => deleteMutation.mutate({ id })}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Escrow-funded items */}
-      {escrowItems.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-blue-500" />
-              تمويل الإسكرو
-              <Badge variant="outline" className="mr-auto">{escrowItems.length} بند</Badge>
-              <span className="text-muted-foreground font-normal">
-                {formatFullAED(escrowItems.reduce((s: number, i: any) => s + i.totalAmount, 0))} AED
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CostItemsList
-              items={escrowItems}
-              onEdit={(item) => { setEditItem(item); setShowAdd(true); }}
-              onDelete={(id) => deleteMutation.mutate({ id })}
-            />
+      {costItems.length === 0 ? (
+        <Card className="border-dashed border-2">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-3">
+              <DollarSign className="h-7 w-7 text-muted-foreground/40" />
+            </div>
+            <p className="font-medium mb-1">لا توجد بنود تكاليف</p>
+            <p className="text-sm text-muted-foreground mb-4 max-w-sm text-center">
+              أضف بنود التكاليف مثل: تكلفة الأرض، أتعاب المقاول، رسوم الاستشاريين، وغيرها
+            </p>
+            <Button onClick={() => setShowAdd(true)}>
+              <Plus className="h-4 w-4 ml-1" />
+              إضافة أول بند
+            </Button>
           </CardContent>
         </Card>
+      ) : (
+        <>
+          {/* Developer-funded items */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <Wallet className="h-4 w-4 text-amber-500" />
+                تمويل المستثمر
+                <Badge variant="outline" className="mr-auto">{developerItems.length} بند</Badge>
+                <span className="text-muted-foreground font-normal">
+                  {formatFullAED(developerItems.reduce((s: number, i: any) => s + i.totalAmount, 0))} AED
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CostItemsList
+                items={developerItems}
+                onEdit={(item) => { setEditItem(item); setShowAdd(true); }}
+                onDelete={(id) => deleteMutation.mutate({ id })}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Escrow-funded items */}
+          {escrowItems.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-blue-500" />
+                  تمويل الإسكرو
+                  <Badge variant="outline" className="mr-auto">{escrowItems.length} بند</Badge>
+                  <span className="text-muted-foreground font-normal">
+                    {formatFullAED(escrowItems.reduce((s: number, i: any) => s + i.totalAmount, 0))} AED
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CostItemsList
+                  items={escrowItems}
+                  onEdit={(item) => { setEditItem(item); setShowAdd(true); }}
+                  onDelete={(id) => deleteMutation.mutate({ id })}
+                />
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
     </div>
   );
@@ -1062,7 +1220,7 @@ function CostItemDialog({ cfProjectId, open, onOpenChange, onSaved, editItem }: 
         <div className="space-y-4">
           <div>
             <Label>اسم البند</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} />
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: تكلفة شراء الأرض" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -1078,7 +1236,7 @@ function CostItemDialog({ cfProjectId, open, onOpenChange, onSaved, editItem }: 
             </div>
             <div>
               <Label>المبلغ (AED)</Label>
-              <Input type="number" value={totalAmount} onChange={(e) => setTotalAmount(Number(e.target.value))} />
+              <Input type="number" value={totalAmount} onChange={(e) => setTotalAmount(Number(e.target.value))} placeholder="مثال: 5000000" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">

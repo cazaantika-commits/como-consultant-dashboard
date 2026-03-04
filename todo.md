@@ -1833,3 +1833,10 @@
 
 ## Bug Fixes - March 5
 - [x] Fix tRPC validation error on /program-cashflow: "expected number, received object"
+
+## تحسين تجربة المستخدم - صفحة التدفقات النقدية - March 5
+- [x] حذف مشاريع الاختبار (Test CF Project for Phases)
+- [x] إعادة تصميم الصفحة الرئيسية لتكون واضحة وسهلة الفهم
+- [x] إضافة شرح وتوجيه للمستخدم الجديد (onboarding)
+- [x] تبسيط عملية إنشاء مشروع جديد
+- [x] تحسين عرض تفاصيل المشروع مع خطوات واضحة
