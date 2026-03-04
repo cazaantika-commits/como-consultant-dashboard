@@ -1672,111 +1672,120 @@ function FinancialEvaluationView({ token, projectId, onBack }: { token: string; 
   const avgFees = sorted.length > 0 ? sorted.reduce((sum, c) => sum + c.totalFees, 0) / sorted.filter(c => c.totalFees > 0).length : 0;
 
   const feeTypeLabel = (type: string, value: number) => {
-    if (type === 'pct') return `${value}% of cost`;
+    if (type === 'pct') return `${value}%`;
     return 'Lump Sum';
   };
 
-  const getDevInfo = (fees: number) => {
-    if (fees === 0 || avgFees === 0) return { pct: 0, color: 'text-gray-400', bg: '' };
+  const getDevColor = (fees: number) => {
+    if (fees === 0 || avgFees === 0) return 'text-slate-400';
     const dev = ((fees - avgFees) / avgFees) * 100;
-    if (dev > 25) return { pct: dev, color: 'text-red-700', bg: 'bg-red-50' };
-    if (dev > 10) return { pct: dev, color: 'text-amber-700', bg: 'bg-amber-50' };
-    if (dev < -25) return { pct: dev, color: 'text-teal-700', bg: 'bg-teal-50' };
-    return { pct: dev, color: 'text-gray-600', bg: '' };
+    if (dev > 25) return 'text-red-600';
+    if (dev > 10) return 'text-amber-600';
+    if (dev < -25) return 'text-emerald-600';
+    return 'text-slate-500';
+  };
+
+  const getDevPct = (fees: number) => {
+    if (fees === 0 || avgFees === 0) return '—';
+    const dev = ((fees - avgFees) / avgFees) * 100;
+    return `${dev > 0 ? '+' : ''}${dev.toFixed(1)}%`;
   };
 
   return (
-    <div dir="ltr" className="space-y-5">
+    <div dir="ltr" className="space-y-4">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={onBack} className="text-gray-500 hover:text-gray-700">
+        <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500 hover:text-slate-700">
           <ArrowLeft className="w-4 h-4 mr-1" /> Back
         </Button>
-        <h2 className="text-xl font-bold text-gray-900">Financial Evaluation</h2>
-        <span className="text-sm text-gray-500">— {project?.name}</span>
+        <h2 className="text-lg font-bold text-slate-900">Financial Evaluation</h2>
+        <span className="text-sm text-slate-500">— {project?.name}</span>
       </div>
       
-      {/* Project Metrics */}
+      {/* Project Metrics - compact */}
       {project && (
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-200">
-            <p className="text-[11px] uppercase tracking-wider text-gray-500 font-medium">BUA</p>
-            <p className="text-lg font-bold text-gray-900 mt-0.5">{project.bua?.toLocaleString()} <span className="text-xs font-normal text-gray-500">sqft</span></p>
-          </div>
-          <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-200">
-            <p className="text-[11px] uppercase tracking-wider text-gray-500 font-medium">Price / sqft</p>
-            <p className="text-lg font-bold text-gray-900 mt-0.5">{project.pricePerSqft?.toLocaleString()} <span className="text-xs font-normal text-gray-500">AED</span></p>
-          </div>
-          <div className="bg-gray-50 rounded-xl px-4 py-3 border border-gray-200">
-            <p className="text-[11px] uppercase tracking-wider text-gray-500 font-medium">Construction Cost</p>
-            <p className="text-lg font-bold text-gray-900 mt-0.5">{project.constructionCost?.toLocaleString()} <span className="text-xs font-normal text-gray-500">AED</span></p>
-          </div>
+        <div className="flex gap-6 px-1 text-sm">
+          <div><span className="text-slate-500">BUA:</span> <span className="font-semibold text-slate-800">{project.bua?.toLocaleString()} sqft</span></div>
+          <div><span className="text-slate-500">Price/sqft:</span> <span className="font-semibold text-slate-800">{project.pricePerSqft?.toLocaleString()} AED</span></div>
+          <div><span className="text-slate-500">Construction Cost:</span> <span className="font-semibold text-slate-800">{project.constructionCost?.toLocaleString()} AED</span></div>
         </div>
       )}
 
-      {/* Consultant Cards - vertical list, names on left */}
-      <div className="space-y-2">
-        {sorted.map((c, i) => {
-          const devInfo = getDevInfo(c.totalFees);
-          return (
-            <div key={c.id} className={`rounded-xl border p-4 transition-all ${
-              i === 0 ? 'border-emerald-300 bg-emerald-50/60 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'
-            }`}>
-              <div className="flex items-start gap-4">
-                {/* Rank + Name (LEFT) */}
-                <div className="flex items-center gap-3 min-w-[180px]">
-                  <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                    i === 0 ? 'bg-emerald-600 text-white' : i === 1 ? 'bg-gray-700 text-white' : i === 2 ? 'bg-amber-600 text-white' : 'bg-gray-200 text-gray-600'
-                  }`}>{i + 1}</span>
-                  <div>
-                    <p className="font-semibold text-gray-900 text-sm">{c.name}</p>
-                    {i === 0 && <p className="text-[10px] text-emerald-600 font-medium">Best Financial Offer</p>}
+      {/* Table Layout */}
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <table className="w-full">
+          <thead>
+            <tr className="bg-slate-50 border-b border-slate-200">
+              <th className="text-left py-2 px-3 text-[11px] font-semibold text-slate-600 uppercase tracking-wider w-[40%]">Consultant</th>
+              <th className="text-right py-2 px-3 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">Design</th>
+              <th className="text-right py-2 px-3 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">Supervision</th>
+              <th className="text-right py-2 px-3 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">Total (AED)</th>
+              <th className="text-center py-2 px-3 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">vs Avg</th>
+              <th className="text-center py-2 px-3 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((c, i) => (
+              <tr key={c.id} className={`border-b border-slate-100 transition-colors ${
+                i === 0 ? 'bg-emerald-50/70' : 'hover:bg-slate-50/50'
+              }`}>
+                {/* Rank + Name */}
+                <td className="py-2 px-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                      i === 0 ? 'bg-emerald-600 text-white' : i === 1 ? 'bg-slate-700 text-white' : i === 2 ? 'bg-amber-600 text-white' : 'bg-slate-200 text-slate-600'
+                    }`}>{i + 1}</span>
+                    <div>
+                      <p className="font-semibold text-slate-900 text-[13px] leading-tight">{c.name}</p>
+                      {i === 0 && <p className="text-[10px] text-emerald-600 font-medium">Best Offer</p>}
+                    </div>
                   </div>
-                </div>
-
-                {/* Fees Grid */}
-                <div className="flex-1 grid grid-cols-4 gap-4 text-center">
-                  <div>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide">Design</p>
-                    <p className="text-sm font-bold text-gray-900 mt-0.5">{c.designAmount?.toLocaleString()}</p>
-                    <p className="text-[10px] text-gray-400">{feeTypeLabel(c.designType, c.designValue)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide">Supervision</p>
-                    <p className="text-sm font-bold text-gray-900 mt-0.5">{c.supervisionAmount?.toLocaleString()}</p>
-                    <p className="text-[10px] text-gray-400">{feeTypeLabel(c.supervisionType, c.supervisionValue)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide">Total (AED)</p>
-                    <p className="text-sm font-extrabold text-gray-900 mt-0.5">{c.totalFees?.toLocaleString()}</p>
-                    <p className={`text-[10px] font-medium ${devInfo.color}`}>
-                      {c.totalFees > 0 ? `${devInfo.pct > 0 ? '+' : ''}${devInfo.pct.toFixed(1)}% vs avg` : '—'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide">Score</p>
-                    <p className={`text-lg font-black mt-0.5 ${
-                      i === 0 ? 'text-emerald-600' : c.financialScore >= 80 ? 'text-gray-900' : 'text-gray-500'
-                    }`}>{c.financialScore}%</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+                </td>
+                {/* Design */}
+                <td className="py-2 px-3 text-right">
+                  <p className="text-[13px] font-semibold text-slate-800">{c.designAmount?.toLocaleString()}</p>
+                  <p className="text-[10px] text-slate-400">{feeTypeLabel(c.designType, c.designValue)}</p>
+                </td>
+                {/* Supervision */}
+                <td className="py-2 px-3 text-right">
+                  <p className="text-[13px] font-semibold text-slate-800">{c.supervisionAmount?.toLocaleString()}</p>
+                  <p className="text-[10px] text-slate-400">{feeTypeLabel(c.supervisionType, c.supervisionValue)}</p>
+                </td>
+                {/* Total */}
+                <td className="py-2 px-3 text-right">
+                  <p className="text-[13px] font-bold text-slate-900">{c.totalFees?.toLocaleString()}</p>
+                </td>
+                {/* vs Avg */}
+                <td className="py-2 px-3 text-center">
+                  <span className={`text-xs font-semibold ${getDevColor(c.totalFees)}`}>{getDevPct(c.totalFees)}</span>
+                </td>
+                {/* Score */}
+                <td className="py-2 px-3 text-center">
+                  <span className={`text-base font-black ${
+                    i === 0 ? 'text-emerald-600' : c.financialScore >= 80 ? 'text-slate-800' : c.financialScore >= 60 ? 'text-amber-600' : 'text-slate-400'
+                  }`}>{c.financialScore}%</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="bg-slate-50">
+              <td className="py-2 px-3 text-[11px] font-semibold text-slate-600">Average</td>
+              <td className="py-2 px-3" />
+              <td className="py-2 px-3" />
+              <td className="py-2 px-3 text-right text-[13px] font-bold text-slate-700">{avgFees > 0 ? `${Math.round(avgFees).toLocaleString()}` : '—'}</td>
+              <td className="py-2 px-3" />
+              <td className="py-2 px-3" />
+            </tr>
+          </tfoot>
+        </table>
       </div>
 
-      {/* Average + Legend */}
-      <div className="flex items-center justify-between text-xs text-gray-500 px-2">
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-gray-700">Average Total:</span>
-          <span className="font-bold text-gray-900">{avgFees > 0 ? `${Math.round(avgFees).toLocaleString()} AED` : '—'}</span>
-        </div>
-        <div className="flex gap-3">
-          <span>Score = Lowest ÷ Fee × 100</span>
-          <span className="text-red-600 font-medium">■ &gt;25% above</span>
-          <span className="text-amber-600 font-medium">■ 10–25% above</span>
-          <span className="text-teal-600 font-medium">■ &gt;25% below</span>
-        </div>
+      {/* Legend */}
+      <div className="flex items-center justify-end gap-4 text-[10px] text-slate-500 px-1">
+        <span>Score = Lowest ÷ Fee × 100</span>
+        <span className="text-emerald-600 font-medium">● &gt;25% below avg</span>
+        <span className="text-amber-600 font-medium">● 10–25% above</span>
+        <span className="text-red-600 font-medium">● &gt;25% above</span>
       </div>
     </div>
   );
@@ -1810,10 +1819,17 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
     return { label: 'غير مقبول', color: 'text-red-700 bg-red-50' };
   };
 
-  // Sort CRITERIA by weight descending
+  const getScoreColor = (score: number) => {
+    if (score >= 93) return 'bg-emerald-500 text-white border-emerald-500';
+    if (score >= 88) return 'bg-blue-500 text-white border-blue-500';
+    if (score >= 82) return 'bg-sky-500 text-white border-sky-500';
+    if (score >= 74) return 'bg-amber-500 text-white border-amber-500';
+    if (score >= 60) return 'bg-orange-500 text-white border-orange-500';
+    return 'bg-red-500 text-white border-red-500';
+  };
+
   const sortedCriteria = [...CRITERIA].sort((a, b) => b.weight - a.weight);
 
-  // Compute totals for ranking
   const computeTotals = () => {
     if (!allComplete || !evalData.allEvaluatorData) return [];
     return (consultantsList?.map((consultant: any) => {
@@ -1877,7 +1893,7 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
             {/* Criterion Header */}
             <button
               onClick={() => setExpandedCriterion(expandedCriterion === criterion.id ? null : criterion.id)}
-              className="w-full text-right px-4 py-3 flex items-center justify-between bg-gradient-to-l from-slate-50 to-white hover:from-slate-100 transition-colors"
+              className="w-full text-right px-4 py-2.5 flex items-center justify-between bg-gradient-to-l from-slate-50 to-white hover:from-slate-100 transition-colors"
             >
               <div className="flex items-center gap-3">
                 <span className="w-7 h-7 rounded-lg bg-slate-800 text-white flex items-center justify-center text-xs font-bold">{criterionIdx + 1}</span>
@@ -1890,26 +1906,27 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
             </button>
 
             {isExpanded && (
-              <div className="px-4 pb-4">
-                {/* Score Meanings for this criterion */}
-                <div className="mb-3 bg-slate-50 rounded-lg p-3 border border-slate-100">
-                  <p className="text-[10px] text-slate-500 font-medium mb-2">دليل النسب لهذا المعيار:</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {criterion.options.map((opt) => (
-                      <div key={opt.score} className="flex items-center gap-1.5 bg-white rounded-md border border-slate-200 px-2 py-1">
-                        <span className="text-xs font-bold text-slate-800 min-w-[28px]">{opt.score}</span>
-                        <span className="text-[10px] text-slate-600">{opt.label}</span>
-                      </div>
-                    ))}
-                  </div>
+              <div className="px-4 pb-3">
+                {/* Score Meanings - horizontal guide */}
+                <div className="mb-3 border border-slate-100 rounded-lg overflow-hidden">
+                  <table className="w-full text-[11px]">
+                    <tbody>
+                      {criterion.options.map((opt, oi) => (
+                        <tr key={opt.score} className={oi % 2 === 0 ? 'bg-slate-50/50' : 'bg-white'}>
+                          <td className="py-1 px-3 w-12 text-center font-bold text-slate-800 border-l border-slate-100">{opt.score}</td>
+                          <td className="py-1 px-3 text-slate-600 text-right">{opt.label}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
 
-                {/* All Consultants for this criterion - stacked vertically */}
-                <div className="space-y-1.5">
+                {/* All Consultants for this criterion */}
+                <div className="space-y-1">
                   {consultantsList?.map((consultant: any) => {
                     const myScore = consultant.myScores?.find((s: any) => s.criterionId === criterion.id);
+                    const selectedLabel = myScore?.score ? criterion.options.find(o => o.score === myScore.score)?.label : null;
                     
-                    // Get average score if all complete
                     let avgScore = 0;
                     let evaluatorScores: { name: string; score: number }[] = [];
                     if (allComplete && evalData.allEvaluatorData) {
@@ -1923,29 +1940,28 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
                     const scoreInfo = getScoreLabel(avgScore);
 
                     return (
-                      <div key={consultant.id} className="rounded-lg border border-slate-100 p-3 hover:border-slate-200 transition-colors">
-                        <div className="flex items-center justify-between">
-                          {/* Consultant Name */}
-                          <div className="flex items-center gap-2 min-w-[160px]">
-                            <span className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600">
+                      <div key={consultant.id} className="rounded-lg border border-slate-100 px-3 py-2 hover:border-slate-200 transition-colors">
+                        <div className="flex items-center gap-3">
+                          {/* Consultant Name - LEFT */}
+                          <div className="flex items-center gap-2 min-w-[180px] shrink-0">
+                            <span className="w-6 h-6 rounded-full bg-slate-700 text-white flex items-center justify-center text-[10px] font-bold">
                               {consultant.name?.charAt(0)}
                             </span>
-                            <span className="text-sm font-medium text-slate-800">{consultant.name}</span>
+                            <span className="text-[13px] font-semibold text-slate-800">{consultant.name}</span>
                           </div>
 
-                          {/* Score buttons (if my evaluation not complete) */}
+                          {/* Score buttons - CENTER */}
                           {!myStatus?.isComplete && (
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 flex-1 justify-center">
                               {criterion.options.map((opt) => (
                                 <button
                                   key={opt.score}
                                   onClick={() => handleScore(consultant.id, criterion.id, opt.score)}
-                                  className={`text-xs px-2.5 py-1 rounded-md border transition-all ${
+                                  className={`text-xs w-10 py-1 rounded-md border transition-all font-semibold ${
                                     myScore?.score === opt.score
-                                      ? 'bg-slate-800 text-white border-slate-800 shadow-sm'
-                                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:bg-slate-50'
+                                      ? getScoreColor(opt.score)
+                                      : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400 hover:bg-slate-50'
                                   }`}
-                                  title={opt.label}
                                 >
                                   {opt.score}
                                 </button>
@@ -1955,8 +1971,7 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
 
                           {/* Results (if all complete) */}
                           {allComplete && (
-                            <div className="flex items-center gap-3">
-                              {/* Individual evaluator scores */}
+                            <div className="flex items-center gap-3 flex-1 justify-center">
                               <div className="flex items-center gap-2">
                                 {evaluatorScores.map((ev) => (
                                   <div key={ev.name} className="text-center">
@@ -1965,9 +1980,7 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
                                   </div>
                                 ))}
                               </div>
-                              {/* Separator */}
-                              <div className="w-px h-6 bg-slate-200" />
-                              {/* Average */}
+                              <div className="w-px h-5 bg-slate-200" />
                               <div className="text-center">
                                 <p className="text-[9px] text-slate-400">المتوسط</p>
                                 <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold ${scoreInfo.color}`}>
@@ -1977,11 +1990,15 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
                             </div>
                           )}
 
-                          {/* My score label (if evaluating) */}
-                          {!myStatus?.isComplete && myScore?.score && (
-                            <span className="text-[10px] text-slate-500 max-w-[200px] truncate">
-                              {criterion.options.find(o => o.score === myScore.score)?.label}
-                            </span>
+                          {/* Selected score meaning - RIGHT */}
+                          {!myStatus?.isComplete && (
+                            <div className="min-w-[180px] text-right shrink-0">
+                              {selectedLabel ? (
+                                <span className="text-[11px] text-slate-600">{selectedLabel}</span>
+                              ) : (
+                                <span className="text-[11px] text-slate-300 italic">اختر التقييم</span>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
