@@ -1654,3 +1654,111 @@ export const stageDocuments = mysqlTable('stage_documents', {
 
 export type StageDocument = typeof stageDocuments.$inferSelect;
 export type InsertStageDocument = typeof stageDocuments.$inferInsert;
+
+
+// ═══════════════════════════════════════════════════════════════
+// Program & Cash Flow Module - برنامج العمل والتدفقات النقدية
+// ═══════════════════════════════════════════════════════════════
+
+// Cash Flow Projects - مشاريع التدفق النقدي
+export const cfProjects = mysqlTable('cf_projects', {
+  id: int('id').autoincrement().primaryKey(),
+  projectId: int('projectId').references(() => projects.id, { onDelete: 'cascade' }),
+  userId: int('userId').notNull().references(() => users.id),
+  name: varchar('name', { length: 500 }).notNull(),
+  startDate: varchar('startDate', { length: 20 }).notNull(), // YYYY-MM format
+  
+  // Phase durations in months
+  designApprovalMonths: int('designApprovalMonths').default(6).notNull(),
+  reraSetupMonths: int('reraSetupMonths').default(3).notNull(),
+  constructionMonths: int('constructionMonths').default(24).notNull(),
+  handoverMonths: int('handoverMonths').default(3).notNull(),
+  
+  // Sales config (optional)
+  salesEnabled: boolean('salesEnabled').default(false).notNull(),
+  salesStartMonth: int('salesStartMonth'), // month offset from project start
+  salesVelocityUnits: int('salesVelocityUnits'), // units per month
+  salesVelocityAed: bigintCol('salesVelocityAed', { mode: 'number' }), // AED per month
+  salesVelocityType: mysqlEnum('salesVelocityType', ['units', 'aed']).default('aed'),
+  totalSalesRevenue: bigintCol('totalSalesRevenue', { mode: 'number' }),
+  
+  // Buyer payment plan percentages
+  buyerPlanBookingPct: decimal('buyerPlanBookingPct', { precision: 5, scale: 2 }).default("20"),
+  buyerPlanConstructionPct: decimal('buyerPlanConstructionPct', { precision: 5, scale: 2 }).default("30"),
+  buyerPlanHandoverPct: decimal('buyerPlanHandoverPct', { precision: 5, scale: 2 }).default("50"),
+  
+  notes: text('notes'),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type CfProject = typeof cfProjects.$inferSelect;
+export type InsertCfProject = typeof cfProjects.$inferInsert;
+
+// Cash Flow Cost Items - عناصر التكلفة
+export const cfCostItems = mysqlTable('cf_cost_items', {
+  id: int('id').autoincrement().primaryKey(),
+  cfProjectId: int('cfProjectId').notNull().references(() => cfProjects.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 500 }).notNull(),
+  category: mysqlEnum('category', [
+    'land', 'consultant_design', 'authority_fees', 'contractor',
+    'supervision', 'marketing_sales', 'developer_fee', 'contingency', 'other'
+  ]).notNull(),
+  totalAmount: bigintCol('totalAmount', { mode: 'number' }).notNull(),
+  
+  // Payment logic
+  paymentType: mysqlEnum('paymentType', [
+    'lump_sum', 'milestone', 'monthly_fixed', 'progress_based', 'sales_linked'
+  ]).notNull(),
+  
+  // Payment parameters stored as JSON
+  paymentParams: text('paymentParams'), // JSON string with type-specific parameters
+  
+  // Phase allocation (optional: which phases this cost spans)
+  phaseAllocation: text('phaseAllocation'), // JSON: e.g. {"design": 40, "construction": 60}
+  
+  sortOrder: int('sortOrder').default(0).notNull(),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type CfCostItem = typeof cfCostItems.$inferSelect;
+export type InsertCfCostItem = typeof cfCostItems.$inferInsert;
+
+// Cash Flow Scenarios - سيناريوهات
+export const cfScenarios = mysqlTable('cf_scenarios', {
+  id: int('id').autoincrement().primaryKey(),
+  cfProjectId: int('cfProjectId').notNull().references(() => cfProjects.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 255 }).notNull(),
+  isDefault: boolean('isDefault').default(false).notNull(),
+  
+  // Scenario adjustments
+  salesStartMonthDelta: int('salesStartMonthDelta').default(0), // +/- months
+  constructionDurationDelta: int('constructionDurationDelta').default(0), // +/- months
+  mobilizationPctOverride: decimal('mobilizationPctOverride', { precision: 5, scale: 2 }),
+  buyerPlanBookingPct: decimal('buyerPlanBookingPct', { precision: 5, scale: 2 }),
+  buyerPlanConstructionPct: decimal('buyerPlanConstructionPct', { precision: 5, scale: 2 }),
+  buyerPlanHandoverPct: decimal('buyerPlanHandoverPct', { precision: 5, scale: 2 }),
+  
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type CfScenario = typeof cfScenarios.$inferSelect;
+export type InsertCfScenario = typeof cfScenarios.$inferInsert;
+
+// Cash Flow Files - ملفات مرفقة
+export const cfFiles = mysqlTable('cf_files', {
+  id: int('id').autoincrement().primaryKey(),
+  cfProjectId: int('cfProjectId').notNull().references(() => cfProjects.id, { onDelete: 'cascade' }),
+  fileName: varchar('fileName', { length: 500 }).notNull(),
+  fileUrl: text('fileUrl').notNull(),
+  fileKey: varchar('fileKey', { length: 500 }).notNull(),
+  mimeType: varchar('mimeType', { length: 100 }),
+  fileSize: int('fileSize'),
+  category: varchar('category', { length: 100 }), // contract, feasibility, etc.
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+
+export type CfFile = typeof cfFiles.$inferSelect;
+export type InsertCfFile = typeof cfFiles.$inferInsert;

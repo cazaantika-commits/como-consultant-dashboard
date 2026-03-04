@@ -274,6 +274,13 @@
       "when": 1772594981922,
       "tag": "0038_odd_masque",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "5",
+      "when": 1772604481716,
+      "tag": "0039_empty_jigsaw",
+      "breakpoints": true
     }
   ]
 }

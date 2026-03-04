@@ -1647,3 +1647,51 @@
 ## نقل أيقونة دليل التقييم في مركز القيادة
 - [x] نقل أيقونة دليل التقييم لتكون بين التقييم المالي والتقييم الفني
 - [x] حفظ نقطة تفتيش
+
+## Program & Cash Flow Module (وحدة برنامج العمل والتدفقات النقدية)
+
+### Database Schema
+- [x] Create cashFlowProjects table (timeline phases, start date, scenario support)
+- [x] Create cashFlowCostItems table (amount, category, phase allocation, payment logic)
+- [x] Create cashFlowPaymentTemplates table (lump sum, milestone, monthly, progress, sales-linked)
+- [x] Create cashFlowScenarios table (per project scenario parameters)
+- [x] Create cashFlowSalesConfig table (sales velocity, buyer payment plan)
+- [x] Create cashFlowFiles table (file uploads per project)
+- [x] Run migrations with pnpm db:push
+
+### Server-side (tRPC Procedures + Cash Flow Engine)
+- [x] Build payment logic calculation engine (all 5 payment types)
+- [x] Build monthly cash outflow generator from timeline + costs + payment logic
+- [x] Build optional sales inflow generator
+- [x] Build key numbers calculator (total cost, peak exposure, peak month)
+- [x] Build portfolio aggregation logic
+- [x] Build scenario simulator recalculation
+- [x] Create CRUD procedures for projects, cost items, payment templates
+- [x] Create procedures for scenarios, sales config, file uploads
+- [x] Integration with existing feasibility study cost data
+
+### Frontend - Timeline & Cost Structure
+- [x] Project setup page with timeline phases (Design, RERA, Construction, Handover)
+- [x] Editable phase durations with Gantt chart visualization
+- [x] Cost structure table (from feasibility or manual entry)
+- [x] Payment logic template selector per cost item
+- [x] Payment logic parameter configuration UI
+
+### Frontend - Cash Flow Output
+- [x] Monthly cash outflow table (by category + total)
+- [x] Optional monthly sales inflow configuration
+- [x] Cumulative cost vs revenue chart
+- [x] Key numbers dashboard (total cost, total sales, peak exposure, peak month)
+
+### Frontend - Portfolio & Scenarios
+- [x] Portfolio view combining multiple projects
+- [x] Portfolio maximum exposure and peak month
+- [x] Scenario simulator (adjust sales start, payment plan, mobilization %, construction duration)
+- [x] Save/load scenarios per project
+- [ ] File upload per project for reference documents
+
+### Integration & Routing
+- [x] Add route in App.tsx
+- [x] Add navigation entry in dashboard/home
+- [ ] Link from feasibility study to cash flow module
+- [ ] حفظ نقطة تفتيش

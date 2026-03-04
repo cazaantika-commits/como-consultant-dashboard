@@ -45,6 +45,7 @@ import FeasibilityStudyPage from "./pages/FeasibilityStudyPage";
 import DevelopmentStagesPage from "./pages/DevelopmentStagesPage";
 import ExecutiveCashFlowPage from "./pages/ProjectCashFlowSimplified";
 import ProjectLifecyclePage from "./pages/ProjectLifecycleSimplified";
+import ProgramCashFlowPage from "./pages/ProgramCashFlowPage";
 
 function Router() {
   return (
@@ -62,6 +63,7 @@ function Router() {
       <Route path="/development-stages" component={DevelopmentStagesPage} />
       <Route path="/cash-flow" component={ExecutiveCashFlowPage} />
       <Route path="/project-lifecycle" component={ProjectLifecyclePage} />
+      <Route path="/program-cashflow" component={ProgramCashFlowPage} />
       <Route path="/consultant-portal" component={ConsultantPortalPage} />
       <Route path="/consultant-guide" component={ConsultantGuidePage} />
       <Route path="/consultant-proposals" component={ConsultantProposalsPage} />
