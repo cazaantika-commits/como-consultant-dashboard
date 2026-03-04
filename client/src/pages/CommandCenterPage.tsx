@@ -55,6 +55,7 @@ import {
   Sparkles,
   SlidersHorizontal,
   ShieldCheck,
+  BookText,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -1551,7 +1552,7 @@ function EvaluationView({ token, memberRole, memberId }: { token: string; member
           </Button>
           <h2 className="text-xl font-bold text-slate-800">{project?.name}</h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {/* التقييم المالي */}
           <button onClick={() => setActiveTab('financial')} className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 p-6 text-white shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] text-right">
             <div className="absolute top-3 left-3 opacity-20 group-hover:opacity-30 transition-opacity">
@@ -1564,6 +1565,20 @@ function EvaluationView({ token, memberRole, memberId }: { token: string; member
               <h3 className="text-lg font-bold mb-1">التقييم المالي</h3>
               <p className="text-emerald-100 text-sm">الأتعاب والسكور المالي</p>
               {project?.hasFinancial && <Badge className="mt-2 bg-white/20 text-white border-0">بيانات متوفرة</Badge>}
+            </div>
+          </button>
+
+          {/* دليل التقييم */}
+          <button onClick={() => { window.location.href = '/consultant-guide'; }} className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-teal-500 to-teal-700 p-6 text-white shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] text-right">
+            <div className="absolute top-3 left-3 opacity-20 group-hover:opacity-30 transition-opacity">
+              <BookText className="w-16 h-16" />
+            </div>
+            <div className="relative z-10">
+              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center mb-4">
+                <BookText className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold mb-1">دليل التقييم</h3>
+              <p className="text-teal-100 text-sm">المرجع الشامل للمنهجية</p>
             </div>
           </button>
 
