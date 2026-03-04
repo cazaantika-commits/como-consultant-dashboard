@@ -1729,3 +1729,6 @@
 - [x] جدول مقارنة الأرقام الرئيسية
 
 - [x] حفظ نقطة تفتيش
+
+## إصلاح خطأ projects.getAll
+- [x] إصلاح خطأ "No procedure found on path projects.getAll" في صفحة /program-cashflow

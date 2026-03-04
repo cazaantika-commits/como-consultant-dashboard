@@ -86,7 +86,7 @@ export default function ProgramCashFlowPage() {
   const [selectedScenarioId, setSelectedScenarioId] = useState<number | null>(null);
 
   const projectsQuery = trpc.cashFlowProgram.listProjects.useQuery();
-  const existingProjects = trpc.projects.getAll.useQuery();
+  const existingProjects = trpc.projects.list.useQuery();
 
   if (selectedProjectId) {
     return (
