@@ -277,6 +277,7 @@ function CreateProjectDialog({
   existingProjects: any[];
   onCreated: (id: number) => void;
 }) {
+  const [mode, setMode] = useState<'manual' | 'feasibility'>('feasibility');
   const [name, setName] = useState("");
   const [startDate, setStartDate] = useState("2026-01");
   const [linkedProjectId, setLinkedProjectId] = useState<string>("none");
@@ -284,30 +285,62 @@ function CreateProjectDialog({
   const [reraMonths, setReraMonths] = useState(3);
   const [constructionMonths, setConstructionMonths] = useState(24);
   const [handoverMonths, setHandoverMonths] = useState(3);
+  const [selectedFeasibilityId, setSelectedFeasibilityId] = useState<string>("none");
 
+  const feasibilityStudies = trpc.feasibility.list.useQuery();
   const createMutation = trpc.cashFlowProgram.createProject.useMutation();
+  const createFromFeasMutation = trpc.cashFlowProgram.createFromFeasibility.useMutation();
+
+  // When a feasibility study is selected, auto-fill the name
+  const selectedStudy = feasibilityStudies.data?.find(s => s.id.toString() === selectedFeasibilityId);
 
   const handleCreate = async () => {
-    if (!name.trim()) {
-      toast.error("يرجى إدخال اسم المشروع");
-      return;
-    }
-    try {
-      const result = await createMutation.mutateAsync({
-        name: name.trim(),
-        startDate,
-        projectId: linkedProjectId !== "none" ? parseInt(linkedProjectId) : null,
-        designApprovalMonths: designMonths,
-        reraSetupMonths: reraMonths,
-        constructionMonths,
-        handoverMonths,
-      });
-      toast.success("تم إنشاء المشروع بنجاح");
-      onCreated(result.id);
-    } catch (e: any) {
-      toast.error(e.message || "فشل في إنشاء المشروع");
+    if (mode === 'feasibility') {
+      if (selectedFeasibilityId === 'none' || !selectedStudy) {
+        toast.error("يرجى اختيار دراسة جدوى");
+        return;
+      }
+      try {
+        const result = await createFromFeasMutation.mutateAsync({
+          feasibilityStudyId: parseInt(selectedFeasibilityId),
+          startDate,
+          designApprovalMonths: designMonths,
+          reraSetupMonths: reraMonths,
+          constructionMonths,
+          handoverMonths,
+        });
+        toast.success(
+          `تم إنشاء المشروع واستيراد ${result.costItemsCount} بند تكلفة تلقائياً`,
+          { description: `إجمالي التكاليف: ${formatAEDFull(result.totalCost)} AED` }
+        );
+        onCreated(result.cfProjectId);
+      } catch (e: any) {
+        toast.error(e.message || "فشل في إنشاء المشروع");
+      }
+    } else {
+      if (!name.trim()) {
+        toast.error("يرجى إدخال اسم المشروع");
+        return;
+      }
+      try {
+        const result = await createMutation.mutateAsync({
+          name: name.trim(),
+          startDate,
+          projectId: linkedProjectId !== "none" ? parseInt(linkedProjectId) : null,
+          designApprovalMonths: designMonths,
+          reraSetupMonths: reraMonths,
+          constructionMonths,
+          handoverMonths,
+        });
+        toast.success("تم إنشاء المشروع بنجاح");
+        onCreated(result.id);
+      } catch (e: any) {
+        toast.error(e.message || "فشل في إنشاء المشروع");
+      }
     }
   };
+
+  const isPending = createMutation.isPending || createFromFeasMutation.isPending;
 
   return (
     <>
@@ -315,29 +348,116 @@ function CreateProjectDialog({
         <DialogTitle>مشروع تدفق نقدي جديد</DialogTitle>
       </DialogHeader>
       <div className="space-y-4 py-4">
-        <div>
-          <Label>اسم المشروع *</Label>
-          <Input value={name} onChange={e => setName(e.target.value)} placeholder="مثال: مركز مجان التجاري" />
+        {/* Mode Toggle */}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => setMode('feasibility')}
+            className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all text-sm font-medium ${
+              mode === 'feasibility'
+                ? 'border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm'
+                : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            استيراد من دراسة جدوى
+          </button>
+          <button
+            onClick={() => setMode('manual')}
+            className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all text-sm font-medium ${
+              mode === 'manual'
+                ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
+                : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+            }`}
+          >
+            <Edit className="w-4 h-4" />
+            إدخال يدوي
+          </button>
         </div>
+
+        {mode === 'feasibility' ? (
+          <>
+            {/* Feasibility Study Selector */}
+            <div>
+              <Label className="text-sm font-semibold">اختر دراسة الجدوى *</Label>
+              <Select value={selectedFeasibilityId} onValueChange={setSelectedFeasibilityId}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="اختر دراسة جدوى..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">اختر دراسة جدوى...</SelectItem>
+                  {(feasibilityStudies.data || []).map(s => (
+                    <SelectItem key={s.id} value={s.id.toString()}>
+                      {s.projectName}{s.scenarioName ? ` (${s.scenarioName})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Preview of selected study */}
+            {selectedStudy && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 space-y-2">
+                <div className="flex items-center gap-2 text-emerald-700 font-semibold text-sm">
+                  <CheckCircle2 className="w-4 h-4" />
+                  سيتم استيراد التكاليف تلقائياً
+                </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-600">
+                  {selectedStudy.landPrice ? (
+                    <div>الأرض: <span className="font-medium text-gray-900">{formatAEDFull(selectedStudy.landPrice)} AED</span></div>
+                  ) : null}
+                  {selectedStudy.constructionCostPerSqft && selectedStudy.estimatedBua ? (
+                    <div>البناء: <span className="font-medium text-gray-900">{formatAEDFull(selectedStudy.estimatedBua * selectedStudy.constructionCostPerSqft)} AED</span></div>
+                  ) : null}
+                  {selectedStudy.numberOfUnits ? (
+                    <div>الوحدات: <span className="font-medium text-gray-900">{selectedStudy.numberOfUnits}</span></div>
+                  ) : null}
+                  {selectedStudy.plotArea ? (
+                    <div>مساحة الأرض: <span className="font-medium text-gray-900">{formatAEDFull(selectedStudy.plotArea)} sqft</span></div>
+                  ) : null}
+                  {selectedStudy.designFeePct ? (
+                    <div>التصميم: <span className="font-medium text-gray-900">{selectedStudy.designFeePct}%</span></div>
+                  ) : null}
+                  {selectedStudy.supervisionFeePct ? (
+                    <div>الإشراف: <span className="font-medium text-gray-900">{selectedStudy.supervisionFeePct}%</span></div>
+                  ) : null}
+                </div>
+                <p className="text-[11px] text-emerald-600 mt-1">
+                  سيتم إنشاء بنود التكلفة مع منطق الدفع المناسب لكل بند (أرض: دفعة واحدة، تصميم: مراحل، مقاول: حسب التقدم، ...)
+                </p>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {/* Manual mode */}
+            <div>
+              <Label>اسم المشروع *</Label>
+              <Input value={name} onChange={e => setName(e.target.value)} placeholder="مثال: مركز مجان التجاري" />
+            </div>
+            {existingProjects.length > 0 && (
+              <div>
+                <Label>ربط بمشروع قائم (اختياري)</Label>
+                <Select value={linkedProjectId} onValueChange={setLinkedProjectId}>
+                  <SelectTrigger><SelectValue placeholder="اختر مشروع" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">بدون ربط</SelectItem>
+                    {existingProjects.map(p => (
+                      <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </>
+        )}
+
+        <Separator />
+
+        {/* Common fields: start date and phase durations */}
         <div>
           <Label>تاريخ البداية</Label>
           <Input type="month" value={startDate} onChange={e => setStartDate(e.target.value)} />
         </div>
-        {existingProjects.length > 0 && (
-          <div>
-            <Label>ربط بمشروع قائم (اختياري)</Label>
-            <Select value={linkedProjectId} onValueChange={setLinkedProjectId}>
-              <SelectTrigger><SelectValue placeholder="اختر مشروع" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">بدون ربط</SelectItem>
-                {existingProjects.map(p => (
-                  <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-        <Separator />
         <p className="text-sm font-semibold text-gray-700">مدة المراحل (بالأشهر)</p>
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -362,8 +482,8 @@ function CreateProjectDialog({
         <DialogClose asChild>
           <Button variant="outline">إلغاء</Button>
         </DialogClose>
-        <Button onClick={handleCreate} disabled={createMutation.isPending} className="bg-emerald-600 hover:bg-emerald-700">
-          {createMutation.isPending ? "جاري الإنشاء..." : "إنشاء"}
+        <Button onClick={handleCreate} disabled={isPending} className="bg-emerald-600 hover:bg-emerald-700">
+          {isPending ? "جاري الإنشاء..." : mode === 'feasibility' ? "إنشاء واستيراد التكاليف" : "إنشاء"}
         </Button>
       </DialogFooter>
     </>
