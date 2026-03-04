@@ -63,6 +63,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Streamdown } from "streamdown";
 
 const SALWA_AVATAR_URL = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/dKjNMGCYtHDQQPse.png";
@@ -2008,18 +2009,24 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
                     )}
                   </div>
 
-                  {/* COL 2 (CENTER): Score buttons - each with unique color */}
+                  {/* COL 2 (CENTER): Score buttons - each with unique color + tooltip */}
                   <div className="flex items-center gap-1.5 justify-center" dir="ltr">
                     {!myStatus?.isComplete && criterion.options.map((opt) => (
-                      <button
-                        key={opt.score}
-                        onClick={() => handleScore(consultant.id, criterion.id, opt.score)}
-                        className={`text-xs w-10 h-10 rounded-full border-2 transition-all font-bold ${
-                          getScoreButtonColor(opt.score, myScore?.score === opt.score)
-                        }`}
-                      >
-                        {opt.score}
-                      </button>
+                      <Tooltip key={opt.score}>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => handleScore(consultant.id, criterion.id, opt.score)}
+                            className={`text-xs w-10 h-10 rounded-full border-2 transition-all font-bold ${
+                              getScoreButtonColor(opt.score, myScore?.score === opt.score)
+                            }`}
+                          >
+                            {opt.score}
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" sideOffset={6} className="max-w-[220px] text-center text-[11px] leading-snug">
+                          {opt.label}
+                        </TooltipContent>
+                      </Tooltip>
                     ))}
                     {myStatus?.isComplete && !allComplete && (
                       <span className="text-sm font-bold text-indigo-600">{myScore?.score || '—'}</span>
