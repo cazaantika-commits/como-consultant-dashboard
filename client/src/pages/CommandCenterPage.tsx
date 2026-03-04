@@ -1800,6 +1800,24 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
   const utils = trpc.useUtils();
   const [currentStep, setCurrentStep] = useState(0);
 
+  // Click sound effect using Web Audio API
+  const playClickSound = () => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime); // A5 note
+      osc.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.05); // quick rise
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.12);
+    } catch { /* silent fallback */ }
+  };
+
   if (data.isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-indigo-500" /></div>;
 
   const evalData = data.data;
@@ -1808,6 +1826,7 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
   const { project, consultants: consultantsList, evaluatorStatus, allComplete, myEvaluatorName, myStatus } = evalData;
 
   const handleScore = async (consultantId: number, criterionId: number, score: number) => {
+    playClickSound();
     await submitScore.mutateAsync({ token, projectId, consultantId, criterionId, score });
     utils.commandCenter.getProjectTechnicalEvaluation.invalidate({ token, projectId });
   };
@@ -2057,8 +2076,19 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
               <ArrowRight className="w-4 h-4" /> السابق
             </Button>
 
-            <div className="text-xs text-slate-500 font-medium">
-              {currentStep + 1} / {totalSteps}
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  toast.success('تم حفظ التقييم كمسودة — يمكنك العودة لإكماله لاحقاً', { duration: 3000 });
+                  onBack();
+                }}
+                className="gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50"
+              >
+                <Clock className="w-3.5 h-3.5" /> حفظ كمسودة
+              </Button>
+              <span className="text-xs text-slate-500 font-medium">{currentStep + 1} / {totalSteps}</span>
             </div>
 
             <Button
