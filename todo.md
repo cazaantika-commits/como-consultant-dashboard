@@ -1830,3 +1830,6 @@
 ### اختبارات
 - [x] اختبار الاستيراد التلقائي مع تعيين مصدر التمويل (12 اختبار ناجح)
 - [x] اختبار حساب التعرض المالي عبر مشاريع متعددة
+
+## Bug Fixes - March 5
+- [x] Fix tRPC validation error on /program-cashflow: "expected number, received object"

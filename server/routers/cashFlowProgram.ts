@@ -385,13 +385,13 @@ export const cashFlowProgramRouter = router({
   }),
 
   getProject: publicProcedure
-    .input(z.number())
+    .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
       if (!ctx.user) return null;
       const db = await getDb();
       if (!db) return null;
       const results = await db.select().from(cfProjects)
-        .where(and(eq(cfProjects.id, input), eq(cfProjects.userId, ctx.user.id)));
+        .where(and(eq(cfProjects.id, input.id), eq(cfProjects.userId, ctx.user.id)));
       return results[0] || null;
     }),
 
@@ -469,13 +469,13 @@ export const cashFlowProgramRouter = router({
 
   // ─── Cost Items CRUD ───
   getCostItems: publicProcedure
-    .input(z.number()) // cfProjectId
+    .input(z.object({ cfProjectId: z.number() }))
     .query(async ({ ctx, input }) => {
       if (!ctx.user) return [];
       const db = await getDb();
       if (!db) return [];
       return db.select().from(cfCostItems)
-        .where(eq(cfCostItems.cfProjectId, input))
+        .where(eq(cfCostItems.cfProjectId, input.cfProjectId))
         .orderBy(cfCostItems.sortOrder);
     }),
 
@@ -507,12 +507,12 @@ export const cashFlowProgramRouter = router({
     }),
 
   deleteCostItem: publicProcedure
-    .input(z.number())
+    .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user) throw new Error("Unauthorized");
       const db = await getDb();
       if (!db) throw new Error("Database not available");
-      await db.delete(cfCostItems).where(eq(cfCostItems.id, input));
+      await db.delete(cfCostItems).where(eq(cfCostItems.id, input.id));
       return { success: true };
     }),
 
