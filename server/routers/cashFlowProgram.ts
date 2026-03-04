@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { cfProjects, cfCostItems, cfScenarios, cfFiles, projects, feasibilityStudies } from "../../drizzle/schema";
+import { cfProjects, cfCostItems, cfScenarios, cfFiles, projects, feasibilityStudies, projectPhases } from "../../drizzle/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { storagePut } from "../storage";
 
@@ -1398,5 +1398,142 @@ export const cashFlowProgramRouter = router({
         totalRevenue: Math.round(totalRevenue),
         costItems,
       };
+    }),
+
+  // ─── Flexible Phases Management ───
+  listPhases: publicProcedure
+    .input(z.number())
+    .query(async ({ ctx, input: cfProjectId }) => {
+      if (!ctx.user) return [];
+      const db = await getDb();
+      if (!db) return [];
+      
+      const projectResults = await db.select().from(cfProjects)
+        .where(and(eq(cfProjects.id, cfProjectId), eq(cfProjects.userId, ctx.user.id)));
+      if (!projectResults[0]) return [];
+      
+      const phases = await db.select().from(projectPhases)
+        .where(eq(projectPhases.projectId, cfProjectId))
+        .orderBy(projectPhases.phaseNumber);
+      return phases;
+    }),
+
+  createPhase: publicProcedure
+    .input(z.object({
+      cfProjectId: z.number(),
+      phaseName: z.string(),
+      startDate: z.string(),
+      durationMonths: z.number().min(1),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      
+      // Verify project ownership
+      const projectResults = await db.select().from(cfProjects)
+        .where(and(eq(cfProjects.id, input.cfProjectId), eq(cfProjects.userId, ctx.user.id)));
+      if (!projectResults[0]) throw new Error("Project not found");
+      
+      // Get max phase number
+      const maxPhaseResult = await db.select({ maxNum: projectPhases.phaseNumber })
+        .from(projectPhases)
+        .where(eq(projectPhases.projectId, input.cfProjectId))
+        .orderBy(desc(projectPhases.phaseNumber))
+        .limit(1);
+      const phaseNumber = (maxPhaseResult[0]?.maxNum || 0) + 1;
+      
+      // Calculate end date
+      const [startYear, startMonth] = input.startDate.split('-').map(Number);
+      let endMonth = startMonth + input.durationMonths - 1;
+      let endYear = startYear;
+      while (endMonth > 12) {
+        endMonth -= 12;
+        endYear++;
+      }
+      const endDate = `${endYear}-${String(endMonth).padStart(2, '0')}`;
+      
+      const result = await db.insert(projectPhases).values({
+        projectId: input.cfProjectId,
+        phaseNumber,
+        phaseName: input.phaseName,
+        startDate: input.startDate,
+        durationMonths: input.durationMonths,
+        endDate,
+        notes: input.notes || null,
+      });
+      
+      return { id: Number(result[0].insertId), phaseNumber, endDate };
+    }),
+
+  updatePhase: publicProcedure
+    .input(z.object({
+      phaseId: z.number(),
+      phaseName: z.string().optional(),
+      startDate: z.string().optional(),
+      durationMonths: z.number().min(1).optional(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      
+      const phaseResults = await db.select().from(projectPhases)
+        .where(eq(projectPhases.id, input.phaseId));
+      const phase = phaseResults[0];
+      if (!phase) throw new Error("Phase not found");
+      
+      // Verify project ownership
+      const projectResults = await db.select().from(cfProjects)
+        .where(and(eq(cfProjects.id, phase.projectId), eq(cfProjects.userId, ctx.user.id)));
+      if (!projectResults[0]) throw new Error("Unauthorized");
+      
+      const startDate = input.startDate || phase.startDate;
+      const durationMonths = input.durationMonths || phase.durationMonths;
+      
+      // Calculate end date
+      const [startYear, startMonth] = startDate.split('-').map(Number);
+      let endMonth = startMonth + durationMonths - 1;
+      let endYear = startYear;
+      while (endMonth > 12) {
+        endMonth -= 12;
+        endYear++;
+      }
+      const endDate = `${endYear}-${String(endMonth).padStart(2, '0')}`;
+      
+      await db.update(projectPhases)
+        .set({
+          phaseName: input.phaseName || phase.phaseName,
+          startDate,
+          durationMonths,
+          endDate,
+          notes: input.notes !== undefined ? input.notes : phase.notes,
+        })
+        .where(eq(projectPhases.id, input.phaseId));
+      
+      return { success: true, endDate };
+    }),
+
+  deletePhase: publicProcedure
+    .input(z.number())
+    .mutation(async ({ ctx, input: phaseId }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      
+      const phaseResults = await db.select().from(projectPhases)
+        .where(eq(projectPhases.id, phaseId));
+      const phase = phaseResults[0];
+      if (!phase) throw new Error("Phase not found");
+      
+      // Verify project ownership
+      const projectResults = await db.select().from(cfProjects)
+        .where(and(eq(cfProjects.id, phase.projectId), eq(cfProjects.userId, ctx.user.id)));
+      if (!projectResults[0]) throw new Error("Unauthorized");
+      
+      await db.delete(projectPhases).where(eq(projectPhases.id, phaseId));
+      return { success: true };
     }),
 });

@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
+import FlexiblePhasesTab from "./FlexiblePhasesTab";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -577,10 +578,14 @@ function ProjectDetailView({
       {/* Tabs */}
       <div className="max-w-7xl mx-auto px-6 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5 mb-6">
+          <TabsList className="grid w-full grid-cols-6 mb-6">
             <TabsTrigger value="timeline" className="flex items-center gap-1">
               <CalendarDays className="w-4 h-4" />
               الجدول الزمني
+            </TabsTrigger>
+            <TabsTrigger value="phases" className="flex items-center gap-1">
+              <Layers className="w-4 h-4" />
+              المراحل المرنة
             </TabsTrigger>
             <TabsTrigger value="costs" className="flex items-center gap-1">
               <DollarSign className="w-4 h-4" />
@@ -602,6 +607,13 @@ function ProjectDetailView({
 
           <TabsContent value="timeline">
             <TimelineTab project={project} onRefresh={() => {
+              projectQuery.refetch();
+              cashFlowQuery.refetch();
+            }} />
+          </TabsContent>
+
+          <TabsContent value="phases">
+            <FlexiblePhasesTab cfProjectId={cfProjectId} onRefresh={() => {
               projectQuery.refetch();
               cashFlowQuery.refetch();
             }} />
