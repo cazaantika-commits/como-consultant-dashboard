@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { cfProjects, cfCostItems, cfScenarios, cfFiles, projects, feasibilityStudies, projectPhases } from "../../drizzle/schema";
+import { cfProjects, cfCostItems, cfScenarios, cfFiles, projects, feasibilityStudies, projectPhases, phaseActivities, phaseCostLinks } from "../../drizzle/schema";
+import { calculateDualCashFlow } from './cashFlowEngine';
 import { eq, and, desc } from "drizzle-orm";
 import { storagePut } from "../storage";
 
@@ -626,94 +627,82 @@ export const cashFlowProgramRouter = router({
         }
       }
 
-      // Build timeline
-      const phases = buildTimeline(
-        project.designApprovalMonths,
-        project.reraSetupMonths,
-        project.constructionMonths,
-        project.handoverMonths,
-        scenario.constructionDurationDelta
-      );
-      const totalMonths = getTotalProjectMonths(phases);
+      // Use the new dual cash flow engine
+      const projectInput: import('./cashFlowEngine').ProjectInput = {
+        startDate: project.startDate,
+        preDevMonths: project.preDevMonths || project.designApprovalMonths + project.reraSetupMonths,
+        constructionMonths: project.constructionMonths + (scenario.constructionDurationDelta || 0),
+        handoverMonths: project.handoverMonths,
+        salesEnabled: !!project.salesEnabled,
+        salesStartMonth: (project.salesStartMonth || 0) + (scenario.salesStartMonthDelta || 0),
+        totalSalesRevenue: project.totalSalesRevenue || 0,
+        buyerPlanBookingPct: scenario.buyerPlanBookingPct ?? parseFloat(project.buyerPlanBookingPct || '20'),
+        buyerPlanConstructionPct: scenario.buyerPlanConstructionPct ?? parseFloat(project.buyerPlanConstructionPct || '30'),
+        buyerPlanHandoverPct: scenario.buyerPlanHandoverPct ?? parseFloat(project.buyerPlanHandoverPct || '50'),
+        escrowDepositPct: parseFloat(project.escrowDepositPct || '20'),
+        contractorAdvancePct: parseFloat(project.contractorAdvancePct || '10'),
+        liquidityBufferPct: parseFloat(project.liquidityBufferPct || '5'),
+        constructionCostTotal: project.constructionCostTotal || null,
+        buaSqft: project.buaSqft || null,
+        constructionCostPerSqft: project.constructionCostPerSqft || null,
+      };
 
-      // Parse cost items
-      const costItems: CostItemWithPayment[] = costItemsRaw.map(item => ({
+      const costItemInputs: import('./cashFlowEngine').CostItemInput[] = costItemsRaw.map(item => ({
         id: item.id,
         name: item.name,
         category: item.category,
         totalAmount: item.totalAmount,
         paymentType: item.paymentType,
         paymentParams: item.paymentParams ? JSON.parse(item.paymentParams) : {},
+        fundingSource: (item.fundingSource as 'developer' | 'escrow' | 'mixed') || 'developer',
+        escrowEligible: !!item.escrowEligible,
+        phaseTag: (item.phaseTag as 'pre_dev' | 'construction' | 'handover' | 'all') || 'pre_dev',
         phaseAllocation: item.phaseAllocation ? JSON.parse(item.phaseAllocation) : undefined,
       }));
 
-      // Calculate outflows
-      const outflowByCategory = calculateMonthlyOutflow(costItems, phases, totalMonths, scenario);
+      const result = calculateDualCashFlow(projectInput, costItemInputs);
 
-      // Calculate inflows
-      const salesInflow = calculateSalesInflow(project, phases, totalMonths, scenario);
-
-      // Calculate cumulative and key numbers
-      const totalOutflow = outflowByCategory['total'] || new Array(totalMonths).fill(0);
-      const cumulativeOutflow: number[] = [];
+      // Also build legacy-compatible arrays for backward compatibility
+      const totalOutflow = result.monthlyTable.map(r => r.totalOutflow);
+      const salesInflow = result.monthlyTable.map(r => r.escrowInflow);
+      const cumulativeOutflow = result.monthlyTable.map(r => r.developerCumulative + r.escrowOutflow);
       const cumulativeInflow: number[] = [];
-      const netCashFlow: number[] = [];
-      const cumulativeNet: number[] = [];
-
-      let cumOut = 0, cumIn = 0, cumNet = 0;
-      let peakExposure = 0, peakMonth = 0;
-
-      for (let m = 0; m < totalMonths; m++) {
-        cumOut += totalOutflow[m];
-        cumIn += salesInflow[m];
-        const net = salesInflow[m] - totalOutflow[m];
-        cumNet += net;
-
-        cumulativeOutflow.push(cumOut);
+      let cumIn = 0;
+      for (const row of result.monthlyTable) {
+        cumIn += row.escrowInflow;
         cumulativeInflow.push(cumIn);
-        netCashFlow.push(net);
-        cumulativeNet.push(cumNet);
-
-        if (cumNet < peakExposure) {
-          peakExposure = cumNet;
-          peakMonth = m + 1;
-        }
       }
-
-      // Generate month labels based on start date
-      const [startYear, startMonthStr] = project.startDate.split('-');
-      const startMonthNum = parseInt(startMonthStr) || 1;
-      const startYearNum = parseInt(startYear) || 2026;
-      const monthLabels: string[] = [];
-      const monthNames = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-      for (let m = 0; m < totalMonths; m++) {
-        const monthIdx = (startMonthNum - 1 + m) % 12;
-        const year = startYearNum + Math.floor((startMonthNum - 1 + m) / 12);
-        monthLabels.push(`${monthNames[monthIdx]} ${year}`);
-      }
-
-      const totalCost = cumOut;
-      const totalSales = cumIn;
 
       return {
-        phases,
-        totalMonths,
-        monthLabels,
-        outflowByCategory,
-        salesInflow,
+        // New dual model
+        dualCashFlow: result,
+        // Legacy compatible
+        phases: [
+          { name: 'pre_dev', startMonth: result.phases.preDev.start, endMonth: result.phases.preDev.end, durationMonths: result.phases.preDev.months },
+          { name: 'construction', startMonth: result.phases.construction.start, endMonth: result.phases.construction.end, durationMonths: result.phases.construction.months },
+          { name: 'handover', startMonth: result.phases.handover.start, endMonth: result.phases.handover.end, durationMonths: result.phases.handover.months },
+        ],
+        totalMonths: result.totalMonths,
+        monthLabels: result.monthLabels,
         totalOutflow,
+        salesInflow,
         cumulativeOutflow,
         cumulativeInflow,
-        netCashFlow,
-        cumulativeNet,
+        netCashFlow: result.monthlyTable.map(r => r.netCashFlow),
+        cumulativeNet: result.monthlyTable.map(r => r.cumulativeNet),
         keyNumbers: {
-          totalCost,
-          totalSales,
-          peakExposure: Math.abs(peakExposure),
-          peakMonth,
-          peakMonthLabel: monthLabels[peakMonth - 1] || '',
-          netProfit: totalSales - totalCost,
-          roi: totalCost > 0 ? ((totalSales - totalCost) / totalCost) * 100 : 0,
+          totalCost: result.totalProjectCost,
+          totalSales: result.totalSalesRevenue,
+          peakExposure: result.developerMaxExposure,
+          peakMonth: result.developerMaxExposureMonth,
+          peakMonthLabel: result.developerMaxExposureLabel,
+          netProfit: result.netProfit,
+          roi: result.roi,
+          // New fields
+          developerCosts: result.developerCosts,
+          escrowCosts: result.escrowCosts,
+          constructionCost: result.constructionCost,
+          fundingStructure: result.fundingStructure,
         },
       };
     }),

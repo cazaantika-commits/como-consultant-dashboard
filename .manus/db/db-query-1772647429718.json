@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE cf_cost_items MODIFY COLUMN category ENUM('land','land_registration','development_setup','design_engineering','consultants','authority_fees','contractor','supervision','marketing_sales','administration','developer_fee','contingency','other') NOT NULL;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute ALTER TABLE cf_cost_items MODIFY COLUMN category ENUM('land','land_registration','development_setup','design_engineering','consultants','authority_fees','contractor','supervision','marketing_sales','administration','developer_fee','contingency','other') NOT NULL;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1766
+}

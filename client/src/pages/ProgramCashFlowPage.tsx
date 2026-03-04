@@ -1,6 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import FlexiblePhasesTab from "./FlexiblePhasesTab";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,33 +15,25 @@ import {
   CalendarDays, Plus, Trash2, Edit, DollarSign, TrendingDown, TrendingUp,
   BarChart3, ArrowRight, Building2, Layers, Settings2, FolderOpen,
   ChevronLeft, Save, RefreshCw, Download, AlertTriangle, CheckCircle2,
-  Clock, Landmark, Briefcase, Hammer, Eye, FileText, Percent, FileSpreadsheet, GitCompare
+  Clock, Landmark, Briefcase, Hammer, Eye, FileText, Percent, FileSpreadsheet,
+  GitCompare, Wallet, Building, ShieldCheck, ArrowUpDown
 } from "lucide-react";
 
 // ═══════════════════════════════════════════════════════════════
-// Types
+// Types & Constants
 // ═══════════════════════════════════════════════════════════════
-
-interface PaymentParams {
-  paymentMonth?: number;
-  milestones?: Array<{ percent: number; description: string; monthOffset: number }>;
-  startMonth?: number;
-  endMonth?: number;
-  mobilizationPct?: number;
-  progressDistribution?: 'linear' | 'scurve';
-  retentionPct?: number;
-  retentionReleaseMonth?: number;
-  salesPct?: number;
-  salesTiming?: 'booking' | 'construction' | 'handover';
-}
 
 const CATEGORY_LABELS: Record<string, string> = {
   land: 'الأرض',
-  consultant_design: 'أتعاب التصميم',
+  land_registration: 'تسجيل الأرض',
+  development_setup: 'إعداد التطوير',
+  design_engineering: 'التصميم والهندسة',
+  consultants: 'الاستشاريون',
   authority_fees: 'رسوم حكومية',
   contractor: 'المقاول الرئيسي',
   supervision: 'الإشراف',
   marketing_sales: 'التسويق والبيع',
+  administration: 'إدارة',
   developer_fee: 'أتعاب المطور',
   contingency: 'احتياطي',
   other: 'أخرى',
@@ -50,31 +41,60 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 const CATEGORY_COLORS: Record<string, string> = {
   land: '#059669',
-  consultant_design: '#2563eb',
+  land_registration: '#047857',
+  development_setup: '#0d9488',
+  design_engineering: '#2563eb',
+  consultants: '#4f46e5',
   authority_fees: '#7c3aed',
   contractor: '#dc2626',
   supervision: '#ea580c',
   marketing_sales: '#0891b2',
+  administration: '#64748b',
   developer_fee: '#ca8a04',
   contingency: '#6b7280',
   other: '#9333ea',
+};
+
+const PHASE_LABELS: Record<string, string> = {
+  pre_dev: 'ما قبل البناء',
+  construction: 'البناء',
+  handover: 'التسليم',
+  all: 'كل المراحل',
+};
+
+const PHASE_COLORS: Record<string, string> = {
+  pre_dev: '#f59e0b',
+  construction: '#3b82f6',
+  handover: '#10b981',
+};
+
+const FUNDING_LABELS: Record<string, string> = {
+  developer: 'المستثمر',
+  escrow: 'الإسكرو',
+  mixed: 'مختلط',
 };
 
 const PAYMENT_TYPE_LABELS: Record<string, string> = {
   lump_sum: 'دفعة واحدة',
   milestone: 'مراحل إنجاز',
   monthly_fixed: 'شهري ثابت',
-  progress_based: 'حسب التقدم (مقاول)',
+  progress_based: 'حسب التقدم',
   sales_linked: 'مرتبط بالمبيعات',
 };
 
-const formatAED = (n: number) => {
-  if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (Math.abs(n) >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
-  return n.toFixed(0);
-};
+function formatAED(amount: number): string {
+  if (Math.abs(amount) >= 1_000_000) {
+    return `${(amount / 1_000_000).toFixed(2)}M`;
+  }
+  if (Math.abs(amount) >= 1_000) {
+    return `${(amount / 1_000).toFixed(0)}K`;
+  }
+  return amount.toLocaleString('en-US');
+}
 
-const formatAEDFull = (n: number) => new Intl.NumberFormat('en-AE').format(Math.round(n));
+function formatFullAED(amount: number): string {
+  return amount.toLocaleString('en-US', { maximumFractionDigits: 0 });
+}
 
 // ═══════════════════════════════════════════════════════════════
 // Main Page Component
@@ -83,186 +103,98 @@ const formatAEDFull = (n: number) => new Intl.NumberFormat('en-AE').format(Math.
 export default function ProgramCashFlowPage() {
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [activeTab, setActiveTab] = useState("timeline");
-  const [selectedScenarioId, setSelectedScenarioId] = useState<number | null>(null);
 
   const projectsQuery = trpc.cashFlowProgram.listProjects.useQuery();
-  const existingProjects = trpc.projects.list.useQuery();
+  const feasibilityQuery = trpc.cashFlowProgram.importFromFeasibility.useQuery(
+    { projectId: 0 },
+    { enabled: false }
+  );
+
+  const projects = projectsQuery.data || [];
 
   if (selectedProjectId) {
     return (
       <ProjectDetailView
         cfProjectId={selectedProjectId}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        selectedScenarioId={selectedScenarioId}
-        setSelectedScenarioId={setSelectedScenarioId}
         onBack={() => setSelectedProjectId(null)}
       />
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-cyan-50" dir="rtl">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-l from-emerald-600 via-teal-600 to-cyan-700 text-white">
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
-              <BarChart3 className="w-7 h-7" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold">برنامج العمل والتدفقات النقدية</h1>
-              <p className="text-emerald-100 mt-1">Program & Cash Flow</p>
-            </div>
-          </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Wallet className="h-7 w-7 text-primary" />
+            برنامج العمل والتدفقات النقدية
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            نموذج تدفق نقدي مزدوج — تمويل المستثمر + حساب الإسكرو
+          </p>
         </div>
+        <CreateProjectDialog
+          open={showCreateDialog}
+          onOpenChange={setShowCreateDialog}
+          onCreated={() => projectsQuery.refetch()}
+        />
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card className="border-emerald-200 bg-emerald-50/50">
-            <CardContent className="pt-5 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                  <FolderOpen className="w-5 h-5 text-emerald-600" />
+      {/* Project Cards */}
+      {projects.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <Building2 className="h-12 w-12 text-muted-foreground/40 mb-4" />
+            <p className="text-lg font-medium text-muted-foreground mb-2">لا توجد مشاريع</p>
+            <p className="text-sm text-muted-foreground mb-4">أنشئ مشروعاً جديداً أو استورد من دراسة الجدوى</p>
+            <Button onClick={() => setShowCreateDialog(true)}>
+              <Plus className="h-4 w-4 ml-2" />
+              مشروع جديد
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {projects.map((p: any) => (
+            <Card
+              key={p.id}
+              className="cursor-pointer hover:border-primary/50 transition-colors"
+              onClick={() => setSelectedProjectId(p.id)}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">{p.name}</CardTitle>
+                  <Badge variant="outline" className="text-xs">
+                    {p.startDate}
+                  </Badge>
                 </div>
-                <div>
-                  <p className="text-sm text-emerald-700">المشاريع</p>
-                  <p className="text-2xl font-bold text-emerald-900">{projectsQuery.data?.length || 0}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-blue-200 bg-blue-50/50">
-            <CardContent className="pt-5 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                  <DollarSign className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-blue-700">إجمالي التكاليف</p>
-                  <p className="text-2xl font-bold text-blue-900">—</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-amber-200 bg-amber-50/50">
-            <CardContent className="pt-5 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
-                  <AlertTriangle className="w-5 h-5 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-amber-700">أقصى تعرض</p>
-                  <p className="text-2xl font-bold text-amber-900">—</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-purple-200 bg-purple-50/50">
-            <CardContent className="pt-5 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                  <Layers className="w-5 h-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-purple-700">عرض المحفظة</p>
-                  <Button variant="link" className="p-0 h-auto text-purple-600" onClick={() => setActiveTab("portfolio")}>
-                    عرض التفاصيل
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Projects Grid */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900">المشاريع</h2>
-          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-            <DialogTrigger asChild>
-              <Button className="bg-emerald-600 hover:bg-emerald-700">
-                <Plus className="w-4 h-4 ml-2" />
-                مشروع جديد
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg" dir="rtl">
-              <CreateProjectDialog
-                existingProjects={existingProjects.data || []}
-                onCreated={(id) => {
-                  setShowCreateDialog(false);
-                  projectsQuery.refetch();
-                  setSelectedProjectId(id);
-                }}
-              />
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        {projectsQuery.isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3].map(i => (
-              <Card key={i} className="animate-pulse">
-                <CardContent className="pt-6 pb-4">
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-3" />
-                  <div className="h-3 bg-gray-200 rounded w-1/2 mb-2" />
-                  <div className="h-3 bg-gray-200 rounded w-2/3" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : projectsQuery.data?.length === 0 ? (
-          <Card className="border-dashed border-2 border-gray-300">
-            <CardContent className="py-16 text-center">
-              <Building2 className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-              <h3 className="text-lg font-semibold text-gray-500 mb-2">لا توجد مشاريع بعد</h3>
-              <p className="text-gray-400 mb-4">أنشئ مشروعاً جديداً لبدء تخطيط التدفقات النقدية</p>
-              <Button onClick={() => setShowCreateDialog(true)} className="bg-emerald-600 hover:bg-emerald-700">
-                <Plus className="w-4 h-4 ml-2" />
-                إنشاء أول مشروع
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {projectsQuery.data?.map(project => (
-              <Card
-                key={project.id}
-                className="cursor-pointer hover:shadow-lg transition-all hover:border-emerald-300 group"
-                onClick={() => {
-                  setSelectedProjectId(project.id);
-                  setActiveTab("timeline");
-                }}
-              >
-                <CardContent className="pt-5 pb-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white">
-                      <Building2 className="w-5 h-5" />
-                    </div>
-                    <ArrowRight className="w-5 h-5 text-gray-300 group-hover:text-emerald-500 transition-colors rotate-180" />
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="bg-amber-500/10 rounded-lg p-2">
+                    <div className="text-xs text-muted-foreground">ما قبل البناء</div>
+                    <div className="font-bold text-amber-600">{p.preDevMonths || p.designApprovalMonths + p.reraSetupMonths} شهر</div>
                   </div>
-                  <h3 className="font-bold text-gray-900 mb-1">{project.name}</h3>
-                  <p className="text-sm text-gray-500 mb-3">بداية: {project.startDate}</p>
-                  <div className="flex gap-2 flex-wrap">
-                    <Badge variant="outline" className="text-xs">
-                      <Clock className="w-3 h-3 ml-1" />
-                      {project.designApprovalMonths + project.reraSetupMonths + project.constructionMonths + project.handoverMonths} شهر
-                    </Badge>
-                    {project.salesEnabled && (
-                      <Badge variant="outline" className="text-xs text-emerald-600 border-emerald-300">
-                        <TrendingUp className="w-3 h-3 ml-1" />
-                        مبيعات مفعّلة
-                      </Badge>
-                    )}
+                  <div className="bg-blue-500/10 rounded-lg p-2">
+                    <div className="text-xs text-muted-foreground">البناء</div>
+                    <div className="font-bold text-blue-600">{p.constructionMonths} شهر</div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
+                  <div className="bg-green-500/10 rounded-lg p-2">
+                    <div className="text-xs text-muted-foreground">التسليم</div>
+                    <div className="font-bold text-green-600">{p.handoverMonths} شهر</div>
+                  </div>
+                </div>
+                {p.totalSalesRevenue && (
+                  <div className="mt-3 text-sm text-muted-foreground">
+                    الإيرادات: <span className="font-semibold text-foreground">{formatAED(p.totalSalesRevenue)} AED</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -271,223 +203,148 @@ export default function ProgramCashFlowPage() {
 // Create Project Dialog
 // ═══════════════════════════════════════════════════════════════
 
-function CreateProjectDialog({
-  existingProjects,
-  onCreated,
-}: {
-  existingProjects: any[];
-  onCreated: (id: number) => void;
+function CreateProjectDialog({ open, onOpenChange, onCreated }: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onCreated: () => void;
 }) {
   const [mode, setMode] = useState<'manual' | 'feasibility'>('feasibility');
-  const [name, setName] = useState("");
-  const [startDate, setStartDate] = useState("2026-01");
-  const [linkedProjectId, setLinkedProjectId] = useState<string>("none");
-  const [designMonths, setDesignMonths] = useState(6);
-  const [reraMonths, setReraMonths] = useState(3);
-  const [constructionMonths, setConstructionMonths] = useState(24);
-  const [handoverMonths, setHandoverMonths] = useState(3);
-  const [selectedFeasibilityId, setSelectedFeasibilityId] = useState<string>("none");
+  const [name, setName] = useState('');
+  const [startDate, setStartDate] = useState('2026-01');
+  const [preDevMonths, setPreDevMonths] = useState(6);
+  const [constructionMonths, setConstructionMonths] = useState(16);
+  const [handoverMonths, setHandoverMonths] = useState(2);
+  const [selectedFeasId, setSelectedFeasId] = useState<number | null>(null);
 
-  const feasibilityStudies = trpc.feasibility.list.useQuery();
-  const createMutation = trpc.cashFlowProgram.createProject.useMutation();
-  const createFromFeasMutation = trpc.cashFlowProgram.createFromFeasibility.useMutation();
+  const feasListQuery = trpc.cashFlowProgram.importFromFeasibility.useQuery(
+    { projectId: 0 },
+    { enabled: open && mode === 'feasibility' }
+  );
 
-  // When a feasibility study is selected, auto-fill the name
-  const selectedStudy = feasibilityStudies.data?.find(s => s.id.toString() === selectedFeasibilityId);
+  const createMutation = trpc.cashFlowProgram.createProject.useMutation({
+    onSuccess: () => {
+      toast.success('تم إنشاء المشروع');
+      onOpenChange(false);
+      onCreated();
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
-  const handleCreate = async () => {
-    if (mode === 'feasibility') {
-      if (selectedFeasibilityId === 'none' || !selectedStudy) {
-        toast.error("يرجى اختيار دراسة جدوى");
-        return;
-      }
-      try {
-        const result = await createFromFeasMutation.mutateAsync({
-          feasibilityStudyId: parseInt(selectedFeasibilityId),
-          startDate,
-          designApprovalMonths: designMonths,
-          reraSetupMonths: reraMonths,
-          constructionMonths,
-          handoverMonths,
-        });
-        toast.success(
-          `تم إنشاء المشروع واستيراد ${result.costItemsCount} بند تكلفة تلقائياً`,
-          { description: `إجمالي التكاليف: ${formatAEDFull(result.totalCost)} AED` }
-        );
-        onCreated(result.cfProjectId);
-      } catch (e: any) {
-        toast.error(e.message || "فشل في إنشاء المشروع");
-      }
-    } else {
-      if (!name.trim()) {
-        toast.error("يرجى إدخال اسم المشروع");
-        return;
-      }
-      try {
-        const result = await createMutation.mutateAsync({
-          name: name.trim(),
-          startDate,
-          projectId: linkedProjectId !== "none" ? parseInt(linkedProjectId) : null,
-          designApprovalMonths: designMonths,
-          reraSetupMonths: reraMonths,
-          constructionMonths,
-          handoverMonths,
-        });
-        toast.success("تم إنشاء المشروع بنجاح");
-        onCreated(result.id);
-      } catch (e: any) {
-        toast.error(e.message || "فشل في إنشاء المشروع");
-      }
-    }
-  };
-
-  const isPending = createMutation.isPending || createFromFeasMutation.isPending;
+  const createFromFeasMutation = trpc.cashFlowProgram.createFromFeasibility.useMutation({
+    onSuccess: (data) => {
+      toast.success(`تم إنشاء المشروع: ${data?.projectName} (${data?.costItemsCount} بند تكلفة)`);
+      onOpenChange(false);
+      onCreated();
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
   return (
-    <>
-      <DialogHeader>
-        <DialogTitle>مشروع تدفق نقدي جديد</DialogTitle>
-      </DialogHeader>
-      <div className="space-y-4 py-4">
-        {/* Mode Toggle */}
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={() => setMode('feasibility')}
-            className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all text-sm font-medium ${
-              mode === 'feasibility'
-                ? 'border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm'
-                : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            استيراد من دراسة جدوى
-          </button>
-          <button
-            onClick={() => setMode('manual')}
-            className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all text-sm font-medium ${
-              mode === 'manual'
-                ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
-                : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
-            }`}
-          >
-            <Edit className="w-4 h-4" />
-            إدخال يدوي
-          </button>
-        </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogTrigger asChild>
+        <Button>
+          <Plus className="h-4 w-4 ml-2" />
+          مشروع جديد
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>إنشاء مشروع تدفق نقدي</DialogTitle>
+        </DialogHeader>
 
-        {mode === 'feasibility' ? (
-          <>
-            {/* Feasibility Study Selector */}
+        <Tabs value={mode} onValueChange={(v) => setMode(v as any)}>
+          <TabsList className="w-full">
+            <TabsTrigger value="feasibility" className="flex-1">من دراسة الجدوى</TabsTrigger>
+            <TabsTrigger value="manual" className="flex-1">يدوي</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="feasibility" className="space-y-4 mt-4">
             <div>
-              <Label className="text-sm font-semibold">اختر دراسة الجدوى *</Label>
-              <Select value={selectedFeasibilityId} onValueChange={setSelectedFeasibilityId}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="اختر دراسة جدوى..." />
-                </SelectTrigger>
+              <Label>اختر دراسة الجدوى</Label>
+              <Select onValueChange={(v) => setSelectedFeasId(Number(v))}>
+                <SelectTrigger><SelectValue placeholder="اختر..." /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">اختر دراسة جدوى...</SelectItem>
-                  {(feasibilityStudies.data || []).map(s => (
-                    <SelectItem key={s.id} value={s.id.toString()}>
-                      {s.projectName}{s.scenarioName ? ` (${s.scenarioName})` : ''}
-                    </SelectItem>
+                  {(feasListQuery.data as any)?.studies?.map((s: any) => (
+                    <SelectItem key={s.id} value={String(s.id)}>{s.projectName}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Preview of selected study */}
-            {selectedStudy && (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 space-y-2">
-                <div className="flex items-center gap-2 text-emerald-700 font-semibold text-sm">
-                  <CheckCircle2 className="w-4 h-4" />
-                  سيتم استيراد التكاليف تلقائياً
-                </div>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-600">
-                  {selectedStudy.landPrice ? (
-                    <div>الأرض: <span className="font-medium text-gray-900">{formatAEDFull(selectedStudy.landPrice)} AED</span></div>
-                  ) : null}
-                  {selectedStudy.constructionCostPerSqft && selectedStudy.estimatedBua ? (
-                    <div>البناء: <span className="font-medium text-gray-900">{formatAEDFull(selectedStudy.estimatedBua * selectedStudy.constructionCostPerSqft)} AED</span></div>
-                  ) : null}
-                  {selectedStudy.numberOfUnits ? (
-                    <div>الوحدات: <span className="font-medium text-gray-900">{selectedStudy.numberOfUnits}</span></div>
-                  ) : null}
-                  {selectedStudy.plotArea ? (
-                    <div>مساحة الأرض: <span className="font-medium text-gray-900">{formatAEDFull(selectedStudy.plotArea)} sqft</span></div>
-                  ) : null}
-                  {selectedStudy.designFeePct ? (
-                    <div>التصميم: <span className="font-medium text-gray-900">{selectedStudy.designFeePct}%</span></div>
-                  ) : null}
-                  {selectedStudy.supervisionFeePct ? (
-                    <div>الإشراف: <span className="font-medium text-gray-900">{selectedStudy.supervisionFeePct}%</span></div>
-                  ) : null}
-                </div>
-                <p className="text-[11px] text-emerald-600 mt-1">
-                  سيتم إنشاء بنود التكلفة مع منطق الدفع المناسب لكل بند (أرض: دفعة واحدة، تصميم: مراحل، مقاول: حسب التقدم، ...)
-                </p>
-              </div>
-            )}
-          </>
-        ) : (
-          <>
-            {/* Manual mode */}
-            <div>
-              <Label>اسم المشروع *</Label>
-              <Input value={name} onChange={e => setName(e.target.value)} placeholder="مثال: مركز مجان التجاري" />
-            </div>
-            {existingProjects.length > 0 && (
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>ربط بمشروع قائم (اختياري)</Label>
-                <Select value={linkedProjectId} onValueChange={setLinkedProjectId}>
-                  <SelectTrigger><SelectValue placeholder="اختر مشروع" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">بدون ربط</SelectItem>
-                    {existingProjects.map(p => (
-                      <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>تاريخ البدء</Label>
+                <Input type="month" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
               </div>
-            )}
-          </>
-        )}
+              <div>
+                <Label>ما قبل البناء (أشهر)</Label>
+                <Input type="number" value={preDevMonths} onChange={(e) => setPreDevMonths(Number(e.target.value))} min={1} />
+              </div>
+              <div>
+                <Label>البناء (أشهر)</Label>
+                <Input type="number" value={constructionMonths} onChange={(e) => setConstructionMonths(Number(e.target.value))} min={1} />
+              </div>
+              <div>
+                <Label>التسليم (أشهر)</Label>
+                <Input type="number" value={handoverMonths} onChange={(e) => setHandoverMonths(Number(e.target.value))} min={1} />
+              </div>
+            </div>
+            <Button
+              className="w-full"
+              disabled={!selectedFeasId || createFromFeasMutation.isPending}
+              onClick={() => selectedFeasId && createFromFeasMutation.mutate({
+                feasibilityStudyId: selectedFeasId,
+                startDate,
+                designApprovalMonths: preDevMonths,
+                reraSetupMonths: 0,
+                constructionMonths,
+                handoverMonths,
+              })}
+            >
+              {createFromFeasMutation.isPending ? 'جاري الإنشاء...' : 'إنشاء من دراسة الجدوى'}
+            </Button>
+          </TabsContent>
 
-        <Separator />
-
-        {/* Common fields: start date and phase durations */}
-        <div>
-          <Label>تاريخ البداية</Label>
-          <Input type="month" value={startDate} onChange={e => setStartDate(e.target.value)} />
-        </div>
-        <p className="text-sm font-semibold text-gray-700">مدة المراحل (بالأشهر)</p>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label className="text-xs">التصميم والموافقات</Label>
-            <Input type="number" min={1} value={designMonths} onChange={e => setDesignMonths(parseInt(e.target.value) || 1)} />
-          </div>
-          <div>
-            <Label className="text-xs">تسجيل ريرا والمبيعات</Label>
-            <Input type="number" min={1} value={reraMonths} onChange={e => setReraMonths(parseInt(e.target.value) || 1)} />
-          </div>
-          <div>
-            <Label className="text-xs">البناء</Label>
-            <Input type="number" min={1} value={constructionMonths} onChange={e => setConstructionMonths(parseInt(e.target.value) || 1)} />
-          </div>
-          <div>
-            <Label className="text-xs">التسليم</Label>
-            <Input type="number" min={1} value={handoverMonths} onChange={e => setHandoverMonths(parseInt(e.target.value) || 1)} />
-          </div>
-        </div>
-      </div>
-      <DialogFooter>
-        <DialogClose asChild>
-          <Button variant="outline">إلغاء</Button>
-        </DialogClose>
-        <Button onClick={handleCreate} disabled={isPending} className="bg-emerald-600 hover:bg-emerald-700">
-          {isPending ? "جاري الإنشاء..." : mode === 'feasibility' ? "إنشاء واستيراد التكاليف" : "إنشاء"}
-        </Button>
-      </DialogFooter>
-    </>
+          <TabsContent value="manual" className="space-y-4 mt-4">
+            <div>
+              <Label>اسم المشروع</Label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: مشروع ند الشبا" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>تاريخ البدء</Label>
+                <Input type="month" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              </div>
+              <div>
+                <Label>ما قبل البناء (أشهر)</Label>
+                <Input type="number" value={preDevMonths} onChange={(e) => setPreDevMonths(Number(e.target.value))} min={1} />
+              </div>
+              <div>
+                <Label>البناء (أشهر)</Label>
+                <Input type="number" value={constructionMonths} onChange={(e) => setConstructionMonths(Number(e.target.value))} min={1} />
+              </div>
+              <div>
+                <Label>التسليم (أشهر)</Label>
+                <Input type="number" value={handoverMonths} onChange={(e) => setHandoverMonths(Number(e.target.value))} min={1} />
+              </div>
+            </div>
+            <Button
+              className="w-full"
+              disabled={!name || createMutation.isPending}
+              onClick={() => createMutation.mutate({
+                name,
+                startDate,
+                designApprovalMonths: preDevMonths,
+                reraSetupMonths: 0,
+                constructionMonths,
+                handoverMonths,
+              })}
+            >
+              {createMutation.isPending ? 'جاري الإنشاء...' : 'إنشاء المشروع'}
+            </Button>
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -495,413 +352,484 @@ function CreateProjectDialog({
 // Project Detail View
 // ═══════════════════════════════════════════════════════════════
 
-function ProjectDetailView({
-  cfProjectId,
-  activeTab,
-  setActiveTab,
-  selectedScenarioId,
-  setSelectedScenarioId,
-  onBack,
-}: {
-  cfProjectId: number;
-  activeTab: string;
-  setActiveTab: (t: string) => void;
-  selectedScenarioId: number | null;
-  setSelectedScenarioId: (id: number | null) => void;
-  onBack: () => void;
-}) {
-  const projectQuery = trpc.cashFlowProgram.getProject.useQuery(cfProjectId);
-  const costItemsQuery = trpc.cashFlowProgram.getCostItems.useQuery(cfProjectId);
-  const scenariosQuery = trpc.cashFlowProgram.getScenarios.useQuery(cfProjectId);
-  const cashFlowQuery = trpc.cashFlowProgram.calculateCashFlow.useQuery({
-    cfProjectId,
-    scenarioId: selectedScenarioId,
-  });
+function ProjectDetailView({ cfProjectId, onBack }: { cfProjectId: number; onBack: () => void }) {
+  const [activeTab, setActiveTab] = useState('overview');
+
+  const projectQuery = trpc.cashFlowProgram.getProject.useQuery({ id: cfProjectId });
+  const costItemsQuery = trpc.cashFlowProgram.getCostItems.useQuery({ cfProjectId });
+  const cashFlowQuery = trpc.cashFlowProgram.calculateCashFlow.useQuery({ cfProjectId });
 
   const project = projectQuery.data;
   const costItems = costItemsQuery.data || [];
   const cashFlow = cashFlowQuery.data;
+  const dual = cashFlow?.dualCashFlow;
 
   if (!project) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full" />
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
     );
   }
 
-  const totalDuration = project.designApprovalMonths + project.reraSetupMonths + project.constructionMonths + project.handoverMonths;
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-cyan-50" dir="rtl">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="bg-gradient-to-l from-emerald-600 via-teal-600 to-cyan-700 text-white">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Button variant="ghost" size="sm" onClick={onBack} className="text-white hover:bg-white/20">
-              <ChevronLeft className="w-4 h-4 ml-1" />
-              العودة
-            </Button>
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">{project.name}</h1>
-              <div className="flex items-center gap-4 mt-2 text-emerald-100">
-                <span className="flex items-center gap-1"><CalendarDays className="w-4 h-4" /> {project.startDate}</span>
-                <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> {totalDuration} شهر</span>
-              </div>
-            </div>
-            {cashFlow?.keyNumbers && (
-              <div className="flex gap-4">
-                <div className="text-center bg-white/10 rounded-lg px-4 py-2">
-                  <p className="text-xs text-emerald-200">إجمالي التكاليف</p>
-                  <p className="text-lg font-bold">{formatAED(cashFlow.keyNumbers.totalCost)} د.إ</p>
-                </div>
-                <div className="text-center bg-white/10 rounded-lg px-4 py-2">
-                  <p className="text-xs text-emerald-200">أقصى تعرض</p>
-                  <p className="text-lg font-bold text-amber-300">{formatAED(cashFlow.keyNumbers.peakExposure)} د.إ</p>
-                </div>
-                {cashFlow.keyNumbers.totalSales > 0 && (
-                  <div className="text-center bg-white/10 rounded-lg px-4 py-2">
-                    <p className="text-xs text-emerald-200">صافي الربح</p>
-                    <p className={`text-lg font-bold ${cashFlow.keyNumbers.netProfit >= 0 ? 'text-green-300' : 'text-red-300'}`}>
-                      {formatAED(cashFlow.keyNumbers.netProfit)} د.إ
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="icon" onClick={onBack}>
+          <ChevronLeft className="h-5 w-5" />
+        </Button>
+        <div className="flex-1">
+          <h1 className="text-xl font-bold">{project.name}</h1>
+          <p className="text-sm text-muted-foreground">
+            بدء: {project.startDate} · {(project.preDevMonths || project.designApprovalMonths + project.reraSetupMonths) + project.constructionMonths + project.handoverMonths} شهر إجمالي
+          </p>
         </div>
+        <Button variant="outline" size="sm" onClick={() => {
+          cashFlowQuery.refetch();
+          costItemsQuery.refetch();
+        }}>
+          <RefreshCw className="h-4 w-4 ml-1" />
+          تحديث
+        </Button>
       </div>
+
+      {/* Key Numbers Cards */}
+      {dual && <KeyNumbersCards dual={dual} />}
 
       {/* Tabs */}
-      <div className="max-w-7xl mx-auto px-6 py-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-6 mb-6">
-            <TabsTrigger value="timeline" className="flex items-center gap-1">
-              <CalendarDays className="w-4 h-4" />
-              الجدول الزمني
-            </TabsTrigger>
-            <TabsTrigger value="phases" className="flex items-center gap-1">
-              <Layers className="w-4 h-4" />
-              المراحل المرنة
-            </TabsTrigger>
-            <TabsTrigger value="costs" className="flex items-center gap-1">
-              <DollarSign className="w-4 h-4" />
-              هيكل التكاليف
-            </TabsTrigger>
-            <TabsTrigger value="cashflow" className="flex items-center gap-1">
-              <BarChart3 className="w-4 h-4" />
-              التدفق النقدي
-            </TabsTrigger>
-            <TabsTrigger value="scenarios" className="flex items-center gap-1">
-              <Settings2 className="w-4 h-4" />
-              السيناريوهات
-            </TabsTrigger>
-            <TabsTrigger value="dashboard" className="flex items-center gap-1">
-              <TrendingUp className="w-4 h-4" />
-              لوحة الأرقام
-            </TabsTrigger>
-          </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="w-full flex-wrap h-auto gap-1">
+          <TabsTrigger value="overview" className="gap-1">
+            <BarChart3 className="h-3.5 w-3.5" />
+            نظرة عامة
+          </TabsTrigger>
+          <TabsTrigger value="timeline" className="gap-1">
+            <CalendarDays className="h-3.5 w-3.5" />
+            الجدول الزمني
+          </TabsTrigger>
+          <TabsTrigger value="costs" className="gap-1">
+            <DollarSign className="h-3.5 w-3.5" />
+            بنود التكاليف
+          </TabsTrigger>
+          <TabsTrigger value="monthly" className="gap-1">
+            <FileSpreadsheet className="h-3.5 w-3.5" />
+            الجدول الشهري
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="gap-1">
+            <Settings2 className="h-3.5 w-3.5" />
+            الإعدادات
+          </TabsTrigger>
+        </TabsList>
 
-          <TabsContent value="timeline">
-            <TimelineTab project={project} onRefresh={() => {
-              projectQuery.refetch();
-              cashFlowQuery.refetch();
-            }} />
-          </TabsContent>
+        <TabsContent value="overview">
+          {dual ? <OverviewTab dual={dual} /> : <LoadingState />}
+        </TabsContent>
 
-          <TabsContent value="phases">
-            <FlexiblePhasesTab cfProjectId={cfProjectId} onRefresh={() => {
-              projectQuery.refetch();
-              cashFlowQuery.refetch();
-            }} />
-          </TabsContent>
+        <TabsContent value="timeline">
+          {dual ? <TimelineTab dual={dual} project={project} /> : <LoadingState />}
+        </TabsContent>
 
-          <TabsContent value="costs">
-            <CostStructureTab
-              cfProjectId={cfProjectId}
-              costItems={costItems}
-              onRefresh={() => {
-                costItemsQuery.refetch();
-                cashFlowQuery.refetch();
-              }}
-              project={project}
-            />
-          </TabsContent>
+        <TabsContent value="costs">
+          <CostItemsTab
+            cfProjectId={cfProjectId}
+            costItems={costItems}
+            onRefresh={() => { costItemsQuery.refetch(); cashFlowQuery.refetch(); }}
+          />
+        </TabsContent>
 
-          <TabsContent value="cashflow">
-            <CashFlowTab cashFlow={cashFlow} costItems={costItems} isLoading={cashFlowQuery.isLoading} project={project} />
-          </TabsContent>
+        <TabsContent value="monthly">
+          {dual ? <MonthlyTableTab dual={dual} /> : <LoadingState />}
+        </TabsContent>
 
-          <TabsContent value="scenarios">
-            <ScenariosTab
-              cfProjectId={cfProjectId}
-              scenarios={scenariosQuery.data || []}
-              selectedScenarioId={selectedScenarioId}
-              onSelectScenario={(id) => {
-                setSelectedScenarioId(id);
-                cashFlowQuery.refetch();
-              }}
-              onRefresh={() => scenariosQuery.refetch()}
-              project={project}
-            />
-          </TabsContent>
+        <TabsContent value="settings">
+          <ProjectSettingsTab
+            cfProjectId={cfProjectId}
+            project={project}
+            onRefresh={() => { projectQuery.refetch(); cashFlowQuery.refetch(); }}
+          />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
 
-          <TabsContent value="dashboard">
-            <DashboardTab cashFlow={cashFlow} project={project} />
-          </TabsContent>
-        </Tabs>
-      </div>
+function LoadingState() {
+  return (
+    <div className="flex items-center justify-center h-32">
+      <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full" />
     </div>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Timeline Tab - Gantt Chart
+// Key Numbers Cards
 // ═══════════════════════════════════════════════════════════════
 
-function TimelineTab({ project, onRefresh }: { project: any; onRefresh: () => void }) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editStartDate, setEditStartDate] = useState(project.startDate);
-  const [editDesign, setEditDesign] = useState(project.designApprovalMonths);
-  const [editRera, setEditRera] = useState(project.reraSetupMonths);
-  const [editConstruction, setEditConstruction] = useState(project.constructionMonths);
-  const [editHandover, setEditHandover] = useState(project.handoverMonths);
+function KeyNumbersCards({ dual }: { dual: any }) {
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <Card className="bg-gradient-to-br from-red-500/10 to-red-500/5 border-red-200/50">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingDown className="h-4 w-4 text-red-500" />
+            <span className="text-xs text-muted-foreground">إجمالي التكاليف</span>
+          </div>
+          <div className="text-lg font-bold text-red-600">{formatAED(dual.totalProjectCost)} AED</div>
+          <div className="flex gap-2 mt-1 text-xs">
+            <span className="text-amber-600">مستثمر: {formatAED(dual.developerCosts)}</span>
+            <span className="text-blue-600">إسكرو: {formatAED(dual.escrowCosts)}</span>
+          </div>
+        </CardContent>
+      </Card>
 
-  const updateMutation = trpc.cashFlowProgram.updateProject.useMutation();
+      <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-200/50">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingUp className="h-4 w-4 text-green-500" />
+            <span className="text-xs text-muted-foreground">إجمالي الإيرادات</span>
+          </div>
+          <div className="text-lg font-bold text-green-600">{formatAED(dual.totalSalesRevenue)} AED</div>
+          <div className="text-xs mt-1 text-muted-foreground">
+            صافي الربح: <span className="font-semibold text-green-600">{formatAED(dual.netProfit)}</span>
+          </div>
+        </CardContent>
+      </Card>
 
-  // Sync local state when project data changes
-  useEffect(() => {
-    setEditStartDate(project.startDate);
-    setEditDesign(project.designApprovalMonths);
-    setEditRera(project.reraSetupMonths);
-    setEditConstruction(project.constructionMonths);
-    setEditHandover(project.handoverMonths);
-  }, [project]);
+      <Card className="bg-gradient-to-br from-amber-500/10 to-amber-500/5 border-amber-200/50">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <span className="text-xs text-muted-foreground">أقصى تعرض للمستثمر</span>
+          </div>
+          <div className="text-lg font-bold text-amber-600">{formatAED(dual.developerMaxExposure)} AED</div>
+          <div className="text-xs mt-1 text-muted-foreground">
+            الشهر: {dual.developerMaxExposureLabel}
+          </div>
+        </CardContent>
+      </Card>
 
-  const displayDesign = isEditing ? editDesign : project.designApprovalMonths;
-  const displayRera = isEditing ? editRera : project.reraSetupMonths;
-  const displayConstruction = isEditing ? editConstruction : project.constructionMonths;
-  const displayHandover = isEditing ? editHandover : project.handoverMonths;
-  const displayStartDate = isEditing ? editStartDate : project.startDate;
-
-  const totalDuration = displayDesign + displayRera + displayConstruction + displayHandover;
-
-  const phases = [
-    { name: 'التصميم والموافقات', months: displayDesign, color: 'bg-blue-500', icon: <Edit className="w-4 h-4" />, key: 'design' },
-    { name: 'تسجيل ريرا والمبيعات', months: displayRera, color: 'bg-purple-500', icon: <Landmark className="w-4 h-4" />, key: 'rera' },
-    { name: 'البناء', months: displayConstruction, color: 'bg-amber-500', icon: <Hammer className="w-4 h-4" />, key: 'construction' },
-    { name: 'التسليم', months: displayHandover, color: 'bg-emerald-500', icon: <CheckCircle2 className="w-4 h-4" />, key: 'handover' },
-  ];
-
-  const handleSave = async () => {
-    try {
-      await updateMutation.mutateAsync({
-        id: project.id,
-        name: project.name,
-        startDate: editStartDate,
-        designApprovalMonths: editDesign,
-        reraSetupMonths: editRera,
-        constructionMonths: editConstruction,
-        handoverMonths: editHandover,
-        salesEnabled: project.salesEnabled || false,
-        salesVelocityType: project.salesVelocityType || 'aed',
-        buyerPlanBookingPct: parseFloat(project.buyerPlanBookingPct) || 20,
-        buyerPlanConstructionPct: parseFloat(project.buyerPlanConstructionPct) || 30,
-        buyerPlanHandoverPct: parseFloat(project.buyerPlanHandoverPct) || 50,
-      });
-      toast.success("تم تحديث الجدول الزمني بنجاح", {
-        description: `المدة الإجمالية: ${totalDuration} شهر — سيتم إعادة حساب التدفق النقدي`,
-      });
-      setIsEditing(false);
-      onRefresh();
-    } catch (e: any) {
-      toast.error(e.message || "فشل في تحديث الجدول الزمني");
-    }
-  };
-
-  const handleCancel = () => {
-    setEditStartDate(project.startDate);
-    setEditDesign(project.designApprovalMonths);
-    setEditRera(project.reraSetupMonths);
-    setEditConstruction(project.constructionMonths);
-    setEditHandover(project.handoverMonths);
-    setIsEditing(false);
-  };
-
-  const handlePhaseChange = (key: string, value: number) => {
-    const v = Math.max(1, value);
-    switch (key) {
-      case 'design': setEditDesign(v); break;
-      case 'rera': setEditRera(v); break;
-      case 'construction': setEditConstruction(v); break;
-      case 'handover': setEditHandover(v); break;
-    }
-  };
-
-  const hasChanges = isEditing && (
-    editStartDate !== project.startDate ||
-    editDesign !== project.designApprovalMonths ||
-    editRera !== project.reraSetupMonths ||
-    editConstruction !== project.constructionMonths ||
-    editHandover !== project.handoverMonths
+      <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-200/50">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Percent className="h-4 w-4 text-blue-500" />
+            <span className="text-xs text-muted-foreground">العائد على الاستثمار</span>
+          </div>
+          <div className="text-lg font-bold text-blue-600">{dual.roi.toFixed(1)}%</div>
+          <div className="text-xs mt-1 text-muted-foreground">
+            البناء: {formatAED(dual.constructionCost)} AED
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
+}
 
-  let cumMonth = 0;
+// ═══════════════════════════════════════════════════════════════
+// Overview Tab - Charts & Summary
+// ═══════════════════════════════════════════════════════════════
+
+function OverviewTab({ dual }: { dual: any }) {
+  const table = dual.monthlyTable || [];
+
+  // Build chart data
+  const maxVal = Math.max(
+    ...table.map((r: any) => Math.max(Math.abs(r.developerCumulative), Math.abs(r.escrowBalance), Math.abs(r.cumulativeNet)))
+  );
 
   return (
     <div className="space-y-6">
+      {/* Funding Structure */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <CalendarDays className="w-5 h-5 text-emerald-600" />
-                الجدول الزمني للمشروع
-              </CardTitle>
-              <CardDescription>المدة الإجمالية: {totalDuration} شهر — بداية من {displayStartDate}</CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              {isEditing ? (
-                <>
-                  <Button variant="outline" size="sm" onClick={handleCancel} disabled={updateMutation.isPending}>
-                    إلغاء
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleSave}
-                    disabled={updateMutation.isPending || !hasChanges}
-                    className="bg-emerald-600 hover:bg-emerald-700"
-                  >
-                    {updateMutation.isPending ? (
-                      <RefreshCw className="w-4 h-4 animate-spin ml-1" />
-                    ) : (
-                      <Save className="w-4 h-4 ml-1" />
-                    )}
-                    {updateMutation.isPending ? "جاري الحفظ..." : "حفظ التعديلات"}
-                  </Button>
-                </>
-              ) : (
-                <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-                  <Edit className="w-4 h-4 ml-1" />
-                  تعديل المدد
-                </Button>
-              )}
-            </div>
-          </div>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Wallet className="h-4 w-4" />
+            هيكل التمويل
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          {/* Start Date Editor */}
-          {isEditing && (
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex items-center gap-4">
-                <Label className="text-sm font-semibold text-blue-700 whitespace-nowrap">تاريخ البداية:</Label>
-                <Input
-                  type="month"
-                  value={editStartDate}
-                  onChange={e => setEditStartDate(e.target.value)}
-                  className="w-48 bg-white"
-                />
-              </div>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div className="text-center p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg">
+              <div className="text-xs text-muted-foreground mb-1">إيداع الإسكرو</div>
+              <div className="font-bold text-amber-600">{formatAED(dual.fundingStructure.escrowDeposit)}</div>
+              <div className="text-xs text-muted-foreground">20%</div>
             </div>
-          )}
+            <div className="text-center p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
+              <div className="text-xs text-muted-foreground mb-1">دفعة مقدمة للمقاول</div>
+              <div className="font-bold text-orange-600">{formatAED(dual.fundingStructure.contractorAdvance)}</div>
+              <div className="text-xs text-muted-foreground">10%</div>
+            </div>
+            <div className="text-center p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg">
+              <div className="text-xs text-muted-foreground mb-1">هامش سيولة</div>
+              <div className="font-bold text-yellow-600">{formatAED(dual.fundingStructure.liquidityBuffer)}</div>
+              <div className="text-xs text-muted-foreground">5%</div>
+            </div>
+            <div className="text-center p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border-2 border-red-200">
+              <div className="text-xs text-muted-foreground mb-1">إجمالي المستثمر (بناء)</div>
+              <div className="font-bold text-red-600">{formatAED(dual.fundingStructure.totalDeveloperConstruction)}</div>
+              <div className="text-xs text-muted-foreground">35%</div>
+            </div>
+            <div className="text-center p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border-2 border-blue-200">
+              <div className="text-xs text-muted-foreground mb-1">من الإسكرو (بناء)</div>
+              <div className="font-bold text-blue-600">{formatAED(dual.fundingStructure.escrowConstruction)}</div>
+              <div className="text-xs text-muted-foreground">65%</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-          {/* Gantt Chart */}
-          <div className="space-y-3">
-            {phases.map((phase, idx) => {
-              const startPct = (cumMonth / totalDuration) * 100;
-              const widthPct = (phase.months / totalDuration) * 100;
-              cumMonth += phase.months;
+      {/* Cash Flow Chart (SVG) */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            التدفق النقدي المزدوج
+          </CardTitle>
+          <CardDescription>
+            <span className="inline-flex items-center gap-1 ml-3"><span className="w-3 h-3 rounded bg-amber-500 inline-block" /> تراكمي المستثمر</span>
+            <span className="inline-flex items-center gap-1 ml-3"><span className="w-3 h-3 rounded bg-blue-500 inline-block" /> رصيد الإسكرو</span>
+            <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-500 inline-block" /> صافي تراكمي</span>
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DualCashFlowChart table={table} phases={dual.phases} />
+        </CardContent>
+      </Card>
+
+      {/* Cost by Category */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Layers className="h-4 w-4" />
+            توزيع التكاليف حسب الفئة
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {Object.entries(dual.costByCategory)
+              .sort(([, a]: any, [, b]: any) => b - a)
+              .map(([cat, amount]: [string, any]) => {
+                const pct = dual.totalProjectCost > 0 ? (amount / dual.totalProjectCost) * 100 : 0;
+                return (
+                  <div key={cat} className="flex items-center gap-3">
+                    <div className="w-32 text-sm truncate">{CATEGORY_LABELS[cat] || cat}</div>
+                    <div className="flex-1 h-6 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{ width: `${pct}%`, backgroundColor: CATEGORY_COLORS[cat] || '#6b7280' }}
+                      />
+                    </div>
+                    <div className="w-24 text-sm text-left font-mono">{formatAED(amount)}</div>
+                    <div className="w-12 text-xs text-muted-foreground text-left">{pct.toFixed(1)}%</div>
+                  </div>
+                );
+              })}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Dual Cash Flow Chart (SVG)
+// ═══════════════════════════════════════════════════════════════
+
+function DualCashFlowChart({ table, phases }: { table: any[]; phases: any }) {
+  if (!table.length) return null;
+
+  const W = 800, H = 350, PAD = { top: 20, right: 20, bottom: 40, left: 80 };
+  const chartW = W - PAD.left - PAD.right;
+  const chartH = H - PAD.top - PAD.bottom;
+
+  const allVals = table.flatMap((r: any) => [
+    -r.developerCumulative, r.escrowBalance, r.cumulativeNet
+  ]);
+  const minVal = Math.min(0, ...allVals);
+  const maxVal = Math.max(0, ...allVals);
+  const range = maxVal - minVal || 1;
+
+  const x = (i: number) => PAD.left + (i / (table.length - 1)) * chartW;
+  const y = (v: number) => PAD.top + chartH - ((v - minVal) / range) * chartH;
+
+  const buildPath = (values: number[]) =>
+    values.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+
+  const devPath = buildPath(table.map((r: any) => -r.developerCumulative));
+  const escPath = buildPath(table.map((r: any) => r.escrowBalance));
+  const netPath = buildPath(table.map((r: any) => r.cumulativeNet));
+
+  // Phase backgrounds
+  const phaseRects = [
+    { start: 0, end: phases.preDev.months - 1, color: '#f59e0b', label: 'ما قبل البناء' },
+    { start: phases.preDev.months, end: phases.preDev.months + phases.construction.months - 1, color: '#3b82f6', label: 'البناء' },
+    { start: phases.preDev.months + phases.construction.months, end: table.length - 1, color: '#10b981', label: 'التسليم' },
+  ];
+
+  // Y-axis ticks
+  const tickCount = 5;
+  const ticks = Array.from({ length: tickCount + 1 }, (_, i) => minVal + (range / tickCount) * i);
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ maxHeight: 350 }}>
+      {/* Phase backgrounds */}
+      {phaseRects.map((p, i) => (
+        <g key={i}>
+          <rect
+            x={x(p.start)}
+            y={PAD.top}
+            width={x(p.end) - x(p.start)}
+            height={chartH}
+            fill={p.color}
+            opacity={0.05}
+          />
+          <text
+            x={(x(p.start) + x(p.end)) / 2}
+            y={H - 5}
+            textAnchor="middle"
+            className="text-[10px] fill-muted-foreground"
+          >
+            {p.label}
+          </text>
+        </g>
+      ))}
+
+      {/* Grid lines */}
+      {ticks.map((t, i) => (
+        <g key={i}>
+          <line x1={PAD.left} y1={y(t)} x2={W - PAD.right} y2={y(t)} stroke="currentColor" opacity={0.1} />
+          <text x={PAD.left - 5} y={y(t) + 4} textAnchor="end" className="text-[9px] fill-muted-foreground">
+            {formatAED(t)}
+          </text>
+        </g>
+      ))}
+
+      {/* Zero line */}
+      <line x1={PAD.left} y1={y(0)} x2={W - PAD.right} y2={y(0)} stroke="currentColor" opacity={0.3} strokeDasharray="4,4" />
+
+      {/* Lines */}
+      <path d={devPath} fill="none" stroke="#f59e0b" strokeWidth={2.5} opacity={0.8} />
+      <path d={escPath} fill="none" stroke="#3b82f6" strokeWidth={2.5} opacity={0.8} />
+      <path d={netPath} fill="none" stroke="#10b981" strokeWidth={2.5} opacity={0.8} />
+
+      {/* Month labels (every 3rd) */}
+      {table.map((r: any, i: number) => i % 3 === 0 ? (
+        <text key={i} x={x(i)} y={H - 22} textAnchor="middle" className="text-[8px] fill-muted-foreground">
+          {r.label}
+        </text>
+      ) : null)}
+    </svg>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Timeline Tab - Interactive Gantt
+// ═══════════════════════════════════════════════════════════════
+
+function TimelineTab({ dual, project }: { dual: any; project: any }) {
+  const phases = dual.phases;
+  const totalMonths = dual.totalMonths;
+  const monthLabels = dual.monthLabels;
+
+  return (
+    <div className="space-y-6">
+      {/* Interactive Gantt Chart */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <CalendarDays className="h-4 w-4" />
+            الجدول الزمني التفاعلي
+          </CardTitle>
+          <CardDescription>3 مراحل: ما قبل البناء → البناء → التسليم</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {/* Phase bars */}
+            {[
+              { key: 'preDev', label: 'ما قبل البناء', phase: phases.preDev, color: '#f59e0b', icon: '📐' },
+              { key: 'construction', label: 'البناء', phase: phases.construction, color: '#3b82f6', icon: '🔨' },
+              { key: 'handover', label: 'التسليم', phase: phases.handover, color: '#10b981', icon: '✅' },
+            ].map(({ key, label, phase, color, icon }) => {
+              const startPct = ((phase.start - 1) / totalMonths) * 100;
+              const widthPct = (phase.months / totalMonths) * 100;
+              const startLabel = monthLabels[phase.start - 1] || '';
+              const endLabel = monthLabels[phase.end - 1] || '';
 
               return (
-                <div key={idx} className="flex items-center gap-4">
-                  <div className="w-48 flex items-center gap-2 text-sm font-medium text-gray-700">
-                    <div className={`w-8 h-8 rounded-lg ${phase.color} text-white flex items-center justify-center`}>
-                      {phase.icon}
-                    </div>
-                    {phase.name}
+                <div key={key} className="space-y-1">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">{icon} {label}</span>
+                    <span className="text-muted-foreground text-xs">
+                      {startLabel} → {endLabel} ({phase.months} شهر)
+                    </span>
                   </div>
-                  <div className="flex-1 relative h-10 bg-gray-100 rounded-lg overflow-hidden">
+                  <div className="relative h-10 bg-muted rounded-lg overflow-hidden">
                     <div
-                      className={`absolute top-0 h-full ${phase.color} rounded-lg flex items-center justify-center text-white text-xs font-bold transition-all`}
-                      style={{ right: `${startPct}%`, width: `${widthPct}%` }}
+                      className="absolute h-full rounded-lg flex items-center justify-center text-white text-xs font-bold transition-all"
+                      style={{
+                        left: `${startPct}%`,
+                        width: `${widthPct}%`,
+                        backgroundColor: color,
+                      }}
                     >
                       {phase.months} شهر
                     </div>
                   </div>
-                  <div className="w-20 text-left text-sm text-gray-500">
-                    ش{cumMonth - phase.months + 1} — ش{cumMonth}
-                  </div>
                 </div>
               );
             })}
-          </div>
 
-          {/* Month markers */}
-          <div className="mt-6 flex items-center">
-            <div className="w-48" />
-            <div className="flex-1 relative h-6">
-              {Array.from({ length: Math.min(totalDuration + 1, 40) }, (_, i) => {
-                if (i % (totalDuration > 24 ? 6 : 3) !== 0 && i !== totalDuration) return null;
-                const pct = (i / totalDuration) * 100;
+            {/* Month ruler */}
+            <div className="relative h-6 mt-2">
+              {monthLabels.map((label: string, i: number) => {
+                if (i % 3 !== 0) return null;
+                const leftPct = (i / totalMonths) * 100;
                 return (
-                  <div key={i} className="absolute text-xs text-gray-400" style={{ right: `${pct}%`, transform: 'translateX(50%)' }}>
-                    ش{i || 1}
+                  <div
+                    key={i}
+                    className="absolute text-[9px] text-muted-foreground"
+                    style={{ left: `${leftPct}%`, transform: 'translateX(-50%)' }}
+                  >
+                    {label}
                   </div>
                 );
               })}
             </div>
-            <div className="w-20" />
           </div>
-
-          {/* Change indicator */}
-          {hasChanges && (
-            <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-600" />
-              <span className="text-sm text-amber-700">لديك تعديلات غير محفوظة — اضغط "حفظ التعديلات" لإعادة حساب التدفق النقدي</span>
-            </div>
-          )}
         </CardContent>
       </Card>
 
-      {/* Phase Details - Editable Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {phases.map((phase, idx) => (
-          <Card key={idx} className={`text-center transition-all ${isEditing ? 'ring-2 ring-emerald-200 shadow-md' : ''}`}>
-            <CardContent className="pt-5 pb-4">
-              <div className={`w-12 h-12 rounded-xl ${phase.color} text-white flex items-center justify-center mx-auto mb-3`}>
-                {phase.icon}
+      {/* Phase Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {[
+          { label: 'ما قبل البناء', phase: phases.preDev, color: 'amber', icon: '📐',
+            desc: 'شراء الأرض، التصميم، الموافقات، تسجيل ريرا، تعبئة المقاول' },
+          { label: 'البناء', phase: phases.construction, color: 'blue', icon: '🔨',
+            desc: 'أعمال البناء، الإشراف، دفعات المقاول من الإسكرو' },
+          { label: 'التسليم', phase: phases.handover, color: 'green', icon: '✅',
+            desc: 'تسليم الوحدات، الدفعات النهائية، إغلاق الحسابات' },
+        ].map(({ label, phase, color, icon, desc }) => (
+          <Card key={label}>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xl">{icon}</span>
+                <span className="font-bold">{label}</span>
               </div>
-              <p className="font-semibold text-gray-900 text-sm">{phase.name}</p>
-              {isEditing ? (
-                <div className="mt-2 flex items-center justify-center gap-2">
-                  <button
-                    onClick={() => handlePhaseChange(phase.key, phase.months - 1)}
-                    className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 font-bold transition-colors"
-                    disabled={phase.months <= 1}
-                  >
-                    −
-                  </button>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={phase.months}
-                    onChange={e => handlePhaseChange(phase.key, parseInt(e.target.value) || 1)}
-                    className="w-16 text-center text-xl font-bold h-10"
-                  />
-                  <button
-                    onClick={() => handlePhaseChange(phase.key, phase.months + 1)}
-                    className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 font-bold transition-colors"
-                  >
-                    +
-                  </button>
+              <div className="text-sm text-muted-foreground mb-2">{desc}</div>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span className="text-muted-foreground">البدء:</span>{' '}
+                  <span className="font-medium">{monthLabels[phase.start - 1]}</span>
                 </div>
-              ) : (
-                <p className="text-2xl font-bold text-gray-700 mt-1">{phase.months}</p>
-              )}
-              <p className="text-xs text-gray-500 mt-1">شهر</p>
+                <div>
+                  <span className="text-muted-foreground">الانتهاء:</span>{' '}
+                  <span className="font-medium">{monthLabels[phase.end - 1]}</span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-muted-foreground">المدة:</span>{' '}
+                  <span className="font-bold">{phase.months} شهر</span>
+                </div>
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -911,206 +839,130 @@ function TimelineTab({ project, onRefresh }: { project: any; onRefresh: () => vo
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Cost Structure Tab
+// Cost Items Tab
 // ═══════════════════════════════════════════════════════════════
 
-function CostStructureTab({
-  cfProjectId,
-  costItems,
-  onRefresh,
-  project,
-}: {
+function CostItemsTab({ cfProjectId, costItems, onRefresh }: {
   cfProjectId: number;
   costItems: any[];
   onRefresh: () => void;
-  project: any;
 }) {
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [editingItem, setEditingItem] = useState<any>(null);
-  const deleteMutation = trpc.cashFlowProgram.deleteCostItem.useMutation();
-  const importQuery = trpc.cashFlowProgram.importFromFeasibility.useQuery(
-    { projectId: project.projectId! },
-    { enabled: false }
-  );
-  const saveMutation = trpc.cashFlowProgram.saveCostItem.useMutation();
+  const [showAdd, setShowAdd] = useState(false);
+  const [editItem, setEditItem] = useState<any>(null);
 
-  const totalCost = costItems.reduce((s, item) => s + item.totalAmount, 0);
-  const categoryTotals = costItems.reduce((acc, item) => {
-    acc[item.category] = (acc[item.category] || 0) + item.totalAmount;
-    return acc;
-  }, {} as Record<string, number>);
+  const deleteMutation = trpc.cashFlowProgram.deleteCostItem.useMutation({
+    onSuccess: () => { toast.success('تم الحذف'); onRefresh(); },
+    onError: (e) => toast.error(e.message),
+  });
 
-  const handleDelete = async (id: number) => {
-    try {
-      await deleteMutation.mutateAsync(id);
-      toast.success("تم الحذف");
-      onRefresh();
-    } catch { toast.error("فشل في الحذف"); }
-  };
-
-  const handleImport = async () => {
-    if (!project.projectId) {
-      toast.error("هذا المشروع غير مرتبط بمشروع قائم");
-      return;
-    }
-    try {
-      const result = await importQuery.refetch();
-      if (result.data?.costItems) {
-        for (const item of result.data.costItems) {
-          await saveMutation.mutateAsync({
-            cfProjectId,
-            name: item.name,
-            category: item.category as any,
-            totalAmount: item.totalAmount,
-            paymentType: item.paymentType as any,
-            paymentParams: item.paymentParams,
-          });
-        }
-        toast.success(`تم استيراد ${result.data.costItems.length} عنصر تكلفة من دراسة الجدوى`);
-        onRefresh();
-      } else {
-        toast.error("لا توجد دراسة جدوى مرتبطة بهذا المشروع");
-      }
-    } catch (e: any) {
-      toast.error(e.message || "فشل في الاستيراد");
-    }
-  };
+  // Group by funding source
+  const developerItems = costItems.filter((i: any) => i.fundingSource !== 'escrow');
+  const escrowItems = costItems.filter((i: any) => i.fundingSource === 'escrow');
 
   return (
-    <div className="space-y-6">
-      {/* Summary Bar */}
-      <Card className="bg-gradient-to-l from-emerald-50 to-teal-50 border-emerald-200">
-        <CardContent className="py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-emerald-700">إجمالي التكاليف</p>
-              <p className="text-3xl font-bold text-emerald-900">{formatAEDFull(totalCost)} <span className="text-sm font-normal">د.إ</span></p>
-            </div>
-            <div className="flex gap-2">
-              {project.projectId && (
-                <Button variant="outline" size="sm" onClick={handleImport} disabled={importQuery.isFetching || saveMutation.isPending}>
-                  <Download className="w-4 h-4 ml-1" />
-                  استيراد من الجدوى
-                </Button>
-              )}
-              <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-                <DialogTrigger asChild>
-                  <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700">
-                    <Plus className="w-4 h-4 ml-1" />
-                    إضافة بند
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-lg" dir="rtl">
-                  <CostItemDialog
-                    cfProjectId={cfProjectId}
-                    item={editingItem}
-                    project={project}
-                    onSaved={() => {
-                      setShowAddDialog(false);
-                      setEditingItem(null);
-                      onRefresh();
-                    }}
-                  />
-                </DialogContent>
-              </Dialog>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold">بنود التكاليف ({costItems.length})</h3>
+        <CostItemDialog
+          cfProjectId={cfProjectId}
+          open={showAdd}
+          onOpenChange={setShowAdd}
+          onSaved={onRefresh}
+          editItem={editItem}
+        />
+      </div>
 
-      {/* Category Breakdown */}
-      {Object.keys(categoryTotals).length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]).map(([cat, amount]) => (
-            <Card key={cat} className="border-r-4" style={{ borderRightColor: CATEGORY_COLORS[cat] || '#6b7280' }}>
-              <CardContent className="py-3 px-4">
-                <p className="text-xs text-gray-500">{CATEGORY_LABELS[cat] || cat}</p>
-                <p className="text-lg font-bold text-gray-900">{formatAED(amount)}</p>
-                <p className="text-xs text-gray-400">{totalCost > 0 ? ((amount / totalCost) * 100).toFixed(1) : 0}%</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* Cost Items Table */}
+      {/* Developer-funded items */}
       <Card>
-        <CardHeader>
-          <CardTitle>بنود التكلفة ({costItems.length})</CardTitle>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Wallet className="h-4 w-4 text-amber-500" />
+            تمويل المستثمر
+            <Badge variant="outline" className="mr-auto">{developerItems.length} بند</Badge>
+            <span className="text-muted-foreground font-normal">
+              {formatFullAED(developerItems.reduce((s: number, i: any) => s + i.totalAmount, 0))} AED
+            </span>
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          {costItems.length === 0 ? (
-            <div className="text-center py-8 text-gray-400">
-              <DollarSign className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p>لا توجد بنود تكلفة بعد</p>
-              <p className="text-sm mt-1">أضف بنوداً يدوياً أو استوردها من دراسة الجدوى</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-gray-500">
-                    <th className="text-right py-2 px-3">البند</th>
-                    <th className="text-right py-2 px-3">الفئة</th>
-                    <th className="text-right py-2 px-3">المبلغ</th>
-                    <th className="text-right py-2 px-3">نوع الدفع</th>
-                    <th className="text-right py-2 px-3">%</th>
-                    <th className="text-center py-2 px-3">إجراءات</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {costItems.map(item => (
-                    <tr key={item.id} className="border-b hover:bg-gray-50">
-                      <td className="py-2 px-3 font-medium">{item.name}</td>
-                      <td className="py-2 px-3">
-                        <Badge variant="outline" style={{ borderColor: CATEGORY_COLORS[item.category], color: CATEGORY_COLORS[item.category] }}>
-                          {CATEGORY_LABELS[item.category] || item.category}
-                        </Badge>
-                      </td>
-                      <td className="py-2 px-3 font-mono">{formatAEDFull(item.totalAmount)}</td>
-                      <td className="py-2 px-3 text-gray-600">{PAYMENT_TYPE_LABELS[item.paymentType] || item.paymentType}</td>
-                      <td className="py-2 px-3 text-gray-500">{totalCost > 0 ? ((item.totalAmount / totalCost) * 100).toFixed(1) : 0}%</td>
-                      <td className="py-2 px-3 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setEditingItem(item);
-                              setShowAddDialog(true);
-                            }}
-                          >
-                            <Edit className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-500 hover:text-red-700"
-                            onClick={() => {
-                              if (window.confirm(`هل أنت متأكد من حذف "${item.name}"؟ سيتم إعادة حساب التدفق النقدي.`)) {
-                                handleDelete(item.id);
-                              }
-                            }}
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="font-bold bg-gray-50">
-                    <td className="py-2 px-3" colSpan={2}>الإجمالي</td>
-                    <td className="py-2 px-3 font-mono">{formatAEDFull(totalCost)}</td>
-                    <td colSpan={3} />
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          )}
+          <CostItemsList
+            items={developerItems}
+            onEdit={(item) => { setEditItem(item); setShowAdd(true); }}
+            onDelete={(id) => deleteMutation.mutate({ id })}
+          />
         </CardContent>
       </Card>
+
+      {/* Escrow-funded items */}
+      {escrowItems.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-blue-500" />
+              تمويل الإسكرو
+              <Badge variant="outline" className="mr-auto">{escrowItems.length} بند</Badge>
+              <span className="text-muted-foreground font-normal">
+                {formatFullAED(escrowItems.reduce((s: number, i: any) => s + i.totalAmount, 0))} AED
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CostItemsList
+              items={escrowItems}
+              onEdit={(item) => { setEditItem(item); setShowAdd(true); }}
+              onDelete={(id) => deleteMutation.mutate({ id })}
+            />
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function CostItemsList({ items, onEdit, onDelete }: {
+  items: any[];
+  onEdit: (item: any) => void;
+  onDelete: (id: number) => void;
+}) {
+  if (!items.length) {
+    return <p className="text-sm text-muted-foreground text-center py-4">لا توجد بنود</p>;
+  }
+
+  return (
+    <div className="space-y-1">
+      {items.map((item: any) => (
+        <div key={item.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 group">
+          <div
+            className="w-1 h-8 rounded-full"
+            style={{ backgroundColor: CATEGORY_COLORS[item.category] || '#6b7280' }}
+          />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium truncate">{item.name}</div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>{CATEGORY_LABELS[item.category] || item.category}</span>
+              <span>·</span>
+              <span>{PAYMENT_TYPE_LABELS[item.paymentType] || item.paymentType}</span>
+              {item.phaseTag && (
+                <>
+                  <span>·</span>
+                  <Badge variant="outline" className="text-[10px] px-1 py-0">
+                    {PHASE_LABELS[item.phaseTag] || item.phaseTag}
+                  </Badge>
+                </>
+              )}
+            </div>
+          </div>
+          <div className="text-sm font-mono font-semibold">{formatFullAED(item.totalAmount)}</div>
+          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(item)}>
+              <Edit className="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => onDelete(item.id)}>
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -1119,1197 +971,430 @@ function CostStructureTab({
 // Cost Item Dialog
 // ═══════════════════════════════════════════════════════════════
 
-function CostItemDialog({
-  cfProjectId,
-  item,
-  project,
-  onSaved,
-}: {
+function CostItemDialog({ cfProjectId, open, onOpenChange, onSaved, editItem }: {
   cfProjectId: number;
-  item?: any;
-  project: any;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
   onSaved: () => void;
+  editItem?: any;
 }) {
-  const [name, setName] = useState(item?.name || "");
-  const [category, setCategory] = useState(item?.category || "other");
-  const [totalAmount, setTotalAmount] = useState(item?.totalAmount?.toString() || "");
-  const [paymentType, setPaymentType] = useState(item?.paymentType || "lump_sum");
-  const [paymentParams, setPaymentParams] = useState<PaymentParams>(
-    item?.paymentParams ? (typeof item.paymentParams === 'string' ? JSON.parse(item.paymentParams) : item.paymentParams) : {}
-  );
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState('other');
+  const [totalAmount, setTotalAmount] = useState(0);
+  const [paymentType, setPaymentType] = useState('lump_sum');
+  const [fundingSource, setFundingSource] = useState('developer');
+  const [phaseTag, setPhaseTag] = useState('pre_dev');
+  const [paymentMonth, setPaymentMonth] = useState(1);
 
-  const saveMutation = trpc.cashFlowProgram.saveCostItem.useMutation();
-
-  const totalDuration = project.designApprovalMonths + project.reraSetupMonths + project.constructionMonths + project.handoverMonths;
-
-  const handleSave = async () => {
-    if (!name.trim() || !totalAmount) {
-      toast.error("يرجى ملء جميع الحقول المطلوبة");
-      return;
+  useEffect(() => {
+    if (editItem) {
+      setName(editItem.name);
+      setCategory(editItem.category);
+      setTotalAmount(editItem.totalAmount);
+      setPaymentType(editItem.paymentType);
+      setFundingSource(editItem.fundingSource || 'developer');
+      setPhaseTag(editItem.phaseTag || 'pre_dev');
+      const params = editItem.paymentParams ? (typeof editItem.paymentParams === 'string' ? JSON.parse(editItem.paymentParams) : editItem.paymentParams) : {};
+      setPaymentMonth(params.paymentMonth || 1);
+    } else {
+      setName('');
+      setCategory('other');
+      setTotalAmount(0);
+      setPaymentType('lump_sum');
+      setFundingSource('developer');
+      setPhaseTag('pre_dev');
+      setPaymentMonth(1);
     }
-    try {
-      await saveMutation.mutateAsync({
-        id: item?.id,
-        cfProjectId,
-        name: name.trim(),
-        category: category as any,
-        totalAmount: parseInt(totalAmount),
-        paymentType: paymentType as any,
-        paymentParams,
-      });
-      toast.success(item ? "تم التحديث" : "تم الإضافة");
+  }, [editItem, open]);
+
+  const saveMutation = trpc.cashFlowProgram.saveCostItem.useMutation({
+    onSuccess: () => {
+      toast.success(editItem ? 'تم التحديث' : 'تم الإضافة');
+      onOpenChange(false);
       onSaved();
-    } catch (e: any) {
-      toast.error(e.message || "فشل في الحفظ");
-    }
-  };
-
-  return (
-    <>
-      <DialogHeader>
-        <DialogTitle>{item ? "تعديل بند التكلفة" : "إضافة بند تكلفة"}</DialogTitle>
-      </DialogHeader>
-      <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
-        <div>
-          <Label>اسم البند *</Label>
-          <Input value={name} onChange={e => setName(e.target.value)} placeholder="مثال: أتعاب التصميم" />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label>الفئة *</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
-                  <SelectItem key={k} value={k}>{v}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>المبلغ الإجمالي (د.إ) *</Label>
-            <Input type="number" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} placeholder="0" />
-          </div>
-        </div>
-        <Separator />
-        <div>
-          <Label>نوع الدفع *</Label>
-          <Select value={paymentType} onValueChange={(v) => { setPaymentType(v); setPaymentParams({}); }}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {Object.entries(PAYMENT_TYPE_LABELS).map(([k, v]) => (
-                <SelectItem key={k} value={k}>{v}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Payment Type Specific Parameters */}
-        {paymentType === 'lump_sum' && (
-          <div>
-            <Label>شهر الدفع (1 - {totalDuration})</Label>
-            <Input
-              type="number"
-              min={1}
-              max={totalDuration}
-              value={paymentParams.paymentMonth || 1}
-              onChange={e => setPaymentParams({ ...paymentParams, paymentMonth: parseInt(e.target.value) || 1 })}
-            />
-          </div>
-        )}
-
-        {paymentType === 'milestone' && (
-          <MilestoneEditor
-            milestones={paymentParams.milestones || []}
-            onChange={ms => setPaymentParams({ ...paymentParams, milestones: ms })}
-            maxMonth={totalDuration}
-          />
-        )}
-
-        {paymentType === 'monthly_fixed' && (
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>شهر البداية</Label>
-              <Input
-                type="number"
-                min={1}
-                value={paymentParams.startMonth || 1}
-                onChange={e => setPaymentParams({ ...paymentParams, startMonth: parseInt(e.target.value) || 1 })}
-              />
-            </div>
-            <div>
-              <Label>شهر النهاية</Label>
-              <Input
-                type="number"
-                min={1}
-                value={paymentParams.endMonth || totalDuration}
-                onChange={e => setPaymentParams({ ...paymentParams, endMonth: parseInt(e.target.value) || totalDuration })}
-              />
-            </div>
-          </div>
-        )}
-
-        {paymentType === 'progress_based' && (
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>نسبة التعبئة %</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={30}
-                  value={paymentParams.mobilizationPct || 10}
-                  onChange={e => setPaymentParams({ ...paymentParams, mobilizationPct: parseInt(e.target.value) || 10 })}
-                />
-              </div>
-              <div>
-                <Label>نسبة الاحتفاظ %</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={20}
-                  value={paymentParams.retentionPct || 5}
-                  onChange={e => setPaymentParams({ ...paymentParams, retentionPct: parseInt(e.target.value) || 5 })}
-                />
-              </div>
-            </div>
-            <div>
-              <Label>توزيع التقدم</Label>
-              <Select
-                value={paymentParams.progressDistribution || 'scurve'}
-                onValueChange={v => setPaymentParams({ ...paymentParams, progressDistribution: v as any })}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="linear">خطي</SelectItem>
-                  <SelectItem value="scurve">منحنى S</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        )}
-
-        {paymentType === 'sales_linked' && (
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>النسبة من المبيعات %</Label>
-              <Input
-                type="number"
-                min={0}
-                max={100}
-                value={paymentParams.salesPct || 100}
-                onChange={e => setPaymentParams({ ...paymentParams, salesPct: parseInt(e.target.value) || 100 })}
-              />
-            </div>
-            <div>
-              <Label>توقيت الدفع</Label>
-              <Select
-                value={paymentParams.salesTiming || 'construction'}
-                onValueChange={v => setPaymentParams({ ...paymentParams, salesTiming: v as any })}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="booking">عند الحجز</SelectItem>
-                  <SelectItem value="construction">أثناء البناء</SelectItem>
-                  <SelectItem value="handover">عند التسليم</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        )}
-      </div>
-      <DialogFooter>
-        <DialogClose asChild>
-          <Button variant="outline">إلغاء</Button>
-        </DialogClose>
-        <Button onClick={handleSave} disabled={saveMutation.isPending} className="bg-emerald-600 hover:bg-emerald-700">
-          {saveMutation.isPending ? "جاري الحفظ..." : "حفظ"}
-        </Button>
-      </DialogFooter>
-    </>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════
-// Milestone Editor
-// ═══════════════════════════════════════════════════════════════
-
-function MilestoneEditor({
-  milestones,
-  onChange,
-  maxMonth,
-}: {
-  milestones: Array<{ percent: number; description: string; monthOffset: number }>;
-  onChange: (ms: Array<{ percent: number; description: string; monthOffset: number }>) => void;
-  maxMonth: number;
-}) {
-  const addMilestone = () => {
-    onChange([...milestones, { percent: 20, description: '', monthOffset: 1 }]);
-  };
-
-  const removeMilestone = (idx: number) => {
-    onChange(milestones.filter((_, i) => i !== idx));
-  };
-
-  const updateMilestone = (idx: number, field: string, value: any) => {
-    const updated = [...milestones];
-    (updated[idx] as any)[field] = value;
-    onChange(updated);
-  };
-
-  const totalPct = milestones.reduce((s, m) => s + m.percent, 0);
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <Label>مراحل الإنجاز</Label>
-        <div className="flex items-center gap-2">
-          <Badge variant={totalPct === 100 ? "default" : "destructive"} className="text-xs">
-            {totalPct}% من 100%
-          </Badge>
-          <Button variant="outline" size="sm" onClick={addMilestone}>
-            <Plus className="w-3 h-3 ml-1" />
-            إضافة
-          </Button>
-        </div>
-      </div>
-      {milestones.map((ms, idx) => (
-        <div key={idx} className="flex items-center gap-2 bg-gray-50 rounded-lg p-2">
-          <Input
-            className="w-16"
-            type="number"
-            min={0}
-            max={100}
-            value={ms.percent}
-            onChange={e => updateMilestone(idx, 'percent', parseInt(e.target.value) || 0)}
-          />
-          <span className="text-xs text-gray-500">%</span>
-          <Input
-            className="flex-1"
-            placeholder="وصف المرحلة"
-            value={ms.description}
-            onChange={e => updateMilestone(idx, 'description', e.target.value)}
-          />
-          <Input
-            className="w-16"
-            type="number"
-            min={1}
-            max={maxMonth}
-            value={ms.monthOffset}
-            onChange={e => updateMilestone(idx, 'monthOffset', parseInt(e.target.value) || 1)}
-          />
-          <span className="text-xs text-gray-500">شهر</span>
-          <Button variant="ghost" size="sm" onClick={() => removeMilestone(idx)} className="text-red-500">
-            <Trash2 className="w-3 h-3" />
-          </Button>
-        </div>
-      ))}
-      {milestones.length === 0 && (
-        <p className="text-sm text-gray-400 text-center py-2">أضف مراحل إنجاز للدفع</p>
-      )}
-
-      {/* Quick Templates */}
-      <div className="flex gap-2 flex-wrap">
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-xs"
-          onClick={() => onChange([
-            { percent: 20, description: 'توقيع العقد', monthOffset: 1 },
-            { percent: 20, description: 'إنهاء المفهوم', monthOffset: 2 },
-            { percent: 25, description: 'التصميم التفصيلي', monthOffset: 4 },
-            { percent: 20, description: 'حزمة المناقصة', monthOffset: 5 },
-            { percent: 15, description: 'رخصة البناء', monthOffset: 6 },
-          ])}
-        >
-          قالب: أتعاب التصميم
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════
-// Cash Flow Tab
-// ═══════════════════════════════════════════════════════════════
-
-function CashFlowTab({
-  cashFlow,
-  costItems,
-  isLoading,
-  project,
-}: {
-  cashFlow: any;
-  costItems: any[];
-  isLoading: boolean;
-  project: any;
-}) {
-  const [viewMode, setViewMode] = useState<'table' | 'chart'>('chart');
-
-  const handleExportExcel = async () => {
-    try {
-      const XLSX = await import('xlsx');
-      const wb = XLSX.utils.book_new();
-
-      // Sheet 1: Monthly Cash Flow
-      const { monthLabels, totalOutflow, salesInflow, cumulativeOutflow, cumulativeInflow, cumulativeNet, outflowByCategory } = cashFlow;
-      const categories = Object.keys(outflowByCategory).filter(k => k !== 'total');
-      const headers = ['الشهر', ...categories.map(c => CATEGORY_LABELS[c] || c), 'إجمالي المصروفات', 'الإيرادات', 'صافي', 'تراكمي التكاليف', 'تراكمي الإيرادات', 'صافي تراكمي'];
-      const rows = monthLabels.map((label: string, idx: number) => [
-        label,
-        ...categories.map(c => outflowByCategory[c]?.[idx] || 0),
-        totalOutflow[idx],
-        salesInflow[idx],
-        salesInflow[idx] - totalOutflow[idx],
-        cumulativeOutflow[idx],
-        cumulativeInflow[idx],
-        cumulativeNet[idx],
-      ]);
-      const ws1 = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-      ws1['!cols'] = headers.map(() => ({ wch: 18 }));
-      XLSX.utils.book_append_sheet(wb, ws1, 'التدفق الشهري');
-
-      // Sheet 2: Key Numbers
-      const kn = cashFlow.keyNumbers;
-      const summaryData = [
-        ['المؤشر', 'القيمة'],
-        ['اسم المشروع', project?.name || ''],
-        ['إجمالي التكاليف (د.إ)', kn.totalCost],
-        ['إجمالي المبيعات (د.إ)', kn.totalSales],
-        ['أقصى تعرض رأسمالي (د.إ)', kn.peakExposure],
-        ['شهر الذروة', kn.peakMonthLabel],
-        ['صافي الربح (د.إ)', kn.netProfit],
-        ['العائد على الاستثمار %', kn.roi?.toFixed(1)],
-      ];
-      const ws2 = XLSX.utils.aoa_to_sheet(summaryData);
-      ws2['!cols'] = [{ wch: 30 }, { wch: 20 }];
-      XLSX.utils.book_append_sheet(wb, ws2, 'الأرقام الرئيسية');
-
-      // Sheet 3: Cost Items
-      const costHeaders = ['البند', 'الفئة', 'المبلغ (د.إ)', 'نوع الدفع', 'النسبة %'];
-      const costRows = costItems.map(item => [
-        item.name,
-        CATEGORY_LABELS[item.category] || item.category,
-        item.totalAmount,
-        PAYMENT_TYPE_LABELS[item.paymentType] || item.paymentType,
-        kn.totalCost > 0 ? ((item.totalAmount / kn.totalCost) * 100).toFixed(1) + '%' : '0%',
-      ]);
-      const ws3 = XLSX.utils.aoa_to_sheet([costHeaders, ...costRows]);
-      ws3['!cols'] = costHeaders.map(() => ({ wch: 22 }));
-      XLSX.utils.book_append_sheet(wb, ws3, 'بنود التكلفة');
-
-      XLSX.writeFile(wb, `تدفق-نقدي-${project?.name || 'project'}.xlsx`);
-      toast.success('تم تصدير الملف بنجاح');
-    } catch (e: any) {
-      toast.error('فشل في التصدير: ' + (e.message || ''));
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="py-16 text-center">
-          <div className="animate-spin w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-gray-500">جاري حساب التدفقات النقدية...</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!cashFlow || costItems.length === 0) {
-    return (
-      <Card>
-        <CardContent className="py-16 text-center">
-          <BarChart3 className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-          <h3 className="text-lg font-semibold text-gray-500 mb-2">لا توجد بيانات كافية</h3>
-          <p className="text-gray-400">أضف بنود تكلفة أولاً في تبويب "هيكل التكاليف"</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const { monthLabels, totalOutflow, salesInflow, cumulativeOutflow, cumulativeInflow, cumulativeNet } = cashFlow;
-
-  // Find max values for chart scaling
-  const maxOutflow = Math.max(...totalOutflow, 1);
-  const maxCumulative = Math.max(...cumulativeOutflow, ...cumulativeInflow.map(Math.abs), 1);
-
-  return (
-    <div className="space-y-6">
-      {/* View Toggle + Export */}
-      <div className="flex justify-between items-center">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleExportExcel}
-          className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-        >
-          <FileSpreadsheet className="w-4 h-4 ml-1" />
-          تصدير Excel
-        </Button>
-        <div className="flex bg-gray-100 rounded-lg p-1">
-          <Button
-            variant={viewMode === 'chart' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('chart')}
-            className={viewMode === 'chart' ? 'bg-emerald-600' : ''}
-          >
-            <BarChart3 className="w-4 h-4 ml-1" />
-            رسم بياني
-          </Button>
-          <Button
-            variant={viewMode === 'table' ? 'default' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('table')}
-            className={viewMode === 'table' ? 'bg-emerald-600' : ''}
-          >
-            <FileText className="w-4 h-4 ml-1" />
-            جدول
-          </Button>
-        </div>
-      </div>
-
-      {viewMode === 'chart' ? (
-        <>
-          {/* Monthly Outflow Bar Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle>التدفق النقدي الشهري (المصروفات)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <div className="min-w-[800px]">
-                  <div className="flex items-end gap-1 h-48">
-                    {totalOutflow.map((val: number, idx: number) => (
-                      <div
-                        key={idx}
-                        className="flex-1 bg-red-400 hover:bg-red-500 rounded-t transition-colors cursor-pointer group relative"
-                        style={{ height: `${(val / maxOutflow) * 100}%`, minHeight: val > 0 ? '2px' : '0' }}
-                        title={`${monthLabels[idx]}: ${formatAEDFull(val)} د.إ`}
-                      >
-                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-10">
-                          {formatAED(val)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  {/* X-axis labels */}
-                  <div className="flex gap-1 mt-2">
-                    {monthLabels.map((label: string, idx: number) => (
-                      <div key={idx} className="flex-1 text-center">
-                        {idx % (monthLabels.length > 24 ? 6 : 3) === 0 && (
-                          <span className="text-[10px] text-gray-400 block truncate">{label}</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Cumulative Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle>التدفق التراكمي (التكاليف مقابل الإيرادات)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <div className="min-w-[800px] relative h-64">
-                  {/* SVG Line Chart */}
-                  <svg viewBox={`0 0 ${monthLabels.length * 20} 200`} className="w-full h-full" preserveAspectRatio="none">
-                    {/* Cost line */}
-                    <polyline
-                      fill="none"
-                      stroke="#dc2626"
-                      strokeWidth="2"
-                      points={cumulativeOutflow.map((v: number, i: number) =>
-                        `${i * 20 + 10},${200 - (v / maxCumulative) * 180}`
-                      ).join(' ')}
-                    />
-                    {/* Revenue line */}
-                    {cumulativeInflow.some((v: number) => v > 0) && (
-                      <polyline
-                        fill="none"
-                        stroke="#059669"
-                        strokeWidth="2"
-                        points={cumulativeInflow.map((v: number, i: number) =>
-                          `${i * 20 + 10},${200 - (v / maxCumulative) * 180}`
-                        ).join(' ')}
-                      />
-                    )}
-                  </svg>
-                  {/* Legend */}
-                  <div className="absolute top-2 left-2 flex gap-4 text-xs">
-                    <span className="flex items-center gap-1"><span className="w-3 h-1 bg-red-600 rounded" /> التكاليف التراكمية</span>
-                    <span className="flex items-center gap-1"><span className="w-3 h-1 bg-emerald-600 rounded" /> الإيرادات التراكمية</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </>
-      ) : (
-        /* Table View */
-        <Card>
-          <CardHeader>
-            <CardTitle>جدول التدفق النقدي الشهري</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-white z-10">
-                  <tr className="border-b text-gray-500">
-                    <th className="text-right py-2 px-3 sticky right-0 bg-white">الشهر</th>
-                    {Object.keys(cashFlow.outflowByCategory).filter(k => k !== 'total').map(cat => (
-                      <th key={cat} className="text-right py-2 px-3 whitespace-nowrap">{CATEGORY_LABELS[cat] || cat}</th>
-                    ))}
-                    <th className="text-right py-2 px-3 font-bold">إجمالي المصروفات</th>
-                    <th className="text-right py-2 px-3">الإيرادات</th>
-                    <th className="text-right py-2 px-3">صافي</th>
-                    <th className="text-right py-2 px-3">تراكمي</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {monthLabels.map((label: string, idx: number) => {
-                    const net = salesInflow[idx] - totalOutflow[idx];
-                    return (
-                      <tr key={idx} className={`border-b hover:bg-gray-50 ${idx === cashFlow.keyNumbers.peakMonth - 1 ? 'bg-amber-50' : ''}`}>
-                        <td className="py-1.5 px-3 sticky right-0 bg-white text-xs font-medium whitespace-nowrap">{label}</td>
-                        {Object.keys(cashFlow.outflowByCategory).filter(k => k !== 'total').map(cat => (
-                          <td key={cat} className="py-1.5 px-3 font-mono text-xs">
-                            {cashFlow.outflowByCategory[cat][idx] > 0 ? formatAED(cashFlow.outflowByCategory[cat][idx]) : '—'}
-                          </td>
-                        ))}
-                        <td className="py-1.5 px-3 font-mono text-xs font-bold text-red-600">
-                          {totalOutflow[idx] > 0 ? formatAED(totalOutflow[idx]) : '—'}
-                        </td>
-                        <td className="py-1.5 px-3 font-mono text-xs text-emerald-600">
-                          {salesInflow[idx] > 0 ? formatAED(salesInflow[idx]) : '—'}
-                        </td>
-                        <td className={`py-1.5 px-3 font-mono text-xs ${net >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                          {formatAED(net)}
-                        </td>
-                        <td className={`py-1.5 px-3 font-mono text-xs font-bold ${cumulativeNet[idx] >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                          {formatAED(cumulativeNet[idx])}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════
-// Scenarios Tab
-// ═══════════════════════════════════════════════════════════════
-
-function ScenariosTab({
-  cfProjectId,
-  scenarios,
-  selectedScenarioId,
-  onSelectScenario,
-  onRefresh,
-  project,
-}: {
-  cfProjectId: number;
-  scenarios: any[];
-  selectedScenarioId: number | null;
-  onSelectScenario: (id: number | null) => void;
-  onRefresh: () => void;
-  project: any;
-}) {
-  const [showCreate, setShowCreate] = useState(false);
-  const [showComparison, setShowComparison] = useState(false);
-  const [name, setName] = useState("");
-  const [salesDelta, setSalesDelta] = useState(0);
-  const [constructionDelta, setConstructionDelta] = useState(0);
-  const [mobPct, setMobPct] = useState<string>("");
-  const [bookingPct, setBookingPct] = useState<string>("");
-  const [constructionPct, setConstructionPct] = useState<string>("");
-  const [handoverPct, setHandoverPct] = useState<string>("");
-
-  const saveMutation = trpc.cashFlowProgram.saveScenario.useMutation();
-  const deleteMutation = trpc.cashFlowProgram.deleteScenario.useMutation();
-
-  const handleSave = async () => {
-    if (!name.trim()) { toast.error("يرجى إدخال اسم السيناريو"); return; }
-    try {
-      await saveMutation.mutateAsync({
-        cfProjectId,
-        name: name.trim(),
-        salesStartMonthDelta: salesDelta,
-        constructionDurationDelta: constructionDelta,
-        mobilizationPctOverride: mobPct ? parseFloat(mobPct) : null,
-        buyerPlanBookingPct: bookingPct ? parseFloat(bookingPct) : null,
-        buyerPlanConstructionPct: constructionPct ? parseFloat(constructionPct) : null,
-        buyerPlanHandoverPct: handoverPct ? parseFloat(handoverPct) : null,
-      });
-      toast.success("تم حفظ السيناريو");
-      setShowCreate(false);
-      setName("");
-      onRefresh();
-    } catch (e: any) { toast.error(e.message); }
-  };
-
-  const handleDelete = async (id: number) => {
-    try {
-      await deleteMutation.mutateAsync(id);
-      if (selectedScenarioId === id) onSelectScenario(null);
-      toast.success("تم الحذف");
-      onRefresh();
-    } catch { toast.error("فشل في الحذف"); }
-  };
-
-  return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Settings2 className="w-5 h-5 text-emerald-600" />
-                محاكي السيناريوهات
-              </CardTitle>
-              <CardDescription>أنشئ سيناريوهات مختلفة لمقارنة التدفقات النقدية</CardDescription>
-            </div>
-            <Button onClick={() => setShowCreate(!showCreate)} className="bg-emerald-600 hover:bg-emerald-700">
-              <Plus className="w-4 h-4 ml-1" />
-              سيناريو جديد
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {/* Active Scenario Selector */}
-          <div className="flex items-center gap-3 mb-6">
-            <span className="text-sm font-medium text-gray-700">السيناريو النشط:</span>
-            <Button
-              variant={selectedScenarioId === null ? "default" : "outline"}
-              size="sm"
-              onClick={() => onSelectScenario(null)}
-              className={selectedScenarioId === null ? "bg-emerald-600" : ""}
-            >
-              الأساسي
-            </Button>
-            {scenarios.map(s => (
-              <Button
-                key={s.id}
-                variant={selectedScenarioId === s.id ? "default" : "outline"}
-                size="sm"
-                onClick={() => onSelectScenario(s.id)}
-                className={selectedScenarioId === s.id ? "bg-emerald-600" : ""}
-              >
-                {s.name}
-              </Button>
-            ))}
-          </div>
-
-          {/* Create Form */}
-          {showCreate && (
-            <Card className="border-dashed border-emerald-300 bg-emerald-50/30 mb-6">
-              <CardContent className="pt-4 space-y-4">
-                <div>
-                  <Label>اسم السيناريو *</Label>
-                  <Input value={name} onChange={e => setName(e.target.value)} placeholder="مثال: سيناريو متفائل" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label>تأخير/تقديم بدء المبيعات (أشهر)</Label>
-                    <Input type="number" value={salesDelta} onChange={e => setSalesDelta(parseInt(e.target.value) || 0)} />
-                    <p className="text-xs text-gray-400 mt-1">+ تأخير / - تقديم</p>
-                  </div>
-                  <div>
-                    <Label>تغيير مدة البناء (أشهر)</Label>
-                    <Input type="number" value={constructionDelta} onChange={e => setConstructionDelta(parseInt(e.target.value) || 0)} />
-                    <p className="text-xs text-gray-400 mt-1">+ تمديد / - تقصير</p>
-                  </div>
-                </div>
-                <div>
-                  <Label>نسبة التعبئة للمقاول (اختياري)</Label>
-                  <Input type="number" value={mobPct} onChange={e => setMobPct(e.target.value)} placeholder="مثال: 10" />
-                </div>
-                <Separator />
-                <p className="text-sm font-semibold text-gray-700">خطة دفع المشتري (اختياري)</p>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <Label className="text-xs">عند الحجز %</Label>
-                    <Input type="number" value={bookingPct} onChange={e => setBookingPct(e.target.value)} placeholder="20" />
-                  </div>
-                  <div>
-                    <Label className="text-xs">أثناء البناء %</Label>
-                    <Input type="number" value={constructionPct} onChange={e => setConstructionPct(e.target.value)} placeholder="30" />
-                  </div>
-                  <div>
-                    <Label className="text-xs">عند التسليم %</Label>
-                    <Input type="number" value={handoverPct} onChange={e => setHandoverPct(e.target.value)} placeholder="50" />
-                  </div>
-                </div>
-                <div className="flex gap-2 justify-end">
-                  <Button variant="outline" onClick={() => setShowCreate(false)}>إلغاء</Button>
-                  <Button onClick={handleSave} disabled={saveMutation.isPending} className="bg-emerald-600">
-                    {saveMutation.isPending ? "جاري الحفظ..." : "حفظ السيناريو"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Scenario Comparison */}
-          {scenarios.length > 0 && (
-            <div className="mb-6">
-              <Button
-                variant={showComparison ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setShowComparison(!showComparison)}
-                className={showComparison ? 'bg-emerald-600 hover:bg-emerald-700' : 'border-emerald-300 text-emerald-700'}
-              >
-                <GitCompare className="w-4 h-4 ml-1" />
-                {showComparison ? 'إخفاء المقارنة' : 'مقارنة السيناريوهات'}
-              </Button>
-              {showComparison && (
-                <ScenarioComparisonView cfProjectId={cfProjectId} scenarios={scenarios} project={project} />
-              )}
-            </div>
-          )}
-
-          {/* Scenarios List */}
-          {scenarios.length === 0 && !showCreate ? (
-            <div className="text-center py-8 text-gray-400">
-              <Settings2 className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p>لا توجد سيناريوهات بعد</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {scenarios.map(s => (
-                <Card key={s.id} className={`${selectedScenarioId === s.id ? 'border-emerald-500 bg-emerald-50/30' : ''}`}>
-                  <CardContent className="pt-4 pb-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-bold text-gray-900">{s.name}</h4>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => onSelectScenario(s.id)}>
-                          <Eye className="w-3 h-3" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-red-500" onClick={() => handleDelete(s.id)}>
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="flex gap-2 flex-wrap text-xs">
-                      {s.salesStartMonthDelta !== 0 && (
-                        <Badge variant="outline">مبيعات: {s.salesStartMonthDelta > 0 ? '+' : ''}{s.salesStartMonthDelta} شهر</Badge>
-                      )}
-                      {s.constructionDurationDelta !== 0 && (
-                        <Badge variant="outline">بناء: {s.constructionDurationDelta > 0 ? '+' : ''}{s.constructionDurationDelta} شهر</Badge>
-                      )}
-                      {s.mobilizationPctOverride && (
-                        <Badge variant="outline">تعبئة: {s.mobilizationPctOverride}%</Badge>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════
-// Dashboard Tab - Key Numbers
-// ═══════════════════════════════════════════════════════════════
-
-function DashboardTab({ cashFlow, project }: { cashFlow: any; project: any }) {
-  if (!cashFlow?.keyNumbers) {
-    return (
-      <Card>
-        <CardContent className="py-16 text-center">
-          <TrendingUp className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-          <h3 className="text-lg font-semibold text-gray-500 mb-2">لا توجد بيانات</h3>
-          <p className="text-gray-400">أضف بنود تكلفة لعرض لوحة الأرقام الرئيسية</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const kn = cashFlow.keyNumbers;
-
-  return (
-    <div className="space-y-6">
-      {/* Key Numbers Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
-          <CardContent className="pt-5 pb-4 text-center">
-            <DollarSign className="w-8 h-8 mx-auto mb-2 text-red-600" />
-            <p className="text-sm text-red-700">إجمالي التكاليف</p>
-            <p className="text-2xl font-bold text-red-900">{formatAEDFull(kn.totalCost)}</p>
-            <p className="text-xs text-red-600">د.إ</p>
-          </CardContent>
-        </Card>
-
-        {kn.totalSales > 0 && (
-          <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
-            <CardContent className="pt-5 pb-4 text-center">
-              <TrendingUp className="w-8 h-8 mx-auto mb-2 text-emerald-600" />
-              <p className="text-sm text-emerald-700">إجمالي المبيعات</p>
-              <p className="text-2xl font-bold text-emerald-900">{formatAEDFull(kn.totalSales)}</p>
-              <p className="text-xs text-emerald-600">د.إ</p>
-            </CardContent>
-          </Card>
-        )}
-
-        <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
-          <CardContent className="pt-5 pb-4 text-center">
-            <AlertTriangle className="w-8 h-8 mx-auto mb-2 text-amber-600" />
-            <p className="text-sm text-amber-700">أقصى تعرض رأسمالي</p>
-            <p className="text-2xl font-bold text-amber-900">{formatAEDFull(kn.peakExposure)}</p>
-            <p className="text-xs text-amber-600">د.إ</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-          <CardContent className="pt-5 pb-4 text-center">
-            <Clock className="w-8 h-8 mx-auto mb-2 text-blue-600" />
-            <p className="text-sm text-blue-700">شهر الذروة</p>
-            <p className="text-2xl font-bold text-blue-900">{kn.peakMonth}</p>
-            <p className="text-xs text-blue-600">{kn.peakMonthLabel}</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {kn.totalSales > 0 && (
-        <div className="grid grid-cols-2 gap-4">
-          <Card className={`${kn.netProfit >= 0 ? 'bg-gradient-to-br from-green-50 to-green-100 border-green-200' : 'bg-gradient-to-br from-red-50 to-red-100 border-red-200'}`}>
-            <CardContent className="pt-5 pb-4 text-center">
-              <p className="text-sm text-gray-700">صافي الربح</p>
-              <p className={`text-3xl font-bold ${kn.netProfit >= 0 ? 'text-green-900' : 'text-red-900'}`}>
-                {formatAEDFull(kn.netProfit)} <span className="text-sm font-normal">د.إ</span>
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-            <CardContent className="pt-5 pb-4 text-center">
-              <p className="text-sm text-purple-700">العائد على الاستثمار</p>
-              <p className="text-3xl font-bold text-purple-900">{kn.roi.toFixed(1)}%</p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Phase Cost Breakdown */}
-      <Card>
-        <CardHeader>
-          <CardTitle>توزيع التكاليف حسب المرحلة</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {cashFlow.phases.map((phase: any) => {
-              const phaseOutflow = cashFlow.totalOutflow
-                .slice(phase.startMonth - 1, phase.endMonth)
-                .reduce((s: number, v: number) => s + v, 0);
-              const pct = kn.totalCost > 0 ? (phaseOutflow / kn.totalCost) * 100 : 0;
-              const phaseNames: Record<string, string> = {
-                design: 'التصميم والموافقات',
-                rera: 'تسجيل ريرا',
-                construction: 'البناء',
-                handover: 'التسليم',
-              };
-
-              return (
-                <div key={phase.name} className="flex items-center gap-4">
-                  <div className="w-36 text-sm font-medium text-gray-700">{phaseNames[phase.name] || phase.name}</div>
-                  <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-l from-emerald-500 to-teal-500 rounded-full transition-all"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                  <div className="w-32 text-left text-sm">
-                    <span className="font-bold">{formatAED(phaseOutflow)}</span>
-                    <span className="text-gray-400 mr-1">({pct.toFixed(1)}%)</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════
-// Scenario Comparison View
-// ═══════════════════════════════════════════════════════════════
-
-const SCENARIO_COLORS = ['#059669', '#2563eb', '#dc2626', '#ea580c', '#7c3aed', '#0891b2'];
-
-function ScenarioComparisonView({
-  cfProjectId,
-  scenarios,
-  project,
-}: {
-  cfProjectId: number;
-  scenarios: any[];
-  project: any;
-}) {
-  // Fetch base scenario cash flow
-  const baseCashFlow = trpc.cashFlowProgram.calculateCashFlow.useQuery({
-    cfProjectId,
-    scenarioId: null,
+    },
+    onError: (e) => toast.error(e.message),
   });
 
-  // Fetch each scenario's cash flow
-  const scenarioCashFlows = scenarios.map(s =>
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    trpc.cashFlowProgram.calculateCashFlow.useQuery({
+  const handleSave = () => {
+    const paymentParams: any = {};
+    if (paymentType === 'lump_sum') paymentParams.paymentMonth = paymentMonth;
+
+    saveMutation.mutate({
+      id: editItem?.id,
       cfProjectId,
-      scenarioId: s.id,
-    })
-  );
-
-  const allLoaded = baseCashFlow.data && scenarioCashFlows.every(q => q.data);
-
-  if (!allLoaded) {
-    return (
-      <Card className="mt-4">
-        <CardContent className="py-8 text-center">
-          <div className="animate-spin w-6 h-6 border-4 border-emerald-500 border-t-transparent rounded-full mx-auto mb-3" />
-          <p className="text-sm text-gray-500">جاري تحميل بيانات المقارنة...</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const baseData = baseCashFlow.data!;
-  const scenarioDataList = scenarioCashFlows.map(q => q.data!);
-
-  // Find the max number of months across all scenarios
-  const maxMonths = Math.max(
-    baseData.monthLabels.length,
-    ...scenarioDataList.map(d => d.monthLabels.length)
-  );
-
-  // Find max cumulative value for chart scaling
-  const allCumulatives = [
-    ...baseData.cumulativeOutflow,
-    ...scenarioDataList.flatMap(d => d.cumulativeOutflow),
-  ];
-  const maxCumVal = Math.max(...allCumulatives, 1);
-
-  // Build SVG paths
-  const buildPath = (data: number[], totalMonths: number) => {
-    if (data.length === 0) return '';
-    const xStep = 800 / Math.max(totalMonths - 1, 1);
-    return data.map((v, i) => {
-      const x = i * xStep;
-      const y = 280 - (v / maxCumVal) * 260;
-      return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join(' ');
+      name,
+      category: category as any,
+      totalAmount,
+      paymentType: paymentType as any,
+      paymentParams: JSON.stringify(paymentParams),
+      sortOrder: editItem?.sortOrder || 0,
+    });
   };
 
   return (
-    <div className="mt-4 space-y-4">
-      {/* Cumulative Cost Comparison Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <GitCompare className="w-5 h-5 text-emerald-600" />
-            مقارنة التكاليف التراكمية
-          </CardTitle>
-          <CardDescription>مقارنة التدفق النقدي التراكمي بين السيناريو الأساسي والسيناريوهات المختلفة</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <svg viewBox="0 0 840 320" className="w-full h-64 md:h-80">
-              {/* Grid lines */}
-              {[0, 0.25, 0.5, 0.75, 1].map(pct => (
-                <g key={pct}>
-                  <line
-                    x1="0" y1={280 - pct * 260} x2="800" y2={280 - pct * 260}
-                    stroke="#e5e7eb" strokeWidth="0.5" strokeDasharray="4,4"
-                  />
-                  <text x="810" y={285 - pct * 260} fontSize="9" fill="#9ca3af" textAnchor="start">
-                    {formatAED(maxCumVal * pct)}
-                  </text>
-                </g>
-              ))}
-
-              {/* Base scenario line */}
-              <path
-                d={buildPath(baseData.cumulativeOutflow, maxMonths)}
-                fill="none"
-                stroke="#6b7280"
-                strokeWidth="2.5"
-                strokeDasharray="6,3"
-              />
-
-              {/* Scenario lines */}
-              {scenarioDataList.map((data, idx) => (
-                <path
-                  key={scenarios[idx].id}
-                  d={buildPath(data.cumulativeOutflow, maxMonths)}
-                  fill="none"
-                  stroke={SCENARIO_COLORS[idx % SCENARIO_COLORS.length]}
-                  strokeWidth="2"
-                />
-              ))}
-            </svg>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogTrigger asChild>
+        <Button size="sm">
+          <Plus className="h-4 w-4 ml-1" />
+          إضافة بند
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{editItem ? 'تعديل بند' : 'إضافة بند تكلفة'}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label>اسم البند</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} />
           </div>
-
-          {/* Legend */}
-          <div className="flex flex-wrap gap-4 mt-3 justify-center">
-            <span className="flex items-center gap-2 text-sm">
-              <span className="w-6 h-0.5 bg-gray-500 block" style={{ borderTop: '2px dashed #6b7280' }} />
-              <span className="text-gray-600">الأساسي</span>
-            </span>
-            {scenarios.map((s, idx) => (
-              <span key={s.id} className="flex items-center gap-2 text-sm">
-                <span className="w-6 h-0.5 block" style={{ backgroundColor: SCENARIO_COLORS[idx % SCENARIO_COLORS.length] }} />
-                <span style={{ color: SCENARIO_COLORS[idx % SCENARIO_COLORS.length] }}>{s.name}</span>
-              </span>
-            ))}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>الفئة</Label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>المبلغ (AED)</Label>
+              <Input type="number" value={totalAmount} onChange={(e) => setTotalAmount(Number(e.target.value))} />
+            </div>
           </div>
-        </CardContent>
-      </Card>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>نوع الدفع</Label>
+              <Select value={paymentType} onValueChange={setPaymentType}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(PAYMENT_TYPE_LABELS).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>مصدر التمويل</Label>
+              <Select value={fundingSource} onValueChange={setFundingSource}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(FUNDING_LABELS).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>المرحلة</Label>
+              <Select value={phaseTag} onValueChange={setPhaseTag}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(PHASE_LABELS).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {paymentType === 'lump_sum' && (
+              <div>
+                <Label>شهر الدفع</Label>
+                <Input type="number" value={paymentMonth} onChange={(e) => setPaymentMonth(Number(e.target.value))} min={1} />
+              </div>
+            )}
+          </div>
+        </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline">إلغاء</Button>
+          </DialogClose>
+          <Button onClick={handleSave} disabled={!name || saveMutation.isPending}>
+            {saveMutation.isPending ? 'جاري الحفظ...' : 'حفظ'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
-      {/* Key Numbers Comparison Table */}
+// ═══════════════════════════════════════════════════════════════
+// Monthly Table Tab
+// ═══════════════════════════════════════════════════════════════
+
+function MonthlyTableTab({ dual }: { dual: any }) {
+  const table = dual.monthlyTable || [];
+  const [showDetails, setShowDetails] = useState(false);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold">الجدول الشهري ({table.length} شهر)</h3>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowDetails(!showDetails)}>
+            <Eye className="h-4 w-4 ml-1" />
+            {showDetails ? 'إخفاء التفاصيل' : 'عرض التفاصيل'}
+          </Button>
+        </div>
+      </div>
+
       <Card>
-        <CardHeader>
-          <CardTitle>مقارنة الأرقام الرئيسية</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b text-gray-500">
-                  <th className="text-right py-2 px-3">المؤشر</th>
-                  <th className="text-right py-2 px-3 bg-gray-50">
-                    <span className="flex items-center gap-1">
-                      <span className="w-2 h-2 rounded-full bg-gray-500" />
-                      الأساسي
-                    </span>
-                  </th>
-                  {scenarios.map((s, idx) => (
-                    <th key={s.id} className="text-right py-2 px-3">
-                      <span className="flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: SCENARIO_COLORS[idx % SCENARIO_COLORS.length] }} />
-                        {s.name}
-                      </span>
-                    </th>
-                  ))}
+                <tr className="border-b bg-muted/50">
+                  <th className="p-2 text-right sticky right-0 bg-muted/50 z-10">الشهر</th>
+                  <th className="p-2 text-center">المرحلة</th>
+                  <th className="p-2 text-left text-amber-600">مصروفات المستثمر</th>
+                  <th className="p-2 text-left text-amber-600">تراكمي المستثمر</th>
+                  <th className="p-2 text-left text-green-600">إيرادات الإسكرو</th>
+                  <th className="p-2 text-left text-red-600">مصروفات الإسكرو</th>
+                  <th className="p-2 text-left text-blue-600">رصيد الإسكرو</th>
+                  <th className="p-2 text-left font-bold">صافي الشهر</th>
+                  <th className="p-2 text-left font-bold">صافي تراكمي</th>
                 </tr>
               </thead>
               <tbody>
-                <tr className="border-b">
-                  <td className="py-2 px-3 font-medium">إجمالي التكاليف</td>
-                  <td className="py-2 px-3 font-mono bg-gray-50">{formatAEDFull(baseData.keyNumbers.totalCost)} د.إ</td>
-                  {scenarioDataList.map((data, idx) => {
-                    const diff = data.keyNumbers.totalCost - baseData.keyNumbers.totalCost;
-                    return (
-                      <td key={scenarios[idx].id} className="py-2 px-3 font-mono">
-                        {formatAEDFull(data.keyNumbers.totalCost)} د.إ
-                        {diff !== 0 && (
-                          <span className={`text-xs mr-1 ${diff > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
-                            ({diff > 0 ? '+' : ''}{formatAED(diff)})
-                          </span>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-                <tr className="border-b">
-                  <td className="py-2 px-3 font-medium">أقصى تعرض رأسمالي</td>
-                  <td className="py-2 px-3 font-mono bg-gray-50">{formatAEDFull(baseData.keyNumbers.peakExposure)} د.إ</td>
-                  {scenarioDataList.map((data, idx) => {
-                    const diff = data.keyNumbers.peakExposure - baseData.keyNumbers.peakExposure;
-                    return (
-                      <td key={scenarios[idx].id} className="py-2 px-3 font-mono">
-                        {formatAEDFull(data.keyNumbers.peakExposure)} د.إ
-                        {diff !== 0 && (
-                          <span className={`text-xs mr-1 ${diff > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
-                            ({diff > 0 ? '+' : ''}{formatAED(diff)})
-                          </span>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-                <tr className="border-b">
-                  <td className="py-2 px-3 font-medium">شهر الذروة</td>
-                  <td className="py-2 px-3 bg-gray-50">{baseData.keyNumbers.peakMonthLabel}</td>
-                  {scenarioDataList.map((data, idx) => (
-                    <td key={scenarios[idx].id} className="py-2 px-3">{data.keyNumbers.peakMonthLabel}</td>
-                  ))}
-                </tr>
-                {baseData.keyNumbers.totalSales > 0 && (
-                  <>
-                    <tr className="border-b">
-                      <td className="py-2 px-3 font-medium">إجمالي المبيعات</td>
-                      <td className="py-2 px-3 font-mono bg-gray-50">{formatAEDFull(baseData.keyNumbers.totalSales)} د.إ</td>
-                      {scenarioDataList.map((data, idx) => (
-                        <td key={scenarios[idx].id} className="py-2 px-3 font-mono">{formatAEDFull(data.keyNumbers.totalSales)} د.إ</td>
-                      ))}
-                    </tr>
-                    <tr className="border-b">
-                      <td className="py-2 px-3 font-medium">صافي الربح</td>
-                      <td className={`py-2 px-3 font-mono bg-gray-50 ${baseData.keyNumbers.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                        {formatAEDFull(baseData.keyNumbers.netProfit)} د.إ
-                      </td>
-                      {scenarioDataList.map((data, idx) => (
-                        <td key={scenarios[idx].id} className={`py-2 px-3 font-mono ${data.keyNumbers.netProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                          {formatAEDFull(data.keyNumbers.netProfit)} د.إ
-                        </td>
-                      ))}
-                    </tr>
-                    <tr className="border-b">
-                      <td className="py-2 px-3 font-medium">العائد على الاستثمار</td>
-                      <td className="py-2 px-3 font-mono bg-gray-50">{baseData.keyNumbers.roi?.toFixed(1)}%</td>
-                      {scenarioDataList.map((data, idx) => {
-                        const diff = (data.keyNumbers.roi || 0) - (baseData.keyNumbers.roi || 0);
-                        return (
-                          <td key={scenarios[idx].id} className="py-2 px-3 font-mono">
-                            {data.keyNumbers.roi?.toFixed(1)}%
-                            {Math.abs(diff) > 0.1 && (
-                              <span className={`text-xs mr-1 ${diff > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                                ({diff > 0 ? '+' : ''}{diff.toFixed(1)}%)
-                              </span>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  </>
-                )}
-                <tr>
-                  <td className="py-2 px-3 font-medium">المدة الإجمالية</td>
-                  <td className="py-2 px-3 bg-gray-50">{baseData.monthLabels.length} شهر</td>
-                  {scenarioDataList.map((data, idx) => {
-                    const diff = data.monthLabels.length - baseData.monthLabels.length;
-                    return (
-                      <td key={scenarios[idx].id} className="py-2 px-3">
-                        {data.monthLabels.length} شهر
-                        {diff !== 0 && (
-                          <span className={`text-xs mr-1 ${diff > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
-                            ({diff > 0 ? '+' : ''}{diff})
-                          </span>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
+                {table.map((row: any, i: number) => (
+                  <tr
+                    key={i}
+                    className={`border-b hover:bg-muted/30 ${
+                      row.phase === 'pre_dev' ? 'bg-amber-500/5' :
+                      row.phase === 'construction' ? 'bg-blue-500/5' :
+                      'bg-green-500/5'
+                    }`}
+                  >
+                    <td className="p-2 font-medium sticky right-0 bg-inherit z-10 text-xs">{row.label}</td>
+                    <td className="p-2 text-center">
+                      <Badge
+                        variant="outline"
+                        className="text-[10px]"
+                        style={{ borderColor: PHASE_COLORS[row.phase], color: PHASE_COLORS[row.phase] }}
+                      >
+                        {PHASE_LABELS[row.phase]}
+                      </Badge>
+                    </td>
+                    <td className="p-2 text-left font-mono text-xs text-amber-600">
+                      {row.developerOutflow > 0 ? formatFullAED(row.developerOutflow) : '-'}
+                    </td>
+                    <td className="p-2 text-left font-mono text-xs text-amber-700 font-semibold">
+                      {formatFullAED(row.developerCumulative)}
+                    </td>
+                    <td className="p-2 text-left font-mono text-xs text-green-600">
+                      {row.escrowInflow > 0 ? formatFullAED(row.escrowInflow) : '-'}
+                    </td>
+                    <td className="p-2 text-left font-mono text-xs text-red-600">
+                      {row.escrowOutflow > 0 ? formatFullAED(row.escrowOutflow) : '-'}
+                    </td>
+                    <td className="p-2 text-left font-mono text-xs text-blue-600 font-semibold">
+                      {formatFullAED(row.escrowBalance)}
+                    </td>
+                    <td className={`p-2 text-left font-mono text-xs font-semibold ${row.netCashFlow >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatFullAED(row.netCashFlow)}
+                    </td>
+                    <td className={`p-2 text-left font-mono text-xs font-bold ${row.cumulativeNet >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                      {formatFullAED(row.cumulativeNet)}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
+              <tfoot>
+                <tr className="border-t-2 bg-muted/30 font-bold">
+                  <td className="p-2 sticky right-0 bg-muted/30 z-10">الإجمالي</td>
+                  <td className="p-2"></td>
+                  <td className="p-2 text-left font-mono text-amber-700">
+                    {formatFullAED(table.reduce((s: number, r: any) => s + r.developerOutflow, 0))}
+                  </td>
+                  <td className="p-2"></td>
+                  <td className="p-2 text-left font-mono text-green-700">
+                    {formatFullAED(table.reduce((s: number, r: any) => s + r.escrowInflow, 0))}
+                  </td>
+                  <td className="p-2 text-left font-mono text-red-700">
+                    {formatFullAED(table.reduce((s: number, r: any) => s + r.escrowOutflow, 0))}
+                  </td>
+                  <td className="p-2"></td>
+                  <td className="p-2"></td>
+                  <td className="p-2 text-left font-mono">
+                    {formatFullAED(table[table.length - 1]?.cumulativeNet || 0)}
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Project Settings Tab
+// ═══════════════════════════════════════════════════════════════
+
+function ProjectSettingsTab({ cfProjectId, project, onRefresh }: {
+  cfProjectId: number;
+  project: any;
+  onRefresh: () => void;
+}) {
+  const [startDate, setStartDate] = useState(project.startDate);
+  const [preDevMonths, setPreDevMonths] = useState(project.preDevMonths || project.designApprovalMonths + project.reraSetupMonths);
+  const [constructionMonths, setConstructionMonths] = useState(project.constructionMonths);
+  const [handoverMonths, setHandoverMonths] = useState(project.handoverMonths);
+  const [salesEnabled, setSalesEnabled] = useState(!!project.salesEnabled);
+  const [salesStartMonth, setSalesStartMonth] = useState(project.salesStartMonth || 7);
+  const [totalSalesRevenue, setTotalSalesRevenue] = useState(project.totalSalesRevenue || 0);
+  const [bookingPct, setBookingPct] = useState(parseFloat(project.buyerPlanBookingPct || '20'));
+  const [constructionPct, setConstructionPct] = useState(parseFloat(project.buyerPlanConstructionPct || '30'));
+  const [handoverPct, setHandoverPct] = useState(parseFloat(project.buyerPlanHandoverPct || '50'));
+  const [escrowDepositPct, setEscrowDepositPct] = useState(parseFloat(project.escrowDepositPct || '20'));
+  const [contractorAdvancePct, setContractorAdvancePct] = useState(parseFloat(project.contractorAdvancePct || '10'));
+  const [liquidityBufferPct, setLiquidityBufferPct] = useState(parseFloat(project.liquidityBufferPct || '5'));
+
+  const updateMutation = trpc.cashFlowProgram.updateProject.useMutation({
+    onSuccess: () => {
+      toast.success('تم تحديث الإعدادات');
+      onRefresh();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const handleSave = () => {
+    updateMutation.mutate({
+      id: cfProjectId,
+      startDate,
+      designApprovalMonths: preDevMonths,
+      reraSetupMonths: 0,
+      constructionMonths,
+      handoverMonths,
+      salesEnabled,
+      salesStartMonth,
+      totalSalesRevenue,
+      buyerPlanBookingPct: bookingPct,
+      buyerPlanConstructionPct: constructionPct,
+      buyerPlanHandoverPct: handoverPct,
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Phase Durations */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <CalendarDays className="h-4 w-4" />
+            المراحل والمدد
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <Label>تاريخ البدء</Label>
+              <Input type="month" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            </div>
+            <div>
+              <Label>ما قبل البناء (أشهر)</Label>
+              <Input type="number" value={preDevMonths} onChange={(e) => setPreDevMonths(Number(e.target.value))} min={1} />
+            </div>
+            <div>
+              <Label>البناء (أشهر)</Label>
+              <Input type="number" value={constructionMonths} onChange={(e) => setConstructionMonths(Number(e.target.value))} min={1} />
+            </div>
+            <div>
+              <Label>التسليم (أشهر)</Label>
+              <Input type="number" value={handoverMonths} onChange={(e) => setHandoverMonths(Number(e.target.value))} min={1} />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Sales Settings */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" />
+            إعدادات المبيعات
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-3">
+            <Switch checked={salesEnabled} onCheckedChange={setSalesEnabled} />
+            <Label>تفعيل المبيعات</Label>
+          </div>
+          {salesEnabled && (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div>
+                <Label>إجمالي الإيرادات (AED)</Label>
+                <Input type="number" value={totalSalesRevenue} onChange={(e) => setTotalSalesRevenue(Number(e.target.value))} />
+              </div>
+              <div>
+                <Label>شهر بدء المبيعات</Label>
+                <Input type="number" value={salesStartMonth} onChange={(e) => setSalesStartMonth(Number(e.target.value))} min={1} />
+              </div>
+              <div className="col-span-2 md:col-span-1">
+                <Label>خطة الدفع للمشتري</Label>
+                <div className="grid grid-cols-3 gap-2 mt-1">
+                  <div>
+                    <Label className="text-xs">حجز %</Label>
+                    <Input type="number" value={bookingPct} onChange={(e) => setBookingPct(Number(e.target.value))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">بناء %</Label>
+                    <Input type="number" value={constructionPct} onChange={(e) => setConstructionPct(Number(e.target.value))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">تسليم %</Label>
+                    <Input type="number" value={handoverPct} onChange={(e) => setHandoverPct(Number(e.target.value))} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Escrow Settings */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4" />
+            إعدادات الإسكرو والتمويل
+          </CardTitle>
+          <CardDescription>نسب تمويل المستثمر من تكلفة البناء (35% افتراضي)</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <Label>إيداع الإسكرو %</Label>
+              <Input type="number" value={escrowDepositPct} onChange={(e) => setEscrowDepositPct(Number(e.target.value))} />
+            </div>
+            <div>
+              <Label>دفعة مقدمة للمقاول %</Label>
+              <Input type="number" value={contractorAdvancePct} onChange={(e) => setContractorAdvancePct(Number(e.target.value))} />
+            </div>
+            <div>
+              <Label>هامش سيولة %</Label>
+              <Input type="number" value={liquidityBufferPct} onChange={(e) => setLiquidityBufferPct(Number(e.target.value))} />
+            </div>
+          </div>
+          <div className="mt-3 p-3 bg-muted rounded-lg text-sm">
+            <span className="font-semibold">إجمالي تمويل المستثمر من البناء: </span>
+            <span className="text-amber-600 font-bold">{escrowDepositPct + contractorAdvancePct + liquidityBufferPct}%</span>
+            <span className="text-muted-foreground"> · الباقي من الإسكرو: </span>
+            <span className="text-blue-600 font-bold">{100 - escrowDepositPct - contractorAdvancePct - liquidityBufferPct}%</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Button onClick={handleSave} disabled={updateMutation.isPending} className="w-full">
+        <Save className="h-4 w-4 ml-2" />
+        {updateMutation.isPending ? 'جاري الحفظ...' : 'حفظ الإعدادات'}
+      </Button>
     </div>
   );
 }
