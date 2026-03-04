@@ -138,7 +138,7 @@ describe('calculateDualCashFlow', () => {
       {
         id: 2,
         name: 'أتعاب الإشراف',
-        category: 'supervision',
+        category: 'consultants',
         totalAmount: 241_496,
         paymentType: 'monthly_fixed',
         paymentParams: {},

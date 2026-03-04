@@ -1,0 +1,24 @@
+{
+  "query": "SELECT id, projectId, optStudioPrice, opt1BrPrice, opt2BrPrice, baseStudioPrice, base1BrPrice, base2BrPrice, consStudioPrice, cons1BrPrice, cons2BrPrice, activeScenario FROM competition_pricing WHERE projectId = 4;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, projectId, optStudioPrice, opt1BrPrice, opt2BrPrice, baseStudioPrice, base1BrPrice, base2BrPrice, consStudioPrice, cons1BrPrice, cons2BrPrice, activeScenario FROM competition_pricing WHERE projectId = 4;",
+  "rows": [
+    {
+      "id": "1",
+      "projectId": "4",
+      "optStudioPrice": "1650",
+      "opt1BrPrice": "1550",
+      "opt2BrPrice": "1450",
+      "baseStudioPrice": "1550",
+      "base1BrPrice": "1450",
+      "base2BrPrice": "1350",
+      "consStudioPrice": "1450",
+      "cons1BrPrice": "1350",
+      "cons2BrPrice": "1250",
+      "activeScenario": "base"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tprojectId\toptStudioPrice\topt1BrPrice\topt2BrPrice\tbaseStudioPrice\tbase1BrPrice\tbase2BrPrice\tconsStudioPrice\tcons1BrPrice\tcons2BrPrice\tactiveScenario\n1\t4\t1650\t1550\t1450\t1550\t1450\t1350\t1450\t1350\t1250\tbase\n",
+  "stderr": "",
+  "execution_time_ms": 1492
+}

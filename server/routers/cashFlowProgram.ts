@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { cfProjects, cfCostItems, cfScenarios, cfFiles, projects, feasibilityStudies, projectPhases, phaseActivities, phaseCostLinks } from "../../drizzle/schema";
+import { cfProjects, cfCostItems, cfScenarios, cfFiles, projects, feasibilityStudies, projectPhases, phaseActivities, phaseCostLinks, competitionPricing, marketOverview } from "../../drizzle/schema";
 import { calculateDualCashFlow, type CostItemInput, type ProjectInput } from './cashFlowEngine';
 import { eq, and, desc } from "drizzle-orm";
 import { storagePut } from "../storage";
@@ -349,7 +349,7 @@ const cfProjectInput = z.object({
 const cfCostItemInput = z.object({
   cfProjectId: z.number(),
   name: z.string().min(1),
-  category: z.enum(['land', 'consultant_design', 'authority_fees', 'contractor', 'supervision', 'marketing_sales', 'developer_fee', 'contingency', 'other']),
+  category: z.enum(['land', 'land_registration', 'development_setup', 'design_engineering', 'consultants', 'authority_fees', 'contractor', 'marketing_sales', 'administration', 'developer_fee', 'contingency', 'other']),
   totalAmount: z.number(),
   paymentType: z.enum(['lump_sum', 'milestone', 'monthly_fixed', 'progress_based', 'sales_linked']),
   paymentParams: z.any().optional(),
@@ -914,18 +914,100 @@ export const cashFlowProgramRouter = router({
       const feas = feasResults[0];
       if (!feas) throw new Error("دراسة الجدوى غير موجودة");
 
-      // Calculate key values from feasibility
-      const bua = feas.estimatedBua || 0;
-      const plotAreaM2 = (feas.plotArea || 0) * 0.0929;
-      const constructionCost = bua * (feas.constructionCostPerSqft || 0);
-      const totalUnits = feas.numberOfUnits || 0;
+      // Also fetch the project data (بطاقة المشروع) which has the real financial data
+      let proj: any = null;
+      if (feas.projectId) {
+        const projResults = await db.select().from(projects).where(eq(projects.id, feas.projectId));
+        proj = projResults[0] || null;
+      }
 
-      // Calculate total revenue
-      const totalRevenue = (
-        ((feas.gfaResidential || 0) * (feas.saleableResidentialPct || 90) / 100 * (feas.residentialSalePrice || 0)) +
-        ((feas.gfaRetail || 0) * (feas.saleableRetailPct || 99) / 100 * (feas.retailSalePrice || 0)) +
-        ((feas.gfaOffices || 0) * (feas.saleableOfficesPct || 90) / 100 * (feas.officesSalePrice || 0))
-      );
+      // Also fetch competition pricing for revenue calculation
+      let cpData: any = null;
+      let moData: any = null;
+      if (feas.projectId) {
+        const cpResults = await db.select().from(competitionPricing).where(eq(competitionPricing.projectId, feas.projectId));
+        cpData = cpResults[0] || null;
+        const moResults = await db.select().from(marketOverview).where(eq(marketOverview.projectId, feas.projectId));
+        moData = moResults[0] || null;
+      }
+
+      // Helper: parse decimal string or number to float
+      const pf = (v: any) => parseFloat(v || '0') || 0;
+
+      // Calculate key values - prefer project data (بطاقة المشروع) over feasibility
+      const bua = pf(proj?.manualBuaSqft) || pf(proj?.bua) || (feas.estimatedBua || 0);
+      const plotAreaSqft = pf(proj?.plotAreaSqft) || (feas.plotArea || 0);
+      const plotAreaM2 = plotAreaSqft * 0.0929;
+      const constructionPricePerSqft = pf(proj?.estimatedConstructionPricePerSqft) || (feas.constructionCostPerSqft || 0);
+      const constructionCost = bua * constructionPricePerSqft;
+
+      // GFA from project
+      const gfaResSqft = pf(proj?.gfaResidentialSqft) || (feas.gfaResidential || 0);
+      const gfaRetSqft = pf(proj?.gfaRetailSqft) || (feas.gfaRetail || 0);
+      const gfaOffSqft = pf(proj?.gfaOfficesSqft) || (feas.gfaOffices || 0);
+      const saleableRes = gfaResSqft * 0.95;
+      const saleableRet = gfaRetSqft * 0.97;
+      const saleableOff = gfaOffSqft * 0.95;
+
+      // Calculate total revenue using competition pricing + market overview data
+      let totalRevenue = 0;
+      let totalUnits = 0;
+      if (cpData && moData) {
+        const activeScenario = cpData.activeScenario || 'base';
+        const getPrices = () => {
+          if (activeScenario === 'optimistic') return { studio: cpData.optStudioPrice || 0, oneBr: cpData.opt1brPrice || 0, twoBr: cpData.opt2brPrice || 0, threeBr: cpData.opt3brPrice || 0 };
+          if (activeScenario === 'conservative') return { studio: cpData.consStudioPrice || 0, oneBr: cpData.cons1brPrice || 0, twoBr: cpData.cons2brPrice || 0, threeBr: cpData.cons3brPrice || 0 };
+          return { studio: cpData.baseStudioPrice || 0, oneBr: cpData.base1brPrice || 0, twoBr: cpData.base2brPrice || 0, threeBr: cpData.base3brPrice || 0 };
+        };
+        const prices = getPrices();
+
+        const calcTypeRevenue = (pct: number, avgArea: number, pricePerSqft: number, saleable: number) => {
+          const allocated = saleable * (pct / 100);
+          const units = avgArea > 0 ? Math.floor(allocated / avgArea) : 0;
+          totalUnits += units;
+          return avgArea * pricePerSqft * units;
+        };
+
+        totalRevenue += calcTypeRevenue(pf(moData.residentialStudioPct), moData.residentialStudioAvgArea || 0, prices.studio, saleableRes);
+        totalRevenue += calcTypeRevenue(pf(moData.residential1brPct), moData.residential1brAvgArea || 0, prices.oneBr, saleableRes);
+        totalRevenue += calcTypeRevenue(pf(moData.residential2brPct), moData.residential2brAvgArea || 0, prices.twoBr, saleableRes);
+        totalRevenue += calcTypeRevenue(pf(moData.residential3brPct), moData.residential3brAvgArea || 0, prices.threeBr, saleableRes);
+      } else {
+        // Fallback to old feasibility calculation
+        totalRevenue = (
+          ((feas.gfaResidential || 0) * (feas.saleableResidentialPct || 90) / 100 * (feas.residentialSalePrice || 0)) +
+          ((feas.gfaRetail || 0) * (feas.saleableRetailPct || 99) / 100 * (feas.retailSalePrice || 0)) +
+          ((feas.gfaOffices || 0) * (feas.saleableOfficesPct || 90) / 100 * (feas.officesSalePrice || 0))
+        );
+        totalUnits = feas.numberOfUnits || 0;
+      }
+
+      // Cost source values - prefer project data over feasibility
+      const landPrice = pf(proj?.landPrice) || (feas.landPrice || 0);
+      const agentCommissionLandPct = pf(proj?.agentCommissionLandPct) || (feas.agentCommissionLandPct || 1);
+      const soilTestFee = pf(proj?.soilTestFee) || (feas.soilInvestigation || 0);
+      const topographicSurveyFee = pf(proj?.topographicSurveyFee) || (feas.topographySurvey || 0);
+      const officialBodiesFees = pf(proj?.officialBodiesFees) || (feas.authoritiesFee || 0);
+      const designFeePct = pf(proj?.designFeePct) || (feas.designFeePct || 2);
+      const supervisionFeePct = pf(proj?.supervisionFeePct) || (feas.supervisionFeePct || 2);
+      const separationFeePerM2 = pf(proj?.separationFeePerM2) || (feas.separationFeePerM2 || 40);
+      const salesCommissionPct = pf(proj?.salesCommissionPct) || (feas.agentCommissionSalePct || 5);
+      const marketingPct = pf(proj?.marketingPct) || (feas.marketingPct || 2);
+      const developerFeePhase1Pct = pf(proj?.developerFeePhase1Pct) || 2;
+      const developerFeePhase2Pct = pf(proj?.developerFeePhase2Pct) || 3;
+      const developerFeePct = developerFeePhase1Pct + developerFeePhase2Pct;
+      const contingenciesPct = feas.contingenciesPct || 2;
+
+      // Regulatory fees from project
+      const reraUnitRegFee = pf(proj?.reraUnitRegFee);
+      const reraProjectRegFee = pf(proj?.reraProjectRegFee);
+      const developerNocFee = pf(proj?.developerNocFee);
+      const escrowAccountFee = pf(proj?.escrowAccountFee);
+      const bankFees = pf(proj?.bankFees);
+      const surveyorFees = pf(proj?.surveyorFees);
+      const reraAuditReportFee = pf(proj?.reraAuditReportFee);
+      const reraInspectionReportFee = pf(proj?.reraInspectionReportFee);
+      const communityFees = pf(proj?.communityFees);
 
       // Create the CF project
       const projectResult = await db.insert(cfProjects).values({
@@ -938,7 +1020,7 @@ export const cashFlowProgramRouter = router({
         constructionMonths: input.constructionMonths,
         handoverMonths: input.handoverMonths,
         salesEnabled: totalRevenue > 0,
-        salesStartMonth: input.designApprovalMonths + input.reraSetupMonths + 1, // Start of construction
+        salesStartMonth: input.designApprovalMonths + input.reraSetupMonths + 1,
         totalSalesRevenue: Math.round(totalRevenue) || null,
         buyerPlanBookingPct: "20",
         buyerPlanConstructionPct: "30",
@@ -947,36 +1029,36 @@ export const cashFlowProgramRouter = router({
       });
       const cfProjectId = Number(projectResult[0].insertId);
 
-      // Build cost items from feasibility data
+      // Build cost items
       const costItemsToInsert: Array<{
         cfProjectId: number;
         name: string;
-        category: 'land' | 'consultant_design' | 'authority_fees' | 'contractor' | 'supervision' | 'marketing_sales' | 'developer_fee' | 'contingency' | 'other';
+        category: 'land' | 'land_registration' | 'development_setup' | 'design_engineering' | 'consultants' | 'authority_fees' | 'contractor' | 'marketing_sales' | 'administration' | 'developer_fee' | 'contingency' | 'other';
         totalAmount: number;
         paymentType: 'lump_sum' | 'milestone' | 'monthly_fixed' | 'progress_based' | 'sales_linked';
         paymentParams: string;
         sortOrder: number;
         fundingSource: 'developer' | 'escrow' | 'mixed';
-        escrowEligible: boolean;
+        escrowEligible: number;
         phaseTag: 'pre_dev' | 'construction' | 'handover' | 'all';
       }> = [];
       let sortOrder = 0;
 
       // 1. Land — Developer funds, pre-dev phase
-      if (feas.landPrice) {
+      if (landPrice > 0) {
         costItemsToInsert.push({
           cfProjectId,
           name: 'سعر الأرض',
           category: 'land',
-          totalAmount: feas.landPrice,
+          totalAmount: Math.round(landPrice),
           paymentType: 'lump_sum',
           paymentParams: JSON.stringify({ paymentMonth: 1 }),
           sortOrder: sortOrder++,
           fundingSource: 'developer',
-          escrowEligible: false,
+          escrowEligible: 0,
           phaseTag: 'pre_dev',
         });
-        const agentComm = feas.landPrice * ((feas.agentCommissionLandPct || 1) / 100);
+        const agentComm = landPrice * (agentCommissionLandPct / 100);
         if (agentComm > 0) {
           costItemsToInsert.push({
             cfProjectId,
@@ -987,13 +1069,13 @@ export const cashFlowProgramRouter = router({
             paymentParams: JSON.stringify({ paymentMonth: 1 }),
             sortOrder: sortOrder++,
             fundingSource: 'developer',
-            escrowEligible: false,
+            escrowEligible: 0,
             phaseTag: 'pre_dev',
           });
         }
 
         // Land registration fee (4%)
-        const landRegFee = feas.landPrice * 0.04;
+        const landRegFee = landPrice * 0.04;
         if (landRegFee > 0) {
           costItemsToInsert.push({
             cfProjectId,
@@ -1004,19 +1086,19 @@ export const cashFlowProgramRouter = router({
             paymentParams: JSON.stringify({ paymentMonth: 1 }),
             sortOrder: sortOrder++,
             fundingSource: 'developer',
-            escrowEligible: false,
+            escrowEligible: 0,
             phaseTag: 'pre_dev',
           });
         }
       }
 
       // 2. Design Fee — Developer funds, pre-dev phase
-      const designFee = constructionCost * ((feas.designFeePct || 2) / 100);
+      const designFee = constructionCost * (designFeePct / 100);
       if (designFee > 0) {
         costItemsToInsert.push({
           cfProjectId,
           name: 'أتعاب التصميم',
-          category: 'consultant_design',
+          category: 'design_engineering',
           totalAmount: Math.round(designFee),
           paymentType: 'milestone',
           paymentParams: JSON.stringify({
@@ -1030,55 +1112,55 @@ export const cashFlowProgramRouter = router({
           }),
           sortOrder: sortOrder++,
           fundingSource: 'developer',
-          escrowEligible: false,
+          escrowEligible: 0,
           phaseTag: 'pre_dev',
         });
       }
 
-      // 3. Authority fees — Developer funds, pre-dev phase
-      if (feas.authoritiesFee) {
+      // 3. Official bodies fees — Developer funds, pre-dev phase
+      if (officialBodiesFees > 0) {
         costItemsToInsert.push({
           cfProjectId,
           name: 'رسوم الجهات الحكومية',
           category: 'authority_fees',
-          totalAmount: feas.authoritiesFee,
+          totalAmount: Math.round(officialBodiesFees),
           paymentType: 'lump_sum',
           paymentParams: JSON.stringify({ paymentMonth: input.designApprovalMonths }),
           sortOrder: sortOrder++,
           fundingSource: 'developer',
-          escrowEligible: false,
+          escrowEligible: 0,
           phaseTag: 'pre_dev',
         });
       }
 
-      // 4. Soil investigation — Developer funds, pre-dev phase
-      if (feas.soilInvestigation) {
+      // 4. Soil test — Developer funds, pre-dev phase
+      if (soilTestFee > 0) {
         costItemsToInsert.push({
           cfProjectId,
           name: 'فحص التربة',
           category: 'authority_fees',
-          totalAmount: feas.soilInvestigation,
+          totalAmount: Math.round(soilTestFee),
           paymentType: 'lump_sum',
           paymentParams: JSON.stringify({ paymentMonth: 1 }),
           sortOrder: sortOrder++,
           fundingSource: 'developer',
-          escrowEligible: false,
+          escrowEligible: 0,
           phaseTag: 'pre_dev',
         });
       }
 
       // 5. Topography survey — Developer funds, pre-dev phase
-      if (feas.topographySurvey) {
+      if (topographicSurveyFee > 0) {
         costItemsToInsert.push({
           cfProjectId,
           name: 'المسح الطبوغرافي',
           category: 'authority_fees',
-          totalAmount: feas.topographySurvey,
+          totalAmount: Math.round(topographicSurveyFee),
           paymentType: 'lump_sum',
           paymentParams: JSON.stringify({ paymentMonth: 1 }),
           sortOrder: sortOrder++,
           fundingSource: 'developer',
-          escrowEligible: false,
+          escrowEligible: 0,
           phaseTag: 'pre_dev',
         });
       }
@@ -1098,30 +1180,30 @@ export const cashFlowProgramRouter = router({
           }),
           sortOrder: sortOrder++,
           fundingSource: 'mixed',
-          escrowEligible: true,
+          escrowEligible: 1,
           phaseTag: 'construction',
         });
       }
 
       // 7. Supervision — Escrow eligible, construction phase
-      const supervisionFee = constructionCost * ((feas.supervisionFeePct || 2) / 100);
+      const supervisionFee = constructionCost * (supervisionFeePct / 100);
       if (supervisionFee > 0) {
         costItemsToInsert.push({
           cfProjectId,
           name: 'أتعاب الإشراف',
-          category: 'supervision',
+          category: 'consultants',
           totalAmount: Math.round(supervisionFee),
           paymentType: 'monthly_fixed',
           paymentParams: JSON.stringify({}),
           sortOrder: sortOrder++,
           fundingSource: 'escrow',
-          escrowEligible: true,
+          escrowEligible: 1,
           phaseTag: 'construction',
         });
       }
 
       // 8. Marketing — Escrow eligible, construction phase
-      const marketing = totalRevenue * ((feas.marketingPct || 2) / 100);
+      const marketing = totalRevenue * (marketingPct / 100);
       if (marketing > 0) {
         costItemsToInsert.push({
           cfProjectId,
@@ -1132,13 +1214,13 @@ export const cashFlowProgramRouter = router({
           paymentParams: JSON.stringify({ salesPct: 100, salesTiming: 'construction' }),
           sortOrder: sortOrder++,
           fundingSource: 'escrow',
-          escrowEligible: true,
+          escrowEligible: 1,
           phaseTag: 'construction',
         });
       }
 
       // 9. Agent commission on sales — Escrow eligible, construction phase
-      const agentSales = totalRevenue * ((feas.agentCommissionSalePct || 5) / 100);
+      const agentSales = totalRevenue * (salesCommissionPct / 100);
       if (agentSales > 0) {
         costItemsToInsert.push({
           cfProjectId,
@@ -1149,13 +1231,13 @@ export const cashFlowProgramRouter = router({
           paymentParams: JSON.stringify({ salesPct: 100, salesTiming: 'booking' }),
           sortOrder: sortOrder++,
           fundingSource: 'escrow',
-          escrowEligible: true,
+          escrowEligible: 1,
           phaseTag: 'construction',
         });
       }
 
       // 10. Developer fee — Developer funds (not escrow eligible), spans all phases
-      const developerFee = totalRevenue * ((feas.developerFeePct || 5) / 100);
+      const developerFee = totalRevenue * (developerFeePct / 100);
       if (developerFee > 0) {
         costItemsToInsert.push({
           cfProjectId,
@@ -1166,13 +1248,13 @@ export const cashFlowProgramRouter = router({
           paymentParams: JSON.stringify({}),
           sortOrder: sortOrder++,
           fundingSource: 'developer',
-          escrowEligible: false,
+          escrowEligible: 0,
           phaseTag: 'all',
         });
       }
 
       // 11. Contingency — Developer funds, construction phase
-      const contingency = constructionCost * ((feas.contingenciesPct || 2) / 100);
+      const contingency = constructionCost * (contingenciesPct / 100);
       if (contingency > 0) {
         costItemsToInsert.push({
           cfProjectId,
@@ -1183,15 +1265,18 @@ export const cashFlowProgramRouter = router({
           paymentParams: JSON.stringify({}),
           sortOrder: sortOrder++,
           fundingSource: 'developer',
-          escrowEligible: false,
+          escrowEligible: 0,
           phaseTag: 'construction',
         });
       }
 
       // 12. RERA & regulatory fees — Developer funds, pre-dev phase
-      const reraFees = (feas.reraOffplanFee || 0) + (totalUnits * (feas.reraUnitFee || 0)) +
+      // Use individual fees from project data, fallback to feasibility aggregated fees
+      const totalRegulatoryFees = reraUnitRegFee + reraProjectRegFee + developerNocFee + escrowAccountFee + bankFees + surveyorFees + reraAuditReportFee + reraInspectionReportFee;
+      const reraFees = totalRegulatoryFees > 0 ? totalRegulatoryFees :
+        ((feas.reraOffplanFee || 0) + (totalUnits * (feas.reraUnitFee || 0)) +
         (feas.nocFee || 0) + (feas.escrowFee || 0) + (feas.bankCharges || 0) +
-        (feas.surveyorFees || 0) + (feas.reraAuditFees || 0) + (feas.reraInspectionFees || 0);
+        (feas.surveyorFees || 0) + (feas.reraAuditFees || 0) + (feas.reraInspectionFees || 0));
       if (reraFees > 0) {
         costItemsToInsert.push({
           cfProjectId,
@@ -1202,13 +1287,13 @@ export const cashFlowProgramRouter = router({
           paymentParams: JSON.stringify({ paymentMonth: input.designApprovalMonths + 1 }),
           sortOrder: sortOrder++,
           fundingSource: 'developer',
-          escrowEligible: false,
+          escrowEligible: 0,
           phaseTag: 'pre_dev',
         });
       }
 
       // 13. Separation fee — Developer funds, pre-dev phase
-      const separationFee = plotAreaM2 * (feas.separationFeePerM2 || 40);
+      const separationFee = plotAreaM2 * separationFeePerM2;
       if (separationFee > 0) {
         costItemsToInsert.push({
           cfProjectId,
@@ -1219,23 +1304,24 @@ export const cashFlowProgramRouter = router({
           paymentParams: JSON.stringify({ paymentMonth: 2 }),
           sortOrder: sortOrder++,
           fundingSource: 'developer',
-          escrowEligible: false,
+          escrowEligible: 0,
           phaseTag: 'pre_dev',
         });
       }
 
       // 14. Community fee — Developer funds, pre-dev phase
-      if (feas.communityFee) {
+      const commFee = communityFees > 0 ? communityFees : (feas.communityFee || 0);
+      if (commFee > 0) {
         costItemsToInsert.push({
           cfProjectId,
           name: 'رسوم المجتمع',
           category: 'other',
-          totalAmount: feas.communityFee,
+          totalAmount: Math.round(commFee),
           paymentType: 'lump_sum',
           paymentParams: JSON.stringify({ paymentMonth: input.designApprovalMonths }),
           sortOrder: sortOrder++,
           fundingSource: 'developer',
-          escrowEligible: false,
+          escrowEligible: 0,
           phaseTag: 'pre_dev',
         });
       }
@@ -1319,7 +1405,7 @@ export const cashFlowProgramRouter = router({
       if (designFee > 0) {
         costItems.push({
           name: 'أتعاب التصميم',
-          category: 'consultant_design',
+          category: 'design_engineering',
           totalAmount: Math.round(designFee),
           paymentType: 'milestone',
           paymentParams: {
@@ -1387,7 +1473,7 @@ export const cashFlowProgramRouter = router({
       if (supervisionFee > 0) {
         costItems.push({
           name: 'أتعاب الإشراف',
-          category: 'supervision',
+          category: 'consultants',
           totalAmount: Math.round(supervisionFee),
           paymentType: 'monthly_fixed',
           paymentParams: {}, // Will be set based on construction phase

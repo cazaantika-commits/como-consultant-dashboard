@@ -373,7 +373,7 @@ describe("Cash Flow Engine - Lump Sum Payment", () => {
     const item: CostItemWithPayment = {
       id: 1,
       name: "Design Fee",
-      category: "consultant_design",
+      category: "design_engineering",
       totalAmount: 2_000_000,
       paymentType: "lump_sum",
       paymentParams: { paymentMonth: 6 },
@@ -395,7 +395,7 @@ describe("Cash Flow Engine - Milestone Payment", () => {
     const item: CostItemWithPayment = {
       id: 2,
       name: "Design Consultant",
-      category: "consultant_design",
+      category: "design_engineering",
       totalAmount: 5_000_000,
       paymentType: "milestone",
       paymentParams: {
@@ -442,7 +442,7 @@ describe("Cash Flow Engine - Monthly Fixed Payment", () => {
     const item: CostItemWithPayment = {
       id: 3,
       name: "Supervision",
-      category: "supervision",
+      category: "consultants",
       totalAmount: 3_600_000,
       paymentType: "monthly_fixed",
       paymentParams: { startMonth: 10, endMonth: 33 }, // construction phase
@@ -625,12 +625,12 @@ describe("Cash Flow Engine - Monthly Outflow Aggregation", () => {
         paymentParams: { paymentMonth: 1 },
       },
       {
-        id: 2, name: "Design", category: "consultant_design",
+        id: 2, name: "Design", category: "design_engineering",
         totalAmount: 5_000_000, paymentType: "lump_sum",
         paymentParams: { paymentMonth: 3 },
       },
       {
-        id: 3, name: "Supervision", category: "supervision",
+        id: 3, name: "Supervision", category: "consultants",
         totalAmount: 2_400_000, paymentType: "monthly_fixed",
         paymentParams: { startMonth: 10, endMonth: 33 },
       },
@@ -640,8 +640,8 @@ describe("Cash Flow Engine - Monthly Outflow Aggregation", () => {
 
     // Check categories exist
     expect(outflow['land']).toBeDefined();
-    expect(outflow['consultant_design']).toBeDefined();
-    expect(outflow['supervision']).toBeDefined();
+    expect(outflow['design_engineering']).toBeDefined();
+    expect(outflow['consultants']).toBeDefined();
     expect(outflow['total']).toBeDefined();
 
     // Check total at month 1 (index 0) = land only
@@ -651,7 +651,7 @@ describe("Cash Flow Engine - Monthly Outflow Aggregation", () => {
     expect(outflow['total'][2]).toBe(5_000_000);
 
     // Check supervision is spread across construction
-    const supervisionTotal = outflow['supervision'].reduce((a: number, b: number) => a + b, 0);
+    const supervisionTotal = outflow['consultants'].reduce((a: number, b: number) => a + b, 0);
     expect(supervisionTotal).toBeCloseTo(2_400_000, 2);
 
     // Total across all months should equal sum of all items

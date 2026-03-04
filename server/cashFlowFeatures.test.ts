@@ -37,7 +37,7 @@ function createNadAlShebaProject(): { project: ProjectInput; costs: CostItemInpu
     { id: 7, name: 'رسوم الفرز', category: 'fees', totalAmount: 2_033_044, paymentType: 'lump_sum', paymentParams: { month: 2 }, fundingSource: 'developer', escrowEligible: false, phaseTag: 'pre_dev' },
     { id: 8, name: 'تسجيل RERA', category: 'fees', totalAmount: 150_000, paymentType: 'lump_sum', paymentParams: { month: 4 }, fundingSource: 'developer', escrowEligible: false, phaseTag: 'pre_dev' },
     // Construction/handover costs (blue section) - escrow eligible
-    { id: 9, name: 'الإشراف', category: 'supervision', totalAmount: 241_496, paymentType: 'monthly_fixed', paymentParams: {}, fundingSource: 'escrow', escrowEligible: true, phaseTag: 'construction' },
+    { id: 9, name: 'الإشراف', category: 'consultants', totalAmount: 241_496, paymentType: 'monthly_fixed', paymentParams: {}, fundingSource: 'escrow', escrowEligible: true, phaseTag: 'construction' },
     { id: 10, name: 'أتعاب المطور - مرحلة ثانية', category: 'developer', totalAmount: 2_915_670, paymentType: 'monthly_fixed', paymentParams: {}, fundingSource: 'developer', escrowEligible: false, phaseTag: 'construction' },
     { id: 11, name: 'عمولة البيع', category: 'marketing', totalAmount: 4_859_450, paymentType: 'sales_linked', paymentParams: {}, fundingSource: 'escrow', escrowEligible: true, phaseTag: 'construction' },
   ];
