@@ -196,23 +196,26 @@ export default function ExcelCashFlowPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-4 gap-2 mb-3">
-        <div className="bg-white rounded-lg border border-gray-200 px-3 py-2 shadow-sm">
-          <div className="text-[10px] text-gray-500 mb-0.5">إجمالي المصاريف</div>
-          <div className="text-sm font-bold text-gray-900">{fmt(grandTotal)} <span className="text-[10px] font-normal text-gray-400">درهم</span></div>
+      <div className="flex items-center gap-3 mb-3 flex-wrap">
+        <div className="bg-white rounded border border-gray-200 px-2 py-1 shadow-sm inline-flex items-center gap-1.5">
+          <span className="text-[10px] text-gray-500">إجمالي المصاريف:</span>
+          <span className="text-xs font-bold text-gray-900">{fmt(grandTotal)}</span>
+          <span className="text-[9px] text-gray-400">درهم</span>
         </div>
-        <div className="bg-white rounded-lg border border-green-200 px-3 py-2 shadow-sm">
-          <div className="text-[10px] text-green-600 mb-0.5">تم دفعه ✓</div>
-          <div className="text-sm font-bold text-green-700">{fmt(paidTotal)} <span className="text-[10px] font-normal text-gray-400">درهم</span></div>
+        <div className="bg-white rounded border border-green-200 px-2 py-1 shadow-sm inline-flex items-center gap-1.5">
+          <span className="text-[10px] text-green-600">تم دفعه ✓</span>
+          <span className="text-xs font-bold text-green-700">{fmt(paidTotal)}</span>
+          <span className="text-[9px] text-gray-400">درهم</span>
         </div>
-        <div className="bg-white rounded-lg border border-orange-200 px-3 py-2 shadow-sm">
-          <div className="text-[10px] text-orange-600 mb-0.5">المتبقي</div>
-          <div className="text-sm font-bold text-orange-700">{fmt(upcomingTotal)} <span className="text-[10px] font-normal text-gray-400">درهم</span></div>
+        <div className="bg-white rounded border border-orange-200 px-2 py-1 shadow-sm inline-flex items-center gap-1.5">
+          <span className="text-[10px] text-orange-600">المتبقي:</span>
+          <span className="text-xs font-bold text-orange-700">{fmt(upcomingTotal)}</span>
+          <span className="text-[9px] text-gray-400">درهم</span>
         </div>
-        <div className="bg-white rounded-lg border-2 border-red-300 px-3 py-2 shadow-sm">
-          <div className="text-[10px] text-red-600 mb-0.5 font-medium">المطلوب للـ 3 أشهر القادمة</div>
-          <div className="text-[10px] text-red-400">{next3Label}</div>
-          <div className="text-sm font-bold text-red-700">{fmt(next3MonthsTotal)} <span className="text-[10px] font-normal text-gray-400">درهم</span></div>
+        <div className="bg-white rounded border-2 border-red-300 px-2 py-1 shadow-sm inline-flex items-center gap-1.5">
+          <span className="text-[10px] text-red-600 font-medium">المطلوب للـ 3 أشهر ({next3Label}):</span>
+          <span className="text-xs font-bold text-red-700">{fmt(next3MonthsTotal)}</span>
+          <span className="text-[9px] text-gray-400">درهم</span>
         </div>
       </div>
 
