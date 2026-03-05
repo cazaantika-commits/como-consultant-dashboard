@@ -1,64 +1,25 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-
-// ===== DATES =====
-// Month 1 = April 2026, Pre-construction: M1-M6 (Apr-Sep 2026)
-// Construction: M7-M22 (Oct 2026 - Jan 2028) = 16 months
-// Handover: M23-M24 (Feb-Mar 2028)
-const PROJECT_START = new Date(2026, 3, 1); // April 2026
-const TODAY = new Date();
-
-function getMonthDate(monthNum: number): Date {
-  const d = new Date(PROJECT_START);
-  d.setMonth(d.getMonth() + monthNum - 1);
-  return d;
-}
-
-function formatQuarter(startMonth: number): string {
-  const d = getMonthDate(startMonth);
-  const months = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
-  return `${months[d.getMonth()]} ${d.getFullYear()}`;
-}
-
-function isQuarterPaid(endMonth: number): boolean {
-  const endDate = getMonthDate(endMonth);
-  endDate.setMonth(endDate.getMonth() + 1); // end of that month
-  return endDate <= TODAY;
-}
-
-function isCurrentQuarter(startMonth: number, endMonth: number): boolean {
-  for (let m = startMonth; m <= endMonth; m++) {
-    const d = getMonthDate(m);
-    if (d.getMonth() === TODAY.getMonth() && d.getFullYear() === TODAY.getFullYear()) return true;
-  }
-  return false;
-}
-
-// ===== QUARTERLY STRUCTURE =====
-interface Quarter {
-  label: string;
-  months: number[];
-  phase: "land" | "preCon" | "construction" | "handover";
-  phaseLabel: string;
-}
-
-const QUARTERS: Quarter[] = [
-  // Land purchase - single column
-  { label: "تم الشراء", months: [], phase: "land", phaseLabel: "شراء الأرض" },
-  // Pre-construction: 6 months = 2 quarters
-  { label: formatQuarter(1), months: [1,2,3], phase: "preCon", phaseLabel: "ما قبل البناء" },
-  { label: formatQuarter(4), months: [4,5,6], phase: "preCon", phaseLabel: "ما قبل البناء" },
-  // Construction: 16 months ≈ 5 quarters + 1 month
-  { label: formatQuarter(7), months: [7,8,9], phase: "construction", phaseLabel: "البناء" },
-  { label: formatQuarter(10), months: [10,11,12], phase: "construction", phaseLabel: "البناء" },
-  { label: formatQuarter(13), months: [13,14,15], phase: "construction", phaseLabel: "البناء" },
-  { label: formatQuarter(16), months: [16,17,18], phase: "construction", phaseLabel: "البناء" },
-  { label: formatQuarter(19), months: [19,20,21], phase: "construction", phaseLabel: "البناء" },
-  { label: formatQuarter(22), months: [22], phase: "construction", phaseLabel: "البناء" },
-  // Handover: 2 months
-  { label: formatQuarter(23), months: [23,24], phase: "handover", phaseLabel: "التسليم" },
-];
+import {
+  type PhaseDurations,
+  type ExpenseItem,
+  type QuarterDef,
+  DEFAULT_DURATIONS,
+  calculatePhases,
+  getTotalMonths,
+  distributeExpense,
+  buildQuarters,
+  aggregateToQuarters,
+  getInvestorExpenses,
+  getDefaultCustomDistribution,
+  getDefaultRevenue,
+  fmt,
+  getMonthDate,
+  isMonthPaid,
+  isCurrentMonth,
+  SALES_VALUE,
+} from "@/lib/cashFlowEngine";
 
 // ===== PHASE COLORS =====
 const PHASE_COLORS: Record<string, { bg: string; header: string; text: string; border: string }> = {
@@ -68,43 +29,8 @@ const PHASE_COLORS: Record<string, { bg: string; header: string; text: string; b
   handover: { bg: "bg-emerald-50", header: "bg-emerald-700 text-white", text: "text-emerald-900", border: "border-emerald-200" },
 };
 
-// ===== MONTHLY DATA (from Excel) =====
-type MonthData = { [month: number]: number };
-
-interface InvestorItem {
-  name: string;
-  total: number;
-  isLand: boolean; // true = paid at land purchase (before M1)
-  monthly: MonthData;
-}
-
-const ITEMS: InvestorItem[] = [
-  { name: "سعر الأرض", total: 18000000, isLand: true, monthly: {} },
-  { name: "عمولة وسيط الأرض", total: 180000, isLand: true, monthly: {} },
-  { name: "رسوم تسجيل الأرض", total: 720000, isLand: true, monthly: {} },
-  { name: "فحص التربة", total: 25000, isLand: false, monthly: { 1: 25000 } },
-  { name: "المسح الطبوغرافي", total: 8000, isLand: false, monthly: { 1: 8000 } },
-  { name: "أتعاب المطور (5%)", total: 4688250, isLand: false, monthly: { 1: 703237.5, 2: 234412.5, 3: 234412.5, 4: 234412.5, 5: 234412.5, 6: 234412.5, 7: 156275, 8: 156275, 9: 156275, 10: 156275, 11: 156275, 12: 156275, 13: 156275, 14: 156275, 15: 156275, 16: 156275, 17: 156275, 18: 156275, 19: 156275, 20: 156275, 21: 156275, 22: 156275, 23: 156275, 24: 156275 } },
-  { name: "أتعاب التصميم (2%)", total: 788559.6, isLand: false, monthly: { 1: 157711.92, 2: 78855.96, 3: 157711.92, 4: 157711.92, 5: 157711.92, 6: 78855.96 } },
-  { name: "رسوم الفرز", total: 2033044.4, isLand: false, monthly: { 2: 2033044.4 } },
-  { name: "تسجيل بيع على الخارطة - ريرا", total: 150000, isLand: false, monthly: { 4: 150000 } },
-  { name: "تسجيل الوحدات - ريرا", total: 39100, isLand: false, monthly: { 5: 39100 } },
-  { name: "رسوم المساح", total: 24000, isLand: false, monthly: { 4: 12000 } },
-  { name: "رسوم NOC للبيع", total: 10000, isLand: false, monthly: { 5: 10000, 23: 12000 } },
-  { name: "رسوم حساب الضمان", total: 140000, isLand: false, monthly: { 4: 140000 } },
-  { name: "إيداع حساب الضمان (20%)", total: 7885596, isLand: false, monthly: { 5: 7885596 } },
-  { name: "دفعة مقدمة للمقاول (10%)", total: 3942798, isLand: false, monthly: { 6: 3942798 } },
-  { name: "احتياطي وطوارئ (2%)", total: 788559.6, isLand: false, monthly: { 6: 788559.6, 13: 394279.8, 22: 394279.8 } },
-  { name: "التسويق والإعلان (2%)", total: 1875300, isLand: false, monthly: { 6: 375060, 8: 375060, 9: 281295, 10: 281295, 11: 93765, 12: 93765, 13: 93765, 14: 93765, 15: 93765, 16: 93765 } },
-  { name: "رسوم بنكية", total: 20000, isLand: false, monthly: { 7: 1111.11, 8: 1111.11, 9: 1111.11, 10: 1111.11, 11: 1111.11, 12: 1111.11, 13: 1111.11, 14: 1111.11, 15: 1111.11, 16: 1111.11, 17: 1111.11, 18: 1111.11, 19: 1111.11, 20: 1111.11, 21: 1111.11, 22: 1111.11, 23: 1111.11, 24: 1111.11 } },
-  { name: "رسوم المجتمع", total: 16000, isLand: false, monthly: { 6: 16000 } },
-];
-
-// ===== FORMAT =====
-function fmt(n: number): string {
-  if (n === 0) return "-";
-  return Math.round(n).toLocaleString("en-US");
-}
+const PROJECT_START = new Date(2026, 3, 1); // April 2026
+const TODAY = new Date();
 
 // ===== COMPONENT =====
 export default function ExcelCashFlowPage() {
@@ -113,42 +39,102 @@ export default function ExcelCashFlowPage() {
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const selectedProject = (projectsQuery.data || []).find((p: any) => p.id === selectedProjectId);
 
-  // Calculate quarterly totals for each item
+  // === DYNAMIC DURATIONS ===
+  const [durations, setDurations] = useState<PhaseDurations>({ ...DEFAULT_DURATIONS });
+  const [showControls, setShowControls] = useState(false);
+
+  // === EXPENSE OVERRIDES & SHIFTS ===
+  const [expenseOverrides, setExpenseOverrides] = useState<Record<string, { [month: number]: number }>>({});
+  const [expenseShifts, setExpenseShifts] = useState<Record<string, number>>({});
+  const [editingCell, setEditingCell] = useState<{ itemId: string; qi: number } | null>(null);
+  const [editValue, setEditValue] = useState("");
+
+  // Calculate phases
+  const phases = useMemo(() => calculatePhases(durations), [durations]);
+  const totalMonths = useMemo(() => getTotalMonths(durations), [durations]);
+
+  // Build quarters for investor table (includes land)
+  const quarters = useMemo(() =>
+    buildQuarters(phases, durations, PROJECT_START, false, true),
+    [phases, durations]
+  );
+
+  // Get base expenses
+  const baseExpenses = useMemo(() => getInvestorExpenses(), []);
+
+  // Default revenue for sales-linked items
+  const defaultRevenue = useMemo(() => getDefaultRevenue(phases, durations), [phases, durations]);
+
+  // Calculate monthly distributions for each expense
+  const monthlyDistributions = useMemo(() => {
+    return baseExpenses.map(item => {
+      const itemWithOverrides: ExpenseItem = {
+        ...item,
+        overrides: expenseOverrides[item.id],
+        shiftMonths: expenseShifts[item.id] || 0,
+      };
+
+      if (item.behavior === "CUSTOM") {
+        const customDist = getDefaultCustomDistribution(item.id, phases, durations);
+        // Apply overrides on top of custom
+        const merged = { ...customDist };
+        if (expenseOverrides[item.id]) {
+          for (const [m, v] of Object.entries(expenseOverrides[item.id])) {
+            merged[parseInt(m)] = v;
+          }
+        }
+        // Apply shift
+        if (expenseShifts[item.id]) {
+          const shifted: { [month: number]: number } = {};
+          for (const [m, v] of Object.entries(merged)) {
+            const newM = parseInt(m) + (expenseShifts[item.id] || 0);
+            if (newM >= 1 && newM <= totalMonths) shifted[newM] = v;
+          }
+          return shifted;
+        }
+        return merged;
+      }
+
+      return distributeExpense(itemWithOverrides, phases, durations, defaultRevenue);
+    });
+  }, [baseExpenses, phases, durations, expenseOverrides, expenseShifts, defaultRevenue, totalMonths]);
+
+  // Aggregate to quarters
   const quarterlyData = useMemo(() => {
-    return ITEMS.map(item => {
-      const qTotals = QUARTERS.map((q, qi) => {
-        if (qi === 0) return item.isLand ? item.total : 0; // land column
-        return q.months.reduce((sum, m) => sum + (item.monthly[m] || 0), 0);
+    return monthlyDistributions.map((monthly, idx) => {
+      const qTotals = quarters.map((q, qi) => {
+        if (qi === 0) return baseExpenses[idx].behavior === "FIXED_ABSOLUTE" ? baseExpenses[idx].total : 0;
+        return q.months.reduce((sum, m) => sum + (monthly[m] || 0), 0);
       });
       return qTotals;
     });
-  }, []);
+  }, [monthlyDistributions, quarters, baseExpenses]);
+
+  // Row totals (recalculated from quarterly data)
+  const rowTotals = useMemo(() => {
+    return quarterlyData.map(row => row.reduce((s, v) => s + v, 0));
+  }, [quarterlyData]);
 
   // Column totals
   const colTotals = useMemo(() => {
-    return QUARTERS.map((_, qi) => {
-      return quarterlyData.reduce((sum, row) => sum + row[qi], 0);
-    });
-  }, [quarterlyData]);
+    return quarters.map((_, qi) => quarterlyData.reduce((sum, row) => sum + row[qi], 0));
+  }, [quarterlyData, quarters]);
 
   // Grand total
-  const grandTotal = ITEMS.reduce((s, i) => s + i.total, 0);
+  const grandTotal = useMemo(() => rowTotals.reduce((s, v) => s + v, 0), [rowTotals]);
 
   // Paid vs upcoming
   const paidTotal = useMemo(() => {
     let paid = 0;
-    // Land is always paid
-    ITEMS.forEach(item => { if (item.isLand) paid += item.total; });
-    // Check each quarter
-    QUARTERS.forEach((q, qi) => {
-      if (qi === 0) return; // land handled above
+    quarters.forEach((q, qi) => {
+      if (qi === 0) { paid += colTotals[0]; return; }
       const lastMonth = q.months[q.months.length - 1];
-      if (isQuarterPaid(lastMonth)) {
+      if (isMonthPaid(lastMonth, PROJECT_START)) {
         paid += colTotals[qi];
       }
     });
     return paid;
-  }, [colTotals]);
+  }, [colTotals, quarters]);
 
   const upcomingTotal = grandTotal - paidTotal;
 
@@ -156,21 +142,22 @@ export default function ExcelCashFlowPage() {
   const next3MonthsTotal = useMemo(() => {
     let total = 0;
     const now = new Date();
-    for (let m = 1; m <= 24; m++) {
-      const d = getMonthDate(m);
+    for (let m = 1; m <= totalMonths; m++) {
+      const d = getMonthDate(m, PROJECT_START);
       if (d >= now) {
         const diffMonths = (d.getFullYear() - now.getFullYear()) * 12 + (d.getMonth() - now.getMonth());
         if (diffMonths >= 0 && diffMonths < 3) {
-          ITEMS.forEach(item => {
-            if (!item.isLand) total += (item.monthly[m] || 0);
+          monthlyDistributions.forEach((monthly, idx) => {
+            if (baseExpenses[idx].behavior !== "FIXED_ABSOLUTE") {
+              total += (monthly[m] || 0);
+            }
           });
         }
       }
     }
     return total;
-  }, []);
+  }, [monthlyDistributions, baseExpenses, totalMonths]);
 
-  // Next 3 months date range
   const next3Label = useMemo(() => {
     const months = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
     const s = new Date(TODAY);
@@ -183,7 +170,7 @@ export default function ExcelCashFlowPage() {
   const phaseSpans = useMemo(() => {
     const spans: { phase: string; label: string; count: number }[] = [];
     let current = "";
-    QUARTERS.forEach(q => {
+    quarters.forEach(q => {
       if (q.phaseLabel !== current) {
         spans.push({ phase: q.phase, label: q.phaseLabel, count: 1 });
         current = q.phaseLabel;
@@ -192,7 +179,62 @@ export default function ExcelCashFlowPage() {
       }
     });
     return spans;
+  }, [quarters]);
+
+  // Is quarter paid/current
+  const isQPaid = useCallback((q: QuarterDef, qi: number) => {
+    if (qi === 0) return true;
+    const lastMonth = q.months[q.months.length - 1];
+    return isMonthPaid(lastMonth, PROJECT_START);
   }, []);
+
+  const isQCurrent = useCallback((q: QuarterDef, qi: number) => {
+    if (qi === 0) return false;
+    return q.months.some(m => isCurrentMonth(m, PROJECT_START));
+  }, []);
+
+  // Handle cell edit
+  const startEdit = (itemId: string, qi: number, currentVal: number) => {
+    setEditingCell({ itemId, qi });
+    setEditValue(currentVal > 0 ? Math.round(currentVal).toString() : "");
+  };
+
+  const commitEdit = () => {
+    if (!editingCell) return;
+    const { itemId, qi } = editingCell;
+    const q = quarters[qi];
+    const newVal = parseFloat(editValue.replace(/,/g, "")) || 0;
+
+    // Distribute the new value across the quarter's months
+    const newOverrides = { ...expenseOverrides };
+    if (!newOverrides[itemId]) newOverrides[itemId] = {};
+
+    if (q.months.length > 0) {
+      const perMonth = newVal / q.months.length;
+      q.months.forEach(m => {
+        newOverrides[itemId][m] = perMonth;
+      });
+    }
+
+    setExpenseOverrides(newOverrides);
+    setEditingCell(null);
+    setEditValue("");
+  };
+
+  // Handle shift
+  const handleShift = (itemId: string, delta: number) => {
+    setExpenseShifts(prev => ({
+      ...prev,
+      [itemId]: (prev[itemId] || 0) + delta,
+    }));
+  };
+
+  // Reset all
+  const resetAll = () => {
+    setDurations({ ...DEFAULT_DURATIONS });
+    setExpenseOverrides({});
+    setExpenseShifts({});
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-4" dir="rtl">
@@ -224,10 +266,150 @@ export default function ExcelCashFlowPage() {
       ) : (
       <div>
       {/* Title */}
-      <div className="mb-3">
-        <h1 className="text-base font-bold text-gray-900">{selectedProject?.name || "المشروع"} — جدول مصاريف المستثمر</h1>
-        <p className="text-xs text-gray-500 mt-0.5">التمويل المباشر من المستثمر (لا يشمل مصاريف حساب الضمان)</p>
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <h1 className="text-base font-bold text-gray-900">{selectedProject?.name || "المشروع"} — جدول مصاريف المستثمر</h1>
+          <p className="text-xs text-gray-500 mt-0.5">التمويل المباشر من المستثمر (لا يشمل مصاريف حساب الضمان)</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowControls(!showControls)}
+            className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+          >
+            <span>⚙️</span>
+            <span>{showControls ? "إخفاء التحكم" : "تعديل المدد والتواريخ"}</span>
+          </button>
+          {(Object.keys(expenseOverrides).length > 0 || Object.keys(expenseShifts).length > 0 || JSON.stringify(durations) !== JSON.stringify(DEFAULT_DURATIONS)) && (
+            <button
+              onClick={resetAll}
+              className="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              إعادة تعيين الكل
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* === DURATION CONTROLS === */}
+      {showControls && (
+        <div className="mb-4 bg-gradient-to-l from-indigo-50 to-white rounded-lg border-2 border-indigo-200 shadow-sm overflow-hidden">
+          <div className="bg-indigo-700 text-white px-4 py-2 flex items-center gap-2">
+            <span>⚙️</span>
+            <span className="text-xs font-bold">لوحة التحكم — تعديل مدد المراحل</span>
+          </div>
+          <div className="p-4">
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              {/* Pre-construction duration */}
+              <div className="bg-amber-50 rounded-lg border border-amber-200 p-3">
+                <div className="text-[10px] font-bold text-amber-800 mb-2">ما قبل البناء</div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setDurations(d => ({ ...d, preCon: Math.max(3, d.preCon - 1) }))}
+                    className="w-7 h-7 rounded bg-amber-200 hover:bg-amber-300 text-amber-800 font-bold text-sm flex items-center justify-center"
+                  >−</button>
+                  <div className="flex-1 text-center">
+                    <span className="text-xl font-bold text-amber-900">{durations.preCon}</span>
+                    <span className="text-[10px] text-amber-600 mr-1">شهر</span>
+                  </div>
+                  <button
+                    onClick={() => setDurations(d => ({ ...d, preCon: Math.min(12, d.preCon + 1) }))}
+                    className="w-7 h-7 rounded bg-amber-200 hover:bg-amber-300 text-amber-800 font-bold text-sm flex items-center justify-center"
+                  >+</button>
+                </div>
+                {durations.preCon !== DEFAULT_DURATIONS.preCon && (
+                  <div className="text-[9px] text-amber-600 text-center mt-1">
+                    الأصل: {DEFAULT_DURATIONS.preCon} شهر
+                  </div>
+                )}
+              </div>
+
+              {/* Construction duration */}
+              <div className="bg-sky-50 rounded-lg border border-sky-200 p-3">
+                <div className="text-[10px] font-bold text-sky-800 mb-2">البناء</div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setDurations(d => ({ ...d, construction: Math.max(6, d.construction - 1) }))}
+                    className="w-7 h-7 rounded bg-sky-200 hover:bg-sky-300 text-sky-800 font-bold text-sm flex items-center justify-center"
+                  >−</button>
+                  <div className="flex-1 text-center">
+                    <span className="text-xl font-bold text-sky-900">{durations.construction}</span>
+                    <span className="text-[10px] text-sky-600 mr-1">شهر</span>
+                  </div>
+                  <button
+                    onClick={() => setDurations(d => ({ ...d, construction: Math.min(36, d.construction + 1) }))}
+                    className="w-7 h-7 rounded bg-sky-200 hover:bg-sky-300 text-sky-800 font-bold text-sm flex items-center justify-center"
+                  >+</button>
+                </div>
+                {durations.construction !== DEFAULT_DURATIONS.construction && (
+                  <div className="text-[9px] text-sky-600 text-center mt-1">
+                    الأصل: {DEFAULT_DURATIONS.construction} شهر
+                  </div>
+                )}
+              </div>
+
+              {/* Handover duration */}
+              <div className="bg-emerald-50 rounded-lg border border-emerald-200 p-3">
+                <div className="text-[10px] font-bold text-emerald-800 mb-2">التسليم</div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setDurations(d => ({ ...d, handover: Math.max(1, d.handover - 1) }))}
+                    className="w-7 h-7 rounded bg-emerald-200 hover:bg-emerald-300 text-emerald-800 font-bold text-sm flex items-center justify-center"
+                  >−</button>
+                  <div className="flex-1 text-center">
+                    <span className="text-xl font-bold text-emerald-900">{durations.handover}</span>
+                    <span className="text-[10px] text-emerald-600 mr-1">شهر</span>
+                  </div>
+                  <button
+                    onClick={() => setDurations(d => ({ ...d, handover: Math.min(6, d.handover + 1) }))}
+                    className="w-7 h-7 rounded bg-emerald-200 hover:bg-emerald-300 text-emerald-800 font-bold text-sm flex items-center justify-center"
+                  >+</button>
+                </div>
+                {durations.handover !== DEFAULT_DURATIONS.handover && (
+                  <div className="text-[9px] text-emerald-600 text-center mt-1">
+                    الأصل: {DEFAULT_DURATIONS.handover} شهر
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Total duration info */}
+            <div className="flex items-center justify-between bg-gray-100 rounded-lg px-4 py-2">
+              <div className="text-xs text-gray-600">
+                إجمالي المدة: <span className="font-bold text-gray-900">{totalMonths} شهر</span>
+                <span className="text-gray-400 mx-2">|</span>
+                الأصل: <span className="text-gray-500">{getTotalMonths(DEFAULT_DURATIONS)} شهر</span>
+              </div>
+              <div className="text-[10px] text-gray-500">
+                تغيير المدة يعيد توزيع المصاريف تلقائياً حسب طبيعة كل بند
+              </div>
+            </div>
+
+            {/* Expense shift controls */}
+            {Object.keys(expenseShifts).filter(k => expenseShifts[k] !== 0).length > 0 && (
+              <div className="mt-3 bg-orange-50 rounded-lg border border-orange-200 px-3 py-2">
+                <div className="text-[10px] font-bold text-orange-800 mb-1">التحريك (Shift) النشط:</div>
+                {Object.entries(expenseShifts).filter(([_, v]) => v !== 0).map(([id, shift]) => {
+                  const item = baseExpenses.find(e => e.id === id);
+                  return (
+                    <div key={id} className="flex items-center justify-between text-[10px] py-0.5">
+                      <span className="text-gray-700">{item?.name}</span>
+                      <div className="flex items-center gap-1">
+                        <span className={shift > 0 ? "text-red-600" : "text-green-600"}>
+                          {shift > 0 ? `تأخير ${shift} شهر` : `تبكير ${Math.abs(shift)} شهر`}
+                        </span>
+                        <button
+                          onClick={() => setExpenseShifts(prev => { const n = { ...prev }; delete n[id]; return n; })}
+                          className="text-gray-400 hover:text-red-500 mr-1"
+                        >✕</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-4 gap-3 mb-4">
@@ -251,18 +433,21 @@ export default function ExcelCashFlowPage() {
       </div>
 
       {/* TABLE */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-        <table className="w-full text-xs border-collapse">
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-auto">
+        <table className="w-full text-xs border-collapse min-w-[900px]">
           <thead>
             {/* Phase header */}
             <tr>
-              <th className="bg-gray-800 text-white px-1 py-1.5 text-right font-medium border-l border-gray-600 w-[160px] text-[10px]">البند</th>
-              <th className="bg-gray-800 text-white px-1 py-1.5 text-center font-medium border-l border-gray-600 w-[80px] text-[10px]">الإجمالي</th>
+              <th className="bg-gray-800 text-white px-1 py-1.5 text-right font-medium border-l border-gray-600 w-[140px] text-[10px] sticky right-0 z-10">البند</th>
+              <th className="bg-gray-800 text-white px-1 py-1.5 text-center font-medium border-l border-gray-600 w-[70px] text-[10px]">الإجمالي</th>
+              {showControls && (
+                <th className="bg-gray-800 text-white px-1 py-1.5 text-center font-medium border-l border-gray-600 w-[50px] text-[10px]">تحريك</th>
+              )}
               {phaseSpans.map((span, i) => (
                 <th
                   key={i}
                   colSpan={span.count}
-                  className={`${PHASE_COLORS[span.phase].header} px-1 py-1.5 text-center font-medium border-l border-gray-600 text-[10px]`}
+                  className={`${PHASE_COLORS[span.phase]?.header || "bg-gray-700 text-white"} px-1 py-1.5 text-center font-medium border-l border-gray-600 text-[10px]`}
                 >
                   {span.label}
                 </th>
@@ -270,11 +455,12 @@ export default function ExcelCashFlowPage() {
             </tr>
             {/* Quarter labels */}
             <tr className="bg-gray-100">
-              <th className="bg-gray-100 px-1 py-1 text-right text-gray-500 border-l border-gray-200 text-[9px]">الفترة</th>
+              <th className="bg-gray-100 px-1 py-1 text-right text-gray-500 border-l border-gray-200 text-[9px] sticky right-0 z-10">الفترة</th>
               <th className="bg-gray-100 px-1 py-1 text-center text-gray-500 border-l border-gray-200 text-[9px]">(درهم)</th>
-              {QUARTERS.map((q, qi) => {
-                const isPaid = qi === 0 || isQuarterPaid(q.months[q.months.length - 1] || 0);
-                const isCurrent = qi > 0 && isCurrentQuarter(q.months[0], q.months[q.months.length - 1]);
+              {showControls && <th className="bg-gray-100 px-1 py-1 text-center text-gray-400 border-l border-gray-200 text-[8px]">◄ ►</th>}
+              {quarters.map((q, qi) => {
+                const isPaid = isQPaid(q, qi);
+                const isCurrent = isQCurrent(q, qi);
                 return (
                   <th
                     key={qi}
@@ -291,56 +477,104 @@ export default function ExcelCashFlowPage() {
             </tr>
           </thead>
           <tbody>
-            {ITEMS.map((item, idx) => (
-              <tr key={idx} className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"} hover:bg-blue-50/30 transition-colors`}>
-                <td className="px-1 py-1 text-right border-l border-gray-100 font-medium text-gray-800 text-[10px]">
-                  {item.name}
+            {baseExpenses.map((item, idx) => (
+              <tr key={item.id} className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"} hover:bg-blue-50/30 transition-colors`}>
+                <td className="px-1 py-1 text-right border-l border-gray-100 font-medium text-gray-800 text-[10px] sticky right-0 z-10 bg-inherit">
+                  <div className="flex items-center gap-1">
+                    <span className="text-[8px] opacity-40">
+                      {item.behavior === "DISTRIBUTED" ? "📊" :
+                       item.behavior === "FIXED_RELATIVE" ? "📌" :
+                       item.behavior === "FIXED_ABSOLUTE" ? "🔒" :
+                       item.behavior === "PERIODIC" ? "🔄" :
+                       item.behavior === "SALES_LINKED" ? "💰" : "⚙️"}
+                    </span>
+                    <span>{item.name}</span>
+                  </div>
                 </td>
                 <td className="px-1 py-1 text-center border-l border-gray-100 font-bold text-gray-900 tabular-nums text-[10px]">
-                  {fmt(item.total)}
+                  {fmt(rowTotals[idx])}
                 </td>
-                {QUARTERS.map((q, qi) => {
+                {showControls && (
+                  <td className="px-1 py-1 text-center border-l border-gray-100 text-[10px]">
+                    {item.behavior !== "FIXED_ABSOLUTE" && (
+                      <div className="flex items-center justify-center gap-0.5">
+                        <button
+                          onClick={() => handleShift(item.id, -1)}
+                          className="w-4 h-4 rounded bg-green-100 hover:bg-green-200 text-green-700 text-[9px] flex items-center justify-center"
+                          title="تبكير شهر"
+                        >◄</button>
+                        <button
+                          onClick={() => handleShift(item.id, 1)}
+                          className="w-4 h-4 rounded bg-red-100 hover:bg-red-200 text-red-700 text-[9px] flex items-center justify-center"
+                          title="تأخير شهر"
+                        >►</button>
+                      </div>
+                    )}
+                  </td>
+                )}
+                {quarters.map((q, qi) => {
                   const val = quarterlyData[idx][qi];
-                  const isPaid = qi === 0 || isQuarterPaid(q.months[q.months.length - 1] || 0);
-                  const isCurrent = qi > 0 && isCurrentQuarter(q.months[0], q.months[q.months.length - 1]);
-                  const colors = PHASE_COLORS[q.phase];
+                  const isPaid = isQPaid(q, qi);
+                  const isCurrent = isQCurrent(q, qi);
+                  const colors = PHASE_COLORS[q.phase] || PHASE_COLORS.land;
+                  const isEditing = editingCell?.itemId === item.id && editingCell?.qi === qi;
+                  const hasOverride = item.id in expenseOverrides && q.months.some(m => m in (expenseOverrides[item.id] || {}));
+
                   return (
                     <td
                       key={qi}
-                      className={`px-1 py-1 text-center border-l tabular-nums text-[10px] ${
+                      className={`px-1 py-1 text-center border-l tabular-nums text-[10px] cursor-pointer ${
                         val === 0 ? "text-gray-300" :
                         isPaid ? "bg-gray-100 text-gray-400 line-through" :
                         isCurrent ? `bg-yellow-50 font-bold ${colors.text}` :
                         `${colors.bg} ${colors.text}`
-                      } ${colors.border}`}
+                      } ${colors.border} ${hasOverride ? "ring-1 ring-orange-400" : ""}`}
+                      onDoubleClick={() => {
+                        if (item.behavior !== "FIXED_ABSOLUTE" && qi > 0) {
+                          startEdit(item.id, qi, val);
+                        }
+                      }}
+                      title={item.behavior !== "FIXED_ABSOLUTE" && qi > 0 ? "انقر مرتين للتعديل" : ""}
                     >
-                      {val === 0 ? "-" : fmt(val)}
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={commitEdit}
+                          onKeyDown={(e) => { if (e.key === "Enter") commitEdit(); if (e.key === "Escape") setEditingCell(null); }}
+                          className="w-full text-center text-[10px] border border-indigo-400 rounded px-0.5 py-0 outline-none bg-white"
+                          autoFocus
+                        />
+                      ) : (
+                        val === 0 ? "-" : fmt(val)
+                      )}
                     </td>
                   );
                 })}
               </tr>
             ))}
 
-            {/* ROW 1: إجمالي رأس مال المشروع */}
+            {/* Total row */}
             <tr className="bg-gray-100 border-t-2 border-gray-300">
-              <td className="px-1 py-1 text-right border-l border-gray-200 font-medium text-gray-700 text-[10px]">إجمالي رأس مال المشروع</td>
+              <td className="px-1 py-1 text-right border-l border-gray-200 font-medium text-gray-700 text-[10px] sticky right-0 z-10 bg-gray-100">إجمالي رأس مال المشروع</td>
               <td className="px-1 py-1 text-center border-l border-gray-200 font-bold text-gray-800 tabular-nums text-[10px]">{fmt(grandTotal)}</td>
-              {QUARTERS.map((q, qi) => {
-                const val = colTotals[qi];
-                return (
-                  <td key={qi} className="px-1 py-1 text-center border-l border-gray-200 tabular-nums text-gray-600 text-[10px]">
-                    {val === 0 ? "-" : fmt(val)}
-                  </td>
-                );
-              })}
+              {showControls && <td className="border-l border-gray-200"></td>}
+              {quarters.map((_, qi) => (
+                <td key={qi} className="px-1 py-1 text-center border-l border-gray-200 tabular-nums text-gray-600 text-[10px]">
+                  {colTotals[qi] === 0 ? "-" : fmt(colTotals[qi])}
+                </td>
+              ))}
             </tr>
-            {/* ROW 2: المبالغ المدفوعة */}
+
+            {/* Paid row */}
             <tr className="bg-green-50 border-t border-gray-200">
-              <td className="px-1 py-1 text-right border-l border-gray-200 font-medium text-green-700 text-[10px]">المبالغ المدفوعة</td>
+              <td className="px-1 py-1 text-right border-l border-gray-200 font-medium text-green-700 text-[10px] sticky right-0 z-10 bg-green-50">المبالغ المدفوعة</td>
               <td className="px-1 py-1 text-center border-l border-gray-200 font-bold text-green-700 tabular-nums text-[10px]">{fmt(paidTotal)}</td>
-              {QUARTERS.map((q, qi) => {
+              {showControls && <td className="border-l border-gray-200"></td>}
+              {quarters.map((q, qi) => {
                 const val = colTotals[qi];
-                const isPaid = qi === 0 || isQuarterPaid(q.months[q.months.length - 1] || 0);
+                const isPaid = isQPaid(q, qi);
                 return (
                   <td key={qi} className="px-1 py-1 text-center border-l border-gray-200 tabular-nums text-[10px] text-green-600">
                     {isPaid && val > 0 ? fmt(val) : "-"}
@@ -348,14 +582,16 @@ export default function ExcelCashFlowPage() {
                 );
               })}
             </tr>
-            {/* ROW 3: رأس المال المطلوب سداده */}
+
+            {/* Remaining row */}
             <tr className="bg-gray-800 text-white font-bold border-t border-gray-600">
-              <td className="px-1 py-1.5 text-right border-l border-gray-600 text-[10px]">رأس المال المطلوب سداده</td>
+              <td className="px-1 py-1.5 text-right border-l border-gray-600 text-[10px] sticky right-0 z-10 bg-gray-800">رأس المال المطلوب سداده</td>
               <td className="px-1 py-1.5 text-center border-l border-gray-600 tabular-nums text-[10px]">{fmt(upcomingTotal)}</td>
-              {QUARTERS.map((q, qi) => {
+              {showControls && <td className="border-l border-gray-600"></td>}
+              {quarters.map((q, qi) => {
                 const val = colTotals[qi];
-                const isPaid = qi === 0 || isQuarterPaid(q.months[q.months.length - 1] || 0);
-                const isCurrent = qi > 0 && isCurrentQuarter(q.months[0], q.months[q.months.length - 1]);
+                const isPaid = isQPaid(q, qi);
+                const isCurrent = isQCurrent(q, qi);
                 return (
                   <td
                     key={qi}
@@ -373,7 +609,7 @@ export default function ExcelCashFlowPage() {
       </div>
 
       {/* Legend */}
-      <div className="mt-4 flex items-center gap-6 text-[10px] text-gray-500">
+      <div className="mt-4 flex flex-wrap items-center gap-4 text-[10px] text-gray-500">
         <div className="flex items-center gap-1">
           <span className="w-3 h-3 bg-gray-200 rounded-sm border border-gray-300 inline-block"></span>
           <span className="line-through text-gray-400">تم الدفع</span>
@@ -398,7 +634,38 @@ export default function ExcelCashFlowPage() {
           <span className="w-3 h-3 bg-emerald-50 rounded-sm border border-emerald-200 inline-block"></span>
           التسليم
         </div>
+        <div className="border-r border-gray-300 h-3 mx-1"></div>
+        <div className="flex items-center gap-1">
+          <span className="text-[8px]">🔒</span> ثابت
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-[8px]">📌</span> نسبي
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-[8px]">📊</span> موزع
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-[8px]">🔄</span> دوري
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-[8px]">💰</span> مبيعات
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-[8px]">⚙️</span> مخصص
+        </div>
+        {showControls && (
+          <div className="flex items-center gap-1 text-orange-500">
+            <span className="w-3 h-3 rounded-sm ring-1 ring-orange-400 inline-block"></span>
+            معدّل يدوياً
+          </div>
+        )}
       </div>
+
+      {showControls && (
+        <div className="mt-2 text-[9px] text-gray-400">
+          💡 انقر مرتين على أي خلية لتعديل قيمتها يدوياً | استخدم أزرار ◄ ► لتحريك المصروف بشهر
+        </div>
+      )}
       </div>
       )}
     </div>
