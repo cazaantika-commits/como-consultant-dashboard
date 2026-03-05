@@ -619,57 +619,98 @@ function LoadingState() {
 // ═══════════════════════════════════════════════════════════════
 
 function KeyNumbersCards({ dual }: { dual: any }) {
+  const profitMargin = dual.totalSalesRevenue > 0 ? ((dual.netProfit / dual.totalSalesRevenue) * 100).toFixed(1) : '0';
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-      <Card className="bg-gradient-to-br from-red-500/10 to-red-500/5 border-red-200/50">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <TrendingDown className="h-4 w-4 text-red-500" />
-            <span className="text-xs text-muted-foreground">إجمالي التكاليف</span>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Total Costs Card */}
+      <Card className="border-r-4 border-r-red-500 shadow-sm">
+        <CardContent className="p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-1">إجمالي تكاليف المشروع</p>
+              <p className="text-2xl font-bold text-foreground tracking-tight">{formatAED(dual.totalProjectCost)}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">درهم إماراتي</p>
+            </div>
+            <div className="p-2.5 bg-red-50 dark:bg-red-950/30 rounded-xl">
+              <TrendingDown className="h-5 w-5 text-red-500" />
+            </div>
           </div>
-          <div className="text-lg font-bold text-red-600">{formatAED(dual.totalProjectCost)} AED</div>
-          <div className="flex gap-2 mt-1 text-xs">
-            <span className="text-amber-600">مستثمر: {formatAED(dual.developerCosts)}</span>
-            <span className="text-blue-600">إسكرو: {formatAED(dual.escrowCosts)}</span>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-200/50">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <TrendingUp className="h-4 w-4 text-green-500" />
-            <span className="text-xs text-muted-foreground">إجمالي الإيرادات</span>
-          </div>
-          <div className="text-lg font-bold text-green-600">{formatAED(dual.totalSalesRevenue)} AED</div>
-          <div className="text-xs mt-1 text-muted-foreground">
-            صافي الربح: <span className="font-semibold text-green-600">{formatAED(dual.netProfit)}</span>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="bg-gradient-to-br from-amber-500/10 to-amber-500/5 border-amber-200/50">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
-            <span className="text-xs text-muted-foreground">أقصى تعرض للمستثمر</span>
-          </div>
-          <div className="text-lg font-bold text-amber-600">{formatAED(dual.developerMaxExposure)} AED</div>
-          <div className="text-xs mt-1 text-muted-foreground">
-            الشهر: {dual.developerMaxExposureLabel}
+          <Separator className="my-3" />
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="bg-amber-50/80 dark:bg-amber-950/20 rounded-md px-2.5 py-1.5">
+              <span className="text-muted-foreground">تمويل المستثمر</span>
+              <p className="font-semibold text-amber-700 mt-0.5">{formatAED(dual.developerCosts)}</p>
+            </div>
+            <div className="bg-blue-50/80 dark:bg-blue-950/20 rounded-md px-2.5 py-1.5">
+              <span className="text-muted-foreground">من حساب الإسكرو</span>
+              <p className="font-semibold text-blue-700 mt-0.5">{formatAED(dual.escrowCosts)}</p>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-200/50">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <Percent className="h-4 w-4 text-blue-500" />
-            <span className="text-xs text-muted-foreground">العائد على الاستثمار</span>
+      {/* Revenue Card */}
+      <Card className="border-r-4 border-r-emerald-500 shadow-sm">
+        <CardContent className="p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-1">إجمالي إيرادات المبيعات</p>
+              <p className="text-2xl font-bold text-foreground tracking-tight">{formatAED(dual.totalSalesRevenue)}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">درهم إماراتي</p>
+            </div>
+            <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/30 rounded-xl">
+              <TrendingUp className="h-5 w-5 text-emerald-500" />
+            </div>
           </div>
-          <div className="text-lg font-bold text-blue-600">{dual.roi.toFixed(1)}%</div>
-          <div className="text-xs mt-1 text-muted-foreground">
-            البناء: {formatAED(dual.constructionCost)} AED
+          <Separator className="my-3" />
+          <div className="bg-emerald-50/80 dark:bg-emerald-950/20 rounded-md px-3 py-2">
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-muted-foreground">صافي الربح المتوقع</span>
+              <span className="text-xs font-medium text-emerald-600">هامش {profitMargin}%</span>
+            </div>
+            <p className="font-bold text-emerald-700 text-base mt-0.5">{formatAED(dual.netProfit)} AED</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Max Exposure Card */}
+      <Card className="border-r-4 border-r-amber-500 shadow-sm">
+        <CardContent className="p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-1">أقصى تعرض نقدي للمستثمر</p>
+              <p className="text-2xl font-bold text-foreground tracking-tight">{formatAED(dual.developerMaxExposure)}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">درهم إماراتي</p>
+            </div>
+            <div className="p-2.5 bg-amber-50 dark:bg-amber-950/30 rounded-xl">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+            </div>
+          </div>
+          <Separator className="my-3" />
+          <div className="bg-amber-50/80 dark:bg-amber-950/20 rounded-md px-3 py-2">
+            <p className="text-xs text-muted-foreground">أعلى مبلغ يحتاجه المستثمر في شهر واحد</p>
+            <p className="text-sm font-semibold text-amber-700 mt-0.5">الذروة في: {dual.developerMaxExposureLabel}</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ROI Card */}
+      <Card className="border-r-4 border-r-blue-500 shadow-sm">
+        <CardContent className="p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground mb-1">العائد على رأس المال المستثمر</p>
+              <p className="text-2xl font-bold text-foreground tracking-tight">{dual.roi.toFixed(1)}%</p>
+              <p className="text-xs text-muted-foreground mt-0.5">نسبة العائد</p>
+            </div>
+            <div className="p-2.5 bg-blue-50 dark:bg-blue-950/30 rounded-xl">
+              <Percent className="h-5 w-5 text-blue-500" />
+            </div>
+          </div>
+          <Separator className="my-3" />
+          <div className="bg-blue-50/80 dark:bg-blue-950/20 rounded-md px-3 py-2">
+            <p className="text-xs text-muted-foreground">الربح مقسوماً على إجمالي ما دفعه المستثمر</p>
+            <p className="text-sm font-semibold text-blue-700 mt-0.5">تكلفة البناء: {formatAED(dual.constructionCost)} AED</p>
           </div>
         </CardContent>
       </Card>
@@ -683,101 +724,188 @@ function KeyNumbersCards({ dual }: { dual: any }) {
 
 function OverviewTab({ dual }: { dual: any }) {
   const table = dual.monthlyTable || [];
+  const fs = dual.fundingStructure || {};
 
   return (
-    <div className="space-y-6">
-      {/* Funding Structure */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Wallet className="h-4 w-4" />
-            هيكل التمويل
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            <div className="text-center p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg">
-              <div className="text-xs text-muted-foreground mb-1">إيداع الإسكرو</div>
-              <div className="font-bold text-amber-600">{formatAED(dual.fundingStructure.escrowDeposit)}</div>
-              <div className="text-xs text-muted-foreground">20%</div>
-            </div>
-            <div className="text-center p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
-              <div className="text-xs text-muted-foreground mb-1">دفعة مقدمة للمقاول</div>
-              <div className="font-bold text-orange-600">{formatAED(dual.fundingStructure.contractorAdvance)}</div>
-              <div className="text-xs text-muted-foreground">10%</div>
-            </div>
-            <div className="text-center p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg">
-              <div className="text-xs text-muted-foreground mb-1">هامش سيولة</div>
-              <div className="font-bold text-yellow-600">{formatAED(dual.fundingStructure.liquidityBuffer)}</div>
-              <div className="text-xs text-muted-foreground">5%</div>
-            </div>
-            <div className="text-center p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border-2 border-red-200">
-              <div className="text-xs text-muted-foreground mb-1">إجمالي المستثمر (بناء)</div>
-              <div className="font-bold text-red-600">{formatAED(dual.fundingStructure.totalDeveloperConstruction)}</div>
-              <div className="text-xs text-muted-foreground">35%</div>
-            </div>
-            <div className="text-center p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border-2 border-blue-200">
-              <div className="text-xs text-muted-foreground mb-1">من الإسكرو (بناء)</div>
-              <div className="font-bold text-blue-600">{formatAED(dual.fundingStructure.escrowConstruction)}</div>
-              <div className="text-xs text-muted-foreground">65%</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-8">
+      {/* Section 1: Funding Structure */}
+      <div>
+        <div className="mb-4">
+          <h3 className="text-lg font-bold flex items-center gap-2 mb-1">
+            <Wallet className="h-5 w-5 text-primary" />
+            هيكل تمويل المشروع
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            يوضح كيف يتم توزيع تكلفة البناء بين المستثمر (يدفع مقدماً) وحساب الإسكرو (يموّل من مبيعات الوحدات)
+          </p>
+        </div>
 
-      {/* Cash Flow Chart (SVG) */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            التدفق النقدي المزدوج
-          </CardTitle>
-          <CardDescription>
-            <span className="inline-flex items-center gap-1 ml-3"><span className="w-3 h-3 rounded bg-amber-500 inline-block" /> تراكمي المستثمر</span>
-            <span className="inline-flex items-center gap-1 ml-3"><span className="w-3 h-3 rounded bg-blue-500 inline-block" /> رصيد الإسكرو</span>
-            <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-500 inline-block" /> صافي تراكمي</span>
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <DualCashFlowChart table={table} phases={dual.phases} />
-        </CardContent>
-      </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Developer Funding */}
+          <Card className="border-r-4 border-r-amber-500">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold text-amber-700 flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-amber-500" />
+                تمويل المستثمر — يُدفع مقدماً قبل بدء الإيرادات
+              </CardTitle>
+              <CardDescription className="text-xs">
+                هذه المبالغ يدفعها المستثمر من جيبه لتغطية المراحل الأولى وضمان بدء البناء
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-2">
+                <div className="flex justify-between items-center py-2 px-3 bg-amber-50/60 dark:bg-amber-950/15 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium">إيداع حساب الإسكرو</p>
+                    <p className="text-xs text-muted-foreground">مطلوب من هيئة التنظيم العقاري (RERA)</p>
+                  </div>
+                  <div className="text-left">
+                    <p className="font-bold text-amber-700">{formatAED(fs.escrowDeposit)}</p>
+                    <p className="text-xs text-muted-foreground">20% من تكلفة البناء</p>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center py-2 px-3 bg-amber-50/60 dark:bg-amber-950/15 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium">دفعة مقدمة للمقاول</p>
+                    <p className="text-xs text-muted-foreground">لبدء أعمال البناء وتجهيز الموقع</p>
+                  </div>
+                  <div className="text-left">
+                    <p className="font-bold text-amber-700">{formatAED(fs.contractorAdvance)}</p>
+                    <p className="text-xs text-muted-foreground">10% من تكلفة البناء</p>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center py-2 px-3 bg-amber-50/60 dark:bg-amber-950/15 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium">هامش سيولة احتياطي</p>
+                    <p className="text-xs text-muted-foreground">لتغطية أي فجوات نقدية غير متوقعة</p>
+                  </div>
+                  <div className="text-left">
+                    <p className="font-bold text-amber-700">{formatAED(fs.liquidityBuffer)}</p>
+                    <p className="text-xs text-muted-foreground">5% من تكلفة البناء</p>
+                  </div>
+                </div>
+              </div>
+              <Separator />
+              <div className="flex justify-between items-center py-2 px-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg border border-amber-300/50">
+                <p className="font-bold text-sm">إجمالي تمويل المستثمر للبناء</p>
+                <div className="text-left">
+                  <p className="font-bold text-amber-800 text-base">{formatAED(fs.totalDeveloperConstruction)}</p>
+                  <p className="text-xs text-muted-foreground">35% من إجمالي البناء</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* Cost by Category */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Layers className="h-4 w-4" />
+          {/* Escrow Funding */}
+          <Card className="border-r-4 border-r-blue-500">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold text-blue-700 flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-blue-500" />
+                تمويل الإسكرو — يُموّل من مبيعات الوحدات
+              </CardTitle>
+              <CardDescription className="text-xs">
+                المبالغ التي تُدفع من حساب الإسكرو للمقاول أثناء البناء — مصدرها أقساط المشترين
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between items-center py-3 px-3 bg-blue-50/60 dark:bg-blue-950/15 rounded-lg">
+                <div>
+                  <p className="text-sm font-medium">تمويل البناء من الإسكرو</p>
+                  <p className="text-xs text-muted-foreground">يُصرف شهرياً حسب تقدم الأعمال</p>
+                </div>
+                <div className="text-left">
+                  <p className="font-bold text-blue-700 text-base">{formatAED(fs.escrowConstruction)}</p>
+                  <p className="text-xs text-muted-foreground">65% من تكلفة البناء</p>
+                </div>
+              </div>
+              <Separator />
+              <div className="bg-blue-50/40 dark:bg-blue-950/10 rounded-lg p-3">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  <strong>كيف يعمل:</strong> عندما يشتري العميل وحدة، تدخل أقساطه في حساب الإسكرو المحمي.
+                  يُستخدم هذا الحساب لدفع مستحقات المقاول شهرياً حسب نسبة إنجاز البناء.
+                  المستثمر لا يتحمل هذا المبلغ — بل يأتي من المشترين.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Section 2: Cash Flow Chart */}
+      <div>
+        <div className="mb-4">
+          <h3 className="text-lg font-bold flex items-center gap-2 mb-1">
+            <BarChart3 className="h-5 w-5 text-primary" />
+            منحنى التدفق النقدي
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            يعرض حركة الأموال عبر الزمن: ما يدفعه المستثمر (الخط البرتقالي)، رصيد الإسكرو (الأزرق)، والصافي التراكمي (الأخضر)
+          </p>
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-wrap gap-4 mb-4 justify-center">
+              <span className="inline-flex items-center gap-2 text-sm"><span className="w-4 h-1 rounded bg-amber-500 inline-block" /> <span className="text-muted-foreground">تراكمي المستثمر (ما دفعه من جيبه)</span></span>
+              <span className="inline-flex items-center gap-2 text-sm"><span className="w-4 h-1 rounded bg-blue-500 inline-block" /> <span className="text-muted-foreground">رصيد حساب الإسكرو</span></span>
+              <span className="inline-flex items-center gap-2 text-sm"><span className="w-4 h-1 rounded bg-emerald-500 inline-block" /> <span className="text-muted-foreground">صافي التدفق التراكمي</span></span>
+            </div>
+            <DualCashFlowChart table={table} phases={dual.phases} />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section 3: Cost Distribution */}
+      <div>
+        <div className="mb-4">
+          <h3 className="text-lg font-bold flex items-center gap-2 mb-1">
+            <Layers className="h-5 w-5 text-primary" />
             توزيع التكاليف حسب الفئة
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {Object.keys(dual.costByCategory).length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">أضف بنود تكاليف لعرض التوزيع</p>
-          ) : (
-            <div className="space-y-2">
-              {Object.entries(dual.costByCategory)
-                .sort(([, a]: any, [, b]: any) => b - a)
-                .map(([cat, amount]: [string, any]) => {
-                  const pct = dual.totalProjectCost > 0 ? (amount / dual.totalProjectCost) * 100 : 0;
-                  return (
-                    <div key={cat} className="flex items-center gap-3">
-                      <div className="w-32 text-sm truncate">{CATEGORY_LABELS[cat] || cat}</div>
-                      <div className="flex-1 h-6 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all"
-                          style={{ width: `${pct}%`, backgroundColor: CATEGORY_COLORS[cat] || '#6b7280' }}
-                        />
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            يوضح نسبة كل بند من إجمالي تكاليف المشروع — البناء عادةً يشكل الجزء الأكبر
+          </p>
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            {Object.keys(dual.costByCategory).length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">أضف بنود تكاليف من تبويب "بنود التكاليف" لعرض التوزيع</p>
+            ) : (
+              <div className="space-y-3">
+                {Object.entries(dual.costByCategory)
+                  .sort(([, a]: any, [, b]: any) => b - a)
+                  .map(([cat, amount]: [string, any]) => {
+                    const pct = dual.totalProjectCost > 0 ? (amount / dual.totalProjectCost) * 100 : 0;
+                    return (
+                      <div key={cat} className="group">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-medium flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-sm inline-block" style={{ backgroundColor: CATEGORY_COLORS[cat] || '#6b7280' }} />
+                            {CATEGORY_LABELS[cat] || cat}
+                          </span>
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm font-mono font-semibold">{formatAED(amount)} AED</span>
+                            <Badge variant="secondary" className="text-xs min-w-[50px] justify-center">{pct.toFixed(1)}%</Badge>
+                          </div>
+                        </div>
+                        <div className="h-3 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{ width: `${pct}%`, backgroundColor: CATEGORY_COLORS[cat] || '#6b7280' }}
+                          />
+                        </div>
                       </div>
-                      <div className="w-24 text-sm text-left font-mono">{formatAED(amount)}</div>
-                      <div className="w-12 text-xs text-muted-foreground text-left">{pct.toFixed(1)}%</div>
-                    </div>
-                  );
-                })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                    );
+                  })}
+                <Separator className="my-2" />
+                <div className="flex justify-between items-center pt-1">
+                  <span className="text-sm font-bold">إجمالي تكاليف المشروع</span>
+                  <span className="text-base font-bold font-mono">{formatAED(dual.totalProjectCost)} AED</span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
@@ -1300,348 +1428,213 @@ function CostItemDialog({ cfProjectId, open, onOpenChange, onSaved, editItem }: 
 
 function MonthlyTableTab({ dual }: { dual: any }) {
   const table = dual.monthlyTable || [];
-  const [viewMode, setViewMode] = useState<'summary' | 'detailed'>('summary');
+  const phases = dual.phases;
+  if (!table.length || !phases) return <div className="text-center py-8 text-muted-foreground">لا توجد بيانات</div>;
 
-  // Calculate phase subtotals
-  const phaseSubtotals = {
-    pre_dev: { devOut: 0, devCum: 0, escIn: 0, escOut: 0, escBal: 0, net: 0, cumNet: 0 },
-    construction: { devOut: 0, devCum: 0, escIn: 0, escOut: 0, escBal: 0, net: 0, cumNet: 0 },
-    handover: { devOut: 0, devCum: 0, escIn: 0, escOut: 0, escBal: 0, net: 0, cumNet: 0 },
-  };
-  let lastRow: any = null;
+  // ── Build item-level row data (like Excel: each cost item = one row, months = columns) ──
+  // Collect all unique item names from developer and escrow breakdowns
+  const devItemNames = new Set<string>();
+  const escItemNames = new Set<string>();
   for (const row of table) {
-    const p = phaseSubtotals[row.phase as keyof typeof phaseSubtotals];
-    if (p) {
-      p.devOut += row.developerOutflow;
-      p.escIn += row.escrowInflow;
-      p.escOut += row.escrowOutflow;
-      p.net += row.netCashFlow;
-    }
-    lastRow = row;
+    for (const name of Object.keys(row.developerBreakdown || {})) devItemNames.add(name);
+    for (const name of Object.keys(row.escrowBreakdown || {})) escItemNames.add(name);
   }
 
-  // Find phase boundaries for separator rows
-  const phaseBoundaries: Record<string, number> = {};
-  for (let i = 0; i < table.length; i++) {
-    if (!phaseBoundaries[table[i].phase]) {
-      phaseBoundaries[table[i].phase] = i;
-    }
-  }
+  // Build monthly arrays for each item
+  const buildItemRows = (itemNames: Set<string>, breakdownKey: 'developerBreakdown' | 'escrowBreakdown') => {
+    return Array.from(itemNames).map(name => {
+      const monthly = table.map((row: any) => Math.round((row[breakdownKey] || {})[name] || 0));
+      const total = monthly.reduce((s: number, v: number) => s + v, 0);
+      return { name, monthly, total };
+    }).filter(item => item.total > 0).sort((a, b) => b.total - a.total);
+  };
 
-  const totalDevOut = table.reduce((s: number, r: any) => s + r.developerOutflow, 0);
-  const totalEscIn = table.reduce((s: number, r: any) => s + r.escrowInflow, 0);
-  const totalEscOut = table.reduce((s: number, r: any) => s + r.escrowOutflow, 0);
+  const devItems = buildItemRows(devItemNames, 'developerBreakdown');
+  const escItems = buildItemRows(escItemNames, 'escrowBreakdown');
+
+  // Monthly totals for each section
+  const devMonthlyTotals = table.map((_: any, i: number) => devItems.reduce((s, item) => s + item.monthly[i], 0));
+  const escMonthlyTotals = table.map((_: any, i: number) => escItems.reduce((s, item) => s + item.monthly[i], 0));
+  const devGrandTotal = devItems.reduce((s, item) => s + item.total, 0);
+  const escGrandTotal = escItems.reduce((s, item) => s + item.total, 0);
+
+  // Escrow balance row (cumulative: inflow - outflow)
+  const escrowBalanceRow = table.map((row: any) => row.escrowBalance);
+
+  // Phase column grouping
+  const phaseGroups = [
+    { key: 'pre_dev', label: 'ما قبل البناء', start: phases.preDev.start - 1, end: phases.preDev.end - 1, color: '#f59e0b' },
+    { key: 'construction', label: 'مرحلة البناء', start: phases.construction.start - 1, end: phases.construction.end - 1, color: '#3b82f6' },
+    { key: 'handover', label: 'التسليم', start: phases.handover.start - 1, end: phases.handover.end - 1, color: '#10b981' },
+  ];
+
+  // Format number for cells
+  const fmtCell = (v: number) => {
+    if (v === 0) return '';
+    return v.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  };
+
+  // Styles
+  const cellBase = 'py-1.5 px-2 text-left font-mono text-[11px] whitespace-nowrap border-l border-slate-200';
+  const headerCell = 'py-2 px-2 text-center font-semibold text-[10px] whitespace-nowrap border-l border-slate-300';
+  const stickyName = 'py-1.5 px-3 text-right font-medium text-[11px] whitespace-nowrap sticky right-0 z-10 min-w-[200px] border-l border-slate-200';
+  const stickyTotal = 'py-1.5 px-2 text-left font-mono font-semibold text-[11px] whitespace-nowrap sticky right-[200px] z-10 min-w-[100px] border-l border-slate-300';
 
   return (
-    <div className="space-y-4">
-      {/* Header with summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200/50 rounded-lg p-3">
-          <div className="text-[10px] text-amber-600 font-medium mb-0.5">إجمالي تمويل المستثمر</div>
-          <div className="text-base font-bold text-amber-700 font-mono">{formatFullAED(totalDevOut)}</div>
-        </div>
-        <div className="bg-green-50 dark:bg-green-950/20 border border-green-200/50 rounded-lg p-3">
-          <div className="text-[10px] text-green-600 font-medium mb-0.5">إجمالي إيرادات المبيعات</div>
-          <div className="text-base font-bold text-green-700 font-mono">{formatFullAED(totalEscIn)}</div>
-        </div>
-        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200/50 rounded-lg p-3">
-          <div className="text-[10px] text-red-600 font-medium mb-0.5">إجمالي مدفوعات الإسكرو</div>
-          <div className="text-base font-bold text-red-700 font-mono">{formatFullAED(totalEscOut)}</div>
-        </div>
-        <div className={`border rounded-lg p-3 ${(lastRow?.cumulativeNet || 0) >= 0 ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200/50' : 'bg-red-50 dark:bg-red-950/20 border-red-200/50'}`}>
-          <div className="text-[10px] text-muted-foreground font-medium mb-0.5">صافي التدفق النقدي</div>
-          <div className={`text-base font-bold font-mono ${(lastRow?.cumulativeNet || 0) >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-            {formatFullAED(lastRow?.cumulativeNet || 0)}
-          </div>
-        </div>
-      </div>
-
-      {/* Controls */}
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold flex items-center gap-2">
+        <h3 className="font-semibold flex items-center gap-2 text-base">
           <FileSpreadsheet className="h-4 w-4" />
-          الجدول الشهري التفصيلي
-          <Badge variant="secondary" className="text-xs">{table.length} شهر</Badge>
+          جدول التدفقات النقدية الشهري
         </h3>
-        <div className="flex gap-2">
-          <Button
-            variant={viewMode === 'summary' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setViewMode('summary')}
-          >
-            ملخص
-          </Button>
-          <Button
-            variant={viewMode === 'detailed' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setViewMode('detailed')}
-          >
-            تفصيلي
-          </Button>
-        </div>
+        <Badge variant="secondary">{table.length} شهر</Badge>
       </div>
 
-      {/* Main Table */}
       <Card className="border shadow-sm">
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-[13px] border-collapse" dir="rtl">
-              <thead>
-                <tr className="bg-slate-800 text-white">
-                  <th className="py-2.5 px-3 text-right font-semibold sticky right-0 bg-slate-800 z-10 min-w-[50px]">#</th>
-                  <th className="py-2.5 px-3 text-right font-semibold sticky right-[50px] bg-slate-800 z-10 min-w-[90px]">الشهر</th>
-                  <th className="py-2.5 px-3 text-center font-semibold min-w-[80px]">المرحلة</th>
-                  <th className="py-2.5 px-3 text-left font-semibold min-w-[120px]" style={{ color: '#fbbf24' }}>مصروفات المستثمر</th>
-                  <th className="py-2.5 px-3 text-left font-semibold min-w-[130px]" style={{ color: '#fbbf24' }}>تراكمي المستثمر</th>
-                  <th className="py-2.5 px-3 text-left font-semibold min-w-[120px]" style={{ color: '#4ade80' }}>إيرادات (إسكرو)</th>
-                  <th className="py-2.5 px-3 text-left font-semibold min-w-[120px]" style={{ color: '#f87171' }}>مدفوعات (إسكرو)</th>
-                  <th className="py-2.5 px-3 text-left font-semibold min-w-[120px]" style={{ color: '#60a5fa' }}>رصيد الإسكرو</th>
-                  <th className="py-2.5 px-3 text-left font-semibold min-w-[110px]">صافي الشهر</th>
-                  <th className="py-2.5 px-3 text-left font-semibold min-w-[130px]">صافي تراكمي</th>
+          <div className="overflow-x-auto overflow-y-auto max-h-[80vh]">
+            <table className="border-collapse text-[11px]" dir="rtl" style={{ minWidth: `${300 + table.length * 75}px` }}>
+              {/* ── Phase Headers ── */}
+              <thead className="sticky top-0 z-20">
+                <tr className="bg-slate-700 text-white">
+                  <th className="py-2 px-3 text-right font-bold text-xs sticky right-0 z-30 bg-slate-700 min-w-[200px] border-l border-slate-500" rowSpan={2}>البند</th>
+                  <th className="py-2 px-2 text-center font-bold text-xs sticky right-[200px] z-30 bg-slate-700 min-w-[100px] border-l border-slate-500" rowSpan={2}>الإجمالي</th>
+                  {phaseGroups.map(pg => (
+                    <th
+                      key={pg.key}
+                      colSpan={pg.end - pg.start + 1}
+                      className="py-2 px-2 text-center font-bold text-xs border-l-2 border-slate-500"
+                      style={{ backgroundColor: pg.color + '30', color: 'white' }}
+                    >
+                      {pg.label}
+                    </th>
+                  ))}
+                </tr>
+                {/* ── Month Number Headers ── */}
+                <tr className="bg-slate-600 text-white">
+                  {table.map((row: any, i: number) => {
+                    const isPhaseStart = phaseGroups.some(pg => pg.start === i);
+                    return (
+                      <th key={i} className={`${headerCell} ${isPhaseStart ? 'border-l-2 border-slate-400' : ''} bg-slate-600`} style={{ minWidth: '70px' }}>
+                        <div className="text-[10px] font-bold">{row.month}</div>
+                        <div className="text-[9px] opacity-70">{row.label}</div>
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
+
               <tbody>
-                {table.map((row: any, i: number) => {
-                  // Phase separator row
-                  const isPhaseStart = phaseBoundaries[row.phase] === i && i > 0;
-                  const phaseColor = row.phase === 'pre_dev' ? 'bg-amber-100/80 dark:bg-amber-900/20' :
-                    row.phase === 'construction' ? 'bg-blue-100/80 dark:bg-blue-900/20' :
-                    'bg-emerald-100/80 dark:bg-emerald-900/20';
-                  const prevPhase = i > 0 ? table[i - 1].phase : null;
-
-                  return (
-                    <React.Fragment key={`row-group-${i}`}>
-                      {/* Phase subtotal row */}
-                      {isPhaseStart && prevPhase && (
-                        <tr key={`sub-${prevPhase}`} className="bg-slate-100 dark:bg-slate-800/50 border-y-2 border-slate-300 dark:border-slate-600">
-                          <td colSpan={3} className="py-2 px-3 font-bold text-right text-slate-700 dark:text-slate-300 sticky right-0 bg-slate-100 dark:bg-slate-800/50 z-10">
-                            إجمالي {PHASE_LABELS[prevPhase]}
-                          </td>
-                          <td className="py-2 px-3 text-left font-mono font-bold text-amber-700">
-                            {formatFullAED(phaseSubtotals[prevPhase as keyof typeof phaseSubtotals]?.devOut || 0)}
-                          </td>
-                          <td className="py-2 px-3 text-left font-mono font-bold text-amber-800">
-                            {formatFullAED(table[i - 1].developerCumulative)}
-                          </td>
-                          <td className="py-2 px-3 text-left font-mono font-bold text-green-700">
-                            {formatFullAED(phaseSubtotals[prevPhase as keyof typeof phaseSubtotals]?.escIn || 0)}
-                          </td>
-                          <td className="py-2 px-3 text-left font-mono font-bold text-red-700">
-                            {formatFullAED(phaseSubtotals[prevPhase as keyof typeof phaseSubtotals]?.escOut || 0)}
-                          </td>
-                          <td className="py-2 px-3 text-left font-mono font-bold text-blue-700">
-                            {formatFullAED(table[i - 1].escrowBalance)}
-                          </td>
-                          <td className="py-2 px-3"></td>
-                          <td className="py-2 px-3 text-left font-mono font-bold">
-                            {formatFullAED(table[i - 1].cumulativeNet)}
-                          </td>
-                        </tr>
-                      )}
-                      {/* Phase header row */}
-                      {isPhaseStart && (
-                        <tr key={`header-${row.phase}`} className={`${phaseColor}`}>
-                          <td colSpan={10} className="py-1.5 px-3 font-bold text-sm">
-                            {row.phase === 'construction' ? '🔨' : row.phase === 'handover' ? '✅' : '📐'}
-                            {' '}{PHASE_LABELS[row.phase]}
-                          </td>
-                        </tr>
-                      )}
-                      {/* Data row */}
-                      <tr
-                        key={i}
-                        className={`border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors ${
-                          i % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50/50 dark:bg-slate-900/50'
-                        }`}
-                      >
-                        <td className="py-2 px-3 text-right text-slate-400 text-xs sticky right-0 bg-inherit z-10">{row.month}</td>
-                        <td className="py-2 px-3 text-right font-medium text-xs sticky right-[50px] bg-inherit z-10">{row.label}</td>
-                        <td className="py-2 px-3 text-center">
-                          <span
-                            className="inline-block text-[10px] font-medium px-2 py-0.5 rounded-full"
-                            style={{
-                              backgroundColor: (PHASE_COLORS[row.phase] || '#6b7280') + '15',
-                              color: PHASE_COLORS[row.phase] || '#6b7280',
-                              border: `1px solid ${(PHASE_COLORS[row.phase] || '#6b7280')}30`,
-                            }}
-                          >
-                            {PHASE_LABELS[row.phase]}
-                          </span>
-                        </td>
-                        <td className="py-2 px-3 text-left font-mono text-xs">
-                          {row.developerOutflow > 0 ? (
-                            <span className="text-amber-600">{formatFullAED(row.developerOutflow)}</span>
-                          ) : (
-                            <span className="text-slate-300">—</span>
-                          )}
-                        </td>
-                        <td className="py-2 px-3 text-left font-mono text-xs font-semibold text-amber-700">
-                          {formatFullAED(row.developerCumulative)}
-                        </td>
-                        <td className="py-2 px-3 text-left font-mono text-xs">
-                          {row.escrowInflow > 0 ? (
-                            <span className="text-green-600">+{formatFullAED(row.escrowInflow)}</span>
-                          ) : (
-                            <span className="text-slate-300">—</span>
-                          )}
-                        </td>
-                        <td className="py-2 px-3 text-left font-mono text-xs">
-                          {row.escrowOutflow > 0 ? (
-                            <span className="text-red-600">-{formatFullAED(row.escrowOutflow)}</span>
-                          ) : (
-                            <span className="text-slate-300">—</span>
-                          )}
-                        </td>
-                        <td className={`py-2 px-3 text-left font-mono text-xs font-semibold ${
-                          row.escrowBalance >= 0 ? 'text-blue-600' : 'text-red-600'
-                        }`}>
-                          {formatFullAED(row.escrowBalance)}
-                        </td>
-                        <td className={`py-2 px-3 text-left font-mono text-xs font-medium ${
-                          row.netCashFlow >= 0 ? 'text-emerald-600' : 'text-red-600'
-                        }`}>
-                          {row.netCashFlow >= 0 ? '+' : ''}{formatFullAED(row.netCashFlow)}
-                        </td>
-                        <td className={`py-2 px-3 text-left font-mono text-xs font-bold ${
-                          row.cumulativeNet >= 0 ? 'text-emerald-700' : 'text-red-700'
-                        }`}>
-                          {formatFullAED(row.cumulativeNet)}
-                        </td>
-                      </tr>
-
-                      {/* Detailed breakdown rows */}
-                      {viewMode === 'detailed' && (row.developerOutflow > 0 || row.escrowOutflow > 0) && (
-                        <tr key={`detail-${i}`} className="bg-slate-50/80 dark:bg-slate-800/20">
-                          <td colSpan={10} className="py-1 px-6">
-                            <div className="flex flex-wrap gap-x-6 gap-y-0.5 text-[10px] text-muted-foreground">
-                              {Object.entries(row.developerBreakdown || {}).map(([name, val]: [string, any]) => (
-                                <span key={name} className="text-amber-600">
-                                  {name}: {formatFullAED(val)}
-                                </span>
-                              ))}
-                              {Object.entries(row.escrowBreakdown || {}).map(([name, val]: [string, any]) => (
-                                <span key={name} className="text-blue-600">
-                                  {name}: {formatFullAED(val)}
-                                </span>
-                              ))}
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-              <tfoot>
-                {/* Last phase subtotal */}
-                {table.length > 0 && (
-                  <tr className="bg-slate-100 dark:bg-slate-800/50 border-y-2 border-slate-300 dark:border-slate-600">
-                    <td colSpan={3} className="py-2 px-3 font-bold text-right text-slate-700 dark:text-slate-300 sticky right-0 bg-slate-100 dark:bg-slate-800/50 z-10">
-                      إجمالي {PHASE_LABELS[table[table.length - 1].phase]}
-                    </td>
-                    <td className="py-2 px-3 text-left font-mono font-bold text-amber-700">
-                      {formatFullAED(phaseSubtotals[table[table.length - 1].phase as keyof typeof phaseSubtotals]?.devOut || 0)}
-                    </td>
-                    <td className="py-2 px-3 text-left font-mono font-bold text-amber-800">
-                      {formatFullAED(lastRow?.developerCumulative || 0)}
-                    </td>
-                    <td className="py-2 px-3 text-left font-mono font-bold text-green-700">
-                      {formatFullAED(phaseSubtotals[table[table.length - 1].phase as keyof typeof phaseSubtotals]?.escIn || 0)}
-                    </td>
-                    <td className="py-2 px-3 text-left font-mono font-bold text-red-700">
-                      {formatFullAED(phaseSubtotals[table[table.length - 1].phase as keyof typeof phaseSubtotals]?.escOut || 0)}
-                    </td>
-                    <td className="py-2 px-3 text-left font-mono font-bold text-blue-700">
-                      {formatFullAED(lastRow?.escrowBalance || 0)}
-                    </td>
-                    <td className="py-2 px-3"></td>
-                    <td className="py-2 px-3 text-left font-mono font-bold">
-                      {formatFullAED(lastRow?.cumulativeNet || 0)}
-                    </td>
-                  </tr>
-                )}
-                {/* Grand total */}
-                <tr className="bg-slate-800 text-white">
-                  <td colSpan={3} className="py-3 px-3 font-bold text-right sticky right-0 bg-slate-800 z-10 text-base">
-                    الإجمالي الكلي
-                  </td>
-                  <td className="py-3 px-3 text-left font-mono font-bold text-amber-300 text-sm">
-                    {formatFullAED(totalDevOut)}
-                  </td>
-                  <td className="py-3 px-3"></td>
-                  <td className="py-3 px-3 text-left font-mono font-bold text-green-300 text-sm">
-                    {formatFullAED(totalEscIn)}
-                  </td>
-                  <td className="py-3 px-3 text-left font-mono font-bold text-red-300 text-sm">
-                    {formatFullAED(totalEscOut)}
-                  </td>
-                  <td className="py-3 px-3 text-left font-mono font-bold text-blue-300 text-sm">
-                    {formatFullAED(lastRow?.escrowBalance || 0)}
-                  </td>
-                  <td className="py-3 px-3"></td>
-                  <td className={`py-3 px-3 text-left font-mono font-bold text-sm ${
-                    (lastRow?.cumulativeNet || 0) >= 0 ? 'text-green-300' : 'text-red-300'
-                  }`}>
-                    {formatFullAED(lastRow?.cumulativeNet || 0)}
+                {/* ═══ SECTION 1: INVESTOR EXPENSES (Yellow) ═══ */}
+                <tr className="bg-amber-100 border-y-2 border-amber-300">
+                  <td colSpan={2 + table.length} className="py-2 px-3 font-bold text-amber-800 text-xs sticky right-0 z-10 bg-amber-100">
+                    <Wallet className="h-3.5 w-3.5 inline ml-1 mb-0.5" />
+                    مصاريف المستثمر (تمويل مباشر)
                   </td>
                 </tr>
-              </tfoot>
+
+                {devItems.map((item, idx) => (
+                  <tr key={`dev-${idx}`} className={`${idx % 2 === 0 ? 'bg-amber-50/40' : 'bg-white'} hover:bg-amber-50/70 transition-colors`}>
+                    <td className={`${stickyName} ${idx % 2 === 0 ? 'bg-amber-50/40' : 'bg-white'}`}>{item.name}</td>
+                    <td className={`${stickyTotal} font-bold text-amber-700 ${idx % 2 === 0 ? 'bg-amber-50/40' : 'bg-white'}`}>{fmtCell(item.total)}</td>
+                    {item.monthly.map((v: number, mi: number) => {
+                      const isPhaseStart = phaseGroups.some(pg => pg.start === mi);
+                      return (
+                        <td key={mi} className={`${cellBase} ${isPhaseStart ? 'border-l-2 border-slate-300' : ''} ${v > 0 ? 'text-amber-700' : 'text-slate-300'}`}>
+                          {fmtCell(v)}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+
+                {/* Investor Total Row */}
+                <tr className="bg-amber-200/70 border-y-2 border-amber-400 font-bold">
+                  <td className={`${stickyName} bg-amber-200/70 font-bold text-amber-900`}>إجمالي مصاريف المستثمر</td>
+                  <td className={`${stickyTotal} bg-amber-200/70 font-bold text-amber-900`}>{fmtCell(devGrandTotal)}</td>
+                  {devMonthlyTotals.map((v: number, mi: number) => {
+                    const isPhaseStart = phaseGroups.some(pg => pg.start === mi);
+                    return (
+                      <td key={mi} className={`${cellBase} ${isPhaseStart ? 'border-l-2 border-amber-400' : 'border-l-amber-300'} text-amber-900 font-bold bg-amber-200/70`}>
+                        {fmtCell(v)}
+                      </td>
+                    );
+                  })}
+                </tr>
+
+                {/* ═══ SPACER ═══ */}
+                <tr className="h-3 bg-slate-50"><td colSpan={2 + table.length}></td></tr>
+
+                {/* ═══ SECTION 2: ESCROW EXPENSES ═══ */}
+                <tr className="bg-blue-100 border-y-2 border-blue-300">
+                  <td colSpan={2 + table.length} className="py-2 px-3 font-bold text-blue-800 text-xs sticky right-0 z-10 bg-blue-100">
+                    <ShieldCheck className="h-3.5 w-3.5 inline ml-1 mb-0.5" />
+                    مصاريف حساب الضمان (الإسكرو)
+                  </td>
+                </tr>
+
+                {escItems.map((item, idx) => (
+                  <tr key={`esc-${idx}`} className={`${idx % 2 === 0 ? 'bg-blue-50/30' : 'bg-white'} hover:bg-blue-50/50 transition-colors`}>
+                    <td className={`${stickyName} ${idx % 2 === 0 ? 'bg-blue-50/30' : 'bg-white'}`}>{item.name}</td>
+                    <td className={`${stickyTotal} font-bold text-blue-700 ${idx % 2 === 0 ? 'bg-blue-50/30' : 'bg-white'}`}>{fmtCell(item.total)}</td>
+                    {item.monthly.map((v: number, mi: number) => {
+                      const isPhaseStart = phaseGroups.some(pg => pg.start === mi);
+                      return (
+                        <td key={mi} className={`${cellBase} ${isPhaseStart ? 'border-l-2 border-slate-300' : ''} ${v > 0 ? 'text-blue-700' : 'text-slate-300'}`}>
+                          {fmtCell(v)}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+
+                {/* Escrow Total Row */}
+                <tr className="bg-blue-200/70 border-y-2 border-blue-400 font-bold">
+                  <td className={`${stickyName} bg-blue-200/70 font-bold text-blue-900`}>إجمالي مصاريف الإسكرو</td>
+                  <td className={`${stickyTotal} bg-blue-200/70 font-bold text-blue-900`}>{fmtCell(escGrandTotal)}</td>
+                  {escMonthlyTotals.map((v: number, mi: number) => {
+                    const isPhaseStart = phaseGroups.some(pg => pg.start === mi);
+                    return (
+                      <td key={mi} className={`${cellBase} ${isPhaseStart ? 'border-l-2 border-blue-400' : 'border-l-blue-300'} text-blue-900 font-bold bg-blue-200/70`}>
+                        {fmtCell(v)}
+                      </td>
+                    );
+                  })}
+                </tr>
+
+                {/* ═══ SPACER ═══ */}
+                <tr className="h-3 bg-slate-50"><td colSpan={2 + table.length}></td></tr>
+
+                {/* ═══ SECTION 3: ESCROW BALANCE (Running) ═══ */}
+                <tr className="bg-emerald-100/60 border-y-2 border-emerald-300">
+                  <td className={`${stickyName} bg-emerald-100/60 font-bold text-emerald-800`}>رصيد حساب الضمان</td>
+                  <td className={`${stickyTotal} bg-emerald-100/60 font-bold text-emerald-800`}></td>
+                  {escrowBalanceRow.map((v: number, mi: number) => {
+                    const isPhaseStart = phaseGroups.some(pg => pg.start === mi);
+                    return (
+                      <td key={mi} className={`${cellBase} ${isPhaseStart ? 'border-l-2 border-emerald-300' : 'border-l-emerald-200'} font-bold bg-emerald-100/60 ${v >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                        {v !== 0 ? fmtCell(v) : ''}
+                      </td>
+                    );
+                  })}
+                </tr>
+
+                {/* ═══ SECTION 4: CUMULATIVE NET CASH FLOW ═══ */}
+                <tr className="bg-slate-800 text-white border-y-2 border-slate-900">
+                  <td className={`py-2 px-3 text-right font-bold text-xs whitespace-nowrap sticky right-0 z-10 min-w-[200px] border-l border-slate-600 bg-slate-800`}>صافي التدفق النقدي التراكمي</td>
+                  <td className={`py-2 px-2 text-left font-mono font-bold text-xs whitespace-nowrap sticky right-[200px] z-10 min-w-[100px] border-l border-slate-600 bg-slate-800`}></td>
+                  {table.map((row: any, mi: number) => {
+                    const isPhaseStart = phaseGroups.some(pg => pg.start === mi);
+                    return (
+                      <td key={mi} className={`py-2 px-2 text-left font-mono font-bold text-[11px] whitespace-nowrap border-l border-slate-600 ${isPhaseStart ? 'border-l-2' : ''} ${row.cumulativeNet >= 0 ? 'text-green-300' : 'text-red-300'}`}>
+                        {fmtCell(row.cumulativeNet)}
+                      </td>
+                    );
+                  })}
+                </tr>
+              </tbody>
             </table>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Phase Summary Table */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Layers className="h-4 w-4" />
-            ملخص المراحل
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <table className="w-full text-sm border-collapse" dir="rtl">
-            <thead>
-              <tr className="border-b-2 border-slate-200">
-                <th className="py-2 px-3 text-right font-semibold">المرحلة</th>
-                <th className="py-2 px-3 text-left font-semibold text-amber-600">تمويل المستثمر</th>
-                <th className="py-2 px-3 text-left font-semibold text-green-600">إيرادات الإسكرو</th>
-                <th className="py-2 px-3 text-left font-semibold text-red-600">مدفوعات الإسكرو</th>
-                <th className="py-2 px-3 text-left font-semibold">صافي المرحلة</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(['pre_dev', 'construction', 'handover'] as const).map((phase) => {
-                const sub = phaseSubtotals[phase];
-                const net = sub.escIn - sub.devOut - sub.escOut;
-                return (
-                  <tr key={phase} className="border-b hover:bg-muted/30">
-                    <td className="py-2.5 px-3 font-medium">
-                      <span className="inline-block w-2.5 h-2.5 rounded-full ml-2" style={{ backgroundColor: PHASE_COLORS[phase] }} />
-                      {PHASE_LABELS[phase]}
-                    </td>
-                    <td className="py-2.5 px-3 text-left font-mono text-amber-700">{formatFullAED(sub.devOut)}</td>
-                    <td className="py-2.5 px-3 text-left font-mono text-green-700">{formatFullAED(sub.escIn)}</td>
-                    <td className="py-2.5 px-3 text-left font-mono text-red-700">{formatFullAED(sub.escOut)}</td>
-                    <td className={`py-2.5 px-3 text-left font-mono font-bold ${net >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-                      {formatFullAED(net)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-            <tfoot>
-              <tr className="border-t-2 border-slate-300 bg-slate-50 dark:bg-slate-800/30 font-bold">
-                <td className="py-2.5 px-3">الإجمالي</td>
-                <td className="py-2.5 px-3 text-left font-mono text-amber-700">{formatFullAED(totalDevOut)}</td>
-                <td className="py-2.5 px-3 text-left font-mono text-green-700">{formatFullAED(totalEscIn)}</td>
-                <td className="py-2.5 px-3 text-left font-mono text-red-700">{formatFullAED(totalEscOut)}</td>
-                <td className={`py-2.5 px-3 text-left font-mono ${(lastRow?.cumulativeNet || 0) >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-                  {formatFullAED(lastRow?.cumulativeNet || 0)}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
         </CardContent>
       </Card>
     </div>
