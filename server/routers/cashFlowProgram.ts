@@ -1857,4 +1857,151 @@ export const cashFlowProgramRouter = router({
         contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       };
     }),
+
+  // ─── Sync existing CF project cost items from Feasibility ───
+  syncFromFeasibility: publicProcedure
+    .input(z.object({ projectId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // Find the CF project linked to this project
+      const cfProjResults = await db.select().from(cfProjects)
+        .where(and(eq(cfProjects.projectId, input.projectId), eq(cfProjects.userId, ctx.user.id)))
+        .orderBy(desc(cfProjects.id));
+      const cfProj = cfProjResults[0];
+      if (!cfProj) throw new Error("لا يوجد مشروع تدفقات نقدية مرتبط. أنشئ واحداً أولاً من صفحة التدفقات النقدية.");
+
+      // Get project data
+      const projResults = await db.select().from(projects).where(eq(projects.id, input.projectId));
+      const proj = projResults[0];
+      if (!proj) throw new Error("المشروع غير موجود");
+
+      // Get feasibility study
+      const feasResults = await db.select().from(feasibilityStudies)
+        .where(and(eq(feasibilityStudies.projectId, input.projectId), eq(feasibilityStudies.userId, ctx.user.id)));
+      const feas = feasResults[0];
+
+      // Get competition pricing & market overview
+      const cpResults = await db.select().from(competitionPricing).where(eq(competitionPricing.projectId, input.projectId));
+      const cpData = cpResults[0] || null;
+      const moResults = await db.select().from(marketOverview).where(eq(marketOverview.projectId, input.projectId));
+      const moData = moResults[0] || null;
+
+      const pf = (v: any) => parseFloat(v || '0') || 0;
+
+      // Calculate values
+      const bua = pf(proj.manualBuaSqft);
+      const plotAreaSqft = pf(proj.plotAreaSqft);
+      const plotAreaM2 = plotAreaSqft * 0.0929;
+      const constructionPricePerSqft = pf(proj.estimatedConstructionPricePerSqft);
+      const constructionCost = bua * constructionPricePerSqft;
+
+      const gfaResSqft = pf(proj.gfaResidentialSqft);
+      const gfaRetSqft = pf(proj.gfaRetailSqft);
+      const gfaOffSqft = pf(proj.gfaOfficesSqft);
+      const saleableRes = gfaResSqft * 0.95;
+      const saleableRet = gfaRetSqft * 0.97;
+      const saleableOff = gfaOffSqft * 0.95;
+
+      // Revenue calculation
+      let totalRevenue = 0;
+      let totalUnits = 0;
+      if (cpData && moData) {
+        const activeScenario = cpData.activeScenario || 'base';
+        const getPrices = () => {
+          if (activeScenario === 'optimistic') return { studio: cpData.optStudioPrice || 0, oneBr: cpData.opt1brPrice || 0, twoBr: cpData.opt2brPrice || 0, threeBr: cpData.opt3brPrice || 0, retSmall: cpData.optRetailSmallPrice || 0, retMed: cpData.optRetailMediumPrice || 0, retLrg: cpData.optRetailLargePrice || 0, offSmall: cpData.optOfficeSmallPrice || 0, offMed: cpData.optOfficeMediumPrice || 0, offLrg: cpData.optOfficeLargePrice || 0 };
+          if (activeScenario === 'conservative') return { studio: cpData.consStudioPrice || 0, oneBr: cpData.cons1brPrice || 0, twoBr: cpData.cons2brPrice || 0, threeBr: cpData.cons3brPrice || 0, retSmall: cpData.consRetailSmallPrice || 0, retMed: cpData.consRetailMediumPrice || 0, retLrg: cpData.consRetailLargePrice || 0, offSmall: cpData.consOfficeSmallPrice || 0, offMed: cpData.consOfficeMediumPrice || 0, offLrg: cpData.consOfficeLargePrice || 0 };
+          return { studio: cpData.baseStudioPrice || 0, oneBr: cpData.base1brPrice || 0, twoBr: cpData.base2brPrice || 0, threeBr: cpData.base3brPrice || 0, retSmall: cpData.baseRetailSmallPrice || 0, retMed: cpData.baseRetailMediumPrice || 0, retLrg: cpData.baseRetailLargePrice || 0, offSmall: cpData.baseOfficeSmallPrice || 0, offMed: cpData.baseOfficeMediumPrice || 0, offLrg: cpData.baseOfficeLargePrice || 0 };
+        };
+        const prices = getPrices();
+        const calcTypeRevenue = (pct: number, avgArea: number, pricePerSqft: number, saleable: number) => {
+          const allocated = saleable * (pct / 100);
+          const units = avgArea > 0 ? Math.floor(allocated / avgArea) : 0;
+          totalUnits += units;
+          return avgArea * pricePerSqft * units;
+        };
+        totalRevenue += calcTypeRevenue(pf(moData.residentialStudioPct), moData.residentialStudioAvgArea || 0, prices.studio, saleableRes);
+        totalRevenue += calcTypeRevenue(pf(moData.residential1brPct), moData.residential1brAvgArea || 0, prices.oneBr, saleableRes);
+        totalRevenue += calcTypeRevenue(pf(moData.residential2brPct), moData.residential2brAvgArea || 0, prices.twoBr, saleableRes);
+        totalRevenue += calcTypeRevenue(pf(moData.residential3brPct), moData.residential3brAvgArea || 0, prices.threeBr, saleableRes);
+        totalRevenue += calcTypeRevenue(pf(moData.retailSmallPct), moData.retailSmallAvgArea || 0, prices.retSmall, saleableRet);
+        totalRevenue += calcTypeRevenue(pf(moData.retailMediumPct), moData.retailMediumAvgArea || 0, prices.retMed, saleableRet);
+        totalRevenue += calcTypeRevenue(pf(moData.retailLargePct), moData.retailLargeAvgArea || 0, prices.retLrg, saleableRet);
+        totalRevenue += calcTypeRevenue(pf(moData.officeSmallPct), moData.officeSmallAvgArea || 0, prices.offSmall, saleableOff);
+        totalRevenue += calcTypeRevenue(pf(moData.officeMediumPct), moData.officeMediumAvgArea || 0, prices.offMed, saleableOff);
+        totalRevenue += calcTypeRevenue(pf(moData.officeLargePct), moData.officeLargeAvgArea || 0, prices.offLrg, saleableOff);
+      } else if (feas) {
+        totalRevenue = (
+          ((feas.gfaResidential || 0) * (feas.saleableResidentialPct || 90) / 100 * (feas.residentialSalePrice || 0)) +
+          ((feas.gfaRetail || 0) * (feas.saleableRetailPct || 99) / 100 * (feas.retailSalePrice || 0)) +
+          ((feas.gfaOffices || 0) * (feas.saleableOfficesPct || 90) / 100 * (feas.officesSalePrice || 0))
+        );
+        totalUnits = feas.numberOfUnits || 0;
+      }
+
+      // Cost values from project
+      const landPrice = pf(proj.landPrice);
+      const agentCommissionLandPct = pf(proj.agentCommissionLandPct);
+      const designFeePct = pf(proj.designFeePct) || 2;
+      const supervisionFeePct = pf(proj.supervisionFeePct) || 2;
+      const separationFeePerM2 = pf(proj.separationFeePerM2) || 40;
+      const salesCommissionPct = pf(proj.salesCommissionPct) || 5;
+      const marketingPct = pf(proj.marketingPct) || 2;
+      const developerFeePct = pf(proj.developerFeePct) || 5;
+
+      // Build name→amount mapping for updates
+      const updatedAmounts: Record<string, number> = {
+        'سعر الأرض': Math.round(landPrice),
+        'عمولة وسيط الأرض': Math.round(landPrice * (agentCommissionLandPct / 100)),
+        'رسوم تسجيل الأرض (4%)': Math.round(landPrice * 0.04),
+        'فحص التربة': Math.round(pf(proj.soilTestFee)),
+        'المسح الطبوغرافي': Math.round(pf(proj.topographicSurveyFee)),
+        'رسوم الجهات الرسمية': Math.round(pf(proj.officialBodiesFees)),
+        'أتعاب التصميم': Math.round(constructionCost * (designFeePct / 100)),
+        'أتعاب الإشراف': Math.round(constructionCost * (supervisionFeePct / 100)),
+        'رسوم الفرز': Math.round(plotAreaM2 * separationFeePerM2),
+        'تكلفة البناء': Math.round(constructionCost),
+        'رسوم المجتمع': Math.round(pf(proj.communityFees)),
+        'احتياطي': Math.round(constructionCost * 0.02),
+        'أتعاب المطور': Math.round(totalRevenue * (developerFeePct / 100)),
+        'عمولة البيع': Math.round(totalRevenue * (salesCommissionPct / 100)),
+        'التسويق': Math.round(totalRevenue * (marketingPct / 100)),
+        'رسوم تسجيل الوحدات — ريرا': Math.round(pf(proj.reraUnitRegFee)),
+        'رسوم تسجيل المشروع — ريرا': Math.round(pf(proj.reraProjectRegFee)),
+        'رسوم عدم ممانعة — المطور': Math.round(pf(proj.developerNocFee)),
+        'حساب الضمان (Escrow)': Math.round(pf(proj.escrowAccountFee)),
+        'الرسوم البنكية': Math.round(pf(proj.bankFees)),
+        'أتعاب المسّاح': Math.round(pf(proj.surveyorFees)),
+        'تدقيق ريرا': Math.round(pf(proj.reraAuditReportFee)),
+        'تفتيش ريرا': Math.round(pf(proj.reraInspectionReportFee)),
+      };
+
+      // Get existing cost items
+      const existingItems = await db.select().from(cfCostItems)
+        .where(eq(cfCostItems.cfProjectId, cfProj.id));
+
+      let updatedCount = 0;
+      for (const item of existingItems) {
+        const newAmount = updatedAmounts[item.name];
+        if (newAmount !== undefined && newAmount !== item.totalAmount) {
+          await db.update(cfCostItems)
+            .set({ totalAmount: newAmount })
+            .where(eq(cfCostItems.id, item.id));
+          updatedCount++;
+        }
+      }
+
+      // Also update the total sales revenue on the CF project
+      await db.update(cfProjects)
+        .set({ totalSalesRevenue: Math.round(totalRevenue) || null })
+        .where(eq(cfProjects.id, cfProj.id));
+
+      return {
+        updatedCount,
+        totalRevenue: Math.round(totalRevenue),
+        message: `تم تحديث ${updatedCount} بند من بنود التكاليف`,
+      };
+    }),
 });
