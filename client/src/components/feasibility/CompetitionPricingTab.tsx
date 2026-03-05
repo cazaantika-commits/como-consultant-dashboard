@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
+import { DEFAULT_AVG_AREAS } from "@shared/feasibilityUtils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -320,35 +321,44 @@ export default function CompetitionPricingTab({ projectId, studyId, form: feasFo
     setIsDirty(true);
   }, []);
 
-  // Data from Tab 1 (Market Overview)
+  // Data from Tab 1 (Market Overview) - with auto-populate for missing avg areas
   const mo = moQuery.data;
+
+  // Helper: get avg area with fallback to default if pct > 0 but avg is 0
+  const getAvg = useCallback((pctKey: string, avgVal: number | null | undefined) => {
+    const v = avgVal || 0;
+    if (v > 0) return v;
+    const mapping = DEFAULT_AVG_AREAS[pctKey];
+    return mapping ? mapping.defaultArea : 0;
+  }, []);
+
   const resData = useMemo(() => {
     if (!mo) return [];
     return [
-      { key: "studio", label: "استديو", pct: parseFloat(mo.residentialStudioPct || "0"), avg: mo.residentialStudioAvgArea || 0, priceKey: "studioPrice" },
-      { key: "1br", label: "غرفة وصالة", pct: parseFloat(mo.residential1brPct || "0"), avg: mo.residential1brAvgArea || 0, priceKey: "oneBrPrice" },
-      { key: "2br", label: "غرفتان وصالة", pct: parseFloat(mo.residential2brPct || "0"), avg: mo.residential2brAvgArea || 0, priceKey: "twoBrPrice" },
-      { key: "3br", label: "ثلاث غرف وصالة", pct: parseFloat(mo.residential3brPct || "0"), avg: mo.residential3brAvgArea || 0, priceKey: "threeBrPrice" },
+      { key: "studio", label: "استديو", pct: parseFloat(mo.residentialStudioPct || "0"), avg: getAvg("residentialStudioPct", mo.residentialStudioAvgArea), priceKey: "studioPrice" },
+      { key: "1br", label: "غرفة وصالة", pct: parseFloat(mo.residential1brPct || "0"), avg: getAvg("residential1brPct", mo.residential1brAvgArea), priceKey: "oneBrPrice" },
+      { key: "2br", label: "غرفتان وصالة", pct: parseFloat(mo.residential2brPct || "0"), avg: getAvg("residential2brPct", mo.residential2brAvgArea), priceKey: "twoBrPrice" },
+      { key: "3br", label: "ثلاث غرف وصالة", pct: parseFloat(mo.residential3brPct || "0"), avg: getAvg("residential3brPct", mo.residential3brAvgArea), priceKey: "threeBrPrice" },
     ].filter(r => r.pct > 0);
-  }, [mo]);
+  }, [mo, getAvg]);
 
   const retData = useMemo(() => {
     if (!mo) return [];
     return [
-      { key: "small", label: "صغيرة", pct: parseFloat(mo.retailSmallPct || "0"), avg: mo.retailSmallAvgArea || 0, priceKey: "retailSmallPrice" },
-      { key: "medium", label: "متوسطة", pct: parseFloat(mo.retailMediumPct || "0"), avg: mo.retailMediumAvgArea || 0, priceKey: "retailMediumPrice" },
-      { key: "large", label: "كبيرة", pct: parseFloat(mo.retailLargePct || "0"), avg: mo.retailLargeAvgArea || 0, priceKey: "retailLargePrice" },
+      { key: "small", label: "صغيرة", pct: parseFloat(mo.retailSmallPct || "0"), avg: getAvg("retailSmallPct", mo.retailSmallAvgArea), priceKey: "retailSmallPrice" },
+      { key: "medium", label: "متوسطة", pct: parseFloat(mo.retailMediumPct || "0"), avg: getAvg("retailMediumPct", mo.retailMediumAvgArea), priceKey: "retailMediumPrice" },
+      { key: "large", label: "كبيرة", pct: parseFloat(mo.retailLargePct || "0"), avg: getAvg("retailLargePct", mo.retailLargeAvgArea), priceKey: "retailLargePrice" },
     ].filter(r => r.pct > 0);
-  }, [mo]);
+  }, [mo, getAvg]);
 
   const offData = useMemo(() => {
     if (!mo) return [];
     return [
-      { key: "small", label: "صغيرة", pct: parseFloat(mo.officeSmallPct || "0"), avg: mo.officeSmallAvgArea || 0, priceKey: "officeSmallPrice" },
-      { key: "medium", label: "متوسطة", pct: parseFloat(mo.officeMediumPct || "0"), avg: mo.officeMediumAvgArea || 0, priceKey: "officeMediumPrice" },
-      { key: "large", label: "كبيرة", pct: parseFloat(mo.officeLargePct || "0"), avg: mo.officeLargeAvgArea || 0, priceKey: "officeLargePrice" },
+      { key: "small", label: "صغيرة", pct: parseFloat(mo.officeSmallPct || "0"), avg: getAvg("officeSmallPct", mo.officeSmallAvgArea), priceKey: "officeSmallPrice" },
+      { key: "medium", label: "متوسطة", pct: parseFloat(mo.officeMediumPct || "0"), avg: getAvg("officeMediumPct", mo.officeMediumAvgArea), priceKey: "officeMediumPrice" },
+      { key: "large", label: "كبيرة", pct: parseFloat(mo.officeLargePct || "0"), avg: getAvg("officeLargePct", mo.officeLargeAvgArea), priceKey: "officeLargePrice" },
     ].filter(r => r.pct > 0);
-  }, [mo]);
+  }, [mo, getAvg]);
 
   // Compute saleable areas from project GFA fields (Fact Sheet)
   const saleableRes = useMemo(() => parseFloat(project?.gfaResidentialSqft || '0') * 0.95, [project?.gfaResidentialSqft]);

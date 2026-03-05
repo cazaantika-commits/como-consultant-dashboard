@@ -1,0 +1,17 @@
+{
+  "query": "SELECT projectId, residential3brPct, residential3brAvgArea, residential1brAvgArea, residential2brAvgArea FROM marketOverview;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT projectId, residential3brPct, residential3brAvgArea, residential1brAvgArea, residential2brAvgArea FROM marketOverview;",
+  "rows": [
+    {
+      "projectId": "4",
+      "residential3brPct": "10.00",
+      "residential3brAvgArea": "1400",
+      "residential1brAvgArea": "700",
+      "residential2brAvgArea": "1000"
+    }
+  ],
+  "messages": [],
+  "stdout": "projectId\tresidential3brPct\tresidential3brAvgArea\tresidential1brAvgArea\tresidential2brAvgArea\n4\t10.00\t1400\t700\t1000\n",
+  "stderr": "",
+  "execution_time_ms": 1535
+}
