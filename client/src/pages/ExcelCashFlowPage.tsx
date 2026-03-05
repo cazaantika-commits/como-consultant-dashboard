@@ -188,47 +188,46 @@ export default function ExcelCashFlowPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6" dir="rtl">
+    <div className="h-screen bg-gray-50 p-3 overflow-hidden flex flex-col" dir="rtl">
       {/* Title */}
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-gray-900">مشروع ند الشبا جاردنز — جدول مصاريف المستثمر</h1>
-        <p className="text-sm text-gray-500 mt-1">التمويل المباشر من المستثمر (لا يشمل مصاريف حساب الضمان)</p>
+      <div className="mb-2">
+        <h1 className="text-sm font-bold text-gray-900">مشروع ند الشبا جاردنز — جدول مصاريف المستثمر</h1>
+        <p className="text-[10px] text-gray-500">التمويل المباشر من المستثمر (لا يشمل مصاريف حساب الضمان)</p>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-4 gap-3 mb-6">
-        <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-          <div className="text-xs text-gray-500 mb-1">إجمالي المصاريف</div>
-          <div className="text-lg font-bold text-gray-900">{fmt(grandTotal)} <span className="text-xs font-normal text-gray-400">درهم</span></div>
+      <div className="grid grid-cols-4 gap-2 mb-2">
+        <div className="bg-white rounded border border-gray-200 px-3 py-1.5">
+          <div className="text-[9px] text-gray-500">إجمالي المصاريف</div>
+          <div className="text-sm font-bold text-gray-900">{fmt(grandTotal)} <span className="text-[9px] font-normal text-gray-400">درهم</span></div>
         </div>
-        <div className="bg-white rounded-lg border border-green-200 p-4 shadow-sm">
-          <div className="text-xs text-green-600 mb-1">تم دفعه ✓</div>
-          <div className="text-lg font-bold text-green-700">{fmt(paidTotal)} <span className="text-xs font-normal text-gray-400">درهم</span></div>
+        <div className="bg-white rounded border border-green-200 px-3 py-1.5">
+          <div className="text-[9px] text-green-600">تم دفعه ✓</div>
+          <div className="text-sm font-bold text-green-700">{fmt(paidTotal)} <span className="text-[9px] font-normal text-gray-400">درهم</span></div>
         </div>
-        <div className="bg-white rounded-lg border border-orange-200 p-4 shadow-sm">
-          <div className="text-xs text-orange-600 mb-1">المتبقي</div>
-          <div className="text-lg font-bold text-orange-700">{fmt(upcomingTotal)} <span className="text-xs font-normal text-gray-400">درهم</span></div>
+        <div className="bg-white rounded border border-orange-200 px-3 py-1.5">
+          <div className="text-[9px] text-orange-600">المتبقي</div>
+          <div className="text-sm font-bold text-orange-700">{fmt(upcomingTotal)} <span className="text-[9px] font-normal text-gray-400">درهم</span></div>
         </div>
-        <div className="bg-white rounded-lg border-2 border-red-300 p-4 shadow-sm">
-          <div className="text-xs text-red-600 mb-1 font-medium">المطلوب للـ 3 أشهر القادمة</div>
-          <div className="text-xs text-red-400 mb-1">{next3Label}</div>
-          <div className="text-lg font-bold text-red-700">{fmt(next3MonthsTotal)} <span className="text-xs font-normal text-gray-400">درهم</span></div>
+        <div className="bg-white rounded border-2 border-red-300 px-3 py-1.5">
+          <div className="text-[9px] text-red-600 font-medium">المطلوب للـ 3 أشهر القادمة ({next3Label})</div>
+          <div className="text-sm font-bold text-red-700">{fmt(next3MonthsTotal)} <span className="text-[9px] font-normal text-gray-400">درهم</span></div>
         </div>
       </div>
 
       {/* TABLE */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-        <table className="w-full text-xs border-collapse">
+      <div className="bg-white rounded border border-gray-200 shadow-sm overflow-hidden flex-1">
+        <table className="w-full border-collapse" style={{ fontSize: '10px' }}>
           <thead>
             {/* Phase header */}
             <tr>
-              <th className="bg-gray-800 text-white px-2 py-2 text-right font-medium border-l border-gray-600 w-[180px]">البند</th>
-              <th className="bg-gray-800 text-white px-2 py-2 text-center font-medium border-l border-gray-600 w-[100px]">الإجمالي</th>
+              <th className="bg-gray-800 text-white px-1 py-1 text-right font-medium border-l border-gray-600 w-[150px]">البند</th>
+              <th className="bg-gray-800 text-white px-1 py-1 text-center font-medium border-l border-gray-600 w-[85px]">الإجمالي</th>
               {phaseSpans.map((span, i) => (
                 <th
                   key={i}
                   colSpan={span.count}
-                  className={`${PHASE_COLORS[span.phase].header} px-1 py-2 text-center font-medium border-l border-gray-600`}
+                  className={`${PHASE_COLORS[span.phase].header} px-1 py-1 text-center font-medium border-l border-gray-600`}
                 >
                   {span.label}
                 </th>
@@ -236,21 +235,21 @@ export default function ExcelCashFlowPage() {
             </tr>
             {/* Quarter labels */}
             <tr className="bg-gray-100">
-              <th className="bg-gray-100 px-2 py-1.5 text-right text-gray-500 border-l border-gray-200 text-[10px]">الفترة</th>
-              <th className="bg-gray-100 px-2 py-1.5 text-center text-gray-500 border-l border-gray-200 text-[10px]">(درهم)</th>
+              <th className="bg-gray-100 px-1 py-0.5 text-right text-gray-500 border-l border-gray-200 text-[8px]">الفترة</th>
+              <th className="bg-gray-100 px-1 py-0.5 text-center text-gray-500 border-l border-gray-200 text-[8px]">(درهم)</th>
               {QUARTERS.map((q, qi) => {
                 const isPaid = qi === 0 || isQuarterPaid(q.months[q.months.length - 1] || 0);
                 const isCurrent = qi > 0 && isCurrentQuarter(q.months[0], q.months[q.months.length - 1]);
                 return (
                   <th
                     key={qi}
-                    className={`px-1 py-1.5 text-center border-l border-gray-200 text-[10px] ${
+                    className={`px-0.5 py-0.5 text-center border-l border-gray-200 text-[8px] leading-tight ${
                       isCurrent ? "bg-yellow-100 font-bold text-yellow-800" :
                       isPaid ? "bg-gray-200 text-gray-500" : "bg-gray-100 text-gray-600"
                     }`}
                   >
                     {q.label}
-                    {isCurrent && <div className="text-[8px] text-yellow-600">◄ الآن</div>}
+                    {isCurrent && <span className="text-[7px] text-yellow-600"> ◄</span>}
                   </th>
                 );
               })}
@@ -258,11 +257,11 @@ export default function ExcelCashFlowPage() {
           </thead>
           <tbody>
             {ITEMS.map((item, idx) => (
-              <tr key={idx} className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"} hover:bg-blue-50/30 transition-colors`}>
-                <td className="px-2 py-1.5 text-right border-l border-gray-100 font-medium text-gray-800 text-[11px]">
+              <tr key={idx} className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"} hover:bg-blue-50/30`}>
+                <td className="px-1 py-[3px] text-right border-l border-gray-100 font-medium text-gray-800 text-[9px] whitespace-nowrap">
                   {item.name}
                 </td>
-                <td className="px-2 py-1.5 text-center border-l border-gray-100 font-bold text-gray-900 tabular-nums">
+                <td className="px-1 py-[3px] text-center border-l border-gray-100 font-bold text-gray-900 tabular-nums text-[9px]">
                   {fmt(item.total)}
                 </td>
                 {QUARTERS.map((q, qi) => {
@@ -273,7 +272,7 @@ export default function ExcelCashFlowPage() {
                   return (
                     <td
                       key={qi}
-                      className={`px-1 py-1.5 text-center border-l tabular-nums ${
+                      className={`px-0.5 py-[3px] text-center border-l tabular-nums text-[9px] ${
                         val === 0 ? "text-gray-300" :
                         isPaid ? "bg-gray-100 text-gray-400 line-through" :
                         isCurrent ? `bg-yellow-50 font-bold ${colors.text}` :
@@ -289,8 +288,8 @@ export default function ExcelCashFlowPage() {
 
             {/* TOTAL ROW */}
             <tr className="bg-gray-800 text-white font-bold border-t-2 border-gray-900">
-              <td className="px-2 py-2 text-right border-l border-gray-600">الإجمالي</td>
-              <td className="px-2 py-2 text-center border-l border-gray-600 tabular-nums">{fmt(grandTotal)}</td>
+              <td className="px-1 py-1 text-right border-l border-gray-600 text-[9px]">الإجمالي</td>
+              <td className="px-1 py-1 text-center border-l border-gray-600 tabular-nums text-[9px]">{fmt(grandTotal)}</td>
               {QUARTERS.map((q, qi) => {
                 const val = colTotals[qi];
                 const isPaid = qi === 0 || isQuarterPaid(q.months[q.months.length - 1] || 0);
@@ -298,7 +297,7 @@ export default function ExcelCashFlowPage() {
                 return (
                   <td
                     key={qi}
-                    className={`px-1 py-2 text-center border-l border-gray-600 tabular-nums ${
+                    className={`px-0.5 py-1 text-center border-l border-gray-600 tabular-nums text-[9px] ${
                       isPaid ? "text-gray-400" : isCurrent ? "text-yellow-300" : ""
                     }`}
                   >
@@ -312,31 +311,13 @@ export default function ExcelCashFlowPage() {
       </div>
 
       {/* Legend */}
-      <div className="mt-4 flex items-center gap-6 text-[10px] text-gray-500">
-        <div className="flex items-center gap-1">
-          <span className="w-3 h-3 bg-gray-200 rounded-sm border border-gray-300 inline-block"></span>
-          <span className="line-through text-gray-400">تم الدفع</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="w-3 h-3 bg-yellow-100 rounded-sm border border-yellow-300 inline-block"></span>
-          الفترة الحالية
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="w-3 h-3 bg-stone-100 rounded-sm border border-stone-300 inline-block"></span>
-          شراء الأرض
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="w-3 h-3 bg-amber-50 rounded-sm border border-amber-200 inline-block"></span>
-          ما قبل البناء
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="w-3 h-3 bg-sky-50 rounded-sm border border-sky-200 inline-block"></span>
-          البناء
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="w-3 h-3 bg-emerald-50 rounded-sm border border-emerald-200 inline-block"></span>
-          التسليم
-        </div>
+      <div className="mt-1 flex items-center gap-4 text-[8px] text-gray-500">
+        <div className="flex items-center gap-0.5"><span className="w-2 h-2 bg-gray-200 rounded-sm border border-gray-300 inline-block"></span><span className="line-through text-gray-400">تم الدفع</span></div>
+        <div className="flex items-center gap-0.5"><span className="w-2 h-2 bg-yellow-100 rounded-sm border border-yellow-300 inline-block"></span>الفترة الحالية</div>
+        <div className="flex items-center gap-0.5"><span className="w-2 h-2 bg-stone-100 rounded-sm border border-stone-300 inline-block"></span>شراء الأرض</div>
+        <div className="flex items-center gap-0.5"><span className="w-2 h-2 bg-amber-50 rounded-sm border border-amber-200 inline-block"></span>ما قبل البناء</div>
+        <div className="flex items-center gap-0.5"><span className="w-2 h-2 bg-sky-50 rounded-sm border border-sky-200 inline-block"></span>البناء</div>
+        <div className="flex items-center gap-0.5"><span className="w-2 h-2 bg-emerald-50 rounded-sm border border-emerald-200 inline-block"></span>التسليم</div>
       </div>
     </div>
   );
