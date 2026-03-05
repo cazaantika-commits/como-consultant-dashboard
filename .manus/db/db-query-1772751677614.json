@@ -1,0 +1,20 @@
+{
+  "query": "SELECT id, name, plotNumber FROM projects WHERE name LIKE '%مجان%' OR name LIKE '%ماجان%' OR name LIKE '%Majan%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, name, plotNumber FROM projects WHERE name LIKE '%مجان%' OR name LIKE '%ماجان%' OR name LIKE '%Majan%';",
+  "rows": [
+    {
+      "id": "1",
+      "name": "مركز مجان التجاري (G+4)",
+      "plotNumber": "6457956"
+    },
+    {
+      "id": "2",
+      "name": "مجان متعدد الاستخدامات (G+4P+25)",
+      "plotNumber": "6457879"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tplotNumber\n1\tمركز مجان التجاري (G+4)\t6457956\n2\tمجان متعدد الاستخدامات (G+4P+25)\t6457879\n",
+  "stderr": "",
+  "execution_time_ms": 1585
+}

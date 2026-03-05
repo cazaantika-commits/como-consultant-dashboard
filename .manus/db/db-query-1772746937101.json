@@ -1,0 +1,100 @@
+{
+  "query": "SELECT id, name, landPrice, plotAreaSqft, manualBuaSqft, estimatedConstructionPricePerSqft, soilTestFee, gfaResidentialSqft FROM projects ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, name, landPrice, plotAreaSqft, manualBuaSqft, estimatedConstructionPricePerSqft, soilTestFee, gfaResidentialSqft FROM projects ORDER BY id;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "مركز مجان التجاري (G+4)",
+      "landPrice": "NULL",
+      "plotAreaSqft": "NULL",
+      "manualBuaSqft": "NULL",
+      "estimatedConstructionPricePerSqft": "NULL",
+      "soilTestFee": "NULL",
+      "gfaResidentialSqft": "NULL"
+    },
+    {
+      "id": "2",
+      "name": "مجان متعدد الاستخدامات (G+4P+25)",
+      "landPrice": "NULL",
+      "plotAreaSqft": "NULL",
+      "manualBuaSqft": "NULL",
+      "estimatedConstructionPricePerSqft": "NULL",
+      "soilTestFee": "NULL",
+      "gfaResidentialSqft": "NULL"
+    },
+    {
+      "id": "3",
+      "name": "مبنى الجداف السكني (G+7)",
+      "landPrice": "NULL",
+      "plotAreaSqft": "NULL",
+      "manualBuaSqft": "NULL",
+      "estimatedConstructionPricePerSqft": "NULL",
+      "soilTestFee": "NULL",
+      "gfaResidentialSqft": "NULL"
+    },
+    {
+      "id": "4",
+      "name": "ند الشبا — قطعة 1 (6185392)",
+      "landPrice": "18000000.00",
+      "plotAreaSqft": "16942.07",
+      "manualBuaSqft": "114284.00",
+      "estimatedConstructionPricePerSqft": "345.00",
+      "soilTestFee": "16200.00",
+      "gfaResidentialSqft": "46736.20"
+    },
+    {
+      "id": "5",
+      "name": "ند الشبا — قطعة 2 المدمجة (6182776)",
+      "landPrice": "NULL",
+      "plotAreaSqft": "NULL",
+      "manualBuaSqft": "NULL",
+      "estimatedConstructionPricePerSqft": "NULL",
+      "soilTestFee": "NULL",
+      "gfaResidentialSqft": "NULL"
+    },
+    {
+      "id": "6",
+      "name": "ند الشبا — قطعة 3 الفلل (6180578)",
+      "landPrice": "NULL",
+      "plotAreaSqft": "NULL",
+      "manualBuaSqft": "NULL",
+      "estimatedConstructionPricePerSqft": "NULL",
+      "soilTestFee": "NULL",
+      "gfaResidentialSqft": "NULL"
+    },
+    {
+      "id": "60001",
+      "name": "مشروع آلات البيع في ميسيسوجا، أونتاريو",
+      "landPrice": "NULL",
+      "plotAreaSqft": "NULL",
+      "manualBuaSqft": "NULL",
+      "estimatedConstructionPricePerSqft": "NULL",
+      "soilTestFee": "NULL",
+      "gfaResidentialSqft": "NULL"
+    },
+    {
+      "id": "60002",
+      "name": "مشروع آلات البيع في ميسيسوجا، أونتاريو",
+      "landPrice": "NULL",
+      "plotAreaSqft": "NULL",
+      "manualBuaSqft": "NULL",
+      "estimatedConstructionPricePerSqft": "NULL",
+      "soilTestFee": "NULL",
+      "gfaResidentialSqft": "NULL"
+    },
+    {
+      "id": "60003",
+      "name": "آلات البيع في كلية طب الأسنان",
+      "landPrice": "NULL",
+      "plotAreaSqft": "NULL",
+      "manualBuaSqft": "NULL",
+      "estimatedConstructionPricePerSqft": "NULL",
+      "soilTestFee": "NULL",
+      "gfaResidentialSqft": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tlandPrice\tplotAreaSqft\tmanualBuaSqft\testimatedConstructionPricePerSqft\tsoilTestFee\tgfaResidentialSqft\n1\tمركز مجان التجاري (G+4)\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\n2\tمجان متعدد الاستخدامات (G+4P+25)\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\n3\tمبنى الجداف السكني (G+7)\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\n4\tند الشبا — قطعة 1 (6185392)\t18000000.00\t16942.07\t114284.00\t345.00\t16200.00\t46736.20\n5\tند الشبا — قطعة 2 المدمجة (6182776)\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\n6\tند الشبا — قطعة 3 الفلل (6180578)\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\n60001\tمشروع آلات البيع في ميسيسوجا، أونتاريو\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\n60002\tمشروع آلات البيع في ميسيسوجا، أونتاريو\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\n60003\tآلات البيع في كلية طب الأسنان\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1596
+}

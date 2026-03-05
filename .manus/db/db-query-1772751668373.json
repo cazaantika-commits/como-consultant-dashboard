@@ -1,0 +1,9 @@
+{
+  "query": "UPDATE projects SET\n  plotAreaSqm = 6213.28,\n  plotAreaSqft = 66879.19,\n  gfaSqm = 43492.96,\n  gfaSqft = 468154.32,\n  landPrice = 64206344.00,\n  permittedUse = 'Mixed Use (Commercial 64%, Retail 16%, Residential 20%)',\n  constructionPeriod = 'G+4P+25 Floors',\n  gfaResidentialSqft = 93623,\n  gfaRetailSqft = 74903,\n  gfaOfficesSqft = 299534\nWHERE plotNumber = '645-7879';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute UPDATE projects SET\n  plotAreaSqm = 6213.28,\n  plotAreaSqft = 66879.19,\n  gfaSqm = 43492.96,\n  gfaSqft = 468154.32,\n  landPrice = 64206344.00,\n  permittedUse = 'Mixed Use (Commercial 64%, Retail 16%, Residential 20%)',\n  constructionPeriod = 'G+4P+25 Floors',\n  gfaResidentialSqft = 93623,\n  gfaRetailSqft = 74903,\n  gfaOfficesSqft = 299534\nWHERE plotNumber = '645-7879';",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1599
+}
