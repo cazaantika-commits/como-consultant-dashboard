@@ -223,22 +223,23 @@ export default function FinancialCommandCenter() {
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
   const projects = projectsQuery.data || [];
 
-  // Fetch market overview and competition pricing for all projects to calculate dynamic costs
-  // We'll fetch for the first project (most common case is single project)
-  const firstProjectId = projects.length > 0 ? projects[0].id : 0;
-  const moQuery = trpc.marketOverview.getByProject.useQuery(firstProjectId, { enabled: firstProjectId > 0, staleTime: 5000 });
-  const cpQuery = trpc.competitionPricing.getByProject.useQuery(firstProjectId, { enabled: firstProjectId > 0, staleTime: 5000 });
+  // Fetch market overview and competition pricing for ALL projects via batch endpoint
+  const allMoQuery = trpc.marketOverview.getAllByUser.useQuery(undefined, { enabled: isAuthenticated, staleTime: 10000 });
+  const allCpQuery = trpc.competitionPricing.getAllByUser.useQuery(undefined, { enabled: isAuthenticated, staleTime: 10000 });
 
-  // Build a map of projectId -> ProjectCosts
+  // Build a map of projectId -> ProjectCosts using ALL project data
   const projectCostsMap = useMemo<Record<number, ProjectCosts>>(() => {
     const map: Record<number, ProjectCosts> = {};
+    const moList = allMoQuery.data || [];
+    const cpList = allCpQuery.data || [];
     for (const p of projects) {
-      // For now use same mo/cp for first project; extend later for multi-project
-      const costs = calcCosts(p, p.id === firstProjectId ? moQuery.data : null, p.id === firstProjectId ? cpQuery.data : null);
+      const mo = moList.find((m: any) => m.projectId === p.id) || null;
+      const cp = cpList.find((c: any) => c.projectId === p.id) || null;
+      const costs = calcCosts(p, mo, cp);
       if (costs) map[p.id] = costs;
     }
     return map;
-  }, [projects, firstProjectId, moQuery.data, cpQuery.data]);
+  }, [projects, allMoQuery.data, allCpQuery.data]);
 
   // Project configurations
   const [projectConfigs, setProjectConfigs] = useState<ProjectConfig[]>([]);

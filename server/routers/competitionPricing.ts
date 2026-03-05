@@ -69,6 +69,17 @@ export const competitionPricingRouter = router({
       return results[0] || null;
     }),
 
+  // Get all competition pricing for the current user (all projects)
+  getAllByUser: publicProcedure
+    .query(async ({ ctx }) => {
+      if (!ctx.user) return [];
+      const db = await getDb();
+      if (!db) return [];
+      const results = await db.select().from(competitionPricing)
+        .where(eq(competitionPricing.userId, ctx.user.id));
+      return results;
+    }),
+
   // Save or update pricing data
   save: publicProcedure
     .input(pricingInput)
