@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import PortfolioView from "./PortfolioView";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -1300,104 +1300,348 @@ function CostItemDialog({ cfProjectId, open, onOpenChange, onSaved, editItem }: 
 
 function MonthlyTableTab({ dual }: { dual: any }) {
   const table = dual.monthlyTable || [];
-  const [showDetails, setShowDetails] = useState(false);
+  const [viewMode, setViewMode] = useState<'summary' | 'detailed'>('summary');
+
+  // Calculate phase subtotals
+  const phaseSubtotals = {
+    pre_dev: { devOut: 0, devCum: 0, escIn: 0, escOut: 0, escBal: 0, net: 0, cumNet: 0 },
+    construction: { devOut: 0, devCum: 0, escIn: 0, escOut: 0, escBal: 0, net: 0, cumNet: 0 },
+    handover: { devOut: 0, devCum: 0, escIn: 0, escOut: 0, escBal: 0, net: 0, cumNet: 0 },
+  };
+  let lastRow: any = null;
+  for (const row of table) {
+    const p = phaseSubtotals[row.phase as keyof typeof phaseSubtotals];
+    if (p) {
+      p.devOut += row.developerOutflow;
+      p.escIn += row.escrowInflow;
+      p.escOut += row.escrowOutflow;
+      p.net += row.netCashFlow;
+    }
+    lastRow = row;
+  }
+
+  // Find phase boundaries for separator rows
+  const phaseBoundaries: Record<string, number> = {};
+  for (let i = 0; i < table.length; i++) {
+    if (!phaseBoundaries[table[i].phase]) {
+      phaseBoundaries[table[i].phase] = i;
+    }
+  }
+
+  const totalDevOut = table.reduce((s: number, r: any) => s + r.developerOutflow, 0);
+  const totalEscIn = table.reduce((s: number, r: any) => s + r.escrowInflow, 0);
+  const totalEscOut = table.reduce((s: number, r: any) => s + r.escrowOutflow, 0);
 
   return (
     <div className="space-y-4">
+      {/* Header with summary cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200/50 rounded-lg p-3">
+          <div className="text-[10px] text-amber-600 font-medium mb-0.5">إجمالي تمويل المستثمر</div>
+          <div className="text-base font-bold text-amber-700 font-mono">{formatFullAED(totalDevOut)}</div>
+        </div>
+        <div className="bg-green-50 dark:bg-green-950/20 border border-green-200/50 rounded-lg p-3">
+          <div className="text-[10px] text-green-600 font-medium mb-0.5">إجمالي إيرادات المبيعات</div>
+          <div className="text-base font-bold text-green-700 font-mono">{formatFullAED(totalEscIn)}</div>
+        </div>
+        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200/50 rounded-lg p-3">
+          <div className="text-[10px] text-red-600 font-medium mb-0.5">إجمالي مدفوعات الإسكرو</div>
+          <div className="text-base font-bold text-red-700 font-mono">{formatFullAED(totalEscOut)}</div>
+        </div>
+        <div className={`border rounded-lg p-3 ${(lastRow?.cumulativeNet || 0) >= 0 ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200/50' : 'bg-red-50 dark:bg-red-950/20 border-red-200/50'}`}>
+          <div className="text-[10px] text-muted-foreground font-medium mb-0.5">صافي التدفق النقدي</div>
+          <div className={`text-base font-bold font-mono ${(lastRow?.cumulativeNet || 0) >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+            {formatFullAED(lastRow?.cumulativeNet || 0)}
+          </div>
+        </div>
+      </div>
+
+      {/* Controls */}
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold">الجدول الشهري ({table.length} شهر)</h3>
+        <h3 className="font-semibold flex items-center gap-2">
+          <FileSpreadsheet className="h-4 w-4" />
+          الجدول الشهري التفصيلي
+          <Badge variant="secondary" className="text-xs">{table.length} شهر</Badge>
+        </h3>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowDetails(!showDetails)}>
-            <Eye className="h-4 w-4 ml-1" />
-            {showDetails ? 'إخفاء التفاصيل' : 'عرض التفاصيل'}
+          <Button
+            variant={viewMode === 'summary' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('summary')}
+          >
+            ملخص
+          </Button>
+          <Button
+            variant={viewMode === 'detailed' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('detailed')}
+          >
+            تفصيلي
           </Button>
         </div>
       </div>
 
-      <Card>
+      {/* Main Table */}
+      <Card className="border shadow-sm">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-[13px] border-collapse" dir="rtl">
               <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="p-2 text-right sticky right-0 bg-muted/50 z-10">الشهر</th>
-                  <th className="p-2 text-center">المرحلة</th>
-                  <th className="p-2 text-left text-amber-600">مصروفات المستثمر</th>
-                  <th className="p-2 text-left text-amber-600">تراكمي المستثمر</th>
-                  <th className="p-2 text-left text-green-600">إيرادات الإسكرو</th>
-                  <th className="p-2 text-left text-red-600">مصروفات الإسكرو</th>
-                  <th className="p-2 text-left text-blue-600">رصيد الإسكرو</th>
-                  <th className="p-2 text-left font-bold">صافي الشهر</th>
-                  <th className="p-2 text-left font-bold">صافي تراكمي</th>
+                <tr className="bg-slate-800 text-white">
+                  <th className="py-2.5 px-3 text-right font-semibold sticky right-0 bg-slate-800 z-10 min-w-[50px]">#</th>
+                  <th className="py-2.5 px-3 text-right font-semibold sticky right-[50px] bg-slate-800 z-10 min-w-[90px]">الشهر</th>
+                  <th className="py-2.5 px-3 text-center font-semibold min-w-[80px]">المرحلة</th>
+                  <th className="py-2.5 px-3 text-left font-semibold min-w-[120px]" style={{ color: '#fbbf24' }}>مصروفات المستثمر</th>
+                  <th className="py-2.5 px-3 text-left font-semibold min-w-[130px]" style={{ color: '#fbbf24' }}>تراكمي المستثمر</th>
+                  <th className="py-2.5 px-3 text-left font-semibold min-w-[120px]" style={{ color: '#4ade80' }}>إيرادات (إسكرو)</th>
+                  <th className="py-2.5 px-3 text-left font-semibold min-w-[120px]" style={{ color: '#f87171' }}>مدفوعات (إسكرو)</th>
+                  <th className="py-2.5 px-3 text-left font-semibold min-w-[120px]" style={{ color: '#60a5fa' }}>رصيد الإسكرو</th>
+                  <th className="py-2.5 px-3 text-left font-semibold min-w-[110px]">صافي الشهر</th>
+                  <th className="py-2.5 px-3 text-left font-semibold min-w-[130px]">صافي تراكمي</th>
                 </tr>
               </thead>
               <tbody>
-                {table.map((row: any, i: number) => (
-                  <tr
-                    key={i}
-                    className={`border-b hover:bg-muted/30 ${
-                      row.phase === 'pre_dev' ? 'bg-amber-500/5' :
-                      row.phase === 'construction' ? 'bg-blue-500/5' :
-                      'bg-green-500/5'
-                    }`}
-                  >
-                    <td className="p-2 font-medium sticky right-0 bg-inherit z-10 text-xs">{row.label}</td>
-                    <td className="p-2 text-center">
-                      <Badge
-                        variant="outline"
-                        className="text-[10px]"
-                        style={{ borderColor: PHASE_COLORS[row.phase], color: PHASE_COLORS[row.phase] }}
+                {table.map((row: any, i: number) => {
+                  // Phase separator row
+                  const isPhaseStart = phaseBoundaries[row.phase] === i && i > 0;
+                  const phaseColor = row.phase === 'pre_dev' ? 'bg-amber-100/80 dark:bg-amber-900/20' :
+                    row.phase === 'construction' ? 'bg-blue-100/80 dark:bg-blue-900/20' :
+                    'bg-emerald-100/80 dark:bg-emerald-900/20';
+                  const prevPhase = i > 0 ? table[i - 1].phase : null;
+
+                  return (
+                    <React.Fragment key={`row-group-${i}`}>
+                      {/* Phase subtotal row */}
+                      {isPhaseStart && prevPhase && (
+                        <tr key={`sub-${prevPhase}`} className="bg-slate-100 dark:bg-slate-800/50 border-y-2 border-slate-300 dark:border-slate-600">
+                          <td colSpan={3} className="py-2 px-3 font-bold text-right text-slate-700 dark:text-slate-300 sticky right-0 bg-slate-100 dark:bg-slate-800/50 z-10">
+                            إجمالي {PHASE_LABELS[prevPhase]}
+                          </td>
+                          <td className="py-2 px-3 text-left font-mono font-bold text-amber-700">
+                            {formatFullAED(phaseSubtotals[prevPhase as keyof typeof phaseSubtotals]?.devOut || 0)}
+                          </td>
+                          <td className="py-2 px-3 text-left font-mono font-bold text-amber-800">
+                            {formatFullAED(table[i - 1].developerCumulative)}
+                          </td>
+                          <td className="py-2 px-3 text-left font-mono font-bold text-green-700">
+                            {formatFullAED(phaseSubtotals[prevPhase as keyof typeof phaseSubtotals]?.escIn || 0)}
+                          </td>
+                          <td className="py-2 px-3 text-left font-mono font-bold text-red-700">
+                            {formatFullAED(phaseSubtotals[prevPhase as keyof typeof phaseSubtotals]?.escOut || 0)}
+                          </td>
+                          <td className="py-2 px-3 text-left font-mono font-bold text-blue-700">
+                            {formatFullAED(table[i - 1].escrowBalance)}
+                          </td>
+                          <td className="py-2 px-3"></td>
+                          <td className="py-2 px-3 text-left font-mono font-bold">
+                            {formatFullAED(table[i - 1].cumulativeNet)}
+                          </td>
+                        </tr>
+                      )}
+                      {/* Phase header row */}
+                      {isPhaseStart && (
+                        <tr key={`header-${row.phase}`} className={`${phaseColor}`}>
+                          <td colSpan={10} className="py-1.5 px-3 font-bold text-sm">
+                            {row.phase === 'construction' ? '🔨' : row.phase === 'handover' ? '✅' : '📐'}
+                            {' '}{PHASE_LABELS[row.phase]}
+                          </td>
+                        </tr>
+                      )}
+                      {/* Data row */}
+                      <tr
+                        key={i}
+                        className={`border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors ${
+                          i % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50/50 dark:bg-slate-900/50'
+                        }`}
                       >
-                        {PHASE_LABELS[row.phase]}
-                      </Badge>
-                    </td>
-                    <td className="p-2 text-left font-mono text-xs text-amber-600">
-                      {row.developerOutflow > 0 ? formatFullAED(row.developerOutflow) : '-'}
-                    </td>
-                    <td className="p-2 text-left font-mono text-xs text-amber-700 font-semibold">
-                      {formatFullAED(row.developerCumulative)}
-                    </td>
-                    <td className="p-2 text-left font-mono text-xs text-green-600">
-                      {row.escrowInflow > 0 ? formatFullAED(row.escrowInflow) : '-'}
-                    </td>
-                    <td className="p-2 text-left font-mono text-xs text-red-600">
-                      {row.escrowOutflow > 0 ? formatFullAED(row.escrowOutflow) : '-'}
-                    </td>
-                    <td className="p-2 text-left font-mono text-xs text-blue-600 font-semibold">
-                      {formatFullAED(row.escrowBalance)}
-                    </td>
-                    <td className={`p-2 text-left font-mono text-xs font-semibold ${row.netCashFlow >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatFullAED(row.netCashFlow)}
-                    </td>
-                    <td className={`p-2 text-left font-mono text-xs font-bold ${row.cumulativeNet >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                      {formatFullAED(row.cumulativeNet)}
-                    </td>
-                  </tr>
-                ))}
+                        <td className="py-2 px-3 text-right text-slate-400 text-xs sticky right-0 bg-inherit z-10">{row.month}</td>
+                        <td className="py-2 px-3 text-right font-medium text-xs sticky right-[50px] bg-inherit z-10">{row.label}</td>
+                        <td className="py-2 px-3 text-center">
+                          <span
+                            className="inline-block text-[10px] font-medium px-2 py-0.5 rounded-full"
+                            style={{
+                              backgroundColor: (PHASE_COLORS[row.phase] || '#6b7280') + '15',
+                              color: PHASE_COLORS[row.phase] || '#6b7280',
+                              border: `1px solid ${(PHASE_COLORS[row.phase] || '#6b7280')}30`,
+                            }}
+                          >
+                            {PHASE_LABELS[row.phase]}
+                          </span>
+                        </td>
+                        <td className="py-2 px-3 text-left font-mono text-xs">
+                          {row.developerOutflow > 0 ? (
+                            <span className="text-amber-600">{formatFullAED(row.developerOutflow)}</span>
+                          ) : (
+                            <span className="text-slate-300">—</span>
+                          )}
+                        </td>
+                        <td className="py-2 px-3 text-left font-mono text-xs font-semibold text-amber-700">
+                          {formatFullAED(row.developerCumulative)}
+                        </td>
+                        <td className="py-2 px-3 text-left font-mono text-xs">
+                          {row.escrowInflow > 0 ? (
+                            <span className="text-green-600">+{formatFullAED(row.escrowInflow)}</span>
+                          ) : (
+                            <span className="text-slate-300">—</span>
+                          )}
+                        </td>
+                        <td className="py-2 px-3 text-left font-mono text-xs">
+                          {row.escrowOutflow > 0 ? (
+                            <span className="text-red-600">-{formatFullAED(row.escrowOutflow)}</span>
+                          ) : (
+                            <span className="text-slate-300">—</span>
+                          )}
+                        </td>
+                        <td className={`py-2 px-3 text-left font-mono text-xs font-semibold ${
+                          row.escrowBalance >= 0 ? 'text-blue-600' : 'text-red-600'
+                        }`}>
+                          {formatFullAED(row.escrowBalance)}
+                        </td>
+                        <td className={`py-2 px-3 text-left font-mono text-xs font-medium ${
+                          row.netCashFlow >= 0 ? 'text-emerald-600' : 'text-red-600'
+                        }`}>
+                          {row.netCashFlow >= 0 ? '+' : ''}{formatFullAED(row.netCashFlow)}
+                        </td>
+                        <td className={`py-2 px-3 text-left font-mono text-xs font-bold ${
+                          row.cumulativeNet >= 0 ? 'text-emerald-700' : 'text-red-700'
+                        }`}>
+                          {formatFullAED(row.cumulativeNet)}
+                        </td>
+                      </tr>
+
+                      {/* Detailed breakdown rows */}
+                      {viewMode === 'detailed' && (row.developerOutflow > 0 || row.escrowOutflow > 0) && (
+                        <tr key={`detail-${i}`} className="bg-slate-50/80 dark:bg-slate-800/20">
+                          <td colSpan={10} className="py-1 px-6">
+                            <div className="flex flex-wrap gap-x-6 gap-y-0.5 text-[10px] text-muted-foreground">
+                              {Object.entries(row.developerBreakdown || {}).map(([name, val]: [string, any]) => (
+                                <span key={name} className="text-amber-600">
+                                  {name}: {formatFullAED(val)}
+                                </span>
+                              ))}
+                              {Object.entries(row.escrowBreakdown || {}).map(([name, val]: [string, any]) => (
+                                <span key={name} className="text-blue-600">
+                                  {name}: {formatFullAED(val)}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
               <tfoot>
-                <tr className="border-t-2 bg-muted/30 font-bold">
-                  <td className="p-2 sticky right-0 bg-muted/30 z-10">الإجمالي</td>
-                  <td className="p-2"></td>
-                  <td className="p-2 text-left font-mono text-amber-700">
-                    {formatFullAED(table.reduce((s: number, r: any) => s + r.developerOutflow, 0))}
+                {/* Last phase subtotal */}
+                {table.length > 0 && (
+                  <tr className="bg-slate-100 dark:bg-slate-800/50 border-y-2 border-slate-300 dark:border-slate-600">
+                    <td colSpan={3} className="py-2 px-3 font-bold text-right text-slate-700 dark:text-slate-300 sticky right-0 bg-slate-100 dark:bg-slate-800/50 z-10">
+                      إجمالي {PHASE_LABELS[table[table.length - 1].phase]}
+                    </td>
+                    <td className="py-2 px-3 text-left font-mono font-bold text-amber-700">
+                      {formatFullAED(phaseSubtotals[table[table.length - 1].phase as keyof typeof phaseSubtotals]?.devOut || 0)}
+                    </td>
+                    <td className="py-2 px-3 text-left font-mono font-bold text-amber-800">
+                      {formatFullAED(lastRow?.developerCumulative || 0)}
+                    </td>
+                    <td className="py-2 px-3 text-left font-mono font-bold text-green-700">
+                      {formatFullAED(phaseSubtotals[table[table.length - 1].phase as keyof typeof phaseSubtotals]?.escIn || 0)}
+                    </td>
+                    <td className="py-2 px-3 text-left font-mono font-bold text-red-700">
+                      {formatFullAED(phaseSubtotals[table[table.length - 1].phase as keyof typeof phaseSubtotals]?.escOut || 0)}
+                    </td>
+                    <td className="py-2 px-3 text-left font-mono font-bold text-blue-700">
+                      {formatFullAED(lastRow?.escrowBalance || 0)}
+                    </td>
+                    <td className="py-2 px-3"></td>
+                    <td className="py-2 px-3 text-left font-mono font-bold">
+                      {formatFullAED(lastRow?.cumulativeNet || 0)}
+                    </td>
+                  </tr>
+                )}
+                {/* Grand total */}
+                <tr className="bg-slate-800 text-white">
+                  <td colSpan={3} className="py-3 px-3 font-bold text-right sticky right-0 bg-slate-800 z-10 text-base">
+                    الإجمالي الكلي
                   </td>
-                  <td className="p-2"></td>
-                  <td className="p-2 text-left font-mono text-green-700">
-                    {formatFullAED(table.reduce((s: number, r: any) => s + r.escrowInflow, 0))}
+                  <td className="py-3 px-3 text-left font-mono font-bold text-amber-300 text-sm">
+                    {formatFullAED(totalDevOut)}
                   </td>
-                  <td className="p-2 text-left font-mono text-red-700">
-                    {formatFullAED(table.reduce((s: number, r: any) => s + r.escrowOutflow, 0))}
+                  <td className="py-3 px-3"></td>
+                  <td className="py-3 px-3 text-left font-mono font-bold text-green-300 text-sm">
+                    {formatFullAED(totalEscIn)}
                   </td>
-                  <td className="p-2"></td>
-                  <td className="p-2"></td>
-                  <td className="p-2 text-left font-mono">
-                    {formatFullAED(table[table.length - 1]?.cumulativeNet || 0)}
+                  <td className="py-3 px-3 text-left font-mono font-bold text-red-300 text-sm">
+                    {formatFullAED(totalEscOut)}
+                  </td>
+                  <td className="py-3 px-3 text-left font-mono font-bold text-blue-300 text-sm">
+                    {formatFullAED(lastRow?.escrowBalance || 0)}
+                  </td>
+                  <td className="py-3 px-3"></td>
+                  <td className={`py-3 px-3 text-left font-mono font-bold text-sm ${
+                    (lastRow?.cumulativeNet || 0) >= 0 ? 'text-green-300' : 'text-red-300'
+                  }`}>
+                    {formatFullAED(lastRow?.cumulativeNet || 0)}
                   </td>
                 </tr>
               </tfoot>
             </table>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Phase Summary Table */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Layers className="h-4 w-4" />
+            ملخص المراحل
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <table className="w-full text-sm border-collapse" dir="rtl">
+            <thead>
+              <tr className="border-b-2 border-slate-200">
+                <th className="py-2 px-3 text-right font-semibold">المرحلة</th>
+                <th className="py-2 px-3 text-left font-semibold text-amber-600">تمويل المستثمر</th>
+                <th className="py-2 px-3 text-left font-semibold text-green-600">إيرادات الإسكرو</th>
+                <th className="py-2 px-3 text-left font-semibold text-red-600">مدفوعات الإسكرو</th>
+                <th className="py-2 px-3 text-left font-semibold">صافي المرحلة</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(['pre_dev', 'construction', 'handover'] as const).map((phase) => {
+                const sub = phaseSubtotals[phase];
+                const net = sub.escIn - sub.devOut - sub.escOut;
+                return (
+                  <tr key={phase} className="border-b hover:bg-muted/30">
+                    <td className="py-2.5 px-3 font-medium">
+                      <span className="inline-block w-2.5 h-2.5 rounded-full ml-2" style={{ backgroundColor: PHASE_COLORS[phase] }} />
+                      {PHASE_LABELS[phase]}
+                    </td>
+                    <td className="py-2.5 px-3 text-left font-mono text-amber-700">{formatFullAED(sub.devOut)}</td>
+                    <td className="py-2.5 px-3 text-left font-mono text-green-700">{formatFullAED(sub.escIn)}</td>
+                    <td className="py-2.5 px-3 text-left font-mono text-red-700">{formatFullAED(sub.escOut)}</td>
+                    <td className={`py-2.5 px-3 text-left font-mono font-bold ${net >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                      {formatFullAED(net)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-slate-300 bg-slate-50 dark:bg-slate-800/30 font-bold">
+                <td className="py-2.5 px-3">الإجمالي</td>
+                <td className="py-2.5 px-3 text-left font-mono text-amber-700">{formatFullAED(totalDevOut)}</td>
+                <td className="py-2.5 px-3 text-left font-mono text-green-700">{formatFullAED(totalEscIn)}</td>
+                <td className="py-2.5 px-3 text-left font-mono text-red-700">{formatFullAED(totalEscOut)}</td>
+                <td className={`py-2.5 px-3 text-left font-mono ${(lastRow?.cumulativeNet || 0) >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                  {formatFullAED(lastRow?.cumulativeNet || 0)}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
         </CardContent>
       </Card>
     </div>
@@ -1439,8 +1683,7 @@ function ProjectSettingsTab({ cfProjectId, project, onRefresh }: {
     updateMutation.mutate({
       id: cfProjectId,
       startDate,
-      designApprovalMonths: preDevMonths,
-      reraSetupMonths: 0,
+      preDevMonths,
       constructionMonths,
       handoverMonths,
       salesEnabled,
@@ -1449,6 +1692,9 @@ function ProjectSettingsTab({ cfProjectId, project, onRefresh }: {
       buyerPlanBookingPct: bookingPct,
       buyerPlanConstructionPct: constructionPct,
       buyerPlanHandoverPct: handoverPct,
+      escrowDepositPct,
+      contractorAdvancePct,
+      liquidityBufferPct,
     });
   };
 

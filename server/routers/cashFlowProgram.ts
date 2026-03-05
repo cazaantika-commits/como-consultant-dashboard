@@ -436,33 +436,67 @@ export const cashFlowProgramRouter = router({
     }),
 
   updateProject: publicProcedure
-    .input(z.object({ id: z.number() }).merge(cfProjectInput))
+    .input(z.object({
+      id: z.number(),
+      name: z.string().min(1).optional(),
+      startDate: z.string().optional(),
+      designApprovalMonths: z.number().min(1).optional(),
+      reraSetupMonths: z.number().min(0).optional(),
+      preDevMonths: z.number().min(1).optional(),
+      constructionMonths: z.number().min(1).optional(),
+      handoverMonths: z.number().min(1).optional(),
+      salesEnabled: z.boolean().optional(),
+      salesStartMonth: z.number().nullable().optional(),
+      salesVelocityUnits: z.number().nullable().optional(),
+      salesVelocityAed: z.number().nullable().optional(),
+      salesVelocityType: z.enum(['units', 'aed']).optional(),
+      totalSalesRevenue: z.number().nullable().optional(),
+      buyerPlanBookingPct: z.number().optional(),
+      buyerPlanConstructionPct: z.number().optional(),
+      buyerPlanHandoverPct: z.number().optional(),
+      escrowDepositPct: z.number().optional(),
+      contractorAdvancePct: z.number().optional(),
+      liquidityBufferPct: z.number().optional(),
+      constructionCostTotal: z.number().nullable().optional(),
+      buaSqft: z.number().nullable().optional(),
+      constructionCostPerSqft: z.number().nullable().optional(),
+      notes: z.string().nullable().optional(),
+    }))
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user) throw new Error("Unauthorized");
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      await db.update(cfProjects)
-        .set({
-          projectId: input.projectId ?? null,
-          name: input.name,
-          startDate: input.startDate,
-          designApprovalMonths: input.designApprovalMonths,
-          reraSetupMonths: input.reraSetupMonths,
-          constructionMonths: input.constructionMonths,
-          handoverMonths: input.handoverMonths,
-          salesEnabled: input.salesEnabled,
-          salesStartMonth: input.salesStartMonth ?? null,
-          salesVelocityUnits: input.salesVelocityUnits ?? null,
-          salesVelocityAed: input.salesVelocityAed ?? null,
-          salesVelocityType: input.salesVelocityType,
-          totalSalesRevenue: input.totalSalesRevenue ?? null,
-          buyerPlanBookingPct: input.buyerPlanBookingPct.toString(),
-          buyerPlanConstructionPct: input.buyerPlanConstructionPct.toString(),
-          buyerPlanHandoverPct: input.buyerPlanHandoverPct.toString(),
-          notes: input.notes ?? null,
-        })
-        .where(and(eq(cfProjects.id, input.id), eq(cfProjects.userId, ctx.user.id)));
+      const updateData: Record<string, any> = {};
+      if (input.name !== undefined) updateData.name = input.name;
+      if (input.startDate !== undefined) updateData.startDate = input.startDate;
+      if (input.designApprovalMonths !== undefined) updateData.designApprovalMonths = input.designApprovalMonths;
+      if (input.reraSetupMonths !== undefined) updateData.reraSetupMonths = input.reraSetupMonths;
+      if (input.preDevMonths !== undefined) updateData.preDevMonths = input.preDevMonths;
+      if (input.constructionMonths !== undefined) updateData.constructionMonths = input.constructionMonths;
+      if (input.handoverMonths !== undefined) updateData.handoverMonths = input.handoverMonths;
+      if (input.salesEnabled !== undefined) updateData.salesEnabled = input.salesEnabled;
+      if (input.salesStartMonth !== undefined) updateData.salesStartMonth = input.salesStartMonth;
+      if (input.salesVelocityUnits !== undefined) updateData.salesVelocityUnits = input.salesVelocityUnits;
+      if (input.salesVelocityAed !== undefined) updateData.salesVelocityAed = input.salesVelocityAed;
+      if (input.salesVelocityType !== undefined) updateData.salesVelocityType = input.salesVelocityType;
+      if (input.totalSalesRevenue !== undefined) updateData.totalSalesRevenue = input.totalSalesRevenue;
+      if (input.buyerPlanBookingPct !== undefined) updateData.buyerPlanBookingPct = input.buyerPlanBookingPct.toString();
+      if (input.buyerPlanConstructionPct !== undefined) updateData.buyerPlanConstructionPct = input.buyerPlanConstructionPct.toString();
+      if (input.buyerPlanHandoverPct !== undefined) updateData.buyerPlanHandoverPct = input.buyerPlanHandoverPct.toString();
+      if (input.escrowDepositPct !== undefined) updateData.escrowDepositPct = input.escrowDepositPct.toString();
+      if (input.contractorAdvancePct !== undefined) updateData.contractorAdvancePct = input.contractorAdvancePct.toString();
+      if (input.liquidityBufferPct !== undefined) updateData.liquidityBufferPct = input.liquidityBufferPct.toString();
+      if (input.constructionCostTotal !== undefined) updateData.constructionCostTotal = input.constructionCostTotal;
+      if (input.buaSqft !== undefined) updateData.buaSqft = input.buaSqft;
+      if (input.constructionCostPerSqft !== undefined) updateData.constructionCostPerSqft = input.constructionCostPerSqft;
+      if (input.notes !== undefined) updateData.notes = input.notes;
+
+      if (Object.keys(updateData).length > 0) {
+        await db.update(cfProjects)
+          .set(updateData)
+          .where(and(eq(cfProjects.id, input.id), eq(cfProjects.userId, ctx.user.id)));
+      }
       return { success: true };
     }),
 

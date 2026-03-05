@@ -1,0 +1,197 @@
+{
+  "query": "SELECT id, name, category, totalAmount, paymentType, paymentParams, fundingSource, escrowEligible, phaseTag FROM cf_cost_items ORDER BY sortOrder",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, name, category, totalAmount, paymentType, paymentParams, fundingSource, escrowEligible, phaseTag FROM cf_cost_items ORDER BY sortOrder",
+  "rows": [
+    {
+      "id": "1",
+      "name": "سعر الأرض",
+      "category": "land",
+      "totalAmount": "50000000",
+      "paymentType": "lump_sum",
+      "paymentParams": "{}",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "id": "30014",
+      "name": "سعر الأرض",
+      "category": "land",
+      "totalAmount": "18000000",
+      "paymentType": "lump_sum",
+      "paymentParams": "{\"paymentMonth\":1}",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "id": "30015",
+      "name": "عمولة وسيط الأرض",
+      "category": "land",
+      "totalAmount": "360000",
+      "paymentType": "lump_sum",
+      "paymentParams": "{\"paymentMonth\":1}",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "id": "30016",
+      "name": "رسوم تسجيل الأرض (4%)",
+      "category": "authority_fees",
+      "totalAmount": "720000",
+      "paymentType": "lump_sum",
+      "paymentParams": "{\"paymentMonth\":1}",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "id": "30017",
+      "name": "أتعاب التصميم",
+      "category": "design_engineering",
+      "totalAmount": "788560",
+      "paymentType": "milestone",
+      "paymentParams": "{\"milestones\":[{\"percent\":20,\"description\":\"توقيع العقد\",\"monthOffset\":1},{\"percent\":20,\"description\":\"إنهاء المفهوم\",\"monthOffset\":2},{\"percent\":25,\"description\":\"التصميم التفصيلي\",\"monthOffset\":4},{\"percent\":20,\"description\":\"حزمة المناقصة\",\"monthOffset\":5},{\"percent\":15,\"description\":\"رخصة البناء\",\"monthOffset\":6}]}",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "id": "30018",
+      "name": "رسوم الجهات الحكومية",
+      "category": "authority_fees",
+      "totalAmount": "1000000",
+      "paymentType": "lump_sum",
+      "paymentParams": "{\"paymentMonth\":6}",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "id": "30019",
+      "name": "فحص التربة",
+      "category": "authority_fees",
+      "totalAmount": "25000",
+      "paymentType": "lump_sum",
+      "paymentParams": "{\"paymentMonth\":1}",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "id": "30020",
+      "name": "المسح الطبوغرافي",
+      "category": "authority_fees",
+      "totalAmount": "8000",
+      "paymentType": "lump_sum",
+      "paymentParams": "{\"paymentMonth\":1}",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "id": "30021",
+      "name": "المقاول الرئيسي",
+      "category": "contractor",
+      "totalAmount": "39427980",
+      "paymentType": "progress_based",
+      "paymentParams": "{\"mobilizationPct\":10,\"progressDistribution\":\"scurve\",\"retentionPct\":5}",
+      "fundingSource": "mixed",
+      "escrowEligible": "1",
+      "phaseTag": "construction"
+    },
+    {
+      "id": "30022",
+      "name": "أتعاب الإشراف",
+      "category": "consultants",
+      "totalAmount": "788560",
+      "paymentType": "monthly_fixed",
+      "paymentParams": "{}",
+      "fundingSource": "escrow",
+      "escrowEligible": "1",
+      "phaseTag": "construction"
+    },
+    {
+      "id": "30023",
+      "name": "التسويق",
+      "category": "marketing_sales",
+      "totalAmount": "1247300",
+      "paymentType": "sales_linked",
+      "paymentParams": "{\"salesPct\":100,\"salesTiming\":\"construction\"}",
+      "fundingSource": "escrow",
+      "escrowEligible": "1",
+      "phaseTag": "construction"
+    },
+    {
+      "id": "30024",
+      "name": "عمولة البيع",
+      "category": "marketing_sales",
+      "totalAmount": "3118250",
+      "paymentType": "sales_linked",
+      "paymentParams": "{\"salesPct\":100,\"salesTiming\":\"booking\"}",
+      "fundingSource": "escrow",
+      "escrowEligible": "1",
+      "phaseTag": "construction"
+    },
+    {
+      "id": "30025",
+      "name": "أتعاب المطور",
+      "category": "developer_fee",
+      "totalAmount": "3118250",
+      "paymentType": "monthly_fixed",
+      "paymentParams": "{}",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "all"
+    },
+    {
+      "id": "30026",
+      "name": "احتياطي",
+      "category": "contingency",
+      "totalAmount": "788560",
+      "paymentType": "monthly_fixed",
+      "paymentParams": "{}",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "construction"
+    },
+    {
+      "id": "30027",
+      "name": "رسوم تنظيمية (ريرا وأخرى)",
+      "category": "authority_fees",
+      "totalAmount": "494100",
+      "paymentType": "lump_sum",
+      "paymentParams": "{\"paymentMonth\":7}",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "id": "30028",
+      "name": "رسوم الفرز",
+      "category": "authority_fees",
+      "totalAmount": "62957",
+      "paymentType": "lump_sum",
+      "paymentParams": "{\"paymentMonth\":2}",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "id": "30029",
+      "name": "رسوم المجتمع",
+      "category": "other",
+      "totalAmount": "16000",
+      "paymentType": "lump_sum",
+      "paymentParams": "{\"paymentMonth\":6}",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tcategory\ttotalAmount\tpaymentType\tpaymentParams\tfundingSource\tescrowEligible\tphaseTag\n1\tسعر الأرض\tland\t50000000\tlump_sum\t{}\tdeveloper\t0\tpre_dev\n30014\tسعر الأرض\tland\t18000000\tlump_sum\t{\"paymentMonth\":1}\tdeveloper\t0\tpre_dev\n30015\tعمولة وسيط الأرض\tland\t360000\tlump_sum\t{\"paymentMonth\":1}\tdeveloper\t0\tpre_dev\n30016\tرسوم تسجيل الأرض (4%)\tauthority_fees\t720000\tlump_sum\t{\"paymentMonth\":1}\tdeveloper\t0\tpre_dev\n30017\tأتعاب التصميم\tdesign_engineering\t788560\tmilestone\t{\"milestones\":[{\"percent\":20,\"description\":\"توقيع العقد\",\"monthOffset\":1},{\"percent\":20,\"description\":\"إنهاء المفهوم\",\"monthOffset\":2},{\"percent\":25,\"description\":\"التصميم التفصيلي\",\"monthOffset\":4},{\"percent\":20,\"description\":\"حزمة المناقصة\",\"monthOffset\":5},{\"percent\":15,\"description\":\"رخصة البناء\",\"monthOffset\":6}]}\tdeveloper\t0\tpre_dev\n30018\tرسوم الجهات الحكومية\tauthority_fees\t1000000\tlump_sum\t{\"paymentMonth\":6}\tdeveloper\t0\tpre_dev\n30019\tفحص التربة\tauthority_fees\t25000\tlump_sum\t{\"paymentMonth\":1}\tdeveloper\t0\tpre_dev\n30020\tالمسح الطبوغرافي\tauthority_fees\t8000\tlump_sum\t{\"paymentMonth\":1}\tdeveloper\t0\tpre_dev\n30021\tالمقاول الرئيسي\tcontractor\t39427980\tprogress_based\t{\"mobilizationPct\":10,\"progressDistribution\":\"scurve\",\"retentionPct\":5}\tmixed\t1\tconstruction\n30022\tأتعاب الإشراف\tconsultants\t788560\tmonthly_fixed\t{}\tescrow\t1\tconstruction\n30023\tالتسويق\tmarketing_sales\t1247300\tsales_linked\t{\"salesPct\":100,\"salesTiming\":\"construction\"}\tescrow\t1\tconstruction\n30024\tعمولة البيع\tmarketing_sales\t3118250\tsales_linked\t{\"salesPct\":100,\"salesTiming\":\"booking\"}\tescrow\t1\tconstruction\n30025\tأتعاب المطور\tdeveloper_fee\t3118250\tmonthly_fixed\t{}\tdeveloper\t0\tall\n30026\tاحتياطي\tcontingency\t788560\tmonthly_fixed\t{}\tdeveloper\t0\tconstruction\n30027\tرسوم تنظيمية (ريرا وأخرى)\tauthority_fees\t494100\tlump_sum\t{\"paymentMonth\":7}\tdeveloper\t0\tpre_dev\n30028\tرسوم الفرز\tauthority_fees\t62957\tlump_sum\t{\"paymentMonth\":2}\tdeveloper\t0\tpre_dev\n30029\tرسوم المجتمع\tother\t16000\tlump_sum\t{\"paymentMonth\":6}\tdeveloper\t0\tpre_dev\n",
+  "stderr": "",
+  "execution_time_ms": 1905
+}

@@ -410,23 +410,47 @@ export function calculateDualCashFlow(
         escrowBreakdowns[item.name][m] += distribution[m];
       }
     } else if (item.fundingSource === 'mixed') {
-      // Split: developer pays the early portion, escrow pays the rest
-      // For contractor: developer pays advance (35%), escrow pays rest (65%)
+      // Mixed funding: developer pays 35% (escrow deposit + advance + buffer),
+      // escrow pays remaining 65% from buyer payments
       const devPct = developerConstructionPct;
       const escPct = 1 - devPct;
       
-      for (let m = 0; m < totalMonths; m++) {
-        // During pre-dev, developer pays
-        if (m < phases.construction.start - 1) {
-          developerMonthly[m] += distribution[m];
-        } else {
-          // During construction, escrow pays
-          escrowMonthly[m] += distribution[m];
-        }
+      const devAmount = item.totalAmount * devPct;
+      const escAmount = item.totalAmount * escPct;
+      
+      // Developer portion: paid early in construction (first few months)
+      // Based on Excel model: developer pays upfront at start of construction
+      const constStart = phases.construction.start - 1;
+      const constEnd = phases.construction.end;
+      
+      // Developer pays their 35% in the first 3-4 months of construction
+      // (matching the Excel pattern: big payment month 1, then smaller)
+      const devPayMonths = Math.min(4, phases.construction.months);
+      const devWeights = [0.57, 0, 0.29, 0.14]; // ~57% month 1, 29% month 3, 14% month 4
+      for (let i = 0; i < devPayMonths && constStart + i < totalMonths; i++) {
+        developerMonthly[constStart + i] += devAmount * (devWeights[i] || 0);
       }
-      // For tracking: split total
-      totalDeveloperCosts += item.totalAmount * devPct;
-      totalEscrowCosts += item.totalAmount * escPct;
+      
+      // Escrow portion: spread evenly across construction months
+      const escMonths = phases.construction.months;
+      const escMonthly = escAmount / escMonths;
+      for (let m = constStart; m < constEnd && m < totalMonths; m++) {
+        escrowMonthly[m] += escMonthly;
+      }
+      
+      // Track totals
+      totalDeveloperCosts += devAmount;
+      totalEscrowCosts += escAmount;
+      
+      // Track breakdowns
+      if (!developerBreakdowns[item.name + ' (مستثمر)']) developerBreakdowns[item.name + ' (مستثمر)'] = new Array(totalMonths).fill(0);
+      if (!escrowBreakdowns[item.name + ' (إسكرو)']) escrowBreakdowns[item.name + ' (إسكرو)'] = new Array(totalMonths).fill(0);
+      for (let i = 0; i < devPayMonths && constStart + i < totalMonths; i++) {
+        developerBreakdowns[item.name + ' (مستثمر)'][constStart + i] += devAmount * (devWeights[i] || 0);
+      }
+      for (let m = constStart; m < constEnd && m < totalMonths; m++) {
+        escrowBreakdowns[item.name + ' (إسكرو)'][m] += escMonthly;
+      }
     } else {
       // Developer pays
       for (let m = 0; m < totalMonths; m++) {
