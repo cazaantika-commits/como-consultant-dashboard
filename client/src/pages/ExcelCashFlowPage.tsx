@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import {
@@ -10,7 +10,6 @@ import {
   getTotalMonths,
   distributeExpense,
   buildQuarters,
-  aggregateToQuarters,
   getInvestorExpenses,
   getDefaultCustomDistribution,
   getDefaultRevenue,
@@ -20,6 +19,18 @@ import {
   isCurrentMonth,
   SALES_VALUE,
 } from "@/lib/cashFlowEngine";
+
+// Import the CashFlowContext directly
+import { useCashFlow } from "@/contexts/CashFlowContext";
+
+// Safe wrapper that returns null when not inside provider
+function useCashFlowSafe() {
+  try {
+    return useCashFlow();
+  } catch {
+    return null;
+  }
+}
 
 // ===== PHASE COLORS =====
 const PHASE_COLORS: Record<string, { bg: string; header: string; text: string; border: string }> = {
@@ -36,16 +47,29 @@ const TODAY = new Date();
 export default function ExcelCashFlowPage() {
   const { isAuthenticated } = useAuth();
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+
+  // Try shared context first
+  const shared = useCashFlowSafe();
+
+  // Local state fallbacks
+  const [localProjectId, setLocalProjectId] = useState<number | null>(null);
+  const [localDurations, setLocalDurations] = useState<PhaseDurations>({ ...DEFAULT_DURATIONS });
+  const [localOverrides, setLocalOverrides] = useState<Record<string, { [month: number]: number }>>({});
+  const [localShifts, setLocalShifts] = useState<Record<string, number>>({});
+
+  // Use shared or local
+  const selectedProjectId = shared ? shared.selectedProjectId : localProjectId;
+  const setSelectedProjectId = shared ? shared.setSelectedProjectId : setLocalProjectId;
+  const durations = shared ? shared.durations : localDurations;
+  const setDurations = shared ? shared.setDurations : setLocalDurations;
+  const expenseOverrides = shared ? shared.investorOverrides : localOverrides;
+  const setExpenseOverrides = shared ? shared.setInvestorOverrides : setLocalOverrides;
+  const expenseShifts = shared ? shared.investorShifts : localShifts;
+  const setExpenseShifts = shared ? shared.setInvestorShifts : setLocalShifts;
+
   const selectedProject = (projectsQuery.data || []).find((p: any) => p.id === selectedProjectId);
 
-  // === DYNAMIC DURATIONS ===
-  const [durations, setDurations] = useState<PhaseDurations>({ ...DEFAULT_DURATIONS });
   const [showControls, setShowControls] = useState(false);
-
-  // === EXPENSE OVERRIDES & SHIFTS ===
-  const [expenseOverrides, setExpenseOverrides] = useState<Record<string, { [month: number]: number }>>({});
-  const [expenseShifts, setExpenseShifts] = useState<Record<string, number>>({});
   const [editingCell, setEditingCell] = useState<{ itemId: string; qi: number } | null>(null);
   const [editValue, setEditValue] = useState("");
 
@@ -76,14 +100,12 @@ export default function ExcelCashFlowPage() {
 
       if (item.behavior === "CUSTOM") {
         const customDist = getDefaultCustomDistribution(item.id, phases, durations);
-        // Apply overrides on top of custom
         const merged = { ...customDist };
         if (expenseOverrides[item.id]) {
           for (const [m, v] of Object.entries(expenseOverrides[item.id])) {
             merged[parseInt(m)] = v;
           }
         }
-        // Apply shift
         if (expenseShifts[item.id]) {
           const shifted: { [month: number]: number } = {};
           for (const [m, v] of Object.entries(merged)) {
@@ -110,7 +132,7 @@ export default function ExcelCashFlowPage() {
     });
   }, [monthlyDistributions, quarters, baseExpenses]);
 
-  // Row totals (recalculated from quarterly data)
+  // Row totals
   const rowTotals = useMemo(() => {
     return quarterlyData.map(row => row.reduce((s, v) => s + v, 0));
   }, [quarterlyData]);
@@ -205,7 +227,6 @@ export default function ExcelCashFlowPage() {
     const q = quarters[qi];
     const newVal = parseFloat(editValue.replace(/,/g, "")) || 0;
 
-    // Distribute the new value across the quarter's months
     const newOverrides = { ...expenseOverrides };
     if (!newOverrides[itemId]) newOverrides[itemId] = {};
 
@@ -223,7 +244,7 @@ export default function ExcelCashFlowPage() {
 
   // Handle shift
   const handleShift = (itemId: string, delta: number) => {
-    setExpenseShifts(prev => ({
+    setExpenseShifts((prev: Record<string, number>) => ({
       ...prev,
       [itemId]: (prev[itemId] || 0) + delta,
     }));
@@ -231,10 +252,20 @@ export default function ExcelCashFlowPage() {
 
   // Reset all
   const resetAll = () => {
-    setDurations({ ...DEFAULT_DURATIONS });
-    setExpenseOverrides({});
-    setExpenseShifts({});
+    if (shared) {
+      shared.resetAll();
+    } else {
+      setDurations({ ...DEFAULT_DURATIONS });
+      setExpenseOverrides({});
+      setExpenseShifts({});
+    }
   };
+
+  const hasChanges = shared ? shared.hasChanges : (
+    Object.keys(expenseOverrides).length > 0 || 
+    Object.keys(expenseShifts).length > 0 || 
+    JSON.stringify(durations) !== JSON.stringify(DEFAULT_DURATIONS)
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 p-4" dir="rtl">
@@ -279,7 +310,7 @@ export default function ExcelCashFlowPage() {
             <span>⚙️</span>
             <span>{showControls ? "إخفاء التحكم" : "تعديل المدد والتواريخ"}</span>
           </button>
-          {(Object.keys(expenseOverrides).length > 0 || Object.keys(expenseShifts).length > 0 || JSON.stringify(durations) !== JSON.stringify(DEFAULT_DURATIONS)) && (
+          {hasChanges && (
             <button
               onClick={resetAll}
               className="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1.5 rounded-lg transition-colors"
@@ -296,6 +327,7 @@ export default function ExcelCashFlowPage() {
           <div className="bg-indigo-700 text-white px-4 py-2 flex items-center gap-2">
             <span>⚙️</span>
             <span className="text-xs font-bold">لوحة التحكم — تعديل مدد المراحل</span>
+            {shared && <span className="text-[9px] bg-white/20 px-2 py-0.5 rounded mr-2">🔗 مشترك مع الإسكرو</span>}
           </div>
           <div className="p-4">
             <div className="grid grid-cols-3 gap-4 mb-4">
@@ -304,7 +336,7 @@ export default function ExcelCashFlowPage() {
                 <div className="text-[10px] font-bold text-amber-800 mb-2">ما قبل البناء</div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setDurations(d => ({ ...d, preCon: Math.max(3, d.preCon - 1) }))}
+                    onClick={() => setDurations((d: PhaseDurations) => ({ ...d, preCon: Math.max(3, d.preCon - 1) }))}
                     className="w-7 h-7 rounded bg-amber-200 hover:bg-amber-300 text-amber-800 font-bold text-sm flex items-center justify-center"
                   >−</button>
                   <div className="flex-1 text-center">
@@ -312,7 +344,7 @@ export default function ExcelCashFlowPage() {
                     <span className="text-[10px] text-amber-600 mr-1">شهر</span>
                   </div>
                   <button
-                    onClick={() => setDurations(d => ({ ...d, preCon: Math.min(12, d.preCon + 1) }))}
+                    onClick={() => setDurations((d: PhaseDurations) => ({ ...d, preCon: Math.min(12, d.preCon + 1) }))}
                     className="w-7 h-7 rounded bg-amber-200 hover:bg-amber-300 text-amber-800 font-bold text-sm flex items-center justify-center"
                   >+</button>
                 </div>
@@ -328,7 +360,7 @@ export default function ExcelCashFlowPage() {
                 <div className="text-[10px] font-bold text-sky-800 mb-2">البناء</div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setDurations(d => ({ ...d, construction: Math.max(6, d.construction - 1) }))}
+                    onClick={() => setDurations((d: PhaseDurations) => ({ ...d, construction: Math.max(6, d.construction - 1) }))}
                     className="w-7 h-7 rounded bg-sky-200 hover:bg-sky-300 text-sky-800 font-bold text-sm flex items-center justify-center"
                   >−</button>
                   <div className="flex-1 text-center">
@@ -336,7 +368,7 @@ export default function ExcelCashFlowPage() {
                     <span className="text-[10px] text-sky-600 mr-1">شهر</span>
                   </div>
                   <button
-                    onClick={() => setDurations(d => ({ ...d, construction: Math.min(36, d.construction + 1) }))}
+                    onClick={() => setDurations((d: PhaseDurations) => ({ ...d, construction: Math.min(36, d.construction + 1) }))}
                     className="w-7 h-7 rounded bg-sky-200 hover:bg-sky-300 text-sky-800 font-bold text-sm flex items-center justify-center"
                   >+</button>
                 </div>
@@ -352,7 +384,7 @@ export default function ExcelCashFlowPage() {
                 <div className="text-[10px] font-bold text-emerald-800 mb-2">التسليم</div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setDurations(d => ({ ...d, handover: Math.max(1, d.handover - 1) }))}
+                    onClick={() => setDurations((d: PhaseDurations) => ({ ...d, handover: Math.max(1, d.handover - 1) }))}
                     className="w-7 h-7 rounded bg-emerald-200 hover:bg-emerald-300 text-emerald-800 font-bold text-sm flex items-center justify-center"
                   >−</button>
                   <div className="flex-1 text-center">
@@ -360,7 +392,7 @@ export default function ExcelCashFlowPage() {
                     <span className="text-[10px] text-emerald-600 mr-1">شهر</span>
                   </div>
                   <button
-                    onClick={() => setDurations(d => ({ ...d, handover: Math.min(6, d.handover + 1) }))}
+                    onClick={() => setDurations((d: PhaseDurations) => ({ ...d, handover: Math.min(6, d.handover + 1) }))}
                     className="w-7 h-7 rounded bg-emerald-200 hover:bg-emerald-300 text-emerald-800 font-bold text-sm flex items-center justify-center"
                   >+</button>
                 </div>
@@ -381,6 +413,7 @@ export default function ExcelCashFlowPage() {
               </div>
               <div className="text-[10px] text-gray-500">
                 تغيير المدة يعيد توزيع المصاريف تلقائياً حسب طبيعة كل بند
+                {shared && <span className="text-indigo-600 mr-2">• التغييرات تنعكس على جدول الإسكرو</span>}
               </div>
             </div>
 
@@ -398,7 +431,7 @@ export default function ExcelCashFlowPage() {
                           {shift > 0 ? `تأخير ${shift} شهر` : `تبكير ${Math.abs(shift)} شهر`}
                         </span>
                         <button
-                          onClick={() => setExpenseShifts(prev => { const n = { ...prev }; delete n[id]; return n; })}
+                          onClick={() => setExpenseShifts((prev: Record<string, number>) => { const n = { ...prev }; delete n[id]; return n; })}
                           className="text-gray-400 hover:text-red-500 mr-1"
                         >✕</button>
                       </div>

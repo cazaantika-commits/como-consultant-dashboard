@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Building2, FileText, BarChart3, ClipboardList, TrendingUp, Landmark, ArrowLeft } from "lucide-react";
+import { ArrowRight, Building2, FileText, BarChart3, ClipboardList, TrendingUp, Landmark, SlidersHorizontal } from "lucide-react";
+import { CashFlowProvider } from "@/contexts/CashFlowContext";
 import FactSheetPage from "./FactSheetPage";
 import FeasibilityStudyPage from "./FeasibilityStudyPage";
 import DevelopmentStagesPage from "./DevelopmentStagesPage";
 import ExcelCashFlowPage from "./ExcelCashFlowPage";
 import EscrowCashFlowPage from "./EscrowCashFlowPage";
+import FinancialCommandCenter from "./FinancialCommandCenter";
 
-type View = "icons" | "fact-sheet" | "feasibility" | "cashflow" | "escrow" | "development-stages";
+type View = "icons" | "fact-sheet" | "feasibility" | "cashflow" | "escrow" | "development-stages" | "financial-command";
 
 const ICONS_CONFIG = [
   {
@@ -71,6 +73,18 @@ const ICONS_CONFIG = [
     textClass: "text-purple-700",
     shadow: "rgba(139, 92, 246, 0.3)",
   },
+  {
+    id: "financial-command" as View,
+    label: "مركز القيادة المالي",
+    description: "دمج المشاريع وتحريك التواريخ",
+    emoji: "🎯",
+    icon: SlidersHorizontal,
+    gradient: "linear-gradient(135deg, #ef4444, #dc2626)",
+    bgClass: "from-red-50 to-red-100",
+    borderClass: "border-red-200",
+    textClass: "text-red-700",
+    shadow: "rgba(239, 68, 68, 0.3)",
+  },
 ];
 
 export default function ProjectManagementPage() {
@@ -78,6 +92,7 @@ export default function ProjectManagementPage() {
   const [activeView, setActiveView] = useState<View>("icons");
 
   return (
+    <CashFlowProvider>
     <div className="min-h-screen bg-background" dir="rtl">
       {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
@@ -109,6 +124,31 @@ export default function ProjectManagementPage() {
                   {ICONS_CONFIG.find(c => c.id === activeView)?.label}
                 </h1>
               </div>
+              {/* Quick nav between cashflow and escrow */}
+              {(activeView === "cashflow" || activeView === "escrow") && (
+                <div className="mr-auto flex items-center gap-1">
+                  <button
+                    onClick={() => setActiveView("cashflow")}
+                    className={`text-[10px] px-2.5 py-1 rounded-lg transition-colors ${
+                      activeView === "cashflow" 
+                        ? "bg-emerald-600 text-white" 
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                  >
+                    💰 مصاريف المستثمر
+                  </button>
+                  <button
+                    onClick={() => setActiveView("escrow")}
+                    className={`text-[10px] px-2.5 py-1 rounded-lg transition-colors ${
+                      activeView === "escrow" 
+                        ? "bg-indigo-600 text-white" 
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                  >
+                    🏦 حساب الضمان
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -122,7 +162,7 @@ export default function ProjectManagementPage() {
             <p className="text-sm text-muted-foreground">اختر القسم المطلوب</p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-5">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
             {ICONS_CONFIG.map((item) => {
               const Icon = item.icon;
               return (
@@ -164,6 +204,12 @@ export default function ProjectManagementPage() {
         </main>
       )}
       {activeView === "development-stages" && <DevelopmentStagesPage embedded />}
+      {activeView === "financial-command" && (
+        <main className="max-w-[98%] mx-auto py-4">
+          <FinancialCommandCenter />
+        </main>
+      )}
     </div>
+    </CashFlowProvider>
   );
 }

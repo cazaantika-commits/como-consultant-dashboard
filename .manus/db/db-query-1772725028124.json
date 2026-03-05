@@ -1,0 +1,118 @@
+{
+  "query": "SELECT p.id, p.name, cf.id as cf_id, cf.name as cf_name, cf.startDate, cf.constructionMonths, cf.preDevMonths, cf.handoverMonths, cf.constructionCostTotal, cf.totalSalesRevenue FROM projects p LEFT JOIN cf_projects cf ON cf.projectId = p.id ORDER BY p.id",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT p.id, p.name, cf.id as cf_id, cf.name as cf_name, cf.startDate, cf.constructionMonths, cf.preDevMonths, cf.handoverMonths, cf.constructionCostTotal, cf.totalSalesRevenue FROM projects p LEFT JOIN cf_projects cf ON cf.projectId = p.id ORDER BY p.id",
+  "rows": [
+    {
+      "id": "1",
+      "name": "مركز مجان التجاري (G+4)",
+      "cf_id": "NULL",
+      "cf_name": "NULL",
+      "startDate": "NULL",
+      "constructionMonths": "NULL",
+      "preDevMonths": "NULL",
+      "handoverMonths": "NULL",
+      "constructionCostTotal": "NULL",
+      "totalSalesRevenue": "NULL"
+    },
+    {
+      "id": "2",
+      "name": "مجان متعدد الاستخدامات (G+4P+25)",
+      "cf_id": "NULL",
+      "cf_name": "NULL",
+      "startDate": "NULL",
+      "constructionMonths": "NULL",
+      "preDevMonths": "NULL",
+      "handoverMonths": "NULL",
+      "constructionCostTotal": "NULL",
+      "totalSalesRevenue": "NULL"
+    },
+    {
+      "id": "3",
+      "name": "مبنى الجداف السكني (G+7)",
+      "cf_id": "NULL",
+      "cf_name": "NULL",
+      "startDate": "NULL",
+      "constructionMonths": "NULL",
+      "preDevMonths": "NULL",
+      "handoverMonths": "NULL",
+      "constructionCostTotal": "NULL",
+      "totalSalesRevenue": "NULL"
+    },
+    {
+      "id": "4",
+      "name": "ند الشبا — قطعة 1 (6185392)",
+      "cf_id": "30012",
+      "cf_name": "ند الشبا — قطعة 1 (6185392)",
+      "startDate": "2026-04",
+      "constructionMonths": "16",
+      "preDevMonths": "6",
+      "handoverMonths": "2",
+      "constructionCostTotal": "NULL",
+      "totalSalesRevenue": "62365000"
+    },
+    {
+      "id": "5",
+      "name": "ند الشبا — قطعة 2 المدمجة (6182776)",
+      "cf_id": "NULL",
+      "cf_name": "NULL",
+      "startDate": "NULL",
+      "constructionMonths": "NULL",
+      "preDevMonths": "NULL",
+      "handoverMonths": "NULL",
+      "constructionCostTotal": "NULL",
+      "totalSalesRevenue": "NULL"
+    },
+    {
+      "id": "6",
+      "name": "ند الشبا — قطعة 3 الفلل (6180578)",
+      "cf_id": "NULL",
+      "cf_name": "NULL",
+      "startDate": "NULL",
+      "constructionMonths": "NULL",
+      "preDevMonths": "NULL",
+      "handoverMonths": "NULL",
+      "constructionCostTotal": "NULL",
+      "totalSalesRevenue": "NULL"
+    },
+    {
+      "id": "60001",
+      "name": "مشروع آلات البيع في ميسيسوجا، أونتاريو",
+      "cf_id": "NULL",
+      "cf_name": "NULL",
+      "startDate": "NULL",
+      "constructionMonths": "NULL",
+      "preDevMonths": "NULL",
+      "handoverMonths": "NULL",
+      "constructionCostTotal": "NULL",
+      "totalSalesRevenue": "NULL"
+    },
+    {
+      "id": "60002",
+      "name": "مشروع آلات البيع في ميسيسوجا، أونتاريو",
+      "cf_id": "NULL",
+      "cf_name": "NULL",
+      "startDate": "NULL",
+      "constructionMonths": "NULL",
+      "preDevMonths": "NULL",
+      "handoverMonths": "NULL",
+      "constructionCostTotal": "NULL",
+      "totalSalesRevenue": "NULL"
+    },
+    {
+      "id": "60003",
+      "name": "آلات البيع في كلية طب الأسنان",
+      "cf_id": "NULL",
+      "cf_name": "NULL",
+      "startDate": "NULL",
+      "constructionMonths": "NULL",
+      "preDevMonths": "NULL",
+      "handoverMonths": "NULL",
+      "constructionCostTotal": "NULL",
+      "totalSalesRevenue": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tcf_id\tcf_name\tstartDate\tconstructionMonths\tpreDevMonths\thandoverMonths\tconstructionCostTotal\ttotalSalesRevenue\n1\tمركز مجان التجاري (G+4)\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\n2\tمجان متعدد الاستخدامات (G+4P+25)\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\n3\tمبنى الجداف السكني (G+7)\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\n4\tند الشبا — قطعة 1 (6185392)\t30012\tند الشبا — قطعة 1 (6185392)\t2026-04\t16\t6\t2\tNULL\t62365000\n5\tند الشبا — قطعة 2 المدمجة (6182776)\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\n6\tند الشبا — قطعة 3 الفلل (6180578)\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\n60001\tمشروع آلات البيع في ميسيسوجا، أونتاريو\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\n60002\tمشروع آلات البيع في ميسيسوجا، أونتاريو\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\n60003\tآلات البيع في كلية طب الأسنان\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1502
+}

@@ -1,0 +1,94 @@
+{
+  "query": "SELECT id, name, projectId, startDate, constructionMonths, preDevMonths, handoverMonths, constructionCostTotal, totalSalesRevenue, userId FROM cf_projects ORDER BY id",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, name, projectId, startDate, constructionMonths, preDevMonths, handoverMonths, constructionCostTotal, totalSalesRevenue, userId FROM cf_projects ORDER BY id",
+  "rows": [
+    {
+      "id": "1",
+      "name": "مشروع ند الشبا السكني",
+      "projectId": "NULL",
+      "startDate": "2026-01",
+      "constructionMonths": "24",
+      "preDevMonths": "6",
+      "handoverMonths": "3",
+      "constructionCostTotal": "NULL",
+      "totalSalesRevenue": "NULL",
+      "userId": "1"
+    },
+    {
+      "id": "30012",
+      "name": "ند الشبا — قطعة 1 (6185392)",
+      "projectId": "4",
+      "startDate": "2026-04",
+      "constructionMonths": "16",
+      "preDevMonths": "6",
+      "handoverMonths": "2",
+      "constructionCostTotal": "NULL",
+      "totalSalesRevenue": "62365000",
+      "userId": "1"
+    },
+    {
+      "id": "30013",
+      "name": "Test CF Project for Phases",
+      "projectId": "NULL",
+      "startDate": "2026-01",
+      "constructionMonths": "24",
+      "preDevMonths": "6",
+      "handoverMonths": "3",
+      "constructionCostTotal": "NULL",
+      "totalSalesRevenue": "NULL",
+      "userId": "1"
+    },
+    {
+      "id": "30014",
+      "name": "Test CF Project for Phases",
+      "projectId": "NULL",
+      "startDate": "2026-01",
+      "constructionMonths": "24",
+      "preDevMonths": "6",
+      "handoverMonths": "3",
+      "constructionCostTotal": "NULL",
+      "totalSalesRevenue": "NULL",
+      "userId": "1"
+    },
+    {
+      "id": "30015",
+      "name": "Test CF Project for Phases",
+      "projectId": "NULL",
+      "startDate": "2026-01",
+      "constructionMonths": "24",
+      "preDevMonths": "6",
+      "handoverMonths": "3",
+      "constructionCostTotal": "NULL",
+      "totalSalesRevenue": "NULL",
+      "userId": "1"
+    },
+    {
+      "id": "30016",
+      "name": "Test CF Project for Phases",
+      "projectId": "NULL",
+      "startDate": "2026-01",
+      "constructionMonths": "24",
+      "preDevMonths": "6",
+      "handoverMonths": "3",
+      "constructionCostTotal": "NULL",
+      "totalSalesRevenue": "NULL",
+      "userId": "1"
+    },
+    {
+      "id": "30017",
+      "name": "Test CF Project for Phases",
+      "projectId": "NULL",
+      "startDate": "2026-01",
+      "constructionMonths": "24",
+      "preDevMonths": "6",
+      "handoverMonths": "3",
+      "constructionCostTotal": "NULL",
+      "totalSalesRevenue": "NULL",
+      "userId": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tprojectId\tstartDate\tconstructionMonths\tpreDevMonths\thandoverMonths\tconstructionCostTotal\ttotalSalesRevenue\tuserId\n1\tمشروع ند الشبا السكني\tNULL\t2026-01\t24\t6\t3\tNULL\tNULL\t1\n30012\tند الشبا — قطعة 1 (6185392)\t4\t2026-04\t16\t6\t2\tNULL\t62365000\t1\n30013\tTest CF Project for Phases\tNULL\t2026-01\t24\t6\t3\tNULL\tNULL\t1\n30014\tTest CF Project for Phases\tNULL\t2026-01\t24\t6\t3\tNULL\tNULL\t1\n30015\tTest CF Project for Phases\tNULL\t2026-01\t24\t6\t3\tNULL\tNULL\t1\n30016\tTest CF Project for Phases\tNULL\t2026-01\t24\t6\t3\tNULL\tNULL\t1\n30017\tTest CF Project for Phases\tNULL\t2026-01\t24\t6\t3\tNULL\tNULL\t1\n",
+  "stderr": "",
+  "execution_time_ms": 1498
+}
