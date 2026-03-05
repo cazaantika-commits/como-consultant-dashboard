@@ -984,15 +984,35 @@ export const cashFlowProgramRouter = router({
       const saleableRet = gfaRetSqft * 0.97;
       const saleableOff = gfaOffSqft * 0.95;
 
+      // Helper: get avg area with DEFAULT_AVG_AREAS fallback (matches CostsCashFlowTab exactly)
+      const getAvg = (pctKey: string, avgVal: number | null | undefined): number => {
+        const v = avgVal || 0;
+        if (v > 0) return v;
+        const mapping = DEFAULT_AVG_AREAS[pctKey];
+        return mapping ? mapping.defaultArea : 0;
+      };
+
       // Calculate total revenue using competition pricing + market overview data
       let totalRevenue = 0;
       let totalUnits = 0;
       if (cpData && moData) {
         const activeScenario = cpData.activeScenario || 'base';
         const getPrices = () => {
-          if (activeScenario === 'optimistic') return { studio: cpData.optStudioPrice || 0, oneBr: cpData.opt1brPrice || 0, twoBr: cpData.opt2brPrice || 0, threeBr: cpData.opt3brPrice || 0 };
-          if (activeScenario === 'conservative') return { studio: cpData.consStudioPrice || 0, oneBr: cpData.cons1brPrice || 0, twoBr: cpData.cons2brPrice || 0, threeBr: cpData.cons3brPrice || 0 };
-          return { studio: cpData.baseStudioPrice || 0, oneBr: cpData.base1brPrice || 0, twoBr: cpData.base2brPrice || 0, threeBr: cpData.base3brPrice || 0 };
+          if (activeScenario === 'optimistic') return {
+            studio: cpData.optStudioPrice || 0, oneBr: cpData.opt1brPrice || 0, twoBr: cpData.opt2brPrice || 0, threeBr: cpData.opt3brPrice || 0,
+            retailSmall: cpData.optRetailSmallPrice || 0, retailMedium: cpData.optRetailMediumPrice || 0, retailLarge: cpData.optRetailLargePrice || 0,
+            officeSmall: cpData.optOfficeSmallPrice || 0, officeMedium: cpData.optOfficeMediumPrice || 0, officeLarge: cpData.optOfficeLargePrice || 0,
+          };
+          if (activeScenario === 'conservative') return {
+            studio: cpData.consStudioPrice || 0, oneBr: cpData.cons1brPrice || 0, twoBr: cpData.cons2brPrice || 0, threeBr: cpData.cons3brPrice || 0,
+            retailSmall: cpData.consRetailSmallPrice || 0, retailMedium: cpData.consRetailMediumPrice || 0, retailLarge: cpData.consRetailLargePrice || 0,
+            officeSmall: cpData.consOfficeSmallPrice || 0, officeMedium: cpData.consOfficeMediumPrice || 0, officeLarge: cpData.consOfficeLargePrice || 0,
+          };
+          return {
+            studio: cpData.baseStudioPrice || 0, oneBr: cpData.base1brPrice || 0, twoBr: cpData.base2brPrice || 0, threeBr: cpData.base3brPrice || 0,
+            retailSmall: cpData.baseRetailSmallPrice || 0, retailMedium: cpData.baseRetailMediumPrice || 0, retailLarge: cpData.baseRetailLargePrice || 0,
+            officeSmall: cpData.baseOfficeSmallPrice || 0, officeMedium: cpData.baseOfficeMediumPrice || 0, officeLarge: cpData.baseOfficeLargePrice || 0,
+          };
         };
         const prices = getPrices();
 
@@ -1003,10 +1023,21 @@ export const cashFlowProgramRouter = router({
           return avgArea * pricePerSqft * units;
         };
 
-        totalRevenue += calcTypeRevenue(pf(moData.residentialStudioPct), moData.residentialStudioAvgArea || 0, prices.studio, saleableRes);
-        totalRevenue += calcTypeRevenue(pf(moData.residential1brPct), moData.residential1brAvgArea || 0, prices.oneBr, saleableRes);
-        totalRevenue += calcTypeRevenue(pf(moData.residential2brPct), moData.residential2brAvgArea || 0, prices.twoBr, saleableRes);
-        totalRevenue += calcTypeRevenue(pf(moData.residential3brPct), moData.residential3brAvgArea || 0, prices.threeBr, saleableRes);
+        // Residential revenue (with DEFAULT_AVG_AREAS fallback)
+        totalRevenue += calcTypeRevenue(pf(moData.residentialStudioPct), getAvg('residentialStudioPct', moData.residentialStudioAvgArea), prices.studio, saleableRes);
+        totalRevenue += calcTypeRevenue(pf(moData.residential1brPct), getAvg('residential1brPct', moData.residential1brAvgArea), prices.oneBr, saleableRes);
+        totalRevenue += calcTypeRevenue(pf(moData.residential2brPct), getAvg('residential2brPct', moData.residential2brAvgArea), prices.twoBr, saleableRes);
+        totalRevenue += calcTypeRevenue(pf(moData.residential3brPct), getAvg('residential3brPct', moData.residential3brAvgArea), prices.threeBr, saleableRes);
+
+        // Retail revenue (with DEFAULT_AVG_AREAS fallback)
+        totalRevenue += calcTypeRevenue(pf(moData.retailSmallPct), getAvg('retailSmallPct', moData.retailSmallAvgArea), prices.retailSmall, saleableRet);
+        totalRevenue += calcTypeRevenue(pf(moData.retailMediumPct), getAvg('retailMediumPct', moData.retailMediumAvgArea), prices.retailMedium, saleableRet);
+        totalRevenue += calcTypeRevenue(pf(moData.retailLargePct), getAvg('retailLargePct', moData.retailLargeAvgArea), prices.retailLarge, saleableRet);
+
+        // Office revenue (with DEFAULT_AVG_AREAS fallback)
+        totalRevenue += calcTypeRevenue(pf(moData.officeSmallPct), getAvg('officeSmallPct', moData.officeSmallAvgArea), prices.officeSmall, saleableOff);
+        totalRevenue += calcTypeRevenue(pf(moData.officeMediumPct), getAvg('officeMediumPct', moData.officeMediumAvgArea), prices.officeMedium, saleableOff);
+        totalRevenue += calcTypeRevenue(pf(moData.officeLargePct), getAvg('officeLargePct', moData.officeLargeAvgArea), prices.officeLarge, saleableOff);
       } else {
         // Fallback to old feasibility calculation
         totalRevenue = (
