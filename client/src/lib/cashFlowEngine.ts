@@ -331,17 +331,53 @@ export function aggregateToQuarters(
 
 // ===== DEFAULT EXPENSE DEFINITIONS =====
 
-// Construction cost base
+// Construction cost base (FALLBACK defaults when no project data available)
 export const CONSTRUCTION_COST = 39427980;
 export const SALES_VALUE = 93765000;
 
-export function getInvestorExpenses(): ExpenseItem[] {
+/**
+ * Dynamic project costs — passed from بطاقة المشروع / دراسة الجدوى.
+ * When provided, all expense items use these values instead of hardcoded defaults.
+ */
+export interface ProjectCosts {
+  landPrice: number;
+  agentCommissionLand: number;
+  landRegistration: number;
+  soilTestFee: number;
+  topographicSurveyFee: number;
+  officialBodiesFees: number;
+  designFee: number;
+  supervisionFee: number;
+  separationFee: number;
+  constructionCost: number;
+  communityFees: number;
+  contingencies: number;
+  developerFee: number;
+  salesCommission: number;
+  marketingCost: number;
+  reraUnitRegFee: number;
+  reraProjectRegFee: number;
+  developerNocFee: number;
+  escrowAccountFee: number;
+  bankFees: number;
+  surveyorFees: number;
+  reraAuditReportFee: number;
+  reraInspectionReportFee: number;
+  totalRevenue: number;
+}
+
+export function getInvestorExpenses(costs?: ProjectCosts): ExpenseItem[] {
+  // Use dynamic costs if provided, otherwise fall back to hardcoded defaults
+  const c = costs;
+  const constructionCost = c ? c.constructionCost : CONSTRUCTION_COST;
+  const salesValue = c ? c.totalRevenue : SALES_VALUE;
+
   return [
     // === شراء الأرض ===
     {
       id: "land_cost",
       name: "سعر الأرض",
-      total: 18000000,
+      total: c ? c.landPrice : 18000000,
       behavior: "FIXED_ABSOLUTE",
       phase: "land",
       table: "investor",
@@ -349,7 +385,7 @@ export function getInvestorExpenses(): ExpenseItem[] {
     {
       id: "land_broker",
       name: "عمولة وسيط الأرض (1%)",
-      total: 180000,
+      total: c ? c.agentCommissionLand : 180000,
       behavior: "FIXED_ABSOLUTE",
       phase: "land",
       table: "investor",
@@ -357,7 +393,7 @@ export function getInvestorExpenses(): ExpenseItem[] {
     {
       id: "land_registration",
       name: "رسوم تسجيل الأرض (4%)",
-      total: 720000,
+      total: c ? c.landRegistration : 720000,
       behavior: "FIXED_ABSOLUTE",
       phase: "land",
       table: "investor",
@@ -367,7 +403,7 @@ export function getInvestorExpenses(): ExpenseItem[] {
     {
       id: "soil_test",
       name: "فحص التربة",
-      total: 25000,
+      total: c ? c.soilTestFee : 25000,
       behavior: "FIXED_RELATIVE",
       phase: "preCon",
       relativeMonth: 1,
@@ -376,7 +412,7 @@ export function getInvestorExpenses(): ExpenseItem[] {
     {
       id: "survey",
       name: "المسح الطبوغرافي",
-      total: 8000,
+      total: c ? c.topographicSurveyFee : 8000,
       behavior: "FIXED_RELATIVE",
       phase: "preCon",
       relativeMonth: 1,
@@ -385,7 +421,7 @@ export function getInvestorExpenses(): ExpenseItem[] {
     {
       id: "developer_fee",
       name: "أتعاب المطور (5%)",
-      total: 4688250,
+      total: c ? c.developerFee : 4688250,
       behavior: "DISTRIBUTED",
       phase: "preCon",
       splitRatio: [
@@ -398,7 +434,7 @@ export function getInvestorExpenses(): ExpenseItem[] {
     {
       id: "design_fee",
       name: "أتعاب التصميم (2%)",
-      total: 788559.6,
+      total: c ? c.designFee : 788559.6,
       behavior: "DISTRIBUTED",
       phase: "preCon",
       distributeAcross: ["preCon"],
@@ -407,7 +443,7 @@ export function getInvestorExpenses(): ExpenseItem[] {
     {
       id: "fraz_fee",
       name: "رسوم الفرز (40 د/قدم)",
-      total: 2033044.4,
+      total: c ? c.separationFee : 2033044.4,
       behavior: "FIXED_RELATIVE",
       phase: "preCon",
       relativeMonth: 2,
@@ -416,7 +452,7 @@ export function getInvestorExpenses(): ExpenseItem[] {
     {
       id: "rera_registration",
       name: "تسجيل بيع على الخارطة - ريرا",
-      total: 150000,
+      total: c ? c.reraProjectRegFee : 150000,
       behavior: "FIXED_RELATIVE",
       phase: "preCon",
       relativeMonth: 4,
@@ -425,7 +461,7 @@ export function getInvestorExpenses(): ExpenseItem[] {
     {
       id: "rera_units",
       name: "تسجيل الوحدات - ريرا",
-      total: 39100,
+      total: c ? c.reraUnitRegFee : 39100,
       behavior: "FIXED_RELATIVE",
       phase: "preCon",
       relativeMonth: 5,
@@ -434,31 +470,31 @@ export function getInvestorExpenses(): ExpenseItem[] {
     {
       id: "surveyor_fee",
       name: "رسوم المساح",
-      total: 24000,
+      total: c ? c.surveyorFees : 24000,
       behavior: "FIXED_RELATIVE",
       phase: "preCon",
       multiPayments: [
-        { phase: "preCon", relativeMonth: 4, amount: 12000 },
-        { phase: "handover", relativeMonth: 1, amount: 12000 },
+        { phase: "preCon", relativeMonth: 4, amount: (c ? c.surveyorFees : 24000) / 2 },
+        { phase: "handover", relativeMonth: 1, amount: (c ? c.surveyorFees : 24000) / 2 },
       ],
       table: "investor",
     },
     {
       id: "noc_fee",
       name: "رسوم NOC للبيع",
-      total: 22000,
+      total: c ? c.developerNocFee : 22000,
       behavior: "FIXED_RELATIVE",
       phase: "preCon",
       multiPayments: [
-        { phase: "preCon", relativeMonth: 5, amount: 10000 },
-        { phase: "handover", relativeMonth: 1, amount: 12000 },
+        { phase: "preCon", relativeMonth: 5, amount: (c ? c.developerNocFee : 22000) * 0.45 },
+        { phase: "handover", relativeMonth: 1, amount: (c ? c.developerNocFee : 22000) * 0.55 },
       ],
       table: "investor",
     },
     {
       id: "escrow_fee",
       name: "رسوم حساب الضمان",
-      total: 140000,
+      total: c ? c.escrowAccountFee : 140000,
       behavior: "FIXED_RELATIVE",
       phase: "preCon",
       relativeMonth: 4,
@@ -467,7 +503,7 @@ export function getInvestorExpenses(): ExpenseItem[] {
     {
       id: "escrow_deposit",
       name: "إيداع حساب الضمان (20%)",
-      total: 7885596,
+      total: constructionCost * 0.20,
       behavior: "FIXED_RELATIVE",
       phase: "preCon",
       relativeMonth: -2, // second to last month
@@ -476,7 +512,7 @@ export function getInvestorExpenses(): ExpenseItem[] {
     {
       id: "contractor_advance",
       name: "دفعة مقدمة للمقاول (10%)",
-      total: 3942798,
+      total: constructionCost * 0.10,
       behavior: "FIXED_RELATIVE",
       phase: "preCon",
       relativeMonth: -1, // last month
@@ -485,7 +521,7 @@ export function getInvestorExpenses(): ExpenseItem[] {
     {
       id: "community_fee",
       name: "رسوم المجتمع",
-      total: 16000,
+      total: c ? c.communityFees : 16000,
       behavior: "FIXED_RELATIVE",
       phase: "preCon",
       relativeMonth: -1, // last month
@@ -496,7 +532,7 @@ export function getInvestorExpenses(): ExpenseItem[] {
     {
       id: "contingency",
       name: "احتياطي وطوارئ (2%)",
-      total: 788559.6,
+      total: c ? c.contingencies : 788559.6,
       behavior: "CUSTOM",
       phase: "construction",
       table: "investor",
@@ -504,7 +540,7 @@ export function getInvestorExpenses(): ExpenseItem[] {
     {
       id: "marketing",
       name: "التسويق والإعلان (2%)",
-      total: 1875300,
+      total: c ? c.marketingCost : 1875300,
       behavior: "SALES_LINKED",
       phase: "construction",
       table: "investor",
@@ -512,7 +548,7 @@ export function getInvestorExpenses(): ExpenseItem[] {
     {
       id: "bank_fees",
       name: "رسوم بنكية",
-      total: 20000,
+      total: c ? c.bankFees : 20000,
       behavior: "DISTRIBUTED",
       phase: "construction",
       distributeAcross: ["construction", "handover"],
@@ -521,12 +557,15 @@ export function getInvestorExpenses(): ExpenseItem[] {
   ];
 }
 
-export function getEscrowExpenses(): ExpenseItem[] {
+export function getEscrowExpenses(costs?: ProjectCosts): ExpenseItem[] {
+  const c = costs;
+  const constructionCost = c ? c.constructionCost : CONSTRUCTION_COST;
+
   return [
     {
       id: "gov_fees",
       name: "رسوم الجهات الحكومية",
-      total: 1000000,
+      total: c ? c.officialBodiesFees : 1000000,
       behavior: "CUSTOM",
       phase: "construction",
       table: "escrow",
@@ -534,7 +573,7 @@ export function getEscrowExpenses(): ExpenseItem[] {
     {
       id: "contractor_payments",
       name: "دفعات المقاول (85%)",
-      total: 33513783,
+      total: constructionCost * 0.85,
       behavior: "DISTRIBUTED",
       phase: "construction",
       distributeAcross: ["construction"],
@@ -543,7 +582,7 @@ export function getEscrowExpenses(): ExpenseItem[] {
     {
       id: "supervision_fee",
       name: "أتعاب الإشراف (2%)",
-      total: 788559.6,
+      total: c ? c.supervisionFee : 788559.6,
       behavior: "DISTRIBUTED",
       phase: "construction",
       distributeAcross: ["construction"],
@@ -552,7 +591,7 @@ export function getEscrowExpenses(): ExpenseItem[] {
     {
       id: "sales_agent",
       name: "عمولة وكيل المبيعات (5%)",
-      total: 4688250,
+      total: c ? c.salesCommission : 4688250,
       behavior: "SALES_LINKED",
       phase: "construction",
       table: "escrow",
@@ -560,21 +599,21 @@ export function getEscrowExpenses(): ExpenseItem[] {
     {
       id: "rera_audit",
       name: "تقارير تدقيق ريرا",
-      total: 18000,
+      total: c ? c.reraAuditReportFee : 18000,
       behavior: "PERIODIC",
       phase: "construction",
       periodicInterval: 3,
-      periodicAmount: 3000,
+      periodicAmount: c ? Math.round(c.reraAuditReportFee / 6) : 3000,
       table: "escrow",
     },
     {
       id: "rera_inspection",
       name: "تقارير تفتيش ريرا",
-      total: 105000,
+      total: c ? c.reraInspectionReportFee : 105000,
       behavior: "PERIODIC",
       phase: "construction",
       periodicInterval: 3,
-      periodicAmount: 15000,
+      periodicAmount: c ? Math.round(c.reraInspectionReportFee / 6) : 15000,
       table: "escrow",
     },
   ];
@@ -584,28 +623,33 @@ export function getEscrowExpenses(): ExpenseItem[] {
 export function getDefaultCustomDistribution(
   itemId: string,
   phases: PhaseConfig[],
-  durations: PhaseDurations
+  durations: PhaseDurations,
+  costs?: ProjectCosts
 ): { [month: number]: number } {
   const conRange = getPhaseMonthRange(phases, "construction");
 
   if (itemId === "contingency") {
     // Contingency: split roughly into 2 payments during construction
+    const contingencyTotal = costs ? costs.contingencies : 788559.6;
+    const half = contingencyTotal / 2;
     const midMonth = conRange.start + Math.floor((conRange.end - conRange.start) / 2);
     const lateMonth = conRange.end - 1;
     return {
-      [midMonth]: 394279.8,
-      [lateMonth]: 394279.8,
+      [midMonth]: half,
+      [lateMonth]: half,
     };
   }
 
   if (itemId === "gov_fees") {
-    // Government fees: 800K at month 3 of construction, then 50K every ~4 months
+    // Government fees: 80% at month 3 of construction, then rest distributed
+    const govTotal = costs ? costs.officialBodiesFees : 1000000;
     const result: { [month: number]: number } = {};
-    result[conRange.start + 2] = 800000; // month 3 of construction
-    let remaining = 200000;
+    const initialPayment = govTotal * 0.8;
+    result[conRange.start + 2] = initialPayment;
+    let remaining = govTotal - initialPayment;
     const interval = 4;
     for (let m = conRange.start + 2 + interval; m <= conRange.end && remaining > 0; m += interval) {
-      const payment = Math.min(50000, remaining);
+      const payment = Math.min(remaining / 4, remaining);
       result[m] = payment;
       remaining -= payment;
     }
@@ -618,8 +662,10 @@ export function getDefaultCustomDistribution(
 // Default revenue distribution
 export function getDefaultRevenue(
   phases: PhaseConfig[],
-  durations: PhaseDurations
+  durations: PhaseDurations,
+  dynamicSalesValue?: number
 ): { [month: number]: number } {
+  const salesTotal = dynamicSalesValue || SALES_VALUE;
   const conRange = getPhaseMonthRange(phases, "construction");
   const handoverRange = getPhaseMonthRange(phases, "handover");
   const revenue: { [month: number]: number } = {};
@@ -639,16 +685,16 @@ export function getDefaultRevenue(
   let allocated = 0;
   // Launch: 10% each
   for (let i = 0; i < launchMonths && salesStart + i <= salesEnd; i++) {
-    revenue[salesStart + i] = SALES_VALUE * 0.10;
-    allocated += SALES_VALUE * 0.10;
+    revenue[salesStart + i] = salesTotal * 0.10;
+    allocated += salesTotal * 0.10;
   }
   // End: 10% each
   for (let i = 0; i < endMonths && salesEnd - i >= salesStart + launchMonths; i++) {
-    revenue[salesEnd - i] = SALES_VALUE * 0.10;
-    allocated += SALES_VALUE * 0.10;
+    revenue[salesEnd - i] = salesTotal * 0.10;
+    allocated += salesTotal * 0.10;
   }
   // Mid: distribute remaining equally
-  const remaining = SALES_VALUE - allocated;
+  const remaining = salesTotal - allocated;
   if (midMonths > 0) {
     const monthly = remaining / midMonths;
     for (let i = 0; i < midMonths; i++) {

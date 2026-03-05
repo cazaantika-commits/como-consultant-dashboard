@@ -5,6 +5,7 @@ import {
   type PhaseDurations,
   type ExpenseItem,
   type QuarterDef,
+  type ProjectCosts,
   DEFAULT_DURATIONS,
   calculatePhases,
   getTotalMonths,
@@ -19,6 +20,7 @@ import {
   isCurrentMonth,
   SALES_VALUE,
 } from "@/lib/cashFlowEngine";
+import { calculateProjectCosts } from "@/lib/projectCostsCalc";
 
 // Import the CashFlowContext directly
 import { useCashFlow } from "@/contexts/CashFlowContext";
@@ -69,6 +71,16 @@ export default function ExcelCashFlowPage() {
 
   const selectedProject = (projectsQuery.data || []).find((p: any) => p.id === selectedProjectId);
 
+  // Fetch market overview and competition pricing for dynamic costs
+  const moQuery = trpc.marketOverview.getByProject.useQuery(selectedProjectId || 0, { enabled: !!selectedProjectId, staleTime: 5000 });
+  const cpQuery = trpc.competitionPricing.getByProject.useQuery(selectedProjectId || 0, { enabled: !!selectedProjectId, staleTime: 5000 });
+
+  // Calculate dynamic costs from project card + market overview + competition pricing
+  const projectCosts = useMemo<ProjectCosts | null>(() => {
+    if (!selectedProject) return null;
+    return calculateProjectCosts(selectedProject, moQuery.data, cpQuery.data);
+  }, [selectedProject, moQuery.data, cpQuery.data]);
+
   const [showControls, setShowControls] = useState(false);
   const [editingCell, setEditingCell] = useState<{ itemId: string; qi: number } | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -83,11 +95,11 @@ export default function ExcelCashFlowPage() {
     [phases, durations]
   );
 
-  // Get base expenses
-  const baseExpenses = useMemo(() => getInvestorExpenses(), []);
+  // Get base expenses — now dynamic from project data
+  const baseExpenses = useMemo(() => getInvestorExpenses(projectCosts || undefined), [projectCosts]);
 
-  // Default revenue for sales-linked items
-  const defaultRevenue = useMemo(() => getDefaultRevenue(phases, durations), [phases, durations]);
+  // Default revenue for sales-linked items — now dynamic
+  const defaultRevenue = useMemo(() => getDefaultRevenue(phases, durations, projectCosts?.totalRevenue), [phases, durations, projectCosts]);
 
   // Calculate monthly distributions for each expense
   const monthlyDistributions = useMemo(() => {
@@ -99,7 +111,7 @@ export default function ExcelCashFlowPage() {
       };
 
       if (item.behavior === "CUSTOM") {
-        const customDist = getDefaultCustomDistribution(item.id, phases, durations);
+        const customDist = getDefaultCustomDistribution(item.id, phases, durations, projectCosts || undefined);
         const merged = { ...customDist };
         if (expenseOverrides[item.id]) {
           for (const [m, v] of Object.entries(expenseOverrides[item.id])) {

@@ -16,10 +16,12 @@ import {
   type PhaseDurations,
   type ExpenseItem,
   type QuarterDef,
+  type ProjectCosts,
   DEFAULT_DURATIONS,
   CONSTRUCTION_COST,
   SALES_VALUE,
 } from "@/lib/cashFlowEngine";
+import { calculateProjectCosts as calcCosts } from "@/lib/projectCostsCalc";
 import {
   ArrowRight,
   Building2,
@@ -100,16 +102,16 @@ interface ProjectCashFlowResult {
   endGlobalMonth: number;
 }
 
-function calculateProjectCashFlow(config: ProjectConfig): ProjectCashFlowResult {
+function calculateProjectCashFlow(config: ProjectConfig, costs?: ProjectCosts): ProjectCashFlowResult {
   const durations = config.durations;
   const phases = calculatePhases(durations);
   const totalMonths = getTotalMonths(durations);
   const projectStart = getProjectStart(config.startOffsetMonths);
 
-  // Get expenses
-  const investorExpenses = getInvestorExpenses();
-  const escrowExpenses = getEscrowExpenses();
-  const defaultRevenue = getDefaultRevenue(phases, durations);
+  // Get expenses — dynamic from project data when available
+  const investorExpenses = getInvestorExpenses(costs);
+  const escrowExpenses = getEscrowExpenses(costs);
+  const defaultRevenue = getDefaultRevenue(phases, durations, costs?.totalRevenue);
 
   // Calculate investor monthly
   const investorMonthly: { [globalMonth: number]: number } = {};
@@ -118,7 +120,7 @@ function calculateProjectCashFlow(config: ProjectConfig): ProjectCashFlowResult 
   for (const item of investorExpenses) {
     let monthlyData: { [month: number]: number };
     if (item.behavior === "CUSTOM") {
-      monthlyData = getDefaultCustomDistribution(item.id, phases, durations);
+      monthlyData = getDefaultCustomDistribution(item.id, phases, durations, costs);
     } else {
       monthlyData = distributeExpense(item, phases, durations, defaultRevenue);
     }
@@ -144,7 +146,7 @@ function calculateProjectCashFlow(config: ProjectConfig): ProjectCashFlowResult 
   for (const item of escrowExpenses) {
     let monthlyData: { [month: number]: number };
     if (item.behavior === "CUSTOM") {
-      monthlyData = getDefaultCustomDistribution(item.id, phases, durations);
+      monthlyData = getDefaultCustomDistribution(item.id, phases, durations, costs);
     } else {
       monthlyData = distributeExpense(item, phases, durations, defaultRevenue);
     }
@@ -164,7 +166,8 @@ function calculateProjectCashFlow(config: ProjectConfig): ProjectCashFlowResult 
   }
 
   // Escrow balance (opening = 20% of construction cost)
-  const openingBalance = CONSTRUCTION_COST * 0.20;
+  const constructionCostVal = costs ? costs.constructionCost : CONSTRUCTION_COST;
+  const openingBalance = constructionCostVal * 0.20;
   const escrowBalanceMonthly: { [globalMonth: number]: number } = {};
   const startGlobalMonth = config.startOffsetMonths;
   const endGlobalMonth = config.startOffsetMonths + totalMonths;
@@ -220,6 +223,23 @@ export default function FinancialCommandCenter() {
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
   const projects = projectsQuery.data || [];
 
+  // Fetch market overview and competition pricing for all projects to calculate dynamic costs
+  // We'll fetch for the first project (most common case is single project)
+  const firstProjectId = projects.length > 0 ? projects[0].id : 0;
+  const moQuery = trpc.marketOverview.getByProject.useQuery(firstProjectId, { enabled: firstProjectId > 0, staleTime: 5000 });
+  const cpQuery = trpc.competitionPricing.getByProject.useQuery(firstProjectId, { enabled: firstProjectId > 0, staleTime: 5000 });
+
+  // Build a map of projectId -> ProjectCosts
+  const projectCostsMap = useMemo<Record<number, ProjectCosts>>(() => {
+    const map: Record<number, ProjectCosts> = {};
+    for (const p of projects) {
+      // For now use same mo/cp for first project; extend later for multi-project
+      const costs = calcCosts(p, p.id === firstProjectId ? moQuery.data : null, p.id === firstProjectId ? cpQuery.data : null);
+      if (costs) map[p.id] = costs;
+    }
+    return map;
+  }, [projects, firstProjectId, moQuery.data, cpQuery.data]);
+
   // Project configurations
   const [projectConfigs, setProjectConfigs] = useState<ProjectConfig[]>([]);
   const [showDetails, setShowDetails] = useState(false);
@@ -251,10 +271,10 @@ export default function FinancialCommandCenter() {
       .filter(c => c.enabled)
       .map(config => ({
         config,
-        result: calculateProjectCashFlow(config),
+        result: calculateProjectCashFlow(config, projectCostsMap[config.projectId]),
         colorSet: PROJECT_COLORS[projectConfigs.indexOf(config) % PROJECT_COLORS.length],
       }));
-  }, [projectConfigs]);
+  }, [projectConfigs, projectCostsMap]);
 
   // Find global min/max months
   const { minMonth, maxMonth } = useMemo(() => {

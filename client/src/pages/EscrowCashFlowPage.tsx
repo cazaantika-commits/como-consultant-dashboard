@@ -5,6 +5,7 @@ import {
   type PhaseDurations,
   type ExpenseItem,
   type QuarterDef,
+  type ProjectCosts,
   DEFAULT_DURATIONS,
   calculatePhases,
   getTotalMonths,
@@ -21,6 +22,7 @@ import {
   CONSTRUCTION_COST,
   SALES_VALUE,
 } from "@/lib/cashFlowEngine";
+import { calculateProjectCosts } from "@/lib/projectCostsCalc";
 
 // Import the CashFlowContext directly
 import { useCashFlow } from "@/contexts/CashFlowContext";
@@ -69,6 +71,16 @@ export default function EscrowCashFlowPage() {
 
   const selectedProject = (projectsQuery.data || []).find((p: any) => p.id === selectedProjectId);
 
+  // Fetch market overview and competition pricing for dynamic costs
+  const moQuery = trpc.marketOverview.getByProject.useQuery(selectedProjectId || 0, { enabled: !!selectedProjectId, staleTime: 5000 });
+  const cpQuery = trpc.competitionPricing.getByProject.useQuery(selectedProjectId || 0, { enabled: !!selectedProjectId, staleTime: 5000 });
+
+  // Calculate dynamic costs from project card + market overview + competition pricing
+  const projectCosts = useMemo<ProjectCosts | null>(() => {
+    if (!selectedProject) return null;
+    return calculateProjectCosts(selectedProject, moQuery.data, cpQuery.data);
+  }, [selectedProject, moQuery.data, cpQuery.data]);
+
   const [showControls, setShowControls] = useState(false);
   const [showRevenuePlanner, setShowRevenuePlanner] = useState(false);
   const [editingCell, setEditingCell] = useState<{ itemId: string; qi: number } | null>(null);
@@ -76,14 +88,14 @@ export default function EscrowCashFlowPage() {
 
   const phases = useMemo(() => calculatePhases(durations), [durations]);
   const totalMonths = useMemo(() => getTotalMonths(durations), [durations]);
-  const openingBalance = useMemo(() => CONSTRUCTION_COST * OPENING_BALANCE_RATIO, []);
+  const openingBalance = useMemo(() => (projectCosts ? projectCosts.constructionCost : CONSTRUCTION_COST) * OPENING_BALANCE_RATIO, [projectCosts]);
 
   const quarters = useMemo(() =>
     buildQuarters(phases, durations, PROJECT_START, true, false),
     [phases, durations]
   );
 
-  const defaultRevenue = useMemo(() => getDefaultRevenue(phases, durations), [phases, durations]);
+  const defaultRevenue = useMemo(() => getDefaultRevenue(phases, durations, projectCosts?.totalRevenue), [phases, durations, projectCosts]);
   const revenueData = useMemo(() => {
     if (Object.keys(revenueOverrides).length > 0) {
       return { ...defaultRevenue, ...revenueOverrides };
@@ -91,7 +103,7 @@ export default function EscrowCashFlowPage() {
     return defaultRevenue;
   }, [defaultRevenue, revenueOverrides]);
 
-  const baseExpenses = useMemo(() => getEscrowExpenses(), []);
+  const baseExpenses = useMemo(() => getEscrowExpenses(projectCosts || undefined), [projectCosts]);
 
   const monthlyDistributions = useMemo(() => {
     return baseExpenses.map(item => {
@@ -101,7 +113,7 @@ export default function EscrowCashFlowPage() {
         shiftMonths: expenseShifts[item.id] || 0,
       };
       if (item.behavior === "CUSTOM") {
-        const customDist = getDefaultCustomDistribution(item.id, phases, durations);
+        const customDist = getDefaultCustomDistribution(item.id, phases, durations, projectCosts || undefined);
         const merged = { ...customDist };
         if (expenseOverrides[item.id]) {
           for (const [m, v] of Object.entries(expenseOverrides[item.id])) {
