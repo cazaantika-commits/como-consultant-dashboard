@@ -32,8 +32,7 @@ function calculateCosts(project: Record<string, any>, feasForm: Record<string, a
   const separationFeePerM2 = parseFloat(project.separationFeePerM2 || "0");
   const salesCommissionPct = parseFloat(project.salesCommissionPct || "0");
   const marketingPct = parseFloat(project.marketingPct || "0");
-  const developerFeePhase1Pct = parseFloat(project.developerFeePhase1Pct || "0");
-  const developerFeePhase2Pct = parseFloat(project.developerFeePhase2Pct || "0");
+  const developerFeePct = parseFloat(project.developerFeePct || "0");
 
   const bua = manualBuaSqft || feasForm.estimatedBua || feasComputed.estimatedBua || 0;
   const plotAreaSqft = parseFloat(project.plotAreaSqft || "0");
@@ -57,12 +56,10 @@ function calculateCosts(project: Record<string, any>, feasForm: Record<string, a
   const totalConstruction = constructionCost + communityFees + contingencies;
 
   // Sales & marketing
-  const developerFeePhase1 = totalRevenue * (developerFeePhase1Pct / 100);
-  const developerFeePhase2 = totalRevenue * (developerFeePhase2Pct / 100);
-  const totalDeveloperFee = developerFeePhase1 + developerFeePhase2;
+  const developerFee = totalRevenue * (developerFeePct / 100);
   const salesCommission = totalRevenue * (salesCommissionPct / 100);
   const marketingCost = totalRevenue * (marketingPct / 100);
-  const totalSalesMarketing = totalDeveloperFee + salesCommission + marketingCost;
+  const totalSalesMarketing = developerFee + salesCommission + marketingCost;
 
   // Regulatory
   const totalRegulatory = reraUnitRegFee + reraProjectRegFee + developerNocFee + escrowAccountFee + bankFees + surveyorFees + reraAuditReportFee + reraInspectionReportFee;
@@ -77,7 +74,7 @@ function calculateCosts(project: Record<string, any>, feasForm: Record<string, a
     landPrice, agentCommissionLand, landRegistration, totalLandCosts,
     constructionCost, designFee, supervisionFee, separationFee, totalPreConstruction,
     contingencies, totalConstruction,
-    developerFeePhase1, developerFeePhase2, totalDeveloperFee, salesCommission, marketingCost, totalSalesMarketing,
+    developerFee, salesCommission, marketingCost, totalSalesMarketing,
     totalRegulatory, totalCosts, profit, profitMargin, roi,
   };
 }
@@ -97,8 +94,7 @@ describe("CostsCashFlowTab Read-Only Calculations", () => {
     separationFeePerM2: "40",
     salesCommissionPct: "5",
     marketingPct: "2",
-    developerFeePhase1Pct: "2",
-    developerFeePhase2Pct: "3",
+    developerFeePct: "5",
     reraUnitRegFee: "25000",
     reraProjectRegFee: "150000",
     developerNocFee: "10000",
@@ -143,11 +139,9 @@ describe("CostsCashFlowTab Read-Only Calculations", () => {
     expect(result.contingencies).toBe(350000); // 17.5M * 2%
   });
 
-  it("calculates developer fees in two phases from revenue", () => {
+  it("calculates developer fee as single percentage from revenue", () => {
     const result = calculateCosts(sampleProject, feasForm, feasComputed);
-    expect(result.developerFeePhase1).toBe(1600000); // 80M * 2%
-    expect(result.developerFeePhase2).toBe(2400000); // 80M * 3%
-    expect(result.totalDeveloperFee).toBe(4000000); // 1.6M + 2.4M
+    expect(result.developerFee).toBe(4000000); // 80M * 5%
   });
 
   it("calculates sales commission and marketing from revenue", () => {
@@ -178,13 +172,10 @@ describe("CostsCashFlowTab Read-Only Calculations", () => {
 
   it("handles missing revenue gracefully (costs only)", () => {
     const result = calculateCosts(sampleProject, feasForm, { totalRevenue: 0 });
-    // Sales/marketing costs should be 0 when revenue is 0
     expect(result.totalSalesMarketing).toBe(0);
-    // But land + construction + regulatory costs should still exist
     expect(result.totalLandCosts).toBeGreaterThan(0);
     expect(result.totalConstruction).toBeGreaterThan(0);
     expect(result.totalRegulatory).toBeGreaterThan(0);
-    // Profit should be negative (costs without revenue)
     expect(result.profit).toBeLessThan(0);
   });
 
@@ -194,7 +185,6 @@ describe("CostsCashFlowTab Read-Only Calculations", () => {
       { estimatedBua: 40000 },
       { totalRevenue: 80000000 }
     );
-    // Should use 60000 from fact sheet, not 40000 from feasForm
     expect(result.constructionCost).toBe(60000 * 350);
   });
 
@@ -210,7 +200,6 @@ describe("CostsCashFlowTab Read-Only Calculations", () => {
   it("identifies missing data items", () => {
     const emptyProject = {};
     const result = calculateCosts(emptyProject, {}, { totalRevenue: 0 });
-    // When all data is empty, missing should include key items
     expect(result.totalCosts).toBe(0);
   });
 });

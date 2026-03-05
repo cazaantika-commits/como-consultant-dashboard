@@ -860,8 +860,7 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
                     <Field label="رسوم الفرز لكل م²" value={formData.separationFeePerM2} onChange={v => updateField("separationFeePerM2", v)} type="number" placeholder="40" suffix="AED/m²" />
                     <Field label="عمولة البيع (%)" value={formData.salesCommissionPct} onChange={v => updateField("salesCommissionPct", v)} type="number" placeholder="5" suffix="%" />
                     <Field label="التسويق (%)" value={formData.marketingPct} onChange={v => updateField("marketingPct", v)} type="number" placeholder="2" suffix="%" />
-                    <Field label="أتعاب المطور المرحلة الأولى (%)" value={formData.developerFeePhase1Pct} onChange={v => updateField("developerFeePhase1Pct", v)} type="number" placeholder="2" suffix="%" />
-                    <Field label="أتعاب المطور المرحلة الثانية (%)" value={formData.developerFeePhase2Pct} onChange={v => updateField("developerFeePhase2Pct", v)} type="number" placeholder="3" suffix="%" />
+                    <Field label="أتعاب المطور (% من المبيعات)" value={formData.developerFeePct} onChange={v => updateField("developerFeePct", v)} type="number" placeholder="5" suffix="%" />
                   </div>
                 </div>
               </Section>

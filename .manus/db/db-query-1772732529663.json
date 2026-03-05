@@ -1,0 +1,42 @@
+{
+  "query": "SHOW COLUMNS FROM projects LIKE 'developer%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SHOW COLUMNS FROM projects LIKE 'developer%';",
+  "rows": [
+    {
+      "Field": "developerNocFee",
+      "Type": "decimal(14,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "developerFeePhase1Pct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "2",
+      "Extra": ""
+    },
+    {
+      "Field": "developerFeePhase2Pct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "3",
+      "Extra": ""
+    },
+    {
+      "Field": "developerFeePct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "5",
+      "Extra": ""
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\ndeveloperNocFee\tdecimal(14,2)\tYES\t\tNULL\t\ndeveloperFeePhase1Pct\tdecimal(5,2)\tYES\t\t2\t\ndeveloperFeePhase2Pct\tdecimal(5,2)\tYES\t\t3\t\ndeveloperFeePct\tdecimal(5,2)\tYES\t\t5\t\n",
+  "stderr": "",
+  "execution_time_ms": 1492
+}

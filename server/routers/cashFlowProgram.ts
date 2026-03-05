@@ -1027,9 +1027,7 @@ export const cashFlowProgramRouter = router({
       const separationFeePerM2 = pf(proj?.separationFeePerM2) || (feas.separationFeePerM2 || 40);
       const salesCommissionPct = pf(proj?.salesCommissionPct) || (feas.agentCommissionSalePct || 5);
       const marketingPct = pf(proj?.marketingPct) || (feas.marketingPct || 2);
-      const developerFeePhase1Pct = pf(proj?.developerFeePhase1Pct) || 2;
-      const developerFeePhase2Pct = pf(proj?.developerFeePhase2Pct) || 3;
-      const developerFeePct = developerFeePhase1Pct + developerFeePhase2Pct;
+      const developerFeePct = pf(proj?.developerFeePct) || 5;
       const contingenciesPct = feas.contingenciesPct || 2;
 
       // Regulatory fees from project
@@ -1155,7 +1153,7 @@ export const cashFlowProgramRouter = router({
       if (officialBodiesFees > 0) {
         costItemsToInsert.push({
           cfProjectId,
-          name: 'رسوم الجهات الحكومية',
+          name: 'رسوم الجهات الرسمية',
           category: 'authority_fees',
           totalAmount: Math.round(officialBodiesFees),
           paymentType: 'lump_sum',
@@ -1203,7 +1201,7 @@ export const cashFlowProgramRouter = router({
       if (constructionCost > 0) {
         costItemsToInsert.push({
           cfProjectId,
-          name: 'المقاول الرئيسي',
+          name: 'تكلفة البناء',
           category: 'contractor',
           totalAmount: Math.round(constructionCost),
           paymentType: 'progress_based',
@@ -1304,26 +1302,33 @@ export const cashFlowProgramRouter = router({
         });
       }
 
-      // 12. RERA & regulatory fees — Developer funds, pre-dev phase
-      // Use individual fees from project data, fallback to feasibility aggregated fees
-      const totalRegulatoryFees = reraUnitRegFee + reraProjectRegFee + developerNocFee + escrowAccountFee + bankFees + surveyorFees + reraAuditReportFee + reraInspectionReportFee;
-      const reraFees = totalRegulatoryFees > 0 ? totalRegulatoryFees :
-        ((feas.reraOffplanFee || 0) + (totalUnits * (feas.reraUnitFee || 0)) +
-        (feas.nocFee || 0) + (feas.escrowFee || 0) + (feas.bankCharges || 0) +
-        (feas.surveyorFees || 0) + (feas.reraAuditFees || 0) + (feas.reraInspectionFees || 0));
-      if (reraFees > 0) {
-        costItemsToInsert.push({
-          cfProjectId,
-          name: 'رسوم تنظيمية (ريرا وأخرى)',
-          category: 'authority_fees',
-          totalAmount: Math.round(reraFees),
-          paymentType: 'lump_sum',
-          paymentParams: JSON.stringify({ paymentMonth: input.designApprovalMonths + 1 }),
-          sortOrder: sortOrder++,
-          fundingSource: 'developer',
-          escrowEligible: 0,
-          phaseTag: 'pre_dev',
-        });
+      // 12. RERA & regulatory fees — Developer funds, pre-dev phase (separate items)
+      const regPayMonth = input.designApprovalMonths + 1;
+      const regItems: Array<{ name: string; amount: number }> = [
+        { name: 'رسوم تسجيل الوحدات — ريرا', amount: reraUnitRegFee || (totalUnits * (feas.reraUnitFee || 0)) },
+        { name: 'رسوم تسجيل المشروع — ريرا', amount: reraProjectRegFee || (feas.reraOffplanFee || 0) },
+        { name: 'رسوم عدم ممانعة — المطور', amount: developerNocFee || (feas.nocFee || 0) },
+        { name: 'حساب الضمان (Escrow)', amount: escrowAccountFee || (feas.escrowFee || 0) },
+        { name: 'الرسوم البنكية', amount: bankFees || (feas.bankCharges || 0) },
+        { name: 'أتعاب المسّاح', amount: surveyorFees || (feas.surveyorFees || 0) },
+        { name: 'تدقيق ريرا', amount: reraAuditReportFee || (feas.reraAuditFees || 0) },
+        { name: 'تفتيش ريرا', amount: reraInspectionReportFee || (feas.reraInspectionFees || 0) },
+      ];
+      for (const ri of regItems) {
+        if (ri.amount > 0) {
+          costItemsToInsert.push({
+            cfProjectId,
+            name: ri.name,
+            category: 'authority_fees',
+            totalAmount: Math.round(ri.amount),
+            paymentType: 'lump_sum',
+            paymentParams: JSON.stringify({ paymentMonth: regPayMonth }),
+            sortOrder: sortOrder++,
+            fundingSource: 'developer',
+            escrowEligible: 0,
+            phaseTag: 'pre_dev',
+          });
+        }
       }
 
       // 13. Separation fee — Developer funds, pre-dev phase
@@ -1457,7 +1462,7 @@ export const cashFlowProgramRouter = router({
       // Authority fees
       if (feas.authoritiesFee) {
         costItems.push({
-          name: 'رسوم الجهات الحكومية',
+          name: 'رسوم الجهات الرسمية',
           category: 'authority_fees',
           totalAmount: feas.authoritiesFee,
           paymentType: 'lump_sum',
@@ -1490,7 +1495,7 @@ export const cashFlowProgramRouter = router({
       // Construction (Main Contractor)
       if (constructionCost > 0) {
         costItems.push({
-          name: 'المقاول الرئيسي',
+          name: 'تكلفة البناء',
           category: 'contractor',
           totalAmount: Math.round(constructionCost),
           paymentType: 'progress_based',

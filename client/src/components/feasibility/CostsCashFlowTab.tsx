@@ -3,7 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, Sparkles, ShieldCheck, DollarSign, TrendingUp, BarChart3, Building2, Percent, FileWarning } from "lucide-react";
+import { Loader2, Sparkles, ShieldCheck, DollarSign, TrendingUp, FileWarning } from "lucide-react";
 import { Streamdown } from "streamdown";
 
 const JOEL_AVATAR = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/mCOkEovAXTtxsABs.png";
@@ -12,39 +12,6 @@ function fmt(n: number | null | undefined): string {
   if (n == null || isNaN(n)) return "0";
   if (n < 100 && n % 1 !== 0) return n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   return Math.round(n).toLocaleString("en-US");
-}
-
-/* ─── Read-only cost row ─── */
-function CostRow({ label, value, suffix, highlight, indent, pct }: {
-  label: string; value: number; suffix?: string; highlight?: boolean; indent?: boolean; pct?: boolean;
-}) {
-  return (
-    <div className={`flex items-center justify-between py-2 px-3 ${highlight ? "bg-primary/5 rounded-lg font-bold" : ""} ${indent ? "pr-8" : ""}`}>
-      <span className={`text-sm text-right flex-1 ${indent ? "text-muted-foreground" : ""}`}>
-        {indent && "← "}{label}
-      </span>
-      <span className={`text-sm font-mono ${highlight ? "text-primary text-base" : "text-muted-foreground"}`} dir="ltr">
-        {pct ? `${value.toFixed(1)}%` : `${fmt(value)} ${suffix || "AED"}`}
-      </span>
-    </div>
-  );
-}
-
-/* ─── Section Card ─── */
-function CostSection({ title, icon: Icon, children }: { title: string; icon: any; children: React.ReactNode }) {
-  return (
-    <Card>
-      <CardContent className="pt-4">
-        <div className="flex items-center gap-2 mb-3 border-b pb-2">
-          <Icon className="w-4 h-4 text-primary" />
-          <h3 className="font-bold text-sm">{title}</h3>
-        </div>
-        <div className="space-y-0.5 divide-y divide-border/30">
-          {children}
-        </div>
-      </CardContent>
-    </Card>
-  );
 }
 
 /* ─── Missing data warning ─── */
@@ -133,8 +100,7 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
     const separationFeePerM2 = parseFloat(p.separationFeePerM2 ?? "40");
     const salesCommissionPct = parseFloat(p.salesCommissionPct ?? "5");
     const marketingPct = parseFloat(p.marketingPct ?? "2");
-    const developerFeePhase1Pct = parseFloat(p.developerFeePhase1Pct ?? "2");
-    const developerFeePhase2Pct = parseFloat(p.developerFeePhase2Pct ?? "3");
+    const developerFeePct = parseFloat(p.developerFeePct ?? "5");
 
     // --- Source 2: Fact Sheet areas ---
     const bua = manualBuaSqft;
@@ -186,18 +152,15 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
     let revenueOff = 0;
 
     if (mo) {
-      // Residential revenue
       revenueRes += calcTypeRevenue(parseFloat(mo.residentialStudioPct || "0"), mo.residentialStudioAvgArea || 0, prices.studioPrice, saleableRes);
       revenueRes += calcTypeRevenue(parseFloat(mo.residential1brPct || "0"), mo.residential1brAvgArea || 0, prices.oneBrPrice, saleableRes);
       revenueRes += calcTypeRevenue(parseFloat(mo.residential2brPct || "0"), mo.residential2brAvgArea || 0, prices.twoBrPrice, saleableRes);
       revenueRes += calcTypeRevenue(parseFloat(mo.residential3brPct || "0"), mo.residential3brAvgArea || 0, prices.threeBrPrice, saleableRes);
 
-      // Retail revenue
       revenueRet += calcTypeRevenue(parseFloat(mo.retailSmallPct || "0"), mo.retailSmallAvgArea || 0, prices.retailSmallPrice, saleableRet);
       revenueRet += calcTypeRevenue(parseFloat(mo.retailMediumPct || "0"), mo.retailMediumAvgArea || 0, prices.retailMediumPrice, saleableRet);
       revenueRet += calcTypeRevenue(parseFloat(mo.retailLargePct || "0"), mo.retailLargeAvgArea || 0, prices.retailLargePrice, saleableRet);
 
-      // Office revenue
       revenueOff += calcTypeRevenue(parseFloat(mo.officeSmallPct || "0"), mo.officeSmallAvgArea || 0, prices.officeSmallPrice, saleableOff);
       revenueOff += calcTypeRevenue(parseFloat(mo.officeMediumPct || "0"), mo.officeMediumAvgArea || 0, prices.officeMediumPrice, saleableOff);
       revenueOff += calcTypeRevenue(parseFloat(mo.officeLargePct || "0"), mo.officeLargeAvgArea || 0, prices.officeLargePrice, saleableOff);
@@ -229,7 +192,7 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
 
     // تكاليف الأرض
     const agentCommissionLand = landPrice * (agentCommissionLandPct / 100);
-    const landRegistration = landPrice * 0.04; // 4% ثابتة
+    const landRegistration = landPrice * 0.04;
     const totalLandCosts = landPrice + agentCommissionLand + landRegistration;
 
     // تكاليف ما قبل البناء
@@ -240,16 +203,14 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
     const totalPreConstruction = soilTestFee + topographicSurveyFee + officialBodiesFees + designFee + supervisionFee + separationFee;
 
     // تكاليف البناء
-    const contingencies = constructionCost * 0.02; // 2% ثابتة
+    const contingencies = constructionCost * 0.02;
     const totalConstruction = constructionCost + communityFees + contingencies;
 
     // تكاليف البيع والتسويق (نسب من إجمالي المبيعات)
-    const developerFeePhase1 = totalRevenue * (developerFeePhase1Pct / 100);
-    const developerFeePhase2 = totalRevenue * (developerFeePhase2Pct / 100);
-    const totalDeveloperFee = developerFeePhase1 + developerFeePhase2;
+    const developerFee = totalRevenue * (developerFeePct / 100);
     const salesCommission = totalRevenue * (salesCommissionPct / 100);
     const marketingCost = totalRevenue * (marketingPct / 100);
-    const totalSalesMarketing = totalDeveloperFee + salesCommission + marketingCost;
+    const totalSalesMarketing = developerFee + salesCommission + marketingCost;
 
     // الرسوم التنظيمية
     const totalRegulatory = reraUnitRegFee + reraProjectRegFee + developerNocFee + escrowAccountFee + bankFees + surveyorFees + reraAuditReportFee + reraInspectionReportFee;
@@ -271,19 +232,17 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
     if (!totalRevenue) missing.push("إجمالي الإيرادات (أكمل Tab 1 و Tab 2)");
 
     return {
-      // Sources
-      landPrice, agentCommissionLandPct, manualBuaSqft, estimatedConstructionPricePerSqft,
+      landPrice, agentCommissionLandPct, manualBuaSqft: bua, estimatedConstructionPricePerSqft,
       soilTestFee, topographicSurveyFee, officialBodiesFees,
       reraUnitRegFee, reraProjectRegFee, developerNocFee, escrowAccountFee,
       bankFees, communityFees, surveyorFees, reraAuditReportFee, reraInspectionReportFee,
       designFeePct, supervisionFeePct, separationFeePerM2,
-      salesCommissionPct, marketingPct, developerFeePhase1Pct, developerFeePhase2Pct,
+      salesCommissionPct, marketingPct, developerFeePct,
       bua, plotAreaM2, totalUnits, totalRevenue, revenueRes, revenueRet, revenueOff,
-      // Calculated
       agentCommissionLand, landRegistration, totalLandCosts,
       constructionCost, designFee, supervisionFee, separationFee, totalPreConstruction,
       contingencies, totalConstruction,
-      developerFeePhase1, developerFeePhase2, totalDeveloperFee, salesCommission, marketingCost, totalSalesMarketing,
+      developerFee, salesCommission, marketingCost, totalSalesMarketing,
       totalRegulatory,
       totalCosts, profit, profitMargin, roi, costPerSqft, profitPerSqft,
       missing,
@@ -310,6 +269,54 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
 
   const isApproved = costsQuery.data?.isApproved === 1;
 
+  // Build the comprehensive cost list
+  type CostLine = { label: string; value: number; isSubtotal?: boolean; isGroupHeader?: boolean; pctLabel?: string };
+
+  const costLines: CostLine[] = [
+    // ─── تكاليف الأرض ───
+    { label: "تكاليف الأرض", value: 0, isGroupHeader: true },
+    { label: "سعر الأرض", value: costs.landPrice },
+    { label: "عمولة وسيط الأرض", value: costs.agentCommissionLand, pctLabel: `${costs.agentCommissionLandPct}%` },
+    { label: "رسوم تسجيل الأرض", value: costs.landRegistration, pctLabel: "4%" },
+    { label: "إجمالي تكاليف الأرض", value: costs.totalLandCosts, isSubtotal: true },
+
+    // ─── تكاليف ما قبل البناء ───
+    { label: "تكاليف ما قبل البناء", value: 0, isGroupHeader: true },
+    { label: "فحص التربة", value: costs.soilTestFee },
+    { label: "المسح الطبوغرافي", value: costs.topographicSurveyFee },
+    { label: "رسوم الجهات الرسمية", value: costs.officialBodiesFees },
+    { label: "أتعاب التصميم", value: costs.designFee, pctLabel: `${costs.designFeePct}% من البناء` },
+    { label: "أتعاب الإشراف", value: costs.supervisionFee, pctLabel: `${costs.supervisionFeePct}% من البناء` },
+    { label: "رسوم الفرز", value: costs.separationFee, pctLabel: `${costs.separationFeePerM2} AED/م²` },
+    { label: "إجمالي ما قبل البناء", value: costs.totalPreConstruction, isSubtotal: true },
+
+    // ─── تكاليف البناء ───
+    { label: "تكاليف البناء", value: 0, isGroupHeader: true },
+    { label: "تكلفة البناء", value: costs.constructionCost, pctLabel: `${fmt(costs.bua)} قدم² × ${fmt(costs.estimatedConstructionPricePerSqft)}` },
+    { label: "رسوم المجتمع", value: costs.communityFees },
+    { label: "احتياطي وطوارئ", value: costs.contingencies, pctLabel: "2%" },
+    { label: "إجمالي تكاليف البناء", value: costs.totalConstruction, isSubtotal: true },
+
+    // ─── تكاليف البيع والتسويق ───
+    { label: "تكاليف البيع والتسويق", value: 0, isGroupHeader: true },
+    { label: "أتعاب المطور", value: costs.developerFee, pctLabel: `${costs.developerFeePct}% من المبيعات` },
+    { label: "عمولة البيع", value: costs.salesCommission, pctLabel: `${costs.salesCommissionPct}% من المبيعات` },
+    { label: "التسويق", value: costs.marketingCost, pctLabel: `${costs.marketingPct}% من المبيعات` },
+    { label: "إجمالي البيع والتسويق", value: costs.totalSalesMarketing, isSubtotal: true },
+
+    // ─── الرسوم التنظيمية ───
+    { label: "الرسوم التنظيمية والإدارية", value: 0, isGroupHeader: true },
+    { label: "رسوم تسجيل الوحدات — ريرا", value: costs.reraUnitRegFee },
+    { label: "رسوم تسجيل المشروع — ريرا", value: costs.reraProjectRegFee },
+    { label: "رسوم عدم ممانعة — المطور", value: costs.developerNocFee },
+    { label: "حساب الضمان (Escrow)", value: costs.escrowAccountFee },
+    { label: "الرسوم البنكية", value: costs.bankFees },
+    { label: "أتعاب المسّاح", value: costs.surveyorFees },
+    { label: "تدقيق ريرا", value: costs.reraAuditReportFee },
+    { label: "تفتيش ريرا", value: costs.reraInspectionReportFee },
+    { label: "إجمالي الرسوم التنظيمية", value: costs.totalRegulatory, isSubtotal: true },
+  ];
+
   return (
     <div className="space-y-6" dir="rtl">
       {/* شريط الأدوات */}
@@ -327,7 +334,7 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
           </Button>
         </div>
         <div className="text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
-          📋 تقرير مُحتسب تلقائياً — لتعديل البيانات ارجع لبطاقة المشروع
+          تقرير مُحتسب تلقائياً — لتعديل البيانات ارجع لبطاقة المشروع
         </div>
       </div>
 
@@ -348,6 +355,52 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
           </CardContent>
         </Card>
       )}
+
+      {/* القائمة الشاملة للتكاليف */}
+      <Card className="overflow-hidden shadow-sm">
+        <div className="bg-gradient-to-l from-slate-800 to-slate-900 px-5 py-4">
+          <h2 className="text-white font-bold text-base">بيان التكاليف التفصيلي</h2>
+          <p className="text-slate-400 text-xs mt-0.5">جميع بنود التكاليف المحتسبة من بطاقة المشروع ودراسة الجدوى</p>
+        </div>
+        <div className="divide-y divide-border/40">
+          {costLines.map((line, i) => {
+            if (line.isGroupHeader) {
+              return (
+                <div key={i} className="bg-muted/40 px-5 py-2.5">
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{line.label}</span>
+                </div>
+              );
+            }
+            if (line.isSubtotal) {
+              return (
+                <div key={i} className="flex items-center justify-between px-5 py-3 bg-primary/5 border-t border-primary/10">
+                  <span className="text-sm font-bold text-primary">{line.label}</span>
+                  <span className="text-sm font-bold font-mono text-primary" dir="ltr">{fmt(line.value)} AED</span>
+                </div>
+              );
+            }
+            return (
+              <div key={i} className="flex items-center justify-between px-5 py-2.5 hover:bg-muted/20 transition-colors">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-foreground/80">{line.label}</span>
+                  {line.pctLabel && (
+                    <span className="text-[10px] text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded">{line.pctLabel}</span>
+                  )}
+                </div>
+                <span className="text-sm font-mono text-foreground/70" dir="ltr">{fmt(line.value)} AED</span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* الإجمالي الكلي */}
+        <div className="bg-gradient-to-l from-slate-800 to-slate-900 px-5 py-4">
+          <div className="flex items-center justify-between">
+            <span className="text-white font-bold text-base">إجمالي تكاليف المشروع</span>
+            <span className="text-xl font-bold font-mono text-white" dir="ltr">{fmt(costs.totalCosts)} AED</span>
+          </div>
+        </div>
+      </Card>
 
       {/* بطاقات المؤشرات */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -387,105 +440,56 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
         </Card>
       </div>
 
-      {/* جدول التكاليف التفصيلي */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="space-y-4">
-          {/* تكاليف الأرض */}
-          <CostSection title="تكاليف الأرض" icon={Building2}>
-            <CostRow label="سعر الأرض" value={costs.landPrice} />
-            <CostRow label={`عمولة وسيط الأرض (${costs.agentCommissionLandPct}%)`} value={costs.agentCommissionLand} indent />
-            <CostRow label="رسوم تسجيل الأرض (4%)" value={costs.landRegistration} indent />
-            <CostRow label="إجمالي تكاليف الأرض" value={costs.totalLandCosts} highlight />
-          </CostSection>
-
-          {/* تكاليف ما قبل البناء */}
-          <CostSection title="تكاليف ما قبل البناء" icon={BarChart3}>
-            <CostRow label="فحص التربة" value={costs.soilTestFee} />
-            <CostRow label="المسح الطبوغرافي" value={costs.topographicSurveyFee} />
-            <CostRow label="رسوم الجهات الرسمية" value={costs.officialBodiesFees} />
-            <CostRow label={`أتعاب التصميم (${costs.designFeePct}% من البناء)`} value={costs.designFee} indent />
-            <CostRow label={`أتعاب الإشراف (${costs.supervisionFeePct}% من البناء)`} value={costs.supervisionFee} indent />
-            <CostRow label={`رسوم الفرز (${costs.separationFeePerM2} AED/م²)`} value={costs.separationFee} indent />
-            <CostRow label="إجمالي ما قبل البناء" value={costs.totalPreConstruction} highlight />
-          </CostSection>
-
-          {/* تكاليف البناء */}
-          <CostSection title="تكاليف البناء" icon={DollarSign}>
-            <CostRow label={`تكلفة البناء (${fmt(costs.bua)} قدم² × ${fmt(costs.estimatedConstructionPricePerSqft)} AED)`} value={costs.constructionCost} />
-            <CostRow label="رسوم المجتمع" value={costs.communityFees} />
-            <CostRow label="احتياطي وطوارئ (2%)" value={costs.contingencies} indent />
-            <CostRow label="إجمالي تكاليف البناء" value={costs.totalConstruction} highlight />
-          </CostSection>
-        </div>
-
-        <div className="space-y-4">
-          {/* تكاليف البيع والتسويق */}
-          <CostSection title="تكاليف البيع والتسويق" icon={TrendingUp}>
-            <CostRow label={`أتعاب المطور - المرحلة الأولى (${costs.developerFeePhase1Pct}%)`} value={costs.developerFeePhase1} indent />
-            <CostRow label={`أتعاب المطور - المرحلة الثانية (${costs.developerFeePhase2Pct}%)`} value={costs.developerFeePhase2} indent />
-            <CostRow label="إجمالي أتعاب المطور" value={costs.totalDeveloperFee} />
-            <CostRow label={`عمولة البيع (${costs.salesCommissionPct}%)`} value={costs.salesCommission} indent />
-            <CostRow label={`التسويق (${costs.marketingPct}%)`} value={costs.marketingCost} indent />
-            <CostRow label="إجمالي البيع والتسويق" value={costs.totalSalesMarketing} highlight />
-          </CostSection>
-
-          {/* الرسوم التنظيمية */}
-          <CostSection title="الرسوم التنظيمية والإدارية" icon={Percent}>
-            <CostRow label="رسوم تسجيل الوحدات — ريرا" value={costs.reraUnitRegFee} />
-            <CostRow label="رسوم تسجيل المشروع — ريرا" value={costs.reraProjectRegFee} />
-            <CostRow label="رسوم عدم ممانعة — المطور" value={costs.developerNocFee} />
-            <CostRow label="حساب الضمان (Escrow)" value={costs.escrowAccountFee} />
-            <CostRow label="الرسوم البنكية" value={costs.bankFees} />
-            <CostRow label="أتعاب المسّاح" value={costs.surveyorFees} />
-            <CostRow label="تدقيق ريرا" value={costs.reraAuditReportFee} />
-            <CostRow label="تفتيش ريرا" value={costs.reraInspectionReportFee} />
-            <CostRow label="إجمالي الرسوم التنظيمية" value={costs.totalRegulatory} highlight />
-          </CostSection>
-        </div>
-      </div>
-
-      {/* ملخص إجمالي التكاليف */}
-      <Card className="border-2 border-primary/30 bg-primary/5">
-        <CardContent className="pt-4">
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-lg">إجمالي تكاليف المشروع</span>
-            <span className="text-2xl font-bold font-mono text-primary" dir="ltr">{fmt(costs.totalCosts)} AED</span>
+      {/* تفصيل الإيرادات */}
+      <Card className="overflow-hidden shadow-sm">
+        <div className="bg-gradient-to-l from-blue-700 to-blue-800 px-5 py-3">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-blue-200" />
+            <h3 className="text-white font-bold text-sm">تفصيل الإيرادات (من تبويب المنافسة والتسعير)</h3>
           </div>
-          <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-4 text-center text-sm border-t pt-3">
-            <div>
-              <p className="text-muted-foreground text-xs">هامش الربح</p>
-              <p className={`font-bold ${costs.profitMargin >= 0 ? "text-emerald-600" : "text-red-600"}`}>{costs.profitMargin.toFixed(1)}%</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground text-xs">التكلفة / قدم² (BUA)</p>
-              <p className="font-bold text-primary" dir="ltr">{fmt(costs.costPerSqft)} AED</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground text-xs">الربح / قدم² (BUA)</p>
-              <p className={`font-bold ${costs.profitPerSqft >= 0 ? "text-emerald-600" : "text-red-600"}`} dir="ltr">{fmt(costs.profitPerSqft)} AED</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground text-xs">العائد ROI</p>
-              <p className="font-bold text-amber-600">{costs.roi.toFixed(1)}%</p>
-            </div>
+        </div>
+        <div className="divide-y divide-border/40">
+          <div className="flex items-center justify-between px-5 py-2.5">
+            <span className="text-sm text-foreground/80">إيرادات سكنية</span>
+            <span className="text-sm font-mono text-foreground/70" dir="ltr">{fmt(costs.revenueRes)} AED</span>
           </div>
-        </CardContent>
+          <div className="flex items-center justify-between px-5 py-2.5">
+            <span className="text-sm text-foreground/80">إيرادات محلات تجارية</span>
+            <span className="text-sm font-mono text-foreground/70" dir="ltr">{fmt(costs.revenueRet)} AED</span>
+          </div>
+          <div className="flex items-center justify-between px-5 py-2.5">
+            <span className="text-sm text-foreground/80">إيرادات مكاتب</span>
+            <span className="text-sm font-mono text-foreground/70" dir="ltr">{fmt(costs.revenueOff)} AED</span>
+          </div>
+          <div className="flex items-center justify-between px-5 py-3 bg-blue-50">
+            <span className="text-sm font-bold text-blue-700">إجمالي الإيرادات</span>
+            <span className="text-sm font-bold font-mono text-blue-700" dir="ltr">{fmt(costs.totalRevenue)} AED</span>
+          </div>
+        </div>
       </Card>
 
-      {/* تفصيل الإيرادات */}
-      <Card>
-        <CardContent className="pt-4">
-          <div className="flex items-center gap-2 mb-3 border-b pb-2">
-            <TrendingUp className="w-4 h-4 text-blue-600" />
-            <h3 className="font-bold text-sm">تفصيل الإيرادات (من تبويب المنافسة والتسعير)</h3>
+      {/* ملخص الربحية */}
+      <Card className="overflow-hidden shadow-sm">
+        <div className={`px-5 py-4 ${costs.profit >= 0 ? "bg-gradient-to-l from-emerald-700 to-emerald-800" : "bg-gradient-to-l from-red-700 to-red-800"}`}>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center text-white">
+            <div>
+              <p className="text-xs opacity-80 mb-1">إجمالي الإيرادات</p>
+              <p className="text-lg font-bold font-mono" dir="ltr">{fmt(costs.totalRevenue)}</p>
+            </div>
+            <div>
+              <p className="text-xs opacity-80 mb-1">إجمالي التكاليف</p>
+              <p className="text-lg font-bold font-mono" dir="ltr">{fmt(costs.totalCosts)}</p>
+            </div>
+            <div>
+              <p className="text-xs opacity-80 mb-1">صافي الربح</p>
+              <p className="text-lg font-bold font-mono" dir="ltr">{fmt(costs.profit)}</p>
+            </div>
+            <div>
+              <p className="text-xs opacity-80 mb-1">التكلفة / قدم²</p>
+              <p className="text-lg font-bold font-mono" dir="ltr">{fmt(costs.costPerSqft)} AED</p>
+            </div>
           </div>
-          <div className="space-y-0.5 divide-y divide-border/30">
-            <CostRow label="إيرادات سكنية" value={costs.revenueRes} />
-            <CostRow label="إيرادات محلات تجارية" value={costs.revenueRet} />
-            <CostRow label="إيرادات مكاتب" value={costs.revenueOff} />
-            <CostRow label="إجمالي الإيرادات" value={costs.totalRevenue} highlight />
-          </div>
-        </CardContent>
+        </div>
       </Card>
     </div>
   );

@@ -1,0 +1,73 @@
+{
+  "query": "SELECT id, name, developerFeePhase1Pct, developerFeePhase2Pct, developerFeePct FROM projects LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, name, developerFeePhase1Pct, developerFeePhase2Pct, developerFeePct FROM projects LIMIT 10;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "مركز مجان التجاري (G+4)",
+      "developerFeePhase1Pct": "2.00",
+      "developerFeePhase2Pct": "3.00",
+      "developerFeePct": "5.00"
+    },
+    {
+      "id": "2",
+      "name": "مجان متعدد الاستخدامات (G+4P+25)",
+      "developerFeePhase1Pct": "2.00",
+      "developerFeePhase2Pct": "3.00",
+      "developerFeePct": "5.00"
+    },
+    {
+      "id": "3",
+      "name": "مبنى الجداف السكني (G+7)",
+      "developerFeePhase1Pct": "2.00",
+      "developerFeePhase2Pct": "3.00",
+      "developerFeePct": "5.00"
+    },
+    {
+      "id": "4",
+      "name": "ند الشبا — قطعة 1 (6185392)",
+      "developerFeePhase1Pct": "2.00",
+      "developerFeePhase2Pct": "3.00",
+      "developerFeePct": "5.00"
+    },
+    {
+      "id": "5",
+      "name": "ند الشبا — قطعة 2 المدمجة (6182776)",
+      "developerFeePhase1Pct": "2.00",
+      "developerFeePhase2Pct": "3.00",
+      "developerFeePct": "5.00"
+    },
+    {
+      "id": "6",
+      "name": "ند الشبا — قطعة 3 الفلل (6180578)",
+      "developerFeePhase1Pct": "2.00",
+      "developerFeePhase2Pct": "3.00",
+      "developerFeePct": "5.00"
+    },
+    {
+      "id": "60001",
+      "name": "مشروع آلات البيع في ميسيسوجا، أونتاريو",
+      "developerFeePhase1Pct": "2.00",
+      "developerFeePhase2Pct": "3.00",
+      "developerFeePct": "5.00"
+    },
+    {
+      "id": "60002",
+      "name": "مشروع آلات البيع في ميسيسوجا، أونتاريو",
+      "developerFeePhase1Pct": "2.00",
+      "developerFeePhase2Pct": "3.00",
+      "developerFeePct": "5.00"
+    },
+    {
+      "id": "60003",
+      "name": "آلات البيع في كلية طب الأسنان",
+      "developerFeePhase1Pct": "2.00",
+      "developerFeePhase2Pct": "3.00",
+      "developerFeePct": "5.00"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tdeveloperFeePhase1Pct\tdeveloperFeePhase2Pct\tdeveloperFeePct\n1\tمركز مجان التجاري (G+4)\t2.00\t3.00\t5.00\n2\tمجان متعدد الاستخدامات (G+4P+25)\t2.00\t3.00\t5.00\n3\tمبنى الجداف السكني (G+7)\t2.00\t3.00\t5.00\n4\tند الشبا — قطعة 1 (6185392)\t2.00\t3.00\t5.00\n5\tند الشبا — قطعة 2 المدمجة (6182776)\t2.00\t3.00\t5.00\n6\tند الشبا — قطعة 3 الفلل (6180578)\t2.00\t3.00\t5.00\n60001\tمشروع آلات البيع في ميسيسوجا، أونتاريو\t2.00\t3.00\t5.00\n60002\tمشروع آلات البيع في ميسيسوجا، أونتاريو\t2.00\t3.00\t5.00\n60003\tآلات البيع في كلية طب الأسنان\t2.00\t3.00\t5.00\n",
+  "stderr": "",
+  "execution_time_ms": 1585
+}
