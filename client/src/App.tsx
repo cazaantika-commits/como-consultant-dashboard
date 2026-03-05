@@ -46,6 +46,7 @@ import DevelopmentStagesPage from "./pages/DevelopmentStagesPage";
 import ExecutiveCashFlowPage from "./pages/ProjectCashFlowSimplified";
 import ProjectLifecyclePage from "./pages/ProjectLifecycleSimplified";
 import ProgramCashFlowPage from "./pages/ProgramCashFlowPage";
+import ExcelCashFlowPage from "./pages/ExcelCashFlowPage";
 
 function Router() {
   return (
@@ -64,6 +65,7 @@ function Router() {
       <Route path="/cash-flow" component={ExecutiveCashFlowPage} />
       <Route path="/project-lifecycle" component={ProjectLifecyclePage} />
       <Route path="/program-cashflow" component={ProgramCashFlowPage} />
+      <Route path="/excel-cashflow" component={ExcelCashFlowPage} />
       <Route path="/consultant-portal" component={ConsultantPortalPage} />
       <Route path="/consultant-guide" component={ConsultantGuidePage} />
       <Route path="/consultant-proposals" component={ConsultantProposalsPage} />
