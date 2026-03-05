@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Building2, FileText, BarChart3, ClipboardList, TrendingUp, ArrowLeft } from "lucide-react";
+import { ArrowRight, Building2, FileText, BarChart3, ClipboardList, TrendingUp, Landmark, ArrowLeft } from "lucide-react";
 import FactSheetPage from "./FactSheetPage";
 import FeasibilityStudyPage from "./FeasibilityStudyPage";
 import DevelopmentStagesPage from "./DevelopmentStagesPage";
 import ExcelCashFlowPage from "./ExcelCashFlowPage";
+import EscrowCashFlowPage from "./EscrowCashFlowPage";
 
-type View = "icons" | "fact-sheet" | "feasibility" | "cashflow" | "development-stages";
+type View = "icons" | "fact-sheet" | "feasibility" | "cashflow" | "escrow" | "development-stages";
 
 const ICONS_CONFIG = [
   {
@@ -36,8 +37,8 @@ const ICONS_CONFIG = [
   },
   {
     id: "cashflow" as View,
-    label: "جدول التدفقات النقدية المتوقعة",
-    description: "المصاريف والإيرادات الشهرية",
+    label: "مصاريف المستثمر",
+    description: "التمويل المباشر المطلوب من المستثمر",
     emoji: "💰",
     icon: TrendingUp,
     gradient: "linear-gradient(135deg, #10b981, #059669)",
@@ -45,6 +46,18 @@ const ICONS_CONFIG = [
     borderClass: "border-emerald-200",
     textClass: "text-emerald-700",
     shadow: "rgba(16, 185, 129, 0.3)",
+  },
+  {
+    id: "escrow" as View,
+    label: "حساب الضمان (الإسكرو)",
+    description: "مصاريف البناء + إيرادات المبيعات",
+    emoji: "🏦",
+    icon: Landmark,
+    gradient: "linear-gradient(135deg, #6366f1, #4f46e5)",
+    bgClass: "from-indigo-50 to-indigo-100",
+    borderClass: "border-indigo-200",
+    textClass: "text-indigo-700",
+    shadow: "rgba(99, 102, 241, 0.3)",
   },
   {
     id: "development-stages" as View,
@@ -103,33 +116,33 @@ export default function ProjectManagementPage() {
 
       {/* Icons View */}
       {activeView === "icons" && (
-        <main className="max-w-4xl mx-auto px-6 py-16">
+        <main className="max-w-5xl mx-auto px-6 py-16">
           <div className="text-center mb-12">
             <h2 className="text-2xl font-bold text-foreground mb-2">إدارة المشاريع</h2>
             <p className="text-sm text-muted-foreground">اختر القسم المطلوب</p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-5">
             {ICONS_CONFIG.map((item) => {
               const Icon = item.icon;
               return (
                 <button
                   key={item.id}
                   onClick={() => setActiveView(item.id)}
-                  className="group relative flex flex-col items-center text-center p-6 rounded-2xl border bg-card hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                  className="group relative flex flex-col items-center text-center p-5 rounded-2xl border bg-card hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
                   style={{ borderColor: 'var(--border)' }}
                 >
                   {/* Icon Circle */}
                   <div
-                    className="w-20 h-20 rounded-2xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300"
-                    style={{ background: item.gradient, boxShadow: `0 8px 24px ${item.shadow}` }}
+                    className="w-18 h-18 rounded-2xl flex items-center justify-center mb-3 shadow-lg group-hover:scale-110 transition-transform duration-300"
+                    style={{ background: item.gradient, boxShadow: `0 8px 24px ${item.shadow}`, width: '72px', height: '72px' }}
                   >
-                    <span className="text-3xl">{item.emoji}</span>
+                    <span className="text-2xl">{item.emoji}</span>
                   </div>
 
                   {/* Label */}
-                  <h3 className="text-sm font-bold text-foreground mb-1 leading-tight">{item.label}</h3>
-                  <p className="text-[11px] text-muted-foreground leading-tight">{item.description}</p>
+                  <h3 className="text-xs font-bold text-foreground mb-1 leading-tight">{item.label}</h3>
+                  <p className="text-[10px] text-muted-foreground leading-tight">{item.description}</p>
                 </button>
               );
             })}
@@ -143,6 +156,11 @@ export default function ProjectManagementPage() {
       {activeView === "cashflow" && (
         <main className="max-w-[98%] mx-auto py-4">
           <ExcelCashFlowPage />
+        </main>
+      )}
+      {activeView === "escrow" && (
+        <main className="max-w-[98%] mx-auto py-4">
+          <EscrowCashFlowPage />
         </main>
       )}
       {activeView === "development-stages" && <DevelopmentStagesPage embedded />}
