@@ -1,4 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 // ===== DATES =====
 // Month 1 = April 2026, Pre-construction: M1-M6 (Apr-Sep 2026)
@@ -106,6 +108,11 @@ function fmt(n: number): string {
 
 // ===== COMPONENT =====
 export default function ExcelCashFlowPage() {
+  const { isAuthenticated } = useAuth();
+  const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const selectedProject = (projectsQuery.data || []).find((p: any) => p.id === selectedProjectId);
+
   // Calculate quarterly totals for each item
   const quarterlyData = useMemo(() => {
     return ITEMS.map(item => {
@@ -189,9 +196,36 @@ export default function ExcelCashFlowPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4" dir="rtl">
+      {/* Project Selector */}
+      <div className="mb-3 bg-white rounded-lg border border-gray-200 shadow-sm px-4 py-3">
+        <div className="flex items-center gap-4">
+          <div className="flex-1 space-y-1">
+            <label className="text-xs font-bold text-gray-500">اختر المشروع</label>
+            <select
+              className="w-full h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium"
+              value={selectedProjectId || ""}
+              onChange={(e) => setSelectedProjectId(e.target.value ? Number(e.target.value) : null)}
+            >
+              <option value="">— اختر مشروع —</option>
+              {(projectsQuery.data || []).map((p: any) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {!selectedProjectId ? (
+        <div className="text-center py-20">
+          <div className="text-5xl mb-4 opacity-30">📊</div>
+          <h2 className="text-xl font-bold text-gray-400 mb-2">اختر مشروع لعرض التدفقات النقدية</h2>
+          <p className="text-sm text-gray-400">اختر مشروع من القائمة أعلاه</p>
+        </div>
+      ) : (
+      <div>
       {/* Title */}
       <div className="mb-3">
-        <h1 className="text-base font-bold text-gray-900">مشروع ند الشبا جاردنز — جدول مصاريف المستثمر</h1>
+        <h1 className="text-base font-bold text-gray-900">{selectedProject?.name || "المشروع"} — جدول مصاريف المستثمر</h1>
         <p className="text-xs text-gray-500 mt-0.5">التمويل المباشر من المستثمر (لا يشمل مصاريف حساب الضمان)</p>
       </div>
 
@@ -365,6 +399,8 @@ export default function ExcelCashFlowPage() {
           التسليم
         </div>
       </div>
+      </div>
+      )}
     </div>
   );
 }
