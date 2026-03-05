@@ -1,180 +1,151 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Building2, FileText, Rocket, Sparkles, ClipboardList, BarChart3, RefreshCw } from "lucide-react";
+import { ArrowRight, Building2, FileText, BarChart3, ClipboardList, TrendingUp, ArrowLeft } from "lucide-react";
 import FactSheetPage from "./FactSheetPage";
 import FeasibilityStudyPage from "./FeasibilityStudyPage";
 import DevelopmentStagesPage from "./DevelopmentStagesPage";
-import ProjectLifecyclePage from "./ProjectLifecycleSimplified";
-import { LegalSetupTab } from "@/components/feasibility/LegalSetupTab";
-import { DesignsAndPermitsTab } from "@/components/feasibility/DesignsAndPermitsTab";
+import ExcelCashFlowPage from "./ExcelCashFlowPage";
 
-type Tab = "fact-sheet" | "feasibility" | "development-stages" | "project-lifecycle" | "legal-setup" | "designs-permits" | "coming-soon";
+type View = "icons" | "fact-sheet" | "feasibility" | "cashflow" | "development-stages";
+
+const ICONS_CONFIG = [
+  {
+    id: "fact-sheet" as View,
+    label: "بطاقة بيانات المشروع",
+    description: "المعلومات الأساسية والتفاصيل الفنية",
+    emoji: "📋",
+    icon: FileText,
+    gradient: "linear-gradient(135deg, #f59e0b, #d97706)",
+    bgClass: "from-amber-50 to-amber-100",
+    borderClass: "border-amber-200",
+    textClass: "text-amber-700",
+    shadow: "rgba(245, 158, 11, 0.3)",
+  },
+  {
+    id: "feasibility" as View,
+    label: "دراسة الجدوى",
+    description: "التحليل المالي والعوائد المتوقعة",
+    emoji: "📊",
+    icon: BarChart3,
+    gradient: "linear-gradient(135deg, #3b82f6, #2563eb)",
+    bgClass: "from-blue-50 to-blue-100",
+    borderClass: "border-blue-200",
+    textClass: "text-blue-700",
+    shadow: "rgba(59, 130, 246, 0.3)",
+  },
+  {
+    id: "cashflow" as View,
+    label: "جدول التدفقات النقدية المتوقعة",
+    description: "المصاريف والإيرادات الشهرية",
+    emoji: "💰",
+    icon: TrendingUp,
+    gradient: "linear-gradient(135deg, #10b981, #059669)",
+    bgClass: "from-emerald-50 to-emerald-100",
+    borderClass: "border-emerald-200",
+    textClass: "text-emerald-700",
+    shadow: "rgba(16, 185, 129, 0.3)",
+  },
+  {
+    id: "development-stages" as View,
+    label: "مراحل التطوير",
+    description: "الجدول الزمني ومتابعة التنفيذ",
+    emoji: "🏗️",
+    icon: ClipboardList,
+    gradient: "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+    bgClass: "from-purple-50 to-purple-100",
+    borderClass: "border-purple-200",
+    textClass: "text-purple-700",
+    shadow: "rgba(139, 92, 246, 0.3)",
+  },
+];
 
 export default function ProjectManagementPage() {
   const [, navigate] = useLocation();
-  const [activeTab, setActiveTab] = useState<Tab>("fact-sheet");
-
-  const tabs: { id: Tab; label: string; icon: React.ReactNode; color: string }[] = [
-    {
-      id: "fact-sheet",
-      label: "بطاقة بيانات المشروع",
-      icon: <FileText className="w-4 h-4" />,
-      color: "amber",
-    },
-    {
-      id: "feasibility",
-      label: "دراسة الجدوى",
-      icon: <BarChart3 className="w-4 h-4" />,
-      color: "blue",
-    },
-    {
-      id: "development-stages",
-      label: "مراحل التطوير",
-      icon: <ClipboardList className="w-4 h-4" />,
-      color: "purple",
-    },
-    {
-      id: "project-lifecycle",
-      label: "دورة المشروع",
-      icon: <RefreshCw className="w-4 h-4" />,
-      color: "teal",
-    },
-    {
-      id: "legal-setup",
-      label: "الإعداد القانوني",
-      icon: <FileText className="w-4 h-4" />,
-      color: "red",
-    },
-    {
-      id: "designs-permits",
-      label: "التصاميم والتصاريح",
-      icon: <Building2 className="w-4 h-4" />,
-      color: "orange",
-    },
-    {
-      id: "coming-soon",
-      label: "أدوات إضافية",
-      icon: <Rocket className="w-4 h-4" />,
-      color: "emerald",
-    },
-  ];
-
-  const getTabColors = (color: string, isActive: boolean) => {
-    if (!isActive) return "border-transparent text-muted-foreground hover:text-foreground hover:border-border";
-    const colorMap: Record<string, string> = {
-      amber: "border-amber-500 text-amber-700 dark:text-amber-400",
-      blue: "border-blue-500 text-blue-700 dark:text-blue-400",
-      purple: "border-purple-500 text-purple-700 dark:text-purple-400",
-      teal: "border-teal-500 text-teal-700 dark:text-teal-400",
-      emerald: "border-emerald-500 text-emerald-700 dark:text-emerald-400",
-      red: "border-red-500 text-red-700 dark:text-red-400",
-      orange: "border-orange-500 text-orange-700 dark:text-orange-400",
-    };
-    return colorMap[color] || colorMap.amber;
-  };
+  const [activeView, setActiveView] = useState<View>("icons");
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
       {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="gap-1.5">
-            <ArrowRight className="w-4 h-4" />
-            الرئيسية
-          </Button>
-          <div className="h-6 w-px bg-border" />
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center">
-              <Building2 className="w-4 h-4 text-white" />
-            </div>
-            <h1 className="text-base font-bold text-foreground">إدارة المشاريع</h1>
-          </div>
+        <div className="max-w-7xl mx-auto px-6 h-14 flex items-center gap-3">
+          {activeView === "icons" ? (
+            <>
+              <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="gap-1.5">
+                <ArrowRight className="w-4 h-4" />
+                الرئيسية
+              </Button>
+              <div className="h-5 w-px bg-border" />
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center">
+                  <Building2 className="w-3.5 h-3.5 text-white" />
+                </div>
+                <h1 className="text-sm font-bold text-foreground">إدارة المشاريع</h1>
+              </div>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" onClick={() => setActiveView("icons")} className="gap-1.5">
+                <ArrowRight className="w-4 h-4" />
+                العودة
+              </Button>
+              <div className="h-5 w-px bg-border" />
+              <div className="flex items-center gap-2">
+                <span className="text-lg">{ICONS_CONFIG.find(c => c.id === activeView)?.emoji}</span>
+                <h1 className="text-sm font-bold text-foreground">
+                  {ICONS_CONFIG.find(c => c.id === activeView)?.label}
+                </h1>
+              </div>
+            </>
+          )}
         </div>
       </header>
 
-      {/* Tabs */}
-      <div className="border-b border-border bg-card/50">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex gap-1 overflow-x-auto scrollbar-hide">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${getTabColors(tab.color, activeTab === tab.id)}`}
-              >
-                <div className="flex items-center gap-2">
-                  {tab.icon}
-                  {tab.label}
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      {activeTab === "fact-sheet" && (
-        <FactSheetPage embedded />
-      )}
-
-      {activeTab === "feasibility" && (
-        <FeasibilityStudyPage embedded />
-      )}
-
-      {activeTab === "development-stages" && (
-        <DevelopmentStagesPage embedded />
-      )}
-
-      {activeTab === "project-lifecycle" && (
-        <ProjectLifecyclePage />
-      )}
-
-      {activeTab === "legal-setup" && (
-        <main className="max-w-7xl mx-auto px-6 py-8">
-          <LegalSetupTab projectId={null} />
-        </main>
-      )}
-
-      {activeTab === "designs-permits" && (
-        <main className="max-w-7xl mx-auto px-6 py-8">
-          <DesignsAndPermitsTab projectId={null} />
-        </main>
-      )}
-
-      {activeTab === "coming-soon" && (
-        <main className="max-w-3xl mx-auto px-6 py-24 text-center">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-xl shadow-emerald-500/25 mb-8">
-            <Rocket className="w-10 h-10 text-white" />
+      {/* Icons View */}
+      {activeView === "icons" && (
+        <main className="max-w-4xl mx-auto px-6 py-16">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl font-bold text-foreground mb-2">إدارة المشاريع</h2>
+            <p className="text-sm text-muted-foreground">اختر القسم المطلوب</p>
           </div>
 
-          <h2 className="text-3xl font-extrabold text-foreground mb-4">
-            قريباً
-          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {ICONS_CONFIG.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveView(item.id)}
+                  className="group relative flex flex-col items-center text-center p-6 rounded-2xl border bg-card hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                  style={{ borderColor: 'var(--border)' }}
+                >
+                  {/* Icon Circle */}
+                  <div
+                    className="w-20 h-20 rounded-2xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300"
+                    style={{ background: item.gradient, boxShadow: `0 8px 24px ${item.shadow}` }}
+                  >
+                    <span className="text-3xl">{item.emoji}</span>
+                  </div>
 
-          <p className="text-lg text-muted-foreground leading-relaxed mb-6 max-w-lg mx-auto">
-            نعمل على تطوير أدوات إضافية لإدارة المشاريع بشكل أكثر شمولية
-          </p>
-
-          <div className="flex flex-wrap gap-3 justify-center mb-10">
-            {[
-              "متابعة المشاريع",
-              "الجدول الزمني",
-              "الميزانيات",
-              "فريق العمل",
-              "التقارير الذكية",
-            ].map((feature, i) => (
-              <span
-                key={i}
-                className="text-sm px-4 py-2 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium flex items-center gap-1.5"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                {feature}
-              </span>
-            ))}
+                  {/* Label */}
+                  <h3 className="text-sm font-bold text-foreground mb-1 leading-tight">{item.label}</h3>
+                  <p className="text-[11px] text-muted-foreground leading-tight">{item.description}</p>
+                </button>
+              );
+            })}
           </div>
         </main>
       )}
+
+      {/* Content Views */}
+      {activeView === "fact-sheet" && <FactSheetPage embedded />}
+      {activeView === "feasibility" && <FeasibilityStudyPage embedded />}
+      {activeView === "cashflow" && (
+        <main className="max-w-[98%] mx-auto py-4">
+          <ExcelCashFlowPage />
+        </main>
+      )}
+      {activeView === "development-stages" && <DevelopmentStagesPage embedded />}
     </div>
   );
 }
