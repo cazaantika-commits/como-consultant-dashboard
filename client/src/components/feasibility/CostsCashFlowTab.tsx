@@ -45,44 +45,44 @@ const DOT_COLORS = [
 function ProfitIndicator({ margin }: { margin: number }) {
   if (margin >= 20) {
     return (
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1 bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-full">
-          <ArrowUpRight className="w-5 h-5" />
-          <span className="text-sm font-bold">{margin.toFixed(1)}%</span>
+      <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+          <ArrowUpRight className="w-3.5 h-3.5" />
+          <span className="text-xs font-bold">{margin.toFixed(1)}%</span>
         </div>
-        <span className="text-xs text-emerald-600 font-medium">ممتاز</span>
+        <span className="text-[10px] text-emerald-600 font-medium">ممتاز</span>
       </div>
     );
   }
   if (margin >= 15) {
     return (
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1 bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-full">
-          <TrendingUp className="w-5 h-5" />
-          <span className="text-sm font-bold">{margin.toFixed(1)}%</span>
+      <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full">
+          <TrendingUp className="w-3.5 h-3.5" />
+          <span className="text-xs font-bold">{margin.toFixed(1)}%</span>
         </div>
-        <span className="text-xs text-emerald-500 font-medium">جيد</span>
+        <span className="text-[10px] text-emerald-500 font-medium">جيد</span>
       </div>
     );
   }
   if (margin >= 10) {
     return (
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1 bg-amber-100 text-amber-700 px-3 py-1.5 rounded-full">
-          <Minus className="w-5 h-5" />
-          <span className="text-sm font-bold">{margin.toFixed(1)}%</span>
+      <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+          <Minus className="w-3.5 h-3.5" />
+          <span className="text-xs font-bold">{margin.toFixed(1)}%</span>
         </div>
-        <span className="text-xs text-amber-600 font-medium">متوسط</span>
+        <span className="text-[10px] text-amber-600 font-medium">متوسط</span>
       </div>
     );
   }
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex items-center gap-1 bg-red-100 text-red-700 px-3 py-1.5 rounded-full">
-        <ArrowDownRight className="w-5 h-5" />
-        <span className="text-sm font-bold">{margin.toFixed(1)}%</span>
+    <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1 bg-red-100 text-red-700 px-2 py-0.5 rounded-full">
+        <ArrowDownRight className="w-3.5 h-3.5" />
+        <span className="text-xs font-bold">{margin.toFixed(1)}%</span>
       </div>
-      <span className="text-xs text-red-600 font-medium">ضعيف</span>
+      <span className="text-[10px] text-red-600 font-medium">ضعيف</span>
     </div>
   );
 }
@@ -336,7 +336,7 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
   ];
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-4" dir="rtl">
       {/* شريط الأدوات */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
@@ -360,7 +360,7 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
             تحديث التدفقات النقدية
           </Button>
         </div>
-        <div className="text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
+        <div className="text-xs text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
           انعكاس تلقائي — لتعديل البيانات ارجع لبطاقة المشروع أو التبويبات السابقة
         </div>
       </div>
@@ -385,67 +385,63 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
       {/* ═══ القائمة المسطحة الشاملة ═══ */}
       <div className="bg-white rounded-xl border border-border/60 shadow-sm overflow-hidden">
         {allCostItems.map((item, i) => (
-          <div key={i} className="flex items-center gap-3 px-5 py-3 border-b border-border/30 last:border-b-0 hover:bg-muted/10 transition-colors">
-            <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${DOT_COLORS[i % DOT_COLORS.length]}`} />
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <span className="text-sm text-foreground/90">{item.label}</span>
-              {item.note && (
-                <span className="text-[10px] text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded whitespace-nowrap">{item.note}</span>
-              )}
-            </div>
-            <span className="text-sm font-mono text-foreground/80 whitespace-nowrap" dir="ltr">{fmt(item.value)}</span>
+          <div key={i} className="flex items-center gap-2 px-4 py-1.5 border-b border-border/20 last:border-b-0 hover:bg-muted/10 transition-colors">
+            <span className={`w-2 h-2 rounded-full shrink-0 ${DOT_COLORS[i % DOT_COLORS.length]}`} />
+            <span className="text-[13px] text-foreground/90 whitespace-nowrap">{item.label}</span>
+            {item.note && (
+              <span className="text-[10px] text-muted-foreground bg-muted/40 px-1 py-0 rounded whitespace-nowrap">{item.note}</span>
+            )}
+            <span className="flex-1 border-b border-dotted border-border/30 mx-1 min-w-[20px]" />
+            <span className="text-[13px] font-mono text-foreground/80 whitespace-nowrap tabular-nums" dir="ltr">{fmt(item.value)}</span>
           </div>
         ))}
 
-        {/* ─── إجمالي التكاليف ─── */}
-        <div className="flex items-center gap-3 px-5 py-4 bg-slate-900">
-          <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-white" />
-          <span className="text-sm font-bold text-white flex-1">إجمالي تكاليف المشروع</span>
-          <span className="text-base font-bold font-mono text-white" dir="ltr">{fmt(costs.totalCosts)} <span className="text-xs font-normal opacity-70">درهم</span></span>
+        {/* ─── Summary bars ─── */}
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-l from-slate-800 to-slate-900">
+          <span className="w-2 h-2 rounded-full shrink-0 bg-white/80" />
+          <span className="text-[13px] font-bold text-white/90 flex-1">إجمالي تكاليف المشروع</span>
+          <span className="text-sm font-bold font-mono text-white tabular-nums" dir="ltr">{fmt(costs.totalCosts)} <span className="text-[10px] font-normal opacity-60">AED</span></span>
         </div>
 
-        {/* ─── إجمالي المبيعات ─── */}
-        <div className="flex items-center gap-3 px-5 py-4 bg-blue-700">
-          <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-white" />
-          <span className="text-sm font-bold text-white flex-1">إجمالي المبيعات</span>
-          <span className="text-base font-bold font-mono text-white" dir="ltr">{fmt(costs.totalRevenue)} <span className="text-xs font-normal opacity-70">درهم</span></span>
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-l from-sky-600 to-sky-700">
+          <span className="w-2 h-2 rounded-full shrink-0 bg-white/80" />
+          <span className="text-[13px] font-bold text-white/90 flex-1">إجمالي المبيعات</span>
+          <span className="text-sm font-bold font-mono text-white tabular-nums" dir="ltr">{fmt(costs.totalRevenue)} <span className="text-[10px] font-normal opacity-60">AED</span></span>
         </div>
 
-        {/* ─── صافي الربح ─── */}
-        <div className={`flex items-center gap-3 px-5 py-4 ${costs.profit >= 0 ? "bg-emerald-700" : "bg-red-700"}`}>
-          <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-white" />
-          <span className="text-sm font-bold text-white flex-1">صافي الربح</span>
-          <span className="text-base font-bold font-mono text-white" dir="ltr">{fmt(costs.profit)} <span className="text-xs font-normal opacity-70">درهم</span></span>
+        <div className={`flex items-center gap-2 px-4 py-2.5 ${costs.profit >= 0 ? "bg-gradient-to-l from-emerald-600 to-emerald-700" : "bg-gradient-to-l from-red-600 to-red-700"}`}>
+          <span className="w-2 h-2 rounded-full shrink-0 bg-white/80" />
+          <span className="text-[13px] font-bold text-white/90 flex-1">صافي الربح</span>
+          <span className="text-sm font-bold font-mono text-white tabular-nums" dir="ltr">{fmt(costs.profit)} <span className="text-[10px] font-normal opacity-60">AED</span></span>
         </div>
 
-        {/* ─── نسبة الربح مع المؤشر البصري ─── */}
-        <div className={`flex items-center gap-3 px-5 py-4 ${costs.profitMargin >= 15 ? "bg-emerald-800" : costs.profitMargin >= 10 ? "bg-amber-700" : "bg-red-800"} rounded-b-xl`}>
-          <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-white" />
-          <span className="text-sm font-bold text-white flex-1">نسبة الربح</span>
+        <div className={`flex items-center gap-2 px-4 py-2.5 rounded-b-xl ${costs.profitMargin >= 15 ? "bg-gradient-to-l from-teal-700 to-teal-800" : costs.profitMargin >= 10 ? "bg-gradient-to-l from-amber-600 to-amber-700" : "bg-gradient-to-l from-rose-700 to-rose-800"}`}>
+          <span className="w-2 h-2 rounded-full shrink-0 bg-white/80" />
+          <span className="text-[13px] font-bold text-white/90 flex-1">نسبة الربح</span>
           <ProfitIndicator margin={costs.profitMargin} />
         </div>
       </div>
 
       {/* ═══ مقارنة السيناريوهات الثلاثة ═══ */}
       <div className="bg-white rounded-xl border border-border/60 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-border/30 bg-gradient-to-l from-muted/30">
+        <div className="px-4 py-3 border-b border-border/30 bg-gradient-to-l from-muted/30">
           <h3 className="text-sm font-bold text-foreground">مقارنة السيناريوهات</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">مقارنة الأداء المالي بين السيناريوهات الثلاثة</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">مقارنة الأداء المالي بين السيناريوهات الثلاثة</p>
         </div>
 
         {/* Header */}
         <div className="grid grid-cols-4 gap-0 border-b border-border/40 bg-muted/20">
-          <div className="px-4 py-3 text-xs font-bold text-muted-foreground">البند</div>
-          <div className="px-4 py-3 text-xs font-bold text-center text-emerald-700 border-x border-border/20">
-            <TrendingUp className="w-3.5 h-3.5 inline ml-1" />
+          <div className="px-3 py-2 text-[11px] font-bold text-muted-foreground">البند</div>
+          <div className="px-3 py-2 text-[11px] font-bold text-center text-emerald-700 border-x border-border/20">
+            <TrendingUp className="w-3 h-3 inline ml-1" />
             المتفائل
           </div>
-          <div className={`px-4 py-3 text-xs font-bold text-center border-l border-border/20 ${activeScenario === "base" ? "text-blue-700 bg-blue-50/50" : "text-blue-600"}`}>
+          <div className={`px-3 py-2 text-[11px] font-bold text-center border-l border-border/20 ${activeScenario === "base" ? "text-blue-700 bg-blue-50/50" : "text-blue-600"}`}>
             السيناريو الأساسي
             {activeScenario === "base" && <span className="mr-1 text-[9px] bg-blue-100 px-1 rounded">نشط</span>}
           </div>
-          <div className="px-4 py-3 text-xs font-bold text-center text-amber-700">
-            <TrendingDown className="w-3.5 h-3.5 inline ml-1" />
+          <div className="px-3 py-2 text-[11px] font-bold text-center text-amber-700">
+            <TrendingDown className="w-3 h-3 inline ml-1" />
             المتحفظ
           </div>
         </div>
@@ -459,14 +455,14 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
           { label: "العائد على الاستثمار", key: "roi" as const },
         ].map((row, i) => (
           <div key={row.key} className={`grid grid-cols-4 gap-0 border-b border-border/20 last:border-b-0 ${i % 2 === 0 ? "" : "bg-muted/5"}`}>
-            <div className="px-4 py-3 text-sm text-foreground/80 font-medium">{row.label}</div>
+            <div className="px-3 py-2 text-[13px] text-foreground/80 font-medium">{row.label}</div>
             {(["optimistic", "base", "conservative"] as const).map((sc) => {
               const val = scenarios[sc][row.key];
               const isPct = row.key === "profitMargin" || row.key === "roi";
               const isProfit = row.key === "profit";
               const isActive = sc === activeScenario;
               return (
-                <div key={sc} className={`px-4 py-3 text-center text-sm font-mono ${isActive ? "bg-blue-50/30" : ""} ${sc !== "conservative" ? "border-x border-border/10" : ""}`}>
+                <div key={sc} className={`px-3 py-2 text-center text-[13px] font-mono ${isActive ? "bg-blue-50/30" : ""} ${sc !== "conservative" ? "border-x border-border/10" : ""}`}>
                   {isPct ? (
                     <span className={val >= 15 ? "text-emerald-600 font-bold" : val >= 10 ? "text-amber-600 font-bold" : "text-red-600 font-bold"}>
                       {val.toFixed(1)}%
@@ -484,11 +480,11 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
 
         {/* Profit indicator row */}
         <div className="grid grid-cols-4 gap-0 bg-muted/10 border-t border-border/30">
-          <div className="px-4 py-3 text-sm text-foreground/80 font-medium">التقييم</div>
+          <div className="px-3 py-2 text-[13px] text-foreground/80 font-medium">التقييم</div>
           {(["optimistic", "base", "conservative"] as const).map((sc) => {
             const m = scenarios[sc].profitMargin;
             return (
-              <div key={sc} className="px-4 py-3 flex justify-center">
+              <div key={sc} className="px-3 py-2 flex justify-center">
                 <ProfitIndicator margin={m} />
               </div>
             );

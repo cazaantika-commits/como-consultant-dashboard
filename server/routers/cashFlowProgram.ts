@@ -2,6 +2,7 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { cfProjects, cfCostItems, cfScenarios, cfFiles, projects, feasibilityStudies, projectPhases, phaseActivities, phaseCostLinks, competitionPricing, marketOverview } from "../../drizzle/schema";
+import { DEFAULT_AVG_AREAS } from "../../shared/feasibilityUtils";
 import { calculateDualCashFlow, type CostItemInput, type ProjectInput } from './cashFlowEngine';
 import { eq, and, desc } from "drizzle-orm";
 import { storagePut } from "../storage";
@@ -1905,7 +1906,14 @@ export const cashFlowProgramRouter = router({
       const saleableRet = gfaRetSqft * 0.97;
       const saleableOff = gfaOffSqft * 0.95;
 
-      // Revenue calculation
+      // Revenue calculation - use DEFAULT_AVG_AREAS for fallback like frontend does
+      const getAvg = (pctKey: string, avgVal: number | null | undefined) => {
+        const v = avgVal || 0;
+        if (v > 0) return v;
+        const mapping = DEFAULT_AVG_AREAS[pctKey];
+        return mapping ? mapping.defaultArea : 0;
+      };
+
       let totalRevenue = 0;
       let totalUnits = 0;
       if (cpData && moData) {
@@ -1922,16 +1930,16 @@ export const cashFlowProgramRouter = router({
           totalUnits += units;
           return avgArea * pricePerSqft * units;
         };
-        totalRevenue += calcTypeRevenue(pf(moData.residentialStudioPct), moData.residentialStudioAvgArea || 0, prices.studio, saleableRes);
-        totalRevenue += calcTypeRevenue(pf(moData.residential1brPct), moData.residential1brAvgArea || 0, prices.oneBr, saleableRes);
-        totalRevenue += calcTypeRevenue(pf(moData.residential2brPct), moData.residential2brAvgArea || 0, prices.twoBr, saleableRes);
-        totalRevenue += calcTypeRevenue(pf(moData.residential3brPct), moData.residential3brAvgArea || 0, prices.threeBr, saleableRes);
-        totalRevenue += calcTypeRevenue(pf(moData.retailSmallPct), moData.retailSmallAvgArea || 0, prices.retSmall, saleableRet);
-        totalRevenue += calcTypeRevenue(pf(moData.retailMediumPct), moData.retailMediumAvgArea || 0, prices.retMed, saleableRet);
-        totalRevenue += calcTypeRevenue(pf(moData.retailLargePct), moData.retailLargeAvgArea || 0, prices.retLrg, saleableRet);
-        totalRevenue += calcTypeRevenue(pf(moData.officeSmallPct), moData.officeSmallAvgArea || 0, prices.offSmall, saleableOff);
-        totalRevenue += calcTypeRevenue(pf(moData.officeMediumPct), moData.officeMediumAvgArea || 0, prices.offMed, saleableOff);
-        totalRevenue += calcTypeRevenue(pf(moData.officeLargePct), moData.officeLargeAvgArea || 0, prices.offLrg, saleableOff);
+        totalRevenue += calcTypeRevenue(pf(moData.residentialStudioPct), getAvg('residentialStudioPct', moData.residentialStudioAvgArea), prices.studio, saleableRes);
+        totalRevenue += calcTypeRevenue(pf(moData.residential1brPct), getAvg('residential1brPct', moData.residential1brAvgArea), prices.oneBr, saleableRes);
+        totalRevenue += calcTypeRevenue(pf(moData.residential2brPct), getAvg('residential2brPct', moData.residential2brAvgArea), prices.twoBr, saleableRes);
+        totalRevenue += calcTypeRevenue(pf(moData.residential3brPct), getAvg('residential3brPct', moData.residential3brAvgArea), prices.threeBr, saleableRes);
+        totalRevenue += calcTypeRevenue(pf(moData.retailSmallPct), getAvg('retailSmallPct', moData.retailSmallAvgArea), prices.retSmall, saleableRet);
+        totalRevenue += calcTypeRevenue(pf(moData.retailMediumPct), getAvg('retailMediumPct', moData.retailMediumAvgArea), prices.retMed, saleableRet);
+        totalRevenue += calcTypeRevenue(pf(moData.retailLargePct), getAvg('retailLargePct', moData.retailLargeAvgArea), prices.retLrg, saleableRet);
+        totalRevenue += calcTypeRevenue(pf(moData.officeSmallPct), getAvg('officeSmallPct', moData.officeSmallAvgArea), prices.offSmall, saleableOff);
+        totalRevenue += calcTypeRevenue(pf(moData.officeMediumPct), getAvg('officeMediumPct', moData.officeMediumAvgArea), prices.offMed, saleableOff);
+        totalRevenue += calcTypeRevenue(pf(moData.officeLargePct), getAvg('officeLargePct', moData.officeLargeAvgArea), prices.offLrg, saleableOff);
       } else if (feas) {
         totalRevenue = (
           ((feas.gfaResidential || 0) * (feas.saleableResidentialPct || 90) / 100 * (feas.residentialSalePrice || 0)) +
@@ -1952,30 +1960,54 @@ export const cashFlowProgramRouter = router({
       const developerFeePct = pf(proj.developerFeePct) || 5;
 
       // Build name→amount mapping for updates
+      // Include aliases for old names that may exist in the database
       const updatedAmounts: Record<string, number> = {
         'سعر الأرض': Math.round(landPrice),
         'عمولة وسيط الأرض': Math.round(landPrice * (agentCommissionLandPct / 100)),
+        'عمولة وسيط الأرض (1%)': Math.round(landPrice * (agentCommissionLandPct / 100)),
         'رسوم تسجيل الأرض (4%)': Math.round(landPrice * 0.04),
+        'رسوم تسجيل الأرض': Math.round(landPrice * 0.04),
         'فحص التربة': Math.round(pf(proj.soilTestFee)),
         'المسح الطبوغرافي': Math.round(pf(proj.topographicSurveyFee)),
         'رسوم الجهات الرسمية': Math.round(pf(proj.officialBodiesFees)),
+        'رسوم الجهات الحكومية': Math.round(pf(proj.officialBodiesFees)),
         'أتعاب التصميم': Math.round(constructionCost * (designFeePct / 100)),
+        'أتعاب التصميم (2%)': Math.round(constructionCost * (designFeePct / 100)),
         'أتعاب الإشراف': Math.round(constructionCost * (supervisionFeePct / 100)),
+        'أتعاب الإشراف (2%)': Math.round(constructionCost * (supervisionFeePct / 100)),
         'رسوم الفرز': Math.round(plotAreaM2 * separationFeePerM2),
+        'رسوم الفرز (40 د/قدم)': Math.round(plotAreaM2 * separationFeePerM2),
         'تكلفة البناء': Math.round(constructionCost),
+        'المقاول الرئيسي': Math.round(constructionCost),
         'رسوم المجتمع': Math.round(pf(proj.communityFees)),
         'احتياطي': Math.round(constructionCost * 0.02),
+        'احتياطي وطوارئ': Math.round(constructionCost * 0.02),
+        'احتياطي وطوارئ (2%)': Math.round(constructionCost * 0.02),
         'أتعاب المطور': Math.round(totalRevenue * (developerFeePct / 100)),
+        'أتعاب المطور (5%)': Math.round(totalRevenue * (developerFeePct / 100)),
         'عمولة البيع': Math.round(totalRevenue * (salesCommissionPct / 100)),
+        'عمولة وكيل المبيعات (5%)': Math.round(totalRevenue * (salesCommissionPct / 100)),
         'التسويق': Math.round(totalRevenue * (marketingPct / 100)),
+        'التسويق والإعلان (2%)': Math.round(totalRevenue * (marketingPct / 100)),
         'رسوم تسجيل الوحدات — ريرا': Math.round(pf(proj.reraUnitRegFee)),
+        'تسجيل الوحدات - ريرا': Math.round(pf(proj.reraUnitRegFee)),
         'رسوم تسجيل المشروع — ريرا': Math.round(pf(proj.reraProjectRegFee)),
+        'تسجيل بيع على الخارطة - ريرا': Math.round(pf(proj.reraProjectRegFee)),
         'رسوم عدم ممانعة — المطور': Math.round(pf(proj.developerNocFee)),
+        'رسوم NOC للبيع': Math.round(pf(proj.developerNocFee)),
         'حساب الضمان (Escrow)': Math.round(pf(proj.escrowAccountFee)),
+        'رسوم حساب الضمان': Math.round(pf(proj.escrowAccountFee)),
         'الرسوم البنكية': Math.round(pf(proj.bankFees)),
+        'رسوم بنكية': Math.round(pf(proj.bankFees)),
         'أتعاب المسّاح': Math.round(pf(proj.surveyorFees)),
+        'رسوم المساح': Math.round(pf(proj.surveyorFees)),
         'تدقيق ريرا': Math.round(pf(proj.reraAuditReportFee)),
+        'تقارير تدقيق ريرا': Math.round(pf(proj.reraAuditReportFee)),
         'تفتيش ريرا': Math.round(pf(proj.reraInspectionReportFee)),
+        'تقارير تفتيش ريرا': Math.round(pf(proj.reraInspectionReportFee)),
+        // Also match items from cashFlowEngine.ts
+        'رسوم الجهات الحكومية': Math.round(pf(proj.officialBodiesFees)),
+        'رسوم تنظيمية (ريرا وأخرى)': Math.round(pf(proj.reraUnitRegFee) + pf(proj.reraProjectRegFee) + pf(proj.developerNocFee) + pf(proj.escrowAccountFee) + pf(proj.bankFees) + pf(proj.surveyorFees) + pf(proj.reraAuditReportFee) + pf(proj.reraInspectionReportFee)),
       };
 
       // Get existing cost items

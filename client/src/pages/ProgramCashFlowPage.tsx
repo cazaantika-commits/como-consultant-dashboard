@@ -32,11 +32,11 @@ const CATEGORY_LABELS: Record<string, string> = {
   design_engineering: 'التصميم والهندسة',
   consultants: 'الاستشاريون',
   authority_fees: 'رسوم حكومية',
-  contractor: 'المقاول الرئيسي',
+  contractor: 'تكلفة البناء',
   marketing_sales: 'التسويق والبيع',
   administration: 'إدارة',
   developer_fee: 'أتعاب المطور',
-  contingency: 'احتياطي',
+  contingency: 'احتياطي وطوارئ',
   other: 'أخرى',
 };
 
