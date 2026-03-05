@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
+import { DEFAULT_AVG_AREAS, autoPopulateAvgAreas as autoPopulateAvgAreasFn } from "@shared/feasibilityUtils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -151,10 +152,13 @@ export default function MarketOverviewTab({ projectId, studyId, form: feasForm, 
   });
 
   // Load data from query
+  // Use shared utility for default avg areas and auto-populate logic
+  const defaultAvgAreas = useMemo(() => DEFAULT_AVG_AREAS, []);
+
   useEffect(() => {
     if (moQuery.data) {
       const d = moQuery.data;
-      setFields({
+      const loadedFields = {
         residentialStudioPct: parseFloat(d.residentialStudioPct || "0"),
         residentialStudioAvgArea: d.residentialStudioAvgArea || 0,
         residential1brPct: parseFloat(d.residential1brPct || "0"),
@@ -176,7 +180,10 @@ export default function MarketOverviewTab({ projectId, studyId, form: feasForm, 
         officeLargePct: parseFloat(d.officeLargePct || "0"),
         officeLargeAvgArea: d.officeLargeAvgArea || 0,
         finishingQuality: d.finishingQuality || "ممتاز",
-      });
+      };
+      // Auto-populate missing avg areas where pct > 0 but avgArea = 0
+      const populatedFields = autoPopulateAvgAreasFn(loadedFields);
+      setFields(populatedFields as typeof fields);
       if (d.aiSmartReport) setSmartReport(d.aiSmartReport);
       if (d.aiRecommendationsJson) {
         try { setRecommendations(JSON.parse(d.aiRecommendationsJson)); setRecsApplied(true); } catch { /* ignore */ }
@@ -185,10 +192,20 @@ export default function MarketOverviewTab({ projectId, studyId, form: feasForm, 
     }
   }, [moQuery.data]);
 
+  // defaultAvgAreas is now defined above the useEffect
+
   const setField = useCallback((key: string, value: any) => {
-    setFields(prev => ({ ...prev, [key]: value }));
+    setFields(prev => {
+      const updated = { ...prev, [key]: value };
+      // Auto-populate default avg area when pct changes from 0 to a value
+      const mapping = defaultAvgAreas[key];
+      if (mapping && value > 0 && (prev[mapping.avgKey as keyof typeof prev] === 0 || !prev[mapping.avgKey as keyof typeof prev])) {
+        (updated as any)[mapping.avgKey] = mapping.defaultArea;
+      }
+      return updated;
+    });
     setIsDirty(true);
-  }, []);
+  }, [defaultAvgAreas]);
 
   // Compute saleable areas from project GFA fields (Fact Sheet) instead of old feasibilityStudies
   const saleableRes = useMemo(() => {
