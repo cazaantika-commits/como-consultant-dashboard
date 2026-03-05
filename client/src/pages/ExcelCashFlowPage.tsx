@@ -13,7 +13,7 @@ function getMonthDate(monthNum: number): Date {
   return d;
 }
 
-function formatQuarter(startMonth: number): string {
+function formatQuarterShort(startMonth: number): string {
   const d = getMonthDate(startMonth);
   const months = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
   return `${months[d.getMonth()]} ${d.getFullYear()}`;
@@ -43,19 +43,19 @@ interface Quarter {
 
 const QUARTERS: Quarter[] = [
   // Land purchase - single column
-  { label: "تم الشراء", months: [], phase: "land", phaseLabel: "شراء الأرض" },
+  { label: "تم", months: [], phase: "land", phaseLabel: "شراء الأرض" },
   // Pre-construction: 6 months = 2 quarters
-  { label: `${formatQuarter(1)} - ${formatQuarter(3)}`, months: [1,2,3], phase: "preCon", phaseLabel: "ما قبل البناء" },
-  { label: `${formatQuarter(4)} - ${formatQuarter(6)}`, months: [4,5,6], phase: "preCon", phaseLabel: "ما قبل البناء" },
+  { label: `${formatQuarterShort(1)}`, months: [1,2,3], phase: "preCon", phaseLabel: "ما قبل البناء" },
+  { label: `${formatQuarterShort(4)}`, months: [4,5,6], phase: "preCon", phaseLabel: "ما قبل البناء" },
   // Construction: 16 months ≈ 5 quarters + 1 month
-  { label: `${formatQuarter(7)} - ${formatQuarter(9)}`, months: [7,8,9], phase: "construction", phaseLabel: "البناء" },
-  { label: `${formatQuarter(10)} - ${formatQuarter(12)}`, months: [10,11,12], phase: "construction", phaseLabel: "البناء" },
-  { label: `${formatQuarter(13)} - ${formatQuarter(15)}`, months: [13,14,15], phase: "construction", phaseLabel: "البناء" },
-  { label: `${formatQuarter(16)} - ${formatQuarter(18)}`, months: [16,17,18], phase: "construction", phaseLabel: "البناء" },
-  { label: `${formatQuarter(19)} - ${formatQuarter(21)}`, months: [19,20,21], phase: "construction", phaseLabel: "البناء" },
-  { label: `${formatQuarter(22)}`, months: [22], phase: "construction", phaseLabel: "البناء" },
+  { label: `${formatQuarterShort(7)}`, months: [7,8,9], phase: "construction", phaseLabel: "البناء" },
+  { label: `${formatQuarterShort(10)}`, months: [10,11,12], phase: "construction", phaseLabel: "البناء" },
+  { label: `${formatQuarterShort(13)}`, months: [13,14,15], phase: "construction", phaseLabel: "البناء" },
+  { label: `${formatQuarterShort(16)}`, months: [16,17,18], phase: "construction", phaseLabel: "البناء" },
+  { label: `${formatQuarterShort(19)}`, months: [19,20,21], phase: "construction", phaseLabel: "البناء" },
+  { label: `${formatQuarterShort(22)}`, months: [22], phase: "construction", phaseLabel: "البناء" },
   // Handover: 2 months
-  { label: `${formatQuarter(23)} - ${formatQuarter(24)}`, months: [23,24], phase: "handover", phaseLabel: "التسليم" },
+  { label: `${formatQuarterShort(23)}`, months: [23,24], phase: "handover", phaseLabel: "التسليم" },
 ];
 
 // ===== PHASE COLORS =====
@@ -145,33 +145,6 @@ export default function ExcelCashFlowPage() {
 
   const upcomingTotal = grandTotal - paidTotal;
 
-  // Next 3 months total
-  const next3MonthsTotal = useMemo(() => {
-    let total = 0;
-    const now = new Date();
-    for (let m = 1; m <= 24; m++) {
-      const d = getMonthDate(m);
-      if (d >= now) {
-        const diffMonths = (d.getFullYear() - now.getFullYear()) * 12 + (d.getMonth() - now.getMonth());
-        if (diffMonths >= 0 && diffMonths < 3) {
-          ITEMS.forEach(item => {
-            if (!item.isLand) total += (item.monthly[m] || 0);
-          });
-        }
-      }
-    }
-    return total;
-  }, []);
-
-  // Next 3 months date range
-  const next3Label = useMemo(() => {
-    const months = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
-    const s = new Date(TODAY);
-    const e = new Date(TODAY);
-    e.setMonth(e.getMonth() + 2);
-    return `${months[s.getMonth()]} - ${months[e.getMonth()]} ${e.getFullYear()}`;
-  }, []);
-
   // Phase spans for header
   const phaseSpans = useMemo(() => {
     const spans: { phase: string; label: string; count: number }[] = [];
@@ -190,29 +163,8 @@ export default function ExcelCashFlowPage() {
   return (
     <div className="h-screen bg-gray-50 p-3 overflow-hidden flex flex-col" dir="rtl">
       {/* Title */}
-      <div className="mb-2">
-        <h1 className="text-sm font-bold text-gray-900">مشروع ند الشبا جاردنز — جدول مصاريف المستثمر</h1>
-        <p className="text-[10px] text-gray-500">التمويل المباشر من المستثمر (لا يشمل مصاريف حساب الضمان)</p>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-4 gap-2 mb-2">
-        <div className="bg-white rounded border border-gray-200 px-3 py-1.5">
-          <div className="text-[9px] text-gray-500">إجمالي المصاريف</div>
-          <div className="text-sm font-bold text-gray-900">{fmt(grandTotal)} <span className="text-[9px] font-normal text-gray-400">درهم</span></div>
-        </div>
-        <div className="bg-white rounded border border-green-200 px-3 py-1.5">
-          <div className="text-[9px] text-green-600">تم دفعه ✓</div>
-          <div className="text-sm font-bold text-green-700">{fmt(paidTotal)} <span className="text-[9px] font-normal text-gray-400">درهم</span></div>
-        </div>
-        <div className="bg-white rounded border border-orange-200 px-3 py-1.5">
-          <div className="text-[9px] text-orange-600">المتبقي</div>
-          <div className="text-sm font-bold text-orange-700">{fmt(upcomingTotal)} <span className="text-[9px] font-normal text-gray-400">درهم</span></div>
-        </div>
-        <div className="bg-white rounded border-2 border-red-300 px-3 py-1.5">
-          <div className="text-[9px] text-red-600 font-medium">المطلوب للـ 3 أشهر القادمة ({next3Label})</div>
-          <div className="text-sm font-bold text-red-700">{fmt(next3MonthsTotal)} <span className="text-[9px] font-normal text-gray-400">درهم</span></div>
-        </div>
+      <div className="mb-1">
+        <h1 className="text-xs font-bold text-gray-900">ند الشبا جاردنز — مصاريف المستثمر</h1>
       </div>
 
       {/* TABLE */}
@@ -286,22 +238,43 @@ export default function ExcelCashFlowPage() {
               </tr>
             ))}
 
-            {/* TOTAL ROW */}
-            <tr className="bg-gray-800 text-white font-bold border-t-2 border-gray-900">
-              <td className="px-1 py-1 text-right border-l border-gray-600 text-[9px]">الإجمالي</td>
-              <td className="px-1 py-1 text-center border-l border-gray-600 tabular-nums text-[9px]">{fmt(grandTotal)}</td>
+            {/* ROW 1: إجمالي رأس مال المشروع - normal style */}
+            <tr className="bg-gray-200 border-t-2 border-gray-400">
+              <td className="px-1 py-[3px] text-right border-l border-gray-300 text-[9px] font-medium text-gray-700">إجمالي رأس مال المشروع</td>
+              <td className="px-1 py-[3px] text-center border-l border-gray-300 tabular-nums text-[9px] font-medium text-gray-700">{fmt(grandTotal)}</td>
+              {QUARTERS.map((_, qi) => (
+                <td key={qi} className="px-0.5 py-[3px] text-center border-l border-gray-300 tabular-nums text-[9px] text-gray-700">
+                  {colTotals[qi] === 0 ? "-" : fmt(colTotals[qi])}
+                </td>
+              ))}
+            </tr>
+
+            {/* ROW 2: المبالغ المدفوعة - normal style */}
+            <tr className="bg-green-50 border-t border-gray-300">
+              <td className="px-1 py-[3px] text-right border-l border-gray-300 text-[9px] font-medium text-green-800">المبالغ المدفوعة</td>
+              <td className="px-1 py-[3px] text-center border-l border-gray-300 tabular-nums text-[9px] font-medium text-green-800">{fmt(paidTotal)}</td>
+              {QUARTERS.map((q, qi) => {
+                const val = colTotals[qi];
+                const isPaid = qi === 0 || isQuarterPaid(q.months[q.months.length - 1] || 0);
+                return (
+                  <td key={qi} className="px-0.5 py-[3px] text-center border-l border-gray-300 tabular-nums text-[9px] text-green-800">
+                    {isPaid && val > 0 ? fmt(val) : "-"}
+                  </td>
+                );
+              })}
+            </tr>
+
+            {/* ROW 3: رأس المال المطلوب سداده - bold/dark */}
+            <tr className="bg-gray-800 text-white font-bold border-t border-gray-600">
+              <td className="px-1 py-[3px] text-right border-l border-gray-600 text-[9px]">رأس المال المطلوب سداده</td>
+              <td className="px-1 py-[3px] text-center border-l border-gray-600 tabular-nums text-[9px]">{fmt(upcomingTotal)}</td>
               {QUARTERS.map((q, qi) => {
                 const val = colTotals[qi];
                 const isPaid = qi === 0 || isQuarterPaid(q.months[q.months.length - 1] || 0);
                 const isCurrent = qi > 0 && isCurrentQuarter(q.months[0], q.months[q.months.length - 1]);
                 return (
-                  <td
-                    key={qi}
-                    className={`px-0.5 py-1 text-center border-l border-gray-600 tabular-nums text-[9px] ${
-                      isPaid ? "text-gray-400" : isCurrent ? "text-yellow-300" : ""
-                    }`}
-                  >
-                    {val === 0 ? "-" : fmt(val)}
+                  <td key={qi} className={`px-0.5 py-[3px] text-center border-l border-gray-600 tabular-nums text-[9px] ${isCurrent ? "text-yellow-300" : ""}`}>
+                    {isPaid ? "-" : val === 0 ? "-" : fmt(val)}
                   </td>
                 );
               })}
