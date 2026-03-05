@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
+import { DEFAULT_AVG_AREAS } from "@shared/feasibilityUtils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, Sparkles, ShieldCheck, DollarSign, TrendingUp, FileWarning } from "lucide-react";
+import { Loader2, Sparkles, ShieldCheck, DollarSign, FileWarning } from "lucide-react";
 import { Streamdown } from "streamdown";
 
 const JOEL_AVATAR = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/mCOkEovAXTtxsABs.png";
@@ -14,7 +15,6 @@ function fmt(n: number | null | undefined): string {
   return Math.round(n).toLocaleString("en-US");
 }
 
-/* ─── Missing data warning ─── */
 function MissingDataWarning({ items }: { items: string[] }) {
   if (items.length === 0) return null;
   return (
@@ -30,6 +30,17 @@ function MissingDataWarning({ items }: { items: string[] }) {
   );
 }
 
+/* ─── Colored dot colors cycling ─── */
+const DOT_COLORS = [
+  "bg-red-500", "bg-blue-500", "bg-emerald-500", "bg-amber-500",
+  "bg-purple-500", "bg-pink-500", "bg-cyan-500", "bg-orange-500",
+  "bg-teal-500", "bg-indigo-500", "bg-lime-500", "bg-rose-500",
+  "bg-sky-500", "bg-violet-500", "bg-fuchsia-500", "bg-yellow-500",
+  "bg-green-500", "bg-blue-400", "bg-red-400", "bg-emerald-400",
+  "bg-amber-400", "bg-purple-400", "bg-pink-400", "bg-cyan-400",
+  "bg-orange-400", "bg-teal-400",
+];
+
 interface CostsCashFlowTabProps {
   projectId: number | null;
   studyId: number | null;
@@ -40,20 +51,23 @@ interface CostsCashFlowTabProps {
 export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, computed: feasComputed }: CostsCashFlowTabProps) {
   const [smartReport, setSmartReport] = useState("");
 
-  // Fetch project data (Fact Sheet) for cost fields
-  const projectQuery = trpc.projects.getById.useQuery(projectId || 0, { enabled: !!projectId });
+  const projectQuery = trpc.projects.getById.useQuery(projectId || 0, { enabled: !!projectId, staleTime: 5000, refetchOnWindowFocus: true });
   const project = projectQuery.data;
 
-  // Fetch Tab 1 (Market Overview) data for unit distribution & areas
-  const moQuery = trpc.marketOverview.getByProject.useQuery(projectId || 0, { enabled: !!projectId });
+  const moQuery = trpc.marketOverview.getByProject.useQuery(projectId || 0, { enabled: !!projectId, staleTime: 5000, refetchOnWindowFocus: true });
   const mo = moQuery.data;
 
-  // Fetch Tab 2 (Competition Pricing) data for prices
-  const cpQuery = trpc.competitionPricing.getByProject.useQuery(projectId || 0, { enabled: !!projectId });
+  const cpQuery = trpc.competitionPricing.getByProject.useQuery(projectId || 0, { enabled: !!projectId, staleTime: 2000, refetchOnWindowFocus: true, refetchInterval: 5000 });
   const cp = cpQuery.data;
 
-  // Fetch costs data (for smart report and approval status only)
   const costsQuery = trpc.costsCashFlow.getByProject.useQuery(projectId || 0, { enabled: !!projectId });
+
+  const getAvg = useCallback((pctKey: string, avgVal: number | null | undefined) => {
+    const v = avgVal || 0;
+    if (v > 0) return v;
+    const mapping = DEFAULT_AVG_AREAS[pctKey];
+    return mapping ? mapping.defaultArea : 0;
+  }, []);
 
   const smartReportMutation = trpc.costsCashFlow.generateSmartReport.useMutation({
     onSuccess: (data) => {
@@ -67,7 +81,6 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
     onSuccess: () => { costsQuery.refetch(); toast.success("تم تحديث حالة الاعتماد"); },
   });
 
-  // Load smart report from DB
   useEffect(() => {
     if (costsQuery.data?.aiSmartReport) setSmartReport(costsQuery.data.aiSmartReport);
   }, [costsQuery.data]);
@@ -78,7 +91,6 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
   const costs = useMemo(() => {
     const p = project || {} as any;
 
-    // --- Source 1: Fact Sheet (بطاقة البيانات) ---
     const landPrice = parseFloat(p.landPrice || "0");
     const agentCommissionLandPct = parseFloat(p.agentCommissionLandPct || "0");
     const manualBuaSqft = parseFloat(p.manualBuaSqft || "0");
@@ -102,12 +114,10 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
     const marketingPct = parseFloat(p.marketingPct ?? "2");
     const developerFeePct = parseFloat(p.developerFeePct ?? "5");
 
-    // --- Source 2: Fact Sheet areas ---
     const bua = manualBuaSqft;
     const plotAreaSqft = parseFloat(p.plotAreaSqft || "0");
     const plotAreaM2 = plotAreaSqft * 0.0929;
 
-    // --- Saleable areas from GFA by type (Fact Sheet) ---
     const gfaResSqft = parseFloat(p.gfaResidentialSqft || "0");
     const gfaRetSqft = parseFloat(p.gfaRetailSqft || "0");
     const gfaOffSqft = parseFloat(p.gfaOfficesSqft || "0");
@@ -115,10 +125,8 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
     const saleableRet = gfaRetSqft * 0.97;
     const saleableOff = gfaOffSqft * 0.95;
 
-    // Total units from Tab 1 distribution
     let totalUnits = 0;
 
-    // Get active scenario prices from competitionPricing
     const activeScenario = cp?.activeScenario || "base";
     const getPrices = () => {
       if (!cp) return { studioPrice: 0, oneBrPrice: 0, twoBrPrice: 0, threeBrPrice: 0, retailSmallPrice: 0, retailMediumPrice: 0, retailLargePrice: 0, officeSmallPrice: 0, officeMediumPrice: 0, officeLargePrice: 0 };
@@ -140,114 +148,94 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
     };
     const prices = getPrices();
 
-    // Calculate revenue from unit distribution (Tab 1) × prices (Tab 2)
     const calcTypeRevenue = (pct: number, avgArea: number, pricePerSqft: number, saleable: number) => {
       const allocated = saleable * (pct / 100);
       const units = avgArea > 0 ? Math.floor(allocated / avgArea) : 0;
       return avgArea * pricePerSqft * units;
     };
 
-    let revenueRes = 0;
-    let revenueRet = 0;
-    let revenueOff = 0;
+    let revenueRes = 0, revenueRet = 0, revenueOff = 0;
 
     if (mo) {
-      revenueRes += calcTypeRevenue(parseFloat(mo.residentialStudioPct || "0"), mo.residentialStudioAvgArea || 0, prices.studioPrice, saleableRes);
-      revenueRes += calcTypeRevenue(parseFloat(mo.residential1brPct || "0"), mo.residential1brAvgArea || 0, prices.oneBrPrice, saleableRes);
-      revenueRes += calcTypeRevenue(parseFloat(mo.residential2brPct || "0"), mo.residential2brAvgArea || 0, prices.twoBrPrice, saleableRes);
-      revenueRes += calcTypeRevenue(parseFloat(mo.residential3brPct || "0"), mo.residential3brAvgArea || 0, prices.threeBrPrice, saleableRes);
+      revenueRes += calcTypeRevenue(parseFloat(mo.residentialStudioPct || "0"), getAvg("residentialStudioPct", mo.residentialStudioAvgArea), prices.studioPrice, saleableRes);
+      revenueRes += calcTypeRevenue(parseFloat(mo.residential1brPct || "0"), getAvg("residential1brPct", mo.residential1brAvgArea), prices.oneBrPrice, saleableRes);
+      revenueRes += calcTypeRevenue(parseFloat(mo.residential2brPct || "0"), getAvg("residential2brPct", mo.residential2brAvgArea), prices.twoBrPrice, saleableRes);
+      revenueRes += calcTypeRevenue(parseFloat(mo.residential3brPct || "0"), getAvg("residential3brPct", mo.residential3brAvgArea), prices.threeBrPrice, saleableRes);
 
-      revenueRet += calcTypeRevenue(parseFloat(mo.retailSmallPct || "0"), mo.retailSmallAvgArea || 0, prices.retailSmallPrice, saleableRet);
-      revenueRet += calcTypeRevenue(parseFloat(mo.retailMediumPct || "0"), mo.retailMediumAvgArea || 0, prices.retailMediumPrice, saleableRet);
-      revenueRet += calcTypeRevenue(parseFloat(mo.retailLargePct || "0"), mo.retailLargeAvgArea || 0, prices.retailLargePrice, saleableRet);
+      revenueRet += calcTypeRevenue(parseFloat(mo.retailSmallPct || "0"), getAvg("retailSmallPct", mo.retailSmallAvgArea), prices.retailSmallPrice, saleableRet);
+      revenueRet += calcTypeRevenue(parseFloat(mo.retailMediumPct || "0"), getAvg("retailMediumPct", mo.retailMediumAvgArea), prices.retailMediumPrice, saleableRet);
+      revenueRet += calcTypeRevenue(parseFloat(mo.retailLargePct || "0"), getAvg("retailLargePct", mo.retailLargeAvgArea), prices.retailLargePrice, saleableRet);
 
-      revenueOff += calcTypeRevenue(parseFloat(mo.officeSmallPct || "0"), mo.officeSmallAvgArea || 0, prices.officeSmallPrice, saleableOff);
-      revenueOff += calcTypeRevenue(parseFloat(mo.officeMediumPct || "0"), mo.officeMediumAvgArea || 0, prices.officeMediumPrice, saleableOff);
-      revenueOff += calcTypeRevenue(parseFloat(mo.officeLargePct || "0"), mo.officeLargeAvgArea || 0, prices.officeLargePrice, saleableOff);
+      revenueOff += calcTypeRevenue(parseFloat(mo.officeSmallPct || "0"), getAvg("officeSmallPct", mo.officeSmallAvgArea), prices.officeSmallPrice, saleableOff);
+      revenueOff += calcTypeRevenue(parseFloat(mo.officeMediumPct || "0"), getAvg("officeMediumPct", mo.officeMediumAvgArea), prices.officeMediumPrice, saleableOff);
+      revenueOff += calcTypeRevenue(parseFloat(mo.officeLargePct || "0"), getAvg("officeLargePct", mo.officeLargeAvgArea), prices.officeLargePrice, saleableOff);
     }
 
     const totalRevenue = revenueRes + revenueRet + revenueOff;
 
-    // Calculate total units from Tab 1 distribution
     if (mo) {
       const calcUnits = (pct: number, avgArea: number, saleable: number) => {
         const allocated = saleable * (pct / 100);
         return avgArea > 0 ? Math.floor(allocated / avgArea) : 0;
       };
-      totalUnits += calcUnits(parseFloat(mo.residentialStudioPct || "0"), mo.residentialStudioAvgArea || 0, saleableRes);
-      totalUnits += calcUnits(parseFloat(mo.residential1brPct || "0"), mo.residential1brAvgArea || 0, saleableRes);
-      totalUnits += calcUnits(parseFloat(mo.residential2brPct || "0"), mo.residential2brAvgArea || 0, saleableRes);
-      totalUnits += calcUnits(parseFloat(mo.residential3brPct || "0"), mo.residential3brAvgArea || 0, saleableRes);
-      totalUnits += calcUnits(parseFloat(mo.retailSmallPct || "0"), mo.retailSmallAvgArea || 0, saleableRet);
-      totalUnits += calcUnits(parseFloat(mo.retailMediumPct || "0"), mo.retailMediumAvgArea || 0, saleableRet);
-      totalUnits += calcUnits(parseFloat(mo.retailLargePct || "0"), mo.retailLargeAvgArea || 0, saleableRet);
-      totalUnits += calcUnits(parseFloat(mo.officeSmallPct || "0"), mo.officeSmallAvgArea || 0, saleableOff);
-      totalUnits += calcUnits(parseFloat(mo.officeMediumPct || "0"), mo.officeMediumAvgArea || 0, saleableOff);
-      totalUnits += calcUnits(parseFloat(mo.officeLargePct || "0"), mo.officeLargeAvgArea || 0, saleableOff);
+      totalUnits += calcUnits(parseFloat(mo.residentialStudioPct || "0"), getAvg("residentialStudioPct", mo.residentialStudioAvgArea), saleableRes);
+      totalUnits += calcUnits(parseFloat(mo.residential1brPct || "0"), getAvg("residential1brPct", mo.residential1brAvgArea), saleableRes);
+      totalUnits += calcUnits(parseFloat(mo.residential2brPct || "0"), getAvg("residential2brPct", mo.residential2brAvgArea), saleableRes);
+      totalUnits += calcUnits(parseFloat(mo.residential3brPct || "0"), getAvg("residential3brPct", mo.residential3brAvgArea), saleableRes);
+      totalUnits += calcUnits(parseFloat(mo.retailSmallPct || "0"), getAvg("retailSmallPct", mo.retailSmallAvgArea), saleableRet);
+      totalUnits += calcUnits(parseFloat(mo.retailMediumPct || "0"), getAvg("retailMediumPct", mo.retailMediumAvgArea), saleableRet);
+      totalUnits += calcUnits(parseFloat(mo.retailLargePct || "0"), getAvg("retailLargePct", mo.retailLargeAvgArea), saleableRet);
+      totalUnits += calcUnits(parseFloat(mo.officeSmallPct || "0"), getAvg("officeSmallPct", mo.officeSmallAvgArea), saleableOff);
+      totalUnits += calcUnits(parseFloat(mo.officeMediumPct || "0"), getAvg("officeMediumPct", mo.officeMediumAvgArea), saleableOff);
+      totalUnits += calcUnits(parseFloat(mo.officeLargePct || "0"), getAvg("officeLargePct", mo.officeLargeAvgArea), saleableOff);
     }
 
-    // ═══════════════════════════════════════════
     // CALCULATED COSTS
-    // ═══════════════════════════════════════════
-
-    // تكاليف الأرض
     const agentCommissionLand = landPrice * (agentCommissionLandPct / 100);
     const landRegistration = landPrice * 0.04;
-    const totalLandCosts = landPrice + agentCommissionLand + landRegistration;
-
-    // تكاليف ما قبل البناء
     const constructionCost = bua * estimatedConstructionPricePerSqft;
     const designFee = constructionCost * (designFeePct / 100);
     const supervisionFee = constructionCost * (supervisionFeePct / 100);
     const separationFee = plotAreaM2 * separationFeePerM2;
-    const totalPreConstruction = soilTestFee + topographicSurveyFee + officialBodiesFees + designFee + supervisionFee + separationFee;
-
-    // تكاليف البناء
     const contingencies = constructionCost * 0.02;
-    const totalConstruction = constructionCost + communityFees + contingencies;
-
-    // تكاليف البيع والتسويق (نسب من إجمالي المبيعات)
     const developerFee = totalRevenue * (developerFeePct / 100);
     const salesCommission = totalRevenue * (salesCommissionPct / 100);
     const marketingCost = totalRevenue * (marketingPct / 100);
-    const totalSalesMarketing = developerFee + salesCommission + marketingCost;
 
-    // الرسوم التنظيمية
     const totalRegulatory = reraUnitRegFee + reraProjectRegFee + developerNocFee + escrowAccountFee + bankFees + surveyorFees + reraAuditReportFee + reraInspectionReportFee;
+    const totalCosts = landPrice + agentCommissionLand + landRegistration
+      + soilTestFee + topographicSurveyFee + officialBodiesFees + designFee + supervisionFee + separationFee
+      + constructionCost + communityFees + contingencies
+      + developerFee + salesCommission + marketingCost
+      + totalRegulatory;
 
-    // الإجماليات
-    const totalCosts = totalLandCosts + totalPreConstruction + totalConstruction + totalSalesMarketing + totalRegulatory;
     const profit = totalRevenue - totalCosts;
     const profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
     const roi = totalCosts > 0 ? (profit / totalCosts) * 100 : 0;
-    const costPerSqft = bua > 0 ? totalCosts / bua : 0;
-    const profitPerSqft = bua > 0 ? profit / bua : 0;
 
-    // بيانات ناقصة
     const missing: string[] = [];
     if (!landPrice) missing.push("سعر الأرض (بطاقة المشروع)");
     if (!estimatedConstructionPricePerSqft) missing.push("السعر التقديري للقدم² (بطاقة المشروع)");
     if (!bua) missing.push("مساحة البناء BUA (بطاقة المشروع)");
-    if (!gfaResSqft && !gfaRetSqft && !gfaOffSqft) missing.push("GFA حسب النوع (بطاقة المشروع → قسم المساحات)");
+    if (!gfaResSqft && !gfaRetSqft && !gfaOffSqft) missing.push("GFA حسب النوع (بطاقة المشروع)");
     if (!totalRevenue) missing.push("إجمالي الإيرادات (أكمل Tab 1 و Tab 2)");
 
     return {
-      landPrice, agentCommissionLandPct, manualBuaSqft: bua, estimatedConstructionPricePerSqft,
+      landPrice, agentCommissionLandPct, estimatedConstructionPricePerSqft,
       soilTestFee, topographicSurveyFee, officialBodiesFees,
       reraUnitRegFee, reraProjectRegFee, developerNocFee, escrowAccountFee,
       bankFees, communityFees, surveyorFees, reraAuditReportFee, reraInspectionReportFee,
       designFeePct, supervisionFeePct, separationFeePerM2,
       salesCommissionPct, marketingPct, developerFeePct,
       bua, plotAreaM2, totalUnits, totalRevenue, revenueRes, revenueRet, revenueOff,
-      agentCommissionLand, landRegistration, totalLandCosts,
-      constructionCost, designFee, supervisionFee, separationFee, totalPreConstruction,
-      contingencies, totalConstruction,
-      developerFee, salesCommission, marketingCost, totalSalesMarketing,
-      totalRegulatory,
-      totalCosts, profit, profitMargin, roi, costPerSqft, profitPerSqft,
+      agentCommissionLand, landRegistration,
+      constructionCost, designFee, supervisionFee, separationFee,
+      contingencies,
+      developerFee, salesCommission, marketingCost,
+      totalRegulatory, totalCosts, profit, profitMargin, roi,
       missing,
     };
-  }, [project, mo, cp]);
+  }, [project, mo, cp, getAvg]);
 
   if (!projectId) {
     return (
@@ -269,43 +257,27 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
 
   const isApproved = costsQuery.data?.isApproved === 1;
 
-  // Build the comprehensive cost list
-  type CostLine = { label: string; value: number; isSubtotal?: boolean; isGroupHeader?: boolean; pctLabel?: string };
+  // ═══════════════════════════════════════════
+  // FLAT LIST — every cost item in one continuous list
+  // ═══════════════════════════════════════════
+  type CostLine = { label: string; value: number; note?: string };
 
-  const costLines: CostLine[] = [
-    // ─── تكاليف الأرض ───
-    { label: "تكاليف الأرض", value: 0, isGroupHeader: true },
+  const allCostItems: CostLine[] = [
     { label: "سعر الأرض", value: costs.landPrice },
-    { label: "عمولة وسيط الأرض", value: costs.agentCommissionLand, pctLabel: `${costs.agentCommissionLandPct}%` },
-    { label: "رسوم تسجيل الأرض", value: costs.landRegistration, pctLabel: "4%" },
-    { label: "إجمالي تكاليف الأرض", value: costs.totalLandCosts, isSubtotal: true },
-
-    // ─── تكاليف ما قبل البناء ───
-    { label: "تكاليف ما قبل البناء", value: 0, isGroupHeader: true },
+    { label: "عمولة وسيط الأرض", value: costs.agentCommissionLand, note: `${costs.agentCommissionLandPct}%` },
+    { label: "رسوم تسجيل الأرض", value: costs.landRegistration, note: "4%" },
     { label: "فحص التربة", value: costs.soilTestFee },
     { label: "المسح الطبوغرافي", value: costs.topographicSurveyFee },
     { label: "رسوم الجهات الرسمية", value: costs.officialBodiesFees },
-    { label: "أتعاب التصميم", value: costs.designFee, pctLabel: `${costs.designFeePct}% من البناء` },
-    { label: "أتعاب الإشراف", value: costs.supervisionFee, pctLabel: `${costs.supervisionFeePct}% من البناء` },
-    { label: "رسوم الفرز", value: costs.separationFee, pctLabel: `${costs.separationFeePerM2} AED/م²` },
-    { label: "إجمالي ما قبل البناء", value: costs.totalPreConstruction, isSubtotal: true },
-
-    // ─── تكاليف البناء ───
-    { label: "تكاليف البناء", value: 0, isGroupHeader: true },
-    { label: "تكلفة البناء", value: costs.constructionCost, pctLabel: `${fmt(costs.bua)} قدم² × ${fmt(costs.estimatedConstructionPricePerSqft)}` },
+    { label: "أتعاب التصميم", value: costs.designFee, note: `${costs.designFeePct}% من تكلفة البناء` },
+    { label: "أتعاب الإشراف", value: costs.supervisionFee, note: `${costs.supervisionFeePct}% من تكلفة البناء` },
+    { label: "رسوم الفرز", value: costs.separationFee, note: `${costs.separationFeePerM2} AED/م²` },
+    { label: "تكلفة البناء", value: costs.constructionCost, note: `${fmt(costs.bua)} قدم² × ${fmt(costs.estimatedConstructionPricePerSqft)}` },
     { label: "رسوم المجتمع", value: costs.communityFees },
-    { label: "احتياطي وطوارئ", value: costs.contingencies, pctLabel: "2%" },
-    { label: "إجمالي تكاليف البناء", value: costs.totalConstruction, isSubtotal: true },
-
-    // ─── تكاليف البيع والتسويق ───
-    { label: "تكاليف البيع والتسويق", value: 0, isGroupHeader: true },
-    { label: "أتعاب المطور", value: costs.developerFee, pctLabel: `${costs.developerFeePct}% من المبيعات` },
-    { label: "عمولة البيع", value: costs.salesCommission, pctLabel: `${costs.salesCommissionPct}% من المبيعات` },
-    { label: "التسويق", value: costs.marketingCost, pctLabel: `${costs.marketingPct}% من المبيعات` },
-    { label: "إجمالي البيع والتسويق", value: costs.totalSalesMarketing, isSubtotal: true },
-
-    // ─── الرسوم التنظيمية ───
-    { label: "الرسوم التنظيمية والإدارية", value: 0, isGroupHeader: true },
+    { label: "احتياطي وطوارئ", value: costs.contingencies, note: "2% من البناء" },
+    { label: "أتعاب المطور", value: costs.developerFee, note: `${costs.developerFeePct}% من المبيعات` },
+    { label: "عمولة البيع", value: costs.salesCommission, note: `${costs.salesCommissionPct}% من المبيعات` },
+    { label: "التسويق", value: costs.marketingCost, note: `${costs.marketingPct}% من المبيعات` },
     { label: "رسوم تسجيل الوحدات — ريرا", value: costs.reraUnitRegFee },
     { label: "رسوم تسجيل المشروع — ريرا", value: costs.reraProjectRegFee },
     { label: "رسوم عدم ممانعة — المطور", value: costs.developerNocFee },
@@ -314,7 +286,6 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
     { label: "أتعاب المسّاح", value: costs.surveyorFees },
     { label: "تدقيق ريرا", value: costs.reraAuditReportFee },
     { label: "تفتيش ريرا", value: costs.reraInspectionReportFee },
-    { label: "إجمالي الرسوم التنظيمية", value: costs.totalRegulatory, isSubtotal: true },
   ];
 
   return (
@@ -334,11 +305,10 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
           </Button>
         </div>
         <div className="text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
-          تقرير مُحتسب تلقائياً — لتعديل البيانات ارجع لبطاقة المشروع
+          انعكاس تلقائي — لتعديل البيانات ارجع لبطاقة المشروع أو التبويبات السابقة
         </div>
       </div>
 
-      {/* تحذير البيانات الناقصة */}
       <MissingDataWarning items={costs.missing} />
 
       {/* تقرير جويل */}
@@ -356,141 +326,52 @@ export default function CostsCashFlowTab({ projectId, studyId, form: feasForm, c
         </Card>
       )}
 
-      {/* القائمة الشاملة للتكاليف */}
-      <Card className="overflow-hidden shadow-sm">
-        <div className="bg-gradient-to-l from-slate-800 to-slate-900 px-5 py-4">
-          <h2 className="text-white font-bold text-base">بيان التكاليف التفصيلي</h2>
-          <p className="text-slate-400 text-xs mt-0.5">جميع بنود التكاليف المحتسبة من بطاقة المشروع ودراسة الجدوى</p>
-        </div>
-        <div className="divide-y divide-border/40">
-          {costLines.map((line, i) => {
-            if (line.isGroupHeader) {
-              return (
-                <div key={i} className="bg-muted/40 px-5 py-2.5">
-                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{line.label}</span>
-                </div>
-              );
-            }
-            if (line.isSubtotal) {
-              return (
-                <div key={i} className="flex items-center justify-between px-5 py-3 bg-primary/5 border-t border-primary/10">
-                  <span className="text-sm font-bold text-primary">{line.label}</span>
-                  <span className="text-sm font-bold font-mono text-primary" dir="ltr">{fmt(line.value)} AED</span>
-                </div>
-              );
-            }
-            return (
-              <div key={i} className="flex items-center justify-between px-5 py-2.5 hover:bg-muted/20 transition-colors">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-foreground/80">{line.label}</span>
-                  {line.pctLabel && (
-                    <span className="text-[10px] text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded">{line.pctLabel}</span>
-                  )}
-                </div>
-                <span className="text-sm font-mono text-foreground/70" dir="ltr">{fmt(line.value)} AED</span>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* الإجمالي الكلي */}
-        <div className="bg-gradient-to-l from-slate-800 to-slate-900 px-5 py-4">
-          <div className="flex items-center justify-between">
-            <span className="text-white font-bold text-base">إجمالي تكاليف المشروع</span>
-            <span className="text-xl font-bold font-mono text-white" dir="ltr">{fmt(costs.totalCosts)} AED</span>
+      {/* ═══ القائمة المسطحة الشاملة ═══ */}
+      <div className="bg-white rounded-xl border border-border/60 shadow-sm overflow-hidden">
+        {allCostItems.map((item, i) => (
+          <div key={i} className="flex items-center gap-3 px-5 py-3 border-b border-border/30 last:border-b-0 hover:bg-muted/10 transition-colors">
+            {/* النقطة الملونة */}
+            <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${DOT_COLORS[i % DOT_COLORS.length]}`} />
+            {/* الاسم + النسبة */}
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <span className="text-sm text-foreground/90">{item.label}</span>
+              {item.note && (
+                <span className="text-[10px] text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded whitespace-nowrap">{item.note}</span>
+              )}
+            </div>
+            {/* المبلغ */}
+            <span className="text-sm font-mono text-foreground/80 whitespace-nowrap" dir="ltr">{fmt(item.value)}</span>
           </div>
-        </div>
-      </Card>
+        ))}
 
-      {/* بطاقات المؤشرات */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Card className="bg-blue-50 border-blue-200">
-          <CardContent className="pt-4 pb-4 text-center">
-            <p className="text-xs text-blue-600 mb-1">إجمالي الإيرادات</p>
-            <p className="text-lg font-bold font-mono text-blue-700" dir="ltr">{fmt(costs.totalRevenue)}</p>
-            <p className="text-[10px] text-blue-500">AED</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-red-50 border-red-200">
-          <CardContent className="pt-4 pb-4 text-center">
-            <p className="text-xs text-red-600 mb-1">إجمالي التكاليف</p>
-            <p className="text-lg font-bold font-mono text-red-700" dir="ltr">{fmt(costs.totalCosts)}</p>
-            <p className="text-[10px] text-red-500">AED</p>
-          </CardContent>
-        </Card>
-        <Card className={costs.profit >= 0 ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"}>
-          <CardContent className="pt-4 pb-4 text-center">
-            <p className={`text-xs mb-1 ${costs.profit >= 0 ? "text-emerald-600" : "text-red-600"}`}>صافي الربح</p>
-            <p className={`text-lg font-bold font-mono ${costs.profit >= 0 ? "text-emerald-700" : "text-red-700"}`} dir="ltr">{fmt(costs.profit)}</p>
-            <p className={`text-[10px] ${costs.profit >= 0 ? "text-emerald-500" : "text-red-500"}`}>AED</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-purple-50 border-purple-200">
-          <CardContent className="pt-4 pb-4 text-center">
-            <p className="text-xs text-purple-600 mb-1">هامش الربح</p>
-            <p className={`text-lg font-bold font-mono ${costs.profitMargin >= 0 ? "text-purple-700" : "text-red-700"}`}>{costs.profitMargin.toFixed(1)}%</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-amber-50 border-amber-200">
-          <CardContent className="pt-4 pb-4 text-center">
-            <p className="text-xs text-amber-600 mb-1">العائد على الاستثمار</p>
-            <p className="text-lg font-bold font-mono text-amber-700">{costs.roi.toFixed(1)}%</p>
-            <p className="text-[10px] text-amber-500">ROI</p>
-          </CardContent>
-        </Card>
+        {/* ─── إجمالي التكاليف ─── */}
+        <div className="flex items-center gap-3 px-5 py-4 bg-slate-900">
+          <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-white" />
+          <span className="text-sm font-bold text-white flex-1">إجمالي تكاليف المشروع</span>
+          <span className="text-base font-bold font-mono text-white" dir="ltr">{fmt(costs.totalCosts)} <span className="text-xs font-normal opacity-70">درهم</span></span>
+        </div>
+
+        {/* ─── إجمالي المبيعات ─── */}
+        <div className="flex items-center gap-3 px-5 py-4 bg-blue-700">
+          <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-white" />
+          <span className="text-sm font-bold text-white flex-1">إجمالي المبيعات</span>
+          <span className="text-base font-bold font-mono text-white" dir="ltr">{fmt(costs.totalRevenue)} <span className="text-xs font-normal opacity-70">درهم</span></span>
+        </div>
+
+        {/* ─── صافي الربح ─── */}
+        <div className={`flex items-center gap-3 px-5 py-4 ${costs.profit >= 0 ? "bg-emerald-700" : "bg-red-700"}`}>
+          <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-white" />
+          <span className="text-sm font-bold text-white flex-1">صافي الربح</span>
+          <span className="text-base font-bold font-mono text-white" dir="ltr">{fmt(costs.profit)} <span className="text-xs font-normal opacity-70">درهم</span></span>
+        </div>
+
+        {/* ─── نسبة الربح ─── */}
+        <div className={`flex items-center gap-3 px-5 py-4 ${costs.profitMargin >= 0 ? "bg-emerald-800" : "bg-red-800"} rounded-b-xl`}>
+          <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-white" />
+          <span className="text-sm font-bold text-white flex-1">نسبة الربح</span>
+          <span className="text-base font-bold font-mono text-white">{costs.profitMargin.toFixed(1)}%</span>
+        </div>
       </div>
-
-      {/* تفصيل الإيرادات */}
-      <Card className="overflow-hidden shadow-sm">
-        <div className="bg-gradient-to-l from-blue-700 to-blue-800 px-5 py-3">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-blue-200" />
-            <h3 className="text-white font-bold text-sm">تفصيل الإيرادات (من تبويب المنافسة والتسعير)</h3>
-          </div>
-        </div>
-        <div className="divide-y divide-border/40">
-          <div className="flex items-center justify-between px-5 py-2.5">
-            <span className="text-sm text-foreground/80">إيرادات سكنية</span>
-            <span className="text-sm font-mono text-foreground/70" dir="ltr">{fmt(costs.revenueRes)} AED</span>
-          </div>
-          <div className="flex items-center justify-between px-5 py-2.5">
-            <span className="text-sm text-foreground/80">إيرادات محلات تجارية</span>
-            <span className="text-sm font-mono text-foreground/70" dir="ltr">{fmt(costs.revenueRet)} AED</span>
-          </div>
-          <div className="flex items-center justify-between px-5 py-2.5">
-            <span className="text-sm text-foreground/80">إيرادات مكاتب</span>
-            <span className="text-sm font-mono text-foreground/70" dir="ltr">{fmt(costs.revenueOff)} AED</span>
-          </div>
-          <div className="flex items-center justify-between px-5 py-3 bg-blue-50">
-            <span className="text-sm font-bold text-blue-700">إجمالي الإيرادات</span>
-            <span className="text-sm font-bold font-mono text-blue-700" dir="ltr">{fmt(costs.totalRevenue)} AED</span>
-          </div>
-        </div>
-      </Card>
-
-      {/* ملخص الربحية */}
-      <Card className="overflow-hidden shadow-sm">
-        <div className={`px-5 py-4 ${costs.profit >= 0 ? "bg-gradient-to-l from-emerald-700 to-emerald-800" : "bg-gradient-to-l from-red-700 to-red-800"}`}>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center text-white">
-            <div>
-              <p className="text-xs opacity-80 mb-1">إجمالي الإيرادات</p>
-              <p className="text-lg font-bold font-mono" dir="ltr">{fmt(costs.totalRevenue)}</p>
-            </div>
-            <div>
-              <p className="text-xs opacity-80 mb-1">إجمالي التكاليف</p>
-              <p className="text-lg font-bold font-mono" dir="ltr">{fmt(costs.totalCosts)}</p>
-            </div>
-            <div>
-              <p className="text-xs opacity-80 mb-1">صافي الربح</p>
-              <p className="text-lg font-bold font-mono" dir="ltr">{fmt(costs.profit)}</p>
-            </div>
-            <div>
-              <p className="text-xs opacity-80 mb-1">التكلفة / قدم²</p>
-              <p className="text-lg font-bold font-mono" dir="ltr">{fmt(costs.costPerSqft)} AED</p>
-            </div>
-          </div>
-        </div>
-      </Card>
     </div>
   );
 }
