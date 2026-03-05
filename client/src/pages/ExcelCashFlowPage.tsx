@@ -43,19 +43,19 @@ interface Quarter {
 
 const QUARTERS: Quarter[] = [
   // Land purchase - single column
-  { label: "تم", months: [], phase: "land", phaseLabel: "شراء الأرض" },
+  { label: "تم الشراء", months: [], phase: "land", phaseLabel: "شراء الأرض" },
   // Pre-construction: 6 months = 2 quarters
-  { label: `${formatQuarter(1)}`, months: [1,2,3], phase: "preCon", phaseLabel: "ما قبل البناء" },
-  { label: `${formatQuarter(4)}`, months: [4,5,6], phase: "preCon", phaseLabel: "ما قبل البناء" },
+  { label: `${formatQuarter(1)} - ${formatQuarter(3)}`, months: [1,2,3], phase: "preCon", phaseLabel: "ما قبل البناء" },
+  { label: `${formatQuarter(4)} - ${formatQuarter(6)}`, months: [4,5,6], phase: "preCon", phaseLabel: "ما قبل البناء" },
   // Construction: 16 months ≈ 5 quarters + 1 month
-  { label: `${formatQuarter(7)}`, months: [7,8,9], phase: "construction", phaseLabel: "البناء" },
-  { label: `${formatQuarter(10)}`, months: [10,11,12], phase: "construction", phaseLabel: "البناء" },
-  { label: `${formatQuarter(13)}`, months: [13,14,15], phase: "construction", phaseLabel: "البناء" },
-  { label: `${formatQuarter(16)}`, months: [16,17,18], phase: "construction", phaseLabel: "البناء" },
-  { label: `${formatQuarter(19)}`, months: [19,20,21], phase: "construction", phaseLabel: "البناء" },
+  { label: `${formatQuarter(7)} - ${formatQuarter(9)}`, months: [7,8,9], phase: "construction", phaseLabel: "البناء" },
+  { label: `${formatQuarter(10)} - ${formatQuarter(12)}`, months: [10,11,12], phase: "construction", phaseLabel: "البناء" },
+  { label: `${formatQuarter(13)} - ${formatQuarter(15)}`, months: [13,14,15], phase: "construction", phaseLabel: "البناء" },
+  { label: `${formatQuarter(16)} - ${formatQuarter(18)}`, months: [16,17,18], phase: "construction", phaseLabel: "البناء" },
+  { label: `${formatQuarter(19)} - ${formatQuarter(21)}`, months: [19,20,21], phase: "construction", phaseLabel: "البناء" },
   { label: `${formatQuarter(22)}`, months: [22], phase: "construction", phaseLabel: "البناء" },
   // Handover: 2 months
-  { label: `${formatQuarter(23)}`, months: [23,24], phase: "handover", phaseLabel: "التسليم" },
+  { label: `${formatQuarter(23)} - ${formatQuarter(24)}`, months: [23,24], phase: "handover", phaseLabel: "التسليم" },
 ];
 
 // ===== PHASE COLORS =====
@@ -188,34 +188,31 @@ export default function ExcelCashFlowPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4" dir="rtl">
+    <div className="min-h-screen bg-gray-50 p-6" dir="rtl">
       {/* Title */}
-      <div className="mb-3">
-        <h1 className="text-lg font-bold text-gray-900">مشروع ند الشبا جاردنز — جدول مصاريف المستثمر</h1>
-        <p className="text-xs text-gray-500 mt-0.5">التمويل المباشر من المستثمر (لا يشمل مصاريف حساب الضمان)</p>
+      <div className="mb-6">
+        <h1 className="text-xl font-bold text-gray-900">مشروع ند الشبا جاردنز — جدول مصاريف المستثمر</h1>
+        <p className="text-sm text-gray-500 mt-1">التمويل المباشر من المستثمر (لا يشمل مصاريف حساب الضمان)</p>
       </div>
 
       {/* Summary Cards */}
-      <div className="flex items-center gap-3 mb-3 flex-wrap">
-        <div className="bg-white rounded border border-gray-200 px-2 py-1 shadow-sm inline-flex items-center gap-1.5">
-          <span className="text-[10px] text-gray-500">إجمالي المصاريف:</span>
-          <span className="text-xs font-bold text-gray-900">{fmt(grandTotal)}</span>
-          <span className="text-[9px] text-gray-400">درهم</span>
+      <div className="grid grid-cols-4 gap-3 mb-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+          <div className="text-xs text-gray-500 mb-1">إجمالي المصاريف</div>
+          <div className="text-lg font-bold text-gray-900">{fmt(grandTotal)} <span className="text-xs font-normal text-gray-400">درهم</span></div>
         </div>
-        <div className="bg-white rounded border border-green-200 px-2 py-1 shadow-sm inline-flex items-center gap-1.5">
-          <span className="text-[10px] text-green-600">تم دفعه ✓</span>
-          <span className="text-xs font-bold text-green-700">{fmt(paidTotal)}</span>
-          <span className="text-[9px] text-gray-400">درهم</span>
+        <div className="bg-white rounded-lg border border-green-200 p-4 shadow-sm">
+          <div className="text-xs text-green-600 mb-1">تم دفعه ✓</div>
+          <div className="text-lg font-bold text-green-700">{fmt(paidTotal)} <span className="text-xs font-normal text-gray-400">درهم</span></div>
         </div>
-        <div className="bg-white rounded border border-orange-200 px-2 py-1 shadow-sm inline-flex items-center gap-1.5">
-          <span className="text-[10px] text-orange-600">المتبقي:</span>
-          <span className="text-xs font-bold text-orange-700">{fmt(upcomingTotal)}</span>
-          <span className="text-[9px] text-gray-400">درهم</span>
+        <div className="bg-white rounded-lg border border-orange-200 p-4 shadow-sm">
+          <div className="text-xs text-orange-600 mb-1">المتبقي</div>
+          <div className="text-lg font-bold text-orange-700">{fmt(upcomingTotal)} <span className="text-xs font-normal text-gray-400">درهم</span></div>
         </div>
-        <div className="bg-white rounded border-2 border-red-300 px-2 py-1 shadow-sm inline-flex items-center gap-1.5">
-          <span className="text-[10px] text-red-600 font-medium">المطلوب للـ 3 أشهر ({next3Label}):</span>
-          <span className="text-xs font-bold text-red-700">{fmt(next3MonthsTotal)}</span>
-          <span className="text-[9px] text-gray-400">درهم</span>
+        <div className="bg-white rounded-lg border-2 border-red-300 p-4 shadow-sm">
+          <div className="text-xs text-red-600 mb-1 font-medium">المطلوب للـ 3 أشهر القادمة</div>
+          <div className="text-xs text-red-400 mb-1">{next3Label}</div>
+          <div className="text-lg font-bold text-red-700">{fmt(next3MonthsTotal)} <span className="text-xs font-normal text-gray-400">درهم</span></div>
         </div>
       </div>
 
@@ -225,13 +222,13 @@ export default function ExcelCashFlowPage() {
           <thead>
             {/* Phase header */}
             <tr>
-              <th className="bg-gray-800 text-white px-1 py-1.5 text-right font-medium border-l border-gray-600 w-[140px]">البند</th>
-              <th className="bg-gray-800 text-white px-1 py-1.5 text-center font-medium border-l border-gray-600 w-[80px]">الإجمالي</th>
+              <th className="bg-gray-800 text-white px-2 py-2 text-right font-medium border-l border-gray-600 w-[180px]">البند</th>
+              <th className="bg-gray-800 text-white px-2 py-2 text-center font-medium border-l border-gray-600 w-[100px]">الإجمالي</th>
               {phaseSpans.map((span, i) => (
                 <th
                   key={i}
                   colSpan={span.count}
-                  className={`${PHASE_COLORS[span.phase].header} px-1 py-1.5 text-center font-medium border-l border-gray-600 text-[11px]`}
+                  className={`${PHASE_COLORS[span.phase].header} px-1 py-2 text-center font-medium border-l border-gray-600`}
                 >
                   {span.label}
                 </th>
@@ -239,21 +236,21 @@ export default function ExcelCashFlowPage() {
             </tr>
             {/* Quarter labels */}
             <tr className="bg-gray-100">
-              <th className="bg-gray-100 px-1 py-1 text-right text-gray-500 border-l border-gray-200 text-[10px]">الفترة</th>
-              <th className="bg-gray-100 px-1 py-1 text-center text-gray-500 border-l border-gray-200 text-[10px]">(درهم)</th>
+              <th className="bg-gray-100 px-2 py-1.5 text-right text-gray-500 border-l border-gray-200 text-[10px]">الفترة</th>
+              <th className="bg-gray-100 px-2 py-1.5 text-center text-gray-500 border-l border-gray-200 text-[10px]">(درهم)</th>
               {QUARTERS.map((q, qi) => {
                 const isPaid = qi === 0 || isQuarterPaid(q.months[q.months.length - 1] || 0);
                 const isCurrent = qi > 0 && isCurrentQuarter(q.months[0], q.months[q.months.length - 1]);
                 return (
                   <th
                     key={qi}
-                    className={`px-0.5 py-1 text-center border-l border-gray-200 text-[9px] ${
+                    className={`px-1 py-1.5 text-center border-l border-gray-200 text-[10px] ${
                       isCurrent ? "bg-yellow-100 font-bold text-yellow-800" :
                       isPaid ? "bg-gray-200 text-gray-500" : "bg-gray-100 text-gray-600"
                     }`}
                   >
                     {q.label}
-                    {isCurrent && <span className="text-[7px] text-yellow-600"> ◄</span>}
+                    {isCurrent && <div className="text-[8px] text-yellow-600">◄ الآن</div>}
                   </th>
                 );
               })}
@@ -262,10 +259,10 @@ export default function ExcelCashFlowPage() {
           <tbody>
             {ITEMS.map((item, idx) => (
               <tr key={idx} className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"} hover:bg-blue-50/30 transition-colors`}>
-                <td className="px-1 py-1 text-right border-l border-gray-100 font-medium text-gray-800 text-[10px] whitespace-nowrap">
+                <td className="px-2 py-1.5 text-right border-l border-gray-100 font-medium text-gray-800 text-[11px]">
                   {item.name}
                 </td>
-                <td className="px-1 py-1 text-center border-l border-gray-100 font-bold text-gray-900 tabular-nums text-[10px]">
+                <td className="px-2 py-1.5 text-center border-l border-gray-100 font-bold text-gray-900 tabular-nums">
                   {fmt(item.total)}
                 </td>
                 {QUARTERS.map((q, qi) => {
@@ -276,7 +273,7 @@ export default function ExcelCashFlowPage() {
                   return (
                     <td
                       key={qi}
-                      className={`px-0.5 py-1 text-center border-l tabular-nums text-[10px] ${
+                      className={`px-1 py-1.5 text-center border-l tabular-nums ${
                         val === 0 ? "text-gray-300" :
                         isPaid ? "bg-gray-100 text-gray-400 line-through" :
                         isCurrent ? `bg-yellow-50 font-bold ${colors.text}` :
@@ -290,43 +287,22 @@ export default function ExcelCashFlowPage() {
               </tr>
             ))}
 
-            {/* ROW 1: إجمالي رأس مال المشروع */}
-            <tr className="bg-gray-200 border-t-2 border-gray-400">
-              <td className="px-1 py-1 text-right border-l border-gray-300 text-[10px] font-medium text-gray-700">إجمالي رأس مال المشروع</td>
-              <td className="px-1 py-1 text-center border-l border-gray-300 tabular-nums text-[10px] font-medium text-gray-700">{fmt(grandTotal)}</td>
-              {QUARTERS.map((_, qi) => (
-                <td key={qi} className="px-0.5 py-1 text-center border-l border-gray-300 tabular-nums text-[10px] text-gray-700">
-                  {colTotals[qi] === 0 ? "-" : fmt(colTotals[qi])}
-                </td>
-              ))}
-            </tr>
-
-            {/* ROW 2: المبالغ المدفوعة */}
-            <tr className="bg-green-50 border-t border-gray-300">
-              <td className="px-1 py-1 text-right border-l border-gray-300 text-[10px] font-medium text-green-800">المبالغ المدفوعة</td>
-              <td className="px-1 py-1 text-center border-l border-gray-300 tabular-nums text-[10px] font-medium text-green-800">{fmt(paidTotal)}</td>
-              {QUARTERS.map((q, qi) => {
-                const val = colTotals[qi];
-                const isPaid = qi === 0 || isQuarterPaid(q.months[q.months.length - 1] || 0);
-                return (
-                  <td key={qi} className="px-0.5 py-1 text-center border-l border-gray-300 tabular-nums text-[10px] text-green-800">
-                    {isPaid && val > 0 ? fmt(val) : "-"}
-                  </td>
-                );
-              })}
-            </tr>
-
-            {/* ROW 3: رأس المال المطلوب سداده */}
-            <tr className="bg-gray-800 text-white font-bold border-t border-gray-600">
-              <td className="px-1 py-1 text-right border-l border-gray-600 text-[10px]">رأس المال المطلوب سداده</td>
-              <td className="px-1 py-1 text-center border-l border-gray-600 tabular-nums text-[10px]">{fmt(upcomingTotal)}</td>
+            {/* TOTAL ROW */}
+            <tr className="bg-gray-800 text-white font-bold border-t-2 border-gray-900">
+              <td className="px-2 py-2 text-right border-l border-gray-600">الإجمالي</td>
+              <td className="px-2 py-2 text-center border-l border-gray-600 tabular-nums">{fmt(grandTotal)}</td>
               {QUARTERS.map((q, qi) => {
                 const val = colTotals[qi];
                 const isPaid = qi === 0 || isQuarterPaid(q.months[q.months.length - 1] || 0);
                 const isCurrent = qi > 0 && isCurrentQuarter(q.months[0], q.months[q.months.length - 1]);
                 return (
-                  <td key={qi} className={`px-0.5 py-1 text-center border-l border-gray-600 tabular-nums text-[10px] ${isCurrent ? "text-yellow-300" : ""}`}>
-                    {isPaid ? "-" : val === 0 ? "-" : fmt(val)}
+                  <td
+                    key={qi}
+                    className={`px-1 py-2 text-center border-l border-gray-600 tabular-nums ${
+                      isPaid ? "text-gray-400" : isCurrent ? "text-yellow-300" : ""
+                    }`}
+                  >
+                    {val === 0 ? "-" : fmt(val)}
                   </td>
                 );
               })}
@@ -336,7 +312,7 @@ export default function ExcelCashFlowPage() {
       </div>
 
       {/* Legend */}
-      <div className="mt-2 flex items-center gap-4 text-[9px] text-gray-500">
+      <div className="mt-4 flex items-center gap-6 text-[10px] text-gray-500">
         <div className="flex items-center gap-1">
           <span className="w-3 h-3 bg-gray-200 rounded-sm border border-gray-300 inline-block"></span>
           <span className="line-through text-gray-400">تم الدفع</span>
