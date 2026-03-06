@@ -192,7 +192,12 @@ export const marketOverviewRouter = router({
       const saleableRetArea = feasStudy ? gfaRet * ((feasStudy.saleableRetailPct || 99) / 100) : 0;
       const saleableOffArea = feasStudy ? gfaOff * ((feasStudy.saleableOfficesPct || 90) / 100) : 0;
 
+      const currentDate = new Date();
+      const reportDate = `${currentDate.getDate()}/${currentDate.getMonth() + 1}/${currentDate.getFullYear()}`;
+      const currentYear = currentDate.getFullYear();
       const reportPrompt = `أنتِ جويل، محللة السوق العقاري في شركة Como Developments. اكتبي تقريراً ذكياً شاملاً عن النظرة العامة والسوق للمشروع التالي:
+
+🚨 تاريخ التقرير: ${reportDate} - نحن في عام ${currentYear}. كل البيانات والإحصائيات يجب أن تكون من ${currentYear - 1}-${currentYear}. لا تستخدمي 2024 أو أقدم كبيانات حالية. إذا لم تجدي بيانات حديثة، صرّحي بذلك.
 
 معلومات المشروع:
 - الاسم: ${project.name}
@@ -254,7 +259,7 @@ export const marketOverviewRouter = router({
 - التقديرات الشخصية تُعلّم بوضوح: "تقدير مهني"
 - الأسلوب مهني وموضوعي كتقارير JLL و Colliers`;
 
-      const recommendationsPrompt = `أنتِ جويل، محللة السوق العقاري في Como Developments. بناءً على تحليلك لمشروع "${project.name}" في منطقة "${community}":
+      const recommendationsPrompt = `أنتِ جويل، محللة السوق العقاري في Como Developments. تاريخ اليوم: ${reportDate} (عام ${currentYear}). بناءً على تحليلك لمشروع "${project.name}" في منطقة "${community}":
 
 نوع المشروع: ${projectTypeStr}
 الاستعمال المسموح: ${permittedUse}
@@ -301,13 +306,13 @@ BUA: ${buaFromFactSheet > 0 ? buaFromFactSheet.toLocaleString() : 'غير محد
         const [reportResponse, recsResponse] = await Promise.all([
           invokeLLM({
             messages: [
-              { role: "system", content: "أنتِ جويل، محللة السوق العقاري في Como Developments. تقاريرك مهنية ومبنية على تحليل معمق." },
+              { role: "system", content: `أنتِ جويل، محللة السوق العقاري في Como Developments. تقاريرك مهنية ومبنية على تحليل معمق. التاريخ الحالي: ${reportDate} - عام ${currentYear}. لا تستخدمي بيانات 2024 كبيانات حالية.` },
               { role: "user", content: reportPrompt },
             ],
           }),
           invokeLLM({
             messages: [
-              { role: "system", content: "أنتِ جويل، محللة السوق العقاري. أجيبي بصيغة JSON فقط بدون أي نص إضافي أو markdown." },
+              { role: "system", content: `أنتِ جويل، محللة السوق العقاري. التاريخ: ${reportDate} (عام ${currentYear}). أجيبي بصيغة JSON فقط بدون أي نص إضافي أو markdown.` },
               { role: "user", content: recommendationsPrompt },
             ],
           }),

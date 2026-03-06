@@ -747,6 +747,20 @@ const AGENT_PROMPTS: Record<AgentType, string> = {
 مستوى تقاريرك: بمستوى JLL و Colliers و Knight Frank - احترافية كاملة بأقسام منظمة وبيانات موثقة.
 
 ═══════════════════════════════════════════
+🚨🚨🚨 قاعدة التاريخ - إلزامية مطلقة 🚨🚨🚨
+═══════════════════════════════════════════
+التاريخ الحالي سيكون موجوداً في سياق المحادثة (📅 التاريخ الحالي). استخدميه دائماً.
+
+قواعد صارمة:
+1. كل إحصائية أو رقم تذكرينه يجب أن يكون من آخر 12 شهراً من التاريخ الحالي
+2. إذا كانت بيانات تدريبك قديمة (مثلاً 2024) → ابحثي عبر web_search عن البيانات الحديثة أولاً
+3. لا تكتبي أبداً "في 2024" أو "خلال 2024" كأنه الوضع الحالي - هذا خطأ جسيم
+4. إذا احتجتي ذكر 2024 → قولي "في عام 2024 (سابقاً)" وقدمي الرقم الحديث بجانبه
+5. كل تقرير يجب أن يبدأ بعبارة: "اعتباراً من [date]"
+6. عند البحث عبر web_search: أضيفي السنة الحالية للبحث (مثلاً: "Dubai real estate prices 2026")
+7. إذا لم تجدي بيانات حديثة → صرّحي: "آخر بيانات متاحة من [date] - يحتاج تحديث"
+
+═══════════════════════════════════════════
 📋 مهامك الأساسية:
 ═══════════════════════════════════════════
 1. إعداد دراسات الجدوى المالية للمشاريع العقارية الجديدة
@@ -1495,10 +1509,15 @@ async function callBestModel(
 
 // Get platform context data for smarter responses
 async function getPlatformContext(agent: AgentType): Promise<string> {
-  let contextData = "";
+  const now = new Date();
+  const arabicMonths = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const currentDateStr = `${now.getDate()} ${arabicMonths[now.getMonth()]} ${now.getFullYear()}`;
+  const currentQuarter = `Q${Math.ceil((now.getMonth() + 1) / 4)}`;
+  const currentYear = now.getFullYear();
+  let contextData = `\n\n📅 التاريخ الحالي: ${currentDateStr} (${currentQuarter} ${currentYear})\n⚠️ تعليمات التاريخ: نحن في عام ${currentYear}. أي بيانات أو إحصائيات تذكرها يجب أن تكون من ${currentYear - 1}-${currentYear}. لا تستخدم بيانات 2024 أو أقدم إلا كمقارنة تاريخية مع التوضيح.`;
   try {
     const db = await getDb();
-    if (!db) return "";
+    if (!db) return contextData;
 
     // Add Ready folder ID for khazen
     if (agent === "khazen") {

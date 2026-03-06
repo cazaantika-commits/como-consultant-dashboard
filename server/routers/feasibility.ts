@@ -168,7 +168,12 @@ export const feasibilityRouter = router({
       const roi = fundingRequired > 0 ? (investorProfit / fundingRequired) * 100 : 0;
       const profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
 
+      const currentDate = new Date();
+      const reportDate = `${currentDate.getDate()}/${currentDate.getMonth() + 1}/${currentDate.getFullYear()}`;
+      const currentYear = currentDate.getFullYear();
       const prompt = `أنتِ جويل، محللة دراسات الجدوى في شركة Como Developments. اكتبي ملخصاً تحليلياً ذكياً باللغة العربية لدراسة الجدوى التالية:
+
+🚨 تاريخ التقرير: ${reportDate} - نحن في عام ${currentYear}. كل الإحصائيات والمقارنات يجب أن تكون من ${currentYear - 1}-${currentYear}. لا تستخدمي بيانات 2024 أو أقدم كبيانات حالية.
 
 المشروع: ${study.projectName}
 المنطقة: ${study.community || 'غير محدد'}
@@ -233,7 +238,7 @@ export const feasibilityRouter = router({
       try {
         const response = await invokeLLM({
           messages: [
-            { role: "system", content: "أنتِ جويل، محللة دراسات الجدوى والسوق في شركة Como Developments. تحليلاتك دقيقة ومهنية." },
+            { role: "system", content: `أنتِ جويل، محللة دراسات الجدوى في Como Developments. التاريخ: ${reportDate} (عام ${currentYear}). لا تستخدمي بيانات 2024 كبيانات حالية.` },
             { role: "user", content: prompt },
           ],
         });
@@ -260,7 +265,12 @@ export const feasibilityRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
+      const currentDate = new Date();
+      const reportDate = `${currentDate.getDate()}/${currentDate.getMonth() + 1}/${currentDate.getFullYear()}`;
+      const currentYear = currentDate.getFullYear();
       const prompt = `أنتِ جويل، محللة استخبارات السوق العقاري في Como Developments. اكتبي تحليلاً احترافياً بمستوى JLL / Colliers لسوق منطقة "${input.community}" في دبي:
+
+🚨 تاريخ التقرير: ${reportDate} - نحن في عام ${currentYear}. كل البيانات والأسعار يجب أن تكون من ${currentYear - 1}-${currentYear}. لا تستخدمي بيانات 2024 أو أقدم كبيانات حالية.
 
 ## 1. الملخص التنفيذي
 فقرة واحدة بأهم الأرقام والاتجاهات.
@@ -302,7 +312,7 @@ export const feasibilityRouter = router({
       try {
         const response = await invokeLLM({
           messages: [
-            { role: "system", content: "أنتِ جويل، خبيرة تحليل السوق العقاري في دبي. تحليلاتك مبنية على بحث مستقل ومعمق." },
+            { role: "system", content: `أنتِ جويل، خبيرة تحليل السوق العقاري في دبي. التاريخ: ${reportDate} (عام ${currentYear}). لا تستخدمي بيانات 2024 كبيانات حالية.` },
             { role: "user", content: prompt },
           ],
         });
@@ -360,7 +370,12 @@ export const feasibilityRouter = router({
       if (!results[0]) throw new Error("Study not found");
       const study = results[0];
 
+      const currentDate2 = new Date();
+      const reportDate2 = `${currentDate2.getDate()}/${currentDate2.getMonth() + 1}/${currentDate2.getFullYear()}`;
+      const currentYear2 = currentDate2.getFullYear();
       const prompt = `أنتِ جويل، محللة استخبارات السوق ودراسات الجدوى في Como Developments. اكتبي تقريراً شاملاً بمستوى JLL / Colliers للمشروع: ${study.projectName}.
+
+🚨 تاريخ التقرير: ${reportDate2} - نحن في عام ${currentYear2}. كل البيانات يجب أن تكون من ${currentYear2 - 1}-${currentYear2}. لا تستخدمي بيانات 2024 أو أقدم.
 
 البيانات المالية:
 - إجمالي التكاليف: ${study.totalCosts ? Number(study.totalCosts).toLocaleString() : 'غير محدد'} درهم
@@ -412,7 +427,7 @@ export const feasibilityRouter = router({
       try {
         const response = await invokeLLM({
           messages: [
-            { role: "system", content: "أنتِ جويل، محللة دراسات الجدوى المتقدمة. تقاريرك شاملة واحترافية." },
+            { role: "system", content: `أنتِ جويل، محللة دراسات الجدوى المتقدمة. التاريخ: ${reportDate2} (عام ${currentYear2}). لا تستخدمي بيانات 2024 كبيانات حالية.` },
             { role: "user", content: prompt },
           ],
         });
@@ -442,7 +457,12 @@ export const feasibilityRouter = router({
       if (!results[0]) throw new Error("Study not found");
       const study = results[0];
 
+      const currentDate3 = new Date();
+      const reportDate3 = `${currentDate3.getDate()}/${currentDate3.getMonth() + 1}/${currentDate3.getFullYear()}`;
+      const currentYear3 = currentDate3.getFullYear();
       const prompt = `أنتِ جويل، محللة استخبارات السوق في Como Developments. اكتبي تقريراً تنفيذياً موجزاً لمجلس الإدارة بمستوى JLL / Colliers عن المشروع: ${study.projectName}.
+
+🚨 تاريخ التقرير: ${reportDate3} - نحن في عام ${currentYear3}. كل البيانات يجب أن تكون من ${currentYear3 - 1}-${currentYear3}.
 
 البيانات المالية:
 - إجمالي التكاليف: ${study.totalCosts ? Number(study.totalCosts).toLocaleString() : 'غير محدد'} درهم
@@ -480,7 +500,7 @@ export const feasibilityRouter = router({
       try {
         const response = await invokeLLM({
           messages: [
-            { role: "system", content: "أنتِ جويل، محللة دراسات الجدوى. تقاريرك الموجزة واضحة وفعالة." },
+            { role: "system", content: `أنتِ جويل، محللة دراسات الجدوى. التاريخ: ${reportDate3} (عام ${currentYear3}). لا تستخدمي بيانات 2024 كبيانات حالية.` },
             { role: "user", content: prompt },
           ],
         });

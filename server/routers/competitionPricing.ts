@@ -240,7 +240,12 @@ export const competitionPricingRouter = router({
         if (Number(mo.residential3brPct) > 0) unitTypes.push(`ثلاث غرف وصالة (${mo.residential3brPct}% - ${mo.residential3brAvgArea} قدم²)`);
       }
 
+      const currentDate = new Date();
+      const reportDate = `${currentDate.getDate()}/${currentDate.getMonth() + 1}/${currentDate.getFullYear()}`;
+      const currentYear = currentDate.getFullYear();
       const reportPrompt = `أنتِ جويل، محللة السوق العقاري في Como Developments. اكتبي تقريراً ذكياً عن المنافسة والتسعير للمشروع:
+
+🚨 تاريخ التقرير: ${reportDate} - نحن في عام ${currentYear}. كل الأسعار والمقارنات يجب أن تكون من ${currentYear - 1}-${currentYear}. لا تستخدمي أسعار 2024 أو أقدم كأسعار حالية.
 
 معلومات المشروع:
 - الاسم: ${project.name}
@@ -296,7 +301,7 @@ ${unitTypes.length > 0 ? `- أنواع الوحدات: ${unitTypes.join(', ')}` 
 - التقديرات تُعلّم بوضوح: "تقدير مهني - يحتاج تحقق"
 - الأسلوب مهني وموضوعي كتقارير JLL و Colliers`;
 
-      const recsPrompt = `أنتِ جويل، محللة السوق العقاري في Como Developments. بناءً على تحليلك لمشروع "${project.name}" في "${community}":
+      const recsPrompt = `أنتِ جويل، محللة السوق العقاري في Como Developments. تاريخ اليوم: ${reportDate} (عام ${currentYear}). بناءً على تحليلك لمشروع "${project.name}" في "${community}":
 
 نوع المشروع: ${projectTypeStr}
 الاستعمال المسموح: ${permittedUse}
@@ -360,13 +365,13 @@ ${unitTypes.length > 0 ? `أنواع الوحدات المعتمدة: ${unitType
         const [reportResponse, recsResponse] = await Promise.all([
           invokeLLM({
             messages: [
-              { role: "system", content: "أنتِ جويل، محللة السوق العقاري في Como Developments. تقاريرك مهنية ومبنية على تحليل معمق." },
+              { role: "system", content: `أنتِ جويل، محللة السوق العقاري في Como Developments. تقاريرك مهنية. التاريخ: ${reportDate} (عام ${currentYear}). لا تستخدمي بيانات 2024 كبيانات حالية.` },
               { role: "user", content: reportPrompt },
             ],
           }),
           invokeLLM({
             messages: [
-              { role: "system", content: "أنتِ جويل، محللة السوق العقاري. أجيبي بصيغة JSON فقط بدون أي نص إضافي أو markdown." },
+              { role: "system", content: `أنتِ جويل، محللة السوق العقاري. التاريخ: ${reportDate} (عام ${currentYear}). أجيبي بصيغة JSON فقط بدون أي نص إضافي.` },
               { role: "user", content: recsPrompt },
             ],
           }),

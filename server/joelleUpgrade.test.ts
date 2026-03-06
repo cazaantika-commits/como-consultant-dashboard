@@ -149,6 +149,85 @@ describe("Joelle Market Intelligence Upgrade", () => {
   });
 
   // ═══════════════════════════════════════
+  // Date Awareness Fix
+  // ═══════════════════════════════════════
+
+  describe("Date Awareness - Context Data", () => {
+    it("should inject current date into contextData for all agents", () => {
+      expect(agentChatContent).toContain("التاريخ الحالي");
+      expect(agentChatContent).toContain("arabicMonths");
+      expect(agentChatContent).toContain("currentDateStr");
+    });
+
+    it("should warn against using 2024 data", () => {
+      expect(agentChatContent).toContain("لا تستخدم بيانات 2024");
+    });
+
+    it("should use dynamic year calculation", () => {
+      expect(agentChatContent).toContain("currentYear - 1");
+      expect(agentChatContent).toContain("currentYear");
+    });
+  });
+
+  describe("Date Awareness - Joelle System Prompt", () => {
+    it("should include strict date rules in Joelle's prompt", () => {
+      expect(agentChatContent).toContain("قاعدة التاريخ");
+      expect(agentChatContent).toContain("إلزامية مطلقة");
+    });
+
+    it("should instruct to use web_search for fresh data", () => {
+      expect(agentChatContent).toContain("web_search");
+      expect(agentChatContent).toContain("البيانات الحديثة");
+    });
+
+    it("should require reports to start with date", () => {
+      expect(agentChatContent).toContain("اعتباراً من");
+    });
+
+    it("should flag 2024 as historical only", () => {
+      expect(agentChatContent).toContain("في عام 2024 (سابقاً)");
+    });
+  });
+
+  describe("Date Awareness - Report Prompts", () => {
+    it("should inject dynamic date in market overview report prompt", () => {
+      expect(marketOverviewContent).toContain("reportDate");
+      expect(marketOverviewContent).toContain("currentYear");
+      expect(marketOverviewContent).toContain("تاريخ التقرير");
+    });
+
+    it("should inject dynamic date in competition pricing report prompt", () => {
+      expect(competitionPricingContent).toContain("reportDate");
+      expect(competitionPricingContent).toContain("currentYear");
+      expect(competitionPricingContent).toContain("تاريخ التقرير");
+    });
+
+    it("should inject dynamic date in all feasibility report prompts", () => {
+      expect(feasibilityContent).toContain("reportDate");
+      expect(feasibilityContent).toContain("currentYear");
+      // Should have date in summary, market analysis, comprehensive, and board prompts
+      const dateMatches = feasibilityContent.match(/تاريخ التقرير/g);
+      expect(dateMatches).toBeTruthy();
+      expect(dateMatches!.length).toBeGreaterThanOrEqual(4);
+    });
+
+    it("should inject date into system messages too", () => {
+      // All system messages should now include date
+      const marketSystemDate = marketOverviewContent.match(/role.*system.*التاريخ/g);
+      expect(marketSystemDate).toBeTruthy();
+      expect(marketSystemDate!.length).toBeGreaterThanOrEqual(2);
+
+      const compSystemDate = competitionPricingContent.match(/role.*system.*التاريخ/g);
+      expect(compSystemDate).toBeTruthy();
+      expect(compSystemDate!.length).toBeGreaterThanOrEqual(2);
+
+      const feasSystemDate = feasibilityContent.match(/role.*system.*التاريخ/g);
+      expect(feasSystemDate).toBeTruthy();
+      expect(feasSystemDate!.length).toBeGreaterThanOrEqual(4);
+    });
+  });
+
+  // ═══════════════════════════════════════
   // AI Report Prompts Upgrade
   // ═══════════════════════════════════════
 
