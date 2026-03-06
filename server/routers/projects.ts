@@ -66,7 +66,7 @@ const factSheetFields = {
   notes: z.string().optional(),
   // بيانات الشراء
   landPrice: z.string().optional(),
-  agentCommissionLandPct: z.string().optional(),
+  agentCommissionLandPct: z.union([z.string(), z.number()]).optional(),
   // الإدخالات اليدوية
   manualBuaSqft: z.string().optional(),
   estimatedConstructionPricePerSqft: z.string().optional(),
@@ -83,13 +83,13 @@ const factSheetFields = {
   reraProjectRegFee: z.string().optional(),
   officialBodiesFees: z.string().optional(),
   // نسب التكاليف المتغيرة
-  designFeePct: z.string().optional(),
-  supervisionFeePct: z.string().optional(),
-  separationFeePerM2: z.string().optional(),
-  salesCommissionPct: z.string().optional(),
-  marketingPct: z.string().optional(),
-  developerFeePhase1Pct: z.string().optional(),
-  developerFeePhase2Pct: z.string().optional(),
+  designFeePct: z.union([z.string(), z.number()]).optional(),
+  supervisionFeePct: z.union([z.string(), z.number()]).optional(),
+  separationFeePerM2: z.union([z.string(), z.number()]).optional(),
+  salesCommissionPct: z.union([z.string(), z.number()]).optional(),
+  marketingPct: z.union([z.string(), z.number()]).optional(),
+  developerFeePhase1Pct: z.union([z.string(), z.number()]).optional(),
+  developerFeePhase2Pct: z.union([z.string(), z.number()]).optional(),
 };
 
 // All Fact Sheet field keys for completeness calculation
