@@ -421,17 +421,17 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
         officialBodiesFees: p.officialBodiesFees || "",
         // بيانات الشراء
         landPrice: p.landPrice || "",
-        agentCommissionLandPct: p.agentCommissionLandPct || "",
+        agentCommissionLandPct: p.agentCommissionLandPct ? String(p.agentCommissionLandPct) : "",
         // تكلفة البناء التقديرية
         estimatedConstructionPricePerSqft: p.estimatedConstructionPricePerSqft || "",
         // نسب التكاليف المتغيرة (قيم افتراضية إذا لم تُدخل)
-        designFeePct: p.designFeePct ?? "2",
-        supervisionFeePct: p.supervisionFeePct ?? "2",
-        separationFeePerM2: p.separationFeePerM2 ?? "40",
-        salesCommissionPct: p.salesCommissionPct ?? "5",
-        marketingPct: p.marketingPct ?? "2",
-        developerFeePhase1Pct: p.developerFeePhase1Pct ?? "2",
-        developerFeePhase2Pct: p.developerFeePhase2Pct ?? "3",
+        designFeePct: p.designFeePct ? String(p.designFeePct) : "2",
+        supervisionFeePct: p.supervisionFeePct ? String(p.supervisionFeePct) : "2",
+        separationFeePerM2: p.separationFeePerM2 ? String(p.separationFeePerM2) : "40",
+        salesCommissionPct: p.salesCommissionPct ? String(p.salesCommissionPct) : "5",
+        marketingPct: p.marketingPct ? String(p.marketingPct) : "2",
+        developerFeePhase1Pct: p.developerFeePhase1Pct ? String(p.developerFeePhase1Pct) : "2",
+        developerFeePhase2Pct: p.developerFeePhase2Pct ? String(p.developerFeePhase2Pct) : "3",
       });
       setHasChanges(false);
     }
@@ -446,9 +446,12 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
     if (!selectedProjectId) return;
     const payload: Record<string, any> = { id: selectedProjectId };
     const numericIntFields = ["bua", "adminFee", "clearanceFee", "compensationAmount"];
+    const numericDecimalFields = ["agentCommissionLandPct", "designFeePct", "supervisionFeePct", "separationFeePerM2", "salesCommissionPct", "marketingPct", "developerFeePhase1Pct", "developerFeePhase2Pct"];
     for (const [key, value] of Object.entries(formData)) {
       if (numericIntFields.includes(key)) {
         payload[key] = value ? Number(value) : undefined;
+      } else if (numericDecimalFields.includes(key)) {
+        payload[key] = value ? parseFloat(String(value)) : undefined;
       } else {
         // Use null check instead of falsy check to allow '0' values
         payload[key] = (value !== null && value !== undefined && String(value).trim() !== "") ? value : undefined;
