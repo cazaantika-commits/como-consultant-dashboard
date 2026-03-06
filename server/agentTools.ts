@@ -12,7 +12,9 @@ import {
   consultantDetails, consultantProfiles, consultantNotes,
   tasks, feasibilityStudies, agents, agentAssignments,
   meetings, meetingParticipants, meetingFiles, meetingMessages,
-  knowledgeBase, contractTypes, projectContracts
+  knowledgeBase, contractTypes, projectContracts,
+  marketOverview, competitionPricing, costsCashFlow,
+  cfProjects, cfCostItems
 } from "../drizzle/schema";
 import { logToolCall } from "./activityLogger";
 import { searchDocuments, getDocumentContent, indexDriveFile, getIndexStats } from "./documentIndexService";
@@ -153,6 +155,63 @@ export const AGENT_TOOLS = [
         type: "object",
         properties: {
           projectId: { type: "number", description: "رقم دراسة الجدوى" },
+        },
+        required: ["projectId"],
+      },
+    },
+  },
+  // ─── MARKET INTELLIGENCE TOOLS (Joelle) ───
+  {
+    type: "function" as const,
+    function: {
+      name: "get_market_overview",
+      description: "عرض بيانات النظرة العامة على السوق لمشروع معين - يتضمن: توزيع أنواع الوحدات (استديو، غرفة، غرفتين، 3 غرف)، نسبها ومساحاتها المتوسطة، توزيع المحلات التجارية والمكاتب، جودة التشطيب، التقرير الذكي AI، وتوصيات توزيع الوحدات",
+      parameters: {
+        type: "object",
+        properties: {
+          projectId: { type: "number", description: "رقم المشروع (من جدول المشاريع، ليس دراسة الجدوى)" },
+        },
+        required: ["projectId"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "get_competition_pricing",
+      description: "عرض بيانات المنافسة والتسعير لمشروع معين - يتضمن: أسعار 3 سيناريوهات (متفائل/أساسي/متحفظ) لكل نوع وحدة، خطة السداد، التقرير الذكي AI، وتوصيات التسعير",
+      parameters: {
+        type: "object",
+        properties: {
+          projectId: { type: "number", description: "رقم المشروع (من جدول المشاريع، ليس دراسة الجدوى)" },
+        },
+        required: ["projectId"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "get_cash_flow_summary",
+      description: "عرض ملخص التدفقات النقدية لمشروع معين - يتضمن: إجمالي التكاليف، الإيرادات، الربح، ROI، أقصى تعرض للمستثمر، مدة المشروع، وتفاصيل بنود التكاليف",
+      parameters: {
+        type: "object",
+        properties: {
+          projectId: { type: "number", description: "رقم المشروع في برنامج التدفقات النقدية (cf_projects)" },
+        },
+        required: ["projectId"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "get_all_market_data",
+      description: "عرض جميع بيانات السوق المتاحة لمشروع معين دفعة واحدة - يجمع: دراسة الجدوى + النظرة العامة + المنافسة والتسعير + التدفقات النقدية. استخدمي هذه الأداة عندما تحتاجين صورة شاملة عن المشروع",
+      parameters: {
+        type: "object",
+        properties: {
+          projectId: { type: "number", description: "رقم المشروع" },
         },
         required: ["projectId"],
       },
@@ -1417,6 +1476,185 @@ async function _executeToolInternal(
           constructionCostPerSqft: s.constructionCostPerSqft,
           residentialSalePrice: s.residentialSalePrice, retailSalePrice: s.retailSalePrice,
           notes: s.notes,
+        });
+      }
+
+      // ─── MARKET INTELLIGENCE TOOL HANDLERS (Joelle) ───
+      case "get_market_overview": {
+        const { projectId: moProjectId } = args;
+        const moResults = await db.select().from(marketOverview)
+          .where(eq(marketOverview.projectId, moProjectId));
+        if (moResults.length === 0) return JSON.stringify({ message: "لا توجد بيانات نظرة عامة على السوق لهذا المشروع. يمكنك إنشاء تقرير ذكي من صفحة دراسة الجدوى > تبويب النظرة العامة." });
+        const mo = moResults[0];
+        return JSON.stringify({
+          projectId: mo.projectId,
+          unitMix: {
+            studio: { pct: mo.residentialStudioPct, avgArea: mo.residentialStudioAvgArea },
+            oneBr: { pct: mo.residential1brPct, avgArea: mo.residential1brAvgArea },
+            twoBr: { pct: mo.residential2brPct, avgArea: mo.residential2brAvgArea },
+            threeBr: { pct: mo.residential3brPct, avgArea: mo.residential3brAvgArea },
+          },
+          retail: {
+            small: { pct: mo.retailSmallPct, avgArea: mo.retailSmallAvgArea },
+            medium: { pct: mo.retailMediumPct, avgArea: mo.retailMediumAvgArea },
+            large: { pct: mo.retailLargePct, avgArea: mo.retailLargeAvgArea },
+          },
+          offices: {
+            small: { pct: mo.officeSmallPct, avgArea: mo.officeSmallAvgArea },
+            medium: { pct: mo.officeMediumPct, avgArea: mo.officeMediumAvgArea },
+            large: { pct: mo.officeLargePct, avgArea: mo.officeLargeAvgArea },
+          },
+          finishingQuality: mo.finishingQuality,
+          aiSmartReport: mo.aiSmartReport ? mo.aiSmartReport.substring(0, 3000) + (mo.aiSmartReport.length > 3000 ? '...(مختصر)' : '') : null,
+          aiRecommendations: mo.aiRecommendationsJson,
+          isApproved: mo.isApproved === 1,
+          reportGeneratedAt: mo.aiReportGeneratedAt,
+        });
+      }
+
+      case "get_competition_pricing": {
+        const { projectId: cpProjectId } = args;
+        const cpResults = await db.select().from(competitionPricing)
+          .where(eq(competitionPricing.projectId, cpProjectId));
+        if (cpResults.length === 0) return JSON.stringify({ message: "لا توجد بيانات منافسة وتسعير لهذا المشروع. يمكنك إنشاء تقرير ذكي من صفحة دراسة الجدوى > تبويب المنافسة والتسعير." });
+        const cp = cpResults[0];
+        return JSON.stringify({
+          projectId: cp.projectId,
+          scenarios: {
+            optimistic: {
+              studio: cp.optStudioPrice, oneBr: cp.opt1brPrice, twoBr: cp.opt2brPrice, threeBr: cp.opt3brPrice,
+              retailSmall: cp.optRetailSmallPrice, retailMedium: cp.optRetailMediumPrice, retailLarge: cp.optRetailLargePrice,
+              officeSmall: cp.optOfficeSmallPrice, officeMedium: cp.optOfficeMediumPrice, officeLarge: cp.optOfficeLargePrice,
+            },
+            base: {
+              studio: cp.baseStudioPrice, oneBr: cp.base1brPrice, twoBr: cp.base2brPrice, threeBr: cp.base3brPrice,
+              retailSmall: cp.baseRetailSmallPrice, retailMedium: cp.baseRetailMediumPrice, retailLarge: cp.baseRetailLargePrice,
+              officeSmall: cp.baseOfficeSmallPrice, officeMedium: cp.baseOfficeMediumPrice, officeLarge: cp.baseOfficeLargePrice,
+            },
+            conservative: {
+              studio: cp.consStudioPrice, oneBr: cp.cons1brPrice, twoBr: cp.cons2brPrice, threeBr: cp.cons3brPrice,
+              retailSmall: cp.consRetailSmallPrice, retailMedium: cp.consRetailMediumPrice, retailLarge: cp.consRetailLargePrice,
+              officeSmall: cp.consOfficeSmallPrice, officeMedium: cp.consOfficeMediumPrice, officeLarge: cp.consOfficeLargePrice,
+            },
+          },
+          paymentPlan: {
+            booking: { pct: cp.paymentBookingPct, timing: cp.paymentBookingTiming },
+            construction: { pct: cp.paymentConstructionPct, timing: cp.paymentConstructionTiming },
+            handover: { pct: cp.paymentHandoverPct, timing: cp.paymentHandoverTiming },
+            deferred: { pct: cp.paymentDeferredPct, timing: cp.paymentDeferredTiming },
+          },
+          activeScenario: cp.activeScenario,
+          aiSmartReport: cp.aiSmartReport ? cp.aiSmartReport.substring(0, 3000) + (cp.aiSmartReport.length > 3000 ? '...(مختصر)' : '') : null,
+          aiRecommendations: cp.aiRecommendationsJson,
+          isApproved: cp.isApproved === 1,
+          reportGeneratedAt: cp.aiReportGeneratedAt,
+        });
+      }
+
+      case "get_cash_flow_summary": {
+        const { projectId: cfProjectId } = args;
+        const cfProjResults = await db.select().from(cfProjects)
+          .where(eq(cfProjects.id, cfProjectId));
+        if (cfProjResults.length === 0) return JSON.stringify({ message: "لا يوجد مشروع بهذا الرقم في برنامج التدفقات النقدية" });
+        const cfProj = cfProjResults[0];
+        const costItems = await db.select().from(cfCostItems)
+          .where(eq(cfCostItems.projectId, cfProjectId));
+        const totalCosts = costItems.reduce((sum, item) => sum + Number(item.totalAmount || 0), 0);
+        const revenue = Number(cfProj.totalRevenue || 0);
+        const profit = revenue - totalCosts;
+        return JSON.stringify({
+          projectId: cfProj.id,
+          projectName: cfProj.projectName,
+          feasibilityStudyId: cfProj.feasibilityStudyId,
+          totalCosts,
+          totalRevenue: revenue,
+          profit,
+          profitMargin: revenue > 0 ? ((profit / revenue) * 100).toFixed(1) + '%' : 'N/A',
+          projectDurationMonths: cfProj.projectDurationMonths,
+          constructionStartMonth: cfProj.constructionStartMonth,
+          constructionDurationMonths: cfProj.constructionDurationMonths,
+          costItems: costItems.map(item => ({
+            category: item.category,
+            name: item.itemName,
+            amount: Number(item.totalAmount || 0),
+            startMonth: item.startMonth,
+            durationMonths: item.durationMonths,
+          })),
+        });
+      }
+
+      case "get_all_market_data": {
+        const { projectId: allDataProjectId } = args;
+        // Get project info
+        const projResults = await db.select().from(projects)
+          .where(eq(projects.id, allDataProjectId));
+        if (projResults.length === 0) return JSON.stringify({ message: "لا يوجد مشروع بهذا الرقم" });
+        const proj = projResults[0];
+        // Get feasibility study
+        const fsResults = await db.select().from(feasibilityStudies)
+          .where(eq(feasibilityStudies.projectId, allDataProjectId));
+        const fs = fsResults[0] || null;
+        // Get market overview
+        const moAllResults = await db.select().from(marketOverview)
+          .where(eq(marketOverview.projectId, allDataProjectId));
+        const moAll = moAllResults[0] || null;
+        // Get competition pricing
+        const cpAllResults = await db.select().from(competitionPricing)
+          .where(eq(competitionPricing.projectId, allDataProjectId));
+        const cpAll = cpAllResults[0] || null;
+        // Get cash flow
+        const cfAllResults = await db.select().from(cfProjects)
+          .where(eq(cfProjects.feasibilityStudyId, fs?.id || 0));
+        const cfAll = cfAllResults[0] || null;
+        let cfCosts: any[] = [];
+        if (cfAll) {
+          cfCosts = await db.select().from(cfCostItems)
+            .where(eq(cfCostItems.projectId, cfAll.id));
+        }
+        return JSON.stringify({
+          project: { id: proj.id, name: proj.name, areaCode: proj.areaCode, description: proj.description },
+          feasibilityStudy: fs ? {
+            id: fs.id, projectName: fs.projectName, community: fs.community,
+            plotArea: fs.plotArea, totalGfa: fs.totalGfa, estimatedBua: fs.estimatedBua,
+            numberOfUnits: fs.numberOfUnits, landPrice: fs.landPrice,
+            constructionCostPerSqft: fs.constructionCostPerSqft,
+            residentialSalePrice: fs.residentialSalePrice, retailSalePrice: fs.retailSalePrice,
+            gfaResidential: fs.gfaResidential, gfaRetail: fs.gfaRetail, gfaOffices: fs.gfaOffices,
+          } : null,
+          marketOverview: moAll ? {
+            unitMix: {
+              studio: { pct: moAll.residentialStudioPct, avgArea: moAll.residentialStudioAvgArea },
+              oneBr: { pct: moAll.residential1brPct, avgArea: moAll.residential1brAvgArea },
+              twoBr: { pct: moAll.residential2brPct, avgArea: moAll.residential2brAvgArea },
+              threeBr: { pct: moAll.residential3brPct, avgArea: moAll.residential3brAvgArea },
+            },
+            finishingQuality: moAll.finishingQuality,
+            isApproved: moAll.isApproved === 1,
+          } : null,
+          competitionPricing: cpAll ? {
+            baseScenario: {
+              studio: cpAll.baseStudioPrice, oneBr: cpAll.base1brPrice,
+              twoBr: cpAll.base2brPrice, threeBr: cpAll.base3brPrice,
+            },
+            paymentPlan: {
+              booking: cpAll.paymentBookingPct + '%',
+              construction: cpAll.paymentConstructionPct + '%',
+              handover: cpAll.paymentHandoverPct + '%',
+            },
+            activeScenario: cpAll.activeScenario,
+            isApproved: cpAll.isApproved === 1,
+          } : null,
+          cashFlow: cfAll ? {
+            totalCosts: cfCosts.reduce((s, i) => s + Number(i.totalAmount || 0), 0),
+            totalRevenue: Number(cfAll.totalRevenue || 0),
+            durationMonths: cfAll.projectDurationMonths,
+          } : null,
+          dataSummary: {
+            hasFeasibility: !!fs,
+            hasMarketOverview: !!moAll,
+            hasCompetitionPricing: !!cpAll,
+            hasCashFlow: !!cfAll,
+          },
         });
       }
 
@@ -2789,6 +3027,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "list_projects", "list_consultants", "get_project_consultants",
     "get_financial_data", "get_evaluation_scores", "get_evaluation_criteria",
     "get_feasibility_study", "set_financial_data", "get_consultant_profile",
+    "get_market_overview", "get_competition_pricing", "get_cash_flow_summary", "get_all_market_data",
     "list_meetings", "get_meeting_details", "query_institutional_memory",
     "read_drive_file_content",
     "create_drive_document", "create_drive_spreadsheet",
@@ -2800,6 +3039,7 @@ const AGENT_ALLOWED_TOOLS: Record<AgentType, string[]> = {
     "list_projects", "list_consultants", "get_project_consultants",
     "get_financial_data", "get_evaluation_scores", "get_evaluation_criteria",
     "get_feasibility_study", "get_consultant_profile", "get_committee_decision",
+    "get_market_overview", "get_competition_pricing", "get_cash_flow_summary", "get_all_market_data",
     "list_meetings", "get_meeting_details", "query_institutional_memory",
     "list_drive_folders", "list_drive_files", "search_drive_files", "read_drive_file_content",
     "create_feasibility_study", "update_feasibility_study",
