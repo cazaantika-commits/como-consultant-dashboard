@@ -13,6 +13,8 @@ import {
   distributeExpense,
   aggregateToQuarters,
   fmt,
+  isMonthPaid,
+  getMonthDate,
   type PhaseDurations,
   type ExpenseItem,
   type QuarterDef,
@@ -41,6 +43,9 @@ import {
   CheckCircle2,
   Landmark,
   DollarSign,
+  Wallet,
+  ArrowDownCircle,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -53,7 +58,7 @@ interface ProjectConfig {
   projectId: number;
   name: string;
   enabled: boolean;
-  startOffsetMonths: number; // shift from base start (0 = original, +3 = delayed 3 months)
+  startOffsetMonths: number;
   durations: PhaseDurations;
   color: string;
 }
@@ -75,6 +80,7 @@ const MONTHS_AR = ["يناير","فبراير","مارس","أبريل","مايو
 
 // ===== BASE DATE =====
 const BASE_START = new Date(2026, 3, 1); // April 2026
+const TODAY = new Date();
 
 function getProjectStart(offsetMonths: number): Date {
   const d = new Date(BASE_START);
@@ -90,6 +96,9 @@ function formatMonthYear(d: Date): string {
 
 interface ProjectCashFlowResult {
   investorTotal: number;
+  investorPaid: number;
+  investorRemaining: number;
+  investorNext3Months: number;
   escrowTotal: number;
   // Monthly data indexed by global month offset from BASE_START
   investorMonthly: { [globalMonth: number]: number };
@@ -112,9 +121,11 @@ function calculateProjectCashFlow(config: ProjectConfig, costs?: ProjectCosts): 
   const escrowExpenses = getEscrowExpenses(costs);
   const defaultRevenue = getDefaultRevenue(phases, durations, costs?.totalRevenue);
 
-  // Calculate investor monthly
+  // Calculate investor monthly (local months)
+  const investorMonthlyLocal: { [month: number]: number } = {};
   const investorMonthly: { [globalMonth: number]: number } = {};
   let investorTotal = 0;
+  let landTotal = 0;
 
   for (const item of investorExpenses) {
     let monthlyData: { [month: number]: number };
@@ -128,14 +139,38 @@ function calculateProjectCashFlow(config: ProjectConfig, costs?: ProjectCosts): 
       const globalMonth = config.startOffsetMonths;
       investorMonthly[globalMonth] = (investorMonthly[globalMonth] || 0) + item.total;
       investorTotal += item.total;
+      landTotal += item.total;
     }
     for (const [mStr, val] of Object.entries(monthlyData)) {
       const localMonth = parseInt(mStr);
       const globalMonth = config.startOffsetMonths + localMonth;
+      investorMonthlyLocal[localMonth] = (investorMonthlyLocal[localMonth] || 0) + val;
       investorMonthly[globalMonth] = (investorMonthly[globalMonth] || 0) + val;
       investorTotal += val;
     }
   }
+
+  // Calculate paid vs remaining using same logic as ExcelCashFlowPage
+  let investorPaid = landTotal; // Land is always "paid"
+  const now = new Date();
+  let investorNext3Months = 0;
+
+  for (let m = 1; m <= totalMonths; m++) {
+    const monthVal = investorMonthlyLocal[m] || 0;
+    if (monthVal <= 0) continue;
+    if (isMonthPaid(m, projectStart)) {
+      investorPaid += monthVal;
+    }
+    // Next 3 months
+    const d = getMonthDate(m, projectStart);
+    if (d >= now) {
+      const diffMonths = (d.getFullYear() - now.getFullYear()) * 12 + (d.getMonth() - now.getMonth());
+      if (diffMonths >= 0 && diffMonths < 3) {
+        investorNext3Months += monthVal;
+      }
+    }
+  }
+  const investorRemaining = investorTotal - investorPaid;
 
   // Calculate escrow monthly
   const escrowExpenseMonthly: { [globalMonth: number]: number } = {};
@@ -171,7 +206,6 @@ function calculateProjectCashFlow(config: ProjectConfig, costs?: ProjectCosts): 
   const startGlobalMonth = config.startOffsetMonths;
   const endGlobalMonth = config.startOffsetMonths + totalMonths;
 
-  // Opening balance at start of construction
   const conStartGlobal = config.startOffsetMonths + durations.preCon + 1;
   let balance = openingBalance;
   for (let gm = conStartGlobal; gm <= endGlobalMonth; gm++) {
@@ -181,6 +215,9 @@ function calculateProjectCashFlow(config: ProjectConfig, costs?: ProjectCosts): 
 
   return {
     investorTotal,
+    investorPaid,
+    investorRemaining,
+    investorNext3Months,
     escrowTotal,
     investorMonthly,
     escrowExpenseMonthly,
@@ -338,30 +375,34 @@ export default function FinancialCommandCenter() {
   // Summary stats
   const summary = useMemo(() => {
     const totalInvestor = projectResults.reduce((s, pr) => s + pr.result.investorTotal, 0);
+    const totalPaid = projectResults.reduce((s, pr) => s + pr.result.investorPaid, 0);
+    const totalRemaining = projectResults.reduce((s, pr) => s + pr.result.investorRemaining, 0);
+    const totalNext3Months = projectResults.reduce((s, pr) => s + pr.result.investorNext3Months, 0);
     const totalEscrowExp = projectResults.reduce((s, pr) => s + pr.result.escrowTotal, 0);
     const peakQuarter = Math.max(...aggregatedData.investorPerQ);
     const peakQuarterIdx = aggregatedData.investorPerQ.indexOf(peakQuarter);
     const peakLabel = globalQuarters[peakQuarterIdx]?.label || "";
 
-    // Find max 3-month requirement
-    let max3Month = 0;
-    let max3MonthLabel = "";
-    for (let i = 0; i < aggregatedData.investorPerQ.length; i++) {
-      if (aggregatedData.investorPerQ[i] > max3Month) {
-        max3Month = aggregatedData.investorPerQ[i];
-        max3MonthLabel = globalQuarters[i]?.label || "";
-      }
-    }
-
     return {
       totalInvestor,
+      totalPaid,
+      totalRemaining,
+      totalNext3Months,
       totalEscrowExp,
-      peakQuarter: max3Month,
-      peakLabel: max3MonthLabel,
+      peakQuarter,
+      peakLabel,
       enabledCount: projectResults.length,
       totalCount: projectConfigs.length,
     };
   }, [projectResults, aggregatedData, globalQuarters, projectConfigs]);
+
+  // Next 3 months label
+  const next3Label = useMemo(() => {
+    const s = new Date(TODAY);
+    const e = new Date(TODAY);
+    e.setMonth(e.getMonth() + 2);
+    return `${MONTHS_AR[s.getMonth()]} - ${MONTHS_AR[e.getMonth()]} ${e.getFullYear()}`;
+  }, []);
 
   // Handlers
   const toggleProject = (projectId: number) => {
@@ -470,17 +511,139 @@ export default function FinancialCommandCenter() {
       </header>
 
       <main className="max-w-[98%] mx-auto px-4 py-6 space-y-6">
-        {/* Summary Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Card className="p-4 bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
-            <div className="flex items-center gap-2 mb-2">
-              <DollarSign className="w-4 h-4 text-emerald-600" />
-              <span className="text-[10px] font-medium text-emerald-700">إجمالي مصاريف المستثمر</span>
-            </div>
-            <div className="text-lg font-bold text-emerald-900">{fmt(summary.totalInvestor)} <span className="text-xs font-normal">درهم</span></div>
-            <div className="text-[10px] text-emerald-600 mt-1">{summary.enabledCount} من {summary.totalCount} مشاريع</div>
-          </Card>
 
+        {/* ========== INVESTOR SUMMARY — PAID / REMAINING / REQUIRED ========== */}
+        <div className="bg-gradient-to-l from-gray-900 to-gray-800 rounded-2xl p-5 text-white shadow-xl">
+          <div className="flex items-center gap-2 mb-4">
+            <Wallet className="w-5 h-5 text-amber-400" />
+            <h2 className="text-sm font-bold">ملخص رأس المال — المستثمر</h2>
+            <span className="text-[10px] text-gray-400 mr-2">{summary.enabledCount} مشاريع مفعّلة</span>
+          </div>
+
+          {/* Main 4 numbers */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+            <div className="bg-white/10 rounded-xl p-3 border border-white/10">
+              <div className="text-[10px] text-gray-300 mb-1 flex items-center gap-1">
+                <DollarSign className="w-3 h-3" />
+                إجمالي رأس المال المطلوب
+              </div>
+              <div className="text-xl font-bold text-white">{fmt(summary.totalInvestor)}</div>
+              <div className="text-[9px] text-gray-400">درهم</div>
+            </div>
+
+            <div className="bg-emerald-500/20 rounded-xl p-3 border border-emerald-500/30">
+              <div className="text-[10px] text-emerald-300 mb-1 flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3" />
+                تم دفعه
+              </div>
+              <div className="text-xl font-bold text-emerald-400">{fmt(summary.totalPaid)}</div>
+              <div className="text-[9px] text-emerald-300/60">
+                {summary.totalInvestor > 0 ? `${Math.round((summary.totalPaid / summary.totalInvestor) * 100)}%` : "0%"} من الإجمالي
+              </div>
+            </div>
+
+            <div className="bg-orange-500/20 rounded-xl p-3 border border-orange-500/30">
+              <div className="text-[10px] text-orange-300 mb-1 flex items-center gap-1">
+                <ArrowDownCircle className="w-3 h-3" />
+                المتبقي (المطلوب تأمينه)
+              </div>
+              <div className="text-xl font-bold text-orange-400">{fmt(summary.totalRemaining)}</div>
+              <div className="text-[9px] text-orange-300/60">
+                {summary.totalInvestor > 0 ? `${Math.round((summary.totalRemaining / summary.totalInvestor) * 100)}%` : "0%"} من الإجمالي
+              </div>
+            </div>
+
+            <div className="bg-red-500/20 rounded-xl p-3 border border-red-500/30">
+              <div className="text-[10px] text-red-300 mb-1 flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                المطلوب خلال 3 أشهر
+              </div>
+              <div className="text-xl font-bold text-red-400">{fmt(summary.totalNext3Months)}</div>
+              <div className="text-[9px] text-red-300/60">{next3Label}</div>
+            </div>
+          </div>
+
+          {/* Progress bar */}
+          <div className="mb-4">
+            <div className="flex items-center justify-between text-[10px] text-gray-300 mb-1.5">
+              <span>التقدم في الدفع</span>
+              <span>{summary.totalInvestor > 0 ? `${Math.round((summary.totalPaid / summary.totalInvestor) * 100)}%` : "0%"}</span>
+            </div>
+            <div className="h-3 bg-white/10 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-l from-emerald-400 to-emerald-600 rounded-full transition-all duration-500"
+                style={{ width: `${summary.totalInvestor > 0 ? Math.min(100, (summary.totalPaid / summary.totalInvestor) * 100) : 0}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Per-project breakdown */}
+          <div className="space-y-2">
+            <div className="text-[10px] text-gray-400 font-medium mb-1">تفصيل لكل مشروع:</div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[10px]">
+                <thead>
+                  <tr className="text-gray-400 border-b border-white/10">
+                    <th className="text-right py-1.5 px-2 font-medium">المشروع</th>
+                    <th className="text-center py-1.5 px-2 font-medium">إجمالي رأس المال</th>
+                    <th className="text-center py-1.5 px-2 font-medium">تم دفعه ✓</th>
+                    <th className="text-center py-1.5 px-2 font-medium">المتبقي المطلوب</th>
+                    <th className="text-center py-1.5 px-2 font-medium">المطلوب 3 أشهر</th>
+                    <th className="text-center py-1.5 px-2 font-medium">التقدم</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {projectResults.map((pr, idx) => {
+                    const paidPct = pr.result.investorTotal > 0 ? Math.round((pr.result.investorPaid / pr.result.investorTotal) * 100) : 0;
+                    return (
+                      <tr key={pr.config.projectId} className="border-b border-white/5 hover:bg-white/5">
+                        <td className="py-2 px-2 text-right">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: pr.colorSet.bar }} />
+                            <span className="font-medium text-white truncate max-w-[180px]">{pr.config.name}</span>
+                          </div>
+                        </td>
+                        <td className="py-2 px-2 text-center font-bold text-white">{fmt(pr.result.investorTotal)}</td>
+                        <td className="py-2 px-2 text-center text-emerald-400 font-medium">{fmt(pr.result.investorPaid)}</td>
+                        <td className="py-2 px-2 text-center text-orange-400 font-bold">{fmt(pr.result.investorRemaining)}</td>
+                        <td className="py-2 px-2 text-center text-red-400 font-medium">
+                          {pr.result.investorNext3Months > 0 ? fmt(pr.result.investorNext3Months) : <span className="text-gray-500">-</span>}
+                        </td>
+                        <td className="py-2 px-2 text-center">
+                          <div className="flex items-center gap-1.5 justify-center">
+                            <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-emerald-500 rounded-full"
+                                style={{ width: `${paidPct}%` }}
+                              />
+                            </div>
+                            <span className="text-gray-300 text-[9px] w-8 text-left">{paidPct}%</span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                {/* Totals row */}
+                <tfoot>
+                  <tr className="border-t-2 border-white/20 font-bold">
+                    <td className="py-2.5 px-2 text-right text-amber-400">الإجمالي</td>
+                    <td className="py-2.5 px-2 text-center text-white">{fmt(summary.totalInvestor)}</td>
+                    <td className="py-2.5 px-2 text-center text-emerald-400">{fmt(summary.totalPaid)}</td>
+                    <td className="py-2.5 px-2 text-center text-orange-400">{fmt(summary.totalRemaining)}</td>
+                    <td className="py-2.5 px-2 text-center text-red-400">{fmt(summary.totalNext3Months)}</td>
+                    <td className="py-2.5 px-2 text-center text-gray-300">
+                      {summary.totalInvestor > 0 ? `${Math.round((summary.totalPaid / summary.totalInvestor) * 100)}%` : "0%"}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* Summary Cards Row */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Card className="p-4 bg-gradient-to-br from-red-50 to-red-100 border-red-200">
             <div className="flex items-center gap-2 mb-2">
               <AlertTriangle className="w-4 h-4 text-red-600" />
@@ -508,6 +671,17 @@ export default function FinancialCommandCenter() {
               {hasChanges ? "تم تعديل التواريخ" : "الوضع الأصلي"}
             </div>
           </Card>
+
+          <Card className="p-4 bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+            <div className="flex items-center gap-2 mb-2">
+              <TrendingUp className="w-4 h-4 text-amber-600" />
+              <span className="text-[10px] font-medium text-amber-700">إجمالي الإيرادات المتوقعة</span>
+            </div>
+            <div className="text-lg font-bold text-amber-900">
+              {fmt(projectResults.reduce((s, pr) => s + (projectCostsMap[pr.config.projectId]?.totalRevenue || 0), 0))}
+              <span className="text-xs font-normal"> درهم</span>
+            </div>
+          </Card>
         </div>
 
         {/* Project Controls */}
@@ -531,6 +705,7 @@ export default function FinancialCommandCenter() {
               const colorSet = PROJECT_COLORS[idx % PROJECT_COLORS.length];
               const projectStart = getProjectStart(config.startOffsetMonths);
               const totalDuration = getTotalMonths(config.durations);
+              const pr = projectResults.find(r => r.config.projectId === config.projectId);
 
               return (
                 <div
@@ -615,12 +790,26 @@ export default function FinancialCommandCenter() {
                       </button>
                     </div>
 
-                    {/* Total */}
-                    <div className="text-left min-w-[100px]">
-                      <div className={`text-xs font-bold ${config.enabled ? colorSet.text : "text-gray-400"}`}>
-                        {fmt(projectResults.find(pr => pr.config.projectId === config.projectId)?.result.investorTotal || 0)}
+                    {/* Totals: Total / Paid / Remaining */}
+                    <div className="text-left min-w-[220px] flex items-center gap-3">
+                      <div>
+                        <div className={`text-[10px] ${config.enabled ? "text-gray-500" : "text-gray-400"}`}>الإجمالي</div>
+                        <div className={`text-xs font-bold ${config.enabled ? colorSet.text : "text-gray-400"}`}>
+                          {fmt(pr?.result.investorTotal || 0)}
+                        </div>
                       </div>
-                      <div className="text-[9px] text-muted-foreground">درهم</div>
+                      <div>
+                        <div className="text-[10px] text-emerald-600">مدفوع</div>
+                        <div className="text-xs font-bold text-emerald-700">
+                          {fmt(pr?.result.investorPaid || 0)}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-orange-600">متبقي</div>
+                        <div className="text-xs font-bold text-orange-700">
+                          {fmt(pr?.result.investorRemaining || 0)}
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -754,6 +943,8 @@ export default function FinancialCommandCenter() {
                   <tr className="bg-gray-800 text-white">
                     <th className="sticky right-0 bg-gray-800 z-10 px-3 py-2 text-right min-w-[160px]">البند</th>
                     <th className="px-2 py-2 text-center bg-gray-700 min-w-[90px]">الإجمالي</th>
+                    <th className="px-2 py-2 text-center bg-emerald-700 min-w-[80px]">مدفوع ✓</th>
+                    <th className="px-2 py-2 text-center bg-orange-700 min-w-[80px]">المتبقي</th>
                     {globalQuarters.map((q, qi) => (
                       <th key={qi} className="px-2 py-2 text-center min-w-[80px] whitespace-nowrap">
                         {q.label}
@@ -783,6 +974,12 @@ export default function FinancialCommandCenter() {
                         <td className="px-2 py-2 text-center font-bold border-b border-gray-100" style={{ backgroundColor: pr.colorSet.light }}>
                           {fmt(total)}
                         </td>
+                        <td className="px-2 py-2 text-center font-medium text-emerald-700 border-b border-gray-100 bg-emerald-50">
+                          {fmt(pr.result.investorPaid)}
+                        </td>
+                        <td className="px-2 py-2 text-center font-bold text-orange-700 border-b border-gray-100 bg-orange-50">
+                          {fmt(pr.result.investorRemaining)}
+                        </td>
                         {globalQuarters.map((_, qi) => (
                           <td key={qi} className="px-2 py-2 text-center border-b border-gray-100">
                             {perQ[qi] > 0 ? fmt(perQ[qi]) : <span className="text-gray-300">-</span>}
@@ -800,6 +997,12 @@ export default function FinancialCommandCenter() {
                     <td className="px-2 py-2.5 text-center bg-gray-800">
                       {fmt(aggregatedData.investorPerQ.reduce((s, v) => s + v, 0))}
                     </td>
+                    <td className="px-2 py-2.5 text-center bg-emerald-800 text-emerald-200">
+                      {fmt(summary.totalPaid)}
+                    </td>
+                    <td className="px-2 py-2.5 text-center bg-orange-800 text-orange-200">
+                      {fmt(summary.totalRemaining)}
+                    </td>
                     {aggregatedData.investorPerQ.map((val, qi) => (
                       <td key={qi} className="px-2 py-2.5 text-center">
                         {val > 0 ? fmt(val) : <span className="text-gray-500">-</span>}
@@ -815,6 +1018,8 @@ export default function FinancialCommandCenter() {
                     <td className="px-2 py-2 text-center bg-red-100">
                       {fmt(aggregatedData.cumulativeInvestor[aggregatedData.cumulativeInvestor.length - 1] || 0)}
                     </td>
+                    <td className="px-2 py-2 text-center bg-red-100" colSpan={1}>-</td>
+                    <td className="px-2 py-2 text-center bg-red-100" colSpan={1}>-</td>
                     {aggregatedData.cumulativeInvestor.map((val, qi) => (
                       <td key={qi} className="px-2 py-2 text-center">
                         {val > 0 ? fmt(val) : <span className="text-red-300">-</span>}
@@ -832,13 +1037,56 @@ export default function FinancialCommandCenter() {
           <Card className="p-4 bg-gradient-to-r from-red-50 to-amber-50 border-red-200">
             <h3 className="text-sm font-bold text-red-800 mb-3 flex items-center gap-2">
               <AlertTriangle className="w-4 h-4" />
-              المطلوب لأقرب 3 أشهر
+              المطلوب لأقرب 3 أشهر — {next3Label}
+            </h3>
+
+            {/* Overall next 3 months */}
+            <div className="bg-white rounded-xl p-4 border-2 border-red-200 mb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-[10px] text-red-600 font-medium">إجمالي المطلوب تأمينه خلال 3 أشهر</div>
+                  <div className="text-2xl font-bold text-red-800">{fmt(summary.totalNext3Months)} <span className="text-sm font-normal">درهم</span></div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] text-gray-500">من إجمالي المتبقي</div>
+                  <div className="text-sm font-bold text-gray-700">{fmt(summary.totalRemaining)} درهم</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Per project next 3 months */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {projectResults.map(pr => {
+                if (pr.result.investorNext3Months <= 0) return null;
+                return (
+                  <div key={pr.config.projectId} className="bg-white rounded-lg p-3 border border-red-100">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: pr.colorSet.bar }} />
+                      <span className="text-[10px] font-bold text-gray-800 truncate">{pr.config.name}</span>
+                    </div>
+                    <div className="text-lg font-bold text-red-800">{fmt(pr.result.investorNext3Months)} <span className="text-xs font-normal">درهم</span></div>
+                    <div className="text-[9px] text-gray-500 mt-1">
+                      من إجمالي متبقي {fmt(pr.result.investorRemaining)} درهم
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        )}
+
+        {/* Quarterly breakdown */}
+        {projectResults.length > 0 && (
+          <Card className="p-4 bg-gradient-to-r from-gray-50 to-blue-50 border-gray-200">
+            <h3 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              أقرب 3 أرباع سنوية
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {globalQuarters.slice(0, 3).map((q, qi) => (
-                <div key={qi} className="bg-white rounded-lg p-3 border border-red-100">
+                <div key={qi} className="bg-white rounded-lg p-3 border border-gray-200">
                   <div className="text-[10px] text-muted-foreground mb-1">{q.label}</div>
-                  <div className="text-lg font-bold text-red-800">{fmt(aggregatedData.investorPerQ[qi])} <span className="text-xs font-normal">درهم</span></div>
+                  <div className="text-lg font-bold text-gray-800">{fmt(aggregatedData.investorPerQ[qi])} <span className="text-xs font-normal">درهم</span></div>
                   <div className="mt-2 space-y-1">
                     {projectResults.map(pr => {
                       const val = (aggregatedData.perProjectInvestorPerQ[pr.config.projectId] || [])[qi] || 0;
