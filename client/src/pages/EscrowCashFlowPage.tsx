@@ -20,7 +20,6 @@ import {
   isMonthPaid,
   isCurrentMonth,
   CONSTRUCTION_COST,
-  SALES_VALUE,
 } from "@/lib/cashFlowEngine";
 import { calculateProjectCosts } from "@/lib/projectCostsCalc";
 
@@ -409,7 +408,7 @@ export default function EscrowCashFlowPage() {
             </div>
             <div className="mt-3 flex items-center justify-between text-[10px] text-gray-500">
               <span>إجمالي الإيرادات المخططة: <span className="font-bold text-emerald-700">{fmt(totalRevenue)} درهم</span></span>
-              <span>قيمة المبيعات الأصلية: <span className="font-bold">{fmt(SALES_VALUE)} درهم</span></span>
+              <span>قيمة المبيعات الأصلية: <span className="font-bold">{fmt(projectCosts ? projectCosts.totalRevenue : 0)} درهم</span></span>
             </div>
           </div>
         </div>

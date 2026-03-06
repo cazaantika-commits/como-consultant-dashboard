@@ -19,7 +19,6 @@ import {
   type ProjectCosts,
   DEFAULT_DURATIONS,
   CONSTRUCTION_COST,
-  SALES_VALUE,
 } from "@/lib/cashFlowEngine";
 import { calculateProjectCosts as calcCosts } from "@/lib/projectCostsCalc";
 import {

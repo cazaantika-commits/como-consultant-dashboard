@@ -18,7 +18,6 @@ import {
   getMonthDate,
   isMonthPaid,
   isCurrentMonth,
-  SALES_VALUE,
 } from "@/lib/cashFlowEngine";
 import { calculateProjectCosts } from "@/lib/projectCostsCalc";
 
