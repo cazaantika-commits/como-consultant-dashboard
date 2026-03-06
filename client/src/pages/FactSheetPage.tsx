@@ -446,12 +446,9 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
     if (!selectedProjectId) return;
     const payload: Record<string, any> = { id: selectedProjectId };
     const numericIntFields = ["bua", "adminFee", "clearanceFee", "compensationAmount"];
-    const numericDecimalFields = ["agentCommissionLandPct", "designFeePct", "supervisionFeePct", "separationFeePerM2", "salesCommissionPct", "marketingPct", "developerFeePhase1Pct", "developerFeePhase2Pct"];
     for (const [key, value] of Object.entries(formData)) {
       if (numericIntFields.includes(key)) {
         payload[key] = value ? Number(value) : undefined;
-      } else if (numericDecimalFields.includes(key)) {
-        payload[key] = value ? parseFloat(String(value)) : undefined;
       } else {
         // Use null check instead of falsy check to allow '0' values
         payload[key] = (value !== null && value !== undefined && String(value).trim() !== "") ? value : undefined;

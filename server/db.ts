@@ -117,7 +117,25 @@ export async function updateProject(projectId: number, userId: number, data: Par
   if (!db) throw new Error('Database not available');
   const project = await getProjectById(projectId, userId);
   if (!project) throw new Error('Project not found');
-  return await db.update(projects).set(data).where(eq(projects.id, projectId));
+  
+  // Convert percentage and numeric fields from string to number
+  const percentageFields = [
+    'agentCommissionLandPct', 'designFeePct', 'supervisionFeePct', 
+    'separationFeePerM2', 'salesCommissionPct', 'marketingPct',
+    'developerFeePhase1Pct', 'developerFeePhase2Pct'
+  ];
+  
+  const convertedData = { ...data };
+  for (const field of percentageFields) {
+    if (field in convertedData && convertedData[field as keyof typeof convertedData]) {
+      const value = convertedData[field as keyof typeof convertedData];
+      if (typeof value === 'string') {
+        convertedData[field as keyof typeof convertedData] = parseFloat(value) as any;
+      }
+    }
+  }
+  
+  return await db.update(projects).set(convertedData).where(eq(projects.id, projectId));
 }
 
 export async function deleteProject(projectId: number, userId: number) {
