@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { cfProjects, cfCostItems, cfScenarios, cfFiles, projects, feasibilityStudies, projectPhases, phaseActivities, phaseCostLinks, competitionPricing, marketOverview } from "../../drizzle/schema";
+import { cfProjects, cfCostItems, cfScenarios, cfFiles, projects, feasibilityStudies, projectPhases, phaseActivities, phaseCostLinks, competitionPricing, marketOverview, projectCapitalSettings } from "../../drizzle/schema";
 import { DEFAULT_AVG_AREAS } from "../../shared/feasibilityUtils";
 import { calculateDualCashFlow, type CostItemInput, type ProjectInput } from './cashFlowEngine';
 import { eq, and, desc } from "drizzle-orm";
@@ -2066,5 +2066,532 @@ export const cashFlowProgramRouter = router({
         totalRevenue: Math.round(totalRevenue),
         message: `تم تحديث ${updatedCount} بند من بنود التكاليف`,
       };
+    }),
+
+  // ═══════════════════════════════════════════════════════════════
+  // Portfolio Capital Planning Simulator
+  // ═══════════════════════════════════════════════════════════════
+
+  getPortfolioSimulation: publicProcedure
+    .input(z.object({
+      availableCapital: z.number().min(0).default(100_000_000),
+      excludeProjectIds: z.array(z.number()).default([]),
+      delayMonths: z.record(z.string(), z.number()).default({}),
+    }))
+    .query(async ({ ctx, input }) => {
+      if (!ctx.user) return null;
+      const db = await getDb();
+      if (!db) return null;
+
+      const allProjects = await db.select().from(cfProjects)
+        .where(eq(cfProjects.userId, ctx.user.id));
+
+      if (allProjects.length === 0) return null;
+
+      // Filter out excluded projects
+      const activeProjects = allProjects.filter(p => !input.excludeProjectIds.includes(p.id));
+
+      if (activeProjects.length === 0) {
+        return {
+          projects: allProjects.map(p => ({
+            id: p.id,
+            name: p.name,
+            startDate: p.startDate,
+            totalCost: 0,
+            totalSales: 0,
+            developerExposure: 0,
+            peakExposure: 0,
+            peakMonthLabel: '',
+            totalMonths: 0,
+            phases: { preDev: p.preDevMonths || 6, construction: p.constructionMonths || 16, handover: p.handoverMonths || 2 },
+            excluded: input.excludeProjectIds.includes(p.id),
+            delayMonths: 0,
+            profit: 0,
+            roi: 0,
+          })),
+          monthLabels: [],
+          portfolioDeveloperOutflow: [],
+          portfolioDeveloperCumulative: [],
+          portfolioEscrowInflow: [],
+          portfolioEscrowOutflow: [],
+          portfolioEscrowBalance: [],
+          portfolioPeakExposure: 0,
+          portfolioPeakMonth: 0,
+          portfolioPeakMonthLabel: '',
+          totalPortfolioCost: 0,
+          totalPortfolioSales: 0,
+          totalDeveloperExposure: 0,
+          availableCapital: input.availableCapital,
+          fundingGap: 0,
+          fundingGapMonths: [],
+        };
+      }
+
+      // Apply delays to start dates
+      function applyDelay(startDate: string, delayMonths: number): string {
+        const [y, m] = startDate.split('-').map(Number);
+        const totalM = (y * 12 + m - 1) + delayMonths;
+        const newY = Math.floor(totalM / 12);
+        const newM = (totalM % 12) + 1;
+        return `${newY}-${String(newM).padStart(2, '0')}`;
+      }
+
+      // Calculate cash flow for each active project
+      const projectResults: Array<any> = [];
+
+      // Find global timeline bounds
+      let globalStartYear = 9999, globalStartMonth = 12;
+      let globalEndYear = 0, globalEndMonth = 0;
+
+      for (const project of activeProjects) {
+        const delay = input.delayMonths[String(project.id)] || 0;
+        const adjustedStart = applyDelay(project.startDate, delay);
+        const [y, m] = adjustedStart.split('-').map(Number);
+        if (y < globalStartYear || (y === globalStartYear && m < globalStartMonth)) {
+          globalStartYear = y;
+          globalStartMonth = m;
+        }
+        const totalMonths = (project.preDevMonths || 6) + (project.constructionMonths || 16) + (project.handoverMonths || 2);
+        const endMonth = m + totalMonths - 1;
+        const endYear = y + Math.floor((endMonth - 1) / 12);
+        const endMonthInYear = ((endMonth - 1) % 12) + 1;
+        if (endYear > globalEndYear || (endYear === globalEndYear && endMonthInYear > globalEndMonth)) {
+          globalEndYear = endYear;
+          globalEndMonth = endMonthInYear;
+        }
+      }
+
+      const totalGlobalMonths = (globalEndYear - globalStartYear) * 12 + (globalEndMonth - globalStartMonth + 1);
+      const portfolioDeveloperOutflow = new Array(totalGlobalMonths).fill(0);
+      const portfolioEscrowInflow = new Array(totalGlobalMonths).fill(0);
+      const portfolioEscrowOutflow = new Array(totalGlobalMonths).fill(0);
+
+      for (const project of activeProjects) {
+        const delay = input.delayMonths[String(project.id)] || 0;
+        const adjustedStart = applyDelay(project.startDate, delay);
+        const [projYear, projMonth] = adjustedStart.split('-').map(Number);
+        const offset = (projYear - globalStartYear) * 12 + (projMonth - globalStartMonth);
+
+        const costItemsRaw = await db.select().from(cfCostItems)
+          .where(eq(cfCostItems.cfProjectId, project.id));
+
+        const costItems: CostItemInput[] = costItemsRaw.map(item => ({
+          id: item.id,
+          name: item.name,
+          category: item.category,
+          totalAmount: item.totalAmount,
+          paymentType: item.paymentType,
+          paymentParams: item.paymentParams ? JSON.parse(item.paymentParams) : {},
+          fundingSource: (item.fundingSource as any) || 'developer',
+          escrowEligible: item.escrowEligible ?? false,
+          phaseTag: (item.phaseTag as any) || 'pre_dev',
+        }));
+
+        const projectInput: ProjectInput = {
+          startDate: adjustedStart,
+          preDevMonths: project.preDevMonths || 6,
+          constructionMonths: project.constructionMonths || 16,
+          handoverMonths: project.handoverMonths || 2,
+          salesEnabled: project.salesEnabled ?? true,
+          salesStartMonth: project.salesStartMonth,
+          totalSalesRevenue: project.totalSalesRevenue,
+          buyerPlanBookingPct: project.buyerPlanBookingPct ?? 20,
+          buyerPlanConstructionPct: project.buyerPlanConstructionPct ?? 50,
+          buyerPlanHandoverPct: project.buyerPlanHandoverPct ?? 30,
+          escrowDepositPct: project.escrowDepositPct ?? 20,
+          contractorAdvancePct: project.contractorAdvancePct ?? 10,
+          liquidityBufferPct: project.liquidityBufferPct ?? 5,
+          constructionCostTotal: project.constructionCostTotal,
+          buaSqft: project.buaSqft,
+          constructionCostPerSqft: project.constructionCostPerSqft,
+        };
+
+        const result = calculateDualCashFlow(projectInput, costItems);
+
+        for (let m = 0; m < result.totalMonths; m++) {
+          if (offset + m < totalGlobalMonths) {
+            const row = result.monthlyTable[m];
+            portfolioDeveloperOutflow[offset + m] += row.developerOutflow;
+            portfolioEscrowInflow[offset + m] += row.escrowInflow;
+            portfolioEscrowOutflow[offset + m] += row.escrowOutflow;
+          }
+        }
+
+        const profit = result.totalSalesRevenue - result.totalProjectCost;
+        const roi = result.developerMaxExposure > 0 ? (profit / result.developerMaxExposure) * 100 : 0;
+
+        projectResults.push({
+          id: project.id,
+          name: project.name,
+          startDate: project.startDate,
+          adjustedStartDate: adjustedStart,
+          totalCost: result.totalProjectCost,
+          totalSales: result.totalSalesRevenue,
+          developerExposure: result.developerMaxExposure,
+          peakExposure: result.developerMaxExposure,
+          peakMonthLabel: result.developerMaxExposureLabel,
+          totalMonths: result.totalMonths,
+          phases: {
+            preDev: projectInput.preDevMonths,
+            construction: projectInput.constructionMonths,
+            handover: projectInput.handoverMonths,
+          },
+          excluded: false,
+          delayMonths: delay,
+          profit,
+          roi,
+          monthlyDeveloperOutflow: result.monthlyTable.map(r => r.developerOutflow),
+        });
+      }
+
+      // Add excluded projects with zero values
+      for (const project of allProjects) {
+        if (input.excludeProjectIds.includes(project.id)) {
+          projectResults.push({
+            id: project.id,
+            name: project.name,
+            startDate: project.startDate,
+            adjustedStartDate: project.startDate,
+            totalCost: 0,
+            totalSales: 0,
+            developerExposure: 0,
+            peakExposure: 0,
+            peakMonthLabel: '',
+            totalMonths: (project.preDevMonths || 6) + (project.constructionMonths || 16) + (project.handoverMonths || 2),
+            phases: { preDev: project.preDevMonths || 6, construction: project.constructionMonths || 16, handover: project.handoverMonths || 2 },
+            excluded: true,
+            delayMonths: 0,
+            profit: 0,
+            roi: 0,
+            monthlyDeveloperOutflow: [],
+          });
+        }
+      }
+
+      // Calculate cumulative and funding gap
+      const portfolioDeveloperCumulative: number[] = [];
+      const portfolioEscrowBalance: number[] = [];
+      const fundingGapMonths: Array<{ month: number; label: string; gap: number }> = [];
+      let cumDev = 0, cumEscIn = 0, cumEscOut = 0;
+      let portfolioPeakExposure = 0, portfolioPeakMonth = 0;
+
+      for (let m = 0; m < totalGlobalMonths; m++) {
+        cumDev += portfolioDeveloperOutflow[m];
+        cumEscIn += portfolioEscrowInflow[m];
+        cumEscOut += portfolioEscrowOutflow[m];
+        portfolioDeveloperCumulative.push(cumDev);
+        portfolioEscrowBalance.push(cumEscIn - cumEscOut);
+        if (cumDev > portfolioPeakExposure) {
+          portfolioPeakExposure = cumDev;
+          portfolioPeakMonth = m + 1;
+        }
+      }
+
+      // Generate month labels
+      const monthNames = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+      const monthLabels: string[] = [];
+      for (let m = 0; m < totalGlobalMonths; m++) {
+        const monthIdx = (globalStartMonth - 1 + m) % 12;
+        const year = globalStartYear + Math.floor((globalStartMonth - 1 + m) / 12);
+        monthLabels.push(`${monthNames[monthIdx]} ${year}`);
+      }
+
+      // Calculate funding gap
+      const fundingGap = Math.max(0, portfolioPeakExposure - input.availableCapital);
+      for (let m = 0; m < totalGlobalMonths; m++) {
+        if (portfolioDeveloperCumulative[m] > input.availableCapital) {
+          fundingGapMonths.push({
+            month: m + 1,
+            label: monthLabels[m],
+            gap: portfolioDeveloperCumulative[m] - input.availableCapital,
+          });
+        }
+      }
+
+      return {
+        projects: projectResults,
+        monthLabels,
+        portfolioDeveloperOutflow,
+        portfolioDeveloperCumulative,
+        portfolioEscrowInflow,
+        portfolioEscrowOutflow,
+        portfolioEscrowBalance,
+        portfolioPeakExposure,
+        portfolioPeakMonth,
+        portfolioPeakMonthLabel: monthLabels[portfolioPeakMonth - 1] || '',
+        totalPortfolioCost: projectResults.filter(p => !p.excluded).reduce((s: number, p: any) => s + p.totalCost, 0),
+        totalPortfolioSales: projectResults.filter(p => !p.excluded).reduce((s: number, p: any) => s + p.totalSales, 0),
+        totalDeveloperExposure: portfolioPeakExposure,
+        availableCapital: input.availableCapital,
+        fundingGap,
+        fundingGapMonths,
+      };
+    }),
+
+  importAllProjects: publicProcedure
+    .mutation(async ({ ctx }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // Get all feasibility studies that have a projectId
+      const allFeas = await db.select().from(feasibilityStudies)
+        .where(eq(feasibilityStudies.userId, ctx.user.id));
+
+      const feasWithProject = allFeas.filter(f => f.projectId !== null);
+
+      // Get existing CF projects for this user
+      const existingCf = await db.select().from(cfProjects)
+        .where(eq(cfProjects.userId, ctx.user.id));
+
+      const existingProjectIds = new Set(existingCf.map(p => p.projectId));
+
+      let imported = 0;
+      const results: Array<{ projectName: string; status: string }> = [];
+
+      for (const feas of feasWithProject) {
+        if (existingProjectIds.has(feas.projectId!)) {
+          results.push({ projectName: feas.projectName, status: 'موجود مسبقاً' });
+          continue;
+        }
+
+        // Get capital settings for start date
+        const settings = await db.select().from(projectCapitalSettings)
+          .where(eq(projectCapitalSettings.projectId, feas.projectId!));
+        const startDate = settings[0]?.startDate || '2025-06';
+
+        // Get project data
+        let proj: any = null;
+        if (feas.projectId) {
+          const projResults = await db.select().from(projects).where(eq(projects.id, feas.projectId));
+          proj = projResults[0] || null;
+        }
+
+        // Get competition pricing
+        let cpData: any = null;
+        if (feas.projectId) {
+          const cpResults = await db.select().from(competitionPricing)
+            .where(eq(competitionPricing.projectId, feas.projectId));
+          cpData = cpResults[0] || null;
+        }
+
+        // Get market overview
+        let moData: any = null;
+        if (feas.projectId) {
+          const moResults = await db.select().from(marketOverview)
+            .where(eq(marketOverview.projectId, feas.projectId));
+          moData = moResults[0] || null;
+        }
+
+        const bua = feas.estimatedBua || 0;
+        const plotAreaM2 = (feas.plotArea || 0) * 0.0929;
+        const constructionCost = bua * (feas.constructionCostPerSqft || 0);
+        const totalUnits = feas.numberOfUnits || 0;
+
+        // Calculate revenue
+        const pf = (v: any) => Number(v) || 0;
+        let totalRevenue = 0;
+        if (cpData) {
+          const avgAreas = DEFAULT_AVG_AREAS;
+          const studioUnits = pf(cpData.studioUnits);
+          const onebrUnits = pf(cpData.onebrUnits);
+          const twobrUnits = pf(cpData.twobrUnits);
+          const threebrUnits = pf(cpData.threebrUnits);
+          const studioPrice = pf(cpData.studioAvgPrice) || (pf(cpData.studioMinPrice) + pf(cpData.studioMaxPrice)) / 2;
+          const onebrPrice = pf(cpData.onebrAvgPrice) || (pf(cpData.onebrMinPrice) + pf(cpData.onebrMaxPrice)) / 2;
+          const twobrPrice = pf(cpData.twobrAvgPrice) || (pf(cpData.twobrMinPrice) + pf(cpData.twobrMaxPrice)) / 2;
+          const threebrPrice = pf(cpData.threebrAvgPrice) || (pf(cpData.threebrMinPrice) + pf(cpData.threebrMaxPrice)) / 2;
+          totalRevenue = studioUnits * studioPrice * avgAreas.studio
+            + onebrUnits * onebrPrice * avgAreas.oneBr
+            + twobrUnits * twobrPrice * avgAreas.twoBr
+            + threebrUnits * threebrPrice * avgAreas.threeBr;
+          // Add retail/office if available
+          if (moData) {
+            totalRevenue += pf(moData.retailRevenue) + pf(moData.officeRevenue);
+          }
+        } else {
+          // Fallback to feasibility prices
+          const resArea = (feas.totalGfa || 0) * ((feas.saleableResidentialPct || 90) / 100);
+          const retArea = (feas.gfaRetail || 0) * ((feas.saleableRetailPct || 99) / 100);
+          const offArea = (feas.gfaOffices || 0) * ((feas.saleableOfficesPct || 90) / 100);
+          totalRevenue = resArea * (feas.residentialSalePrice || 0)
+            + retArea * (feas.retailSalePrice || 0)
+            + offArea * (feas.officesSalePrice || 0);
+        }
+
+        // Create CF project
+        const insertResult = await db.insert(cfProjects).values({
+          userId: ctx.user.id,
+          projectId: feas.projectId,
+          name: feas.projectName,
+          startDate,
+          designApprovalMonths: 6,
+          reraSetupMonths: 3,
+          constructionMonths: 24,
+          handoverMonths: 3,
+          preDevMonths: 9,
+          salesEnabled: 1,
+          salesStartMonth: 4,
+          totalSalesRevenue: Math.round(totalRevenue) || null,
+          constructionCostTotal: Math.round(constructionCost) || null,
+          buaSqft: bua || null,
+          constructionCostPerSqft: feas.constructionCostPerSqft || null,
+        });
+
+        const cfProjectId = Number(insertResult[0].insertId);
+
+        // Build cost items
+        const costItemsToInsert: any[] = [];
+        let sortOrder = 1;
+
+        // Land
+        const landPrice = pf(proj?.landPrice) || pf(feas.landPrice);
+        if (landPrice > 0) {
+          costItemsToInsert.push({
+            cfProjectId, name: 'سعر الأرض', category: 'land',
+            totalAmount: Math.round(landPrice), paymentType: 'lump_sum',
+            paymentParams: JSON.stringify({ paymentMonth: 1 }),
+            sortOrder: sortOrder++, fundingSource: 'developer', escrowEligible: 0, phaseTag: 'pre_dev',
+          });
+          const agentComm = landPrice * ((feas.agentCommissionLandPct || 1) / 100);
+          if (agentComm > 0) {
+            costItemsToInsert.push({
+              cfProjectId, name: 'عمولة وسيط الأرض', category: 'land',
+              totalAmount: Math.round(agentComm), paymentType: 'lump_sum',
+              paymentParams: JSON.stringify({ paymentMonth: 1 }),
+              sortOrder: sortOrder++, fundingSource: 'developer', escrowEligible: 0, phaseTag: 'pre_dev',
+            });
+          }
+        }
+
+        // Design
+        const designFee = constructionCost * ((feas.designFeePct || 2) / 100);
+        if (designFee > 0) {
+          costItemsToInsert.push({
+            cfProjectId, name: 'أتعاب التصميم', category: 'design_engineering',
+            totalAmount: Math.round(designFee), paymentType: 'milestone',
+            paymentParams: JSON.stringify({ milestones: [
+              { percent: 20, description: 'توقيع العقد', monthOffset: 1 },
+              { percent: 20, description: 'إنهاء المفهوم', monthOffset: 2 },
+              { percent: 25, description: 'التصميم التفصيلي', monthOffset: 4 },
+              { percent: 20, description: 'حزمة المناقصة', monthOffset: 5 },
+              { percent: 15, description: 'رخصة البناء', monthOffset: 6 },
+            ]}),
+            sortOrder: sortOrder++, fundingSource: 'developer', escrowEligible: 0, phaseTag: 'pre_dev',
+          });
+        }
+
+        // Supervision
+        const supervisionFee = constructionCost * ((feas.supervisionFeePct || 2) / 100);
+        if (supervisionFee > 0) {
+          costItemsToInsert.push({
+            cfProjectId, name: 'أتعاب الإشراف', category: 'design_engineering',
+            totalAmount: Math.round(supervisionFee), paymentType: 'monthly_fixed',
+            paymentParams: JSON.stringify({}),
+            sortOrder: sortOrder++, fundingSource: 'developer', escrowEligible: 0, phaseTag: 'construction',
+          });
+        }
+
+        // Authority fees
+        if (feas.authoritiesFee) {
+          costItemsToInsert.push({
+            cfProjectId, name: 'رسوم الجهات الرسمية', category: 'authority_fees',
+            totalAmount: feas.authoritiesFee, paymentType: 'lump_sum',
+            paymentParams: JSON.stringify({ paymentMonth: 3 }),
+            sortOrder: sortOrder++, fundingSource: 'developer', escrowEligible: 0, phaseTag: 'pre_dev',
+          });
+        }
+
+        // Construction
+        if (constructionCost > 0) {
+          costItemsToInsert.push({
+            cfProjectId, name: 'تكلفة البناء', category: 'construction',
+            totalAmount: Math.round(constructionCost), paymentType: 'progress_based',
+            paymentParams: JSON.stringify({ mobilizationPct: 10, progressDistribution: 'scurve', retentionPct: 10, retentionReleaseMonth: 3 }),
+            sortOrder: sortOrder++, fundingSource: 'mixed', escrowEligible: 1, phaseTag: 'construction',
+          });
+        }
+
+        // Marketing & Sales Commission
+        const marketing = totalRevenue * ((feas.marketingPct || 2) / 100);
+        const salesComm = totalRevenue * ((feas.agentCommissionSalePct || 5) / 100);
+        if (marketing > 0) {
+          costItemsToInsert.push({
+            cfProjectId, name: 'تسويق', category: 'marketing',
+            totalAmount: Math.round(marketing), paymentType: 'monthly_fixed',
+            paymentParams: JSON.stringify({}),
+            sortOrder: sortOrder++, fundingSource: 'developer', escrowEligible: 0, phaseTag: 'all',
+          });
+        }
+        if (salesComm > 0) {
+          costItemsToInsert.push({
+            cfProjectId, name: 'عمولة البيع', category: 'marketing',
+            totalAmount: Math.round(salesComm), paymentType: 'sales_linked',
+            paymentParams: JSON.stringify({ salesPct: feas.agentCommissionSalePct || 5, salesTiming: 'booking' }),
+            sortOrder: sortOrder++, fundingSource: 'developer', escrowEligible: 0, phaseTag: 'all',
+          });
+        }
+
+        // Developer fee
+        const developerFee = totalRevenue * ((feas.developerFeePct || 5) / 100);
+        if (developerFee > 0) {
+          costItemsToInsert.push({
+            cfProjectId, name: 'أتعاب المطور', category: 'developer_fee',
+            totalAmount: Math.round(developerFee), paymentType: 'monthly_fixed',
+            paymentParams: JSON.stringify({}),
+            sortOrder: sortOrder++, fundingSource: 'developer', escrowEligible: 0, phaseTag: 'all',
+          });
+        }
+
+        // Contingency
+        const contingency = constructionCost * ((feas.contingenciesPct || 2) / 100);
+        if (contingency > 0) {
+          costItemsToInsert.push({
+            cfProjectId, name: 'احتياطي', category: 'contingency',
+            totalAmount: Math.round(contingency), paymentType: 'monthly_fixed',
+            paymentParams: JSON.stringify({}),
+            sortOrder: sortOrder++, fundingSource: 'developer', escrowEligible: 0, phaseTag: 'construction',
+          });
+        }
+
+        // Separation fee
+        const separationFee = plotAreaM2 * (feas.separationFeePerM2 || 40);
+        if (separationFee > 0) {
+          costItemsToInsert.push({
+            cfProjectId, name: 'رسوم الفرز', category: 'authority_fees',
+            totalAmount: Math.round(separationFee), paymentType: 'lump_sum',
+            paymentParams: JSON.stringify({ paymentMonth: 2 }),
+            sortOrder: sortOrder++, fundingSource: 'developer', escrowEligible: 0, phaseTag: 'pre_dev',
+          });
+        }
+
+        // Soil & Survey
+        if (feas.soilInvestigation) {
+          costItemsToInsert.push({
+            cfProjectId, name: 'فحص التربة', category: 'pre_dev',
+            totalAmount: feas.soilInvestigation, paymentType: 'lump_sum',
+            paymentParams: JSON.stringify({ paymentMonth: 2 }),
+            sortOrder: sortOrder++, fundingSource: 'developer', escrowEligible: 0, phaseTag: 'pre_dev',
+          });
+        }
+        if (feas.topographySurvey) {
+          costItemsToInsert.push({
+            cfProjectId, name: 'مسح طبوغرافي', category: 'pre_dev',
+            totalAmount: feas.topographySurvey, paymentType: 'lump_sum',
+            paymentParams: JSON.stringify({ paymentMonth: 1 }),
+            sortOrder: sortOrder++, fundingSource: 'developer', escrowEligible: 0, phaseTag: 'pre_dev',
+          });
+        }
+
+        // Insert cost items
+        for (const item of costItemsToInsert) {
+          await db.insert(cfCostItems).values(item);
+        }
+
+        imported++;
+        results.push({ projectName: feas.projectName, status: `تم الاستيراد (${costItemsToInsert.length} بند)` });
+      }
+
+      return { imported, total: feasWithProject.length, results };
     }),
 });
