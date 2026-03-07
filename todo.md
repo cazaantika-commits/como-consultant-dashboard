@@ -2059,3 +2059,18 @@
 - [ ] إصلاح جذر المشكلة لضمان رقم واحد متسق في كل مكان
 - [ ] جويل لا تذكر أسماء مشاريع حقيقية في المنطقة للمقارنة
 - [ ] جويل تخترع أرقام (مثل BUA 115,000) بدل قراءة البيانات الموجودة
+
+
+## Consultants & Technical Specialists Registry (NEW - March 2026)
+- [x] Create database schema (consultants_registry, consultants_registry_files, consultants_categories tables)
+- [x] Create tRPC router with CRUD endpoints (create, getAll, getById, update, delete)
+- [x] Create file management endpoints (uploadFile, deleteFile, getFiles)
+- [x] Create category management endpoints (getCategories, addCategory)
+- [x] Build frontend ConsultantsRegistry page with list, filters, add/edit form
+- [x] Add file upload/download functionality with S3 storage
+- [x] Add route to App.tsx (/consultants-registry)
+- [x] Add navigation item to Home page quick menu (سجل الاستشاريين)
+- [ ] Test file upload to S3 in browser
+- [ ] Test full end-to-end flow (add consultant → upload file → view in registry)
+- [ ] Verify website links are clickable
+- [ ] Test status filtering and search

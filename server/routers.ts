@@ -4,6 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { projectsRouter } from "./routers/projects";
 import { consultantsRouter } from "./routers/consultants";
+import { consultantsRegistryRouter } from "./routers/consultantsRegistry";
 import { financialRouter } from "./routers/financial";
 import { evaluationRouter } from "./routers/evaluation";
 import { projectConsultantsRouter } from "./routers/projectConsultants";
@@ -84,6 +85,7 @@ export const appRouter = router({
   costsCashFlow: costsCashFlowRouter,
   cashFlowProgram: cashFlowProgramRouter,
   phaseManagement: phaseManagementRouter,
+  consultantsRegistry: consultantsRegistryRouter,
 });
 
 export type AppRouter = typeof appRouter;

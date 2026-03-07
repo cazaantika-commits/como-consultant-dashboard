@@ -492,6 +492,7 @@ export default function Home() {
                   { label: "سجل الإيميلات المرسلة", emoji: "✉️", icon: Send, path: "/sent-emails", gradient: "linear-gradient(135deg, #3b82f6, #2563eb)", shadow: "rgba(59, 130, 246, 0.25)" },
                   { label: "برنامج العمل والتدفقات", emoji: "💰", icon: BarChart3, path: "/program-cashflow", gradient: "linear-gradient(135deg, #10b981, #0d9488)", shadow: "rgba(16, 185, 129, 0.25)" },
                   { label: "محاكي تخطيط رأس المال", emoji: "🏦", icon: Building2, path: "/capital-planning", gradient: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245, 158, 11, 0.25)" },
+                  { label: "سجل الاستشاريين", emoji: "👥", icon: Users, path: "/consultants-registry", gradient: "linear-gradient(135deg, #06b6d4, #0891b2)", shadow: "rgba(6, 182, 212, 0.25)" },
                 ].map((item, i) => (
                   <button
                     key={i}

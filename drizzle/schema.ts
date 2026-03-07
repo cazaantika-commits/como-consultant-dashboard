@@ -1286,3 +1286,51 @@ export const users = mysqlTable("users", {
 (table) => [
 	index("users_openId_unique").on(table.openId),
 ]);
+
+
+// Consultants & Technical Specialists Registry
+export const consultantsRegistry = mysqlTable("consultants_registry", {
+	id: int().autoincrement().notNull().primaryKey(),
+	companyName: varchar({ length: 255 }).notNull(),
+	category: varchar({ length: 100 }).notNull(),
+	contactPerson: varchar({ length: 255 }),
+	mobileNumber: varchar({ length: 20 }),
+	emailAddress: varchar({ length: 255 }),
+	website: varchar({ length: 255 }),
+	status: mysqlEnum(['quoted_only', 'under_review', 'appointed', 'not_selected']).default('quoted_only').notNull(),
+	notes: text(),
+	userId: int().notNull(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+	index("consultants_registry_userId").on(table.userId),
+	index("consultants_registry_category").on(table.category),
+	index("consultants_registry_status").on(table.status),
+]);
+
+// Consultants Registry - File Uploads
+export const consultantsRegistryFiles = mysqlTable("consultants_registry_files", {
+	id: int().autoincrement().notNull().primaryKey(),
+	consultantId: int().notNull(),
+	fileName: varchar({ length: 255 }).notNull(),
+	fileKey: varchar({ length: 500 }).notNull(), // S3 key
+	fileUrl: varchar({ length: 500 }).notNull(), // S3 URL
+	fileType: varchar({ length: 50 }),
+	fileSizeBytes: int(),
+	uploadedAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+	index("consultants_registry_files_consultantId").on(table.consultantId),
+]);
+
+// Consultants Registry - Categories (dynamic)
+export const consultantsCategories = mysqlTable("consultants_categories", {
+	id: int().autoincrement().notNull().primaryKey(),
+	categoryName: varchar({ length: 100 }).notNull(),
+	userId: int().notNull(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+	index("consultants_categories_userId").on(table.userId),
+]);
