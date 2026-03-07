@@ -25,8 +25,8 @@ import { useToast } from "@/hooks/use-toast";
 export default function ConsultantsRegistry() {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
-  const [selectedStatus, setSelectedStatus] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [formData, setFormData] = useState({
     companyName: "",
@@ -42,8 +42,8 @@ export default function ConsultantsRegistry() {
   // Queries
   const { data: consultants = [], isLoading, refetch } = trpc.consultantsRegistry.getAll.useQuery({
     search,
-    category: selectedCategory,
-    status: selectedStatus,
+    category: selectedCategory === "all" ? undefined : selectedCategory,
+    status: selectedStatus === "all" ? undefined : selectedStatus,
   });
 
   const { data: categories = [] } = trpc.consultantsRegistry.getCategories.useQuery();
@@ -121,7 +121,7 @@ export default function ConsultantsRegistry() {
               <SelectValue placeholder="Filter by category" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Categories</SelectItem>
+              <SelectItem value="all">All Categories</SelectItem>
               {categories.map((cat) => (
                 <SelectItem key={cat} value={cat}>
                   {cat}
@@ -134,7 +134,7 @@ export default function ConsultantsRegistry() {
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Statuses</SelectItem>
+              <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="quoted_only">Quoted Only</SelectItem>
               <SelectItem value="under_review">Under Review</SelectItem>
               <SelectItem value="appointed">Appointed</SelectItem>
