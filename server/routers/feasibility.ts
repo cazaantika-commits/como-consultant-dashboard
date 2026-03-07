@@ -364,11 +364,26 @@ export const feasibilityRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
       
-      const results = await db.select().from(feasibilityStudies).where(
+            const results = await db.select().from(feasibilityStudies).where(
         and(eq(feasibilityStudies.id, input.id), eq(feasibilityStudies.userId, ctx.user.id))
       );
       if (!results[0]) throw new Error("Study not found");
       const study = results[0];
+
+      // Get project details
+      const projectResults = await db.select().from(projects)
+        .where(eq(projects.id, study.projectId));
+      const project = projectResults[0];
+
+      // Get market overview data
+      const moResults = await db.select().from(marketOverview)
+        .where(and(eq(marketOverview.projectId, study.projectId), eq(marketOverview.userId, ctx.user.id)));
+      const mo = moResults[0] || null;
+
+      // Get competition pricing data
+      const cpResults = await db.select().from(competitionPricing)
+        .where(and(eq(competitionPricing.projectId, study.projectId), eq(competitionPricing.userId, ctx.user.id)));
+      const cp = cpResults[0] || null;
 
       const currentDate2 = new Date();
       const reportDate2 = `${currentDate2.getDate()}/${currentDate2.getMonth() + 1}/${currentDate2.getFullYear()}`;
@@ -383,6 +398,20 @@ export const feasibilityRouter = router({
 - الربح: ${study.profit ? Number(study.profit).toLocaleString() : 'غير محدد'} درهم
 - ROI: ${study.roi || 'غير محدد'}%
 - هامش الربح: ${study.profitMargin || 'غير محدد'}%
+
+${cp ? `
+بيانات التسعير المحفوظة (من دراسة السوق):
+- استديو: ${cp.baseStudioPrice || 'غير محدد'} درهم/قدم²
+- غرفة وصالة: ${cp.base1brPrice || 'غير محدد'} درهم/قدم²
+- غرفتان وصالة: ${cp.base2brPrice || 'غير محدد'} درهم/قدم²
+- ثلاث غرف: ${cp.base3brPrice || 'غير محدد'} درهم/قدم²` : ''}
+
+${mo ? `
+بيانات النظرة العامة للسوق:
+- جودة التشطيب: ${mo.finishingQuality || 'غير محدد'}
+- نسبة الاستديو: ${mo.residentialStudioPct || 0}%
+- نسبة الغرفة الواحدة: ${mo.residential1brPct || 0}%
+- نسبة الغرفتين: ${mo.residential2brPct || 0}%` : ''}
 
 اكتبي التقرير بالأقسام التالية:
 

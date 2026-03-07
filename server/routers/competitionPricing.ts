@@ -205,6 +205,11 @@ export const competitionPricingRouter = router({
         .where(and(eq(marketOverview.projectId, projectId), eq(marketOverview.userId, ctx.user.id)));
       const mo = moResults[0] || null;
 
+      // Get existing competition pricing data (this tab)
+      const cpResults = await db.select().from(competitionPricing)
+        .where(and(eq(competitionPricing.projectId, projectId), eq(competitionPricing.userId, ctx.user.id)));
+      const cp = cpResults[0] || null;
+
       // ═══════════════════════════════════════════════════════════
       // Merge data: Fact Sheet (projects table) + Feasibility Study
       // ═══════════════════════════════════════════════════════════
@@ -243,6 +248,19 @@ export const competitionPricingRouter = router({
       const currentDate = new Date();
       const reportDate = `${currentDate.getDate()}/${currentDate.getMonth() + 1}/${currentDate.getFullYear()}`;
       const currentYear = currentDate.getFullYear();
+      // Format saved pricing data if exists
+      const savedPricingSection = cp ? `
+
+بيانات التسعير المحفوظة (من دراسة السوق السابقة):
+السيناريو الأساسي:
+- استديو: ${cp.baseStudioPrice || 'غير محدد'} درهم/قدم²
+- غرفة وصالة: ${cp.base1brPrice || 'غير محدد'} درهم/قدم²
+- غرفتان وصالة: ${cp.base2brPrice || 'غير محدد'} درهم/قدم²
+- ثلاث غرف: ${cp.base3brPrice || 'غير محدد'} درهم/قدم²
+- محلات صغيرة: ${cp.baseRetailSmallPrice || 'غير محدد'} درهم/قدم²
+- محلات متوسطة: ${cp.baseRetailMediumPrice || 'غير محدد'} درهم/قدم²
+- محلات كبيرة: ${cp.baseRetailLargePrice || 'غير محدد'} درهم/قدم²` : '';
+
       const reportPrompt = `أنتِ جويل، محللة السوق العقاري في Como Developments. اكتبي تقريراً ذكياً عن المنافسة والتسعير للمشروع:
 
 🚨 تاريخ التقرير: ${reportDate} - نحن في عام ${currentYear}. كل الأسعار والمقارنات يجب أن تكون من ${currentYear - 1}-${currentYear}. لا تستخدمي أسعار 2024 أو أقدم كأسعار حالية.
@@ -263,7 +281,7 @@ ${unitTypes.length > 0 ? `- أنواع الوحدات: ${unitTypes.join(', ')}` 
 تفصيل المساحات:
 - GFA السكني: ${gfaRes > 0 ? gfaRes.toLocaleString() : 'غير محدد'} قدم²
 - GFA التجاري: ${gfaRet > 0 ? gfaRet.toLocaleString() : 'غير محدد'} قدم²
-- GFA المكاتب: ${gfaOff > 0 ? gfaOff.toLocaleString() : 'غير محدد'} قدم²
+- GFA المكاتب: ${gfaOff > 0 ? gfaOff.toLocaleString() : 'غير محدد'} قدم²${savedPricingSection}
 
 اكتبي تقريراً احترافياً بمستوى JLL / Colliers يتضمن الأقسام التالية بالترتيب:
 

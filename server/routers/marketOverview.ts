@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { marketOverview, feasibilityStudies, projects } from "../../drizzle/schema";
+import { marketOverview, feasibilityStudies, projects, competitionPricing } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { invokeLLM } from "../_core/llm";
 
@@ -158,6 +158,11 @@ export const marketOverviewRouter = router({
         .where(and(eq(feasibilityStudies.projectId, projectId), eq(feasibilityStudies.userId, ctx.user.id)));
       const feasStudy = feasResults[0] || null;
 
+      // Get competition pricing data if exists
+      const compResults = await db.select().from(competitionPricing)
+        .where(and(eq(competitionPricing.projectId, projectId), eq(competitionPricing.userId, ctx.user.id)));
+      const compPricing = compResults[0] || null;
+
       // ═══════════════════════════════════════════════════════════
       // Merge data: Fact Sheet (projects table) + Feasibility Study
       // Fact sheet is the primary source, feasibility study overrides if available
@@ -192,6 +197,18 @@ export const marketOverviewRouter = router({
       const saleableRetArea = feasStudy ? gfaRet * ((feasStudy.saleableRetailPct || 99) / 100) : 0;
       const saleableOffArea = feasStudy ? gfaOff * ((feasStudy.saleableOfficesPct || 90) / 100) : 0;
 
+      // Format competition pricing data for the report
+      const competitionPricingSection = compPricing ? `
+
+بيانات التسعير التنافسي (من دراسة السوق):
+- سعر الاستوديو: ${compPricing.baseStudioPrice || 'غير محدد'} درهم/قدم²
+- سعر الشقة 1 غرفة: ${compPricing.base1brPrice || 'غير محدد'} درهم/قدم²
+- سعر الشقة 2 غرفة: ${compPricing.base2brPrice || 'غير محدد'} درهم/قدم²
+- سعر الشقة 3 غرف: ${compPricing.base3brPrice || 'غير محدد'} درهم/قدم²
+- سعر المحلات الصغيرة: ${compPricing.retailSmallPrice || 'غير محدد'} درهم/قدم²
+- سعر المحلات المتوسطة: ${compPricing.retailMediumPrice || 'غير محدد'} درهم/قدم²
+- سعر المحلات الكبيرة: ${compPricing.retailLargePrice || 'غير محدد'} درهم/قدم²` : '';
+
       const currentDate = new Date();
       const reportDate = `${currentDate.getDate()}/${currentDate.getMonth() + 1}/${currentDate.getFullYear()}`;
       const currentYear = currentDate.getFullYear();
@@ -218,7 +235,7 @@ export const marketOverviewRouter = router({
 - GFA المكاتب: ${gfaOff > 0 ? gfaOff.toLocaleString() : 'غير محدد'} قدم²
 - المساحة القابلة للبيع (سكني): ${saleableResArea > 0 ? Math.round(saleableResArea).toLocaleString() : 'غير محدد'} قدم²
 - المساحة القابلة للبيع (تجاري): ${saleableRetArea > 0 ? Math.round(saleableRetArea).toLocaleString() : 'غير محدد'} قدم²
-- المساحة القابلة للبيع (مكاتب): ${saleableOffArea > 0 ? Math.round(saleableOffArea).toLocaleString() : 'غير محدد'} قدم²
+- المساحة القابلة للبيع (مكاتب): ${saleableOffArea > 0 ? Math.round(saleableOffArea).toLocaleString() : 'غير محدد'} قدم²${competitionPricingSection}
 
 اكتبي تقريراً احترافياً بمستوى JLL / Colliers يتضمن الأقسام التالية بالترتيب:
 
