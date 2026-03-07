@@ -483,38 +483,75 @@ export default function Home() {
                   { label: "المكاتب الاستشارية", emoji: "🏛️", icon: Users, path: "/consultant-portal", gradient: "linear-gradient(135deg, #78716c, #57534e)", shadow: "rgba(120, 113, 108, 0.25)" },
 
                   { label: "ملخص التكليفات", emoji: "📊", icon: BarChart3, path: "/agent-assignments-summary", gradient: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245, 158, 11, 0.25)" },
-                  { label: "سجل التكليفات", emoji: "📋", icon: ClipboardList, path: "/agent-assignments", gradient: "linear-gradient(135deg, #78716c, #57534e)", shadow: "rgba(120, 113, 108, 0.25)" },
-                  { label: "سجل المحادثات", emoji: "💬", icon: MessageSquare, path: "/conversation-history", gradient: "linear-gradient(135deg, #ec4899, #db2777)", shadow: "rgba(236, 72, 153, 0.25)" },
                   { label: "قاعدة المعرفة", emoji: "📚", icon: BookOpen, path: "/knowledge-base", gradient: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)" },
                   { label: "غرفة الاجتماعات", emoji: "🎙️", icon: Users, path: "/meetings", gradient: "linear-gradient(135deg, #a855f7, #7c3aed)", shadow: "rgba(168, 85, 247, 0.25)" },
-                  { label: "سجل العقود", emoji: "⚖️", icon: Scale, path: "/contracts", gradient: "linear-gradient(135deg, #0ea5e9, #0284c7)", shadow: "rgba(14, 165, 233, 0.25)" },
                   { label: "مراقبة التنفيذ", emoji: "⚡", icon: Activity, path: "/execution-dashboard", gradient: "linear-gradient(135deg, #f97316, #ea580c)", shadow: "rgba(249, 115, 22, 0.25)" },
-                  { label: "سجل الإيميلات المرسلة", emoji: "✉️", icon: Send, path: "/sent-emails", gradient: "linear-gradient(135deg, #3b82f6, #2563eb)", shadow: "rgba(59, 130, 246, 0.25)" },
                   { label: "برنامج العمل والتدفقات", emoji: "💰", icon: BarChart3, path: "/program-cashflow", gradient: "linear-gradient(135deg, #10b981, #0d9488)", shadow: "rgba(16, 185, 129, 0.25)" },
                   { label: "محاكي تخطيط رأس المال", emoji: "🏦", icon: Building2, path: "/capital-planning", gradient: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245, 158, 11, 0.25)" },
-                  { label: "سجل الاستشاريين", emoji: "👥", icon: Users, path: "/consultants-registry", gradient: "linear-gradient(135deg, #06b6d4, #0891b2)", shadow: "rgba(6, 182, 212, 0.25)" },
-                ].map((item, i) => (
-                  <button
-                    key={i}
-                    onClick={() => navigate(item.path)}
-                    className="premium-card p-5 text-right hover-lift group relative overflow-hidden"
-                  >
-                    <div
-                      className="absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-300 rounded-xl"
-                      style={{ background: item.gradient }}
-                    />
-                    <div className="relative">
-                      <ColorIcon bg={item.gradient} shadow={item.shadow}>
-                        <item.icon className="w-6 h-6 text-white" />
-                      </ColorIcon>
-                      <div className="mt-4 flex items-center gap-2">
-                        <span className="text-lg">{item.emoji}</span>
-                        <span className="font-semibold text-sm text-foreground">{item.label}</span>
+                  { label: "السجلات", emoji: "📋", icon: ClipboardList, path: null, gradient: "linear-gradient(135deg, #0ea5e9, #0284c7)", shadow: "rgba(14, 165, 233, 0.25)", isDropdown: true, items: [
+                    { label: "سجل التكليفات", path: "/agent-assignments" },
+                    { label: "سجل المحادثات", path: "/conversation-history" },
+                    { label: "سجل العقود", path: "/contracts" },
+                    { label: "سجل الإيميلات المرسلة", path: "/sent-emails" },
+                    { label: "سجل الاستشاريين", path: "/consultants-registry" },
+                  ] },
+                ].map((item, i) => {
+                  if (item.isDropdown) {
+                    return (
+                      <div key={i} className="relative group">
+                        <button className="premium-card p-5 text-right hover-lift group relative overflow-hidden w-full">
+                          <div
+                            className="absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-300 rounded-xl"
+                            style={{ background: item.gradient }}
+                          />
+                          <div className="relative">
+                            <ColorIcon bg={item.gradient} shadow={item.shadow}>
+                              <item.icon className="w-6 h-6 text-white" />
+                            </ColorIcon>
+                            <div className="mt-4 flex items-center gap-2">
+                              <span className="text-lg">{item.emoji}</span>
+                              <span className="font-semibold text-sm text-foreground">{item.label}</span>
+                            </div>
+                            <ArrowLeft className="w-4 h-4 text-muted-foreground mt-2 transition-transform group-hover:-translate-x-1" />
+                          </div>
+                        </button>
+                        <div className="absolute right-0 top-full mt-2 hidden group-hover:block bg-background border border-border rounded-lg shadow-lg z-50 min-w-max">
+                          {item.items.map((subitem, j) => (
+                            <button
+                              key={j}
+                              onClick={() => navigate(subitem.path)}
+                              className="w-full text-right px-4 py-3 hover:bg-muted transition-colors text-sm font-medium text-foreground border-b border-border/50 last:border-b-0"
+                            >
+                              {subitem.label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                      <ArrowLeft className="w-4 h-4 text-muted-foreground mt-2 transition-transform group-hover:-translate-x-1" />
-                    </div>
-                  </button>
-                ))}
+                    );
+                  }
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => navigate(item.path)}
+                      className="premium-card p-5 text-right hover-lift group relative overflow-hidden"
+                    >
+                      <div
+                        className="absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-300 rounded-xl"
+                        style={{ background: item.gradient }}
+                      />
+                      <div className="relative">
+                        <ColorIcon bg={item.gradient} shadow={item.shadow}>
+                          <item.icon className="w-6 h-6 text-white" />
+                        </ColorIcon>
+                        <div className="mt-4 flex items-center gap-2">
+                          <span className="text-lg">{item.emoji}</span>
+                          <span className="font-semibold text-sm text-foreground">{item.label}</span>
+                        </div>
+                        <ArrowLeft className="w-4 h-4 text-muted-foreground mt-2 transition-transform group-hover:-translate-x-1" />
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </section>

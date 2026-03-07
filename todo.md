@@ -2074,3 +2074,16 @@
 - [ ] Test full end-to-end flow (add consultant → upload file → view in registry)
 - [ ] Verify website links are clickable
 - [ ] Test status filtering and search
+
+
+## Navigation Menu Reorganization (NEW - March 2026)
+- [x] Create registries dropdown menu component to group all السجل items
+- [x] Move السجلات items into dropdown:
+  - سجل التكليفات
+  - سجل المحادثات
+  - سجل العقود
+  - سجل الإيميلات المرسلة
+  - سجل الاستشاريين
+- [x] Update Home.tsx to replace individual registry items with single "السجلات" button
+- [x] Test dropdown menu functionality
+- [ ] Save checkpoint
