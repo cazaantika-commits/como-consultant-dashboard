@@ -2093,3 +2093,75 @@
 - [x] Check AI report generation logic for competitor building names
 - [x] Fix report to include actual competitor project/building names from the area
 - [ ] Test and verify fix (user needs to regenerate report)
+
+## Joelle 10-Stage Market Analysis Workflow (NEW - March 2026)
+- [ ] Stage 1: Read Project Fact Sheet - Joelle reads project data from fact sheet before analysis
+- [ ] Stage 2: Market Context Intelligence - Area demographics, buyer profile, infrastructure analysis
+- [ ] Stage 3: Demand Structure Analysis - Transaction frequency, unit types, absorption speed
+- [ ] Stage 4: Competitive Landscape Mapping - Competitors within 1km, 2km, 3km radius with full details
+- [ ] Stage 5: Product Strategy Development - Optimal unit mix, sizes, retail concept, quality positioning
+- [ ] Stage 6: Pricing Intelligence - 3 scenarios (conservative/base/optimistic) per unit type
+- [ ] Stage 7: Payment Plan Benchmarking - Competitor payment plan analysis and recommendation
+- [ ] Stage 8: Populate Platform Fields - Auto-populate system fields from analysis results
+- [ ] Stage 9: Generate 5 Reports (Market Intelligence, Competitive Landscape, Product Strategy, Pricing Strategy, Executive Board Summary)
+- [ ] Stage 10: Continuous Validation - Multi-source verification (DLD, DXBInteract, Property Finder, Bayut, etc.)
+- [ ] Database schema updates for stages and reports
+- [ ] Backend API endpoints for staged workflow
+- [ ] Frontend UI for staged analysis interface
+- [ ] Tests and verification
+
+## Joelle Market Intelligence System - FULL REBUILD (March 2026)
+### Database Tables
+- [ ] Create market_transactions table (transaction_id, project_name, building_name, community, unit_type, unit_size, price, price_per_sqft, transaction_date, source, lat, lng)
+- [ ] Create market_listings table (listing_id, project_name, community, unit_type, unit_size, asking_price, price_per_sqft, listing_date, source)
+- [ ] Create competitor_projects table (competitor_id, project_name, developer, community, launch_year, completion_year, total_units, unit_mix_json, avg_sizes_json, price_range, payment_plan, distance_km, project_id)
+- [ ] Create market_reports_kb table (report_id, report_source, report_year, report_file_url, extracted_insights, uploaded_at)
+- [ ] Create geographic_features table (feature_id, project_id, feature_type, feature_name, distance_km)
+- [ ] Create demographics table (district, population, income_level, household_size, growth_rate)
+- [x] Update joelle_analysis_stages table for 12-engine workflow
+- [x] Update joelle_reports table for 7 report types
+
+### Backend - Joelle Analysis Engines
+- [x] Engine 1: Data Acquisition (read project fact sheet + available data sources)
+- [x] Engine 2: Area Context Analysis (demographics + geographic intelligence via Google Places)
+- [x] Engine 3: Market Structure Analysis (transaction volume, price distribution, unit demand)
+- [x] Engine 4: Competitive Landscape Engine (projects within 1/2/3km, unit mix, prices, payment plans)
+- [x] Engine 5: Demand Forecast Engine (annual demand, unit distribution, market share scenarios, sales velocity, sell-out duration)
+- [x] Engine 6: Product Strategy Engine (unit mix, sizes, retail mix, positioning)
+- [x] Engine 7: Pricing Intelligence Engine (3 scenarios with weighted average from multiple sources)
+- [x] Engine 8: Absorption Engine (units/year, monthly velocity)
+- [x] Engine 9: Risk Intelligence Engine (5 risk categories + Project Market Risk Index)
+- [x] Engine 10: Data Reconciliation Engine (source weighting system)
+- [x] Engine 11: Output Generation (auto-populate platform fields)
+- [x] Engine 12: Report Generation (7 reports)
+
+### Backend - Source Weighting System
+- [x] Implement source weights: DXB Interact 30%, DataFinder 20%, Property Monitor 20%, DLD 10%, Property Finder 10%, Bayut 5%, Market Reports 5%
+- [x] Weighted average calculation for price reconciliation
+
+### Backend - 7 Reports
+- [x] Market Intelligence Report
+- [x] Competitive Analysis Report
+- [x] Product Strategy Report
+- [x] Pricing Strategy Report
+- [x] Demand Forecast Report
+- [x] Risk Analysis Report
+- [x] Executive Board Summary
+
+### Backend - Self-Learning System
+- [ ] Historical Project Database (store all analyzed project outcomes)
+- [ ] Forecast vs Reality Comparison (predicted vs actual prices, absorption, velocity)
+- [ ] Model Adjustment Logic (update assumptions based on deviations)
+
+### Frontend
+- [x] Joelle staged analysis workflow UI (run all engines sequentially with progress)
+- [ ] Knowledge Base upload page (CBRE, JLL, Knight Frank, Savills reports)
+- [ ] Competitor Projects Database CRUD page
+- [ ] Market Transactions data view
+- [ ] Geographic Intelligence map view
+- [ ] Risk Dashboard with Project Market Risk Index
+
+### Testing & Delivery
+- [x] Write vitest tests for Joelle engines (8 tests passed)
+- [ ] Save checkpoint
+- [ ] Deliver with list of required user actions (APIs, subscriptions, data uploads)

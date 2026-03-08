@@ -1334,3 +1334,43 @@ export const consultantsCategories = mysqlTable("consultants_categories", {
 (table) => [
 	index("consultants_categories_userId").on(table.userId),
 ]);
+
+
+// Joelle 10-Stage Market Analysis Workflow
+export const joelleAnalysisStages = mysqlTable("joelle_analysis_stages", {
+	id: int().autoincrement().notNull().primaryKey(),
+	userId: int().notNull(),
+	projectId: int().notNull(),
+	stageNumber: int().notNull(), // 1-10
+	stageName: varchar({ length: 255 }).notNull(),
+	stageStatus: mysqlEnum(['pending', 'running', 'completed', 'error']).default('pending').notNull(),
+	stageOutput: longtext(), // The report/analysis text (markdown)
+	stageDataJson: longtext(), // Structured data from this stage (JSON)
+	errorMessage: text(),
+	startedAt: timestamp({ mode: 'string' }),
+	completedAt: timestamp({ mode: 'string' }),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+	index("joelle_stages_user_project").on(table.userId, table.projectId),
+	index("joelle_stages_project_stage").on(table.projectId, table.stageNumber),
+]);
+
+// Joelle Generated Reports (Stage 9 output - 5 separate reports)
+export const joelleReports = mysqlTable("joelle_reports", {
+	id: int().autoincrement().notNull().primaryKey(),
+	userId: int().notNull(),
+	projectId: int().notNull(),
+	reportType: mysqlEnum(['market_intelligence', 'competitive_landscape', 'product_strategy', 'pricing_strategy', 'executive_summary']).notNull(),
+	reportTitle: varchar({ length: 500 }).notNull(),
+	reportContent: longtext(), // Full report markdown
+	reportDataJson: longtext(), // Structured data if any
+	generatedAt: timestamp({ mode: 'string' }),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+	index("joelle_reports_user_project").on(table.userId, table.projectId),
+	index("joelle_reports_type").on(table.reportType),
+]);
