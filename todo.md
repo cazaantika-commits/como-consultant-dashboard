@@ -2086,4 +2086,10 @@
   - سجل الاستشاريين
 - [x] Update Home.tsx to replace individual registry items with single "السجلات" button
 - [x] Test dropdown menu functionality
-- [ ] Save checkpoint
+- [x] Save checkpoint
+
+## Bug Fix: Competition Pricing Report Missing Competitor Names (Project 6185392)
+- [x] Investigate competition_pricing data and AI report for project 6185392
+- [x] Check AI report generation logic for competitor building names
+- [x] Fix report to include actual competitor project/building names from the area
+- [ ] Test and verify fix (user needs to regenerate report)
