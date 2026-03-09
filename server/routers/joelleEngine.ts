@@ -8,6 +8,7 @@ import {
   feasibilityStudies,
   marketOverview,
   competitionPricing,
+  costsCashFlow,
 } from "../../drizzle/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { invokeLLM } from "../_core/llm";
@@ -83,6 +84,11 @@ async function getProjectFactSheet(db: any, projectId: number, userId: number) {
     .where(and(eq(competitionPricing.projectId, projectId), eq(competitionPricing.userId, userId)));
   const cp = cpResults[0] || null;
 
+  // Get cost & cashflow data
+  const ccfResults = await db.select().from(costsCashFlow)
+    .where(and(eq(costsCashFlow.projectId, projectId), eq(costsCashFlow.userId, userId)));
+  const ccf = ccfResults[0] || null;
+
   // Merge data
   const plotArea = feasStudy?.plotArea || parseFloat(String(project.plotAreaSqft || '0')) || 0;
   const gfaRes = feasStudy?.gfaResidential || parseFloat(String(project.gfaResidentialSqft || '0')) || 0;
@@ -131,11 +137,26 @@ async function getProjectFactSheet(db: any, projectId: number, userId: number) {
     cons3br: cp.cons3brPrice || 0,
   } : null;
 
+  // Cost data summary
+  const costData = ccf ? {
+    landPrice: ccf.landPrice || 0,
+    constructionCostPerSqft: ccf.constructionCostPerSqft || 0,
+    developerFeePct: parseFloat(String(ccf.developerFeePct || '5')),
+    marketingPct: parseFloat(String(ccf.marketingPct || '2')),
+    agentCommissionSalePct: parseFloat(String(ccf.agentCommissionSalePct || '5')),
+    contingenciesPct: parseFloat(String(ccf.contingenciesPct || '2')),
+    projectDurationMonths: ccf.projectDurationMonths || 36,
+    constructionStartMonth: ccf.constructionStartMonth || 6,
+    constructionDurationMonths: ccf.constructionDurationMonths || 24,
+    comoProfitSharePct: parseFloat(String(ccf.comoProfitSharePct || '15')),
+  } : null;
+
   return {
     project,
     feasStudy,
     mo,
     cp,
+    ccf,
     plotArea,
     totalGFA,
     gfaRes,
@@ -148,6 +169,7 @@ async function getProjectFactSheet(db: any, projectId: number, userId: number) {
     projectType: projectType.length > 0 ? projectType.join(' + ') : 'غير محدد',
     unitTypes,
     existingPricing,
+    costData,
   };
 }
 
@@ -719,22 +741,46 @@ ${stage2?.[0]?.stageOutput ? `\nتحليل المنطقة السابق:\n${stage
           }
         } catch (e) {}
 
-        // Search for real estate projects nearby
+        // Search for real estate projects nearby - focus on residential apartments in same area
         let nearbyProjects: string[] = [];
         if (geoData.lat !== 0) {
           try {
-            const searchResult = await makeRequest<PlacesSearchResult>(
+            // Search 1: Residential apartment towers in same community
+            const searchResult1 = await makeRequest<PlacesSearchResult>(
               '/maps/api/place/textsearch/json',
               {
-                query: `residential buildings apartments ${factSheet.community} Dubai`,
+                query: `residential apartment tower building ${factSheet.community} Dubai`,
+                location: `${geoData.lat},${geoData.lng}`,
+                radius: 2000,
+                type: 'establishment',
+              }
+            );
+            const results1 = searchResult1.results?.slice(0, 10).map(p => 
+              `${p.name} (${p.formatted_address}${p.rating ? `, تقييم: ${p.rating}` : ''}) [نفس المنطقة]`
+            ) || [];
+            
+            // Search 2: New real estate projects in same area
+            const searchResult2 = await makeRequest<PlacesSearchResult>(
+              '/maps/api/place/textsearch/json',
+              {
+                query: `new residential project off-plan apartments ${factSheet.community} Dubai`,
                 location: `${geoData.lat},${geoData.lng}`,
                 radius: 3000,
                 type: 'establishment',
               }
             );
-            nearbyProjects = searchResult.results?.slice(0, 15).map(p => 
+            const results2 = searchResult2.results?.slice(0, 10).map(p => 
               `${p.name} (${p.formatted_address}${p.rating ? `, تقييم: ${p.rating}` : ''})`
             ) || [];
+            
+            // Combine and deduplicate
+            const seen = new Set<string>();
+            nearbyProjects = [...results1, ...results2].filter(p => {
+              const name = p.split('(')[0].trim();
+              if (seen.has(name)) return false;
+              seen.add(name);
+              return true;
+            }).slice(0, 20);
           } catch (e) {}
         }
 
@@ -742,18 +788,25 @@ ${stage2?.[0]?.stageOutput ? `\nتحليل المنطقة السابق:\n${stage
 
 أنتِ الآن في المحرك الرابع: خريطة المنافسين.
 
+🚨 **تعليمات حاسمة - الأولوية القصوى:**
+- ركّزي حصرياً على **مباني الشقق السكنية** (Residential Apartment Buildings/Towers) في **نفس المنطقة** (${factSheet.community})
+- لا تذكري فلل أو تاون هاوس أو مشاريع تجارية بحتة إلا إذا كانت مشاريع متعددة الاستخدام تحتوي شقق
+- الأولوية للمشاريع **الجديدة والقيد الإنشاء (Off-Plan)** في نفس المنطقة
+- ثم المشاريع **المكتملة حديثاً** (آخر 3 سنوات) في نفس المنطقة
+- المشاريع خارج المنطقة تُذكر فقط كمرجع ثانوي
+
 بيانات المشروع:
 - الاسم: ${factSheet.project.name}
 - المنطقة: ${factSheet.community}
 - نوع المشروع: ${factSheet.projectType}
 - الإحداثيات: ${geoData.lat}, ${geoData.lng}
 
-${nearbyProjects.length > 0 ? `## مباني ومشاريع حقيقية من Google Maps (نطاق 3 كم):\n${nearbyProjects.map((p, i) => `${i + 1}. ${p}`).join('\n')}` : ''}
+${nearbyProjects.length > 0 ? `## مباني ومشاريع سكنية حقيقية من Google Maps في ${factSheet.community}:\n${nearbyProjects.map((p, i) => `${i + 1}. ${p}`).join('\n')}` : ''}
 
 اكتبي تحليلاً شاملاً للمنافسين يتضمن:
 
-## 1. خريطة المنافسين (Competitor Map)
-حددي المشاريع المنافسة ضمن 3 نطاقات:
+## 1. خريطة المنافسين (Competitor Map) — شقق سكنية في ${factSheet.community}
+حددي المشاريع المنافسة (شقق سكنية فقط) ضمن 3 نطاقات:
 
 ### نطاق 1 كم (منافسون مباشرون)
 ### نطاق 2 كم (منافسون قريبون)
@@ -763,10 +816,12 @@ ${nearbyProjects.length > 0 ? `## مباني ومشاريع حقيقية من Go
 | اسم المشروع | المطور | المسافة | عدد الوحدات | أنواع الوحدات | سعر/قدم² | خطة السداد | حالة المبيعات | سرعة البيع | المصدر |
 
 🚨 **قواعد إلزامية:**
-- يجب ذكر 10-15 مشروع حقيقي على الأقل
+- يجب ذكر 10-15 مشروع شقق سكنية حقيقي على الأقل **في نفس المنطقة (${factSheet.community})**
+- الأولوية المطلقة: مشاريع الشقق السكنية (أبراج/مباني) في ${factSheet.community}
 - استخدمي أسماء المباني من Google Maps أعلاه كنقطة بداية
-- أضيفي مشاريع أخرى معروفة في المنطقة
-- لكل مشروع: اسم حقيقي + مطور حقيقي + أسعار واقعية
+- أضيفي مشاريع شقق سكنية أخرى معروفة في ${factSheet.community}
+- لا تخلطي بين أسعار الفلل وأسعار الشقق — نحن نبني مبنى شقق سكنية
+- لكل مشروع: اسم حقيقي + مطور حقيقي + أسعار واقعية للشقق
 - التقديرات تُعلّم بـ "تقدير مهني"
 
 ## 2. تحليل المنتج المنافس
@@ -986,7 +1041,13 @@ ${stage4Data ? `بيانات المنافسين (المحرك 4): ${stage4Data.s
 
 المحرك السادس: استراتيجية المنتج.
 
-بيانات المشروع:
+🚨 **تعليمات حاسمة:**
+- جميع المقارنات والتوصيات يجب أن تكون مبنية على **مباني الشقق السكنية في نفس المنطقة (${factSheet.community})**
+- لا تقارني مع فلل أو تاون هاوس — نحن نبني مبنى شقق سكنية
+- الأسعار والمساحات يجب أن تعكس واقع سوق الشقق في ${factSheet.community} تحديداً
+- لا تستخدمي أرقام عامة لدبي — استخدمي أرقام المنطقة فقط
+
+بيانات المشروع::
 - الاسم: ${factSheet.project.name}
 - المنطقة: ${factSheet.community}
 - نوع المشروع: ${factSheet.projectType}
@@ -1015,7 +1076,8 @@ ${stage5Data ? `بيانات الطلب: ${stage5Data.substring(0, 1000)}` : ''}
 - نقاط البيع الفريدة (USPs)
 
 ## 4. المقارنة مع المنافسين (Developer Benchmarking)
-مقارنة مع مشاريع Emaar, Meraas, Sobha, Danube, Ellington في نفس المنطقة:
+مقارنة مع مشاريع الشقق السكنية الفعلية في ${factSheet.community} (من بيانات المحرك 4 أعلاه).
+🚨 استخدمي فقط المشاريع الموجودة فعلاً في نفس المنطقة:
 | المطور | المشروع | Unit Mix | المساحات | التشطيب | التسعير |
 
 ## 5. التوصيات النهائية للمنتج
@@ -1092,7 +1154,14 @@ JSON:
 
 المحرك السابع: ذكاء التسعير.
 
-بيانات المشروع:
+🚨 **تعليمات حاسمة للتسعير:**
+- جميع الأسعار يجب أن تعكس واقع **سوق الشقق السكنية في ${factSheet.community} تحديداً**
+- لا تستخدمي متوسطات دبي العامة — استخدمي أسعار المنطقة فقط
+- المقارنة يجب أن تكون مع **مشاريع الشقق السكنية في نفس المنطقة** (من بيانات المحرك 4)
+- لا تخلطي أسعار الفلل مع أسعار الشقق
+- يجب أن تكون الأرقام متسقة مع بيانات المنافسين في المحرك 4 واستراتيجية المنتج في المحرك 6
+
+بيانات المشروع::
 - الاسم: ${factSheet.project.name}
 - المنطقة: ${factSheet.community}
 - نوع المشروع: ${factSheet.projectType}
@@ -1414,7 +1483,13 @@ JSON:
 
         const prompt = `أنتِ جويل. التاريخ: ${reportDate}.
 
-المحرك العاشر: مصالحة البيانات.
+االمحرك العاشر: مصالحة البيانات.
+
+🚨 **تعليمات حاسمة للمصالحة:**
+- جميع الأسعار المرجحة يجب أن تعكس **سوق الشقق السكنية في ${factSheet.community} تحديداً**
+- لا تستخدمي متوسطات دبي العامة — استخدمي بيانات المنطقة فقط
+- يجب أن تكون الأرقام النهائية **متسقة تماماً** مع أسعار المحرك 7 (التسعير) والمحرك 4 (المنافسين)
+- إذا وجدتِ تضارباً بين المحركات، اذكريه واشرحي كيف تم حله
 
 المشروع: ${factSheet.project.name} — ${factSheet.community}
 
@@ -1651,6 +1726,32 @@ JSON:
 
         if (!stage6Data && !stage7Data) {
           outputSummary += '## ⚠️ لا توجد بيانات كافية لتعبئة الحقول\nيرجى تشغيل المحركات 6 و 7 أولاً.\n';
+        }
+
+        // Cross-validate with cost & cashflow data
+        const factSheet = await getProjectFactSheet(db, projectId, ctx.user.id);
+        if (factSheet.costData) {
+          outputSummary += '\n## ✅ ربط بيانات التكلفة والتدفقات\n';
+          outputSummary += `- سعر الأرض: ${factSheet.costData.landPrice?.toLocaleString() || 'غير محدد'} درهم\n`;
+          outputSummary += `- تكلفة البناء/قدم²: ${factSheet.costData.constructionCostPerSqft || 'غير محدد'} درهم\n`;
+          outputSummary += `- رسوم المطور: ${factSheet.costData.developerFeePct}%\n`;
+          outputSummary += `- التسويق: ${factSheet.costData.marketingPct}%\n`;
+          outputSummary += `- عمولة البيع: ${factSheet.costData.agentCommissionSalePct}%\n`;
+          outputSummary += `- مدة المشروع: ${factSheet.costData.projectDurationMonths} شهر\n`;
+          outputSummary += `- حصة كومو: ${factSheet.costData.comoProfitSharePct}%\n\n`;
+          outputFields.costData = factSheet.costData;
+
+          // Validate pricing vs cost consistency
+          if (outputFields.pricing && factSheet.costData.constructionCostPerSqft > 0) {
+            const basePrice = outputFields.pricing.base?.residential?.oneBr || outputFields.pricing.base?.residential?.studio || 0;
+            const costPerSqft = factSheet.costData.constructionCostPerSqft;
+            if (basePrice > 0 && basePrice < costPerSqft * 1.3) {
+              outputSummary += '## ⚠️ تحذير: سعر البيع الأساسي قريب جداً من تكلفة البناء\n';
+              outputSummary += `سعر البيع: ${basePrice} درهم/قدم² مقابل تكلفة البناء: ${costPerSqft} درهم/قدم²\n\n`;
+            }
+          }
+        } else {
+          outputSummary += '\n## ⚠️ لا توجد بيانات تكلفة وتدفقات\nيرجى تعبئة تبويب "التكاليف والتدفقات" في دراسة الجدوى لربط البيانات.\n\n';
         }
 
         await saveStageResult(db, ctx.user.id, projectId, 11, STAGES[10].nameAr, 'completed', outputSummary, JSON.stringify(outputFields));
