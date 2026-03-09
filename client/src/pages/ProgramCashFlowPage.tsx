@@ -207,7 +207,7 @@ export default function ProgramCashFlowPage() {
             </div>
             <p className="text-lg font-medium mb-1">لا توجد مشاريع بعد</p>
             <p className="text-sm text-muted-foreground mb-6 max-w-sm text-center">
-              ابدأ بإنشاء مشروعك الأول — يمكنك الاستيراد من دراسة الجدوى أو إنشاء مشروع يدوياً
+              ابدأ بإنشاء مشروعك الأول — يمكنك الاستيراد من بطاقة المشروع أو إنشاء مشروع يدوياً
             </p>
             <Button size="lg" onClick={() => setShowCreateDialog(true)}>
               <Plus className="h-5 w-5 ml-2" />
@@ -321,17 +321,17 @@ function CreateProjectDialog({ open, onOpenChange, onCreated }: {
   onOpenChange: (v: boolean) => void;
   onCreated: () => void;
 }) {
-  const [mode, setMode] = useState<'manual' | 'feasibility'>('feasibility');
+  const [mode, setMode] = useState<'manual' | 'project'>('project');
   const [name, setName] = useState('');
   const [startDate, setStartDate] = useState('2026-01');
   const [preDevMonths, setPreDevMonths] = useState(6);
   const [constructionMonths, setConstructionMonths] = useState(16);
   const [handoverMonths, setHandoverMonths] = useState(2);
-  const [selectedFeasId, setSelectedFeasId] = useState<number | null>(null);
+  const [selectedProjId, setSelectedProjId] = useState<number | null>(null);
 
-  const feasListQuery = trpc.cashFlowProgram.importFromFeasibility.useQuery(
-    { projectId: 0 },
-    { enabled: open && mode === 'feasibility' }
+  const projectsListQuery = trpc.projects.list.useQuery(
+    undefined,
+    { enabled: open && mode === 'project' }
   );
 
   const createMutation = trpc.cashFlowProgram.createProject.useMutation({
@@ -343,7 +343,7 @@ function CreateProjectDialog({ open, onOpenChange, onCreated }: {
     onError: (e) => toast.error(e.message),
   });
 
-  const createFromFeasMutation = trpc.cashFlowProgram.createFromFeasibility.useMutation({
+  const createFromProjectMutation = trpc.cashFlowProgram.createFromFeasibility.useMutation({
     onSuccess: (data) => {
       toast.success(`تم إنشاء المشروع: ${data?.projectName} (${data?.costItemsCount} بند تكلفة)`);
       onOpenChange(false);
@@ -367,9 +367,9 @@ function CreateProjectDialog({ open, onOpenChange, onCreated }: {
 
         <Tabs value={mode} onValueChange={(v) => setMode(v as any)}>
           <TabsList className="w-full">
-            <TabsTrigger value="feasibility" className="flex-1">
+            <TabsTrigger value="project" className="flex-1">
               <FileText className="h-3.5 w-3.5 ml-1" />
-              من دراسة الجدوى
+              من بطاقة المشروع
             </TabsTrigger>
             <TabsTrigger value="manual" className="flex-1">
               <Edit className="h-3.5 w-3.5 ml-1" />
@@ -377,18 +377,18 @@ function CreateProjectDialog({ open, onOpenChange, onCreated }: {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="feasibility" className="space-y-4 mt-4">
+          <TabsContent value="project" className="space-y-4 mt-4">
             <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200/50 text-xs text-blue-700 dark:text-blue-300">
               <Info className="h-3.5 w-3.5 inline ml-1" />
-              سيتم استيراد بنود التكاليف تلقائياً من دراسة الجدوى المختارة
+              سيتم استيراد بنود التكاليف تلقائياً من بيانات المشروع ودراسة الجدوى
             </div>
             <div>
-              <Label>اختر دراسة الجدوى</Label>
-              <Select onValueChange={(v) => setSelectedFeasId(Number(v))}>
-                <SelectTrigger><SelectValue placeholder="اختر دراسة جدوى..." /></SelectTrigger>
+              <Label>اختر المشروع</Label>
+              <Select onValueChange={(v) => setSelectedProjId(Number(v))}>
+                <SelectTrigger><SelectValue placeholder="اختر مشروعاً..." /></SelectTrigger>
                 <SelectContent>
-                  {(feasListQuery.data as any)?.studies?.map((s: any) => (
-                    <SelectItem key={s.id} value={String(s.id)}>{s.projectName}</SelectItem>
+                  {projectsListQuery.data?.map((p: any) => (
+                    <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -413,9 +413,9 @@ function CreateProjectDialog({ open, onOpenChange, onCreated }: {
             </div>
             <Button
               className="w-full"
-              disabled={!selectedFeasId || createFromFeasMutation.isPending}
-              onClick={() => selectedFeasId && createFromFeasMutation.mutate({
-                feasibilityStudyId: selectedFeasId,
+              disabled={!selectedProjId || createFromProjectMutation.isPending}
+              onClick={() => selectedProjId && createFromProjectMutation.mutate({
+                feasibilityStudyId: selectedProjId,
                 startDate,
                 designApprovalMonths: preDevMonths,
                 reraSetupMonths: 0,
@@ -423,7 +423,7 @@ function CreateProjectDialog({ open, onOpenChange, onCreated }: {
                 handoverMonths,
               })}
             >
-              {createFromFeasMutation.isPending ? 'جاري الإنشاء...' : 'إنشاء من دراسة الجدوى'}
+              {createFromProjectMutation.isPending ? 'جاري الإنشاء...' : 'إنشاء من بيانات المشروع'}
             </Button>
           </TabsContent>
 

@@ -185,25 +185,7 @@ export default function FeasibilityStudyPage({ embedded }: { embedded?: boolean 
   const deleteMutation = trpc.feasibility.delete.useMutation({
     onSuccess: () => { studiesByProjectQuery.refetch(); setSelectedStudyId(null); setForm({}); toast.success("تم حذف الدراسة"); },
   });
-  // Removed: aiSummaryMutation (now in Joelle Engine)
-  const _aiSummaryMutation = trpc.feasibility.generateAiSummary.useMutation({
-    onSuccess: (data) => { studyQuery.refetch(); setForm((prev: Record<string, any>) => ({ ...prev, aiSummary: data.summary })); toast.success("تم إنشاء التحليل بنجاح"); },
-    onError: (err) => toast.error(err.message || "فشل في إنشاء التحليل"),
-  });
-  const marketAnalysisMutation = trpc.feasibility.generateMarketAnalysis.useMutation({
-    onSuccess: (data) => { studyQuery.refetch(); setForm((prev: Record<string, any>) => ({ ...prev, marketAnalysis: data.analysis })); toast.success("تم تحليل السوق بنجاح"); },
-    onError: (err) => toast.error(err.message || "فشل في تحليل السوق"),
-  });
-  // Removed: comprehensiveReportMutation (now in Joelle Engine)
-  const _comprehensiveReportMutation = trpc.feasibility.generateComprehensiveReport.useMutation({
-    onSuccess: (data) => { studyQuery.refetch(); setForm((prev: Record<string, any>) => ({ ...prev, competitorAnalysis: data.report })); toast.success("تم إنشاء التقرير الشامل"); },
-    onError: (err) => toast.error(err.message || "فشل في إنشاء التقرير"),
-  });
-  // Removed: executiveReportMutation (now in Joelle Engine)
-  const _executiveReportMutation = trpc.feasibility.generateExecutiveReport.useMutation({
-    onSuccess: (data) => { studyQuery.refetch(); setForm((prev: Record<string, any>) => ({ ...prev, priceRecommendation: data.report })); toast.success("تم إنشاء تقرير المجلس"); },
-    onError: (err) => toast.error(err.message || "فشل في إنشاء التقرير"),
-  });
+  // AI mutations removed - now handled by Joelle Engine
 
   // Load study data into form
   const loadedStudyId = studyQuery.data?.id;

@@ -2223,3 +2223,15 @@
 - [x] إضافة زر "تعبئة تلقائية من جويل" في واجهة CostsCashFlowTab
 - [x] إصلاح خلل aiRecommendationsJson (الواجهة كانت تبحث عن aiRecommendations بدلاً من aiRecommendationsJson)
 - [x] كتابة 22 اختبار vitest لمنطق الملء التلقائي (joelleAutoPopulate.test.ts)
+
+## توحيد مصادر البيانات وتنظيف الملفات (Mar 9)
+- [x] مراجعة تدفق البيانات الكامل: بطاقة تعريفية → جويل → تكاليف → تخطيط → تدفقات
+- [x] إزالة الاعتماد على feasibilityStudies في cashFlowProgram واستبداله بـ projects+MO+CP+costsCashFlow
+- [x] حذف 12 ملف غير مستخدم (Tab1-8 + CompetitionPricingTab + MarketOverviewTab + DesignsAndPermitsTab + LegalSetupTab)
+- [x] ربط CostsCashFlowTab بالبطاقة التعريفية (projects) مباشرة لسحب الحقول الأساسية
+- [x] ربط محرك جويل بالتكاليف: مخرجات المحركات تملأ الحقول تلقائياً
+- [x] ربط محاكي التخطيط الرأسمالي بالتكاليف (cashFlowProgram يقرأ من projects+MO+CP+costsCashFlow)
+- [x] ربط برنامج العمل والتدفقات النقدية بالتكاليف (syncFromFeasibility يقرأ من projects+costsCashFlow)
+- [x] تنظيف الملفات: حذف 12 مكون غير مستخدم + إزالة mutations غير مستخدمة من FeasibilityStudyPage
+- [x] اختبار التدفق الكامل: 22 اختبار vitest ناجح + السيرفر يعمل بدون أخطاء
+- [x] تحديث ProgramCashFlowPage: عرض المشاريع بدلاً من دراسات الجدوى في حوار الإنشاء
