@@ -379,12 +379,12 @@ export default function FeasibilityStudyPage({ embedded }: { embedded?: boolean 
                   🧠 محرك جويل
                 </TabsTrigger>
                 <TabsTrigger value="tab5" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  💰 التكاليف والتدفقات
+                  💰 الميزانية والتسعير
                 </TabsTrigger>
               </TabsList>
 
               {/* ═══════════════════════════════════════════ */}
-              {/* التبويب الموحد: التكاليف والتدفقات */}
+              {/* التبويب الموحد: الميزانية والتسعير */}
               {/* يشمل: توزيع الوحدات + التسعير + التكاليف */}
               {/* ═══════════════════════════════════════════ */}
               <TabsContent value="tab5">

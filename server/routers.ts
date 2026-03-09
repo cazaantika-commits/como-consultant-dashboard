@@ -40,6 +40,7 @@ import { joelleEngineRouter } from "./routers/joelleEngine";
 import { marketReportsRouter } from "./routers/marketReports";
 import { riskDashboardRouter } from "./routers/riskDashboard";
 import { selfLearningRouter } from "./routers/selfLearning";
+import { sectionStatusRouter } from "./routers/sectionStatus";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -94,6 +95,7 @@ export const appRouter = router({
   marketReports: marketReportsRouter,
   riskDashboard: riskDashboardRouter,
   selfLearning: selfLearningRouter,
+  sectionStatus: sectionStatusRouter,
 });
 
 export type AppRouter = typeof appRouter;
