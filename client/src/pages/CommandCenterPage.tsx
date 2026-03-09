@@ -785,7 +785,12 @@ function BubbleDetail({ token, bubbleType, onBack, memberRole }: { token: string
       await deleteItem.mutateAsync({ token, itemId });
       utils.commandCenter.getItems.invalidate({ token, bubbleType: bubbleType as any, status: "active" });
       toast.success("تم حذف الإعلان بنجاح");
-    } catch (error) {
+    } catch (error: any) {
+      // Silently ignore "Item not found" errors (already deleted)
+      if (error?.data?.code === "NOT_FOUND") {
+        utils.commandCenter.getItems.invalidate({ token, bubbleType: bubbleType as any, status: "active" });
+        return;
+      }
       toast.error("خطأ في حذف الإعلان");
     }
   };
