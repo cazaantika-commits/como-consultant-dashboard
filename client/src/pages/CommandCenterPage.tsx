@@ -749,24 +749,138 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
 function BubbleDetail({ token, bubbleType, onBack, memberRole }: { token: string; bubbleType: string; onBack: () => void; memberRole: string }) {
   const bubble = BUBBLES.find(b => b.type === bubbleType);
   const items = trpc.commandCenter.getItems.useQuery({ token, bubbleType: bubbleType as any, status: "active" });
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newContent, setNewContent] = useState("");
+  const createItem = trpc.commandCenter.createItem.useMutation();
+  const deleteItem = trpc.commandCenter.deleteItem.useMutation();
+  const utils = trpc.useUtils();
+
+  const handleAddItem = async () => {
+    if (!newTitle.trim()) {
+      toast.error("الرجاء إدخال عنوان");
+      return;
+    }
+    try {
+      await createItem.mutateAsync({
+        token,
+        bubbleType: bubbleType as any,
+        title: newTitle,
+        content: newContent,
+        priority: "normal",
+        summary: newContent.substring(0, 100),
+      });
+      setNewTitle("");
+      setNewContent("");
+      setShowAddModal(false);
+      utils.commandCenter.getItems.invalidate({ token, bubbleType: bubbleType as any, status: "active" });
+      toast.success("تم إضافة الإعلان بنجاح");
+    } catch (error) {
+      toast.error("خطأ في إضافة الإعلان");
+    }
+  };
+
+  const handleDeleteItem = async (itemId: number) => {
+    try {
+      await deleteItem.mutateAsync({ token, itemId });
+      utils.commandCenter.getItems.invalidate({ token, bubbleType: bubbleType as any, status: "active" });
+      toast.success("تم حذف الإعلان بنجاح");
+    } catch (error) {
+      toast.error("خطأ في حذف الإعلان");
+    }
+  };
 
   if (!bubble) return null;
 
   return (
     <div className="space-y-6 fade-in" dir="rtl">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500 hover:text-slate-700 -mr-2">
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${bubble.color} flex items-center justify-center shadow-md`}>
-          <bubble.icon className="w-5 h-5 text-white" />
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500 hover:text-slate-700 -mr-2">
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${bubble.color} flex items-center justify-center shadow-md`}>
+            <bubble.icon className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-slate-800">{bubble.label}</h2>
+            <p className="text-xs text-slate-500">{items.data?.length || 0} عنصر</p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-lg font-bold text-slate-800">{bubble.label}</h2>
-          <p className="text-xs text-slate-500">{items.data?.length || 0} عنصر</p>
-        </div>
+        {bubbleType === "announcements" && (
+          <Button
+            size="sm"
+            onClick={() => setShowAddModal(true)}
+            className="bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:shadow-md"
+          >
+            <Plus className="w-4 h-4 ml-1" />
+            إضافة إعلان
+          </Button>
+        )}
       </div>
+
+      {/* Add Announcement Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <div className="p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-slate-800">إضافة إعلان جديد</h3>
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">العنوان</label>
+                  <Input
+                    placeholder="عنوان الإعلان"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">المحتوى</label>
+                  <Textarea
+                    placeholder="محتوى الإعلان"
+                    value={newContent}
+                    onChange={(e) => setNewContent(e.target.value)}
+                    className="w-full h-24 resize-none"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4"
+                >
+                  إلغاء
+                </Button>
+                <Button
+                  onClick={handleAddItem}
+                  disabled={createItem.isPending || !newTitle.trim()}
+                  className="bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4"
+                >
+                  {createItem.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 ml-1 animate-spin" />
+                      جاري الإضافة...
+                    </>
+                  ) : (
+                    "إضافة"
+                  )}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
 
       {/* Items */}
       {items.isLoading ? (
@@ -786,7 +900,13 @@ function BubbleDetail({ token, bubbleType, onBack, memberRole }: { token: string
       ) : (
         <div className="space-y-3">
           {items.data?.map((item) => (
-            <ItemCard key={item.id} item={item} token={token} />
+            <ItemCard
+              key={item.id}
+              item={item}
+              token={token}
+              bubbleType={bubbleType}
+              onDelete={bubbleType === "announcements" ? handleDeleteItem : undefined}
+            />
           ))}
         </div>
       )}
@@ -794,7 +914,7 @@ function BubbleDetail({ token, bubbleType, onBack, memberRole }: { token: string
   );
 }
 
-function ItemCard({ item, token }: { item: any; token: string }) {
+function ItemCard({ item, token, onDelete, bubbleType }: { item: any; token: string; onDelete?: (id: number) => void; bubbleType?: string }) {
   const [expanded, setExpanded] = useState(false);
   const priority = PRIORITY_LABELS[item.priority] || PRIORITY_LABELS.normal;
   const responses = trpc.commandCenter.getResponses.useQuery(
@@ -804,8 +924,8 @@ function ItemCard({ item, token }: { item: any; token: string }) {
 
   return (
     <Card className="p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition-all hover:shadow-md">
-      <div className="flex items-start justify-between gap-3 cursor-pointer" onClick={() => setExpanded(!expanded)}>
-        <div className="flex-1 min-w-0">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setExpanded(!expanded)}>
           <div className="flex items-center gap-2 mb-1.5">
             <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${priority.color}`}>
               {priority.label}
@@ -821,8 +941,36 @@ function ItemCard({ item, token }: { item: any; token: string }) {
             <p className="text-xs text-slate-500 mt-1 line-clamp-2">{item.summary}</p>
           )}
         </div>
-        <div className="text-xs text-slate-400 flex-shrink-0">
-          {new Date(item.createdAt).toLocaleDateString("ar-AE", { month: "short", day: "numeric" })}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="text-xs text-slate-400">
+            {new Date(item.createdAt).toLocaleDateString("ar-AE", { month: "short", day: "numeric" })}
+          </div>
+          {bubbleType === "announcements" && onDelete && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>حذف الإعلان</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    هل أنت متأكد من حذف هذا الإعلان؟ لا يمكن التراجع عن هذا الإجراء.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => onDelete(item.id)}
+                    className="bg-red-500 hover:bg-red-600"
+                  >
+                    حذف
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
       </div>
 
