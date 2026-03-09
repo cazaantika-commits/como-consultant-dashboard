@@ -326,7 +326,7 @@ export default function Home() {
   const NAV_MAIN = [
     { id: "main-projects", label: "إدارة المشاريع", icon: Building2, path: "/project-management", borderColor: "#059669", iconBg: "linear-gradient(135deg, #059669, #047857)", shadow: "rgba(5, 150, 105, 0.25)" },
     { id: "main-dev", label: "مراحل التطوير", icon: HardHat, path: "/development-phases", borderColor: "#8b5cf6", iconBg: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)" },
-    { id: "main-cmd", label: "مركز القيادة", icon: Crown, path: "/command-center", borderColor: "#d97706", iconBg: "linear-gradient(135deg, #d97706, #b45309)", shadow: "rgba(217, 119, 6, 0.25)" },
+    { id: "main-cmd", label: "مركز القيادة", icon: Crown, path: "/command-center", borderColor: "#6d28d9", iconBg: "linear-gradient(135deg, #6d28d9, #5b21b6)", shadow: "rgba(109, 40, 217, 0.3)" },
     { id: "main-consult", label: "المكاتب الاستشارية", icon: Users, path: "/consultant-portal", borderColor: "#78716c", iconBg: "linear-gradient(135deg, #78716c, #57534e)", shadow: "rgba(120, 113, 108, 0.25)" },
     { id: "main-agents", label: "لوحة الوكلاء", icon: Bot, path: "/agent-dashboard", borderColor: "#6366f1", iconBg: "linear-gradient(135deg, #6366f1, #8b5cf6)", shadow: "rgba(99, 102, 241, 0.25)" },
   ];
