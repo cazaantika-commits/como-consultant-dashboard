@@ -159,29 +159,34 @@ function SortableMainCard({ item, onNavigate }: { item: NavItem; onNavigate: (pa
       onClick={() => !isDragging && onNavigate(item.path)}
       className={`group relative rounded-2xl border transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-[0.97] overflow-hidden cursor-grab active:cursor-grabbing select-none touch-none ${
         isCommandCenter
-          ? 'border-border/60 py-8 px-6 hover:shadow-2xl hover:-translate-y-1.5 hover:border-border/80'
+          ? 'border-border/60 py-8 px-6 hover:shadow-2xl hover:-translate-y-1.5 hover:border-border/80 before:absolute before:inset-0 before:bg-gradient-to-br before:from-purple-500/5 before:to-transparent before:opacity-0 before:group-hover:opacity-100 before:transition-opacity before:duration-300'
           : 'border-border/40 py-7 px-5'
       } ${isDragging ? 'shadow-2xl scale-105 ring-2 ring-primary/30' : ''}`}
     >
       <div className="absolute top-0 left-0 right-0 h-[4px] rounded-t-2xl" style={{ background: item.iconBg }} />
-      <div className={`absolute -top-8 -right-8 rounded-full opacity-[0.07] blur-2xl ${
-        isCommandCenter ? 'w-32 h-32' : 'w-24 h-24'
+      <div className={`absolute -top-8 -right-8 rounded-full opacity-[0.07] blur-2xl transition-all duration-300 group-hover:opacity-[0.15] ${
+        isCommandCenter ? 'w-32 h-32 group-hover:w-40 group-hover:h-40' : 'w-24 h-24'
       }`} style={{ background: item.borderColor }} />
-      <div className="flex flex-col items-center gap-4">
+      {isCommandCenter && (
+        <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{
+          background: 'radial-gradient(circle at 30% 30%, rgba(139, 92, 246, 0.1), transparent 50%)',
+        }} />
+      )}
+      <div className="flex flex-col items-center gap-4 relative z-10">
         <div
           className={`rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ring-4 ring-white/80 dark:ring-card/80 ${
             isCommandCenter
-              ? 'w-20 h-20 group-hover:scale-125 group-hover:shadow-2xl'
+              ? 'w-20 h-20 group-hover:scale-125 group-hover:shadow-2xl relative after:absolute after:inset-0 after:rounded-2xl after:opacity-0 after:group-hover:opacity-100 after:transition-opacity after:duration-300 after:bg-gradient-to-br after:from-white/20 after:to-transparent'
               : 'w-16 h-16'
           }`}
           style={{ background: item.iconBg, boxShadow: `0 ${isCommandCenter ? '8px 24px' : '6px 20px'} ${item.shadow}` }}
         >
           <item.icon className={`text-white ${
-            isCommandCenter ? 'w-9 h-9' : 'w-7 h-7'
+            isCommandCenter ? 'w-9 h-9 group-hover:animate-pulse' : 'w-7 h-7'
           }`} />
         </div>
-        <span className={`font-bold text-foreground ${
-          isCommandCenter ? 'text-base' : 'text-[15px]'
+        <span className={`font-bold text-foreground transition-all duration-300 ${
+          isCommandCenter ? 'text-base group-hover:text-purple-600 dark:group-hover:text-purple-400' : 'text-[15px]'
         }`}>{item.label}</span>
       </div>
     </div>
