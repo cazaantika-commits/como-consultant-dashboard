@@ -407,33 +407,39 @@ export default function Home() {
               <h2 className="text-base font-bold text-foreground">الأقسام الرئيسية</h2>
             </div>
 
-            {/* 5 Main Cards - White cards with colored top border */}
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* 5 Main Cards - Distinctive larger cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-5">
               {NAV_MAIN.map((item, i) => (
                 <button
                   key={i}
                   onClick={() => navigate(item.path)}
-                  className="group relative bg-card hover:bg-card/90 rounded-xl border border-border/50 p-5 text-right transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] overflow-hidden"
+                  className="group relative rounded-2xl border border-border/40 py-7 px-5 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-[0.97] overflow-hidden"
+                  style={{ background: `linear-gradient(180deg, ${item.borderColor}08 0%, transparent 60%)` }}
                 >
-                  {/* Top colored accent line */}
+                  {/* Top colored accent bar - thicker */}
                   <div
-                    className="absolute top-0 left-0 right-0 h-[3px] rounded-t-xl"
-                    style={{ backgroundColor: item.borderColor }}
+                    className="absolute top-0 left-0 right-0 h-[4px] rounded-t-2xl"
+                    style={{ background: item.iconBg }}
+                  />
+                  {/* Subtle corner glow */}
+                  <div
+                    className="absolute -top-8 -right-8 w-24 h-24 rounded-full opacity-[0.07] blur-2xl"
+                    style={{ background: item.borderColor }}
                   />
 
-                  <div className="flex flex-col items-center gap-3 pt-1">
-                    {/* Round colored icon */}
+                  <div className="flex flex-col items-center gap-4">
+                    {/* Larger round icon with ring */}
                     <div
-                      className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110"
+                      className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ring-4 ring-white/80 dark:ring-card/80"
                       style={{
                         background: item.iconBg,
-                        boxShadow: `0 4px 14px ${item.shadow}`,
+                        boxShadow: `0 6px 20px ${item.shadow}`,
                       }}
                     >
-                      <item.icon className="w-6 h-6 text-white" />
+                      <item.icon className="w-7 h-7 text-white" />
                     </div>
-                    {/* Label */}
-                    <span className="text-sm font-bold text-foreground">{item.label}</span>
+                    {/* Label - larger */}
+                    <span className="text-[15px] font-bold text-foreground">{item.label}</span>
                   </div>
                 </button>
               ))}
