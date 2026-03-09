@@ -1,0 +1,9 @@
+{
+  "query": "UPDATE joelle_analysis_stages SET stageStatus = 'pending', errorMessage = NULL, stageOutput = '' WHERE projectId = 4 AND stageNumber = 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute UPDATE joelle_analysis_stages SET stageStatus = 'pending', errorMessage = NULL, stageOutput = '' WHERE projectId = 4 AND stageNumber = 10;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1508
+}
