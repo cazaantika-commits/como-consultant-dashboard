@@ -1,5 +1,22 @@
 import { useAuth } from "@/_core/hooks/useAuth";
-import { useState } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  rectSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -120,6 +137,76 @@ function QuickActionResult({
   );
 }
 
+/* ── Sortable Main Card (big cards) ── */
+type NavItem = { id: string; label: string; icon: any; path: string; borderColor: string; iconBg: string; shadow: string };
+
+function SortableMainCard({ item, onNavigate }: { item: NavItem; onNavigate: (path: string) => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+    opacity: isDragging ? 0.85 : 1,
+    background: `linear-gradient(180deg, ${item.borderColor}08 0%, transparent 60%)`,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onClick={() => !isDragging && onNavigate(item.path)}
+      className={`group relative rounded-2xl border border-border/40 py-7 px-5 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-[0.97] overflow-hidden cursor-grab active:cursor-grabbing select-none touch-none ${isDragging ? 'shadow-2xl scale-105 ring-2 ring-primary/30' : ''}`}
+    >
+      <div className="absolute top-0 left-0 right-0 h-[4px] rounded-t-2xl" style={{ background: item.iconBg }} />
+      <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full opacity-[0.07] blur-2xl" style={{ background: item.borderColor }} />
+      <div className="flex flex-col items-center gap-4">
+        <div
+          className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ring-4 ring-white/80 dark:ring-card/80"
+          style={{ background: item.iconBg, boxShadow: `0 6px 20px ${item.shadow}` }}
+        >
+          <item.icon className="w-7 h-7 text-white" />
+        </div>
+        <span className="text-[15px] font-bold text-foreground">{item.label}</span>
+      </div>
+    </div>
+  );
+}
+
+/* ── Sortable Tool Card (smaller cards) ── */
+function SortableToolCard({ item, onNavigate }: { item: NavItem; onNavigate: (path: string) => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+    opacity: isDragging ? 0.85 : 1,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onClick={() => !isDragging && onNavigate(item.path)}
+      className={`group relative bg-card hover:bg-card/90 rounded-xl border border-border/50 p-4 text-right transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] overflow-hidden cursor-grab active:cursor-grabbing select-none touch-none ${isDragging ? 'shadow-2xl scale-105 ring-2 ring-primary/30' : ''}`}
+    >
+      <div className="absolute top-0 left-0 right-0 h-[3px] rounded-t-xl" style={{ backgroundColor: item.borderColor }} />
+      <div className="flex items-center gap-3 flex-row-reverse">
+        <div
+          className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110"
+          style={{ background: item.iconBg, boxShadow: `0 4px 14px ${item.shadow}` }}
+        >
+          <item.icon className="w-5 h-5 text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <span className="text-sm font-bold text-foreground block">{item.label}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const { user, loading, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
@@ -127,6 +214,26 @@ export default function Home() {
   const [quickActionLoading, setQuickActionLoading] = useState<string | null>(null);
   const [quickActionResult, setQuickActionResult] = useState<{ title: string; content: string } | null>(null);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+
+  /* ── Drag & Drop order state ── */
+  const [mainOrder, setMainOrder] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("como_main_order");
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+  const [toolsOrder, setToolsOrder] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("como_tools_order");
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+    useSensor(KeyboardSensor)
+  );
   const { data: agentsList = [] } = trpc.agents.list.useQuery(undefined, {
     enabled: isAuthenticated,
   });
@@ -202,22 +309,61 @@ export default function Home() {
 
   /* ── Navigation items organized in groups ── */
   const NAV_MAIN = [
-    { label: "إدارة المشاريع", icon: Building2, path: "/project-management", borderColor: "#059669", iconBg: "linear-gradient(135deg, #059669, #047857)", shadow: "rgba(5, 150, 105, 0.25)" },
-    { label: "مراحل التطوير", icon: HardHat, path: "/development-phases", borderColor: "#8b5cf6", iconBg: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)" },
-    { label: "مركز القيادة", icon: Crown, path: "/command-center", borderColor: "#d97706", iconBg: "linear-gradient(135deg, #d97706, #b45309)", shadow: "rgba(217, 119, 6, 0.25)" },
-    { label: "المكاتب الاستشارية", icon: Users, path: "/consultant-portal", borderColor: "#78716c", iconBg: "linear-gradient(135deg, #78716c, #57534e)", shadow: "rgba(120, 113, 108, 0.25)" },
-    { label: "لوحة الوكلاء", icon: Bot, path: "/agent-dashboard", borderColor: "#6366f1", iconBg: "linear-gradient(135deg, #6366f1, #8b5cf6)", shadow: "rgba(99, 102, 241, 0.25)" },
+    { id: "main-projects", label: "إدارة المشاريع", icon: Building2, path: "/project-management", borderColor: "#059669", iconBg: "linear-gradient(135deg, #059669, #047857)", shadow: "rgba(5, 150, 105, 0.25)" },
+    { id: "main-dev", label: "مراحل التطوير", icon: HardHat, path: "/development-phases", borderColor: "#8b5cf6", iconBg: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)" },
+    { id: "main-cmd", label: "مركز القيادة", icon: Crown, path: "/command-center", borderColor: "#d97706", iconBg: "linear-gradient(135deg, #d97706, #b45309)", shadow: "rgba(217, 119, 6, 0.25)" },
+    { id: "main-consult", label: "المكاتب الاستشارية", icon: Users, path: "/consultant-portal", borderColor: "#78716c", iconBg: "linear-gradient(135deg, #78716c, #57534e)", shadow: "rgba(120, 113, 108, 0.25)" },
+    { id: "main-agents", label: "لوحة الوكلاء", icon: Bot, path: "/agent-dashboard", borderColor: "#6366f1", iconBg: "linear-gradient(135deg, #6366f1, #8b5cf6)", shadow: "rgba(99, 102, 241, 0.25)" },
   ];
 
   const NAV_TOOLS = [
-    { label: "المهام", icon: FileText, path: "/tasks", borderColor: "#06b6d4", iconBg: "linear-gradient(135deg, #06b6d4, #0891b2)", shadow: "rgba(6, 182, 212, 0.25)" },
-    { label: "ملفات Drive", icon: Archive, path: "/drive", borderColor: "#10b981", iconBg: "linear-gradient(135deg, #10b981, #059669)", shadow: "rgba(16, 185, 129, 0.25)" },
-    { label: "غرفة الاجتماعات", icon: Users, path: "/meetings", borderColor: "#a855f7", iconBg: "linear-gradient(135deg, #a855f7, #7c3aed)", shadow: "rgba(168, 85, 247, 0.25)" },
-    { label: "قاعدة المعرفة", icon: BookOpen, path: "/knowledge-base", borderColor: "#8b5cf6", iconBg: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)" },
-    { label: "تقارير السوق", icon: BarChart3, path: "/market-reports", borderColor: "#0891b2", iconBg: "linear-gradient(135deg, #0891b2, #06b6d4)", shadow: "rgba(8, 145, 178, 0.25)" },
-    { label: "ملخص التكليفات", icon: ClipboardList, path: "/agent-assignments-summary", borderColor: "#f59e0b", iconBg: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245, 158, 11, 0.25)" },
-    { label: "التعلم الذاتي", icon: Brain, path: "/self-learning", borderColor: "#ec4899", iconBg: "linear-gradient(135deg, #ec4899, #db2777)", shadow: "rgba(236, 72, 153, 0.25)" },
+    { id: "tool-tasks", label: "المهام", icon: FileText, path: "/tasks", borderColor: "#06b6d4", iconBg: "linear-gradient(135deg, #06b6d4, #0891b2)", shadow: "rgba(6, 182, 212, 0.25)" },
+    { id: "tool-drive", label: "ملفات Drive", icon: Archive, path: "/drive", borderColor: "#10b981", iconBg: "linear-gradient(135deg, #10b981, #059669)", shadow: "rgba(16, 185, 129, 0.25)" },
+    { id: "tool-meetings", label: "غرفة الاجتماعات", icon: Users, path: "/meetings", borderColor: "#a855f7", iconBg: "linear-gradient(135deg, #a855f7, #7c3aed)", shadow: "rgba(168, 85, 247, 0.25)" },
+    { id: "tool-kb", label: "قاعدة المعرفة", icon: BookOpen, path: "/knowledge-base", borderColor: "#8b5cf6", iconBg: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)" },
+    { id: "tool-market", label: "تقارير السوق", icon: BarChart3, path: "/market-reports", borderColor: "#0891b2", iconBg: "linear-gradient(135deg, #0891b2, #06b6d4)", shadow: "rgba(8, 145, 178, 0.25)" },
+    { id: "tool-assign", label: "ملخص التكليفات", icon: ClipboardList, path: "/agent-assignments-summary", borderColor: "#f59e0b", iconBg: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245, 158, 11, 0.25)" },
+    { id: "tool-learn", label: "التعلم الذاتي", icon: Brain, path: "/self-learning", borderColor: "#ec4899", iconBg: "linear-gradient(135deg, #ec4899, #db2777)", shadow: "rgba(236, 72, 153, 0.25)" },
   ];
+
+  /* ── Sorted arrays based on saved order ── */
+  const sortedMain = useMemo(() => {
+    if (!mainOrder.length) return NAV_MAIN;
+    const map = new Map(NAV_MAIN.map(item => [item.id, item]));
+    const ordered = mainOrder.filter(id => map.has(id)).map(id => map.get(id)!);
+    NAV_MAIN.forEach(item => { if (!mainOrder.includes(item.id)) ordered.push(item); });
+    return ordered;
+  }, [mainOrder]);
+
+  const sortedTools = useMemo(() => {
+    if (!toolsOrder.length) return NAV_TOOLS;
+    const map = new Map(NAV_TOOLS.map(item => [item.id, item]));
+    const ordered = toolsOrder.filter(id => map.has(id)).map(id => map.get(id)!);
+    NAV_TOOLS.forEach(item => { if (!toolsOrder.includes(item.id)) ordered.push(item); });
+    return ordered;
+  }, [toolsOrder]);
+
+  const handleMainDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = sortedMain.findIndex(i => i.id === active.id);
+    const newIndex = sortedMain.findIndex(i => i.id === over.id);
+    const newArr = arrayMove(sortedMain, oldIndex, newIndex);
+    const newOrder = newArr.map(i => i.id);
+    setMainOrder(newOrder);
+    localStorage.setItem("como_main_order", JSON.stringify(newOrder));
+  }, [sortedMain]);
+
+  const handleToolsDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = sortedTools.findIndex(i => i.id === active.id);
+    const newIndex = sortedTools.findIndex(i => i.id === over.id);
+    const newArr = arrayMove(sortedTools, oldIndex, newIndex);
+    const newOrder = newArr.map(i => i.id);
+    setToolsOrder(newOrder);
+    localStorage.setItem("como_tools_order", JSON.stringify(newOrder));
+  }, [sortedTools]);
 
   const NAV_RECORDS = [
     { label: "سجل التكليفات", path: "/agent-assignments" },
@@ -407,43 +553,16 @@ export default function Home() {
               <h2 className="text-base font-bold text-foreground">الأقسام الرئيسية</h2>
             </div>
 
-            {/* 5 Main Cards - Distinctive larger cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-5">
-              {NAV_MAIN.map((item, i) => (
-                <button
-                  key={i}
-                  onClick={() => navigate(item.path)}
-                  className="group relative rounded-2xl border border-border/40 py-7 px-5 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-[0.97] overflow-hidden"
-                  style={{ background: `linear-gradient(180deg, ${item.borderColor}08 0%, transparent 60%)` }}
-                >
-                  {/* Top colored accent bar - thicker */}
-                  <div
-                    className="absolute top-0 left-0 right-0 h-[4px] rounded-t-2xl"
-                    style={{ background: item.iconBg }}
-                  />
-                  {/* Subtle corner glow */}
-                  <div
-                    className="absolute -top-8 -right-8 w-24 h-24 rounded-full opacity-[0.07] blur-2xl"
-                    style={{ background: item.borderColor }}
-                  />
-
-                  <div className="flex flex-col items-center gap-4">
-                    {/* Larger round icon with ring */}
-                    <div
-                      className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ring-4 ring-white/80 dark:ring-card/80"
-                      style={{
-                        background: item.iconBg,
-                        boxShadow: `0 6px 20px ${item.shadow}`,
-                      }}
-                    >
-                      <item.icon className="w-7 h-7 text-white" />
-                    </div>
-                    {/* Label - larger */}
-                    <span className="text-[15px] font-bold text-foreground">{item.label}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
+            {/* 5 Main Cards - Draggable */}
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleMainDragEnd}>
+              <SortableContext items={sortedMain.map(i => i.id)} strategy={rectSortingStrategy}>
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-5">
+                  {sortedMain.map((item) => (
+                    <SortableMainCard key={item.id} item={item} onNavigate={navigate} />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
           </section>
         )}
 
@@ -459,38 +578,15 @@ export default function Home() {
               <h2 className="text-base font-bold text-foreground">الأدوات والتقارير</h2>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {NAV_TOOLS.map((item, i) => (
-                <button
-                  key={i}
-                  onClick={() => navigate(item.path)}
-                  className="group relative bg-card hover:bg-card/90 rounded-xl border border-border/50 p-4 text-right transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] overflow-hidden"
-                >
-                  {/* Top colored accent line */}
-                  <div
-                    className="absolute top-0 left-0 right-0 h-[3px] rounded-t-xl"
-                    style={{ backgroundColor: item.borderColor }}
-                  />
-
-                  <div className="flex items-center gap-3 flex-row-reverse">
-                    {/* Round colored icon */}
-                    <div
-                      className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110"
-                      style={{
-                        background: item.iconBg,
-                        boxShadow: `0 4px 14px ${item.shadow}`,
-                      }}
-                    >
-                      <item.icon className="w-5 h-5 text-white" />
-                    </div>
-                    {/* Label */}
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-bold text-foreground block">{item.label}</span>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleToolsDragEnd}>
+              <SortableContext items={sortedTools.map(i => i.id)} strategy={rectSortingStrategy}>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {sortedTools.map((item) => (
+                    <SortableToolCard key={item.id} item={item} onNavigate={navigate} />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
 
             {/* Records dropdown row */}
             <div className="mt-4">
