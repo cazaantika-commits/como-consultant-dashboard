@@ -188,7 +188,7 @@ export const commandCenterRouter = router({
         conditions.push(eq(commandCenterItems.bubbleType, input.bubbleType));
       }
       if (input.status) {
-        conditions.push(eq(commandCenterItems.status, input.status));
+        conditions.push(eq(commandCenterItems.itemStatus, input.status));
       }
       
       const items = conditions.length > 0 
@@ -216,7 +216,7 @@ export const commandCenterRouter = router({
       if (!db) return { reports: 0, requests: 0, meeting_minutes: 0, evaluations: 0, announcements: 0, milestones_kpis: 0, unread: 0 };
       
       const [items, notifications] = await Promise.all([
-        db.select().from(commandCenterItems).where(eq(commandCenterItems.status, "active")),
+        db.select().from(commandCenterItems).where(eq(commandCenterItems.itemStatus, "active")),
         db.select().from(commandCenterNotifications)
           .where(and(eq(commandCenterNotifications.memberId, member.memberId), eq(commandCenterNotifications.isRead, 0))),
       ]);
@@ -661,7 +661,7 @@ export const commandCenterRouter = router({
       const [projectsList, consultantsList, recentItems] = await Promise.all([
         db.select({ id: projects.id, name: projects.name }).from(projects).limit(20),
         db.select({ id: consultants.id, name: consultants.name, specialization: consultants.specialization }).from(consultants).limit(30),
-        db.select().from(commandCenterItems).where(eq(commandCenterItems.status, "active")).orderBy(desc(commandCenterItems.createdAt)).limit(10),
+        db.select().from(commandCenterItems).where(eq(commandCenterItems.itemStatus, "active")).orderBy(desc(commandCenterItems.createdAt)).limit(10),
       ]);
       
       const systemPrompt = `أنتِ سلوى، السكرتيرة التنفيذية الذكية في مركز القيادة لشركة COMO Developments.

@@ -202,11 +202,11 @@ export default function Home() {
 
   /* ── Navigation items organized in groups ── */
   const NAV_MAIN = [
-    { label: "إدارة المشاريع", icon: Building2, path: "/project-management", gradient: "linear-gradient(135deg, #059669, #047857)", shadow: "rgba(5, 150, 105, 0.25)" },
-    { label: "مراحل التطوير", icon: HardHat, path: "/development-phases", gradient: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)" },
-    { label: "مركز القيادة", icon: Crown, path: "/command-center", gradient: "linear-gradient(135deg, #d97706, #b45309)", shadow: "rgba(217, 119, 6, 0.25)" },
-    { label: "المكاتب الاستشارية", icon: Users, path: "/consultant-portal", gradient: "linear-gradient(135deg, #78716c, #57534e)", shadow: "rgba(120, 113, 108, 0.25)" },
-    { label: "لوحة الوكلاء", icon: Bot, path: "/agent-dashboard", gradient: "linear-gradient(135deg, #6366f1, #8b5cf6)", shadow: "rgba(99, 102, 241, 0.25)" },
+    { label: "إدارة المشاريع", icon: Building2, path: "/project-management", borderColor: "#059669", iconBg: "linear-gradient(135deg, #059669, #047857)", shadow: "rgba(5, 150, 105, 0.25)" },
+    { label: "مراحل التطوير", icon: HardHat, path: "/development-phases", borderColor: "#8b5cf6", iconBg: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)" },
+    { label: "مركز القيادة", icon: Crown, path: "/command-center", borderColor: "#d97706", iconBg: "linear-gradient(135deg, #d97706, #b45309)", shadow: "rgba(217, 119, 6, 0.25)" },
+    { label: "المكاتب الاستشارية", icon: Users, path: "/consultant-portal", borderColor: "#78716c", iconBg: "linear-gradient(135deg, #78716c, #57534e)", shadow: "rgba(120, 113, 108, 0.25)" },
+    { label: "لوحة الوكلاء", icon: Bot, path: "/agent-dashboard", borderColor: "#6366f1", iconBg: "linear-gradient(135deg, #6366f1, #8b5cf6)", shadow: "rgba(99, 102, 241, 0.25)" },
   ];
 
   const NAV_TOOLS = [
@@ -407,34 +407,33 @@ export default function Home() {
               <h2 className="text-base font-bold text-foreground">الأقسام الرئيسية</h2>
             </div>
 
-            {/* 5 Main Cards */}
+            {/* 5 Main Cards - White cards with colored top border */}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
               {NAV_MAIN.map((item, i) => (
                 <button
                   key={i}
                   onClick={() => navigate(item.path)}
-                  className="group relative rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-[0.98]"
-                  style={{ minHeight: "170px" }}
+                  className="group relative bg-card hover:bg-card/90 rounded-xl border border-border/50 p-5 text-right transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] overflow-hidden"
                 >
-                  {/* Gradient background */}
+                  {/* Top colored accent line */}
                   <div
-                    className="absolute inset-0 opacity-90 group-hover:opacity-100 transition-opacity duration-300"
-                    style={{ background: item.gradient }}
+                    className="absolute top-0 left-0 right-0 h-[3px] rounded-t-xl"
+                    style={{ backgroundColor: item.borderColor }}
                   />
-                  {/* Decorative circles */}
-                  <div className="absolute top-3 left-3 w-16 h-16 rounded-full bg-white/10 blur-sm" />
-                  <div className="absolute bottom-4 right-4 w-20 h-20 rounded-full bg-white/5" />
 
-                  {/* Content */}
-                  <div className="relative h-full flex flex-col items-center justify-center p-5 text-center">
-                    {/* Icon */}
-                    <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mb-3 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                      <item.icon className="w-7 h-7 text-white" />
+                  <div className="flex flex-col items-center gap-3 pt-1">
+                    {/* Round colored icon */}
+                    <div
+                      className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110"
+                      style={{
+                        background: item.iconBg,
+                        boxShadow: `0 4px 14px ${item.shadow}`,
+                      }}
+                    >
+                      <item.icon className="w-6 h-6 text-white" />
                     </div>
                     {/* Label */}
-                    <h3 className="text-sm font-bold text-white mb-1 leading-tight">{item.label}</h3>
-                    {/* Subtle arrow */}
-                    <ArrowLeft className="w-4 h-4 text-white/60 mt-1 transition-transform duration-300 group-hover:-translate-x-1" />
+                    <span className="text-sm font-bold text-foreground">{item.label}</span>
                   </div>
                 </button>
               ))}
