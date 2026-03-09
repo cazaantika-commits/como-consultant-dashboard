@@ -89,8 +89,8 @@ export default function JoelleEngineTab({ projectId, studyId }: { projectId: num
       const stageMap: Record<number, StageState> = {};
       for (const s of stagesQuery.data) {
         stageMap[s.stageNumber] = {
-          status: s.status as StageStatus,
-          output: s.outputSummary,
+          status: s.stageStatus as StageStatus,
+          output: s.stageOutput,
           error: s.errorMessage,
           startedAt: s.startedAt ? new Date(s.startedAt).getTime() : null,
           completedAt: s.completedAt ? new Date(s.completedAt).getTime() : null,
@@ -422,7 +422,7 @@ export default function JoelleEngineTab({ projectId, studyId }: { projectId: num
                   <div className="flex items-center gap-3">
                     <FileText className="w-4 h-4 text-violet-500" />
                     <div>
-                      <p className="text-sm font-medium">{REPORT_NAMES[report.reportType] || report.title}</p>
+                      <p className="text-sm font-medium">{REPORT_NAMES[report.reportType] || report.reportTitle}</p>
                       <p className="text-[10px] text-muted-foreground">
                         {new Date(report.generatedAt).toLocaleDateString('ar-AE', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </p>
@@ -441,7 +441,7 @@ export default function JoelleEngineTab({ projectId, studyId }: { projectId: num
                 if (!report) return null;
                 return (
                   <div className="mt-3 prose prose-sm max-w-none bg-muted/20 rounded-xl p-6 border border-border" dir="rtl">
-                    <Streamdown>{report.content}</Streamdown>
+                    <Streamdown>{report.reportContent}</Streamdown>
                   </div>
                 );
               })()}

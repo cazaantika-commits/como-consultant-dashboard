@@ -2163,5 +2163,10 @@
 
 ### Testing & Delivery
 - [x] Write vitest tests for Joelle engines (8 tests passed)
-- [ ] Save checkpoint
-- [ ] Deliver with list of required user actions (APIs, subscriptions, data uploads)
+- [x] Fix joelleUpgrade test (5-8 → 8-12 مشروع)
+- [x] Fix frontend field mappings (stageStatus, stageOutput, reportContent, reportTitle)
+- [x] Update DB schema with all 7 report types
+- [x] Create JoelleDataManager component (data source status + engine results viewer)
+- [x] Integrate JoelleDataManager as new tab in FeasibilityStudyPage
+- [x] Save checkpoint
+- [x] Deliver with list of required user actions (APIs, subscriptions, data uploads)

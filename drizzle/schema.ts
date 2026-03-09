@@ -1362,7 +1362,7 @@ export const joelleReports = mysqlTable("joelle_reports", {
 	id: int().autoincrement().notNull().primaryKey(),
 	userId: int().notNull(),
 	projectId: int().notNull(),
-	reportType: mysqlEnum(['market_intelligence', 'competitive_landscape', 'product_strategy', 'pricing_strategy', 'executive_summary']).notNull(),
+	reportType: mysqlEnum(['market_intelligence', 'competitive_landscape', 'product_strategy', 'pricing_strategy', 'executive_summary', 'competitive_analysis', 'demand_forecast', 'risk_analysis']).notNull(),
 	reportTitle: varchar({ length: 500 }).notNull(),
 	reportContent: longtext(), // Full report markdown
 	reportDataJson: longtext(), // Structured data if any

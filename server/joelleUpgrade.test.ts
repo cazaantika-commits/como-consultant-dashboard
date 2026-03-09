@@ -268,7 +268,7 @@ describe("Joelle Market Intelligence Upgrade", () => {
 
     it("should include Competitor Analysis with table structure", () => {
       expect(competitionPricingContent).toContain("تحليل المنافسين");
-      expect(competitionPricingContent).toContain("5-8 مشاريع");
+      expect(competitionPricingContent).toContain("8-12 مشروع");
     });
 
     it("should include Payment Plan Analysis", () => {

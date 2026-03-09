@@ -20,6 +20,7 @@ import MarketOverviewTab from "@/components/feasibility/MarketOverviewTab";
 import CompetitionPricingTab from "@/components/feasibility/CompetitionPricingTab";
 import CostsCashFlowTab from "@/components/feasibility/CostsCashFlowTab";
 import JoelleEngineTab from "@/components/feasibility/JoelleEngineTab";
+import JoelleDataManager from "@/components/feasibility/JoelleDataManager";
 
 // ═══════════════════════════════════════════
 // HELPER COMPONENTS
@@ -389,6 +390,9 @@ export default function FeasibilityStudyPage({ embedded }: { embedded?: boolean 
             {/* ═══════════════════════════════════════════ */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="w-full justify-start mb-4 bg-card border border-border h-auto flex-wrap gap-1 p-1">
+                <TabsTrigger value="tab10" className="gap-1.5 text-xs data-[state=active]:bg-gradient-to-l data-[state=active]:from-emerald-600 data-[state=active]:to-teal-600 data-[state=active]:text-white">
+                  📦 بيانات جويل
+                </TabsTrigger>
                 <TabsTrigger value="tab9" className="gap-1.5 text-xs data-[state=active]:bg-gradient-to-l data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white">
                   🧠 محرك جويل
                 </TabsTrigger>
@@ -607,6 +611,9 @@ export default function FeasibilityStudyPage({ embedded }: { embedded?: boolean 
               {/* التبويب 8: التقرير المختصر لمجلس الإدارة */}
               {/* تقرير من جويل - READ ONLY */}
               {/* ═══════════════════════════════════════════ */}
+              <TabsContent value="tab10">
+                <JoelleDataManager projectId={selectedProjectId} community={form.community || ''} />
+              </TabsContent>
               <TabsContent value="tab9">
                 <JoelleEngineTab projectId={selectedProjectId} studyId={selectedStudyId} />
               </TabsContent>
