@@ -142,6 +142,7 @@ type NavItem = { id: string; label: string; icon: any; path: string; borderColor
 
 function SortableMainCard({ item, onNavigate }: { item: NavItem; onNavigate: (path: string) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+  const isCommandCenter = item.id === "main-cmd";
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -156,18 +157,32 @@ function SortableMainCard({ item, onNavigate }: { item: NavItem; onNavigate: (pa
       {...attributes}
       {...listeners}
       onClick={() => !isDragging && onNavigate(item.path)}
-      className={`group relative rounded-2xl border border-border/40 py-7 px-5 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-[0.97] overflow-hidden cursor-grab active:cursor-grabbing select-none touch-none ${isDragging ? 'shadow-2xl scale-105 ring-2 ring-primary/30' : ''}`}
+      className={`group relative rounded-2xl border transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-[0.97] overflow-hidden cursor-grab active:cursor-grabbing select-none touch-none ${
+        isCommandCenter
+          ? 'border-border/60 py-8 px-6 hover:shadow-2xl hover:-translate-y-1.5 hover:border-border/80'
+          : 'border-border/40 py-7 px-5'
+      } ${isDragging ? 'shadow-2xl scale-105 ring-2 ring-primary/30' : ''}`}
     >
       <div className="absolute top-0 left-0 right-0 h-[4px] rounded-t-2xl" style={{ background: item.iconBg }} />
-      <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full opacity-[0.07] blur-2xl" style={{ background: item.borderColor }} />
+      <div className={`absolute -top-8 -right-8 rounded-full opacity-[0.07] blur-2xl ${
+        isCommandCenter ? 'w-32 h-32' : 'w-24 h-24'
+      }`} style={{ background: item.borderColor }} />
       <div className="flex flex-col items-center gap-4">
         <div
-          className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ring-4 ring-white/80 dark:ring-card/80"
-          style={{ background: item.iconBg, boxShadow: `0 6px 20px ${item.shadow}` }}
+          className={`rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ring-4 ring-white/80 dark:ring-card/80 ${
+            isCommandCenter
+              ? 'w-20 h-20 group-hover:scale-125 group-hover:shadow-2xl'
+              : 'w-16 h-16'
+          }`}
+          style={{ background: item.iconBg, boxShadow: `0 ${isCommandCenter ? '8px 24px' : '6px 20px'} ${item.shadow}` }}
         >
-          <item.icon className="w-7 h-7 text-white" />
+          <item.icon className={`text-white ${
+            isCommandCenter ? 'w-9 h-9' : 'w-7 h-7'
+          }`} />
         </div>
-        <span className="text-[15px] font-bold text-foreground">{item.label}</span>
+        <span className={`font-bold text-foreground ${
+          isCommandCenter ? 'text-base' : 'text-[15px]'
+        }`}>{item.label}</span>
       </div>
     </div>
   );
