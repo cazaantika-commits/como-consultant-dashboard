@@ -51,6 +51,9 @@ import EscrowCashFlowPage from "./pages/EscrowCashFlowPage";
 import FinancialCommandCenter from "./pages/FinancialCommandCenter";
 import CapitalPlanningDashboard from "./pages/CapitalPlanningDashboard";
 import ConsultantsRegistry from "./pages/ConsultantsRegistry";
+import MarketReportsPage from "./pages/MarketReportsPage";
+import RiskDashboardPage from "./pages/RiskDashboardPage";
+import SelfLearningPage from "./pages/SelfLearningPage";
 
 function Router() {
   return (
@@ -104,6 +107,9 @@ function Router() {
       <Route path="/executive" component={ExecutiveVIPPage} />
       <Route path="/command-center" component={CommandCenterPage} />
       <Route path="/meetings/:id" component={MeetingRoomPage} />
+      <Route path="/market-reports" component={MarketReportsPage} />
+      <Route path="/risk-dashboard" component={RiskDashboardPage} />
+      <Route path="/self-learning" component={SelfLearningPage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

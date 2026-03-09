@@ -2155,11 +2155,11 @@
 
 ### Frontend
 - [x] Joelle staged analysis workflow UI (run all engines sequentially with progress)
-- [ ] Knowledge Base upload page (CBRE, JLL, Knight Frank, Savills reports)
+- [x] Knowledge Base upload page (CBRE, JLL, Knight Frank, Savills reports)
 - [ ] Competitor Projects Database CRUD page
 - [ ] Market Transactions data view
 - [ ] Geographic Intelligence map view
-- [ ] Risk Dashboard with Project Market Risk Index
+- [x] Risk Dashboard with Project Market Risk Index
 
 ### Testing & Delivery
 - [x] Write vitest tests for Joelle engines (8 tests passed)
@@ -2170,3 +2170,28 @@
 - [x] Integrate JoelleDataManager as new tab in FeasibilityStudyPage
 - [x] Save checkpoint
 - [x] Deliver with list of required user actions (APIs, subscriptions, data uploads)
+
+## صفحة رفع تقارير السوق (Market Reports Knowledge Base)
+- [x] إنشاء جدول market_reports في قاعدة البيانات (المصدر، النوع، المنطقة، التاريخ، الملف، الملخص)
+- [x] إنشاء backend procedures لرفع وإدارة التقارير
+- [x] بناء صفحة رفع التقارير (CBRE, JLL, Knight Frank, Savills, Colliers)
+- [x] استخراج النص من PDF تلقائياً وتلخيصه بـ LLM
+- [x] ربط التقارير بالمحركات (Engine 1 يقرأ التقارير المتاحة)
+- [x] فلترة حسب المصدر والمنطقة والتاريخ
+
+## لوحة مخاطر تفاعلية (Interactive Risk Dashboard)
+- [x] إنشاء جدول project_risk_scores لحفظ نتائج تحليل المخاطر
+- [x] إنشاء backend procedures لجلب وحساب المخاطر
+- [x] بناء لوحة المخاطر التفاعلية (مؤشر المخاطر لكل مشروع)
+- [x] رسوم بيانية: Radar chart للفئات الخمس، Gauge لمؤشر PMRI
+- [x] مقارنة المخاطر بين المشاريع جنباً إلى جنب
+- [x] تنبيهات المخاطر العالية
+
+## نظام التعلم الذاتي (Self-Learning System)
+- [x] إنشاء جدول prediction_records لحفظ التوقعات
+- [x] إنشاء جدول actual_outcomes لحفظ النتائج الفعلية
+- [x] إنشاء backend procedures للمقارنة والتعلم
+- [x] بناء صفحة مقارنة التوقعات بالنتائج الفعلية
+- [x] حساب دقة التوقعات (MAPE, bias direction)
+- [x] تعديل الافتراضات تلقائياً بناءً على الانحرافات
+- [x] عرض تاريخ تحسن الدقة بمرور الوقت

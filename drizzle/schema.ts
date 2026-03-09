@@ -1374,3 +1374,136 @@ export const joelleReports = mysqlTable("joelle_reports", {
 	index("joelle_reports_user_project").on(table.userId, table.projectId),
 	index("joelle_reports_type").on(table.reportType),
 ]);
+
+// ═══════════════════════════════════════════
+// Market Reports Knowledge Base
+// ═══════════════════════════════════════════
+export const marketReports = mysqlTable("market_reports", {
+	id: int().autoincrement().notNull().primaryKey(),
+	userId: int().notNull(),
+	source: mysqlEnum("source", ['CBRE', 'JLL', 'Knight_Frank', 'Savills', 'Colliers', 'Cushman_Wakefield', 'DXBInteract', 'Property_Monitor', 'Bayut', 'Property_Finder', 'DLD', 'Other']).notNull(),
+	reportTitle: varchar({ length: 500 }).notNull(),
+	reportType: mysqlEnum("report_type", ['market_overview', 'residential', 'commercial', 'office', 'hospitality', 'mixed_use', 'land', 'quarterly', 'annual', 'special']).notNull(),
+	region: varchar({ length: 255 }),
+	community: varchar({ length: 255 }),
+	reportDate: varchar({ length: 50 }),
+	reportYear: int(),
+	reportQuarter: int(),
+	fileName: varchar({ length: 500 }).notNull(),
+	fileKey: varchar({ length: 500 }).notNull(),
+	fileUrl: text().notNull(),
+	fileSizeBytes: int(),
+	mimeType: varchar({ length: 100 }),
+	extractedText: longtext(),
+	aiSummary: longtext(),
+	keyMetrics: longtext(),
+	tags: text(),
+	processingStatus: mysqlEnum("processing_status", ['uploaded', 'extracting', 'summarizing', 'ready', 'error']).default('uploaded').notNull(),
+	errorMessage: text(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+	index("market_reports_user").on(table.userId),
+	index("market_reports_source").on(table.source),
+	index("market_reports_community").on(table.community),
+	index("market_reports_year_quarter").on(table.reportYear, table.reportQuarter),
+]);
+
+// ═══════════════════════════════════════════
+// Project Risk Scores (from Engine 9)
+// ═══════════════════════════════════════════
+export const projectRiskScores = mysqlTable("project_risk_scores", {
+	id: int().autoincrement().notNull().primaryKey(),
+	userId: int().notNull(),
+	projectId: int().notNull(),
+	pmriScore: decimal({ precision: 5, scale: 2 }),
+	riskLevel: mysqlEnum("risk_level", ['low', 'medium', 'high', 'critical']).default('medium').notNull(),
+	marketRisk: decimal({ precision: 5, scale: 2 }),
+	financialRisk: decimal({ precision: 5, scale: 2 }),
+	competitiveRisk: decimal({ precision: 5, scale: 2 }),
+	regulatoryRisk: decimal({ precision: 5, scale: 2 }),
+	executionRisk: decimal({ precision: 5, scale: 2 }),
+	marketRiskDetails: longtext(),
+	financialRiskDetails: longtext(),
+	competitiveRiskDetails: longtext(),
+	regulatoryRiskDetails: longtext(),
+	executionRiskDetails: longtext(),
+	mitigationStrategies: longtext(),
+	analysisDate: timestamp({ mode: 'string' }),
+	dataSourcesUsed: text(),
+	confidenceLevel: decimal({ precision: 5, scale: 2 }),
+	notes: text(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+	index("risk_scores_user_project").on(table.userId, table.projectId),
+	index("risk_scores_level").on(table.riskLevel),
+]);
+
+// ═══════════════════════════════════════════
+// Self-Learning: Prediction Records
+// ═══════════════════════════════════════════
+export const predictionRecords = mysqlTable("prediction_records", {
+	id: int().autoincrement().notNull().primaryKey(),
+	userId: int().notNull(),
+	projectId: int().notNull(),
+	predictionType: mysqlEnum("prediction_type", ['price_per_sqft', 'total_revenue', 'absorption_rate', 'sell_out_months', 'demand_units', 'construction_cost', 'roi', 'irr']).notNull(),
+	predictedValue: decimal({ precision: 15, scale: 2 }).notNull(),
+	predictedUnit: varchar({ length: 50 }),
+	predictionDate: timestamp({ mode: 'string' }).notNull(),
+	targetDate: timestamp({ mode: 'string' }),
+	engineVersion: varchar({ length: 50 }),
+	confidenceLevel: decimal({ precision: 5, scale: 2 }),
+	inputDataJson: longtext(),
+	methodology: text(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+	index("predictions_user_project").on(table.userId, table.projectId),
+	index("predictions_type").on(table.predictionType),
+]);
+
+// ═══════════════════════════════════════════
+// Self-Learning: Actual Outcomes
+// ═══════════════════════════════════════════
+export const actualOutcomes = mysqlTable("actual_outcomes", {
+	id: int().autoincrement().notNull().primaryKey(),
+	userId: int().notNull(),
+	projectId: int().notNull(),
+	predictionId: int(),
+	outcomeType: mysqlEnum("outcome_type", ['price_per_sqft', 'total_revenue', 'absorption_rate', 'sell_out_months', 'demand_units', 'construction_cost', 'roi', 'irr']).notNull(),
+	actualValue: decimal({ precision: 15, scale: 2 }).notNull(),
+	actualUnit: varchar({ length: 50 }),
+	recordedDate: timestamp({ mode: 'string' }).notNull(),
+	source: varchar({ length: 255 }),
+	notes: text(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+	index("outcomes_user_project").on(table.userId, table.projectId),
+	index("outcomes_prediction").on(table.predictionId),
+]);
+
+// ═══════════════════════════════════════════
+// Self-Learning: Model Accuracy Tracking
+// ═══════════════════════════════════════════
+export const modelAccuracyLog = mysqlTable("model_accuracy_log", {
+	id: int().autoincrement().notNull().primaryKey(),
+	userId: int().notNull(),
+	projectId: int(),
+	predictionType: mysqlEnum("accuracy_prediction_type", ['price_per_sqft', 'total_revenue', 'absorption_rate', 'sell_out_months', 'demand_units', 'construction_cost', 'roi', 'irr']).notNull(),
+	mape: decimal({ precision: 8, scale: 4 }),
+	biasDirection: mysqlEnum("bias_direction", ['over', 'under', 'neutral']).default('neutral'),
+	biasAmount: decimal({ precision: 15, scale: 2 }),
+	sampleSize: int(),
+	adjustmentApplied: longtext(),
+	periodStart: timestamp({ mode: 'string' }),
+	periodEnd: timestamp({ mode: 'string' }),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+	index("accuracy_user").on(table.userId),
+	index("accuracy_type").on(table.predictionType),
+]);

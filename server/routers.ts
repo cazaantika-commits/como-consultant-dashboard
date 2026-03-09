@@ -37,6 +37,9 @@ import { costsCashFlowRouter } from "./routers/costsCashFlow";
 import { cashFlowProgramRouter } from "./routers/cashFlowProgram";
 import { phaseManagementRouter } from "./routers/phaseManagement";
 import { joelleEngineRouter } from "./routers/joelleEngine";
+import { marketReportsRouter } from "./routers/marketReports";
+import { riskDashboardRouter } from "./routers/riskDashboard";
+import { selfLearningRouter } from "./routers/selfLearning";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -88,6 +91,9 @@ export const appRouter = router({
   phaseManagement: phaseManagementRouter,
   consultantsRegistry: consultantsRegistryRouter,
   joelleEngine: joelleEngineRouter,
+  marketReports: marketReportsRouter,
+  riskDashboard: riskDashboardRouter,
+  selfLearning: selfLearningRouter,
 });
 
 export type AppRouter = typeof appRouter;
