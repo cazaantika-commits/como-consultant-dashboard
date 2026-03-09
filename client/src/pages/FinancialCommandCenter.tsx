@@ -235,7 +235,7 @@ function AnimNum({ value, className = "" }: { value: string; className?: string 
 
 // ===== COMPONENT =====
 
-export default function FinancialCommandCenter() {
+export default function FinancialCommandCenter({ embedded }: { embedded?: boolean } = {}) {
   const [, navigate] = useLocation();
   const { isAuthenticated } = useAuth();
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
@@ -418,8 +418,9 @@ export default function FinancialCommandCenter() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20" dir="rtl">
-      {/* ===== PREMIUM HEADER ===== */}
+    <div className={`${embedded ? '' : 'min-h-screen'} bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20`} dir="rtl">
+      {/* ===== HEADER (hidden when embedded) ===== */}
+      {!embedded && (
       <header className="border-b border-slate-200/60 bg-white/90 backdrop-blur-xl sticky top-0 z-50 shadow-sm">
         <div className="max-w-[98%] mx-auto px-6 h-16 flex items-center gap-4">
           <Button variant="ghost" size="sm" onClick={() => navigate("/project-management")} className="gap-2 text-slate-600 hover:text-slate-900">
@@ -467,6 +468,7 @@ export default function FinancialCommandCenter() {
           </div>
         </div>
       </header>
+      )}
 
       <main className="max-w-[98%] mx-auto px-6 py-8 space-y-8">
 

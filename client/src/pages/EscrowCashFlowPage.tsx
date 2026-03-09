@@ -45,7 +45,7 @@ const PROJECT_START = new Date(2026, 3, 1);
 const TODAY = new Date();
 const OPENING_BALANCE_RATIO = 0.20;
 
-export default function EscrowCashFlowPage() {
+export default function EscrowCashFlowPage({ embedded }: { embedded?: boolean } = {}) {
   const { isAuthenticated } = useAuth();
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
 
@@ -251,7 +251,7 @@ export default function EscrowCashFlowPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4" dir="rtl">
+    <div className={`${embedded ? '' : 'min-h-screen'} bg-gray-50 p-4`} dir="rtl">
       {/* Project Selector */}
       <div className="mb-3 bg-white rounded-lg border border-gray-200 shadow-sm px-4 py-3">
         <div className="flex items-center gap-4">
