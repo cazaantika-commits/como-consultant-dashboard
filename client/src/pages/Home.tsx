@@ -138,7 +138,7 @@ function QuickActionResult({
 }
 
 /* ── Sortable Main Card (big cards) ── */
-type NavItem = { id: string; label: string; icon: any; path: string; borderColor: string; iconBg: string; shadow: string };
+type NavItem = { id: string; label: string; icon: any; path: string; borderColor: string; iconBg: string; shadow: string; badge?: number };
 
 function SortableMainCard({ item, onNavigate }: { item: NavItem; onNavigate: (path: string) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
@@ -174,9 +174,9 @@ function SortableMainCard({ item, onNavigate }: { item: NavItem; onNavigate: (pa
       )}
       <div className="flex flex-col items-center gap-4 relative z-10">
         <div
-          className={`rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ring-4 ring-white/80 dark:ring-card/80 ${
+          className={`rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ring-4 ring-white/80 dark:ring-card/80 relative ${
             isCommandCenter
-              ? 'w-20 h-20 group-hover:scale-125 group-hover:shadow-2xl relative after:absolute after:inset-0 after:rounded-2xl after:opacity-0 after:group-hover:opacity-100 after:transition-opacity after:duration-300 after:bg-gradient-to-br after:from-white/20 after:to-transparent'
+              ? 'w-20 h-20 group-hover:scale-125 group-hover:shadow-2xl after:absolute after:inset-0 after:rounded-2xl after:opacity-0 after:group-hover:opacity-100 after:transition-opacity after:duration-300 after:bg-gradient-to-br after:from-white/20 after:to-transparent'
               : 'w-16 h-16'
           }`}
           style={{ background: item.iconBg, boxShadow: `0 ${isCommandCenter ? '8px 24px' : '6px 20px'} ${item.shadow}` }}
@@ -184,6 +184,11 @@ function SortableMainCard({ item, onNavigate }: { item: NavItem; onNavigate: (pa
           <item.icon className={`text-white ${
             isCommandCenter ? 'w-9 h-9 group-hover:animate-pulse' : 'w-7 h-7'
           }`} />
+          {item.badge !== undefined && item.badge > 0 && (
+            <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center shadow-lg">
+              {item.badge > 99 ? '99+' : item.badge}
+            </div>
+          )}
         </div>
         <span className={`font-bold text-foreground transition-all duration-300 ${
           isCommandCenter ? 'text-base group-hover:text-purple-600 dark:group-hover:text-purple-400' : 'text-[15px]'
@@ -329,11 +334,11 @@ export default function Home() {
 
   /* ── Navigation items organized in groups ── */
   const NAV_MAIN = [
-    { id: "main-projects", label: "الدراسات والتخطيط الاستراتيجي", icon: Building2, path: "/project-management", borderColor: "#059669", iconBg: "linear-gradient(135deg, #059669, #047857)", shadow: "rgba(5, 150, 105, 0.25)" },
+    { id: "main-projects", label: "الدراسات والتخطيط الاستراتيجي", icon: Building2, path: "/project-management", borderColor: "#059669", iconBg: "linear-gradient(135deg, #059669, #047857)", shadow: "rgba(5, 150, 105, 0.25)", badge: 3 },
     { id: "main-dev", label: "جولة في مراحل التطوير", icon: HardHat, path: "/development-phases", borderColor: "#8b5cf6", iconBg: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)" },
-    { id: "main-cmd", label: "مركز القيادة", icon: Crown, path: "/command-center", borderColor: "#6d28d9", iconBg: "linear-gradient(135deg, #6d28d9, #5b21b6)", shadow: "rgba(109, 40, 217, 0.3)" },
+    { id: "main-cmd", label: "مركز القيادة", icon: Crown, path: "/command-center", borderColor: "#6d28d9", iconBg: "linear-gradient(135deg, #6d28d9, #5b21b6)", shadow: "rgba(109, 40, 217, 0.3)", badge: 5 },
     { id: "main-kb", label: "قاعدة المعرفة", icon: BookOpen, path: "/knowledge-base", borderColor: "#8b5cf6", iconBg: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)" },
-    { id: "main-audit", label: "تدقيق وتحليل العقود", icon: FileText, path: "/contract-audit", borderColor: "#dc2626", iconBg: "linear-gradient(135deg, #dc2626, #b91c1c)", shadow: "rgba(220, 38, 38, 0.25)" },
+    { id: "main-audit", label: "تدقيق وتحليل العقود", icon: FileText, path: "/contract-audit", borderColor: "#dc2626", iconBg: "linear-gradient(135deg, #dc2626, #b91c1c)", shadow: "rgba(220, 38, 38, 0.25)", badge: 2 },
   ];
 
   const NAV_TOOLS = [
