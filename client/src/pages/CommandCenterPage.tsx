@@ -1798,36 +1798,38 @@ function EvaluationView({ token, memberRole, memberId }: { token: string; member
           <p>لا توجد مشاريع للتقييم</p>
         </div>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {projectsQuery.data?.map((project: any) => {
-          const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
-            not_started: { label: 'لم يبدأ', color: 'bg-slate-100 text-slate-600', icon: Lock },
-            in_progress: { label: 'قيد التقييم', color: 'bg-amber-100 text-amber-700', icon: Loader2 },
-            evaluation_complete: { label: 'التقييم مكتمل', color: 'bg-blue-100 text-blue-700', icon: CheckCircle2 },
-            decided: { label: 'تم اتخاذ القرار', color: 'bg-green-100 text-green-700', icon: Trophy },
+          const statusConfig: Record<string, { label: string; color: string; icon: any; topColor: string; bgColor: string; iconBg: string }> = {
+            not_started: { label: 'لم يبدأ', color: 'bg-slate-100 text-slate-600', icon: Lock, topColor: 'border-t-4 border-t-slate-400', bgColor: 'bg-slate-50', iconBg: 'bg-slate-500' },
+            in_progress: { label: 'قيد التقييم', color: 'bg-amber-100 text-amber-700', icon: Loader2, topColor: 'border-t-4 border-t-amber-400', bgColor: 'bg-amber-50', iconBg: 'bg-amber-500' },
+            evaluation_complete: { label: 'التقييم مكتمل', color: 'bg-blue-100 text-blue-700', icon: CheckCircle2, topColor: 'border-t-4 border-t-blue-400', bgColor: 'bg-blue-50', iconBg: 'bg-blue-500' },
+            decided: { label: 'تم اتخاذ القرار', color: 'bg-green-100 text-green-700', icon: Trophy, topColor: 'border-t-4 border-t-green-400', bgColor: 'bg-green-50', iconBg: 'bg-green-500' },
           };
           const st = statusConfig[project.status] || statusConfig.not_started;
           const StatusIcon = st.icon;
           return (
-            <button key={project.id} onClick={() => setSelectedProject(project.id)} className="group text-right bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-all hover:border-purple-300 hover:scale-[1.01]">
-              <div className="flex items-start justify-between mb-3">
-                <Badge className={`${st.color} border-0 text-xs`}>
-                  <StatusIcon className={`w-3 h-3 ml-1 ${project.status === 'in_progress' ? 'animate-spin' : ''}`} />
-                  {st.label}
-                </Badge>
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center">
-                  <Building className="w-5 h-5 text-white" />
-                </div>
-              </div>
-              <h3 className="font-bold text-slate-800 mb-1 group-hover:text-purple-700 transition-colors">{project.name}</h3>
-              <p className="text-sm text-slate-500">{project.consultantCount} استشاري</p>
-              <div className="mt-3 flex gap-1">
-                {project.evaluatorStatus?.map((e: any) => (
-                  <div key={e.name} className="flex items-center gap-1">
-                    <span className={`w-2.5 h-2.5 rounded-full ${e.isComplete ? 'bg-green-500' : e.completed > 0 ? 'bg-amber-400' : 'bg-slate-300'}`} />
-                    <span className="text-[10px] text-slate-400">{e.name === 'sheikh_issa' ? 'ش.ع' : e.name === 'wael' ? 'و' : 'ع'}</span>
+            <button key={project.id} onClick={() => setSelectedProject(project.id)} className={`group text-right rounded-2xl overflow-hidden shadow-md hover:shadow-lg transition-all hover:scale-[1.02] ${st.topColor} ${st.bgColor} border border-slate-200 hover:border-slate-300`}>
+              <div className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <Badge className={`${st.color} border-0 text-xs font-medium`}>
+                    <StatusIcon className={`w-3 h-3 ml-1 ${project.status === 'in_progress' ? 'animate-spin' : ''}`} />
+                    {st.label}
+                  </Badge>
+                  <div className={`w-14 h-14 rounded-2xl ${st.iconBg} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform`}>
+                    <Building className="w-7 h-7 text-white" />
                   </div>
-                ))}
+                </div>
+                <h3 className="font-bold text-slate-800 mb-2 text-lg group-hover:text-slate-900 transition-colors">{project.name}</h3>
+                <p className="text-sm text-slate-600 mb-4">{project.consultantCount} استشاري</p>
+                <div className="flex gap-2">
+                  {project.evaluatorStatus?.map((e: any) => (
+                    <div key={e.name} className="flex items-center gap-1">
+                      <span className={`w-3 h-3 rounded-full ${e.isComplete ? 'bg-green-500' : e.completed > 0 ? 'bg-amber-400' : 'bg-slate-300'}`} />
+                      <span className="text-[11px] text-slate-500 font-medium">{e.name === 'sheikh_issa' ? 'ش.ع' : e.name === 'wael' ? 'و' : 'ع'}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </button>
           );
