@@ -33,7 +33,7 @@ const RISK_CATEGORIES = [
   { key: "executionRisk", label: "مخاطر تنفيذية", icon: Zap, color: "#ef4444" },
 ];
 
-export default function RiskDashboardPage() {
+export default function RiskDashboardPage({ embedded = false }: { embedded?: boolean } = {}) {
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
 
   const allRisksQuery = trpc.riskDashboard.getAllProjectRisks.useQuery();
@@ -67,16 +67,16 @@ export default function RiskDashboardPage() {
 
   if (allRisksQuery.isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className={`${embedded ? '' : 'min-h-screen'} flex items-center justify-center`}>
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className={`${embedded ? '' : 'min-h-screen'} bg-background`} dir="rtl">
       {/* Header */}
-      <div className="border-b bg-card">
+      {!embedded && <div className="border-b bg-card">
         <div className="container py-6">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow-lg">
@@ -88,7 +88,7 @@ export default function RiskDashboardPage() {
             </div>
           </div>
         </div>
-      </div>
+      </div>}
 
       <div className="container py-6 space-y-6">
         {/* Summary Cards */}

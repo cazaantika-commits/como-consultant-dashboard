@@ -36,7 +36,7 @@ const PHASE_COLORS: Record<string, { bg: string; label: string }> = {
 // Main Component
 // ═══════════════════════════════════════════════════════════════
 
-export default function CapitalPlanningDashboard() {
+export default function CapitalPlanningDashboard({ embedded = false }: { embedded?: boolean } = {}) {
   const [, navigate] = useLocation();
   const [availableCapital, setAvailableCapital] = useState(100_000_000);
   const [capitalInput, setCapitalInput] = useState("100,000,000");
@@ -86,7 +86,7 @@ export default function CapitalPlanningDashboard() {
   // ─── Loading State ───
   if (simulationQuery.isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50/30 flex items-center justify-center" dir="rtl">
+      <div className={`${embedded ? '' : 'min-h-screen'} bg-gradient-to-br from-slate-50 via-white to-amber-50/30 flex items-center justify-center`} dir="rtl">
         <div className="text-center space-y-4">
           <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center shadow-lg shadow-amber-500/30 animate-pulse">
             <Landmark className="w-8 h-8 text-white" />
@@ -101,12 +101,12 @@ export default function CapitalPlanningDashboard() {
   // ─── Empty State ───
   if (!data || data.projects.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50/30" dir="rtl">
+      <div className={`${embedded ? '' : 'min-h-screen'} bg-gradient-to-br from-slate-50 via-white to-amber-50/30`} dir="rtl">
         <div className="max-w-4xl mx-auto px-6 py-12">
-          <Button variant="ghost" onClick={() => navigate("/")} className="mb-8 gap-2">
+          {!embedded && <Button variant="ghost" onClick={() => navigate("/")} className="mb-8 gap-2">
             <ChevronLeft className="w-4 h-4" />
             العودة
-          </Button>
+          </Button>}
           <div className="text-center space-y-6 py-20">
             <div className="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center shadow-xl shadow-amber-500/30">
               <Landmark className="w-10 h-10 text-white" />
@@ -135,9 +135,9 @@ export default function CapitalPlanningDashboard() {
   const hasFundingGap = data.fundingGap > 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50/30" dir="rtl">
+    <div className={`${embedded ? '' : 'min-h-screen'} bg-gradient-to-br from-slate-50 via-white to-amber-50/30`} dir="rtl">
       {/* ── Header ── */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-amber-200/40 shadow-sm">
+      {!embedded && <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-amber-200/40 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
@@ -164,7 +164,19 @@ export default function CapitalPlanningDashboard() {
             تحديث المشاريع
           </Button>
         </div>
-      </header>
+      </header>}
+      {embedded && <div className="max-w-7xl mx-auto px-6 pt-4 flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => importMutation.mutate()}
+          disabled={importMutation.isPending}
+          className="gap-2 text-xs"
+        >
+          {importMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+          تحديث المشاريع
+        </Button>
+      </div>}
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
         {/* ── KPI Cards ── */}

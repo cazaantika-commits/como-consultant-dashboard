@@ -488,10 +488,7 @@ export default function Home() {
                   { label: "قاعدة المعرفة", emoji: "📚", icon: BookOpen, path: "/knowledge-base", gradient: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)" },
                   { label: "غرفة الاجتماعات", emoji: "🎙️", icon: Users, path: "/meetings", gradient: "linear-gradient(135deg, #a855f7, #7c3aed)", shadow: "rgba(168, 85, 247, 0.25)" },
                   { label: "مراقبة التنفيذ", emoji: "⚡", icon: Activity, path: "/execution-dashboard", gradient: "linear-gradient(135deg, #f97316, #ea580c)", shadow: "rgba(249, 115, 22, 0.25)" },
-                  { label: "برنامج العمل والتدفقات", emoji: "💰", icon: BarChart3, path: "/program-cashflow", gradient: "linear-gradient(135deg, #10b981, #0d9488)", shadow: "rgba(16, 185, 129, 0.25)" },
-                  { label: "محاكي تخطيط رأس المال", emoji: "🏦", icon: Building2, path: "/capital-planning", gradient: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245, 158, 11, 0.25)" },
                   { label: "تقارير السوق", emoji: "📊", icon: FileText, path: "/market-reports", gradient: "linear-gradient(135deg, #0891b2, #06b6d4)", shadow: "rgba(8, 145, 178, 0.25)" },
-                  { label: "لوحة المخاطر", emoji: "🛡️", icon: ShieldAlert, path: "/risk-dashboard", gradient: "linear-gradient(135deg, #ef4444, #dc2626)", shadow: "rgba(239, 68, 68, 0.25)" },
                   { label: "التعلم الذاتي", emoji: "🧠", icon: Brain, path: "/self-learning", gradient: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)" },
                   { label: "السجلات", emoji: "📋", icon: ClipboardList, path: null, gradient: "linear-gradient(135deg, #0ea5e9, #0284c7)", shadow: "rgba(14, 165, 233, 0.25)", isDropdown: true, items: [
                     { label: "سجل التكليفات", path: "/agent-assignments" },

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Building2, FileText, BarChart3, ClipboardList, TrendingUp, Landmark, SlidersHorizontal } from "lucide-react";
+import { ArrowRight, Building2, FileText, BarChart3, ClipboardList, TrendingUp, Landmark, SlidersHorizontal, Wallet, Shield } from "lucide-react";
 import { CashFlowProvider } from "@/contexts/CashFlowContext";
 import FactSheetPage from "./FactSheetPage";
 import FeasibilityStudyPage from "./FeasibilityStudyPage";
@@ -9,8 +9,11 @@ import DevelopmentStagesPage from "./DevelopmentStagesPage";
 import ExcelCashFlowPage from "./ExcelCashFlowPage";
 import EscrowCashFlowPage from "./EscrowCashFlowPage";
 import FinancialCommandCenter from "./FinancialCommandCenter";
+import CapitalPlanningDashboard from "./CapitalPlanningDashboard";
+import ProgramCashFlowPage from "./ProgramCashFlowPage";
+import RiskDashboardPage from "./RiskDashboardPage";
 
-type View = "icons" | "fact-sheet" | "feasibility" | "cashflow" | "escrow" | "development-stages" | "financial-command";
+type View = "icons" | "fact-sheet" | "feasibility" | "cashflow" | "escrow" | "development-stages" | "financial-command" | "capital-planning" | "program-cashflow" | "risk-dashboard";
 
 const ICONS_CONFIG = [
   {
@@ -74,6 +77,30 @@ const ICONS_CONFIG = [
     shadow: "rgba(139, 92, 246, 0.3)",
   },
   {
+    id: "program-cashflow" as View,
+    label: "برنامج العمل والتدفقات",
+    description: "خطة العمل الشهرية والتدفقات النقدية",
+    emoji: "💹",
+    icon: Wallet,
+    gradient: "linear-gradient(135deg, #0d9488, #0f766e)",
+    bgClass: "from-teal-50 to-teal-100",
+    borderClass: "border-teal-200",
+    textClass: "text-teal-700",
+    shadow: "rgba(13, 148, 136, 0.3)",
+  },
+  {
+    id: "capital-planning" as View,
+    label: "محاكي تخطيط رأس المال",
+    description: "محاكاة التمويل وتخطيط رأس المال",
+    emoji: "🏛️",
+    icon: Building2,
+    gradient: "linear-gradient(135deg, #f59e0b, #b45309)",
+    bgClass: "from-yellow-50 to-yellow-100",
+    borderClass: "border-yellow-200",
+    textClass: "text-yellow-700",
+    shadow: "rgba(245, 158, 11, 0.3)",
+  },
+  {
     id: "financial-command" as View,
     label: "مركز القيادة المالي",
     description: "دمج المشاريع وتحريك التواريخ",
@@ -84,6 +111,18 @@ const ICONS_CONFIG = [
     borderClass: "border-red-200",
     textClass: "text-red-700",
     shadow: "rgba(239, 68, 68, 0.3)",
+  },
+  {
+    id: "risk-dashboard" as View,
+    label: "لوحة المخاطر",
+    description: "تحليل وإدارة مخاطر المشاريع",
+    emoji: "🛡️",
+    icon: Shield,
+    gradient: "linear-gradient(135deg, #e11d48, #be123c)",
+    bgClass: "from-rose-50 to-rose-100",
+    borderClass: "border-rose-200",
+    textClass: "text-rose-700",
+    shadow: "rgba(225, 29, 72, 0.3)",
   },
 ];
 
@@ -162,9 +201,8 @@ export default function ProjectManagementPage() {
             <p className="text-sm text-muted-foreground">اختر القسم المطلوب</p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-3 md:grid-cols-3 gap-5">
             {ICONS_CONFIG.map((item) => {
-              const Icon = item.icon;
               return (
                 <button
                   key={item.id}
@@ -204,9 +242,24 @@ export default function ProjectManagementPage() {
         </main>
       )}
       {activeView === "development-stages" && <DevelopmentStagesPage embedded />}
+      {activeView === "program-cashflow" && (
+        <main className="max-w-[98%] mx-auto py-4">
+          <ProgramCashFlowPage />
+        </main>
+      )}
+      {activeView === "capital-planning" && (
+        <main className="max-w-[98%] mx-auto py-4">
+          <CapitalPlanningDashboard embedded />
+        </main>
+      )}
       {activeView === "financial-command" && (
         <main className="max-w-[98%] mx-auto py-4">
           <FinancialCommandCenter />
+        </main>
+      )}
+      {activeView === "risk-dashboard" && (
+        <main className="max-w-[98%] mx-auto py-4">
+          <RiskDashboardPage embedded />
         </main>
       )}
     </div>
