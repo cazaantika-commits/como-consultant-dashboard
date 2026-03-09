@@ -385,6 +385,34 @@ export const commandCenterRouter = router({
       return { success: true };
     }),
 
+  deleteItem: publicProcedure
+    .input(z.object({
+      token: z.string(),
+      itemId: z.number(),
+    }))
+    .mutation(async ({ input }) => {
+      const member = await verifyToken(input.token);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      
+      const item = await db.select().from(commandCenterItems)
+        .where(eq(commandCenterItems.id, input.itemId))
+        .limit(1);
+      
+      if (item.length === 0) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Item not found" });
+      }
+      
+      if (item[0].createdByMemberId !== member.memberId && member.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "You can only delete items you created" });
+      }
+      
+      await db.delete(commandCenterItems)
+        .where(eq(commandCenterItems.id, input.itemId));
+      
+      return { success: true };
+    }),
+
   // ═══ Evaluation System (Blind) ═══
   
   // Get available evaluation sessions
