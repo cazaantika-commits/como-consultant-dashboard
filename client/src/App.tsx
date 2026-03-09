@@ -54,6 +54,7 @@ import ConsultantsRegistry from "./pages/ConsultantsRegistry";
 import MarketReportsPage from "./pages/MarketReportsPage";
 import RiskDashboardPage from "./pages/RiskDashboardPage";
 import SelfLearningPage from "./pages/SelfLearningPage";
+import DevelopmentPhasesPage from "./pages/DevelopmentPhasesPage";
 
 function Router() {
   return (
@@ -109,6 +110,7 @@ function Router() {
       <Route path="/meetings/:id" component={MeetingRoomPage} />
       <Route path="/market-reports" component={MarketReportsPage} />
       <Route path="/risk-dashboard" component={RiskDashboardPage} />
+      <Route path="/development-phases" component={DevelopmentPhasesPage} />
       <Route path="/self-learning" component={SelfLearningPage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
