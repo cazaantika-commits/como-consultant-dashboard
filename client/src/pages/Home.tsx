@@ -59,21 +59,6 @@ const AGENT_ICONS: Record<string, any> = {
   "bar-chart-2": BarChart2,
 };
 
-/* Colored emoji-style icon wrapper */
-function ColorIcon({ children, bg, shadow }: { children: React.ReactNode; bg: string; shadow: string }) {
-  return (
-    <div
-      className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:rotate-3"
-      style={{
-        background: bg,
-        boxShadow: `0 8px 24px ${shadow}`,
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
 /* Quick Action Button */
 function QuickActionButton({
   icon: Icon,
@@ -94,12 +79,12 @@ function QuickActionButton({
     <button
       onClick={onClick}
       disabled={isLoading}
-      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all duration-200 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-wait ${color} ${borderColor}`}
+      className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-medium transition-all duration-200 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-wait ${color} ${borderColor}`}
     >
       {isLoading ? (
-        <Loader2 className="w-4 h-4 animate-spin" />
+        <Loader2 className="w-3.5 h-3.5 animate-spin" />
       ) : (
-        <Icon className="w-4 h-4" />
+        <Icon className="w-3.5 h-3.5" />
       )}
       {label}
     </button>
@@ -117,10 +102,10 @@ function QuickActionResult({
   onClose: () => void;
 }) {
   return (
-    <div className="mt-6 bg-white dark:bg-card rounded-2xl border border-amber-200/60 dark:border-amber-800/30 shadow-lg overflow-hidden animate-in slide-in-from-top-2 duration-300">
+    <div className="mt-4 bg-white dark:bg-card rounded-2xl border border-amber-200/60 dark:border-amber-800/30 shadow-lg overflow-hidden animate-in slide-in-from-top-2 duration-300">
       <div className="flex items-center justify-between px-5 py-3 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 border-b border-amber-200/40">
         <div className="flex items-center gap-2">
-          <img src={SALWA_AVATAR_URL} alt="سلوى" className="w-7 h-7 rounded-full ring-2 ring-amber-400/50" />
+          <img src={SALWA_AVATAR_URL} alt="سلوى" className="w-6 h-6 rounded-full ring-2 ring-amber-400/50" />
           <span className="font-bold text-sm text-foreground">{title}</span>
         </div>
         <button onClick={onClose} className="p-1 rounded-lg hover:bg-amber-200/30 transition-colors">
@@ -140,6 +125,7 @@ export default function Home() {
   const [activeAgent, setActiveAgent] = useState<AgentType | null>(null);
   const [quickActionLoading, setQuickActionLoading] = useState<string | null>(null);
   const [quickActionResult, setQuickActionResult] = useState<{ title: string; content: string } | null>(null);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const { data: agentsList = [] } = trpc.agents.list.useQuery(undefined, {
     enabled: isAuthenticated,
   });
@@ -213,18 +199,47 @@ export default function Home() {
     },
   ];
 
+  /* ── Navigation items organized in groups ── */
+  const NAV_MAIN = [
+    { label: "إدارة المشاريع", emoji: "🏗️", icon: Building2, path: "/project-management", gradient: "linear-gradient(135deg, #059669, #047857)", shadow: "rgba(5, 150, 105, 0.25)" },
+    { label: "مركز القيادة", emoji: "👑", icon: Crown, path: "/command-center", gradient: "linear-gradient(135deg, #d97706, #b45309)", shadow: "rgba(217, 119, 6, 0.25)" },
+    { label: "المكاتب الاستشارية", emoji: "🏛️", icon: Users, path: "/consultant-portal", gradient: "linear-gradient(135deg, #78716c, #57534e)", shadow: "rgba(120, 113, 108, 0.25)" },
+    { label: "لوحة الوكلاء", emoji: "🤖", icon: Bot, path: "/agent-dashboard", gradient: "linear-gradient(135deg, #6366f1, #8b5cf6)", shadow: "rgba(99, 102, 241, 0.25)" },
+  ];
+
+  const NAV_TOOLS = [
+    { label: "المهام", emoji: "📝", icon: FileText, path: "/tasks", gradient: "linear-gradient(135deg, #06b6d4, #0891b2)", shadow: "rgba(6, 182, 212, 0.25)" },
+    { label: "ملفات Drive", emoji: "📂", icon: Archive, path: "/drive", gradient: "linear-gradient(135deg, #10b981, #059669)", shadow: "rgba(16, 185, 129, 0.25)" },
+    { label: "غرفة الاجتماعات", emoji: "🎙️", icon: Users, path: "/meetings", gradient: "linear-gradient(135deg, #a855f7, #7c3aed)", shadow: "rgba(168, 85, 247, 0.25)" },
+    { label: "مراقبة التنفيذ", emoji: "⚡", icon: Activity, path: "/execution-dashboard", gradient: "linear-gradient(135deg, #f97316, #ea580c)", shadow: "rgba(249, 115, 22, 0.25)" },
+    { label: "قاعدة المعرفة", emoji: "📚", icon: BookOpen, path: "/knowledge-base", gradient: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)" },
+    { label: "تقارير السوق", emoji: "📊", icon: BarChart3, path: "/market-reports", gradient: "linear-gradient(135deg, #0891b2, #06b6d4)", shadow: "rgba(8, 145, 178, 0.25)" },
+    { label: "ملخص التكليفات", emoji: "📋", icon: ClipboardList, path: "/agent-assignments-summary", gradient: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245, 158, 11, 0.25)" },
+    { label: "التعلم الذاتي", emoji: "🧠", icon: Brain, path: "/self-learning", gradient: "linear-gradient(135deg, #ec4899, #db2777)", shadow: "rgba(236, 72, 153, 0.25)" },
+  ];
+
+  const NAV_RECORDS = [
+    { label: "سجل التكليفات", path: "/agent-assignments" },
+    { label: "سجل المحادثات", path: "/conversation-history" },
+    { label: "سجل العقود", path: "/contracts" },
+    { label: "سجل الإيميلات المرسلة", path: "/sent-emails" },
+    { label: "سجل الاستشاريين", path: "/consultants-registry" },
+  ];
+
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20" dir="rtl">
+      {/* ══════════════════════════════════════════════════════════════ */}
       {/* ── Header ── */}
-      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      {/* ══════════════════════════════════════════════════════════════ */}
+      <header className="border-b border-border/60 bg-card/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-stone-700 to-stone-900 flex items-center justify-center shadow-lg shadow-stone-600/20">
-              <Building2 className="w-5 h-5 text-white" />
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-stone-700 to-stone-900 flex items-center justify-center shadow-md">
+              <Building2 className="w-4.5 h-4.5 text-white" />
             </div>
             <div>
-              <h1 className="text-base font-bold text-foreground leading-tight">COMO Developments</h1>
-              <p className="text-[11px] text-muted-foreground leading-tight">منصة إدارة المشاريع الذكية</p>
+              <h1 className="text-sm font-bold text-foreground leading-tight">COMO Developments</h1>
+              <p className="text-[10px] text-muted-foreground leading-tight">منصة إدارة المشاريع الذكية</p>
             </div>
           </div>
 
@@ -233,18 +248,10 @@ export default function Home() {
               <div className="w-20 h-8 rounded-md shimmer" />
             ) : isAuthenticated ? (
               <>
-                <span className="text-sm text-muted-foreground hidden sm:inline">
+                <span className="text-xs text-muted-foreground hidden sm:inline">
                   مرحباً، <span className="font-medium text-foreground">{user?.name}</span>
                 </span>
                 <NotificationBell />
-                <Button
-                  size="sm"
-                  onClick={() => navigate("/command-center")}
-                  className="text-xs gap-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white border-0 shadow-lg shadow-amber-500/25"
-                >
-                  <Crown className="w-3.5 h-3.5" />
-                  مركز القيادة
-                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -269,420 +276,426 @@ export default function Home() {
         </div>
       </header>
 
-      <main>
+      <main className="max-w-7xl mx-auto px-6">
+
+        {/* ══════════════════════════════════════════════════════════════ */}
         {/* ── Hero Section (for non-authenticated) ── */}
+        {/* ══════════════════════════════════════════════════════════════ */}
         {!isAuthenticated && (
           <section className="relative py-20 lg:py-28 overflow-hidden">
             <div className="absolute inset-0 pattern-overlay opacity-40" />
             <div className="absolute top-10 right-1/4 w-[400px] h-[400px] rounded-full bg-amber-500/8 blur-[100px]" />
             <div className="absolute bottom-10 left-1/4 w-[300px] h-[300px] rounded-full bg-stone-500/8 blur-[100px]" />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-primary/5 blur-[120px]" />
 
-            <div className="relative max-w-7xl mx-auto px-6">
-              <div className="max-w-3xl mx-auto text-center">
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-sm font-medium mb-6">
-                  <span className="relative flex h-2.5 w-2.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
-                  </span>
-                  <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                  مدعوم بالذكاء الاصطناعي
-                </div>
-
-                <h1 className="text-4xl lg:text-5xl font-extrabold text-foreground leading-tight mb-5 fade-in">
-                  إدارة مشاريع كومو بذكاء
-                  <br />
-                  <span className="text-gold-gradient">مع فريق الوكلاء الفنيين</span>
-                </h1>
-
-                <p className="text-lg text-muted-foreground leading-relaxed mb-8 max-w-2xl mx-auto fade-in">
-                  منصة متكاملة تجمع بين الذكاء الاصطناعي وإدارة المشاريع لتقديم تجربة
-                  احترافية لفريق التطوير العقاري
-                </p>
-
-                <div className="flex items-center justify-center gap-3 fade-in">
-                  <Button
-                    size="lg"
-                    onClick={() => (window.location.href = getLoginUrl())}
-                    className="gap-2 px-8 shadow-lg shadow-primary/20 bg-gradient-to-r from-stone-700 to-stone-900 hover:from-stone-800 hover:to-stone-950"
-                  >
-                    ابدأ الآن
-                    <ArrowLeft className="w-4 h-4" />
-                  </Button>
-                </div>
+            <div className="relative max-w-3xl mx-auto text-center">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-sm font-medium mb-6">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+                </span>
+                <Sparkles className="w-3.5 h-3.5" />
+                منصة ذكية لإدارة المشاريع
               </div>
+
+              <h1 className="text-4xl lg:text-5xl font-extrabold text-foreground leading-tight mb-5">
+                إدارة مشاريع كومو بذكاء
+                <br />
+                <span className="text-gold-gradient">مع فريق الوكلاء الفنيين</span>
+              </h1>
+
+              <p className="text-lg text-muted-foreground leading-relaxed mb-8 max-w-2xl mx-auto">
+                منصة متكاملة تجمع بين الذكاء الاصطناعي وإدارة المشاريع لتقديم تجربة
+                احترافية لفريق التطوير العقاري
+              </p>
+
+              <Button
+                size="lg"
+                onClick={() => (window.location.href = getLoginUrl())}
+                className="gap-2 px-8 shadow-lg shadow-primary/20 bg-gradient-to-r from-stone-700 to-stone-900 hover:from-stone-800 hover:to-stone-950"
+              >
+                ابدأ الآن
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
             </div>
           </section>
         )}
 
-        {/* ── Features Grid ── */}
-        <section className="py-16 border-t border-border/50">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="text-center mb-12">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-400 to-red-500 shadow-lg shadow-orange-500/25 mb-4">
-                <Rocket className="w-6 h-6 text-white" />
-              </div>
-              <h2 className="text-2xl font-bold text-foreground mb-3">قدرات المنصة</h2>
-              <p className="text-muted-foreground">أدوات متقدمة لإدارة كل جانب من جوانب مشاريعك</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-              {[
-                {
-                  icon: BrainCircuit,
-                  title: "وكلاء ذكيون",
-                  desc: "فريق من الوكلاء المتخصصين يعملون على مدار الساعة",
-                  gradient: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                  shadow: "rgba(99, 102, 241, 0.3)",
-                  emoji: "🤖",
-                },
-                {
-                  icon: Shield,
-                  title: "تدقيق العقود",
-                  desc: "مراجعة قانونية ذكية للعقود واكتشاف المخاطر",
-                  gradient: "linear-gradient(135deg, #06b6d4, #0891b2)",
-                  shadow: "rgba(6, 182, 212, 0.3)",
-                  emoji: "🛡️",
-                },
-                {
-                  icon: TrendingUp,
-                  title: "تحليل مالي",
-                  desc: "تحليل الميزانيات والمستخلصات المالية بدقة",
-                  gradient: "linear-gradient(135deg, #10b981, #059669)",
-                  shadow: "rgba(16, 185, 129, 0.3)",
-                  emoji: "💰",
-                },
-                {
-                  icon: Layers,
-                  title: "أرشفة ذكية",
-                  desc: "تنظيم وأرشفة الملفات تلقائياً بتسمية احترافية",
-                  gradient: "linear-gradient(135deg, #f59e0b, #d97706)",
-                  shadow: "rgba(245, 158, 11, 0.3)",
-                  emoji: "📁",
-                },
-              ].map((feature, i) => (
-                <div
-                  key={i}
-                  className="premium-card p-6 hover-lift fade-in group relative overflow-hidden"
-                  style={{ animationDelay: `${i * 0.1}s` }}
-                >
-                  <div
-                    className="absolute top-0 left-0 right-0 h-1 rounded-t-xl"
-                    style={{ background: feature.gradient }}
-                  />
-                  <div className="flex items-start gap-4">
-                    <ColorIcon bg={feature.gradient} shadow={feature.shadow}>
-                      <feature.icon className="w-7 h-7 text-white" />
-                    </ColorIcon>
-                    <div className="flex-1 pt-1">
-                      <h3 className="font-bold text-foreground mb-1.5 text-base">
-                        <span className="ml-1.5">{feature.emoji}</span>
-                        {feature.title}
-                      </h3>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{feature.desc}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* ══════════════════════════════════════════════════════════════ */}
-        {/* ── SALWA - Below Capabilities with Quick Actions ── */}
+        {/* ── SALWA - TOP OF PAGE (Authenticated) ── */}
         {/* ══════════════════════════════════════════════════════════════ */}
         {isAuthenticated && (
-          <section className="py-12 border-t border-border/50">
-            <div className="max-w-5xl mx-auto px-6">
-              <div className="relative bg-gradient-to-br from-white to-amber-50/50 dark:from-card dark:to-amber-950/10 rounded-3xl border border-amber-200/60 dark:border-amber-800/30 shadow-xl shadow-amber-500/10 p-8 lg:p-10 overflow-hidden">
-                {/* Gold accent bar at top */}
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-400" />
+          <section className="pt-8 pb-6">
+            <div className="relative rounded-2xl bg-gradient-to-l from-amber-50/80 via-white to-yellow-50/50 dark:from-amber-950/15 dark:via-card dark:to-yellow-950/10 border border-amber-200/40 dark:border-amber-800/20 shadow-sm overflow-hidden">
+              {/* Subtle gold accent */}
+              <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-300" />
 
-                <div className="flex flex-col lg:flex-row items-center gap-8">
-                  {/* Salwa's Avatar - no crown */}
-                  <div className="relative shrink-0">
-                    <div className="w-44 h-44 lg:w-52 lg:h-52 rounded-full overflow-hidden ring-4 ring-amber-400/60 ring-offset-4 ring-offset-background shadow-2xl shadow-amber-500/20">
-                      <img
-                        src={SALWA_AVATAR_URL}
-                        alt="سلوى"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    {/* Online indicator */}
-                    <span className="absolute bottom-1 right-1 w-5 h-5 bg-emerald-500 rounded-full border-3 border-white dark:border-card shadow-lg">
-                      <span className="absolute inset-0 w-full h-full rounded-full bg-emerald-500 animate-ping opacity-40" />
-                    </span>
+              <div className="flex items-center gap-5 p-5 lg:p-6">
+                {/* Avatar - compact */}
+                <div className="relative shrink-0">
+                  <div className="w-20 h-20 lg:w-24 lg:h-24 rounded-full overflow-hidden ring-3 ring-amber-300/50 ring-offset-2 ring-offset-background shadow-lg">
+                    <img src={SALWA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover" />
                   </div>
-
-                  {/* Salwa's Info & Quick Actions */}
-                  <div className="flex-1 text-center lg:text-right">
-                    <div className="flex items-center justify-center lg:justify-start gap-3 mb-2 flex-wrap">
-                      <h2 className="text-2xl lg:text-3xl font-extrabold text-foreground">سلوى</h2>
-                      <span className="text-xs px-3 py-1 rounded-full bg-gradient-to-r from-amber-500/15 to-yellow-500/15 text-amber-700 dark:text-amber-400 font-bold border border-amber-300/40">
-                        المنسقة الرئيسية
-                      </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground leading-relaxed mb-5 max-w-xl">
-                      المساعدة التنفيذية الذكية — نفذي أوامر سريعة أو تحدث معها مباشرة
-                    </p>
-
-                    {/* Quick Action Buttons - Real commands */}
-                    <div className="flex flex-wrap gap-2 justify-center lg:justify-start mb-5">
-                      {QUICK_ACTIONS.map((action) => (
-                        <QuickActionButton
-                          key={action.id}
-                          icon={action.icon}
-                          label={action.label}
-                          color={action.color}
-                          borderColor={action.borderColor}
-                          isLoading={quickActionLoading === action.id}
-                          onClick={() => executeQuickAction(action.id, action.message, action.resultTitle)}
-                        />
-                      ))}
-                    </div>
-
-                    {/* Chat with Salwa button */}
-                    <button
-                      onClick={() => setActiveAgent("salwa" as AgentType)}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold shadow-lg shadow-amber-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-amber-500/35 hover:from-amber-600 hover:to-amber-700 text-sm"
-                    >
-                      <MessageSquare className="w-4 h-4" />
-                      تحدث مع سلوى
-                      <ArrowLeft className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  <span className="absolute bottom-0 right-0 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white dark:border-card shadow-sm">
+                    <span className="absolute inset-0 w-full h-full rounded-full bg-emerald-500 animate-ping opacity-40" />
+                  </span>
                 </div>
 
-                {/* Quick Action Result */}
-                {quickActionResult && (
+                {/* Info + Quick Actions */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
+                    <h2 className="text-xl lg:text-2xl font-extrabold text-foreground">سلوى</h2>
+                    <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500/15 to-yellow-500/15 text-amber-700 dark:text-amber-400 font-bold border border-amber-300/40">
+                      المنسقة الرئيسية
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    المساعدة التنفيذية الذكية — نفذي أوامر سريعة أو تحدثي معها مباشرة
+                  </p>
+
+                  {/* Quick Actions Row */}
+                  <div className="flex flex-wrap gap-1.5 mb-3">
+                    {QUICK_ACTIONS.map((action) => (
+                      <QuickActionButton
+                        key={action.id}
+                        icon={action.icon}
+                        label={action.label}
+                        color={action.color}
+                        borderColor={action.borderColor}
+                        isLoading={quickActionLoading === action.id}
+                        onClick={() => executeQuickAction(action.id, action.message, action.resultTitle)}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Chat button */}
+                  <button
+                    onClick={() => setActiveAgent("salwa" as AgentType)}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold shadow-md shadow-amber-500/20 transition-all duration-200 hover:shadow-lg hover:from-amber-600 hover:to-amber-700 text-xs"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    تحدث مع سلوى
+                    <ArrowLeft className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick Action Result */}
+              {quickActionResult && (
+                <div className="px-5 pb-5">
                   <QuickActionResult
                     title={quickActionResult.title}
                     content={quickActionResult.content}
                     onClose={() => setQuickActionResult(null)}
                   />
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════ */}
+        {/* ── MAIN NAVIGATION - Big Cards (Authenticated) ── */}
+        {/* ══════════════════════════════════════════════════════════════ */}
+        {isAuthenticated && (
+          <section className="pb-8">
+            {/* Section Title */}
+            <div className="flex items-center gap-2.5 mb-5">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-sm">
+                <Target className="w-4 h-4 text-white" />
+              </div>
+              <h2 className="text-base font-bold text-foreground">الأقسام الرئيسية</h2>
+            </div>
+
+            {/* 4 Main Cards - Tall gradient cards inspired by reference */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {NAV_MAIN.map((item, i) => (
+                <button
+                  key={i}
+                  onClick={() => navigate(item.path)}
+                  className="group relative rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-[0.98]"
+                  style={{ minHeight: "180px" }}
+                >
+                  {/* Gradient background */}
+                  <div
+                    className="absolute inset-0 opacity-90 group-hover:opacity-100 transition-opacity duration-300"
+                    style={{ background: item.gradient }}
+                  />
+                  {/* Decorative circles */}
+                  <div className="absolute top-3 left-3 w-16 h-16 rounded-full bg-white/10 blur-sm" />
+                  <div className="absolute bottom-4 right-4 w-20 h-20 rounded-full bg-white/5" />
+
+                  {/* Content */}
+                  <div className="relative h-full flex flex-col items-center justify-center p-5 text-center">
+                    {/* Icon */}
+                    <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mb-3 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                      <item.icon className="w-7 h-7 text-white" />
+                    </div>
+                    {/* Label */}
+                    <h3 className="text-base font-bold text-white mb-1 leading-tight">{item.label}</h3>
+                    {/* Subtle arrow */}
+                    <ArrowLeft className="w-4 h-4 text-white/60 mt-1 transition-transform duration-300 group-hover:-translate-x-1" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════ */}
+        {/* ── TOOLS & FEATURES - Clean card grid ── */}
+        {/* ══════════════════════════════════════════════════════════════ */}
+        {isAuthenticated && (
+          <section className="pb-8">
+            <div className="flex items-center gap-2.5 mb-5">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-sm">
+                <Zap className="w-4 h-4 text-white" />
+              </div>
+              <h2 className="text-base font-bold text-foreground">الأدوات والتقارير</h2>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {NAV_TOOLS.map((item, i) => (
+                <button
+                  key={i}
+                  onClick={() => navigate(item.path)}
+                  className="group relative bg-card hover:bg-card/90 rounded-xl border border-border/60 hover:border-border p-4 text-right transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] overflow-hidden"
+                >
+                  {/* Top accent line */}
+                  <div
+                    className="absolute top-0 left-0 right-0 h-[3px] rounded-t-xl opacity-80 group-hover:opacity-100 transition-opacity"
+                    style={{ background: item.gradient }}
+                  />
+
+                  <div className="flex items-center gap-3">
+                    {/* Icon */}
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110 shadow-sm"
+                      style={{
+                        background: item.gradient,
+                        boxShadow: `0 4px 12px ${item.shadow}`,
+                      }}
+                    >
+                      <item.icon className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-sm font-semibold text-foreground block truncate">{item.label}</span>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Records dropdown row */}
+            <div className="mt-3">
+              <div className="relative">
+                <button
+                  onClick={() => setOpenDropdown(openDropdown === "records" ? null : "records")}
+                  className="group relative bg-card hover:bg-card/90 rounded-xl border border-border/60 hover:border-border p-4 text-right transition-all duration-200 hover:shadow-lg overflow-hidden w-full"
+                >
+                  <div className="absolute top-0 left-0 right-0 h-[3px] rounded-t-xl bg-gradient-to-r from-sky-500 to-blue-600 opacity-80 group-hover:opacity-100 transition-opacity" />
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm bg-gradient-to-br from-sky-500 to-blue-600" style={{ boxShadow: "0 4px 12px rgba(14, 165, 233, 0.25)" }}>
+                      <ClipboardList className="w-5 h-5 text-white" />
+                    </div>
+                    <span className="text-sm font-semibold text-foreground">📋 السجلات والأرشيف</span>
+                    <ChevronLeft className={`w-4 h-4 text-muted-foreground mr-auto transition-transform duration-200 ${openDropdown === "records" ? "rotate-90" : ""}`} />
+                  </div>
+                </button>
+                {openDropdown === "records" && (
+                  <div className="mt-2 bg-card border border-border rounded-xl shadow-lg overflow-hidden animate-in slide-in-from-top-1 duration-200">
+                    {NAV_RECORDS.map((item, j) => (
+                      <button
+                        key={j}
+                        onClick={() => { navigate(item.path); setOpenDropdown(null); }}
+                        className="w-full text-right px-5 py-3 hover:bg-muted/60 transition-colors text-sm font-medium text-foreground border-b border-border/30 last:border-b-0 flex items-center gap-2"
+                      >
+                        <div className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
           </section>
         )}
 
-        {/* ── Quick Navigation (Authenticated) ── */}
-        {isAuthenticated && (
-          <section className="py-12 border-t border-border/50">
-            <div className="max-w-7xl mx-auto px-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-md shadow-orange-500/20">
-                  <Zap className="w-5 h-5 text-white" />
-                </div>
-                <h2 className="text-lg font-bold text-foreground">الوصول السريع</h2>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {[
-                  { label: "إدارة المشاريع", emoji: "🏗️", icon: Building2, path: "/project-management", gradient: "linear-gradient(135deg, #059669, #047857)", shadow: "rgba(5, 150, 105, 0.25)" },
-                  { label: "لوحة الوكلاء", emoji: "🤖", icon: Bot, path: "/agent-dashboard", gradient: "linear-gradient(135deg, #6366f1, #8b5cf6)", shadow: "rgba(99, 102, 241, 0.25)" },
-                  { label: "المهام", emoji: "📝", icon: FileText, path: "/tasks", gradient: "linear-gradient(135deg, #06b6d4, #0891b2)", shadow: "rgba(6, 182, 212, 0.25)" },
-                  { label: "ملفات Drive", emoji: "📂", icon: Archive, path: "/drive", gradient: "linear-gradient(135deg, #10b981, #059669)", shadow: "rgba(16, 185, 129, 0.25)" },
-                  { label: "المكاتب الاستشارية", emoji: "🏛️", icon: Users, path: "/consultant-portal", gradient: "linear-gradient(135deg, #78716c, #57534e)", shadow: "rgba(120, 113, 108, 0.25)" },
-
-                  { label: "ملخص التكليفات", emoji: "📊", icon: BarChart3, path: "/agent-assignments-summary", gradient: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245, 158, 11, 0.25)" },
-                  { label: "قاعدة المعرفة", emoji: "📚", icon: BookOpen, path: "/knowledge-base", gradient: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)" },
-                  { label: "غرفة الاجتماعات", emoji: "🎙️", icon: Users, path: "/meetings", gradient: "linear-gradient(135deg, #a855f7, #7c3aed)", shadow: "rgba(168, 85, 247, 0.25)" },
-                  { label: "مراقبة التنفيذ", emoji: "⚡", icon: Activity, path: "/execution-dashboard", gradient: "linear-gradient(135deg, #f97316, #ea580c)", shadow: "rgba(249, 115, 22, 0.25)" },
-                  { label: "تقارير السوق", emoji: "📊", icon: FileText, path: "/market-reports", gradient: "linear-gradient(135deg, #0891b2, #06b6d4)", shadow: "rgba(8, 145, 178, 0.25)" },
-                  { label: "التعلم الذاتي", emoji: "🧠", icon: Brain, path: "/self-learning", gradient: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)" },
-                  { label: "السجلات", emoji: "📋", icon: ClipboardList, path: null, gradient: "linear-gradient(135deg, #0ea5e9, #0284c7)", shadow: "rgba(14, 165, 233, 0.25)", isDropdown: true, items: [
-                    { label: "سجل التكليفات", path: "/agent-assignments" },
-                    { label: "سجل المحادثات", path: "/conversation-history" },
-                    { label: "سجل العقود", path: "/contracts" },
-                    { label: "سجل الإيميلات المرسلة", path: "/sent-emails" },
-                    { label: "سجل الاستشاريين", path: "/consultants-registry" },
-                  ] },
-                ].map((item, i) => {
-                  if (item.isDropdown) {
-                    return (
-                      <div key={i} className="relative group">
-                        <button className="premium-card p-5 text-right hover-lift group relative overflow-hidden w-full">
-                          <div
-                            className="absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-300 rounded-xl"
-                            style={{ background: item.gradient }}
-                          />
-                          <div className="relative">
-                            <ColorIcon bg={item.gradient} shadow={item.shadow}>
-                              <item.icon className="w-6 h-6 text-white" />
-                            </ColorIcon>
-                            <div className="mt-4 flex items-center gap-2">
-                              <span className="text-lg">{item.emoji}</span>
-                              <span className="font-semibold text-sm text-foreground">{item.label}</span>
-                            </div>
-                            <ArrowLeft className="w-4 h-4 text-muted-foreground mt-2 transition-transform group-hover:-translate-x-1" />
-                          </div>
-                        </button>
-                        <div className="absolute right-0 top-full mt-2 hidden group-hover:block bg-background border border-border rounded-lg shadow-lg z-50 min-w-max">
-                          {item.items.map((subitem, j) => (
-                            <button
-                              key={j}
-                              onClick={() => navigate(subitem.path)}
-                              className="w-full text-right px-4 py-3 hover:bg-muted transition-colors text-sm font-medium text-foreground border-b border-border/50 last:border-b-0"
-                            >
-                              {subitem.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  }
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => navigate(item.path)}
-                      className="premium-card p-5 text-right hover-lift group relative overflow-hidden"
-                    >
-                      <div
-                        className="absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-300 rounded-xl"
-                        style={{ background: item.gradient }}
-                      />
-                      <div className="relative">
-                        <ColorIcon bg={item.gradient} shadow={item.shadow}>
-                          <item.icon className="w-6 h-6 text-white" />
-                        </ColorIcon>
-                        <div className="mt-4 flex items-center gap-2">
-                          <span className="text-lg">{item.emoji}</span>
-                          <span className="font-semibold text-sm text-foreground">{item.label}</span>
-                        </div>
-                        <ArrowLeft className="w-4 h-4 text-muted-foreground mt-2 transition-transform group-hover:-translate-x-1" />
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+        {/* ══════════════════════════════════════════════════════════════ */}
+        {/* ── CAPABILITIES (for all users) ── */}
+        {/* ══════════════════════════════════════════════════════════════ */}
+        <section className="py-10 border-t border-border/30">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-red-500 shadow-md shadow-orange-500/20 mb-3">
+              <Rocket className="w-5 h-5 text-white" />
             </div>
-          </section>
-        )}
+            <h2 className="text-xl font-bold text-foreground mb-2">قدرات المنصة</h2>
+            <p className="text-sm text-muted-foreground">أدوات متقدمة لإدارة كل جانب من جوانب مشاريعك</p>
+          </div>
 
-        {/* ── Agent Team Section (without Salwa) ── */}
-        {isAuthenticated && teamAgents.length > 0 && (
-          <section className="py-16 border-t border-border/50 bg-muted/30">
-            <div className="max-w-7xl mx-auto px-6">
-              <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/25">
-                    <Users className="w-6 h-6 text-white" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              {
+                icon: BrainCircuit,
+                title: "وكلاء ذكيون",
+                desc: "فريق من الوكلاء المتخصصين يعملون على مدار الساعة",
+                gradient: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                shadow: "rgba(99, 102, 241, 0.3)",
+                emoji: "🤖",
+              },
+              {
+                icon: Shield,
+                title: "تدقيق العقود",
+                desc: "مراجعة قانونية ذكية للعقود واكتشاف المخاطر",
+                gradient: "linear-gradient(135deg, #06b6d4, #0891b2)",
+                shadow: "rgba(6, 182, 212, 0.3)",
+                emoji: "🛡️",
+              },
+              {
+                icon: TrendingUp,
+                title: "تحليل مالي",
+                desc: "تحليل الميزانيات والمستخلصات المالية بدقة",
+                gradient: "linear-gradient(135deg, #10b981, #059669)",
+                shadow: "rgba(16, 185, 129, 0.3)",
+                emoji: "💰",
+              },
+              {
+                icon: Layers,
+                title: "أرشفة ذكية",
+                desc: "تنظيم وأرشفة الملفات تلقائياً بتسمية احترافية",
+                gradient: "linear-gradient(135deg, #f59e0b, #d97706)",
+                shadow: "rgba(245, 158, 11, 0.3)",
+                emoji: "📁",
+              },
+            ].map((feature, i) => (
+              <div
+                key={i}
+                className="relative bg-card rounded-xl border border-border/60 p-5 overflow-hidden hover:shadow-md transition-shadow duration-200"
+              >
+                <div
+                  className="absolute top-0 left-0 right-0 h-[3px] rounded-t-xl"
+                  style={{ background: feature.gradient }}
+                />
+                <div className="flex items-start gap-3.5">
+                  <div
+                    className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-sm"
+                    style={{
+                      background: feature.gradient,
+                      boxShadow: `0 4px 12px ${feature.shadow}`,
+                    }}
+                  >
+                    <feature.icon className="w-5.5 h-5.5 text-white" />
                   </div>
-                  <div>
-                    <h2 className="text-2xl font-bold text-foreground">فريق الوكلاء</h2>
-                    <p className="text-muted-foreground text-sm">
-                      {teamAgents.length} وكيل متخصص يعملون تحت إشراف سلوى
-                    </p>
+                  <div className="flex-1 pt-0.5">
+                    <h3 className="font-bold text-foreground mb-1 text-sm">
+                      <span className="ml-1">{feature.emoji}</span>
+                      {feature.title}
+                    </h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{feature.desc}</p>
                   </div>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate("/agent-dashboard")}
-                  className="gap-1.5 text-xs"
-                >
-                  عرض التفاصيل
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                </Button>
               </div>
+            ))}
+          </div>
+        </section>
 
-              {/* Team Agents Grid - without Salwa */}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-6">
-                {teamAgents.map((agent: any, i: number) => {
-                  const IconComp = AGENT_ICONS[agent.icon || "bot"] || Bot;
-                  const agentColor = agent.color || '#6366f1';
-                  return (
-                    <button
-                      key={agent.id}
-                      onClick={() => setActiveAgent((agent.nameEn || agent.name).toLowerCase() as AgentType)}
-                      className="premium-card p-6 group fade-in relative overflow-hidden hover-lift text-center cursor-pointer"
-                      style={{ animationDelay: `${i * 0.05}s` }}
-                    >
-                      {/* Avatar */}
-                      {agent.avatarUrl && (
-                        <div className="mx-auto mb-4 relative">
-                          <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-offset-2 ring-offset-background shadow-xl mx-auto transition-all duration-300 group-hover:scale-110 group-hover:ring-6" style={{ borderColor: agentColor }}>
-                            <img src={agent.avatarUrl} alt={agent.name} className="w-full h-full object-cover" />
-                          </div>
-                          <span className="absolute bottom-0 right-1/2 translate-x-1/2 translate-y-1 w-4 h-4 bg-emerald-500 rounded-full border-3 border-background shadow-md" />
-                        </div>
-                      )}
-                      {/* Colored top accent bar */}
-                      <div
-                        className="absolute top-0 left-0 right-0 h-1 rounded-t-xl"
-                        style={{ background: agentColor }}
-                      />
-                      <div className="flex items-center gap-3 mb-3">
-                        <div
-                          className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-md"
-                          style={{
-                            background: `linear-gradient(135deg, ${agentColor}, ${agentColor}cc)`,
-                            boxShadow: `0 6px 16px ${agentColor}35`,
-                          }}
-                        >
-                          <IconComp className="w-6 h-6 text-white" />
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="font-bold text-foreground text-sm">{agent.name}</h4>
-                          <p className="text-xs text-muted-foreground truncate">{agent.nameEn}</p>
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed mb-3 line-clamp-2">
-                        {agent.role}
-                      </p>
-                      <div className="flex items-center gap-1.5 justify-center">
-                        <div className="relative">
-                          <div
-                            className={`w-2 h-2 rounded-full ${
-                              agent.status === "active"
-                                ? "bg-emerald-500"
-                                : agent.status === "maintenance"
-                                ? "bg-amber-500"
-                                : "bg-gray-400"
-                            }`}
-                          />
-                          {agent.status === "active" && (
-                            <div className="absolute inset-0 w-2 h-2 rounded-full bg-emerald-500 animate-ping opacity-50" />
-                          )}
-                        </div>
-                        <span className={`text-[11px] font-medium ${
-                          agent.status === "active"
-                            ? "text-emerald-600"
-                            : agent.status === "maintenance"
-                            ? "text-amber-600"
-                            : "text-gray-400"
-                        }`}>
-                          {agent.status === "active"
-                            ? "نشط"
-                            : agent.status === "maintenance"
-                            ? "صيانة"
-                            : "غير نشط"}
-                        </span>
-                      </div>
-                      <div
-                        className="w-full mt-4 gap-2 text-xs flex items-center justify-center rounded-md border border-input bg-transparent px-3 py-2 hover:bg-accent hover:text-accent-foreground transition-colors"
-                      >
-                        <Send className="w-3.5 h-3.5" />
-                        تحدث مع {agent.name}
-                      </div>
-                    </button>
-                  );
-                })}
+        {/* ══════════════════════════════════════════════════════════════ */}
+        {/* ── Agent Team Section ── */}
+        {/* ══════════════════════════════════════════════════════════════ */}
+        {isAuthenticated && teamAgents.length > 0 && (
+          <section className="py-10 border-t border-border/30">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm">
+                  <Users className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-foreground">فريق الوكلاء</h2>
+                  <p className="text-[10px] text-muted-foreground">{teamAgents.length} وكيل متخصص تحت إشراف سلوى</p>
+                </div>
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/agent-dashboard")}
+                className="gap-1.5 text-xs"
+              >
+                عرض التفاصيل
+                <ArrowLeft className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-4 gap-4">
+              {teamAgents.map((agent: any, i: number) => {
+                const IconComp = AGENT_ICONS[agent.icon || "bot"] || Bot;
+                const agentColor = agent.color || '#6366f1';
+                return (
+                  <button
+                    key={agent.id}
+                    onClick={() => setActiveAgent((agent.nameEn || agent.name).toLowerCase() as AgentType)}
+                    className="group relative bg-card rounded-xl border border-border/60 p-4 overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 text-center cursor-pointer"
+                  >
+                    {/* Top accent */}
+                    <div className="absolute top-0 left-0 right-0 h-[3px] rounded-t-xl" style={{ background: agentColor }} />
+
+                    {/* Avatar */}
+                    {agent.avatarUrl && (
+                      <div className="mx-auto mb-3 relative">
+                        <div className="w-16 h-16 rounded-full overflow-hidden ring-3 ring-offset-2 ring-offset-background shadow-md mx-auto transition-transform duration-200 group-hover:scale-105" style={{ borderColor: agentColor }}>
+                          <img src={agent.avatarUrl} alt={agent.name} className="w-full h-full object-cover" />
+                        </div>
+                        <span className="absolute bottom-0 right-1/2 translate-x-1/2 translate-y-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background shadow-sm" />
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2.5 mb-2">
+                      <div
+                        className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110 shadow-sm"
+                        style={{
+                          background: `linear-gradient(135deg, ${agentColor}, ${agentColor}cc)`,
+                          boxShadow: `0 4px 12px ${agentColor}30`,
+                        }}
+                      >
+                        <IconComp className="w-4.5 h-4.5 text-white" />
+                      </div>
+                      <div className="min-w-0 text-right">
+                        <h4 className="font-bold text-foreground text-xs">{agent.name}</h4>
+                        <p className="text-[10px] text-muted-foreground truncate">{agent.nameEn}</p>
+                      </div>
+                    </div>
+
+                    <p className="text-[10px] text-muted-foreground leading-relaxed mb-2 line-clamp-2">{agent.role}</p>
+
+                    <div className="flex items-center gap-1.5 justify-center mb-2">
+                      <div className="relative">
+                        <div className={`w-1.5 h-1.5 rounded-full ${agent.status === "active" ? "bg-emerald-500" : agent.status === "maintenance" ? "bg-amber-500" : "bg-gray-400"}`} />
+                        {agent.status === "active" && <div className="absolute inset-0 w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping opacity-50" />}
+                      </div>
+                      <span className={`text-[10px] font-medium ${agent.status === "active" ? "text-emerald-600" : agent.status === "maintenance" ? "text-amber-600" : "text-gray-400"}`}>
+                        {agent.status === "active" ? "نشط" : agent.status === "maintenance" ? "صيانة" : "غير نشط"}
+                      </span>
+                    </div>
+
+                    <div className="w-full gap-1.5 text-[10px] flex items-center justify-center rounded-lg border border-input bg-transparent px-2.5 py-1.5 hover:bg-accent hover:text-accent-foreground transition-colors">
+                      <Send className="w-3 h-3" />
+                      تحدث مع {agent.name}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </section>
         )}
       </main>
 
       {/* ── Footer ── */}
-      <footer className="border-t border-border py-6">
+      <footer className="border-t border-border/40 py-5 mt-4">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[10px] text-muted-foreground">
             COMO Developments &copy; {new Date().getFullYear()}
           </p>
-          <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <span className="inline-flex w-4 h-4 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 items-center justify-center">
-              <Sparkles className="w-2.5 h-2.5 text-white" />
+          <p className="text-[10px] text-muted-foreground flex items-center gap-1.5">
+            <span className="inline-flex w-3.5 h-3.5 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 items-center justify-center">
+              <Sparkles className="w-2 h-2 text-white" />
             </span>
             مدعوم بالذكاء الاصطناعي
           </p>
