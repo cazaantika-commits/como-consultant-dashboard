@@ -1931,4 +1931,242 @@ ${results.map(r => `- ${r.success ? '✅' : '❌'} ${r.title}`).join('\n')}
         }[type] || type,
       }));
     }),
+
+  // ═══════════════════════════════════════════════════════════════
+  // APPLY JOELLE ENGINE OUTPUTS TO FEASIBILITY FIELDS
+  // Reads Engine 6 (Product Strategy) → MarketOverview
+  // Reads Engine 7 (Pricing Intelligence) → CompetitionPricing
+  // ═══════════════════════════════════════════════════════════════
+  applyJoelleOutputs: publicProcedure
+    .input(z.number()) // projectId
+    .mutation(async ({ ctx, input: projectId }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // Fetch completed stages for this project
+      const stages = await db.select().from(joelleAnalysisStages)
+        .where(and(
+          eq(joelleAnalysisStages.userId, ctx.user.id),
+          eq(joelleAnalysisStages.projectId, projectId),
+        ))
+        .orderBy(joelleAnalysisStages.stageNumber);
+
+      const stage6 = stages.find(s => s.stageNumber === 6 && s.stageStatus === 'completed');
+      const stage7 = stages.find(s => s.stageNumber === 7 && s.stageStatus === 'completed');
+
+      const results: { marketOverview: boolean; competitionPricing: boolean; details: string[] } = {
+        marketOverview: false,
+        competitionPricing: false,
+        details: [],
+      };
+
+      // ─── Apply Engine 6 (Product Strategy) → MarketOverview ───
+      if (stage6?.stageDataJson) {
+        try {
+          const data = JSON.parse(stage6.stageDataJson);
+          const unitMix = data.unitMix || {};
+          const retailMix = data.retailMix || {};
+
+          const moData: any = {
+            residentialStudioPct: String(unitMix.studio?.pct ?? 0),
+            residentialStudioAvgArea: Math.round(unitMix.studio?.avgSize ?? 0),
+            residential1brPct: String(unitMix.oneBr?.pct ?? 0),
+            residential1brAvgArea: Math.round(unitMix.oneBr?.avgSize ?? 0),
+            residential2brPct: String(unitMix.twoBr?.pct ?? 0),
+            residential2brAvgArea: Math.round(unitMix.twoBr?.avgSize ?? 0),
+            residential3brPct: String(unitMix.threeBr?.pct ?? 0),
+            residential3brAvgArea: Math.round(unitMix.threeBr?.avgSize ?? 0),
+            retailSmallPct: String(retailMix.small?.pct ?? 0),
+            retailSmallAvgArea: Math.round(retailMix.small?.avgSize ?? 0),
+            retailMediumPct: String(retailMix.medium?.pct ?? 0),
+            retailMediumAvgArea: Math.round(retailMix.medium?.avgSize ?? 0),
+            retailLargePct: String(retailMix.large?.pct ?? 0),
+            retailLargeAvgArea: Math.round(retailMix.large?.avgSize ?? 0),
+            finishingQuality: data.finishingQuality || 'ممتاز',
+            aiRecommendationsJson: stage6.stageDataJson,
+            aiReportGeneratedAt: new Date(),
+          };
+
+          // Upsert into marketOverview
+          const existing = await db.select().from(marketOverview)
+            .where(and(
+              eq(marketOverview.projectId, projectId),
+              eq(marketOverview.userId, ctx.user.id)
+            ));
+
+          if (existing[0]) {
+            await db.update(marketOverview).set(moData).where(eq(marketOverview.id, existing[0].id));
+          } else {
+            await db.insert(marketOverview).values({
+              userId: ctx.user.id,
+              projectId,
+              ...moData,
+            });
+          }
+          results.marketOverview = true;
+          results.details.push(`تم تطبيق استراتيجية المنتج (محرك 6): Studio ${unitMix.studio?.pct}%, 1BR ${unitMix.oneBr?.pct}%, 2BR ${unitMix.twoBr?.pct}%, 3BR ${unitMix.threeBr?.pct}%`);
+        } catch (e: any) {
+          results.details.push(`خطأ في تطبيق محرك 6: ${e.message}`);
+        }
+      } else {
+        results.details.push('محرك 6 (استراتيجية المنتج) لم يكتمل بعد — لم يتم تحديث توزيع الوحدات');
+      }
+
+      // ─── Apply Engine 7 (Pricing Intelligence) → CompetitionPricing ───
+      if (stage7?.stageDataJson) {
+        try {
+          const data = JSON.parse(stage7.stageDataJson);
+          const scenarios = data.scenarios || {};
+          const paymentPlan = data.paymentPlan || {};
+
+          const opt = scenarios.optimistic?.residential || {};
+          const optRet = scenarios.optimistic?.retail || {};
+          const optOff = scenarios.optimistic?.offices || {};
+          const base = scenarios.base?.residential || {};
+          const baseRet = scenarios.base?.retail || {};
+          const baseOff = scenarios.base?.offices || {};
+          const cons = scenarios.conservative?.residential || {};
+          const consRet = scenarios.conservative?.retail || {};
+          const consOff = scenarios.conservative?.offices || {};
+
+          const cpData: any = {
+            optStudioPrice: Math.round(opt.studio ?? 0),
+            opt1brPrice: Math.round(opt.oneBr ?? 0),
+            opt2brPrice: Math.round(opt.twoBr ?? 0),
+            opt3brPrice: Math.round(opt.threeBr ?? 0),
+            optRetailSmallPrice: Math.round(optRet.small ?? 0),
+            optRetailMediumPrice: Math.round(optRet.medium ?? 0),
+            optRetailLargePrice: Math.round(optRet.large ?? 0),
+            optOfficeSmallPrice: Math.round(optOff.small ?? 0),
+            optOfficeMediumPrice: Math.round(optOff.medium ?? 0),
+            optOfficeLargePrice: Math.round(optOff.large ?? 0),
+            baseStudioPrice: Math.round(base.studio ?? 0),
+            base1brPrice: Math.round(base.oneBr ?? 0),
+            base2brPrice: Math.round(base.twoBr ?? 0),
+            base3brPrice: Math.round(base.threeBr ?? 0),
+            baseRetailSmallPrice: Math.round(baseRet.small ?? 0),
+            baseRetailMediumPrice: Math.round(baseRet.medium ?? 0),
+            baseRetailLargePrice: Math.round(baseRet.large ?? 0),
+            baseOfficeSmallPrice: Math.round(baseOff.small ?? 0),
+            baseOfficeMediumPrice: Math.round(baseOff.medium ?? 0),
+            baseOfficeLargePrice: Math.round(baseOff.large ?? 0),
+            consStudioPrice: Math.round(cons.studio ?? 0),
+            cons1brPrice: Math.round(cons.oneBr ?? 0),
+            cons2brPrice: Math.round(cons.twoBr ?? 0),
+            cons3brPrice: Math.round(cons.threeBr ?? 0),
+            consRetailSmallPrice: Math.round(consRet.small ?? 0),
+            consRetailMediumPrice: Math.round(consRet.medium ?? 0),
+            consRetailLargePrice: Math.round(consRet.large ?? 0),
+            consOfficeSmallPrice: Math.round(consOff.small ?? 0),
+            consOfficeMediumPrice: Math.round(consOff.medium ?? 0),
+            consOfficeLargePrice: Math.round(consOff.large ?? 0),
+            paymentBookingPct: String(paymentPlan.booking?.pct ?? 10),
+            paymentBookingTiming: paymentPlan.booking?.timing || 'عند التوقيع',
+            paymentConstructionPct: String(paymentPlan.construction?.pct ?? 60),
+            paymentConstructionTiming: paymentPlan.construction?.timing || 'أثناء الإنشاء',
+            paymentHandoverPct: String(paymentPlan.handover?.pct ?? 30),
+            paymentHandoverTiming: paymentPlan.handover?.timing || 'عند التسليم',
+            paymentDeferredPct: String(paymentPlan.deferred?.pct ?? 0),
+            paymentDeferredTiming: paymentPlan.deferred?.timing || '',
+            activeScenario: 'base',
+            aiRecommendationsJson: stage7.stageDataJson,
+            aiReportGeneratedAt: new Date(),
+          };
+
+          // Upsert into competitionPricing
+          const existing = await db.select().from(competitionPricing)
+            .where(and(
+              eq(competitionPricing.projectId, projectId),
+              eq(competitionPricing.userId, ctx.user.id)
+            ));
+
+          if (existing[0]) {
+            await db.update(competitionPricing).set(cpData).where(eq(competitionPricing.id, existing[0].id));
+          } else {
+            await db.insert(competitionPricing).values({
+              userId: ctx.user.id,
+              projectId,
+              ...cpData,
+            });
+          }
+          results.competitionPricing = true;
+          results.details.push(`تم تطبيق ذكاء التسعير (محرك 7): Base Studio ${base.studio}, 1BR ${base.oneBr}, 2BR ${base.twoBr}, 3BR ${base.threeBr}`);
+        } catch (e: any) {
+          results.details.push(`خطأ في تطبيق محرك 7: ${e.message}`);
+        }
+      } else {
+        results.details.push('محرك 7 (ذكاء التسعير) لم يكتمل بعد — لم يتم تحديث الأسعار');
+      }
+
+      return results;
+    }),
+
+  // ═══════════════════════════════════════════════════════════════
+  // GET JOELLE ENGINE DATA STATUS FOR AUTO-POPULATE UI
+  // Returns which engines have completed and what data is available
+  // ═══════════════════════════════════════════════════════════════
+  getAutoPopulateStatus: publicProcedure
+    .input(z.number()) // projectId
+    .query(async ({ ctx, input: projectId }) => {
+      if (!ctx.user) return { engine6Ready: false, engine7Ready: false, lastApplied: null };
+      const db = await getDb();
+      if (!db) return { engine6Ready: false, engine7Ready: false, lastApplied: null };
+
+      const stages = await db.select().from(joelleAnalysisStages)
+        .where(and(
+          eq(joelleAnalysisStages.userId, ctx.user.id),
+          eq(joelleAnalysisStages.projectId, projectId),
+        ))
+        .orderBy(joelleAnalysisStages.stageNumber);
+
+      const stage6 = stages.find(s => s.stageNumber === 6 && s.stageStatus === 'completed');
+      const stage7 = stages.find(s => s.stageNumber === 7 && s.stageStatus === 'completed');
+
+      // Check if already applied (aiRecommendationsJson is set)
+      const moResults = await db.select().from(marketOverview)
+        .where(and(
+          eq(marketOverview.projectId, projectId),
+          eq(marketOverview.userId, ctx.user.id)
+        ));
+      const cpResults = await db.select().from(competitionPricing)
+        .where(and(
+          eq(competitionPricing.projectId, projectId),
+          eq(competitionPricing.userId, ctx.user.id)
+        ));
+
+      let engine6Summary = null;
+      if (stage6?.stageDataJson) {
+        try {
+          const d = JSON.parse(stage6.stageDataJson);
+          engine6Summary = {
+            totalUnits: d.totalUnits,
+            positioning: d.positioning,
+            unitMix: d.unitMix,
+          };
+        } catch {}
+      }
+
+      let engine7Summary = null;
+      if (stage7?.stageDataJson) {
+        try {
+          const d = JSON.parse(stage7.stageDataJson);
+          engine7Summary = {
+            baseScenario: d.scenarios?.base?.residential,
+            weightedAvgPrice: d.weightedAvgPrice,
+          };
+        } catch {}
+      }
+
+      return {
+        engine6Ready: !!stage6?.stageDataJson,
+        engine7Ready: !!stage7?.stageDataJson,
+        engine6CompletedAt: stage6?.completedAt || null,
+        engine7CompletedAt: stage7?.completedAt || null,
+        engine6Summary,
+        engine7Summary,
+        moHasJoelleData: !!moResults[0]?.aiRecommendationsJson,
+        cpHasJoelleData: !!cpResults[0]?.aiRecommendationsJson,
+      };
+    }),
 });

@@ -14,10 +14,7 @@ import {
   Sparkles, Copy, Brain, Globe, FolderOpen, ShieldCheck, Users,
   Landmark, Percent, ChevronDown, BookOpen, Scale, AlertTriangle,
 } from "lucide-react";
-import { Streamdown } from "streamdown";
 import { useLocation } from "wouter";
-import MarketOverviewTab from "@/components/feasibility/MarketOverviewTab";
-import CompetitionPricingTab from "@/components/feasibility/CompetitionPricingTab";
 import CostsCashFlowTab from "@/components/feasibility/CostsCashFlowTab";
 import JoelleEngineTab from "@/components/feasibility/JoelleEngineTab";
 import JoelleDataManager from "@/components/feasibility/JoelleDataManager";
@@ -146,7 +143,7 @@ export default function FeasibilityStudyPage({ embedded }: { embedded?: boolean 
   const [, navigate] = useLocation();
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [selectedStudyId, setSelectedStudyId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState("tab3");
+  const [activeTab, setActiveTab] = useState("tab5");
   const [form, setForm] = useState<Record<string, any>>({});
   const [isDirty, setIsDirty] = useState(false);
   const [autoCreating, setAutoCreating] = useState(false);
@@ -188,7 +185,8 @@ export default function FeasibilityStudyPage({ embedded }: { embedded?: boolean 
   const deleteMutation = trpc.feasibility.delete.useMutation({
     onSuccess: () => { studiesByProjectQuery.refetch(); setSelectedStudyId(null); setForm({}); toast.success("تم حذف الدراسة"); },
   });
-  const aiSummaryMutation = trpc.feasibility.generateAiSummary.useMutation({
+  // Removed: aiSummaryMutation (now in Joelle Engine)
+  const _aiSummaryMutation = trpc.feasibility.generateAiSummary.useMutation({
     onSuccess: (data) => { studyQuery.refetch(); setForm((prev: Record<string, any>) => ({ ...prev, aiSummary: data.summary })); toast.success("تم إنشاء التحليل بنجاح"); },
     onError: (err) => toast.error(err.message || "فشل في إنشاء التحليل"),
   });
@@ -196,11 +194,13 @@ export default function FeasibilityStudyPage({ embedded }: { embedded?: boolean 
     onSuccess: (data) => { studyQuery.refetch(); setForm((prev: Record<string, any>) => ({ ...prev, marketAnalysis: data.analysis })); toast.success("تم تحليل السوق بنجاح"); },
     onError: (err) => toast.error(err.message || "فشل في تحليل السوق"),
   });
-  const comprehensiveReportMutation = trpc.feasibility.generateComprehensiveReport.useMutation({
+  // Removed: comprehensiveReportMutation (now in Joelle Engine)
+  const _comprehensiveReportMutation = trpc.feasibility.generateComprehensiveReport.useMutation({
     onSuccess: (data) => { studyQuery.refetch(); setForm((prev: Record<string, any>) => ({ ...prev, competitorAnalysis: data.report })); toast.success("تم إنشاء التقرير الشامل"); },
     onError: (err) => toast.error(err.message || "فشل في إنشاء التقرير"),
   });
-  const executiveReportMutation = trpc.feasibility.generateExecutiveReport.useMutation({
+  // Removed: executiveReportMutation (now in Joelle Engine)
+  const _executiveReportMutation = trpc.feasibility.generateExecutiveReport.useMutation({
     onSuccess: (data) => { studyQuery.refetch(); setForm((prev: Record<string, any>) => ({ ...prev, priceRecommendation: data.report })); toast.success("تم إنشاء تقرير المجلس"); },
     onError: (err) => toast.error(err.message || "فشل في إنشاء التقرير"),
   });
@@ -386,7 +386,7 @@ export default function FeasibilityStudyPage({ embedded }: { embedded?: boolean 
             </div>
 
             {/* ═══════════════════════════════════════════ */}
-            {/* 8 TABS - حسب تعليمات المستخدم بالضبط */}
+            {/* 3 TABS - الهيكل الجديد المبسط */}
             {/* ═══════════════════════════════════════════ */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="w-full justify-start mb-4 bg-card border border-border h-auto flex-wrap gap-1 p-1">
@@ -396,45 +396,14 @@ export default function FeasibilityStudyPage({ embedded }: { embedded?: boolean 
                 <TabsTrigger value="tab9" className="gap-1.5 text-xs data-[state=active]:bg-gradient-to-l data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white">
                   🧠 محرك جويل
                 </TabsTrigger>
-                <TabsTrigger value="tab8" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  👔 ٦. تقرير المجلس
-                </TabsTrigger>
-                <TabsTrigger value="tab7" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  📋 ٥. التقرير الشامل
-                </TabsTrigger>
-                <TabsTrigger value="tab6" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  📊 ٤. التحليل والسيناريوهات
-                </TabsTrigger>
                 <TabsTrigger value="tab5" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  💰 ٣. التكاليف والتدفقات
-                </TabsTrigger>
-                <TabsTrigger value="tab4" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  ⚔️ ٢. المنافسة والتسعير
-                </TabsTrigger>
-                <TabsTrigger value="tab3" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  🌍 ١. النظرة العامة والسوق
+                  💰 التكاليف والتدفقات
                 </TabsTrigger>
               </TabsList>
 
               {/* ═══════════════════════════════════════════ */}
-              {/* التبويب 1: النظرة العامة والسوق */}
-              {/* توصيات جويل + حقول قابلة للتعديل */}
-              {/* ═══════════════════════════════════════════ */}
-              <TabsContent value="tab3">
-                <MarketOverviewTab projectId={selectedProjectId} studyId={selectedStudyId} form={form} computed={computed} />
-              </TabsContent>
-
-              {/* ═══════════════════════════════════════════ */}
-              {/* التبويب 4: المنافسة والتسعير */}
-              {/* 3 سيناريوهات + خطة السداد */}
-              {/* ═══════════════════════════════════════════ */}
-              <TabsContent value="tab4">
-                <CompetitionPricingTab projectId={selectedProjectId} studyId={selectedStudyId} form={form} computed={computed} />
-              </TabsContent>
-
-              {/* ═══════════════════════════════════════════ */}
-              {/* التبويب 5: التكاليف والتدفقات */}
-              {/* حقل واحد قابل للتعديل (سعر القدم) + تقرير READ ONLY */}
+              {/* التبويب الموحد: التكاليف والتدفقات */}
+              {/* يشمل: توزيع الوحدات + التسعير + التكاليف */}
               {/* ═══════════════════════════════════════════ */}
               <TabsContent value="tab5">
                 <CostsCashFlowTab projectId={selectedProjectId} studyId={selectedStudyId} form={form} computed={computed} />
@@ -442,175 +411,7 @@ export default function FeasibilityStudyPage({ embedded }: { embedded?: boolean 
 
 
 
-              {/* ═══════════════════════════════════════════ */}
-              {/* التبويب 6: التحليل والسيناريوهات */}
-              {/* تقرير من جويل: تحليل + مخاطر + توصيات + سجل المصادر + أوزان الترجيح */}
-              {/* ═══════════════════════════════════════════ */}
-              <TabsContent value="tab6">
-                <div className="space-y-4">
-                  {/* التحليل والمخاطر والتوصيات */}
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <SectionHeader icon={AlertTriangle} title="التحليل والمخاطر والتوصيات" />
-                        <Button
-                          onClick={() => { if (selectedStudyId) aiSummaryMutation.mutate(selectedStudyId); }}
-                          disabled={aiSummaryMutation.isPending}
-                          className="gap-2"
-                        >
-                          {aiSummaryMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                          {aiSummaryMutation.isPending ? "جويل تحلل..." : "اطلب من جويل"}
-                        </Button>
-                      </div>
-                      {form.aiSummary ? (
-                        <div className="prose prose-sm max-w-none bg-muted/30 rounded-xl p-6 border border-border" dir="rtl">
-                          <Streamdown>{form.aiSummary}</Streamdown>
-                        </div>
-                      ) : (
-                        <JoellePlaceholder message="لم يُنشأ هذا القسم بعد" subMessage="اضغط زر جويل أعلاه لإنشاء المحتوى" />
-                      )}
-                    </CardContent>
-                  </Card>
 
-                  {/* تحليل السيناريوهات */}
-                  <Card>
-                    <CardContent className="pt-6">
-                      <SectionHeader icon={BarChart3} title="تحليل السيناريوهات" subtitle="مقارنة بين السيناريوهات الثلاثة" />
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b-2 border-border bg-muted/30">
-                              <th className="text-right py-3 px-4 font-bold">المؤشر</th>
-                              <th className="text-center py-3 px-4 font-bold text-emerald-600">🟢 متفائل (+15%)</th>
-                              <th className="text-center py-3 px-4 font-bold text-blue-600">🔵 أساسي</th>
-                              <th className="text-center py-3 px-4 font-bold text-orange-600">🟠 محافظ (-15%)</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {[
-                              { label: "إجمالي الإيرادات", opt: computed.totalRevenue * 1.15, base: computed.totalRevenue, cons: computed.totalRevenue * 0.85 },
-                              { label: "إجمالي التكاليف", opt: computed.totalCosts, base: computed.totalCosts, cons: computed.totalCosts },
-                              { label: "صافي الربح", opt: computed.totalRevenue * 1.15 - computed.totalCosts, base: computed.profit, cons: computed.totalRevenue * 0.85 - computed.totalCosts },
-                              { label: "هامش الربح %", opt: computed.totalRevenue * 1.15 > 0 ? ((computed.totalRevenue * 1.15 - computed.totalCosts) / (computed.totalRevenue * 1.15)) * 100 : 0, base: computed.profitMargin, cons: computed.totalRevenue * 0.85 > 0 ? ((computed.totalRevenue * 0.85 - computed.totalCosts) / (computed.totalRevenue * 0.85)) * 100 : 0 },
-                            ].map((row, i) => (
-                              <tr key={i} className="border-b border-border/50">
-                                <td className="py-3 px-4 font-medium">{row.label}</td>
-                                <td className="py-3 px-4 text-center font-mono text-emerald-600">{i === 3 ? `${row.opt.toFixed(1)}%` : fmt(row.opt)}</td>
-                                <td className="py-3 px-4 text-center font-mono font-bold text-blue-600">{i === 3 ? `${row.base.toFixed(1)}%` : fmt(row.base)}</td>
-                                <td className="py-3 px-4 text-center font-mono text-orange-600">{i === 3 ? `${row.cons.toFixed(1)}%` : fmt(row.cons)}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* سجل المصادر */}
-                  <Card>
-                    <CardContent className="pt-6">
-                      <SectionHeader icon={BookOpen} title="سجل المصادر" subtitle="12 مصدر مسجل — 5 طبقات حسب الموثوقية" />
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b-2 border-border bg-muted/30">
-                              <th className="text-right py-3 px-3 font-bold">المصدر</th>
-                              <th className="text-center py-3 px-3 font-bold">الطبقة</th>
-                              <th className="text-right py-3 px-3 font-bold">البيانات المتاحة</th>
-                              <th className="text-center py-3 px-3 font-bold">التحديث</th>
-                              <th className="text-center py-3 px-3 font-bold">الطريقة</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {[
-                              { name: "Dubai REST", tier: "طبقة 1 — حكومي رسمي", tierColor: "bg-emerald-100 text-emerald-700", data: "e_status, noc_status, escrow_accounts", update: "Real-time", method: "api" },
-                              { name: "DubaiNow", tier: "طبقة 1 — حكومي رسمي", tierColor: "bg-emerald-100 text-emerald-700", data: "bills, government_fees, service_requests", update: "Real-time", method: "api" },
-                              { name: "Data.Dubai (Smart Dubai)", tier: "طبقة 1 — حكومي رسمي", tierColor: "bg-emerald-100 text-emerald-700", data: "density, land_use_data, utility_connections", update: "Monthly", method: "api" },
-                              { name: "Dubai Statistics Center (DSC/DDSE)", tier: "طبقة 1 — حكومي رسمي", tierColor: "bg-emerald-100 text-emerald-700", data: "data, construction_permits, trade_data", update: "Quarterly", method: "manual_file" },
-                              { name: "Bayut", tier: "طبقة 4 — بوابات إعلانات", tierColor: "bg-amber-100 text-amber-700", data: "areas, price_per_sqft, inventory_levels", update: "Real-time", method: "scrape" },
-                              { name: "Property Finder (PF)", tier: "طبقة 4 — بوابات إعلانات", tierColor: "bg-amber-100 text-amber-700", data: "market, agent_listings, area_coverage", update: "Real-time", method: "scrape" },
-                              { name: "Knight Frank (KF)", tier: "طبقة 3 — استشاري مهني", tierColor: "bg-blue-100 text-blue-700", data: "health_report, rental_analysis, capital_values", update: "Quarterly", method: "manual_file" },
-                              { name: "CBRE", tier: "طبقة 3 — استشاري مهني", tierColor: "bg-blue-100 text-blue-700", data: "occupancy_rates, development_pipeline", update: "Quarterly", method: "manual_file" },
-                              { name: "JLL (Jones Lang LaSalle)", tier: "طبقة 3 — استشاري مهني", tierColor: "bg-blue-100 text-blue-700", data: "rates, vacancy_rates, investment_volumes", update: "Quarterly", method: "manual_file" },
-                              { name: "REIDIN", tier: "طبقة 2 — مزود بيانات أولي", tierColor: "bg-purple-100 text-purple-700", data: "historical_trends, comparable_transactions", update: "Monthly", method: "manual_file" },
-                              { name: "Property Monitor (PM)", tier: "طبقة 2 — مزود بيانات أولي", tierColor: "bg-purple-100 text-purple-700", data: "rption_rate, rental_yields, market_trends", update: "Monthly", method: "manual_file" },
-                              { name: "Dubai Land Department (DLD)", tier: "طبقة 1 — حكومي رسمي", tierColor: "bg-emerald-100 text-emerald-700", data: "mber, buyer_nationality, mortgage_data", update: "Daily", method: "manual_file" },
-                            ].map((src, i) => (
-                              <tr key={i} className="border-b border-border/50 hover:bg-muted/20">
-                                <td className="py-2.5 px-3 font-medium">{src.name}</td>
-                                <td className="py-2.5 px-3 text-center"><span className={`text-[10px] px-2 py-1 rounded-full font-bold ${src.tierColor}`}>{src.tier}</span></td>
-                                <td className="py-2.5 px-3 text-xs text-muted-foreground">{src.data}</td>
-                                <td className="py-2.5 px-3 text-center text-xs">{src.update}</td>
-                                <td className="py-2.5 px-3 text-center"><span className={`text-[10px] px-2 py-0.5 rounded font-mono ${src.method === 'api' ? 'text-emerald-600' : src.method === 'scrape' ? 'text-amber-600' : 'text-blue-600'}`}>{src.method}</span></td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* جدول أوزان الترجيح */}
-                  <Card>
-                    <CardContent className="pt-6">
-                      <SectionHeader icon={Scale} title="جدول أوزان الترجيح" subtitle="يُطبّق تلقائياً عند مصالحة بيانات من مصادر متعددة" />
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        {[
-                          { title: "المعاملات المسجلة", weights: "DLD 80% · PM 15% · REIDIN 5%", bg: "bg-stone-50" },
-                          { title: "الإيجارات المسجلة", weights: "DLD 80% · PM 15% · Portals 5%", bg: "bg-stone-50" },
-                          { title: "خط الإمداد والمعروض", weights: "PM 45% · REIDIN 45% · DLD 10%", bg: "bg-stone-50" },
-                          { title: "أسعار الطلب", weights: "Brochure 60% · Portals 35% · Calls 5%", bg: "bg-stone-50" },
-                          { title: "البيانات السكانية", weights: "DDSE 80% · Research 20%", bg: "bg-stone-50" },
-                          { title: "التنظيمي / القانوني", weights: "Official 100%", bg: "bg-stone-50" },
-                        ].map((cat, i) => (
-                          <div key={i} className={`p-4 rounded-xl ${cat.bg} border border-border`}>
-                            <h4 className="font-bold text-sm mb-1">{cat.title}</h4>
-                            <p className="text-xs text-muted-foreground font-mono">{cat.weights}</p>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="p-3 rounded-xl bg-red-50 border border-red-200">
-                        <h4 className="font-bold text-sm text-red-700 mb-1">حدود التباين المسموح</h4>
-                        <p className="text-xs text-red-600 font-mono">الإجماليات ±5% · الأسعار الوسطية ±3% · خط الإمداد ±10% · أسعار الطلب ±7%</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
-
-              {/* ═══════════════════════════════════════════ */}
-              {/* التبويب 7: التقرير الشامل المهني الاحترافي */}
-              {/* تقرير من جويل - READ ONLY */}
-              {/* ═══════════════════════════════════════════ */}
-              <TabsContent value="tab7">
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <SectionHeader icon={FileText} title="التقرير الشامل المهني الاحترافي" subtitle="تقرير مفصل من جويل يتضمن جميع جوانب المشروع" />
-                      <Button
-                        onClick={() => { if (selectedStudyId) comprehensiveReportMutation.mutate({ id: selectedStudyId }); }}
-                        disabled={comprehensiveReportMutation.isPending}
-                        className="gap-2"
-                      >
-                        {comprehensiveReportMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                        {comprehensiveReportMutation.isPending ? "جويل تكتب..." : "إنشاء التقرير"}
-                      </Button>
-                    </div>
-                    {form.competitorAnalysis ? (
-                      <div className="prose prose-sm max-w-none bg-muted/30 rounded-xl p-6 border border-border" dir="rtl">
-                        <Streamdown>{form.competitorAnalysis}</Streamdown>
-                      </div>
-                    ) : (
-                      <JoellePlaceholder message="لم يُنشأ هذا القسم بعد" subMessage="اضغط زر جويل أعلاه لإنشاء التقرير الشامل" />
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* ═══════════════════════════════════════════ */}
-              {/* التبويب 8: التقرير المختصر لمجلس الإدارة */}
-              {/* تقرير من جويل - READ ONLY */}
-              {/* ═══════════════════════════════════════════ */}
               <TabsContent value="tab10">
                 <JoelleDataManager projectId={selectedProjectId} community={form.community || ''} />
               </TabsContent>
@@ -618,30 +419,6 @@ export default function FeasibilityStudyPage({ embedded }: { embedded?: boolean 
                 <JoelleEngineTab projectId={selectedProjectId} studyId={selectedStudyId} />
               </TabsContent>
 
-              <TabsContent value="tab8">
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <SectionHeader icon={Users} title="التقرير المختصر لمجلس الإدارة" subtitle="ملخص موجز وفعال من جويل للقيادة العليا" />
-                      <Button
-                        onClick={() => { if (selectedStudyId) executiveReportMutation.mutate({ id: selectedStudyId }); }}
-                        disabled={executiveReportMutation.isPending}
-                        className="gap-2"
-                      >
-                        {executiveReportMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                        {executiveReportMutation.isPending ? "جويل تكتب..." : "إنشاء التقرير"}
-                      </Button>
-                    </div>
-                    {form.priceRecommendation ? (
-                      <div className="prose prose-sm max-w-none bg-muted/30 rounded-xl p-6 border border-border" dir="rtl">
-                        <Streamdown>{form.priceRecommendation}</Streamdown>
-                      </div>
-                    ) : (
-                      <JoellePlaceholder message="لم يُنشأ هذا القسم بعد" subMessage="اضغط زر جويل أعلاه لإنشاء تقرير مجلس الإدارة" />
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
 
             </Tabs>
           </>
