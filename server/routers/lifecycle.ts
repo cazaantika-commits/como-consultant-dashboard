@@ -9,7 +9,8 @@ import {
   projectRequirementStatus,
   projectStageStatus,
 } from "../../drizzle/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, lte, gte, isNotNull } from "drizzle-orm";
+import { notifyOwner } from "../_core/notification";
 
 // ─────────────────────────────────────────────────────────────
 // Helper: compute dynamic operational status for a service
@@ -465,6 +466,129 @@ export const lifecycleRouter = router({
         await db.insert(projectRequirementStatus).values(data);
       }
       return { success: true };
+    }),
+
+  /** Check all service deadlines and send notifications for overdue/upcoming services */
+  checkDeadlines: protectedProcedure.mutation(async () => {
+    const db = await getDb();
+    const now = new Date();
+    const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+    const nowMs = now.getTime();
+    const threeDaysMs = threeDaysFromNow.getTime();
+
+    // Get all service instances that have a due date and are not completed
+    const instances = await db
+      .select()
+      .from(projectServiceInstances)
+      .where(
+        and(
+          isNotNull(projectServiceInstances.plannedDueDate),
+          sql`${projectServiceInstances.operationalStatus} NOT IN ('completed', 'submitted', 'na')`
+        )
+      );
+
+    const services = await db.select().from(lifecycleServices);
+    const stages = await db.select().from(lifecycleStages);
+
+    // Import projects table to get project names
+    const { projects } = await import("../../drizzle/schema");
+    const projectsList = await db.select({ id: projects.id, name: projects.name }).from(projects);
+
+    const overdueItems: string[] = [];
+    const upcomingItems: string[] = [];
+
+    for (const inst of instances) {
+      if (!inst.plannedDueDate) continue;
+      const dueMs = new Date(inst.plannedDueDate).getTime();
+      const service = services.find((s) => s.serviceCode === inst.serviceCode);
+      const stage = stages.find((s) => s.stageCode === service?.stageCode);
+      const project = projectsList.find((p) => p.id === inst.projectId);
+      const label = `[${project?.name ?? `مشروع ${inst.projectId}`}] ${stage?.nameAr ?? ''} > ${service?.nameAr ?? inst.serviceCode}`;
+      const dueDate = new Date(inst.plannedDueDate).toLocaleDateString('ar-AE');
+
+      if (dueMs < nowMs) {
+        overdueItems.push(`• ${label} — موعد الاستحقاق: ${dueDate} (متأخرة)`);
+      } else if (dueMs <= threeDaysMs) {
+        upcomingItems.push(`• ${label} — موعد الاستحقاق: ${dueDate} (خلال 3 أيام)`);
+      }
+    }
+
+    const alerts = [...overdueItems, ...upcomingItems];
+    if (alerts.length === 0) return { sent: false, count: 0 };
+
+    const lines: string[] = [];
+    if (overdueItems.length > 0) {
+      lines.push(`🔴 خدمات متأخرة (${overdueItems.length}):\n${overdueItems.join('\n')}`);
+    }
+    if (upcomingItems.length > 0) {
+      lines.push(`🟡 خدمات تستحق خلال 3 أيام (${upcomingItems.length}):\n${upcomingItems.join('\n')}`);
+    }
+
+    await notifyOwner({
+      title: `تنبيه مواعيد DLD/RERA — ${alerts.length} خدمة تحتاج متابعة`,
+      content: lines.join('\n\n'),
+    });
+
+    return { sent: true, count: alerts.length, overdue: overdueItems.length, upcoming: upcomingItems.length };
+  }),
+
+  /** Get upcoming and overdue services for a project (for UI display) */
+  getDeadlineAlerts: protectedProcedure
+    .input(z.object({ projectId: z.number().optional() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      const now = new Date();
+      const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const nowMs = now.getTime();
+      const sevenDaysMs = sevenDaysFromNow.getTime();
+
+      const whereClause = input.projectId
+        ? and(
+            eq(projectServiceInstances.projectId, input.projectId),
+            isNotNull(projectServiceInstances.plannedDueDate),
+            sql`${projectServiceInstances.operationalStatus} NOT IN ('completed', 'submitted', 'na')`
+          )
+        : and(
+            isNotNull(projectServiceInstances.plannedDueDate),
+            sql`${projectServiceInstances.operationalStatus} NOT IN ('completed', 'submitted', 'na')`
+          );
+
+      const instances = await db
+        .select()
+        .from(projectServiceInstances)
+        .where(whereClause);
+
+      const services = await db.select().from(lifecycleServices);
+      const stages = await db.select().from(lifecycleStages);
+      const { projects } = await import("../../drizzle/schema");
+      const projectsList = await db.select({ id: projects.id, name: projects.name }).from(projects);
+
+      const alerts = instances
+        .filter((inst) => {
+          if (!inst.plannedDueDate) return false;
+          const dueMs = new Date(inst.plannedDueDate).getTime();
+          return dueMs <= sevenDaysMs; // overdue or within 7 days
+        })
+        .map((inst) => {
+          const dueMs = new Date(inst.plannedDueDate!).getTime();
+          const service = services.find((s) => s.serviceCode === inst.serviceCode);
+          const stage = stages.find((s) => s.stageCode === service?.stageCode);
+          const project = projectsList.find((p) => p.id === inst.projectId);
+          const daysLeft = Math.ceil((dueMs - nowMs) / (24 * 60 * 60 * 1000));
+          return {
+            projectId: inst.projectId,
+            projectName: project?.name ?? `مشروع ${inst.projectId}`,
+            serviceCode: inst.serviceCode,
+            serviceNameAr: service?.nameAr ?? inst.serviceCode,
+            stageNameAr: stage?.nameAr ?? '',
+            plannedDueDate: inst.plannedDueDate,
+            daysLeft,
+            severity: daysLeft < 0 ? 'overdue' : daysLeft <= 3 ? 'urgent' : 'soon',
+          };
+        })
+        .sort((a, b) => a.daysLeft - b.daysLeft);
+
+      return alerts;
     }),
 
   /** Get summary stats for a project across all stages */

@@ -12,6 +12,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { initTelegramBot, registerCallbackHandler, getBotInfo } from "../telegramBot";
 import { startEmailNotificationService } from "../emailNotificationService";
+import { startLifecycleDeadlineScheduler } from "../lifecycleDeadlineScheduler";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -100,6 +101,9 @@ async function startServer() {
 
   // Start email notification background service
   startEmailNotificationService();
+
+  // Start lifecycle deadline checker (daily at 8 AM Dubai time)
+  startLifecycleDeadlineScheduler();
 }
 
 startServer().catch(console.error);

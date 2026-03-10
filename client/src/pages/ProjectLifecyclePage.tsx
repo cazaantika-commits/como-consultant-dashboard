@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import {
   ArrowLeft, Clock, CheckCircle2, Lock, AlertCircle, Circle, FileText, Database,
   ChevronRight, CalendarDays, Users, Building2, AlertTriangle, Timer, TrendingUp,
-  Edit3, Save, X
+  Edit3, Save, X, Bell, BellRing, RefreshCw
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -895,6 +895,7 @@ function ServicesListPanel({
 export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean } = {}) {
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [selectedStage, setSelectedStage] = useState<{ code: string; name: string } | null>(null);
+  const [showAlerts, setShowAlerts] = useState(false);
 
   const projectsQuery = trpc.projects.getAll.useQuery();
   const stagesQuery = trpc.lifecycle.getProjectStageStatuses.useQuery(
@@ -905,6 +906,20 @@ export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean 
     { projectId: selectedProjectId! },
     { enabled: !!selectedProjectId }
   );
+  const alertsQuery = trpc.lifecycle.getDeadlineAlerts.useQuery(
+    { projectId: selectedProjectId ?? undefined },
+    { enabled: !!selectedProjectId }
+  );
+  const checkDeadlinesMutation = trpc.lifecycle.checkDeadlines.useMutation({
+    onSuccess: (data) => {
+      if (data.sent) {
+        toast.success(`تم إرسال تنبيه: ${data.overdue} متأخرة، ${data.upcoming} قريبة`);
+      } else {
+        toast.info('لا توجد مواعيد استحقاق قريبة أو متأخرة');
+      }
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
   const projects = projectsQuery.data ?? [];
   const stages = stagesQuery.data ?? [];
@@ -962,6 +977,76 @@ export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean 
             </SelectContent>
           </Select>
         </div>
+
+        {/* Deadline Alerts Panel */}
+        {selectedProjectId && (alertsQuery.data?.length ?? 0) > 0 && (
+          <div className="mb-5">
+            <button
+              onClick={() => setShowAlerts(!showAlerts)}
+              className="w-full flex items-center justify-between bg-red-50 border border-red-200 rounded-2xl p-3.5 text-right hover:bg-red-100 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <BellRing className="w-4 h-4 text-red-600" />
+                <span className="text-sm font-semibold text-red-700">
+                  {alertsQuery.data!.filter(a => a.severity === 'overdue').length > 0 && (
+                    <span className="ml-1">{alertsQuery.data!.filter(a => a.severity === 'overdue').length} متأخرة</span>
+                  )}
+                  {alertsQuery.data!.filter(a => a.severity === 'urgent').length > 0 && (
+                    <span className="ml-1">{alertsQuery.data!.filter(a => a.severity === 'urgent').length} عاجلة</span>
+                  )}
+                  {alertsQuery.data!.filter(a => a.severity === 'soon').length > 0 && (
+                    <span className="ml-1">{alertsQuery.data!.filter(a => a.severity === 'soon').length} قريبة</span>
+                  )}
+                </span>
+                <span className="text-xs text-red-500">— اضغط للتفاصيل</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs h-7 px-2 text-red-600 hover:bg-red-200"
+                  onClick={(e) => { e.stopPropagation(); checkDeadlinesMutation.mutate(); }}
+                  disabled={checkDeadlinesMutation.isPending}
+                >
+                  <RefreshCw className={`w-3 h-3 ml-1 ${checkDeadlinesMutation.isPending ? 'animate-spin' : ''}`} />
+                  إرسال تنبيه
+                </Button>
+              </div>
+            </button>
+            {showAlerts && (
+              <div className="mt-2 bg-card border border-red-100 rounded-2xl overflow-hidden">
+                {alertsQuery.data!.map((alert, i) => (
+                  <div key={i} className={`flex items-center gap-3 px-4 py-3 border-b border-border/50 last:border-0 ${
+                    alert.severity === 'overdue' ? 'bg-red-50/50' :
+                    alert.severity === 'urgent' ? 'bg-orange-50/50' : 'bg-amber-50/30'
+                  }`}>
+                    <div className={`w-2 h-2 rounded-full shrink-0 ${
+                      alert.severity === 'overdue' ? 'bg-red-500' :
+                      alert.severity === 'urgent' ? 'bg-orange-500' : 'bg-amber-400'
+                    }`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-foreground truncate">{alert.serviceNameAr}</p>
+                      <p className="text-[10px] text-muted-foreground">{alert.stageNameAr} — {alert.projectName}</p>
+                    </div>
+                    <div className="text-left shrink-0">
+                      <span className={`text-[10px] font-medium ${
+                        alert.severity === 'overdue' ? 'text-red-600' :
+                        alert.severity === 'urgent' ? 'text-orange-600' : 'text-amber-600'
+                      }`}>
+                        {alert.daysLeft < 0 ? `متأخرة ${Math.abs(alert.daysLeft)} يوم` :
+                         alert.daysLeft === 0 ? 'تستحق اليوم' :
+                         `متبقي ${alert.daysLeft} أيام`}
+                      </span>
+                      <p className="text-[10px] text-muted-foreground">
+                        {alert.plannedDueDate ? new Date(alert.plannedDueDate).toLocaleDateString('ar-AE') : ''}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Progress summary card */}
         {selectedProjectId && !stagesQuery.isLoading && summary.length > 0 && (
