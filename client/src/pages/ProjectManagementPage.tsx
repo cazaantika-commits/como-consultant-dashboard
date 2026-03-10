@@ -9,8 +9,9 @@ import CashFlowHub from "./CashFlowHub";
 import WorkProgramHub from "./WorkProgramHub";
 import RiskDashboardPage from "./RiskDashboardPage";
 import MarketReportsPage from "./MarketReportsPage";
+import ProjectLifecyclePage from "./ProjectLifecyclePage";
 
-type View = "icons" | "fact-sheet" | "feasibility" | "cashflow-hub" | "work-program" | "risk-dashboard" | "market-reports";
+type View = "icons" | "fact-sheet" | "feasibility" | "cashflow-hub" | "work-program" | "risk-dashboard" | "market-reports" | "lifecycle";
 
 const SECTIONS = [
   {
@@ -66,6 +67,15 @@ const SECTIONS = [
     shadow: "rgba(8, 145, 178, 0.3)",
     borderColor: "#0891b2",
     statusKey: "market-reports",
+  },
+  {
+    id: "lifecycle" as View,
+    label: "مراحل DLD / RERA",
+    icon: CheckCircle2,
+    gradient: "linear-gradient(135deg, #7c3aed, #6d28d9)",
+    shadow: "rgba(124, 58, 237, 0.3)",
+    borderColor: "#7c3aed",
+    statusKey: "lifecycle",
   },
 ];
 
@@ -249,6 +259,11 @@ export default function ProjectManagementPage() {
       {activeView === "market-reports" && (
         <main className="py-1">
           <MarketReportsPage />
+        </main>
+      )}
+      {activeView === "lifecycle" && (
+        <main className="py-1">
+          <ProjectLifecyclePage embedded />
         </main>
       )}
     </div>

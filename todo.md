@@ -2308,3 +2308,12 @@
 - [x] إضافة بانر إجمالي التكاليف + إجمالي الإيرادات في صفحة مصاريف المستثمر (ExcelCashFlowPage)
 - [x] إضافة بانر إجمالي التكاليف + إجمالي الإيرادات في صفحة حساب الضمان (EscrowCashFlowPage)
 - [x] إضافة بانر إجمالي التكاليف + إجمالي الإيرادات في مركز القيادة (FinancialCommandCenter)
+
+## مراحل DLD / RERA - دورة حياة المشروع
+- [x] إنشاء جداول قاعدة البيانات (lifecycle_stages, lifecycle_services, lifecycle_requirements, project_service_instances, project_requirement_status, project_stage_status)
+- [x] إدخال بيانات STG-02 (5 مراحل، 4 خدمات، 23 متطلباً)
+- [x] إنشاء lifecycle router مع جميع tRPC procedures
+- [x] إنشاء صفحة ProjectLifecyclePage (مراحل → خدمات → متطلبات)
+- [x] إضافة أيقونة "مراحل DLD/RERA" في ProjectManagementPage
+- [x] إصلاح أسماء أعمدة الـ schema لتطابق الـ DB
+- [x] كتابة 9 اختبارات vitest واجتيازها بنجاح

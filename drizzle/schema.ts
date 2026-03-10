@@ -1507,3 +1507,113 @@ export const modelAccuracyLog = mysqlTable("model_accuracy_log", {
 	index("accuracy_user").on(table.userId),
 	index("accuracy_type").on(table.predictionType),
 ]);
+
+// ============================================================
+// PROJECT LIFECYCLE MANAGEMENT (Stages → Services → Requirements)
+// ============================================================
+
+/** Master list of lifecycle stages (STG-01 … STG-05, etc.) */
+export const lifecycleStages = mysqlTable("lifecycle_stages", {
+  id: int().autoincrement().notNull().primaryKey(),
+  stageCode: varchar({ length: 30 }).notNull().unique(),   // e.g. STG-02
+  nameAr: varchar({ length: 200 }).notNull(),
+  descriptionAr: text(),
+  defaultStatus: mysqlEnum("defaultStatus", ['not_started','in_progress','completed','locked']).default('not_started'),
+  sortOrder: int().default(0),
+  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+  index("lc_stage_code").on(table.stageCode),
+]);
+
+/** Master list of services/transactions inside a stage */
+export const lifecycleServices = mysqlTable("lifecycle_services", {
+  id: int().autoincrement().notNull().primaryKey(),
+  serviceCode: varchar({ length: 50 }).notNull().unique(),  // e.g. SRV-RERA-PROJ-REG
+  stageCode: varchar({ length: 30 }).notNull(),
+  nameAr: varchar({ length: 200 }).notNull(),
+  descriptionAr: text(),
+  externalParty: varchar({ length: 200 }),
+  internalOwner: varchar({ length: 200 }),
+  isMandatory: tinyint().default(1),
+  expectedDurationDays: int().default(7),
+  sortOrder: int().default(0),
+  /** Comma-separated service codes this service depends on */
+  dependsOn: text(),
+  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+  index("lc_svc_stage").on(table.stageCode),
+]);
+
+/** Master list of requirements (checklist items) for each service */
+export const lifecycleRequirements = mysqlTable("lifecycle_requirements", {
+  id: int().autoincrement().notNull().primaryKey(),
+  requirementCode: varchar({ length: 60 }).notNull().unique(),
+  serviceCode: varchar({ length: 50 }).notNull(),
+  reqType: mysqlEnum("reqType", ['document','data','approval','action']).default('document'),
+  nameAr: varchar({ length: 300 }).notNull(),
+  descriptionAr: text(),
+  sourceNote: varchar({ length: 300 }),
+  isMandatory: tinyint().default(1),
+  timing: varchar({ length: 100 }).default('قبل التقديم'),
+  internalOwner: varchar({ length: 200 }),
+  sortOrder: int().default(0),
+  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+  index("lc_req_svc").on(table.serviceCode),
+]);
+
+/** Per-project instance of a service (tracks dates + operational status) */
+export const projectServiceInstances = mysqlTable("project_service_instances", {
+  id: int().autoincrement().notNull().primaryKey(),
+  projectId: int().notNull(),
+  serviceCode: varchar({ length: 50 }).notNull(),
+  stageCode: varchar({ length: 30 }).notNull(),
+  operationalStatus: mysqlEnum("operationalStatus", ['not_started','in_progress','completed','locked','submitted']).default('not_started'),
+  plannedStartDate: varchar({ length: 20 }),
+  plannedDueDate: varchar({ length: 20 }),
+  actualStartDate: varchar({ length: 20 }),
+  actualCloseDate: varchar({ length: 20 }),
+  notes: text(),
+  submittedAt: timestamp({ mode: 'string' }),
+  submittedByUserId: int(),
+  updatedAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+  index("psi_project").on(table.projectId),
+  index("psi_service").on(table.serviceCode),
+]);
+
+/** Per-project status of each requirement (the actual checklist) */
+export const projectRequirementStatus = mysqlTable("project_requirement_status", {
+  id: int().autoincrement().notNull().primaryKey(),
+  projectId: int().notNull(),
+  serviceCode: varchar({ length: 50 }).notNull(),
+  requirementCode: varchar({ length: 60 }).notNull(),
+  status: mysqlEnum("status", ['pending','completed','not_applicable']).default('pending'),
+  fileUrl: text(),
+  fileKey: text(),
+  notes: text(),
+  completedByUserId: int(),
+  completedAt: timestamp({ mode: 'string' }),
+  updatedAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+  index("prs_project").on(table.projectId),
+  index("prs_svc_req").on(table.serviceCode, table.requirementCode),
+]);
+
+/** Per-project stage status (overrides defaultStatus per project) */
+export const projectStageStatus = mysqlTable("project_stage_status", {
+  id: int().autoincrement().notNull().primaryKey(),
+  projectId: int().notNull(),
+  stageCode: varchar({ length: 30 }).notNull(),
+  status: mysqlEnum("status", ['not_started','in_progress','completed','locked']).default('not_started'),
+  updatedAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+  index("pss_project").on(table.projectId),
+]);
