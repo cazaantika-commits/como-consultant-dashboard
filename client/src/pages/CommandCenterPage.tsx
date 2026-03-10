@@ -56,6 +56,11 @@ import {
   SlidersHorizontal,
   ShieldCheck,
   BookText,
+  Paperclip,
+  LinkIcon,
+  Upload,
+  ExternalLink,
+  FileUp,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -752,46 +757,80 @@ function BubbleDetail({ token, bubbleType, onBack, memberRole }: { token: string
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newContent, setNewContent] = useState("");
+  const [newLinkUrl, setNewLinkUrl] = useState("");
+  const [newLinkName, setNewLinkName] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadedAttachment, setUploadedAttachment] = useState<{ name: string; url: string; type: string } | null>(null);
   const createItem = trpc.commandCenter.createItem.useMutation();
   const deleteItem = trpc.commandCenter.deleteItem.useMutation();
   const utils = trpc.useUtils();
 
-  const handleAddItem = async () => {
-    if (!newTitle.trim()) {
-      toast.error("الرجاء إدخال عنوان");
-      return;
+  const canCreate = ["announcements", "meeting_minutes", "reports", "requests"].includes(bubbleType);
+  const canDelete = ["announcements", "meeting_minutes", "reports", "requests"].includes(bubbleType);
+  const hasFileUpload = ["meeting_minutes", "reports"].includes(bubbleType);
+  const hasLinkField = ["meeting_minutes", "reports"].includes(bubbleType);
+
+  const labels: Record<string, { btn: string; modal: string; success: string }> = {
+    announcements: { btn: "إضافة إعلان", modal: "إضافة إعلان جديد", success: "تم إضافة الإعلان بنجاح" },
+    meeting_minutes: { btn: "إضافة محضر", modal: "إضافة محضر اجتماع", success: "تم إضافة المحضر بنجاح" },
+    reports: { btn: "رفع تقرير", modal: "رفع تقرير جديد", success: "تم رفع التقرير بنجاح" },
+    requests: { btn: "تقديم طلب", modal: "تقديم طلب جديد", success: "تم تقديم الطلب بنجاح" },
+  };
+  const lbl = labels[bubbleType] || labels.announcements;
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("bubbleType", bubbleType);
+      const res = await fetch("/api/upload/command-center", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "فشل رفع الملف");
+      setUploadedAttachment({ name: data.name, url: data.url, type: data.type });
+      toast.success("تم رفع الملف بنجاح ✔️");
+    } catch (err: any) {
+      toast.error(err.message || "خطأ في رفع الملف");
+    } finally {
+      setUploading(false);
     }
+  };
+
+  const resetModal = () => {
+    setNewTitle(""); setNewContent(""); setNewLinkUrl(""); setNewLinkName("");
+    setUploadedAttachment(null); setShowAddModal(false);
+  };
+
+  const handleAddItem = async () => {
+    if (!newTitle.trim()) { toast.error("الرجاء إدخال عنوان"); return; }
+    const attachments: { name: string; url: string; type: string }[] = [];
+    if (uploadedAttachment) attachments.push(uploadedAttachment);
+    if (newLinkUrl.trim()) attachments.push({ name: newLinkName.trim() || newLinkUrl, url: newLinkUrl.trim(), type: "link" });
     try {
       await createItem.mutateAsync({
-        token,
-        bubbleType: bubbleType as any,
-        title: newTitle,
-        content: newContent,
-        priority: "normal",
-        summary: newContent.substring(0, 100),
+        token, bubbleType: bubbleType as any, title: newTitle, content: newContent,
+        priority: "normal", summary: newContent.substring(0, 100),
+        attachments: attachments.length > 0 ? attachments : undefined,
       });
-      setNewTitle("");
-      setNewContent("");
-      setShowAddModal(false);
+      resetModal();
       utils.commandCenter.getItems.invalidate({ token, bubbleType: bubbleType as any, status: "active" });
-      toast.success("تم إضافة الإعلان بنجاح");
-    } catch (error) {
-      toast.error("خطأ في إضافة الإعلان");
-    }
+      toast.success(lbl.success);
+    } catch { toast.error("خطأ في الإضافة"); }
   };
 
   const handleDeleteItem = async (itemId: number) => {
     try {
       await deleteItem.mutateAsync({ token, itemId });
       utils.commandCenter.getItems.invalidate({ token, bubbleType: bubbleType as any, status: "active" });
-      toast.success("تم حذف الإعلان بنجاح");
+      toast.success("تم الحذف بنجاح");
     } catch (error: any) {
-      // Silently ignore "Item not found" errors (already deleted)
       if (error?.data?.code === "NOT_FOUND") {
         utils.commandCenter.getItems.invalidate({ token, bubbleType: bubbleType as any, status: "active" });
         return;
       }
-      toast.error("خطأ في حذف الإعلان");
+      toast.error("خطأ في الحذف");
     }
   };
 
@@ -813,73 +852,97 @@ function BubbleDetail({ token, bubbleType, onBack, memberRole }: { token: string
             <p className="text-xs text-slate-500">{items.data?.length || 0} عنصر</p>
           </div>
         </div>
-        {bubbleType === "announcements" && (
-          <Button
-            size="sm"
-            onClick={() => setShowAddModal(true)}
-            className="bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:shadow-md"
-          >
-            <Plus className="w-4 h-4 ml-1" />
-            إضافة إعلان
+        {canCreate && (
+          <Button size="sm" onClick={() => setShowAddModal(true)}
+            className="bg-gradient-to-r from-slate-700 to-slate-800 text-white hover:shadow-md">
+            <Plus className="w-4 h-4 ml-1" />{lbl.btn}
           </Button>
         )}
       </div>
 
-      {/* Add Announcement Modal */}
+      {/* Add Item Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-md">
-            <div className="p-6 space-y-4">
+          <Card className="w-full max-w-lg">
+            <div className="p-6 space-y-4" dir="rtl">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold text-slate-800">إضافة إعلان جديد</h3>
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  className="text-slate-400 hover:text-slate-600"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <h3 className="text-lg font-bold text-slate-800">{lbl.modal}</h3>
+                <button onClick={resetModal} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
               </div>
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">العنوان</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    {bubbleType === "requests" ? "موضوع الطلب" : "العنوان"} <span className="text-red-500">*</span>
+                  </label>
                   <Input
-                    placeholder="عنوان الإعلان"
-                    value={newTitle}
-                    onChange={(e) => setNewTitle(e.target.value)}
-                    className="w-full"
-                  />
+                    placeholder={bubbleType === "requests" ? "موضوع الطلب" : bubbleType === "meeting_minutes" ? "عنوان الاجتماع" : "عنوان التقرير"}
+                    value={newTitle} onChange={(e) => setNewTitle(e.target.value)} className="w-full" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">المحتوى</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    {bubbleType === "requests" ? "تفاصيل الطلب" : "وصف مختصر"}
+                  </label>
                   <Textarea
-                    placeholder="محتوى الإعلان"
-                    value={newContent}
-                    onChange={(e) => setNewContent(e.target.value)}
-                    className="w-full h-24 resize-none"
-                  />
+                    placeholder={bubbleType === "requests" ? "اشرح طلبك بالتفصيل..." : "وصف مختصر..."}
+                    value={newContent} onChange={(e) => setNewContent(e.target.value)}
+                    className="w-full h-24 resize-none" />
                 </div>
+
+                {/* File Upload — meetings & reports */}
+                {hasFileUpload && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      <Paperclip className="w-3.5 h-3.5 inline ml-1" />رفع ملف (PDF, Word, Excel)
+                    </label>
+                    <div className="border-2 border-dashed border-slate-200 rounded-lg p-4 text-center hover:border-slate-400 transition-colors">
+                      {uploadedAttachment ? (
+                        <div className="flex items-center justify-between gap-2 text-sm">
+                          <div className="flex items-center gap-2 text-emerald-700">
+                            <FileUp className="w-4 h-4" />
+                            <span className="truncate max-w-[220px]">{uploadedAttachment.name}</span>
+                          </div>
+                          <button onClick={() => setUploadedAttachment(null)} className="text-slate-400 hover:text-red-500">
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : uploading ? (
+                        <div className="flex items-center justify-center gap-2 text-slate-500">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span className="text-sm">جاري الرفع...</span>
+                        </div>
+                      ) : (
+                        <label className="cursor-pointer block">
+                          <Upload className="w-6 h-6 mx-auto mb-1 text-slate-400" />
+                          <span className="text-sm text-slate-500">اضغط لاختيار ملف</span>
+                          <input type="file" className="hidden"
+                            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png"
+                            onChange={handleFileChange} />
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* External Link — meetings & reports */}
+                {hasLinkField && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      <LinkIcon className="w-3.5 h-3.5 inline ml-1" />رابط خارجي (اختياري)
+                    </label>
+                    <div className="flex gap-2">
+                      <Input placeholder="https://..." value={newLinkUrl}
+                        onChange={(e) => setNewLinkUrl(e.target.value)} className="flex-1 text-sm" dir="ltr" />
+                      <Input placeholder="اسم الرابط" value={newLinkName}
+                        onChange={(e) => setNewLinkName(e.target.value)} className="w-32 text-sm" />
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="flex gap-2 justify-end pt-4 border-t">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowAddModal(false)}
-                  className="px-4"
-                >
-                  إلغاء
-                </Button>
-                <Button
-                  onClick={handleAddItem}
-                  disabled={createItem.isPending || !newTitle.trim()}
-                  className="bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4"
-                >
-                  {createItem.isPending ? (
-                    <>
-                      <Loader2 className="w-4 h-4 ml-1 animate-spin" />
-                      جاري الإضافة...
-                    </>
-                  ) : (
-                    "إضافة"
-                  )}
+                <Button variant="outline" onClick={resetModal} className="px-4">إلغاء</Button>
+                <Button onClick={handleAddItem} disabled={createItem.isPending || !newTitle.trim() || uploading}
+                  className="bg-gradient-to-r from-slate-700 to-slate-800 text-white px-4">
+                  {createItem.isPending ? <><Loader2 className="w-4 h-4 ml-1 animate-spin" />جاري...</> : lbl.btn}
                 </Button>
               </div>
             </div>
@@ -889,29 +952,23 @@ function BubbleDetail({ token, bubbleType, onBack, memberRole }: { token: string
 
       {/* Items */}
       {items.isLoading ? (
-        <div className="space-y-3">
-          {[1,2,3].map(i => (
-            <div key={i} className="h-24 rounded-xl shimmer" />
-          ))}
-        </div>
+        <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-24 rounded-xl shimmer" />)}</div>
       ) : items.data?.length === 0 ? (
         <div className="text-center py-16">
           <div className={`w-16 h-16 rounded-2xl ${bubble.bg} flex items-center justify-center mx-auto mb-4`}>
             <bubble.icon className={`w-7 h-7 ${bubble.text}`} />
           </div>
           <p className="text-slate-500 font-medium">لا توجد عناصر حالياً</p>
-          <p className="text-slate-400 text-sm mt-1">ستظهر العناصر هنا عندما تضيفها سلوى</p>
+          {canCreate && (
+            <button onClick={() => setShowAddModal(true)}
+              className="mt-3 text-sm text-slate-400 hover:text-slate-600 underline">{lbl.btn} الآن</button>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
           {items.data?.map((item) => (
-            <ItemCard
-              key={item.id}
-              item={item}
-              token={token}
-              bubbleType={bubbleType}
-              onDelete={bubbleType === "announcements" ? handleDeleteItem : undefined}
-            />
+            <ItemCard key={item.id} item={item} token={token} bubbleType={bubbleType}
+              onDelete={canDelete ? handleDeleteItem : undefined} />
           ))}
         </div>
       )}
@@ -927,17 +984,32 @@ function ItemCard({ item, token, onDelete, bubbleType }: { item: any; token: str
     { enabled: expanded }
   );
 
+  const attachments: { name: string; url: string; type: string }[] = (() => {
+    try { return item.attachments ? JSON.parse(item.attachments) : []; }
+    catch { return []; }
+  })();
+
+  const deleteLabels: Record<string, string> = {
+    announcements: "حذف الإعلان", meeting_minutes: "حذف المحضر",
+    reports: "حذف التقرير", requests: "حذف الطلب",
+  };
+
   return (
     <Card className="p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition-all hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setExpanded(!expanded)}>
-          <div className="flex items-center gap-2 mb-1.5">
+          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
             <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${priority.color}`}>
               {priority.label}
             </Badge>
             {item.requiresResponse === 1 && (
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-blue-50 text-blue-600 border-blue-200">
                 يحتاج رد
+              </Badge>
+            )}
+            {attachments.length > 0 && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-emerald-50 text-emerald-600 border-emerald-200">
+                <Paperclip className="w-2.5 h-2.5 ml-0.5" />{attachments.length} مرفق
               </Badge>
             )}
           </div>
@@ -950,28 +1022,23 @@ function ItemCard({ item, token, onDelete, bubbleType }: { item: any; token: str
           <div className="text-xs text-slate-400">
             {new Date(item.createdAt).toLocaleDateString("ar-AE", { month: "short", day: "numeric" })}
           </div>
-          {bubbleType === "announcements" && onDelete && (
+          {onDelete && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <button className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </AlertDialogTrigger>
-              <AlertDialogContent>
+              <AlertDialogContent dir="rtl">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>حذف الإعلان</AlertDialogTitle>
+                  <AlertDialogTitle>{deleteLabels[bubbleType || ""] || "حذف"}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    هل أنت متأكد من حذف هذا الإعلان؟ لا يمكن التراجع عن هذا الإجراء.
+                    هل أنت متأكد من حذف هذا العنصر؟ لا يمكن التراجع عن هذا الإجراء.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => onDelete(item.id)}
-                    className="bg-red-500 hover:bg-red-600"
-                  >
-                    حذف
-                  </AlertDialogAction>
+                  <AlertDialogAction onClick={() => onDelete(item.id)} className="bg-red-500 hover:bg-red-600">حذف</AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
@@ -984,6 +1051,19 @@ function ItemCard({ item, token, onDelete, bubbleType }: { item: any; token: str
           {item.content && (
             <div className="text-sm text-slate-600 leading-relaxed bg-slate-50 rounded-lg p-3">
               <Streamdown>{item.content}</Streamdown>
+            </div>
+          )}
+          {/* Attachments */}
+          {attachments.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-xs font-semibold text-slate-500">المرفقات:</p>
+              {attachments.map((att, idx) => (
+                <a key={idx} href={att.url} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 bg-blue-50 rounded-lg px-3 py-2 hover:bg-blue-100 transition-colors">
+                  {att.type === "link" ? <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" /> : <FileUp className="w-3.5 h-3.5 flex-shrink-0" />}
+                  <span className="truncate">{att.name}</span>
+                </a>
+              ))}
             </div>
           )}
           {responses.data && responses.data.length > 0 && (

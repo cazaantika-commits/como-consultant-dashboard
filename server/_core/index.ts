@@ -7,6 +7,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import dashboardDataRoute from "../dashboardDataRoute";
 import agentApiRoute from "../agentApi";
+import fileUploadRoute from "../fileUploadRoute";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { initTelegramBot, registerCallbackHandler, getBotInfo } from "../telegramBot";
@@ -54,6 +55,8 @@ async function startServer() {
   app.use("/api/dashboard-data", dashboardDataRoute);
   // Agent API (for Qasim, Salwa, and other agents)
   app.use("/api/agent", agentApiRoute);
+  // File upload API (for command center items)
+  app.use("/api/upload", fileUploadRoute);
 
   // tRPC API
   app.use(
