@@ -2338,3 +2338,11 @@
 - [ ] إضافة tRPC procedure لتشغيل الفحص اليومي
 - [ ] جدولة المهمة اليومية في الـ server
 - [ ] إضافة واجهة التنبيهات في صفحة المراحل
+
+## توحيد منطق المراحل - ربط البطاقة + المستندات
+- [ ] إضافة جداول stage_field_definitions و project_stage_field_values و project_stage_documents
+- [ ] backend: syncFromProjectCard, upsertStageField, uploadStageDocument, getStageRecord, getBlockingRequirements
+- [ ] مكوّن StageDataTab مع زر "تحديث من بطاقة المشروع" وحالة كل حقل
+- [ ] مكوّن StageDocumentsTab مع رفع ملف وربط من المكتبة وحالة المستندات الإلزامية
+- [ ] زر التقديم معطّل حتى اكتمال المتطلبات الإلزامية
+- [ ] تكامل المكوّنين في ProjectLifecyclePage

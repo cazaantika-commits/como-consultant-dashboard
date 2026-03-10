@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { StageDataTab } from "@/components/lifecycle/StageDataTab";
+import { StageDocumentsTab } from "@/components/lifecycle/StageDocumentsTab";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -668,7 +670,13 @@ function ServiceDetailPanel({
         )}
 
         <div className="p-4 space-y-2">
-          {reqQuery.isLoading ? (
+          {/* Use rich StageDataTab for البيانات tab */}
+          {activeTab === "data" ? (
+            <StageDataTab projectId={projectId} serviceCode={service.serviceCode} />
+          ) : activeTab === "documents" && docReqs.length === 0 ? (
+            /* If no legacy doc requirements, use StageDocumentsTab */
+            <StageDocumentsTab projectId={projectId} serviceCode={service.serviceCode} />
+          ) : reqQuery.isLoading ? (
             <div className="text-center py-8 text-muted-foreground text-sm">جاري التحميل...</div>
           ) : (
             activeReqs.map((req) => (
@@ -680,7 +688,7 @@ function ServiceDetailPanel({
               />
             ))
           )}
-          {!reqQuery.isLoading && activeReqs.length === 0 && (
+          {!reqQuery.isLoading && activeTab !== "data" && !(activeTab === "documents" && docReqs.length === 0) && activeReqs.length === 0 && (
             <div className="text-center py-6 text-muted-foreground text-sm">
               لا توجد بنود في هذا التصنيف
             </div>
