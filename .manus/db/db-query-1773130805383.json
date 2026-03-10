@@ -1,0 +1,259 @@
+{
+  "query": "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() ORDER BY TABLE_NAME;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() ORDER BY TABLE_NAME;",
+  "rows": [
+    {
+      "TABLE_NAME": "__drizzle_migrations"
+    },
+    {
+      "TABLE_NAME": "actual_outcomes"
+    },
+    {
+      "TABLE_NAME": "agentActivityLog"
+    },
+    {
+      "TABLE_NAME": "agentAssignments"
+    },
+    {
+      "TABLE_NAME": "agents"
+    },
+    {
+      "TABLE_NAME": "aiAdvisoryScores"
+    },
+    {
+      "TABLE_NAME": "cf_cost_items"
+    },
+    {
+      "TABLE_NAME": "cf_files"
+    },
+    {
+      "TABLE_NAME": "cf_projects"
+    },
+    {
+      "TABLE_NAME": "cf_scenarios"
+    },
+    {
+      "TABLE_NAME": "chatHistory"
+    },
+    {
+      "TABLE_NAME": "commandCenterChat"
+    },
+    {
+      "TABLE_NAME": "commandCenterEvaluations"
+    },
+    {
+      "TABLE_NAME": "commandCenterItems"
+    },
+    {
+      "TABLE_NAME": "commandCenterMembers"
+    },
+    {
+      "TABLE_NAME": "commandCenterNotifications"
+    },
+    {
+      "TABLE_NAME": "commandCenterResponses"
+    },
+    {
+      "TABLE_NAME": "committeeDecisions"
+    },
+    {
+      "TABLE_NAME": "competition_pricing"
+    },
+    {
+      "TABLE_NAME": "competitor_projects"
+    },
+    {
+      "TABLE_NAME": "consultantDetails"
+    },
+    {
+      "TABLE_NAME": "consultantNotes"
+    },
+    {
+      "TABLE_NAME": "consultantPortfolio"
+    },
+    {
+      "TABLE_NAME": "consultantProfiles"
+    },
+    {
+      "TABLE_NAME": "consultantProposals"
+    },
+    {
+      "TABLE_NAME": "consultants"
+    },
+    {
+      "TABLE_NAME": "contractTypes"
+    },
+    {
+      "TABLE_NAME": "costs_cash_flow"
+    },
+    {
+      "TABLE_NAME": "dashboardData"
+    },
+    {
+      "TABLE_NAME": "data_collection_log"
+    },
+    {
+      "TABLE_NAME": "demographics"
+    },
+    {
+      "TABLE_NAME": "designsAndPermits"
+    },
+    {
+      "TABLE_NAME": "documentIndex"
+    },
+    {
+      "TABLE_NAME": "emailCheckLog"
+    },
+    {
+      "TABLE_NAME": "emailLog"
+    },
+    {
+      "TABLE_NAME": "email_notifications"
+    },
+    {
+      "TABLE_NAME": "evaluationApprovals"
+    },
+    {
+      "TABLE_NAME": "evaluationResults"
+    },
+    {
+      "TABLE_NAME": "evaluationScores"
+    },
+    {
+      "TABLE_NAME": "evaluationSessionMembers"
+    },
+    {
+      "TABLE_NAME": "evaluationSessions"
+    },
+    {
+      "TABLE_NAME": "evaluatorScores"
+    },
+    {
+      "TABLE_NAME": "feasibilityStudies"
+    },
+    {
+      "TABLE_NAME": "financialData"
+    },
+    {
+      "TABLE_NAME": "geographic_features"
+    },
+    {
+      "TABLE_NAME": "joelle_analysis_stages"
+    },
+    {
+      "TABLE_NAME": "joelle_learning"
+    },
+    {
+      "TABLE_NAME": "joelle_reports"
+    },
+    {
+      "TABLE_NAME": "knowledgeBase"
+    },
+    {
+      "TABLE_NAME": "legalSetupRecords"
+    },
+    {
+      "TABLE_NAME": "marketOverview"
+    },
+    {
+      "TABLE_NAME": "market_listings"
+    },
+    {
+      "TABLE_NAME": "market_reports"
+    },
+    {
+      "TABLE_NAME": "market_reports_kb"
+    },
+    {
+      "TABLE_NAME": "market_transactions"
+    },
+    {
+      "TABLE_NAME": "meetingFiles"
+    },
+    {
+      "TABLE_NAME": "meetingMessages"
+    },
+    {
+      "TABLE_NAME": "meetingParticipants"
+    },
+    {
+      "TABLE_NAME": "meetings"
+    },
+    {
+      "TABLE_NAME": "modelUsageLog"
+    },
+    {
+      "TABLE_NAME": "model_accuracy_log"
+    },
+    {
+      "TABLE_NAME": "oauthTokens"
+    },
+    {
+      "TABLE_NAME": "phaseActivities"
+    },
+    {
+      "TABLE_NAME": "phaseCostLinks"
+    },
+    {
+      "TABLE_NAME": "prediction_records"
+    },
+    {
+      "TABLE_NAME": "projectCapitalSettings"
+    },
+    {
+      "TABLE_NAME": "projectConsultants"
+    },
+    {
+      "TABLE_NAME": "projectContracts"
+    },
+    {
+      "TABLE_NAME": "projectKpis"
+    },
+    {
+      "TABLE_NAME": "projectMilestones"
+    },
+    {
+      "TABLE_NAME": "projectPhases"
+    },
+    {
+      "TABLE_NAME": "project_risk_scores"
+    },
+    {
+      "TABLE_NAME": "projects"
+    },
+    {
+      "TABLE_NAME": "proposalComparisons"
+    },
+    {
+      "TABLE_NAME": "sent_emails"
+    },
+    {
+      "TABLE_NAME": "specialistKnowledge"
+    },
+    {
+      "TABLE_NAME": "stage_documents"
+    },
+    {
+      "TABLE_NAME": "stage_items"
+    },
+    {
+      "TABLE_NAME": "taskCategories"
+    },
+    {
+      "TABLE_NAME": "taskExecutionLogs"
+    },
+    {
+      "TABLE_NAME": "taskProjects"
+    },
+    {
+      "TABLE_NAME": "tasks"
+    },
+    {
+      "TABLE_NAME": "users"
+    }
+  ],
+  "messages": [],
+  "stdout": "TABLE_NAME\n__drizzle_migrations\nactual_outcomes\nagentActivityLog\nagentAssignments\nagents\naiAdvisoryScores\ncf_cost_items\ncf_files\ncf_projects\ncf_scenarios\nchatHistory\ncommandCenterChat\ncommandCenterEvaluations\ncommandCenterItems\ncommandCenterMembers\ncommandCenterNotifications\ncommandCenterResponses\ncommitteeDecisions\ncompetition_pricing\ncompetitor_projects\nconsultantDetails\nconsultantNotes\nconsultantPortfolio\nconsultantProfiles\nconsultantProposals\nconsultants\ncontractTypes\ncosts_cash_flow\ndashboardData\ndata_collection_log\ndemographics\ndesignsAndPermits\ndocumentIndex\nemailCheckLog\nemailLog\nemail_notifications\nevaluationApprovals\nevaluationResults\nevaluationScores\nevaluationSessionMembers\nevaluationSessions\nevaluatorScores\nfeasibilityStudies\nfinancialData\ngeographic_features\njoelle_analysis_stages\njoelle_learning\njoelle_reports\nknowledgeBase\nlegalSetupRecords\nmarketOverview\nmarket_listings\nmarket_reports\nmarket_reports_kb\nmarket_transactions\nmeetingFiles\nmeetingMessages\nmeetingParticipants\nmeetings\nmodelUsageLog\nmodel_accuracy_log\noauthTokens\nphaseActivities\nphaseCostLinks\nprediction_records\nprojectCapitalSettings\nprojectConsultants\nprojectContracts\nprojectKpis\nprojectMilestones\nprojectPhases\nproject_risk_scores\nprojects\nproposalComparisons\nsent_emails\nspecialistKnowledge\nstage_documents\nstage_items\ntaskCategories\ntaskExecutionLogs\ntaskProjects\ntasks\nusers\n",
+  "stderr": "",
+  "execution_time_ms": 1517
+}

@@ -13,6 +13,7 @@ import {
 import { eq, and, desc } from "drizzle-orm";
 import { invokeLLM } from "../_core/llm";
 import { makeRequest, type PlacesSearchResult, type GeocodingResult } from "../_core/map";
+import { webSearch, fetchWebpageContent } from "../webSearchService";
 
 // ═══════════════════════════════════════════════════════════════════
 // JOELLE MARKET INTELLIGENCE ENGINE
@@ -804,6 +805,29 @@ ${stage2?.[0]?.stageOutput ? `\nتحليل المنطقة السابق:\n${stage
           } catch (e) {}
         }
 
+        // ═══ REAL-TIME WEB SEARCH: Off-plan projects and prices in the EXACT same area ═══
+        let liveOffPlanData = '';
+        try {
+          const offPlanSearches = await Promise.allSettled([
+            webSearch(`off-plan apartments ${factSheet.community} Dubai launch price per sqft 2025 2026`, 'en'),
+            webSearch(`${factSheet.community} Dubai new project developer off-plan AED sqft`, 'en'),
+            webSearch(`bayut propertyFinder off-plan ${factSheet.community} Dubai apartments price`, 'en'),
+          ]);
+          const offPlanSnippets: string[] = [];
+          for (const result of offPlanSearches) {
+            if (result.status === 'fulfilled' && result.value.results.length > 0) {
+              result.value.results.slice(0, 5).forEach(r => {
+                offPlanSnippets.push(`[${r.title}] ${r.snippet}`);
+              });
+            }
+          }
+          if (offPlanSnippets.length > 0) {
+            liveOffPlanData = `\n\n## 🔴 بيانات حية - مشاريع على الخارطة في ${factSheet.community} (2025-2026):\n${offPlanSnippets.join('\n')}`;
+          }
+        } catch (searchErr) {
+          console.error('[Engine4] Web search failed:', searchErr);
+        }
+
         // Validate that we have real data from Google Maps
         if (nearbyProjects.length === 0) {
           await saveStageResult(db, ctx.user.id, projectId, 4, STAGES[3].nameAr, 'error', '', null, 'لم يتم العثور على مباني سكنية حقيقية في المنطقة من Google Maps. تأكد من اسم المنطقة.');
@@ -829,7 +853,9 @@ ${stage2?.[0]?.stageOutput ? `\nتحليل المنطقة السابق:\n${stage
 - الإحداثيات: ${geoData.lat}, ${geoData.lng}
 
 ## مباني ومشاريع سكنية حقيقية من Google Maps في ${factSheet.community} (البيانات الوحيدة المسموحة):
-${nearbyProjects.map((p, i) => `${i + 1}. ${p}`).join('\n')}}
+${nearbyProjects.map((p, i) => `${i + 1}. ${p}`).join('\n')}
+
+${liveOffPlanData}
 
 اكتبي تحليلاً شاملاً للمنافسين يتضمن:
 
@@ -1178,27 +1204,53 @@ JSON:
         const stage4Data = prevStages.find(s => s.stageNumber === 4)?.stageDataJson;
         const stage6Data = prevStages.find(s => s.stageNumber === 6)?.stageDataJson;
 
+        // ═══ REAL-TIME WEB SEARCH: Off-plan prices in the EXACT same area ═══
+        const community = factSheet.community;
+        const currentYearStr = new Date().getFullYear().toString();
+        let liveSearchData = '';
+        try {
+          const searches = await Promise.allSettled([
+            webSearch(`off-plan apartments for sale ${community} Dubai price per sqft ${currentYearStr}`, 'en'),
+            webSearch(`${community} Dubai off-plan project launch price 2025 2026 AED per sqft`, 'en'),
+            webSearch(`شقق على الخارطة ${community} دبي سعر القدم المربع ${currentYearStr}`, 'ar'),
+          ]);
+          const allSnippets: string[] = [];
+          for (const result of searches) {
+            if (result.status === 'fulfilled' && result.value.results.length > 0) {
+              result.value.results.slice(0, 5).forEach(r => {
+                allSnippets.push(`[${r.title}] ${r.snippet}`);
+              });
+            }
+          }
+          if (allSnippets.length > 0) {
+            liveSearchData = `\n\n## 🔴 بيانات حية من الإنترنت - أسعار المشاريع على الخارطة في ${community} (${currentYearStr}):\n${allSnippets.join('\n')}`;
+          }
+        } catch (searchErr) {
+          console.error('[Engine7] Web search failed:', searchErr);
+        }
+
         const prompt = `أنتِ جويل، محللة السوق العقاري في Como Developments. التاريخ: ${reportDate} (عام ${currentYear}).
 
 المحرك السابع: ذكاء التسعير.
 
-🚨 **تعليمات حاسمة للتسعير - تصفية صارمة:**
-- جميع الأسعار يجب أن تعكس واقع **سوق الشقق السكنية في ${factSheet.community} تحديداً**
-- لا تستخدمي متوسطات دبي العامة — استخدمي أسعار المنطقة فقط
-- المقارنة يجب أن تكون مع **مشاريع الشقق السكنية في نفس المنطقة فقط** (من بيانات المحرك 4)
-- **تصفية صارمة:** لا تخلطي أسعار الفلل مع أسعار الشقق — إذا كانت بيانات المحرك 4 تحتوي فلل، تجاهليها تماماً
-- استخرجي من المحرك 4 فقط الشقق السكنية وحساب المتوسط من الشقق فقط
-- يجب أن تكون الأرقام متسقة مع بيانات المنافسين (الشقق فقط) في المحرك 4 واستراتيجية المنتج في المحرك 6
+🚨 **تعليمات حاسمة للتسعير - قواعد صارمة لا استثناء:**
+1. استخدمي **فقط** أسعار مشاريع على الخارطة (Off-Plan) في **نفس المنطقة تحديداً** (${community})
+2. لا تستخدمي أسعار المباني الجاهزة (Ready) أو المباني القديمة بتاتاً - هذه أسعار مختلفة تماماً
+3. لا تستخدمي متوسطات دبي العامة أو أسعار مناطق أخرى
+4. لا تخلطي أسعار الفلل مع أسعار الشقق
+5. إذا كانت بيانات البحث الحي أدناه تظهر أسعاراً أعلى من بيانات المحرك 4 - ثقي ببيانات البحث الحي أكثر
 
-بيانات المشروع::
+بيانات المشروع:
 - الاسم: ${factSheet.project.name}
-- المنطقة: ${factSheet.community}
+- المنطقة: ${community}
 - نوع المشروع: ${factSheet.projectType}
 - جودة التشطيب: ${factSheet.mo?.finishingQuality || 'ممتاز'}
 
-${stage3Data ? `بيانات السوق: ${stage3Data.substring(0, 1000)}` : ''}
-${stage4Data ? `بيانات المنافسين: ${stage4Data.substring(0, 1000)}` : ''}
-${stage6Data ? `استراتيجية المنتج: ${stage6Data.substring(0, 1000)}` : ''}
+${liveSearchData}
+
+${stage3Data ? `بيانات السوق (محرك 3): ${stage3Data.substring(0, 800)}` : ''}
+${stage4Data ? `بيانات المنافسين (محرك 4): ${stage4Data.substring(0, 800)}` : ''}
+${stage6Data ? `استراتيجية المنتج (محرك 6): ${stage6Data.substring(0, 800)}` : ''}
 
 اكتبي تحليل التسعير الذكي:
 

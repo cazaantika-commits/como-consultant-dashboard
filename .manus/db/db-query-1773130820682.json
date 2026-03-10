@@ -1,0 +1,24 @@
+{
+  "query": "\nSELECT fs.plotArea, fs.gfaResidential, fs.gfaRetail, fs.gfaOffices, fs.estimatedBua, fs.landPrice, fs.constructionCostPerSqft, fs.residentialSalePrice, fs.retailSalePrice, fs.officesSalePrice, fs.community, fs.saleableResidentialPct FROM feasibilityStudies fs WHERE fs.projectId = 3 LIMIT 1;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute \nSELECT fs.plotArea, fs.gfaResidential, fs.gfaRetail, fs.gfaOffices, fs.estimatedBua, fs.landPrice, fs.constructionCostPerSqft, fs.residentialSalePrice, fs.retailSalePrice, fs.officesSalePrice, fs.community, fs.saleableResidentialPct FROM feasibilityStudies fs WHERE fs.projectId = 3 LIMIT 1;\n",
+  "rows": [
+    {
+      "plotArea": "NULL",
+      "gfaResidential": "NULL",
+      "gfaRetail": "NULL",
+      "gfaOffices": "NULL",
+      "estimatedBua": "NULL",
+      "landPrice": "NULL",
+      "constructionCostPerSqft": "NULL",
+      "residentialSalePrice": "NULL",
+      "retailSalePrice": "NULL",
+      "officesSalePrice": "NULL",
+      "community": "NULL",
+      "saleableResidentialPct": "90"
+    }
+  ],
+  "messages": [],
+  "stdout": "plotArea\tgfaResidential\tgfaRetail\tgfaOffices\testimatedBua\tlandPrice\tconstructionCostPerSqft\tresidentialSalePrice\tretailSalePrice\tofficesSalePrice\tcommunity\tsaleableResidentialPct\nNULL\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\t90\n",
+  "stderr": "",
+  "execution_time_ms": 1521
+}

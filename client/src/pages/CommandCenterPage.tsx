@@ -1167,9 +1167,9 @@ function RequestsAndInquiries({ token, memberId, memberNameAr, memberRole, onBac
   );
 }
 
-// ═══════════════════════════════════════════════════════
+// ---------------------------------------------------
 // BUBBLE DETAIL VIEW
-// ═══════════════════════════════════════════════════════
+// ---------------------------------------------------
 function BubbleDetail({ token, bubbleType, onBack, memberRole }: { token: string; bubbleType: string; onBack: () => void; memberRole: string }) {
   const bubble = BUBBLES.find(b => b.type === bubbleType);
   const items = trpc.commandCenter.getItems.useQuery({ token, bubbleType: bubbleType as any, status: "active" });

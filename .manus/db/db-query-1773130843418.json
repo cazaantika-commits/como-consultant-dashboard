@@ -1,0 +1,17 @@
+{
+  "query": "SELECT cp.baseStudioPrice, cp.base1brPrice, cp.base2brPrice, cp.base3brPrice, cp.activeScenario FROM competition_pricing cp WHERE cp.projectId = 3 LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT cp.baseStudioPrice, cp.base1brPrice, cp.base2brPrice, cp.base3brPrice, cp.activeScenario FROM competition_pricing cp WHERE cp.projectId = 3 LIMIT 1;",
+  "rows": [
+    {
+      "baseStudioPrice": "1280",
+      "base1brPrice": "1200",
+      "base2brPrice": "1150",
+      "base3brPrice": "1100",
+      "activeScenario": "base"
+    }
+  ],
+  "messages": [],
+  "stdout": "baseStudioPrice\tbase1brPrice\tbase2brPrice\tbase3brPrice\tactiveScenario\n1280\t1200\t1150\t1100\tbase\n",
+  "stderr": "",
+  "execution_time_ms": 1575
+}
