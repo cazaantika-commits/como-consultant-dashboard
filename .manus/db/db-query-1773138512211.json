@@ -1,0 +1,9 @@
+{
+  "query": "UPDATE marketOverview SET \n  residentialStudioPct = 14.00,\n  residential1brPct = 36.00,\n  residential2brPct = 30.00,\n  residential3brPct = 20.00,\n  retailSmallPct = 50.00\nWHERE projectId = 4;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute UPDATE marketOverview SET \n  residentialStudioPct = 14.00,\n  residential1brPct = 36.00,\n  residential2brPct = 30.00,\n  residential3brPct = 20.00,\n  retailSmallPct = 50.00\nWHERE projectId = 4;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1520
+}

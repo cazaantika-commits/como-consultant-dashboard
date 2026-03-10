@@ -1685,21 +1685,23 @@ JSON:
               const moExisting = await db.select().from(marketOverview)
                 .where(and(eq(marketOverview.projectId, projectId), eq(marketOverview.userId, ctx.user.id)));
 
+              // Normalize pct: if Joel returns 0.14 instead of 14, multiply by 100
+              const normPct = (v: number) => { const n = v || 0; return (n > 0 && n <= 1) ? Math.round(n * 100) : n; };
               const moData: any = {};
               if (s6.unitMix.studio) {
-                moData.residentialStudioPct = String(s6.unitMix.studio.pct || 0);
+                moData.residentialStudioPct = String(normPct(s6.unitMix.studio.pct));
                 moData.residentialStudioAvgArea = s6.unitMix.studio.avgSize || 0;
               }
               if (s6.unitMix.oneBr) {
-                moData.residential1brPct = String(s6.unitMix.oneBr.pct || 0);
+                moData.residential1brPct = String(normPct(s6.unitMix.oneBr.pct));
                 moData.residential1brAvgArea = s6.unitMix.oneBr.avgSize || 0;
               }
               if (s6.unitMix.twoBr) {
-                moData.residential2brPct = String(s6.unitMix.twoBr.pct || 0);
+                moData.residential2brPct = String(normPct(s6.unitMix.twoBr.pct));
                 moData.residential2brAvgArea = s6.unitMix.twoBr.avgSize || 0;
               }
               if (s6.unitMix.threeBr) {
-                moData.residential3brPct = String(s6.unitMix.threeBr.pct || 0);
+                moData.residential3brPct = String(normPct(s6.unitMix.threeBr.pct));
                 moData.residential3brAvgArea = s6.unitMix.threeBr.avgSize || 0;
               }
               if (s6.finishingQuality) {
