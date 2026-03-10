@@ -413,6 +413,38 @@ export const commandCenterRouter = router({
       return { success: true };
     }),
 
+  // Update item status (resolve, archive, etc.)
+  updateItemStatus: publicProcedure
+    .input(z.object({
+      token: z.string(),
+      itemId: z.number(),
+      status: z.enum(["active", "archived", "pending_response", "resolved"]),
+    }))
+    .mutation(async ({ input }) => {
+      await verifyToken(input.token);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await db.update(commandCenterItems)
+        .set({ itemStatus: input.status })
+        .where(eq(commandCenterItems.id, input.itemId));
+      return { success: true };
+    }),
+
+  // Get members list (for recipient picker)
+  getMembers: publicProcedure
+    .input(z.object({ token: z.string() }))
+    .query(async ({ input }) => {
+      await verifyToken(input.token);
+      const db = await getDb();
+      if (!db) return [];
+      return db.select({
+        memberId: commandCenterMembers.memberId,
+        nameAr: commandCenterMembers.nameAr,
+        memberRole: commandCenterMembers.memberRole,
+        avatarUrl: commandCenterMembers.avatarUrl,
+      }).from(commandCenterMembers).where(eq(commandCenterMembers.isActive, 1));
+    }),
+
   // ═══ Evaluation System (Blind) ═══
   
   // Get available evaluation sessions

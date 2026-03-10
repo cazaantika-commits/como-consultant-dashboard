@@ -61,6 +61,7 @@ import {
   Upload,
   ExternalLink,
   FileUp,
+  HelpCircle,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -272,7 +273,7 @@ const CRITERIA = [
 // ─── Bubble Config ───
 const BUBBLES = [
   { type: "reports" as const, label: "التقارير", icon: FileText, color: "from-blue-600 to-blue-800", bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700" },
-  { type: "requests" as const, label: "الطلبات", icon: ClipboardList, color: "from-amber-600 to-amber-800", bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700" },
+  { type: "requests" as const, label: "الطلبات والاستفسارات", icon: ClipboardList, color: "from-amber-600 to-amber-800", bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700" },
   { type: "meeting_minutes" as const, label: "محاضر الاجتماعات", icon: BookOpen, color: "from-emerald-600 to-emerald-800", bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700" },
   { type: "evaluations" as const, label: "تقييم الاستشاريين", icon: Star, color: "from-purple-600 to-purple-800", bg: "bg-purple-50", border: "border-purple-200", text: "text-purple-700" },
   { type: "milestones_kpis" as const, label: "المراحل والأداء", icon: Target, color: "from-cyan-600 to-teal-700", bg: "bg-cyan-50", border: "border-cyan-200", text: "text-cyan-700" },
@@ -281,7 +282,7 @@ const BUBBLES = [
 
 const BUBBLE_LABELS: Record<string, string> = {
   reports: "التقارير",
-  requests: "الطلبات",
+  requests: "الطلبات والاستفسارات",
   meeting_minutes: "محاضر الاجتماعات",
   evaluations: "تقييم الاستشاريين",
   milestones_kpis: "المراحل والأداء",
@@ -744,6 +745,424 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+// REQUESTS & INQUIRIES (Interactive)
+// ═══════════════════════════════════════════════════════
+const MEMBERS_MAP: Record<string, string> = {
+  abdulrahman: "عبدالرحمن",
+  wael: "وائل",
+  sheikh_issa: "الشيخ عيسى",
+};
+
+const REQUEST_TYPE_CONFIG = {
+  approval: { label: "موافقة", color: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: CheckCircle2 },
+  rejection: { label: "رفض", color: "bg-red-100 text-red-700 border-red-200", icon: X },
+  comment: { label: "تعليق", color: "bg-blue-100 text-blue-700 border-blue-200", icon: MessageSquare },
+  question: { label: "استفسار", color: "bg-amber-100 text-amber-700 border-amber-200", icon: HelpCircle },
+};
+
+const STATUS_CONFIG = {
+  active: { label: "جديد", color: "bg-blue-100 text-blue-700 border-blue-200" },
+  pending_response: { label: "بانتظار رد", color: "bg-amber-100 text-amber-700 border-amber-200" },
+  resolved: { label: "تم الحل", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+  archived: { label: "مؤرشف", color: "bg-gray-100 text-gray-600 border-gray-200" },
+};
+
+function RequestConversation({ token, item, memberId, memberNameAr, onClose }: {
+  token: string;
+  item: any;
+  memberId: string;
+  memberNameAr: string;
+  onClose: () => void;
+}) {
+  const [replyText, setReplyText] = useState("");
+  const [replyType, setReplyType] = useState<"approval" | "rejection" | "comment" | "question">("comment");
+  const responses = trpc.commandCenter.getResponses.useQuery({ token, itemId: item.id });
+  const respondMutation = trpc.commandCenter.respondToItem.useMutation();
+  const updateStatus = trpc.commandCenter.updateItemStatus.useMutation();
+  const utils = trpc.useUtils();
+
+  const handleReply = async () => {
+    if (!replyText.trim()) return;
+    await respondMutation.mutateAsync({ token, itemId: item.id, responseText: replyText, responseType: replyType });
+    // Auto-update status based on reply type
+    if (replyType === "approval") {
+      await updateStatus.mutateAsync({ token, itemId: item.id, status: "resolved" });
+    } else if (replyType === "rejection") {
+      await updateStatus.mutateAsync({ token, itemId: item.id, status: "resolved" });
+    } else {
+      await updateStatus.mutateAsync({ token, itemId: item.id, status: "pending_response" });
+    }
+    setReplyText("");
+    utils.commandCenter.getResponses.invalidate({ token, itemId: item.id });
+    utils.commandCenter.getItems.invalidate();
+  };
+
+  const targetIds: string[] = (() => { try { return item.targetMemberIds ? JSON.parse(item.targetMemberIds) : []; } catch { return []; } })();
+  const isRecipient = targetIds.includes(memberId);
+  const isSender = item.createdByMemberId === memberId;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" dir="rtl">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between p-5 border-b border-slate-100">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${STATUS_CONFIG[item.itemStatus as keyof typeof STATUS_CONFIG]?.color || STATUS_CONFIG.active.color}`}>
+                {STATUS_CONFIG[item.itemStatus as keyof typeof STATUS_CONFIG]?.label || "جديد"}
+              </span>
+              {item.itemPriority === "urgent" && <span className="text-xs px-2 py-0.5 rounded-full border font-medium bg-red-100 text-red-700 border-red-200">عاجل</span>}
+            </div>
+            <h3 className="font-bold text-slate-800 text-lg truncate">{item.title}</h3>
+            <p className="text-sm text-slate-500 mt-0.5">
+              من: <span className="font-medium text-slate-700">{MEMBERS_MAP[item.createdByMemberId] || item.createdByMemberId}</span>
+              {targetIds.length > 0 && <> → إلى: <span className="font-medium text-slate-700">{targetIds.map(t => MEMBERS_MAP[t] || t).join("، ")}</span></>}
+            </p>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors mr-2">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Original message */}
+        <div className="p-5 bg-amber-50/50 border-b border-amber-100">
+          <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">{item.content || item.summary || "لا يوجد وصف"}</p>
+          <p className="text-xs text-slate-400 mt-2">{new Date(item.createdAt).toLocaleString("ar-SA")}</p>
+        </div>
+
+        {/* Conversation thread */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-3">
+          {responses.isLoading && <div className="text-center text-slate-400 text-sm py-4">جاري التحميل...</div>}
+          {responses.data?.length === 0 && !responses.isLoading && (
+            <div className="text-center text-slate-400 text-sm py-8">
+              <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-30" />
+              <p>لا توجد ردود بعد</p>
+            </div>
+          )}
+          {responses.data?.map((resp: any) => {
+            const cfg = REQUEST_TYPE_CONFIG[resp.responseType as keyof typeof REQUEST_TYPE_CONFIG] || REQUEST_TYPE_CONFIG.comment;
+            const RespIcon = cfg.icon;
+            const isMe = resp.memberId === memberId;
+            return (
+              <div key={resp.id} className={`flex gap-3 ${isMe ? "flex-row-reverse" : ""}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${isMe ? "bg-amber-500 text-white" : "bg-slate-200 text-slate-600"}`}>
+                  {(MEMBERS_MAP[resp.memberId] || resp.memberId).charAt(0)}
+                </div>
+                <div className={`max-w-[75%] ${isMe ? "items-end" : "items-start"} flex flex-col gap-1`}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-500">{MEMBERS_MAP[resp.memberId] || resp.memberId}</span>
+                    <span className={`text-xs px-1.5 py-0.5 rounded border font-medium flex items-center gap-1 ${cfg.color}`}>
+                      <RespIcon className="w-3 h-3" />{cfg.label}
+                    </span>
+                  </div>
+                  <div className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${isMe ? "bg-amber-500 text-white rounded-tr-sm" : "bg-slate-100 text-slate-700 rounded-tl-sm"}`}>
+                    {resp.responseText}
+                  </div>
+                  <span className="text-xs text-slate-400">{new Date(resp.createdAt).toLocaleString("ar-SA")}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Reply area */}
+        {(isRecipient || isSender) && item.itemStatus !== "resolved" && item.itemStatus !== "archived" && (
+          <div className="p-4 border-t border-slate-100 bg-slate-50/50">
+            {/* Reply type selector */}
+            <div className="flex gap-2 mb-3 flex-wrap">
+              {(Object.entries(REQUEST_TYPE_CONFIG) as [string, any][]).map(([type, cfg]) => {
+                const Icon = cfg.icon;
+                return (
+                  <button
+                    key={type}
+                    onClick={() => setReplyType(type as any)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                      replyType === type ? cfg.color + " ring-2 ring-offset-1 ring-current" : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />{cfg.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex gap-2">
+              <textarea
+                value={replyText}
+                onChange={e => setReplyText(e.target.value)}
+                placeholder="اكتب ردك هنا..."
+                rows={2}
+                className="flex-1 resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+              />
+              <button
+                onClick={handleReply}
+                disabled={!replyText.trim() || respondMutation.isPending}
+                className="px-4 py-2 bg-amber-500 text-white rounded-xl text-sm font-medium hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
+              >
+                <Send className="w-4 h-4" />
+                إرسال
+              </button>
+            </div>
+          </div>
+        )}
+        {item.itemStatus === "resolved" && (
+          <div className="p-3 border-t border-emerald-100 bg-emerald-50 text-center text-sm text-emerald-700 font-medium">✅ تم حل هذا الطلب</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function RequestsAndInquiries({ token, memberId, memberNameAr, memberRole, onBack }: {
+  token: string;
+  memberId: string;
+  memberNameAr: string;
+  memberRole: string;
+  onBack: () => void;
+}) {
+  const [tab, setTab] = useState<"inbox" | "sent" | "all">("inbox");
+  const [showNewModal, setShowNewModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [newTitle, setNewTitle] = useState("");
+  const [newContent, setNewContent] = useState("");
+  const [newPriority, setNewPriority] = useState<"normal" | "important" | "urgent">("normal");
+  const [newTargets, setNewTargets] = useState<string[]>([]);
+  const allItems = trpc.commandCenter.getItems.useQuery({ token, bubbleType: "requests" });
+  const members = trpc.commandCenter.getMembers.useQuery({ token });
+  const createItem = trpc.commandCenter.createItem.useMutation();
+  const deleteItem = trpc.commandCenter.deleteItem.useMutation();
+  const utils = trpc.useUtils();
+
+  const items = allItems.data || [];
+
+  const inboxItems = items.filter((item: any) => {
+    try {
+      const targets = item.targetMemberIds ? JSON.parse(item.targetMemberIds) : [];
+      return targets.includes(memberId) && item.createdByMemberId !== memberId;
+    } catch { return false; }
+  });
+
+  const sentItems = items.filter((item: any) => item.createdByMemberId === memberId);
+
+  const displayItems = tab === "inbox" ? inboxItems : tab === "sent" ? sentItems : items;
+
+  const handleCreate = async () => {
+    if (!newTitle.trim()) return;
+    await createItem.mutateAsync({
+      token,
+      bubbleType: "requests",
+      title: newTitle,
+      content: newContent,
+      priority: newPriority,
+      targetMemberIds: newTargets.length > 0 ? newTargets : undefined,
+      requiresResponse: true,
+    });
+    setNewTitle(""); setNewContent(""); setNewTargets([]); setNewPriority("normal");
+    setShowNewModal(false);
+    utils.commandCenter.getItems.invalidate();
+  };
+
+  const handleDelete = async (id: number) => {
+    await deleteItem.mutateAsync({ token, itemId: id });
+    utils.commandCenter.getItems.invalidate();
+  };
+
+  const otherMembers = (members.data || []).filter((m: any) => m.memberId !== memberId);
+
+  return (
+    <div dir="rtl">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="p-2 rounded-full hover:bg-slate-100 text-slate-500 transition-colors">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h2 className="text-xl font-bold text-slate-800">الطلبات والاستفسارات</h2>
+            <p className="text-sm text-slate-500">تواصل تفاعلي بين أعضاء مركز القيادة</p>
+          </div>
+        </div>
+        <button
+          onClick={() => setShowNewModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-xl text-sm font-medium hover:bg-amber-600 transition-colors shadow-sm"
+        >
+          <Plus className="w-4 h-4" />
+          طلب / استفسار جديد
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl mb-5">
+        {(["inbox", "sent", "all"] as const).map(t => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+              tab === t ? "bg-white text-amber-700 shadow-sm" : "text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            {t === "inbox" ? `الوارد (${inboxItems.length})` : t === "sent" ? `المرسل (${sentItems.length})` : `الكل (${items.length})`}
+          </button>
+        ))}
+      </div>
+
+      {/* Items list */}
+      {allItems.isLoading && <div className="text-center py-12 text-slate-400">جاري التحميل...</div>}
+      {!allItems.isLoading && displayItems.length === 0 && (
+        <div className="text-center py-16 text-slate-400">
+          <ClipboardList className="w-12 h-12 mx-auto mb-3 opacity-30" />
+          <p className="font-medium">{tab === "inbox" ? "لا توجد طلبات واردة" : tab === "sent" ? "لم ترسل أي طلبات بعد" : "لا توجد طلبات"}</p>
+        </div>
+      )}
+      <div className="space-y-3">
+        {displayItems.map((item: any) => {
+          const targetIds: string[] = (() => { try { return item.targetMemberIds ? JSON.parse(item.targetMemberIds) : []; } catch { return []; } })();
+          const statusCfg = STATUS_CONFIG[item.itemStatus as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.active;
+          const priorityCfg = PRIORITY_LABELS[item.itemPriority] || PRIORITY_LABELS.normal;
+          const isMyItem = item.createdByMemberId === memberId;
+          return (
+            <div
+              key={item.id}
+              className="bg-white rounded-2xl border border-slate-200 p-4 hover:shadow-md transition-all cursor-pointer group"
+              onClick={() => setSelectedItem(item)}
+            >
+              <div className="flex items-start gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+                  isMyItem ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"
+                }`}>
+                  {(MEMBERS_MAP[item.createdByMemberId] || item.createdByMemberId).charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${statusCfg.color}`}>{statusCfg.label}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${priorityCfg.color}`}>{priorityCfg.label}</span>
+                    {!isMyItem && <span className="text-xs bg-blue-50 text-blue-600 border border-blue-200 px-2 py-0.5 rounded-full">وارد إليك</span>}
+                    {isMyItem && <span className="text-xs bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded-full">مرسل منك</span>}
+                  </div>
+                  <h4 className="font-semibold text-slate-800 truncate">{item.title}</h4>
+                  {item.content && <p className="text-sm text-slate-500 mt-0.5 line-clamp-2">{item.content}</p>}
+                  <div className="flex items-center gap-3 mt-2 text-xs text-slate-400">
+                    <span>من: {MEMBERS_MAP[item.createdByMemberId] || item.createdByMemberId}</span>
+                    {targetIds.length > 0 && <span>→ {targetIds.map(t => MEMBERS_MAP[t] || t).join("، ")}</span>}
+                    <span>{new Date(item.createdAt).toLocaleDateString("ar-SA")}</span>
+                  </div>
+                </div>
+                {isMyItem && (
+                  <button
+                    onClick={e => { e.stopPropagation(); handleDelete(item.id); }}
+                    className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-50 text-red-400 hover:text-red-600 transition-all"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* New Request Modal */}
+      {showNewModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" dir="rtl">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+            <div className="flex items-center justify-between p-5 border-b border-slate-100">
+              <h3 className="font-bold text-slate-800 text-lg">طلب / استفسار جديد</h3>
+              <button onClick={() => setShowNewModal(false)} className="p-2 rounded-full hover:bg-slate-100 text-slate-400">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">الموضوع <span className="text-red-500">*</span></label>
+                <input
+                  value={newTitle}
+                  onChange={e => setNewTitle(e.target.value)}
+                  placeholder="موضوع الطلب أو الاستفسار..."
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">التفاصيل</label>
+                <textarea
+                  value={newContent}
+                  onChange={e => setNewContent(e.target.value)}
+                  placeholder="اشرح طلبك أو استفسارك بالتفصيل..."
+                  rows={4}
+                  className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">إرسال إلى</label>
+                <div className="flex gap-2 flex-wrap">
+                  {otherMembers.map((m: any) => (
+                    <button
+                      key={m.memberId}
+                      onClick={() => setNewTargets(prev =>
+                        prev.includes(m.memberId) ? prev.filter(x => x !== m.memberId) : [...prev, m.memberId]
+                      )}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${
+                        newTargets.includes(m.memberId)
+                          ? "bg-amber-500 text-white border-amber-500"
+                          : "bg-white text-slate-600 border-slate-200 hover:border-amber-300"
+                      }`}
+                    >
+                      {m.nameAr}
+                    </button>
+                  ))}
+                  {otherMembers.length === 0 && <span className="text-sm text-slate-400">جاري التحميل...</span>}
+                </div>
+                <p className="text-xs text-slate-400 mt-1">إذا لم تختر أحداً سيتم إرساله لجميع الأعضاء</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">الأولوية</label>
+                <div className="flex gap-2">
+                  {(["normal", "important", "urgent"] as const).map(p => (
+                    <button
+                      key={p}
+                      onClick={() => setNewPriority(p)}
+                      className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-all ${
+                        newPriority === p ? PRIORITY_LABELS[p].color + " ring-2 ring-offset-1 ring-current" : "bg-white text-slate-500 border-slate-200"
+                      }`}
+                    >
+                      {PRIORITY_LABELS[p].label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 p-5 border-t border-slate-100">
+              <button
+                onClick={() => setShowNewModal(false)}
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handleCreate}
+                disabled={!newTitle.trim() || createItem.isPending}
+                className="flex-1 py-2.5 rounded-xl bg-amber-500 text-white text-sm font-medium hover:bg-amber-600 disabled:opacity-50 transition-colors"
+              >
+                {createItem.isPending ? "جاري الإرسال..." : "إرسال الطلب"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Conversation Modal */}
+      {selectedItem && (
+        <RequestConversation
+          token={token}
+          item={selectedItem}
+          memberId={memberId}
+          memberNameAr={memberNameAr}
+          onClose={() => setSelectedItem(null)}
+        />
+      )}
     </div>
   );
 }
@@ -3103,12 +3522,22 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white" dir="rtl">
         <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
         <div className="max-w-3xl mx-auto px-4 py-6">
-          <BubbleDetail
-            token={token}
-            bubbleType={activeBubble}
-            onBack={() => setActiveBubble(null)}
-            memberRole={member.role}
-          />
+          {activeBubble === "requests" ? (
+            <RequestsAndInquiries
+              token={token}
+              memberId={member.memberId}
+              memberNameAr={member.nameAr}
+              memberRole={member.role}
+              onBack={() => setActiveBubble(null)}
+            />
+          ) : (
+            <BubbleDetail
+              token={token}
+              bubbleType={activeBubble}
+              onBack={() => setActiveBubble(null)}
+              memberRole={member.role}
+            />
+          )}
         </div>
         <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
       </div>
