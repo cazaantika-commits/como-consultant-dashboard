@@ -342,13 +342,14 @@ export default function FinancialCommandCenter({ embedded }: { embedded?: boolea
     const totalNext3Months = projectResults.reduce((s, pr) => s + pr.result.investorNext3Months, 0);
     const totalEscrowExp = projectResults.reduce((s, pr) => s + pr.result.escrowTotal, 0);
     const totalRevenue = projectResults.reduce((s, pr) => s + (projectCostsMap[pr.config.projectId]?.totalRevenue || 0), 0);
+    const totalCosts = projectResults.reduce((s, pr) => s + (projectCostsMap[pr.config.projectId]?.totalCosts || 0), 0);
     const peakQuarter = Math.max(...(aggregatedData.investorPerQ.length > 0 ? aggregatedData.investorPerQ : [0]));
     const peakQuarterIdx = aggregatedData.investorPerQ.indexOf(peakQuarter);
     const peakLabel = globalQuarters[peakQuarterIdx]?.label || "";
 
     return {
       totalInvestor, totalPaid, totalRemaining, totalNext3Months,
-      totalEscrowExp, totalRevenue, peakQuarter, peakLabel,
+      totalEscrowExp, totalRevenue, totalCosts, peakQuarter, peakLabel,
       enabledCount: projectResults.length,
       totalCount: projectConfigs.length,
       paidPct: totalInvestor > 0 ? Math.round((totalPaid / totalInvestor) * 100) : 0,
@@ -505,6 +506,32 @@ export default function FinancialCommandCenter({ embedded }: { embedded?: boolea
                 </div>
               )}
             </div>
+
+            {/* Feasibility Summary Banner — Total Costs + Total Revenue from feasibility studies */}
+            {summary.totalCosts > 0 || summary.totalRevenue > 0 ? (
+              <div className="grid grid-cols-2 gap-4 mb-5">
+                <div className="rounded-2xl bg-gradient-to-l from-slate-800 to-slate-900 px-6 py-4 shadow-md flex items-center justify-between">
+                  <div>
+                    <div className="text-[10px] text-slate-400 font-medium mb-1">إجمالي تكلفة جميع المشاريع</div>
+                    <div className="text-2xl font-black text-white tabular-nums" dir="ltr">{fmt(summary.totalCosts)} <span className="text-[11px] font-normal text-slate-400">AED</span></div>
+                    <div className="text-[9px] text-slate-500 mt-1">من دراسات الجدوى — يشمل الأراضي وجميع التكاليف</div>
+                  </div>
+                  <div className="text-4xl opacity-15">🏗️</div>
+                </div>
+                <div className="rounded-2xl bg-gradient-to-l from-blue-700 to-blue-800 px-6 py-4 shadow-md flex items-center justify-between">
+                  <div>
+                    <div className="text-[10px] text-blue-200 font-medium mb-1">إجمالي الإيرادات المتوقعة</div>
+                    <div className="text-2xl font-black text-white tabular-nums" dir="ltr">{fmt(summary.totalRevenue)} <span className="text-[11px] font-normal text-blue-300">AED</span></div>
+                    <div className="text-[9px] text-blue-300 mt-1">
+                      {summary.totalRevenue > summary.totalCosts && summary.totalCosts > 0
+                        ? `✅ هامش الربح الإجمالي: ${(((summary.totalRevenue - summary.totalCosts) / summary.totalRevenue) * 100).toFixed(1)}%`
+                        : summary.totalRevenue > 0 ? `إجمالي المشاريع المفعّلة: ${summary.enabledCount}` : 'اختر مشاريع لعرض البيانات'}
+                    </div>
+                  </div>
+                  <div className="text-4xl opacity-15">💰</div>
+                </div>
+              </div>
+            ) : null}
 
             {/* Main 4 KPI cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">

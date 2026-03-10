@@ -364,6 +364,7 @@ export interface ProjectCosts {
   reraAuditReportFee: number;
   reraInspectionReportFee: number;
   totalRevenue: number;
+  totalCosts?: number;
 }
 
 export function getInvestorExpenses(costs?: ProjectCosts): ExpenseItem[] {

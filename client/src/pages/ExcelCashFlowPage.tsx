@@ -455,6 +455,32 @@ export default function ExcelCashFlowPage({ embedded }: { embedded?: boolean } =
         </div>
       )}
 
+      {/* Feasibility Summary Banner */}
+      {projectCosts && (projectCosts.totalCosts || projectCosts.totalRevenue) ? (
+        <div className="mb-3 grid grid-cols-2 gap-3">
+          <div className="rounded-xl bg-gradient-to-l from-slate-800 to-slate-900 px-5 py-3 shadow-md flex items-center justify-between">
+            <div>
+              <div className="text-[10px] text-slate-400 font-medium mb-0.5">إجمالي تكلفة المشروع</div>
+              <div className="text-lg font-black text-white tabular-nums" dir="ltr">{fmt(projectCosts.totalCosts ?? 0)} <span className="text-[10px] font-normal text-slate-400">AED</span></div>
+              <div className="text-[9px] text-slate-500 mt-0.5">من دراسة الجدوى — يشمل الأرض وجميع التكاليف</div>
+            </div>
+            <div className="text-3xl opacity-20">🏗️</div>
+          </div>
+          <div className="rounded-xl bg-gradient-to-l from-blue-700 to-blue-800 px-5 py-3 shadow-md flex items-center justify-between">
+            <div>
+              <div className="text-[10px] text-blue-200 font-medium mb-0.5">إجمالي الإيرادات المتوقعة</div>
+              <div className="text-lg font-black text-white tabular-nums" dir="ltr">{fmt(projectCosts.totalRevenue)} <span className="text-[10px] font-normal text-blue-300">AED</span></div>
+              <div className="text-[9px] text-blue-300 mt-0.5">
+                {projectCosts.totalRevenue > (projectCosts.totalCosts ?? 0)
+                  ? `✅ هامش الربح: ${(((projectCosts.totalRevenue - (projectCosts.totalCosts ?? 0)) / projectCosts.totalRevenue) * 100).toFixed(1)}%`
+                  : `⚠️ الإيرادات أقل من التكاليف`}
+              </div>
+            </div>
+            <div className="text-3xl opacity-20">💰</div>
+          </div>
+        </div>
+      ) : null}
+
       {/* Summary Cards */}
       <div className="grid grid-cols-4 gap-3 mb-4">
         <div className="bg-white rounded-lg border border-gray-200 px-3 py-2 shadow-sm">

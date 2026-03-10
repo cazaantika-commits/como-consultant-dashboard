@@ -125,6 +125,9 @@ export function calculateProjectCosts(
   const salesCommission = totalRevenue * (salesCommissionPct / 100);
   const marketingCost = totalRevenue * (marketingPct / 100);
 
+  const totalRegulatory = reraUnitRegFee + reraProjectRegFee + developerNocFee + escrowAccountFee + bankFees + surveyorFees + reraAuditReportFee + reraInspectionReportFee;
+  const totalCosts = landPrice + agentCommissionLand + landRegistration + soilTestFee + topographicSurveyFee + officialBodiesFees + designFee + supervisionFee + separationFee + constructionCost + communityFees + contingencies + developerFee + salesCommission + marketingCost + totalRegulatory;
+
   return {
     landPrice,
     agentCommissionLand,
@@ -150,5 +153,6 @@ export function calculateProjectCosts(
     reraAuditReportFee,
     reraInspectionReportFee,
     totalRevenue,
+    totalCosts,
   };
 }

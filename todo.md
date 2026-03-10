@@ -2301,3 +2301,10 @@
 - [x] Auto-apply Joel outputs to Competition Pricing when Engine 11 completes (no manual button)
 - [x] Show warning banner in Cash Flow when feasibility numbers are newer than last sync
 - [x] Add "Data is out of sync" indicator across sections when data is stale
+
+## إضافة بانر ملخص دراسة الجدوى في صفحات التدفقات النقدية - مارس 10
+- [x] إضافة totalCosts إلى دالة calculateProjectCosts في projectCostsCalc.ts
+- [x] إضافة totalCosts إلى ProjectCosts interface في cashFlowEngine.ts
+- [x] إضافة بانر إجمالي التكاليف + إجمالي الإيرادات في صفحة مصاريف المستثمر (ExcelCashFlowPage)
+- [x] إضافة بانر إجمالي التكاليف + إجمالي الإيرادات في صفحة حساب الضمان (EscrowCashFlowPage)
+- [x] إضافة بانر إجمالي التكاليف + إجمالي الإيرادات في مركز القيادة (FinancialCommandCenter)
