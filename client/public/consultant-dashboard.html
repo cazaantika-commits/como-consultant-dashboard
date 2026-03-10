@@ -615,9 +615,11 @@
       
       project.consultants.forEach((c, idx) => {
         let fin = data[currentProject]?.financial?.[idx] || { designType: 'pct', designVal: 0, supervisionType: 'pct', supervisionVal: 0 };
+        let finDesignVal = parseFloat(fin.designVal) || 0;
+        let finSupervisionVal = parseFloat(fin.supervisionVal) || 0;
         
-        let designAmount = fin.designType === 'pct' ? (fin.designVal * buildingCost / 100) : fin.designVal;
-        let supervisionAmount = fin.supervisionType === 'pct' ? (fin.supervisionVal * buildingCost / 100) : fin.supervisionVal;
+        let designAmount = fin.designType === 'pct' ? (finDesignVal * buildingCost / 100) : finDesignVal;
+        let supervisionAmount = fin.supervisionType === 'pct' ? (finSupervisionVal * buildingCost / 100) : finSupervisionVal;
         let total = designAmount + supervisionAmount;
         
         let proposalLink = data[currentProject]?.proposalLinks?.[c] || '';
@@ -747,8 +749,10 @@
       let results = [];
       project.consultants.forEach((c, idx) => {
         let fin = data[currentProject]?.financial?.[idx] || { designType: 'pct', designVal: 0, supervisionType: 'pct', supervisionVal: 0 };
-        let designAmount = fin.designType === 'pct' ? (fin.designVal * buildingCost / 100) : fin.designVal;
-        let supervisionAmount = fin.supervisionType === 'pct' ? (fin.supervisionVal * buildingCost / 100) : fin.supervisionVal;
+        let finDesignVal = parseFloat(fin.designVal) || 0;
+        let finSupervisionVal = parseFloat(fin.supervisionVal) || 0;
+        let designAmount = fin.designType === 'pct' ? (finDesignVal * buildingCost / 100) : finDesignVal;
+        let supervisionAmount = fin.supervisionType === 'pct' ? (finSupervisionVal * buildingCost / 100) : finSupervisionVal;
         let total = designAmount + supervisionAmount;
         
         let totalScore = 0;
