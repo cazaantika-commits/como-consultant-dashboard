@@ -452,12 +452,24 @@
         let res = await fetch(API_BASE);
         if (res.ok) {
           data = await res.json();
+          let consultantsFromAPI = new Set();
+          for (let projectKey in data) {
+            if (data[projectKey] && data[projectKey].financial && Array.isArray(data[projectKey].financial)) {
+              data[projectKey].financial.forEach(item => {
+                if (item.consultant) consultantsFromAPI.add(item.consultant);
+              });
+            }
+          }
+          if (consultantsFromAPI.size > 0) {
+            ALL_CONSULTANTS = Array.from(consultantsFromAPI);
+          }
         } else {
           let stored = localStorage.getItem('consultantDashboardData_v9');
           if (stored) data = JSON.parse(stored);
           else data = {};
         }
       } catch(e) {
+        console.error('Error loading data:', e);
         let stored = localStorage.getItem('consultantDashboardData_v9');
         if (stored) data = JSON.parse(stored);
         else data = {};
