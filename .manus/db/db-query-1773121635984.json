@@ -1,0 +1,74 @@
+{
+  "query": "SELECT fd.projectId, c.name as consultant, fd.designType, fd.designValue, fd.supervisionType, fd.supervisionValue FROM financialData fd JOIN consultants c ON fd.consultantId = c.id WHERE fd.projectId = 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT fd.projectId, c.name as consultant, fd.designType, fd.designValue, fd.supervisionType, fd.supervisionValue FROM financialData fd JOIN consultants c ON fd.consultantId = c.id WHERE fd.projectId = 1;",
+  "rows": [
+    {
+      "projectId": "1",
+      "consultant": "Osus International",
+      "designType": "pct",
+      "designValue": "2.50",
+      "supervisionType": "pct",
+      "supervisionValue": "1.50"
+    },
+    {
+      "projectId": "1",
+      "consultant": "Realistic Engineering",
+      "designType": "pct",
+      "designValue": "0.00",
+      "supervisionType": "pct",
+      "supervisionValue": "0.00"
+    },
+    {
+      "projectId": "1",
+      "consultant": "DATUM Engineering Consultants",
+      "designType": "pct",
+      "designValue": "0.00",
+      "supervisionType": "pct",
+      "supervisionValue": "0.00"
+    },
+    {
+      "projectId": "1",
+      "consultant": "ARTEC Architectural & Engineering Consultants",
+      "designType": "pct",
+      "designValue": "0.00",
+      "supervisionType": "pct",
+      "supervisionValue": "0.00"
+    },
+    {
+      "projectId": "1",
+      "consultant": "Arif & Bintoak Consulting Architects & Engineers",
+      "designType": "lump",
+      "designValue": "11775000.00",
+      "supervisionType": "lump",
+      "supervisionValue": "12102000.00"
+    },
+    {
+      "projectId": "1",
+      "consultant": "LACASA",
+      "designType": "lump",
+      "designValue": "9384500.00",
+      "supervisionType": "lump",
+      "supervisionValue": "9384500.00"
+    },
+    {
+      "projectId": "1",
+      "consultant": "Kieferle & Partner",
+      "designType": "lump",
+      "designValue": "9764346.00",
+      "supervisionType": "lump",
+      "supervisionValue": "9764346.00"
+    },
+    {
+      "projectId": "1",
+      "consultant": "Safeer Engineering Consultants (SEC)",
+      "designType": "pct",
+      "designValue": "1.50",
+      "supervisionType": "pct",
+      "supervisionValue": "1.50"
+    }
+  ],
+  "messages": [],
+  "stdout": "projectId\tconsultant\tdesignType\tdesignValue\tsupervisionType\tsupervisionValue\n1\tOsus International\tpct\t2.50\tpct\t1.50\n1\tRealistic Engineering\tpct\t0.00\tpct\t0.00\n1\tDATUM Engineering Consultants\tpct\t0.00\tpct\t0.00\n1\tARTEC Architectural & Engineering Consultants\tpct\t0.00\tpct\t0.00\n1\tArif & Bintoak Consulting Architects & Engineers\tlump\t11775000.00\tlump\t12102000.00\n1\tLACASA\tlump\t9384500.00\tlump\t9384500.00\n1\tKieferle & Partner\tlump\t9764346.00\tlump\t9764346.00\n1\tSafeer Engineering Consultants (SEC)\tpct\t1.50\tpct\t1.50\n",
+  "stderr": "",
+  "execution_time_ms": 1497
+}

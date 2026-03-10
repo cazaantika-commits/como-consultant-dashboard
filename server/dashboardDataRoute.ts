@@ -137,9 +137,9 @@ async function buildDataFromStructuredTables(): Promise<any> {
 
         financial.push({
           consultant: cName,
-          designType: fd.designType === "lumpsum" ? "lump" : "pct",
+          designType: (fd.designType === "lumpsum" || fd.designType === "lump") ? "lump" : "pct",
           designVal,
-          supervisionType: fd.supervisionType === "lumpsum" ? "lump" : "pct",
+          supervisionType: (fd.supervisionType === "lumpsum" || fd.supervisionType === "lump") ? "lump" : "pct",
           supervisionVal,
         });
 
