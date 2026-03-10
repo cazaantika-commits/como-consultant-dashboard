@@ -676,7 +676,7 @@
           supervisionInput.nextElementSibling.textContent = supervisionAmount.toLocaleString() + ' AED';
         }
         
-        let total = designAmount + supervisionAmount;
+        let total = parseFloat(designAmount) + parseFloat(supervisionAmount);
         let totalCell = document.getElementById(`total-${c.replace(/\s+/g, '')}`);
         if (totalCell) totalCell.textContent = 'AED ' + total.toLocaleString();
       });
