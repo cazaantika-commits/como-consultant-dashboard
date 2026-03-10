@@ -1,0 +1,130 @@
+{
+  "query": "SELECT requirementCode, serviceCode, reqType, nameAr FROM lifecycle_requirements LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT requirementCode, serviceCode, reqType, nameAr FROM lifecycle_requirements LIMIT 20;",
+  "rows": [
+    {
+      "requirementCode": "REQ-PROJ-REG-DOC-01",
+      "serviceCode": "SRV-RERA-PROJ-REG",
+      "reqType": "document",
+      "nameAr": "سند ملكية الأرض / عقد شراء الأرض"
+    },
+    {
+      "requirementCode": "REQ-PROJ-REG-DOC-02",
+      "serviceCode": "SRV-RERA-PROJ-REG",
+      "reqType": "document",
+      "nameAr": "الرخصة التجارية للمطوّر"
+    },
+    {
+      "requirementCode": "REQ-PROJ-REG-DOC-03",
+      "serviceCode": "SRV-RERA-PROJ-REG",
+      "reqType": "document",
+      "nameAr": "شهادة تسجيل المطوّر لدى RERA"
+    },
+    {
+      "requirementCode": "REQ-PROJ-REG-DOC-04",
+      "serviceCode": "SRV-RERA-PROJ-REG",
+      "reqType": "document",
+      "nameAr": "مخطط موقعي ومخطط أولي للمشروع"
+    },
+    {
+      "requirementCode": "REQ-PROJ-REG-DOC-05",
+      "serviceCode": "SRV-RERA-PROJ-REG",
+      "reqType": "document",
+      "nameAr": "تقرير تكلفة المشروع المبدئية"
+    },
+    {
+      "requirementCode": "REQ-PROJ-REG-DATA-01",
+      "serviceCode": "SRV-RERA-PROJ-REG",
+      "reqType": "data",
+      "nameAr": "اسم المشروع"
+    },
+    {
+      "requirementCode": "REQ-PROJ-REG-DATA-02",
+      "serviceCode": "SRV-RERA-PROJ-REG",
+      "reqType": "data",
+      "nameAr": "رقم قطعة الأرض والمنطقة"
+    },
+    {
+      "requirementCode": "REQ-PROJ-REG-DATA-03",
+      "serviceCode": "SRV-RERA-PROJ-REG",
+      "reqType": "data",
+      "nameAr": "نوع المشروع واستخداماته"
+    },
+    {
+      "requirementCode": "REQ-PROJ-REG-DATA-04",
+      "serviceCode": "SRV-RERA-PROJ-REG",
+      "reqType": "data",
+      "nameAr": "المساحة البنائية وعدد الوحدات"
+    },
+    {
+      "requirementCode": "REQ-PROJ-REG-DATA-05",
+      "serviceCode": "SRV-RERA-PROJ-REG",
+      "reqType": "data",
+      "nameAr": "تقدير تكلفة الإنشاء"
+    },
+    {
+      "requirementCode": "REQ-ESCROW-DOC-01",
+      "serviceCode": "SRV-RERA-ESCROW-OPEN",
+      "reqType": "document",
+      "nameAr": "شهادة تسجيل المشروع ورقم RERA"
+    },
+    {
+      "requirementCode": "REQ-ESCROW-DOC-02",
+      "serviceCode": "SRV-RERA-ESCROW-OPEN",
+      "reqType": "document",
+      "nameAr": "سند ملكية الأرض"
+    },
+    {
+      "requirementCode": "REQ-ESCROW-DOC-03",
+      "serviceCode": "SRV-RERA-ESCROW-OPEN",
+      "reqType": "document",
+      "nameAr": "الرخصة التجارية للمطوّر"
+    },
+    {
+      "requirementCode": "REQ-ESCROW-DOC-04",
+      "serviceCode": "SRV-RERA-ESCROW-OPEN",
+      "reqType": "document",
+      "nameAr": "عقد التأسيس / النظام الأساسي"
+    },
+    {
+      "requirementCode": "REQ-ESCROW-DOC-05",
+      "serviceCode": "SRV-RERA-ESCROW-OPEN",
+      "reqType": "document",
+      "nameAr": "نماذج توقيع وتفويض للمخولين بالتوقيع"
+    },
+    {
+      "requirementCode": "REQ-ESCROW-DOC-06",
+      "serviceCode": "SRV-RERA-ESCROW-OPEN",
+      "reqType": "document",
+      "nameAr": "تقرير تكلفة المشروع المحدث"
+    },
+    {
+      "requirementCode": "REQ-ESCROW-DOC-07",
+      "serviceCode": "SRV-RERA-ESCROW-OPEN",
+      "reqType": "document",
+      "nameAr": "نموذج طلب فتح حساب ضمان من البنك"
+    },
+    {
+      "requirementCode": "REQ-ESCROW-DATA-01",
+      "serviceCode": "SRV-RERA-ESCROW-OPEN",
+      "reqType": "data",
+      "nameAr": "اسم المشروع ورقم المشروع"
+    },
+    {
+      "requirementCode": "REQ-ESCROW-DATA-02",
+      "serviceCode": "SRV-RERA-ESCROW-OPEN",
+      "reqType": "data",
+      "nameAr": "بيانات الشركة المطوّرة"
+    },
+    {
+      "requirementCode": "REQ-ESCROW-DATA-03",
+      "serviceCode": "SRV-RERA-ESCROW-OPEN",
+      "reqType": "data",
+      "nameAr": "بيانات المخولين بالتوقيع"
+    }
+  ],
+  "messages": [],
+  "stdout": "requirementCode\tserviceCode\treqType\tnameAr\nREQ-PROJ-REG-DOC-01\tSRV-RERA-PROJ-REG\tdocument\tسند ملكية الأرض / عقد شراء الأرض\nREQ-PROJ-REG-DOC-02\tSRV-RERA-PROJ-REG\tdocument\tالرخصة التجارية للمطوّر\nREQ-PROJ-REG-DOC-03\tSRV-RERA-PROJ-REG\tdocument\tشهادة تسجيل المطوّر لدى RERA\nREQ-PROJ-REG-DOC-04\tSRV-RERA-PROJ-REG\tdocument\tمخطط موقعي ومخطط أولي للمشروع\nREQ-PROJ-REG-DOC-05\tSRV-RERA-PROJ-REG\tdocument\tتقرير تكلفة المشروع المبدئية\nREQ-PROJ-REG-DATA-01\tSRV-RERA-PROJ-REG\tdata\tاسم المشروع\nREQ-PROJ-REG-DATA-02\tSRV-RERA-PROJ-REG\tdata\tرقم قطعة الأرض والمنطقة\nREQ-PROJ-REG-DATA-03\tSRV-RERA-PROJ-REG\tdata\tنوع المشروع واستخداماته\nREQ-PROJ-REG-DATA-04\tSRV-RERA-PROJ-REG\tdata\tالمساحة البنائية وعدد الوحدات\nREQ-PROJ-REG-DATA-05\tSRV-RERA-PROJ-REG\tdata\tتقدير تكلفة الإنشاء\nREQ-ESCROW-DOC-01\tSRV-RERA-ESCROW-OPEN\tdocument\tشهادة تسجيل المشروع ورقم RERA\nREQ-ESCROW-DOC-02\tSRV-RERA-ESCROW-OPEN\tdocument\tسند ملكية الأرض\nREQ-ESCROW-DOC-03\tSRV-RERA-ESCROW-OPEN\tdocument\tالرخصة التجارية للمطوّر\nREQ-ESCROW-DOC-04\tSRV-RERA-ESCROW-OPEN\tdocument\tعقد التأسيس / النظام الأساسي\nREQ-ESCROW-DOC-05\tSRV-RERA-ESCROW-OPEN\tdocument\tنماذج توقيع وتفويض للمخولين بالتوقيع\nREQ-ESCROW-DOC-06\tSRV-RERA-ESCROW-OPEN\tdocument\tتقرير تكلفة المشروع المحدث\nREQ-ESCROW-DOC-07\tSRV-RERA-ESCROW-OPEN\tdocument\tنموذج طلب فتح حساب ضمان من البنك\nREQ-ESCROW-DATA-01\tSRV-RERA-ESCROW-OPEN\tdata\tاسم المشروع ورقم المشروع\nREQ-ESCROW-DATA-02\tSRV-RERA-ESCROW-OPEN\tdata\tبيانات الشركة المطوّرة\nREQ-ESCROW-DATA-03\tSRV-RERA-ESCROW-OPEN\tdata\tبيانات المخولين بالتوقيع\n",
+  "stderr": "",
+  "execution_time_ms": 1514
+}

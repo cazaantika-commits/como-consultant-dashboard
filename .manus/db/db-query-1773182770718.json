@@ -1,0 +1,70 @@
+{
+  "query": "SELECT requirementCode, serviceCode, reqType, nameAr FROM lifecycle_requirements LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT requirementCode, serviceCode, reqType, nameAr FROM lifecycle_requirements LIMIT 10;",
+  "rows": [
+    {
+      "requirementCode": "REQ-PROJ-REG-DOC-01",
+      "serviceCode": "SRV-RERA-PROJ-REG",
+      "reqType": "document",
+      "nameAr": "سند ملكية الأرض / عقد شراء الأرض"
+    },
+    {
+      "requirementCode": "REQ-PROJ-REG-DOC-02",
+      "serviceCode": "SRV-RERA-PROJ-REG",
+      "reqType": "document",
+      "nameAr": "الرخصة التجارية للمطوّر"
+    },
+    {
+      "requirementCode": "REQ-PROJ-REG-DOC-03",
+      "serviceCode": "SRV-RERA-PROJ-REG",
+      "reqType": "document",
+      "nameAr": "شهادة تسجيل المطوّر لدى RERA"
+    },
+    {
+      "requirementCode": "REQ-PROJ-REG-DOC-04",
+      "serviceCode": "SRV-RERA-PROJ-REG",
+      "reqType": "document",
+      "nameAr": "مخطط موقعي ومخطط أولي للمشروع"
+    },
+    {
+      "requirementCode": "REQ-PROJ-REG-DOC-05",
+      "serviceCode": "SRV-RERA-PROJ-REG",
+      "reqType": "document",
+      "nameAr": "تقرير تكلفة المشروع المبدئية"
+    },
+    {
+      "requirementCode": "REQ-PROJ-REG-DATA-01",
+      "serviceCode": "SRV-RERA-PROJ-REG",
+      "reqType": "data",
+      "nameAr": "اسم المشروع"
+    },
+    {
+      "requirementCode": "REQ-PROJ-REG-DATA-02",
+      "serviceCode": "SRV-RERA-PROJ-REG",
+      "reqType": "data",
+      "nameAr": "رقم قطعة الأرض والمنطقة"
+    },
+    {
+      "requirementCode": "REQ-PROJ-REG-DATA-03",
+      "serviceCode": "SRV-RERA-PROJ-REG",
+      "reqType": "data",
+      "nameAr": "نوع المشروع واستخداماته"
+    },
+    {
+      "requirementCode": "REQ-PROJ-REG-DATA-04",
+      "serviceCode": "SRV-RERA-PROJ-REG",
+      "reqType": "data",
+      "nameAr": "المساحة البنائية وعدد الوحدات"
+    },
+    {
+      "requirementCode": "REQ-PROJ-REG-DATA-05",
+      "serviceCode": "SRV-RERA-PROJ-REG",
+      "reqType": "data",
+      "nameAr": "تقدير تكلفة الإنشاء"
+    }
+  ],
+  "messages": [],
+  "stdout": "requirementCode\tserviceCode\treqType\tnameAr\nREQ-PROJ-REG-DOC-01\tSRV-RERA-PROJ-REG\tdocument\tسند ملكية الأرض / عقد شراء الأرض\nREQ-PROJ-REG-DOC-02\tSRV-RERA-PROJ-REG\tdocument\tالرخصة التجارية للمطوّر\nREQ-PROJ-REG-DOC-03\tSRV-RERA-PROJ-REG\tdocument\tشهادة تسجيل المطوّر لدى RERA\nREQ-PROJ-REG-DOC-04\tSRV-RERA-PROJ-REG\tdocument\tمخطط موقعي ومخطط أولي للمشروع\nREQ-PROJ-REG-DOC-05\tSRV-RERA-PROJ-REG\tdocument\tتقرير تكلفة المشروع المبدئية\nREQ-PROJ-REG-DATA-01\tSRV-RERA-PROJ-REG\tdata\tاسم المشروع\nREQ-PROJ-REG-DATA-02\tSRV-RERA-PROJ-REG\tdata\tرقم قطعة الأرض والمنطقة\nREQ-PROJ-REG-DATA-03\tSRV-RERA-PROJ-REG\tdata\tنوع المشروع واستخداماته\nREQ-PROJ-REG-DATA-04\tSRV-RERA-PROJ-REG\tdata\tالمساحة البنائية وعدد الوحدات\nREQ-PROJ-REG-DATA-05\tSRV-RERA-PROJ-REG\tdata\tتقدير تكلفة الإنشاء\n",
+  "stderr": "",
+  "execution_time_ms": 1476
+}

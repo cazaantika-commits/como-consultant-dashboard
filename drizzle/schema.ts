@@ -1617,3 +1617,63 @@ export const projectStageStatus = mysqlTable("project_stage_status", {
 (table) => [
   index("pss_project").on(table.projectId),
 ]);
+
+/** Master list of data fields per service (with project card mapping) */
+export const stageFieldDefinitions = mysqlTable("stage_field_definitions", {
+  id: int().autoincrement().notNull().primaryKey(),
+  serviceCode: varchar({ length: 50 }).notNull(),
+  fieldKey: varchar({ length: 80 }).notNull(),
+  labelAr: varchar({ length: 200 }).notNull(),
+  labelEn: varchar({ length: 200 }),
+  fieldType: varchar({ length: 30 }).default('text'),
+  source: mysqlEnum("source", ['project_fact_sheet','manual_input','company_settings','ai_agent']).default('manual_input'),
+  requiredLevel: mysqlEnum("requiredLevel", ['required','optional','recommended']).default('required'),
+  stageGroup: varchar({ length: 100 }),
+  notes: text(),
+  projectCardField: varchar({ length: 80 }),
+  isMandatory: tinyint().default(1),
+  sortOrder: int().default(0),
+  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+  index("sfd_service").on(table.serviceCode),
+]);
+
+/** Per-project values for each field (with source tracking) */
+export const projectStageFieldValues = mysqlTable("project_stage_field_values", {
+  id: int().autoincrement().notNull().primaryKey(),
+  projectId: int().notNull(),
+  serviceCode: varchar({ length: 50 }).notNull(),
+  fieldKey: varchar({ length: 80 }).notNull(),
+  value: text(),
+  valueSource: mysqlEnum("valueSource", ['project_card','manual']).default('manual'),
+  syncedAt: timestamp({ mode: 'string' }),
+  updatedByUserId: int(),
+  updatedAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+  index("psfv_project_svc").on(table.projectId, table.serviceCode),
+]);
+
+/** Per-project documents for each requirement */
+export const projectStageDocuments = mysqlTable("project_stage_documents", {
+  id: int().autoincrement().notNull().primaryKey(),
+  projectId: int().notNull(),
+  serviceCode: varchar({ length: 50 }).notNull(),
+  requirementCode: varchar({ length: 60 }).notNull(),
+  fileName: varchar({ length: 300 }).notNull(),
+  fileUrl: text().notNull(),
+  fileKey: text().notNull(),
+  mimeType: varchar({ length: 100 }),
+  fileSizeBytes: int(),
+  docStatus: mysqlEnum("docStatus", ['uploaded_pending_review','approved','rejected','not_uploaded']).default('uploaded_pending_review'),
+  rejectionReason: text(),
+  uploadedByUserId: int(),
+  reviewedByUserId: int(),
+  reviewedAt: timestamp({ mode: 'string' }),
+  uploadedAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+  index("psd_project_svc").on(table.projectId, table.serviceCode),
+  index("psd_req").on(table.requirementCode),
+]);

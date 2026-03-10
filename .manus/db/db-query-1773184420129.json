@@ -1,0 +1,46 @@
+{
+  "query": "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'lifecycle_requirements' ORDER BY ORDINAL_POSITION;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'lifecycle_requirements' ORDER BY ORDINAL_POSITION;",
+  "rows": [
+    {
+      "COLUMN_NAME": "id"
+    },
+    {
+      "COLUMN_NAME": "requirementCode"
+    },
+    {
+      "COLUMN_NAME": "serviceCode"
+    },
+    {
+      "COLUMN_NAME": "reqType"
+    },
+    {
+      "COLUMN_NAME": "nameAr"
+    },
+    {
+      "COLUMN_NAME": "descriptionAr"
+    },
+    {
+      "COLUMN_NAME": "sourceNote"
+    },
+    {
+      "COLUMN_NAME": "isMandatory"
+    },
+    {
+      "COLUMN_NAME": "timing"
+    },
+    {
+      "COLUMN_NAME": "internalOwner"
+    },
+    {
+      "COLUMN_NAME": "sortOrder"
+    },
+    {
+      "COLUMN_NAME": "createdAt"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\nid\nrequirementCode\nserviceCode\nreqType\nnameAr\ndescriptionAr\nsourceNote\nisMandatory\ntiming\ninternalOwner\nsortOrder\ncreatedAt\n",
+  "stderr": "",
+  "execution_time_ms": 1515
+}

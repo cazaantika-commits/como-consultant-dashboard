@@ -2346,3 +2346,11 @@
 - [ ] مكوّن StageDocumentsTab مع رفع ملف وربط من المكتبة وحالة المستندات الإلزامية
 - [ ] زر التقديم معطّل حتى اكتمال المتطلبات الإلزامية
 - [ ] تكامل المكوّنين في ProjectLifecyclePage
+
+## مرحلة DLD/RERA — إصلاحات وتحسينات (مارس 2026)
+
+- [ ] إصلاح كراش StageDataTab (blocking.total undefined)
+- [ ] إضافة زر رفع الملفات في StageDocumentsTab لكل متطلب
+- [ ] توسيع جدول stage_field_definitions بأعمدة: Field_Label_EN, Source, Required_Level, Stage_Group, Notes
+- [ ] تقرير الامتثال PDF — زر في شاشة DLD/RERA يولّد PDF
+- [ ] AI API endpoint — /api/ai/service-status يُرجع JSON منظم

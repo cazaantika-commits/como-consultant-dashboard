@@ -1,22 +1,19 @@
 /**
  * stageData router — unified logic for stage data fields + documents
- *
- * Procedures:
- *  - getFieldDefinitions(serviceCode)          → field defs for a service
- *  - getFieldValues(projectId, serviceCode)    → saved values + source status
- *  - syncFromProjectCard(projectId, serviceCode) → pull project card values into field values
- *  - upsertFieldValue(projectId, serviceCode, fieldKey, value) → manual override
- *  - getStageRecord(projectId, serviceCode)    → full record: fields + docs + blocking
- *  - getBlockingRequirements(projectId, serviceCode) → list of incomplete mandatory items
- *  - uploadDocument(projectId, serviceCode, requirementCode, fileUrl, fileName, ...) → save doc ref
- *  - updateDocStatus(docId, status, rejectionReason) → approve/reject doc
- *  - getDocuments(projectId, serviceCode)      → all docs for a project/service
+ * Uses Drizzle ORM (eq/and) — NOT raw db.execute(string, params[])
  */
-
 import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { TRPCError } from "@trpc/server";
+import { eq, and } from "drizzle-orm";
+import {
+  stageFieldDefinitions,
+  projectStageFieldValues,
+  projectStageDocuments,
+  lifecycleRequirements,
+  projects,
+} from "../../drizzle/schema";
 
 export const stageDataRouter = router({
   // ─── Field Definitions ─────────────────────────────────────────────────────
@@ -24,11 +21,12 @@ export const stageDataRouter = router({
     .input(z.object({ serviceCode: z.string() }))
     .query(async ({ input }) => {
       const db = await getDb();
-      const [rows] = await db.execute<any[]>(
-        `SELECT * FROM stage_field_definitions WHERE serviceCode = ? ORDER BY sortOrder ASC`,
-        [input.serviceCode]
-      );
-      return rows;
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      return db
+        .select()
+        .from(stageFieldDefinitions)
+        .where(eq(stageFieldDefinitions.serviceCode, input.serviceCode))
+        .orderBy(stageFieldDefinitions.sortOrder);
     }),
 
   // ─── Field Values ───────────────────────────────────────────────────────────
@@ -36,11 +34,16 @@ export const stageDataRouter = router({
     .input(z.object({ projectId: z.number(), serviceCode: z.string() }))
     .query(async ({ input }) => {
       const db = await getDb();
-      const [rows] = await db.execute<any[]>(
-        `SELECT * FROM project_stage_field_values WHERE projectId = ? AND serviceCode = ?`,
-        [input.projectId, input.serviceCode]
-      );
-      return rows;
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      return db
+        .select()
+        .from(projectStageFieldValues)
+        .where(
+          and(
+            eq(projectStageFieldValues.projectId, input.projectId),
+            eq(projectStageFieldValues.serviceCode, input.serviceCode)
+          )
+        );
     }),
 
   // ─── Sync from Project Card ─────────────────────────────────────────────────
@@ -48,133 +51,157 @@ export const stageDataRouter = router({
     .input(z.object({ projectId: z.number(), serviceCode: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
 
-      // Get field definitions with project card mappings
-      const [fieldDefs] = await db.execute<any[]>(
-        `SELECT fieldKey, projectCardField FROM stage_field_definitions 
-         WHERE serviceCode = ? AND projectCardField IS NOT NULL`,
-        [input.serviceCode]
-      );
+      const fieldDefs = await db
+        .select()
+        .from(stageFieldDefinitions)
+        .where(eq(stageFieldDefinitions.serviceCode, input.serviceCode));
 
-      if (fieldDefs.length === 0) {
-        return { synced: 0, fields: [] };
-      }
+      const mappedFields = fieldDefs.filter((f) => f.projectCardField);
+      if (mappedFields.length === 0) return { synced: 0 };
 
-      // Get project data
-      const [projects] = await db.execute<any[]>(
-        `SELECT * FROM projects WHERE id = ?`,
-        [input.projectId]
-      );
+      const projectRows = await db
+        .select()
+        .from(projects)
+        .where(eq(projects.id, input.projectId))
+        .limit(1);
 
-      if (!projects.length) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Project not found" });
-      }
+      if (!projectRows.length) throw new TRPCError({ code: "NOT_FOUND", message: "Project not found" });
+      const project = projectRows[0] as Record<string, unknown>;
 
-      const project = projects[0];
-      const now = new Date();
-      const synced: string[] = [];
+      let synced = 0;
+      const now = new Date().toISOString().slice(0, 19).replace("T", " ");
 
-      for (const field of fieldDefs) {
-        const projectValue = project[field.projectCardField];
-        if (projectValue !== undefined && projectValue !== null) {
-          await db.execute(
-            `INSERT INTO project_stage_field_values (projectId, serviceCode, fieldKey, value, valueSource, syncedAt, updatedByUserId)
-             VALUES (?, ?, ?, ?, 'project_card', ?, ?)
-             ON DUPLICATE KEY UPDATE value = VALUES(value), valueSource = 'project_card', syncedAt = VALUES(syncedAt), updatedByUserId = VALUES(updatedByUserId)`,
-            [input.projectId, input.serviceCode, field.fieldKey, String(projectValue), now, ctx.user.id]
-          );
-          synced.push(field.fieldKey);
+      for (const field of mappedFields) {
+        const cardField = field.projectCardField as string;
+        const rawValue = project[cardField];
+        const value = rawValue != null ? String(rawValue) : null;
+        if (value === null) continue;
+
+        const existing = await db
+          .select({ id: projectStageFieldValues.id })
+          .from(projectStageFieldValues)
+          .where(
+            and(
+              eq(projectStageFieldValues.projectId, input.projectId),
+              eq(projectStageFieldValues.serviceCode, input.serviceCode),
+              eq(projectStageFieldValues.fieldKey, field.fieldKey)
+            )
+          )
+          .limit(1);
+
+        if (existing.length > 0) {
+          await db
+            .update(projectStageFieldValues)
+            .set({ value, valueSource: "project_card", syncedAt: now, updatedAt: now })
+            .where(eq(projectStageFieldValues.id, existing[0].id));
+        } else {
+          await db.insert(projectStageFieldValues).values({
+            projectId: input.projectId,
+            serviceCode: input.serviceCode,
+            fieldKey: field.fieldKey,
+            value,
+            valueSource: "project_card",
+            syncedAt: now,
+            updatedByUserId: ctx.user.id,
+            updatedAt: now,
+          });
         }
+        synced++;
       }
 
-      return { synced: synced.length, fields: synced };
+      return { synced };
     }),
 
-  // ─── Upsert Field Value (manual) ───────────────────────────────────────────
+  // ─── Upsert Field Value (manual override) ──────────────────────────────────
   upsertFieldValue: protectedProcedure
-    .input(z.object({
-      projectId: z.number(),
-      serviceCode: z.string(),
-      fieldKey: z.string(),
-      value: z.string(),
-    }))
+    .input(
+      z.object({
+        projectId: z.number(),
+        serviceCode: z.string(),
+        fieldKey: z.string(),
+        value: z.string(),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
-      await db.execute(
-        `INSERT INTO project_stage_field_values (projectId, serviceCode, fieldKey, value, valueSource, updatedByUserId)
-         VALUES (?, ?, ?, ?, 'manual', ?)
-         ON DUPLICATE KEY UPDATE value = VALUES(value), valueSource = 'manual', updatedByUserId = VALUES(updatedByUserId)`,
-        [input.projectId, input.serviceCode, input.fieldKey, input.value, ctx.user.id]
-      );
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+
+      const existing = await db
+        .select({ id: projectStageFieldValues.id })
+        .from(projectStageFieldValues)
+        .where(
+          and(
+            eq(projectStageFieldValues.projectId, input.projectId),
+            eq(projectStageFieldValues.serviceCode, input.serviceCode),
+            eq(projectStageFieldValues.fieldKey, input.fieldKey)
+          )
+        )
+        .limit(1);
+
+      if (existing.length > 0) {
+        await db
+          .update(projectStageFieldValues)
+          .set({ value: input.value, valueSource: "manual", updatedByUserId: ctx.user.id, updatedAt: now })
+          .where(eq(projectStageFieldValues.id, existing[0].id));
+      } else {
+        await db.insert(projectStageFieldValues).values({
+          projectId: input.projectId,
+          serviceCode: input.serviceCode,
+          fieldKey: input.fieldKey,
+          value: input.value,
+          valueSource: "manual",
+          updatedByUserId: ctx.user.id,
+          updatedAt: now,
+        });
+      }
       return { success: true };
     }),
 
-  // ─── Get Stage Record (full snapshot for AI / reports) ─────────────────────
+  // ─── Get Stage Record (fields + values combined) ────────────────────────────
   getStageRecord: protectedProcedure
     .input(z.object({ projectId: z.number(), serviceCode: z.string() }))
     .query(async ({ input }) => {
       const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
 
-      // Field definitions
-      const [fieldDefs] = await db.execute<any[]>(
-        `SELECT * FROM stage_field_definitions WHERE serviceCode = ? ORDER BY sortOrder`,
-        [input.serviceCode]
-      );
+      const fieldDefs = await db
+        .select()
+        .from(stageFieldDefinitions)
+        .where(eq(stageFieldDefinitions.serviceCode, input.serviceCode))
+        .orderBy(stageFieldDefinitions.sortOrder);
 
-      // Saved field values
-      const [fieldValues] = await db.execute<any[]>(
-        `SELECT * FROM project_stage_field_values WHERE projectId = ? AND serviceCode = ?`,
-        [input.projectId, input.serviceCode]
-      );
+      const savedValues = await db
+        .select()
+        .from(projectStageFieldValues)
+        .where(
+          and(
+            eq(projectStageFieldValues.projectId, input.projectId),
+            eq(projectStageFieldValues.serviceCode, input.serviceCode)
+          )
+        );
 
-      // Requirements for this service
-      const [requirements] = await db.execute<any[]>(
-        `SELECT lr.*, prs.status, prs.notes, prs.completedAt
-         FROM lifecycle_requirements lr
-         LEFT JOIN project_requirement_status prs
-           ON prs.requirementCode = lr.requirementCode AND prs.projectId = ?
-         WHERE lr.serviceCode = ?
-         ORDER BY lr.sortOrder`,
-        [input.projectId, input.serviceCode]
-      );
+      const valueMap: Record<string, { value: string | null; valueSource: string | null }> = {};
+      for (const v of savedValues) {
+        valueMap[v.fieldKey] = { value: v.value ?? null, valueSource: v.valueSource ?? null };
+      }
 
-      // Documents
-      const [documents] = await db.execute<any[]>(
-        `SELECT * FROM project_stage_documents WHERE projectId = ? AND serviceCode = ?`,
-        [input.projectId, input.serviceCode]
-      );
-
-      // Build merged field map
-      const valueMap = Object.fromEntries(fieldValues.map((v: any) => [v.fieldKey, v]));
-      const mergedFields = fieldDefs.map((def: any) => ({
-        ...def,
-        savedValue: valueMap[def.fieldKey]?.value ?? null,
-        valueSource: valueMap[def.fieldKey]?.valueSource ?? null,
-        syncedAt: valueMap[def.fieldKey]?.syncedAt ?? null,
-        status: valueMap[def.fieldKey]
-          ? (valueMap[def.fieldKey].valueSource === 'project_card' ? 'synced' : 'manual')
-          : 'empty',
+      const fields = fieldDefs.map((f) => ({
+        ...f,
+        currentValue: valueMap[f.fieldKey]?.value ?? null,
+        valueSource: valueMap[f.fieldKey]?.valueSource ?? null,
       }));
 
-      // Blocking items (mandatory fields empty + mandatory docs missing)
-      const blockingFields = mergedFields.filter((f: any) => f.isMandatory && !f.savedValue);
-      const docMap = Object.fromEntries(documents.map((d: any) => [d.requirementCode, d]));
-      const blockingDocs = requirements.filter((r: any) =>
-        r.reqType === 'document' && r.isMandatory &&
-        (!docMap[r.requirementCode] || docMap[r.requirementCode].docStatus === 'not_uploaded')
-      );
+      const filledCount = fields.filter((f) => f.currentValue !== null && f.currentValue !== "").length;
 
       return {
-        serviceCode: input.serviceCode,
-        projectId: input.projectId,
-        fields: mergedFields,
-        requirements,
-        documents,
-        blocking: {
-          fields: blockingFields.map((f: any) => ({ fieldKey: f.fieldKey, labelAr: f.labelAr })),
-          documents: blockingDocs.map((r: any) => ({ requirementCode: r.requirementCode, nameAr: r.nameAr })),
-          total: blockingFields.length + blockingDocs.length,
-          canSubmit: blockingFields.length === 0 && blockingDocs.length === 0,
+        fields,
+        stats: {
+          total: fields.length,
+          filled: filledCount,
+          missing: fields.length - filledCount,
         },
       };
     }),
@@ -184,77 +211,124 @@ export const stageDataRouter = router({
     .input(z.object({ projectId: z.number(), serviceCode: z.string() }))
     .query(async ({ input }) => {
       const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
 
-      const [fieldDefs] = await db.execute<any[]>(
-        `SELECT fd.fieldKey, fd.labelAr, fd.isMandatory, psfv.value
-         FROM stage_field_definitions fd
-         LEFT JOIN project_stage_field_values psfv
-           ON psfv.fieldKey = fd.fieldKey AND psfv.serviceCode = fd.serviceCode AND psfv.projectId = ?
-         WHERE fd.serviceCode = ? AND fd.isMandatory = 1 AND (psfv.value IS NULL OR psfv.value = '')`,
-        [input.projectId, input.serviceCode]
-      );
+      const fieldDefs = await db
+        .select()
+        .from(stageFieldDefinitions)
+        .where(
+          and(
+            eq(stageFieldDefinitions.serviceCode, input.serviceCode),
+            eq(stageFieldDefinitions.isMandatory, 1)
+          )
+        );
 
-      const [docReqs] = await db.execute<any[]>(
-        `SELECT lr.requirementCode, lr.nameAr, psd.docStatus
-         FROM lifecycle_requirements lr
-         LEFT JOIN project_stage_documents psd
-           ON psd.requirementCode = lr.requirementCode AND psd.projectId = ? AND psd.serviceCode = ?
-         WHERE lr.serviceCode = ? AND lr.reqType = 'document' AND lr.isMandatory = 1
-           AND (psd.id IS NULL OR psd.docStatus = 'not_uploaded')`,
-        [input.projectId, input.serviceCode, input.serviceCode]
-      );
+      const savedValues = await db
+        .select()
+        .from(projectStageFieldValues)
+        .where(
+          and(
+            eq(projectStageFieldValues.projectId, input.projectId),
+            eq(projectStageFieldValues.serviceCode, input.serviceCode)
+          )
+        );
+
+      const filledKeys = new Set(savedValues.filter((v) => v.value).map((v) => v.fieldKey));
+      const missingFields = fieldDefs.filter((f) => !filledKeys.has(f.fieldKey));
+
+      const docReqs = await db
+        .select()
+        .from(lifecycleRequirements)
+        .where(
+          and(
+            eq(lifecycleRequirements.serviceCode, input.serviceCode),
+            eq(lifecycleRequirements.reqType, "document"),
+            eq(lifecycleRequirements.isMandatory, 1)
+          )
+        );
+
+      const uploadedDocs = await db
+        .select()
+        .from(projectStageDocuments)
+        .where(
+          and(
+            eq(projectStageDocuments.projectId, input.projectId),
+            eq(projectStageDocuments.serviceCode, input.serviceCode)
+          )
+        );
+
+      const uploadedReqCodes = new Set(uploadedDocs.map((d) => d.requirementCode));
+      const missingDocuments = docReqs.filter((r) => !uploadedReqCodes.has(r.requirementCode));
 
       return {
-        missingFields: fieldDefs,
-        missingDocuments: docReqs,
-        canSubmit: fieldDefs.length === 0 && docReqs.length === 0,
+        missingFields,
+        missingDocuments,
+        canSubmit: missingFields.length === 0 && missingDocuments.length === 0,
       };
-    }),  // ─── Upload Document (accepts base64, uploads to S3) ───────────────────────────
+    }),
+
+  // ─── Upload Document (accepts base64, uploads to S3) ───────────────────────
   uploadDocument: protectedProcedure
-    .input(z.object({
-      projectId: z.number(),
-      serviceCode: z.string(),
-      requirementCode: z.string(),
-      fileName: z.string(),
-      mimeType: z.string().optional(),
-      fileBase64: z.string(),
-    }))
+    .input(
+      z.object({
+        projectId: z.number(),
+        serviceCode: z.string(),
+        requirementCode: z.string(),
+        fileName: z.string(),
+        mimeType: z.string().optional(),
+        fileBase64: z.string(),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
-      // Upload to S3
-      const { storagePut } = await import('../storage');
-      const fileBuffer = Buffer.from(input.fileBase64, 'base64');
-      const ext = input.fileName.split('.').pop() ?? 'bin';
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+
+      const { storagePut } = await import("../storage");
+      const fileBuffer = Buffer.from(input.fileBase64, "base64");
+      const ext = input.fileName.split(".").pop() ?? "bin";
       const fileKey = `stage-docs/${input.projectId}/${input.serviceCode}/${input.requirementCode}-${Date.now()}.${ext}`;
-      const { url } = await storagePut(fileKey, fileBuffer, input.mimeType ?? 'application/octet-stream');
-      await db.execute(
-        `INSERT INTO project_stage_documents 
-           (projectId, serviceCode, requirementCode, fileName, fileUrl, fileKey, mimeType, fileSizeBytes, docStatus, uploadedByUserId)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'uploaded_pending_review', ?)`,
-        [
-          input.projectId, input.serviceCode, input.requirementCode,
-          input.fileName, url, fileKey,
-          input.mimeType ?? null, fileBuffer.length, ctx.user.id
-        ]
-      );
+      const { url } = await storagePut(fileKey, fileBuffer, input.mimeType ?? "application/octet-stream");
+
+      const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+      await db.insert(projectStageDocuments).values({
+        projectId: input.projectId,
+        serviceCode: input.serviceCode,
+        requirementCode: input.requirementCode,
+        fileName: input.fileName,
+        fileUrl: url,
+        fileKey,
+        mimeType: input.mimeType ?? null,
+        fileSizeBytes: fileBuffer.length,
+        docStatus: "uploaded_pending_review",
+        uploadedByUserId: ctx.user.id,
+        uploadedAt: now,
+      });
+
       return { success: true, url };
     }),
 
   // ─── Update Document Status ─────────────────────────────────────────────────
   updateDocStatus: protectedProcedure
-    .input(z.object({
-      docId: z.number(),
-      status: z.enum(['uploaded_pending_review', 'approved', 'rejected', 'not_uploaded']),
-      rejectionReason: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        docId: z.number(),
+        status: z.enum(["uploaded_pending_review", "approved", "rejected", "not_uploaded"]),
+        rejectionReason: z.string().optional(),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
-      await db.execute(
-        `UPDATE project_stage_documents 
-         SET docStatus = ?, rejectionReason = ?, reviewedByUserId = ?, reviewedAt = NOW()
-         WHERE id = ?`,
-        [input.status, input.rejectionReason ?? null, ctx.user.id, input.docId]
-      );
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+      await db
+        .update(projectStageDocuments)
+        .set({
+          docStatus: input.status,
+          rejectionReason: input.rejectionReason ?? null,
+          reviewedByUserId: ctx.user.id,
+          reviewedAt: now,
+        })
+        .where(eq(projectStageDocuments.id, input.docId));
       return { success: true };
     }),
 
@@ -263,43 +337,54 @@ export const stageDataRouter = router({
     .input(z.object({ docId: z.number() }))
     .mutation(async ({ input }) => {
       const db = await getDb();
-      await db.execute(`DELETE FROM project_stage_documents WHERE id = ?`, [input.docId]);
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      await db.delete(projectStageDocuments).where(eq(projectStageDocuments.id, input.docId));
       return { success: true };
     }),
 
-  // ─── Get Documents (returns requirements + their docs + stats) ───────────────────
+  // ─── Get Documents (returns requirements + their docs + stats) ───────────────
   getDocuments: protectedProcedure
     .input(z.object({ projectId: z.number(), serviceCode: z.string() }))
     .query(async ({ input }) => {
       const db = await getDb();
-      // Get all document requirements for this service
-      const [reqRows] = await db.execute<any[]>(
-        `SELECT requirementCode, nameAr, isMandatory, descriptionAr
-         FROM lifecycle_requirements
-         WHERE serviceCode = ? AND reqType = 'document'
-         ORDER BY sortOrder`,
-        [input.serviceCode]
-      );
-      // Get all uploaded docs for this project+service
-      const [docRows] = await db.execute<any[]>(
-        `SELECT * FROM project_stage_documents
-         WHERE projectId = ? AND serviceCode = ?
-         ORDER BY uploadedAt DESC`,
-        [input.projectId, input.serviceCode]
-      );
-      // Group docs by requirementCode
-      const docsByReq: Record<string, any[]> = {};
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+
+      const reqRows = await db
+        .select()
+        .from(lifecycleRequirements)
+        .where(
+          and(
+            eq(lifecycleRequirements.serviceCode, input.serviceCode),
+            eq(lifecycleRequirements.reqType, "document")
+          )
+        )
+        .orderBy(lifecycleRequirements.sortOrder);
+
+      const docRows = await db
+        .select()
+        .from(projectStageDocuments)
+        .where(
+          and(
+            eq(projectStageDocuments.projectId, input.projectId),
+            eq(projectStageDocuments.serviceCode, input.serviceCode)
+          )
+        )
+        .orderBy(projectStageDocuments.uploadedAt);
+
+      const docsByReq: Record<string, typeof docRows> = {};
       for (const doc of docRows) {
         if (!docsByReq[doc.requirementCode]) docsByReq[doc.requirementCode] = [];
         docsByReq[doc.requirementCode].push(doc);
       }
-      // Merge requirements with their docs
-      const requirements = reqRows.map((req: any) => ({
+
+      const requirements = reqRows.map((req) => ({
         ...req,
         documents: docsByReq[req.requirementCode] ?? [],
       }));
-      const uploaded = requirements.filter((r: any) => r.documents.length > 0).length;
-      const missingMandatory = requirements.filter((r: any) => r.isMandatory && r.documents.length === 0).length;
+
+      const uploaded = requirements.filter((r) => r.documents.length > 0).length;
+      const missingMandatory = requirements.filter((r) => r.isMandatory && r.documents.length === 0).length;
+
       return {
         requirements,
         stats: { total: requirements.length, uploaded, missingMandatory },

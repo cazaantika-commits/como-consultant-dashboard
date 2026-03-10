@@ -670,11 +670,10 @@ function ServiceDetailPanel({
         )}
 
         <div className="p-4 space-y-2">
-          {/* Use rich StageDataTab for البيانات tab */}
+          {/* Use rich StageDataTab for البيانات tab, StageDocumentsTab for المستندات tab */}
           {activeTab === "data" ? (
             <StageDataTab projectId={projectId} serviceCode={service.serviceCode} />
-          ) : activeTab === "documents" && docReqs.length === 0 ? (
-            /* If no legacy doc requirements, use StageDocumentsTab */
+          ) : activeTab === "documents" ? (
             <StageDocumentsTab projectId={projectId} serviceCode={service.serviceCode} />
           ) : reqQuery.isLoading ? (
             <div className="text-center py-8 text-muted-foreground text-sm">جاري التحميل...</div>
@@ -688,7 +687,7 @@ function ServiceDetailPanel({
               />
             ))
           )}
-          {!reqQuery.isLoading && activeTab !== "data" && !(activeTab === "documents" && docReqs.length === 0) && activeReqs.length === 0 && (
+          {!reqQuery.isLoading && activeTab !== "data" && activeTab !== "documents" && activeReqs.length === 0 && (
             <div className="text-center py-6 text-muted-foreground text-sm">
               لا توجد بنود في هذا التصنيف
             </div>
@@ -956,11 +955,24 @@ export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean 
     <div className={`${embedded ? "" : "min-h-screen bg-background"}`} dir="rtl">
       <div className="max-w-3xl mx-auto px-4 py-6">
         {/* Header */}
-        <div className="mb-6">
-          <h2 className="text-xl font-bold text-foreground">مراحل DLD / RERA</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            دورة حياة المشروع العقاري — من التسجيل حتى الإغلاق
-          </p>
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-foreground">مراحل DLD / RERA</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              دورة حياة المشروع العقاري — من التسجيل حتى الإغلاق
+            </p>
+          </div>
+          {selectedProjectId && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5 border-emerald-200 text-emerald-700 hover:bg-emerald-50 shrink-0"
+              onClick={() => window.open(`/api/lifecycle/compliance-report?projectId=${selectedProjectId}`, '_blank')}
+            >
+              <FileText className="w-4 h-4" />
+              تقرير الامتثال
+            </Button>
+          )}
         </div>
 
         {/* Project selector */}

@@ -13,6 +13,8 @@ import { serveStatic, setupVite } from "./vite";
 import { initTelegramBot, registerCallbackHandler, getBotInfo } from "../telegramBot";
 import { startEmailNotificationService } from "../emailNotificationService";
 import { startLifecycleDeadlineScheduler } from "../lifecycleDeadlineScheduler";
+import complianceReportRoute from "../complianceReport";
+import lifecycleApiRoute from "../lifecycleApiRoute";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -58,6 +60,10 @@ async function startServer() {
   app.use("/api/agent", agentApiRoute);
   // File upload API (for command center items)
   app.use("/api/upload", fileUploadRoute);
+  // Compliance report HTML/PDF for DLD/RERA lifecycle
+  app.use("/api/lifecycle", complianceReportRoute);
+  // Lifecycle AI API (structured JSON for agents)
+  app.use("/api/lifecycle", lifecycleApiRoute);
 
   // tRPC API
   app.use(
