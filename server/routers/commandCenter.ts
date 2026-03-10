@@ -1220,11 +1220,13 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
         const fin = fins.find(f => f.consultantId === pc.consultantId);
         let designAmount = 0, supervisionAmount = 0;
         if (fin) {
-          designAmount = fin.designType === 'pct' ? constructionCost * ((fin.designValue || 0) / 100) : (fin.designValue || 0);
-          supervisionAmount = fin.supervisionType === 'pct' ? constructionCost * ((fin.supervisionValue || 0) / 100) : (fin.supervisionValue || 0);
+          const dVal = Number(fin.designValue) || 0;
+          const sVal = Number(fin.supervisionValue) || 0;
+          designAmount = fin.designType === 'pct' ? constructionCost * (dVal / 100) : dVal;
+          supervisionAmount = fin.supervisionType === 'pct' ? constructionCost * (sVal / 100) : sVal;
         }
-        const totalFees = designAmount + supervisionAmount;
-        return { id: c?.id || pc.consultantId, name: c?.name || '\u063a\u064a\u0631 \u0645\u0639\u0631\u0648\u0641', designType: fin?.designType || 'pct', designValue: fin?.designValue || 0, supervisionType: fin?.supervisionType || 'pct', supervisionValue: fin?.supervisionValue || 0, designAmount, supervisionAmount, totalFees, proposalLink: (fin as any)?.proposalLink || null, financialScore: 0 as number };
+        const totalFees = Number(designAmount) + Number(supervisionAmount);
+        return { id: c?.id || pc.consultantId, name: c?.name || '\u063a\u064a\u0631 \u0645\u0639\u0631\u0648\u0641', designType: fin?.designType || 'pct', designValue: Number(fin?.designValue) || 0, supervisionType: fin?.supervisionType || 'pct', supervisionValue: Number(fin?.supervisionValue) || 0, designAmount: Number(designAmount), supervisionAmount: Number(supervisionAmount), totalFees: Number(totalFees), proposalLink: (fin as any)?.proposalLink || null, financialScore: 0 as number };
       });
       const sortedByFees = [...consultantData].filter(c => c.totalFees > 0).sort((a, b) => a.totalFees - b.totalFees);
       const lowestFee = sortedByFees[0]?.totalFees || 1;
@@ -1359,10 +1361,12 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
         const fin = fins.find(f => f.consultantId === pc.consultantId);
         let designAmount = 0, supervisionAmount = 0;
         if (fin) {
-          designAmount = fin.designType === 'pct' ? constructionCost * ((fin.designValue || 0) / 100) : (fin.designValue || 0);
-          supervisionAmount = fin.supervisionType === 'pct' ? constructionCost * ((fin.supervisionValue || 0) / 100) : (fin.supervisionValue || 0);
+          const dVal = Number(fin.designValue) || 0;
+          const sVal = Number(fin.supervisionValue) || 0;
+          designAmount = fin.designType === 'pct' ? constructionCost * (dVal / 100) : dVal;
+          supervisionAmount = fin.supervisionType === 'pct' ? constructionCost * (sVal / 100) : sVal;
         }
-        const totalFees = designAmount + supervisionAmount;
+        const totalFees = Number(designAmount) + Number(supervisionAmount);
         const consScores = allScores.filter(s => s.consultantId === pc.consultantId);
         let technicalWeighted = 0;
         CRITERIA_WEIGHTS.forEach(cw => {
