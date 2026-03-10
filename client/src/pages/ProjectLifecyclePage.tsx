@@ -897,7 +897,7 @@ export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean 
   const [selectedStage, setSelectedStage] = useState<{ code: string; name: string } | null>(null);
   const [showAlerts, setShowAlerts] = useState(false);
 
-  const projectsQuery = trpc.projects.getAll.useQuery();
+  const projectsQuery = trpc.projects.list.useQuery();
   const stagesQuery = trpc.lifecycle.getProjectStageStatuses.useQuery(
     { projectId: selectedProjectId! },
     { enabled: !!selectedProjectId }
