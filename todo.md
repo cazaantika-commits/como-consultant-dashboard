@@ -2298,3 +2298,6 @@
 - [ ] إصلاح مشكلة عدم تجميع الأرقام من دراسات جويل: الأرقام لا تُجمّع بشكل صحيح عند نقلها إلى مركز القيادة وتقييم الاستشاريين- [x] نظام الطلبات والاستفسارات التفاعلي: جدول قاعدة بيانات (مرسل، مستقبل، حالة، ردود)
 - [x] نظام الطلبات والاستفسارات التفاعلي: إجراءات السيرفر (إنشاء، قائمة، رد، موافقة/رفض)
 - [x] نظام الطلبات والاستفسارات التفاعلي: واجهة مستخدم مع صندوق الوارد والمرسل والمحادثة
+- [x] Auto-apply Joel outputs to Competition Pricing when Engine 11 completes (no manual button)
+- [x] Show warning banner in Cash Flow when feasibility numbers are newer than last sync
+- [x] Add "Data is out of sync" indicator across sections when data is stale

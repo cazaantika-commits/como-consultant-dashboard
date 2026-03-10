@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { costsCashFlow, marketOverview, competitionPricing, feasibilityStudies, projects } from "../../drizzle/schema";
+import { costsCashFlow, marketOverview, competitionPricing, feasibilityStudies, projects, joelleAnalysisStages } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { invokeLLM } from "../_core/llm";
 
@@ -267,5 +267,76 @@ BUA: ${bua > 0 ? bua.toLocaleString() : 'غير محدد'} قدم²
         console.error("Error generating costs report:", error);
         throw new Error("فشل في إنشاء التقرير: " + error.message);
       }
+    }),
+
+  // ─── DATA SYNC STATUS: compare timestamps across sections ───
+  getSyncStatus: publicProcedure
+    .input(z.number()) // projectId
+    .query(async ({ ctx, input: projectId }) => {
+      if (!ctx.user) return null;
+      const db = await getDb();
+      if (!db) return null;
+
+      // Get feasibility study updatedAt
+      const feasRows = await db.select({ updatedAt: feasibilityStudies.updatedAt })
+        .from(feasibilityStudies)
+        .where(and(eq(feasibilityStudies.projectId, projectId), eq(feasibilityStudies.userId, ctx.user.id)));
+      const feasUpdatedAt = feasRows[0]?.updatedAt ? new Date(feasRows[0].updatedAt) : null;
+
+      // Get competition pricing updatedAt (Joel's prices applied here)
+      const cpRows = await db.select({ updatedAt: competitionPricing.updatedAt })
+        .from(competitionPricing)
+        .where(and(eq(competitionPricing.projectId, projectId), eq(competitionPricing.userId, ctx.user.id)));
+      const cpUpdatedAt = cpRows[0]?.updatedAt ? new Date(cpRows[0].updatedAt) : null;
+
+      // Get market overview updatedAt (Joel's unit mix applied here)
+      const moRows = await db.select({ updatedAt: marketOverview.updatedAt })
+        .from(marketOverview)
+        .where(and(eq(marketOverview.projectId, projectId), eq(marketOverview.userId, ctx.user.id)));
+      const moUpdatedAt = moRows[0]?.updatedAt ? new Date(moRows[0].updatedAt) : null;
+
+      // Get costs cash flow updatedAt
+      const costsRows = await db.select({ updatedAt: costsCashFlow.updatedAt })
+        .from(costsCashFlow)
+        .where(and(eq(costsCashFlow.projectId, projectId), eq(costsCashFlow.userId, ctx.user.id)));
+      const costsUpdatedAt = costsRows[0]?.updatedAt ? new Date(costsRows[0].updatedAt) : null;
+
+      // Get Joel's last completed Engine 11 run
+      const joelRows = await db.select({ updatedAt: joelleAnalysisStages.updatedAt })
+        .from(joelleAnalysisStages)
+        .where(and(
+          eq(joelleAnalysisStages.projectId, projectId),
+          eq(joelleAnalysisStages.userId, ctx.user.id),
+          eq(joelleAnalysisStages.stageNumber, 11),
+          eq(joelleAnalysisStages.stageStatus, 'completed')
+        ));
+      const joelLastRun = joelRows[0]?.updatedAt ? new Date(joelRows[0].updatedAt) : null;
+
+      // Determine sync issues
+      const warnings: string[] = [];
+
+      // If Joel ran but competition pricing is older than Joel's run
+      if (joelLastRun && cpUpdatedAt && cpUpdatedAt < joelLastRun) {
+        const diffHours = Math.round((joelLastRun.getTime() - cpUpdatedAt.getTime()) / 3600000);
+        warnings.push(`جويل أجرت تحليلاً جديداً منذ ${diffHours} ساعة — أسعار التسعير قد تكون غير محدّثة`);
+      }
+
+      // If feasibility study is newer than costs cash flow
+      if (feasUpdatedAt && costsUpdatedAt && feasUpdatedAt > costsUpdatedAt) {
+        const diffHours = Math.round((feasUpdatedAt.getTime() - costsUpdatedAt.getTime()) / 3600000);
+        if (diffHours > 0) {
+          warnings.push(`دراسة الجدوى تحدّثت منذ ${diffHours} ساعة — اضغط على "مزامنة التدفقات" لتحديث التدفقات النقدية`);
+        }
+      }
+
+      return {
+        feasUpdatedAt: feasUpdatedAt?.toISOString() || null,
+        cpUpdatedAt: cpUpdatedAt?.toISOString() || null,
+        moUpdatedAt: moUpdatedAt?.toISOString() || null,
+        costsUpdatedAt: costsUpdatedAt?.toISOString() || null,
+        joelLastRun: joelLastRun?.toISOString() || null,
+        warnings,
+        isOutOfSync: warnings.length > 0,
+      };
     }),
 });

@@ -1836,6 +1836,116 @@ JSON:
         }
 
         await saveStageResult(db, ctx.user.id, projectId, 11, STAGES[10].nameAr, 'completed', outputSummary, JSON.stringify(outputFields));
+
+        // ─── AUTO-APPLY: Push Joel outputs to Competition Pricing & Market Overview ───
+        // This runs automatically so no manual button is needed
+        try {
+          const allStages = await db.select().from(joelleAnalysisStages)
+            .where(and(
+              eq(joelleAnalysisStages.userId, ctx.user.id),
+              eq(joelleAnalysisStages.projectId, projectId),
+            ))
+            .orderBy(joelleAnalysisStages.stageNumber);
+
+          const s6 = allStages.find(s => s.stageNumber === 6 && s.stageStatus === 'completed');
+          const s7 = allStages.find(s => s.stageNumber === 7 && s.stageStatus === 'completed');
+
+          // Apply Engine 6 → Market Overview (unit mix)
+          if (s6?.stageDataJson) {
+            const d6 = JSON.parse(s6.stageDataJson);
+            const um = d6.unitMix || {};
+            const rm = d6.retailMix || {};
+            const moData: any = {
+              residentialStudioPct: String(um.studio?.pct ?? 0),
+              residentialStudioAvgArea: Math.round(um.studio?.avgSize ?? 0),
+              residential1brPct: String(um.oneBr?.pct ?? 0),
+              residential1brAvgArea: Math.round(um.oneBr?.avgSize ?? 0),
+              residential2brPct: String(um.twoBr?.pct ?? 0),
+              residential2brAvgArea: Math.round(um.twoBr?.avgSize ?? 0),
+              residential3brPct: String(um.threeBr?.pct ?? 0),
+              residential3brAvgArea: Math.round(um.threeBr?.avgSize ?? 0),
+              retailSmallPct: String(rm.small?.pct ?? 0),
+              retailSmallAvgArea: Math.round(rm.small?.avgSize ?? 0),
+              retailMediumPct: String(rm.medium?.pct ?? 0),
+              retailMediumAvgArea: Math.round(rm.medium?.avgSize ?? 0),
+              retailLargePct: String(rm.large?.pct ?? 0),
+              retailLargeAvgArea: Math.round(rm.large?.avgSize ?? 0),
+              finishingQuality: d6.finishingQuality || 'ممتاز',
+              aiRecommendationsJson: s6.stageDataJson,
+              aiReportGeneratedAt: new Date(),
+            };
+            const moEx = await db.select().from(marketOverview)
+              .where(and(eq(marketOverview.projectId, projectId), eq(marketOverview.userId, ctx.user.id)));
+            if (moEx[0]) {
+              await db.update(marketOverview).set(moData).where(eq(marketOverview.id, moEx[0].id));
+            } else {
+              await db.insert(marketOverview).values({ userId: ctx.user.id, projectId, ...moData });
+            }
+          }
+
+          // Apply Engine 7 → Competition Pricing (prices per sqft)
+          if (s7?.stageDataJson) {
+            const d7 = JSON.parse(s7.stageDataJson);
+            const sc = d7.scenarios || {};
+            const pp = d7.paymentPlan || {};
+            const opt = sc.optimistic?.residential || {};
+            const optRet = sc.optimistic?.retail || {};
+            const optOff = sc.optimistic?.offices || {};
+            const base = sc.base?.residential || {};
+            const baseRet = sc.base?.retail || {};
+            const baseOff = sc.base?.offices || {};
+            const cons = sc.conservative?.residential || {};
+            const consRet = sc.conservative?.retail || {};
+            const consOff = sc.conservative?.offices || {};
+            const cpData: any = {
+              optStudioPrice: Math.round(opt.studio ?? 0), opt1brPrice: Math.round(opt.oneBr ?? 0),
+              opt2brPrice: Math.round(opt.twoBr ?? 0), opt3brPrice: Math.round(opt.threeBr ?? 0),
+              optRetailSmallPrice: Math.round(optRet.small ?? 0), optRetailMediumPrice: Math.round(optRet.medium ?? 0),
+              optRetailLargePrice: Math.round(optRet.large ?? 0),
+              optOfficeSmallPrice: Math.round(optOff.small ?? 0), optOfficeMediumPrice: Math.round(optOff.medium ?? 0),
+              optOfficeLargePrice: Math.round(optOff.large ?? 0),
+              baseStudioPrice: Math.round(base.studio ?? 0), base1brPrice: Math.round(base.oneBr ?? 0),
+              base2brPrice: Math.round(base.twoBr ?? 0), base3brPrice: Math.round(base.threeBr ?? 0),
+              baseRetailSmallPrice: Math.round(baseRet.small ?? 0), baseRetailMediumPrice: Math.round(baseRet.medium ?? 0),
+              baseRetailLargePrice: Math.round(baseRet.large ?? 0),
+              baseOfficeSmallPrice: Math.round(baseOff.small ?? 0), baseOfficeMediumPrice: Math.round(baseOff.medium ?? 0),
+              baseOfficeLargePrice: Math.round(baseOff.large ?? 0),
+              consStudioPrice: Math.round(cons.studio ?? 0), cons1brPrice: Math.round(cons.oneBr ?? 0),
+              cons2brPrice: Math.round(cons.twoBr ?? 0), cons3brPrice: Math.round(cons.threeBr ?? 0),
+              consRetailSmallPrice: Math.round(consRet.small ?? 0), consRetailMediumPrice: Math.round(consRet.medium ?? 0),
+              consRetailLargePrice: Math.round(consRet.large ?? 0),
+              consOfficeSmallPrice: Math.round(consOff.small ?? 0), consOfficeMediumPrice: Math.round(consOff.medium ?? 0),
+              consOfficeLargePrice: Math.round(consOff.large ?? 0),
+              paymentBookingPct: String(pp.booking?.pct ?? 10),
+              paymentBookingTiming: pp.booking?.timing || 'عند التوقيع',
+              paymentConstructionPct: String(pp.construction?.pct ?? 60),
+              paymentConstructionTiming: pp.construction?.timing || 'أثناء الإنشاء',
+              paymentHandoverPct: String(pp.handover?.pct ?? 30),
+              paymentHandoverTiming: pp.handover?.timing || 'عند التسليم',
+              paymentDeferredPct: String(pp.deferred?.pct ?? 0),
+              paymentDeferredTiming: pp.deferred?.timing || '',
+              activeScenario: 'base',
+              aiRecommendationsJson: s7.stageDataJson,
+              aiReportGeneratedAt: new Date(),
+            };
+            const cpEx = await db.select().from(competitionPricing)
+              .where(and(eq(competitionPricing.projectId, projectId), eq(competitionPricing.userId, ctx.user.id)));
+            if (cpEx[0]) {
+              await db.update(competitionPricing).set(cpData).where(eq(competitionPricing.id, cpEx[0].id));
+            } else {
+              await db.insert(competitionPricing).values({ userId: ctx.user.id, projectId, ...cpData });
+            }
+          }
+
+          outputSummary += '\n## ✅ تم تطبيق مخرجات جويل تلقائياً\n';
+          outputSummary += '- توزيع الوحدات → النظرة العامة والسوق\n';
+          outputSummary += '- أسعار التسعير (3 سيناريوهات) → المنافسة والتسعير\n';
+          outputSummary += '- خطة السداد → المنافسة والتسعير\n';
+        } catch (autoApplyErr: any) {
+          console.error('Auto-apply error (non-fatal):', autoApplyErr.message);
+          outputSummary += '\n## ⚠️ تعذّر التطبيق التلقائي — يرجى الضغط على "تطبيق مخرجات جويل" يدوياً\n';
+        }
+
         return { success: true, output: outputSummary, dataJson: JSON.stringify(outputFields) };
       } catch (error: any) {
         await saveStageResult(db, ctx.user.id, projectId, 11, STAGES[10].nameAr, 'error', '', null, error.message);

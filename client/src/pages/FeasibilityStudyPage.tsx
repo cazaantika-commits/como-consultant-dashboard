@@ -154,6 +154,10 @@ export default function FeasibilityStudyPage({ embedded }: { embedded?: boolean 
   // Studies query - get studies for selected project
   const studiesByProjectQuery = trpc.feasibility.listByProject.useQuery(selectedProjectId || 0, { enabled: !!selectedProjectId });
   const studyQuery = trpc.feasibility.getById.useQuery(selectedStudyId || 0, { enabled: !!selectedStudyId });
+  const syncStatusQuery = trpc.costsCashFlow.getSyncStatus.useQuery(selectedProjectId || 0, {
+    enabled: !!selectedProjectId,
+    refetchInterval: 60000,
+  });
 
   // Auto-load or auto-create study when project is selected
   useEffect(() => {
@@ -378,8 +382,11 @@ export default function FeasibilityStudyPage({ embedded }: { embedded?: boolean 
                 <TabsTrigger value="tab9" className="gap-1.5 text-xs data-[state=active]:bg-gradient-to-l data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white">
                   🧠 محرك جويل
                 </TabsTrigger>
-                <TabsTrigger value="tab5" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <TabsTrigger value="tab5" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground relative">
                   💰 الميزانية والتسعير
+                  {syncStatusQuery.data?.isOutOfSync && (
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-orange-500 rounded-full border border-white" title="بيانات غير متزامنة" />
+                  )}
                 </TabsTrigger>
               </TabsList>
 

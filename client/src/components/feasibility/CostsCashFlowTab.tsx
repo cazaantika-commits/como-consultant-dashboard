@@ -10,7 +10,8 @@ import { toast } from "sonner";
 import {
   Loader2, Sparkles, ShieldCheck, DollarSign, FileWarning,
   TrendingUp, TrendingDown, Minus, RefreshCw, ArrowUpRight, ArrowDownRight,
-  ChevronDown, ChevronUp, Building2, BarChart3, CreditCard, Save, Zap, CheckCircle2
+  ChevronDown, ChevronUp, Building2, BarChart3, CreditCard, Save, Zap, CheckCircle2,
+  AlertTriangle, CheckCircle
 } from "lucide-react";
 import { Streamdown } from "streamdown";
 
@@ -285,8 +286,12 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
     onSuccess: () => { costsQuery.refetch(); toast.success("تم تحديث حالة الاعتماد"); },
   });
   const syncMutation = trpc.cashFlowProgram.syncFromFeasibility.useMutation({
-    onSuccess: () => toast.success("تم تحديث التدفقات النقدية"),
+    onSuccess: () => { syncStatusQuery.refetch(); toast.success("تم تحديث التدفقات النقدية"); },
     onError: (err) => toast.error(err.message || "فشل في التحديث"),
+  });
+  const syncStatusQuery = trpc.costsCashFlow.getSyncStatus.useQuery(projectId!, {
+    enabled: !!projectId,
+    refetchInterval: 60000, // refresh every minute
   });
 
   useEffect(() => {
@@ -750,6 +755,27 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
               </Button>
             </div>
           </div>
+
+          {/* ─── DATA SYNC WARNING BANNER ─── */}
+          {syncStatusQuery.data?.isOutOfSync && (
+            <div className="bg-orange-50 border border-orange-300 rounded-lg p-3 flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-orange-600 mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-orange-800">تحذير: البيانات غير متزامنة</p>
+                <ul className="mt-1 space-y-0.5">
+                  {syncStatusQuery.data.warnings.map((w, i) => (
+                    <li key={i} className="text-xs text-orange-700">• {w}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+          {syncStatusQuery.data && !syncStatusQuery.data.isOutOfSync && syncStatusQuery.data.feasUpdatedAt && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-2 flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
+              <p className="text-xs text-green-700">جميع البيانات متزامنة — آخر تحديث: {new Date(syncStatusQuery.data.feasUpdatedAt).toLocaleString('ar-AE')}</p>
+            </div>
+          )}
 
           <MissingDataWarning items={missing} />
 
