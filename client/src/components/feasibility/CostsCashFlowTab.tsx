@@ -791,6 +791,37 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
             </Card>
           )}
 
+          {/* ═══ Financial Summary Banner ═══ */}
+          <div className="rounded-2xl overflow-hidden shadow-lg border border-border/20">
+            <div className="bg-gradient-to-l from-slate-900 via-slate-800 to-slate-900 px-5 py-3 flex items-center gap-2">
+              <div className="w-1.5 h-5 rounded-full bg-sky-400" />
+              <span className="text-xs font-bold text-white/70 tracking-widest uppercase">ملخص مالي — السيناريو الأساسي</span>
+            </div>
+            <div className="grid grid-cols-2 divide-x divide-x-reverse divide-border/30">
+              <div className="bg-gradient-to-br from-sky-600 to-sky-700 px-6 py-5 flex flex-col gap-1">
+                <span className="text-[11px] font-semibold text-sky-100/80 tracking-wide">إجمالي الإيرادات</span>
+                <span className="text-2xl font-black text-white tabular-nums" dir="ltr">{fmt(costs.totalRevenue)}</span>
+                <span className="text-[10px] text-sky-200/70">درهم إماراتي</span>
+              </div>
+              <div className="bg-gradient-to-br from-slate-700 to-slate-800 px-6 py-5 flex flex-col gap-1">
+                <span className="text-[11px] font-semibold text-slate-300/80 tracking-wide">إجمالي التكاليف</span>
+                <span className="text-2xl font-black text-white tabular-nums" dir="ltr">{fmt(costs.totalCosts)}</span>
+                <span className="text-[10px] text-slate-400/70">درهم إماراتي</span>
+              </div>
+            </div>
+            <div className={`px-6 py-3 flex items-center justify-between ${costs.profit >= 0 ? 'bg-gradient-to-l from-emerald-700 to-emerald-800' : 'bg-gradient-to-l from-red-700 to-red-800'}`}>
+              <span className="text-[12px] font-bold text-white/80">صافي الربح</span>
+              <div className="flex items-center gap-3">
+                <span className="text-lg font-black text-white tabular-nums" dir="ltr">{fmt(costs.profit)}</span>
+                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                  costs.profitMargin >= 15 ? 'bg-emerald-500/30 text-emerald-100' :
+                  costs.profitMargin >= 10 ? 'bg-amber-500/30 text-amber-100' :
+                  'bg-red-500/30 text-red-100'
+                }`}>{costs.profitMargin.toFixed(1)}%</span>
+              </div>
+            </div>
+          </div>
+
           {/* Cost items flat list */}
           <div className="bg-white rounded-xl border border-border/60 shadow-sm overflow-hidden">
             {allCostItems.map((item, i) => (
