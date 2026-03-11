@@ -945,29 +945,86 @@ export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean 
 
   return (
     <div className={`${embedded ? "" : "min-h-screen bg-background"}`} dir="rtl">
-      <div className="max-w-3xl mx-auto px-4 py-6">
-        {/* Header */}
-        <div className="mb-6 flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-bold text-foreground">مراحل DLD / RERA</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              دورة حياة المشروع العقاري — من التسجيل حتى الإغلاق
-            </p>
-          </div>
-          {selectedProjectId && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-1.5 border-emerald-200 text-emerald-700 hover:bg-emerald-50 shrink-0"
-              onClick={() => { setReportStageFilter("all"); setShowReportDialog(true); }}
-            >
-              <FileText className="w-4 h-4" />
-              تقرير الامتثال
-            </Button>
-          )}
 
-          {/* Compliance Report Dialog */}
-          <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
+      {/* ═══════════════════════════════════════════════════════
+           HERO BANNER — مسار الامتثال التنظيمي
+      ═══════════════════════════════════════════════════════ */}
+      <div
+        className="relative overflow-hidden"
+        style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 45%, #4c1d95 75%, #6d28d9 100%)" }}
+      >
+        {/* Decorative blobs */}
+        <div className="absolute -top-12 -right-12 w-56 h-56 rounded-full opacity-20"
+          style={{ background: "radial-gradient(circle, #a78bfa, transparent)" }} />
+        <div className="absolute -bottom-10 -left-10 w-44 h-44 rounded-full opacity-15"
+          style={{ background: "radial-gradient(circle, #818cf8, transparent)" }} />
+        <div className="absolute top-1/2 left-1/3 w-32 h-32 rounded-full opacity-10"
+          style={{ background: "radial-gradient(circle, #c4b5fd, transparent)" }} />
+
+        <div className="relative max-w-3xl mx-auto px-6 pt-7 pb-6">
+          {/* Title row */}
+          <div className="flex items-start justify-between gap-4 mb-5">
+            <div className="flex items-center gap-4">
+              <div
+                className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
+                style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)", backdropFilter: "blur(12px)" }}
+              >
+                <Building2 className="w-7 h-7 text-white" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-white leading-tight">مسار الامتثال التنظيمي</h2>
+                <p className="text-violet-300 text-sm mt-0.5">دورة حياة المشروع العقاري — DLD / RERA</p>
+              </div>
+            </div>
+            {selectedProjectId && (
+              <button
+                onClick={() => { setReportStageFilter("all"); setShowReportDialog(true); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium text-white shrink-0 transition-all hover:scale-105"
+                style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)", backdropFilter: "blur(8px)" }}
+              >
+                <FileText className="w-4 h-4" />
+                تقرير الامتثال
+              </button>
+            )}
+          </div>
+
+          {/* Stats row — only when project selected */}
+          {selectedProjectId && !stagesQuery.isLoading && summary.length > 0 && (
+            <>
+              <div className="grid grid-cols-4 gap-3 mb-4">
+                {[
+                  { value: `${overallPct}%`, label: "نسبة الإنجاز", color: "text-white" },
+                  { value: completedStages, label: "مراحل مكتملة", color: "text-emerald-300" },
+                  { value: completedServices, label: "خدمات مكتملة", color: "text-sky-300" },
+                  { value: totalServices - completedServices, label: "خدمات متبقية", color: "text-amber-300" },
+                ].map((stat, i) => (
+                  <div
+                    key={i}
+                    className="rounded-xl p-3 text-center"
+                    style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)" }}
+                  >
+                    <div className={`text-2xl font-bold ${stat.color}`}>{stat.value}</div>
+                    <div className="text-[10px] text-violet-300 mt-0.5">{stat.label}</div>
+                  </div>
+                ))}
+              </div>
+              {/* Progress bar */}
+              <div className="w-full rounded-full h-2" style={{ background: "rgba(255,255,255,0.15)" }}>
+                <div
+                  className="h-2 rounded-full transition-all duration-700"
+                  style={{ width: `${overallPct}%`, background: "linear-gradient(90deg, #34d399, #10b981)" }}
+                />
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+      {/* ═══════════════════════════════════════════════════════ */}
+
+      <div className="max-w-3xl mx-auto px-4 py-6">
+
+        {/* Compliance Report Dialog */}
+        <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
             <DialogContent className="max-w-md" dir="rtl">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
@@ -1016,11 +1073,15 @@ export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean 
               </div>
             </DialogContent>
           </Dialog>
-        </div>
 
-        {/* Project selector */}
+        {/* ─── اختيار المشروع ─── */}
         <div className="mb-5">
-          <label className="text-sm font-medium text-foreground mb-2 block">اختر المشروع</label>
+          <label className="block mb-2">
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground/70 px-3 py-1 rounded-full bg-muted/60 border border-border/50">
+              <Building2 className="w-3 h-3" />
+              اختيار المشروع
+            </span>
+          </label>
           <Select
             value={selectedProjectId?.toString() ?? ""}
             onValueChange={(v) => {
@@ -1041,7 +1102,7 @@ export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean 
           </Select>
         </div>
 
-        {/* Deadline Alerts Panel */}
+        {/* ─── تنبيهات المواعيد ─── */}
         {selectedProjectId && (alertsQuery.data?.length ?? 0) > 0 && (
           <div className="mb-5">
             <button
@@ -1111,41 +1172,20 @@ export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean 
           </div>
         )}
 
-        {/* Progress summary card */}
-        {selectedProjectId && !stagesQuery.isLoading && summary.length > 0 && (
-          <div className="bg-card border border-border rounded-2xl p-4 mb-5">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-primary" />
-                <span className="text-sm font-semibold text-foreground">التقدم الكلي للمشروع</span>
-              </div>
-              <span className="text-2xl font-bold text-primary">{overallPct}%</span>
-            </div>
-            <Progress value={overallPct} className="h-3 mb-3" />
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="bg-muted/40 rounded-xl p-2">
-                <div className="text-lg font-bold text-foreground">{completedStages}</div>
-                <div className="text-[10px] text-muted-foreground">مراحل مكتملة</div>
-              </div>
-              <div className="bg-muted/40 rounded-xl p-2">
-                <div className="text-lg font-bold text-foreground">{completedServices}</div>
-                <div className="text-[10px] text-muted-foreground">خدمات مكتملة</div>
-              </div>
-              <div className="bg-muted/40 rounded-xl p-2">
-                <div className="text-lg font-bold text-foreground">{totalServices - completedServices}</div>
-                <div className="text-[10px] text-muted-foreground">خدمات متبقية</div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Stages list */}
+        {/* Progress card removed — stats now shown in hero banner */}
+        {/* ─── قائمة المراحل ─── */}
+        <div className="mb-3">
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground/70 px-3 py-1 rounded-full bg-muted/60 border border-border/50">
+            <CheckCircle2 className="w-3 h-3" />
+            مراحل الامتثال
+          </span>
+        </div>
         {!selectedProjectId ? (
           <div className="text-center py-16 text-muted-foreground">
             <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
               <Building2 className="w-8 h-8 text-muted-foreground/50" />
             </div>
-            <p className="text-sm">اختر مشروعاً لعرض مراحل DLD/RERA</p>
+            <p className="text-sm">اختر مشروعاً لعرض مراحل DLD / RERA</p>
           </div>
         ) : stagesQuery.isLoading ? (
           <div className="text-center py-12 text-muted-foreground text-sm">جاري تحميل المراحل...</div>
@@ -1165,40 +1205,69 @@ export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean 
                 <button
                   key={stage.stageCode}
                   onClick={() => setSelectedStage({ code: stage.stageCode, name: stage.nameAr })}
-                  className="w-full text-right flex items-center gap-4 p-4 rounded-xl border transition-all duration-200 group bg-card border-border hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.99]"
+                  className="w-full text-right flex items-center gap-4 p-4 rounded-2xl border transition-all duration-200 group active:scale-[0.99] overflow-hidden relative"
+                  style={{
+                    background: isNotStarted ? "" : `linear-gradient(135deg, ${colors.gradient.includes('#') ? 'var(--card)' : 'var(--card)'}, var(--card))`,
+                    borderColor: isNotStarted ? "var(--border)" : colors.shadow.replace('0.3', '0.25'),
+                    boxShadow: isNotStarted ? "none" : `0 2px 12px ${colors.shadow}`,
+                  }}
                 >
+                  {/* Left accent bar */}
+                  {!isNotStarted && (
+                    <div
+                      className="absolute right-0 top-0 bottom-0 w-1 rounded-r-2xl"
+                      style={{ background: colors.gradient }}
+                    />
+                  )}
+
                   {/* Stage icon */}
                   <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-md group-hover:scale-105 transition-transform"
+                    className="w-14 h-14 rounded-2xl flex flex-col items-center justify-center shrink-0 transition-transform group-hover:scale-105"
                     style={{
                       background: isNotStarted ? "#e2e8f0" : colors.gradient,
-                      boxShadow: isNotStarted ? "none" : `0 4px 16px ${colors.shadow}`,
+                      boxShadow: isNotStarted ? "none" : `0 6px 20px ${colors.shadow}`,
                     }}
                   >
-                    <span className={`text-sm font-bold ${isNotStarted ? "text-slate-400" : "text-white"}`}>
+                    <span className={`text-lg font-black leading-none ${isNotStarted ? "text-slate-400" : "text-white"}`}>
                       {stage.stageCode.replace("STG-", "")}
                     </span>
+                    <span className={`text-[8px] font-medium mt-0.5 ${isNotStarted ? "text-slate-400" : "text-white/70"}`}>مرحلة</span>
                   </div>
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-semibold text-foreground">{stage.nameAr}</span>
-                      <span
-                        className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${stageStatusBadge(stage.status as StageStatus)}`}
-                      >
-                        {stageStatusLabel(stage.status as StageStatus)}
-                      </span>
+                    {/* Main title — large and bold */}
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className="text-base font-bold text-foreground leading-tight">{stage.nameAr}</span>
                     </div>
+                    {/* Status badge — clearly separated */}
+                    <span
+                      className={`inline-block text-[10px] px-2.5 py-0.5 rounded-full border font-semibold mb-2 ${stageStatusBadge(stage.status as StageStatus)}`}
+                    >
+                      {stageStatusLabel(stage.status as StageStatus)}
+                    </span>
+                    {/* Description */}
+                    {stage.descriptionAr && (
+                      <p className="text-xs text-muted-foreground line-clamp-1 mb-1.5">
+                        {stage.descriptionAr}
+                      </p>
+                    )}
+                    {/* Progress bar */}
                     {stageSummary && stageSummary.totalServices > 0 && (
-                      <div className="mt-2">
+                      <div>
                         <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
-                          <span>{stageSummary.completedServices} / {stageSummary.totalServices} خدمات</span>
-                          <span className="font-medium">{stageProgress}%</span>
+                          <span className="font-medium">{stageSummary.completedServices} / {stageSummary.totalServices} خدمات</span>
+                          <span
+                            className={`font-bold ${
+                              stageProgress === 100 ? "text-emerald-600" :
+                              stageProgress > 50 ? "text-blue-600" :
+                              stageProgress > 0 ? "text-amber-600" : "text-muted-foreground"
+                            }`}
+                          >{stageProgress}%</span>
                         </div>
-                        <div className="w-full bg-muted/50 rounded-full h-1.5">
+                        <div className="w-full bg-muted/60 rounded-full h-2">
                           <div
-                            className={`h-1.5 rounded-full transition-all ${
+                            className={`h-2 rounded-full transition-all ${
                               stageProgress === 100 ? "bg-emerald-500" :
                               stageProgress > 50 ? "bg-blue-500" :
                               stageProgress > 0 ? "bg-amber-500" : "bg-gray-300"
@@ -1208,15 +1277,10 @@ export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean 
                         </div>
                       </div>
                     )}
-                    {stage.descriptionAr && !stageSummary && (
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                        {stage.descriptionAr}
-                      </p>
-                    )}
                   </div>
 
                   {/* Arrow */}
-                  <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <ChevronRight className="w-5 h-5 text-muted-foreground/60 shrink-0 group-hover:text-foreground transition-colors" />
                 </button>
               );
             })}
