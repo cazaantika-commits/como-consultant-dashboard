@@ -42,6 +42,8 @@ import {
   RefreshCw,
   Trash2,
   Eye,
+  EyeOff,
+  Pencil,
   Home,
   Calculator,
   Shield,
@@ -1104,7 +1106,13 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
   });
 
   const [showAddCategory, setShowAddCategory] = useState(false);
-  const [categoryForm, setCategoryForm] = useState({ code: "", label: "", buaMinSqft: "", buaMaxSqft: "" });
+  const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [categoryForm, setCategoryForm] = useState({ code: "", label: "", buaMinSqft: "", buaMaxSqft: "", description: "" });
+
+  const deleteCategoryMutation = trpc.cpa.settings.upsertBuildingCategory.useMutation({
+    onSuccess: () => { categoriesQuery.refetch(); toast({ title: "تم التحديث" }); },
+    onError: (e) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
+  });
 
   const [showAddRole, setShowAddRole] = useState(false);
   const [roleForm, setRoleForm] = useState({ code: "", label: "", grade: "", teamType: "SITE", monthlyRateAed: "" });
@@ -1142,41 +1150,72 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
           </div>
           <div className="space-y-2">
             {(categoriesQuery.data ?? []).map((c: any) => (
-              <div key={c.id} className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <span className="font-medium">{c.label}</span>
-                  <span className="text-xs text-muted-foreground ml-2">({c.code})</span>
-                  {(c.bua_min_sqft || c.bua_max_sqft) && (
-                    <span className="text-xs text-muted-foreground ml-2">
-                      {c.bua_min_sqft ?? 0} - {c.bua_max_sqft ?? "∞"} قدم²
-                    </span>
+              <div key={c.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/30 transition-colors">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{c.label}</span>
+                    <span className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">{c.code}</span>
+                    <Badge variant={c.is_active ? "default" : "secondary"} className="text-xs">
+                      {c.is_active ? "نشط" : "غير نشط"}
+                    </Badge>
+                  </div>
+                  {(c.bua_min_sqft != null || c.bua_max_sqft != null) && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      النطاق: {c.bua_min_sqft != null ? c.bua_min_sqft.toLocaleString() : "0"} — {c.bua_max_sqft != null ? c.bua_max_sqft.toLocaleString() : "∞"} قدم²
+                    </p>
                   )}
+                  {c.description && <p className="text-xs text-muted-foreground mt-0.5">{c.description}</p>}
                 </div>
-                <Badge variant={c.is_active ? "default" : "secondary"}>
-                  {c.is_active ? "نشط" : "غير نشط"}
-                </Badge>
+                <div className="flex items-center gap-1 mr-2">
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => {
+                    setEditingCategory(c);
+                    setCategoryForm({ code: c.code, label: c.label, buaMinSqft: c.bua_min_sqft ?? "", buaMaxSqft: c.bua_max_sqft ?? "", description: c.description ?? "" });
+                    setShowAddCategory(true);
+                  }}>
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => {
+                    if (confirm(`هل تريد ${c.is_active ? 'تعطيل' : 'تفعيل'} فئة "${c.label}"؟`)) {
+                      upsertCategoryMutation.mutate({ id: c.id, code: c.code, label: c.label, buaMinSqft: c.bua_min_sqft, buaMaxSqft: c.bua_max_sqft, description: c.description, isActive: c.is_active ? 0 : 1 });
+                    }
+                  }}>
+                    {c.is_active ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-green-600" />}
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
-          <Dialog open={showAddCategory} onOpenChange={setShowAddCategory}>
+          <Dialog open={showAddCategory} onOpenChange={(open) => { setShowAddCategory(open); if (!open) { setEditingCategory(null); setCategoryForm({ code: "", label: "", buaMinSqft: "", buaMaxSqft: "", description: "" }); } }}>
             <DialogContent dir="rtl">
-              <DialogHeader><DialogTitle>إضافة فئة مبنى</DialogTitle></DialogHeader>
+              <DialogHeader>
+                <DialogTitle>{editingCategory ? `تعديل: ${editingCategory.label}` : "إضافة فئة مبنى جديدة"}</DialogTitle>
+              </DialogHeader>
               <div className="space-y-3 py-2">
                 <div className="grid grid-cols-2 gap-3">
-                  <div><Label>الكود *</Label><Input value={categoryForm.code} onChange={(e) => setCategoryForm({ ...categoryForm, code: e.target.value })} /></div>
-                  <div><Label>الاسم *</Label><Input value={categoryForm.label} onChange={(e) => setCategoryForm({ ...categoryForm, label: e.target.value })} /></div>
+                  <div><Label>الكود *</Label><Input value={categoryForm.code} onChange={(e) => setCategoryForm({ ...categoryForm, code: e.target.value })} placeholder="مثال: VILLA" /></div>
+                  <div><Label>الاسم *</Label><Input value={categoryForm.label} onChange={(e) => setCategoryForm({ ...categoryForm, label: e.target.value })} placeholder="مثال: فيلا" /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><Label>BUA الأدنى (قدم²)</Label><Input type="number" value={categoryForm.buaMinSqft} onChange={(e) => setCategoryForm({ ...categoryForm, buaMinSqft: e.target.value })} /></div>
-                  <div><Label>BUA الأقصى (قدم²)</Label><Input type="number" value={categoryForm.buaMaxSqft} onChange={(e) => setCategoryForm({ ...categoryForm, buaMaxSqft: e.target.value })} /></div>
+                  <div><Label>BUA الأدنى (قدم²)</Label><Input type="number" value={categoryForm.buaMinSqft} onChange={(e) => setCategoryForm({ ...categoryForm, buaMinSqft: e.target.value })} placeholder="اتركه فارغاً = بلا حد أدنى" /></div>
+                  <div><Label>BUA الأقصى (قدم²)</Label><Input type="number" value={categoryForm.buaMaxSqft} onChange={(e) => setCategoryForm({ ...categoryForm, buaMaxSqft: e.target.value })} placeholder="اتركه فارغاً = بلا حد أقصى" /></div>
                 </div>
-                <div className="flex gap-2">
-                  <Button className="flex-1" onClick={() => upsertCategoryMutation.mutate({
-                    code: categoryForm.code, label: categoryForm.label,
-                    buaMinSqft: categoryForm.buaMinSqft ? Number(categoryForm.buaMinSqft) : null,
-                    buaMaxSqft: categoryForm.buaMaxSqft ? Number(categoryForm.buaMaxSqft) : null,
-                  })}>حفظ</Button>
-                  <Button variant="outline" onClick={() => setShowAddCategory(false)}>إلغاء</Button>
+                <div><Label>وصف (اختياري)</Label><Input value={categoryForm.description} onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })} /></div>
+                <div className="flex gap-2 pt-1">
+                  <Button className="flex-1" disabled={!categoryForm.code || !categoryForm.label} onClick={() => {
+                    upsertCategoryMutation.mutate({
+                      id: editingCategory?.id,
+                      code: categoryForm.code,
+                      label: categoryForm.label,
+                      buaMinSqft: categoryForm.buaMinSqft !== "" ? Number(categoryForm.buaMinSqft) : null,
+                      buaMaxSqft: categoryForm.buaMaxSqft !== "" ? Number(categoryForm.buaMaxSqft) : null,
+                      description: categoryForm.description || undefined,
+                      isActive: editingCategory?.is_active ?? 1,
+                    });
+                    setShowAddCategory(false);
+                    setEditingCategory(null);
+                    setCategoryForm({ code: "", label: "", buaMinSqft: "", buaMaxSqft: "", description: "" });
+                  }}>{editingCategory ? "حفظ التعديلات" : "إضافة"}</Button>
+                  <Button variant="outline" onClick={() => { setShowAddCategory(false); setEditingCategory(null); setCategoryForm({ code: "", label: "", buaMinSqft: "", buaMaxSqft: "", description: "" }); }}>إلغاء</Button>
                 </div>
               </div>
             </DialogContent>
