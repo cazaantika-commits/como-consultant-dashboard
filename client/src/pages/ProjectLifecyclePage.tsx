@@ -114,14 +114,14 @@ function serviceStatusBadge(s: ServiceOpStatus) {
 // ─────────────────────────────────────────────────────────────
 // Stage color palette
 // ─────────────────────────────────────────────────────────────
-const STAGE_COLORS: Record<string, { gradient: string; shadow: string }> = {
-  "STG-01": { gradient: "linear-gradient(135deg, #6366f1, #4f46e5)", shadow: "rgba(99,102,241,0.3)" },
-  "STG-02": { gradient: "linear-gradient(135deg, #0ea5e9, #0284c7)", shadow: "rgba(14,165,233,0.3)" },
-  "STG-03": { gradient: "linear-gradient(135deg, #10b981, #059669)", shadow: "rgba(16,185,129,0.3)" },
-  "STG-04": { gradient: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245,158,11,0.3)" },
-  "STG-05": { gradient: "linear-gradient(135deg, #e11d48, #be123c)", shadow: "rgba(225,29,72,0.3)" },
-  "STG-10": { gradient: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139,92,246,0.3)" },
-  "STG-20": { gradient: "linear-gradient(135deg, #ec4899, #db2777)", shadow: "rgba(236,72,153,0.3)" },
+const STAGE_COLORS: Record<string, { gradient: string; shadow: string; tint: string; border: string }> = {
+  "STG-01": { gradient: "linear-gradient(135deg, #6366f1, #4f46e5)", shadow: "rgba(99,102,241,0.3)",  tint: "rgba(99,102,241,0.06)",  border: "rgba(99,102,241,0.25)" },
+  "STG-02": { gradient: "linear-gradient(135deg, #0ea5e9, #0284c7)", shadow: "rgba(14,165,233,0.3)",  tint: "rgba(14,165,233,0.06)",  border: "rgba(14,165,233,0.25)" },
+  "STG-03": { gradient: "linear-gradient(135deg, #10b981, #059669)", shadow: "rgba(16,185,129,0.3)",  tint: "rgba(16,185,129,0.06)",  border: "rgba(16,185,129,0.25)" },
+  "STG-04": { gradient: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245,158,11,0.3)",  tint: "rgba(245,158,11,0.06)",  border: "rgba(245,158,11,0.25)" },
+  "STG-05": { gradient: "linear-gradient(135deg, #e11d48, #be123c)", shadow: "rgba(225,29,72,0.3)",   tint: "rgba(225,29,72,0.06)",   border: "rgba(225,29,72,0.25)" },
+  "STG-10": { gradient: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139,92,246,0.3)",  tint: "rgba(139,92,246,0.06)",  border: "rgba(139,92,246,0.25)" },
+  "STG-20": { gradient: "linear-gradient(135deg, #ec4899, #db2777)", shadow: "rgba(236,72,153,0.3)",  tint: "rgba(236,72,153,0.06)",  border: "rgba(236,72,153,0.25)" },
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -1207,8 +1207,8 @@ export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean 
                   onClick={() => setSelectedStage({ code: stage.stageCode, name: stage.nameAr })}
                   className="w-full text-right flex items-center gap-4 p-4 rounded-2xl border transition-all duration-200 group active:scale-[0.99] overflow-hidden relative"
                   style={{
-                    background: isNotStarted ? "" : `linear-gradient(135deg, ${colors.gradient.includes('#') ? 'var(--card)' : 'var(--card)'}, var(--card))`,
-                    borderColor: isNotStarted ? "var(--border)" : colors.shadow.replace('0.3', '0.25'),
+                    background: isNotStarted ? "" : colors.tint,
+                    borderColor: isNotStarted ? "var(--border)" : colors.border,
                     boxShadow: isNotStarted ? "none" : `0 2px 12px ${colors.shadow}`,
                   }}
                 >
