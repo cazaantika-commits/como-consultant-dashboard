@@ -22,24 +22,8 @@ async function computeServiceStatus(
   serviceCode: string,
   dependsOn: string | null
 ): Promise<{ opStatus: string; timeStatus: string }> {
-  // Check if dependencies are completed
-  if (dependsOn) {
-    const depCodes = dependsOn.split(",").map((s) => s.trim()).filter(Boolean);
-    for (const depCode of depCodes) {
-      const [depInstance] = await db
-        .select()
-        .from(projectServiceInstances)
-        .where(
-          and(
-            eq(projectServiceInstances.projectId, projectId),
-            eq(projectServiceInstances.serviceCode, depCode)
-          )
-        );
-      if (!depInstance || depInstance.operationalStatus !== "completed") {
-        return { opStatus: "locked", timeStatus: "مقفلة (تعتمد على خدمة سابقة)" };
-      }
-    }
-  }
+  // NOTE: Dependency locking is DISABLED — all services are always accessible
+  // (dependsOn is ignored; re-enable later after field definitions are complete)
 
   // Check requirement completion
   const reqs = await db

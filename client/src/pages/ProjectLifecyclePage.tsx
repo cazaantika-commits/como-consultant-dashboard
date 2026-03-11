@@ -795,7 +795,6 @@ function ServicesListPanel({
       ) : (
         <div className="space-y-3">
           {services.map((svc, idx) => {
-            const isLocked = svc.opStatus === "locked";
             const timeAlert = computeTimeAlert(svc.instance?.plannedDueDate);
             const isDone = svc.opStatus === "completed" || svc.opStatus === "submitted";
 
@@ -803,9 +802,7 @@ function ServicesListPanel({
               <div
                 key={svc.serviceCode}
                 className={`rounded-xl border transition-all duration-200 ${
-                  isLocked
-                    ? "bg-muted/30 border-border/30 opacity-60"
-                    : isDone
+                  isDone
                     ? "bg-emerald-50/30 border-emerald-200/60"
                     : timeAlert.severity === "overdue"
                     ? "bg-red-50/30 border-red-200/60"
@@ -813,8 +810,7 @@ function ServicesListPanel({
                 }`}
               >
                 <button
-                  onClick={() => !isLocked && setSelectedService(svc.serviceCode)}
-                  disabled={isLocked}
+                  onClick={() => setSelectedService(svc.serviceCode)}
                   className="w-full text-right flex items-center gap-4 p-4"
                 >
                   {/* Step number */}
@@ -822,8 +818,6 @@ function ServicesListPanel({
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
                       isDone
                         ? "bg-emerald-500 text-white"
-                        : isLocked
-                        ? "bg-slate-200 text-slate-400"
                         : timeAlert.severity === "overdue"
                         ? "bg-red-500 text-white"
                         : "bg-primary/10 text-primary"
@@ -831,8 +825,6 @@ function ServicesListPanel({
                   >
                     {isDone ? (
                       <CheckCircle2 className="w-4 h-4" />
-                    ) : isLocked ? (
-                      <Lock className="w-3.5 h-3.5" />
                     ) : timeAlert.severity === "overdue" ? (
                       <AlertTriangle className="w-3.5 h-3.5" />
                     ) : (
@@ -864,7 +856,7 @@ function ServicesListPanel({
                       <span className="text-[11px] text-muted-foreground">
                         {svc.completedReqs}/{svc.totalReqs} متطلبات
                       </span>
-                      {svc.mandatoryIncomplete > 0 && !isLocked && !isDone && (
+                      {svc.mandatoryIncomplete > 0 && !isDone && (
                         <span className="text-[11px] text-amber-600 flex items-center gap-1">
                           <AlertCircle className="w-3 h-3" />
                           {svc.mandatoryIncomplete} إلزامية ناقصة
@@ -874,19 +866,17 @@ function ServicesListPanel({
                   </div>
 
                   {/* Arrow */}
-                  {!isLocked && <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
+                  <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
                 </button>
 
                 {/* Inline date editor button */}
-                {!isLocked && (
-                  <div className="px-4 pb-3 flex justify-end">
-                    <DateEditor
-                      projectId={projectId}
-                      service={svc as any}
-                      onSaved={() => servicesQuery.refetch()}
-                    />
-                  </div>
-                )}
+                <div className="px-4 pb-3 flex justify-end">
+                  <DateEditor
+                    projectId={projectId}
+                    service={svc as any}
+                    onSaved={() => servicesQuery.refetch()}
+                  />
+                </div>
               </div>
             );
           })}
@@ -903,6 +893,8 @@ export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean 
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [selectedStage, setSelectedStage] = useState<{ code: string; name: string } | null>(null);
   const [showAlerts, setShowAlerts] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [reportStageFilter, setReportStageFilter] = useState<string>("all");
 
   const projectsQuery = trpc.projects.list.useQuery();
   const stagesQuery = trpc.lifecycle.getProjectStageStatuses.useQuery(
@@ -967,12 +959,63 @@ export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean 
               size="sm"
               variant="outline"
               className="gap-1.5 border-emerald-200 text-emerald-700 hover:bg-emerald-50 shrink-0"
-              onClick={() => window.open(`/api/lifecycle/compliance-report?projectId=${selectedProjectId}`, '_blank')}
+              onClick={() => { setReportStageFilter("all"); setShowReportDialog(true); }}
             >
               <FileText className="w-4 h-4" />
               تقرير الامتثال
             </Button>
           )}
+
+          {/* Compliance Report Dialog */}
+          <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
+            <DialogContent className="max-w-md" dir="rtl">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-emerald-600" />
+                  تقرير الامتثال
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <p className="text-sm text-muted-foreground">
+                  اختر نطاق التقرير — يمكنك تضمين جميع المراحل أو مرحلة محددة فقط.
+                </p>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">نطاق التقرير</Label>
+                  <Select value={reportStageFilter} onValueChange={setReportStageFilter}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="اختر النطاق..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">📋 جميع مراحل DLD / RERA</SelectItem>
+                      {stages.map((s: any) => (
+                        <SelectItem key={s.stageCode} value={s.stageCode}>
+                          {s.nameAr ?? s.stageCode}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    className="flex-1 gap-2"
+                    onClick={() => {
+                      const url = reportStageFilter === "all"
+                        ? `/api/lifecycle/compliance-report?projectId=${selectedProjectId}`
+                        : `/api/lifecycle/compliance-report?projectId=${selectedProjectId}&stageCode=${reportStageFilter}`;
+                      window.open(url, '_blank');
+                      setShowReportDialog(false);
+                    }}
+                  >
+                    <FileText className="w-4 h-4" />
+                    فتح التقرير
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowReportDialog(false)}>
+                    إلغاء
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
 
         {/* Project selector */}
@@ -1110,7 +1153,6 @@ export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean 
           <div className="space-y-3">
             {stages.map((stage: any) => {
               const colors = STAGE_COLORS[stage.stageCode] ?? STAGE_COLORS["STG-01"];
-              const isLocked = stage.status === "locked";
               const isNotStarted = stage.status === "not_started";
               const stageSummary = summary.find((s) => s.stageCode === stage.stageCode);
               const stageProgress = stageSummary
@@ -1122,26 +1164,18 @@ export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean 
               return (
                 <button
                   key={stage.stageCode}
-                  onClick={() =>
-                    !isLocked &&
-                    setSelectedStage({ code: stage.stageCode, name: stage.nameAr })
-                  }
-                  disabled={isLocked}
-                  className={`w-full text-right flex items-center gap-4 p-4 rounded-xl border transition-all duration-200 group ${
-                    isLocked
-                      ? "bg-muted/30 border-border/30 opacity-50 cursor-not-allowed"
-                      : "bg-card border-border hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.99]"
-                  }`}
+                  onClick={() => setSelectedStage({ code: stage.stageCode, name: stage.nameAr })}
+                  className="w-full text-right flex items-center gap-4 p-4 rounded-xl border transition-all duration-200 group bg-card border-border hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.99]"
                 >
                   {/* Stage icon */}
                   <div
                     className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-md group-hover:scale-105 transition-transform"
                     style={{
-                      background: isLocked || isNotStarted ? "#e2e8f0" : colors.gradient,
-                      boxShadow: isLocked || isNotStarted ? "none" : `0 4px 16px ${colors.shadow}`,
+                      background: isNotStarted ? "#e2e8f0" : colors.gradient,
+                      boxShadow: isNotStarted ? "none" : `0 4px 16px ${colors.shadow}`,
                     }}
                   >
-                    <span className={`text-sm font-bold ${isLocked || isNotStarted ? "text-slate-400" : "text-white"}`}>
+                    <span className={`text-sm font-bold ${isNotStarted ? "text-slate-400" : "text-white"}`}>
                       {stage.stageCode.replace("STG-", "")}
                     </span>
                   </div>
@@ -1182,9 +1216,7 @@ export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean 
                   </div>
 
                   {/* Arrow */}
-                  {!isLocked && (
-                    <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-                  )}
+                  <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
                 </button>
               );
             })}
