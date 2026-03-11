@@ -642,28 +642,71 @@ function ImportJsonScreen({
       stated_duration_months: 24,
     },
     scope_coverage: [
+      // === Section 1: Core Design Services ===
+      { item_code: "CONCEPT_DESIGN", status: "INCLUDED" },
+      { item_code: "SCHEMATIC_DESIGN", status: "INCLUDED" },
+      { item_code: "DETAILED_DESIGN", status: "INCLUDED" },
       { item_code: "ARCH_DESIGN", status: "INCLUDED" },
-      { item_code: "STRUCTURAL_DESIGN", status: "INCLUDED" },
-      { item_code: "MEP_DESIGN", status: "EXCLUDED" },
-      { item_code: "INTERIOR_DESIGN", status: "NOT_MENTIONED" },
-      { item_code: "LANDSCAPE_DESIGN", status: "EXCLUDED" },
+      { item_code: "STRUCTURAL_CIVIL", status: "INCLUDED" },
+      { item_code: "MEP_ENGINEERING", status: "INCLUDED" },
+      { item_code: "FLS", status: "INCLUDED" },
       { item_code: "BIM", status: "NOT_MENTIONED" },
-      { item_code: "PERMIT_DRAWINGS", status: "INCLUDED" },
-      { item_code: "SHOP_DRAWINGS", status: "INCLUDED" },
-      { item_code: "SITE_SUPERVISION", status: "INCLUDED" },
-      { item_code: "STRUCTURAL_AUDIT", status: "NOT_MENTIONED" },
+      { item_code: "QS_BOQ", status: "INCLUDED" },
+      { item_code: "PARKING_STRATEGY", status: "INCLUDED" },
+      { item_code: "WASTE_MANAGEMENT", status: "NOT_MENTIONED" },
+      { item_code: "SIGNAGE_WAYFINDING", status: "NOT_MENTIONED" },
+      { item_code: "INFRASTRUCTURE", status: "INCLUDED" },
+      // === Section 1: Documentation & Deliverables ===
+      { item_code: "AUTHORITY_SUBMISSIONS", status: "INCLUDED" },
+      { item_code: "BUILDING_PERMIT", status: "INCLUDED" },
+      { item_code: "IFC_PACKAGE", status: "INCLUDED" },
+      { item_code: "TENDER_DOCS", status: "INCLUDED" },
+      { item_code: "TENDER_EVAL", status: "NOT_MENTIONED" },
+      // === Section 1: Contract Framework ===
+      { item_code: "FIDIC_CONTRACT", status: "INCLUDED" },
+      { item_code: "DIAC", status: "NOT_MENTIONED" },
+      { item_code: "PI_INSURANCE", status: "NOT_MENTIONED" },
+      { item_code: "PL_INSURANCE", status: "NOT_MENTIONED" },
+      { item_code: "GOVERNING_LAW", status: "INCLUDED" },
+      { item_code: "RETENTION", status: "INCLUDED" },
+      { item_code: "FEE_CAP", status: "NOT_MENTIONED" },
+      { item_code: "CONFIDENTIALITY", status: "INCLUDED" },
+      { item_code: "IP", status: "INCLUDED" },
+      { item_code: "TERMINATION", status: "INCLUDED" },
+      // === Section 2: Specialized Mandatory GREEN ===
       { item_code: "GREEN_BUILDING", status: "NOT_MENTIONED" },
+      { item_code: "STRUCTURAL_AUDIT", status: "NOT_MENTIONED" },
       { item_code: "SECURITY_SIRA", status: "NOT_MENTIONED" },
       { item_code: "VERTICAL_TRANSPORT", status: "NOT_MENTIONED" },
+      { item_code: "BMU", status: "NOT_MENTIONED" },
+      { item_code: "FACADE_ENGINEERING", status: "NOT_MENTIONED" },
+      { item_code: "WIND_TUNNEL", status: "NOT_MENTIONED" },
       { item_code: "AV_ELV", status: "NOT_MENTIONED" },
+      { item_code: "FLS_SPECIALIST", status: "NOT_MENTIONED" },
       { item_code: "FACADE_LIGHTING", status: "NOT_MENTIONED" },
-      { item_code: "FLS", status: "NOT_MENTIONED" },
-      { item_code: "TESTING_COMMISSIONING", status: "INCLUDED" },
-      { item_code: "AS_BUILT", status: "INCLUDED" }
+      { item_code: "TIS", status: "NOT_MENTIONED" },
+      { item_code: "ACOUSTIC", status: "NOT_MENTIONED" },
+      { item_code: "LEED", status: "NOT_MENTIONED" },
+      { item_code: "COST_MANAGEMENT", status: "NOT_MENTIONED" },
+      { item_code: "VALUE_ENGINEERING", status: "NOT_MENTIONED" },
+      // === Section 3: Mandatory RED ===
+      { item_code: "ID_COMMON_AREAS", status: "NOT_MENTIONED" },
+      { item_code: "ID_UNIT_PROTOTYPES", status: "NOT_MENTIONED" },
+      { item_code: "LANDSCAPE", status: "NOT_MENTIONED" },
+      { item_code: "WATER_FEATURES", status: "NOT_MENTIONED" }
     ],
     supervision_team: [
-      { role_code: "PM", allocation_pct: 100, monthly_rate: 25000 },
-      { role_code: "ARCH_SUP", allocation_pct: 50, monthly_rate: 18000 },
+      { role_code: "RE", allocation_pct: 100, monthly_rate: 45000 },
+      { role_code: "DEPUTY_RE", allocation_pct: 0, monthly_rate: 40000 },
+      { role_code: "CIVIL_INSPECTOR", allocation_pct: 70, monthly_rate: 18000 },
+      { role_code: "MEP_INSPECTOR", allocation_pct: 60, monthly_rate: 20000 },
+      { role_code: "HSE_OFFICER", allocation_pct: 100, monthly_rate: 18000 },
+      { role_code: "DOC_CONTROLLER", allocation_pct: 50, monthly_rate: 12000 },
+      { role_code: "QA_QC", allocation_pct: 40, monthly_rate: 28000 },
+      { role_code: "HO_STRUCTURAL", allocation_pct: 30, monthly_rate: 35000 },
+      { role_code: "HO_ARCH", allocation_pct: 30, monthly_rate: 32000 },
+      { role_code: "HO_MECHANICAL", allocation_pct: 30, monthly_rate: 35000 },
+      { role_code: "HO_ELECTRICAL", allocation_pct: 30, monthly_rate: 35000 }
     ],
   }, null, 2);
 
@@ -1115,7 +1158,17 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
   });
 
   const [showAddRole, setShowAddRole] = useState(false);
+  const [editingRole, setEditingRole] = useState<any>(null);
   const [roleForm, setRoleForm] = useState({ code: "", label: "", grade: "", teamType: "SITE", monthlyRateAed: "" });
+
+  const upsertScopeItemMutation = trpc.cpa.settings.upsertScopeItem.useMutation({
+    onSuccess: () => { scopeItemsQuery.refetch(); setShowScopeItemDialog(false); toast({ title: "تم الحفظ" }); },
+    onError: (e) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
+  });
+  const sectionsQuery = trpc.cpa.settings.getScopeSections.useQuery();
+  const [showScopeItemDialog, setShowScopeItemDialog] = useState(false);
+  const [editingScopeItem, setEditingScopeItem] = useState<any>(null);
+  const [scopeItemForm, setScopeItemForm] = useState({ itemNumber: "", code: "", label: "", sectionId: "", defaultType: "CORE", description: "" });
 
   return (
     <div className="space-y-5">
@@ -1226,26 +1279,45 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
         <TabsContent value="roles" className="space-y-3 mt-4">
           <div className="flex justify-between items-center">
             <h3 className="font-semibold text-sm">أدوار فريق الإشراف</h3>
-            <Button size="sm" onClick={() => setShowAddRole(true)}>
+            <Button size="sm" onClick={() => { setEditingRole(null); setRoleForm({ code: "", label: "", grade: "", teamType: "SITE", monthlyRateAed: "" }); setShowAddRole(true); }}>
               <Plus className="w-3.5 h-3.5 ml-1" />
               إضافة دور
             </Button>
           </div>
           <div className="space-y-2">
             {(rolesQuery.data ?? []).map((r: any) => (
-              <div key={r.id} className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <span className="font-medium">{r.label}</span>
-                  <span className="text-xs text-muted-foreground ml-2">({r.code})</span>
-                  {r.grade && <span className="text-xs text-muted-foreground ml-1">· {r.grade}</span>}
+              <div key={r.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/30 transition-colors">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{r.label}</span>
+                    <span className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">{r.code}</span>
+                    {r.grade && <span className="text-xs text-muted-foreground">· {r.grade}</span>}
+                    <Badge variant="outline" className="text-xs">{r.team_type === 'SITE' ? 'موقع' : 'مكتب رئيسي'}</Badge>
+                  </div>
+                  <p className="text-sm font-semibold text-sky-700 mt-0.5">{fmtAED(r.monthly_rate_aed)} / شهر</p>
                 </div>
-                <div className="text-sm font-semibold text-sky-700">{fmtAED(r.monthly_rate_aed)} / شهر</div>
+                <div className="flex items-center gap-1 mr-2">
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => {
+                    setEditingRole(r);
+                    setRoleForm({ code: r.code, label: r.label, grade: r.grade ?? "", teamType: r.team_type, monthlyRateAed: String(r.monthly_rate_aed) });
+                    setShowAddRole(true);
+                  }}>
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => {
+                    if (confirm(`هل تريد ${r.is_active ? 'تعطيل' : 'تفعيل'} دور "${r.label}"؟`)) {
+                      upsertRoleMutation.mutate({ id: r.id, code: r.code, label: r.label, grade: r.grade || undefined, teamType: r.team_type, monthlyRateAed: Number(r.monthly_rate_aed), isActive: r.is_active ? 0 : 1 });
+                    }
+                  }}>
+                    {r.is_active ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-green-600" />}
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
-          <Dialog open={showAddRole} onOpenChange={setShowAddRole}>
+          <Dialog open={showAddRole} onOpenChange={(open) => { setShowAddRole(open); if (!open) { setEditingRole(null); setRoleForm({ code: "", label: "", grade: "", teamType: "SITE", monthlyRateAed: "" }); } }}>
             <DialogContent dir="rtl">
-              <DialogHeader><DialogTitle>إضافة دور إشراف</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>{editingRole ? `تعديل: ${editingRole.label}` : "إضافة دور إشراف"}</DialogTitle></DialogHeader>
               <div className="space-y-3 py-2">
                 <div className="grid grid-cols-2 gap-3">
                   <div><Label>الكود *</Label><Input value={roleForm.code} onChange={(e) => setRoleForm({ ...roleForm, code: e.target.value })} /></div>
@@ -1266,11 +1338,18 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
                 </div>
                 <div><Label>المعدل الشهري (AED) *</Label><Input type="number" value={roleForm.monthlyRateAed} onChange={(e) => setRoleForm({ ...roleForm, monthlyRateAed: e.target.value })} /></div>
                 <div className="flex gap-2">
-                  <Button className="flex-1" onClick={() => upsertRoleMutation.mutate({
-                    code: roleForm.code, label: roleForm.label, grade: roleForm.grade || undefined,
-                    teamType: roleForm.teamType as any, monthlyRateAed: Number(roleForm.monthlyRateAed),
-                  })}>حفظ</Button>
-                  <Button variant="outline" onClick={() => setShowAddRole(false)}>إلغاء</Button>
+                  <Button className="flex-1" disabled={!roleForm.code || !roleForm.label || !roleForm.monthlyRateAed} onClick={() => {
+                    upsertRoleMutation.mutate({
+                      id: editingRole?.id,
+                      code: roleForm.code, label: roleForm.label, grade: roleForm.grade || undefined,
+                      teamType: roleForm.teamType as any, monthlyRateAed: Number(roleForm.monthlyRateAed),
+                      isActive: editingRole?.is_active ?? 1,
+                    });
+                    setShowAddRole(false);
+                    setEditingRole(null);
+                    setRoleForm({ code: "", label: "", grade: "", teamType: "SITE", monthlyRateAed: "" });
+                  }}>{editingRole ? "حفظ التعديلات" : "إضافة"}</Button>
+                  <Button variant="outline" onClick={() => { setShowAddRole(false); setEditingRole(null); setRoleForm({ code: "", label: "", grade: "", teamType: "SITE", monthlyRateAed: "" }); }}>إلغاء</Button>
                 </div>
               </div>
             </DialogContent>
@@ -1344,29 +1423,107 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
 
         {/* Scope Items */}
         <TabsContent value="scope" className="space-y-3 mt-4">
-          <h3 className="font-semibold text-sm">بنود النطاق المعياري</h3>
-          <div className="space-y-1 max-h-96 overflow-y-auto">
+          <div className="flex justify-between items-center">
+            <h3 className="font-semibold text-sm">بنود النطاق المعياري ({scopeItemsQuery.data?.length ?? 0} بند)</h3>
+            <Button size="sm" onClick={() => { setEditingScopeItem(null); setScopeItemForm({ itemNumber: "", code: "", label: "", sectionId: "", defaultType: "CORE", description: "" }); setShowScopeItemDialog(true); }}>
+              <Plus className="w-3.5 h-3.5 ml-1" />
+              إضافة بند
+            </Button>
+          </div>
+          <div className="space-y-1 max-h-[500px] overflow-y-auto">
             {(scopeItemsQuery.data ?? []).map((item: any) => (
-              <div key={item.id} className="flex items-center justify-between p-2.5 border rounded-lg text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground w-6 text-center">{item.item_number}</span>
-                  <span className="font-medium">{item.label}</span>
-                  <span className="text-xs text-muted-foreground">({item.code})</span>
+              <div key={item.id} className="flex items-center justify-between p-2.5 border rounded-lg text-sm hover:bg-muted/30 transition-colors">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <span className="text-xs text-muted-foreground w-6 text-center font-mono">{item.item_number}</span>
+                  <div className="min-w-0">
+                    <span className="font-medium">{item.label}</span>
+                    <span className="text-xs text-muted-foreground ml-1">({item.code})</span>
+                    {item.section_label && <span className="text-xs text-muted-foreground block">{item.section_label}</span>}
+                  </div>
                 </div>
-                <Badge
-                  variant="outline"
-                  className={
-                    item.default_type === "CORE" ? "border-sky-300 text-sky-700" :
-                    item.default_type === "GREEN" ? "border-emerald-300 text-emerald-700" :
-                    item.default_type === "RED" ? "border-red-300 text-red-700" :
-                    "border-gray-300 text-gray-700"
-                  }
-                >
-                  {item.default_type}
-                </Badge>
+                <div className="flex items-center gap-2 mr-2">
+                  <Badge
+                    variant="outline"
+                    className={
+                      item.default_type === "CORE" ? "border-sky-300 text-sky-700" :
+                      item.default_type === "GREEN" ? "border-emerald-300 text-emerald-700" :
+                      item.default_type === "RED" ? "border-red-300 text-red-700" :
+                      "border-gray-300 text-gray-700"
+                    }
+                  >
+                    {item.default_type}
+                  </Badge>
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => {
+                    setEditingScopeItem(item);
+                    setScopeItemForm({ itemNumber: String(item.item_number), code: item.code, label: item.label, sectionId: String(item.section_id ?? ""), defaultType: item.default_type, description: item.description ?? "" });
+                    setShowScopeItemDialog(true);
+                  }}>
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => {
+                    if (confirm(`هل تريد ${item.is_active ? 'تعطيل' : 'تفعيل'} بند "${item.label}"؟`)) {
+                      upsertScopeItemMutation.mutate({ id: item.id, itemNumber: item.item_number, code: item.code, label: item.label, sectionId: item.section_id, defaultType: item.default_type, isActive: item.is_active ? 0 : 1 });
+                    }
+                  }}>
+                    {item.is_active ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-green-600" />}
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
+          <Dialog open={showScopeItemDialog} onOpenChange={(open) => { setShowScopeItemDialog(open); if (!open) { setEditingScopeItem(null); setScopeItemForm({ itemNumber: "", code: "", label: "", sectionId: "", defaultType: "CORE", description: "" }); } }}>
+            <DialogContent dir="rtl">
+              <DialogHeader><DialogTitle>{editingScopeItem ? `تعديل: ${editingScopeItem.label}` : "إضافة بند نطاق"}</DialogTitle></DialogHeader>
+              <div className="space-y-3 py-2">
+                <div className="grid grid-cols-3 gap-3">
+                  <div><Label>رقم البند *</Label><Input type="number" value={scopeItemForm.itemNumber} onChange={(e) => setScopeItemForm({ ...scopeItemForm, itemNumber: e.target.value })} /></div>
+                  <div className="col-span-2"><Label>الكود *</Label><Input value={scopeItemForm.code} onChange={(e) => setScopeItemForm({ ...scopeItemForm, code: e.target.value })} placeholder="مثال: ARCH_DESIGN" /></div>
+                </div>
+                <div><Label>الاسم *</Label><Input value={scopeItemForm.label} onChange={(e) => setScopeItemForm({ ...scopeItemForm, label: e.target.value })} /></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>القسم</Label>
+                    <Select value={scopeItemForm.sectionId} onValueChange={(v) => setScopeItemForm({ ...scopeItemForm, sectionId: v })}>
+                      <SelectTrigger><SelectValue placeholder="اختر القسم" /></SelectTrigger>
+                      <SelectContent>
+                        {(sectionsQuery.data ?? []).map((s: any) => (
+                          <SelectItem key={s.id} value={String(s.id)}>{s.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>نوع البند *</Label>
+                    <Select value={scopeItemForm.defaultType} onValueChange={(v) => setScopeItemForm({ ...scopeItemForm, defaultType: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="CORE">أساسي (CORE)</SelectItem>
+                        <SelectItem value="GREEN">أخضر (GREEN)</SelectItem>
+                        <SelectItem value="RED">أحمر (RED)</SelectItem>
+                        <SelectItem value="CONTRACTOR">مقاول (CONTRACTOR)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div><Label>وصف (اختياري)</Label><Input value={scopeItemForm.description} onChange={(e) => setScopeItemForm({ ...scopeItemForm, description: e.target.value })} /></div>
+                <div className="flex gap-2">
+                  <Button className="flex-1" disabled={!scopeItemForm.itemNumber || !scopeItemForm.code || !scopeItemForm.label} onClick={() => {
+                    upsertScopeItemMutation.mutate({
+                      id: editingScopeItem?.id,
+                      itemNumber: Number(scopeItemForm.itemNumber),
+                      code: scopeItemForm.code,
+                      label: scopeItemForm.label,
+                      sectionId: scopeItemForm.sectionId ? Number(scopeItemForm.sectionId) : null,
+                      defaultType: scopeItemForm.defaultType as any,
+                      description: scopeItemForm.description || undefined,
+                      isActive: editingScopeItem?.is_active ?? 1,
+                    });
+                  }}>{editingScopeItem ? "حفظ التعديلات" : "إضافة"}</Button>
+                  <Button variant="outline" onClick={() => { setShowScopeItemDialog(false); setEditingScopeItem(null); setScopeItemForm({ itemNumber: "", code: "", label: "", sectionId: "", defaultType: "CORE", description: "" }); }}>إلغاء</Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
       </Tabs>
     </div>
