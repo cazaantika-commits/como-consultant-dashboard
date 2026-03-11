@@ -1,0 +1,16 @@
+{
+  "query": "DESCRIBE lifecycle_stages; SELECT * FROM lifecycle_stages ORDER BY sort_order LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute DESCRIBE lifecycle_stages; SELECT * FROM lifecycle_stages ORDER BY sort_order LIMIT 20;",
+  "returncode": 1,
+  "logs": [
+    "Field\tType\tNull\tKey\tDefault\tExtra",
+    "id\tint\tNO\tPRI\tNULL\tauto_increment",
+    "stageCode\tvarchar(30)\tNO\tUNI\tNULL\t",
+    "nameAr\tvarchar(200)\tNO\t\tNULL\t",
+    "descriptionAr\ttext\tYES\t\tNULL\t",
+    "defaultStatus\tenum('not_started','in_progress','completed','locked')\tYES\t\tnot_started\t",
+    "sortOrder\tint\tYES\t\t0\t",
+    "createdAt\ttimestamp\tYES\t\tCURRENT_TIMESTAMP",
+    "ERROR 1054 (42S22) at line 1: Unknown column 'sort_order' in 'order clause'"
+  ]
+}

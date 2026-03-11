@@ -1517,6 +1517,9 @@ export const lifecycleStages = mysqlTable("lifecycle_stages", {
   id: int().autoincrement().notNull().primaryKey(),
   stageCode: varchar({ length: 30 }).notNull().unique(),   // e.g. STG-02
   nameAr: varchar({ length: 200 }).notNull(),
+  nameEn: varchar({ length: 200 }),
+  category: varchar({ length: 100 }),
+  isActive: tinyint().notNull().default(1),
   descriptionAr: text(),
   defaultStatus: mysqlEnum("defaultStatus", ['not_started','in_progress','completed','locked']).default('not_started'),
   sortOrder: int().default(0),

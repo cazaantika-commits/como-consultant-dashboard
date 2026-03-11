@@ -1,0 +1,90 @@
+{
+  "query": "DESCRIBE lifecycle_stages;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute DESCRIBE lifecycle_stages;",
+  "rows": [
+    {
+      "Field": "id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": "auto_increment"
+    },
+    {
+      "Field": "stageCode",
+      "Type": "varchar(30)",
+      "Null": "NO",
+      "Key": "UNI",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "nameAr",
+      "Type": "varchar(200)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "descriptionAr",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "defaultStatus",
+      "Type": "enum('not_started','in_progress','completed','locked')",
+      "Null": "YES",
+      "Key": "",
+      "Default": "not_started",
+      "Extra": ""
+    },
+    {
+      "Field": "sortOrder",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "createdAt",
+      "Type": "timestamp",
+      "Null": "YES",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": ""
+    },
+    {
+      "Field": "nameEn",
+      "Type": "varchar(200)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "category",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "isActive",
+      "Type": "tinyint(1)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "1",
+      "Extra": ""
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nid\tint\tNO\tPRI\tNULL\tauto_increment\nstageCode\tvarchar(30)\tNO\tUNI\tNULL\t\nnameAr\tvarchar(200)\tNO\t\tNULL\t\ndescriptionAr\ttext\tYES\t\tNULL\t\ndefaultStatus\tenum('not_started','in_progress','completed','locked')\tYES\t\tnot_started\t\nsortOrder\tint\tYES\t\t0\t\ncreatedAt\ttimestamp\tYES\t\tCURRENT_TIMESTAMP\t\nnameEn\tvarchar(200)\tYES\t\tNULL\t\ncategory\tvarchar(100)\tYES\t\tNULL\t\nisActive\ttinyint(1)\tNO\t\t1\t\n",
+  "stderr": "",
+  "execution_time_ms": 1760
+}

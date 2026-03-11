@@ -2373,3 +2373,18 @@
 - [x] تحسين StageDocumentsTab — معاينة الملف المرفوع مع اسم الملف + badge "مرفوع" + تاريخ + زر حذف
 - [x] تحسين تقرير الامتثال — Dialog لاختيار المرحلة + صفحة عنوان + تنسيق PDF
 - [x] AI API endpoint — /api/lifecycle/service-status و /api/lifecycle/project-summary
+
+## إعادة هيكلة "جولة في مراحل التطوير" (مارس 2026)
+- [ ] تحديث جدول lifecycle_stages: إضافة isActive, nameEn, category + تحديث الترتيب
+- [ ] تحديث Drizzle schema بالحقول الجديدة
+- [ ] إعادة بناء DevelopmentPhasesPage بثلاث أيقونات: مسار الامتثال، إعدادات المراحل، العقود
+- [ ] بناء واجهة إعدادات المراحل (إضافة/تعديل/ترتيب/تفعيل)
+- [ ] تحسين التصميم البصري: تمييز واضح بين مستوى المرحلة ومستوى الخدمة
+
+## تحديث مارس 11 — إعادة هيكلة صفحة مراحل التطوير
+- [x] إضافة إجراءات tRPC: getAllStages, createStage, updateStage, reorderStages
+- [x] إصلاح createStage لاستخدام drizzle max() بدلاً من raw SQL
+- [x] إعادة بناء DevelopmentPhasesPage بثلاث أيقونات: مسار الامتثال التنظيمي، إعدادات المراحل، العقود والاتفاقيات
+- [x] بناء StageSettingsView: عرض المراحل مع ترتيب وتفعيل وتعديل وإضافة
+- [x] إصلاح ترميز النص العربي (unicode escapes → UTF-8 فعلي)
+- [x] كتابة اختبارات vitest لإجراءات إدارة المراحل (7 اختبارات ناجحة)

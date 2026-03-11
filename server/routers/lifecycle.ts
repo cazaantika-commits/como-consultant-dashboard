@@ -9,7 +9,7 @@ import {
   projectRequirementStatus,
   projectStageStatus,
 } from "../../drizzle/schema";
-import { eq, and, sql, lte, gte, isNotNull } from "drizzle-orm";
+import { eq, and, sql, lte, gte, isNotNull, max } from "drizzle-orm";
 import { notifyOwner } from "../_core/notification";
 
 // ─────────────────────────────────────────────────────────────
@@ -92,14 +92,80 @@ async function computeServiceStatus(
 export const lifecycleRouter = router({
   // ── Stages ──────────────────────────────────────────────────
 
-  /** Get all master stages */
+  /** Get all active master stages */
   getStages: protectedProcedure.query(async () => {
+    const db = await getDb();
+    return db
+      .select()
+      .from(lifecycleStages)
+      .where(eq(lifecycleStages.isActive, 1))
+      .orderBy(lifecycleStages.sortOrder);
+  }),
+
+  /** Get ALL stages including inactive (for settings UI) */
+  getAllStages: protectedProcedure.query(async () => {
     const db = await getDb();
     return db
       .select()
       .from(lifecycleStages)
       .orderBy(lifecycleStages.sortOrder);
   }),
+
+  /** Create a new stage */
+  createStage: protectedProcedure
+    .input(z.object({
+      nameAr: z.string().min(1),
+      nameEn: z.string().optional(),
+      category: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      const maxOrder = await db
+        .select({ max: max(lifecycleStages.sortOrder) })
+        .from(lifecycleStages);
+      const nextOrder = (maxOrder[0]?.max ?? 0) + 1;
+      const stageCode = `STG-CUSTOM-${Date.now()}`;
+      await db.insert(lifecycleStages).values({
+        stageCode,
+        nameAr: input.nameAr,
+        nameEn: input.nameEn ?? null,
+        category: input.category ?? null,
+        isActive: 1,
+        sortOrder: nextOrder,
+        defaultStatus: 'not_started',
+      });
+      return { success: true, stageCode };
+    }),
+
+  /** Update stage name, category, isActive, sortOrder */
+  updateStage: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      nameAr: z.string().min(1).optional(),
+      nameEn: z.string().optional(),
+      category: z.string().optional(),
+      isActive: z.number().optional(),
+      sortOrder: z.number().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      const { id, ...updates } = input;
+      await db.update(lifecycleStages).set(updates).where(eq(lifecycleStages.id, id));
+      return { success: true };
+    }),
+
+  /** Reorder stages: update sortOrder for multiple stages at once */
+  reorderStages: protectedProcedure
+    .input(z.object({
+      stages: z.array(z.object({ id: z.number(), sortOrder: z.number() }))
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      for (const s of input.stages) {
+        await db.update(lifecycleStages).set({ sortOrder: s.sortOrder }).where(eq(lifecycleStages.id, s.id));
+      }
+      return { success: true };
+    }),
 
   /** Get per-project stage statuses */
   getProjectStageStatuses: protectedProcedure
