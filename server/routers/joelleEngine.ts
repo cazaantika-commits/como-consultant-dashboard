@@ -1839,7 +1839,7 @@ JSON:
 
         await saveStageResult(db, ctx.user.id, projectId, 11, STAGES[10].nameAr, 'completed', outputSummary, JSON.stringify(outputFields));
 
-        // ─── AUTO-APPLY: Push Joel outputs to Competition Pricing & Market Overview ───
+        // --- AUTO-APPLY: Push Joel outputs to Competition Pricing & Market Overview ---
         // This runs automatically so no manual button is needed
         try {
           const allStages = await db.select().from(joelleAnalysisStages)
@@ -2134,7 +2134,7 @@ ${results.map(r => `- ${r.success ? '✅' : '❌'} ${r.title}`).join('\n')}
         details: [],
       };
 
-      // ─── Apply Engine 6 (Product Strategy) → MarketOverview ───
+      // --- Apply Engine 6 (Product Strategy) → MarketOverview ---
       if (stage6?.stageDataJson) {
         try {
           const data = JSON.parse(stage6.stageDataJson);
@@ -2186,7 +2186,7 @@ ${results.map(r => `- ${r.success ? '✅' : '❌'} ${r.title}`).join('\n')}
         results.details.push('محرك 6 (استراتيجية المنتج) لم يكتمل بعد — لم يتم تحديث توزيع الوحدات');
       }
 
-      // ─── Apply Engine 7 (Pricing Intelligence) → CompetitionPricing ───
+      // --- Apply Engine 7 (Pricing Intelligence) → CompetitionPricing ---
       if (stage7?.stageDataJson) {
         try {
           const data = JSON.parse(stage7.stageDataJson);

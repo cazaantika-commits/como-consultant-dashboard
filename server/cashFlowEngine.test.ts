@@ -7,7 +7,7 @@ import {
   type CostItemInput,
 } from './routers/cashFlowEngine';
 
-// ─── Phase Timeline Tests ───
+// --- Phase Timeline Tests ---
 
 describe('buildPhaseTimeline', () => {
   it('should build correct 3-phase timeline (6+16+2)', () => {
@@ -35,7 +35,7 @@ describe('buildPhaseTimeline', () => {
   });
 });
 
-// ─── Month Labels Tests ───
+// --- Month Labels Tests ---
 
 describe('generateMonthLabels', () => {
   it('should generate correct month labels starting from Jan 2026', () => {
@@ -56,7 +56,7 @@ describe('generateMonthLabels', () => {
   });
 });
 
-// ─── Dual Cash Flow Engine Tests ───
+// --- Dual Cash Flow Engine Tests ---
 
 describe('calculateDualCashFlow', () => {
   const baseProject: ProjectInput = {

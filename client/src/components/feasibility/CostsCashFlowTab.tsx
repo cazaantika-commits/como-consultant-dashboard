@@ -23,7 +23,7 @@ function fmt(n: number | null | undefined): string {
   return Math.round(n).toLocaleString("en-US");
 }
 
-/* ─── Inline editable number ─── */
+/* --- Inline editable number --- */
 function EditableNum({ value, onChange, suffix, disabled }: { value: number; onChange: (v: number) => void; suffix?: string; disabled?: boolean }) {
   const [localVal, setLocalVal] = useState("");
   const [focused, setFocused] = useState(false);
@@ -756,7 +756,7 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
             </div>
           </div>
 
-          {/* ─── DATA SYNC WARNING BANNER ─── */}
+          {/* --- DATA SYNC WARNING BANNER --- */}
           {syncStatusQuery.data?.isOutOfSync && (
             <div className="bg-orange-50 border border-orange-300 rounded-lg p-3 flex items-start gap-2">
               <AlertTriangle className="w-4 h-4 text-orange-600 mt-0.5 shrink-0" />

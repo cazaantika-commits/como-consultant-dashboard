@@ -1,0 +1,100 @@
+{
+  "query": "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'projects' ORDER BY ORDINAL_POSITION LIMIT 30;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'projects' ORDER BY ORDINAL_POSITION LIMIT 30;",
+  "rows": [
+    {
+      "COLUMN_NAME": "id"
+    },
+    {
+      "COLUMN_NAME": "userId"
+    },
+    {
+      "COLUMN_NAME": "name"
+    },
+    {
+      "COLUMN_NAME": "description"
+    },
+    {
+      "COLUMN_NAME": "bua"
+    },
+    {
+      "COLUMN_NAME": "pricePerSqft"
+    },
+    {
+      "COLUMN_NAME": "notes"
+    },
+    {
+      "COLUMN_NAME": "createdAt"
+    },
+    {
+      "COLUMN_NAME": "updatedAt"
+    },
+    {
+      "COLUMN_NAME": "plotNumber"
+    },
+    {
+      "COLUMN_NAME": "areaCode"
+    },
+    {
+      "COLUMN_NAME": "driveFolderId"
+    },
+    {
+      "COLUMN_NAME": "titleDeedNumber"
+    },
+    {
+      "COLUMN_NAME": "ddaNumber"
+    },
+    {
+      "COLUMN_NAME": "masterDevRef"
+    },
+    {
+      "COLUMN_NAME": "plotAreaSqm"
+    },
+    {
+      "COLUMN_NAME": "plotAreaSqft"
+    },
+    {
+      "COLUMN_NAME": "gfaSqm"
+    },
+    {
+      "COLUMN_NAME": "gfaSqft"
+    },
+    {
+      "COLUMN_NAME": "permittedUse"
+    },
+    {
+      "COLUMN_NAME": "ownershipType"
+    },
+    {
+      "COLUMN_NAME": "subdivisionRestrictions"
+    },
+    {
+      "COLUMN_NAME": "masterDevName"
+    },
+    {
+      "COLUMN_NAME": "masterDevAddress"
+    },
+    {
+      "COLUMN_NAME": "sellerName"
+    },
+    {
+      "COLUMN_NAME": "sellerAddress"
+    },
+    {
+      "COLUMN_NAME": "buyerName"
+    },
+    {
+      "COLUMN_NAME": "buyerNationality"
+    },
+    {
+      "COLUMN_NAME": "buyerPassport"
+    },
+    {
+      "COLUMN_NAME": "buyerAddress"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\nid\nuserId\nname\ndescription\nbua\npricePerSqft\nnotes\ncreatedAt\nupdatedAt\nplotNumber\nareaCode\ndriveFolderId\ntitleDeedNumber\nddaNumber\nmasterDevRef\nplotAreaSqm\nplotAreaSqft\ngfaSqm\ngfaSqft\npermittedUse\nownershipType\nsubdivisionRestrictions\nmasterDevName\nmasterDevAddress\nsellerName\nsellerAddress\nbuyerName\nbuyerNationality\nbuyerPassport\nbuyerAddress\n",
+  "stderr": "",
+  "execution_time_ms": 1545
+}

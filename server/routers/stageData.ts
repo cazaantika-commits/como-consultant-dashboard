@@ -16,7 +16,7 @@ import {
 } from "../../drizzle/schema";
 
 export const stageDataRouter = router({
-  // ─── Field Definitions ─────────────────────────────────────────────────────
+  // --- Field Definitions -----------------------------------------------------
   getFieldDefinitions: protectedProcedure
     .input(z.object({ serviceCode: z.string() }))
     .query(async ({ input }) => {
@@ -29,7 +29,7 @@ export const stageDataRouter = router({
         .orderBy(stageFieldDefinitions.sortOrder);
     }),
 
-  // ─── Field Values ───────────────────────────────────────────────────────────
+  // --- Field Values -----------------------------------------------------------
   getFieldValues: protectedProcedure
     .input(z.object({ projectId: z.number(), serviceCode: z.string() }))
     .query(async ({ input }) => {
@@ -46,7 +46,7 @@ export const stageDataRouter = router({
         );
     }),
 
-  // ─── Sync from Project Card ─────────────────────────────────────────────────
+  // --- Sync from Project Card -------------------------------------------------
   syncFromProjectCard: protectedProcedure
     .input(z.object({ projectId: z.number(), serviceCode: z.string() }))
     .mutation(async ({ input, ctx }) => {
@@ -114,7 +114,7 @@ export const stageDataRouter = router({
       return { synced };
     }),
 
-  // ─── Upsert Field Value (manual override) ──────────────────────────────────
+  // --- Upsert Field Value (manual override) ----------------------------------
   upsertFieldValue: protectedProcedure
     .input(
       z.object({
@@ -160,7 +160,7 @@ export const stageDataRouter = router({
       return { success: true };
     }),
 
-  // ─── Get Stage Record (fields + values combined) ────────────────────────────
+  // --- Get Stage Record (fields + values combined) ----------------------------
   getStageRecord: protectedProcedure
     .input(z.object({ projectId: z.number(), serviceCode: z.string() }))
     .query(async ({ input }) => {
@@ -206,7 +206,7 @@ export const stageDataRouter = router({
       };
     }),
 
-  // ─── Get Blocking Requirements ──────────────────────────────────────────────
+  // --- Get Blocking Requirements ----------------------------------------------
   getBlockingRequirements: protectedProcedure
     .input(z.object({ projectId: z.number(), serviceCode: z.string() }))
     .query(async ({ input }) => {
@@ -267,7 +267,7 @@ export const stageDataRouter = router({
       };
     }),
 
-  // ─── Upload Document (accepts base64, uploads to S3) ───────────────────────
+  // --- Upload Document (accepts base64, uploads to S3) -----------------------
   uploadDocument: protectedProcedure
     .input(
       z.object({
@@ -307,7 +307,7 @@ export const stageDataRouter = router({
       return { success: true, url };
     }),
 
-  // ─── Update Document Status ─────────────────────────────────────────────────
+  // --- Update Document Status -------------------------------------------------
   updateDocStatus: protectedProcedure
     .input(
       z.object({
@@ -332,7 +332,7 @@ export const stageDataRouter = router({
       return { success: true };
     }),
 
-  // ─── Delete Document ─────────────────────────────────────────────────────────
+  // --- Delete Document ---------------------------------------------------------
   deleteDocument: protectedProcedure
     .input(z.object({ docId: z.number() }))
     .mutation(async ({ input }) => {
@@ -342,7 +342,7 @@ export const stageDataRouter = router({
       return { success: true };
     }),
 
-  // ─── Get Documents (returns requirements + their docs + stats) ───────────────
+  // --- Get Documents (returns requirements + their docs + stats) ---------------
   getDocuments: protectedProcedure
     .input(z.object({ projectId: z.number(), serviceCode: z.string() }))
     .query(async ({ input }) => {

@@ -8,12 +8,12 @@ import nodemailer from "nodemailer";
  * Sends replies via SMTP
  */
 
-// ─── Config ────────────────────────────────────────────────────
+// --- Config ----------------------------------------------------
 const EMAIL_HOST = process.env.EMAIL_HOST || "mail.privateemail.com";
 const EMAIL_USER = process.env.EMAIL_USER || "a.zaqout@comodevelopments.com";
 const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD || "";
 
-// ─── Types ─────────────────────────────────────────────────────
+// --- Types -----------------------------------------------------
 export interface EmailMessage {
   uid: number;
   messageId: string;
@@ -36,7 +36,7 @@ export interface EmailAttachment {
   content?: Buffer;
 }
 
-// ─── Track processed emails ────────────────────────────────────
+// --- Track processed emails ------------------------------------
 // Store UIDs of emails we've already notified about (persists in memory per server session)
 const processedUIDs = new Set<number>();
 let lastCheckUID = 0;

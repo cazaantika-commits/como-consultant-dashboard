@@ -393,7 +393,7 @@ export async function readFileContent(fileId: string): Promise<FileContentResult
       const truncated = totalChars > MAX_CONTENT_CHARS;
       
       // Add metadata header
-      const header = `📄 الملف: ${fileName}\n📊 الحجم: ${Math.round(fileSize / 1024 / 1024)} MB | الصفحات: ${totalPages} | الأحرف: ${totalChars.toLocaleString()}\n${'─'.repeat(50)}\n\n`;
+      const header = `📄 الملف: ${fileName}\n📊 الحجم: ${Math.round(fileSize / 1024 / 1024)} MB | الصفحات: ${totalPages} | الأحرف: ${totalChars.toLocaleString()}\n${'-'.repeat(50)}\n\n`;
       
       if (truncated) {
         // Smart truncation: take beginning and end for context

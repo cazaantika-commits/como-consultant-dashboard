@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 describe("Email Agent Tools - Salwa Platform Email Access", () => {
-  // ─── Tool Definitions ───
+  // --- Tool Definitions ---
   it("should have check_email tool defined in AGENT_TOOLS", async () => {
     const { AGENT_TOOLS } = await import("./agentTools");
     const tool = AGENT_TOOLS.find((t: any) => t.function.name === "check_email");
@@ -34,7 +34,7 @@ describe("Email Agent Tools - Salwa Platform Email Access", () => {
     expect(tool!.function.parameters.required).toContain("body");
   });
 
-  // ─── Tool Access ───
+  // --- Tool Access ---
   it("should allow Salwa to access all email tools", async () => {
     const { getToolsForAgent } = await import("./agentTools");
     const salwaTools = getToolsForAgent("salwa");
@@ -55,7 +55,7 @@ describe("Email Agent Tools - Salwa Platform Email Access", () => {
     expect(toolNames).not.toContain("compose_email");
   });
 
-  // ─── Tool Execution: check_email ───
+  // --- Tool Execution: check_email ---
   it("should execute check_email and return email list", async () => {
     const { executeAgentTool } = await import("./agentTools");
     const result = await executeAgentTool("check_email", { hours: 48 }, 1);
@@ -74,7 +74,7 @@ describe("Email Agent Tools - Salwa Platform Email Access", () => {
     }
   }, 30000);
 
-  // ─── Tool Execution: read_email ───
+  // --- Tool Execution: read_email ---
   it("should execute read_email and return email details or not-found error", async () => {
     const { executeAgentTool } = await import("./agentTools");
     // First get a valid UID from check_email
@@ -99,7 +99,7 @@ describe("Email Agent Tools - Salwa Platform Email Access", () => {
     }
   }, 30000);
 
-  // ─── Salwa System Prompt ───
+  // --- Salwa System Prompt ---
   it("should include email tool instructions in Salwa's system prompt", async () => {
     const fs = await import("fs");
     const path = await import("path");
@@ -112,7 +112,7 @@ describe("Email Agent Tools - Salwa Platform Email Access", () => {
     expect(source).toContain("اعرضي المسودة أولاً واطلبي الموافقة قبل الإرسال");
   });
 
-  // ─── Write tools logged as assignments ───
+  // --- Write tools logged as assignments ---
   it("should log reply_email and compose_email as assignments", async () => {
     const fs = await import("fs");
     const path = await import("path");

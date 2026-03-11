@@ -1680,3 +1680,212 @@ export const projectStageDocuments = mysqlTable("project_stage_documents", {
   index("psd_project_svc").on(table.projectId, table.serviceCode),
   index("psd_req").on(table.requirementCode),
 ]);
+
+// ─────────────────────────────────────────────────────────────
+// CONSULTANT PROPOSAL ANALYSIS MODULE (تحليل عروض الاستشاريين)
+// ─────────────────────────────────────────────────────────────
+
+// Table 1: cpa_building_categories
+export const cpaBuildinCategories = mysqlTable("cpa_building_categories", {
+  id: int().autoincrement().notNull().primaryKey(),
+  code: varchar({ length: 20 }).notNull(),
+  label: varchar({ length: 100 }).notNull(),
+  buaMinSqft: decimal({ precision: 12, scale: 2 }),
+  buaMaxSqft: decimal({ precision: 12, scale: 2 }),
+  description: text(),
+  sortOrder: int().notNull().default(0),
+  isActive: tinyint().notNull().default(1),
+  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+// Table 2: cpa_scope_sections
+export const cpaScopeSections = mysqlTable("cpa_scope_sections", {
+  id: int().autoincrement().notNull().primaryKey(),
+  code: varchar({ length: 50 }).notNull(),
+  label: varchar({ length: 200 }).notNull(),
+  sortOrder: int().notNull().default(0),
+  isActive: tinyint().notNull().default(1),
+  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+// Table 3: cpa_scope_items
+export const cpaScopeItems = mysqlTable("cpa_scope_items", {
+  id: int().autoincrement().notNull().primaryKey(),
+  itemNumber: int().notNull(),
+  code: varchar({ length: 50 }).notNull(),
+  label: varchar({ length: 200 }).notNull(),
+  sectionId: int(),
+  defaultType: mysqlEnum("cpa_si_defaultType", ['CORE', 'GREEN', 'RED', 'CONTRACTOR']).notNull().default('CORE'),
+  description: text(),
+  sortOrder: int().notNull().default(0),
+  isActive: tinyint().notNull().default(1),
+  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+// Table 4: cpa_scope_category_matrix
+export const cpaScopeCategoryMatrix = mysqlTable("cpa_scope_category_matrix", {
+  id: int().autoincrement().notNull().primaryKey(),
+  scopeItemId: int().notNull(),
+  buildingCategoryId: int().notNull(),
+  status: mysqlEnum("cpa_scm_status", ['INCLUDED', 'GREEN', 'RED', 'CONTRACTOR', 'NOT_REQUIRED']).notNull(),
+  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+  index("cpa_scm_item_cat").on(table.scopeItemId, table.buildingCategoryId),
+]);
+
+// Table 5: cpa_scope_reference_costs
+export const cpaScopeReferenceCosts = mysqlTable("cpa_scope_reference_costs", {
+  id: int().autoincrement().notNull().primaryKey(),
+  scopeItemId: int().notNull(),
+  buildingCategoryId: int().notNull(),
+  costAed: decimal({ precision: 15, scale: 2 }),
+  notes: text(),
+  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+  index("cpa_src_item_cat").on(table.scopeItemId, table.buildingCategoryId),
+]);
+
+// Table 6: cpa_supervision_roles
+export const cpaSupervisionRoles = mysqlTable("cpa_supervision_roles", {
+  id: int().autoincrement().notNull().primaryKey(),
+  code: varchar({ length: 50 }).notNull(),
+  label: varchar({ length: 200 }).notNull(),
+  grade: varchar({ length: 50 }),
+  teamType: mysqlEnum("cpa_sr_teamType", ['SITE', 'HEAD_OFFICE']).notNull().default('SITE'),
+  monthlyRateAed: decimal({ precision: 12, scale: 2 }).notNull(),
+  sortOrder: int().notNull().default(0),
+  isActive: tinyint().notNull().default(1),
+  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+// Table 7: cpa_supervision_baseline
+export const cpaSupervisionBaseline = mysqlTable("cpa_supervision_baseline", {
+  id: int().autoincrement().notNull().primaryKey(),
+  supervisionRoleId: int().notNull(),
+  buildingCategoryId: int().notNull(),
+  requiredAllocationPct: decimal({ precision: 5, scale: 2 }).notNull().default('0'),
+  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+  index("cpa_sb_role_cat").on(table.supervisionRoleId, table.buildingCategoryId),
+]);
+
+// Table 8: cpa_consultants_master
+export const cpaConsultantsMaster = mysqlTable("cpa_consultants_master", {
+  id: int().autoincrement().notNull().primaryKey(),
+  code: varchar({ length: 50 }).notNull(),
+  legalName: varchar({ length: 300 }).notNull(),
+  tradeName: varchar({ length: 300 }),
+  registrationNo: varchar({ length: 100 }),
+  specialties: text(),
+  contactEmail: varchar({ length: 200 }),
+  contactPhone: varchar({ length: 50 }),
+  isActive: tinyint().notNull().default(1),
+  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+// Table 9: cpa_projects
+export const cpaProjects = mysqlTable("cpa_projects", {
+  id: int().autoincrement().notNull().primaryKey(),
+  projectId: int().notNull(),
+  plotNumber: varchar({ length: 50 }).notNull(),
+  location: varchar({ length: 300 }),
+  projectType: mysqlEnum("cpa_proj_type", ['RESIDENTIAL', 'COMMERCIAL', 'MIXED_USE', 'OTHER']).default('RESIDENTIAL'),
+  description: varchar({ length: 500 }),
+  buaSqft: decimal({ precision: 12, scale: 2 }).notNull(),
+  buildingCategoryId: int(),
+  constructionCostPerSqft: decimal({ precision: 10, scale: 2 }).notNull(),
+  durationMonths: int().notNull(),
+  status: mysqlEnum("cpa_proj_status", ['ACTIVE', 'COMPLETED', 'CANCELLED']).default('ACTIVE'),
+  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+  index("cpa_proj_project_id").on(table.projectId),
+]);
+
+// Table 10: cpa_project_consultants
+export const cpaProjectConsultants = mysqlTable("cpa_project_consultants", {
+  id: int().autoincrement().notNull().primaryKey(),
+  cpaProjectId: int().notNull(),
+  consultantId: int().notNull(),
+  proposalDate: varchar({ length: 20 }),
+  proposalReference: varchar({ length: 200 }),
+  designFeeAmount: decimal({ precision: 15, scale: 2 }),
+  designFeeMethod: mysqlEnum("cpa_pc_dfm", ['LUMP_SUM', 'PERCENTAGE', 'MONTHLY_RATE']),
+  designFeePercentage: decimal({ precision: 7, scale: 4 }),
+  supervisionFeeAmount: decimal({ precision: 15, scale: 2 }),
+  supervisionFeeMethod: mysqlEnum("cpa_pc_sfm", ['LUMP_SUM', 'PERCENTAGE', 'MONTHLY_RATE']),
+  supervisionFeePercentage: decimal({ precision: 7, scale: 4 }),
+  supervisionStatedDurationMonths: int(),
+  supervisionSubmitted: tinyint().notNull().default(0),
+  importJson: longtext(),
+  status: mysqlEnum("cpa_pc_status", ['DRAFT', 'CONFIRMED', 'EVALUATED']).default('DRAFT'),
+  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+  index("cpa_pc_project").on(table.cpaProjectId),
+  index("cpa_pc_consultant").on(table.consultantId),
+]);
+
+// Table 11: cpa_consultant_scope_coverage
+export const cpaConsultantScopeCoverage = mysqlTable("cpa_consultant_scope_coverage", {
+  id: int().autoincrement().notNull().primaryKey(),
+  projectConsultantId: int().notNull(),
+  scopeItemId: int().notNull(),
+  coverageStatus: mysqlEnum("cpa_csc_status", ['INCLUDED', 'EXCLUDED', 'NOT_MENTIONED']).notNull().default('NOT_MENTIONED'),
+  notes: text(),
+  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+  index("cpa_csc_pc_item").on(table.projectConsultantId, table.scopeItemId),
+]);
+
+// Table 12: cpa_consultant_supervision_team
+export const cpaConsultantSupervisionTeam = mysqlTable("cpa_consultant_supervision_team", {
+  id: int().autoincrement().notNull().primaryKey(),
+  projectConsultantId: int().notNull(),
+  supervisionRoleId: int().notNull(),
+  proposedAllocationPct: decimal({ precision: 5, scale: 2 }).notNull().default('0'),
+  proposedMonthlyRate: decimal({ precision: 12, scale: 2 }),
+  notes: text(),
+  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+  index("cpa_cst_pc_role").on(table.projectConsultantId, table.supervisionRoleId),
+]);
+
+// Table 13: cpa_evaluation_results
+export const cpaEvaluationResults = mysqlTable("cpa_evaluation_results", {
+  id: int().autoincrement().notNull().primaryKey(),
+  projectConsultantId: int().notNull(),
+  quotedDesignFee: decimal({ precision: 15, scale: 2 }),
+  designScopeGapCost: decimal({ precision: 15, scale: 2 }),
+  trueDesignFee: decimal({ precision: 15, scale: 2 }),
+  quotedSupervisionFee: decimal({ precision: 15, scale: 2 }),
+  supervisionGapCost: decimal({ precision: 15, scale: 2 }),
+  adjustedSupervisionFee: decimal({ precision: 15, scale: 2 }),
+  totalTrueCost: decimal({ precision: 15, scale: 2 }),
+  rank: int(),
+  canRank: tinyint().notNull().default(1),
+  calculationNotes: longtext(),
+  calculatedAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+  index("cpa_er_pc").on(table.projectConsultantId),
+]);

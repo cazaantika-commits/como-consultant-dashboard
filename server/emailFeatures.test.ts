@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// ─── Test: Email Notification Service ──────────────────────────
+// --- Test: Email Notification Service --------------------------
 describe("Email Notification Service", () => {
   it("should export start and stop functions", async () => {
     const mod = await import("./emailNotificationService");
@@ -17,7 +17,7 @@ describe("Email Notification Service", () => {
   }, 30000);
 });
 
-// ─── Test: Notification DB helpers ─────────────────────────────
+// --- Test: Notification DB helpers -----------------------------
 describe("Notification DB helpers", () => {
   it("should export all notification DB functions", async () => {
     const db = await import("./db");
@@ -31,7 +31,7 @@ describe("Notification DB helpers", () => {
   });
 });
 
-// ─── Test: Notifications Router ────────────────────────────────
+// --- Test: Notifications Router --------------------------------
 describe("Notifications Router", () => {
   it("should export notificationsRouter", async () => {
     const mod = await import("./routers/notifications");
@@ -52,7 +52,7 @@ describe("Notifications Router", () => {
   });
 });
 
-// ─── Test: SentEmails Router with follow-up task ───────────────
+// --- Test: SentEmails Router with follow-up task ---------------
 describe("SentEmails Router", () => {
   it("should export sentEmailsRouter", async () => {
     const mod = await import("./routers/sentEmails");
@@ -72,7 +72,7 @@ describe("SentEmails Router", () => {
   });
 });
 
-// ─── Test: Schema has emailNotifications table ─────────────────
+// --- Test: Schema has emailNotifications table -----------------
 describe("Database Schema", () => {
   it("should have emailNotifications table defined", async () => {
     const schema = await import("../drizzle/schema");
@@ -97,7 +97,7 @@ describe("Database Schema", () => {
   });
 });
 
-// ─── Test: Pending Email Draft System ──────────────────────────
+// --- Test: Pending Email Draft System --------------------------
 describe("Pending Email Draft System", () => {
   it("should export draft management functions", async () => {
     const mod = await import("./agentChat");
@@ -143,7 +143,7 @@ describe("Pending Email Draft System", () => {
   });
 });
 
-// ─── Test: App Router includes all new routers ─────────────────
+// --- Test: App Router includes all new routers -----------------
 describe("App Router", () => {
   it("should include notifications router", async () => {
     const mod = await import("./routers");

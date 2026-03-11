@@ -1431,7 +1431,7 @@ function MonthlyTableTab({ dual }: { dual: any }) {
   const phases = dual.phases;
   if (!table.length || !phases) return <div className="text-center py-8 text-muted-foreground">لا توجد بيانات</div>;
 
-  // ── Build item-level row data (like Excel: each cost item = one row, months = columns) ──
+  // -- Build item-level row data (like Excel: each cost item = one row, months = columns) --
   // Collect all unique item names from developer and escrow breakdowns
   const devItemNames = new Set<string>();
   const escItemNames = new Set<string>();
@@ -1494,7 +1494,7 @@ function MonthlyTableTab({ dual }: { dual: any }) {
         <CardContent className="p-0">
           <div className="overflow-x-auto overflow-y-auto max-h-[80vh]">
             <table className="border-collapse text-[11px]" dir="rtl" style={{ minWidth: `${300 + table.length * 75}px` }}>
-              {/* ── Phase Headers ── */}
+              {/* -- Phase Headers -- */}
               <thead className="sticky top-0 z-20">
                 <tr className="bg-slate-700 text-white">
                   <th className="py-2 px-3 text-right font-bold text-xs sticky right-0 z-30 bg-slate-700 min-w-[200px] border-l border-slate-500" rowSpan={2}>البند</th>
@@ -1510,7 +1510,7 @@ function MonthlyTableTab({ dual }: { dual: any }) {
                     </th>
                   ))}
                 </tr>
-                {/* ── Month Number Headers ── */}
+                {/* -- Month Number Headers -- */}
                 <tr className="bg-slate-600 text-white">
                   {table.map((row: any, i: number) => {
                     const isPhaseStart = phaseGroups.some(pg => pg.start === i);

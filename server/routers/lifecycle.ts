@@ -12,10 +12,10 @@ import {
 import { eq, and, sql, lte, gte, isNotNull, max } from "drizzle-orm";
 import { notifyOwner } from "../_core/notification";
 
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 // Helper: compute dynamic operational status for a service
 // based on dependency completion and requirement status
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 async function computeServiceStatus(
   db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
   projectId: number,
@@ -90,7 +90,7 @@ async function computeServiceStatus(
 }
 
 export const lifecycleRouter = router({
-  // ── Stages ──────────────────────────────────────────────────
+  // -- Stages --------------------------------------------------
 
   /** Get all active master stages */
   getStages: protectedProcedure.query(async () => {
@@ -232,7 +232,7 @@ export const lifecycleRouter = router({
       return { success: true };
     }),
 
-  // ── Services ─────────────────────────────────────────────────
+  // -- Services -------------------------------------------------
 
   /** Get services for a stage with computed dynamic status per project */
   getStageServices: protectedProcedure
@@ -426,7 +426,7 @@ export const lifecycleRouter = router({
       return { success: true };
     }),
 
-  // ── Requirements ─────────────────────────────────────────────
+  // -- Requirements ---------------------------------------------
 
   /** Get requirements for a service with per-project status */
   getServiceRequirements: protectedProcedure

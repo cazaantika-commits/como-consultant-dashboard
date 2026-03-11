@@ -691,7 +691,7 @@ export async function getSentEmailById(id: number, userId: number) {
   return result[0] || null;
 }
 
-// ─── Email Notifications ──────────────────────────────────────
+// --- Email Notifications --------------------------------------
 import { emailNotifications } from "../drizzle/schema";
 
 export async function createEmailNotification(data: {

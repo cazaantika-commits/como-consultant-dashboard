@@ -12,7 +12,7 @@
  * Escrow pays remaining 65% from buyer payments
  */
 
-// ─── Types ───
+// --- Types ---
 
 export interface PhaseTimeline {
   preDev: { start: number; end: number; months: number };
@@ -104,7 +104,7 @@ export interface CashFlowResult {
   escrowCosts: number;
 }
 
-// ─── Phase Timeline Builder ───
+// --- Phase Timeline Builder ---
 
 export function buildPhaseTimeline(
   preDevMonths: number,
@@ -127,7 +127,7 @@ export function buildPhaseTimeline(
   return { preDev, construction, handover, totalMonths };
 }
 
-// ─── Month Label Generator ───
+// --- Month Label Generator ---
 
 export function generateMonthLabels(startDate: string, totalMonths: number): string[] {
   const [startYear, startMonthStr] = startDate.split('-');
@@ -144,7 +144,7 @@ export function generateMonthLabels(startDate: string, totalMonths: number): str
   return labels;
 }
 
-// ─── Construction Payment Curve ───
+// --- Construction Payment Curve ---
 
 function buildConstructionPaymentCurve(constructionMonths: number): number[] {
   // Based on the spec: 10% advance, 3%, 4%, 4%, 5%, then progressive for remaining
@@ -184,7 +184,7 @@ function buildConstructionPaymentCurve(constructionMonths: number): number[] {
   return curve;
 }
 
-// ─── Sales Inflow Calculator ───
+// --- Sales Inflow Calculator ---
 
 function calculateSalesInflow(
   project: ProjectInput,
@@ -230,7 +230,7 @@ function calculateSalesInflow(
   return inflow;
 }
 
-// ─── Cost Distribution Calculator ───
+// --- Cost Distribution Calculator ---
 
 function distributeCostItem(
   item: CostItemInput,
@@ -343,7 +343,7 @@ function distributeCostItem(
   return monthly;
 }
 
-// ─── Main Calculation Engine ───
+// --- Main Calculation Engine ---
 
 export function calculateDualCashFlow(
   project: ProjectInput,

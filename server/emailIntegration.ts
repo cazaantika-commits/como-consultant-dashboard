@@ -76,7 +76,7 @@ export function setOwnerChatId(chatId: number) {
   ownerChatId = chatId;
 }
 
-// ─── Main: Check new (unseen) emails and notify owner ──────────────
+// --- Main: Check new (unseen) emails and notify owner --------------
 export async function checkAndNotifyEmails(): Promise<number> {
   if (!botInstance || !ownerChatId) {
     console.warn("[EmailIntegration] Bot or chatId not initialized");
@@ -113,7 +113,7 @@ export async function checkAndNotifyEmails(): Promise<number> {
   }
 }
 
-// ─── Check last 48 hours (read + unread) ───────────────────────────
+// --- Check last 48 hours (read + unread) ---------------------------
 export async function checkLast48HoursEmails(): Promise<number> {
   if (!botInstance || !ownerChatId) {
     console.warn("[EmailIntegration] Bot or chatId not initialized");
@@ -269,7 +269,7 @@ export async function handleEmailCallback(
   return false;
 }
 
-// ─── Reply handling ────────────────────────────────────────────────
+// --- Reply handling ------------------------------------------------
 async function handleReplyAction(bot: any, chatId: number, uid: number, callbackQueryId: string) {
   const pending = pendingEmails.get("uid_" + uid);
   if (!pending) {
@@ -391,7 +391,7 @@ export async function handleCustomReplyText(bot: any, chatId: number, text: stri
   return true;
 }
 
-// ─── خازن: Archive to Google Drive (enhanced) ─────────────────────
+// --- خازن: Archive to Google Drive (enhanced) ---------------------
 async function handleArchiveAction(bot: any, chatId: number, uid: number, callbackQueryId: string) {
   const pending = pendingEmails.get("uid_" + uid);
   if (!pending) {
@@ -507,7 +507,7 @@ async function handleArchiveAction(bot: any, chatId: number, uid: number, callba
   }
 }
 
-// ─── فاروق: Analyze consultant proposal (enhanced with attachment reading) ───
+// --- فاروق: Analyze consultant proposal (enhanced with attachment reading) ---
 async function handleAnalyzeAction(bot: any, chatId: number, uid: number, callbackQueryId: string) {
   const pending = pendingEmails.get("uid_" + uid);
   if (!pending) {
@@ -680,7 +680,7 @@ async function handleAnalyzeAction(bot: any, chatId: number, uid: number, callba
 
     pending.farouqAnalysis = analysis;
 
-    // ─── Auto-update platform database ───
+    // --- Auto-update platform database ---
     let platformMsg = "";
     try {
       platformMsg = await updatePlatformFromAnalysis(analysis, pending.email);
@@ -742,7 +742,7 @@ async function handleAnalyzeAction(bot: any, chatId: number, uid: number, callba
   }
 }
 
-// ─── Auto-update platform from Farouq analysis ───
+// --- Auto-update platform from Farouq analysis ---
 async function updatePlatformFromAnalysis(analysis: FarouqAnalysis, email: EmailMessage): Promise<string> {
   const db = await getDb();
   if (!db) return "\n⚠️ قاعدة البيانات غير متاحة";

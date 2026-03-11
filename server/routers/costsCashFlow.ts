@@ -269,7 +269,7 @@ BUA: ${bua > 0 ? bua.toLocaleString() : 'غير محدد'} قدم²
       }
     }),
 
-  // ─── DATA SYNC STATUS: compare timestamps across sections ───
+  // --- DATA SYNC STATUS: compare timestamps across sections ---
   getSyncStatus: publicProcedure
     .input(z.number()) // projectId
     .query(async ({ ctx, input: projectId }) => {

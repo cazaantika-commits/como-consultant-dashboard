@@ -230,7 +230,7 @@ describe("Email Notification Formatting", () => {
   });
 });
 
-// ─── NEW: Test IMAP SINCE date string generation ───────────────────
+// --- NEW: Test IMAP SINCE date string generation -------------------
 describe("IMAP SINCE Date Generation", () => {
   it("should generate correct SINCE date string for 48 hours ago", () => {
     const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -270,7 +270,7 @@ describe("IMAP SINCE Date Generation", () => {
   });
 });
 
-// ─── NEW: Test 48-hour email summary formatting ────────────────────
+// --- NEW: Test 48-hour email summary formatting --------------------
 describe("48-Hour Email Summary Formatting", () => {
   it("should correctly count read and unread emails", () => {
     const emails = [
@@ -320,7 +320,7 @@ describe("48-Hour Email Summary Formatting", () => {
   });
 });
 
-// ─── NEW: Test Farouq analysis with attachment handling ────────────
+// --- NEW: Test Farouq analysis with attachment handling ------------
 describe("Farouq Analysis - Attachment Handling", () => {
   it("should identify PDF attachments for LLM file_url", () => {
     const attachmentUrls = [
@@ -388,7 +388,7 @@ describe("Farouq Analysis - Attachment Handling", () => {
   });
 });
 
-// ─── NEW: Test Khazen archiving - safe filename generation ─────────
+// --- NEW: Test Khazen archiving - safe filename generation ---------
 describe("Khazen Archiving - File Handling", () => {
   it("should sanitize filenames for S3 keys", () => {
     const filename = "عرض أتعاب (التصميم).pdf";
@@ -430,7 +430,7 @@ describe("Khazen Archiving - File Handling", () => {
   });
 });
 
-// ─── NEW: Test FarouqAnalysis JSON parsing ─────────────────────────
+// --- NEW: Test FarouqAnalysis JSON parsing -------------------------
 describe("Farouq Analysis JSON Parsing", () => {
   it("should parse valid analysis JSON", () => {
     const analysisText = JSON.stringify({
@@ -476,7 +476,7 @@ describe("Farouq Analysis JSON Parsing", () => {
   });
 });
 
-// ─── NEW: Test email keywords detection for free text ──────────────
+// --- NEW: Test email keywords detection for free text --------------
 describe("Email Keywords Detection", () => {
   it("should detect Arabic email-related keywords", () => {
     const emailKeywords = [
@@ -507,7 +507,7 @@ describe("Email Keywords Detection", () => {
   });
 });
 
-// ─── NEW: Test pending emails state management ─────────────────────
+// --- NEW: Test pending emails state management ---------------------
 describe("Pending Emails State Management", () => {
   it("should track pending emails by UID key", () => {
     const pendingEmails = new Map<string, any>();

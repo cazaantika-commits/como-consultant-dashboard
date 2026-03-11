@@ -10,7 +10,7 @@ import { getKnowledgeStats, searchKnowledge, getKnowledgeByDomain, addKnowledge 
 import { seedKnowledgeBase } from "../seedKnowledge";
 
 export const activityMonitorRouter = router({
-  // ─── Activity Log ───
+  // --- Activity Log ---
   getActivityLog: protectedProcedure
     .input(z.object({
       agentName: z.string().optional(),
@@ -49,7 +49,7 @@ export const activityMonitorRouter = router({
       return getRecentAgentActivity(input.agentName, input.limit);
     }),
 
-  // ─── Document Index ───
+  // --- Document Index ---
   getIndexStats: protectedProcedure
     .query(async () => {
       return getIndexStats();
@@ -74,7 +74,7 @@ export const activityMonitorRouter = router({
       });
     }),
 
-  // ─── Knowledge Base ───
+  // --- Knowledge Base ---
   getKnowledgeStats: protectedProcedure
     .query(async () => {
       return getKnowledgeStats();

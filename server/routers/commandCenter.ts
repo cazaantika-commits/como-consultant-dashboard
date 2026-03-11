@@ -27,7 +27,7 @@ import { invokeLLM } from "../_core/llm";
 import { transcribeAudio } from "../_core/voiceTranscription";
 import { storagePut } from "../storage";
 
-// ─── Helper: Verify Command Center access token ───
+// --- Helper: Verify Command Center access token ---
 async function verifyToken(token: string) {
   const db = await getDb();
   if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
@@ -45,7 +45,7 @@ async function verifyToken(token: string) {
   return member;
 }
 
-// ─── Helper: Generate secure token ───
+// --- Helper: Generate secure token ---
 function generateToken(): string {
   return crypto.randomBytes(48).toString("hex");
 }
@@ -961,7 +961,7 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       return { success: true };
     }),
 
-  // ─── KPIs ───
+  // --- KPIs ---
 
   // Get KPIs for a project
   getKpis: publicProcedure
@@ -1116,7 +1116,7 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       }));
     }),
 
-  // ─── Voice Transcription for Command Center ───
+  // --- Voice Transcription for Command Center ---
   transcribeVoice: publicProcedure
     .input(z.object({
       token: z.string(),
@@ -1159,7 +1159,7 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       return { text: (result as any).text || "", language: (result as any).language || "ar", duration: (result as any).duration || 0 };
     }),
 
-  // ─── Text-to-Speech for Command Center ───
+  // --- Text-to-Speech for Command Center ---
   textToSpeech: publicProcedure
     .input(z.object({
       token: z.string(),

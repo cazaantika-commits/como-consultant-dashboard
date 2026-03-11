@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 describe("Email Attachment Download Tool", () => {
-  // ─── Tool Definition ───
+  // --- Tool Definition ---
   it("should have download_email_attachments tool defined in AGENT_TOOLS", async () => {
     const { AGENT_TOOLS } = await import("./agentTools");
     const tool = AGENT_TOOLS.find((t: any) => t.function.name === "download_email_attachments");
@@ -12,7 +12,7 @@ describe("Email Attachment Download Tool", () => {
     expect(tool!.function.parameters.properties).toHaveProperty("renamePattern");
   });
 
-  // ─── Tool Access ───
+  // --- Tool Access ---
   it("should allow Salwa to access download_email_attachments", async () => {
     const { getToolsForAgent } = await import("./agentTools");
     const salwaTools = getToolsForAgent("salwa");
@@ -34,7 +34,7 @@ describe("Email Attachment Download Tool", () => {
     expect(toolNames).not.toContain("download_email_attachments");
   });
 
-  // ─── Write Tool Logging ───
+  // --- Write Tool Logging ---
   it("should log download_email_attachments as a write tool (assignment)", async () => {
     const fs = await import("fs");
     const path = await import("path");
@@ -46,13 +46,13 @@ describe("Email Attachment Download Tool", () => {
     expect(writeToolSection).toContain("download_email_attachments");
   });
 
-  // ─── uploadBinaryFile exists ───
+  // --- uploadBinaryFile exists ---
   it("should have uploadBinaryFile function in googleDrive module", async () => {
     const { uploadBinaryFile } = await import("./googleDrive");
     expect(typeof uploadBinaryFile).toBe("function");
   });
 
-  // ─── Tool Execution: no attachments ───
+  // --- Tool Execution: no attachments ---
   it("should return error when email has no attachments", async () => {
     const { executeAgentTool } = await import("./agentTools");
     // First get a list of emails to find one without attachments
@@ -71,7 +71,7 @@ describe("Email Attachment Download Tool", () => {
     expect(true).toBe(true);
   }, 30000);
 
-  // ─── Tool Execution: invalid UID ───
+  // --- Tool Execution: invalid UID ---
   it("should return error for invalid email UID", async () => {
     const { executeAgentTool } = await import("./agentTools");
     const result = await executeAgentTool("download_email_attachments", { uid: 999999 }, 1);
@@ -79,7 +79,7 @@ describe("Email Attachment Download Tool", () => {
     expect(parsed.error).toBeDefined();
   }, 30000);
 
-  // ─── System prompt includes download instructions ───
+  // --- System prompt includes download instructions ---
   it("should include download_email_attachments in Salwa's system prompt", async () => {
     const fs = await import("fs");
     const path = await import("path");
@@ -91,7 +91,7 @@ describe("Email Attachment Download Tool", () => {
     expect(agentToolsSource).toContain("renamePattern");
   });
 
-  // ─── Tool Execution: with attachments (integration test) ───
+  // --- Tool Execution: with attachments (integration test) ---
   it("should successfully download attachments from an email with attachments", async () => {
     const { executeAgentTool } = await import("./agentTools");
     const checkResult = await executeAgentTool("check_email", { hours: 72 }, 1);

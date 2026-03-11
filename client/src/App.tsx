@@ -13,7 +13,7 @@ import TasksPage from "./pages/TasksPage";
 import AgentDashboardPage from "./pages/AgentDashboardPage";
 import ConsultantPortalPage from "./pages/ConsultantPortalPage";
 import ConsultantGuidePage from "./pages/ConsultantGuidePage";
-import ConsultantProposalsPage from "./pages/ConsultantProposalsPage";
+import CPAPage from "./pages/CPAPage";
 import ConsultantKnowPage from "./pages/ConsultantKnowPage";
 import ConsultantRecommendPage from "./pages/ConsultantRecommendPage";
 import ConsultantEvaluationPage from "./pages/ConsultantEvaluationPage";
@@ -81,7 +81,7 @@ function Router() {
       <Route path="/consultants-registry" component={ConsultantsRegistry} />
       <Route path="/consultant-portal" component={ConsultantPortalPage} />
       <Route path="/consultant-guide" component={ConsultantGuidePage} />
-      <Route path="/consultant-proposals" component={ConsultantProposalsPage} />
+      <Route path="/consultant-proposals" component={CPAPage} />
       <Route path="/consultant-know" component={ConsultantKnowPage} />
       <Route path="/consultant-evaluation" component={ConsultantEvaluationPage} />
       <Route path="/consultant-recommend" component={ConsultantRecommendPage} />

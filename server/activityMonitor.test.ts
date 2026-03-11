@@ -30,7 +30,7 @@ function createAuthContext(): { ctx: TrpcContext } {
 }
 
 describe("activityMonitor router", () => {
-  // ─── Activity Log ───
+  // --- Activity Log ---
   describe("getActivityLog", () => {
     it("returns activity log with activities array and total count", async () => {
       const { ctx } = createAuthContext();
@@ -67,7 +67,7 @@ describe("activityMonitor router", () => {
     });
   });
 
-  // ─── Agent Stats ───
+  // --- Agent Stats ---
   describe("getAgentStats", () => {
     it("returns an array of agent stats", async () => {
       const { ctx } = createAuthContext();
@@ -95,7 +95,7 @@ describe("activityMonitor router", () => {
     });
   });
 
-  // ─── Document Index Stats ───
+  // --- Document Index Stats ---
   describe("getIndexStats", () => {
     it("returns index statistics with byType and byAgent arrays", async () => {
       const { ctx } = createAuthContext();
@@ -112,7 +112,7 @@ describe("activityMonitor router", () => {
     });
   });
 
-  // ─── Document Search ───
+  // --- Document Search ---
   describe("searchDocuments", () => {
     it("returns an array of matching documents", async () => {
       const { ctx } = createAuthContext();
@@ -137,7 +137,7 @@ describe("activityMonitor router", () => {
     });
   });
 
-  // ─── Knowledge Stats ───
+  // --- Knowledge Stats ---
   describe("getKnowledgeStats", () => {
     it("returns knowledge statistics with byDomain array and totals", async () => {
       const { ctx } = createAuthContext();
@@ -152,7 +152,7 @@ describe("activityMonitor router", () => {
     });
   });
 
-  // ─── Knowledge Search ───
+  // --- Knowledge Search ---
   describe("searchKnowledge", () => {
     it("returns matching knowledge entries", async () => {
       const { ctx } = createAuthContext();
@@ -183,7 +183,7 @@ describe("activityMonitor router", () => {
     });
   });
 
-  // ─── Knowledge by Domain ───
+  // --- Knowledge by Domain ---
   describe("getKnowledgeByDomain", () => {
     it("returns knowledge entries for a specific domain", async () => {
       const { ctx } = createAuthContext();
@@ -196,7 +196,7 @@ describe("activityMonitor router", () => {
     });
   });
 
-  // ─── Seed Knowledge ───
+  // --- Seed Knowledge ---
   describe("seedKnowledge", () => {
     it("seeds the knowledge base and returns success/failed counts", async () => {
       const { ctx } = createAuthContext();
@@ -212,7 +212,7 @@ describe("activityMonitor router", () => {
     });
   });
 
-  // ─── Add Knowledge ───
+  // --- Add Knowledge ---
   describe("addKnowledge", () => {
     it("adds a new knowledge entry", async () => {
       const { ctx } = createAuthContext();

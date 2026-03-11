@@ -43,6 +43,7 @@ import { selfLearningRouter } from "./routers/selfLearning";
 import { sectionStatusRouter } from "./routers/sectionStatus";
 import { lifecycleRouter } from "./routers/lifecycle";
 import { stageDataRouter } from "./routers/stageData";
+import { cpaRouter } from "./routers/cpa";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -100,6 +101,7 @@ export const appRouter = router({
   sectionStatus: sectionStatusRouter,
   lifecycle: lifecycleRouter,
   stageData: stageDataRouter,
+  cpa: cpaRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -37,7 +37,7 @@ import nodemailer from "nodemailer";
 // ═══════════════════════════════════════════════════
 
 export const AGENT_TOOLS = [
-  // ─── READ TOOLS ───
+  // --- READ TOOLS ---
   {
     type: "function" as const,
     function: {
@@ -160,7 +160,7 @@ export const AGENT_TOOLS = [
       },
     },
   },
-  // ─── MARKET INTELLIGENCE TOOLS (Joelle) ───
+  // --- MARKET INTELLIGENCE TOOLS (Joelle) ---
   {
     type: "function" as const,
     function: {
@@ -309,7 +309,7 @@ export const AGENT_TOOLS = [
     },
   },
 
-  // ─── WRITE TOOLS ───
+  // --- WRITE TOOLS ---
   {
     type: "function" as const,
     function: {
@@ -579,7 +579,7 @@ export const AGENT_TOOLS = [
       },
     },
   },
-  // ─── GOOGLE DRIVE TOOLS ───
+  // --- GOOGLE DRIVE TOOLS ---
   {
     type: "function" as const,
     function: {
@@ -666,7 +666,7 @@ export const AGENT_TOOLS = [
       },
     },
   },
-  // ─── BATCH COPY ───
+  // --- BATCH COPY ---
   {
     type: "function" as const,
     function: {
@@ -693,7 +693,7 @@ export const AGENT_TOOLS = [
       },
     },
   },
-  // ─── FILE CONTENT READING ───
+  // --- FILE CONTENT READING ---
   {
     type: "function" as const,
     function: {
@@ -708,7 +708,7 @@ export const AGENT_TOOLS = [
       },
     },
   },
-  // ─── FILE CREATION & UPLOAD ───
+  // --- FILE CREATION & UPLOAD ---
   {
     type: "function" as const,
     function: {
@@ -775,7 +775,7 @@ export const AGENT_TOOLS = [
       },
     },
   },
-  // ─── FILE MANAGEMENT (rename, move, delete) ───
+  // --- FILE MANAGEMENT (rename, move, delete) ---
   {
     type: "function" as const,
     function: {
@@ -821,7 +821,7 @@ export const AGENT_TOOLS = [
       },
     },
   },
-  // ─── FACT SHEET UPDATE ───
+  // --- FACT SHEET UPDATE ---
   {
     type: "function" as const,
     function: {
@@ -887,7 +887,7 @@ export const AGENT_TOOLS = [
       },
     },
   },
-  // ─── CONTRACT REGISTRY ───
+  // --- CONTRACT REGISTRY ---
   {
     type: "function" as const,
     function: {
@@ -950,7 +950,7 @@ export const AGENT_TOOLS = [
       },
     },
   },
-  // ─── EMAIL TOOLS (Salwa) ───
+  // --- EMAIL TOOLS (Salwa) ---
   {
     type: "function" as const,
     function: {
@@ -1030,7 +1030,7 @@ export const AGENT_TOOLS = [
       },
     },
   },
-  // ─── INTER-AGENT ───
+  // --- INTER-AGENT ---
   {
     type: "function" as const,
     function: {
@@ -1050,7 +1050,7 @@ export const AGENT_TOOLS = [
       },
     },
   },
-  // ─── SALWA: VIEW OTHER AGENTS' CONVERSATIONS ───
+  // --- SALWA: VIEW OTHER AGENTS' CONVERSATIONS ---
   {
     type: "function" as const,
     function: {
@@ -1156,7 +1156,7 @@ export const AGENT_TOOLS = [
       },
     },
   },
-  // ─── WEB SEARCH & BROWSE TOOLS ───
+  // --- WEB SEARCH & BROWSE TOOLS ---
   {
     type: "function" as const,
     function: {
@@ -1306,7 +1306,7 @@ async function _executeToolInternal(
 ): Promise<string> {
   try {
     switch (toolName) {
-      // ─── READ ───
+      // --- READ ---
       case "list_projects": {
         const result = await db.select().from(projects);
         if (result.length === 0) return JSON.stringify({ message: "لا توجد مشاريع مسجلة", data: [] });
@@ -1479,7 +1479,7 @@ async function _executeToolInternal(
         });
       }
 
-      // ─── MARKET INTELLIGENCE TOOL HANDLERS (Joelle) ───
+      // --- MARKET INTELLIGENCE TOOL HANDLERS (Joelle) ---
       case "get_market_overview": {
         const { projectId: moProjectId } = args;
         const moResults = await db.select().from(marketOverview)
@@ -1658,7 +1658,7 @@ async function _executeToolInternal(
         });
       }
 
-      // ─── FEASIBILITY STUDY WRITE TOOLS ───
+      // --- FEASIBILITY STUDY WRITE TOOLS ---
       case "create_feasibility_study": {
         const { projectName: fsName, ...fsData } = args;
         if (!fsName) return JSON.stringify({ error: "يجب تحديد اسم المشروع" });
@@ -1740,7 +1740,7 @@ async function _executeToolInternal(
         });
       }
 
-      // ─── WRITE ───
+      // --- WRITE ---
       case "add_consultant": {
         const { name, email, phone, specialization } = args;
         const result = await db.insert(consultants).values({
@@ -2018,7 +2018,7 @@ async function _executeToolInternal(
         return JSON.stringify({ success: true, ...searchResults });
       }
 
-      // ─── GOOGLE DRIVE ───
+      // --- GOOGLE DRIVE ---
       case "list_drive_folders": {
         const folders = await listSharedDrives();
         if (folders.length === 0) return JSON.stringify({ message: "لا توجد مجلدات مشتركة", data: [] });
@@ -2129,7 +2129,7 @@ async function _executeToolInternal(
         });
       }
 
-      // ─── FILE CONTENT READING ───
+      // --- FILE CONTENT READING ---
       case "read_drive_file_content": {
         const { fileId: readFileId } = args;
         if (!readFileId) return JSON.stringify({ error: "يجب تحديد معرف الملف (fileId)" });
@@ -2157,7 +2157,7 @@ async function _executeToolInternal(
         }
       }
 
-      // ─── FILE CREATION & UPLOAD ───
+      // --- FILE CREATION & UPLOAD ---
       case "create_drive_document": {
         const { title: docTitle, content: docContent, parentFolderId: docParent, contentType: docType } = args;
         if (!docTitle || !docContent || !docParent) return JSON.stringify({ error: "يجب تحديد العنوان والمحتوى ومعرف المجلد" });
@@ -2218,7 +2218,7 @@ async function _executeToolInternal(
         }
       }
 
-      // ─── FILE MANAGEMENT (rename, move, delete) ───
+      // --- FILE MANAGEMENT (rename, move, delete) ---
       case "rename_drive_file": {
         const { fileId: renameFileId, newName: renameNewName } = args;
         if (!renameFileId || !renameNewName) return JSON.stringify({ error: "يجب تحديد معرف الملف والاسم الجديد" });
@@ -2283,7 +2283,7 @@ async function _executeToolInternal(
         }
       }
 
-      // ─── SALWA: VIEW AGENT CONVERSATIONS ───
+      // --- SALWA: VIEW AGENT CONVERSATIONS ---
       case "view_agent_conversations": {
         const { targetAgent: viewTarget, limit: msgLimit } = args;
         const chatLimit = msgLimit || 20;
@@ -2334,7 +2334,7 @@ async function _executeToolInternal(
         }
       }
 
-      // ─── INTER-AGENT ───
+      // --- INTER-AGENT ---
       case "ask_another_agent": {
         // Agent-to-agent communication - use handleAgentChat
         const { targetAgent, question } = args;
@@ -2377,7 +2377,7 @@ async function _executeToolInternal(
         });
       }
 
-      // ─── FACT SHEET UPDATE TOOL ───
+      // --- FACT SHEET UPDATE TOOL ---
       case "update_project_fact_sheet": {
         const { projectId: fsProjectId, ...fsFields } = args;
         if (!fsProjectId) return JSON.stringify({ error: "يجب تحديد معرف المشروع" });
@@ -2410,7 +2410,7 @@ async function _executeToolInternal(
         });
       }
 
-      // ─── CONTRACT REGISTRY TOOLS ───
+      // --- CONTRACT REGISTRY TOOLS ---
       case "list_contract_types": {
         const types = await db.select().from(contractTypes).orderBy(contractTypes.category, contractTypes.sortOrder);
         return JSON.stringify({ contractTypes: types.map((t: any) => ({ id: t.id, name: t.name, nameEn: t.nameEn, code: t.code, category: t.category, description: t.description })) });
@@ -2477,7 +2477,7 @@ async function _executeToolInternal(
         return JSON.stringify({ success: true, message: "تم حفظ تحليل العقد بنجاح" });
       }
 
-      // ─── EMAIL TOOLS ───
+      // --- EMAIL TOOLS ---
       case "check_email": {
         const hours = args.hours || 48;
         try {
@@ -2768,7 +2768,7 @@ async function _executeToolInternal(
         }
       }
 
-      // ─── DOCUMENT INDEX & KNOWLEDGE ───
+      // --- DOCUMENT INDEX & KNOWLEDGE ---
       case "search_indexed_documents": {
         const results = await searchDocuments(args.query, {
           projectId: args.projectId,

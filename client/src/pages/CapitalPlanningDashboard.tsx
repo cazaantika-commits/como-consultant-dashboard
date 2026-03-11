@@ -83,7 +83,7 @@ export default function CapitalPlanningDashboard({ embedded = false }: { embedde
     });
   };
 
-  // ─── Loading State ───
+  // --- Loading State ---
   if (simulationQuery.isLoading) {
     return (
       <div className={`${embedded ? '' : 'min-h-screen'} bg-gradient-to-br from-slate-50 via-white to-amber-50/30 flex items-center justify-center`} dir="rtl">
@@ -98,7 +98,7 @@ export default function CapitalPlanningDashboard({ embedded = false }: { embedde
     );
   }
 
-  // ─── Empty State ───
+  // --- Empty State ---
   if (!data || data.projects.length === 0) {
     return (
       <div className={`${embedded ? '' : 'min-h-screen'} bg-gradient-to-br from-slate-50 via-white to-amber-50/30`} dir="rtl">
@@ -136,7 +136,7 @@ export default function CapitalPlanningDashboard({ embedded = false }: { embedde
 
   return (
     <div className={`${embedded ? '' : 'min-h-screen'} bg-gradient-to-br from-slate-50 via-white to-amber-50/30`} dir="rtl">
-      {/* ── Header ── */}
+      {/* -- Header -- */}
       {!embedded && <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-amber-200/40 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -179,7 +179,7 @@ export default function CapitalPlanningDashboard({ embedded = false }: { embedde
       </div>}
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-        {/* ── KPI Cards ── */}
+        {/* -- KPI Cards -- */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <KPICard icon={Building2} label="إجمالي التكاليف" value={formatAED(data.totalPortfolioCost)} sub="AED" gradient="from-red-500 to-rose-600" shadow="shadow-red-500/20" />
           <KPICard icon={TrendingUp} label="إجمالي الإيرادات" value={formatAED(data.totalPortfolioSales)} sub="AED" gradient="from-green-500 to-emerald-600" shadow="shadow-green-500/20" />
@@ -189,7 +189,7 @@ export default function CapitalPlanningDashboard({ embedded = false }: { embedde
           <KPICard icon={hasFundingGap ? AlertTriangle : Shield} label="فجوة التمويل" value={hasFundingGap ? formatAED(data.fundingGap) : "لا توجد"} sub={hasFundingGap ? `${data.fundingGapMonths.length} شهر عجز` : "✓ مغطى"} gradient={hasFundingGap ? "from-red-600 to-rose-700" : "from-green-500 to-emerald-600"} shadow={hasFundingGap ? "shadow-red-600/20" : "shadow-green-500/20"} />
         </div>
 
-        {/* ── Capital Input + Project Controls ── */}
+        {/* -- Capital Input + Project Controls -- */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="border-amber-200/60 shadow-lg shadow-amber-500/5">
             <CardHeader className="pb-3">
@@ -257,16 +257,16 @@ export default function CapitalPlanningDashboard({ embedded = false }: { embedde
           </Card>
         </div>
 
-        {/* ── Gantt Chart ── */}
+        {/* -- Gantt Chart -- */}
         <GanttChart data={data} delayMonths={delayMonths} />
 
-        {/* ── Cumulative Capital Demand Chart ── */}
+        {/* -- Cumulative Capital Demand Chart -- */}
         <CumulativeChart data={data} availableCapital={availableCapital} />
 
-        {/* ── Stacked Monthly Outflow ── */}
+        {/* -- Stacked Monthly Outflow -- */}
         <StackedOutflowChart data={data} />
 
-        {/* ── Comparison Table ── */}
+        {/* -- Comparison Table -- */}
         <ComparisonTable data={data} />
       </main>
     </div>

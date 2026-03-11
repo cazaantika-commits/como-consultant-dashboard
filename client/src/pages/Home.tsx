@@ -137,7 +137,7 @@ function QuickActionResult({
   );
 }
 
-/* ── Sortable Main Card (big cards) ── */
+/* -- Sortable Main Card (big cards) -- */
 type NavItem = { id: string; label: string; icon: any; path: string; borderColor: string; iconBg: string; shadow: string; badge?: number };
 
 function SortableMainCard({ item, onNavigate }: { item: NavItem; onNavigate: (path: string) => void }) {
@@ -198,7 +198,7 @@ function SortableMainCard({ item, onNavigate }: { item: NavItem; onNavigate: (pa
   );
 }
 
-/* ── Sortable Tool Card (smaller cards) ── */
+/* -- Sortable Tool Card (smaller cards) -- */
 function SortableToolCard({ item, onNavigate }: { item: NavItem; onNavigate: (path: string) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
   const style = {
@@ -240,7 +240,7 @@ export default function Home() {
   const [quickActionResult, setQuickActionResult] = useState<{ title: string; content: string } | null>(null);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
-  /* ── Drag & Drop order state ── */
+  /* -- Drag & Drop order state -- */
   const [mainOrder, setMainOrder] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem("como_main_order");
@@ -332,7 +332,7 @@ export default function Home() {
     },
   ];
 
-  /* ── Navigation items organized in groups ── */
+  /* -- Navigation items organized in groups -- */
   const NAV_MAIN = [
     { id: "main-projects", label: "الدراسات والتخطيط الاستراتيجي", icon: Building2, path: "/project-management", borderColor: "#059669", iconBg: "linear-gradient(135deg, #059669, #047857)", shadow: "rgba(5, 150, 105, 0.25)", badge: 3 },
     { id: "main-dev", label: "جولة في مراحل التطوير", icon: HardHat, path: "/development-phases", borderColor: "#8b5cf6", iconBg: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)" },
@@ -352,7 +352,7 @@ export default function Home() {
     { id: "tool-learn", label: "التعلم الذاتي", icon: Brain, path: "/self-learning", borderColor: "#ec4899", iconBg: "linear-gradient(135deg, #ec4899, #db2777)", shadow: "rgba(236, 72, 153, 0.25)" },
   ];
 
-  /* ── Sorted arrays based on saved order ── */
+  /* -- Sorted arrays based on saved order -- */
   const sortedMain = useMemo(() => {
     if (!mainOrder.length) return NAV_MAIN;
     const map = new Map(NAV_MAIN.map(item => [item.id, item]));
@@ -402,7 +402,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20" dir="rtl">
       {/* ══════════════════════════════════════════════════════════════ */}
-      {/* ── Header ── */}
+      {/* -- Header -- */}
       {/* ══════════════════════════════════════════════════════════════ */}
       <header className="border-b border-border/60 bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
@@ -452,7 +452,7 @@ export default function Home() {
       <main className="max-w-7xl mx-auto px-6">
 
         {/* ══════════════════════════════════════════════════════════════ */}
-        {/* ── Hero Section (for non-authenticated) ── */}
+        {/* -- Hero Section (for non-authenticated) -- */}
         {/* ══════════════════════════════════════════════════════════════ */}
         {!isAuthenticated && (
           <section className="relative py-20 lg:py-28 overflow-hidden">
@@ -494,7 +494,7 @@ export default function Home() {
         )}
 
         {/* ══════════════════════════════════════════════════════════════ */}
-        {/* ── SALWA - TOP OF PAGE (Authenticated) ── */}
+        {/* -- SALWA - TOP OF PAGE (Authenticated) -- */}
         {/* ══════════════════════════════════════════════════════════════ */}
         {isAuthenticated && (
           <section className="pt-8 pb-6">
@@ -567,7 +567,7 @@ export default function Home() {
         )}
 
         {/* ══════════════════════════════════════════════════════════════ */}
-        {/* ── MAIN NAVIGATION - Big Cards (Authenticated) ── */}
+        {/* -- MAIN NAVIGATION - Big Cards (Authenticated) -- */}
         {/* ══════════════════════════════════════════════════════════════ */}
         {isAuthenticated && (
           <section className="pb-8">
@@ -593,7 +593,7 @@ export default function Home() {
         )}
 
         {/* ══════════════════════════════════════════════════════════════ */}
-        {/* ── TOOLS & REPORTS - White cards with colored top border ── */}
+        {/* -- TOOLS & REPORTS - White cards with colored top border -- */}
         {/* ══════════════════════════════════════════════════════════════ */}
         {isAuthenticated && (
           <section className="pb-8">
@@ -650,7 +650,7 @@ export default function Home() {
         )}
 
         {/* ══════════════════════════════════════════════════════════════ */}
-        {/* ── CAPABILITIES (for all users) ── */}
+        {/* -- CAPABILITIES (for all users) -- */}
         {/* ══════════════════════════════════════════════════════════════ */}
         <section className="py-10 border-t border-border/30">
           <div className="text-center mb-8">
@@ -725,7 +725,7 @@ export default function Home() {
         </section>
 
         {/* ══════════════════════════════════════════════════════════════ */}
-        {/* ── Agent Team Section ── */}
+        {/* -- Agent Team Section -- */}
         {/* ══════════════════════════════════════════════════════════════ */}
         {isAuthenticated && teamAgents.length > 0 && (
           <section className="py-10 border-t border-border/30">
@@ -813,7 +813,7 @@ export default function Home() {
         )}
       </main>
 
-      {/* ── Footer ── */}
+      {/* -- Footer -- */}
       <footer className="border-t border-border/40 py-5 mt-4">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <p className="text-[10px] text-muted-foreground">
@@ -828,7 +828,7 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* ── Agent Chat Box ── */}
+      {/* -- Agent Chat Box -- */}
       {activeAgent && (
         <AgentChatBox
           key={activeAgent}

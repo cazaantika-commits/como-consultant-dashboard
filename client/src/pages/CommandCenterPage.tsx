@@ -87,7 +87,7 @@ import {
 
 const SALWA_AVATAR_URL = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/dKjNMGCYtHDQQPse.png";
 
-// ─── Voice Recording Hook ───
+// --- Voice Recording Hook ---
 function getSupportedMimeType(): string {
   // Safari/iOS prefers mp4, Chrome/Firefox prefer webm
   const types = [
@@ -190,7 +190,7 @@ function useVoiceRecorder() {
   return { isRecording, recordingTime, isTranscribing, setIsTranscribing, startRecording, stopRecording, cancelRecording };
 }
 
-// ─── Token Management ───
+// --- Token Management ---
 function getStoredToken(): string | null {
   return localStorage.getItem("cc_token");
 }
@@ -201,7 +201,7 @@ function clearStoredToken() {
   localStorage.removeItem("cc_token");
 }
 
-// ─── Evaluation Criteria (same as platform) ───
+// --- Evaluation Criteria (same as platform) ---
 const CRITERIA = [
   { id: 0, name: "الهوية المعمارية وجودة التصميم", weight: 14.6, options: [
     { score: 95, label: "طرح معماري مرجعي ذو هوية واضحة ومتماسكة بالكامل" },
@@ -270,7 +270,7 @@ const CRITERIA = [
   ]},
 ];
 
-// ─── Bubble Config ───
+// --- Bubble Config ---
 const BUBBLES = [
   { type: "reports" as const, label: "التقارير", icon: FileText, color: "from-blue-600 to-blue-800", bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700" },
   { type: "requests" as const, label: "الطلبات والاستفسارات", icon: ClipboardList, color: "from-amber-600 to-amber-800", bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700" },
@@ -289,7 +289,7 @@ const BUBBLE_LABELS: Record<string, string> = {
   announcements: "الإعلانات",
 };
 
-// ─── Milestone/KPI Helpers ───
+// --- Milestone/KPI Helpers ---
 const MILESTONE_STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
   not_started: { label: "لم تبدأ", color: "bg-slate-100 text-slate-600 border-slate-200", icon: Clock },
   in_progress: { label: "جارية", color: "bg-blue-100 text-blue-700 border-blue-200", icon: Activity },
@@ -1885,7 +1885,7 @@ function MilestonesKpisView({ token, onBack }: { token: string; onBack: () => vo
   );
 }
 
-// ─── Milestone Form ───
+// --- Milestone Form ---
 function MilestoneForm({ token, milestone, projects, onClose, onSuccess }: {
   token: string; milestone: any; projects: any[]; onClose: () => void; onSuccess: () => void;
 }) {
@@ -2018,7 +2018,7 @@ function MilestoneForm({ token, milestone, projects, onClose, onSuccess }: {
   );
 }
 
-// ─── KPI Form ───
+// --- KPI Form ---
 function KpiForm({ token, kpi, projects, onClose, onSuccess }: {
   token: string; kpi: any; projects: any[]; onClose: () => void; onSuccess: () => void;
 }) {
@@ -3553,7 +3553,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
       <NewsTicker token={token} />
 
       <div className="max-w-4xl mx-auto px-4 py-6">
-        {/* ─── Salwa Hero Section (same as main platform) ─── */}
+        {/* --- Salwa Hero Section (same as main platform) --- */}
         <div className="bg-gradient-to-l from-amber-50 via-white to-amber-50/30 rounded-2xl border border-amber-200/50 p-5 sm:p-6 mb-6 shadow-sm">
           <div className="flex flex-col sm:flex-row items-center gap-5">
             {/* Salwa Large Image */}
@@ -3593,7 +3593,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           </div>
         </div>
 
-        {/* ─── Smart Bubbles Grid (mobile-friendly) ─── */}
+        {/* --- Smart Bubbles Grid (mobile-friendly) --- */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
           {BUBBLES.map(bubble => {
             const count = counts.data?.[bubble.type as keyof typeof counts.data] || 0;
@@ -3630,7 +3630,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           })}
         </div>
 
-        {/* ─── Recent Notifications ─── */}
+        {/* --- Recent Notifications --- */}
         {notifications.data && notifications.data.length > 0 && (
           <div className="mb-6">
             <div className="flex items-center justify-between mb-3">

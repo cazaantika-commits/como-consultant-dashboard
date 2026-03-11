@@ -375,7 +375,7 @@ const cfScenarioInput = z.object({
 // ═══════════════════════════════════════════════════════════════
 
 export const cashFlowProgramRouter = router({
-  // ─── Projects CRUD ───
+  // --- Projects CRUD ---
   listProjects: publicProcedure.query(async ({ ctx }) => {
     if (!ctx.user) return [];
     const db = await getDb();
@@ -512,7 +512,7 @@ export const cashFlowProgramRouter = router({
       return { success: true };
     }),
 
-  // ─── Cost Items CRUD ───
+  // --- Cost Items CRUD ---
   getCostItems: publicProcedure
     .input(z.object({ cfProjectId: z.number() }))
     .query(async ({ ctx, input }) => {
@@ -561,7 +561,7 @@ export const cashFlowProgramRouter = router({
       return { success: true };
     }),
 
-  // ─── Scenarios CRUD ───
+  // --- Scenarios CRUD ---
   getScenarios: publicProcedure
     .input(z.number()) // cfProjectId
     .query(async ({ ctx, input }) => {
@@ -610,7 +610,7 @@ export const cashFlowProgramRouter = router({
       return { success: true };
     }),
 
-  // ─── Files CRUD ───
+  // --- Files CRUD ---
   getFiles: publicProcedure
     .input(z.number()) // cfProjectId
     .query(async ({ ctx, input }) => {
@@ -632,7 +632,7 @@ export const cashFlowProgramRouter = router({
       return { success: true };
     }),
 
-  // ─── Cash Flow Calculation ───
+  // --- Cash Flow Calculation ---
   calculateCashFlow: publicProcedure
     .input(z.object({
       cfProjectId: z.number(),
@@ -752,7 +752,7 @@ export const cashFlowProgramRouter = router({
       };
     }),
 
-  // ─── Portfolio View (Dual Engine) ───
+  // --- Portfolio View (Dual Engine) ---
   getPortfolioCashFlow: publicProcedure.query(async ({ ctx }) => {
     if (!ctx.user) return null;
     const db = await getDb();
@@ -925,7 +925,7 @@ export const cashFlowProgramRouter = router({
     };
   }),
 
-  // ─── Create Project from Project Data (auto-import costs) ───
+  // --- Create Project from Project Data (auto-import costs) ---
   createFromFeasibility: publicProcedure
     .input(z.object({
       projectId: z.number(),
@@ -1390,7 +1390,7 @@ export const cashFlowProgramRouter = router({
       };
     }),
 
-    // ─── Import from Project (preview only) ───
+    // --- Import from Project (preview only) ---
   importFromFeasibility: publicProcedure
     .input(z.object({ projectId: z.number() }))
     .query(async ({ ctx, input }) => {
@@ -1629,7 +1629,7 @@ export const cashFlowProgramRouter = router({
         costItems,
       };
     }),
-  // ─── Flexible Phases Management ────
+  // --- Flexible Phases Management ----
   listPhases: publicProcedure
     .input(z.number())
     .query(async ({ ctx, input: cfProjectId }) => {
@@ -1766,7 +1766,7 @@ export const cashFlowProgramRouter = router({
       return { success: true };
     }),
 
-  // ─── Export Cash Flow as Excel ───
+  // --- Export Cash Flow as Excel ---
   exportCashFlowExcel: publicProcedure
     .input(z.object({ cfProjectId: z.number() }))
     .mutation(async ({ ctx, input }) => {
@@ -1870,7 +1870,7 @@ export const cashFlowProgramRouter = router({
       };
     }),
 
-  // ─── Sync existing CF project cost items from Feasibility ───
+  // --- Sync existing CF project cost items from Feasibility ---
   syncFromFeasibility: publicProcedure
     .input(z.object({ projectId: z.number() }))
     .mutation(async ({ ctx, input }) => {

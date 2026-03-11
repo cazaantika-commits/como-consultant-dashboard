@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { AgentChatBox } from "@/components/AgentChatBox";
 
-/* ─── animated floating particles background ─── */
+/* --- animated floating particles background --- */
 function FloatingParticles() {
   const particles = useMemo(() =>
     Array.from({ length: 25 }).map((_, i) => ({
@@ -62,7 +62,7 @@ function FloatingParticles() {
   );
 }
 
-/* ─── news ticker ─── */
+/* --- news ticker --- */
 function NewsTicker({ items }: { items: string[] }) {
   if (!items.length) return null;
   const doubled = [...items, ...items];
@@ -86,7 +86,7 @@ function NewsTicker({ items }: { items: string[] }) {
   );
 }
 
-/* ─── main bubble component ─── */
+/* --- main bubble component --- */
 interface BubbleProps {
   icon: React.ReactNode;
   title: string;
@@ -171,7 +171,7 @@ function Bubble({ icon, title, subtitle, count, color, glowColor, size, onClick,
   );
 }
 
-/* ─── Salwa greeting ─── */
+/* --- Salwa greeting --- */
 function SalwaGreeting({ onChatClick }: { onChatClick: () => void }) {
   const [greeting, setGreeting] = useState("");
   const hour = new Date().getHours();
@@ -212,7 +212,7 @@ function SalwaGreeting({ onChatClick }: { onChatClick: () => void }) {
   );
 }
 
-/* ─── sub-page view ─── */
+/* --- sub-page view --- */
 function SubPage({ title, icon, color, onBack, children }: {
   title: string; icon: React.ReactNode; color: string; onBack: () => void; children: React.ReactNode;
 }) {
@@ -233,7 +233,7 @@ function SubPage({ title, icon, color, onBack, children }: {
   );
 }
 
-/* ─── stat card ─── */
+/* --- stat card --- */
 function StatCard({ label, value, icon, trend }: { label: string; value: string | number; icon: React.ReactNode; trend?: "up" | "down" | "neutral" }) {
   return (
     <Card className="p-4 flex items-center gap-3 hover:shadow-md transition-shadow">
@@ -251,7 +251,7 @@ function StatCard({ label, value, icon, trend }: { label: string; value: string 
   );
 }
 
-/* ─── Urgent Alert Toast ─── */
+/* --- Urgent Alert Toast --- */
 function UrgentAlertToast({ tasks, onDismiss, onView }: {
   tasks: { id: number; title: string }[];
   onDismiss: () => void;
@@ -298,7 +298,7 @@ function UrgentAlertToast({ tasks, onDismiss, onView }: {
 }
 
 /* ═══════════════════════════════════════════════════
-   ─── MAIN PAGE ───
+   --- MAIN PAGE ---
    ═══════════════════════════════════════════════════ */
 export default function ExecutiveVIPPage() {
   const { user } = useAuth();
@@ -306,7 +306,7 @@ export default function ExecutiveVIPPage() {
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [showChat, setShowChat] = useState(false);
 
-  // ─── Audio notification state ───
+  // --- Audio notification state ---
   const [soundEnabled, setSoundEnabled] = useState(() => {
     try { return localStorage.getItem("vip-sound-enabled") !== "false"; } catch { return true; }
   });
@@ -371,7 +371,7 @@ export default function ExecutiveVIPPage() {
   const urgentTasks = useMemo(() => tasks?.filter(t => t.priority === "urgent" && t.status !== "done") || [], [tasks]);
   const importantTasks = useMemo(() => tasks?.filter(t => t.priority === "high" && t.status !== "done") || [], [tasks]);
 
-  // ─── Detect NEW urgent tasks and trigger alert ───
+  // --- Detect NEW urgent tasks and trigger alert ---
   useEffect(() => {
     if (!tasks) return;
     const currentUrgentIds = new Set(urgentTasks.map(t => t.id));
@@ -416,7 +416,7 @@ export default function ExecutiveVIPPage() {
 
   const firstName = user?.name?.split(" ")[0] || "سيدي";
 
-  // ─── sub-page content renderers ───
+  // --- sub-page content renderers ---
   const renderUrgent = () => (
     <SubPage title="عاجل" icon={<AlertTriangle className="w-6 h-6" />} color="bg-gradient-to-r from-red-500 to-rose-600" onBack={() => setActiveSection(null)}>
       <div className="space-y-3">
@@ -648,7 +648,7 @@ export default function ExecutiveVIPPage() {
             {/* news ticker */}
             <NewsTicker items={tickerItems} />
 
-            {/* ─── 4 large priority bubbles ─── */}
+            {/* --- 4 large priority bubbles --- */}
             <div className="grid grid-cols-2 gap-5 justify-items-center mb-8">
               <Bubble
                 icon={<AlertTriangle className="w-full h-full" />}
@@ -695,7 +695,7 @@ export default function ExecutiveVIPPage() {
               />
             </div>
 
-            {/* ─── medium secondary bubbles ─── */}
+            {/* --- medium secondary bubbles --- */}
             <div className="flex flex-wrap justify-center gap-4 mb-8">
               <Bubble
                 icon={<Briefcase className="w-full h-full" />}
@@ -736,7 +736,7 @@ export default function ExecutiveVIPPage() {
               />
             </div>
 
-            {/* ─── quick stats bar ─── */}
+            {/* --- quick stats bar --- */}
             <div className="grid grid-cols-3 gap-3 mb-6">
               <Card className="p-3 text-center bg-white/80 backdrop-blur-sm hover:shadow-md transition-shadow">
                 <p className="text-2xl font-bold text-amber-600">{taskStats?.total || 0}</p>

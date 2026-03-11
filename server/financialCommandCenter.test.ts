@@ -24,7 +24,7 @@ import {
   type ProjectCosts,
 } from "../client/src/lib/cashFlowEngine";
 
-// ─── Helper: replicate the paid/remaining logic from FinancialCommandCenter ───
+// --- Helper: replicate the paid/remaining logic from FinancialCommandCenter ---
 
 function calculateInvestorBreakdown(
   durations: PhaseDurations,
@@ -95,7 +95,7 @@ function calculateInvestorBreakdown(
   };
 }
 
-// ─── Tests ───
+// --- Tests ---
 
 describe("Financial Command Center — paid/remaining calculation", () => {
   it("should calculate investorTotal > 0 with default durations", () => {

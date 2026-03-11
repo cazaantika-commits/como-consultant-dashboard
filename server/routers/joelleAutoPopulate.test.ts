@@ -6,7 +6,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
  * and Engine 7 (Pricing Intelligence) to the MarketOverview and CompetitionPricing tables.
  */
 
-// ─── Mock data matching Engine 6 output structure ───
+// --- Mock data matching Engine 6 output structure ---
 const MOCK_ENGINE6_OUTPUT = {
   unitMix: {
     studio: { pct: 15, avgSize: 400 },
@@ -24,7 +24,7 @@ const MOCK_ENGINE6_OUTPUT = {
   positioning: "mid-luxury",
 };
 
-// ─── Mock data matching Engine 7 output structure ───
+// --- Mock data matching Engine 7 output structure ---
 const MOCK_ENGINE7_OUTPUT = {
   scenarios: {
     optimistic: {

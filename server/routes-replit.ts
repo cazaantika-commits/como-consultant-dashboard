@@ -2234,7 +2234,7 @@ ${criteriaNames.map((name, i) => `${i}. ${name}`).join('\n')}
     }
   });
 
-  // ─── AI Governance Engine ───
+  // --- AI Governance Engine ---
   app.post("/api/governance/review/:studyId", async (req, res) => {
     try {
       const studyId = Number(req.params.studyId);
@@ -2255,7 +2255,7 @@ ${criteriaNames.map((name, i) => `${i}. ${name}`).join('\n')}
     }
   });
 
-  // ─── Source Registry ───
+  // --- Source Registry ---
   app.get("/api/sources", async (_req, res) => {
     try {
       const sources = await storage.getSources();
@@ -2285,7 +2285,7 @@ ${criteriaNames.map((name, i) => `${i}. ${name}`).join('\n')}
     }
   });
 
-  // ─── Project Assumptions ───
+  // --- Project Assumptions ---
   app.get("/api/assumptions/:projectId", async (req, res) => {
     try {
       const assumptions = await storage.getAssumptions(req.params.projectId);
@@ -2325,7 +2325,7 @@ ${criteriaNames.map((name, i) => `${i}. ${name}`).join('\n')}
     }
   });
 
-  // ─── Project Scenarios ───
+  // --- Project Scenarios ---
   app.get("/api/scenarios/:projectId", async (req, res) => {
     try {
       const scenarios = await storage.getScenarios(req.params.projectId);
@@ -2364,7 +2364,7 @@ ${criteriaNames.map((name, i) => `${i}. ${name}`).join('\n')}
     }
   });
 
-  // ─── Conflict Records ───
+  // --- Conflict Records ---
   app.get("/api/conflicts/:projectId", async (req, res) => {
     try {
       const conflicts = await storage.getConflicts(req.params.projectId);
@@ -2397,7 +2397,7 @@ ${criteriaNames.map((name, i) => `${i}. ${name}`).join('\n')}
     }
   });
 
-  // ─── Audit Log ───
+  // --- Audit Log ---
   app.get("/api/audit-log", async (req, res) => {
     try {
       const projectId = req.query.projectId as string | undefined;
@@ -2409,7 +2409,7 @@ ${criteriaNames.map((name, i) => `${i}. ${name}`).join('\n')}
     }
   });
 
-  // ─── Reconciliation Ledger ───
+  // --- Reconciliation Ledger ---
   app.get("/api/reconciliation-ledger/:projectId", async (req, res) => {
     try {
       const entries = await storage.getReconciliationLedger(req.params.projectId);
@@ -2458,7 +2458,7 @@ ${criteriaNames.map((name, i) => `${i}. ${name}`).join('\n')}
     }
   });
 
-  // ─── Competitor Projects ───
+  // --- Competitor Projects ---
   app.get("/api/competitors/:projectId", async (req, res) => {
     try {
       const competitors = await storage.getCompetitorProjects(req.params.projectId);
@@ -2507,7 +2507,7 @@ ${criteriaNames.map((name, i) => `${i}. ${name}`).join('\n')}
     }
   });
 
-  // ─── Project Documents ───
+  // --- Project Documents ---
   app.get("/api/documents/:projectId", async (req, res) => {
     try {
       const documents = await storage.getProjectDocuments(req.params.projectId);
@@ -2556,7 +2556,7 @@ ${criteriaNames.map((name, i) => `${i}. ${name}`).join('\n')}
     }
   });
 
-  // ─── Source Registry Seed ───
+  // --- Source Registry Seed ---
   app.post("/api/sources/seed", async (_req, res) => {
     try {
       const existing = await storage.getSources();

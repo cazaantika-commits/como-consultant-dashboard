@@ -82,7 +82,7 @@ interface ConversationState {
 }
 const conversations = new Map<number, ConversationState>();
 
-// ─── Delete Approval System ───
+// --- Delete Approval System ---
 interface PendingDeleteApproval {
   fileId: string;
   fileName: string;

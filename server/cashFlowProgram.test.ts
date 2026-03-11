@@ -36,7 +36,7 @@ interface CostItemWithPayment {
   phaseAllocation?: Record<string, number>;
 }
 
-// ─── Pure functions from the engine ───
+// --- Pure functions from the engine ---
 
 function buildTimeline(
   designMonths: number,

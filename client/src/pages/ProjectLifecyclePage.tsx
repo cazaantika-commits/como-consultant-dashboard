@@ -18,15 +18,15 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 // Types
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 type StageStatus = "not_started" | "in_progress" | "completed" | "locked";
 type ServiceOpStatus = "not_started" | "in_progress" | "completed" | "locked" | "submitted";
 
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 // Delay / time status helpers
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 function computeTimeAlert(plannedDueDate: string | null | undefined): {
   label: string;
   severity: "overdue" | "urgent" | "soon" | "ok" | "none";
@@ -63,9 +63,9 @@ function timeAlertIcon(severity: string) {
   return <Clock className="w-3 h-3" />;
 }
 
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 // Status helpers
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 function stageStatusLabel(s: StageStatus) {
   const map: Record<StageStatus, string> = {
     not_started: "لم تبدأ", in_progress: "جاري التنفيذ",
@@ -111,9 +111,9 @@ function serviceStatusBadge(s: ServiceOpStatus) {
   return map[s] ?? "bg-gray-100 text-gray-600";
 }
 
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 // Stage color palette
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 const STAGE_COLORS: Record<string, { gradient: string; shadow: string; tint: string; border: string }> = {
   "STG-01": { gradient: "linear-gradient(135deg, #6366f1, #4f46e5)", shadow: "rgba(99,102,241,0.3)",  tint: "rgba(99,102,241,0.06)",  border: "rgba(99,102,241,0.25)" },
   "STG-02": { gradient: "linear-gradient(135deg, #0ea5e9, #0284c7)", shadow: "rgba(14,165,233,0.3)",  tint: "rgba(14,165,233,0.06)",  border: "rgba(14,165,233,0.25)" },
@@ -124,9 +124,9 @@ const STAGE_COLORS: Record<string, { gradient: string; shadow: string; tint: str
   "STG-20": { gradient: "linear-gradient(135deg, #ec4899, #db2777)", shadow: "rgba(236,72,153,0.3)",  tint: "rgba(236,72,153,0.06)",  border: "rgba(236,72,153,0.25)" },
 };
 
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 // DateEditor — inline editable date fields for a service
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 function DateEditor({
   projectId,
   service,
@@ -273,9 +273,9 @@ function fromInputDate(yyyymmdd: string): string {
   return `${d}-${m}-${y}`;
 }
 
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 // RequirementRow component
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 function RequirementRow({
   req,
   projectId,
@@ -453,9 +453,9 @@ function RequirementRow({
   );
 }
 
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 // ServiceDetailPanel component
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 function ServiceDetailPanel({
   service,
   projectId,
@@ -698,9 +698,9 @@ function ServiceDetailPanel({
   );
 }
 
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 // ServicesListPanel component
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 function ServicesListPanel({
   stageCode,
   stageName,
@@ -886,9 +886,9 @@ function ServicesListPanel({
   );
 }
 
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 // Main ProjectLifecyclePage
-// ─────────────────────────────────────────────────────────────
+// -------------------------------------------------------------
 export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean } = {}) {
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [selectedStage, setSelectedStage] = useState<{ code: string; name: string } | null>(null);
@@ -1022,7 +1022,6 @@ export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean 
       {/* ═══════════════════════════════════════════════════════ */}
 
       <div className="max-w-3xl mx-auto px-4 py-6">
-
         {/* Compliance Report Dialog */}
         <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
             <DialogContent className="max-w-md" dir="rtl">
@@ -1074,7 +1073,7 @@ export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean 
             </DialogContent>
           </Dialog>
 
-        {/* ─── اختيار المشروع ─── */}
+        {/* --- اختيار المشروع --- */}
         <div className="mb-5">
           <label className="block mb-2">
             <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground/70 px-3 py-1 rounded-full bg-muted/60 border border-border/50">
@@ -1102,7 +1101,7 @@ export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean 
           </Select>
         </div>
 
-        {/* ─── تنبيهات المواعيد ─── */}
+        {/* --- تنبيهات المواعيد --- */}
         {selectedProjectId && (alertsQuery.data?.length ?? 0) > 0 && (
           <div className="mb-5">
             <button
@@ -1173,7 +1172,7 @@ export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean 
         )}
 
         {/* Progress card removed — stats now shown in hero banner */}
-        {/* ─── قائمة المراحل ─── */}
+        {/* --- قائمة المراحل --- */}
         <div className="mb-3">
           <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground/70 px-3 py-1 rounded-full bg-muted/60 border border-border/50">
             <CheckCircle2 className="w-3 h-3" />
