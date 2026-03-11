@@ -604,10 +604,12 @@ function ProjectDetailScreen({
 
 function ImportJsonScreen({
   projectConsultantId,
+  cpaProjectId,
   consultantName,
   onBack,
 }: {
   projectConsultantId: number;
+  cpaProjectId: number;
   consultantName: string;
   onBack: () => void;
 }) {
@@ -638,9 +640,24 @@ function ImportJsonScreen({
       stated_duration_months: 24,
     },
     scope_coverage: [
-      { item_code: "ARCH", status: "INCLUDED" },
-      { item_code: "STRUCT", status: "INCLUDED" },
-      { item_code: "MEP", status: "EXCLUDED" },
+      { item_code: "ARCH_DESIGN", status: "INCLUDED" },
+      { item_code: "STRUCTURAL_DESIGN", status: "INCLUDED" },
+      { item_code: "MEP_DESIGN", status: "EXCLUDED" },
+      { item_code: "INTERIOR_DESIGN", status: "NOT_MENTIONED" },
+      { item_code: "LANDSCAPE_DESIGN", status: "EXCLUDED" },
+      { item_code: "BIM", status: "NOT_MENTIONED" },
+      { item_code: "PERMIT_DRAWINGS", status: "INCLUDED" },
+      { item_code: "SHOP_DRAWINGS", status: "INCLUDED" },
+      { item_code: "SITE_SUPERVISION", status: "INCLUDED" },
+      { item_code: "STRUCTURAL_AUDIT", status: "NOT_MENTIONED" },
+      { item_code: "GREEN_BUILDING", status: "NOT_MENTIONED" },
+      { item_code: "SECURITY_SIRA", status: "NOT_MENTIONED" },
+      { item_code: "VERTICAL_TRANSPORT", status: "NOT_MENTIONED" },
+      { item_code: "AV_ELV", status: "NOT_MENTIONED" },
+      { item_code: "FACADE_LIGHTING", status: "NOT_MENTIONED" },
+      { item_code: "FLS", status: "NOT_MENTIONED" },
+      { item_code: "TESTING_COMMISSIONING", status: "INCLUDED" },
+      { item_code: "AS_BUILT", status: "INCLUDED" }
     ],
     supervision_team: [
       { role_code: "PM", allocation_pct: 100, monthly_rate: 25000 },
@@ -712,7 +729,7 @@ function ImportJsonScreen({
             <Button
               className="flex-1 bg-sky-600 hover:bg-sky-500 text-white"
               disabled={!jsonText.trim() || importMutation.isPending}
-              onClick={() => importMutation.mutate({ cpaProjectId: 0, jsonText })}
+              onClick={() => importMutation.mutate({ cpaProjectId, jsonText })}
             >
               {importMutation.isPending ? "جاري الاستيراد..." : "استيراد البيانات"}
             </Button>
@@ -1389,9 +1406,10 @@ export default function CPAPage() {
             onResults={goResults}
           />
         )}
-        {screen === "import-json" && selectedPcId && (
+        {screen === "import-json" && selectedPcId && selectedProjectId && (
           <ImportJsonScreen
             projectConsultantId={selectedPcId}
+            cpaProjectId={selectedProjectId}
             consultantName={selectedConsultantName}
             onBack={() => setScreen("project-detail")}
           />
