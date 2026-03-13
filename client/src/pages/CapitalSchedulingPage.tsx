@@ -51,24 +51,24 @@ interface ProjectColumn {
   monthlyAmounts: Record<number, number>;
 }
 
-// Phase colors for the pillar cells
+// Phase colors — professional dark palette
 const PHASE_BG: Record<string, string> = {
-  preCon: "#bfdbfe",       // blue-200
-  construction: "#bbf7d0", // green-200
-  handover: "#fef08a",     // yellow-200
+  preCon:       "#1e3a5f", // deep navy
+  construction: "#14532d", // deep green
+  handover:     "#7c2d12", // deep burnt orange
 };
 const PHASE_TEXT: Record<string, string> = {
-  preCon: "#1e40af",
-  construction: "#166534",
-  handover: "#854d0e",
+  preCon:       "#93c5fd", // light blue text on dark navy
+  construction: "#86efac", // light green text on dark green
+  handover:     "#fdba74", // light orange text on dark burnt
 };
 
-// Row background — alternating subtle stripes for the full row
-const ROW_BG_EVEN = "#f0f4f8";
-const ROW_BG_ODD  = "#e8edf3";
+// Row background — dark slate alternating
+const ROW_BG_EVEN = "#1e293b";
+const ROW_BG_ODD  = "#0f172a";
 
-// Pillar inner background — slightly lighter than row so pillar stands out
-const PILLAR_INACTIVE = "rgba(255,255,255,0.55)"; // inside pillar, no phase active
+// Pillar inner background — dark card on dark row
+const PILLAR_INACTIVE = "rgba(255,255,255,0.04)";
 
 interface Props {
   embedded?: boolean;
@@ -148,12 +148,12 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
     return null;
   }
 
-  // Column widths
-  const TOTAL_COL_W = 130; // leftmost: الإجمالي الشهري
-  const DATE_COL_W  = 120; // second from left: الشهر
-  const COL_W       = 150; // each project
-  const ROW_H       = 38;
-  const GAP         = 4;   // gap between project pillars (px)
+  // Column widths — compact
+  const TOTAL_COL_W = 90;  // leftmost: الإجمالي الشهري
+  const DATE_COL_W  = 90;  // second from left: الشهر
+  const COL_W       = 90;  // each project
+  const ROW_H       = 34;
+  const GAP         = 3;   // gap between project pillars (px)
 
   const isLoading = projectsQuery.isLoading || allMoQuery.isLoading || allCpQuery.isLoading;
   const grandTotal = Object.values(monthlyTotals).reduce((s, v) => s + v, 0);
@@ -280,13 +280,13 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                   style={{
                     width: COL_W,
                     minWidth: COL_W,
-                    background: "#1e293b",
-                    color: "#f8fafc",
-                    fontSize: 11,
+                    background: "#0f172a",
+                    color: "#e2e8f0",
+                    fontSize: 10,
                     fontWeight: 700,
-                    padding: "10px 6px",
+                    padding: "8px 4px",
                     textAlign: "center",
-                    borderLeft: ci < columns.length - 1 ? `${GAP}px solid #0f172a` : "none",
+                    borderLeft: ci < columns.length - 1 ? `${GAP}px solid #1e293b` : "none",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
@@ -302,14 +302,14 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                 style={{
                   width: DATE_COL_W,
                   minWidth: DATE_COL_W,
-                  background: "#334155",
-                  color: "#cbd5e1",
-                  fontSize: 12,
+                  background: "#1e293b",
+                  color: "#94a3b8",
+                  fontSize: 10,
                   fontWeight: 700,
-                  padding: "10px 8px",
+                  padding: "8px 6px",
                   textAlign: "center",
-                  borderLeft: "3px solid #0f172a",
-                  borderRight: "3px solid #0f172a",
+                  borderLeft: "2px solid #334155",
+                  borderRight: "2px solid #334155",
                 }}
               >
                 الشهر
@@ -321,14 +321,14 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                   width: TOTAL_COL_W,
                   minWidth: TOTAL_COL_W,
                   background: "#0f172a",
-                  color: "#fbbf24",
-                  fontSize: 12,
+                  color: "#f59e0b",
+                  fontSize: 10,
                   fontWeight: 700,
-                  padding: "10px 8px",
+                  padding: "8px 6px",
                   textAlign: "center",
                 }}
               >
-                الإجمالي الشهري
+                الإجمالي
               </th>
             </tr>
           </thead>
@@ -377,14 +377,14 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                     style={{
                       width: DATE_COL_W,
                       minWidth: DATE_COL_W,
-                      fontSize: 11,
+                      fontSize: 10,
                       fontWeight: 600,
-                      color: "#334155",
-                      padding: "0 8px",
+                      color: "#94a3b8",
+                      padding: "0 6px",
                       textAlign: "center",
-                      borderLeft: "3px solid #94a3b8",
-                      borderRight: "3px solid #94a3b8",
-                      background: absIdx % 2 === 0 ? "#dde3ea" : "#d0d8e2",
+                      borderLeft: "2px solid #334155",
+                      borderRight: "2px solid #334155",
+                      background: absIdx % 2 === 0 ? "#1e293b" : "#172032",
                       whiteSpace: "nowrap",
                     }}
                   >
@@ -396,13 +396,13 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                     style={{
                       width: TOTAL_COL_W,
                       minWidth: TOTAL_COL_W,
-                      background: total > 0 ? "#fef3c7" : rowBg,
-                      borderRight: "3px solid #fbbf24",
-                      padding: "0 8px",
+                      background: total > 0 ? "#292524" : rowBg,
+                      borderRight: "2px solid #f59e0b",
+                      padding: "0 6px",
                       textAlign: "center",
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: total > 0 ? 800 : 400,
-                      color: total > 0 ? "#92400e" : "transparent",
+                      color: total > 0 ? "#f59e0b" : "transparent",
                     }}
                   >
                     {total > 0 ? fmtCell(total) : ""}
