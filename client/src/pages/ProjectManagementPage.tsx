@@ -1,14 +1,12 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Building2, BarChart3, TrendingUp, Shield, AlertCircle, Circle } from "lucide-react";
+import { ArrowRight, Building2, BarChart3, AlertCircle, Circle } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import FeasibilityHubPage from "./FeasibilityHubPage";
 import WorkProgramHub from "./WorkProgramHub";
-import RiskDashboardPage from "./RiskDashboardPage";
-import MarketReportsPage from "./MarketReportsPage";
 
-type View = "icons" | "feasibility-hub" | "work-program" | "risk-dashboard" | "market-reports";
+type View = "icons" | "feasibility-hub" | "work-program";
 
 const SECTIONS = [
   {
@@ -30,26 +28,6 @@ const SECTIONS = [
     borderColor: "#0d9488",
     statusKey: "program-cashflow",
     description: "مراحل التطوير والجدول الزمني",
-  },
-  {
-    id: "risk-dashboard" as View,
-    label: "لوحة المخاطر",
-    icon: Shield,
-    gradient: "linear-gradient(135deg, #e11d48, #be123c)",
-    shadow: "rgba(225, 29, 72, 0.3)",
-    borderColor: "#e11d48",
-    statusKey: "risk-dashboard",
-    description: "تحليل وإدارة المخاطر",
-  },
-  {
-    id: "market-reports" as View,
-    label: "تقارير السوق",
-    icon: TrendingUp,
-    gradient: "linear-gradient(135deg, #0891b2, #06b6d4)",
-    shadow: "rgba(8, 145, 178, 0.3)",
-    borderColor: "#0891b2",
-    statusKey: "market-reports",
-    description: "تحليل السوق والمنافسين",
   },
 ];
 
@@ -164,7 +142,7 @@ export default function ProjectManagementPage() {
             <p className="text-sm text-muted-foreground">اختر القسم المطلوب</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 max-w-sm mx-auto">
             {SECTIONS.map((item) => {
               const sectionStatus = getSectionStatus(item.statusKey);
               return (
@@ -221,16 +199,6 @@ export default function ProjectManagementPage() {
       {activeView === "work-program" && (
         <main className="py-1">
           <WorkProgramHub embedded />
-        </main>
-      )}
-      {activeView === "risk-dashboard" && (
-        <main className="max-w-[98%] mx-auto py-4">
-          <RiskDashboardPage embedded />
-        </main>
-      )}
-      {activeView === "market-reports" && (
-        <main className="py-1">
-          <MarketReportsPage />
         </main>
       )}
     </div>

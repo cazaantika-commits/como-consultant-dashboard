@@ -3,7 +3,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowRight, FileText, BarChart3, FileBarChart2, CalendarRange, Wallet, Landmark } from "lucide-react";
+import { ArrowRight, FileText, BarChart3, FileBarChart2, CalendarRange, Wallet, Landmark, Shield, TrendingUp } from "lucide-react";
 import { CashFlowProvider, useCashFlow } from "@/contexts/CashFlowContext";
 import FactSheetPage from "./FactSheetPage";
 import FeasibilityStudyPage from "./FeasibilityStudyPage";
@@ -11,8 +11,10 @@ import FinancialFeasibilityTab from "./FinancialFeasibilityTab";
 import TimeDistributionTab from "./TimeDistributionTab";
 import ExcelCashFlowPage from "./ExcelCashFlowPage";
 import EscrowCashFlowPage from "./EscrowCashFlowPage";
+import RiskDashboardPage from "./RiskDashboardPage";
+import MarketReportsPage from "./MarketReportsPage";
 
-type SubView = "icons" | "fact-sheet" | "feasibility" | "fin-feasibility" | "time-dist" | "capital" | "escrow";
+type SubView = "icons" | "fact-sheet" | "feasibility" | "fin-feasibility" | "time-dist" | "capital" | "escrow" | "risk-dashboard" | "market-reports";
 
 const SUB_SECTIONS = [
   {
@@ -68,6 +70,24 @@ const SUB_SECTIONS = [
     shadow: "rgba(79, 70, 229, 0.3)",
     borderColor: "#4f46e5",
     emoji: "🏦",
+  },
+  {
+    id: "risk-dashboard" as SubView,
+    label: "لوحة المخاطر",
+    icon: Shield,
+    gradient: "linear-gradient(135deg, #e11d48, #be123c)",
+    shadow: "rgba(225, 29, 72, 0.3)",
+    borderColor: "#e11d48",
+    emoji: "🛡️",
+  },
+  {
+    id: "market-reports" as SubView,
+    label: "تقارير السوق",
+    icon: TrendingUp,
+    gradient: "linear-gradient(135deg, #0891b2, #06b6d4)",
+    shadow: "rgba(8, 145, 178, 0.3)",
+    borderColor: "#0891b2",
+    emoji: "📰",
   },
 ];
 
@@ -216,6 +236,16 @@ function FeasibilityHubInner({ onBack }: { onBack: () => void }) {
       {activeView === "escrow" && (
         <main className="py-1">
           <EscrowCashFlowPage embedded />
+        </main>
+      )}
+      {activeView === "risk-dashboard" && (
+        <main className="max-w-[98%] mx-auto py-4">
+          <RiskDashboardPage embedded />
+        </main>
+      )}
+      {activeView === "market-reports" && (
+        <main className="py-1">
+          <MarketReportsPage />
         </main>
       )}
     </div>
