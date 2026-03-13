@@ -12,6 +12,7 @@
  */
 
 import { useState, useMemo } from "react";
+import { ScopeMatrixTable, ReferenceCostsTable, SupervisionBaselineTable } from "./CPASettingsMatrices";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -1118,7 +1119,7 @@ function ResultsScreen({
 // ---- Screen 6: Settings ---------------------------------------------------
 
 function SettingsScreen({ onBack }: { onBack: () => void }) {
-  const [activeTab, setActiveTab] = useState("categories");
+  const [activeTab, setActiveTab] = useState("scope-matrix");
   const { toast } = useToast();
 
   const categoriesQuery = trpc.cpa.settings.getBuildingCategories.useQuery();
@@ -1185,12 +1186,48 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-4 w-full">
-          <TabsTrigger value="categories">فئات المباني</TabsTrigger>
-          <TabsTrigger value="roles">أدوار الإشراف</TabsTrigger>
-          <TabsTrigger value="consultants">قائمة الاستشاريين</TabsTrigger>
-          <TabsTrigger value="scope">بنود النطاق</TabsTrigger>
+        <TabsList className="grid grid-cols-7 w-full">
+          <TabsTrigger value="scope-matrix" className="text-xs">مصفوفة النطاق</TabsTrigger>
+          <TabsTrigger value="ref-costs" className="text-xs">الأسعار المرجعية</TabsTrigger>
+          <TabsTrigger value="supervision-matrix" className="text-xs">مصفوفة الإشراف</TabsTrigger>
+          <TabsTrigger value="categories" className="text-xs">فئات المباني</TabsTrigger>
+          <TabsTrigger value="roles" className="text-xs">أدوار الإشراف</TabsTrigger>
+          <TabsTrigger value="consultants" className="text-xs">الاستشاريون</TabsTrigger>
+          <TabsTrigger value="scope" className="text-xs">بنود النطاق</TabsTrigger>
         </TabsList>
+
+        {/* Scope Category Matrix */}
+        <TabsContent value="scope-matrix" className="mt-4">
+          <div className="space-y-3">
+            <div>
+              <h3 className="font-semibold text-sm">مصفوفة النطاق (47 بند × 5 فئات)</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">اضغط على أي خلية لتغيير حالة البند في تلك الفئة. التغييرات تُحفظ فوراً.</p>
+            </div>
+            <ScopeMatrixTable />
+          </div>
+        </TabsContent>
+
+        {/* Reference Costs */}
+        <TabsContent value="ref-costs" className="mt-4">
+          <div className="space-y-3">
+            <div>
+              <h3 className="font-semibold text-sm">الأسعار المرجعية للبنود المتخصصة (AED)</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">هذه الأسعار تُستخدم لحساب تكلفة الفجوات عند مقارنة عروض الاستشاريين. اضغط على أي خلية للتعديل.</p>
+            </div>
+            <ReferenceCostsTable />
+          </div>
+        </TabsContent>
+
+        {/* Supervision Baseline Matrix */}
+        <TabsContent value="supervision-matrix" className="mt-4">
+          <div className="space-y-3">
+            <div>
+              <h3 className="font-semibold text-sm">مصفوفة الإشراف — نسب التخصيص المطلوبة</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">نسبة التخصيص لكل دور في كل فئة. 0 = غير مطلوب، 100 = دوام كامل. اضغط على أي خلية للتعديل.</p>
+            </div>
+            <SupervisionBaselineTable />
+          </div>
+        </TabsContent>
 
         {/* Building Categories */}
         <TabsContent value="categories" className="space-y-3 mt-4">

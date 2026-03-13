@@ -586,6 +586,134 @@ export const cpaRouter = router({
         );
         return { ok: true };
       }),
+
+    // Returns the full 47×5 matrix in one query for the settings table view
+    getFullScopeMatrix: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return { items: [], categories: [], matrix: {} };
+
+      const items = await qRows<any>(
+        db,
+        sql`SELECT si.id, si.item_number, si.code, si.label, si.default_type,
+                   ss.label as section_label, ss.code as section_code
+            FROM cpa_scope_items si
+            LEFT JOIN cpa_scope_sections ss ON ss.id = si.section_id
+            WHERE si.is_active = 1
+            ORDER BY si.item_number`
+      );
+
+      const categories = await qRows<any>(
+        db,
+        sql`SELECT id, code, label FROM cpa_building_categories WHERE is_active = 1 ORDER BY sort_order`
+      );
+
+      const matrixRows = await qRows<any>(
+        db,
+        sql`SELECT scm.scope_item_id, scm.building_category_id, scm.status
+            FROM cpa_scope_category_matrix scm
+            JOIN cpa_scope_items si ON si.id = scm.scope_item_id
+            WHERE si.is_active = 1`
+      );
+
+      // Build matrix map: { itemId_catId: status }
+      const matrix: Record<string, string> = {};
+      for (const row of matrixRows) {
+        matrix[`${row.scope_item_id}_${row.building_category_id}`] = row.status;
+      }
+
+      return { items, categories, matrix };
+    }),
+
+    // Returns the full 47×5 reference costs in one query
+    getFullReferenceCosts: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return { items: [], categories: [], costs: {} };
+
+      const items = await qRows<any>(
+        db,
+        sql`SELECT si.id, si.item_number, si.code, si.label, si.default_type
+            FROM cpa_scope_items si
+            WHERE si.is_active = 1 AND si.default_type IN ('GREEN', 'RED')
+            ORDER BY si.item_number`
+      );
+
+      const categories = await qRows<any>(
+        db,
+        sql`SELECT id, code, label FROM cpa_building_categories WHERE is_active = 1 ORDER BY sort_order`
+      );
+
+      const costRows = await qRows<any>(
+        db,
+        sql`SELECT src.scope_item_id, src.building_category_id, src.cost_aed
+            FROM cpa_scope_reference_costs src
+            JOIN cpa_scope_items si ON si.id = src.scope_item_id
+            WHERE si.is_active = 1`
+      );
+
+      const costs: Record<string, number | null> = {};
+      for (const row of costRows) {
+        costs[`${row.scope_item_id}_${row.building_category_id}`] = row.cost_aed !== null ? Number(row.cost_aed) : null;
+      }
+
+      return { items, categories, costs };
+    }),
+
+    upsertReferenceCost: protectedProcedure
+      .input(z.object({
+        scopeItemId: z.number(),
+        buildingCategoryId: z.number(),
+        costAed: z.number().nullable(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("DB unavailable");
+        if (input.costAed === null) {
+          await db.execute(
+            sql`DELETE FROM cpa_scope_reference_costs
+                WHERE scope_item_id = ${input.scopeItemId}
+                  AND building_category_id = ${input.buildingCategoryId}`
+          );
+        } else {
+          await db.execute(
+            sql`INSERT INTO cpa_scope_reference_costs (scope_item_id, building_category_id, cost_aed)
+                VALUES (${input.scopeItemId}, ${input.buildingCategoryId}, ${input.costAed})
+                ON DUPLICATE KEY UPDATE cost_aed = VALUES(cost_aed)`
+          );
+        }
+        return { ok: true };
+      }),
+
+    // Returns the full 11×5 supervision baseline in one query
+    getFullSupervisionBaseline: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return { roles: [], categories: [], baseline: {} };
+
+      const roles = await qRows<any>(
+        db,
+        sql`SELECT id, code, label, grade, team_type, monthly_rate_aed
+            FROM cpa_supervision_roles WHERE is_active = 1 ORDER BY sort_order`
+      );
+
+      const categories = await qRows<any>(
+        db,
+        sql`SELECT id, code, label FROM cpa_building_categories WHERE is_active = 1 ORDER BY sort_order`
+      );
+
+      const baselineRows = await qRows<any>(
+        db,
+        sql`SELECT sb.supervision_role_id, sb.building_category_id, sb.required_allocation_pct
+            FROM cpa_supervision_baseline sb
+            JOIN cpa_supervision_roles sr ON sr.id = sb.supervision_role_id
+            WHERE sr.is_active = 1`
+      );
+
+      const baseline: Record<string, number> = {};
+      for (const row of baselineRows) {
+        baseline[`${row.supervision_role_id}_${row.building_category_id}`] = Number(row.required_allocation_pct);
+      }
+
+      return { roles, categories, baseline };
+    }),
   }),
 
   // ---- CPA Projects ----
