@@ -634,17 +634,27 @@ export function getDefaultCustomDistribution(
   }
 
   if (itemId === "gov_fees") {
-    // Government fees: 80% at month 3 of construction, then rest distributed
+    // Government fees: 80% at month 3 of construction, then rest distributed equally
+    // The total of all payments MUST equal govTotal exactly
     const govTotal = costs ? costs.officialBodiesFees : 1000000;
+    if (govTotal === 0) return {};
     const result: { [month: number]: number } = {};
     const initialPayment = govTotal * 0.8;
     result[conRange.start + 2] = initialPayment;
-    let remaining = govTotal - initialPayment;
+    const remaining = govTotal - initialPayment;
     const interval = 4;
-    for (let m = conRange.start + 2 + interval; m <= conRange.end && remaining > 0; m += interval) {
-      const payment = Math.min(remaining / 4, remaining);
-      result[m] = payment;
-      remaining -= payment;
+    // Collect all remaining payment months first
+    const remainingMonths: number[] = [];
+    for (let m = conRange.start + 2 + interval; m <= conRange.end; m += interval) {
+      remainingMonths.push(m);
+    }
+    if (remainingMonths.length > 0) {
+      // Distribute remaining equally across all months
+      const perMonth = remaining / remainingMonths.length;
+      remainingMonths.forEach(m => { result[m] = perMonth; });
+    } else {
+      // No room for remaining payments — add to the initial payment month
+      result[conRange.start + 2] = govTotal;
     }
     return result;
   }
