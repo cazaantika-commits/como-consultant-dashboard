@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Building2, BarChart3, AlertCircle, Circle } from "lucide-react";
+import { ArrowRight, Building2, BarChart3, AlertCircle, Circle, Layers } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import FeasibilityHubPage from "./FeasibilityHubPage";
 import WorkProgramHub from "./WorkProgramHub";
+import CapitalSchedulingPage from "./CapitalSchedulingPage";
 
-type View = "icons" | "feasibility-hub" | "work-program";
+type View = "icons" | "feasibility-hub" | "work-program" | "capital-scheduling";
 
 const SECTIONS = [
   {
@@ -28,6 +29,16 @@ const SECTIONS = [
     borderColor: "#0d9488",
     statusKey: "program-cashflow",
     description: "مراحل التطوير والجدول الزمني",
+  },
+  {
+    id: "capital-scheduling" as View,
+    label: "مشاريع كومو - جدولة رأس المال",
+    icon: Layers,
+    gradient: "linear-gradient(135deg, #f97316, #ea580c)",
+    shadow: "rgba(249, 115, 22, 0.35)",
+    borderColor: "#f97316",
+    statusKey: "capital-scheduling",
+    description: "جدولة احتياجات رأس المال لجميع المشاريع",
   },
 ];
 
@@ -142,7 +153,7 @@ export default function ProjectManagementPage() {
             <p className="text-sm text-muted-foreground">اختر القسم المطلوب</p>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 max-w-sm mx-auto">
+          <div className="grid grid-cols-3 gap-6 max-w-4xl mx-auto">
             {SECTIONS.map((item) => {
               const sectionStatus = getSectionStatus(item.statusKey);
               return (
@@ -199,6 +210,11 @@ export default function ProjectManagementPage() {
       {activeView === "work-program" && (
         <main className="py-1">
           <WorkProgramHub embedded />
+        </main>
+      )}
+      {activeView === "capital-scheduling" && (
+        <main className="py-1">
+          <CapitalSchedulingPage embedded onBack={() => setActiveView("icons")} />
         </main>
       )}
     </div>
