@@ -455,31 +455,7 @@ export default function ExcelCashFlowPage({ embedded }: { embedded?: boolean } =
         </div>
       )}
 
-      {/* Feasibility Summary Banner */}
-      {projectCosts && (projectCosts.totalCosts || projectCosts.totalRevenue) ? (
-        <div className="mb-3 grid grid-cols-2 gap-3">
-          <div className="rounded-xl bg-gradient-to-l from-slate-800 to-slate-900 px-5 py-3 shadow-md flex items-center justify-between">
-            <div>
-              <div className="text-[10px] text-slate-400 font-medium mb-0.5">إجمالي تكلفة المشروع</div>
-              <div className="text-lg font-black text-white tabular-nums" dir="ltr">{fmt(projectCosts.totalCosts ?? 0)} <span className="text-[10px] font-normal text-slate-400">AED</span></div>
-              <div className="text-[9px] text-slate-500 mt-0.5">من دراسة الجدوى — يشمل الأرض وجميع التكاليف</div>
-            </div>
-            <div className="text-3xl opacity-20">🏗️</div>
-          </div>
-          <div className="rounded-xl bg-gradient-to-l from-blue-700 to-blue-800 px-5 py-3 shadow-md flex items-center justify-between">
-            <div>
-              <div className="text-[10px] text-blue-200 font-medium mb-0.5">إجمالي الإيرادات المتوقعة</div>
-              <div className="text-lg font-black text-white tabular-nums" dir="ltr">{fmt(projectCosts.totalRevenue)} <span className="text-[10px] font-normal text-blue-300">AED</span></div>
-              <div className="text-[9px] text-blue-300 mt-0.5">
-                {projectCosts.totalRevenue > (projectCosts.totalCosts ?? 0)
-                  ? `✅ هامش الربح: ${(((projectCosts.totalRevenue - (projectCosts.totalCosts ?? 0)) / projectCosts.totalRevenue) * 100).toFixed(1)}%`
-                  : `⚠️ الإيرادات أقل من التكاليف`}
-              </div>
-            </div>
-            <div className="text-3xl opacity-20">💰</div>
-          </div>
-        </div>
-      ) : null}
+
 
       {/* Summary Cards */}
       <div className="grid grid-cols-4 gap-3 mb-4">
@@ -504,7 +480,7 @@ export default function ExcelCashFlowPage({ embedded }: { embedded?: boolean } =
 
       {/* TABLE */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-auto">
-        <table className="w-full text-xs border-collapse min-w-[900px]">
+        <table className="w-full text-sm border-collapse min-w-[900px]">
           <thead>
             {/* Phase header */}
             <tr>
@@ -654,10 +630,10 @@ export default function ExcelCashFlowPage({ embedded }: { embedded?: boolean } =
             </tr>
 
             {/* Remaining row */}
-            <tr className="bg-gray-800 text-white font-bold border-t border-gray-600">
-              <td className="px-1 py-1.5 text-right border-l border-gray-600 text-[10px] sticky right-0 z-10 bg-gray-800">رأس المال المطلوب سداده</td>
-              <td className="px-1 py-1.5 text-center border-l border-gray-600 tabular-nums text-[10px]">{fmt(upcomingTotal)}</td>
-              {showControls && <td className="border-l border-gray-600"></td>}
+            <tr className="bg-indigo-700 text-white font-bold border-t-2 border-indigo-500">
+              <td className="px-2 py-2 text-right border-l border-indigo-500 text-xs sticky right-0 z-10 bg-indigo-700">رأس المال المطلوب سداده</td>
+              <td className="px-2 py-2 text-center border-l border-indigo-500 tabular-nums text-xs">{fmt(upcomingTotal)}</td>
+              {showControls && <td className="border-l border-indigo-500"></td>}
               {quarters.map((q, qi) => {
                 const val = colTotals[qi];
                 const isPaid = isQPaid(q, qi);
@@ -665,8 +641,8 @@ export default function ExcelCashFlowPage({ embedded }: { embedded?: boolean } =
                 return (
                   <td
                     key={qi}
-                    className={`px-1 py-1.5 text-center border-l border-gray-600 tabular-nums text-[10px] ${
-                      isPaid ? "text-gray-500" : isCurrent ? "text-yellow-300" : ""
+                    className={`px-2 py-2 text-center border-l border-indigo-500 tabular-nums text-xs ${
+                      isPaid ? "text-indigo-300" : isCurrent ? "text-yellow-300" : ""
                     }`}
                   >
                     {isPaid ? "-" : val === 0 ? "-" : fmt(val)}

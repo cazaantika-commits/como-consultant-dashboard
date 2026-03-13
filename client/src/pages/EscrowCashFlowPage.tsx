@@ -414,38 +414,10 @@ export default function EscrowCashFlowPage({ embedded }: { embedded?: boolean } 
         </div>
       )}
 
-      {/* Feasibility Summary Banner */}
-      {projectCosts && (projectCosts.totalCosts || projectCosts.totalRevenue) ? (
-        <div className="mb-3 grid grid-cols-2 gap-3">
-          <div className="rounded-xl bg-gradient-to-l from-slate-800 to-slate-900 px-5 py-3 shadow-md flex items-center justify-between">
-            <div>
-              <div className="text-[10px] text-slate-400 font-medium mb-0.5">إجمالي تكلفة المشروع</div>
-              <div className="text-lg font-black text-white tabular-nums" dir="ltr">{fmt(projectCosts.totalCosts ?? 0)} <span className="text-[10px] font-normal text-slate-400">AED</span></div>
-              <div className="text-[9px] text-slate-500 mt-0.5">من دراسة الجدوى — يشمل الأرض وجميع التكاليف</div>
-            </div>
-            <div className="text-3xl opacity-20">🏗️</div>
-          </div>
-          <div className="rounded-xl bg-gradient-to-l from-blue-700 to-blue-800 px-5 py-3 shadow-md flex items-center justify-between">
-            <div>
-              <div className="text-[10px] text-blue-200 font-medium mb-0.5">إجمالي الإيرادات المتوقعة</div>
-              <div className="text-lg font-black text-white tabular-nums" dir="ltr">{fmt(projectCosts.totalRevenue)} <span className="text-[10px] font-normal text-blue-300">AED</span></div>
-              <div className="text-[9px] text-blue-300 mt-0.5">
-                {projectCosts.totalRevenue > (projectCosts.totalCosts ?? 0)
-                  ? `✅ هامش الربح: ${(((projectCosts.totalRevenue - (projectCosts.totalCosts ?? 0)) / projectCosts.totalRevenue) * 100).toFixed(1)}%`
-                  : `⚠️ الإيرادات أقل من التكاليف`}
-              </div>
-            </div>
-            <div className="text-3xl opacity-20">💰</div>
-          </div>
-        </div>
-      ) : null}
+
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-5 gap-3 mb-4">
-        <div className="bg-white rounded-lg border border-violet-200 px-3 py-2 shadow-sm">
-          <div className="text-[10px] text-violet-600">الرصيد الافتتاحي (20%)</div>
-          <div className="text-sm font-bold text-violet-700">{fmt(openingBalance)} <span className="text-[10px] font-normal text-gray-400">درهم</span></div>
-        </div>
+      <div className="grid grid-cols-4 gap-3 mb-4">
         <div className="bg-white rounded-lg border border-red-200 px-3 py-2 shadow-sm">
           <div className="text-[10px] text-red-600">إجمالي المصاريف</div>
           <div className="text-sm font-bold text-red-700">{fmt(totalExpenses)} <span className="text-[10px] font-normal text-gray-400">درهم</span></div>
@@ -469,7 +441,7 @@ export default function EscrowCashFlowPage({ embedded }: { embedded?: boolean } 
 
       {/* TABLE */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-auto">
-        <table className="w-full text-xs border-collapse min-w-[900px]">
+        <table className="w-full text-sm border-collapse min-w-[900px]">
           <thead>
             <tr>
               <th className="bg-gray-800 text-white px-1 py-1.5 text-right font-medium border-l border-gray-600 w-[140px] text-[10px] sticky right-0 z-10">البند</th>
@@ -582,16 +554,16 @@ export default function EscrowCashFlowPage({ embedded }: { embedded?: boolean } 
             </tr>
 
             {/* Running Balance */}
-            <tr className="bg-gray-800 text-white font-bold border-t border-gray-600">
-              <td className="px-1 py-1.5 text-right border-l border-gray-600 text-[10px] sticky right-0 z-10 bg-gray-800">رصيد حساب الضمان</td>
-              <td className="px-1 py-1.5 text-center border-l border-gray-600 tabular-nums text-[10px]">-</td>
-              {showControls && <td className="border-l border-gray-600"></td>}
+            <tr className="bg-emerald-700 text-white font-bold border-t-2 border-emerald-500">
+              <td className="px-2 py-2 text-right border-l border-emerald-500 text-xs sticky right-0 z-10 bg-emerald-700">رصيد حساب الضمان</td>
+              <td className="px-2 py-2 text-center border-l border-emerald-500 tabular-nums text-xs">-</td>
+              {showControls && <td className="border-l border-emerald-500"></td>}
               {quarters.map((_, qi) => (
-                <td key={qi} className={`px-1 py-1.5 text-center border-l border-gray-600 tabular-nums text-[10px] ${
-                  runningBalance[qi] < 0 ? "text-red-400 bg-red-900/30" : "text-emerald-300"
+                <td key={qi} className={`px-2 py-2 text-center border-l border-emerald-500 tabular-nums text-xs ${
+                  runningBalance[qi] < 0 ? "text-red-300 bg-red-900/40" : "text-emerald-100"
                 }`}>
                   {fmtSigned(runningBalance[qi])}
-                  {runningBalance[qi] < 0 && <div className="text-[8px] text-red-400">⚠️ عجز</div>}
+                  {runningBalance[qi] < 0 && <div className="text-[9px] text-red-300">⚠️ عجز</div>}
                 </td>
               ))}
             </tr>
