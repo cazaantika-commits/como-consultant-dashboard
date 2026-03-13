@@ -51,21 +51,24 @@ interface ProjectColumn {
   monthlyAmounts: Record<number, number>;
 }
 
+// Phase colors for the pillar cells
 const PHASE_BG: Record<string, string> = {
-  preCon: "#dbeafe",
-  construction: "#dcfce7",
-  handover: "#fef9c3",
+  preCon: "#bfdbfe",       // blue-200
+  construction: "#bbf7d0", // green-200
+  handover: "#fef08a",     // yellow-200
 };
 const PHASE_TEXT: Record<string, string> = {
-  preCon: "#1d4ed8",
-  construction: "#15803d",
-  handover: "#a16207",
+  preCon: "#1e40af",
+  construction: "#166534",
+  handover: "#854d0e",
 };
-const PHASE_BORDER: Record<string, string> = {
-  preCon: "#93c5fd",
-  construction: "#86efac",
-  handover: "#fde047",
-};
+
+// Row background — alternating subtle stripes for the full row
+const ROW_BG_EVEN = "#f0f4f8";
+const ROW_BG_ODD  = "#e8edf3";
+
+// Pillar inner background — slightly lighter than row so pillar stands out
+const PILLAR_INACTIVE = "rgba(255,255,255,0.55)"; // inside pillar, no phase active
 
 interface Props {
   embedded?: boolean;
@@ -75,34 +78,28 @@ interface Props {
 export default function CapitalSchedulingPage({ onBack }: Props) {
   const { isAuthenticated } = useAuth();
 
-  // Fetch all data in bulk (no hooks inside loops)
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
-  const allMoQuery = trpc.marketOverview.getAllByUser.useQuery(undefined, { enabled: isAuthenticated, staleTime: 60000 });
-  const allCpQuery = trpc.competitionPricing.getAllByUser.useQuery(undefined, { enabled: isAuthenticated, staleTime: 60000 });
+  const allMoQuery    = trpc.marketOverview.getAllByUser.useQuery(undefined, { enabled: isAuthenticated, staleTime: 60000 });
+  const allCpQuery    = trpc.competitionPricing.getAllByUser.useQuery(undefined, { enabled: isAuthenticated, staleTime: 60000 });
 
   const projects = useMemo(() => projectsQuery.data || [], [projectsQuery.data]);
-  const allMo = useMemo(() => allMoQuery.data || [], [allMoQuery.data]);
-  const allCp = useMemo(() => allCpQuery.data || [], [allCpQuery.data]);
+  const allMo    = useMemo(() => allMoQuery.data || [], [allMoQuery.data]);
+  const allCp    = useMemo(() => allCpQuery.data || [], [allCpQuery.data]);
 
   const columns = useMemo<ProjectColumn[]>(() => {
     return projects.map((project) => {
-      const mo = allMo.find((m: any) => m.projectId === project.id);
-      const cp = allCp.find((c: any) => c.projectId === project.id);
+      const mo   = allMo.find((m: any) => m.projectId === project.id);
+      const cp   = allCp.find((c: any) => c.projectId === project.id);
       const costs = calculateProjectCosts(project, mo, cp);
 
-      const preConMonths = project.preConMonths ?? 6;
+      const preConMonths       = project.preConMonths ?? 6;
       const constructionMonths = project.constructionMonths ?? 16;
-      const handoverMonths = 2;
+      const handoverMonths     = 2;
 
-      const durations: PhaseDurations = {
-        preCon: preConMonths,
-        construction: constructionMonths,
-        handover: handoverMonths,
-      };
-      const phases = calculatePhases(durations);
+      const durations: PhaseDurations = { preCon: preConMonths, construction: constructionMonths, handover: handoverMonths };
+      const phases   = calculatePhases(durations);
       const expenses = getInvestorExpenses(costs || undefined);
 
-      // Build monthly distribution (relative months 1-based within project)
       const relativeMonthly: Record<number, number> = {};
       for (const item of expenses) {
         if (item.phase === "land") continue;
@@ -118,7 +115,6 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
         }
       }
 
-      // Map relative months to absolute months (0-based from CHART_START)
       const startOffset = getMonthOffset((project as any).constructionStartDate || null);
       const monthlyAmounts: Record<number, number> = {};
       for (const [rel, val] of Object.entries(relativeMonthly)) {
@@ -128,14 +124,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
         }
       }
 
-      return {
-        id: project.id,
-        name: project.name,
-        startOffset,
-        preConMonths,
-        constructionMonths,
-        monthlyAmounts,
-      };
+      return { id: project.id, name: project.name, startOffset, preConMonths, constructionMonths, monthlyAmounts };
     });
   }, [projects, allMo, allCp]);
 
@@ -159,12 +148,15 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
     return null;
   }
 
-  const DATE_COL_W = 120;
-  const COL_W = 150;
-  const TOTAL_COL_W = 130;
-  const ROW_H = 38;
+  // Column widths
+  const TOTAL_COL_W = 130; // leftmost: الإجمالي الشهري
+  const DATE_COL_W  = 120; // second from left: الشهر
+  const COL_W       = 150; // each project
+  const ROW_H       = 38;
+  const GAP         = 4;   // gap between project pillars (px)
 
   const isLoading = projectsQuery.isLoading || allMoQuery.isLoading || allCpQuery.isLoading;
+  const grandTotal = Object.values(monthlyTotals).reduce((s, v) => s + v, 0);
 
   if (isLoading) {
     return (
@@ -187,7 +179,8 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
     );
   }
 
-  const grandTotal = Object.values(monthlyTotals).reduce((s, v) => s + v, 0);
+  // Table total width: total col + date col + (n projects * col width) + gaps
+  const tableW = TOTAL_COL_W + DATE_COL_W + columns.length * (COL_W + GAP);
 
   return (
     <div className="p-4 space-y-4" dir="rtl">
@@ -224,9 +217,9 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
             <div key={phase} className="flex items-center gap-1.5">
               <div
                 className="w-3.5 h-3.5 rounded"
-                style={{ background: PHASE_BG[phase], border: `1px solid ${PHASE_BORDER[phase]}` }}
+                style={{ background: PHASE_BG[phase], border: "1px solid rgba(0,0,0,0.15)" }}
               />
-              <span style={{ color: PHASE_TEXT[phase] }}>{label}</span>
+              <span style={{ color: PHASE_TEXT[phase], fontWeight: 600 }}>{label}</span>
             </div>
           ))}
         </div>
@@ -240,31 +233,19 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
         {columns.map((col) => {
           const total = Object.values(col.monthlyAmounts).reduce((s, v) => s + v, 0);
           return (
-            <div key={col.id} className="rounded-xl border border-border p-3 bg-card">
-              <p className="text-[11px] text-muted-foreground truncate font-medium" title={col.name}>
-                {col.name}
-              </p>
+            <div key={col.id} className="rounded-xl border border-border p-3 bg-card shadow-sm">
+              <p className="text-[11px] text-muted-foreground truncate font-medium" title={col.name}>{col.name}</p>
               <p className="text-base font-bold text-foreground mt-0.5">
                 {total > 0 ? `${(total / 1_000_000).toFixed(2)}M` : "—"}
               </p>
               <div className="flex gap-1 mt-1.5 flex-wrap">
-                <span
-                  className="text-[10px] px-1.5 py-0.5 rounded"
-                  style={{ background: PHASE_BG.preCon, color: PHASE_TEXT.preCon }}
-                >
-                  {col.preConMonths}ش قبل
-                </span>
-                <span
-                  className="text-[10px] px-1.5 py-0.5 rounded"
-                  style={{ background: PHASE_BG.construction, color: PHASE_TEXT.construction }}
-                >
-                  {col.constructionMonths}ش إنشاء
-                </span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: PHASE_BG.preCon, color: PHASE_TEXT.preCon }}>{col.preConMonths}ش قبل</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: PHASE_BG.construction, color: PHASE_TEXT.construction }}>{col.constructionMonths}ش إنشاء</span>
               </div>
             </div>
           );
         })}
-        <div className="rounded-xl border-2 border-amber-400 p-3 bg-amber-50 dark:bg-amber-950">
+        <div className="rounded-xl border-2 border-amber-400 p-3 bg-amber-50 dark:bg-amber-950 shadow-sm">
           <p className="text-[11px] text-amber-700 font-semibold">الإجمالي الكلي</p>
           <p className="text-base font-bold text-amber-800 mt-0.5">
             {grandTotal > 0 ? `${(grandTotal / 1_000_000).toFixed(2)}M` : "—"}
@@ -273,42 +254,27 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
         </div>
       </div>
 
-      {/* Gantt chart table */}
+      {/* Gantt chart table
+          Column order (RTL): projects... | الشهر | الإجمالي الشهري
+          The full row has a background color; each project column is a "pillar" on top of it.
+      */}
       <div
         className="overflow-auto rounded-xl border border-border shadow-sm"
         style={{ maxHeight: "65vh" }}
       >
         <table
           style={{
-            width: DATE_COL_W + columns.length * COL_W + TOTAL_COL_W,
-            borderCollapse: "collapse",
+            width: tableW,
+            borderCollapse: "separate",
+            borderSpacing: 0,
             tableLayout: "fixed",
             direction: "rtl",
           }}
         >
           <thead>
             <tr style={{ position: "sticky", top: 0, zIndex: 20 }}>
-              {/* Date header — sticky right */}
-              <th
-                style={{
-                  width: DATE_COL_W,
-                  minWidth: DATE_COL_W,
-                  background: "#1e293b",
-                  color: "#f8fafc",
-                  fontSize: 12,
-                  fontWeight: 700,
-                  padding: "10px 8px",
-                  textAlign: "center",
-                  borderLeft: "2px solid #334155",
-                  position: "sticky",
-                  right: 0,
-                  zIndex: 30,
-                }}
-              >
-                الشهر
-              </th>
-              {/* Project column headers */}
-              {columns.map((col) => (
+              {/* Project column headers — rightmost group */}
+              {columns.map((col, ci) => (
                 <th
                   key={col.id}
                   style={{
@@ -320,7 +286,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                     fontWeight: 700,
                     padding: "10px 6px",
                     textAlign: "center",
-                    borderLeft: "1px solid #334155",
+                    borderLeft: ci < columns.length - 1 ? `${GAP}px solid #0f172a` : "none",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
@@ -330,7 +296,26 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                   {col.name}
                 </th>
               ))}
-              {/* Total column header */}
+
+              {/* Date column header — between projects and total */}
+              <th
+                style={{
+                  width: DATE_COL_W,
+                  minWidth: DATE_COL_W,
+                  background: "#334155",
+                  color: "#cbd5e1",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  padding: "10px 8px",
+                  textAlign: "center",
+                  borderLeft: "3px solid #0f172a",
+                  borderRight: "3px solid #0f172a",
+                }}
+              >
+                الشهر
+              </th>
+
+              {/* Total column header — leftmost */}
               <th
                 style={{
                   width: TOTAL_COL_W,
@@ -341,7 +326,6 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                   fontWeight: 700,
                   padding: "10px 8px",
                   textAlign: "center",
-                  borderLeft: "2px solid #334155",
                 }}
               >
                 الإجمالي الشهري
@@ -350,39 +334,20 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
           </thead>
           <tbody>
             {Array.from({ length: TOTAL_MONTHS }, (_, absIdx) => {
-              const total = monthlyTotals[absIdx] || 0;
-              const isEven = absIdx % 2 === 0;
+              const total   = monthlyTotals[absIdx] || 0;
+              const rowBg   = absIdx % 2 === 0 ? ROW_BG_EVEN : ROW_BG_ODD;
 
               return (
-                <tr key={absIdx} style={{ height: ROW_H, background: isEven ? "#f8fafc" : "#ffffff" }}>
-                  {/* Date cell — sticky right */}
-                  <td
-                    style={{
-                      width: DATE_COL_W,
-                      minWidth: DATE_COL_W,
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: "#475569",
-                      padding: "0 8px",
-                      textAlign: "center",
-                      borderLeft: "2px solid #cbd5e1",
-                      background: isEven ? "#f1f5f9" : "#f8fafc",
-                      position: "sticky",
-                      right: 0,
-                      zIndex: 10,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {getMonthLabel(absIdx)}
-                  </td>
-
-                  {/* Project cells */}
-                  {columns.map((col) => {
-                    const phase = getPhase(col, absIdx);
+                <tr key={absIdx} style={{ height: ROW_H, background: rowBg }}>
+                  {/* Project pillar cells */}
+                  {columns.map((col, ci) => {
+                    const phase  = getPhase(col, absIdx);
                     const amount = col.monthlyAmounts[absIdx] || 0;
-                    const bg = phase ? PHASE_BG[phase] : (isEven ? "#f8fafc" : "#ffffff");
-                    const textColor = phase ? PHASE_TEXT[phase] : "#94a3b8";
-                    const borderColor = phase ? PHASE_BORDER[phase] : "#e2e8f0";
+
+                    // Pillar background: phase color if active, else semi-transparent white
+                    const pillarBg    = phase ? PHASE_BG[phase] : PILLAR_INACTIVE;
+                    const textColor   = phase ? PHASE_TEXT[phase] : "#94a3b8";
+                    const borderColor = phase ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.6)";
 
                     return (
                       <td
@@ -390,14 +355,16 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                         style={{
                           width: COL_W,
                           minWidth: COL_W,
-                          background: bg,
-                          borderLeft: `1px solid ${borderColor}`,
+                          background: pillarBg,
+                          // Gap between pillars via right border (RTL: right = next sibling)
+                          borderLeft: ci < columns.length - 1 ? `${GAP}px solid ${rowBg}` : "none",
+                          borderTop: `1px solid ${borderColor}`,
                           borderBottom: `1px solid ${borderColor}`,
                           padding: "0 6px",
                           textAlign: "center",
                           fontSize: 11,
                           fontWeight: amount > 0 ? 700 : 400,
-                          color: amount > 0 ? textColor : (phase ? "#94a3b8" : "#e2e8f0"),
+                          color: amount > 0 ? textColor : (phase ? "rgba(0,0,0,0.2)" : "transparent"),
                         }}
                       >
                         {amount > 0 ? fmtCell(amount) : (phase ? "—" : "")}
@@ -405,18 +372,37 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                     );
                   })}
 
+                  {/* Date cell */}
+                  <td
+                    style={{
+                      width: DATE_COL_W,
+                      minWidth: DATE_COL_W,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: "#334155",
+                      padding: "0 8px",
+                      textAlign: "center",
+                      borderLeft: "3px solid #94a3b8",
+                      borderRight: "3px solid #94a3b8",
+                      background: absIdx % 2 === 0 ? "#dde3ea" : "#d0d8e2",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {getMonthLabel(absIdx)}
+                  </td>
+
                   {/* Total cell */}
                   <td
                     style={{
                       width: TOTAL_COL_W,
                       minWidth: TOTAL_COL_W,
-                      background: total > 0 ? "#fffbeb" : (isEven ? "#f8fafc" : "#ffffff"),
-                      borderLeft: "2px solid #fcd34d",
+                      background: total > 0 ? "#fef3c7" : rowBg,
+                      borderRight: "3px solid #fbbf24",
                       padding: "0 8px",
                       textAlign: "center",
                       fontSize: 12,
                       fontWeight: total > 0 ? 800 : 400,
-                      color: total > 0 ? "#92400e" : "#e2e8f0",
+                      color: total > 0 ? "#92400e" : "transparent",
                     }}
                   >
                     {total > 0 ? fmtCell(total) : ""}
