@@ -38,10 +38,10 @@ const PHASE_COLORS: Record<string, { header: string; cell: string }> = {
   handover: { header: "bg-emerald-700 text-white", cell: "bg-emerald-50" },
 };
 
-export default function TimeDistributionTab() {
+export default function TimeDistributionTab({ initialProjectId }: { initialProjectId?: number | null } = {}) {
   const { isAuthenticated } = useAuth();
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(initialProjectId ?? null);
   const [durations] = useState<PhaseDurations>({ ...DEFAULT_DURATIONS });
 
   const selectedProject = (projectsQuery.data || []).find((p: any) => p.id === selectedProjectId);

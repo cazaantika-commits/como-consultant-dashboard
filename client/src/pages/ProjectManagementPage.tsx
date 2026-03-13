@@ -1,43 +1,25 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Building2, FileText, BarChart3, Wallet, Shield, AlertCircle, Circle, TrendingUp } from "lucide-react";
+import { ArrowRight, Building2, BarChart3, TrendingUp, Shield, AlertCircle, Circle } from "lucide-react";
 import { trpc } from "@/lib/trpc";
-import FactSheetPage from "./FactSheetPage";
-import FeasibilityStudyPage from "./FeasibilityStudyPage";
-import CashFlowHub from "./CashFlowHub";
+import FeasibilityHubPage from "./FeasibilityHubPage";
 import WorkProgramHub from "./WorkProgramHub";
 import RiskDashboardPage from "./RiskDashboardPage";
 import MarketReportsPage from "./MarketReportsPage";
-type View = "icons" | "fact-sheet" | "feasibility" | "cashflow-hub" | "work-program" | "risk-dashboard" | "market-reports";
+
+type View = "icons" | "feasibility-hub" | "work-program" | "risk-dashboard" | "market-reports";
 
 const SECTIONS = [
   {
-    id: "fact-sheet" as View,
-    label: "بطاقة المشروع",
-    icon: FileText,
-    gradient: "linear-gradient(135deg, #f59e0b, #d97706)",
-    shadow: "rgba(245, 158, 11, 0.3)",
-    borderColor: "#f59e0b",
-    statusKey: "fact-sheet",
-  },
-  {
-    id: "feasibility" as View,
-    label: "دراسة الجدوى",
+    id: "feasibility-hub" as View,
+    label: "دراسة جدوى المشروع",
     icon: BarChart3,
-    gradient: "linear-gradient(135deg, #3b82f6, #2563eb)",
-    shadow: "rgba(59, 130, 246, 0.3)",
-    borderColor: "#3b82f6",
-    statusKey: "feasibility",
-  },
-  {
-    id: "cashflow-hub" as View,
-    label: "التدفقات النقدية",
-    icon: Wallet,
-    gradient: "linear-gradient(135deg, #10b981, #059669)",
-    shadow: "rgba(16, 185, 129, 0.3)",
-    borderColor: "#10b981",
-    statusKey: "cashflow",
+    gradient: "linear-gradient(135deg, #059669, #047857)",
+    shadow: "rgba(5, 150, 105, 0.3)",
+    borderColor: "#059669",
+    statusKey: "feasibility-hub",
+    description: "بطاقة المشروع، دراسة الجدوى، التدفقات النقدية",
   },
   {
     id: "work-program" as View,
@@ -47,6 +29,7 @@ const SECTIONS = [
     shadow: "rgba(13, 148, 136, 0.3)",
     borderColor: "#0d9488",
     statusKey: "program-cashflow",
+    description: "مراحل التطوير والجدول الزمني",
   },
   {
     id: "risk-dashboard" as View,
@@ -56,6 +39,7 @@ const SECTIONS = [
     shadow: "rgba(225, 29, 72, 0.3)",
     borderColor: "#e11d48",
     statusKey: "risk-dashboard",
+    description: "تحليل وإدارة المخاطر",
   },
   {
     id: "market-reports" as View,
@@ -65,6 +49,7 @@ const SECTIONS = [
     shadow: "rgba(8, 145, 178, 0.3)",
     borderColor: "#0891b2",
     statusKey: "market-reports",
+    description: "تحليل السوق والمنافسين",
   },
 ];
 
@@ -72,7 +57,7 @@ function StatusDot({ status }: { status: "complete" | "partial" | "empty" }) {
   if (status === "complete") {
     return (
       <div className="absolute -top-1 -left-1 w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center shadow ring-2 ring-white">
-        <CheckCircle2 className="w-3 h-3 text-white" />
+        <AlertCircle className="w-3 h-3 text-white" />
       </div>
     );
   }
@@ -102,7 +87,7 @@ export default function ProjectManagementPage() {
   const getSectionStatus = (sectionId: string): "complete" | "partial" | "empty" => {
     if (!statusQuery.data?.sectionSummary) return "empty";
     const keyMap: Record<string, string[]> = {
-      "cashflow-hub": ["cashflow", "escrow", "financial-command"],
+      "feasibility-hub": ["fact-sheet", "feasibility", "cashflow", "escrow", "financial-command"],
       "work-program": ["program-cashflow", "capital-planning"],
     };
     const keys = keyMap[sectionId] || [sectionId];
@@ -118,6 +103,11 @@ export default function ProjectManagementPage() {
     if (hasPartial) return "partial";
     return "empty";
   };
+
+  // If feasibility hub is active, render it as a full page
+  if (activeView === "feasibility-hub") {
+    return <FeasibilityHubPage onBack={() => setActiveView("icons")} />;
+  }
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
@@ -135,7 +125,7 @@ export default function ProjectManagementPage() {
                 <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center">
                   <Building2 className="w-3.5 h-3.5 text-white" />
                 </div>
-                <h1 className="text-sm font-bold text-foreground">إدارة المشاريع</h1>
+                <h1 className="text-sm font-bold text-foreground">الدراسات والتخطيط الاستراتيجي</h1>
               </div>
             </>
           ) : (
@@ -166,22 +156,22 @@ export default function ProjectManagementPage() {
         </div>
       </header>
 
-      {/* Icons View - Clean grid, no stepper, no descriptions */}
+      {/* Icons View */}
       {activeView === "icons" && (
         <main className="max-w-3xl mx-auto px-6 py-12">
           <div className="text-center mb-10">
-            <h2 className="text-2xl font-bold text-foreground mb-2">إدارة المشاريع</h2>
+            <h2 className="text-2xl font-bold text-foreground mb-2">الدراسات والتخطيط الاستراتيجي</h2>
             <p className="text-sm text-muted-foreground">اختر القسم المطلوب</p>
           </div>
 
-          <div className="grid grid-cols-3 gap-5">
+          <div className="grid grid-cols-2 gap-6">
             {SECTIONS.map((item) => {
               const sectionStatus = getSectionStatus(item.statusKey);
               return (
                 <button
                   key={item.id}
                   onClick={() => setActiveView(item.id)}
-                  className="group relative flex flex-col items-center text-center p-6 rounded-2xl bg-card border border-border/50 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 active:scale-[0.98] overflow-hidden"
+                  className="group relative flex flex-col items-center text-center p-8 rounded-2xl bg-card border border-border/50 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 active:scale-[0.98] overflow-hidden"
                 >
                   {/* Top colored accent */}
                   <div
@@ -194,14 +184,14 @@ export default function ProjectManagementPage() {
 
                   {/* Icon */}
                   <div
-                    className="w-16 h-16 rounded-2xl flex items-center justify-center mb-3 shadow-lg group-hover:scale-110 transition-transform duration-300"
+                    className="w-20 h-20 rounded-2xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300"
                     style={{ background: item.gradient, boxShadow: `0 8px 24px ${item.shadow}` }}
                   >
-                    <item.icon className="w-8 h-8 text-white" />
+                    <item.icon className="w-10 h-10 text-white" />
                   </div>
 
-                  {/* Label only - no description */}
-                  <h3 className="text-sm font-bold text-foreground leading-tight">{item.label}</h3>
+                  <h3 className="text-base font-bold text-foreground leading-tight mb-1">{item.label}</h3>
+                  <p className="text-[11px] text-muted-foreground">{item.description}</p>
                 </button>
               );
             })}
@@ -228,13 +218,6 @@ export default function ProjectManagementPage() {
       )}
 
       {/* Content Views */}
-      {activeView === "fact-sheet" && <FactSheetPage embedded />}
-      {activeView === "feasibility" && <FeasibilityStudyPage embedded />}
-      {activeView === "cashflow-hub" && (
-        <main className="py-1">
-          <CashFlowHub embedded />
-        </main>
-      )}
       {activeView === "work-program" && (
         <main className="py-1">
           <WorkProgramHub embedded />

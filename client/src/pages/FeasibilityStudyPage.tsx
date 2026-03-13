@@ -138,10 +138,10 @@ function JoellePlaceholder({ message, subMessage }: { message: string; subMessag
 // MAIN COMPONENT
 // ═══════════════════════════════════════════
 
-export default function FeasibilityStudyPage({ embedded }: { embedded?: boolean } = {}) {
+export default function FeasibilityStudyPage({ embedded, initialProjectId }: { embedded?: boolean; initialProjectId?: number | null } = {}) {
   const { user, loading, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(initialProjectId ?? null);
   const [selectedStudyId, setSelectedStudyId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState("tab5");
   const [form, setForm] = useState<Record<string, any>>({});

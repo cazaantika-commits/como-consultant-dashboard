@@ -59,10 +59,10 @@ const COST_LINES: CostLine[] = [
 
 const GROUPS = ["الأرض", "ما قبل البناء", "البناء", "المبيعات والتسويق"];
 
-export default function FinancialFeasibilityTab() {
+export default function FinancialFeasibilityTab({ initialProjectId }: { initialProjectId?: number | null } = {}) {
   const { isAuthenticated } = useAuth();
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(initialProjectId ?? null);
 
   const selectedProject = (projectsQuery.data || []).find((p: any) => p.id === selectedProjectId);
   const moQuery = trpc.marketOverview.getByProject.useQuery(selectedProjectId || 0, { enabled: !!selectedProjectId });

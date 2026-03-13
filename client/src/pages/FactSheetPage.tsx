@@ -125,10 +125,10 @@ function Section({ title, icon: Icon, children, color = "amber" }: {
   );
 }
 
-export default function FactSheetPage({ embedded = false }: { embedded?: boolean }) {
+export default function FactSheetPage({ embedded = false, initialProjectId }: { embedded?: boolean; initialProjectId?: number | null }) {
   const { user, loading: authLoading } = useAuth();
   const [, navigate] = useLocation();
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(initialProjectId ?? null);
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [hasChanges, setHasChanges] = useState(false);
   const [khazenLoading, setKhazenLoading] = useState(false);
