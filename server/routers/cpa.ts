@@ -1247,7 +1247,19 @@ export const cpaRouter = router({
     if (!db) return [];
     return qRows(
       db,
-      sql`SELECT id, name, plotNumber as plot_number, bua, pricePerSqft as price_per_sqft FROM projects ORDER BY name`
+      sql`SELECT
+        id,
+        name,
+        plotNumber          AS plot_number,
+        bua,
+        pricePerSqft        AS price_per_sqft,
+        manualBuaSqft       AS manual_bua_sqft,
+        gfaSqft             AS gfa_sqft,
+        estimatedConstructionPricePerSqft AS construction_cost_per_sqft,
+        permittedUse        AS permitted_use,
+        areaCode            AS area_code
+      FROM projects
+      ORDER BY name`
     );
   }),
 });

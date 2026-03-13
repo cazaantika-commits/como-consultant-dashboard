@@ -147,6 +147,16 @@ function ProjectListScreen({
   const sysProjects = sysProjectsQuery.data ?? [];
   const categories = categoriesQuery.data ?? [];
 
+  // Map permittedUse text to project type enum
+  function detectProjectType(permittedUse: string | null | undefined): string {
+    if (!permittedUse) return "RESIDENTIAL";
+    const u = permittedUse.toLowerCase();
+    if (u.includes("تجار") || u.includes("commercial") || u.includes("retail") || u.includes("مكاتب") || u.includes("office")) return "COMMERCIAL";
+    if (u.includes("متعدد") || u.includes("mixed") || u.includes("سكني تجاري")) return "MIXED_USE";
+    if (u.includes("سكن") || u.includes("residential") || u.includes("villa") || u.includes("فيلا")) return "RESIDENTIAL";
+    return "RESIDENTIAL";
+  }
+
   // Auto-detect building category from BUA
   function detectCategoryFromBUA(buaStr: string): string {
     const bua = Number(buaStr);
@@ -314,9 +324,35 @@ function ProjectListScreen({
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            {/* Project selector — auto-fills all fields */}
             <div>
               <Label>المشروع *</Label>
-              <Select value={form.projectId} onValueChange={(v) => setForm({ ...form, projectId: v })}>
+              <Select
+                value={form.projectId}
+                onValueChange={(v) => {
+                  const sp = (sysProjects as any[]).find((p) => String(p.id) === v);
+                  if (!sp) { setForm({ ...form, projectId: v }); return; }
+                  const rawBua = sp.manual_bua_sqft ?? sp.gfa_sqft ?? sp.bua ?? "";
+                  const buaStr = rawBua ? String(Math.round(Number(rawBua))) : "";
+                  const detectedCatId = detectCategoryFromBUA(buaStr);
+                  const detectedCat = (categories as any[]).find((c) => String(c.id) === detectedCatId);
+                  const durationFromCat = detectedCat?.supervision_duration_months
+                    ? String(detectedCat.supervision_duration_months)
+                    : "";
+                  const constructionCost = sp.construction_cost_per_sqft ? String(Math.round(Number(sp.construction_cost_per_sqft))) : "";
+                  setForm({
+                    ...form,
+                    projectId: v,
+                    plotNumber: sp.plot_number ?? "",
+                    location: sp.area_code ?? "",
+                    buaSqft: buaStr,
+                    constructionCostPerSqft: constructionCost,
+                    buildingCategoryId: detectedCatId,
+                    durationMonths: durationFromCat,
+                    projectType: detectProjectType(sp.permitted_use),
+                  });
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="اختر مشروعاً من النظام..." />
                 </SelectTrigger>
@@ -329,16 +365,26 @@ function ProjectListScreen({
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>رقم القطعة *</Label>
-                <Input value={form.plotNumber} onChange={(e) => setForm({ ...form, plotNumber: e.target.value })} placeholder="مثال: 123-456" />
+
+            {/* Auto-filled summary — shown after project selected */}
+            {form.projectId && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 space-y-2 text-sm">
+                <p className="text-xs font-semibold text-emerald-700 flex items-center gap-1">
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  تم سحب البيانات تلقائياً من بطاقة المشروع
+                </p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                  <div><span className="text-muted-foreground">رقم القطعة: </span><strong>{form.plotNumber || "—"}</strong></div>
+                  <div><span className="text-muted-foreground">الموقع: </span><strong>{form.location || "—"}</strong></div>
+                  <div><span className="text-muted-foreground">BUA: </span><strong>{form.buaSqft ? Number(form.buaSqft).toLocaleString() + " قدم²" : "—"}</strong></div>
+                  <div><span className="text-muted-foreground">تكلفة الإنشاء: </span><strong>{form.constructionCostPerSqft ? form.constructionCostPerSqft + " AED/قدم²" : "—"}</strong></div>
+                  <div><span className="text-muted-foreground">الفئة: </span><strong>{(categories as any[]).find((c) => String(c.id) === form.buildingCategoryId)?.label || "—"}</strong></div>
+                  <div><span className="text-muted-foreground">مدة الإشراف: </span><strong>{form.durationMonths ? form.durationMonths + " شهر" : "—"}</strong></div>
+                </div>
               </div>
-              <div>
-                <Label>الموقع</Label>
-                <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="دبي، الإمارات" />
-              </div>
-            </div>
+            )}
+
+            {/* Editable overrides */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>BUA (قدم مربع) *</Label>
@@ -348,7 +394,11 @@ function ProjectListScreen({
                   onChange={(e) => {
                     const newBua = e.target.value;
                     const detectedCatId = detectCategoryFromBUA(newBua);
-                    setForm({ ...form, buaSqft: newBua, buildingCategoryId: detectedCatId || form.buildingCategoryId });
+                    const detectedCat = (categories as any[]).find((c) => String(c.id) === detectedCatId);
+                    const durationFromCat = detectedCat?.supervision_duration_months
+                      ? String(detectedCat.supervision_duration_months)
+                      : form.durationMonths;
+                    setForm({ ...form, buaSqft: newBua, buildingCategoryId: detectedCatId || form.buildingCategoryId, durationMonths: durationFromCat });
                   }}
                   placeholder="مثال: 50000"
                 />
@@ -358,7 +408,7 @@ function ProjectListScreen({
                   return cat ? (
                     <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
                       <CheckCircle className="w-3 h-3" />
-                      تم اكتشاف الفئة تلقائياً: <strong>{cat.label}</strong>
+                      الفئة: <strong>{cat.label}</strong> · الإشراف: <strong>{cat.supervision_duration_months} شهر</strong>
                     </p>
                   ) : null;
                 })()}
@@ -370,12 +420,14 @@ function ProjectListScreen({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>مدة الإشراف (شهر) *</Label>
-                <Input type="number" value={form.durationMonths} onChange={(e) => setForm({ ...form, durationMonths: e.target.value })} placeholder="مثال: 24" />
-              </div>
-              <div>
                 <Label>فئة المبنى</Label>
-                <Select value={form.buildingCategoryId} onValueChange={(v) => setForm({ ...form, buildingCategoryId: v })}>
+                <Select value={form.buildingCategoryId} onValueChange={(v) => {
+                  const cat = (categories as any[]).find((c) => String(c.id) === v);
+                  const dur = cat?.supervision_duration_months
+                    ? String(cat.supervision_duration_months)
+                    : form.durationMonths;
+                  setForm({ ...form, buildingCategoryId: v, durationMonths: dur });
+                }}>
                   <SelectTrigger>
                     <SelectValue placeholder="تلقائي..." />
                   </SelectTrigger>
@@ -385,6 +437,20 @@ function ProjectListScreen({
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div>
+                <Label>مدة الإشراف (شهر)</Label>
+                <Input type="number" value={form.durationMonths} onChange={(e) => setForm({ ...form, durationMonths: e.target.value })} placeholder="من الفئة تلقائياً" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>رقم القطعة *</Label>
+                <Input value={form.plotNumber} onChange={(e) => setForm({ ...form, plotNumber: e.target.value })} placeholder="مثال: 123-456" />
+              </div>
+              <div>
+                <Label>الموقع</Label>
+                <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="دبي، الإمارات" />
               </div>
             </div>
             <div>
