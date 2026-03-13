@@ -1070,6 +1070,7 @@ export const cpaRouter = router({
         }
 
         // Import scope coverage
+        let scopeIncluded = 0, scopeExcluded = 0, scopeNotMentioned = 0;
         if (parsed.scope_coverage?.length) {
           for (const item of parsed.scope_coverage) {
             const scopeRows = await qRows<any>(
@@ -1078,6 +1079,9 @@ export const cpaRouter = router({
             );
             if (!scopeRows[0]) continue;
             const status = String(item.status).toUpperCase();
+            if (status === "INCLUDED") scopeIncluded++;
+            else if (status === "EXCLUDED") scopeExcluded++;
+            else scopeNotMentioned++;
             await db.execute(
               sql`INSERT INTO cpa_consultant_scope_coverage
                     (project_consultant_id, scope_item_id, coverage_status)
@@ -1088,6 +1092,7 @@ export const cpaRouter = router({
         }
 
         // Import supervision team
+        let supervisionRolesImported = 0;
         if (parsed.supervision_team?.length) {
           for (const member of parsed.supervision_team) {
             const roleRows = await qRows<any>(
@@ -1095,6 +1100,7 @@ export const cpaRouter = router({
               sql`SELECT id FROM cpa_supervision_roles WHERE code = ${member.role_code}`
             );
             if (!roleRows[0]) continue;
+            supervisionRolesImported++;
             await db.execute(
               sql`INSERT INTO cpa_consultant_supervision_team
                     (project_consultant_id, supervision_role_id, proposed_allocation_pct, proposed_monthly_rate)
@@ -1106,7 +1112,18 @@ export const cpaRouter = router({
           }
         }
 
-        return { pcId, consultantId, status: "CONFIRMED" };
+        return {
+          pcId,
+          consultantId,
+          status: "CONFIRMED",
+          summary: {
+            scopeIncluded,
+            scopeExcluded,
+            scopeNotMentioned,
+            scopeTotal: scopeIncluded + scopeExcluded + scopeNotMentioned,
+            supervisionRolesImported,
+          },
+        };
       }),
 
     getScopeCoverage: protectedProcedure

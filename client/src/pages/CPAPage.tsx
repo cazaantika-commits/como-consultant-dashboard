@@ -147,6 +147,18 @@ function ProjectListScreen({
   const sysProjects = sysProjectsQuery.data ?? [];
   const categories = categoriesQuery.data ?? [];
 
+  // Auto-detect building category from BUA
+  function detectCategoryFromBUA(buaStr: string): string {
+    const bua = Number(buaStr);
+    if (!bua || !categories.length) return "";
+    const match = (categories as any[]).find((c) => {
+      const minOk = c.bua_min_sqft == null || bua >= Number(c.bua_min_sqft);
+      const maxOk = c.bua_max_sqft == null || bua <= Number(c.bua_max_sqft);
+      return minOk && maxOk && c.is_active;
+    });
+    return match ? String(match.id) : "";
+  }
+
   function handleCreate() {
     if (!form.projectId || !form.plotNumber || !form.buaSqft || !form.constructionCostPerSqft || !form.durationMonths) {
       toast({ title: "يرجى ملء الحقول المطلوبة", variant: "destructive" });
@@ -330,7 +342,26 @@ function ProjectListScreen({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>BUA (قدم مربع) *</Label>
-                <Input type="number" value={form.buaSqft} onChange={(e) => setForm({ ...form, buaSqft: e.target.value })} placeholder="مثال: 50000" />
+                <Input
+                  type="number"
+                  value={form.buaSqft}
+                  onChange={(e) => {
+                    const newBua = e.target.value;
+                    const detectedCatId = detectCategoryFromBUA(newBua);
+                    setForm({ ...form, buaSqft: newBua, buildingCategoryId: detectedCatId || form.buildingCategoryId });
+                  }}
+                  placeholder="مثال: 50000"
+                />
+                {form.buaSqft && (() => {
+                  const detectedId = detectCategoryFromBUA(form.buaSqft);
+                  const cat = (categories as any[]).find((c) => String(c.id) === detectedId);
+                  return cat ? (
+                    <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" />
+                      تم اكتشاف الفئة تلقائياً: <strong>{cat.label}</strong>
+                    </p>
+                  ) : null;
+                })()}
               </div>
               <div>
                 <Label>تكلفة الإنشاء / قدم² *</Label>
@@ -685,12 +716,24 @@ function ImportJsonScreen({
     if (file) readFile(file);
   }
 
+  const [importSummary, setImportSummary] = useState<null | {
+    scopeIncluded: number;
+    scopeExcluded: number;
+    scopeNotMentioned: number;
+    scopeTotal: number;
+    supervisionRolesImported: number;
+  }>(null);
+
   const importMutation = trpc.cpa.consultants.importJson.useMutation({
-    onSuccess: () => {
-      toast({ title: "تم استيراد البيانات بنجاح" });
+    onSuccess: (data) => {
       setJsonText("");
       setFileName("");
-      onBack();
+      if (data?.summary) {
+        setImportSummary(data.summary);
+      } else {
+        toast({ title: "تم استيراد البيانات بنجاح" });
+        onBack();
+      }
     },
     onError: (e) => toast({ title: "خطأ في الاستيراد", description: e.message, variant: "destructive" }),
   });
@@ -874,11 +917,55 @@ function ImportJsonScreen({
           </div>
         </CardContent>
       </Card>
+
+      {/* Post-Import Summary Dialog */}
+      <Dialog open={!!importSummary} onOpenChange={(open) => { if (!open) { setImportSummary(null); onBack(); } }}>
+        <DialogContent className="max-w-sm" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-emerald-700">
+              <CheckCircle className="w-5 h-5" />
+              تم الاستيراد بنجاح
+            </DialogTitle>
+          </DialogHeader>
+          {importSummary && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">ملخص بيانات عرض <strong>{consultantName}</strong>:</p>
+              {/* Scope Summary */}
+              <div className="rounded-xl border overflow-hidden">
+                <div className="bg-muted/40 px-3 py-2 text-xs font-semibold text-muted-foreground">
+                  تغطية بنود النطاق ({importSummary.scopeTotal} بند)
+                </div>
+                <div className="grid grid-cols-3 divide-x divide-x-reverse">
+                  <div className="p-3 text-center">
+                    <div className="text-2xl font-bold text-emerald-600">{importSummary.scopeIncluded}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">مشمول</div>
+                  </div>
+                  <div className="p-3 text-center">
+                    <div className="text-2xl font-bold text-red-500">{importSummary.scopeExcluded}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">مستثنى</div>
+                  </div>
+                  <div className="p-3 text-center">
+                    <div className="text-2xl font-bold text-amber-500">{importSummary.scopeNotMentioned}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">غير مذكور</div>
+                  </div>
+                </div>
+              </div>
+              {/* Supervision Summary */}
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <span className="text-sm text-muted-foreground">أدوار الإشراف المستوردة</span>
+                <span className="font-bold text-sky-700">{importSummary.supervisionRolesImported} دور</span>
+              </div>
+              <Button className="w-full" onClick={() => { setImportSummary(null); onBack(); }}>
+                متابعة ← العودة للمشروع
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
-
-// ---- Screen 4: Scope Review -----------------------------------------------
+// ---- Screen 4: Scope Revieww -----------------------------------------------
 
 function ScopeReviewScreen({
   projectConsultantId,
