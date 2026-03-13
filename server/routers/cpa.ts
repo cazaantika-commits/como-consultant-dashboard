@@ -151,20 +151,27 @@ async function runCalculationEngine(cpaProjectId: number) {
       }
     }
 
-    // Duration warning (ملاحظة 3)
+    // Duration warning + adjustment (ملاحظة 3)
     const statedDuration = consultant.supervision_stated_duration_months
       ? toNum(consultant.supervision_stated_duration_months)
       : null;
-    if (statedDuration !== null && statedDuration < durationMonths) {
+    const durationAdjustmentFactor =
+      statedDuration !== null && statedDuration > 0 && statedDuration < durationMonths
+        ? durationMonths / statedDuration
+        : 1;
+    if (durationAdjustmentFactor > 1) {
       notes.durationWarning = {
         statedMonths: statedDuration,
         projectMonths: durationMonths,
-        message: `مدة الإشراف المقدمة ${statedDuration} شهر — مدة المشروع ${durationMonths} شهر`,
+        adjustmentFactor: durationAdjustmentFactor,
+        originalFee: originalSupervisionFeeBeforeAdj,
+        message: `مدة الإشراف المقدمة ${statedDuration} شهر — مدة المشروع ${durationMonths} شهر — السعر سيُعدَّل بمعامل ${durationAdjustmentFactor.toFixed(2)}`,
       };
     }
 
     // Supervision
     let quotedSupervisionFee = 0;
+    let originalSupervisionFeeBeforeAdj = 0;
     let canRank = 1;
 
     if (!consultant.supervision_submitted) {
@@ -182,12 +189,15 @@ async function runCalculationEngine(cpaProjectId: number) {
       }
 
       if (consultant.supervision_fee_method === "LUMP_SUM") {
-        quotedSupervisionFee = toNum(consultant.supervision_fee_amount);
+        // Apply duration adjustment if stated duration < project duration
+        originalSupervisionFeeBeforeAdj = toNum(consultant.supervision_fee_amount);
+        quotedSupervisionFee = originalSupervisionFeeBeforeAdj * durationAdjustmentFactor;
       } else if (consultant.supervision_fee_method === "PERCENTAGE") {
+        // Apply duration adjustment if stated duration < project duration
         quotedSupervisionFee =
-          (totalConstructionCost *
-            toNum(consultant.supervision_fee_percentage)) /
-          100;
+          ((totalConstructionCost * toNum(consultant.supervision_fee_percentage)) / 100);
+        originalSupervisionFeeBeforeAdj = quotedSupervisionFee;
+        quotedSupervisionFee = quotedSupervisionFee * durationAdjustmentFactor;
       } else if (consultant.supervision_fee_method === "MONTHLY_RATE") {
         for (const row of supTeam) {
           if (row.proposed_monthly_rate) {
@@ -508,6 +518,17 @@ export const cpaRouter = router({
           );
           return { id: (r[0] as any).insertId };
         }
+      }),
+
+    deleteSupervisionRole: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("DB unavailable");
+        await db.execute(sql`DELETE FROM cpa_supervision_baseline WHERE supervision_role_id=${input.id}`);
+        await db.execute(sql`DELETE FROM cpa_consultant_supervision_team WHERE supervision_role_id=${input.id}`);
+        await db.execute(sql`DELETE FROM cpa_supervision_roles WHERE id=${input.id}`);
+        return { success: true };
       }),
 
     getSupervisionBaseline: protectedProcedure
@@ -992,6 +1013,9 @@ export const cpaRouter = router({
           ? String(parsed.supervision_fee.method).toUpperCase()
           : null;
         const supSubmitted = parsed.supervision_fee?.submitted ? 1 : 0;
+        // ملاحظة 2: عند PERCENTAGE يتجاهل النظام amount ويعيد الحساب من النسبة
+        const designFeeAmount = designMethod === "PERCENTAGE" ? null : (parsed.design_fee.amount ?? null);
+        const supFeeAmount = supMethod === "PERCENTAGE" ? null : (parsed.supervision_fee?.amount ?? null);
 
         if (existing[0]) {
           pcId = existing[0].id;
@@ -999,10 +1023,10 @@ export const cpaRouter = router({
             sql`UPDATE cpa_project_consultants SET
                   proposal_date=${parsed.proposal_date ?? null},
                   proposal_reference=${parsed.proposal_reference ?? null},
-                  design_fee_amount=${parsed.design_fee.amount ?? null},
+                  design_fee_amount=${designFeeAmount},
                   design_fee_method=${designMethod},
                   design_fee_percentage=${parsed.design_fee.percentage ?? null},
-                  supervision_fee_amount=${parsed.supervision_fee?.amount ?? null},
+                  supervision_fee_amount=${supFeeAmount},
                   supervision_fee_method=${supMethod},
                   supervision_fee_percentage=${parsed.supervision_fee?.percentage ?? null},
                   supervision_stated_duration_months=${parsed.supervision_fee?.stated_duration_months ?? null},
@@ -1020,9 +1044,9 @@ export const cpaRouter = router({
                    supervision_stated_duration_months, supervision_submitted, import_json, status)
                 VALUES (${input.cpaProjectId}, ${consultantId},
                         ${parsed.proposal_date ?? null}, ${parsed.proposal_reference ?? null},
-                        ${parsed.design_fee.amount ?? null}, ${designMethod},
+                        ${designFeeAmount}, ${designMethod},
                         ${parsed.design_fee.percentage ?? null},
-                        ${parsed.supervision_fee?.amount ?? null}, ${supMethod},
+                        ${supFeeAmount}, ${supMethod},
                         ${parsed.supervision_fee?.percentage ?? null},
                         ${parsed.supervision_fee?.stated_duration_months ?? null},
                         ${supSubmitted}, ${input.jsonText}, 'CONFIRMED')`

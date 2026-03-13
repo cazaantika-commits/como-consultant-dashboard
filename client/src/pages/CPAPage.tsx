@@ -1135,10 +1135,21 @@ function ResultsScreen({
                             {r.calculationNotes.durationWarning && (
                               <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded px-3 py-2">
                                 <span className="text-amber-600 text-base leading-none mt-0.5">⚠️</span>
-                                <div>
-                                  <p className="text-xs font-semibold text-amber-800">تحذير: مدة الإشراف</p>
+                                <div className="flex-1">
+                                  <p className="text-xs font-semibold text-amber-800">تحذير: مدة الإشراف المقدمة أقل من مدة المشروع</p>
                                   <p className="text-xs text-amber-700 mt-0.5">{r.calculationNotes.durationWarning.message}</p>
-                                  <p className="text-xs text-amber-600 mt-0.5">الحساب مبني على مدة المشروع الكاملة ({r.calculationNotes.durationWarning.projectMonths} شهر)</p>
+                                  {r.calculationNotes.durationWarning.originalFee > 0 && (
+                                    <div className="mt-1.5 grid grid-cols-2 gap-2 text-xs">
+                                      <div className="bg-white/60 rounded px-2 py-1">
+                                        <span className="text-amber-600">سعر العرض ({r.calculationNotes.durationWarning.statedMonths} شهر)</span>
+                                        <p className="font-semibold text-amber-700 line-through">{fmtAED(r.calculationNotes.durationWarning.originalFee)}</p>
+                                      </div>
+                                      <div className="bg-amber-100 rounded px-2 py-1">
+                                        <span className="text-amber-700">سعر معدَّل ({r.calculationNotes.durationWarning.projectMonths} شهر)</span>
+                                        <p className="font-bold text-amber-900">{fmtAED(r.calculationNotes.durationWarning.originalFee * r.calculationNotes.durationWarning.adjustmentFactor)}</p>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             )}
