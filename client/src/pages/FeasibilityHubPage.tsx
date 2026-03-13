@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -74,11 +74,19 @@ const SUB_SECTIONS = [
 function FeasibilityHubInner({ onBack }: { onBack: () => void }) {
   const { isAuthenticated } = useAuth();
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
-  const { selectedProjectId, setSelectedProjectId } = useCashFlow();
+  const { selectedProjectId, setSelectedProjectId, setDurations } = useCashFlow();
   const [activeView, setActiveView] = useState<SubView>("icons");
 
   const selectedProject = (projectsQuery.data || []).find((p: any) => p.id === selectedProjectId);
   const currentSection = SUB_SECTIONS.find(s => s.id === activeView);
+
+  // Auto-update durations from project card when project changes
+  useEffect(() => {
+    if (!selectedProject) return;
+    const preCon = selectedProject.preConMonths ? Number(selectedProject.preConMonths) : 6;
+    const construction = selectedProject.constructionMonths ? Number(selectedProject.constructionMonths) : 24;
+    setDurations(prev => ({ ...prev, preCon, construction }));
+  }, [selectedProject?.id, selectedProject?.preConMonths, selectedProject?.constructionMonths]);
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
