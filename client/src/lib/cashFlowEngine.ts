@@ -290,7 +290,7 @@ export function buildQuarters(
 
   const totalMonths = getTotalMonths(durations);
 
-  // Group months into quarters (3 months each)
+  // Group months individually (monthly view)
   for (const phase of phases) {
     if (phase.type === "land") continue;
     if (includeOpening && phase.type === "preCon") continue; // escrow skips preCon
@@ -298,21 +298,13 @@ export function buildQuarters(
     const range = getPhaseMonthRange(phases, phase.type);
     if (range.start === 0 && range.end === 0) continue;
 
-    let m = range.start;
-    while (m <= range.end) {
-      const qStart = m;
-      const qEnd = Math.min(m + 2, range.end);
-      const qMonths: number[] = [];
-      for (let i = qStart; i <= qEnd; i++) {
-        qMonths.push(i);
-      }
+    for (let m = range.start; m <= range.end; m++) {
       quarters.push({
-        label: formatMonth(qStart),
-        months: qMonths,
+        label: formatMonth(m),
+        months: [m],
         phase: phase.type,
         phaseLabel: phase.label,
       });
-      m = qEnd + 1;
     }
   }
 
