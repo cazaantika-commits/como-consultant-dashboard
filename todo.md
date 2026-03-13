@@ -2446,3 +2446,7 @@
 - [x] التحقق من أن تعديلات مصفوفة الإشراف تنعكس على النتائج
 - [x] إضافة supervision_duration_months لكل فئة مبنى (VILLA=16, SMALL=18, MEDIUM=20, LARGE=30, MEGA=36)
 - [x] ربط مدة الإشراف بفئة المبنى في حسابات الـ router
+
+## حذف مشروع CPA (مارس 2026)
+- [ ] إضافة deleteProject procedure في الـ router مع cascade delete
+- [ ] إضافة زر حذف مع نافذة تأكيد في واجهة المشروع

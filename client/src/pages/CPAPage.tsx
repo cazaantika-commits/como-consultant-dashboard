@@ -418,8 +418,12 @@ function ProjectDetailScreen({
     onSuccess: () => { consultantsQuery.refetch(); toast({ title: "تم حذف الاستشاري" }); },
     onError: (e) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
   });
-
-  const [showAdd, setShowAdd] = useState(false);
+  const deleteProjectMutation = trpc.cpa.projects.delete.useMutation({
+    onSuccess: () => { toast({ title: "تم حذف المشروع بنجاح" }); onBack(); },
+    onError: (e) => toast({ title: "خطأ في الحذف", description: e.message, variant: "destructive" }),
+  });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);;
   const [selectedMasterId, setSelectedMasterId] = useState("");
 
   const project = projectQuery.data;
@@ -443,9 +447,40 @@ function ProjectDetailScreen({
           <h2 className="font-bold text-lg">{project.project_name}</h2>
           <p className="text-sm text-muted-foreground">قطعة: {project.plot_number}</p>
         </div>
-        <StatusBadge status={project.status ?? "ACTIVE"} />
+         <StatusBadge status={project.status ?? "ACTIVE"} />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowDeleteConfirm(true)}
+          className="text-red-600 border-red-200 hover:bg-red-50 gap-1"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+          حذف المشروع
+        </Button>
       </div>
-
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">تأكيد حذف المشروع</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              سيتم حذف مشروع <strong>{project.project_name}</strong> مع جميع بياناته (الاستشاريين، النتائج، الملفات المستوردة). هذا الإجراء لا يمكن التراجع عنه.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>إلغاء</Button>
+              <Button
+                variant="destructive"
+                onClick={() => { deleteProjectMutation.mutate({ id: projectId }); setShowDeleteConfirm(false); }}
+                disabled={deleteProjectMutation.isPending}
+              >
+                {deleteProjectMutation.isPending ? "جاري الحذف..." : "حذف نهائياً"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
       {/* Project Stats */}
       <div className="grid grid-cols-4 gap-3">
         {[

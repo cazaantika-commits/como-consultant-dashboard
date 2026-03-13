@@ -874,11 +874,26 @@ export const cpaRouter = router({
         if (fields.durationMonths !== undefined)
           await db.execute(sql`UPDATE cpa_projects SET duration_months=${fields.durationMonths} WHERE id=${id}`);
         if (fields.status !== undefined)
-          await db.execute(sql`UPDATE cpa_projects SET status=${fields.status} WHERE id=${id}`);
+           await db.execute(sql`UPDATE cpa_projects SET status=${fields.status} WHERE id=${id}`);
+        return { ok: true };
+      }),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("DB unavailable");
+        // Cascade delete: evaluation results → supervision team → scope coverage → project consultants → project
+        const pcs = await qRows<any>(db, sql`SELECT id FROM cpa_project_consultants WHERE cpa_project_id = ${input.id}`);
+        for (const pc of pcs) {
+          await db.execute(sql`DELETE FROM cpa_evaluation_results WHERE project_consultant_id = ${pc.id}`);
+          await db.execute(sql`DELETE FROM cpa_consultant_supervision_team WHERE project_consultant_id = ${pc.id}`);
+          await db.execute(sql`DELETE FROM cpa_consultant_scope_coverage WHERE project_consultant_id = ${pc.id}`);
+        }
+        await db.execute(sql`DELETE FROM cpa_project_consultants WHERE cpa_project_id = ${input.id}`);
+        await db.execute(sql`DELETE FROM cpa_projects WHERE id = ${input.id}`);
         return { ok: true };
       }),
   }),
-
   // ---- Project Consultants ----
   consultants: router({
     listByProject: protectedProcedure
