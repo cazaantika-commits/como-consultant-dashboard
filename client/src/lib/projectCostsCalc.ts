@@ -119,7 +119,8 @@ export function calculateProjectCosts(
   const constructionCost = bua * estimatedConstructionPricePerSqft;
   const designFee = constructionCost * (designFeePct / 100);
   const supervisionFee = constructionCost * (supervisionFeePct / 100);
-  const separationFee = plotAreaM2 * separationFeePerM2;
+  const totalGfaSqft = gfaResSqft + gfaRetSqft + gfaOffSqft;
+  const separationFee = totalGfaSqft * separationFeePerM2;
   const contingencies = constructionCost * 0.02;
   const developerFee = totalRevenue * (developerFeePct / 100);
   const salesCommission = totalRevenue * (salesCommissionPct / 100);
