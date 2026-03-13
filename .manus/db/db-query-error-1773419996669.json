@@ -1,0 +1,8 @@
+{
+  "query": "\nSELECT p.id, p.name, p.plot_number, p.area_code, p.permitted_use, p.gfa_sqft, p.manual_bua_sqft, p.bua,\n       p.land_price, p.land_broker_commission_pct,\n       p.construction_cost_per_sqft, p.num_floors, p.num_units,\n       p.registration_fees_pct, p.developer_fees_pct, p.sales_commission_pct, p.marketing_pct,\n       p.sorting_fees_per_sqft,\n       p.expected_sale_price_per_sqft, p.expected_revenue,\n       p.status, p.created_at\nFROM projects p\nWHERE p.plot_number LIKE '%6185392%' OR p.name LIKE '%6185392%' OR p.name LIKE '%ند الشبا%'\nLIMIT 5;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute \nSELECT p.id, p.name, p.plot_number, p.area_code, p.permitted_use, p.gfa_sqft, p.manual_bua_sqft, p.bua,\n       p.land_price, p.land_broker_commission_pct,\n       p.construction_cost_per_sqft, p.num_floors, p.num_units,\n       p.registration_fees_pct, p.developer_fees_pct, p.sales_commission_pct, p.marketing_pct,\n       p.sorting_fees_per_sqft,\n       p.expected_sale_price_per_sqft, p.expected_revenue,\n       p.status, p.created_at\nFROM projects p\nWHERE p.plot_number LIKE '%6185392%' OR p.name LIKE '%6185392%' OR p.name LIKE '%ند الشبا%'\nLIMIT 5;\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 2: Unknown column 'p.plot_number' in 'where clause'"
+  ]
+}

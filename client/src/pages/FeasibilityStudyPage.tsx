@@ -227,7 +227,7 @@ export default function FeasibilityStudyPage({ embedded }: { embedded?: boolean 
     const agentCommissionLand = (f.landPrice || 0) * ((f.agentCommissionLandPct || 1) / 100);
     const designFee = constructionCost * ((f.designFeePct || 2) / 100);
     const supervisionFee = constructionCost * ((f.supervisionFeePct || 2) / 100);
-    const separationFee = (f.plotAreaM2 || 0) * (f.separationFeePerM2 || 40);
+    const separationFee = totalGfa * (f.separationFeePerM2 || 40);
     const contingencies = constructionCost * ((f.contingenciesPct || 2) / 100);
     const reraUnitTotal = (f.numberOfUnits || 0) * (f.reraUnitFee || 850);
 

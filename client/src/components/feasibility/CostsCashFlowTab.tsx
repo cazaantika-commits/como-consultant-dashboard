@@ -327,7 +327,7 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
     const reraInspectionReportFee = parseFloat(p.reraInspectionReportFee || "0");
     const designFeePct = parseFloat(p.designFeePct ?? "2");
     const supervisionFeePct = parseFloat(p.supervisionFeePct ?? "2");
-    const separationFeePerM2 = parseFloat(p.separationFeePerM2 ?? "40");
+    const separationFeePerSqft = parseFloat(p.separationFeePerM2 ?? "40");
     const salesCommissionPct = parseFloat(p.salesCommissionPct ?? "5");
     const marketingPct = parseFloat(p.marketingPct ?? "2");
     const developerFeePct = parseFloat(p.developerFeePct ?? "5");
@@ -371,7 +371,8 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
     const constructionCost = bua * estimatedConstructionPricePerSqft;
     const designFee = constructionCost * (designFeePct / 100);
     const supervisionFee = constructionCost * (supervisionFeePct / 100);
-    const separationFee = plotAreaM2 * separationFeePerM2;
+    const totalGfaSqft = gfaResSqft + gfaRetSqft + gfaOffSqft;
+    const separationFee = totalGfaSqft * separationFeePerSqft;
     const contingencies = constructionCost * 0.02;
     const developerFee = totalRevenue * (developerFeePct / 100);
     const salesCommission = totalRevenue * (salesCommissionPct / 100);
@@ -387,7 +388,7 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
       soilTestFee, topographicSurveyFee, officialBodiesFees,
       reraUnitRegFee, reraProjectRegFee, developerNocFee, escrowAccountFee,
       bankFees, communityFees, surveyorFees, reraAuditReportFee, reraInspectionReportFee,
-      designFeePct, supervisionFeePct, separationFeePerM2,
+      designFeePct, supervisionFeePct, separationFeePerM2: separationFeePerSqft,
       salesCommissionPct, marketingPct, developerFeePct,
       bua, plotAreaM2,
       agentCommissionLand, landRegistration, constructionCost, designFee, supervisionFee, separationFee,
@@ -539,7 +540,7 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
     { label: "رسوم الجهات الرسمية", value: costs.officialBodiesFees },
     { label: "أتعاب التصميم", value: costs.designFee, note: `${costs.designFeePct}%` },
     { label: "أتعاب الإشراف", value: costs.supervisionFee, note: `${costs.supervisionFeePct}%` },
-    { label: "رسوم الفرز", value: costs.separationFee, note: `${costs.separationFeePerM2} AED/م²` },
+    { label: "رسوم الفرز", value: costs.separationFee, note: `${costs.separationFeePerM2} AED/قدم²` },
     { label: "تكلفة البناء", value: costs.constructionCost, note: `${fmt(costs.bua)} قدم²` },
     { label: "رسوم المجتمع", value: costs.communityFees },
     { label: "احتياطي وطوارئ", value: costs.contingencies, note: "2%" },

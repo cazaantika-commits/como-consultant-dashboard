@@ -1033,7 +1033,8 @@ export const cashFlowProgramRouter = router({
       const officialBodiesFees = ccf ? (ccf.authoritiesFee || 0) : pf(proj.officialBodiesFees);
       const designFeePct = ccf ? pf(ccf.designFeePct) || 2 : pf(proj.designFeePct) || 2;
       const supervisionFeePct = ccf ? pf(ccf.supervisionFeePct) || 2 : pf(proj.supervisionFeePct) || 2;
-      const separationFeePerM2 = ccf ? (ccf.separationFeePerM2 || 40) : pf(proj.separationFeePerM2) || 40;
+      const separationFeePerSqft = ccf ? (ccf.separationFeePerM2 || 40) : pf(proj.separationFeePerM2) || 40;
+      const totalGfaSqft = gfaResSqft + gfaRetSqft + gfaOffSqft;
       const salesCommissionPct = ccf ? pf(ccf.agentCommissionSalePct) || 5 : pf(proj.salesCommissionPct) || 5;
       const marketingPct = ccf ? pf(ccf.marketingPct) || 2 : pf(proj.marketingPct) || 2;
       const developerFeePct = ccf ? pf(ccf.developerFeePct) || 5 : pf(proj.developerFeePct) || 5;
@@ -1341,7 +1342,7 @@ export const cashFlowProgramRouter = router({
       }
 
       // 13. Separation fee — Developer funds, pre-dev phase
-      const separationFee = plotAreaM2 * separationFeePerM2;
+      const separationFee = totalGfaSqft * separationFeePerSqft;
       if (separationFee > 0) {
         costItemsToInsert.push({
           cfProjectId,
@@ -1601,8 +1602,9 @@ export const cashFlowProgramRouter = router({
         });
       }
       // Separation fee
-      const sepFeePerM2 = ccf ? (ccf.separationFeePerM2 || 40) : pf(proj.separationFeePerM2) || 40;
-      const separationFee = plotAreaM2 * sepFeePerM2;
+      const sepFeePerSqft = ccf ? (ccf.separationFeePerM2 || 40) : pf(proj.separationFeePerM2) || 40;
+      const totalGfaSqftB = pf(proj.gfaResidentialSqft) + pf(proj.gfaRetailSqft) + pf(proj.gfaOfficesSqft);
+      const separationFee = totalGfaSqftB * sepFeePerSqft;
       if (separationFee > 0) {
         costItems.push({
           name: 'رسوم الفرز',
@@ -1958,7 +1960,8 @@ export const cashFlowProgramRouter = router({
       const agentCommissionLandPct = pf(proj.agentCommissionLandPct);
       const designFeePct = pf(proj.designFeePct) || 2;
       const supervisionFeePct = pf(proj.supervisionFeePct) || 2;
-      const separationFeePerM2 = pf(proj.separationFeePerM2) || 40;
+      const separationFeePerSqft2 = pf(proj.separationFeePerM2) || 40;
+      const totalGfaSqftC = gfaResSqft + gfaRetSqft + gfaOffSqft;
       const salesCommissionPct = pf(proj.salesCommissionPct) || 5;
       const marketingPct = pf(proj.marketingPct) || 2;
       const developerFeePct = pf(proj.developerFeePct) || 5;
@@ -1979,8 +1982,8 @@ export const cashFlowProgramRouter = router({
         'أتعاب التصميم (2%)': Math.round(constructionCost * (designFeePct / 100)),
         'أتعاب الإشراف': Math.round(constructionCost * (supervisionFeePct / 100)),
         'أتعاب الإشراف (2%)': Math.round(constructionCost * (supervisionFeePct / 100)),
-        'رسوم الفرز': Math.round(plotAreaM2 * separationFeePerM2),
-        'رسوم الفرز (40 د/قدم)': Math.round(plotAreaM2 * separationFeePerM2),
+        'رسوم الفرز': Math.round(totalGfaSqftC * separationFeePerSqft2),
+        'رسوم الفرز (40 د/قدم)': Math.round(totalGfaSqftC * separationFeePerSqft2),
         'تكلفة البناء': Math.round(constructionCost),
         'المقاول الرئيسي': Math.round(constructionCost),
         'رسوم المجتمع': Math.round(pf(proj.communityFees)),
@@ -2489,8 +2492,9 @@ export const cashFlowProgramRouter = router({
           });
         }
         // Separation fee
-        const sepFeePerM2 = ccf ? (ccf.separationFeePerM2 || 40) : pf(proj.separationFeePerM2) || 40;
-        const separationFee = plotAreaM2 * sepFeePerM2;
+        const sepFeePerM2D = ccf ? (ccf.separationFeePerM2 || 40) : pf(proj.separationFeePerM2) || 40;
+        const totalGfaSqftD = pf(proj.gfaResidentialSqft) + pf(proj.gfaRetailSqft) + pf(proj.gfaOfficesSqft);
+        const separationFee = totalGfaSqftD * sepFeePerM2D;
         if (separationFee > 0) {
           costItemsToInsert.push({
             cfProjectId, name: 'رسوم الفرز', category: 'authority_fees',
