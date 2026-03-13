@@ -232,10 +232,10 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
         },
       });
       if (d.paymentBookingPct) setPayment({
-        bookingPct: d.paymentBookingPct || 10, bookingTiming: d.paymentBookingTiming || "عند التوقيع",
-        constructionPct: d.paymentConstructionPct || 60, constructionTiming: d.paymentConstructionTiming || "أثناء الإنشاء",
-        handoverPct: d.paymentHandoverPct || 30, handoverTiming: d.paymentHandoverTiming || "عند التسليم",
-        deferredPct: d.paymentDeferredPct || 0, deferredTiming: d.paymentDeferredTiming || "",
+        bookingPct: parseFloat(String(d.paymentBookingPct)) || 10, bookingTiming: d.paymentBookingTiming || "عند التوقيع",
+        constructionPct: parseFloat(String(d.paymentConstructionPct)) || 60, constructionTiming: d.paymentConstructionTiming || "أثناء الإنشاء",
+        handoverPct: parseFloat(String(d.paymentHandoverPct)) || 30, handoverTiming: d.paymentHandoverTiming || "عند التسليم",
+        deferredPct: parseFloat(String(d.paymentDeferredPct)) || 0, deferredTiming: d.paymentDeferredTiming || "",
       });
       if (d.activeScenario) setActiveScenario(d.activeScenario as ScenarioKey);
       // Fix: check aiRecommendationsJson (the actual Drizzle property name)
