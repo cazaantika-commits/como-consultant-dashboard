@@ -172,7 +172,15 @@ export default function FeasibilityStudyPage({ embedded }: { embedded?: boolean 
       const project = (projectsQuery.data || []).find((p: any) => p.id === selectedProjectId);
       if (project) {
         setAutoCreating(true);
-        createMutation.mutate({ projectName: project.name, projectId: selectedProjectId });
+        createMutation.mutate({
+          projectName: project.name,
+          projectId: selectedProjectId,
+          separationFeePerM2: project.separationFeePerM2 ? parseFloat(project.separationFeePerM2) : 40,
+          landPrice: project.landPrice ? parseFloat(project.landPrice) : null,
+          agentCommissionLandPct: project.agentCommissionLandPct ? parseFloat(project.agentCommissionLandPct) : null,
+          estimatedBua: project.manualBuaSqft ? parseFloat(project.manualBuaSqft) : null,
+          constructionCostPerSqft: project.estimatedConstructionPricePerSqft ? parseFloat(project.estimatedConstructionPricePerSqft) : null,
+        });
       }
     }
   }, [selectedProjectId, studiesByProjectQuery.data, studiesByProjectQuery.isLoading]);
