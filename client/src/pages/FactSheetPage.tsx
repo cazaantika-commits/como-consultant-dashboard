@@ -432,6 +432,9 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
         marketingPct: p.marketingPct ? String(p.marketingPct) : "2",
         developerFeePhase1Pct: p.developerFeePhase1Pct ? String(p.developerFeePhase1Pct) : "2",
         developerFeePhase2Pct: p.developerFeePhase2Pct ? String(p.developerFeePhase2Pct) : "3",
+        // مدد المراحل
+        preConMonths: p.preConMonths ? String(p.preConMonths) : "6",
+        constructionMonths: p.constructionMonths ? String(p.constructionMonths) : "16",
       });
       setHasChanges(false);
     }
@@ -445,7 +448,7 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
   const handleSave = () => {
     if (!selectedProjectId) return;
     const payload: Record<string, any> = { id: selectedProjectId };
-    const numericIntFields = ["bua", "adminFee", "clearanceFee", "compensationAmount"];
+    const numericIntFields = ["bua", "adminFee", "clearanceFee", "compensationAmount", "preConMonths", "constructionMonths"];
     for (const [key, value] of Object.entries(formData)) {
       if (numericIntFields.includes(key)) {
         payload[key] = value ? Number(value) : undefined;
@@ -766,6 +769,10 @@ export default function FactSheetPage({ embedded = false }: { embedded?: boolean
                     <Field label="فترة البناء الإجمالية" value={formData.constructionPeriod} onChange={v => updateField("constructionPeriod", v)} />
                     <Field label="تاريخ بدء الإنشاء" value={formData.constructionStartDate} onChange={v => updateField("constructionStartDate", v)} />
                     <Field label="تاريخ الإنجاز المتوقع" value={formData.completionDate} onChange={v => updateField("completionDate", v)} />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <Field label="مدة ما قبل التنفيذ (شهر)" value={formData.preConMonths} onChange={v => updateField("preConMonths", v)} type="number" placeholder="6" suffix="شهر" />
+                    <Field label="مدة الإنشاء (شهر)" value={formData.constructionMonths} onChange={v => updateField("constructionMonths", v)} type="number" placeholder="16" suffix="شهر" />
                   </div>
                   <Field label="شروط بدء الإنشاء" value={formData.constructionConditions} onChange={v => updateField("constructionConditions", v)} type="textarea" />
                 </div>

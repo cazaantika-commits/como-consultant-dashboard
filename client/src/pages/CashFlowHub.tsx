@@ -1,14 +1,32 @@
 import { useState } from "react";
 import { CashFlowProvider } from "@/contexts/CashFlowContext";
+import FinancialFeasibilityTab from "./FinancialFeasibilityTab";
+import TimeDistributionTab from "./TimeDistributionTab";
 import ExcelCashFlowPage from "./ExcelCashFlowPage";
 import EscrowCashFlowPage from "./EscrowCashFlowPage";
 import FinancialCommandCenter from "./FinancialCommandCenter";
-import { Wallet, Landmark, BarChart3 } from "lucide-react";
+import { Wallet, Landmark, BarChart3, FileBarChart2, CalendarRange } from "lucide-react";
 
 const TABS = [
   {
+    id: "feasibility" as const,
+    label: "دراسة الجدوى المالية",
+    description: "إجمالي التكاليف والإيرادات والأرباح",
+    icon: FileBarChart2,
+    emoji: "📊",
+    color: "violet",
+  },
+  {
+    id: "distribution" as const,
+    label: "التوزيع الزمني للمصاريف",
+    description: "جميع بنود التكاليف موزعة شهرياً",
+    icon: CalendarRange,
+    emoji: "📅",
+    color: "amber",
+  },
+  {
     id: "investor" as const,
-    label: "مصاريف المستثمر",
+    label: "رأس المال المطلوب",
     description: "التمويل المباشر المطلوب شهرياً",
     icon: Wallet,
     emoji: "💰",
@@ -35,9 +53,19 @@ const TABS = [
 type TabId = typeof TABS[number]["id"];
 
 export default function CashFlowHub({ embedded }: { embedded?: boolean } = {}) {
-  const [activeTab, setActiveTab] = useState<TabId>("investor");
+  const [activeTab, setActiveTab] = useState<TabId>("feasibility");
 
   const tabColors: Record<TabId, { active: string; ring: string; dot: string }> = {
+    feasibility: {
+      active: "bg-violet-600 text-white shadow-lg shadow-violet-200",
+      ring: "ring-violet-500/20",
+      dot: "bg-violet-500",
+    },
+    distribution: {
+      active: "bg-amber-600 text-white shadow-lg shadow-amber-200",
+      ring: "ring-amber-500/20",
+      dot: "bg-amber-500",
+    },
     investor: {
       active: "bg-emerald-600 text-white shadow-lg shadow-emerald-200",
       ring: "ring-emerald-500/20",
@@ -90,6 +118,8 @@ export default function CashFlowHub({ embedded }: { embedded?: boolean } = {}) {
               <div className="mr-auto flex items-center gap-2 text-[10px] text-gray-400">
                 <div className={`w-2 h-2 rounded-full ${tabColors[activeTab].dot}`} />
                 <span>
+                  {activeTab === "feasibility" && "إجمالي التكاليف والإيرادات والأرباح ونسبة العائد"}
+                  {activeTab === "distribution" && "كل بند من التكاليف موزع على أشهر المشروع"}
                   {activeTab === "investor" && "كم يحتاج المستثمر أن يدفع كل شهر؟"}
                   {activeTab === "escrow" && "كم في حساب الضمان وكم يخرج منه؟"}
                   {activeTab === "command" && "كم تكلفة جميع المشاريع معاً؟"}
@@ -101,6 +131,8 @@ export default function CashFlowHub({ embedded }: { embedded?: boolean } = {}) {
 
         {/* Tab Content */}
         <div className="max-w-[98%] mx-auto py-3">
+          {activeTab === "feasibility" && <FinancialFeasibilityTab />}
+          {activeTab === "distribution" && <TimeDistributionTab />}
           {activeTab === "investor" && <ExcelCashFlowPage embedded />}
           {activeTab === "escrow" && <EscrowCashFlowPage embedded />}
           {activeTab === "command" && <FinancialCommandCenter embedded />}

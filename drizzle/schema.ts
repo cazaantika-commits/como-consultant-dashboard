@@ -1113,6 +1113,8 @@ export const projects = mysqlTable("projects", {
 	gfaResidentialSqft: decimal({ precision: 14, scale: 2 }),
 	gfaRetailSqft: decimal({ precision: 14, scale: 2 }),
 	gfaOfficesSqft: decimal({ precision: 14, scale: 2 }),
+	preConMonths: int().default(6),
+	constructionMonths: int().default(16),
 });
 
 export const proposalComparisons = mysqlTable("proposalComparisons", {
