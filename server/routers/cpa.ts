@@ -36,7 +36,8 @@ async function runCalculationEngine(cpaProjectId: number) {
   // Step 1: Get cpa_project
   const projects = await qRows<any>(
     db,
-    sql`SELECT p.*, bc.id as cat_id, bc.code as cat_code, bc.label as cat_label
+    sql`SELECT p.*, bc.id as cat_id, bc.code as cat_code, bc.label as cat_label,
+               bc.supervision_duration_months as cat_supervision_months
         FROM cpa_projects p
         LEFT JOIN cpa_building_categories bc ON bc.id = p.building_category_id
         WHERE p.id = ${cpaProjectId}`
@@ -60,7 +61,11 @@ async function runCalculationEngine(cpaProjectId: number) {
 
   const totalConstructionCost =
     toNum(proj.bua_sqft) * toNum(proj.construction_cost_per_sqft);
-  const durationMonths = toNum(proj.duration_months);
+  // Use category supervision duration (from building category settings)
+  // Falls back to project duration_months if category not resolved yet
+  const durationMonths = proj.cat_supervision_months
+    ? toNum(proj.cat_supervision_months)
+    : toNum(proj.duration_months);
 
   // Step 2: Mandatory scope items for this category
   const mandatoryItems = catId
@@ -324,6 +329,7 @@ export const cpaRouter = router({
           description: z.string().optional(),
           sortOrder: z.number().optional(),
           isActive: z.number().optional(),
+          supervisionDurationMonths: z.number().optional(),
         })
       )
       .mutation(async ({ input }) => {
@@ -337,17 +343,19 @@ export const cpaRouter = router({
                     bua_max_sqft=${input.buaMaxSqft ?? null},
                     description=${input.description ?? null},
                     sort_order=${input.sortOrder ?? 0},
-                    is_active=${input.isActive ?? 1}
+                    is_active=${input.isActive ?? 1},
+                    supervision_duration_months=${input.supervisionDurationMonths ?? null}
                 WHERE id=${input.id}`
           );
           return { id: input.id };
         } else {
           const r = await db.execute(
             sql`INSERT INTO cpa_building_categories
-                  (code, label, bua_min_sqft, bua_max_sqft, description, sort_order)
+                  (code, label, bua_min_sqft, bua_max_sqft, description, sort_order, supervision_duration_months)
                 VALUES (${input.code}, ${input.label},
                         ${input.buaMinSqft ?? null}, ${input.buaMaxSqft ?? null},
-                        ${input.description ?? null}, ${input.sortOrder ?? 0})`
+                        ${input.description ?? null}, ${input.sortOrder ?? 0},
+                        ${input.supervisionDurationMonths ?? null})`
           );
           return { id: (r[0] as any).insertId };
         }

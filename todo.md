@@ -2423,3 +2423,9 @@
 - [x] تحذير مدة الإشراف عندما stated_duration < project_duration
 - [x] إصلاح ملف ARTEC JSON (amount: null للنسبة المئوية)
 - [x] إصلاح أكواد الاستشاريين في الملفات الخمسة (ARTEC→AAEC، DATUM→DEC، KP→KIEFERLE)
+
+## ربط مدة الإشراف بفئة المبنى (مارس 2026)
+- [ ] إضافة عمود supervision_duration_months لجدول cpa_building_categories
+- [ ] إدخال القيم: VILLA=16, SMALL=18, MEDIUM=20, LARGE=30, MEGA=36
+- [ ] تحديث الـ router ليسحب المدة من فئة المبنى بدل cpa_projects.duration_months
+- [ ] إضافة حقل المدة قابل للتعديل في إعدادات الفئات

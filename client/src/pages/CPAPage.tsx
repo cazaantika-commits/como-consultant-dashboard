@@ -1217,7 +1217,7 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
 
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
-  const [categoryForm, setCategoryForm] = useState({ code: "", label: "", buaMinSqft: "", buaMaxSqft: "", description: "" });
+  const [categoryForm, setCategoryForm] = useState({ code: "", label: "", buaMinSqft: "", buaMaxSqft: "", description: "", supervisionDurationMonths: "" });
 
   const deleteCategoryMutation = trpc.cpa.settings.upsertBuildingCategory.useMutation({
     onSuccess: () => { categoriesQuery.refetch(); toast({ title: "تم التحديث" }); },
@@ -1320,12 +1320,17 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
                       النطاق: {c.bua_min_sqft != null ? c.bua_min_sqft.toLocaleString() : "0"} — {c.bua_max_sqft != null ? c.bua_max_sqft.toLocaleString() : "∞"} قدم²
                     </p>
                   )}
+                  {c.supervision_duration_months != null && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      مدة الإشراف: <span className="font-semibold text-foreground">{c.supervision_duration_months} شهر</span>
+                    </p>
+                  )}
                   {c.description && <p className="text-xs text-muted-foreground mt-0.5">{c.description}</p>}
                 </div>
                 <div className="flex items-center gap-1 mr-2">
                   <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => {
                     setEditingCategory(c);
-                    setCategoryForm({ code: c.code, label: c.label, buaMinSqft: c.bua_min_sqft ?? "", buaMaxSqft: c.bua_max_sqft ?? "", description: c.description ?? "" });
+                    setCategoryForm({ code: c.code, label: c.label, buaMinSqft: c.bua_min_sqft ?? "", buaMaxSqft: c.bua_max_sqft ?? "", description: c.description ?? "", supervisionDurationMonths: c.supervision_duration_months ?? "" });
                     setShowAddCategory(true);
                   }}>
                     <Pencil className="w-3.5 h-3.5" />
@@ -1341,7 +1346,7 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
               </div>
             ))}
           </div>
-          <Dialog open={showAddCategory} onOpenChange={(open) => { setShowAddCategory(open); if (!open) { setEditingCategory(null); setCategoryForm({ code: "", label: "", buaMinSqft: "", buaMaxSqft: "", description: "" }); } }}>
+          <Dialog open={showAddCategory} onOpenChange={(open) => { setShowAddCategory(open); if (!open) { setEditingCategory(null); setCategoryForm({ code: "", label: "", buaMinSqft: "", buaMaxSqft: "", description: "", supervisionDurationMonths: "" }); } }}>
             <DialogContent dir="rtl">
               <DialogHeader>
                 <DialogTitle>{editingCategory ? `تعديل: ${editingCategory.label}` : "إضافة فئة مبنى جديدة"}</DialogTitle>
@@ -1355,6 +1360,7 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
                   <div><Label>BUA الأدنى (قدم²)</Label><Input type="number" value={categoryForm.buaMinSqft} onChange={(e) => setCategoryForm({ ...categoryForm, buaMinSqft: e.target.value })} placeholder="اتركه فارغاً = بلا حد أدنى" /></div>
                   <div><Label>BUA الأقصى (قدم²)</Label><Input type="number" value={categoryForm.buaMaxSqft} onChange={(e) => setCategoryForm({ ...categoryForm, buaMaxSqft: e.target.value })} placeholder="اتركه فارغاً = بلا حد أقصى" /></div>
                 </div>
+                <div><Label>مدة الإشراف (شهر) *</Label><Input type="number" min="1" max="120" value={categoryForm.supervisionDurationMonths} onChange={(e) => setCategoryForm({ ...categoryForm, supervisionDurationMonths: e.target.value })} placeholder="مثال: 24" /></div>
                 <div><Label>وصف (اختياري)</Label><Input value={categoryForm.description} onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })} /></div>
                 <div className="flex gap-2 pt-1">
                   <Button className="flex-1" disabled={!categoryForm.code || !categoryForm.label} onClick={() => {
@@ -1366,12 +1372,13 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
                       buaMaxSqft: categoryForm.buaMaxSqft !== "" ? Number(categoryForm.buaMaxSqft) : null,
                       description: categoryForm.description || undefined,
                       isActive: editingCategory?.is_active ?? 1,
+                      supervisionDurationMonths: categoryForm.supervisionDurationMonths !== "" ? Number(categoryForm.supervisionDurationMonths) : undefined,
                     });
                     setShowAddCategory(false);
                     setEditingCategory(null);
-                    setCategoryForm({ code: "", label: "", buaMinSqft: "", buaMaxSqft: "", description: "" });
+                    setCategoryForm({ code: "", label: "", buaMinSqft: "", buaMaxSqft: "", description: "", supervisionDurationMonths: "" });
                   }}>{editingCategory ? "حفظ التعديلات" : "إضافة"}</Button>
-                  <Button variant="outline" onClick={() => { setShowAddCategory(false); setEditingCategory(null); setCategoryForm({ code: "", label: "", buaMinSqft: "", buaMaxSqft: "", description: "" }); }}>إلغاء</Button>
+                  <Button variant="outline" onClick={() => { setShowAddCategory(false); setEditingCategory(null); setCategoryForm({ code: "", label: "", buaMinSqft: "", buaMaxSqft: "", description: "", supervisionDurationMonths: "" }); }}>إلغاء</Button>
                 </div>
               </div>
             </DialogContent>
