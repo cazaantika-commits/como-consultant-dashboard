@@ -7,7 +7,7 @@
  * 3. SupervisionBaselineTable — 11 supervision roles × 5 categories (% allocation per cell)
  */
 
-import { useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -116,7 +116,7 @@ export function ScopeMatrixTable() {
         </thead>
         <tbody>
           {Object.entries(sections).map(([sectionLabel, sectionItems]) => (
-            <>
+            <React.Fragment key={`section-${sectionLabel}`}>
               <tr
                 key={`sec-${sectionLabel}`}
                 className="bg-muted/30 border-b border-t"
@@ -194,7 +194,7 @@ export function ScopeMatrixTable() {
                   })}
                 </tr>
               ))}
-            </>
+            </React.Fragment>
           ))}
         </tbody>
       </table>
