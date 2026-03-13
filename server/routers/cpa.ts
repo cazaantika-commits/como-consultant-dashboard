@@ -146,6 +146,18 @@ async function runCalculationEngine(cpaProjectId: number) {
       }
     }
 
+    // Duration warning (ملاحظة 3)
+    const statedDuration = consultant.supervision_stated_duration_months
+      ? toNum(consultant.supervision_stated_duration_months)
+      : null;
+    if (statedDuration !== null && statedDuration < durationMonths) {
+      notes.durationWarning = {
+        statedMonths: statedDuration,
+        projectMonths: durationMonths,
+        message: `مدة الإشراف المقدمة ${statedDuration} شهر — مدة المشروع ${durationMonths} شهر`,
+      };
+    }
+
     // Supervision
     let quotedSupervisionFee = 0;
     let canRank = 1;

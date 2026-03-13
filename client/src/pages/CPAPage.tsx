@@ -1132,6 +1132,16 @@ function ResultsScreen({
                                 </div>
                               </div>
                             )}
+                            {r.calculationNotes.durationWarning && (
+                              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+                                <span className="text-amber-600 text-base leading-none mt-0.5">⚠️</span>
+                                <div>
+                                  <p className="text-xs font-semibold text-amber-800">تحذير: مدة الإشراف</p>
+                                  <p className="text-xs text-amber-700 mt-0.5">{r.calculationNotes.durationWarning.message}</p>
+                                  <p className="text-xs text-amber-600 mt-0.5">الحساب مبني على مدة المشروع الكاملة ({r.calculationNotes.durationWarning.projectMonths} شهر)</p>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
                       </CardContent>
