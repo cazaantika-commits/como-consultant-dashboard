@@ -61,6 +61,72 @@ export default function TimeDistributionTab() {
     [phases, durations, costs]
   );
 
+  // Payment percentages from competitionPricing (or defaults)
+  const paymentPcts = useMemo(() => {
+    const d = cpQuery.data;
+    return {
+      bookingPct: parseFloat(String(d?.paymentBookingPct ?? 10)) || 10,
+      constructionPct: parseFloat(String(d?.paymentConstructionPct ?? 60)) || 60,
+      handoverPct: parseFloat(String(d?.paymentHandoverPct ?? 30)) || 30,
+      deferredPct: parseFloat(String(d?.paymentDeferredPct ?? 0)) || 0,
+    };
+  }, [cpQuery.data]);
+
+  // Calculate incoming cash flow rows based on payment percentages
+  const incomingCashFlow = useMemo(() => {
+    if (!costs || !costs.totalRevenue) return null;
+    const totalRev = costs.totalRevenue;
+    const conRange = phases.find(p => p.type === "construction");
+    const handoverRange = phases.find(p => p.type === "handover");
+    const preConRange = phases.find(p => p.type === "preCon");
+    if (!conRange || !handoverRange || !preConRange) return null;
+
+    const rows: { label: string; color: string; dist: Record<number, number> }[] = [];
+
+    // 1. Booking: distributed across sales launch (first 2 months of construction)
+    if (paymentPcts.bookingPct > 0) {
+      const bookingTotal = totalRev * (paymentPcts.bookingPct / 100);
+      const dist: Record<number, number> = {};
+      const salesStart = conRange.startMonth + 2;
+      dist[salesStart] = bookingTotal * 0.6;
+      dist[salesStart + 1] = bookingTotal * 0.4;
+      rows.push({ label: `إيرادات الحجز (${paymentPcts.bookingPct}%)`, color: "text-violet-700", dist });
+    }
+
+    // 2. Construction payments: distributed evenly across construction phase
+    if (paymentPcts.constructionPct > 0) {
+      const conTotal = totalRev * (paymentPcts.constructionPct / 100);
+      const dist: Record<number, number> = {};
+      const monthly = conTotal / conRange.duration;
+      for (let m = conRange.startMonth; m < conRange.startMonth + conRange.duration; m++) {
+        dist[m] = monthly;
+      }
+      rows.push({ label: `إيرادات أثناء الإنشاء (${paymentPcts.constructionPct}%)`, color: "text-sky-700", dist });
+    }
+
+    // 3. Handover: distributed across handover phase
+    if (paymentPcts.handoverPct > 0) {
+      const handTotal = totalRev * (paymentPcts.handoverPct / 100);
+      const dist: Record<number, number> = {};
+      const monthly = handTotal / handoverRange.duration;
+      for (let m = handoverRange.startMonth; m < handoverRange.startMonth + handoverRange.duration; m++) {
+        dist[m] = monthly;
+      }
+      rows.push({ label: `إيرادات عند التسليم (${paymentPcts.handoverPct}%)`, color: "text-emerald-700", dist });
+    }
+
+    // 4. Deferred: 6 months after handover end
+    if (paymentPcts.deferredPct > 0) {
+      const deferredTotal = totalRev * (paymentPcts.deferredPct / 100);
+      const dist: Record<number, number> = {};
+      const deferredMonth = handoverRange.startMonth + handoverRange.duration + 6;
+      dist[deferredMonth] = deferredTotal;
+      rows.push({ label: `إيرادات مؤجلة (${paymentPcts.deferredPct}%)`, color: "text-rose-700", dist });
+    }
+
+    return rows;
+  }, [costs, phases, paymentPcts]);
+
   // Build all expense items (investor + escrow)
   const allExpenses = useMemo(() => {
     const investor = getInvestorExpenses(costs || undefined);
@@ -288,6 +354,61 @@ export default function TimeDistributionTab() {
                     </tr>
                   );
                 })}
+
+                {/* Incoming cash flow section */}
+                {incomingCashFlow && incomingCashFlow.length > 0 && (
+                  <>
+                    <tr className="bg-emerald-800 text-white">
+                      <td colSpan={months.length + 3} className="sticky right-0 px-3 py-2 text-right font-bold text-sm">
+                        ↓ التدفقات النقدية الواردة (حسب خطة السداد)
+                      </td>
+                    </tr>
+                    {incomingCashFlow.map((row, ridx) => {
+                      const rowTotal = months.reduce((s, m) => s + (row.dist[m] || 0), 0);
+                      return (
+                        <tr key={ridx} className="border-b border-emerald-100 bg-emerald-50/40 hover:bg-emerald-50">
+                          <td className="sticky right-0 z-10 bg-emerald-50 px-3 py-1.5 text-right font-medium border-l border-emerald-100">
+                            <span className={row.color}>{row.label}</span>
+                          </td>
+                          <td className="px-2 py-1.5 text-center text-gray-300">—</td>
+                          {months.map(m => {
+                            const val = row.dist[m] || 0;
+                            return (
+                              <td key={m} className={`px-2 py-1.5 text-center font-mono ${val > 0 ? `font-semibold ${row.color}` : "text-gray-300"}`}>
+                                {val > 0 ? fmt(val) : "·"}
+                              </td>
+                            );
+                          })}
+                          <td className="px-3 py-1.5 text-center font-bold font-mono bg-emerald-50">
+                            {rowTotal > 0 ? <span className={row.color}>{fmt(rowTotal)}</span> : "—"}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {/* Net cash flow row */}
+                    <tr className="bg-indigo-900 text-white font-bold border-t-2 border-indigo-700">
+                      <td className="sticky right-0 z-10 bg-indigo-900 px-3 py-2.5 text-right">
+                        صافي التدفق الشهري
+                      </td>
+                      <td className="px-2 py-2.5 text-center font-mono text-indigo-200">
+                        {fmt(-landTotal)}
+                      </td>
+                      {months.map(m => {
+                        const inflow = incomingCashFlow.reduce((s, r) => s + (r.dist[m] || 0), 0);
+                        const outflow = colTotals[m - 1] || 0;
+                        const net = inflow - outflow;
+                        return (
+                          <td key={m} className={`px-2 py-2.5 text-center font-mono ${net >= 0 ? "text-emerald-300" : "text-red-300"}`}>
+                            {net !== 0 ? fmt(net) : "·"}
+                          </td>
+                        );
+                      })}
+                      <td className="px-3 py-2.5 text-center font-mono text-yellow-300">
+                        {fmt(incomingCashFlow.reduce((s, r) => s + months.reduce((rs, m) => rs + (r.dist[m] || 0), 0), 0) - grandTotal)}
+                      </td>
+                    </tr>
+                  </>
+                )}
 
                 {/* Column totals row */}
                 <tr className="bg-gray-800 text-white font-bold border-t-2 border-gray-600">

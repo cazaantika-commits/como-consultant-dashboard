@@ -2460,3 +2460,8 @@
 
 ## إصلاح خطأ نوع البيانات في حقول نسب الدفع (مارس 2026)
 - [x] إصلاح paymentBookingPct/paymentConstructionPct/paymentHandoverPct/paymentDeferredPct — تُرسل كـ string بدل number في mutation المشروع (إضافة parseFloat عند القراءة من DB)
+
+## تحسينات شاملة (مارس 2026)
+- [x] إصلاح جميع حقول decimal في المنصة باستخدام parseFloat عند القراءة من DB
+- [x] إضافة تحقق من أن مجموع نسب الدفع = 100% مع رسالة تحذير قبل الحفظ
+- [x] ربط نسب الدفع بجدول التوزيع الزمني لحساب التدفقات الواردة شهرياً

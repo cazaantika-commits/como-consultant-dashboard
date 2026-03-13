@@ -255,6 +255,10 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
 
   const handleSaveCp = () => {
     if (!projectId) return;
+    if (Math.abs(paymentTotal - 100) > 0.1) {
+      toast.error(`مجموع نسب الدفع = ${paymentTotal}% — يجب أن يساوي 100% قبل الحفظ`);
+      return;
+    }
     cpSaveMutation.mutate({
       projectId,
       optStudioPrice: scenarios.optimistic.studioPrice, opt1brPrice: scenarios.optimistic.oneBrPrice, opt2brPrice: scenarios.optimistic.twoBrPrice, opt3brPrice: scenarios.optimistic.threeBrPrice,
