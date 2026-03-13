@@ -1,76 +1,432 @@
-import { ArrowRight, Layers, TrendingUp, Calendar, DollarSign } from "lucide-react";
+import { useMemo } from "react";
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { ArrowRight, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  calculatePhases,
+  getInvestorExpenses,
+  distributeExpense,
+  getDefaultCustomDistribution,
+  type PhaseDurations,
+  type ExpenseItem,
+} from "@/lib/cashFlowEngine";
+import { calculateProjectCosts } from "@/lib/projectCostsCalc";
+
+const TOTAL_MONTHS = 40;
+const CHART_START = new Date(2026, 3, 1); // April 2026
+
+const ARABIC_MONTHS = [
+  "يناير","فبراير","مارس","أبريل","مايو","يونيو",
+  "يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر",
+];
+
+function getMonthLabel(offset: number): string {
+  const d = new Date(CHART_START);
+  d.setMonth(d.getMonth() + offset);
+  return `${ARABIC_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function getMonthOffset(dateStr: string | null | undefined): number {
+  if (!dateStr) return 0;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return 0;
+  const diffMs = d.getTime() - CHART_START.getTime();
+  return Math.max(0, Math.round(diffMs / (1000 * 60 * 60 * 24 * 30.44)));
+}
+
+function fmtCell(n: number): string {
+  if (n === 0) return "";
+  if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (Math.abs(n) >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+  return n.toFixed(0);
+}
+
+interface ProjectColumn {
+  id: number;
+  name: string;
+  startOffset: number;
+  preConMonths: number;
+  constructionMonths: number;
+  monthlyAmounts: Record<number, number>;
+}
+
+const PHASE_BG: Record<string, string> = {
+  preCon: "#dbeafe",
+  construction: "#dcfce7",
+  handover: "#fef9c3",
+};
+const PHASE_TEXT: Record<string, string> = {
+  preCon: "#1d4ed8",
+  construction: "#15803d",
+  handover: "#a16207",
+};
+const PHASE_BORDER: Record<string, string> = {
+  preCon: "#93c5fd",
+  construction: "#86efac",
+  handover: "#fde047",
+};
 
 interface Props {
   embedded?: boolean;
   onBack?: () => void;
 }
 
-export default function CapitalSchedulingPage({ embedded, onBack }: Props) {
+export default function CapitalSchedulingPage({ onBack }: Props) {
+  const { isAuthenticated } = useAuth();
+
+  // Fetch all data in bulk (no hooks inside loops)
+  const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
+  const allMoQuery = trpc.marketOverview.getAllByUser.useQuery(undefined, { enabled: isAuthenticated, staleTime: 60000 });
+  const allCpQuery = trpc.competitionPricing.getAllByUser.useQuery(undefined, { enabled: isAuthenticated, staleTime: 60000 });
+
+  const projects = useMemo(() => projectsQuery.data || [], [projectsQuery.data]);
+  const allMo = useMemo(() => allMoQuery.data || [], [allMoQuery.data]);
+  const allCp = useMemo(() => allCpQuery.data || [], [allCpQuery.data]);
+
+  const columns = useMemo<ProjectColumn[]>(() => {
+    return projects.map((project) => {
+      const mo = allMo.find((m: any) => m.projectId === project.id);
+      const cp = allCp.find((c: any) => c.projectId === project.id);
+      const costs = calculateProjectCosts(project, mo, cp);
+
+      const preConMonths = project.preConMonths ?? 6;
+      const constructionMonths = project.constructionMonths ?? 16;
+      const handoverMonths = 2;
+
+      const durations: PhaseDurations = {
+        preCon: preConMonths,
+        construction: constructionMonths,
+        handover: handoverMonths,
+      };
+      const phases = calculatePhases(durations);
+      const expenses = getInvestorExpenses(costs || undefined);
+
+      // Build monthly distribution (relative months 1-based within project)
+      const relativeMonthly: Record<number, number> = {};
+      for (const item of expenses) {
+        if (item.phase === "land") continue;
+        let dist: Record<number, number>;
+        if (item.behavior === "CUSTOM") {
+          dist = getDefaultCustomDistribution(item.id, phases, durations, costs || undefined);
+        } else {
+          dist = distributeExpense(item as ExpenseItem, phases, durations);
+        }
+        for (const [m, v] of Object.entries(dist)) {
+          const mn = parseInt(m);
+          relativeMonthly[mn] = (relativeMonthly[mn] || 0) + v;
+        }
+      }
+
+      // Map relative months to absolute months (0-based from CHART_START)
+      const startOffset = getMonthOffset((project as any).constructionStartDate || null);
+      const monthlyAmounts: Record<number, number> = {};
+      for (const [rel, val] of Object.entries(relativeMonthly)) {
+        const absIdx = startOffset + parseInt(rel) - 1;
+        if (absIdx >= 0 && absIdx < TOTAL_MONTHS) {
+          monthlyAmounts[absIdx] = (monthlyAmounts[absIdx] || 0) + val;
+        }
+      }
+
+      return {
+        id: project.id,
+        name: project.name,
+        startOffset,
+        preConMonths,
+        constructionMonths,
+        monthlyAmounts,
+      };
+    });
+  }, [projects, allMo, allCp]);
+
+  const monthlyTotals = useMemo(() => {
+    const totals: Record<number, number> = {};
+    for (const col of columns) {
+      for (const [absIdx, val] of Object.entries(col.monthlyAmounts)) {
+        const idx = parseInt(absIdx);
+        totals[idx] = (totals[idx] || 0) + val;
+      }
+    }
+    return totals;
+  }, [columns]);
+
+  function getPhase(col: ProjectColumn, absIdx: number): string | null {
+    const rel = absIdx - col.startOffset + 1;
+    if (rel < 1) return null;
+    if (rel <= col.preConMonths) return "preCon";
+    if (rel <= col.preConMonths + col.constructionMonths) return "construction";
+    if (rel <= col.preConMonths + col.constructionMonths + 2) return "handover";
+    return null;
+  }
+
+  const DATE_COL_W = 120;
+  const COL_W = 150;
+  const TOTAL_COL_W = 130;
+  const ROW_H = 38;
+
+  const isLoading = projectsQuery.isLoading || allMoQuery.isLoading || allCpQuery.isLoading;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64 text-muted-foreground" dir="rtl">
+        <div className="text-center space-y-2">
+          <div className="w-8 h-8 border-2 border-orange-400 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p>جاري تحميل بيانات المشاريع...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (projects.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-4 text-muted-foreground" dir="rtl">
+        <Layers className="w-12 h-12 opacity-30" />
+        <p className="text-lg font-medium">لا توجد مشاريع مسجلة</p>
+        <p className="text-sm">أضف مشاريع من بطاقة المشروع لتظهر هنا</p>
+      </div>
+    );
+  }
+
+  const grandTotal = Object.values(monthlyTotals).reduce((s, v) => s + v, 0);
+
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
-      {!embedded && (
-        <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-6 h-14 flex items-center gap-3">
+    <div className="p-4 space-y-4" dir="rtl">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          {onBack && (
             <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5">
               <ArrowRight className="w-4 h-4" />
-              العودة
+              رجوع
             </Button>
-            <div className="h-5 w-px bg-border" />
-            <div className="flex items-center gap-2">
-              <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center"
-                style={{ background: "linear-gradient(135deg, #f97316, #ea580c)" }}
-              >
-                <Layers className="w-3.5 h-3.5 text-white" />
-              </div>
-              <h1 className="text-sm font-bold text-foreground">مشاريع كومو - جدولة رأس المال</h1>
-            </div>
+          )}
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center shadow-md flex-shrink-0"
+            style={{ background: "linear-gradient(135deg, #f97316, #ea580c)" }}
+          >
+            <Layers className="w-5 h-5 text-white" />
           </div>
-        </header>
-      )}
-
-      <main className="max-w-4xl mx-auto px-6 py-16 text-center">
-        <div
-          className="w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl"
-          style={{
-            background: "linear-gradient(135deg, #f97316, #ea580c)",
-            boxShadow: "0 16px 48px rgba(249, 115, 22, 0.35)",
-          }}
-        >
-          <Layers className="w-12 h-12 text-white" />
+          <div>
+            <h1 className="text-xl font-bold text-foreground">مشاريع كومو — جدولة رأس المال</h1>
+            <p className="text-xs text-muted-foreground">
+              {TOTAL_MONTHS} شهراً · ابتداءً من أبريل 2026 · {projects.length} مشروع
+            </p>
+          </div>
         </div>
 
-        <h2 className="text-3xl font-bold text-foreground mb-3">مشاريع كومو</h2>
-        <p className="text-lg text-orange-500 font-semibold mb-6">جدولة رأس المال</p>
-        <p className="text-sm text-muted-foreground max-w-lg mx-auto mb-12">
-          عرض شامل لجميع مشاريع كومو مع جدولة احتياجات رأس المال لكل مشروع شهرياً، وإمكانية تعديل مراحل المشاريع وتأجيلها أو تسريعها حسب الحاجة.
-        </p>
-
-        <div className="grid grid-cols-3 gap-5 max-w-2xl mx-auto">
+        {/* Legend */}
+        <div className="flex items-center gap-4 text-xs flex-wrap">
           {[
-            { icon: TrendingUp, label: "عرض جميع المشاريع", desc: "مقارنة احتياجات رأس المال لكل مشروع" },
-            { icon: Calendar, label: "الجدول الزمني", desc: "توزيع الاحتياجات شهرياً على مدة المشروع" },
-            { icon: DollarSign, label: "تعديل المراحل", desc: "تأجيل أو تسريع مراحل المشاريع" },
-          ].map((f, i) => (
-            <div
-              key={i}
-              className="p-5 rounded-2xl bg-card border border-border/50 flex flex-col items-center text-center gap-3"
-            >
+            { phase: "preCon", label: "ما قبل التنفيذ" },
+            { phase: "construction", label: "الإنشاء" },
+            { phase: "handover", label: "التسليم" },
+          ].map(({ phase, label }) => (
+            <div key={phase} className="flex items-center gap-1.5">
               <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center"
-                style={{ background: "linear-gradient(135deg, #f97316, #ea580c)" }}
-              >
-                <f.icon className="w-6 h-6 text-white" />
-              </div>
-              <p className="text-sm font-bold text-foreground">{f.label}</p>
-              <p className="text-[11px] text-muted-foreground">{f.desc}</p>
+                className="w-3.5 h-3.5 rounded"
+                style={{ background: PHASE_BG[phase], border: `1px solid ${PHASE_BORDER[phase]}` }}
+              />
+              <span style={{ color: PHASE_TEXT[phase] }}>{label}</span>
             </div>
           ))}
         </div>
+      </div>
 
-        <p className="text-xs text-muted-foreground mt-10 opacity-60">قيد التطوير — سيتم الإعلان عن الإطلاق قريباً</p>
-      </main>
+      {/* Summary cards */}
+      <div
+        className="grid gap-3"
+        style={{ gridTemplateColumns: `repeat(${Math.min(columns.length + 1, 6)}, minmax(0, 1fr))` }}
+      >
+        {columns.map((col) => {
+          const total = Object.values(col.monthlyAmounts).reduce((s, v) => s + v, 0);
+          return (
+            <div key={col.id} className="rounded-xl border border-border p-3 bg-card">
+              <p className="text-[11px] text-muted-foreground truncate font-medium" title={col.name}>
+                {col.name}
+              </p>
+              <p className="text-base font-bold text-foreground mt-0.5">
+                {total > 0 ? `${(total / 1_000_000).toFixed(2)}M` : "—"}
+              </p>
+              <div className="flex gap-1 mt-1.5 flex-wrap">
+                <span
+                  className="text-[10px] px-1.5 py-0.5 rounded"
+                  style={{ background: PHASE_BG.preCon, color: PHASE_TEXT.preCon }}
+                >
+                  {col.preConMonths}ش قبل
+                </span>
+                <span
+                  className="text-[10px] px-1.5 py-0.5 rounded"
+                  style={{ background: PHASE_BG.construction, color: PHASE_TEXT.construction }}
+                >
+                  {col.constructionMonths}ش إنشاء
+                </span>
+              </div>
+            </div>
+          );
+        })}
+        <div className="rounded-xl border-2 border-amber-400 p-3 bg-amber-50 dark:bg-amber-950">
+          <p className="text-[11px] text-amber-700 font-semibold">الإجمالي الكلي</p>
+          <p className="text-base font-bold text-amber-800 mt-0.5">
+            {grandTotal > 0 ? `${(grandTotal / 1_000_000).toFixed(2)}M` : "—"}
+          </p>
+          <p className="text-[10px] text-amber-600 mt-1">جميع المشاريع</p>
+        </div>
+      </div>
+
+      {/* Gantt chart table */}
+      <div
+        className="overflow-auto rounded-xl border border-border shadow-sm"
+        style={{ maxHeight: "65vh" }}
+      >
+        <table
+          style={{
+            width: DATE_COL_W + columns.length * COL_W + TOTAL_COL_W,
+            borderCollapse: "collapse",
+            tableLayout: "fixed",
+            direction: "rtl",
+          }}
+        >
+          <thead>
+            <tr style={{ position: "sticky", top: 0, zIndex: 20 }}>
+              {/* Date header — sticky right */}
+              <th
+                style={{
+                  width: DATE_COL_W,
+                  minWidth: DATE_COL_W,
+                  background: "#1e293b",
+                  color: "#f8fafc",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  padding: "10px 8px",
+                  textAlign: "center",
+                  borderLeft: "2px solid #334155",
+                  position: "sticky",
+                  right: 0,
+                  zIndex: 30,
+                }}
+              >
+                الشهر
+              </th>
+              {/* Project column headers */}
+              {columns.map((col) => (
+                <th
+                  key={col.id}
+                  style={{
+                    width: COL_W,
+                    minWidth: COL_W,
+                    background: "#1e293b",
+                    color: "#f8fafc",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    padding: "10px 6px",
+                    textAlign: "center",
+                    borderLeft: "1px solid #334155",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                  title={col.name}
+                >
+                  {col.name}
+                </th>
+              ))}
+              {/* Total column header */}
+              <th
+                style={{
+                  width: TOTAL_COL_W,
+                  minWidth: TOTAL_COL_W,
+                  background: "#0f172a",
+                  color: "#fbbf24",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  padding: "10px 8px",
+                  textAlign: "center",
+                  borderLeft: "2px solid #334155",
+                }}
+              >
+                الإجمالي الشهري
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: TOTAL_MONTHS }, (_, absIdx) => {
+              const total = monthlyTotals[absIdx] || 0;
+              const isEven = absIdx % 2 === 0;
+
+              return (
+                <tr key={absIdx} style={{ height: ROW_H, background: isEven ? "#f8fafc" : "#ffffff" }}>
+                  {/* Date cell — sticky right */}
+                  <td
+                    style={{
+                      width: DATE_COL_W,
+                      minWidth: DATE_COL_W,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: "#475569",
+                      padding: "0 8px",
+                      textAlign: "center",
+                      borderLeft: "2px solid #cbd5e1",
+                      background: isEven ? "#f1f5f9" : "#f8fafc",
+                      position: "sticky",
+                      right: 0,
+                      zIndex: 10,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {getMonthLabel(absIdx)}
+                  </td>
+
+                  {/* Project cells */}
+                  {columns.map((col) => {
+                    const phase = getPhase(col, absIdx);
+                    const amount = col.monthlyAmounts[absIdx] || 0;
+                    const bg = phase ? PHASE_BG[phase] : (isEven ? "#f8fafc" : "#ffffff");
+                    const textColor = phase ? PHASE_TEXT[phase] : "#94a3b8";
+                    const borderColor = phase ? PHASE_BORDER[phase] : "#e2e8f0";
+
+                    return (
+                      <td
+                        key={col.id}
+                        style={{
+                          width: COL_W,
+                          minWidth: COL_W,
+                          background: bg,
+                          borderLeft: `1px solid ${borderColor}`,
+                          borderBottom: `1px solid ${borderColor}`,
+                          padding: "0 6px",
+                          textAlign: "center",
+                          fontSize: 11,
+                          fontWeight: amount > 0 ? 700 : 400,
+                          color: amount > 0 ? textColor : (phase ? "#94a3b8" : "#e2e8f0"),
+                        }}
+                      >
+                        {amount > 0 ? fmtCell(amount) : (phase ? "—" : "")}
+                      </td>
+                    );
+                  })}
+
+                  {/* Total cell */}
+                  <td
+                    style={{
+                      width: TOTAL_COL_W,
+                      minWidth: TOTAL_COL_W,
+                      background: total > 0 ? "#fffbeb" : (isEven ? "#f8fafc" : "#ffffff"),
+                      borderLeft: "2px solid #fcd34d",
+                      padding: "0 8px",
+                      textAlign: "center",
+                      fontSize: 12,
+                      fontWeight: total > 0 ? 800 : 400,
+                      color: total > 0 ? "#92400e" : "#e2e8f0",
+                    }}
+                  >
+                    {total > 0 ? fmtCell(total) : ""}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
