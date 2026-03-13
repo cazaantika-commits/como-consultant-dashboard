@@ -8,6 +8,8 @@ import {
   getInvestorExpenses,
   distributeExpense,
   getDefaultCustomDistribution,
+  getTotalMonths,
+  isMonthPaid,
   type PhaseDurations,
   type ExpenseItem,
 } from "@/lib/cashFlowEngine";
@@ -49,6 +51,10 @@ interface ProjectColumn {
   preConMonths: number;
   constructionMonths: number;
   monthlyAmounts: Record<number, number>;
+  // Capital summary (from cashflow engine)
+  totalCapital: number;
+  paidCapital: number;
+  remainingCapital: number;
 }
 
 // Phase colors — professional dark palette
@@ -124,7 +130,22 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
         }
       }
 
-      return { id: project.id, name: project.name, startOffset, preConMonths, constructionMonths, monthlyAmounts };
+      // Capital summary: total, paid (months already passed), remaining
+      const projectStart = new Date(CHART_START);
+      projectStart.setMonth(projectStart.getMonth() + startOffset);
+      const totalMonths = getTotalMonths(durations);
+      let totalCapital = 0;
+      let paidCapital = 0;
+      for (let relM = 1; relM <= totalMonths; relM++) {
+        const monthAmt = relativeMonthly[relM] || 0;
+        totalCapital += monthAmt;
+        if (isMonthPaid(relM, projectStart)) {
+          paidCapital += monthAmt;
+        }
+      }
+      const remainingCapital = totalCapital - paidCapital;
+
+      return { id: project.id, name: project.name, startOffset, preConMonths, constructionMonths, monthlyAmounts, totalCapital, paidCapital, remainingCapital };
     });
   }, [projects, allMo, allCp]);
 
@@ -225,32 +246,66 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
         </div>
       </div>
 
-      {/* Summary cards */}
+      {/* Summary cards — total / paid / remaining per project */}
       <div
         className="grid gap-3"
-        style={{ gridTemplateColumns: `repeat(${Math.min(columns.length + 1, 6)}, minmax(0, 1fr))` }}
+        style={{ gridTemplateColumns: `repeat(${Math.min(columns.length + 1, 4)}, minmax(0, 1fr))` }}
       >
-        {columns.map((col) => {
-          const total = Object.values(col.monthlyAmounts).reduce((s, v) => s + v, 0);
-          return (
-            <div key={col.id} className="rounded-xl border border-border p-3 bg-card shadow-sm">
-              <p className="text-[11px] text-muted-foreground truncate font-medium" title={col.name}>{col.name}</p>
-              <p className="text-base font-bold text-foreground mt-0.5">
-                {total > 0 ? `${(total / 1_000_000).toFixed(2)}M` : "—"}
-              </p>
-              <div className="flex gap-1 mt-1.5 flex-wrap">
-                <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: PHASE_BG.preCon, color: PHASE_TEXT.preCon }}>{col.preConMonths}ش قبل</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: PHASE_BG.construction, color: PHASE_TEXT.construction }}>{col.constructionMonths}ش إنشاء</span>
-              </div>
+        {columns.map((col) => (
+          <div key={col.id} className="rounded-xl border border-border p-3 bg-card shadow-sm space-y-1.5">
+            <p className="text-[11px] text-muted-foreground truncate font-semibold" title={col.name}>{col.name}</p>
+            {/* Total */}
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-slate-400">إجمالي رأس المال</span>
+              <span className="text-[12px] font-bold text-foreground">
+                {col.totalCapital > 0 ? `${(col.totalCapital / 1_000_000).toFixed(2)}M` : "—"}
+              </span>
             </div>
-          );
-        })}
-        <div className="rounded-xl border-2 border-amber-400 p-3 bg-amber-50 dark:bg-amber-950 shadow-sm">
-          <p className="text-[11px] text-amber-700 font-semibold">الإجمالي الكلي</p>
-          <p className="text-base font-bold text-amber-800 mt-0.5">
-            {grandTotal > 0 ? `${(grandTotal / 1_000_000).toFixed(2)}M` : "—"}
-          </p>
-          <p className="text-[10px] text-amber-600 mt-1">جميع المشاريع</p>
+            {/* Paid */}
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-green-400">المدفوع</span>
+              <span className="text-[12px] font-bold text-green-500">
+                {col.paidCapital > 0 ? `${(col.paidCapital / 1_000_000).toFixed(2)}M` : "—"}
+              </span>
+            </div>
+            {/* Remaining */}
+            <div className="flex items-center justify-between border-t border-border pt-1.5">
+              <span className="text-[10px] text-amber-400 font-semibold">المطلوب سداده</span>
+              <span className="text-[13px] font-extrabold text-amber-400">
+                {col.remainingCapital > 0 ? `${(col.remainingCapital / 1_000_000).toFixed(2)}M` : "—"}
+              </span>
+            </div>
+            {/* Phase badges */}
+            <div className="flex gap-1 flex-wrap pt-0.5">
+              <span className="text-[9px] px-1.5 py-0.5 rounded" style={{ background: PHASE_BG.preCon, color: PHASE_TEXT.preCon }}>{col.preConMonths}ش قبل</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded" style={{ background: PHASE_BG.construction, color: PHASE_TEXT.construction }}>{col.constructionMonths}ش إنشاء</span>
+            </div>
+          </div>
+        ))}
+        {/* Grand total card */}
+        <div className="rounded-xl border-2 border-amber-400 p-3 bg-amber-950/30 shadow-sm space-y-1.5">
+          <p className="text-[11px] text-amber-400 font-semibold">الإجمالي الكلي — جميع المشاريع</p>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-slate-400">إجمالي رأس المال</span>
+            <span className="text-[12px] font-bold text-foreground">
+              {columns.reduce((s,c) => s+c.totalCapital,0) > 0
+                ? `${(columns.reduce((s,c) => s+c.totalCapital,0)/1_000_000).toFixed(2)}M` : "—"}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-green-400">المدفوع</span>
+            <span className="text-[12px] font-bold text-green-500">
+              {columns.reduce((s,c) => s+c.paidCapital,0) > 0
+                ? `${(columns.reduce((s,c) => s+c.paidCapital,0)/1_000_000).toFixed(2)}M` : "—"}
+            </span>
+          </div>
+          <div className="flex items-center justify-between border-t border-amber-400/30 pt-1.5">
+            <span className="text-[10px] text-amber-400 font-semibold">المطلوب سداده</span>
+            <span className="text-[14px] font-extrabold text-amber-400">
+              {columns.reduce((s,c) => s+c.remainingCapital,0) > 0
+                ? `${(columns.reduce((s,c) => s+c.remainingCapital,0)/1_000_000).toFixed(2)}M` : "—"}
+            </span>
+          </div>
         </div>
       </div>
 
