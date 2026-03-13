@@ -11,7 +11,7 @@
  *  6. Settings (admin)
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { ScopeMatrixTable, ReferenceCostsTable, SupervisionBaselineTable } from "./CPASettingsMatrices";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
@@ -619,11 +619,42 @@ function ImportJsonScreen({
   const { toast } = useToast();
   const [jsonText, setJsonText] = useState("");
   const [showTemplate, setShowTemplate] = useState(false);
+  const [fileName, setFileName] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function readFile(file: File) {
+    if (!file.name.endsWith(".json")) {
+      toast({ title: "الملف غير صالح", description: "يرجى اختيار ملف JSON فقط", variant: "destructive" });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      try {
+        JSON.parse(text); // validate
+        setJsonText(text);
+        setFileName(file.name);
+        toast({ title: "تم تحميل الملف", description: file.name });
+      } catch {
+        toast({ title: "ملف JSON غير صالح", description: "تأكد من صحة تنسيق الملف", variant: "destructive" });
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) readFile(file);
+  }
 
   const importMutation = trpc.cpa.consultants.importJson.useMutation({
     onSuccess: () => {
       toast({ title: "تم استيراد البيانات بنجاح" });
       setJsonText("");
+      setFileName("");
       onBack();
     },
     onError: (e) => toast({ title: "خطأ في الاستيراد", description: e.message, variant: "destructive" }),
@@ -752,15 +783,40 @@ function ImportJsonScreen({
               </Button>
             </div>
           )}
-          <div>
-            <Label>الصق JSON هنا</Label>
-            <Textarea
-              value={jsonText}
-              onChange={(e) => setJsonText(e.target.value)}
-              placeholder='{"consultant_code": "...", "design_fee": {...}, ...}'
-              className="font-mono text-xs min-h-48 mt-1"
-              dir="ltr"
+          {/* File Upload Area */}
+          <div
+            className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
+              isDragging ? "border-sky-500 bg-sky-50" : jsonText ? "border-green-400 bg-green-50" : "border-muted-foreground/30 hover:border-sky-400 hover:bg-sky-50/50"
+            }`}
+            onClick={() => fileInputRef.current?.click()}
+            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={handleDrop}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) readFile(f); e.target.value = ""; }}
             />
+            {jsonText ? (
+              <div className="space-y-2">
+                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto">
+                  <FileJson className="w-6 h-6 text-green-600" />
+                </div>
+                <p className="font-medium text-green-700">{fileName}</p>
+                <p className="text-xs text-green-600">تم تحميل الملف بنجاح — اضغط للتغيير</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="w-12 h-12 rounded-full bg-sky-100 flex items-center justify-center mx-auto">
+                  <FileJson className="w-6 h-6 text-sky-600" />
+                </div>
+                <p className="font-medium text-foreground">اسحب ملف JSON هنا أو اضغط للاختيار</p>
+                <p className="text-xs text-muted-foreground">يقبل ملفات .json فقط</p>
+              </div>
+            )}
           </div>
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
             <p className="font-medium mb-1">تعليمات:</p>
