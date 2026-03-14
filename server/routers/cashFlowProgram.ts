@@ -2539,16 +2539,22 @@ export const cashFlowProgramRouter = router({
     if (!ctx.user) return [];
     const db = await getDb();
     if (!db) return [];
-
-    // Get all cfProjects that have a linked project
+    // Source projects from the projects table (البطاقة) directly
+    const allProjects = await db.select().from(projects)
+      .where(eq(projects.userId, ctx.user.id));
+    if (allProjects.length === 0) return [];
+    // Also get cfProjects for startDate / durations lookup
     const allCfProjs = await db.select().from(cfProjects)
       .where(eq(cfProjects.userId, ctx.user.id));
-    if (allCfProjs.length === 0) return [];
-
+    // Build a map: projectId -> cfProject (for startDate/durations)
+    const cfByProjectId = new Map<number, typeof allCfProjs[0]>();
+    for (const cf of allCfProjs) {
+      if (cf.projectId) cfByProjectId.set(cf.projectId, cf);
+    }
     const today = new Date();
     const results: Array<{
-      cfProjectId: number;
-      projectId: number | null;
+      cfProjectId: number | null;
+      projectId: number;
       name: string;
       startDate: string;
       preDevMonths: number;
@@ -2559,41 +2565,34 @@ export const cashFlowProgramRouter = router({
       paidTotal: number;
       upcomingTotal: number;
     }> = [];
-
-    for (const cfProj of allCfProjs) {
-      // If no linked project, skip
-      if (!cfProj.projectId) continue;
-
-      // Fetch project, marketOverview, competitionPricing
-      const [projRows] = await db.select().from(projects)
-        .where(eq(projects.id, cfProj.projectId));
-      if (!projRows) continue;
-
+    for (const proj of allProjects) {
       const [moRows] = await db.select().from(marketOverview)
-        .where(eq(marketOverview.projectId, cfProj.projectId));
+        .where(eq(marketOverview.projectId, proj.id));
       const [cpRows] = await db.select().from(competitionPricing)
-        .where(eq(competitionPricing.projectId, cfProj.projectId));
-
-      const startDateStr = cfProj.startDate || '2026-04';
+        .where(eq(competitionPricing.projectId, proj.id));
+      // Use cfProject durations/startDate if available, otherwise use project defaults
+      const cfProj = cfByProjectId.get(proj.id);
+      const startDateStr = cfProj?.startDate || '2026-04';
+      const preDevMonths = cfProj?.preDevMonths || proj.preConMonths || 6;
+      const constructionMonths = cfProj?.constructionMonths || proj.constructionMonths || 16;
+      const handoverMonths = cfProj?.handoverMonths || 2;
       const data = computeProjectCapital(
-        projRows,
+        proj,
         moRows || null,
         cpRows || null,
         {
           startDate: startDateStr,
-          preDevMonths: cfProj.preDevMonths || 6,
-          constructionMonths: cfProj.constructionMonths || 16,
-          handoverMonths: cfProj.handoverMonths || 2,
+          preDevMonths,
+          constructionMonths,
+          handoverMonths,
         },
         today,
       );
-
       if (!data) continue;
-
       results.push({
-        cfProjectId: cfProj.id,
-        projectId: cfProj.projectId,
-        name: cfProj.name,
+        cfProjectId: cfProj?.id ?? null,
+        projectId: proj.id,
+        name: proj.name,
         startDate: startDateStr,
         preDevMonths: data.preDevMonths,
         constructionMonths: data.constructionMonths,

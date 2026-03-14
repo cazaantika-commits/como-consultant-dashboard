@@ -1,0 +1,55 @@
+{
+  "query": "SELECT id, name, projectId FROM cf_projects ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, name, projectId FROM cf_projects ORDER BY id;",
+  "rows": [
+    {
+      "id": "30012",
+      "name": "ند الشبا — قطعة 1 (6185392)",
+      "projectId": "4"
+    },
+    {
+      "id": "90001",
+      "name": "مركز مجان التجاري (G+4)",
+      "projectId": "1"
+    },
+    {
+      "id": "90002",
+      "name": "مجان متعدد الاستخدامات (G+4P+25)",
+      "projectId": "2"
+    },
+    {
+      "id": "90003",
+      "name": "مبنى الجداف السكني (G+7)",
+      "projectId": "3"
+    },
+    {
+      "id": "330001",
+      "name": "Test CF Project for Phases",
+      "projectId": "NULL"
+    },
+    {
+      "id": "360001",
+      "name": "Test CF Project for Phases",
+      "projectId": "NULL"
+    },
+    {
+      "id": "360002",
+      "name": "Test CF Project for Phases",
+      "projectId": "NULL"
+    },
+    {
+      "id": "360003",
+      "name": "Test CF Project for Phases",
+      "projectId": "NULL"
+    },
+    {
+      "id": "360004",
+      "name": "Test CF Project for Phases",
+      "projectId": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tprojectId\n30012\tند الشبا — قطعة 1 (6185392)\t4\n90001\tمركز مجان التجاري (G+4)\t1\n90002\tمجان متعدد الاستخدامات (G+4P+25)\t2\n90003\tمبنى الجداف السكني (G+7)\t3\n330001\tTest CF Project for Phases\tNULL\n360001\tTest CF Project for Phases\tNULL\n360002\tTest CF Project for Phases\tNULL\n360003\tTest CF Project for Phases\tNULL\n360004\tTest CF Project for Phases\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1498
+}
