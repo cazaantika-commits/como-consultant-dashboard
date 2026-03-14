@@ -2,15 +2,6 @@ import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { ArrowRight, Layers, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
-import {
-  calculatePhases,
-  getInvestorExpenses,
-  distributeExpense,
-  getDefaultCustomDistribution,
-  type PhaseDurations,
-  type ExpenseItem,
-} from "@/lib/cashFlowEngine";
-import { calculateProjectCosts } from "@/lib/projectCostsCalc";
 
 const TOTAL_MONTHS = 48;
 const CHART_START = new Date(2026, 3, 1); // April 2026
@@ -41,23 +32,25 @@ function fmtFull(n: number): string {
 }
 
 // ── 2 phase colors only ──────────────────────────────────────────────────────
-const PRE_CON_COLOR    = "#3b82f6"; // blue-500 — ما قبل التنفيذ
-const PRE_CON_LIGHT    = "#dbeafe"; // blue-100 — inactive pre-con
-const CONSTRUCTION_COLOR = "#ec4899"; // pink-500 — مرحلة الإنشاء
-const CONSTRUCTION_LIGHT = "#fce7f3"; // pink-100 — inactive construction
-const INACTIVE_COLOR   = "#f1f5f9"; // slate-100 — outside range
+const PRE_CON_COLOR      = "#3b82f6"; // blue-500
+const PRE_CON_LIGHT      = "#dbeafe"; // blue-100
+const CONSTRUCTION_COLOR = "#ec4899"; // pink-500
+const CONSTRUCTION_LIGHT = "#fce7f3"; // pink-100
+const INACTIVE_COLOR     = "#f1f5f9"; // slate-100
 
-// Header color — unified for all projects
-const HEADER_BG = "#1e3a5f"; // deep navy
+const HEADER_BG   = "#1e3a5f";
 const HEADER_TEXT = "#ffffff";
 
 interface ProjectColumn {
-  id: number;
+  cfProjectId: number;
+  projectId: number | null;
   name: string;
-  preConMonths: number;
+  startDate: string;
+  preDevMonths: number;
   constructionMonths: number;
-  relativeMonthly: Record<number, number>;
-  durations: PhaseDurations;
+  handoverMonths: number;
+  /** monthly developer outflow indexed from month 0 of the project */
+  monthlyDeveloperOutflow: number[];
   totalCapital: number;
   paidCapital: number;
 }
@@ -72,101 +65,80 @@ interface Props {
   onBack?: () => void;
 }
 
+// Convert a project's relative month index to an absolute chart index (0 = Apr 2026)
+function projectMonthToChartIndex(
+  startDate: string,
+  relativeMonth: number // 0-based
+): number {
+  const [sy, sm] = startDate.split("-").map(Number);
+  // chart starts at April 2026 = month index 0
+  const chartStartYear = 2026;
+  const chartStartMonth = 4; // April
+  const absYear = sy + Math.floor((sm - 1 + relativeMonth) / 12);
+  const absMonth = ((sm - 1 + relativeMonth) % 12) + 1;
+  return (absYear - chartStartYear) * 12 + (absMonth - chartStartMonth);
+}
+
 export default function CapitalSchedulingPage({ onBack }: Props) {
   const { isAuthenticated } = useAuth();
 
-  const projectsQuery    = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
-  const allMoQuery       = trpc.marketOverview.getAllByUser.useQuery(undefined, { enabled: isAuthenticated, staleTime: 60000 });
-  const allCpQuery       = trpc.competitionPricing.getAllByUser.useQuery(undefined, { enabled: isAuthenticated, staleTime: 60000 });
-  const capitalSummaryQ  = trpc.cashFlowProgram.getCapitalSummaryAllProjects.useQuery(undefined, { enabled: isAuthenticated, staleTime: 60000 });
+  const scheduleQuery = trpc.cashFlowProgram.getCapitalScheduleData.useQuery(
+    undefined,
+    { enabled: isAuthenticated, staleTime: 60000 }
+  );
 
-  const projects    = useMemo(() => projectsQuery.data || [], [projectsQuery.data]);
-  const allMo       = useMemo(() => allMoQuery.data || [], [allMoQuery.data]);
-  const allCp       = useMemo(() => allCpQuery.data || [], [allCpQuery.data]);
-  const capitalData = useMemo(() => capitalSummaryQ.data || [], [capitalSummaryQ.data]);
+  const rawData = useMemo(() => scheduleQuery.data || [], [scheduleQuery.data]);
 
-  // Today for paid calculation
-  const TODAY = useMemo(() => new Date(), []);
-
-  const baseColumns = useMemo<ProjectColumn[]>(() => {
-    return projects.map((project) => {
-      const mo    = allMo.find((m: any) => m.projectId === project.id);
-      const cp    = allCp.find((c: any) => c.projectId === project.id);
-      const costs = calculateProjectCosts(project, mo, cp);
-
-      const preConMonths       = project.preConMonths ?? 6;
-      const constructionMonths = project.constructionMonths ?? 16;
-      const handoverMonths     = 2;
-      const durations: PhaseDurations = { preCon: preConMonths, construction: constructionMonths, handover: handoverMonths };
-      const phases   = calculatePhases(durations);
-      const expenses = getInvestorExpenses(costs || undefined);
-
-      const relativeMonthly: Record<number, number> = {};
-      for (const item of expenses) {
-        if (item.phase === "land") continue;
-        let dist: Record<number, number>;
-        if (item.behavior === "CUSTOM") {
-          dist = getDefaultCustomDistribution(item.id, phases, durations, costs || undefined);
-        } else {
-          dist = distributeExpense(item as ExpenseItem, phases, durations);
-        }
-        for (const [m, v] of Object.entries(dist)) {
-          const mn = parseInt(m);
-          relativeMonthly[mn] = (relativeMonthly[mn] || 0) + v;
-        }
-      }
-
-      // Get capital summary from cf_cost_items
-      const cap = capitalData.find((c: any) => c.projectId === project.id);
-      const totalCapital = cap?.totalCapital ?? 0;
-      const paidCapital  = cap?.paidCapital  ?? 0;
-
-      return { id: project.id, name: project.name, preConMonths, constructionMonths, relativeMonthly, durations, totalCapital, paidCapital };
-    });
-  }, [projects, allMo, allCp, capitalData]);
+  const baseColumns = useMemo<ProjectColumn[]>(() => rawData, [rawData]);
 
   const [delays, setDelays] = useState<Record<number, DelayState>>({});
 
-  function getDelay(projectId: number): DelayState {
-    return delays[projectId] || { fullDelay: 0, constructionDelay: 0 };
+  function getDelay(cfProjectId: number): DelayState {
+    return delays[cfProjectId] || { fullDelay: 0, constructionDelay: 0 };
   }
 
-  function adjustFullDelay(projectId: number, delta: number) {
+  function adjustFullDelay(cfProjectId: number, delta: number) {
     setDelays(prev => {
-      const cur = prev[projectId] || { fullDelay: 0, constructionDelay: 0 };
-      return { ...prev, [projectId]: { ...cur, fullDelay: Math.max(0, cur.fullDelay + delta) } };
+      const cur = prev[cfProjectId] || { fullDelay: 0, constructionDelay: 0 };
+      return { ...prev, [cfProjectId]: { ...cur, fullDelay: Math.max(0, cur.fullDelay + delta) } };
     });
   }
 
-  function adjustConstructionDelay(projectId: number, delta: number) {
+  function adjustConstructionDelay(cfProjectId: number, delta: number) {
     setDelays(prev => {
-      const cur = prev[projectId] || { fullDelay: 0, constructionDelay: 0 };
-      return { ...prev, [projectId]: { ...cur, constructionDelay: Math.max(0, cur.constructionDelay + delta) } };
+      const cur = prev[cfProjectId] || { fullDelay: 0, constructionDelay: 0 };
+      return { ...prev, [cfProjectId]: { ...cur, constructionDelay: Math.max(0, cur.constructionDelay + delta) } };
     });
   }
 
-  function resetDelay(projectId: number) {
-    setDelays(prev => ({ ...prev, [projectId]: { fullDelay: 0, constructionDelay: 0 } }));
+  function resetDelay(cfProjectId: number) {
+    setDelays(prev => ({ ...prev, [cfProjectId]: { fullDelay: 0, constructionDelay: 0 } }));
   }
 
+  // Build effective columns with delay applied
   const effectiveColumns = useMemo(() => {
     return baseColumns.map((col) => {
-      const { fullDelay, constructionDelay } = getDelay(col.id);
-      const preConEnd = col.preConMonths;
+      const { fullDelay, constructionDelay } = getDelay(col.cfProjectId);
+      const preDevEnd = col.preDevMonths; // relative month index (1-based end)
 
       const monthlyAmounts: Record<number, number> = {};
-      for (const [relStr, val] of Object.entries(col.relativeMonthly)) {
-        const rel = parseInt(relStr);
-        let absIdx: number;
-        if (rel <= preConEnd) {
-          absIdx = fullDelay + rel - 1;
+      col.monthlyDeveloperOutflow.forEach((val, relIdx) => {
+        if (val <= 0) return;
+        let chartIdx: number;
+        // relIdx is 0-based; months 0..(preDevMonths-1) are pre-dev
+        if (relIdx < col.preDevMonths) {
+          // Pre-dev phase: shift by fullDelay only
+          const baseChartIdx = projectMonthToChartIndex(col.startDate, relIdx);
+          chartIdx = baseChartIdx + fullDelay;
         } else {
-          absIdx = fullDelay + constructionDelay + rel - 1;
+          // Construction/handover phase: shift by fullDelay + constructionDelay
+          const baseChartIdx = projectMonthToChartIndex(col.startDate, relIdx);
+          chartIdx = baseChartIdx + fullDelay + constructionDelay;
         }
-        if (absIdx >= 0 && absIdx < TOTAL_MONTHS) {
-          monthlyAmounts[absIdx] = (monthlyAmounts[absIdx] || 0) + val;
+        if (chartIdx >= 0 && chartIdx < TOTAL_MONTHS) {
+          monthlyAmounts[chartIdx] = (monthlyAmounts[chartIdx] || 0) + val;
         }
-      }
+      });
 
       return { ...col, monthlyAmounts, fullDelay, constructionDelay };
     });
@@ -183,17 +155,20 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
     return totals;
   }, [effectiveColumns]);
 
-  function getPhase(col: typeof effectiveColumns[0], absIdx: number): string | null {
+  // Determine phase for a given chart index, considering delays
+  function getPhase(col: typeof effectiveColumns[0], chartIdx: number): string | null {
     const { fullDelay, constructionDelay } = col;
-    const preConStart = fullDelay;
-    const preConEnd   = preConStart + col.preConMonths - 1;
-    const constrStart = fullDelay + constructionDelay + col.preConMonths;
-    const constrEnd   = constrStart + col.constructionMonths - 1;
-    const handoverEnd = constrEnd + 2;
+    // Base chart index of project start
+    const baseStart = projectMonthToChartIndex(col.startDate, 0);
+    const preDevStart  = baseStart + fullDelay;
+    const preDevEnd    = preDevStart + col.preDevMonths - 1;
+    const constrStart  = preDevEnd + 1 + constructionDelay;
+    const constrEnd    = constrStart + col.constructionMonths - 1;
+    const handoverEnd  = constrEnd + col.handoverMonths;
 
-    if (absIdx >= preConStart && absIdx <= preConEnd) return "preCon";
-    if (absIdx >= constrStart && absIdx <= constrEnd) return "construction";
-    if (absIdx > constrEnd && absIdx <= handoverEnd) return "handover";
+    if (chartIdx >= preDevStart && chartIdx <= preDevEnd) return "preCon";
+    if (chartIdx >= constrStart && chartIdx <= constrEnd) return "construction";
+    if (chartIdx > constrEnd && chartIdx <= handoverEnd) return "handover";
     return null;
   }
 
@@ -214,13 +189,13 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
           .reduce((s, v) => s + v, 0);
         const midIdx = startIdx + Math.floor((endIdx - startIdx) / 2);
         const phase  = getPhase(col, midIdx);
-        return { colId: col.id, amount, phase };
+        return { colId: col.cfProjectId, amount, phase };
       });
       return { gi, startIdx, endIdx, label, total, colData };
     });
   }, [effectiveColumns, monthlyTotals, groupBy]);
 
-  const isLoading = projectsQuery.isLoading || allMoQuery.isLoading || allCpQuery.isLoading;
+  const isLoading = scheduleQuery.isLoading;
 
   if (isLoading) {
     return (
@@ -233,20 +208,19 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
     );
   }
 
-  if (projects.length === 0) {
+  if (baseColumns.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4 text-slate-400" dir="rtl">
         <Layers className="w-12 h-12 opacity-30" />
-        <p className="text-lg font-medium">لا توجد مشاريع مسجلة</p>
+        <p className="text-lg font-medium">لا توجد مشاريع مسجلة في نظام التدفق النقدي</p>
       </div>
     );
   }
 
-  // Layout constants
   const COL_W       = 130;
   const DATE_COL_W  = 110;
   const TOTAL_COL_W = 110;
-  const GAP         = 16;  // white gap between columns
+  const GAP         = 16;
   const ROW_H       = groupBy === 1 ? 36 : groupBy === 3 ? 48 : 58;
 
   const tableW = TOTAL_COL_W + GAP + DATE_COL_W + GAP + effectiveColumns.length * COL_W + (effectiveColumns.length - 1) * GAP;
@@ -293,7 +267,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
               مشاريع كومو — جدولة رأس المال
             </h1>
             <p style={{ margin: 0, fontSize: 11, color: "#64748b" }}>
-              {TOTAL_MONTHS} شهراً · أبريل 2026 — {getMonthLabel(TOTAL_MONTHS - 1)} · {projects.length} مشاريع
+              {TOTAL_MONTHS} شهراً · أبريل 2026 — {getMonthLabel(TOTAL_MONTHS - 1)} · {baseColumns.length} مشاريع
             </p>
           </div>
         </div>
@@ -307,10 +281,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
               { label: "مرحلة الإنشاء",  color: CONSTRUCTION_COLOR },
             ].map(({ label, color }) => (
               <div key={label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <div style={{
-                  width: 14, height: 14, borderRadius: 4,
-                  background: color,
-                }} />
+                <div style={{ width: 14, height: 14, borderRadius: 4, background: color }} />
                 <span style={{ fontSize: 12, color: "#475569", fontWeight: 600 }}>{label}</span>
               </div>
             ))}
@@ -361,14 +332,14 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
         >
           <thead>
             <tr style={{ position: "sticky", top: 0, zIndex: 30 }}>
-              {/* Project column headers — unified navy color */}
+              {/* Project column headers */}
               {effectiveColumns.map((col, ci) => {
-                const delay    = getDelay(col.id);
+                const delay    = getDelay(col.cfProjectId);
                 const hasDelay = delay.fullDelay > 0 || delay.constructionDelay > 0;
                 const remaining = col.totalCapital - col.paidCapital;
                 return (
                   <th
-                    key={col.id}
+                    key={col.cfProjectId}
                     style={{
                       width: COL_W,
                       minWidth: COL_W,
@@ -425,7 +396,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                     {/* Full project delay controls */}
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginBottom: 3 }}>
                       <button
-                        onClick={() => adjustFullDelay(col.id, -3)}
+                        onClick={() => adjustFullDelay(col.cfProjectId, -3)}
                         disabled={delay.fullDelay === 0}
                         title="تقديم المشروع 3 أشهر"
                         style={{
@@ -442,7 +413,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                         المشروع
                       </span>
                       <button
-                        onClick={() => adjustFullDelay(col.id, 3)}
+                        onClick={() => adjustFullDelay(col.cfProjectId, 3)}
                         title="تأجيل المشروع 3 أشهر"
                         style={{
                           width: 20, height: 20, borderRadius: 5,
@@ -459,7 +430,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                     {/* Construction delay controls */}
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginBottom: 3 }}>
                       <button
-                        onClick={() => adjustConstructionDelay(col.id, -3)}
+                        onClick={() => adjustConstructionDelay(col.cfProjectId, -3)}
                         disabled={delay.constructionDelay === 0}
                         title="تقديم الإنشاء 3 أشهر"
                         style={{
@@ -476,7 +447,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                         الإنشاء
                       </span>
                       <button
-                        onClick={() => adjustConstructionDelay(col.id, 3)}
+                        onClick={() => adjustConstructionDelay(col.cfProjectId, 3)}
                         title="تأجيل الإنشاء 3 أشهر"
                         style={{
                           width: 20, height: 20, borderRadius: 5,
@@ -494,7 +465,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                     {hasDelay && (
                       <div style={{ textAlign: "center" }}>
                         <button
-                          onClick={() => resetDelay(col.id)}
+                          onClick={() => resetDelay(col.cfProjectId)}
                           title="إعادة ضبط"
                           style={{
                             background: "rgba(255,255,255,0.15)", border: "none",

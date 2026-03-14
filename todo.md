@@ -2493,3 +2493,9 @@
 
 ## بناء مخطط جدولة رأس المال (مارس 2026)
 - [ ] بناء صفحة CapitalSchedulingPage كمخطط Gantt مالي عمودي: 40 شهر خلفية، مستطيلات عمودية لكل مشروع (لونان: قبل التنفيذ + إنشاء)، أرقام شهرية من دراسات الجدوى، عمود التواريخ، عمود الإجمالي الشهري
+
+## إصلاح حساب رأس المال في جدولة رأس المال (مارس 2026)
+- [x] إضافة procedure جديدة getCapitalScheduleData في cashFlowProgram.ts تعيد monthlyDeveloperOutflow لكل مشروع من cf_cost_items عبر calculateDualCashFlow
+- [x] إعادة كتابة CapitalSchedulingPage لاستخدام getCapitalScheduleData بدلاً من cashFlowEngine القديم
+- [x] إصلاح حساب الأرقام الشهرية: الآن يستخدم developerOutflow (صافي تمويل المستثمر) بدلاً من مجموع cf_cost_items.totalAmount
+- [x] إصلاح حساب تحديد المرحلة (pre-dev / construction / handover) بناءً على startDate الفعلي للمشروع
