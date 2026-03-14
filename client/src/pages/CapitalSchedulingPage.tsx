@@ -87,10 +87,13 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
   const allMoQuery    = trpc.marketOverview.getAllByUser.useQuery(undefined, { enabled: isAuthenticated, staleTime: 60000 });
   const allCpQuery    = trpc.competitionPricing.getAllByUser.useQuery(undefined, { enabled: isAuthenticated, staleTime: 60000 });
+  // Real capital data from cf_cost_items (أيقونة رأس المال المطلوب)
+  const capitalSummaryQuery = trpc.cashFlowProgram.getCapitalSummaryAllProjects.useQuery(undefined, { enabled: isAuthenticated, staleTime: 30000 });
 
   const projects = useMemo(() => projectsQuery.data || [], [projectsQuery.data]);
   const allMo    = useMemo(() => allMoQuery.data || [], [allMoQuery.data]);
   const allCp    = useMemo(() => allCpQuery.data || [], [allCpQuery.data]);
+  const capitalSummary = useMemo(() => capitalSummaryQuery.data || [], [capitalSummaryQuery.data]);
 
   const columns = useMemo<ProjectColumn[]>(() => {
     return projects.map((project) => {
@@ -251,28 +254,34 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
         className="grid gap-3"
         style={{ gridTemplateColumns: `repeat(${Math.min(columns.length + 1, 4)}, minmax(0, 1fr))` }}
       >
-        {columns.map((col) => (
+        {columns.map((col) => {
+          // Use real data from cf_cost_items (أيقونة رأس المال المطلوب) when available
+          const cs = capitalSummary.find((s: any) => s.projectId === col.id);
+          const total     = cs ? cs.totalCapital     : col.totalCapital;
+          const paid      = cs ? cs.paidCapital      : col.paidCapital;
+          const remaining = cs ? cs.remainingCapital : col.remainingCapital;
+          return (
           <div key={col.id} className="rounded-xl border border-border p-3 bg-card shadow-sm space-y-1.5">
             <p className="text-[11px] text-muted-foreground truncate font-semibold" title={col.name}>{col.name}</p>
             {/* Total */}
             <div className="flex items-center justify-between">
               <span className="text-[10px] text-slate-400">إجمالي رأس المال</span>
               <span className="text-[12px] font-bold text-foreground">
-                {col.totalCapital > 0 ? `${(col.totalCapital / 1_000_000).toFixed(2)}M` : "—"}
+                {total > 0 ? `${(total / 1_000_000).toFixed(2)}M` : "—"}
               </span>
             </div>
             {/* Paid */}
             <div className="flex items-center justify-between">
               <span className="text-[10px] text-green-400">المدفوع</span>
               <span className="text-[12px] font-bold text-green-500">
-                {col.paidCapital > 0 ? `${(col.paidCapital / 1_000_000).toFixed(2)}M` : "—"}
+                {paid > 0 ? `${(paid / 1_000_000).toFixed(2)}M` : "—"}
               </span>
             </div>
             {/* Remaining */}
             <div className="flex items-center justify-between border-t border-border pt-1.5">
               <span className="text-[10px] text-amber-400 font-semibold">المطلوب سداده</span>
               <span className="text-[13px] font-extrabold text-amber-400">
-                {col.remainingCapital > 0 ? `${(col.remainingCapital / 1_000_000).toFixed(2)}M` : "—"}
+                {remaining > 0 ? `${(remaining / 1_000_000).toFixed(2)}M` : "—"}
               </span>
             </div>
             {/* Phase badges */}
@@ -281,31 +290,45 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
               <span className="text-[9px] px-1.5 py-0.5 rounded" style={{ background: PHASE_BG.construction, color: PHASE_TEXT.construction }}>{col.constructionMonths}ش إنشاء</span>
             </div>
           </div>
-        ))}
+          );
+        })}
         {/* Grand total card */}
         <div className="rounded-xl border-2 border-amber-400 p-3 bg-amber-950/30 shadow-sm space-y-1.5">
           <p className="text-[11px] text-amber-400 font-semibold">الإجمالي الكلي — جميع المشاريع</p>
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] text-slate-400">إجمالي رأس المال</span>
-            <span className="text-[12px] font-bold text-foreground">
-              {columns.reduce((s,c) => s+c.totalCapital,0) > 0
-                ? `${(columns.reduce((s,c) => s+c.totalCapital,0)/1_000_000).toFixed(2)}M` : "—"}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] text-green-400">المدفوع</span>
-            <span className="text-[12px] font-bold text-green-500">
-              {columns.reduce((s,c) => s+c.paidCapital,0) > 0
-                ? `${(columns.reduce((s,c) => s+c.paidCapital,0)/1_000_000).toFixed(2)}M` : "—"}
-            </span>
-          </div>
-          <div className="flex items-center justify-between border-t border-amber-400/30 pt-1.5">
-            <span className="text-[10px] text-amber-400 font-semibold">المطلوب سداده</span>
-            <span className="text-[14px] font-extrabold text-amber-400">
-              {columns.reduce((s,c) => s+c.remainingCapital,0) > 0
-                ? `${(columns.reduce((s,c) => s+c.remainingCapital,0)/1_000_000).toFixed(2)}M` : "—"}
-            </span>
-          </div>
+          {(() => {
+            // Use real capital data when available, fallback to calculated
+            const gtTotal     = capitalSummary.length > 0
+              ? capitalSummary.reduce((s: number, c: any) => s + c.totalCapital, 0)
+              : columns.reduce((s,c) => s+c.totalCapital, 0);
+            const gtPaid      = capitalSummary.length > 0
+              ? capitalSummary.reduce((s: number, c: any) => s + c.paidCapital, 0)
+              : columns.reduce((s,c) => s+c.paidCapital, 0);
+            const gtRemaining = capitalSummary.length > 0
+              ? capitalSummary.reduce((s: number, c: any) => s + c.remainingCapital, 0)
+              : columns.reduce((s,c) => s+c.remainingCapital, 0);
+            return (
+              <>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-slate-400">إجمالي رأس المال</span>
+                  <span className="text-[12px] font-bold text-foreground">
+                    {gtTotal > 0 ? `${(gtTotal/1_000_000).toFixed(2)}M` : "—"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-green-400">المدفوع</span>
+                  <span className="text-[12px] font-bold text-green-500">
+                    {gtPaid > 0 ? `${(gtPaid/1_000_000).toFixed(2)}M` : "—"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border-t border-amber-400/30 pt-1.5">
+                  <span className="text-[10px] text-amber-400 font-semibold">المطلوب سداده</span>
+                  <span className="text-[14px] font-extrabold text-amber-400">
+                    {gtRemaining > 0 ? `${(gtRemaining/1_000_000).toFixed(2)}M` : "—"}
+                  </span>
+                </div>
+              </>
+            );
+          })()}
         </div>
       </div>
 
