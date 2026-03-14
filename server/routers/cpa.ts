@@ -881,9 +881,10 @@ export const cpaRouter = router({
         const db = await getDb();
         if (!db) throw new Error("DB unavailable");
         // Cascade delete: evaluation results → supervision team → scope coverage → project consultants → project
+        // cpa_evaluation_results uses project_consultant_id, not cpa_project_id
+        await db.execute(sql`DELETE FROM cpa_evaluation_results WHERE project_consultant_id IN (SELECT id FROM cpa_project_consultants WHERE cpa_project_id = ${input.id})`);
         const pcs = await qRows<any>(db, sql`SELECT id FROM cpa_project_consultants WHERE cpa_project_id = ${input.id}`);
         for (const pc of pcs) {
-          await db.execute(sql`DELETE FROM cpa_evaluation_results WHERE project_consultant_id = ${pc.id}`);
           await db.execute(sql`DELETE FROM cpa_consultant_supervision_team WHERE project_consultant_id = ${pc.id}`);
           await db.execute(sql`DELETE FROM cpa_consultant_scope_coverage WHERE project_consultant_id = ${pc.id}`);
         }
@@ -908,6 +909,7 @@ export const cpaRouter = router({
               FROM cpa_project_consultants pc
               JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id
               LEFT JOIN cpa_evaluation_results er ON er.project_consultant_id = pc.id
+                AND er.id = (SELECT MAX(er2.id) FROM cpa_evaluation_results er2 WHERE er2.project_consultant_id = pc.id)
               WHERE pc.cpa_project_id = ${input.cpaProjectId}
               ORDER BY COALESCE(er.result_rank, 999), pc.created_at`
         );
@@ -1238,6 +1240,21 @@ export const cpaRouter = router({
         }));
       }),
   }),
+
+  // ---- Delete Project ----
+  deleteProject: protectedProcedure
+    .input(z.object({ cpaProjectId: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error('DB unavailable');
+      // Delete in order: evaluation results → scope coverage → consultant teams → project consultants → project
+      await db.run(sql`DELETE FROM cpa_evaluation_results WHERE cpa_project_id = ${input.cpaProjectId}`);
+      await db.run(sql`DELETE FROM cpa_consultant_scope_coverage WHERE project_consultant_id IN (SELECT id FROM cpa_project_consultants WHERE cpa_project_id = ${input.cpaProjectId})`);
+      await db.run(sql`DELETE FROM cpa_consultant_supervision_team WHERE project_consultant_id IN (SELECT id FROM cpa_project_consultants WHERE cpa_project_id = ${input.cpaProjectId})`);
+      await db.run(sql`DELETE FROM cpa_project_consultants WHERE cpa_project_id = ${input.cpaProjectId}`);
+      await db.run(sql`DELETE FROM cpa_projects WHERE id = ${input.cpaProjectId}`);
+      return { success: true };
+    }),
 
   // ---- Utility ----
   getSystemProjects: protectedProcedure.query(async () => {
