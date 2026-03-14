@@ -485,6 +485,176 @@ function ProjectListScreen({
 
 // ---- Screen 2: Project Detail + Consultant List ----------------------------
 
+// ---- Fee Input Dialog Component (inline) --------------------------------
+function FeeInputDialog({
+  consultant,
+  onClose,
+  onSaved,
+}: {
+  consultant: any;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { toast } = useToast();
+  const [designMethod, setDesignMethod] = useState<string>(consultant.design_fee_method || "LUMP_SUM");
+  const [designAmount, setDesignAmount] = useState<string>(consultant.design_fee_amount ? String(consultant.design_fee_amount) : "");
+  const [designPct, setDesignPct] = useState<string>(consultant.design_fee_percentage ? String(consultant.design_fee_percentage) : "");
+  const [supSubmitted, setSupSubmitted] = useState<boolean>(consultant.supervision_submitted === 1 || consultant.supervision_submitted === true);
+  const [supMethod, setSupMethod] = useState<string>(consultant.supervision_fee_method || "MONTHLY_RATE");
+  const [supAmount, setSupAmount] = useState<string>(consultant.supervision_fee_amount ? String(consultant.supervision_fee_amount) : "");
+  const [supPct, setSupPct] = useState<string>(consultant.supervision_fee_percentage ? String(consultant.supervision_fee_percentage) : "");
+  const [supDuration, setSupDuration] = useState<string>(consultant.supervision_stated_duration_months ? String(consultant.supervision_stated_duration_months) : "");
+
+  const updateFeesMutation = trpc.cpa.consultants.updateFees.useMutation({
+    onSuccess: () => {
+      toast({ title: "تم حفظ الأتعاب بنجاح" });
+      onSaved();
+      onClose();
+    },
+    onError: (e) => toast({ title: "خطأ في الحفظ", description: e.message, variant: "destructive" }),
+  });
+
+  function handleSave() {
+    updateFeesMutation.mutate({
+      id: consultant.id,
+      designFeeMethod: designMethod as any,
+      designFeeAmount: designMethod !== "PERCENTAGE" && designAmount ? parseFloat(designAmount) : null,
+      designFeePercentage: designMethod === "PERCENTAGE" && designPct ? parseFloat(designPct) : null,
+      supervisionSubmitted: supSubmitted ? 1 : 0,
+      supervisionFeeMethod: supSubmitted ? supMethod as any : null,
+      supervisionFeeAmount: supSubmitted && supMethod !== "PERCENTAGE" && supAmount ? parseFloat(supAmount) : null,
+      supervisionFeePercentage: supSubmitted && supMethod === "PERCENTAGE" && supPct ? parseFloat(supPct) : null,
+      supervisionStatedDurationMonths: supSubmitted && supDuration ? parseInt(supDuration) : null,
+      status: "DRAFT",
+    });
+  }
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent dir="rtl" className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>إدخال أتعاب: {consultant.trade_name || consultant.legal_name}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-5 py-2">
+          {/* Design Fee */}
+          <div className="space-y-3">
+            <h4 className="font-semibold text-sm border-b pb-1">أتعاب التصميم</h4>
+            <div>
+              <Label className="text-xs mb-1 block">طريقة الأتعاب</Label>
+              <Select value={designMethod} onValueChange={setDesignMethod}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="LUMP_SUM">مبلغ إجمالي (Lump Sum)</SelectItem>
+                  <SelectItem value="PERCENTAGE">نسبة مئوية (%)</SelectItem>
+                  <SelectItem value="MONTHLY_RATE">معدل شهري</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {designMethod === "PERCENTAGE" ? (
+              <div>
+                <Label className="text-xs mb-1 block">النسبة (%)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="مثال: 2.5"
+                  value={designPct}
+                  onChange={(e) => setDesignPct(e.target.value)}
+                />
+              </div>
+            ) : (
+              <div>
+                <Label className="text-xs mb-1 block">المبلغ (AED)</Label>
+                <Input
+                  type="number"
+                  placeholder="مثال: 500000"
+                  value={designAmount}
+                  onChange={(e) => setDesignAmount(e.target.value)}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Supervision Fee */}
+          <div className="space-y-3">
+            <h4 className="font-semibold text-sm border-b pb-1">أتعاب الإشراف</h4>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="sup-submitted"
+                checked={supSubmitted}
+                onChange={(e) => setSupSubmitted(e.target.checked)}
+                className="w-4 h-4"
+              />
+              <Label htmlFor="sup-submitted" className="text-sm cursor-pointer">الاستشاري قدّم عرض إشراف</Label>
+            </div>
+            {supSubmitted && (
+              <>
+                <div>
+                  <Label className="text-xs mb-1 block">طريقة أتعاب الإشراف</Label>
+                  <Select value={supMethod} onValueChange={setSupMethod}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="LUMP_SUM">مبلغ إجمالي (Lump Sum)</SelectItem>
+                      <SelectItem value="PERCENTAGE">نسبة مئوية (%)</SelectItem>
+                      <SelectItem value="MONTHLY_RATE">معدل شهري</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {supMethod === "PERCENTAGE" ? (
+                  <div>
+                    <Label className="text-xs mb-1 block">النسبة (%)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="مثال: 1.5"
+                      value={supPct}
+                      onChange={(e) => setSupPct(e.target.value)}
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <Label className="text-xs mb-1 block">المبلغ / المعدل الشهري (AED)</Label>
+                    <Input
+                      type="number"
+                      placeholder="مثال: 45000"
+                      value={supAmount}
+                      onChange={(e) => setSupAmount(e.target.value)}
+                    />
+                  </div>
+                )}
+                <div>
+                  <Label className="text-xs mb-1 block">مدة الإشراف المذكورة في العرض (شهر)</Label>
+                  <Input
+                    type="number"
+                    placeholder="مثال: 24"
+                    value={supDuration}
+                    onChange={(e) => setSupDuration(e.target.value)}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="flex gap-2 pt-2">
+            <Button
+              className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white"
+              onClick={handleSave}
+              disabled={updateFeesMutation.isPending}
+            >
+              {updateFeesMutation.isPending ? "جاري الحفظ..." : "حفظ الأتعاب"}
+            </Button>
+            <Button variant="outline" onClick={onClose}>إلغاء</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function ProjectDetailScreen({
   projectId,
   onBack,
@@ -516,7 +686,7 @@ function ProjectDetailScreen({
   });
   const removeMutation = trpc.cpa.consultants.removeConsultant.useMutation({
     onSuccess: () => { consultantsQuery.refetch(); toast({ title: "تم حذف الاستشاري" }); },
-    onError: (e) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
+    onError: (e) => toast({ title: "خطأ في الحذف", description: e.message, variant: "destructive" }),
   });
   const deleteProjectMutation = trpc.cpa.projects.delete.useMutation({
     onSuccess: () => { toast({ title: "تم حذف المشروع بنجاح" }); onBack(); },
@@ -525,6 +695,7 @@ function ProjectDetailScreen({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAdd, setShowAdd] = useState(false);;
   const [selectedMasterId, setSelectedMasterId] = useState("");
+  const [feeInputConsultant, setFeeInputConsultant] = useState<any>(null);
 
   const project = projectQuery.data;
   const consultants = consultantsQuery.data ?? [];
@@ -760,7 +931,16 @@ ${scopeItems}
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">{c.consultant_code}</p>
                     </div>
-                    <div className="flex gap-1.5 shrink-0">
+                    <div className="flex gap-1.5 shrink-0 flex-wrap justify-end">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                        onClick={() => setFeeInputConsultant(c)}
+                      >
+                        <Pencil className="w-3.5 h-3.5 ml-1" />
+                        الأتعاب
+                      </Button>
                       <Button size="sm" variant="outline" onClick={() => onImportJson(c.id, c.trade_name || c.legal_name)}>
                         <FileJson className="w-3.5 h-3.5 ml-1" />
                         JSON
@@ -813,6 +993,15 @@ ${scopeItems}
           <BarChart3 className="w-4 h-4 ml-2" />
           عرض نتائج التقييم والترتيب
         </Button>
+      )}
+
+      {/* Fee Input Dialog */}
+      {feeInputConsultant && (
+        <FeeInputDialog
+          consultant={feeInputConsultant}
+          onClose={() => setFeeInputConsultant(null)}
+          onSaved={() => consultantsQuery.refetch()}
+        />
       )}
 
       {/* Add Consultant Dialog */}
