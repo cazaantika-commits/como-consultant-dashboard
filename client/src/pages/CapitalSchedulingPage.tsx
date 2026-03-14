@@ -353,13 +353,12 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                   fontWeight: 700,
                   padding: "8px 6px",
                   textAlign: "center",
-                  borderLeft: "3px solid #64748b",
-                  borderRight: "3px solid #64748b",
+                  borderLeft: `${GAP}px solid #94a3b8`,
+                  borderRight: `${GAP}px solid #94a3b8`,
                 }}
               >
                 الشهر
               </th>
-
               {/* Total column header — leftmost */}
               <th
                 style={{
@@ -420,8 +419,8 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       color: "#1e293b",
                       padding: "0 4px",
                       textAlign: "center",
-                      borderLeft: "3px solid #64748b",
-                      borderRight: "3px solid #64748b",
+                      borderLeft: `${GAP}px solid ${rowBg}`,
+                      borderRight: `${GAP}px solid ${rowBg}`,
                       background: row.gi % 2 === 0 ? "#cbd5e1" : "#b0bec5",
                       whiteSpace: groupBy === 1 ? "nowrap" : "normal",
                       lineHeight: 1.3,
