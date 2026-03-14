@@ -57,24 +57,24 @@ interface ProjectColumn {
   remainingCapital: number;
 }
 
-// Phase colors — professional dark palette
+// Phase colors — bright attractive palette
 const PHASE_BG: Record<string, string> = {
-  preCon:       "#1e3a5f", // deep navy
-  construction: "#14532d", // deep green
-  handover:     "#7c2d12", // deep burnt orange
+  preCon:       "#3b82f6", // vivid blue
+  construction: "#10b981", // vivid emerald
+  handover:     "#f59e0b", // vivid amber
 };
 const PHASE_TEXT: Record<string, string> = {
-  preCon:       "#93c5fd", // light blue text on dark navy
-  construction: "#86efac", // light green text on dark green
-  handover:     "#fdba74", // light orange text on dark burnt
+  preCon:       "#ffffff",
+  construction: "#ffffff",
+  handover:     "#1c1917",
 };
 
-// Row background — dark slate alternating
-const ROW_BG_EVEN = "#1e293b";
-const ROW_BG_ODD  = "#0f172a";
+// Row background — light neutral alternating (so columns pop)
+const ROW_BG_EVEN = "#f1f5f9";
+const ROW_BG_ODD  = "#e2e8f0";
 
-// Pillar inner background — dark card on dark row
-const PILLAR_INACTIVE = "rgba(255,255,255,0.04)";
+// Pillar inner background — white with slight opacity on light row
+const PILLAR_INACTIVE = "rgba(255,255,255,0.6)";
 
 interface Props {
   embedded?: boolean;
@@ -174,7 +174,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
   const DATE_COL_W  = 90;  // second from left: الشهر
   const COL_W       = 90;  // each project
   const ROW_H       = 34;
-  const GAP         = 3;   // gap between project pillars (px)
+  const GAP         = 8;   // gap between project pillars (px) — wide enough to show background
 
   const isLoading = projectsQuery.isLoading || allMoQuery.isLoading || allCpQuery.isLoading;
   const grandTotal = Object.values(monthlyTotals).reduce((s, v) => s + v, 0);
@@ -335,13 +335,13 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                   style={{
                     width: COL_W,
                     minWidth: COL_W,
-                    background: "#0f172a",
-                    color: "#e2e8f0",
+                    background: "#1e293b",
+                    color: "#f8fafc",
                     fontSize: 10,
                     fontWeight: 700,
                     padding: "8px 4px",
                     textAlign: "center",
-                    borderLeft: ci < columns.length - 1 ? `${GAP}px solid #1e293b` : "none",
+                    borderLeft: ci < columns.length - 1 ? `${GAP}px solid #94a3b8` : "none",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
@@ -357,14 +357,14 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                 style={{
                   width: DATE_COL_W,
                   minWidth: DATE_COL_W,
-                  background: "#1e293b",
-                  color: "#94a3b8",
+                  background: "#334155",
+                  color: "#e2e8f0",
                   fontSize: 10,
                   fontWeight: 700,
                   padding: "8px 6px",
                   textAlign: "center",
-                  borderLeft: "2px solid #334155",
-                  borderRight: "2px solid #334155",
+                  borderLeft: "3px solid #64748b",
+                  borderRight: "3px solid #64748b",
                 }}
               >
                 الشهر
@@ -375,8 +375,8 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                 style={{
                   width: TOTAL_COL_W,
                   minWidth: TOTAL_COL_W,
-                  background: "#0f172a",
-                  color: "#f59e0b",
+                  background: "#1e293b",
+                  color: "#fbbf24",
                   fontSize: 10,
                   fontWeight: 700,
                   padding: "8px 6px",
@@ -401,8 +401,8 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
 
                     // Pillar background: phase color if active, else semi-transparent white
                     const pillarBg    = phase ? PHASE_BG[phase] : PILLAR_INACTIVE;
-                    const textColor   = phase ? PHASE_TEXT[phase] : "#94a3b8";
-                    const borderColor = phase ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.6)";
+                    const textColor   = phase ? PHASE_TEXT[phase] : "#475569";
+                    const borderColor = phase ? "rgba(0,0,0,0.12)" : "rgba(0,0,0,0.06)";
 
                     return (
                       <td
@@ -411,7 +411,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                           width: COL_W,
                           minWidth: COL_W,
                           background: pillarBg,
-                          // Gap between pillars via right border (RTL: right = next sibling)
+                          // Gap between pillars — shows row background color through
                           borderLeft: ci < columns.length - 1 ? `${GAP}px solid ${rowBg}` : "none",
                           borderTop: `1px solid ${borderColor}`,
                           borderBottom: `1px solid ${borderColor}`,
@@ -419,7 +419,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                           textAlign: "center",
                           fontSize: 11,
                           fontWeight: amount > 0 ? 700 : 400,
-                          color: amount > 0 ? textColor : (phase ? "rgba(0,0,0,0.2)" : "transparent"),
+                          color: amount > 0 ? textColor : (phase ? "rgba(0,0,0,0.25)" : "transparent"),
                         }}
                       >
                         {amount > 0 ? fmtCell(amount) : (phase ? "—" : "")}
@@ -434,12 +434,12 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       minWidth: DATE_COL_W,
                       fontSize: 10,
                       fontWeight: 600,
-                      color: "#94a3b8",
+                      color: "#1e293b",
                       padding: "0 6px",
                       textAlign: "center",
-                      borderLeft: "2px solid #334155",
-                      borderRight: "2px solid #334155",
-                      background: absIdx % 2 === 0 ? "#1e293b" : "#172032",
+                      borderLeft: "3px solid #64748b",
+                      borderRight: "3px solid #64748b",
+                      background: absIdx % 2 === 0 ? "#cbd5e1" : "#b0bec5",
                       whiteSpace: "nowrap",
                     }}
                   >
@@ -451,8 +451,8 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                     style={{
                       width: TOTAL_COL_W,
                       minWidth: TOTAL_COL_W,
-                      background: total > 0 ? "#292524" : rowBg,
-                      borderRight: "2px solid #f59e0b",
+                      background: total > 0 ? "#fef3c7" : rowBg,
+                      borderRight: "3px solid #f59e0b",
                       padding: "0 6px",
                       textAlign: "center",
                       fontSize: 11,
