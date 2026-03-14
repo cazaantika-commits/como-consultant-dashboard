@@ -290,7 +290,7 @@ async function runCalculationEngine(cpaProjectId: number) {
       sql`INSERT INTO cpa_evaluation_results
             (project_consultant_id, quoted_design_fee, design_scope_gap_cost, true_design_fee,
              quoted_supervision_fee, supervision_gap_cost, adjusted_supervision_fee,
-             total_true_cost, result_rank, can_rank, calculation_notes, calculated_at)
+             total_true_cost, eval_rank, can_rank, calculation_notes, calculated_at)
           VALUES (${r.pcId}, ${r.quotedDesignFee}, ${r.designScopeGapCost}, ${r.trueDesignFee},
                   ${r.quotedSupervisionFee}, ${r.supervisionGapCost}, ${r.adjustedSupervisionFee},
                   ${r.totalTrueCost}, ${r.resultRank}, ${r.canRank}, ${notesJson}, NOW())
@@ -302,7 +302,7 @@ async function runCalculationEngine(cpaProjectId: number) {
             supervision_gap_cost = VALUES(supervision_gap_cost),
             adjusted_supervision_fee = VALUES(adjusted_supervision_fee),
             total_true_cost = VALUES(total_true_cost),
-            result_rank = VALUES(result_rank),
+            eval_rank = VALUES(eval_rank),
             can_rank = VALUES(can_rank),
             calculation_notes = VALUES(calculation_notes),
             calculated_at = NOW()`
@@ -902,16 +902,26 @@ export const cpaRouter = router({
         if (!db) return [];
         return qRows(
           db,
-          sql`SELECT pc.*, cm.legal_name, cm.trade_name, cm.code as consultant_code,
-                     er.total_true_cost, er.result_rank, er.can_rank, er.quoted_design_fee,
-                     er.design_scope_gap_cost, er.true_design_fee,
-                     er.quoted_supervision_fee, er.supervision_gap_cost, er.adjusted_supervision_fee
+          sql`WITH latest_er AS (
+                SELECT er2.id, er2.project_consultant_id, er2.total_true_cost, er2.eval_rank,
+                       er2.can_rank, er2.quoted_design_fee, er2.design_scope_gap_cost, er2.true_design_fee,
+                       er2.quoted_supervision_fee, er2.supervision_gap_cost, er2.adjusted_supervision_fee
+                FROM cpa_evaluation_results er2
+                INNER JOIN (
+                  SELECT project_consultant_id, MAX(id) as max_id
+                  FROM cpa_evaluation_results
+                  GROUP BY project_consultant_id
+                ) mx ON er2.id = mx.max_id
+              )
+              SELECT pc.*, cm.legal_name, cm.trade_name, cm.code as consultant_code,
+                     ler.total_true_cost, ler.eval_rank as result_rank, ler.can_rank, ler.quoted_design_fee,
+                     ler.design_scope_gap_cost, ler.true_design_fee,
+                     ler.quoted_supervision_fee, ler.supervision_gap_cost, ler.adjusted_supervision_fee
               FROM cpa_project_consultants pc
               JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id
-              LEFT JOIN cpa_evaluation_results er ON er.project_consultant_id = pc.id
-                AND er.id = (SELECT MAX(er2.id) FROM cpa_evaluation_results er2 WHERE er2.project_consultant_id = pc.id)
+              LEFT JOIN latest_er ler ON ler.project_consultant_id = pc.id
               WHERE pc.cpa_project_id = ${input.cpaProjectId}
-              ORDER BY COALESCE(er.result_rank, 999), pc.created_at`
+              ORDER BY COALESCE(ler.eval_rank, 999), pc.created_at`
         );
       }),
 
@@ -1230,7 +1240,7 @@ export const cpaRouter = router({
               JOIN cpa_project_consultants pc ON pc.id = er.project_consultant_id
               JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id
               WHERE pc.cpa_project_id = ${input.cpaProjectId}
-              ORDER BY COALESCE(er.result_rank, 999), er.total_true_cost`
+              ORDER BY COALESCE(er.eval_rank, 999), er.total_true_cost`
         );
         return rows.map((r: any) => ({
           ...r,

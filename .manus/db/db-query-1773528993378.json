@@ -1,0 +1,70 @@
+{
+  "query": "SELECT id, code, legal_name, is_active FROM cpa_consultants_master ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, code, legal_name, is_active FROM cpa_consultants_master ORDER BY id;",
+  "rows": [
+    {
+      "id": "1",
+      "code": "OSUS",
+      "legal_name": "Osus International",
+      "is_active": "1"
+    },
+    {
+      "id": "2",
+      "code": "REALISTI",
+      "legal_name": "Realistic Engineering",
+      "is_active": "1"
+    },
+    {
+      "id": "3",
+      "code": "DEC",
+      "legal_name": "DATUM Engineering Consultants",
+      "is_active": "1"
+    },
+    {
+      "id": "4",
+      "code": "AAEC",
+      "legal_name": "ARTEC Architectural & Engineering Consultants",
+      "is_active": "1"
+    },
+    {
+      "id": "5",
+      "code": "ABCAE",
+      "legal_name": "Arif & Bintoak Consulting Architects & Engineers",
+      "is_active": "1"
+    },
+    {
+      "id": "6",
+      "code": "ALDEC",
+      "legal_name": "Al Diwan Engineering Consultants",
+      "is_active": "1"
+    },
+    {
+      "id": "7",
+      "code": "LACASA",
+      "legal_name": "LACASA",
+      "is_active": "1"
+    },
+    {
+      "id": "8",
+      "code": "XYZ",
+      "legal_name": "XYZ Designers",
+      "is_active": "1"
+    },
+    {
+      "id": "9",
+      "code": "KIEFERLE",
+      "legal_name": "Kieferle & Partner",
+      "is_active": "1"
+    },
+    {
+      "id": "10",
+      "code": "SEC(",
+      "legal_name": "Safeer Engineering Consultants (SEC)",
+      "is_active": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcode\tlegal_name\tis_active\n1\tOSUS\tOsus International\t1\n2\tREALISTI\tRealistic Engineering\t1\n3\tDEC\tDATUM Engineering Consultants\t1\n4\tAAEC\tARTEC Architectural & Engineering Consultants\t1\n5\tABCAE\tArif & Bintoak Consulting Architects & Engineers\t1\n6\tALDEC\tAl Diwan Engineering Consultants\t1\n7\tLACASA\tLACASA\t1\n8\tXYZ\tXYZ Designers\t1\n9\tKIEFERLE\tKieferle & Partner\t1\n10\tSEC(\tSafeer Engineering Consultants (SEC)\t1\n",
+  "stderr": "",
+  "execution_time_ms": 1779
+}

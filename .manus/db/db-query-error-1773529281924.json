@@ -1,0 +1,12 @@
+{
+  "query": "SELECT * FROM cpa_projects; SELECT COUNT(*) as consultant_count FROM cpa_project_consultants; SELECT COUNT(*) as master_count FROM consultant_master_list;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT * FROM cpa_projects; SELECT COUNT(*) as consultant_count FROM cpa_project_consultants; SELECT COUNT(*) as master_count FROM consultant_master_list;",
+  "returncode": 1,
+  "logs": [
+    "id\tproject_id\tplot_number\tlocation\tproject_type\tdescription\tbua_sqft\tbuilding_category_id\tconstruction_cost_per_sqft\tduration_months\tstatus\tcreated_at\tupdated_at",
+    "90001\t2\t6457879\tMaj-M\tMIXED_USE\tNULL\t875300.00\t30010\t345.00\t36\tACTIVE\t2026-03-14 22:54:09\t2026-03-14 22:54:09",
+    "consultant_count",
+    "3",
+    "ERROR 1146 (42S02) at line 1: Table 'q366eayg4q7iam8vuammfx.consultant_master_list' doesn't exist"
+  ]
+}

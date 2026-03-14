@@ -1881,7 +1881,7 @@ export const cpaEvaluationResults = mysqlTable("cpa_evaluation_results", {
   supervisionGapCost: decimal({ precision: 15, scale: 2 }),
   adjustedSupervisionFee: decimal({ precision: 15, scale: 2 }),
   totalTrueCost: decimal({ precision: 15, scale: 2 }),
-  rank: int(),
+  evalRank: int(),
   canRank: tinyint().notNull().default(1),
   calculationNotes: longtext(),
   calculatedAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),

@@ -2509,3 +2509,4 @@
 - [ ] إنشاء tRPC procedure لحذف المشروع وكل بياناته المرتبطة
 - [x] Fix duplicate React keys (90001-90005) in consultant list - LEFT JOIN returns multiple rows per consultant
 - [x] Fix delete project SQL error - wrong column name in cpa_evaluation_results
+- [ ] Fix: Cannot add consultants to a CPA project

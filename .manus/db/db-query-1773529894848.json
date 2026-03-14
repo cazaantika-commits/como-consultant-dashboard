@@ -1,0 +1,40 @@
+{
+  "query": "WITH latest_er AS (SELECT er2.id, er2.project_consultant_id, er2.total_true_cost, er2.eval_rank, er2.can_rank, er2.quoted_design_fee, er2.design_scope_gap_cost, er2.true_design_fee, er2.quoted_supervision_fee, er2.supervision_gap_cost, er2.adjusted_supervision_fee FROM cpa_evaluation_results er2 INNER JOIN (SELECT project_consultant_id, MAX(id) as max_id FROM cpa_evaluation_results GROUP BY project_consultant_id) mx ON er2.id = mx.max_id) SELECT pc.id, pc.consultant_id, pc.status, cm.legal_name, cm.code as consultant_code, ler.total_true_cost, ler.eval_rank as result_rank, ler.can_rank FROM cpa_project_consultants pc JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id LEFT JOIN latest_er ler ON ler.project_consultant_id = pc.id WHERE pc.cpa_project_id = 90001 ORDER BY COALESCE(ler.eval_rank, 999), pc.created_at;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute WITH latest_er AS (SELECT er2.id, er2.project_consultant_id, er2.total_true_cost, er2.eval_rank, er2.can_rank, er2.quoted_design_fee, er2.design_scope_gap_cost, er2.true_design_fee, er2.quoted_supervision_fee, er2.supervision_gap_cost, er2.adjusted_supervision_fee FROM cpa_evaluation_results er2 INNER JOIN (SELECT project_consultant_id, MAX(id) as max_id FROM cpa_evaluation_results GROUP BY project_consultant_id) mx ON er2.id = mx.max_id) SELECT pc.id, pc.consultant_id, pc.status, cm.legal_name, cm.code as consultant_code, ler.total_true_cost, ler.eval_rank as result_rank, ler.can_rank FROM cpa_project_consultants pc JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id LEFT JOIN latest_er ler ON ler.project_consultant_id = pc.id WHERE pc.cpa_project_id = 90001 ORDER BY COALESCE(ler.eval_rank, 999), pc.created_at;",
+  "rows": [
+    {
+      "id": "120001",
+      "consultant_id": "7",
+      "status": "DRAFT",
+      "legal_name": "LACASA",
+      "consultant_code": "LACASA",
+      "total_true_cost": "NULL",
+      "result_rank": "NULL",
+      "can_rank": "NULL"
+    },
+    {
+      "id": "120002",
+      "consultant_id": "3",
+      "status": "DRAFT",
+      "legal_name": "DATUM Engineering Consultants",
+      "consultant_code": "DEC",
+      "total_true_cost": "NULL",
+      "result_rank": "NULL",
+      "can_rank": "NULL"
+    },
+    {
+      "id": "120003",
+      "consultant_id": "3",
+      "status": "DRAFT",
+      "legal_name": "DATUM Engineering Consultants",
+      "consultant_code": "DEC",
+      "total_true_cost": "NULL",
+      "result_rank": "NULL",
+      "can_rank": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tconsultant_id\tstatus\tlegal_name\tconsultant_code\ttotal_true_cost\tresult_rank\tcan_rank\n120001\t7\tDRAFT\tLACASA\tLACASA\tNULL\tNULL\tNULL\n120002\t3\tDRAFT\tDATUM Engineering Consultants\tDEC\tNULL\tNULL\tNULL\n120003\t3\tDRAFT\tDATUM Engineering Consultants\tDEC\tNULL\tNULL\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1699
+}

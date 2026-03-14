@@ -1,0 +1,8 @@
+{
+  "query": "SELECT pc.*, cm.legal_name, cm.trade_name, cm.code as consultant_code, er.total_true_cost, er.`rank` as result_rank, er.can_rank, er.quoted_design_fee, er.design_scope_gap_cost, er.true_design_fee, er.quoted_supervision_fee, er.supervision_gap_cost, er.adjusted_supervision_fee FROM cpa_project_consultants pc JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id LEFT JOIN cpa_evaluation_results er ON er.project_consultant_id = pc.id WHERE pc.cpa_project_id = 90001 AND (er.id IS NULL OR er.id = (SELECT MAX(er2.id) FROM cpa_evaluation_results er2 WHERE er2.project_consultant_id = pc.id)) ORDER BY COALESCE(er.`rank`, 999), pc.created_at;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT pc.*, cm.legal_name, cm.trade_name, cm.code as consultant_code, er.total_true_cost, er.`rank` as result_rank, er.can_rank, er.quoted_design_fee, er.design_scope_gap_cost, er.true_design_fee, er.quoted_supervision_fee, er.supervision_gap_cost, er.adjusted_supervision_fee FROM cpa_project_consultants pc JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id LEFT JOIN cpa_evaluation_results er ON er.project_consultant_id = pc.id WHERE pc.cpa_project_id = 90001 AND (er.id IS NULL OR er.id = (SELECT MAX(er2.id) FROM cpa_evaluation_results er2 WHERE er2.project_consultant_id = pc.id)) ORDER BY COALESCE(er.`rank`, 999), pc.created_at;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'er.rank' in 'order clause'"
+  ]
+}

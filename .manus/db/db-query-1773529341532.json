@@ -1,0 +1,25 @@
+{
+  "query": "SELECT * FROM cpa_projects WHERE id = 90001;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT * FROM cpa_projects WHERE id = 90001;",
+  "rows": [
+    {
+      "id": "90001",
+      "project_id": "2",
+      "plot_number": "6457879",
+      "location": "Maj-M",
+      "project_type": "MIXED_USE",
+      "description": "NULL",
+      "bua_sqft": "875300.00",
+      "building_category_id": "30010",
+      "construction_cost_per_sqft": "345.00",
+      "duration_months": "36",
+      "status": "ACTIVE",
+      "created_at": "2026-03-14 22:54:09",
+      "updated_at": "2026-03-14 22:54:09"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tproject_id\tplot_number\tlocation\tproject_type\tdescription\tbua_sqft\tbuilding_category_id\tconstruction_cost_per_sqft\tduration_months\tstatus\tcreated_at\tupdated_at\n90001\t2\t6457879\tMaj-M\tMIXED_USE\tNULL\t875300.00\t30010\t345.00\t36\tACTIVE\t2026-03-14 22:54:09\t2026-03-14 22:54:09\n",
+  "stderr": "",
+  "execution_time_ms": 1569
+}
