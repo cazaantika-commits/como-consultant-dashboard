@@ -11,7 +11,7 @@
  *  6. Settings (admin)
  */
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { ScopeMatrixTable, ReferenceCostsTable, SupervisionBaselineTable } from "./CPASettingsMatrices";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
@@ -528,6 +528,22 @@ function ProjectDetailScreen({
   const consultants = consultantsQuery.data ?? [];
   const masterList = masterQuery.data ?? [];
   const totalCost = project ? project.bua_sqft * project.construction_cost_per_sqft : 0;
+
+  // Auto-run calculation when data is loaded but no results exist yet
+  const [autoCalcTriggered, setAutoCalcTriggered] = useState(false);
+  useEffect(() => {
+    if (
+      !autoCalcTriggered &&
+      !consultantsQuery.isLoading &&
+      !projectQuery.isLoading &&
+      consultants.length > 0 &&
+      !evalMutation.isPending &&
+      consultants.some((c: any) => c.design_fee_method && !c.total_true_cost)
+    ) {
+      setAutoCalcTriggered(true);
+      evalMutation.mutate({ cpaProjectId: projectId });
+    }
+  }, [consultantsQuery.isLoading, projectQuery.isLoading, consultants.length, autoCalcTriggered]);
 
   if (projectQuery.isLoading) return <div className="text-center py-12 text-muted-foreground">جاري التحميل...</div>;
   if (!project) return <div className="text-center py-12 text-red-500">المشروع غير موجود</div>;
