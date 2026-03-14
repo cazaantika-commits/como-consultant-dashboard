@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { ArrowRight, Layers } from "lucide-react";
@@ -179,6 +179,35 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
   const ROW_H       = 34;
   const GAP         = 8;   // gap between project pillars (px) — wide enough to show background
 
+  // Grouping: 1 = monthly, 3 = quarterly, 6 = semi-annual
+  const [groupBy, setGroupBy] = useState<1 | 3 | 6>(1);
+
+  // Build grouped rows: each row covers `groupBy` months
+  const groupedRows = useMemo(() => {
+    const numGroups = Math.ceil(TOTAL_MONTHS / groupBy);
+    return Array.from({ length: numGroups }, (_, gi) => {
+      const startIdx = gi * groupBy;
+      const endIdx   = Math.min(startIdx + groupBy - 1, TOTAL_MONTHS - 1);
+      // Label: first month label (if groupBy=1) or range
+      const label = groupBy === 1
+        ? getMonthLabel(startIdx)
+        : `${getMonthLabel(startIdx)} — ${getMonthLabel(endIdx)}`;
+      // Aggregate totals
+      const total = Array.from({ length: endIdx - startIdx + 1 }, (_, i) => monthlyTotals[startIdx + i] || 0)
+        .reduce((s, v) => s + v, 0);
+      // Per-project aggregated amounts and dominant phase
+      const colData = columns.map((col) => {
+        const amount = Array.from({ length: endIdx - startIdx + 1 }, (_, i) => col.monthlyAmounts[startIdx + i] || 0)
+          .reduce((s, v) => s + v, 0);
+        // Dominant phase: pick phase of middle month in group
+        const midIdx = startIdx + Math.floor((endIdx - startIdx) / 2);
+        const phase  = getPhase(col, midIdx);
+        return { colId: col.id, amount, phase };
+      });
+      return { gi, startIdx, endIdx, label, total, colData };
+    });
+  }, [columns, monthlyTotals, groupBy]);
+
   const isLoading = projectsQuery.isLoading || allMoQuery.isLoading || allCpQuery.isLoading;
   const grandTotal = Object.values(monthlyTotals).reduce((s, v) => s + v, 0);
 
@@ -229,6 +258,29 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
               {TOTAL_MONTHS} شهراً · ابتداءً من أبريل 2026 · {projects.length} مشروع
             </p>
           </div>
+        </div>
+
+        {/* Grouping buttons */}
+        <div className="flex items-center gap-2">
+          {([1, 3, 6] as const).map((g) => (
+            <button
+              key={g}
+              onClick={() => setGroupBy(g)}
+              style={{
+                padding: "5px 14px",
+                borderRadius: 8,
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: "pointer",
+                border: groupBy === g ? "2px solid #f97316" : "2px solid #cbd5e1",
+                background: groupBy === g ? "#f97316" : "#f8fafc",
+                color: groupBy === g ? "#fff" : "#475569",
+                transition: "all 0.15s",
+              }}
+            >
+              {g === 1 ? "شهري" : g === 3 ? "ربع سنوي" : "نصف سنوي"}
+            </button>
+          ))}
         </div>
 
         {/* Legend */}
@@ -411,41 +463,34 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
             </tr>
           </thead>
           <tbody>
-            {Array.from({ length: TOTAL_MONTHS }, (_, absIdx) => {
-              const total   = monthlyTotals[absIdx] || 0;
-              const rowBg   = absIdx % 2 === 0 ? ROW_BG_EVEN : ROW_BG_ODD;
-
+            {groupedRows.map((row) => {
+              const rowBg = row.gi % 2 === 0 ? ROW_BG_EVEN : ROW_BG_ODD;
+              const rowH  = groupBy === 1 ? ROW_H : groupBy === 3 ? 44 : 52;
               return (
-                <tr key={absIdx} style={{ height: ROW_H, background: rowBg }}>
+                <tr key={row.gi} style={{ height: rowH, background: rowBg }}>
                   {/* Project pillar cells */}
-                  {columns.map((col, ci) => {
-                    const phase  = getPhase(col, absIdx);
-                    const amount = col.monthlyAmounts[absIdx] || 0;
-
-                    // Pillar background: phase color if active, else semi-transparent white
-                    const pillarBg    = phase ? PHASE_BG[phase] : PILLAR_INACTIVE;
-                    const textColor   = phase ? PHASE_TEXT[phase] : "#475569";
-                    const borderColor = phase ? "rgba(0,0,0,0.12)" : "rgba(0,0,0,0.06)";
-
+                  {row.colData.map((cd, ci) => {
+                    const pillarBg  = cd.phase ? PHASE_BG[cd.phase] : PILLAR_INACTIVE;
+                    const textColor = cd.phase ? PHASE_TEXT[cd.phase] : "#475569";
+                    const borderColor = cd.phase ? "rgba(0,0,0,0.12)" : "rgba(0,0,0,0.06)";
                     return (
                       <td
-                        key={col.id}
+                        key={cd.colId}
                         style={{
                           width: COL_W,
                           minWidth: COL_W,
                           background: pillarBg,
-                          // Gap between pillars — shows row background color through
                           borderLeft: ci < columns.length - 1 ? `${GAP}px solid ${rowBg}` : "none",
                           borderTop: `1px solid ${borderColor}`,
                           borderBottom: `1px solid ${borderColor}`,
                           padding: "0 6px",
                           textAlign: "center",
                           fontSize: 11,
-                          fontWeight: amount > 0 ? 700 : 400,
-                          color: amount > 0 ? textColor : (phase ? "rgba(0,0,0,0.25)" : "transparent"),
+                          fontWeight: cd.amount > 0 ? 700 : 400,
+                          color: cd.amount > 0 ? textColor : (cd.phase ? "rgba(0,0,0,0.25)" : "transparent"),
                         }}
                       >
-                        {amount > 0 ? fmtCell(amount) : (phase ? "—" : "")}
+                        {cd.amount > 0 ? fmtCell(cd.amount) : (cd.phase ? "—" : "")}
                       </td>
                     );
                   })}
@@ -455,18 +500,19 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                     style={{
                       width: DATE_COL_W,
                       minWidth: DATE_COL_W,
-                      fontSize: 10,
+                      fontSize: groupBy === 1 ? 10 : 9,
                       fontWeight: 600,
                       color: "#1e293b",
-                      padding: "0 6px",
+                      padding: "0 4px",
                       textAlign: "center",
                       borderLeft: "3px solid #64748b",
                       borderRight: "3px solid #64748b",
-                      background: absIdx % 2 === 0 ? "#cbd5e1" : "#b0bec5",
-                      whiteSpace: "nowrap",
+                      background: row.gi % 2 === 0 ? "#cbd5e1" : "#b0bec5",
+                      whiteSpace: groupBy === 1 ? "nowrap" : "normal",
+                      lineHeight: 1.3,
                     }}
                   >
-                    {getMonthLabel(absIdx)}
+                    {row.label}
                   </td>
 
                   {/* Total cell */}
@@ -474,16 +520,16 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                     style={{
                       width: TOTAL_COL_W,
                       minWidth: TOTAL_COL_W,
-                      background: total > 0 ? "#fef3c7" : rowBg,
+                      background: row.total > 0 ? "#fef3c7" : rowBg,
                       borderRight: "3px solid #f59e0b",
                       padding: "0 6px",
                       textAlign: "center",
                       fontSize: 11,
-                      fontWeight: total > 0 ? 800 : 400,
-                      color: total > 0 ? "#f59e0b" : "transparent",
+                      fontWeight: row.total > 0 ? 800 : 400,
+                      color: row.total > 0 ? "#f59e0b" : "transparent",
                     }}
                   >
-                    {total > 0 ? fmtCell(total) : ""}
+                    {row.total > 0 ? fmtCell(row.total) : ""}
                   </td>
                 </tr>
               );
