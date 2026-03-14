@@ -61,11 +61,8 @@ async function runCalculationEngine(cpaProjectId: number) {
 
   const totalConstructionCost =
     toNum(proj.bua_sqft) * toNum(proj.construction_cost_per_sqft);
-  // Use category supervision duration (from building category settings)
-  // Falls back to project duration_months if category not resolved yet
-  const durationMonths = proj.cat_supervision_months
-    ? toNum(proj.cat_supervision_months)
-    : toNum(proj.duration_months);
+  // Use project's actual duration_months for fee adjustment calculations
+  const durationMonths = toNum(proj.duration_months);
 
   // Step 2: Mandatory scope items for this category
   const mandatoryItems = catId
@@ -79,7 +76,8 @@ async function runCalculationEngine(cpaProjectId: number) {
               ON src.scope_item_id = scm.scope_item_id
               AND src.building_category_id = scm.building_category_id
             WHERE scm.building_category_id = ${catId}
-              AND scm.status IN ('INCLUDED', 'GREEN')`
+              AND scm.status IN ('INCLUDED', 'GREEN')
+              AND si.item_number NOT IN (10, 11, 12, 13, 44, 45, 46, 47)`
       )
     : [];
 
@@ -209,26 +207,26 @@ async function runCalculationEngine(cpaProjectId: number) {
         }
       }
 
-      // Supervision gap
+      // Supervision gap — ONLY for MONTHLY_RATE (per spec Section 3A/3B: no team gap for LUMP_SUM or PERCENTAGE)
       let supervisionGapCost = 0;
-      for (const baseline of supervisionBaseline) {
-        const roleId = Number(baseline.supervision_role_id);
-        const required = toNum(baseline.required_allocation_pct);
-        const proposed = toNum(teamMap[roleId]?.proposed_allocation_pct ?? 0);
-        if (proposed < required) {
-          const gapPct = required - proposed;
-          const gapMonths = durationMonths * (gapPct / 100);
-          const gapCost = toNum(baseline.monthly_rate_aed) * gapMonths;
-          supervisionGapCost += gapCost;
-          notes.supervisionGaps.push({
-            roleCode: baseline.code,
-            roleLabel: baseline.label,
-            required,
-            proposed,
-            gapPct,
-            gapMonths,
-            gapCost,
-          });
+      if (consultant.supervision_fee_method === "MONTHLY_RATE") {
+        for (const baseline of supervisionBaseline) {
+          const roleId = Number(baseline.supervision_role_id);
+          const required = toNum(baseline.required_allocation_pct);
+          const proposed = toNum(teamMap[roleId]?.proposed_allocation_pct ?? 0);
+          if (proposed < required) {
+            const gapPct = required - proposed;
+            const gapCost = toNum(baseline.monthly_rate_aed) * durationMonths * (gapPct / 100);
+            supervisionGapCost += gapCost;
+            notes.supervisionGaps.push({
+              roleCode: baseline.code,
+              roleLabel: baseline.label,
+              required,
+              proposed,
+              gapPct,
+              gapCost,
+            });
+          }
         }
       }
 

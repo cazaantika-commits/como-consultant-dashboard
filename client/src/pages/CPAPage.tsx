@@ -50,6 +50,8 @@ import {
   Shield,
   Layers,
   Loader2,
+  Copy,
+  MessageSquare,
 } from "lucide-react";
 
 // ---- Types ----------------------------------------------------------------
@@ -621,6 +623,97 @@ function ProjectDetailScreen({
               الاستشاريون ({consultants.length})
             </CardTitle>
             <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1 border-violet-200 text-violet-700 hover:bg-violet-50"
+                onClick={() => {
+                  const catLabel = project.category_label ?? "غير محدد";
+                  const totalCostFmt = (project.bua_sqft * project.construction_cost_per_sqft).toLocaleString("en-US", { maximumFractionDigits: 0 });
+                  const consultantList = consultants.map((c: any, i: number) => `${i + 1}. ${c.trade_name ?? c.consultant_code}`).join("\n");
+                  const scopeItems = [
+                    "29. Green Building / Sustainability",
+                    "30. 3rd Party Structural Audit",
+                    "31. Security Design / SIRA",
+                    "32. Vertical Transportation",
+                    "33. BMU — Facade Maintenance",
+                    "34. Facade Engineering",
+                    "35. Wind Tunnel Study",
+                    "36. AV & ELV Design",
+                    "37. FLS Specialist",
+                    "38. Facade Lighting",
+                    "39. Traffic Impact Study (TIS)",
+                    "40. Acoustic & Vibration",
+                    "41. LEED Certification",
+                    "42. Cost Management",
+                    "43. Value Engineering",
+                  ].join("\n");
+                  const msg = `طلب قراءة عروض استشارية — نظام كومو للتقييم المالي
+
+بيانات المشروع:
+- اسم المشروع: ${project.project_name}
+- رقم القطعة: ${project.plot_number ?? "—"}
+- فئة المبنى: ${catLabel}
+- المساحة الإجمالية (BUA): ${Number(project.bua_sqft).toLocaleString("en-US")} قدم²
+- تكلفة الإنشاء الإجمالية: AED ${totalCostFmt}
+- مدة المشروع: ${project.duration_months} شهر
+
+الاستشاريون المطلوب تقييمهم:
+${consultantList}
+
+المطلوب:
+لكل استشاري من القائمة أعلاه، اقرأ عرضه وأرجع ملف JSON بالتنسيق التالي:
+
+{
+  "consultant_code": "كود_الاستشاري",
+  "proposal_date": "YYYY-MM-DD",
+  "proposal_reference": "رقم المرجع",
+  "design_fee": {
+    "method": "LUMP_SUM أو PERCENTAGE أو MONTHLY_RATE",
+    "amount": 0,
+    "percentage": null
+  },
+  "supervision_fee": {
+    "submitted": true,
+    "method": "LUMP_SUM أو PERCENTAGE أو MONTHLY_RATE",
+    "amount": 0,
+    "stated_duration_months": ${project.duration_months}
+  },
+  "scope_coverage": [
+    { "item_number": 29, "status": "INCLUDED أو EXCLUDED" },
+    { "item_number": 30, "status": "INCLUDED أو EXCLUDED" },
+    { "item_number": 31, "status": "INCLUDED أو EXCLUDED" },
+    { "item_number": 32, "status": "INCLUDED أو EXCLUDED" },
+    { "item_number": 33, "status": "INCLUDED أو EXCLUDED" },
+    { "item_number": 34, "status": "INCLUDED أو EXCLUDED" },
+    { "item_number": 35, "status": "INCLUDED أو EXCLUDED" },
+    { "item_number": 36, "status": "INCLUDED أو EXCLUDED" },
+    { "item_number": 37, "status": "INCLUDED أو EXCLUDED" },
+    { "item_number": 38, "status": "INCLUDED أو EXCLUDED" },
+    { "item_number": 39, "status": "INCLUDED أو EXCLUDED" },
+    { "item_number": 40, "status": "INCLUDED أو EXCLUDED" },
+    { "item_number": 41, "status": "INCLUDED أو EXCLUDED" },
+    { "item_number": 42, "status": "INCLUDED أو EXCLUDED" },
+    { "item_number": 43, "status": "INCLUDED أو EXCLUDED" }
+  ]
+}
+
+قائمة البنود المتخصصة للمراجعة:
+${scopeItems}
+
+ملاحظات:
+- status = INCLUDED: الاستشاري يشمل هذا البند في عرضه
+- status = EXCLUDED: الاستشاري استثنى هذا البند أو لم يذكره
+- إذا لم يقدم الاستشاري عرض إشراف: supervision_fee.submitted = false
+- لا تحسب أي أرقام — فقط استخرج البيانات من العرض كما هي`;
+                  navigator.clipboard.writeText(msg).then(() => {
+                    toast({ title: "✅ تم نسخ الطلب", description: "الصقه في Claude الآن" });
+                  });
+                }}
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                نسخ طلب Claude
+              </Button>
               <Button size="sm" variant="outline" onClick={() => setShowAdd(true)}>
                 <Plus className="w-3.5 h-3.5 ml-1" />
                 إضافة
