@@ -49,10 +49,15 @@ interface ProjectColumn {
   preDevMonths: number;
   constructionMonths: number;
   handoverMonths: number;
-  /** monthly developer outflow indexed from month 0 of the project */
-  monthlyDeveloperOutflow: number[];
-  totalCapital: number;
-  paidCapital: number;
+  /**
+   * Monthly investor outflow from getCapitalScheduleData:
+   * index 0 = land purchase (FIXED_ABSOLUTE, placed 1 month before project start)
+   * index 1..N = project months 1..N (month 1 = first pre-dev month)
+   */
+  monthlyAmounts: number[];
+  grandTotal: number;
+  paidTotal: number;
+  upcomingTotal: number;
 }
 
 interface DelayState {
@@ -65,13 +70,14 @@ interface Props {
   onBack?: () => void;
 }
 
-// Convert a project's relative month index to an absolute chart index (0 = Apr 2026)
+// Convert a project's relative month index (0-based) to an absolute chart index (0 = Apr 2026)
 function projectMonthToChartIndex(
   startDate: string,
-  relativeMonth: number // 0-based
+  relativeMonth: number
 ): number {
-  const [sy, sm] = startDate.split("-").map(Number);
-  // chart starts at April 2026 = month index 0
+  const parts = startDate.split("-").map(Number);
+  const sy = parts[0];
+  const sm = parts[1] || 4;
   const chartStartYear = 2026;
   const chartStartMonth = 4; // April
   const absYear = sy + Math.floor((sm - 1 + relativeMonth) / 12);
@@ -88,8 +94,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
   );
 
   const rawData = useMemo(() => scheduleQuery.data || [], [scheduleQuery.data]);
-
-  const baseColumns = useMemo<ProjectColumn[]>(() => rawData, [rawData]);
+  const baseColumns = useMemo<ProjectColumn[]>(() => rawData as ProjectColumn[], [rawData]);
 
   const [delays, setDelays] = useState<Record<number, DelayState>>({});
 
@@ -116,38 +121,47 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
   }
 
   // Build effective columns with delay applied
+  // monthlyAmounts from API:
+  //   index 0 = land (FIXED_ABSOLUTE) → placed 1 month before project start
+  //   index 1..N = project months 1..N (relIdx 0..N-1)
   const effectiveColumns = useMemo(() => {
     return baseColumns.map((col) => {
       const { fullDelay, constructionDelay } = getDelay(col.cfProjectId);
-      const preDevEnd = col.preDevMonths; // relative month index (1-based end)
+      const chartAmounts: Record<number, number> = {};
 
-      const monthlyAmounts: Record<number, number> = {};
-      col.monthlyDeveloperOutflow.forEach((val, relIdx) => {
+      col.monthlyAmounts.forEach((val, idx) => {
         if (val <= 0) return;
         let chartIdx: number;
-        // relIdx is 0-based; months 0..(preDevMonths-1) are pre-dev
-        if (relIdx < col.preDevMonths) {
-          // Pre-dev phase: shift by fullDelay only
-          const baseChartIdx = projectMonthToChartIndex(col.startDate, relIdx);
+        if (idx === 0) {
+          // Land: 1 month before project start, shift by fullDelay only
+          const baseChartIdx = projectMonthToChartIndex(col.startDate, 0) - 1;
           chartIdx = baseChartIdx + fullDelay;
         } else {
-          // Construction/handover phase: shift by fullDelay + constructionDelay
-          const baseChartIdx = projectMonthToChartIndex(col.startDate, relIdx);
-          chartIdx = baseChartIdx + fullDelay + constructionDelay;
+          // idx 1..N → relIdx 0..(N-1)
+          const relIdx = idx - 1;
+          if (relIdx < col.preDevMonths) {
+            // Pre-dev: shift by fullDelay only
+            const baseChartIdx = projectMonthToChartIndex(col.startDate, relIdx);
+            chartIdx = baseChartIdx + fullDelay;
+          } else {
+            // Construction/handover: shift by fullDelay + constructionDelay
+            const baseChartIdx = projectMonthToChartIndex(col.startDate, relIdx);
+            chartIdx = baseChartIdx + fullDelay + constructionDelay;
+          }
         }
         if (chartIdx >= 0 && chartIdx < TOTAL_MONTHS) {
-          monthlyAmounts[chartIdx] = (monthlyAmounts[chartIdx] || 0) + val;
+          chartAmounts[chartIdx] = (chartAmounts[chartIdx] || 0) + val;
         }
       });
 
-      return { ...col, monthlyAmounts, fullDelay, constructionDelay };
+      return { ...col, chartAmounts, fullDelay, constructionDelay };
     });
   }, [baseColumns, delays]);
 
   const monthlyTotals = useMemo(() => {
     const totals: Record<number, number> = {};
     for (const col of effectiveColumns) {
-      for (const [absIdx, val] of Object.entries(col.monthlyAmounts)) {
+      for (const [absIdx, val] of Object.entries(col.chartAmounts)) {
         const idx = parseInt(absIdx);
         totals[idx] = (totals[idx] || 0) + val;
       }
@@ -158,7 +172,6 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
   // Determine phase for a given chart index, considering delays
   function getPhase(col: typeof effectiveColumns[0], chartIdx: number): string | null {
     const { fullDelay, constructionDelay } = col;
-    // Base chart index of project start
     const baseStart = projectMonthToChartIndex(col.startDate, 0);
     const preDevStart  = baseStart + fullDelay;
     const preDevEnd    = preDevStart + col.preDevMonths - 1;
@@ -185,7 +198,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
       const total = Array.from({ length: endIdx - startIdx + 1 }, (_, i) => monthlyTotals[startIdx + i] || 0)
         .reduce((s, v) => s + v, 0);
       const colData = effectiveColumns.map((col) => {
-        const amount = Array.from({ length: endIdx - startIdx + 1 }, (_, i) => col.monthlyAmounts[startIdx + i] || 0)
+        const amount = Array.from({ length: endIdx - startIdx + 1 }, (_, i) => col.chartAmounts[startIdx + i] || 0)
           .reduce((s, v) => s + v, 0);
         const midIdx = startIdx + Math.floor((endIdx - startIdx) / 2);
         const phase  = getPhase(col, midIdx);
@@ -336,7 +349,6 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
               {effectiveColumns.map((col, ci) => {
                 const delay    = getDelay(col.cfProjectId);
                 const hasDelay = delay.fullDelay > 0 || delay.constructionDelay > 0;
-                const remaining = col.totalCapital - col.paidCapital;
                 return (
                   <th
                     key={col.cfProjectId}
@@ -360,7 +372,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       {col.name}
                     </div>
 
-                    {/* Capital summary */}
+                    {/* Capital summary: grandTotal / paidTotal / upcomingTotal */}
                     <div style={{
                       background: "rgba(255,255,255,0.1)",
                       borderRadius: 6, padding: "4px 6px", marginBottom: 6,
@@ -368,15 +380,15 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                     }}>
                       <div style={{ display: "flex", justifyContent: "space-between", gap: 4 }}>
                         <span style={{ color: "#94a3b8" }}>الإجمالي:</span>
-                        <span style={{ fontWeight: 800, color: "#fbbf24" }}>{fmtFull(col.totalCapital)}</span>
+                        <span style={{ fontWeight: 800, color: "#fbbf24" }}>{fmtFull(col.grandTotal)}</span>
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", gap: 4 }}>
                         <span style={{ color: "#94a3b8" }}>المدفوع:</span>
-                        <span style={{ fontWeight: 700, color: "#4ade80" }}>{fmtFull(col.paidCapital)}</span>
+                        <span style={{ fontWeight: 700, color: "#4ade80" }}>{fmtFull(col.paidTotal)}</span>
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", gap: 4, borderTop: "1px solid rgba(255,255,255,0.15)", paddingTop: 3, marginTop: 2 }}>
                         <span style={{ color: "#94a3b8" }}>المطلوب:</span>
-                        <span style={{ fontWeight: 800, color: "#f87171" }}>{fmtFull(remaining)}</span>
+                        <span style={{ fontWeight: 800, color: "#f87171" }}>{fmtFull(col.upcomingTotal)}</span>
                       </div>
                     </div>
 

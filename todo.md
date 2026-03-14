@@ -2499,3 +2499,5 @@
 - [x] إعادة كتابة CapitalSchedulingPage لاستخدام getCapitalScheduleData بدلاً من cashFlowEngine القديم
 - [x] إصلاح حساب الأرقام الشهرية: الآن يستخدم developerOutflow (صافي تمويل المستثمر) بدلاً من مجموع cf_cost_items.totalAmount
 - [x] إصلاح حساب تحديد المرحلة (pre-dev / construction / handover) بناءً على startDate الفعلي للمشروع
+- [x] إصلاح جذري: استبدال calculateDualCashFlow بـ computeProjectCapital (من investorCashFlow.ts) لتطابق أرقام صفحة "رأس المال المطلوب" بالضبط (41.49M لند الشبا)
+- [x] المعادلة الصحيحة: إجمالي التكاليف − رسوم الجهات الحكومية − أتعاب الإشراف − عمولة وكيل المبيعات − تقارير ريرا − 70% من تكلفة الإنشاء

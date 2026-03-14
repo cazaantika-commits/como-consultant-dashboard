@@ -4,6 +4,7 @@ import { getDb } from "../db";
 import { cfProjects, cfCostItems, cfScenarios, cfFiles, projects, costsCashFlow, projectPhases, phaseActivities, phaseCostLinks, competitionPricing, marketOverview, projectCapitalSettings } from "../../drizzle/schema";
 import { DEFAULT_AVG_AREAS } from "../../shared/feasibilityUtils";
 import { calculateDualCashFlow, type CostItemInput, type ProjectInput } from './cashFlowEngine';
+import { computeProjectCapital } from '../investorCashFlow';
 import { eq, and, desc } from "drizzle-orm";
 import { storagePut } from "../storage";
 
@@ -2539,9 +2540,10 @@ export const cashFlowProgramRouter = router({
     const db = await getDb();
     if (!db) return [];
 
-    const allProjs = await db.select().from(cfProjects)
+    // Get all cfProjects that have a linked project
+    const allCfProjs = await db.select().from(cfProjects)
       .where(eq(cfProjects.userId, ctx.user.id));
-    if (allProjs.length === 0) return [];
+    if (allCfProjs.length === 0) return [];
 
     const today = new Date();
     const results: Array<{
@@ -2552,90 +2554,59 @@ export const cashFlowProgramRouter = router({
       preDevMonths: number;
       constructionMonths: number;
       handoverMonths: number;
-      monthlyDeveloperOutflow: number[];
-      totalCapital: number;
-      paidCapital: number;
+      monthlyAmounts: number[];
+      grandTotal: number;
+      paidTotal: number;
+      upcomingTotal: number;
     }> = [];
 
-    for (const proj of allProjs) {
-      const items = await db.select().from(cfCostItems)
-        .where(eq(cfCostItems.cfProjectId, proj.id));
+    for (const cfProj of allCfProjs) {
+      // If no linked project, skip
+      if (!cfProj.projectId) continue;
 
-      const projectInput: ProjectInput = {
-        preDevMonths: proj.preDevMonths || 6,
-        constructionMonths: proj.constructionMonths || 16,
-        handoverMonths: proj.handoverMonths || 2,
-        startDate: proj.startDate || '2026-04-01',
-        salesEnabled: proj.salesEnabled === 1,
-        salesStartMonth: proj.salesStartMonth ?? undefined,
-        salesVelocityAed: proj.salesVelocityAed ?? undefined,
-        salesVelocityType: (proj.salesVelocityType as 'units' | 'aed') ?? 'aed',
-        totalSalesRevenue: proj.totalSalesRevenue ?? 0,
-        buyerPlanBookingPct: Number(proj.buyerPlanBookingPct) || 20,
-        buyerPlanConstructionPct: Number(proj.buyerPlanConstructionPct) || 30,
-        buyerPlanHandoverPct: Number(proj.buyerPlanHandoverPct) || 50,
-        escrowDepositPct: Number(proj.escrowDepositPct) || 20,
-        contractorAdvancePct: Number(proj.contractorAdvancePct) || 10,
-        liquidityBufferPct: Number(proj.liquidityBufferPct) || 5,
-        constructionCostTotal: proj.constructionCostTotal ?? 0,
-        buaSqft: proj.buaSqft ?? undefined,
-        constructionCostPerSqft: proj.constructionCostPerSqft ?? undefined,
-      };
+      // Fetch project, marketOverview, competitionPricing
+      const [projRows] = await db.select().from(projects)
+        .where(eq(projects.id, cfProj.projectId));
+      if (!projRows) continue;
 
-      const costItemInputs: CostItemInput[] = items.map(i => ({
-        id: String(i.id),
-        name: i.name,
-        category: i.category,
-        totalAmount: i.totalAmount || 0,
-        paymentType: i.paymentType,
-        paymentParams: i.paymentParams ? JSON.parse(i.paymentParams) : {},
-        phaseAllocation: i.phaseAllocation ? JSON.parse(i.phaseAllocation) : undefined,
-        fundingSource: i.fundingSource,
-        escrowEligible: i.escrowEligible === 1,
-        phaseTag: i.phaseTag,
-      }));
+      const [moRows] = await db.select().from(marketOverview)
+        .where(eq(marketOverview.projectId, cfProj.projectId));
+      const [cpRows] = await db.select().from(competitionPricing)
+        .where(eq(competitionPricing.projectId, cfProj.projectId));
 
-      let monthlyDeveloperOutflow: number[] = [];
-      let totalCapital = 0;
-      let paidCapital = 0;
+      const startDateStr = cfProj.startDate || '2026-04';
+      const data = computeProjectCapital(
+        projRows,
+        moRows || null,
+        cpRows || null,
+        {
+          startDate: startDateStr,
+          preDevMonths: cfProj.preDevMonths || 6,
+          constructionMonths: cfProj.constructionMonths || 16,
+          handoverMonths: cfProj.handoverMonths || 2,
+        },
+        today,
+      );
 
-      try {
-        const result = calculateDualCashFlow(projectInput, costItemInputs);
-        monthlyDeveloperOutflow = result.monthlyTable.map(r => r.developerOutflow);
-        const [startYear, startMonth] = (proj.startDate || '2026-04-01').split('-').map(Number);
-        result.monthlyTable.forEach((row, idx) => {
-          totalCapital += row.developerOutflow;
-          const rowYear = startYear + Math.floor((startMonth - 1 + idx) / 12);
-          const rowMonth = ((startMonth - 1 + idx) % 12) + 1;
-          const rowDate = new Date(rowYear, rowMonth - 1, 28);
-          if (rowDate < today) {
-            paidCapital += row.developerOutflow;
-          }
-        });
-      } catch (_e) {
-        // fallback: empty monthly data
-        monthlyDeveloperOutflow = [];
-        totalCapital = items.reduce((s, i) => s + (i.totalAmount || 0), 0);
-      }
+      if (!data) continue;
 
       results.push({
-        cfProjectId: proj.id,
-        projectId: proj.projectId ?? null,
-        name: proj.name,
-        startDate: proj.startDate || '2026-04-01',
-        preDevMonths: proj.preDevMonths || 6,
-        constructionMonths: proj.constructionMonths || 16,
-        handoverMonths: proj.handoverMonths || 2,
-        monthlyDeveloperOutflow,
-        totalCapital,
-        paidCapital,
+        cfProjectId: cfProj.id,
+        projectId: cfProj.projectId,
+        name: cfProj.name,
+        startDate: startDateStr,
+        preDevMonths: data.preDevMonths,
+        constructionMonths: data.constructionMonths,
+        handoverMonths: data.handoverMonths,
+        monthlyAmounts: data.monthlyAmounts,
+        grandTotal: data.grandTotal,
+        paidTotal: data.paidTotal,
+        upcomingTotal: data.upcomingTotal,
       });
     }
-
     return results;
   }),
-
-  // --- Capital Summary for All Projects (used by CapitalSchedulingPage) ---
+    // --- Capital Summary for All Projects (used by CapitalSchedulingPage) ---
   getCapitalSummaryAllProjects: publicProcedure.query(async ({ ctx }) => {
     if (!ctx.user) return [];
     const db = await getDb();
