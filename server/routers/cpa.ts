@@ -96,14 +96,14 @@ async function runCalculationEngine(cpaProjectId: number) {
       )
     : [];
 
-  // Step 4: All confirmed consultants
+  // Step 4: All consultants (including DRAFT)
   const consultants = await qRows<any>(
     db,
     sql`SELECT pc.*, cm.legal_name, cm.trade_name, cm.code as consultant_code
         FROM cpa_project_consultants pc
         JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id
         WHERE pc.cpa_project_id = ${cpaProjectId}
-          AND pc.status IN ('CONFIRMED', 'EVALUATED')`
+          AND pc.status IN ('DRAFT', 'CONFIRMED', 'EVALUATED')`
   );
 
   const results: any[] = [];
@@ -151,6 +151,11 @@ async function runCalculationEngine(cpaProjectId: number) {
       }
     }
 
+     // Supervision
+    let quotedSupervisionFee = 0;
+    let originalSupervisionFeeBeforeAdj = 0;
+    let canRank = 1;
+
     // Duration warning + adjustment (ملاحظة 3)
     const statedDuration = consultant.supervision_stated_duration_months
       ? toNum(consultant.supervision_stated_duration_months)
@@ -168,11 +173,6 @@ async function runCalculationEngine(cpaProjectId: number) {
         message: `مدة الإشراف المقدمة ${statedDuration} شهر — مدة المشروع ${durationMonths} شهر — السعر سيُعدَّل بمعامل ${durationAdjustmentFactor.toFixed(2)}`,
       };
     }
-
-    // Supervision
-    let quotedSupervisionFee = 0;
-    let originalSupervisionFeeBeforeAdj = 0;
-    let canRank = 1;
 
     if (!consultant.supervision_submitted) {
       canRank = 0;

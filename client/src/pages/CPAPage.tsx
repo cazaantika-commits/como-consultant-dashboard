@@ -49,6 +49,7 @@ import {
   Calculator,
   Shield,
   Layers,
+  Loader2,
 } from "lucide-react";
 
 // ---- Types ----------------------------------------------------------------
@@ -613,10 +614,19 @@ function ProjectDetailScreen({
                   size="sm"
                   onClick={() => evalMutation.mutate({ cpaProjectId: projectId })}
                   disabled={evalMutation.isPending}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white border-0"
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white border-0 min-w-[160px]"
                 >
-                  <Calculator className="w-3.5 h-3.5 ml-1" />
-                  {evalMutation.isPending ? "جاري الحساب..." : "احسب التكلفة الحقيقية"}
+                  {evalMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 ml-1 animate-spin" />
+                      جاري الحساب...
+                    </>
+                  ) : (
+                    <>
+                      <Calculator className="w-3.5 h-3.5 ml-1" />
+                      احسب التكلفة الحقيقية
+                    </>
+                  )}
                 </Button>
               )}
             </div>
