@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { ArrowRight, Layers } from "lucide-react";
+import { ArrowRight, Layers, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   calculatePhases,
@@ -29,14 +29,6 @@ function getMonthLabel(offset: number): string {
   return `${ARABIC_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-function getMonthOffset(dateStr: string | null | undefined): number {
-  if (!dateStr) return 0;
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return 0;
-  const diffMs = d.getTime() - CHART_START.getTime();
-  return Math.max(0, Math.round(diffMs / (1000 * 60 * 60 * 24 * 30.44)));
-}
-
 function fmtCell(n: number): string {
   if (n === 0) return "";
   if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -47,32 +39,42 @@ function fmtCell(n: number): string {
 interface ProjectColumn {
   id: number;
   name: string;
-  startOffset: number;
+  baseStartOffset: number;   // original start (always 0 = April 2026)
   preConMonths: number;
   constructionMonths: number;
-  monthlyAmounts: Record<number, number>;
-  // Capital summary (from cashflow engine)
-  totalCapital: number;
-  paidCapital: number;
-  remainingCapital: number;
+  relativeMonthly: Record<number, number>; // relative month → amount (before any delay)
+  durations: PhaseDurations;
 }
 
-// Phase colors — attractive olive/earthy palette
+// ── Colors ─────────────────────────────────────────────────────────────────
+// Phase colors
 const PHASE_BG: Record<string, string> = {
-  preCon:       "#8fbc5a", // olive green — ما قبل التنفيذ
-  construction: "#4a7c59", // deep forest green — الإنشاء
-  handover:     "#c9a84c", // warm gold — التسليم
+  preCon:       "#c8e6c9", // light green
+  construction: "#f8bbd0", // pink
+  handover:     "#ffe082", // amber
 };
 const PHASE_TEXT: Record<string, string> = {
-  preCon:       "#1a2e0a",
-  construction: "#ffffff",
-  handover:     "#1a1000",
+  preCon:       "#1b5e20",
+  construction: "#880e4f",
+  handover:     "#4e2500",
 };
-// Row background — warm cream alternating (earthy tone to complement olive)
-const ROW_BG_EVEN = "#f5f0e8";
-const ROW_BG_ODD  = "#ede7d9";
-// Pillar inner background — soft warm white
-const PILLAR_INACTIVE = "rgba(255,252,245,0.7)";
+// Column header: yellow-green gradient
+const COL_HEADER_BG = "linear-gradient(135deg, #d4e157, #aed581)";
+const COL_HEADER_TEXT = "#1b5e20";
+// Row backgrounds
+const ROW_BG_EVEN = "#ffffff";
+const ROW_BG_ODD  = "#f9f9f9";
+// Inactive pillar cell
+const PILLAR_INACTIVE = "rgba(255,255,255,0.85)";
+// Gap color: white
+const GAP_COLOR = "#ffffff";
+
+// ── Delay state ─────────────────────────────────────────────────────────────
+// delayMode: 'full' = shift entire project, 'construction' = shift construction phase only
+interface DelayState {
+  fullDelay: number;        // extra months added to entire project start
+  constructionDelay: number; // extra months added to construction start (on top of fullDelay)
+}
 
 interface Props {
   embedded?: boolean;
@@ -85,24 +87,21 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
   const allMoQuery    = trpc.marketOverview.getAllByUser.useQuery(undefined, { enabled: isAuthenticated, staleTime: 60000 });
   const allCpQuery    = trpc.competitionPricing.getAllByUser.useQuery(undefined, { enabled: isAuthenticated, staleTime: 60000 });
-  // Real capital data from cf_cost_items (أيقونة رأس المال المطلوب)
-  const capitalSummaryQuery = trpc.cashFlowProgram.getCapitalSummaryAllProjects.useQuery(undefined, { enabled: isAuthenticated, staleTime: 30000 });
 
   const projects = useMemo(() => projectsQuery.data || [], [projectsQuery.data]);
   const allMo    = useMemo(() => allMoQuery.data || [], [allMoQuery.data]);
   const allCp    = useMemo(() => allCpQuery.data || [], [allCpQuery.data]);
-  const capitalSummary = useMemo(() => capitalSummaryQuery.data || [], [capitalSummaryQuery.data]);
 
-  const columns = useMemo<ProjectColumn[]>(() => {
+  // Build base columns (without delay)
+  const baseColumns = useMemo<ProjectColumn[]>(() => {
     return projects.map((project) => {
-      const mo   = allMo.find((m: any) => m.projectId === project.id);
-      const cp   = allCp.find((c: any) => c.projectId === project.id);
+      const mo    = allMo.find((m: any) => m.projectId === project.id);
+      const cp    = allCp.find((c: any) => c.projectId === project.id);
       const costs = calculateProjectCosts(project, mo, cp);
 
       const preConMonths       = project.preConMonths ?? 6;
       const constructionMonths = project.constructionMonths ?? 16;
       const handoverMonths     = 2;
-
       const durations: PhaseDurations = { preCon: preConMonths, construction: constructionMonths, handover: handoverMonths };
       const phases   = calculatePhases(durations);
       const expenses = getInvestorExpenses(costs || undefined);
@@ -122,92 +121,128 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
         }
       }
 
-      const startOffset = getMonthOffset((project as any).constructionStartDate || null);
+      return {
+        id: project.id,
+        name: project.name,
+        baseStartOffset: 0, // all projects start April 2026
+        preConMonths,
+        constructionMonths,
+        relativeMonthly,
+        durations,
+      };
+    });
+  }, [projects, allMo, allCp]);
+
+  // Delay state per project
+  const [delays, setDelays] = useState<Record<number, DelayState>>({});
+
+  function getDelay(projectId: number): DelayState {
+    return delays[projectId] || { fullDelay: 0, constructionDelay: 0 };
+  }
+
+  function adjustFullDelay(projectId: number, delta: number) {
+    setDelays(prev => {
+      const cur = prev[projectId] || { fullDelay: 0, constructionDelay: 0 };
+      const newFull = Math.max(0, cur.fullDelay + delta);
+      return { ...prev, [projectId]: { ...cur, fullDelay: newFull } };
+    });
+  }
+
+  function adjustConstructionDelay(projectId: number, delta: number) {
+    setDelays(prev => {
+      const cur = prev[projectId] || { fullDelay: 0, constructionDelay: 0 };
+      const newConst = Math.max(0, cur.constructionDelay + delta);
+      return { ...prev, [projectId]: { ...cur, constructionDelay: newConst } };
+    });
+  }
+
+  // Build effective monthly amounts applying delays
+  const effectiveColumns = useMemo(() => {
+    return baseColumns.map((col) => {
+      const { fullDelay, constructionDelay } = getDelay(col.id);
+      const preConEnd = col.preConMonths;
+      const constrStart = preConEnd + 1;
+
       const monthlyAmounts: Record<number, number> = {};
-      for (const [rel, val] of Object.entries(relativeMonthly)) {
-        const absIdx = startOffset + parseInt(rel) - 1;
+      for (const [relStr, val] of Object.entries(col.relativeMonthly)) {
+        const rel = parseInt(relStr);
+        let absIdx: number;
+        if (rel <= preConEnd) {
+          // Pre-construction: shift by fullDelay only
+          absIdx = col.baseStartOffset + fullDelay + rel - 1;
+        } else {
+          // Construction + handover: shift by fullDelay + constructionDelay
+          absIdx = col.baseStartOffset + fullDelay + constructionDelay + rel - 1;
+        }
         if (absIdx >= 0 && absIdx < TOTAL_MONTHS) {
           monthlyAmounts[absIdx] = (monthlyAmounts[absIdx] || 0) + val;
         }
       }
 
-      // Capital summary: total, paid (months already passed), remaining
-      const projectStart = new Date(CHART_START);
-      projectStart.setMonth(projectStart.getMonth() + startOffset);
-      const totalMonths = getTotalMonths(durations);
-      let totalCapital = 0;
-      let paidCapital = 0;
-      for (let relM = 1; relM <= totalMonths; relM++) {
-        const monthAmt = relativeMonthly[relM] || 0;
-        totalCapital += monthAmt;
-        if (isMonthPaid(relM, projectStart)) {
-          paidCapital += monthAmt;
-        }
-      }
-      const remainingCapital = totalCapital - paidCapital;
-
-      return { id: project.id, name: project.name, startOffset, preConMonths, constructionMonths, monthlyAmounts, totalCapital, paidCapital, remainingCapital };
+      return { ...col, monthlyAmounts, fullDelay, constructionDelay };
     });
-  }, [projects, allMo, allCp]);
+  }, [baseColumns, delays]);
 
+  // Monthly totals across all projects
   const monthlyTotals = useMemo(() => {
     const totals: Record<number, number> = {};
-    for (const col of columns) {
+    for (const col of effectiveColumns) {
       for (const [absIdx, val] of Object.entries(col.monthlyAmounts)) {
         const idx = parseInt(absIdx);
         totals[idx] = (totals[idx] || 0) + val;
       }
     }
     return totals;
-  }, [columns]);
+  }, [effectiveColumns]);
 
-  function getPhase(col: ProjectColumn, absIdx: number): string | null {
-    const rel = absIdx - col.startOffset + 1;
-    if (rel < 1) return null;
-    if (rel <= col.preConMonths) return "preCon";
-    if (rel <= col.preConMonths + col.constructionMonths) return "construction";
-    if (rel <= col.preConMonths + col.constructionMonths + 2) return "handover";
+  // Get phase for a given absolute month index, considering delays
+  function getPhase(col: typeof effectiveColumns[0], absIdx: number): string | null {
+    const { fullDelay, constructionDelay } = col;
+    const preConStart  = col.baseStartOffset + fullDelay;
+    const preConEnd    = preConStart + col.preConMonths - 1;
+    const constrStart  = col.baseStartOffset + fullDelay + constructionDelay + col.preConMonths;
+    const constrEnd    = constrStart + col.constructionMonths - 1;
+    const handoverEnd  = constrEnd + 2;
+
+    if (absIdx >= preConStart && absIdx <= preConEnd) return "preCon";
+    if (absIdx >= constrStart && absIdx <= constrEnd) return "construction";
+    if (absIdx > constrEnd && absIdx <= handoverEnd) return "handover";
     return null;
   }
 
-  // Column widths — compact
-  const TOTAL_COL_W = 90;  // leftmost: الإجمالي الشهري
-  const DATE_COL_W  = 90;  // second from left: الشهر
-  const COL_W       = 90;  // each project
+  // Column widths
+  const TOTAL_COL_W = 90;
+  const DATE_COL_W  = 90;
+  const COL_W       = 90;
   const ROW_H       = 34;
-  const GAP         = 24;  // gap between project pillars (px) — wide enough to show background
+  const GAP         = 24;
 
   // Grouping: 1 = monthly, 3 = quarterly, 6 = semi-annual
   const [groupBy, setGroupBy] = useState<1 | 3 | 6>(1);
 
-  // Build grouped rows: each row covers `groupBy` months
+  // Build grouped rows
   const groupedRows = useMemo(() => {
     const numGroups = Math.ceil(TOTAL_MONTHS / groupBy);
     return Array.from({ length: numGroups }, (_, gi) => {
       const startIdx = gi * groupBy;
       const endIdx   = Math.min(startIdx + groupBy - 1, TOTAL_MONTHS - 1);
-      // Label: first month label (if groupBy=1) or range
       const label = groupBy === 1
         ? getMonthLabel(startIdx)
         : `${getMonthLabel(startIdx)} — ${getMonthLabel(endIdx)}`;
-      // Aggregate totals
       const total = Array.from({ length: endIdx - startIdx + 1 }, (_, i) => monthlyTotals[startIdx + i] || 0)
         .reduce((s, v) => s + v, 0);
-      // Per-project aggregated amounts and dominant phase
-      const colData = columns.map((col) => {
+      const colData = effectiveColumns.map((col) => {
         const amount = Array.from({ length: endIdx - startIdx + 1 }, (_, i) => col.monthlyAmounts[startIdx + i] || 0)
           .reduce((s, v) => s + v, 0);
-        // Dominant phase: pick phase of middle month in group
         const midIdx = startIdx + Math.floor((endIdx - startIdx) / 2);
         const phase  = getPhase(col, midIdx);
         return { colId: col.id, amount, phase };
       });
       return { gi, startIdx, endIdx, label, total, colData };
     });
-  }, [columns, monthlyTotals, groupBy]);
+  }, [effectiveColumns, monthlyTotals, groupBy]);
 
   const isLoading = projectsQuery.isLoading || allMoQuery.isLoading || allCpQuery.isLoading;
-  const grandTotal = Object.values(monthlyTotals).reduce((s, v) => s + v, 0);
 
   if (isLoading) {
     return (
@@ -230,8 +265,8 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
     );
   }
 
-  // Table total width: total col + date col + (n projects * col width) + gaps
-  const tableW = TOTAL_COL_W + DATE_COL_W + columns.length * (COL_W + GAP);
+  // Table total width
+  const tableW = TOTAL_COL_W + DATE_COL_W + effectiveColumns.length * (COL_W + GAP) + GAP * 2;
 
   return (
     <div className="p-4 space-y-4" dir="rtl">
@@ -299,13 +334,10 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
         </div>
       </div>
 
-      {/* Gantt chart table
-          Column order (RTL): projects... | الشهر | الإجمالي الشهري
-          The full row has a background color; each project column is a "pillar" on top of it.
-      */}
+      {/* Gantt chart table */}
       <div
         className="overflow-auto rounded-xl border border-border shadow-sm"
-        style={{ maxHeight: "65vh" }}
+        style={{ maxHeight: "70vh" }}
       >
         <table
           style={{
@@ -317,32 +349,103 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
           }}
         >
           <thead>
+            {/* Row 1: project names + delay controls */}
             <tr style={{ position: "sticky", top: 0, zIndex: 20 }}>
-              {/* Project column headers — rightmost group */}
-              {columns.map((col, ci) => (
-                <th
-                  key={col.id}
-                  style={{
-                    width: COL_W,
-                    minWidth: COL_W,
-                    background: "#1e293b",
-                    color: "#f8fafc",
-                    fontSize: 10,
-                    fontWeight: 700,
-                    padding: "8px 4px",
-                    textAlign: "center",
-                    borderLeft: ci < columns.length - 1 ? `${GAP}px solid #94a3b8` : "none",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                  title={col.name}
-                >
-                  {col.name}
-                </th>
-              ))}
+              {effectiveColumns.map((col, ci) => {
+                const delay = getDelay(col.id);
+                return (
+                  <th
+                    key={col.id}
+                    style={{
+                      width: COL_W,
+                      minWidth: COL_W,
+                      background: COL_HEADER_BG,
+                      color: COL_HEADER_TEXT,
+                      fontSize: 9,
+                      fontWeight: 700,
+                      padding: "4px 2px 2px",
+                      textAlign: "center",
+                      borderLeft: ci < effectiveColumns.length - 1 ? `${GAP}px solid ${GAP_COLOR}` : "none",
+                      overflow: "hidden",
+                      verticalAlign: "top",
+                    }}
+                    title={col.name}
+                  >
+                    {/* Project name */}
+                    <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 3 }}>
+                      {col.name}
+                    </div>
+                    {/* Delay controls: Full project */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 2, marginBottom: 2 }}>
+                      <button
+                        onClick={() => adjustFullDelay(col.id, -3)}
+                        disabled={delay.fullDelay === 0}
+                        title="تقديم المشروع 3 أشهر"
+                        style={{
+                          width: 16, height: 16, borderRadius: 3, border: "1px solid #558b2f",
+                          background: delay.fullDelay === 0 ? "#e8f5e9" : "#558b2f",
+                          color: delay.fullDelay === 0 ? "#aaa" : "#fff",
+                          cursor: delay.fullDelay === 0 ? "default" : "pointer",
+                          fontSize: 10, lineHeight: 1, padding: 0,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                        }}
+                      >
+                        <ChevronUp style={{ width: 10, height: 10 }} />
+                      </button>
+                      <span style={{ fontSize: 8, color: "#33691e", minWidth: 28, textAlign: "center" }}>
+                        {delay.fullDelay > 0 ? `+${delay.fullDelay}ش` : "كامل"}
+                      </span>
+                      <button
+                        onClick={() => adjustFullDelay(col.id, 3)}
+                        title="تأجيل المشروع 3 أشهر"
+                        style={{
+                          width: 16, height: 16, borderRadius: 3, border: "1px solid #558b2f",
+                          background: "#558b2f", color: "#fff",
+                          cursor: "pointer", fontSize: 10, lineHeight: 1, padding: 0,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                        }}
+                      >
+                        <ChevronDown style={{ width: 10, height: 10 }} />
+                      </button>
+                    </div>
+                    {/* Delay controls: Construction only */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
+                      <button
+                        onClick={() => adjustConstructionDelay(col.id, -3)}
+                        disabled={delay.constructionDelay === 0}
+                        title="تقديم الإنشاء 3 أشهر"
+                        style={{
+                          width: 16, height: 16, borderRadius: 3, border: "1px solid #880e4f",
+                          background: delay.constructionDelay === 0 ? "#fce4ec" : "#880e4f",
+                          color: delay.constructionDelay === 0 ? "#aaa" : "#fff",
+                          cursor: delay.constructionDelay === 0 ? "default" : "pointer",
+                          fontSize: 10, lineHeight: 1, padding: 0,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                        }}
+                      >
+                        <ChevronUp style={{ width: 10, height: 10 }} />
+                      </button>
+                      <span style={{ fontSize: 8, color: "#880e4f", minWidth: 28, textAlign: "center" }}>
+                        {delay.constructionDelay > 0 ? `+${delay.constructionDelay}ش` : "إنشاء"}
+                      </span>
+                      <button
+                        onClick={() => adjustConstructionDelay(col.id, 3)}
+                        title="تأجيل الإنشاء 3 أشهر"
+                        style={{
+                          width: 16, height: 16, borderRadius: 3, border: "1px solid #880e4f",
+                          background: "#880e4f", color: "#fff",
+                          cursor: "pointer", fontSize: 10, lineHeight: 1, padding: 0,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                        }}
+                      >
+                        <ChevronDown style={{ width: 10, height: 10 }} />
+                      </button>
+                    </div>
+                  </th>
+                );
+              })}
 
-              {/* Date column header — between projects and total */}
+              {/* Date column header */}
               <th
                 style={{
                   width: DATE_COL_W,
@@ -353,13 +456,13 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                   fontWeight: 700,
                   padding: "8px 6px",
                   textAlign: "center",
-                  borderLeft: `${GAP}px solid #94a3b8`,
-                  borderRight: `${GAP}px solid #94a3b8`,
+                  borderLeft: `${GAP}px solid ${GAP_COLOR}`,
+                  borderRight: `${GAP}px solid ${GAP_COLOR}`,
                 }}
               >
                 الشهر
               </th>
-              {/* Total column header — leftmost */}
+              {/* Total column header */}
               <th
                 style={{
                   width: TOTAL_COL_W,
@@ -386,7 +489,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                   {row.colData.map((cd, ci) => {
                     const pillarBg  = cd.phase ? PHASE_BG[cd.phase] : PILLAR_INACTIVE;
                     const textColor = cd.phase ? PHASE_TEXT[cd.phase] : "#475569";
-                    const borderColor = cd.phase ? "rgba(0,0,0,0.12)" : "rgba(0,0,0,0.06)";
+                    const borderColor = cd.phase ? "rgba(0,0,0,0.10)" : "rgba(0,0,0,0.04)";
                     return (
                       <td
                         key={cd.colId}
@@ -394,7 +497,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                           width: COL_W,
                           minWidth: COL_W,
                           background: pillarBg,
-                          borderLeft: ci < columns.length - 1 ? `${GAP}px solid ${rowBg}` : "none",
+                          borderLeft: ci < effectiveColumns.length - 1 ? `${GAP}px solid ${GAP_COLOR}` : "none",
                           borderTop: `1px solid ${borderColor}`,
                           borderBottom: `1px solid ${borderColor}`,
                           padding: "0 6px",
@@ -419,9 +522,9 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       color: "#1e293b",
                       padding: "0 4px",
                       textAlign: "center",
-                      borderLeft: `${GAP}px solid ${rowBg}`,
-                      borderRight: `${GAP}px solid ${rowBg}`,
-                      background: row.gi % 2 === 0 ? "#cbd5e1" : "#b0bec5",
+                      borderLeft: `${GAP}px solid ${GAP_COLOR}`,
+                      borderRight: `${GAP}px solid ${GAP_COLOR}`,
+                      background: row.gi % 2 === 0 ? "#e2e8f0" : "#cbd5e1",
                       whiteSpace: groupBy === 1 ? "nowrap" : "normal",
                       lineHeight: 1.3,
                     }}
@@ -440,7 +543,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       textAlign: "center",
                       fontSize: 11,
                       fontWeight: row.total > 0 ? 800 : 400,
-                      color: row.total > 0 ? "#f59e0b" : "transparent",
+                      color: row.total > 0 ? "#b45309" : "transparent",
                     }}
                   >
                     {row.total > 0 ? fmtCell(row.total) : ""}
