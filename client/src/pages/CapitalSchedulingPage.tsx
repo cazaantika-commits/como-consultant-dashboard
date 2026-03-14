@@ -57,24 +57,22 @@ interface ProjectColumn {
   remainingCapital: number;
 }
 
-// Phase colors — bright attractive palette
+// Phase colors — attractive olive/earthy palette
 const PHASE_BG: Record<string, string> = {
-  preCon:       "#3b82f6", // vivid blue
-  construction: "#10b981", // vivid emerald
-  handover:     "#f59e0b", // vivid amber
+  preCon:       "#8fbc5a", // olive green — ما قبل التنفيذ
+  construction: "#4a7c59", // deep forest green — الإنشاء
+  handover:     "#c9a84c", // warm gold — التسليم
 };
 const PHASE_TEXT: Record<string, string> = {
-  preCon:       "#ffffff",
+  preCon:       "#1a2e0a",
   construction: "#ffffff",
-  handover:     "#1c1917",
+  handover:     "#1a1000",
 };
-
-// Row background — light neutral alternating (so columns pop)
-const ROW_BG_EVEN = "#f1f5f9";
-const ROW_BG_ODD  = "#e2e8f0";
-
-// Pillar inner background — white with slight opacity on light row
-const PILLAR_INACTIVE = "rgba(255,255,255,0.6)";
+// Row background — warm cream alternating (earthy tone to complement olive)
+const ROW_BG_EVEN = "#f5f0e8";
+const ROW_BG_ODD  = "#ede7d9";
+// Pillar inner background — soft warm white
+const PILLAR_INACTIVE = "rgba(255,252,245,0.7)";
 
 interface Props {
   embedded?: boolean;
@@ -177,7 +175,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
   const DATE_COL_W  = 90;  // second from left: الشهر
   const COL_W       = 90;  // each project
   const ROW_H       = 34;
-  const GAP         = 8;   // gap between project pillars (px) — wide enough to show background
+  const GAP         = 24;  // gap between project pillars (px) — wide enough to show background
 
   // Grouping: 1 = monthly, 3 = quarterly, 6 = semi-annual
   const [groupBy, setGroupBy] = useState<1 | 3 | 6>(1);
