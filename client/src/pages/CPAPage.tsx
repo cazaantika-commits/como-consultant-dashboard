@@ -502,11 +502,15 @@ function ProjectDetailScreen({
   const projectQuery = trpc.cpa.projects.getById.useQuery({ id: projectId });
   const consultantsQuery = trpc.cpa.consultants.listByProject.useQuery({ cpaProjectId: projectId });
   const masterQuery = trpc.cpa.settings.getConsultantsMaster.useQuery();
+  const [manualCalcRequested, setManualCalcRequested] = useState(false);
   const evalMutation = trpc.cpa.evaluation.runEvaluation.useMutation({
     onSuccess: (data) => {
       consultantsQuery.refetch();
       toast({ title: `تم حساب التكلفة لـ ${data.length} استشاري` });
-      onResults();
+      if (manualCalcRequested) {
+        setManualCalcRequested(false);
+        onResults();
+      }
     },
     onError: (e) => toast({ title: "خطأ في الحساب", description: e.message, variant: "destructive" }),
   });
@@ -738,7 +742,7 @@ Rules:
               {consultants.length > 0 && (
                 <Button
                   size="sm"
-                  onClick={() => evalMutation.mutate({ cpaProjectId: projectId })}
+                  onClick={() => { setManualCalcRequested(true); evalMutation.mutate({ cpaProjectId: projectId }); }}
                   disabled={evalMutation.isPending}
                   className="bg-emerald-600 hover:bg-emerald-500 text-white border-0 min-w-[160px]"
                 >
@@ -1097,6 +1101,20 @@ function ImportJsonScreen({
                 <p className="text-xs text-muted-foreground">يقبل ملفات .json فقط</p>
               </div>
             )}
+          </div>
+          {/* Paste JSON directly */}
+          <div>
+            <p className="text-xs text-muted-foreground mb-1 font-medium">أو الصق JSON مباشرة هنا:</p>
+            <Textarea
+              value={jsonText}
+              onChange={(e) => {
+                const text = e.target.value;
+                try { JSON.parse(text); setJsonText(text); setFileName("manual-paste.json"); } catch { setJsonText(text); }
+              }}
+              placeholder='{"consultant_code": "LACASA", ...}'
+              className="font-mono text-xs h-32 resize-none"
+              dir="ltr"
+            />
           </div>
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
             <p className="font-medium mb-1">تعليمات:</p>

@@ -199,10 +199,16 @@ async function runCalculationEngine(cpaProjectId: number) {
       } else if (consultant.supervision_fee_method === "MONTHLY_RATE") {
         for (const row of supTeam) {
           if (row.proposed_monthly_rate) {
+            // If allocation_pct is 0 but rate is provided, use the baseline required_pct for this role
+            const roleId = Number(row.supervision_role_id);
+            const baselineEntry = supervisionBaseline.find((b: any) => Number(b.supervision_role_id) === roleId);
+            const effectiveAlloc = toNum(row.proposed_allocation_pct) > 0
+              ? toNum(row.proposed_allocation_pct)
+              : (baselineEntry ? toNum(baselineEntry.required_allocation_pct) : 100);
             quotedSupervisionFee +=
               toNum(row.proposed_monthly_rate) *
               durationMonths *
-              (toNum(row.proposed_allocation_pct) / 100);
+              (effectiveAlloc / 100);
           }
         }
       }
@@ -215,7 +221,11 @@ async function runCalculationEngine(cpaProjectId: number) {
         const roleId = Number(baseline.supervision_role_id);
         const required = toNum(baseline.required_allocation_pct);
         const teamEntry = teamMap[roleId];
-        const proposed = toNum(teamEntry?.proposed_allocation_pct ?? 0);
+        // If allocation_pct is 0 but rate is provided, treat as covering the baseline required_pct
+        const rawProposed = toNum(teamEntry?.proposed_allocation_pct ?? 0);
+        const proposed = (rawProposed === 0 && teamEntry?.proposed_monthly_rate)
+          ? required  // consultant provided a rate but no explicit pct -> assume full coverage
+          : rawProposed;
         if (proposed < required) {
           const gapPct = required - proposed;
           // For MONTHLY_RATE: use the consultant's own proposed rate for the gap role (if present), else reference rate
