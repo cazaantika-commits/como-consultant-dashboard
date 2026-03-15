@@ -1,0 +1,166 @@
+{
+  "query": "SELECT si.item_number, si.code\nFROM cpa_scope_category_matrix scm\nJOIN cpa_scope_items si ON si.id = scm.scope_item_id\nJOIN cpa_building_categories bc ON bc.id = scm.building_category_id\nWHERE bc.code = 'MEGA'\n  AND scm.status IN ('INCLUDED','GREEN')\n  AND si.item_number NOT IN (10,11,12,13,44,45,46,47)\nORDER BY si.item_number;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT si.item_number, si.code\nFROM cpa_scope_category_matrix scm\nJOIN cpa_scope_items si ON si.id = scm.scope_item_id\nJOIN cpa_building_categories bc ON bc.id = scm.building_category_id\nWHERE bc.code = 'MEGA'\n  AND scm.status IN ('INCLUDED','GREEN')\n  AND si.item_number NOT IN (10,11,12,13,44,45,46,47)\nORDER BY si.item_number;",
+  "rows": [
+    {
+      "item_number": "1",
+      "code": "CONCEPT_DESIGN"
+    },
+    {
+      "item_number": "2",
+      "code": "SCHEMATIC_DESIGN"
+    },
+    {
+      "item_number": "3",
+      "code": "DETAILED_DESIGN"
+    },
+    {
+      "item_number": "4",
+      "code": "ARCH_DESIGN"
+    },
+    {
+      "item_number": "5",
+      "code": "STRUCTURAL_CIVIL"
+    },
+    {
+      "item_number": "6",
+      "code": "MEP_ENGINEERING"
+    },
+    {
+      "item_number": "7",
+      "code": "FLS"
+    },
+    {
+      "item_number": "8",
+      "code": "BIM"
+    },
+    {
+      "item_number": "9",
+      "code": "QS_BOQ"
+    },
+    {
+      "item_number": "14",
+      "code": "AUTHORITY_SUBMISSIONS"
+    },
+    {
+      "item_number": "15",
+      "code": "BUILDING_PERMIT"
+    },
+    {
+      "item_number": "16",
+      "code": "IFC_PACKAGE"
+    },
+    {
+      "item_number": "17",
+      "code": "TENDER_DOCS"
+    },
+    {
+      "item_number": "18",
+      "code": "TENDER_EVAL"
+    },
+    {
+      "item_number": "19",
+      "code": "FIDIC_CONTRACT"
+    },
+    {
+      "item_number": "20",
+      "code": "DIAC"
+    },
+    {
+      "item_number": "21",
+      "code": "PI_INSURANCE"
+    },
+    {
+      "item_number": "22",
+      "code": "PL_INSURANCE"
+    },
+    {
+      "item_number": "23",
+      "code": "GOVERNING_LAW"
+    },
+    {
+      "item_number": "24",
+      "code": "RETENTION"
+    },
+    {
+      "item_number": "25",
+      "code": "FEE_CAP"
+    },
+    {
+      "item_number": "26",
+      "code": "CONFIDENTIALITY"
+    },
+    {
+      "item_number": "27",
+      "code": "IP"
+    },
+    {
+      "item_number": "28",
+      "code": "TERMINATION"
+    },
+    {
+      "item_number": "29",
+      "code": "GREEN_BUILDING"
+    },
+    {
+      "item_number": "30",
+      "code": "STRUCTURAL_AUDIT"
+    },
+    {
+      "item_number": "31",
+      "code": "SECURITY_SIRA"
+    },
+    {
+      "item_number": "32",
+      "code": "VERTICAL_TRANSPORT"
+    },
+    {
+      "item_number": "33",
+      "code": "BMU"
+    },
+    {
+      "item_number": "34",
+      "code": "FACADE_ENGINEERING"
+    },
+    {
+      "item_number": "35",
+      "code": "WIND_TUNNEL"
+    },
+    {
+      "item_number": "36",
+      "code": "AV_ELV"
+    },
+    {
+      "item_number": "37",
+      "code": "FLS_SPECIALIST"
+    },
+    {
+      "item_number": "38",
+      "code": "FACADE_LIGHTING"
+    },
+    {
+      "item_number": "39",
+      "code": "TIS"
+    },
+    {
+      "item_number": "40",
+      "code": "ACOUSTIC"
+    },
+    {
+      "item_number": "41",
+      "code": "LEED"
+    },
+    {
+      "item_number": "42",
+      "code": "COST_MANAGEMENT"
+    },
+    {
+      "item_number": "43",
+      "code": "VALUE_ENGINEERING"
+    }
+  ],
+  "messages": [],
+  "stdout": "item_number\tcode\n1\tCONCEPT_DESIGN\n2\tSCHEMATIC_DESIGN\n3\tDETAILED_DESIGN\n4\tARCH_DESIGN\n5\tSTRUCTURAL_CIVIL\n6\tMEP_ENGINEERING\n7\tFLS\n8\tBIM\n9\tQS_BOQ\n14\tAUTHORITY_SUBMISSIONS\n15\tBUILDING_PERMIT\n16\tIFC_PACKAGE\n17\tTENDER_DOCS\n18\tTENDER_EVAL\n19\tFIDIC_CONTRACT\n20\tDIAC\n21\tPI_INSURANCE\n22\tPL_INSURANCE\n23\tGOVERNING_LAW\n24\tRETENTION\n25\tFEE_CAP\n26\tCONFIDENTIALITY\n27\tIP\n28\tTERMINATION\n29\tGREEN_BUILDING\n30\tSTRUCTURAL_AUDIT\n31\tSECURITY_SIRA\n32\tVERTICAL_TRANSPORT\n33\tBMU\n34\tFACADE_ENGINEERING\n35\tWIND_TUNNEL\n36\tAV_ELV\n37\tFLS_SPECIALIST\n38\tFACADE_LIGHTING\n39\tTIS\n40\tACOUSTIC\n41\tLEED\n42\tCOST_MANAGEMENT\n43\tVALUE_ENGINEERING\n",
+  "stderr": "",
+  "execution_time_ms": 1523
+}

@@ -1,0 +1,15 @@
+{
+  "query": "SELECT MIN(si.item_number) as min_item, MAX(si.item_number) as max_item, COUNT(*) as total\nFROM cpa_scope_category_matrix scm\nJOIN cpa_scope_items si ON si.id = scm.scope_item_id\nJOIN cpa_building_categories bc ON bc.id = scm.building_category_id\nWHERE bc.code = 'MEGA'\n  AND scm.status IN ('INCLUDED','GREEN')\n  AND si.item_number NOT IN (10,11,12,13,44,45,46,47);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT MIN(si.item_number) as min_item, MAX(si.item_number) as max_item, COUNT(*) as total\nFROM cpa_scope_category_matrix scm\nJOIN cpa_scope_items si ON si.id = scm.scope_item_id\nJOIN cpa_building_categories bc ON bc.id = scm.building_category_id\nWHERE bc.code = 'MEGA'\n  AND scm.status IN ('INCLUDED','GREEN')\n  AND si.item_number NOT IN (10,11,12,13,44,45,46,47);",
+  "rows": [
+    {
+      "min_item": "1",
+      "max_item": "43",
+      "total": "39"
+    }
+  ],
+  "messages": [],
+  "stdout": "min_item\tmax_item\ttotal\n1\t43\t39\n",
+  "stderr": "",
+  "execution_time_ms": 1592
+}

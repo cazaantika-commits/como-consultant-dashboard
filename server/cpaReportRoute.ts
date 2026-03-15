@@ -61,6 +61,8 @@ router.get("/:projectId", async (req, res) => {
     const durationMonths = toNum(proj.duration_months);
 
     // ---- Mandatory scope items ----
+    // Only show add-on scope items (29-43) — items 1-28 are base design scope
+    // and are implicitly included in any proposal, not tracked as gaps
     const mandatoryItems = await qRows<any>(
       db,
       sql`SELECT si.id, si.item_number, si.code, si.label,
@@ -72,7 +74,7 @@ router.get("/:projectId", async (req, res) => {
             AND src.building_category_id = scm.building_category_id
           WHERE scm.building_category_id = ${proj.building_category_id}
             AND scm.status IN ('INCLUDED', 'GREEN')
-            AND si.item_number NOT IN (10, 11, 12, 13, 44, 45, 46, 47)
+            AND si.item_number BETWEEN 29 AND 43
           ORDER BY si.item_number`
     );
 

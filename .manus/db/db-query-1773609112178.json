@@ -1,0 +1,244 @@
+{
+  "query": "SELECT si.item_number, si.code, si.label, scm.status\nFROM cpa_scope_category_matrix scm\nJOIN cpa_scope_items si ON si.id = scm.scope_item_id\nJOIN cpa_building_categories bc ON bc.id = scm.building_category_id\nWHERE bc.code = 'MEGA'\n  AND scm.status IN ('INCLUDED','GREEN')\n  AND si.item_number NOT IN (10,11,12,13,44,45,46,47)\nORDER BY si.item_number\nLIMIT 50;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT si.item_number, si.code, si.label, scm.status\nFROM cpa_scope_category_matrix scm\nJOIN cpa_scope_items si ON si.id = scm.scope_item_id\nJOIN cpa_building_categories bc ON bc.id = scm.building_category_id\nWHERE bc.code = 'MEGA'\n  AND scm.status IN ('INCLUDED','GREEN')\n  AND si.item_number NOT IN (10,11,12,13,44,45,46,47)\nORDER BY si.item_number\nLIMIT 50;",
+  "rows": [
+    {
+      "item_number": "1",
+      "code": "CONCEPT_DESIGN",
+      "label": "Concept Design",
+      "status": "INCLUDED"
+    },
+    {
+      "item_number": "2",
+      "code": "SCHEMATIC_DESIGN",
+      "label": "Schematic Design",
+      "status": "INCLUDED"
+    },
+    {
+      "item_number": "3",
+      "code": "DETAILED_DESIGN",
+      "label": "Detailed Design",
+      "status": "INCLUDED"
+    },
+    {
+      "item_number": "4",
+      "code": "ARCH_DESIGN",
+      "label": "Architectural Design",
+      "status": "INCLUDED"
+    },
+    {
+      "item_number": "5",
+      "code": "STRUCTURAL_CIVIL",
+      "label": "Structural / Civil Engineering",
+      "status": "INCLUDED"
+    },
+    {
+      "item_number": "6",
+      "code": "MEP_ENGINEERING",
+      "label": "MEP Engineering",
+      "status": "INCLUDED"
+    },
+    {
+      "item_number": "7",
+      "code": "FLS",
+      "label": "Fire Protection & Life Safety (FLS)",
+      "status": "INCLUDED"
+    },
+    {
+      "item_number": "8",
+      "code": "BIM",
+      "label": "BIM Modeling",
+      "status": "INCLUDED"
+    },
+    {
+      "item_number": "9",
+      "code": "QS_BOQ",
+      "label": "Quantity Survey (QS) — BOQ",
+      "status": "INCLUDED"
+    },
+    {
+      "item_number": "14",
+      "code": "AUTHORITY_SUBMISSIONS",
+      "label": "Authority Submissions & NOCs",
+      "status": "INCLUDED"
+    },
+    {
+      "item_number": "15",
+      "code": "BUILDING_PERMIT",
+      "label": "Building Permit",
+      "status": "INCLUDED"
+    },
+    {
+      "item_number": "16",
+      "code": "IFC_PACKAGE",
+      "label": "IFC Package (Issued for Construction)",
+      "status": "INCLUDED"
+    },
+    {
+      "item_number": "17",
+      "code": "TENDER_DOCS",
+      "label": "Tender Documents + BOQ + Specifications",
+      "status": "INCLUDED"
+    },
+    {
+      "item_number": "18",
+      "code": "TENDER_EVAL",
+      "label": "Tender Evaluation Report",
+      "status": "INCLUDED"
+    },
+    {
+      "item_number": "19",
+      "code": "FIDIC_CONTRACT",
+      "label": "FIDIC Based Contract",
+      "status": "INCLUDED"
+    },
+    {
+      "item_number": "20",
+      "code": "DIAC",
+      "label": "Dispute Resolution — DIAC",
+      "status": "INCLUDED"
+    },
+    {
+      "item_number": "21",
+      "code": "PI_INSURANCE",
+      "label": "PI Insurance — Professional Indemnity",
+      "status": "INCLUDED"
+    },
+    {
+      "item_number": "22",
+      "code": "PL_INSURANCE",
+      "label": "PL Insurance — Public Liability",
+      "status": "INCLUDED"
+    },
+    {
+      "item_number": "23",
+      "code": "GOVERNING_LAW",
+      "label": "Governing Law — Dubai Courts",
+      "status": "INCLUDED"
+    },
+    {
+      "item_number": "24",
+      "code": "RETENTION",
+      "label": "Retention 5%",
+      "status": "INCLUDED"
+    },
+    {
+      "item_number": "25",
+      "code": "FEE_CAP",
+      "label": "Fee Cap on Percentage Fees",
+      "status": "INCLUDED"
+    },
+    {
+      "item_number": "26",
+      "code": "CONFIDENTIALITY",
+      "label": "Confidentiality Clause",
+      "status": "INCLUDED"
+    },
+    {
+      "item_number": "27",
+      "code": "IP",
+      "label": "IP — Intellectual Property",
+      "status": "INCLUDED"
+    },
+    {
+      "item_number": "28",
+      "code": "TERMINATION",
+      "label": "Termination Clause",
+      "status": "INCLUDED"
+    },
+    {
+      "item_number": "29",
+      "code": "GREEN_BUILDING",
+      "label": "Green Building / Sustainability Certification",
+      "status": "GREEN"
+    },
+    {
+      "item_number": "30",
+      "code": "STRUCTURAL_AUDIT",
+      "label": "3rd Party Structural Audit",
+      "status": "GREEN"
+    },
+    {
+      "item_number": "31",
+      "code": "SECURITY_SIRA",
+      "label": "Security Design / SIRA Approval",
+      "status": "GREEN"
+    },
+    {
+      "item_number": "32",
+      "code": "VERTICAL_TRANSPORT",
+      "label": "Vertical Transportation",
+      "status": "GREEN"
+    },
+    {
+      "item_number": "33",
+      "code": "BMU",
+      "label": "BMU — Facade Maintenance System",
+      "status": "GREEN"
+    },
+    {
+      "item_number": "34",
+      "code": "FACADE_ENGINEERING",
+      "label": "Facade Engineering",
+      "status": "GREEN"
+    },
+    {
+      "item_number": "35",
+      "code": "WIND_TUNNEL",
+      "label": "Wind Tunnel Study",
+      "status": "GREEN"
+    },
+    {
+      "item_number": "36",
+      "code": "AV_ELV",
+      "label": "AV & ELV Design",
+      "status": "GREEN"
+    },
+    {
+      "item_number": "37",
+      "code": "FLS_SPECIALIST",
+      "label": "FLS Specialist (separate from MEP)",
+      "status": "GREEN"
+    },
+    {
+      "item_number": "38",
+      "code": "FACADE_LIGHTING",
+      "label": "Facade Lighting",
+      "status": "GREEN"
+    },
+    {
+      "item_number": "39",
+      "code": "TIS",
+      "label": "Traffic Impact Study (TIS)",
+      "status": "GREEN"
+    },
+    {
+      "item_number": "40",
+      "code": "ACOUSTIC",
+      "label": "Acoustic & Vibration Design",
+      "status": "GREEN"
+    },
+    {
+      "item_number": "41",
+      "code": "LEED",
+      "label": "Sustainability / LEED Certification",
+      "status": "GREEN"
+    },
+    {
+      "item_number": "42",
+      "code": "COST_MANAGEMENT",
+      "label": "Cost Management",
+      "status": "GREEN"
+    },
+    {
+      "item_number": "43",
+      "code": "VALUE_ENGINEERING",
+      "label": "Value Engineering",
+      "status": "GREEN"
+    }
+  ],
+  "messages": [],
+  "stdout": "item_number\tcode\tlabel\tstatus\n1\tCONCEPT_DESIGN\tConcept Design\tINCLUDED\n2\tSCHEMATIC_DESIGN\tSchematic Design\tINCLUDED\n3\tDETAILED_DESIGN\tDetailed Design\tINCLUDED\n4\tARCH_DESIGN\tArchitectural Design\tINCLUDED\n5\tSTRUCTURAL_CIVIL\tStructural / Civil Engineering\tINCLUDED\n6\tMEP_ENGINEERING\tMEP Engineering\tINCLUDED\n7\tFLS\tFire Protection & Life Safety (FLS)\tINCLUDED\n8\tBIM\tBIM Modeling\tINCLUDED\n9\tQS_BOQ\tQuantity Survey (QS) — BOQ\tINCLUDED\n14\tAUTHORITY_SUBMISSIONS\tAuthority Submissions & NOCs\tINCLUDED\n15\tBUILDING_PERMIT\tBuilding Permit\tINCLUDED\n16\tIFC_PACKAGE\tIFC Package (Issued for Construction)\tINCLUDED\n17\tTENDER_DOCS\tTender Documents + BOQ + Specifications\tINCLUDED\n18\tTENDER_EVAL\tTender Evaluation Report\tINCLUDED\n19\tFIDIC_CONTRACT\tFIDIC Based Contract\tINCLUDED\n20\tDIAC\tDispute Resolution — DIAC\tINCLUDED\n21\tPI_INSURANCE\tPI Insurance — Professional Indemnity\tINCLUDED\n22\tPL_INSURANCE\tPL Insurance — Public Liability\tINCLUDED\n23\tGOVERNING_LAW\tGoverning Law — Dubai Courts\tINCLUDED\n24\tRETENTION\tRetention 5%\tINCLUDED\n25\tFEE_CAP\tFee Cap on Percentage Fees\tINCLUDED\n26\tCONFIDENTIALITY\tConfidentiality Clause\tINCLUDED\n27\tIP\tIP — Intellectual Property\tINCLUDED\n28\tTERMINATION\tTermination Clause\tINCLUDED\n29\tGREEN_BUILDING\tGreen Building / Sustainability Certification\tGREEN\n30\tSTRUCTURAL_AUDIT\t3rd Party Structural Audit\tGREEN\n31\tSECURITY_SIRA\tSecurity Design / SIRA Approval\tGREEN\n32\tVERTICAL_TRANSPORT\tVertical Transportation\tGREEN\n33\tBMU\tBMU — Facade Maintenance System\tGREEN\n34\tFACADE_ENGINEERING\tFacade Engineering\tGREEN\n35\tWIND_TUNNEL\tWind Tunnel Study\tGREEN\n36\tAV_ELV\tAV & ELV Design\tGREEN\n37\tFLS_SPECIALIST\tFLS Specialist (separate from MEP)\tGREEN\n38\tFACADE_LIGHTING\tFacade Lighting\tGREEN\n39\tTIS\tTraffic Impact Study (TIS)\tGREEN\n40\tACOUSTIC\tAcoustic & Vibration Design\tGREEN\n41\tLEED\tSustainability / LEED Certification\tGREEN\n42\tCOST_MANAGEMENT\tCost Management\tGREEN\n43\tVALUE_ENGINEERING\tValue Engineering\tGREEN\n",
+  "stderr": "",
+  "execution_time_ms": 1650
+}

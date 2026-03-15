@@ -7,3 +7,4 @@
 - [x] Build True Cost Report generation endpoint (HTML/PDF matching TrueCost_6457879 format)
 - [x] Add Export Report button to CPA results page
 - [ ] Import corrected KIEFERLE JSON and recalculate
+- [x] Fix report: scope gap table now shows only items 29-43 (add-on items), not 1-28 (base scope)
