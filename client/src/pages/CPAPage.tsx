@@ -669,43 +669,60 @@ ${consultantList}
   "proposal_date": "YYYY-MM-DD",
   "proposal_reference": "رقم المرجع",
   "design_fee": {
-    "method": "LUMP_SUM أو PERCENTAGE أو MONTHLY_RATE",
-    "amount": 0,
+    "method": "LUMP_SUM or PERCENTAGE",
+    "amount": null,
     "percentage": null
   },
   "supervision_fee": {
     "submitted": true,
-    "method": "LUMP_SUM أو PERCENTAGE أو MONTHLY_RATE",
-    "amount": 0,
-    "stated_duration_months": ${project.duration_months}
+    "method": "LUMP_SUM or PERCENTAGE or MONTHLY_RATE",
+    "amount": null,
+    "percentage": null,
+    "stated_duration_months": null,
+    "team": [
+      {
+        "role_code": "RE",
+        "proposed_monthly_rate": 45000,
+        "proposed_allocation_pct": 100
+      }
+    ]
   },
   "scope_coverage": [
-    { "item_number": 29, "status": "INCLUDED أو EXCLUDED" },
-    { "item_number": 30, "status": "INCLUDED أو EXCLUDED" },
-    { "item_number": 31, "status": "INCLUDED أو EXCLUDED" },
-    { "item_number": 32, "status": "INCLUDED أو EXCLUDED" },
-    { "item_number": 33, "status": "INCLUDED أو EXCLUDED" },
-    { "item_number": 34, "status": "INCLUDED أو EXCLUDED" },
-    { "item_number": 35, "status": "INCLUDED أو EXCLUDED" },
-    { "item_number": 36, "status": "INCLUDED أو EXCLUDED" },
-    { "item_number": 37, "status": "INCLUDED أو EXCLUDED" },
-    { "item_number": 38, "status": "INCLUDED أو EXCLUDED" },
-    { "item_number": 39, "status": "INCLUDED أو EXCLUDED" },
-    { "item_number": 40, "status": "INCLUDED أو EXCLUDED" },
-    { "item_number": 41, "status": "INCLUDED أو EXCLUDED" },
-    { "item_number": 42, "status": "INCLUDED أو EXCLUDED" },
-    { "item_number": 43, "status": "INCLUDED أو EXCLUDED" }
+    { "item_number": 29, "status": "INCLUDED or EXCLUDED" },
+    { "item_number": 30, "status": "INCLUDED or EXCLUDED" },
+    { "item_number": 31, "status": "INCLUDED or EXCLUDED" },
+    { "item_number": 32, "status": "INCLUDED or EXCLUDED" },
+    { "item_number": 33, "status": "INCLUDED or EXCLUDED" },
+    { "item_number": 34, "status": "INCLUDED or EXCLUDED" },
+    { "item_number": 35, "status": "INCLUDED or EXCLUDED" },
+    { "item_number": 36, "status": "INCLUDED or EXCLUDED" },
+    { "item_number": 37, "status": "INCLUDED or EXCLUDED" },
+    { "item_number": 38, "status": "INCLUDED or EXCLUDED" },
+    { "item_number": 39, "status": "INCLUDED or EXCLUDED" },
+    { "item_number": 40, "status": "INCLUDED or EXCLUDED" },
+    { "item_number": 41, "status": "INCLUDED or EXCLUDED" },
+    { "item_number": 42, "status": "INCLUDED or EXCLUDED" },
+    { "item_number": 43, "status": "INCLUDED or EXCLUDED" }
   ]
 }
 
-قائمة البنود المتخصصة للمراجعة:
+Specialized scope items reference:
 ${scopeItems}
 
-ملاحظات:
-- status = INCLUDED: الاستشاري يشمل هذا البند في عرضه
-- status = EXCLUDED: الاستشاري استثنى هذا البند أو لم يذكره
-- إذا لم يقدم الاستشاري عرض إشراف: supervision_fee.submitted = false
-- لا تحسب أي أرقام — فقط استخرج البيانات من العرض كما هي`;
+Rules:
+1. design_fee.method = LUMP_SUM or PERCENTAGE only (no MONTHLY_RATE for design).
+   Fill amount (number) or percentage (decimal e.g. 0.018 = 1.8%), leave the other null.
+2. scope_coverage: INCLUDED if explicitly included. EXCLUDED if excluded or not mentioned.
+3. supervision_fee.submitted = false if consultant submitted no supervision fee at all.
+   In that case set method: null and team: [].
+4. supervision_fee.team: list ALL supervision roles the consultant mentioned, regardless of fee method.
+   If a role is mentioned without allocation %, set proposed_allocation_pct: 0.
+   If no team was mentioned at all, set team: [].
+5. supervision_fee.stated_duration_months: duration in months consultant based their fee on.
+   If not mentioned, set null.
+6. Available role codes: RE, DEPUTY_RE, CIVIL_INSPECTOR, MEP_INSPECTOR, HSE_OFFICER,
+   DOC_CONTROLLER, QA_QC, HO_STRUCTURAL, HO_ARCH, HO_MECHANICAL, HO_ELECTRICAL.
+7. Do NOT calculate anything. Extract only what is written in the proposal.`;
                   navigator.clipboard.writeText(msg).then(() => {
                     toast({ title: "✅ تم نسخ الطلب", description: "الصقه في Claude الآن" });
                   });
