@@ -1133,11 +1133,12 @@ export const cpaRouter = router({
             if (status === "INCLUDED") scopeIncluded++;
             else if (status === "EXCLUDED") scopeExcluded++;
             else scopeNotMentioned++;
+            const itemNote = item.note ?? null;
             await db.execute(
               sql`INSERT INTO cpa_consultant_scope_coverage
-                    (project_consultant_id, scope_item_id, coverage_status)
-                  VALUES (${pcId}, ${scopeRows[0].id}, ${status})
-                  ON DUPLICATE KEY UPDATE coverage_status = VALUES(coverage_status)`
+                    (project_consultant_id, scope_item_id, coverage_status, notes)
+                  VALUES (${pcId}, ${scopeRows[0].id}, ${status}, ${itemNote})
+                  ON DUPLICATE KEY UPDATE coverage_status = VALUES(coverage_status), notes = VALUES(notes)`
             );
           }
         }

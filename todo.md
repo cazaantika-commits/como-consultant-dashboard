@@ -8,3 +8,4 @@
 - [x] Add Export Report button to CPA results page
 - [ ] Import corrected KIEFERLE JSON and recalculate
 - [x] Fix report: scope gap table now shows only items 29-43 (add-on items), not 1-28 (base scope)
+- [x] Add contractual risk warnings section (items 1-28) to report with notes from JSON
