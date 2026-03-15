@@ -207,26 +207,33 @@ async function runCalculationEngine(cpaProjectId: number) {
         }
       }
 
-      // Supervision gap — ONLY for MONTHLY_RATE (per spec Section 3A/3B: no team gap for LUMP_SUM or PERCENTAGE)
+      // Supervision gap — applies to ALL fee methods (LUMP_SUM, PERCENTAGE, MONTHLY_RATE)
+      // For MONTHLY_RATE: use consultant's proposed rates for gap pricing
+      // For LUMP_SUM / PERCENTAGE: use reference rates from supervision_roles table
       let supervisionGapCost = 0;
-      if (consultant.supervision_fee_method === "MONTHLY_RATE") {
-        for (const baseline of supervisionBaseline) {
-          const roleId = Number(baseline.supervision_role_id);
-          const required = toNum(baseline.required_allocation_pct);
-          const proposed = toNum(teamMap[roleId]?.proposed_allocation_pct ?? 0);
-          if (proposed < required) {
-            const gapPct = required - proposed;
-            const gapCost = toNum(baseline.monthly_rate_aed) * durationMonths * (gapPct / 100);
-            supervisionGapCost += gapCost;
-            notes.supervisionGaps.push({
-              roleCode: baseline.code,
-              roleLabel: baseline.label,
-              required,
-              proposed,
-              gapPct,
-              gapCost,
-            });
-          }
+      for (const baseline of supervisionBaseline) {
+        const roleId = Number(baseline.supervision_role_id);
+        const required = toNum(baseline.required_allocation_pct);
+        const teamEntry = teamMap[roleId];
+        const proposed = toNum(teamEntry?.proposed_allocation_pct ?? 0);
+        if (proposed < required) {
+          const gapPct = required - proposed;
+          // For MONTHLY_RATE: use the consultant's own proposed rate for the gap role (if present), else reference rate
+          // For LUMP_SUM / PERCENTAGE: always use reference rate from baseline
+          const rateToUse =
+            consultant.supervision_fee_method === "MONTHLY_RATE" && teamEntry?.proposed_monthly_rate
+              ? toNum(teamEntry.proposed_monthly_rate)
+              : toNum(baseline.monthly_rate_aed);
+          const gapCost = rateToUse * durationMonths * (gapPct / 100);
+          supervisionGapCost += gapCost;
+          notes.supervisionGaps.push({
+            roleCode: baseline.code,
+            roleLabel: baseline.label,
+            required,
+            proposed,
+            gapPct,
+            gapCost,
+          });
         }
       }
 
