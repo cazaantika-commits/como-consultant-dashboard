@@ -1080,13 +1080,26 @@ export const cpaRouter = router({
         }
 
         // Import scope coverage
+        // First delete existing scope coverage for this consultant in this project
+        await db.execute(
+          sql`DELETE FROM cpa_consultant_scope_coverage WHERE project_consultant_id = ${pcId}`
+        );
         let scopeIncluded = 0, scopeExcluded = 0, scopeNotMentioned = 0;
         if (parsed.scope_coverage?.length) {
           for (const item of parsed.scope_coverage) {
-            const scopeRows = await qRows<any>(
-              db,
-              sql`SELECT id FROM cpa_scope_items WHERE code = ${item.item_code}`
-            );
+            // Accept both item_code (string) and item_number (integer)
+            let scopeRows: any[] = [];
+            if (item.item_code) {
+              scopeRows = await qRows<any>(
+                db,
+                sql`SELECT id FROM cpa_scope_items WHERE code = ${item.item_code} AND is_active = 1`
+              );
+            } else if (item.item_number != null) {
+              scopeRows = await qRows<any>(
+                db,
+                sql`SELECT id FROM cpa_scope_items WHERE item_number = ${item.item_number} AND is_active = 1`
+              );
+            }
             if (!scopeRows[0]) continue;
             const status = String(item.status).toUpperCase();
             if (status === "INCLUDED") scopeIncluded++;

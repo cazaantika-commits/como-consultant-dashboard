@@ -1,0 +1,70 @@
+{
+  "query": "SELECT id, code, trade_name, legal_name FROM cpa_consultants_master WHERE is_active = 1 ORDER BY code;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, code, trade_name, legal_name FROM cpa_consultants_master WHERE is_active = 1 ORDER BY code;",
+  "rows": [
+    {
+      "id": "4",
+      "code": "AAEC",
+      "trade_name": "ARTEC Architectural & Engineering Consultants",
+      "legal_name": "ARTEC Architectural & Engineering Consultants"
+    },
+    {
+      "id": "5",
+      "code": "ABCAE",
+      "trade_name": "Arif & Bintoak Consulting Architects & Engineers",
+      "legal_name": "Arif & Bintoak Consulting Architects & Engineers"
+    },
+    {
+      "id": "6",
+      "code": "ALDEC",
+      "trade_name": "Al Diwan Engineering Consultants",
+      "legal_name": "Al Diwan Engineering Consultants"
+    },
+    {
+      "id": "3",
+      "code": "DEC",
+      "trade_name": "DATUM Engineering Consultants",
+      "legal_name": "DATUM Engineering Consultants"
+    },
+    {
+      "id": "9",
+      "code": "KIEFERLE",
+      "trade_name": "Kieferle & Partner",
+      "legal_name": "Kieferle & Partner"
+    },
+    {
+      "id": "7",
+      "code": "LACASA",
+      "trade_name": "LACASA",
+      "legal_name": "LACASA"
+    },
+    {
+      "id": "1",
+      "code": "OSUS",
+      "trade_name": "شركة أوسس الدولية",
+      "legal_name": "Osus International"
+    },
+    {
+      "id": "2",
+      "code": "REALISTI",
+      "trade_name": "Realistic Engineering",
+      "legal_name": "Realistic Engineering"
+    },
+    {
+      "id": "10",
+      "code": "SEC(",
+      "trade_name": "Safeer Engineering Consultants (SEC)",
+      "legal_name": "Safeer Engineering Consultants (SEC)"
+    },
+    {
+      "id": "8",
+      "code": "XYZ",
+      "trade_name": "XYZ Designers",
+      "legal_name": "XYZ Designers"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcode\ttrade_name\tlegal_name\n4\tAAEC\tARTEC Architectural & Engineering Consultants\tARTEC Architectural & Engineering Consultants\n5\tABCAE\tArif & Bintoak Consulting Architects & Engineers\tArif & Bintoak Consulting Architects & Engineers\n6\tALDEC\tAl Diwan Engineering Consultants\tAl Diwan Engineering Consultants\n3\tDEC\tDATUM Engineering Consultants\tDATUM Engineering Consultants\n9\tKIEFERLE\tKieferle & Partner\tKieferle & Partner\n7\tLACASA\tLACASA\tLACASA\n1\tOSUS\tشركة أوسس الدولية\tOsus International\n2\tREALISTI\tRealistic Engineering\tRealistic Engineering\n10\tSEC(\tSafeer Engineering Consultants (SEC)\tSafeer Engineering Consultants (SEC)\n8\tXYZ\tXYZ Designers\tXYZ Designers\n",
+  "stderr": "",
+  "execution_time_ms": 1646
+}

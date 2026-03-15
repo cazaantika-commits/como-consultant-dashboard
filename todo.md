@@ -2510,3 +2510,8 @@
 - [x] Fix duplicate React keys (90001-90005) in consultant list - LEFT JOIN returns multiple rows per consultant
 - [x] Fix delete project SQL error - wrong column name in cpa_evaluation_results
 - [ ] Fix: Cannot add consultants to a CPA project
+
+## إصلاحات JSON Import - مارس 15
+- [ ] حذف زر الأتعاب (FeeInputDialog) المضاف خطأً من بطاقات الاستشاريين
+- [ ] إصلاح JSON import: قبول item_number بدلاً من item_code في scope_coverage
+- [ ] التحقق من أن جميع بيانات JSON تُحفظ وتُعرض بشكل صحيح
