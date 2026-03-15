@@ -1162,7 +1162,12 @@ export const cpaRouter = router({
             }
             supervisionRolesImported++;
             // Accept both field name variants from Claude JSON
-            const memberAlloc = member.proposed_allocation_pct ?? member.allocation_pct ?? 100;
+            // IMPORTANT: preserve null for KP format (monthly rate with no allocation %)
+            // null = no allocation stated (system uses SOI baseline %)
+            // 0 = part time without a number (full gap applies)
+            // number = explicit allocation %
+            const rawAlloc = member.proposed_allocation_pct ?? member.allocation_pct;
+            const memberAlloc = rawAlloc === undefined ? 100 : rawAlloc; // only default to 100 if field is completely absent
             const memberRate = member.proposed_monthly_rate ?? member.monthly_rate ?? null;
             await db.execute(
               sql`INSERT INTO cpa_consultant_supervision_team
