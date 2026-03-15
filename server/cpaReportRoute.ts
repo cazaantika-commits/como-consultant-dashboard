@@ -430,6 +430,17 @@ router.get("/:projectId", async (req, res) => {
 </div>`;
       }
 
+      // Check if this is KP format (all team entries have rate but null allocation)
+      const isKpFormat = r.supervision_fee_method === "MONTHLY_RATE" &&
+        Object.values(teamMap).length > 0 &&
+        Object.values(teamMap).every((t: any) => t.proposed_monthly_rate && (t.proposed_allocation_pct === null || t.proposed_allocation_pct === undefined));
+
+      if (isKpFormat) {
+        html += `<div class="warning" style="background:#eff6ff;border-left:4px solid #3b82f6;color:#1e40af">
+  ℹ️ MONTHLY RATE FORMAT — No allocation percentages stated by consultant. System applied SOI baseline allocation percentages to consultant’s own rates to calculate the quoted fee. Team gap = AED 0 (all roles covered by consultant’s rates).
+</div>`;
+      }
+
       // Team gap table
       html += `<table>
   <thead>
