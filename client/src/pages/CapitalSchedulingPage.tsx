@@ -38,12 +38,12 @@ const CONSTRUCTION_COLOR = "#ec4899"; // pink-500
 const CONSTRUCTION_LIGHT = "#fce7f3"; // pink-100
 const INACTIVE_COLOR     = "#f1f5f9"; // slate-100
 
-const HEADER_BG   = "#1e3a5f";
-const HEADER_TEXT = "#ffffff";
+const HEADER_BG   = "#e8f0fb";
+const HEADER_TEXT = "#1e3a5f";
 
 interface ProjectColumn {
-  cfProjectId: number;
-  projectId: number | null;
+  cfProjectId: number | null;
+  projectId: number;
   name: string;
   startDate: string;
   preDevMonths: number;
@@ -98,26 +98,27 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
 
   const [delays, setDelays] = useState<Record<number, DelayState>>({});
 
-  function getDelay(cfProjectId: number): DelayState {
-    return delays[cfProjectId] || { fullDelay: 0, constructionDelay: 0 };
+  // Use projectId (always unique) as the delay key — cfProjectId can be null
+  function getDelay(projectId: number): DelayState {
+    return delays[projectId] || { fullDelay: 0, constructionDelay: 0 };
   }
 
-  function adjustFullDelay(cfProjectId: number, delta: number) {
+  function adjustFullDelay(projectId: number, delta: number) {
     setDelays(prev => {
-      const cur = prev[cfProjectId] || { fullDelay: 0, constructionDelay: 0 };
-      return { ...prev, [cfProjectId]: { ...cur, fullDelay: Math.max(0, cur.fullDelay + delta) } };
+      const cur = prev[projectId] || { fullDelay: 0, constructionDelay: 0 };
+      return { ...prev, [projectId]: { ...cur, fullDelay: Math.max(0, cur.fullDelay + delta) } };
     });
   }
 
-  function adjustConstructionDelay(cfProjectId: number, delta: number) {
+  function adjustConstructionDelay(projectId: number, delta: number) {
     setDelays(prev => {
-      const cur = prev[cfProjectId] || { fullDelay: 0, constructionDelay: 0 };
-      return { ...prev, [cfProjectId]: { ...cur, constructionDelay: Math.max(0, cur.constructionDelay + delta) } };
+      const cur = prev[projectId] || { fullDelay: 0, constructionDelay: 0 };
+      return { ...prev, [projectId]: { ...cur, constructionDelay: Math.max(0, cur.constructionDelay + delta) } };
     });
   }
 
-  function resetDelay(cfProjectId: number) {
-    setDelays(prev => ({ ...prev, [cfProjectId]: { fullDelay: 0, constructionDelay: 0 } }));
+  function resetDelay(projectId: number) {
+    setDelays(prev => ({ ...prev, [projectId]: { fullDelay: 0, constructionDelay: 0 } }));
   }
 
   // Build effective columns with delay applied
@@ -126,7 +127,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
   //   index 1..N = project months 1..N (relIdx 0..N-1)
   const effectiveColumns = useMemo(() => {
     return baseColumns.map((col) => {
-      const { fullDelay, constructionDelay } = getDelay(col.cfProjectId);
+      const { fullDelay, constructionDelay } = getDelay(col.projectId);
       const chartAmounts: Record<number, number> = {};
 
       col.monthlyAmounts.forEach((val, idx) => {
@@ -202,7 +203,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
           .reduce((s, v) => s + v, 0);
         const midIdx = startIdx + Math.floor((endIdx - startIdx) / 2);
         const phase  = getPhase(col, midIdx);
-        return { colId: col.cfProjectId, amount, phase };
+              return { colId: col.projectId, amount, phase };
       });
       return { gi, startIdx, endIdx, label, total, colData };
     });
@@ -310,7 +311,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                   padding: "6px 16px", borderRadius: 20, fontSize: 12, fontWeight: 700,
                   cursor: "pointer", transition: "all 0.2s",
                   border: groupBy === g ? "none" : "1px solid #e2e8f0",
-                  background: groupBy === g ? HEADER_BG : "#f8fafc",
+                      background: groupBy === g ? "#1e3a5f" : "#f8fafc",
                   color: groupBy === g ? "#fff" : "#64748b",
                   boxShadow: groupBy === g ? "0 4px 12px rgba(30,58,95,0.3)" : "none",
                 }}
@@ -347,15 +348,16 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
             <tr style={{ position: "sticky", top: 0, zIndex: 30 }}>
               {/* Project column headers */}
               {effectiveColumns.map((col, ci) => {
-                const delay    = getDelay(col.cfProjectId);
+                const delay    = getDelay(col.projectId);
                 const hasDelay = delay.fullDelay > 0 || delay.constructionDelay > 0;
                 return (
                   <th
-                    key={col.cfProjectId}
+                    key={col.projectId}
                     style={{
                       width: COL_W,
                       minWidth: COL_W,
                       background: HEADER_BG,
+                      border: `1px solid #c7d9f5`,
                       borderLeft: ci < effectiveColumns.length - 1 ? `${GAP}px solid #ffffff` : "none",
                       padding: "10px 8px 8px",
                       verticalAlign: "top",
@@ -364,7 +366,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                   >
                     {/* Project name */}
                     <div style={{
-                      fontSize: 10, fontWeight: 800, color: HEADER_TEXT,
+                      fontSize: 10, fontWeight: 800, color: HEADER_TEXT, fontFamily: "inherit",
                       textAlign: "center", lineHeight: 1.4,
                       marginBottom: 6, padding: "0 2px",
                       wordBreak: "break-word",
@@ -374,21 +376,21 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
 
                     {/* Capital summary: grandTotal / paidTotal / upcomingTotal */}
                     <div style={{
-                      background: "rgba(255,255,255,0.1)",
+                      background: "rgba(30,58,95,0.07)",
                       borderRadius: 6, padding: "4px 6px", marginBottom: 6,
-                      fontSize: 9, color: "#e2e8f0", lineHeight: 1.6,
+                      fontSize: 9, color: "#334155", lineHeight: 1.6,
                     }}>
                       <div style={{ display: "flex", justifyContent: "space-between", gap: 4 }}>
-                        <span style={{ color: "#94a3b8" }}>الإجمالي:</span>
-                        <span style={{ fontWeight: 800, color: "#fbbf24" }}>{fmtFull(col.grandTotal)}</span>
+                        <span style={{ color: "#64748b" }}>الإجمالي:</span>
+                        <span style={{ fontWeight: 800, color: "#1e3a5f" }}>{fmtFull(col.grandTotal)}</span>
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", gap: 4 }}>
-                        <span style={{ color: "#94a3b8" }}>المدفوع:</span>
-                        <span style={{ fontWeight: 700, color: "#4ade80" }}>{fmtFull(col.paidTotal)}</span>
+                        <span style={{ color: "#64748b" }}>المدفوع:</span>
+                        <span style={{ fontWeight: 700, color: "#16a34a" }}>{fmtFull(col.paidTotal)}</span>
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", gap: 4, borderTop: "1px solid rgba(255,255,255,0.15)", paddingTop: 3, marginTop: 2 }}>
-                        <span style={{ color: "#94a3b8" }}>المطلوب:</span>
-                        <span style={{ fontWeight: 800, color: "#f87171" }}>{fmtFull(col.upcomingTotal)}</span>
+                        <span style={{ color: "#64748b" }}>المطلوب:</span>
+                        <span style={{ fontWeight: 800, color: "#dc2626" }}>{fmtFull(col.upcomingTotal)}</span>
                       </div>
                     </div>
 
@@ -408,29 +410,29 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                     {/* Full project delay controls */}
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginBottom: 3 }}>
                       <button
-                        onClick={() => adjustFullDelay(col.cfProjectId, -3)}
+                        onClick={() => adjustFullDelay(col.projectId, -3)}
                         disabled={delay.fullDelay === 0}
                         title="تقديم المشروع 3 أشهر"
                         style={{
                           width: 20, height: 20, borderRadius: 5,
-                          background: delay.fullDelay === 0 ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.85)",
-                          border: "none", cursor: delay.fullDelay === 0 ? "default" : "pointer",
+                          background: delay.fullDelay === 0 ? "#f1f5f9" : "#dbeafe",
+                          border: "1px solid #e2e8f0", cursor: delay.fullDelay === 0 ? "default" : "pointer",
                           display: "flex", alignItems: "center", justifyContent: "center",
-                          color: delay.fullDelay === 0 ? "rgba(255,255,255,0.25)" : "#1e3a5f",
+                          color: delay.fullDelay === 0 ? "#cbd5e1" : "#1e3a5f",
                         }}
                       >
                         <ChevronUp style={{ width: 11, height: 11 }} />
                       </button>
-                      <span style={{ fontSize: 8, color: "rgba(255,255,255,0.7)", minWidth: 28, textAlign: "center", fontWeight: 700 }}>
+                      <span style={{ fontSize: 8, color: "#475569", minWidth: 28, textAlign: "center", fontWeight: 700 }}>
                         المشروع
                       </span>
                       <button
-                        onClick={() => adjustFullDelay(col.cfProjectId, 3)}
+                        onClick={() => adjustFullDelay(col.projectId, 3)}
                         title="تأجيل المشروع 3 أشهر"
                         style={{
                           width: 20, height: 20, borderRadius: 5,
-                          background: "rgba(255,255,255,0.85)",
-                          border: "none", cursor: "pointer",
+                          background: "#dbeafe",
+                          border: "1px solid #bfdbfe", cursor: "pointer",
                           display: "flex", alignItems: "center", justifyContent: "center",
                           color: "#1e3a5f",
                         }}
@@ -442,31 +444,31 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                     {/* Construction delay controls */}
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginBottom: 3 }}>
                       <button
-                        onClick={() => adjustConstructionDelay(col.cfProjectId, -3)}
+                        onClick={() => adjustConstructionDelay(col.projectId, -3)}
                         disabled={delay.constructionDelay === 0}
                         title="تقديم الإنشاء 3 أشهر"
                         style={{
                           width: 20, height: 20, borderRadius: 5,
-                          background: delay.constructionDelay === 0 ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.85)",
-                          border: "none", cursor: delay.constructionDelay === 0 ? "default" : "pointer",
+                          background: delay.constructionDelay === 0 ? "#f1f5f9" : "#fce7f3",
+                          border: "1px solid #e2e8f0", cursor: delay.constructionDelay === 0 ? "default" : "pointer",
                           display: "flex", alignItems: "center", justifyContent: "center",
-                          color: delay.constructionDelay === 0 ? "rgba(255,255,255,0.25)" : "#1e3a5f",
+                          color: delay.constructionDelay === 0 ? "#cbd5e1" : "#be185d",
                         }}
                       >
                         <ChevronUp style={{ width: 11, height: 11 }} />
                       </button>
-                      <span style={{ fontSize: 8, color: "rgba(255,255,255,0.7)", minWidth: 28, textAlign: "center", fontWeight: 700 }}>
+                      <span style={{ fontSize: 8, color: "#475569", minWidth: 28, textAlign: "center", fontWeight: 700 }}>
                         الإنشاء
                       </span>
                       <button
-                        onClick={() => adjustConstructionDelay(col.cfProjectId, 3)}
+                        onClick={() => adjustConstructionDelay(col.projectId, 3)}
                         title="تأجيل الإنشاء 3 أشهر"
                         style={{
                           width: 20, height: 20, borderRadius: 5,
-                          background: "rgba(255,255,255,0.85)",
-                          border: "none", cursor: "pointer",
+                          background: "#fce7f3",
+                          border: "1px solid #fbcfe8", cursor: "pointer",
                           display: "flex", alignItems: "center", justifyContent: "center",
-                          color: "#1e3a5f",
+                          color: "#be185d",
                         }}
                       >
                         <ChevronDown style={{ width: 11, height: 11 }} />
@@ -477,12 +479,12 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                     {hasDelay && (
                       <div style={{ textAlign: "center" }}>
                         <button
-                          onClick={() => resetDelay(col.cfProjectId)}
+                          onClick={() => resetDelay(col.projectId)}
                           title="إعادة ضبط"
                           style={{
-                            background: "rgba(255,255,255,0.15)", border: "none",
+                            background: "#f1f5f9", border: "1px solid #e2e8f0",
                             borderRadius: 5, padding: "2px 8px", cursor: "pointer",
-                            fontSize: 8, color: "#fff", fontWeight: 700,
+                            fontSize: 8, color: "#475569", fontWeight: 700,
                             display: "inline-flex", alignItems: "center", gap: 3,
                           }}
                         >
@@ -500,8 +502,8 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                 style={{
                   width: DATE_COL_W,
                   minWidth: DATE_COL_W,
-                  background: "#334155",
-                  color: "#f1f5f9",
+                  background: "#f8fafc",
+                  color: "#334155",
                   fontSize: 11,
                   fontWeight: 800,
                   padding: "16px 6px",
@@ -520,8 +522,8 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                 style={{
                   width: TOTAL_COL_W,
                   minWidth: TOTAL_COL_W,
-                  background: "#1e3a5f",
-                  color: "#fbbf24",
+                  background: "#f0f4ff",
+                  color: "#1e3a5f",
                   fontSize: 11,
                   fontWeight: 800,
                   padding: "16px 6px",
@@ -558,7 +560,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
 
                     return (
                       <td
-                        key={cd.colId}
+                        key={`col-${cd.colId}`}
                         style={{
                           width: COL_W,
                           minWidth: COL_W,
@@ -606,12 +608,12 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       width: TOTAL_COL_W,
                       minWidth: TOTAL_COL_W,
                       height: ROW_H,
-                      background: row.total > 0 ? "#1e3a5f" : (isEven ? "#f8fafc" : "#f1f5f9"),
+                      background: row.total > 0 ? "#e8f0fb" : (isEven ? "#f8fafc" : "#f1f5f9"),
                       padding: "0 8px",
                       textAlign: "center",
                       fontSize: 11,
                       fontWeight: row.total > 0 ? 800 : 400,
-                      color: row.total > 0 ? "#fbbf24" : "#94a3b8",
+                      color: row.total > 0 ? "#1e3a5f" : "#94a3b8",
                       borderTop: "1px solid #e2e8f0",
                     }}
                   >
