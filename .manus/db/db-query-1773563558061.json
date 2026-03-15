@@ -1,0 +1,114 @@
+{
+  "query": "DESCRIBE cpa_projects;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute DESCRIBE cpa_projects;",
+  "rows": [
+    {
+      "Field": "id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": "auto_increment"
+    },
+    {
+      "Field": "project_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "plot_number",
+      "Type": "varchar(50)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "location",
+      "Type": "varchar(300)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "project_type",
+      "Type": "enum('RESIDENTIAL','COMMERCIAL','MIXED_USE','OTHER')",
+      "Null": "YES",
+      "Key": "",
+      "Default": "RESIDENTIAL",
+      "Extra": ""
+    },
+    {
+      "Field": "description",
+      "Type": "varchar(500)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "bua_sqft",
+      "Type": "decimal(12,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "building_category_id",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "construction_cost_per_sqft",
+      "Type": "decimal(10,2)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "duration_months",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "status",
+      "Type": "enum('ACTIVE','COMPLETED','CANCELLED')",
+      "Null": "YES",
+      "Key": "",
+      "Default": "ACTIVE",
+      "Extra": ""
+    },
+    {
+      "Field": "created_at",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": ""
+    },
+    {
+      "Field": "updated_at",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": "DEFAULT_GENERATED on update CURRENT_TIMESTAMP"
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nid\tint\tNO\tPRI\tNULL\tauto_increment\nproject_id\tint\tNO\tMUL\tNULL\t\nplot_number\tvarchar(50)\tNO\t\tNULL\t\nlocation\tvarchar(300)\tYES\t\tNULL\t\nproject_type\tenum('RESIDENTIAL','COMMERCIAL','MIXED_USE','OTHER')\tYES\t\tRESIDENTIAL\t\ndescription\tvarchar(500)\tYES\t\tNULL\t\nbua_sqft\tdecimal(12,2)\tNO\t\tNULL\t\nbuilding_category_id\tint\tYES\t\tNULL\t\nconstruction_cost_per_sqft\tdecimal(10,2)\tNO\t\tNULL\t\nduration_months\tint\tNO\t\tNULL\t\nstatus\tenum('ACTIVE','COMPLETED','CANCELLED')\tYES\t\tACTIVE\t\ncreated_at\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\t\nupdated_at\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\tDEFAULT_GENERATED on update CURRENT_TIMESTAMP\n",
+  "stderr": "",
+  "execution_time_ms": 1512
+}

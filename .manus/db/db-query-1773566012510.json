@@ -1,0 +1,50 @@
+{
+  "query": "SELECT er.id, er.project_consultant_id, er.eval_rank, er.can_rank, er.total_true_cost, cm.code FROM cpa_evaluation_results er JOIN cpa_project_consultants pc ON pc.id = er.project_consultant_id JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id WHERE pc.cpa_project_id = 120001 ORDER BY COALESCE(er.eval_rank, 999), er.total_true_cost",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT er.id, er.project_consultant_id, er.eval_rank, er.can_rank, er.total_true_cost, cm.code FROM cpa_evaluation_results er JOIN cpa_project_consultants pc ON pc.id = er.project_consultant_id JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id WHERE pc.cpa_project_id = 120001 ORDER BY COALESCE(er.eval_rank, 999), er.total_true_cost",
+  "rows": [
+    {
+      "id": "180091",
+      "project_consultant_id": "150001",
+      "eval_rank": "1",
+      "can_rank": "1",
+      "total_true_cost": "13967701.00",
+      "code": "AAEC"
+    },
+    {
+      "id": "180092",
+      "project_consultant_id": "150002",
+      "eval_rank": "2",
+      "can_rank": "1",
+      "total_true_cost": "15713995.45",
+      "code": "DEC"
+    },
+    {
+      "id": "180094",
+      "project_consultant_id": "150004",
+      "eval_rank": "3",
+      "can_rank": "1",
+      "total_true_cost": "19535164.40",
+      "code": "KIEFERLE"
+    },
+    {
+      "id": "180093",
+      "project_consultant_id": "150003",
+      "eval_rank": "NULL",
+      "can_rank": "0",
+      "total_true_cost": "NULL",
+      "code": "LACASA"
+    },
+    {
+      "id": "180095",
+      "project_consultant_id": "150005",
+      "eval_rank": "NULL",
+      "can_rank": "0",
+      "total_true_cost": "NULL",
+      "code": "XYZ"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tproject_consultant_id\teval_rank\tcan_rank\ttotal_true_cost\tcode\n180091\t150001\t1\t1\t13967701.00\tAAEC\n180092\t150002\t2\t1\t15713995.45\tDEC\n180094\t150004\t3\t1\t19535164.40\tKIEFERLE\n180093\t150003\tNULL\t0\tNULL\tLACASA\n180095\t150005\tNULL\t0\tNULL\tXYZ\n",
+  "stderr": "",
+  "execution_time_ms": 1520
+}

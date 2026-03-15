@@ -1,0 +1,8 @@
+{
+  "query": "SELECT pc.id as pc_id, cm.consultant_code, pc.supervision_fee_method, pc.supervision_fee_amount, pc.supervision_submitted, COUNT(cst.id) as team_count FROM cpa_project_consultants pc JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id LEFT JOIN cpa_consultant_supervision_team cst ON cst.project_consultant_id = pc.id GROUP BY pc.id, cm.consultant_code, pc.supervision_fee_method, pc.supervision_fee_amount, pc.supervision_submitted;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT pc.id as pc_id, cm.consultant_code, pc.supervision_fee_method, pc.supervision_fee_amount, pc.supervision_submitted, COUNT(cst.id) as team_count FROM cpa_project_consultants pc JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id LEFT JOIN cpa_consultant_supervision_team cst ON cst.project_consultant_id = pc.id GROUP BY pc.id, cm.consultant_code, pc.supervision_fee_method, pc.supervision_fee_amount, pc.supervision_submitted;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'cm.consultant_code' in 'group statement'"
+  ]
+}

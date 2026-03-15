@@ -1,0 +1,50 @@
+{
+  "query": "SELECT id, code FROM cpa_supervision_roles WHERE code IN ('RE', 'HO_ARCH', 'HO_STRUCTURAL', 'CIVIL_INSPECTOR', 'HO_MECHANICAL', 'MEP_INSPECTOR', 'HO_ELECTRICAL', 'HSE_OFFICER', 'DOC_CONTROLLER', 'QA_QC')",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, code FROM cpa_supervision_roles WHERE code IN ('RE', 'HO_ARCH', 'HO_STRUCTURAL', 'CIVIL_INSPECTOR', 'HO_MECHANICAL', 'MEP_INSPECTOR', 'HO_ELECTRICAL', 'HSE_OFFICER', 'DOC_CONTROLLER', 'QA_QC')",
+  "rows": [
+    {
+      "id": "30012",
+      "code": "RE"
+    },
+    {
+      "id": "30014",
+      "code": "CIVIL_INSPECTOR"
+    },
+    {
+      "id": "30015",
+      "code": "MEP_INSPECTOR"
+    },
+    {
+      "id": "30016",
+      "code": "HSE_OFFICER"
+    },
+    {
+      "id": "30017",
+      "code": "DOC_CONTROLLER"
+    },
+    {
+      "id": "30018",
+      "code": "QA_QC"
+    },
+    {
+      "id": "30019",
+      "code": "HO_STRUCTURAL"
+    },
+    {
+      "id": "30020",
+      "code": "HO_ARCH"
+    },
+    {
+      "id": "30021",
+      "code": "HO_MECHANICAL"
+    },
+    {
+      "id": "30022",
+      "code": "HO_ELECTRICAL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcode\n30012\tRE\n30014\tCIVIL_INSPECTOR\n30015\tMEP_INSPECTOR\n30016\tHSE_OFFICER\n30017\tDOC_CONTROLLER\n30018\tQA_QC\n30019\tHO_STRUCTURAL\n30020\tHO_ARCH\n30021\tHO_MECHANICAL\n30022\tHO_ELECTRICAL\n",
+  "stderr": "",
+  "execution_time_ms": 1518
+}

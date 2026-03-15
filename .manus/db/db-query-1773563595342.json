@@ -1,0 +1,90 @@
+{
+  "query": "SELECT id, code, trade_name FROM cpa_consultants_master WHERE is_active = 1 ORDER BY code;\nSELECT id, code, label FROM cpa_building_categories WHERE is_active = 1 ORDER BY sort_order;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, code, trade_name FROM cpa_consultants_master WHERE is_active = 1 ORDER BY code;\nSELECT id, code, label FROM cpa_building_categories WHERE is_active = 1 ORDER BY sort_order;",
+  "rows": [
+    {
+      "id": "4",
+      "code": "AAEC",
+      "trade_name": "ARTEC Architectural & Engineering Consultants"
+    },
+    {
+      "id": "5",
+      "code": "ABCAE",
+      "trade_name": "Arif & Bintoak Consulting Architects & Engineers"
+    },
+    {
+      "id": "6",
+      "code": "ALDEC",
+      "trade_name": "Al Diwan Engineering Consultants"
+    },
+    {
+      "id": "3",
+      "code": "DEC",
+      "trade_name": "DATUM Engineering Consultants"
+    },
+    {
+      "id": "9",
+      "code": "KIEFERLE",
+      "trade_name": "Kieferle & Partner"
+    },
+    {
+      "id": "7",
+      "code": "LACASA",
+      "trade_name": "LACASA"
+    },
+    {
+      "id": "1",
+      "code": "OSUS",
+      "trade_name": "شركة أوسس الدولية"
+    },
+    {
+      "id": "2",
+      "code": "REALISTI",
+      "trade_name": "Realistic Engineering"
+    },
+    {
+      "id": "10",
+      "code": "SEC(",
+      "trade_name": "Safeer Engineering Consultants (SEC)"
+    },
+    {
+      "id": "8",
+      "code": "XYZ",
+      "trade_name": "XYZ Designers"
+    },
+    {
+      "id": "id",
+      "code": "code",
+      "trade_name": "label"
+    },
+    {
+      "id": "30006",
+      "code": "VILLA",
+      "trade_name": "Villa"
+    },
+    {
+      "id": "30007",
+      "code": "SMALL",
+      "trade_name": "Small"
+    },
+    {
+      "id": "30008",
+      "code": "MEDIUM",
+      "trade_name": "Medium"
+    },
+    {
+      "id": "30009",
+      "code": "LARGE",
+      "trade_name": "Large"
+    },
+    {
+      "id": "30010",
+      "code": "MEGA",
+      "trade_name": "Mega"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcode\ttrade_name\n4\tAAEC\tARTEC Architectural & Engineering Consultants\n5\tABCAE\tArif & Bintoak Consulting Architects & Engineers\n6\tALDEC\tAl Diwan Engineering Consultants\n3\tDEC\tDATUM Engineering Consultants\n9\tKIEFERLE\tKieferle & Partner\n7\tLACASA\tLACASA\n1\tOSUS\tشركة أوسس الدولية\n2\tREALISTI\tRealistic Engineering\n10\tSEC(\tSafeer Engineering Consultants (SEC)\n8\tXYZ\tXYZ Designers\nid\tcode\tlabel\n30006\tVILLA\tVilla\n30007\tSMALL\tSmall\n30008\tMEDIUM\tMedium\n30009\tLARGE\tLarge\n30010\tMEGA\tMega\n",
+  "stderr": "",
+  "execution_time_ms": 1788
+}

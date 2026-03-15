@@ -1,0 +1,8 @@
+{
+  "query": "\nSELECT cp.id as cpa_project_id, cp.project_id, cpc.id as cpc_id, cpc.consultant_master_id\nFROM cpa_projects cp \nJOIN cpa_project_consultants cpc ON cpc.cpa_project_id = cp.id\nORDER BY cp.id DESC, cpc.id;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute \nSELECT cp.id as cpa_project_id, cp.project_id, cpc.id as cpc_id, cpc.consultant_master_id\nFROM cpa_projects cp \nJOIN cpa_project_consultants cpc ON cpc.cpa_project_id = cp.id\nORDER BY cp.id DESC, cpc.id;\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 2: Unknown column 'cpc.consultant_master_id' in 'field list'"
+  ]
+}

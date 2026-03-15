@@ -1,0 +1,9 @@
+{
+  "query": "DELETE FROM cpa_consultant_supervision_team WHERE project_consultant_id = 150004;\nINSERT INTO cpa_consultant_supervision_team (project_consultant_id, supervision_role_id, proposed_allocation_pct, proposed_monthly_rate) VALUES\n  (150004, 30012, 100, 69938),\n  (150004, 30020, 40, 43197),\n  (150004, 30019, 40, 46282.50),\n  (150004, 30014, 100, 22627),\n  (150004, 30021, 40, 43197),\n  (150004, 30015, 100, 22627),\n  (150004, 30022, 40, 43197),\n  (150004, 30016, 100, 26741),\n  (150004, 30017, 100, 13370.50),\n  (150004, 30018, 100, 43197)",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute DELETE FROM cpa_consultant_supervision_team WHERE project_consultant_id = 150004;\nINSERT INTO cpa_consultant_supervision_team (project_consultant_id, supervision_role_id, proposed_allocation_pct, proposed_monthly_rate) VALUES\n  (150004, 30012, 100, 69938),\n  (150004, 30020, 40, 43197),\n  (150004, 30019, 40, 46282.50),\n  (150004, 30014, 100, 22627),\n  (150004, 30021, 40, 43197),\n  (150004, 30015, 100, 22627),\n  (150004, 30022, 40, 43197),\n  (150004, 30016, 100, 26741),\n  (150004, 30017, 100, 13370.50),\n  (150004, 30018, 100, 43197)",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1764
+}

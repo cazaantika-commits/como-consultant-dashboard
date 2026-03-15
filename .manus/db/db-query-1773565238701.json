@@ -1,0 +1,45 @@
+{
+  "query": "SELECT pc.id as pc_id, pc.supervision_fee_method, pc.supervision_fee_amount, pc.supervision_submitted, COUNT(cst.id) as team_count FROM cpa_project_consultants pc LEFT JOIN cpa_consultant_supervision_team cst ON cst.project_consultant_id = pc.id GROUP BY pc.id, pc.supervision_fee_method, pc.supervision_fee_amount, pc.supervision_submitted;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT pc.id as pc_id, pc.supervision_fee_method, pc.supervision_fee_amount, pc.supervision_submitted, COUNT(cst.id) as team_count FROM cpa_project_consultants pc LEFT JOIN cpa_consultant_supervision_team cst ON cst.project_consultant_id = pc.id GROUP BY pc.id, pc.supervision_fee_method, pc.supervision_fee_amount, pc.supervision_submitted;",
+  "rows": [
+    {
+      "pc_id": "150003",
+      "supervision_fee_method": "NULL",
+      "supervision_fee_amount": "NULL",
+      "supervision_submitted": "0",
+      "team_count": "0"
+    },
+    {
+      "pc_id": "150005",
+      "supervision_fee_method": "NULL",
+      "supervision_fee_amount": "NULL",
+      "supervision_submitted": "0",
+      "team_count": "0"
+    },
+    {
+      "pc_id": "150002",
+      "supervision_fee_method": "LUMP_SUM",
+      "supervision_fee_amount": "5350000.00",
+      "supervision_submitted": "1",
+      "team_count": "0"
+    },
+    {
+      "pc_id": "150004",
+      "supervision_fee_method": "MONTHLY_RATE",
+      "supervision_fee_amount": "NULL",
+      "supervision_submitted": "1",
+      "team_count": "0"
+    },
+    {
+      "pc_id": "150001",
+      "supervision_fee_method": "PERCENTAGE",
+      "supervision_fee_amount": "NULL",
+      "supervision_submitted": "1",
+      "team_count": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "pc_id\tsupervision_fee_method\tsupervision_fee_amount\tsupervision_submitted\tteam_count\n150003\tNULL\tNULL\t0\t0\n150005\tNULL\tNULL\t0\t0\n150002\tLUMP_SUM\t5350000.00\t1\t0\n150004\tMONTHLY_RATE\tNULL\t1\t0\n150001\tPERCENTAGE\tNULL\t1\t0\n",
+  "stderr": "",
+  "execution_time_ms": 1561
+}

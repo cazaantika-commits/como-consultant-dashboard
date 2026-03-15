@@ -1,0 +1,50 @@
+{
+  "query": "SELECT pc.id, pc.cpa_project_id, pc.consultant_id, pc.status, cm.trade_name, cm.code\nFROM cpa_project_consultants pc\nJOIN cpa_consultants_master cm ON cm.id = pc.consultant_id\nORDER BY pc.consultant_id, pc.id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT pc.id, pc.cpa_project_id, pc.consultant_id, pc.status, cm.trade_name, cm.code\nFROM cpa_project_consultants pc\nJOIN cpa_consultants_master cm ON cm.id = pc.consultant_id\nORDER BY pc.consultant_id, pc.id;",
+  "rows": [
+    {
+      "id": "150002",
+      "cpa_project_id": "120001",
+      "consultant_id": "3",
+      "status": "EVALUATED",
+      "trade_name": "DATUM Engineering Consultants",
+      "code": "DEC"
+    },
+    {
+      "id": "150001",
+      "cpa_project_id": "120001",
+      "consultant_id": "4",
+      "status": "EVALUATED",
+      "trade_name": "ARTEC Architectural & Engineering Consultants",
+      "code": "AAEC"
+    },
+    {
+      "id": "150003",
+      "cpa_project_id": "120001",
+      "consultant_id": "7",
+      "status": "EVALUATED",
+      "trade_name": "LACASA",
+      "code": "LACASA"
+    },
+    {
+      "id": "150005",
+      "cpa_project_id": "120001",
+      "consultant_id": "8",
+      "status": "EVALUATED",
+      "trade_name": "XYZ Designers",
+      "code": "XYZ"
+    },
+    {
+      "id": "150004",
+      "cpa_project_id": "120001",
+      "consultant_id": "9",
+      "status": "EVALUATED",
+      "trade_name": "Kieferle & Partner",
+      "code": "KIEFERLE"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcpa_project_id\tconsultant_id\tstatus\ttrade_name\tcode\n150002\t120001\t3\tEVALUATED\tDATUM Engineering Consultants\tDEC\n150001\t120001\t4\tEVALUATED\tARTEC Architectural & Engineering Consultants\tAAEC\n150003\t120001\t7\tEVALUATED\tLACASA\tLACASA\n150005\t120001\t8\tEVALUATED\tXYZ Designers\tXYZ\n150004\t120001\t9\tEVALUATED\tKieferle & Partner\tKIEFERLE\n",
+  "stderr": "",
+  "execution_time_ms": 1514
+}

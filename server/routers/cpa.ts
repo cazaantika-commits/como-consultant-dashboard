@@ -283,7 +283,13 @@ async function runCalculationEngine(cpaProjectId: number) {
     r.resultRank = null;
   });
 
-  // Persist results
+  // Persist results — delete old results first to avoid duplicates
+  const allPcIds = results.map((r) => r.pcId);
+  if (allPcIds.length > 0) {
+    for (const pcId of allPcIds) {
+      await db.execute(sql`DELETE FROM cpa_evaluation_results WHERE project_consultant_id = ${pcId}`);
+    }
+  }
   for (const r of results) {
     const notesJson = JSON.stringify(r.notes);
     await db.execute(
@@ -1039,6 +1045,11 @@ export const cpaRouter = router({
           : null;
         const supSubmitted = parsed.supervision_fee?.submitted ? 1 : 0;
         // ملاحظة 2: عند PERCENTAGE يتجاهل النظام amount ويعيد الحساب من النسبة
+        // Normalize percentage: Claude may send 0.018 (decimal) or 1.8 (percent) — normalize to percent value
+        const rawDesignPct = parsed.design_fee.percentage ?? null;
+        const normalizedDesignPct = rawDesignPct !== null ? (rawDesignPct < 1 ? rawDesignPct * 100 : rawDesignPct) : null;
+        const rawSupPct = parsed.supervision_fee?.percentage ?? null;
+        const normalizedSupPct = rawSupPct !== null ? (rawSupPct < 1 ? rawSupPct * 100 : rawSupPct) : null;
         const designFeeAmount = designMethod === "PERCENTAGE" ? null : (parsed.design_fee.amount ?? null);
         const supFeeAmount = supMethod === "PERCENTAGE" ? null : (parsed.supervision_fee?.amount ?? null);
 
@@ -1050,10 +1061,10 @@ export const cpaRouter = router({
                   proposal_reference=${parsed.proposal_reference ?? null},
                   design_fee_amount=${designFeeAmount},
                   design_fee_method=${designMethod},
-                  design_fee_percentage=${parsed.design_fee.percentage ?? null},
+                  design_fee_percentage=${normalizedDesignPct},
                   supervision_fee_amount=${supFeeAmount},
                   supervision_fee_method=${supMethod},
-                  supervision_fee_percentage=${parsed.supervision_fee?.percentage ?? null},
+                  supervision_fee_percentage=${normalizedSupPct},
                   supervision_stated_duration_months=${parsed.supervision_fee?.stated_duration_months ?? null},
                   supervision_submitted=${supSubmitted},
                   import_json=${input.jsonText},
@@ -1070,9 +1081,9 @@ export const cpaRouter = router({
                 VALUES (${input.cpaProjectId}, ${consultantId},
                         ${parsed.proposal_date ?? null}, ${parsed.proposal_reference ?? null},
                         ${designFeeAmount}, ${designMethod},
-                        ${parsed.design_fee.percentage ?? null},
+                        ${normalizedDesignPct},
                         ${supFeeAmount}, ${supMethod},
-                        ${parsed.supervision_fee?.percentage ?? null},
+                        ${normalizedSupPct},
                         ${parsed.supervision_fee?.stated_duration_months ?? null},
                         ${supSubmitted}, ${input.jsonText}, 'CONFIRMED')`
           );
@@ -1114,23 +1125,31 @@ export const cpaRouter = router({
           }
         }
 
-        // Import supervision team
+        // Import supervision team — accept both parsed.supervision_team and parsed.supervision_fee.team
         let supervisionRolesImported = 0;
-        if (parsed.supervision_team?.length) {
-          for (const member of parsed.supervision_team) {
+        const supervisionTeamMembers: any[] = parsed.supervision_team ?? parsed.supervision_fee?.team ?? [];
+        // Always delete existing team entries first (ON DUPLICATE KEY UPDATE won't work without UNIQUE constraint)
+        await db.execute(
+          sql`DELETE FROM cpa_consultant_supervision_team WHERE project_consultant_id = ${pcId}`
+        );
+        if (supervisionTeamMembers.length) {
+          for (const member of supervisionTeamMembers) {
             const roleRows = await qRows<any>(
               db,
               sql`SELECT id FROM cpa_supervision_roles WHERE code = ${member.role_code}`
             );
-            if (!roleRows[0]) continue;
+            if (!roleRows[0]) {
+              console.warn(`[CPA importJson] Supervision role not found: ${member.role_code}`);
+              continue;
+            }
             supervisionRolesImported++;
+            // Accept both field name variants from Claude JSON
+            const memberAlloc = member.proposed_allocation_pct ?? member.allocation_pct ?? 100;
+            const memberRate = member.proposed_monthly_rate ?? member.monthly_rate ?? null;
             await db.execute(
               sql`INSERT INTO cpa_consultant_supervision_team
                     (project_consultant_id, supervision_role_id, proposed_allocation_pct, proposed_monthly_rate)
-                  VALUES (${pcId}, ${roleRows[0].id}, ${member.allocation_pct ?? 0}, ${member.monthly_rate ?? null})
-                  ON DUPLICATE KEY UPDATE
-                    proposed_allocation_pct = VALUES(proposed_allocation_pct),
-                    proposed_monthly_rate = VALUES(proposed_monthly_rate)`
+                  VALUES (${pcId}, ${roleRows[0].id}, ${memberAlloc}, ${memberRate})`
             );
           }
         }
@@ -1246,7 +1265,7 @@ export const cpaRouter = router({
         if (!db) return [];
         const rows = await qRows<any>(
           db,
-          sql`SELECT er.*, pc.consultant_id, cm.legal_name, cm.trade_name, cm.code as consultant_code,
+          sql`SELECT er.*, er.eval_rank as result_rank, pc.consultant_id, cm.legal_name, cm.trade_name, cm.code as consultant_code,
                      pc.design_fee_method, pc.supervision_fee_method,
                      pc.supervision_stated_duration_months, pc.proposal_reference, pc.proposal_date
               FROM cpa_evaluation_results er

@@ -1,0 +1,26 @@
+{
+  "query": "SHOW CREATE TABLE cpa_consultant_supervision_team",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SHOW CREATE TABLE cpa_consultant_supervision_team",
+  "rows": [
+    {
+      "Table": "cpa_consultant_supervision_team",
+      "Create Table": "CREATE TABLE `cpa_consultant_supervision_team` ("
+    }
+  ],
+  "messages": [
+    "  `id` int NOT NULL AUTO_INCREMENT,",
+    "  `project_consultant_id` int NOT NULL,",
+    "  `supervision_role_id` int NOT NULL,",
+    "  `proposed_allocation_pct` decimal(5,2) NOT NULL DEFAULT '0',",
+    "  `proposed_monthly_rate` decimal(12,2) DEFAULT NULL,",
+    "  `notes` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,",
+    "  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,",
+    "  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,",
+    "  PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */,",
+    "  KEY `cpa_cst_pc_role` (`project_consultant_id`,`supervision_role_id`)",
+    ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+  ],
+  "stdout": "Table\tCreate Table\ncpa_consultant_supervision_team\tCREATE TABLE `cpa_consultant_supervision_team` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `project_consultant_id` int NOT NULL,\n  `supervision_role_id` int NOT NULL,\n  `proposed_allocation_pct` decimal(5,2) NOT NULL DEFAULT '0',\n  `proposed_monthly_rate` decimal(12,2) DEFAULT NULL,\n  `notes` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,\n  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`) /*T![clustered_index] CLUSTERED */,\n  KEY `cpa_cst_pc_role` (`project_consultant_id`,`supervision_role_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci\n",
+  "stderr": "",
+  "execution_time_ms": 1518
+}

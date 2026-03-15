@@ -1,0 +1,130 @@
+{
+  "query": "SELECT cst.*, sr.code, sr.label FROM cpa_consultant_supervision_team cst JOIN cpa_supervision_roles sr ON sr.id = cst.supervision_role_id WHERE cst.project_consultant_id = 150004",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT cst.*, sr.code, sr.label FROM cpa_consultant_supervision_team cst JOIN cpa_supervision_roles sr ON sr.id = cst.supervision_role_id WHERE cst.project_consultant_id = 150004",
+  "rows": [
+    {
+      "id": "1",
+      "project_consultant_id": "150004",
+      "supervision_role_id": "30012",
+      "proposed_allocation_pct": "100.00",
+      "proposed_monthly_rate": "69938.00",
+      "notes": "NULL",
+      "created_at": "2026-03-15 09:10:43",
+      "updated_at": "2026-03-15 09:10:43",
+      "code": "RE",
+      "label": "Resident Engineer"
+    },
+    {
+      "id": "2",
+      "project_consultant_id": "150004",
+      "supervision_role_id": "30020",
+      "proposed_allocation_pct": "40.00",
+      "proposed_monthly_rate": "43197.00",
+      "notes": "NULL",
+      "created_at": "2026-03-15 09:10:43",
+      "updated_at": "2026-03-15 09:10:43",
+      "code": "HO_ARCH",
+      "label": "Architectural Engineer (H/O)"
+    },
+    {
+      "id": "3",
+      "project_consultant_id": "150004",
+      "supervision_role_id": "30019",
+      "proposed_allocation_pct": "40.00",
+      "proposed_monthly_rate": "46282.50",
+      "notes": "NULL",
+      "created_at": "2026-03-15 09:10:43",
+      "updated_at": "2026-03-15 09:10:43",
+      "code": "HO_STRUCTURAL",
+      "label": "Structural Engineer (H/O)"
+    },
+    {
+      "id": "4",
+      "project_consultant_id": "150004",
+      "supervision_role_id": "30014",
+      "proposed_allocation_pct": "100.00",
+      "proposed_monthly_rate": "22627.00",
+      "notes": "NULL",
+      "created_at": "2026-03-15 09:10:43",
+      "updated_at": "2026-03-15 09:10:43",
+      "code": "CIVIL_INSPECTOR",
+      "label": "Civil Inspector"
+    },
+    {
+      "id": "5",
+      "project_consultant_id": "150004",
+      "supervision_role_id": "30021",
+      "proposed_allocation_pct": "40.00",
+      "proposed_monthly_rate": "43197.00",
+      "notes": "NULL",
+      "created_at": "2026-03-15 09:10:43",
+      "updated_at": "2026-03-15 09:10:43",
+      "code": "HO_MECHANICAL",
+      "label": "Mechanical Engineer (H/O)"
+    },
+    {
+      "id": "6",
+      "project_consultant_id": "150004",
+      "supervision_role_id": "30015",
+      "proposed_allocation_pct": "100.00",
+      "proposed_monthly_rate": "22627.00",
+      "notes": "NULL",
+      "created_at": "2026-03-15 09:10:43",
+      "updated_at": "2026-03-15 09:10:43",
+      "code": "MEP_INSPECTOR",
+      "label": "MEP Inspector"
+    },
+    {
+      "id": "7",
+      "project_consultant_id": "150004",
+      "supervision_role_id": "30022",
+      "proposed_allocation_pct": "40.00",
+      "proposed_monthly_rate": "43197.00",
+      "notes": "NULL",
+      "created_at": "2026-03-15 09:10:43",
+      "updated_at": "2026-03-15 09:10:43",
+      "code": "HO_ELECTRICAL",
+      "label": "Electrical Engineer (H/O)"
+    },
+    {
+      "id": "8",
+      "project_consultant_id": "150004",
+      "supervision_role_id": "30016",
+      "proposed_allocation_pct": "100.00",
+      "proposed_monthly_rate": "26741.00",
+      "notes": "NULL",
+      "created_at": "2026-03-15 09:10:43",
+      "updated_at": "2026-03-15 09:10:43",
+      "code": "HSE_OFFICER",
+      "label": "HSE Officer"
+    },
+    {
+      "id": "9",
+      "project_consultant_id": "150004",
+      "supervision_role_id": "30017",
+      "proposed_allocation_pct": "100.00",
+      "proposed_monthly_rate": "13370.50",
+      "notes": "NULL",
+      "created_at": "2026-03-15 09:10:43",
+      "updated_at": "2026-03-15 09:10:43",
+      "code": "DOC_CONTROLLER",
+      "label": "Document Controller"
+    },
+    {
+      "id": "10",
+      "project_consultant_id": "150004",
+      "supervision_role_id": "30018",
+      "proposed_allocation_pct": "100.00",
+      "proposed_monthly_rate": "43197.00",
+      "notes": "NULL",
+      "created_at": "2026-03-15 09:10:43",
+      "updated_at": "2026-03-15 09:10:43",
+      "code": "QA_QC",
+      "label": "QA/QC Engineer"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tproject_consultant_id\tsupervision_role_id\tproposed_allocation_pct\tproposed_monthly_rate\tnotes\tcreated_at\tupdated_at\tcode\tlabel\n1\t150004\t30012\t100.00\t69938.00\tNULL\t2026-03-15 09:10:43\t2026-03-15 09:10:43\tRE\tResident Engineer\n2\t150004\t30020\t40.00\t43197.00\tNULL\t2026-03-15 09:10:43\t2026-03-15 09:10:43\tHO_ARCH\tArchitectural Engineer (H/O)\n3\t150004\t30019\t40.00\t46282.50\tNULL\t2026-03-15 09:10:43\t2026-03-15 09:10:43\tHO_STRUCTURAL\tStructural Engineer (H/O)\n4\t150004\t30014\t100.00\t22627.00\tNULL\t2026-03-15 09:10:43\t2026-03-15 09:10:43\tCIVIL_INSPECTOR\tCivil Inspector\n5\t150004\t30021\t40.00\t43197.00\tNULL\t2026-03-15 09:10:43\t2026-03-15 09:10:43\tHO_MECHANICAL\tMechanical Engineer (H/O)\n6\t150004\t30015\t100.00\t22627.00\tNULL\t2026-03-15 09:10:43\t2026-03-15 09:10:43\tMEP_INSPECTOR\tMEP Inspector\n7\t150004\t30022\t40.00\t43197.00\tNULL\t2026-03-15 09:10:43\t2026-03-15 09:10:43\tHO_ELECTRICAL\tElectrical Engineer (H/O)\n8\t150004\t30016\t100.00\t26741.00\tNULL\t2026-03-15 09:10:43\t2026-03-15 09:10:43\tHSE_OFFICER\tHSE Officer\n9\t150004\t30017\t100.00\t13370.50\tNULL\t2026-03-15 09:10:43\t2026-03-15 09:10:43\tDOC_CONTROLLER\tDocument Controller\n10\t150004\t30018\t100.00\t43197.00\tNULL\t2026-03-15 09:10:43\t2026-03-15 09:10:43\tQA_QC\tQA/QC Engineer\n",
+  "stderr": "",
+  "execution_time_ms": 1594
+}
