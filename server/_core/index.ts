@@ -15,6 +15,7 @@ import { startEmailNotificationService } from "../emailNotificationService";
 import { startLifecycleDeadlineScheduler } from "../lifecycleDeadlineScheduler";
 import complianceReportRoute from "../complianceReport";
 import lifecycleApiRoute from "../lifecycleApiRoute";
+import cpaReportRoute from "../cpaReportRoute";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -64,6 +65,8 @@ async function startServer() {
   app.use("/api/lifecycle", complianceReportRoute);
   // Lifecycle AI API (structured JSON for agents)
   app.use("/api/lifecycle", lifecycleApiRoute);
+  // CPA True Cost Report (printable HTML)
+  app.use("/api/cpa/report", cpaReportRoute);
 
   // tRPC API
   app.use(

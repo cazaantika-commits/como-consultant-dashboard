@@ -1359,6 +1359,16 @@ function ResultsScreen({
           <RefreshCw className={`w-3.5 h-3.5 ml-1 ${evalMutation.isPending ? "animate-spin" : ""}`} />
           إعادة الحساب
         </Button>
+        {results.length > 0 && (
+          <Button
+            size="sm"
+            className="bg-sky-700 hover:bg-sky-600 text-white gap-1"
+            onClick={() => window.open(`/api/cpa/report/${projectId}`, '_blank')}
+          >
+            <Eye className="w-3.5 h-3.5" />
+            تصدير التقرير
+          </Button>
+        )}
       </div>
 
       {resultsQuery.isLoading ? (
@@ -1515,13 +1525,27 @@ function ResultsScreen({
               <div className="space-y-2">
                 {unrankable.map((r: any) => (
                   <Card key={r.project_consultant_id} className="border-dashed">
-                    <CardContent className="p-4 flex items-center justify-between">
-                      <div>
-                        <div className="font-semibold">{r.trade_name || r.legal_name}</div>
-                        <div className="text-xs text-muted-foreground">لم يقدم عرض إشراف كامل</div>
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        أتعاب التصميم: {fmtAED(r.quoted_design_fee)}
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="font-semibold">{r.trade_name || r.legal_name}</div>
+                          <div className="text-xs text-muted-foreground">لم يقدم عرض إشراف كامل</div>
+                        </div>
+                        <div className="text-sm text-right space-y-1">
+                          <div className="text-muted-foreground">
+                            أتعاب التصميم المقدمة: <span className="font-medium text-foreground">{fmtAED(r.quoted_design_fee)}</span>
+                          </div>
+                          {r.design_scope_gap_cost > 0 && (
+                            <div className="text-amber-600">
+                              فجوة النطاق: <span className="font-medium">+ {fmtAED(r.design_scope_gap_cost)}</span>
+                            </div>
+                          )}
+                          {(r.true_design_fee > r.quoted_design_fee) && (
+                            <div className="text-sky-700 font-semibold border-t pt-1">
+                              التصميم الحقيقي: {fmtAED(r.true_design_fee)}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
