@@ -1226,7 +1226,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                     if (phase && PHASE_COLORS[phase]) {
                       const colors = PHASE_COLORS[phase];
                       bg        = cd.amount > 0 ? colors.solid : colors.light;
-                      textColor = cd.amount > 0 ? "#ffffff" : colors.text;
+                      textColor = cd.amount > 0 ? "#000000" : colors.text;
                       fontW     = cd.amount > 0 ? 800 : 500;
                       if (cd.isFirst) { tl = CURVE; tr = CURVE; }
                       if (cd.isLast) { bl = CURVE; br = CURVE; }
@@ -1355,7 +1355,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       textAlign: "center",
                       fontSize: 11,
                       fontWeight: row.total > 0 ? 800 : 400,
-                      color: row.total > 0 ? "#ffffff" : "#94a3b8",
+                      color: row.total > 0 ? "#000000" : "#94a3b8",
                     }}
                   >
                     <CellTooltip lines={row.total > 0 ? (() => {
@@ -1389,7 +1389,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       textAlign: "center",
                       fontSize: 11,
                       fontWeight: cumulativeTotals[row.gi] > 0 ? 800 : 400,
-                      color: cumulativeTotals[row.gi] > 0 ? "#ffffff" : "#94a3b8",
+                      color: cumulativeTotals[row.gi] > 0 ? "#000000" : "#94a3b8",
                     }}
                   >
                     <CellTooltip lines={cumulativeTotals[row.gi] > 0 ? [
