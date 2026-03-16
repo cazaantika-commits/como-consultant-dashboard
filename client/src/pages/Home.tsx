@@ -288,11 +288,11 @@ export default function Home() {
     {
       id: "check-email",
       icon: Mail,
-      label: "شيكي على الإيميل",
+      label: "البريد الإلكتروني",
       color: "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400",
       borderColor: "border-blue-200 dark:border-blue-800",
-      message: "شيكي على الإيميل",
-      resultTitle: "📧 فحص الإيميل",
+      message: "شيكي على البريد الإلكتروني",
+      resultTitle: "📧 البريد الإلكتروني",
     },
     {
       id: "task-summary",
@@ -505,7 +505,7 @@ export default function Home() {
               <div className="flex items-center gap-5 p-5 lg:p-6">
                 {/* Avatar - compact */}
                 <div className="relative shrink-0">
-                  <div className="w-20 h-20 lg:w-24 lg:h-24 rounded-full overflow-hidden ring-3 ring-amber-300/50 ring-offset-2 ring-offset-background shadow-lg">
+                  <div className="w-28 h-28 lg:w-32 lg:h-32 rounded-full overflow-hidden ring-3 ring-amber-300/50 ring-offset-2 ring-offset-background shadow-lg">
                     <img src={SALWA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover" />
                   </div>
                   <span className="absolute bottom-0 right-0 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white dark:border-card shadow-sm">
