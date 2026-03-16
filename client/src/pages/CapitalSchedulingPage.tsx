@@ -205,9 +205,11 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
         }
       }
 
-      // Aggregate all phases into a single chartAmounts for totals
+      // Aggregate all phases EXCEPT land into chartAmounts for totals
+      // Land/paid amounts are already paid and should not appear in the monthly schedule
       const chartAmounts: Record<number, number> = {};
       for (const phase of phaseTypes) {
+        if (phase === "land") continue; // Skip paid amounts
         for (const [idx, val] of Object.entries(phaseChartAmounts[phase])) {
           const i = parseInt(idx);
           chartAmounts[i] = (chartAmounts[i] || 0) + val;
@@ -273,7 +275,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
     const { phaseRanges } = col;
     // Check in order of priority (offplan can overlap with design)
     if (chartIdx >= phaseRanges.offplan.start && chartIdx <= phaseRanges.offplan.end && col.offplanMonths > 0) return "offplan";
-    if (chartIdx >= phaseRanges.land.start && chartIdx <= phaseRanges.land.end) return "land";
+    // Land/paid phase excluded from monthly display — already paid
     if (chartIdx >= phaseRanges.design.start && chartIdx <= phaseRanges.design.end) return "design";
     if (chartIdx >= phaseRanges.construction.start && chartIdx <= phaseRanges.construction.end) return "construction";
     if (chartIdx >= phaseRanges.handover.start && chartIdx <= phaseRanges.handover.end) return "handover";
@@ -407,7 +409,6 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
           {/* Legend */}
           <div style={{ display: "flex", gap: 10, fontSize: 11, color: "#475569", alignItems: "center" }}>
             {([
-              { phase: "land" as const, label: "المدفوع" },
               { phase: "design" as const, label: "التصاميم" },
               { phase: "offplan" as const, label: "أوف بلان" },
               { phase: "construction" as const, label: "الإنشاء" },

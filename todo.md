@@ -50,3 +50,4 @@
 - [x] Verify all pages reflect changes from one place
 - [x] Bug fix: Edit button for last two projects now uses projectId instead of cfProjectId
 - [x] Change delay increment from 3 months to 1 month in capital scheduling
+- [x] Remove paid/land amounts from monthly schedule rows (should not mix with future required amounts)
