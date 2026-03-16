@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { ArrowRight, Layers, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
+import { ArrowRight, Layers, ChevronDown, ChevronUp, RotateCcw, Settings, Calendar, Clock, Save, X } from "lucide-react";
 
 const TOTAL_MONTHS = 48;
 const CHART_START = new Date(2026, 3, 1); // April 2026
@@ -32,13 +32,13 @@ function fmtFull(n: number): string {
 }
 
 // ── Phase colors ─────────────────────────────────────────────────────
-// 5 phases: land (green), design (cyan), offplan (pink), construction (orange), handover (yellow)
+// 5 phases: land (yellow), design (cyan), offplan (pink), construction (green), handover (orange)
 const PHASE_COLORS = {
-  land:         { solid: "#4AD8A4", light: "#e6faf2", text: "#1a7a54" },
+  land:         { solid: "#FBC53B", light: "#fef9e7", text: "#854d0e" },
   design:       { solid: "#3AD8F0", light: "#e0f7fc", text: "#0e7490" },
   offplan:      { solid: "#F581BE", light: "#fde8f3", text: "#9d174d" },
-  construction: { solid: "#FF602A", light: "#fff0eb", text: "#9a3412" },
-  handover:     { solid: "#FBC53B", light: "#fef9e7", text: "#854d0e" },
+  construction: { solid: "#4AD8A4", light: "#e6faf2", text: "#1a7a54" },
+  handover:     { solid: "#FF602A", light: "#fff0eb", text: "#9a3412" },
 } as const;
 
 type PhaseType = "land" | "design" | "offplan" | "construction" | "handover";
@@ -96,6 +96,17 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
 
   const rawData = useMemo(() => scheduleQuery.data || [], [scheduleQuery.data]);
   const baseColumns = useMemo<ProjectColumn[]>(() => rawData as ProjectColumn[], [rawData]);
+
+  const [showSettings, setShowSettings] = useState(false);
+  const [editingProject, setEditingProject] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState<{ startDate: string; preDevMonths: number; constructionMonths: number; handoverMonths: number }>({ startDate: '2026-04', preDevMonths: 6, constructionMonths: 16, handoverMonths: 2 });
+
+  const updateProjectMutation = trpc.cashFlowProgram.updateProject.useMutation({
+    onSuccess: () => {
+      scheduleQuery.refetch();
+      setEditingProject(null);
+    },
+  });
 
   const [delays, setDelays] = useState<Record<number, DelayState>>({});
 
@@ -408,6 +419,22 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
             ))}
           </div>
 
+          {/* Settings toggle */}
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              background: showSettings ? "#3AD8F0" : "#ffffff",
+              color: showSettings ? "#fff" : "#475569",
+              border: "1px solid " + (showSettings ? "#3AD8F0" : "#e2e8f0"),
+              borderRadius: 10, padding: "6px 14px", cursor: "pointer",
+              fontSize: 12, fontWeight: 700, transition: "all 0.2s",
+            }}
+          >
+            <Settings style={{ width: 14, height: 14 }} />
+            إعدادات المشاريع
+          </button>
+
           {/* Grouping buttons */}
           <div style={{ display: "flex", gap: 4, background: "#ffffff", borderRadius: 12, padding: 3, border: "1px solid #e2e8f0" }}>
             {([1, 3, 6] as const).map((g) => (
@@ -418,7 +445,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                   padding: "5px 14px", borderRadius: 9, fontSize: 12, fontWeight: 700,
                   cursor: "pointer", transition: "all 0.2s",
                   border: "none",
-                  background: groupBy === g ? "#FF602A" : "transparent",
+                  background: groupBy === g ? "#3AD8F0" : "transparent",
                   color: groupBy === g ? "#fff" : "#64748b",
                 }}
               >
@@ -428,6 +455,163 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
           </div>
         </div>
       </div>
+
+      {/* ── Project Settings Panel ───────────────────────────────────── */}
+      {showSettings && (
+        <div style={{
+          background: "#ffffff", borderRadius: 16, border: "1px solid #e5e7eb",
+          padding: 16, marginBottom: 16, boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Settings style={{ width: 16, height: 16, color: "#3AD8F0" }} />
+              <span style={{ fontSize: 14, fontWeight: 800, color: "#0f172a" }}>إعدادات المشاريع — تواريخ البداية والمدد</span>
+            </div>
+            <button onClick={() => setShowSettings(false)} style={{
+              background: "#f1f5f9", border: "1px solid #e2e8f0", borderRadius: 8,
+              padding: "4px 8px", cursor: "pointer", display: "flex", alignItems: "center", gap: 4,
+              fontSize: 11, color: "#64748b", fontWeight: 700,
+            }}>
+              <X style={{ width: 12, height: 12 }} /> إغلاق
+            </button>
+          </div>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+              <thead>
+                <tr style={{ background: "#f8fafb" }}>
+                  <th style={{ padding: "8px 12px", textAlign: "right", fontWeight: 700, color: "#475569", borderBottom: "2px solid #e5e7eb" }}>المشروع</th>
+                  <th style={{ padding: "8px 12px", textAlign: "center", fontWeight: 700, color: "#475569", borderBottom: "2px solid #e5e7eb", whiteSpace: "nowrap" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                      <Calendar style={{ width: 12, height: 12 }} /> تاريخ البداية
+                    </div>
+                  </th>
+                  <th style={{ padding: "8px 12px", textAlign: "center", fontWeight: 700, color: PHASE_COLORS.design.text, borderBottom: "2px solid #e5e7eb", whiteSpace: "nowrap" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                      <Clock style={{ width: 12, height: 12 }} /> التصاميم (شهر)
+                    </div>
+                  </th>
+                  <th style={{ padding: "8px 12px", textAlign: "center", fontWeight: 700, color: PHASE_COLORS.construction.text, borderBottom: "2px solid #e5e7eb", whiteSpace: "nowrap" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                      <Clock style={{ width: 12, height: 12 }} /> الإنشاء (شهر)
+                    </div>
+                  </th>
+                  <th style={{ padding: "8px 12px", textAlign: "center", fontWeight: 700, color: "#475569", borderBottom: "2px solid #e5e7eb", whiteSpace: "nowrap" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                      <Clock style={{ width: 12, height: 12 }} /> التسليم (شهر)
+                    </div>
+                  </th>
+                  <th style={{ padding: "8px 12px", textAlign: "center", fontWeight: 700, color: "#475569", borderBottom: "2px solid #e5e7eb" }}>إجراء</th>
+                </tr>
+              </thead>
+              <tbody>
+                {baseColumns.map((col) => {
+                  const isEditing = editingProject !== null && editingProject === col.cfProjectId;
+                  return (
+                    <tr key={col.projectId} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                      <td style={{ padding: "8px 12px", fontWeight: 700, color: "#1e293b", maxWidth: 200 }}>{col.name}</td>
+                      {isEditing ? (
+                        <>
+                          <td style={{ padding: "6px 8px", textAlign: "center" }}>
+                            <input type="month" value={editForm.startDate}
+                              onChange={(e) => setEditForm(f => ({ ...f, startDate: e.target.value }))}
+                              style={{ padding: "4px 8px", borderRadius: 8, border: "2px solid #3AD8F0", fontSize: 12, textAlign: "center", width: 130, outline: "none" }}
+                            />
+                          </td>
+                          <td style={{ padding: "6px 8px", textAlign: "center" }}>
+                            <input type="number" min={1} max={36} value={editForm.preDevMonths}
+                              onChange={(e) => setEditForm(f => ({ ...f, preDevMonths: parseInt(e.target.value) || 1 }))}
+                              style={{ padding: "4px 8px", borderRadius: 8, border: `2px solid ${PHASE_COLORS.design.solid}`, fontSize: 12, textAlign: "center", width: 60, outline: "none" }}
+                            />
+                          </td>
+                          <td style={{ padding: "6px 8px", textAlign: "center" }}>
+                            <input type="number" min={1} max={60} value={editForm.constructionMonths}
+                              onChange={(e) => setEditForm(f => ({ ...f, constructionMonths: parseInt(e.target.value) || 1 }))}
+                              style={{ padding: "4px 8px", borderRadius: 8, border: `2px solid ${PHASE_COLORS.construction.solid}`, fontSize: 12, textAlign: "center", width: 60, outline: "none" }}
+                            />
+                          </td>
+                          <td style={{ padding: "6px 8px", textAlign: "center" }}>
+                            <input type="number" min={1} max={12} value={editForm.handoverMonths}
+                              onChange={(e) => setEditForm(f => ({ ...f, handoverMonths: parseInt(e.target.value) || 1 }))}
+                              style={{ padding: "4px 8px", borderRadius: 8, border: "2px solid #94a3b8", fontSize: 12, textAlign: "center", width: 60, outline: "none" }}
+                            />
+                          </td>
+                          <td style={{ padding: "6px 8px", textAlign: "center" }}>
+                            <div style={{ display: "flex", gap: 4, justifyContent: "center" }}>
+                              <button
+                                onClick={() => {
+                                  if (col.cfProjectId) {
+                                    updateProjectMutation.mutate({
+                                      id: col.cfProjectId,
+                                      startDate: editForm.startDate,
+                                      preDevMonths: editForm.preDevMonths,
+                                      constructionMonths: editForm.constructionMonths,
+                                      handoverMonths: editForm.handoverMonths,
+                                    });
+                                  }
+                                }}
+                                disabled={updateProjectMutation.isPending}
+                                style={{
+                                  background: "#4AD8A4", color: "#fff", border: "none", borderRadius: 8,
+                                  padding: "4px 12px", cursor: "pointer", fontSize: 11, fontWeight: 700,
+                                  display: "flex", alignItems: "center", gap: 4, opacity: updateProjectMutation.isPending ? 0.6 : 1,
+                                }}
+                              >
+                                <Save style={{ width: 11, height: 11 }} /> حفظ
+                              </button>
+                              <button
+                                onClick={() => setEditingProject(null)}
+                                style={{
+                                  background: "#f1f5f9", color: "#64748b", border: "1px solid #e2e8f0", borderRadius: 8,
+                                  padding: "4px 10px", cursor: "pointer", fontSize: 11, fontWeight: 700,
+                                }}
+                              >
+                                إلغاء
+                              </button>
+                            </div>
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td style={{ padding: "8px 12px", textAlign: "center", color: "#334155", fontWeight: 600 }}>{col.startDate}</td>
+                          <td style={{ padding: "8px 12px", textAlign: "center" }}>
+                            <span style={{ background: PHASE_COLORS.design.light, color: PHASE_COLORS.design.text, padding: "2px 10px", borderRadius: 6, fontWeight: 700, fontSize: 12 }}>{col.preDevMonths}</span>
+                          </td>
+                          <td style={{ padding: "8px 12px", textAlign: "center" }}>
+                            <span style={{ background: PHASE_COLORS.construction.light, color: PHASE_COLORS.construction.text, padding: "2px 10px", borderRadius: 6, fontWeight: 700, fontSize: 12 }}>{col.constructionMonths}</span>
+                          </td>
+                          <td style={{ padding: "8px 12px", textAlign: "center" }}>
+                            <span style={{ background: "#f1f5f9", color: "#475569", padding: "2px 10px", borderRadius: 6, fontWeight: 700, fontSize: 12 }}>{col.handoverMonths}</span>
+                          </td>
+                          <td style={{ padding: "8px 12px", textAlign: "center" }}>
+                            <button
+                              onClick={() => {
+                                setEditingProject(col.cfProjectId);
+                                setEditForm({
+                                  startDate: col.startDate,
+                                  preDevMonths: col.preDevMonths,
+                                  constructionMonths: col.constructionMonths,
+                                  handoverMonths: col.handoverMonths,
+                                });
+                              }}
+                              style={{
+                                background: "#e0f7fc", color: "#0e7490", border: "1px solid #67e8f9", borderRadius: 8,
+                                padding: "4px 12px", cursor: "pointer", fontSize: 11, fontWeight: 700,
+                                display: "inline-flex", alignItems: "center", gap: 4,
+                              }}
+                            >
+                              <Settings style={{ width: 11, height: 11 }} /> تعديل
+                            </button>
+                          </td>
+                        </>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* ── Gantt Table ──────────────────────────────────────────────────── */}
       <div
@@ -504,7 +688,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                           borderTop: "1px solid #ccfbf1", paddingTop: 3, marginTop: 2,
                         }}>
                           <span style={{ color: "#64748b" }}>المطلوب:</span>
-                          <span style={{ fontWeight: 800, color: "#FF602A" }}>{fmtFull(col.upcomingTotal)}</span>
+                          <span style={{ fontWeight: 800, color: "#4AD8A4" }}>{fmtFull(col.upcomingTotal)}</span>
                         </div>
                       </div>
 
@@ -549,9 +733,9 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       {/* Construction delay controls */}
                       <DelayControl
                         label="الإنشاء"
-                        color="#FF602A"
-                        lightBg="#fff0eb"
-                        borderColor="#fdba74"
+                        color="#4AD8A4"
+                        lightBg="#e6faf2"
+                        borderColor="#6ee7b7"
                         value={delay.constructionDelay}
                         onUp={() => adjustDelay(col.projectId, "constructionDelay", -3)}
                         onDown={() => adjustDelay(col.projectId, "constructionDelay", 3)}

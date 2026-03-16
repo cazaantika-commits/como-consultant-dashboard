@@ -37,3 +37,6 @@
 - [x] Delay badge shows active delays (e.g., "تصاميم +3ش · أوف +3ش")
 - [ ] Import corrected KIEFERLE JSON and recalculate (pending)
 - [x] Update capital scheduling phase colors to match provided color palette (green, orange, pink, cyan, yellow)
+- [ ] Bug: Design and offplan phases not showing for مجان متعدد الاستخدامات in capital scheduling
+- [x] Change construction phase color to green (#4AD8A4) instead of orange
+- [x] Add project settings panel to CapitalSchedulingPage for editing startDate and durations directly
