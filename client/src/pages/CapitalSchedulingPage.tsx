@@ -845,6 +845,74 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
           </thead>
 
           <tbody>
+            {/* ── Paid Summary Row ─────────────────────────── */}
+            <tr>
+              {effectiveColumns.map((col, ci) => (
+                <td
+                  key={`paid-${col.projectId}`}
+                  style={{
+                    width: COL_W,
+                    minWidth: COL_W,
+                    height: ROW_H + 4,
+                    padding: 0,
+                    borderLeft: ci < effectiveColumns.length - 1 ? `${GAP}px solid #f8fafb` : "none",
+                    background: "#f8fafb",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      background: col.paidTotal > 0 ? "#fef3c7" : "#fafbfc",
+                      borderRadius: 10,
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 1,
+                      border: col.paidTotal > 0 ? "1px solid #fde68a" : "none",
+                    }}
+                  >
+                    {col.paidTotal > 0 && (
+                      <>
+                        <span style={{ fontSize: 7, color: "#92400e", fontWeight: 600 }}>المدفوع</span>
+                        <span style={{ fontSize: 11, color: "#78350f", fontWeight: 800 }}>{fmtCell(col.paidTotal)}</span>
+                      </>
+                    )}
+                  </div>
+                </td>
+              ))}
+              {/* Date cell */}
+              <td style={{
+                width: COL_W, minWidth: COL_W, height: ROW_H + 4,
+                fontSize: 10, fontWeight: 700, color: "#92400e",
+                textAlign: "center", background: "#fffbeb",
+                borderLeft: `${GAP}px solid #f8fafb`,
+                borderRight: `${GAP}px solid #f8fafb`,
+              }}>
+                المدفوع
+              </td>
+              {/* Total paid cell */}
+              <td style={{
+                width: COL_W, minWidth: COL_W, height: ROW_H + 4,
+                background: "#fef3c7", textAlign: "center",
+                fontSize: 11, fontWeight: 800, color: "#78350f",
+                border: "1px solid #fde68a", borderRadius: 8,
+              }}>
+                {fmtCell(effectiveColumns.reduce((s, c) => s + c.paidTotal, 0))}
+              </td>
+              {/* Empty cumulative cell */}
+              <td style={{
+                width: COL_W, minWidth: COL_W, height: ROW_H + 4,
+                background: "#f8fafb", paddingRight: GAP,
+              }} />
+            </tr>
+
+            {/* ── Separator Row ─────────────────────────── */}
+            <tr>
+              <td colSpan={effectiveColumns.length + 3} style={{ height: 6, background: "#f8fafb" }} />
+            </tr>
+
             {groupedRows.map((row) => {
               const isEven = row.gi % 2 === 0;
               return (
