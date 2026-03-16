@@ -133,6 +133,7 @@ interface ProjectColumn {
   grandTotal: number;
   paidTotal: number;
   upcomingTotal: number;
+  itemBreakdown?: Record<string, { name: string; amount: number }[]>;
 }
 
 interface DelayState {
@@ -308,6 +309,54 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
         }
       }
 
+      // Build item-level chart breakdown: maps chart index → [{name, amount}]
+      const itemChartBreakdown: Record<number, { name: string; amount: number }[]> = {};
+      if (col.itemBreakdown) {
+        for (const [monthStr, items] of Object.entries(col.itemBreakdown)) {
+          const m = parseInt(monthStr);
+          if (hasDelay && paidStatus[m]) continue;
+
+          // Determine which phase this month belongs to, to apply correct delay
+          let chartIdx: number;
+          // Check phase order: land(0), design(1..designMonths), offplan(overlaps), construction, handover
+          if (m === 0) {
+            chartIdx = projectMonthToChartIndex(col.startDate, 0) - 1;
+          } else {
+            // Find which phase this month belongs to by checking phaseMonthlyAmounts
+            const phaseOrder: PhaseType[] = ["offplan", "design", "construction", "handover"];
+            let foundPhase: PhaseType = "construction";
+            for (const p of phaseOrder) {
+              if (col.phaseMonthlyAmounts?.[p]?.[String(m)] && Number(col.phaseMonthlyAmounts[p][String(m)]) > 0) {
+                foundPhase = p;
+                break;
+              }
+            }
+            const baseChartIdx = projectMonthToChartIndex(col.startDate, m - 1);
+            if (foundPhase === "design") {
+              chartIdx = baseChartIdx + delay.designDelay;
+            } else if (foundPhase === "offplan") {
+              chartIdx = baseChartIdx + delay.designDelay + delay.offplanDelay;
+            } else {
+              chartIdx = baseChartIdx + delay.designDelay + delay.constructionDelay;
+            }
+          }
+
+          if (chartIdx >= 0 && chartIdx < TOTAL_MONTHS) {
+            if (!itemChartBreakdown[chartIdx]) itemChartBreakdown[chartIdx] = [];
+            for (const item of items) {
+              if (item.amount <= 0) continue;
+              // Merge with existing item of same name at same chartIdx
+              const existing = itemChartBreakdown[chartIdx].find(e => e.name === item.name);
+              if (existing) {
+                existing.amount += item.amount;
+              } else {
+                itemChartBreakdown[chartIdx].push({ name: item.name, amount: item.amount });
+              }
+            }
+          }
+        }
+      }
+
       // Aggregate all phases EXCEPT land into chartAmounts for totals
       // Land/paid amounts are already paid and should not appear in the monthly schedule
       const chartAmounts: Record<number, number> = {};
@@ -357,6 +406,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
         chartAmounts,
         phaseChartAmounts,
         phaseRanges,
+        itemChartBreakdown,
         ...delay,
       };
     });
@@ -974,12 +1024,21 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                     background: "#f8fafb",
                   }}
                 >
-                  <CellTooltip lines={col.paidTotal > 0 ? [
-                    `📌 ${col.name}`,
-                    `المدفوع: ${fmtTooltipNum(col.paidTotal)}`,
-                    `من إجمالي: ${fmtTooltipNum(col.grandTotal)}`,
-                    `المطلوب: ${fmtTooltipNum(col.upcomingTotal)}`,
-                  ] : []}>
+                  <CellTooltip lines={col.paidTotal > 0 ? (() => {
+                    const lines: string[] = [
+                      `💰 المدفوع: ${fmtTooltipNum(col.paidTotal)}`,
+                      "───────────────",
+                    ];
+                    // Show land items from itemBreakdown month 0
+                    const landItems = col.itemBreakdown?.["0"] || col.itemBreakdown?.[0 as any];
+                    if (landItems && Array.isArray(landItems)) {
+                      const sorted = [...landItems].filter(i => i.amount > 0).sort((a, b) => b.amount - a.amount);
+                      for (const item of sorted) {
+                        lines.push(`${item.name}: ${fmtTooltipNum(item.amount)}`);
+                      }
+                    }
+                    return lines;
+                  })() : []}>
                     <div
                       style={{
                         width: "100%",
@@ -1023,13 +1082,18 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                 border: "1px solid #fde68a", borderRadius: 8,
                 padding: 0,
               }}>
-                <CellTooltip lines={[
-                  `💰 إجمالي المدفوع: ${fmtTooltipNum(effectiveColumns.reduce((s, c) => s + c.paidTotal, 0))}`,
-                  "─── توزيع حسب المشروع ───",
-                  ...effectiveColumns.filter(c => c.paidTotal > 0).map(c =>
-                    `  ${c.name.split(" ").slice(0, 3).join(" ")}: ${fmtTooltipNum(c.paidTotal)}`
-                  ),
-                ]}>
+                <CellTooltip lines={(() => {
+                  const total = effectiveColumns.reduce((s, c) => s + c.paidTotal, 0);
+                  const lines: string[] = [
+                    `💰 إجمالي المدفوع: ${fmtTooltipNum(total)}`,
+                    "─── توزيع حسب المشروع ───",
+                  ];
+                  for (const c of effectiveColumns) {
+                    if (c.paidTotal <= 0) continue;
+                    lines.push(`${c.name.split(" ").slice(0, 3).join(" ")}: ${fmtTooltipNum(c.paidTotal)}`);
+                  }
+                  return lines;
+                })()}>
                   <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {fmtCell(effectiveColumns.reduce((s, c) => s + c.paidTotal, 0))}
                   </div>
@@ -1085,28 +1149,30 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       >
                         <CellTooltip lines={cd.amount > 0 ? (() => {
                           const col = effectiveColumns[ci];
-                          const phaseName = phase ? PHASE_NAMES[phase] : "غير محدد";
                           const lines: string[] = [
-                            `📌 ${col.name}`,
-                            `📅 ${row.label}`,
-                            `🏠 المرحلة: ${phaseName}`,
                             `💰 ${fmtTooltipNum(cd.amount)}`,
+                            "───────────────",
                           ];
-                          // Show per-phase breakdown if multiple phases contribute
-                          if (phase && groupBy === 1) {
-                            const startIdx = row.startIdx;
-                            const phaseTypes: PhaseType[] = ["design", "offplan", "construction", "handover"];
-                            const breakdown: { name: string; amt: number }[] = [];
-                            for (const p of phaseTypes) {
-                              const amt = col.phaseChartAmounts[p]?.[startIdx] || 0;
-                              if (amt > 0) breakdown.push({ name: PHASE_NAMES[p], amt });
-                            }
-                            if (breakdown.length > 1) {
-                              lines.push("─── تفصيل ───");
-                              for (const b of breakdown) {
-                                lines.push(`  ${b.name}: ${fmtTooltipNum(b.amt)}`);
+                          // Collect item breakdown for all months in this grouped row
+                          const mergedItems: Record<string, number> = {};
+                          for (let idx = row.startIdx; idx <= row.endIdx; idx++) {
+                            const items = col.itemChartBreakdown?.[idx];
+                            if (items) {
+                              for (const item of items) {
+                                mergedItems[item.name] = (mergedItems[item.name] || 0) + item.amount;
                               }
                             }
+                          }
+                          // Sort by amount descending
+                          const sorted = Object.entries(mergedItems)
+                            .filter(([, v]) => v > 0)
+                            .sort((a, b) => b[1] - a[1]);
+                          if (sorted.length > 0) {
+                            for (const [name, amt] of sorted) {
+                              lines.push(`${name}: ${fmtTooltipNum(amt)}`);
+                            }
+                          } else {
+                            lines.push("لا يوجد تفصيل");
                           }
                           return lines;
                         })() : []}>
@@ -1167,15 +1233,19 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       color: row.total > 0 ? "#854d0e" : "#94a3b8",
                     }}
                   >
-                    <CellTooltip lines={row.total > 0 ? [
-                      `📅 ${row.label}`,
-                      `💰 الإجمالي: ${fmtTooltipNum(row.total)}`,
-                      "─── توزيع حسب المشروع ───",
-                      ...row.colData.filter(cd => cd.amount > 0).map((cd, i) => {
+                    <CellTooltip lines={row.total > 0 ? (() => {
+                      const lines: string[] = [
+                        `💰 الإجمالي: ${fmtTooltipNum(row.total)}`,
+                        "─── توزيع حسب المشروع ───",
+                      ];
+                      for (const cd of row.colData) {
+                        if (cd.amount <= 0) continue;
                         const col = effectiveColumns.find(c => c.projectId === cd.colId);
-                        return `  ${col?.name?.split(" ").slice(0, 3).join(" ") || "مشروع"}: ${fmtTooltipNum(cd.amount)}`;
-                      }),
-                    ] : []}>
+                        const shortName = col?.name?.split(" ").slice(0, 3).join(" ") || "مشروع";
+                        lines.push(`${shortName}: ${fmtTooltipNum(cd.amount)}`);
+                      }
+                      return lines;
+                    })() : []}>
                       <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 6px" }}>
                         {row.total > 0 ? fmtCell(row.total) : ""}
                       </div>
@@ -1198,7 +1268,6 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                     }}
                   >
                     <CellTooltip lines={cumulativeTotals[row.gi] > 0 ? [
-                      `📅 ${row.label}`,
                       `📊 التراكمي: ${fmtTooltipNum(cumulativeTotals[row.gi])}`,
                       `💰 هذا الشهر: ${fmtTooltipNum(row.total)}`,
                     ] : []}>

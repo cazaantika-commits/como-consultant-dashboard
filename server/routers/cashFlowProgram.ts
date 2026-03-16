@@ -2619,6 +2619,7 @@ export const cashFlowProgramRouter = router({
       grandTotal: number;
       paidTotal: number;
       upcomingTotal: number;
+      itemBreakdown?: Record<number, { name: string; amount: number }[]>;
     }> = [];
     for (const proj of allProjects) {
       const [moRows] = await db.select().from(marketOverview)
@@ -2660,6 +2661,7 @@ export const cashFlowProgramRouter = router({
         grandTotal: data.grandTotal,
         paidTotal: data.paidTotal,
         upcomingTotal: data.upcomingTotal,
+        itemBreakdown: data.itemBreakdown,
       });
     }
     return results;

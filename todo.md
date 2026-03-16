@@ -56,3 +56,5 @@
 - [x] CRITICAL: Delay/shift changes in capital scheduling must persist to DB and reflect in capital requirements page
 - [x] Keep handover phase as separate color (orange) from construction (green)
 - [x] Add tooltips on capital scheduling cells: amount cells show project+phase+month detail, paid cells show breakdown, total/cumulative show per-project split
+- [x] Replace tooltips: show item-level breakdown (consultant fees, contractor, marketing, etc.) that compose each cell's total amount
+- [x] Remove old tooltips that only showed project name, phase, and month

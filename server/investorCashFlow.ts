@@ -530,6 +530,8 @@ export interface ProjectCapitalData {
   upcomingTotal: number;
   /** Per-phase totals */
   phaseTotals: Record<PhaseType, number>;
+  /** Per-month item-level breakdown: month → [{name, amount}] */
+  itemBreakdown: Record<number, { name: string; amount: number }[]>;
 }
 
 export function computeProjectCapital(
@@ -560,6 +562,9 @@ export function computeProjectCapital(
   const phaseMonthlyAmounts: Record<PhaseType, Record<number, number>> = {
     land: {}, design: {}, offplan: {}, construction: {}, handover: {},
   };
+
+  // Track per-month item-level breakdown for tooltips
+  const itemBreakdown: Record<number, { name: string; amount: number }[]> = {};
 
   // Track per-phase totals
   const phaseTotals: Record<PhaseType, number> = {
@@ -596,7 +601,6 @@ export function computeProjectCapital(
         // Determine the correct phase for tracking
         let trackPhase: PhaseType;
         if (hasSplitDistribution) {
-          // For split items, determine phase by which month range the amount falls in
           trackPhase = getPhaseForMonth(m);
         } else {
           trackPhase = item.phase;
@@ -604,6 +608,10 @@ export function computeProjectCapital(
 
         phaseMonthlyAmounts[trackPhase][m] = (phaseMonthlyAmounts[trackPhase][m] || 0) + val;
         phaseTotals[trackPhase] += val;
+
+        // Track item-level breakdown for tooltip
+        if (!itemBreakdown[m]) itemBreakdown[m] = [];
+        itemBreakdown[m].push({ name: item.name, amount: val });
       }
     }
   }
@@ -643,5 +651,6 @@ export function computeProjectCapital(
     paidTotal,
     upcomingTotal,
     phaseTotals,
+    itemBreakdown,
   };
 }
