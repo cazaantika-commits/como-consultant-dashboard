@@ -17,3 +17,4 @@
 - [x] Capital scheduling: pick 2 colors from reference image for phases (teal + amber)
 - [x] Capital scheduling: all columns equal width
 - [x] Capital scheduling: phase rectangles with rounded corners at all 4 corners (not just top/bottom)
+- [x] Capital scheduling: add cumulative total column (التراكمي) next to the total column

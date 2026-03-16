@@ -226,6 +226,17 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
     });
   }, [effectiveColumns, monthlyTotals, groupBy]);
 
+  // Compute cumulative totals for each grouped row
+  const cumulativeTotals = useMemo(() => {
+    const cumulative: number[] = [];
+    let running = 0;
+    for (const row of groupedRows) {
+      running += row.total;
+      cumulative.push(running);
+    }
+    return cumulative;
+  }, [groupedRows]);
+
   const isLoading = scheduleQuery.isLoading;
 
   if (isLoading) {
@@ -254,7 +265,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
   const ROW_H       = groupBy === 1 ? 34 : groupBy === 3 ? 46 : 56;
   const CURVE       = 14;
 
-  const totalCols = effectiveColumns.length + 2; // projects + date + total
+  const totalCols = effectiveColumns.length + 3; // projects + date + total + cumulative
   const tableW = totalCols * COL_W + (totalCols - 1) * GAP;
 
   return (
@@ -580,6 +591,31 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                   💰 الإجمالي
                 </div>
               </th>
+
+              {/* Cumulative total column header */}
+              <th
+                style={{
+                  width: COL_W,
+                  minWidth: COL_W,
+                  padding: 0,
+                  paddingRight: GAP,
+                  verticalAlign: "bottom",
+                  background: "#f8fafb",
+                }}
+              >
+                <div style={{
+                  background: "#fef3c7",
+                  borderRadius: 14,
+                  padding: "14px 6px",
+                  textAlign: "center",
+                  color: "#78350f",
+                  fontSize: 10,
+                  fontWeight: 800,
+                  border: "1px solid #fde68a",
+                  borderTop: "3px solid #d97706",
+                }}>                  📊 التراكمي
+                </div>
+              </th>
             </tr>
           </thead>
 
@@ -688,10 +724,30 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                   >
                     {row.total > 0 ? fmtCell(row.total) : ""}
                   </td>
+
+                  {/* Cumulative total cell */}
+                  <td
+                    style={{
+                      width: COL_W,
+                      minWidth: COL_W,
+                      height: ROW_H,
+                      background: cumulativeTotals[row.gi] > 0 ? "#fef3c7" : (isEven ? "#ffffff" : "#f8fafc"),
+                      padding: "0 6px",
+                      paddingRight: GAP,
+                      textAlign: "center",
+                      fontSize: 11,
+                      fontWeight: cumulativeTotals[row.gi] > 0 ? 800 : 400,
+                      color: cumulativeTotals[row.gi] > 0 ? "#78350f" : "#94a3b8",
+                    }}
+                  >
+                    {cumulativeTotals[row.gi] > 0 ? fmtCell(cumulativeTotals[row.gi]) : ""}
+                  </td>
                 </tr>
               );
             })}
           </tbody>
+
+
         </table>
       </div>
     </div>
