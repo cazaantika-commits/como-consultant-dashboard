@@ -83,3 +83,5 @@
 - [x] Radical color redesign of CapitalSchedulingPage: calm white background with dark muted accent colors
 - [x] Change total and required columns to match Como Projects icon colors (dark orange/green)
 - [x] Make phase colors darker/muted - like dark colors painted on white canvas
+- [x] Add horizontal (transposed) view of capital scheduling table - projects as rows, months as columns
+- [x] Add toggle button to switch between vertical and horizontal views

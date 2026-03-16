@@ -2,7 +2,8 @@ import { useMemo, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { ArrowRight, Layers, ChevronDown, ChevronUp, RotateCcw, Settings, Calendar, Clock, Save, X, Eye, EyeOff } from "lucide-react";
+import { ArrowRight, Layers, ChevronDown, ChevronUp, RotateCcw, Settings, Calendar, Clock, Save, X, Eye, EyeOff, LayoutGrid, Rows3 } from "lucide-react";
+import CapitalSchedulingHorizontal from "./CapitalSchedulingHorizontal";
 
 const TOTAL_MONTHS = 48;
 const CHART_START = new Date(2026, 3, 1); // April 2026
@@ -486,6 +487,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
   }
 
   const [groupBy, setGroupBy] = useState<1 | 3 | 6>(1);
+  const [viewMode, setViewMode] = useState<"vertical" | "horizontal">("vertical");
 
   const groupedRows = useMemo(() => {
     const numGroups = Math.ceil(TOTAL_MONTHS / groupBy);
@@ -649,6 +651,36 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
             <Settings style={{ width: 14, height: 14 }} />
             إعدادات المشاريع
           </button>
+
+          {/* View toggle */}
+          <div style={{ display: "flex", gap: 4, background: "#ffffff", borderRadius: 12, padding: 3, border: "1px solid #e2e8f0" }}>
+            <button
+              onClick={() => setViewMode("vertical")}
+              style={{
+                padding: "5px 12px", borderRadius: 9, fontSize: 12, fontWeight: 700,
+                cursor: "pointer", transition: "all 0.2s", border: "none",
+                background: viewMode === "vertical" ? "#c2410c" : "transparent",
+                color: viewMode === "vertical" ? "#fff" : "#94a3b8",
+                display: "flex", alignItems: "center", gap: 4,
+              }}
+            >
+              <Rows3 style={{ width: 13, height: 13 }} />
+              عمودي
+            </button>
+            <button
+              onClick={() => setViewMode("horizontal")}
+              style={{
+                padding: "5px 12px", borderRadius: 9, fontSize: 12, fontWeight: 700,
+                cursor: "pointer", transition: "all 0.2s", border: "none",
+                background: viewMode === "horizontal" ? "#c2410c" : "transparent",
+                color: viewMode === "horizontal" ? "#fff" : "#94a3b8",
+                display: "flex", alignItems: "center", gap: 4,
+              }}
+            >
+              <LayoutGrid style={{ width: 13, height: 13 }} />
+              أفقي
+            </button>
+          </div>
 
           {/* Grouping buttons */}
           <div style={{ display: "flex", gap: 4, background: "#ffffff", borderRadius: 12, padding: 3, border: "1px solid #e2e8f0" }}>
@@ -871,6 +903,16 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
         </div>
       )}
 
+      {/* ── View Toggle: Horizontal or Vertical ────────────────────── */}
+      {viewMode === "horizontal" ? (
+        <CapitalSchedulingHorizontal
+          baseColumns={baseColumns}
+          delays={delays}
+          hiddenProjects={hiddenProjects}
+          groupBy={groupBy}
+        />
+      ) : (
+      <>
       {/* ── Gantt Table ──────────────────────────────────────────────────── */}
       <div
         style={{
@@ -1407,6 +1449,8 @@ border: "1px solid #2d5a8a",
           </tbody>
         </table>
       </div>
+      </>
+      )}
     </div>
   );
 }
