@@ -18,3 +18,21 @@
 - [x] Capital scheduling: all columns equal width
 - [x] Capital scheduling: phase rectangles with rounded corners at all 4 corners (not just top/bottom)
 - [x] Capital scheduling: add cumulative total column (التراكمي) next to the total column
+- [x] Restructure capital requirements into 4 phases: paid, design/approvals, off-plan, construction
+- [x] Move contractor advance payment (10%) to first month of construction phase
+- [x] Move sorting fees (رسوم الفرز) to off-plan phase
+- [x] Distribute developer fees: 30% design, 10% off-plan, 60% construction
+- [x] Distribute marketing: 25% off-plan, 75% construction (75% first 4 months, 25% next 6 months)
+- [x] Update capital requirements page UI to show 4 phases
+- [x] Update capital scheduling page for 4 phases with flexible ordering and delay controls
+- [x] Phase ordering rules: paid→design→(off-plan/construction flexible)
+- [x] Test: offplan delay works independently (shifts offplan amounts only)
+- [x] Test: construction delay works independently (shifts construction amounts only)
+- [x] Test: design delay shifts all downstream phases (design + offplan + construction)
+- [x] Test: reset button restores original positions
+- [x] Test: cumulative totals update correctly with delays
+- [x] Test: past phases (before chart start) correctly handled when delayed
+- [x] 4-phase color coding: gray (land/paid), purple (design), light blue (offplan), amber (construction)
+- [x] Independent delay controls per project: 3 delay buttons (design, offplan, construction)
+- [x] Delay badge shows active delays (e.g., "تصاميم +3ش · أوف +3ش")
+- [ ] Import corrected KIEFERLE JSON and recalculate (pending)

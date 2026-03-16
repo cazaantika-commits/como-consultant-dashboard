@@ -33,12 +33,13 @@ function useCashFlowSafe() {
   }
 }
 
-// ===== PHASE COLORS =====
+// ===== PHASE COLORS (4 phases + handover) =====
 const PHASE_COLORS: Record<string, { bg: string; header: string; text: string; border: string }> = {
-  land: { bg: "bg-stone-100", header: "bg-stone-700 text-white", text: "text-stone-800", border: "border-stone-300" },
-  preCon: { bg: "bg-amber-50", header: "bg-amber-700 text-white", text: "text-amber-900", border: "border-amber-200" },
-  construction: { bg: "bg-sky-50", header: "bg-sky-800 text-white", text: "text-sky-900", border: "border-sky-200" },
-  handover: { bg: "bg-emerald-50", header: "bg-emerald-700 text-white", text: "text-emerald-900", border: "border-emerald-200" },
+  land:         { bg: "bg-stone-100",   header: "bg-stone-700 text-white",   text: "text-stone-800",   border: "border-stone-300" },
+  design:      { bg: "bg-amber-50",    header: "bg-amber-700 text-white",   text: "text-amber-900",   border: "border-amber-200" },
+  offplan:     { bg: "bg-violet-50",   header: "bg-violet-700 text-white",  text: "text-violet-900",  border: "border-violet-200" },
+  construction: { bg: "bg-sky-50",      header: "bg-sky-800 text-white",     text: "text-sky-900",     border: "border-sky-200" },
+  handover:    { bg: "bg-emerald-50",  header: "bg-emerald-700 text-white", text: "text-emerald-900", border: "border-emerald-200" },
 };
 
 const PROJECT_START = new Date(2026, 3, 1); // April 2026
@@ -109,7 +110,7 @@ export default function ExcelCashFlowPage({ embedded }: { embedded?: boolean } =
         shiftMonths: expenseShifts[item.id] || 0,
       };
 
-      if (item.behavior === "CUSTOM") {
+      if (item.behavior === "CUSTOM" && !item.customDistribution) {
         const customDist = getDefaultCustomDistribution(item.id, phases, durations, projectCosts || undefined);
         const merged = { ...customDist };
         if (expenseOverrides[item.id]) {
@@ -130,7 +131,7 @@ export default function ExcelCashFlowPage({ embedded }: { embedded?: boolean } =
 
       return distributeExpense(itemWithOverrides, phases, durations, defaultRevenue);
     });
-  }, [baseExpenses, phases, durations, expenseOverrides, expenseShifts, defaultRevenue, totalMonths]);
+  }, [baseExpenses, phases, durations, expenseOverrides, expenseShifts, defaultRevenue, totalMonths, projectCosts]);
 
   // Aggregate to quarters
   const quarterlyData = useMemo(() => {
@@ -310,8 +311,8 @@ export default function ExcelCashFlowPage({ embedded }: { embedded?: boolean } =
       {/* Title */}
       <div className="mb-3 flex items-center justify-between">
         <div>
-          <h1 className="text-base font-bold text-gray-900">{selectedProject?.name || "المشروع"} — جدول مصاريف المستثمر</h1>
-          <p className="text-xs text-gray-500 mt-0.5">التمويل المباشر من المستثمر (لا يشمل مصاريف حساب الضمان)</p>
+          <h1 className="text-base font-bold text-gray-900">{selectedProject?.name || "المشروع"} — جدول رأس المال المطلوب</h1>
+          <p className="text-xs text-gray-500 mt-0.5">التمويل المباشر من المستثمر — 4 مراحل (الأرض، التصاميم، أوف بلان، الإنشاء)</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -341,34 +342,46 @@ export default function ExcelCashFlowPage({ embedded }: { embedded?: boolean } =
             {shared && <span className="text-[9px] bg-white/20 px-2 py-0.5 rounded mr-2">🔗 مشترك مع الإسكرو</span>}
           </div>
           <div className="p-4">
-            <div className="grid grid-cols-3 gap-4 mb-4">
-              {/* Pre-construction duration */}
+            <div className="grid grid-cols-4 gap-4 mb-4">
+              {/* Design phase duration */}
               <div className="bg-amber-50 rounded-lg border border-amber-200 p-3">
-                <div className="text-[10px] font-bold text-amber-800 mb-2">ما قبل البناء</div>
+                <div className="text-[10px] font-bold text-amber-800 mb-2">التصاميم والموافقات</div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setDurations((d: PhaseDurations) => ({ ...d, preCon: Math.max(3, d.preCon - 1) }))}
+                    onClick={() => setDurations((d: PhaseDurations) => ({ ...d, design: Math.max(3, d.design - 1) }))}
                     className="w-7 h-7 rounded bg-amber-200 hover:bg-amber-300 text-amber-800 font-bold text-sm flex items-center justify-center"
                   >−</button>
                   <div className="flex-1 text-center">
-                    <span className="text-xl font-bold text-amber-900">{durations.preCon}</span>
+                    <span className="text-xl font-bold text-amber-900">{durations.design}</span>
                     <span className="text-[10px] text-amber-600 mr-1">شهر</span>
                   </div>
                   <button
-                    onClick={() => setDurations((d: PhaseDurations) => ({ ...d, preCon: Math.min(12, d.preCon + 1) }))}
+                    onClick={() => setDurations((d: PhaseDurations) => ({ ...d, design: Math.min(12, d.design + 1) }))}
                     className="w-7 h-7 rounded bg-amber-200 hover:bg-amber-300 text-amber-800 font-bold text-sm flex items-center justify-center"
                   >+</button>
                 </div>
-                {durations.preCon !== DEFAULT_DURATIONS.preCon && (
+                {durations.design !== DEFAULT_DURATIONS.design && (
                   <div className="text-[9px] text-amber-600 text-center mt-1">
-                    الأصل: {DEFAULT_DURATIONS.preCon} شهر
+                    الأصل: {DEFAULT_DURATIONS.design} شهر
                   </div>
                 )}
               </div>
 
+              {/* Offplan duration - fixed at 2 months */}
+              <div className="bg-violet-50 rounded-lg border border-violet-200 p-3">
+                <div className="text-[10px] font-bold text-violet-800 mb-2">تسجيل أوف بلان</div>
+                <div className="flex items-center justify-center">
+                  <div className="text-center">
+                    <span className="text-xl font-bold text-violet-900">{durations.offplan}</span>
+                    <span className="text-[10px] text-violet-600 mr-1">شهر</span>
+                  </div>
+                </div>
+                <div className="text-[9px] text-violet-500 text-center mt-1">مدة ثابتة</div>
+              </div>
+
               {/* Construction duration */}
               <div className="bg-sky-50 rounded-lg border border-sky-200 p-3">
-                <div className="text-[10px] font-bold text-sky-800 mb-2">البناء</div>
+                <div className="text-[10px] font-bold text-sky-800 mb-2">الإنشاء</div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setDurations((d: PhaseDurations) => ({ ...d, construction: Math.max(6, d.construction - 1) }))}
@@ -421,6 +434,8 @@ export default function ExcelCashFlowPage({ embedded }: { embedded?: boolean } =
                 إجمالي المدة: <span className="font-bold text-gray-900">{totalMonths} شهر</span>
                 <span className="text-gray-400 mx-2">|</span>
                 الأصل: <span className="text-gray-500">{getTotalMonths(DEFAULT_DURATIONS)} شهر</span>
+                <span className="text-gray-400 mx-2">|</span>
+                <span className="text-violet-600">أوف بلان يتداخل مع التصاميم (شهرين ثابتة)</span>
               </div>
               <div className="text-[10px] text-gray-500">
                 تغيير المدة يعيد توزيع المصاريف تلقائياً حسب طبيعة كل بند
@@ -455,12 +470,10 @@ export default function ExcelCashFlowPage({ embedded }: { embedded?: boolean } =
         </div>
       )}
 
-
-
       {/* Summary Cards */}
       <div className="grid grid-cols-4 gap-3 mb-4">
         <div className="bg-white rounded-lg border border-gray-200 px-3 py-2 shadow-sm">
-          <div className="text-[10px] text-gray-500">إجمالي المصاريف</div>
+          <div className="text-[10px] text-gray-500">إجمالي رأس المال</div>
           <div className="text-sm font-bold text-gray-900">{fmt(grandTotal)} <span className="text-[10px] font-normal text-gray-400">درهم</span></div>
         </div>
         <div className="bg-white rounded-lg border border-green-200 px-3 py-2 shadow-sm">
@@ -480,7 +493,7 @@ export default function ExcelCashFlowPage({ embedded }: { embedded?: boolean } =
 
       {/* TABLE */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-auto">
-        <table className="w-full text-sm border-collapse min-w-[900px]">
+        <table className="w-full border-collapse text-[10px]" style={{ minWidth: "900px" }}>
           <thead>
             {/* Phase header */}
             <tr>
@@ -666,15 +679,19 @@ export default function ExcelCashFlowPage({ embedded }: { embedded?: boolean } =
         </div>
         <div className="flex items-center gap-1">
           <span className="w-3 h-3 bg-stone-100 rounded-sm border border-stone-300 inline-block"></span>
-          شراء الأرض
+          الأرض
         </div>
         <div className="flex items-center gap-1">
           <span className="w-3 h-3 bg-amber-50 rounded-sm border border-amber-200 inline-block"></span>
-          ما قبل البناء
+          التصاميم والموافقات
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="w-3 h-3 bg-violet-50 rounded-sm border border-violet-200 inline-block"></span>
+          تسجيل أوف بلان
         </div>
         <div className="flex items-center gap-1">
           <span className="w-3 h-3 bg-sky-50 rounded-sm border border-sky-200 inline-block"></span>
-          البناء
+          الإنشاء
         </div>
         <div className="flex items-center gap-1">
           <span className="w-3 h-3 bg-emerald-50 rounded-sm border border-emerald-200 inline-block"></span>

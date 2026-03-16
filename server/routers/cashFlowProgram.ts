@@ -2558,9 +2558,13 @@ export const cashFlowProgramRouter = router({
       name: string;
       startDate: string;
       preDevMonths: number;
+      designMonths: number;
+      offplanMonths: number;
       constructionMonths: number;
       handoverMonths: number;
       monthlyAmounts: number[];
+      phaseMonthlyAmounts: Record<string, Record<number, number>>;
+      phaseTotals: Record<string, number>;
       grandTotal: number;
       paidTotal: number;
       upcomingTotal: number;
@@ -2595,9 +2599,13 @@ export const cashFlowProgramRouter = router({
         name: proj.name,
         startDate: startDateStr,
         preDevMonths: data.preDevMonths,
+        designMonths: data.designMonths,
+        offplanMonths: data.offplanMonths,
         constructionMonths: data.constructionMonths,
         handoverMonths: data.handoverMonths,
         monthlyAmounts: data.monthlyAmounts,
+        phaseMonthlyAmounts: data.phaseMonthlyAmounts,
+        phaseTotals: data.phaseTotals,
         grandTotal: data.grandTotal,
         paidTotal: data.paidTotal,
         upcomingTotal: data.upcomingTotal,

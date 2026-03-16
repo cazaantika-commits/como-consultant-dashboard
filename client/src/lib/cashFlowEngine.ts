@@ -1,34 +1,40 @@
 /**
- * Cash Flow Engine — Dynamic Expense Distribution
+ * Cash Flow Engine — Dynamic Expense Distribution (4-Phase Structure)
  * 
- * This engine classifies each expense by its behavior:
- * - FIXED_ABSOLUTE: One-time payment, never changes (e.g., land cost)
- * - FIXED_RELATIVE: One-time at a relative position in a phase (e.g., RERA at month 4 of pre-con)
- * - DISTRIBUTED: Total divided equally across phase duration (e.g., contractor payments)
- * - PERIODIC: Fixed amount repeating every N months (e.g., RERA reports every 3 months)
- * - SALES_LINKED: Follows revenue timing (e.g., sales agent commission)
- * - CUSTOM: User-defined distribution (e.g., contingency)
+ * Phase 1: "land"         — المبالغ المدفوعة (الأرض)
+ * Phase 2: "design"       — التصاميم والموافقات
+ * Phase 3: "offplan"      — تسجيل أوف بلان (always 2 months)
+ * Phase 4: "construction" — الإنشاء
+ * Phase 5: "handover"     — التسليم
  * 
- * When phase duration changes, each expense recalculates automatically based on its type.
+ * Key rules:
+ *  - offplan duration = always 2 months
+ *  - offplan cannot start before month 3 of design phase
+ *  - Developer fee: 30% design, 10% offplan, 60% construction
+ *  - Marketing: 25% offplan, 75% construction (75% first 4mo, 25% next 6mo)
+ *  - Contractor advance: month 1 of construction
  */
 
 // ===== TYPES =====
 
 export type ExpenseBehavior = 
-  | "FIXED_ABSOLUTE"    // لا تتأثر أبداً
-  | "FIXED_RELATIVE"    // دفعة في وقت نسبي من المرحلة
-  | "DISTRIBUTED"       // إجمالي ÷ مدة المرحلة
-  | "PERIODIC"          // مبلغ ثابت كل N أشهر
-  | "SALES_LINKED"      // مرتبط بالمبيعات
-  | "CUSTOM";           // توزيع يدوي/افتراضي
+  | "FIXED_ABSOLUTE"
+  | "FIXED_RELATIVE"
+  | "DISTRIBUTED"
+  | "PERIODIC"
+  | "SALES_LINKED"
+  | "CUSTOM";
 
-export type PhaseType = "land" | "preCon" | "construction" | "handover";
+export type PhaseType = "land" | "design" | "offplan" | "construction" | "handover";
+
+// Legacy type for backward compatibility
+export type LegacyPhaseType = "land" | "preCon" | "construction" | "handover";
 
 export interface PhaseConfig {
   type: PhaseType;
   label: string;
-  duration: number; // months
-  startMonth: number; // calculated from previous phases
+  duration: number;
+  startMonth: number;
 }
 
 export interface ExpenseItem {
@@ -36,54 +42,73 @@ export interface ExpenseItem {
   name: string;
   total: number;
   behavior: ExpenseBehavior;
-  phase: PhaseType; // which phase this expense belongs to
-  // For FIXED_RELATIVE: position in phase (1-based, or negative from end)
-  relativeMonth?: number; // e.g., 1 = first month, -1 = last month, -2 = second to last
-  // For DISTRIBUTED: which phases to distribute across
+  phase: PhaseType;
+  relativeMonth?: number;
   distributeAcross?: PhaseType[];
-  // For DISTRIBUTED with split: e.g., developer fee 2% preCon + 3% construction
   splitRatio?: { phase: PhaseType; ratio: number }[];
-  // For PERIODIC: interval in months and per-occurrence amount
   periodicInterval?: number;
   periodicAmount?: number;
-  // For FIXED_RELATIVE with multiple payments
   multiPayments?: { phase: PhaseType; relativeMonth: number; amount: number }[];
-  // For SALES_LINKED: percentage of sales
+  customDistribution?: { phase: PhaseType; months: number; ratio: number }[];
   salesPercentage?: number;
-  // Table: "investor" or "escrow"
   table: "investor" | "escrow";
-  // Manual override: user can override any month's value
   overrides?: { [month: number]: number };
-  // Shift: user can shift the entire expense by N months
   shiftMonths?: number;
 }
 
 export interface PhaseDurations {
-  preCon: number;      // default 6
-  construction: number; // default 16 (was 18 in Excel including handover prep)
-  handover: number;     // default 2
+  design: number;       // was preCon
+  offplan: number;      // always 2
+  construction: number;
+  handover: number;
+}
+
+// Legacy interface for backward compatibility
+export interface LegacyPhaseDurations {
+  preCon: number;
+  construction: number;
+  handover: number;
 }
 
 export const DEFAULT_DURATIONS: PhaseDurations = {
-  preCon: 6,
+  design: 6,
+  offplan: 2,
   construction: 16,
   handover: 2,
 };
 
+export function legacyToNewDurations(legacy: LegacyPhaseDurations): PhaseDurations {
+  return {
+    design: legacy.preCon,
+    offplan: 2,
+    construction: legacy.construction,
+    handover: legacy.handover,
+  };
+}
+
 // ===== PHASE CALCULATION =====
 
-export function calculatePhases(durations: PhaseDurations): PhaseConfig[] {
-  const phases: PhaseConfig[] = [
+export function calculatePhases(durations: PhaseDurations, offplanDelay = 0): PhaseConfig[] {
+  const designStart = 1;
+  const designEnd = designStart + durations.design - 1;
+  const offplanEarliestStart = designStart + 2; // after 2 months of design
+  const offplanStart = offplanEarliestStart + offplanDelay;
+  const constructionStart = designEnd + 1;
+  const constructionEnd = constructionStart + durations.construction - 1;
+  const handoverStart = constructionEnd + 1;
+
+  return [
     { type: "land", label: "شراء الأرض", duration: 0, startMonth: 0 },
-    { type: "preCon", label: "ما قبل البناء", duration: durations.preCon, startMonth: 1 },
-    { type: "construction", label: "البناء", duration: durations.construction, startMonth: 1 + durations.preCon },
-    { type: "handover", label: "التسليم", duration: durations.handover, startMonth: 1 + durations.preCon + durations.construction },
+    { type: "design", label: "التصاميم والموافقات", duration: durations.design, startMonth: designStart },
+    { type: "offplan", label: "تسجيل أوف بلان", duration: durations.offplan, startMonth: offplanStart },
+    { type: "construction", label: "الإنشاء", duration: durations.construction, startMonth: constructionStart },
+    { type: "handover", label: "التسليم", duration: durations.handover, startMonth: handoverStart },
   ];
-  return phases;
 }
 
 export function getTotalMonths(durations: PhaseDurations): number {
-  return durations.preCon + durations.construction + durations.handover;
+  // offplan overlaps with design in normal flow, so total = design + construction + handover
+  return durations.design + durations.construction + durations.handover;
 }
 
 export function getPhaseMonthRange(phases: PhaseConfig[], phaseType: PhaseType): { start: number; end: number } {
@@ -106,14 +131,11 @@ export function distributeExpense(
 
   switch (item.behavior) {
     case "FIXED_ABSOLUTE": {
-      // Land items: no monthly distribution, shown in land column
-      // Nothing to distribute
       break;
     }
 
     case "FIXED_RELATIVE": {
       if (item.multiPayments) {
-        // Multiple payments at different relative positions
         for (const payment of item.multiPayments) {
           const range = getPhaseMonthRange(phases, payment.phase);
           if (range.start === 0 && range.end === 0) continue;
@@ -147,7 +169,6 @@ export function distributeExpense(
 
     case "DISTRIBUTED": {
       if (item.splitRatio) {
-        // Split across multiple phases with ratios
         for (const split of item.splitRatio) {
           const range = getPhaseMonthRange(phases, split.phase);
           if (range.start === 0 && range.end === 0) continue;
@@ -163,7 +184,6 @@ export function distributeExpense(
           }
         }
       } else if (item.distributeAcross) {
-        // Distribute across specified phases
         let totalDuration = 0;
         for (const pt of item.distributeAcross) {
           const phaseConfig = phases.find(p => p.type === pt);
@@ -181,7 +201,6 @@ export function distributeExpense(
           }
         }
       } else {
-        // Distribute across own phase
         const range = getPhaseMonthRange(phases, item.phase);
         const phaseConfig = phases.find(p => p.type === item.phase);
         if (!phaseConfig || phaseConfig.duration === 0) break;
@@ -201,14 +220,12 @@ export function distributeExpense(
       if (range.start === 0 && range.end === 0) break;
       const interval = item.periodicInterval || 3;
       const amount = item.periodicAmount || 0;
-      // First occurrence at interval months into the phase
       for (let m = range.start + interval - 1; m <= range.end; m += interval) {
         const shifted = m + shift;
         if (shifted >= 1 && shifted <= totalMonths) {
           result[shifted] = (result[shifted] || 0) + amount;
         }
       }
-      // Also at end of handover if applicable
       const handoverRange = getPhaseMonthRange(phases, "handover");
       if (handoverRange.end > 0) {
         const shifted = handoverRange.end + shift;
@@ -220,7 +237,6 @@ export function distributeExpense(
     }
 
     case "SALES_LINKED": {
-      // Follows revenue timing proportionally
       if (!revenueData) break;
       const totalRev = Object.values(revenueData).reduce((s, v) => s + v, 0);
       if (totalRev === 0) break;
@@ -234,14 +250,58 @@ export function distributeExpense(
     }
 
     case "CUSTOM": {
-      // Use overrides directly, or default distribution
-      // Custom items start with a default and user can edit
+      // Custom distribution for marketing with weighted month blocks
+      if (item.customDistribution) {
+        for (const block of item.customDistribution) {
+          const range = getPhaseMonthRange(phases, block.phase);
+          if (range.start === 0 && range.end === 0) continue;
+          const blockTotal = item.total * block.ratio;
+
+          if (block.phase === "offplan") {
+            const phaseConfig = phases.find(p => p.type === block.phase);
+            if (!phaseConfig || phaseConfig.duration === 0) continue;
+            const monthly = blockTotal / phaseConfig.duration;
+            for (let m = range.start; m <= range.end; m++) {
+              const shifted = m + shift;
+              if (shifted >= 1 && shifted <= totalMonths) {
+                result[shifted] = (result[shifted] || 0) + monthly;
+              }
+            }
+          } else {
+            // Construction: first N months or next N months
+            const isFirstBlock = block.ratio === 0.75 * 0.75; // 56.25%
+            const blockStart = isFirstBlock ? range.start : range.start + 4;
+            const blockEnd = isFirstBlock
+              ? Math.min(range.start + block.months - 1, range.end)
+              : Math.min(blockStart + block.months - 1, range.end);
+
+            const actualMonths = blockEnd - blockStart + 1;
+            if (actualMonths <= 0) continue;
+            const monthly = blockTotal / actualMonths;
+            for (let m = blockStart; m <= blockEnd; m++) {
+              const shifted = m + shift;
+              if (shifted >= 1 && shifted <= totalMonths) {
+                result[shifted] = (result[shifted] || 0) + monthly;
+              }
+            }
+          }
+        }
+      }
+      // Apply overrides for legacy custom items (contingency, gov_fees)
+      if (item.overrides) {
+        for (const [mStr, val] of Object.entries(item.overrides)) {
+          const m = parseInt(mStr);
+          if (m >= 1 && m <= totalMonths) {
+            result[m] = val;
+          }
+        }
+      }
       break;
     }
   }
 
-  // Apply overrides (user manual edits)
-  if (item.overrides) {
+  // Apply overrides (user manual edits) for non-CUSTOM behaviors
+  if (item.behavior !== "CUSTOM" && item.overrides) {
     for (const [mStr, val] of Object.entries(item.overrides)) {
       const m = parseInt(mStr);
       if (m >= 1 && m <= totalMonths) {
@@ -283,21 +343,79 @@ export function buildQuarters(
     quarters.push({ label: "تم الشراء", months: [], phase: "land", phaseLabel: "شراء الأرض" });
   }
 
-  // Opening balance column (for escrow)
+  // Opening balance
   if (includeOpening) {
     quarters.push({ label: "رصيد افتتاحي", months: [], phase: "opening", phaseLabel: "الرصيد الافتتاحي" });
   }
 
   const totalMonths = getTotalMonths(durations);
 
-  // Group months individually (monthly view)
-  for (const phase of phases) {
-    if (phase.type === "land") continue;
-    if (includeOpening && phase.type === "preCon") continue; // escrow skips preCon
-
+  // Build a month -> phase mapping, handling overlaps
+  // offplan months take priority over design months when they overlap
+  const offplanRange = getPhaseMonthRange(phases, "offplan");
+  const designRange = getPhaseMonthRange(phases, "design");
+  
+  // Collect all phases except land in order
+  const orderedPhases = phases.filter(p => p.type !== "land");
+  if (includeOpening) {
+    // escrow skips design phase entirely
+    orderedPhases.splice(orderedPhases.findIndex(p => p.type === "design"), 1);
+  }
+  
+  // Track which months have been assigned
+  const assignedMonths = new Set<number>();
+  
+  // First pass: assign offplan months (they take priority in overlaps)
+  if (offplanRange.start > 0) {
+    for (let m = offplanRange.start; m <= offplanRange.end; m++) {
+      assignedMonths.add(m);
+    }
+  }
+  
+  // Build quarters in chronological order
+  // Design months (excluding offplan overlap)
+  if (!includeOpening && designRange.start > 0) {
+    const designPhase = phases.find(p => p.type === "design")!;
+    for (let m = designRange.start; m <= designRange.end; m++) {
+      if (!assignedMonths.has(m)) {
+        quarters.push({
+          label: formatMonth(m),
+          months: [m],
+          phase: "design",
+          phaseLabel: designPhase.label,
+        });
+      } else if (m === offplanRange.start) {
+        // Insert offplan months here (chronological position)
+        const offplanPhase = phases.find(p => p.type === "offplan")!;
+        for (let om = offplanRange.start; om <= offplanRange.end; om++) {
+          quarters.push({
+            label: formatMonth(om),
+            months: [om],
+            phase: "offplan",
+            phaseLabel: offplanPhase.label,
+          });
+        }
+      }
+    }
+    // If offplan starts after design ends, add offplan months separately
+    if (offplanRange.start > designRange.end) {
+      const offplanPhase = phases.find(p => p.type === "offplan")!;
+      for (let m = offplanRange.start; m <= offplanRange.end; m++) {
+        quarters.push({
+          label: formatMonth(m),
+          months: [m],
+          phase: "offplan",
+          phaseLabel: offplanPhase.label,
+        });
+      }
+    }
+  }
+  
+  // Construction and handover months
+  for (const phase of orderedPhases) {
+    if (phase.type === "design" || phase.type === "offplan") continue;
     const range = getPhaseMonthRange(phases, phase.type);
     if (range.start === 0 && range.end === 0) continue;
-
     for (let m = range.start; m <= range.end; m++) {
       quarters.push({
         label: formatMonth(m),
@@ -323,14 +441,9 @@ export function aggregateToQuarters(
 
 // ===== DEFAULT EXPENSE DEFINITIONS =====
 
-// Construction cost base (FALLBACK defaults when no project data available)
 export const CONSTRUCTION_COST = 39427980;
 export const SALES_VALUE = 93765000;
 
-/**
- * Dynamic project costs — passed from بطاقة المشروع / دراسة الجدوى.
- * When provided, all expense items use these values instead of hardcoded defaults.
- */
 export interface ProjectCosts {
   landPrice: number;
   agentCommissionLand: number;
@@ -360,191 +473,137 @@ export interface ProjectCosts {
 }
 
 export function getInvestorExpenses(costs?: ProjectCosts): ExpenseItem[] {
-  // Use dynamic costs if provided, otherwise fall back to hardcoded defaults
   const c = costs;
   const constructionCost = c ? c.constructionCost : CONSTRUCTION_COST;
-  const salesValue = c ? c.totalRevenue : SALES_VALUE;
 
   return [
-    // === شراء الأرض ===
+    // ═══ المرحلة 1: الأرض (المبالغ المدفوعة) ═══
     {
-      id: "land_cost",
-      name: "سعر الأرض",
+      id: "land_cost", name: "سعر الأرض",
       total: c ? c.landPrice : 18000000,
-      behavior: "FIXED_ABSOLUTE",
-      phase: "land",
-      table: "investor",
+      behavior: "FIXED_ABSOLUTE", phase: "land", table: "investor",
     },
     {
-      id: "land_broker",
-      name: "عمولة وسيط الأرض (1%)",
+      id: "land_broker", name: "عمولة وسيط الأرض (1%)",
       total: c ? c.agentCommissionLand : 180000,
-      behavior: "FIXED_ABSOLUTE",
-      phase: "land",
-      table: "investor",
+      behavior: "FIXED_ABSOLUTE", phase: "land", table: "investor",
     },
     {
-      id: "land_registration",
-      name: "رسوم تسجيل الأرض (4%)",
+      id: "land_registration", name: "رسوم تسجيل الأرض (4%)",
       total: c ? c.landRegistration : 720000,
-      behavior: "FIXED_ABSOLUTE",
-      phase: "land",
-      table: "investor",
+      behavior: "FIXED_ABSOLUTE", phase: "land", table: "investor",
     },
 
-    // === ما قبل البناء ===
+    // ═══ المرحلة 2: التصاميم والموافقات ═══
     {
-      id: "soil_test",
-      name: "فحص التربة",
+      id: "soil_test", name: "فحص التربة",
       total: c ? c.soilTestFee : 25000,
-      behavior: "FIXED_RELATIVE",
-      phase: "preCon",
-      relativeMonth: 1,
-      table: "investor",
+      behavior: "FIXED_RELATIVE", phase: "design", relativeMonth: 1, table: "investor",
     },
     {
-      id: "survey",
-      name: "المسح الطبوغرافي",
+      id: "survey", name: "المسح الطبوغرافي",
       total: c ? c.topographicSurveyFee : 8000,
-      behavior: "FIXED_RELATIVE",
-      phase: "preCon",
-      relativeMonth: 1,
-      table: "investor",
+      behavior: "FIXED_RELATIVE", phase: "design", relativeMonth: 1, table: "investor",
     },
+    // أتعاب المطور: 30% تصاميم، 10% أوف بلان، 60% إنشاء
     {
-      id: "developer_fee",
-      name: "أتعاب المطور (5%)",
+      id: "developer_fee", name: "أتعاب المطور (5%)",
       total: c ? c.developerFee : 4688250,
-      behavior: "DISTRIBUTED",
-      phase: "preCon",
+      behavior: "DISTRIBUTED", phase: "design",
       splitRatio: [
-        { phase: "preCon", ratio: 0.4 },       // 2% = 40% of 5%
-        { phase: "construction", ratio: 0.5 },  // 2.5% = 50% of 5%
-        { phase: "handover", ratio: 0.1 },      // 0.5% = 10% of 5%
+        { phase: "design", ratio: 0.3 },
+        { phase: "offplan", ratio: 0.1 },
+        { phase: "construction", ratio: 0.6 },
       ],
       table: "investor",
     },
     {
-      id: "design_fee",
-      name: "أتعاب التصميم (2%)",
+      id: "design_fee", name: "أتعاب التصميم (2%)",
       total: c ? c.designFee : 788559.6,
-      behavior: "DISTRIBUTED",
-      phase: "preCon",
-      distributeAcross: ["preCon"],
-      table: "investor",
+      behavior: "DISTRIBUTED", phase: "design", distributeAcross: ["design"], table: "investor",
     },
+
+    // ═══ المرحلة 3: تسجيل أوف بلان ═══
     {
-      id: "fraz_fee",
-      name: "رسوم الفرز (40 د/قدم)",
+      id: "fraz_fee", name: "رسوم الفرز (40 د/قدم²)",
       total: c ? c.separationFee : 2033044.4,
-      behavior: "FIXED_RELATIVE",
-      phase: "preCon",
-      relativeMonth: 2,
-      table: "investor",
+      behavior: "FIXED_RELATIVE", phase: "offplan", relativeMonth: 1, table: "investor",
     },
     {
-      id: "rera_registration",
-      name: "تسجيل بيع على الخارطة - ريرا",
+      id: "rera_registration", name: "تسجيل بيع على الخارطة - ريرا",
       total: c ? c.reraProjectRegFee : 150000,
-      behavior: "FIXED_RELATIVE",
-      phase: "preCon",
-      relativeMonth: 4,
-      table: "investor",
+      behavior: "FIXED_RELATIVE", phase: "offplan", relativeMonth: 1, table: "investor",
     },
     {
-      id: "rera_units",
-      name: "تسجيل الوحدات - ريرا",
+      id: "rera_units", name: "تسجيل الوحدات - ريرا",
       total: c ? c.reraUnitRegFee : 39100,
-      behavior: "FIXED_RELATIVE",
-      phase: "preCon",
-      relativeMonth: 5,
-      table: "investor",
+      behavior: "FIXED_RELATIVE", phase: "offplan", relativeMonth: 1, table: "investor",
     },
     {
-      id: "surveyor_fee",
-      name: "رسوم المساح",
+      id: "surveyor_fee", name: "رسوم المساح",
       total: c ? c.surveyorFees : 24000,
-      behavior: "FIXED_RELATIVE",
-      phase: "preCon",
+      behavior: "FIXED_RELATIVE", phase: "offplan",
       multiPayments: [
-        { phase: "preCon", relativeMonth: 4, amount: (c ? c.surveyorFees : 24000) / 2 },
+        { phase: "offplan", relativeMonth: 1, amount: (c ? c.surveyorFees : 24000) / 2 },
         { phase: "handover", relativeMonth: 1, amount: (c ? c.surveyorFees : 24000) / 2 },
       ],
       table: "investor",
     },
     {
-      id: "noc_fee",
-      name: "رسوم NOC للبيع",
+      id: "noc_fee", name: "رسوم NOC للبيع",
       total: c ? c.developerNocFee : 22000,
-      behavior: "FIXED_RELATIVE",
-      phase: "preCon",
+      behavior: "FIXED_RELATIVE", phase: "offplan",
       multiPayments: [
-        { phase: "preCon", relativeMonth: 5, amount: (c ? c.developerNocFee : 22000) * 0.45 },
+        { phase: "offplan", relativeMonth: 1, amount: (c ? c.developerNocFee : 22000) * 0.45 },
         { phase: "handover", relativeMonth: 1, amount: (c ? c.developerNocFee : 22000) * 0.55 },
       ],
       table: "investor",
     },
     {
-      id: "escrow_fee",
-      name: "رسوم حساب الضمان",
+      id: "escrow_fee", name: "رسوم حساب الضمان",
       total: c ? c.escrowAccountFee : 140000,
-      behavior: "FIXED_RELATIVE",
-      phase: "preCon",
-      relativeMonth: 4,
-      table: "investor",
+      behavior: "FIXED_RELATIVE", phase: "offplan", relativeMonth: 1, table: "investor",
     },
     {
-      id: "escrow_deposit",
-      name: "إيداع حساب الضمان (20%)",
-      total: constructionCost * 0.20,
-      behavior: "FIXED_RELATIVE",
-      phase: "preCon",
-      relativeMonth: -2, // second to last month
-      table: "investor",
-    },
-    {
-      id: "contractor_advance",
-      name: "دفعة مقدمة للمقاول (10%)",
-      total: constructionCost * 0.10,
-      behavior: "FIXED_RELATIVE",
-      phase: "preCon",
-      relativeMonth: -1, // last month
-      table: "investor",
-    },
-    {
-      id: "community_fee",
-      name: "رسوم المجتمع",
+      id: "community_fee", name: "رسوم المجتمع",
       total: c ? c.communityFees : 16000,
-      behavior: "FIXED_RELATIVE",
-      phase: "preCon",
-      relativeMonth: -1, // last month
-      table: "investor",
+      behavior: "FIXED_RELATIVE", phase: "offplan", relativeMonth: 2, table: "investor",
+    },
+    {
+      id: "bank_fees", name: "رسوم بنكية",
+      total: c ? c.bankFees : 20000,
+      behavior: "DISTRIBUTED", phase: "construction",
+      distributeAcross: ["construction", "handover"], table: "investor",
+    },
+    // إيداع حساب الضمان (20% من تكلفة الإنشاء)
+    {
+      id: "escrow_deposit", name: "إيداع حساب الضمان (20%)",
+      total: constructionCost * 0.20,
+      behavior: "FIXED_RELATIVE", phase: "offplan", relativeMonth: 2, table: "investor",
     },
 
-    // === البناء ===
+    // ═══ المرحلة 4: الإنشاء ═══
+    // دفعة مقدمة للمقاول — الشهر الأول من الإنشاء
     {
-      id: "contingency",
-      name: "احتياطي وطوارئ (2%)",
+      id: "contractor_advance", name: "دفعة مقدمة للمقاول (10%)",
+      total: constructionCost * 0.10,
+      behavior: "FIXED_RELATIVE", phase: "construction", relativeMonth: 1, table: "investor",
+    },
+    {
+      id: "contingency", name: "احتياطي وطوارئ (2%)",
       total: c ? c.contingencies : 788559.6,
-      behavior: "CUSTOM",
-      phase: "construction",
-      table: "investor",
+      behavior: "DISTRIBUTED", phase: "construction", distributeAcross: ["construction"], table: "investor",
     },
+    // التسويق والإعلان: 25% أوف بلان، 75% إنشاء (75% أول 4 شهور، 25% الـ 6 التالية)
     {
-      id: "marketing",
-      name: "التسويق والإعلان (2%)",
+      id: "marketing", name: "التسويق والإعلان (2%)",
       total: c ? c.marketingCost : 1875300,
-      behavior: "SALES_LINKED",
-      phase: "construction",
-      table: "investor",
-    },
-    {
-      id: "bank_fees",
-      name: "رسوم بنكية",
-      total: c ? c.bankFees : 20000,
-      behavior: "DISTRIBUTED",
-      phase: "construction",
-      distributeAcross: ["construction", "handover"],
+      behavior: "CUSTOM", phase: "offplan",
+      customDistribution: [
+        { phase: "offplan", months: 2, ratio: 0.25 },
+        { phase: "construction", months: 4, ratio: 0.75 * 0.75 },
+        { phase: "construction", months: 6, ratio: 0.75 * 0.25 },
+      ],
       table: "investor",
     },
   ];
@@ -556,55 +615,39 @@ export function getEscrowExpenses(costs?: ProjectCosts): ExpenseItem[] {
 
   return [
     {
-      id: "gov_fees",
-      name: "رسوم الجهات الحكومية",
+      id: "gov_fees", name: "رسوم الجهات الحكومية",
       total: c ? c.officialBodiesFees : 1000000,
-      behavior: "CUSTOM",
-      phase: "construction",
-      table: "escrow",
+      behavior: "CUSTOM", phase: "construction", table: "escrow",
     },
     {
-      id: "contractor_payments",
-      name: "دفعات المقاول (85%)",
+      id: "contractor_payments", name: "دفعات المقاول (85%)",
       total: constructionCost * 0.85,
-      behavior: "DISTRIBUTED",
-      phase: "construction",
-      distributeAcross: ["construction"],
-      table: "escrow",
+      behavior: "DISTRIBUTED", phase: "construction",
+      distributeAcross: ["construction"], table: "escrow",
     },
     {
-      id: "supervision_fee",
-      name: "أتعاب الإشراف (2%)",
+      id: "supervision_fee", name: "أتعاب الإشراف (2%)",
       total: c ? c.supervisionFee : 788559.6,
-      behavior: "DISTRIBUTED",
-      phase: "construction",
-      distributeAcross: ["construction"],
-      table: "escrow",
+      behavior: "DISTRIBUTED", phase: "construction",
+      distributeAcross: ["construction"], table: "escrow",
     },
     {
-      id: "sales_agent",
-      name: "عمولة وكيل المبيعات (5%)",
+      id: "sales_agent", name: "عمولة وكيل المبيعات (5%)",
       total: c ? c.salesCommission : 4688250,
-      behavior: "SALES_LINKED",
-      phase: "construction",
-      table: "escrow",
+      behavior: "SALES_LINKED", phase: "construction", table: "escrow",
     },
     {
-      id: "rera_audit",
-      name: "تقارير تدقيق ريرا",
+      id: "rera_audit", name: "تقارير تدقيق ريرا",
       total: c ? c.reraAuditReportFee : 18000,
-      behavior: "PERIODIC",
-      phase: "construction",
+      behavior: "PERIODIC", phase: "construction",
       periodicInterval: 3,
       periodicAmount: c ? Math.round(c.reraAuditReportFee / 6) : 3000,
       table: "escrow",
     },
     {
-      id: "rera_inspection",
-      name: "تقارير تفتيش ريرا",
+      id: "rera_inspection", name: "تقارير تفتيش ريرا",
       total: c ? c.reraInspectionReportFee : 105000,
-      behavior: "PERIODIC",
-      phase: "construction",
+      behavior: "PERIODIC", phase: "construction",
       periodicInterval: 3,
       periodicAmount: c ? Math.round(c.reraInspectionReportFee / 6) : 15000,
       table: "escrow",
@@ -612,7 +655,7 @@ export function getEscrowExpenses(costs?: ProjectCosts): ExpenseItem[] {
   ];
 }
 
-// Default custom distributions (for CUSTOM behavior items)
+// Default custom distributions (for CUSTOM behavior items without customDistribution)
 export function getDefaultCustomDistribution(
   itemId: string,
   phases: PhaseConfig[],
@@ -622,7 +665,6 @@ export function getDefaultCustomDistribution(
   const conRange = getPhaseMonthRange(phases, "construction");
 
   if (itemId === "contingency") {
-    // Contingency: split roughly into 2 payments during construction
     const contingencyTotal = costs ? costs.contingencies : 788559.6;
     const half = contingencyTotal / 2;
     const midMonth = conRange.start + Math.floor((conRange.end - conRange.start) / 2);
@@ -634,26 +676,21 @@ export function getDefaultCustomDistribution(
   }
 
   if (itemId === "gov_fees") {
-    // Government fees: 80% at month 3 of construction, then rest distributed equally
-    // The total of all payments MUST equal govTotal exactly
     const govTotal = costs ? costs.officialBodiesFees : 1000000;
     if (govTotal === 0) return {};
     const result: { [month: number]: number } = {};
     const initialPayment = govTotal * 0.8;
     result[conRange.start + 2] = initialPayment;
     const remaining = govTotal - initialPayment;
-    const interval = 4;
-    // Collect all remaining payment months first
+    const interval = Math.max(1, Math.floor((conRange.end - conRange.start - 2) / 3));
     const remainingMonths: number[] = [];
     for (let m = conRange.start + 2 + interval; m <= conRange.end; m += interval) {
       remainingMonths.push(m);
     }
     if (remainingMonths.length > 0) {
-      // Distribute remaining equally across all months
       const perMonth = remaining / remainingMonths.length;
       remainingMonths.forEach(m => { result[m] = perMonth; });
     } else {
-      // No room for remaining payments — add to the initial payment month
       result[conRange.start + 2] = govTotal;
     }
     return result;
@@ -673,30 +710,25 @@ export function getDefaultRevenue(
   const handoverRange = getPhaseMonthRange(phases, "handover");
   const revenue: { [month: number]: number } = {};
 
-  // Sales start 3 months into construction
   const salesStart = conRange.start + 2;
   const salesEnd = handoverRange.end;
   const totalSalesMonths = salesEnd - salesStart + 1;
 
   if (totalSalesMonths <= 0) return revenue;
 
-  // 10% at launch (first 2 months), then 5% monthly, 10% at last 2 months
   const launchMonths = 2;
   const endMonths = 2;
   const midMonths = totalSalesMonths - launchMonths - endMonths;
 
   let allocated = 0;
-  // Launch: 10% each
   for (let i = 0; i < launchMonths && salesStart + i <= salesEnd; i++) {
     revenue[salesStart + i] = salesTotal * 0.10;
     allocated += salesTotal * 0.10;
   }
-  // End: 10% each
   for (let i = 0; i < endMonths && salesEnd - i >= salesStart + launchMonths; i++) {
     revenue[salesEnd - i] = salesTotal * 0.10;
     allocated += salesTotal * 0.10;
   }
-  // Mid: distribute remaining equally
   const remaining = salesTotal - allocated;
   if (midMonths > 0) {
     const monthly = remaining / midMonths;

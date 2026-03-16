@@ -31,14 +31,17 @@ function fmtFull(n: number): string {
   return n.toFixed(0);
 }
 
-// ── Phase colors (from platform palette) ─────────────────────────────
-// Teal for pre-construction, Amber/Orange for construction
-const PRE_CON_SOLID  = "#0d9488"; // teal-600
-const PRE_CON_LIGHT  = "#ccfbf1"; // teal-100
-const PRE_CON_TEXT   = "#115e59"; // teal-800
-const CONSTR_SOLID   = "#d97706"; // amber-600
-const CONSTR_LIGHT   = "#fef3c7"; // amber-100
-const CONSTR_TEXT    = "#92400e"; // amber-800
+// ── Phase colors ─────────────────────────────────────────────────────
+// 4 phases: land (gray), design (purple), offplan (blue), construction (amber)
+const PHASE_COLORS = {
+  land:         { solid: "#64748b", light: "#f1f5f9", text: "#334155" },
+  design:       { solid: "#7c3aed", light: "#ede9fe", text: "#5b21b6" },
+  offplan:      { solid: "#0284c7", light: "#e0f2fe", text: "#075985" },
+  construction: { solid: "#d97706", light: "#fef3c7", text: "#92400e" },
+  handover:     { solid: "#d97706", light: "#fef3c7", text: "#92400e" },
+} as const;
+
+type PhaseType = "land" | "design" | "offplan" | "construction" | "handover";
 
 interface ProjectColumn {
   cfProjectId: number | null;
@@ -46,17 +49,22 @@ interface ProjectColumn {
   name: string;
   startDate: string;
   preDevMonths: number;
+  designMonths: number;
+  offplanMonths: number;
   constructionMonths: number;
   handoverMonths: number;
   monthlyAmounts: number[];
+  phaseMonthlyAmounts: Record<string, Record<string, number>>;
+  phaseTotals: Record<string, number>;
   grandTotal: number;
   paidTotal: number;
   upcomingTotal: number;
 }
 
 interface DelayState {
-  fullDelay: number;
-  constructionDelay: number;
+  designDelay: number;       // delay for design phase (shifts everything)
+  offplanDelay: number;      // additional delay for offplan phase
+  constructionDelay: number; // additional delay for construction phase
 }
 
 interface Props {
@@ -92,25 +100,19 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
   const [delays, setDelays] = useState<Record<number, DelayState>>({});
 
   function getDelay(projectId: number): DelayState {
-    return delays[projectId] || { fullDelay: 0, constructionDelay: 0 };
+    return delays[projectId] || { designDelay: 0, offplanDelay: 0, constructionDelay: 0 };
   }
 
-  function adjustFullDelay(projectId: number, delta: number) {
+  function adjustDelay(projectId: number, phase: keyof DelayState, delta: number) {
     setDelays(prev => {
-      const cur = prev[projectId] || { fullDelay: 0, constructionDelay: 0 };
-      return { ...prev, [projectId]: { ...cur, fullDelay: Math.max(0, cur.fullDelay + delta) } };
-    });
-  }
-
-  function adjustConstructionDelay(projectId: number, delta: number) {
-    setDelays(prev => {
-      const cur = prev[projectId] || { fullDelay: 0, constructionDelay: 0 };
-      return { ...prev, [projectId]: { ...cur, constructionDelay: Math.max(0, cur.constructionDelay + delta) } };
+      const cur = prev[projectId] || { designDelay: 0, offplanDelay: 0, constructionDelay: 0 };
+      const newVal = Math.max(0, cur[phase] + delta);
+      return { ...prev, [projectId]: { ...cur, [phase]: newVal } };
     });
   }
 
   function resetDelay(projectId: number) {
-    setDelays(prev => ({ ...prev, [projectId]: { fullDelay: 0, constructionDelay: 0 } }));
+    setDelays(prev => ({ ...prev, [projectId]: { designDelay: 0, offplanDelay: 0, constructionDelay: 0 } }));
   }
 
   // Determine which months are "paid" (past) based on today's date
@@ -131,37 +133,116 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
     return paidStatus;
   }
 
+  /**
+   * For each project, compute chart-level amounts per phase, considering delays.
+   * 
+   * Phase delays work as follows:
+   * - designDelay: shifts design, offplan, and construction all together
+   * - offplanDelay: shifts offplan independently (additional to designDelay)
+   * - constructionDelay: shifts construction independently (additional to designDelay)
+   * 
+   * Rules:
+   * - Land phase: never shifts (already paid)
+   * - Design: shifts by designDelay
+   * - Offplan: shifts by designDelay + offplanDelay (min start = design start + 2 months)
+   * - Construction: shifts by designDelay + constructionDelay (min start = after design ends)
+   */
   const effectiveColumns = useMemo(() => {
     return baseColumns.map((col) => {
-      const { fullDelay, constructionDelay } = getDelay(col.projectId);
-      const hasDelay = fullDelay > 0 || constructionDelay > 0;
+      const delay = getDelay(col.projectId);
+      const hasDelay = delay.designDelay > 0 || delay.offplanDelay > 0 || delay.constructionDelay > 0;
       const paidStatus = getMonthPaidStatus(col);
-      const chartAmounts: Record<number, number> = {};
 
-      col.monthlyAmounts.forEach((val, idx) => {
-        if (val <= 0) return;
-        if (hasDelay && paidStatus[idx]) return;
+      // Phase amounts mapped to chart indices
+      const phaseChartAmounts: Record<PhaseType, Record<number, number>> = {
+        land: {}, design: {}, offplan: {}, construction: {}, handover: {},
+      };
 
-        let chartIdx: number;
-        if (idx === 0) {
-          const baseChartIdx = projectMonthToChartIndex(col.startDate, 0) - 1;
-          chartIdx = baseChartIdx + fullDelay;
-        } else {
-          const relIdx = idx - 1;
-          if (relIdx < col.preDevMonths) {
-            const baseChartIdx = projectMonthToChartIndex(col.startDate, relIdx);
-            chartIdx = baseChartIdx + fullDelay;
+      const phaseTypes: PhaseType[] = ["land", "design", "offplan", "construction", "handover"];
+
+      for (const phase of phaseTypes) {
+        const phaseData = col.phaseMonthlyAmounts?.[phase];
+        if (!phaseData) continue;
+
+        for (const [monthStr, val] of Object.entries(phaseData)) {
+          const m = parseInt(monthStr);
+          if (val <= 0) continue;
+          if (hasDelay && paidStatus[m]) continue;
+
+          let chartIdx: number;
+          if (phase === "land") {
+            // Land never shifts
+            const baseChartIdx = projectMonthToChartIndex(col.startDate, 0) - 1;
+            chartIdx = baseChartIdx;
+          } else if (phase === "design") {
+            // Design shifts by designDelay
+            const baseChartIdx = projectMonthToChartIndex(col.startDate, m - 1);
+            chartIdx = baseChartIdx + delay.designDelay;
+          } else if (phase === "offplan") {
+            // Offplan shifts by designDelay + offplanDelay
+            const baseChartIdx = projectMonthToChartIndex(col.startDate, m - 1);
+            chartIdx = baseChartIdx + delay.designDelay + delay.offplanDelay;
           } else {
-            const baseChartIdx = projectMonthToChartIndex(col.startDate, relIdx);
-            chartIdx = baseChartIdx + fullDelay + constructionDelay;
+            // Construction/handover shifts by designDelay + constructionDelay
+            const baseChartIdx = projectMonthToChartIndex(col.startDate, m - 1);
+            chartIdx = baseChartIdx + delay.designDelay + delay.constructionDelay;
+          }
+
+          if (chartIdx >= 0 && chartIdx < TOTAL_MONTHS) {
+            phaseChartAmounts[phase][chartIdx] = (phaseChartAmounts[phase][chartIdx] || 0) + val;
           }
         }
-        if (chartIdx >= 0 && chartIdx < TOTAL_MONTHS) {
-          chartAmounts[chartIdx] = (chartAmounts[chartIdx] || 0) + val;
-        }
-      });
+      }
 
-      return { ...col, chartAmounts, fullDelay, constructionDelay };
+      // Aggregate all phases into a single chartAmounts for totals
+      const chartAmounts: Record<number, number> = {};
+      for (const phase of phaseTypes) {
+        for (const [idx, val] of Object.entries(phaseChartAmounts[phase])) {
+          const i = parseInt(idx);
+          chartAmounts[i] = (chartAmounts[i] || 0) + val;
+        }
+      }
+
+      // Compute phase ranges for visual display (considering delays)
+      const baseStart = projectMonthToChartIndex(col.startDate, 0);
+
+      // Design range
+      const designStart = baseStart + delay.designDelay;
+      const designEnd = designStart + col.designMonths - 1;
+
+      // Offplan range (normal: starts at design month 3, but with delay it shifts)
+      // In normal flow, offplan starts at design start + 2
+      const offplanNormalStart = designStart + 2;
+      const offplanStart = offplanNormalStart + delay.offplanDelay;
+      const offplanEnd = offplanStart + (col.offplanMonths || 2) - 1;
+
+      // Construction range (starts after design ends normally)
+      const constructionNormalStart = designEnd + 1;
+      const constructionStart = constructionNormalStart + delay.constructionDelay;
+      const constructionEnd = constructionStart + col.constructionMonths - 1;
+
+      // Handover
+      const handoverStart = constructionEnd + 1;
+      const handoverEnd = handoverStart + col.handoverMonths - 1;
+
+      // Land: just the month before design
+      const landIdx = baseStart - 1;
+
+      const phaseRanges = {
+        land: { start: landIdx, end: landIdx },
+        design: { start: designStart, end: designEnd },
+        offplan: { start: offplanStart, end: offplanEnd },
+        construction: { start: constructionStart, end: constructionEnd },
+        handover: { start: handoverStart, end: handoverEnd },
+      };
+
+      return {
+        ...col,
+        chartAmounts,
+        phaseChartAmounts,
+        phaseRanges,
+        ...delay,
+      };
     });
   }, [baseColumns, delays]);
 
@@ -176,26 +257,23 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
     return totals;
   }, [effectiveColumns]);
 
-  function getPhase(col: typeof effectiveColumns[0], chartIdx: number): string | null {
-    const { fullDelay, constructionDelay } = col;
-    const baseStart = projectMonthToChartIndex(col.startDate, 0);
-    const preDevStart  = baseStart + fullDelay;
-    const preDevEnd    = preDevStart + col.preDevMonths - 1;
-    const constrStart  = preDevEnd + 1 + constructionDelay;
-    const constrEnd    = constrStart + col.constructionMonths - 1;
-    const handoverEnd  = constrEnd + col.handoverMonths;
-
-    if (chartIdx >= preDevStart && chartIdx <= preDevEnd) return "preCon";
-    if (chartIdx >= constrStart && chartIdx <= constrEnd) return "construction";
-    if (chartIdx > constrEnd && chartIdx <= handoverEnd) return "handover";
+  // Determine phase for a given chart index in a project column
+  function getPhaseAtIndex(col: typeof effectiveColumns[0], chartIdx: number): PhaseType | null {
+    const { phaseRanges } = col;
+    // Check in order of priority (offplan can overlap with design)
+    if (chartIdx >= phaseRanges.offplan.start && chartIdx <= phaseRanges.offplan.end && col.offplanMonths > 0) return "offplan";
+    if (chartIdx >= phaseRanges.land.start && chartIdx <= phaseRanges.land.end) return "land";
+    if (chartIdx >= phaseRanges.design.start && chartIdx <= phaseRanges.design.end) return "design";
+    if (chartIdx >= phaseRanges.construction.start && chartIdx <= phaseRanges.construction.end) return "construction";
+    if (chartIdx >= phaseRanges.handover.start && chartIdx <= phaseRanges.handover.end) return "handover";
     return null;
   }
 
   function getPhasePosition(col: typeof effectiveColumns[0], chartIdx: number): { isFirst: boolean; isLast: boolean } {
-    const phase = getPhase(col, chartIdx);
+    const phase = getPhaseAtIndex(col, chartIdx);
     if (!phase) return { isFirst: false, isLast: false };
-    const prevPhase = chartIdx > 0 ? getPhase(col, chartIdx - 1) : null;
-    const nextPhase = chartIdx < TOTAL_MONTHS - 1 ? getPhase(col, chartIdx + 1) : null;
+    const prevPhase = chartIdx > 0 ? getPhaseAtIndex(col, chartIdx - 1) : null;
+    const nextPhase = chartIdx < TOTAL_MONTHS - 1 ? getPhaseAtIndex(col, chartIdx + 1) : null;
     return {
       isFirst: prevPhase !== phase,
       isLast: nextPhase !== phase,
@@ -218,7 +296,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
         const amount = Array.from({ length: endIdx - startIdx + 1 }, (_, i) => col.chartAmounts[startIdx + i] || 0)
           .reduce((s, v) => s + v, 0);
         const midIdx = startIdx + Math.floor((endIdx - startIdx) / 2);
-        const phase  = getPhase(col, midIdx);
+        const phase  = getPhaseAtIndex(col, midIdx);
         const { isFirst, isLast } = getPhasePosition(col, midIdx);
         return { colId: col.projectId, amount, phase, isFirst, isLast };
       });
@@ -226,7 +304,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
     });
   }, [effectiveColumns, monthlyTotals, groupBy]);
 
-  // Compute cumulative totals for each grouped row
+  // Cumulative totals
   const cumulativeTotals = useMemo(() => {
     const cumulative: number[] = [];
     let running = 0;
@@ -243,7 +321,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
     return (
       <div className="flex items-center justify-center h-64" dir="rtl">
         <div className="text-center space-y-3">
-          <div className="w-10 h-10 rounded-full border-4 border-teal-400 border-t-transparent animate-spin mx-auto" />
+          <div className="w-10 h-10 rounded-full border-4 border-violet-400 border-t-transparent animate-spin mx-auto" />
           <p className="text-sm text-slate-500 font-medium">جاري تحميل بيانات المشاريع...</p>
         </div>
       </div>
@@ -259,11 +337,10 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
     );
   }
 
-  // All columns same width
-  const COL_W       = 130;
-  const GAP         = 10;
-  const ROW_H       = groupBy === 1 ? 34 : groupBy === 3 ? 46 : 56;
-  const CURVE       = 14;
+  const COL_W  = 130;
+  const GAP    = 10;
+  const ROW_H  = groupBy === 1 ? 34 : groupBy === 3 ? 46 : 56;
+  const CURVE  = 14;
 
   const totalCols = effectiveColumns.length + 3; // projects + date + total + cumulative
   const tableW = totalCols * COL_W + (totalCols - 1) * GAP;
@@ -298,9 +375,9 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
           <div
             style={{
               width: 44, height: 44, borderRadius: 14,
-              background: "linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)",
+              background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: "0 4px 12px rgba(20,184,166,0.25)",
+              boxShadow: "0 4px 12px rgba(124,58,237,0.25)",
             }}
           >
             <Layers style={{ width: 22, height: 22, color: "#fff" }} />
@@ -310,22 +387,25 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
               مشاريع كومو — جدولة رأس المال
             </h2>
             <p style={{ margin: 0, fontSize: 12, color: "#64748b" }}>
-              {TOTAL_MONTHS} شهراً · أبريل 2026 — مارس 2030 · {baseColumns.length} مشاريع
+              {TOTAL_MONTHS} شهراً · أبريل 2026 — مارس 2030 · {baseColumns.length} مشاريع · 4 مراحل
             </p>
           </div>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           {/* Legend */}
-          <div style={{ display: "flex", gap: 14, fontSize: 11, color: "#475569", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-              <div style={{ width: 12, height: 12, borderRadius: 4, background: PRE_CON_SOLID }} />
-              <span style={{ fontWeight: 600 }}>ما قبل التنفيذ</span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-              <div style={{ width: 12, height: 12, borderRadius: 4, background: CONSTR_SOLID }} />
-              <span style={{ fontWeight: 600 }}>مرحلة الإنشاء</span>
-            </div>
+          <div style={{ display: "flex", gap: 10, fontSize: 11, color: "#475569", alignItems: "center" }}>
+            {([
+              { phase: "land" as const, label: "المدفوع" },
+              { phase: "design" as const, label: "التصاميم" },
+              { phase: "offplan" as const, label: "أوف بلان" },
+              { phase: "construction" as const, label: "الإنشاء" },
+            ]).map(({ phase, label }) => (
+              <div key={phase} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <div style={{ width: 12, height: 12, borderRadius: 4, background: PHASE_COLORS[phase].solid }} />
+                <span style={{ fontWeight: 600 }}>{label}</span>
+              </div>
+            ))}
           </div>
 
           {/* Grouping buttons */}
@@ -338,7 +418,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                   padding: "5px 14px", borderRadius: 9, fontSize: 12, fontWeight: 700,
                   cursor: "pointer", transition: "all 0.2s",
                   border: "none",
-                  background: groupBy === g ? "#0d9488" : "transparent",
+                  background: groupBy === g ? "#7c3aed" : "transparent",
                   color: groupBy === g ? "#fff" : "#64748b",
                 }}
               >
@@ -372,10 +452,10 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
         >
           <thead>
             <tr style={{ position: "sticky", top: 0, zIndex: 30 }}>
-              {/* Project column headers - LIGHT style matching platform cards */}
+              {/* Project column headers */}
               {effectiveColumns.map((col, ci) => {
-                const delay    = getDelay(col.projectId);
-                const hasDelay = delay.fullDelay > 0 || delay.constructionDelay > 0;
+                const delay = getDelay(col.projectId);
+                const hasDelay = delay.designDelay > 0 || delay.offplanDelay > 0 || delay.constructionDelay > 0;
                 return (
                   <th
                     key={col.projectId}
@@ -392,17 +472,17 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       style={{
                         background: "#ffffff",
                         borderRadius: 14,
-                        padding: "14px 8px 10px",
+                        padding: "12px 6px 8px",
                         border: "1px solid #e5e7eb",
-                        borderTop: "3px solid #0d9488",
+                        borderTop: "3px solid #7c3aed",
                         boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
                       }}
                     >
                       {/* Project name */}
                       <div style={{
-                        fontSize: 11, fontWeight: 800, color: "#1e293b",
+                        fontSize: 10, fontWeight: 800, color: "#1e293b",
                         textAlign: "center", lineHeight: 1.5,
-                        marginBottom: 8, padding: "0 2px",
+                        marginBottom: 6, padding: "0 2px",
                         wordBreak: "break-word",
                       }}>
                         {col.name}
@@ -410,10 +490,10 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
 
                       {/* Capital summary */}
                       <div style={{
-                        background: "#f0fdfa", borderRadius: 10,
-                        padding: "6px 8px", marginBottom: 8,
-                        fontSize: 9, color: "#475569", lineHeight: 1.8,
-                        border: "1px solid #ccfbf1",
+                        background: "#f5f3ff", borderRadius: 8,
+                        padding: "4px 6px", marginBottom: 6,
+                        fontSize: 8, color: "#475569", lineHeight: 1.8,
+                        border: "1px solid #ede9fe",
                       }}>
                         <div style={{ display: "flex", justifyContent: "space-between", gap: 4 }}>
                           <span style={{ color: "#64748b" }}>الإجمالي:</span>
@@ -421,7 +501,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                         </div>
                         <div style={{
                           display: "flex", justifyContent: "space-between", gap: 4,
-                          borderTop: "1px solid #e0f2fe", paddingTop: 4, marginTop: 3,
+                          borderTop: "1px solid #ede9fe", paddingTop: 3, marginTop: 2,
                         }}>
                           <span style={{ color: "#64748b" }}>المطلوب:</span>
                           <span style={{ fontWeight: 800, color: "#d97706" }}>{fmtFull(col.upcomingTotal)}</span>
@@ -431,90 +511,51 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       {/* Delay badge */}
                       {hasDelay && (
                         <div style={{
-                          background: "#fef3c7", borderRadius: 8,
-                          padding: "3px 6px", marginBottom: 6, textAlign: "center",
-                          fontSize: 9, color: "#92400e", fontWeight: 700,
+                          background: "#fef3c7", borderRadius: 6,
+                          padding: "2px 4px", marginBottom: 4, textAlign: "center",
+                          fontSize: 8, color: "#92400e", fontWeight: 700,
                           border: "1px solid #fde68a",
                         }}>
-                          {delay.fullDelay > 0 && `كامل +${delay.fullDelay}ش`}
-                          {delay.fullDelay > 0 && delay.constructionDelay > 0 && " · "}
+                          {delay.designDelay > 0 && `تصاميم +${delay.designDelay}ش`}
+                          {delay.designDelay > 0 && (delay.offplanDelay > 0 || delay.constructionDelay > 0) && " · "}
+                          {delay.offplanDelay > 0 && `أوف +${delay.offplanDelay}ش`}
+                          {delay.offplanDelay > 0 && delay.constructionDelay > 0 && " · "}
                           {delay.constructionDelay > 0 && `إنشاء +${delay.constructionDelay}ش`}
                         </div>
                       )}
 
-                      {/* Full project delay controls */}
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 3, marginBottom: 4 }}>
-                        <button
-                          onClick={() => adjustFullDelay(col.projectId, -3)}
-                          disabled={delay.fullDelay === 0}
-                          title="تقديم المشروع 3 أشهر"
-                          style={{
-                            width: 22, height: 22, borderRadius: 6,
-                            background: delay.fullDelay === 0 ? "#f1f5f9" : "#ccfbf1",
-                            border: `1px solid ${delay.fullDelay === 0 ? "#e2e8f0" : "#99f6e4"}`,
-                            cursor: delay.fullDelay === 0 ? "default" : "pointer",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            color: delay.fullDelay === 0 ? "#cbd5e1" : "#0d9488",
-                            transition: "all 0.2s",
-                          }}
-                        >
-                          <ChevronUp style={{ width: 12, height: 12 }} />
-                        </button>
-                        <span style={{ fontSize: 8, color: "#94a3b8", minWidth: 30, textAlign: "center", fontWeight: 700 }}>
-                          المشروع
-                        </span>
-                        <button
-                          onClick={() => adjustFullDelay(col.projectId, 3)}
-                          title="تأجيل المشروع 3 أشهر"
-                          style={{
-                            width: 22, height: 22, borderRadius: 6,
-                            background: "#ccfbf1",
-                            border: "1px solid #99f6e4", cursor: "pointer",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            color: "#0d9488",
-                            transition: "all 0.2s",
-                          }}
-                        >
-                          <ChevronDown style={{ width: 12, height: 12 }} />
-                        </button>
-                      </div>
+                      {/* Design delay controls */}
+                      <DelayControl
+                        label="التصاميم"
+                        color="#7c3aed"
+                        lightBg="#ede9fe"
+                        borderColor="#c4b5fd"
+                        value={delay.designDelay}
+                        onUp={() => adjustDelay(col.projectId, "designDelay", -3)}
+                        onDown={() => adjustDelay(col.projectId, "designDelay", 3)}
+                      />
+
+                      {/* Offplan delay controls */}
+                      <DelayControl
+                        label="أوف بلان"
+                        color="#0284c7"
+                        lightBg="#e0f2fe"
+                        borderColor="#7dd3fc"
+                        value={delay.offplanDelay}
+                        onUp={() => adjustDelay(col.projectId, "offplanDelay", -3)}
+                        onDown={() => adjustDelay(col.projectId, "offplanDelay", 3)}
+                      />
 
                       {/* Construction delay controls */}
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 3, marginBottom: 4 }}>
-                        <button
-                          onClick={() => adjustConstructionDelay(col.projectId, -3)}
-                          disabled={delay.constructionDelay === 0}
-                          title="تقديم الإنشاء 3 أشهر"
-                          style={{
-                            width: 22, height: 22, borderRadius: 6,
-                            background: delay.constructionDelay === 0 ? "#f1f5f9" : "#fef3c7",
-                            border: `1px solid ${delay.constructionDelay === 0 ? "#e2e8f0" : "#fde68a"}`,
-                            cursor: delay.constructionDelay === 0 ? "default" : "pointer",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            color: delay.constructionDelay === 0 ? "#cbd5e1" : "#d97706",
-                            transition: "all 0.2s",
-                          }}
-                        >
-                          <ChevronUp style={{ width: 12, height: 12 }} />
-                        </button>
-                        <span style={{ fontSize: 8, color: "#94a3b8", minWidth: 30, textAlign: "center", fontWeight: 700 }}>
-                          الإنشاء
-                        </span>
-                        <button
-                          onClick={() => adjustConstructionDelay(col.projectId, 3)}
-                          title="تأجيل الإنشاء 3 أشهر"
-                          style={{
-                            width: 22, height: 22, borderRadius: 6,
-                            background: "#fef3c7",
-                            border: "1px solid #fde68a", cursor: "pointer",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            color: "#d97706",
-                            transition: "all 0.2s",
-                          }}
-                        >
-                          <ChevronDown style={{ width: 12, height: 12 }} />
-                        </button>
-                      </div>
+                      <DelayControl
+                        label="الإنشاء"
+                        color="#d97706"
+                        lightBg="#fef3c7"
+                        borderColor="#fde68a"
+                        value={delay.constructionDelay}
+                        onUp={() => adjustDelay(col.projectId, "constructionDelay", -3)}
+                        onDown={() => adjustDelay(col.projectId, "constructionDelay", 3)}
+                      />
 
                       {/* Reset button */}
                       {hasDelay && (
@@ -524,13 +565,13 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                             title="إعادة ضبط"
                             style={{
                               background: "#f1f5f9", border: "1px solid #e2e8f0",
-                              borderRadius: 6, padding: "3px 10px", cursor: "pointer",
+                              borderRadius: 6, padding: "2px 8px", cursor: "pointer",
                               fontSize: 8, color: "#64748b", fontWeight: 700,
                               display: "inline-flex", alignItems: "center", gap: 3,
                               transition: "all 0.2s",
                             }}
                           >
-                            <RotateCcw style={{ width: 9, height: 9 }} />
+                            <RotateCcw style={{ width: 8, height: 8 }} />
                             إعادة
                           </button>
                         </div>
@@ -563,7 +604,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                   border: "1px solid #e5e7eb",
                   borderTop: "3px solid #94a3b8",
                 }}>
-                  📅 الشهر
+                  الشهر
                 </div>
               </th>
 
@@ -588,11 +629,11 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                   border: "1px solid #fde68a",
                   borderTop: "3px solid #f59e0b",
                 }}>
-                  💰 الإجمالي
+                  الإجمالي
                 </div>
               </th>
 
-              {/* Cumulative total column header */}
+              {/* Cumulative column header */}
               <th
                 style={{
                   width: COL_W,
@@ -613,7 +654,8 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                   fontWeight: 800,
                   border: "1px solid #fde68a",
                   borderTop: "3px solid #d97706",
-                }}>                  📊 التراكمي
+                }}>
+                  التراكمي
                 </div>
               </th>
             </tr>
@@ -630,23 +672,13 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                     let textColor = "#cbd5e1";
                     let fontW     = 400;
 
-                    // Build border-radius: each corner is independent
-                    // In a vertical column layout (RTL):
-                    // CSS border-radius order: top-left top-right bottom-right bottom-left
-                    // But visually in our table: "first" = top row of phase, "last" = bottom row
                     let tl = 0, tr = 0, br = 0, bl = 0;
 
-                    if (cd.phase === "preCon") {
-                      bg        = cd.amount > 0 ? PRE_CON_SOLID : PRE_CON_LIGHT;
-                      textColor = cd.amount > 0 ? "#ffffff" : PRE_CON_TEXT;
-                      fontW     = cd.amount > 0 ? 800 : 500;
-                      // First row of phase: round top-left and top-right
-                      if (cd.isFirst) { tl = CURVE; tr = CURVE; }
-                      // Last row of phase: round bottom-left and bottom-right
-                      if (cd.isLast) { bl = CURVE; br = CURVE; }
-                    } else if (cd.phase === "construction" || cd.phase === "handover") {
-                      bg        = cd.amount > 0 ? CONSTR_SOLID : CONSTR_LIGHT;
-                      textColor = cd.amount > 0 ? "#ffffff" : CONSTR_TEXT;
+                    const phase = cd.phase as PhaseType | null;
+                    if (phase && PHASE_COLORS[phase]) {
+                      const colors = PHASE_COLORS[phase];
+                      bg        = cd.amount > 0 ? colors.solid : colors.light;
+                      textColor = cd.amount > 0 ? "#ffffff" : colors.text;
                       fontW     = cd.amount > 0 ? 800 : 500;
                       if (cd.isFirst) { tl = CURVE; tr = CURVE; }
                       if (cd.isLast) { bl = CURVE; br = CURVE; }
@@ -681,7 +713,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                             transition: "all 0.15s ease",
                           }}
                         >
-                          {cd.amount > 0 ? fmtCell(cd.amount) : (cd.phase ? "" : "")}
+                          {cd.amount > 0 ? fmtCell(cd.amount) : ""}
                         </div>
                       </td>
                     );
@@ -746,10 +778,59 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
               );
             })}
           </tbody>
-
-
         </table>
       </div>
+    </div>
+  );
+}
+
+// ── Delay Control Component ──────────────────────────────────────────────────
+function DelayControl({
+  label, color, lightBg, borderColor, value, onUp, onDown,
+}: {
+  label: string;
+  color: string;
+  lightBg: string;
+  borderColor: string;
+  value: number;
+  onUp: () => void;
+  onDown: () => void;
+}) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 3, marginBottom: 3 }}>
+      <button
+        onClick={onUp}
+        disabled={value === 0}
+        title={`تقديم ${label} 3 أشهر`}
+        style={{
+          width: 20, height: 20, borderRadius: 5,
+          background: value === 0 ? "#f1f5f9" : lightBg,
+          border: `1px solid ${value === 0 ? "#e2e8f0" : borderColor}`,
+          cursor: value === 0 ? "default" : "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          color: value === 0 ? "#cbd5e1" : color,
+          transition: "all 0.2s",
+        }}
+      >
+        <ChevronUp style={{ width: 11, height: 11 }} />
+      </button>
+      <span style={{ fontSize: 7, color: "#94a3b8", minWidth: 32, textAlign: "center", fontWeight: 700 }}>
+        {label}
+      </span>
+      <button
+        onClick={onDown}
+        title={`تأجيل ${label} 3 أشهر`}
+        style={{
+          width: 20, height: 20, borderRadius: 5,
+          background: lightBg,
+          border: `1px solid ${borderColor}`, cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          color: color,
+          transition: "all 0.2s",
+        }}
+      >
+        <ChevronDown style={{ width: 11, height: 11 }} />
+      </button>
     </div>
   );
 }
