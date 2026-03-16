@@ -35,14 +35,13 @@ function fmtTooltipNum(n: number): string {
   return `${n.toFixed(0)} AED`;
 }
 
-// Phase colors (same as vertical view)
-const PHASE_COLORS = {
-  land:         { solid: "#4a5568", light: "#f7fafc", text: "#2d3748" },
-  design:       { solid: "#5b6abf", light: "#eef0f8", text: "#3c4a8a" },
-  offplan:      { solid: "#b8860b", light: "#faf5eb", text: "#8b6508" },
-  construction: { solid: "#2d6a4f", light: "#edf5f1", text: "#1b4332" },
-  handover:     { solid: "#9b2c4d", light: "#f8eff2", text: "#7b2240" },
-} as const;
+// Simple basic colors - light pastels only
+const PHASE_BG: Record<string, string> = {
+  design:       "#e8eaf6", // light lavender
+  offplan:      "#fff8e1", // light cream
+  construction: "#e8f5e9", // light mint
+  handover:     "#fce4ec", // light pink
+};
 
 type PhaseType = "land" | "design" | "offplan" | "construction" | "handover";
 
@@ -66,10 +65,10 @@ function CellTooltip({ children, lines }: { children: React.ReactNode; lines: st
         <div style={{
           position: "fixed", left: pos.x, top: pos.y,
           transform: "translate(-50%, -100%)", zIndex: 99999,
-          background: "#1e293b", color: "#f8fafc", borderRadius: 10,
-          padding: "8px 12px", fontSize: 11, fontWeight: 600,
-          lineHeight: 1.7, whiteSpace: "nowrap",
-          boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
+          background: "#1e293b", color: "#f8fafc", borderRadius: 8,
+          padding: "6px 10px", fontSize: 11, fontWeight: 600,
+          lineHeight: 1.6, whiteSpace: "nowrap",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.2)",
           pointerEvents: "none", direction: "rtl", textAlign: "right",
         }}>
           {lines.map((line, i) => (
@@ -78,8 +77,8 @@ function CellTooltip({ children, lines }: { children: React.ReactNode; lines: st
           <div style={{
             position: "absolute", bottom: -5, left: "50%", transform: "translateX(-50%)",
             width: 0, height: 0,
-            borderLeft: "6px solid transparent", borderRight: "6px solid transparent",
-            borderTop: "6px solid #1e293b",
+            borderLeft: "5px solid transparent", borderRight: "5px solid transparent",
+            borderTop: "5px solid #1e293b",
           }} />
         </div>,
         document.body
@@ -197,7 +196,6 @@ export default function CapitalSchedulingHorizontal({ baseColumns, delays, hidde
         }
       }
 
-      // Phase ranges
       const baseStart = projectMonthToChartIndex(col.startDate, 0);
       const designStart = baseStart + delay.designDelay;
       const designEnd = designStart + col.designMonths - 1;
@@ -222,7 +220,6 @@ export default function CapitalSchedulingHorizontal({ baseColumns, delays, hidde
     });
   }, [baseColumns, delays, hiddenProjects]);
 
-  // Group months
   const groupedMonths = useMemo(() => {
     const numGroups = Math.ceil(TOTAL_MONTHS / groupBy);
     return Array.from({ length: numGroups }, (_, gi) => {
@@ -235,7 +232,6 @@ export default function CapitalSchedulingHorizontal({ baseColumns, delays, hidde
     });
   }, [groupBy]);
 
-  // Get phase at chart index for a project
   function getPhaseAtIndex(col: typeof effectiveColumns[0], chartIdx: number): PhaseType | null {
     const basePhases: PhaseType[] = ["design", "construction", "handover"];
     for (const phase of basePhases) {
@@ -264,7 +260,6 @@ export default function CapitalSchedulingHorizontal({ baseColumns, delays, hidde
     return chartIdx >= phaseRanges.offplan.start && chartIdx <= phaseRanges.offplan.end && col.offplanMonths > 0;
   }
 
-  // Monthly totals
   const monthlyTotals = useMemo(() => {
     const totals: Record<number, number> = {};
     for (const col of effectiveColumns) {
@@ -276,7 +271,6 @@ export default function CapitalSchedulingHorizontal({ baseColumns, delays, hidde
     return totals;
   }, [effectiveColumns]);
 
-  // Cumulative totals
   const cumulativeTotals = useMemo(() => {
     const cumulative: number[] = [];
     let running = 0;
@@ -291,10 +285,9 @@ export default function CapitalSchedulingHorizontal({ baseColumns, delays, hidde
     return cumulative;
   }, [groupedMonths, monthlyTotals]);
 
-  const ROW_H = 38;
-  const HEADER_W = 180;
-  const CELL_W = groupBy === 1 ? 70 : groupBy === 3 ? 90 : 110;
-  const GAP = 3;
+  const ROW_H = 34;
+  const HEADER_W = 160;
+  const CELL_W = groupBy === 1 ? 52 : groupBy === 3 ? 68 : 85;
 
   return (
     <div
@@ -302,16 +295,14 @@ export default function CapitalSchedulingHorizontal({ baseColumns, delays, hidde
         overflowX: "auto",
         overflowY: "auto",
         maxHeight: "75vh",
-        borderRadius: 16,
+        borderRadius: 12,
         background: "#ffffff",
         border: "1px solid #e5e7eb",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
       }}
     >
       <table
         style={{
-          borderCollapse: "separate",
-          borderSpacing: 0,
+          borderCollapse: "collapse",
           tableLayout: "fixed",
           direction: "rtl",
         }}
@@ -322,10 +313,10 @@ export default function CapitalSchedulingHorizontal({ baseColumns, delays, hidde
             <th style={{
               width: HEADER_W, minWidth: HEADER_W,
               position: "sticky", right: 0, zIndex: 40,
-              background: "#f8fafc", padding: "10px 12px",
-              textAlign: "right", fontWeight: 800, fontSize: 11,
-              color: "#0f172a", borderBottom: "2px solid #e5e7eb",
-              borderLeft: `${GAP}px solid #f3f4f6`,
+              background: "#f9fafb", padding: "8px 10px",
+              textAlign: "right", fontWeight: 700, fontSize: 10,
+              color: "#374151", borderBottom: "1px solid #e5e7eb",
+              borderLeft: "1px solid #e5e7eb",
             }}>
               المشروع
             </th>
@@ -333,10 +324,10 @@ export default function CapitalSchedulingHorizontal({ baseColumns, delays, hidde
             {/* Paid column header */}
             <th style={{
               width: CELL_W, minWidth: CELL_W,
-              background: "#374151", padding: "8px 4px",
-              textAlign: "center", fontWeight: 800, fontSize: 10,
-              color: "#ffffff", borderBottom: "2px solid #4b5563",
-              borderLeft: `${GAP}px solid #f3f4f6`,
+              background: "#f3f4f6", padding: "6px 2px",
+              textAlign: "center", fontWeight: 700, fontSize: 9,
+              color: "#6b7280", borderBottom: "1px solid #e5e7eb",
+              borderLeft: "1px solid #e5e7eb",
             }}>
               المدفوع
             </th>
@@ -345,10 +336,11 @@ export default function CapitalSchedulingHorizontal({ baseColumns, delays, hidde
             {groupedMonths.map((gm) => (
               <th key={gm.gi} style={{
                 width: CELL_W, minWidth: CELL_W,
-                background: gm.gi % 2 === 0 ? "#f8fafc" : "#ffffff",
-                padding: "6px 2px", textAlign: "center",
-                fontWeight: 600, fontSize: groupBy === 1 ? 9 : 8,
-                color: "#475569", borderBottom: "2px solid #e5e7eb",
+                background: "#f9fafb",
+                padding: "4px 1px", textAlign: "center",
+                fontWeight: 500, fontSize: groupBy === 1 ? 8 : 7,
+                color: "#9ca3af", borderBottom: "1px solid #e5e7eb",
+                borderLeft: "1px solid #f3f4f6",
                 whiteSpace: groupBy === 1 ? "nowrap" : "normal",
                 lineHeight: 1.2,
               }}>
@@ -356,13 +348,13 @@ export default function CapitalSchedulingHorizontal({ baseColumns, delays, hidde
               </th>
             ))}
 
-            {/* Total row header */}
+            {/* Total header */}
             <th style={{
-              width: CELL_W + 10, minWidth: CELL_W + 10,
-              background: "#c2410c", padding: "8px 4px",
-              textAlign: "center", fontWeight: 800, fontSize: 10,
-              color: "#ffffff", borderBottom: "2px solid #c2410c",
-              borderRight: `${GAP}px solid #f3f4f6`,
+              width: CELL_W + 5, minWidth: CELL_W + 5,
+              background: "#f3f4f6", padding: "6px 2px",
+              textAlign: "center", fontWeight: 700, fontSize: 9,
+              color: "#6b7280", borderBottom: "1px solid #e5e7eb",
+              borderRight: "1px solid #e5e7eb",
             }}>
               الإجمالي
             </th>
@@ -379,10 +371,10 @@ export default function CapitalSchedulingHorizontal({ baseColumns, delays, hidde
                 <td style={{
                   width: HEADER_W, minWidth: HEADER_W,
                   position: "sticky", right: 0, zIndex: 20,
-                  background: isEven ? "#ffffff" : "#f8fafc",
-                  padding: "6px 10px", fontWeight: 700, fontSize: 10,
-                  color: "#1e293b", borderBottom: "1px solid #f1f5f9",
-                  borderLeft: `${GAP}px solid #f3f4f6`,
+                  background: isEven ? "#ffffff" : "#fafbfc",
+                  padding: "4px 8px", fontWeight: 600, fontSize: 9,
+                  color: "#374151", borderBottom: "1px solid #f3f4f6",
+                  borderLeft: "1px solid #e5e7eb",
                   whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                   maxWidth: HEADER_W,
                 }}>
@@ -392,14 +384,12 @@ export default function CapitalSchedulingHorizontal({ baseColumns, delays, hidde
                     `المطلوب: ${fmtTooltipNum(col.upcomingTotal)}`,
                     `المدفوع: ${fmtTooltipNum(col.paidTotal)}`,
                   ]}>
-                    <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "#1e293b", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {col.name.length > 25 ? col.name.slice(0, 25) + "..." : col.name}
+                    <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                      <div style={{ fontSize: 9, fontWeight: 600, color: "#374151", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {col.name.length > 22 ? col.name.slice(0, 22) + "…" : col.name}
                       </div>
-                      <div style={{ fontSize: 8, color: "#94a3b8", marginTop: 1 }}>
-                        <span style={{ color: "#c2410c", fontWeight: 700 }}>{fmtCell(col.grandTotal)}</span>
-                        {" · "}
-                        <span style={{ color: "#2d6a4f", fontWeight: 600 }}>{fmtCell(col.upcomingTotal)}</span>
+                      <div style={{ fontSize: 8, color: "#9ca3af", marginTop: 1 }}>
+                        {fmtCell(col.grandTotal)} · {fmtCell(col.upcomingTotal)}
                       </div>
                     </div>
                   </CellTooltip>
@@ -408,78 +398,50 @@ export default function CapitalSchedulingHorizontal({ baseColumns, delays, hidde
                 {/* Paid cell */}
                 <td style={{
                   width: CELL_W, minWidth: CELL_W, height: ROW_H,
-                  background: col.paidTotal > 0 ? "#374151" : "#fafbfc",
-                  textAlign: "center", fontSize: 10, fontWeight: 800,
-                  color: col.paidTotal > 0 ? "#ffffff" : "#cbd5e1",
-                  borderBottom: "1px solid #f1f5f9",
-                  borderLeft: `${GAP}px solid #f3f4f6`,
+                  background: col.paidTotal > 0 ? "#f3f4f6" : "#fafbfc",
+                  textAlign: "center", fontSize: 9, fontWeight: 700,
+                  color: col.paidTotal > 0 ? "#374151" : "#d1d5db",
+                  borderBottom: "1px solid #f3f4f6",
+                  borderLeft: "1px solid #e5e7eb",
                 }}>
                   {col.paidTotal > 0 ? fmtCell(col.paidTotal) : ""}
                 </td>
 
                 {/* Month cells */}
                 {groupedMonths.map((gm) => {
-                  // Sum amounts for this group
                   let amount = 0;
                   for (let i = gm.startIdx; i <= gm.endIdx; i++) {
                     amount += col.chartAmounts[i] || 0;
                   }
-                  // Determine phase at midpoint
                   const midIdx = gm.startIdx + Math.floor((gm.endIdx - gm.startIdx) / 2);
                   const phase = getPhaseAtIndex(col, midIdx);
-                  const offplanOverlay = hasOffplanAtIndex(col, midIdx) && phase !== "offplan";
 
-                  let bg = "#fafbfc";
-                  let textColor = "#cbd5e1";
-                  let fontW = 400;
-
-                  if (phase && PHASE_COLORS[phase]) {
-                    const colors = PHASE_COLORS[phase];
-                    bg = amount > 0 ? colors.solid : colors.light;
-                    textColor = amount > 0 ? "#000000" : colors.text;
-                    fontW = amount > 0 ? 800 : 500;
+                  let bg = "#ffffff";
+                  if (phase && PHASE_BG[phase]) {
+                    bg = PHASE_BG[phase];
                   }
-
-                  // Phase position for rounded corners (horizontal: left/right instead of top/bottom)
-                  const prevPhase = gm.startIdx > 0 ? getPhaseAtIndex(col, gm.startIdx - 1) : null;
-                  const nextPhase = gm.endIdx < TOTAL_MONTHS - 1 ? getPhaseAtIndex(col, gm.endIdx + 1) : null;
-                  const isFirst = prevPhase !== phase;
-                  const isLast = nextPhase !== phase;
-                  const CURVE = 10;
-                  // RTL: right is start, left is end
-                  const tr = isFirst ? CURVE : 0;
-                  const br = isFirst ? CURVE : 0;
-                  const tl = isLast ? CURVE : 0;
-                  const bl = isLast ? CURVE : 0;
-                  const borderRadiusStyle = `${tl}px ${tr}px ${br}px ${bl}px`;
 
                   return (
                     <td key={gm.gi} style={{
                       width: CELL_W, minWidth: CELL_W, height: ROW_H,
-                      padding: 0, background: "#f3f4f6",
+                      padding: 0,
+                      background: bg,
                       borderBottom: "1px solid #f3f4f6",
+                      borderLeft: "1px solid #f3f4f6",
+                      textAlign: "center",
+                      fontSize: 9, fontWeight: amount > 0 ? 700 : 400,
+                      color: amount > 0 ? "#1f2937" : "transparent",
                     }}>
                       <CellTooltip lines={amount > 0 ? [
-                        `💰 ${fmtTooltipNum(amount)}`,
+                        `${fmtTooltipNum(amount)}`,
                         `${col.name.split(" ").slice(0, 3).join(" ")}`,
                         `${gm.label}`,
                       ] : []}>
                         <div style={{
                           width: "100%", height: "100%",
-                          background: bg, borderRadius: borderRadiusStyle,
                           display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 10, fontWeight: fontW, color: textColor,
-                          position: "relative", overflow: "hidden",
                         }}>
                           {amount > 0 ? fmtCell(amount) : ""}
-                          {offplanOverlay && (
-                            <div style={{
-                              position: "absolute", inset: 0,
-                              background: "rgba(245, 158, 11, 0.2)",
-                              borderRadius: borderRadiusStyle,
-                              pointerEvents: "none",
-                            }} />
-                          )}
                         </div>
                       </CellTooltip>
                     </td>
@@ -488,11 +450,11 @@ export default function CapitalSchedulingHorizontal({ baseColumns, delays, hidde
 
                 {/* Project total */}
                 <td style={{
-                  width: CELL_W + 10, minWidth: CELL_W + 10, height: ROW_H,
-                  background: "#c2410c", textAlign: "center",
-                  fontSize: 10, fontWeight: 800, color: "#000000",
-                  borderBottom: "1px solid #ea580c",
-                  borderRight: `${GAP}px solid #f3f4f6`,
+                  width: CELL_W + 5, minWidth: CELL_W + 5, height: ROW_H,
+                  background: "#f9fafb", textAlign: "center",
+                  fontSize: 9, fontWeight: 700, color: "#374151",
+                  borderBottom: "1px solid #f3f4f6",
+                  borderRight: "1px solid #e5e7eb",
                 }}>
                   {fmtCell(col.upcomingTotal)}
                 </td>
@@ -500,27 +462,24 @@ export default function CapitalSchedulingHorizontal({ baseColumns, delays, hidde
             );
           })}
 
-          {/* Separator */}
-          <tr>
-            <td colSpan={groupedMonths.length + 3} style={{ height: 4, background: "#f3f4f6" }} />
-          </tr>
-
           {/* Monthly totals row */}
           <tr>
             <td style={{
               width: HEADER_W, minWidth: HEADER_W,
               position: "sticky", right: 0, zIndex: 20,
-              background: "#c2410c", padding: "8px 10px",
-              fontWeight: 800, fontSize: 11, color: "#ffffff",
-              borderLeft: `${GAP}px solid #f3f4f6`,
+              background: "#f3f4f6", padding: "6px 8px",
+              fontWeight: 700, fontSize: 10, color: "#374151",
+              borderTop: "2px solid #e5e7eb",
+              borderLeft: "1px solid #e5e7eb",
             }}>
               الإجمالي الشهري
             </td>
             <td style={{
               width: CELL_W, minWidth: CELL_W, height: ROW_H,
-              background: "#374151", textAlign: "center",
-              fontSize: 10, fontWeight: 800, color: "#ffffff",
-              borderLeft: `${GAP}px solid #f3f4f6`,
+              background: "#f3f4f6", textAlign: "center",
+              fontSize: 9, fontWeight: 700, color: "#374151",
+              borderTop: "2px solid #e5e7eb",
+              borderLeft: "1px solid #e5e7eb",
             }}>
               {fmtCell(effectiveColumns.reduce((s, c) => s + c.paidTotal, 0))}
             </td>
@@ -532,20 +491,22 @@ export default function CapitalSchedulingHorizontal({ baseColumns, delays, hidde
               return (
                 <td key={gm.gi} style={{
                   width: CELL_W, minWidth: CELL_W, height: ROW_H,
-                  background: total > 0 ? "#c2410c" : "#fafbfc",
-                  textAlign: "center", fontSize: 10, fontWeight: total > 0 ? 800 : 400,
-                  color: total > 0 ? "#000000" : "#94a3b8",
+                  background: "#f3f4f6",
+                  textAlign: "center", fontSize: 9, fontWeight: total > 0 ? 700 : 400,
+                  color: total > 0 ? "#374151" : "#d1d5db",
+                  borderTop: "2px solid #e5e7eb",
+                  borderLeft: "1px solid #f3f4f6",
                 }}>
                   {total > 0 ? fmtCell(total) : ""}
                 </td>
               );
             })}
             <td style={{
-              width: CELL_W + 10, minWidth: CELL_W + 10, height: ROW_H,
-              background: "#c2410c", textAlign: "center",
-              fontSize: 10, fontWeight: 800, color: "#ffffff",
-              borderRight: `${GAP}px solid #f3f4f6`,
-              border: "2px solid #ea580c",
+              width: CELL_W + 5, minWidth: CELL_W + 5, height: ROW_H,
+              background: "#e5e7eb", textAlign: "center",
+              fontSize: 9, fontWeight: 800, color: "#1f2937",
+              borderTop: "2px solid #e5e7eb",
+              borderRight: "1px solid #e5e7eb",
             }}>
               {fmtCell(effectiveColumns.reduce((s, c) => s + c.upcomingTotal, 0))}
             </td>
@@ -556,33 +517,33 @@ export default function CapitalSchedulingHorizontal({ baseColumns, delays, hidde
             <td style={{
               width: HEADER_W, minWidth: HEADER_W,
               position: "sticky", right: 0, zIndex: 20,
-              background: "#1e3a5f", padding: "8px 10px",
-              fontWeight: 800, fontSize: 11, color: "#ffffff",
-              borderLeft: `${GAP}px solid #f3f4f6`,
+              background: "#f9fafb", padding: "6px 8px",
+              fontWeight: 700, fontSize: 10, color: "#6b7280",
+              borderLeft: "1px solid #e5e7eb",
             }}>
               التراكمي
             </td>
             <td style={{
               width: CELL_W, minWidth: CELL_W, height: ROW_H,
-              background: "#f3f4f6",
-              borderLeft: `${GAP}px solid #f3f4f6`,
+              background: "#f9fafb",
+              borderLeft: "1px solid #e5e7eb",
             }} />
             {groupedMonths.map((gm, gi) => (
               <td key={gm.gi} style={{
                 width: CELL_W, minWidth: CELL_W, height: ROW_H,
-                background: cumulativeTotals[gi] > 0 ? "#1e3a5f" : "#fafbfc",
-                textAlign: "center", fontSize: 10, fontWeight: cumulativeTotals[gi] > 0 ? 800 : 400,
-                color: cumulativeTotals[gi] > 0 ? "#000000" : "#94a3b8",
+                background: "#f9fafb",
+                textAlign: "center", fontSize: 9, fontWeight: cumulativeTotals[gi] > 0 ? 600 : 400,
+                color: cumulativeTotals[gi] > 0 ? "#6b7280" : "#d1d5db",
+                borderLeft: "1px solid #f3f4f6",
               }}>
                 {cumulativeTotals[gi] > 0 ? fmtCell(cumulativeTotals[gi]) : ""}
               </td>
             ))}
             <td style={{
-              width: CELL_W + 10, minWidth: CELL_W + 10, height: ROW_H,
-              background: "#1e3a5f", textAlign: "center",
-              fontSize: 10, fontWeight: 800, color: "#ffffff",
-              borderRight: `${GAP}px solid #f3f4f6`,
-              border: "2px solid #2d5a8a",
+              width: CELL_W + 5, minWidth: CELL_W + 5, height: ROW_H,
+              background: "#e5e7eb", textAlign: "center",
+              fontSize: 9, fontWeight: 800, color: "#374151",
+              borderRight: "1px solid #e5e7eb",
             }}>
               {cumulativeTotals.length > 0 ? fmtCell(cumulativeTotals[cumulativeTotals.length - 1]) : ""}
             </td>

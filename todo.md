@@ -85,3 +85,5 @@
 - [x] Make phase colors darker/muted - like dark colors painted on white canvas
 - [x] Add horizontal (transposed) view of capital scheduling table - projects as rows, months as columns
 - [x] Add toggle button to switch between vertical and horizontal views
+- [x] Simplify horizontal view colors to basic/simple palette
+- [x] Reduce column widths in horizontal view
