@@ -36,7 +36,7 @@ function fmtFull(n: number): string {
 // Vibrant & balanced: sky blue design, golden yellow offplan, fresh green construction, warm pink handover
 const PHASE_COLORS = {
   land:         { solid: "#6b7280", light: "#f3f4f6", text: "#374151" },
-  design:       { solid: "#60a5fa", light: "#eff6ff", text: "#2563eb" },
+  design:       { solid: "#f472b6", light: "#fdf2f8", text: "#db2777" },
   offplan:      { solid: "#f59e0b", light: "#fef3c7", text: "#b45309" },
   construction: { solid: "#34d399", light: "#ecfdf5", text: "#059669" },
   handover:     { solid: "#ec4899", light: "#fce7f3", text: "#be185d" },
@@ -1092,15 +1092,15 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                 }}
               >
                 <div style={{
-                  background: "#e11d48",
+                  background: "#3b82f6",
                   borderRadius: 14,
                   padding: "14px 6px",
                   textAlign: "center",
                   color: "#ffffff",
                   fontSize: 10,
                   fontWeight: 800,
-                  border: "1px solid #fb7185",
-                  borderTop: "3px solid #e11d48",
+                  border: "1px solid #60a5fa",
+                  borderTop: "3px solid #2563eb",
                 }}>
                   التراكمي
                 </div>
@@ -1383,7 +1383,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       width: COL_W,
                       minWidth: COL_W,
                       height: ROW_H,
-                      background: cumulativeTotals[row.gi] > 0 ? "#e11d48" : (isEven ? "#ffffff" : "#f8fafc"),
+                      background: cumulativeTotals[row.gi] > 0 ? "#3b82f6" : (isEven ? "#ffffff" : "#f8fafc"),
                       padding: 0,
                       paddingRight: GAP,
                       textAlign: "center",
