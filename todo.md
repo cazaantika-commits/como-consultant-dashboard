@@ -58,3 +58,7 @@
 - [x] Add tooltips on capital scheduling cells: amount cells show project+phase+month detail, paid cells show breakdown, total/cumulative show per-project split
 - [x] Replace tooltips: show item-level breakdown (consultant fees, contractor, marketing, etc.) that compose each cell's total amount
 - [x] Remove old tooltips that only showed project name, phase, and month
+- [x] Off-plan phase as transparent overlay: render off-plan as a see-through layer on top of design/construction, not a separate sequential block
+- [x] Off-plan constraints: cannot start in first 2 months of design, cannot exist in last 6 months of construction
+- [x] Off-plan can also exist between design and construction (sequential position possible)
+- [x] Off-plan delay controls move the overlay position within allowed range

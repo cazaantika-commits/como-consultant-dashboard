@@ -423,28 +423,54 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
     return totals;
   }, [effectiveColumns]);
 
-  // Determine phase for a given chart index in a project column
-  // Uses actual data (phaseChartAmounts) as primary source, falls back to geometric ranges
-  function getPhaseAtIndex(col: typeof effectiveColumns[0], chartIdx: number): PhaseType | null {
-    // First: check which phases actually have amounts at this chart index
+  // Determine the BASE phase for a given chart index (design, construction, handover)
+  // Off-plan is treated as an overlay, not a base phase
+  function getBasePhaseAtIndex(col: typeof effectiveColumns[0], chartIdx: number): PhaseType | null {
+    // Check base phases (everything except offplan) for actual amounts
+    const basePhases: PhaseType[] = ["design", "construction", "handover"];
     const phasesWithAmounts: { phase: PhaseType; amount: number }[] = [];
-    const phaseTypes: PhaseType[] = ["design", "offplan", "construction", "handover"];
-    for (const phase of phaseTypes) {
+    for (const phase of basePhases) {
       const amt = col.phaseChartAmounts[phase]?.[chartIdx] || 0;
       if (amt > 0) phasesWithAmounts.push({ phase, amount: amt });
     }
-    // If we have actual data, use the phase with the largest amount
     if (phasesWithAmounts.length > 0) {
       phasesWithAmounts.sort((a, b) => b.amount - a.amount);
       return phasesWithAmounts[0].phase;
     }
-    // Fallback: use geometric ranges for cells with no amounts (light-colored background)
+    // If only offplan has amounts here, determine underlying base phase from geometric ranges
+    const offplanAmt = col.phaseChartAmounts.offplan?.[chartIdx] || 0;
+    if (offplanAmt > 0) {
+      // Off-plan overlaps: determine which base phase is underneath
+      const { phaseRanges } = col;
+      if (chartIdx >= phaseRanges.design.start && chartIdx <= phaseRanges.design.end) return "design";
+      if (chartIdx >= phaseRanges.construction.start && chartIdx <= phaseRanges.construction.end) return "construction";
+      // Between design and construction
+      if (chartIdx > phaseRanges.design.end && chartIdx < phaseRanges.construction.start) return "offplan";
+      return "offplan"; // standalone offplan
+    }
+    // Fallback: geometric ranges for light-colored background cells
     const { phaseRanges } = col;
-    if (chartIdx >= phaseRanges.offplan.start && chartIdx <= phaseRanges.offplan.end && col.offplanMonths > 0) return "offplan";
     if (chartIdx >= phaseRanges.design.start && chartIdx <= phaseRanges.design.end) return "design";
     if (chartIdx >= phaseRanges.construction.start && chartIdx <= phaseRanges.construction.end) return "construction";
     if (chartIdx >= phaseRanges.handover.start && chartIdx <= phaseRanges.handover.end) return "handover";
+    // Check if in offplan-only zone (between design and construction)
+    if (chartIdx >= phaseRanges.offplan.start && chartIdx <= phaseRanges.offplan.end && col.offplanMonths > 0) return "offplan";
     return null;
+  }
+
+  // Check if off-plan overlay exists at this chart index
+  function hasOffplanAtIndex(col: typeof effectiveColumns[0], chartIdx: number): boolean {
+    // Check actual amounts
+    const offplanAmt = col.phaseChartAmounts.offplan?.[chartIdx] || 0;
+    if (offplanAmt > 0) return true;
+    // Check geometric range
+    const { phaseRanges } = col;
+    return chartIdx >= phaseRanges.offplan.start && chartIdx <= phaseRanges.offplan.end && col.offplanMonths > 0;
+  }
+
+  // Legacy wrapper for backward compatibility
+  function getPhaseAtIndex(col: typeof effectiveColumns[0], chartIdx: number): PhaseType | null {
+    return getBasePhaseAtIndex(col, chartIdx);
   }
 
   function getPhasePosition(col: typeof effectiveColumns[0], chartIdx: number): { isFirst: boolean; isLast: boolean } {
@@ -476,7 +502,14 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
         const midIdx = startIdx + Math.floor((endIdx - startIdx) / 2);
         const phase  = getPhaseAtIndex(col, midIdx);
         const { isFirst, isLast } = getPhasePosition(col, midIdx);
-        return { colId: col.projectId, amount, phase, isFirst, isLast };
+        // Check if offplan overlay exists at this row
+        const offplanOverlay = hasOffplanAtIndex(col, midIdx);
+        // Offplan overlay position (for rounded corners on overlay)
+        const prevHasOffplan = startIdx > 0 ? hasOffplanAtIndex(col, startIdx - 1) : false;
+        const nextHasOffplan = endIdx < TOTAL_MONTHS - 1 ? hasOffplanAtIndex(col, endIdx + 1) : false;
+        const isOffplanFirst = offplanOverlay && !prevHasOffplan;
+        const isOffplanLast = offplanOverlay && !nextHasOffplan;
+        return { colId: col.projectId, amount, phase, isFirst, isLast, offplanOverlay, isOffplanFirst, isOffplanLast };
       });
       return { gi, startIdx, endIdx, label, total, colData };
     });
@@ -1135,6 +1168,14 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
 
                     const borderRadiusStyle = `${tl}px ${tr}px ${br}px ${bl}px`;
 
+                    // Off-plan overlay: transparent pink layer on top
+                    const showOffplanOverlay = cd.offplanOverlay && phase !== "offplan";
+                    const offplanOverlayTl = cd.isOffplanFirst ? CURVE : 0;
+                    const offplanOverlayTr = cd.isOffplanFirst ? CURVE : 0;
+                    const offplanOverlayBl = cd.isOffplanLast ? CURVE : 0;
+                    const offplanOverlayBr = cd.isOffplanLast ? CURVE : 0;
+                    const offplanOverlayRadius = `${offplanOverlayTl}px ${offplanOverlayTr}px ${offplanOverlayBr}px ${offplanOverlayBl}px`;
+
                     return (
                       <td
                         key={`col-${cd.colId}`}
@@ -1189,9 +1230,27 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                               fontWeight: fontW,
                               color: textColor,
                               transition: "all 0.15s ease",
+                              position: "relative",
+                              overflow: "hidden",
                             }}
                           >
                             {cd.amount > 0 ? fmtCell(cd.amount) : ""}
+                            {/* Off-plan transparent overlay */}
+                            {showOffplanOverlay && (
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  inset: 0,
+                                  background: "rgba(245, 129, 190, 0.25)",
+                                  borderRadius: offplanOverlayRadius,
+                                  pointerEvents: "none",
+                                  borderTop: cd.isOffplanFirst ? "2px solid rgba(245, 129, 190, 0.6)" : "none",
+                                  borderBottom: cd.isOffplanLast ? "2px solid rgba(245, 129, 190, 0.6)" : "none",
+                                  borderRight: "1.5px solid rgba(245, 129, 190, 0.35)",
+                                  borderLeft: "1.5px solid rgba(245, 129, 190, 0.35)",
+                                }}
+                              />
+                            )}
                           </div>
                         </CellTooltip>
                       </td>
