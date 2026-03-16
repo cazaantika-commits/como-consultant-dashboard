@@ -65,3 +65,9 @@
 - [x] Improve capital scheduling page overall visual design and color scheme
 - [x] Refine phase colors for a more professional, cohesive palette
 - [x] Polish header, controls, and table styling for board-presentation quality
+- [x] Fix project headers: align الإجمالي and المطلوب on same horizontal line across all projects
+- [x] Darken faded/pale colors in capital scheduling - make them stronger and more visible
+- [x] Match capital scheduling page theme with the platform's existing theme
+- [x] Complete color redesign: new calming, comfortable palette for phase columns (not faded, not harsh)
+- [x] Fix header colors to be strong and non-faded
+- [x] Add project toggle (hide/show) in settings panel to temporarily exclude projects from the table
