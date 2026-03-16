@@ -221,11 +221,35 @@ export default function TimeDistributionTab({ initialProjectId }: { initialProje
   if (!selectedProjectId) {
     return (
       <div dir="rtl" className="space-y-4">
+        {!initialProjectId && (
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+            <label className="block text-sm font-bold text-gray-700 mb-2">اختر المشروع</label>
+            <select
+              className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+              value=""
+              onChange={e => setSelectedProjectId(e.target.value ? Number(e.target.value) : null)}
+            >
+              <option value="">— اختر مشروعاً —</option>
+              {(projectsQuery.data || []).map((p: any) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        <div className="text-center py-16 text-gray-400 text-sm">اختر مشروعاً لعرض التوزيع الزمني للمصاريف</div>
+      </div>
+    );
+  }
+
+  return (
+    <div dir="rtl" className="space-y-4">
+      {/* Project selector - only show when NOT embedded from hub */}
+      {!initialProjectId && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
           <label className="block text-sm font-bold text-gray-700 mb-2">اختر المشروع</label>
           <select
             className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
-            value=""
+            value={selectedProjectId || ""}
             onChange={e => setSelectedProjectId(e.target.value ? Number(e.target.value) : null)}
           >
             <option value="">— اختر مشروعاً —</option>
@@ -234,27 +258,7 @@ export default function TimeDistributionTab({ initialProjectId }: { initialProje
             ))}
           </select>
         </div>
-        <div className="text-center py-16 text-gray-400 text-sm">اختر مشروعاً لعرض التوزيع الزمني للمصاريف</div>
-      </div>
-    );
-  }
-
-  return (
-    <div dir="rtl" className="space-y-4">
-      {/* Project selector */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-        <label className="block text-sm font-bold text-gray-700 mb-2">اختر المشروع</label>
-        <select
-          className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
-          value={selectedProjectId || ""}
-          onChange={e => setSelectedProjectId(e.target.value ? Number(e.target.value) : null)}
-        >
-          <option value="">— اختر مشروعاً —</option>
-          {(projectsQuery.data || []).map((p: any) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
-      </div>
+      )}
 
       {!costs && selectedProjectId && (
         <div className="text-center py-16 text-gray-400 text-sm">جاري تحميل البيانات...</div>

@@ -324,38 +324,40 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
           </div>
         </div>
 
-        {/* Project Selector - قائمة منسدلة واحدة فقط */}
-        <Card>
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center gap-4">
-              <div className="flex-1 space-y-1">
-                <Label className="text-xs font-bold text-muted-foreground">اختر المشروع</Label>
-                <select
-                  className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm font-medium"
-                  value={selectedProjectId || ""}
-                  onChange={(e) => {
-                    const val = e.target.value ? Number(e.target.value) : null;
-                    setSelectedProjectId(val);
-                    setSelectedStudyId(null);
-                    setForm({});
-                    setActiveTab("tab1");
-                  }}
-                >
-                  <option value="">— اختر مشروع —</option>
-                  {(projectsQuery.data || []).map((p: any) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </div>
-              {autoCreating && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  جاري إنشاء الدراسة...
+        {/* Project Selector - only show when NOT embedded from hub */}
+        {!initialProjectId && (
+          <Card>
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center gap-4">
+                <div className="flex-1 space-y-1">
+                  <Label className="text-xs font-bold text-muted-foreground">اختر المشروع</Label>
+                  <select
+                    className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm font-medium"
+                    value={selectedProjectId || ""}
+                    onChange={(e) => {
+                      const val = e.target.value ? Number(e.target.value) : null;
+                      setSelectedProjectId(val);
+                      setSelectedStudyId(null);
+                      setForm({});
+                      setActiveTab("tab1");
+                    }}
+                  >
+                    <option value="">— اختر مشروع —</option>
+                    {(projectsQuery.data || []).map((p: any) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                {autoCreating && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    جاري إنشاء الدراسة...
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Main Content */}
         {!selectedProjectId ? (

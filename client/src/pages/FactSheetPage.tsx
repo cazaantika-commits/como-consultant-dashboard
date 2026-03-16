@@ -519,22 +519,24 @@ export default function FactSheetPage({ embedded = false, initialProjectId }: { 
             </div>
 
             <div className="flex items-center gap-3">
-              {/* Project selector */}
-              <Select
-                value={selectedProjectId ? String(selectedProjectId) : ""}
-                onValueChange={(val) => setSelectedProjectId(Number(val))}
-              >
-                <SelectTrigger className="w-[220px] bg-white border-stone-200">
-                  <SelectValue placeholder="اختر المشروع..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {projectsQuery.data?.map((p: any) => (
-                    <SelectItem key={p.id} value={String(p.id)}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* Project selector - only show when NOT embedded from hub */}
+              {!initialProjectId && (
+                <Select
+                  value={selectedProjectId ? String(selectedProjectId) : ""}
+                  onValueChange={(val) => setSelectedProjectId(Number(val))}
+                >
+                  <SelectTrigger className="w-[220px] bg-white border-stone-200">
+                    <SelectValue placeholder="اختر المشروع..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projectsQuery.data?.map((p: any) => (
+                      <SelectItem key={p.id} value={String(p.id)}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
 
               {selectedProjectId && (
                 <>

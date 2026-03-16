@@ -76,3 +76,4 @@
 - [x] Soften blue (design) and green (construction) phase colors - less intense/strong
 - [x] Swap cumulative column color (rose) with design phase color (blue)
 - [x] Make all numbers in table columns black color for better readability
+- [x] Fix feasibility study: remove redundant project selector from sub-pages after project is already selected
