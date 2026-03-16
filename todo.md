@@ -62,3 +62,6 @@
 - [x] Off-plan constraints: cannot start in first 2 months of design, cannot exist in last 6 months of construction
 - [x] Off-plan can also exist between design and construction (sequential position possible)
 - [x] Off-plan delay controls move the overlay position within allowed range
+- [x] Improve capital scheduling page overall visual design and color scheme
+- [x] Refine phase colors for a more professional, cohesive palette
+- [x] Polish header, controls, and table styling for board-presentation quality
