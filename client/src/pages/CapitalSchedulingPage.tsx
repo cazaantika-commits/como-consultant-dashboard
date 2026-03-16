@@ -713,8 +713,8 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                         lightBg="#e0f7fc"
                         borderColor="#67e8f9"
                         value={delay.designDelay}
-                        onUp={() => adjustDelay(col.projectId, "designDelay", -3)}
-                        onDown={() => adjustDelay(col.projectId, "designDelay", 3)}
+                        onUp={() => adjustDelay(col.projectId, "designDelay", -1)}
+                        onDown={() => adjustDelay(col.projectId, "designDelay", 1)}
                       />
 
                       {/* Offplan delay controls */}
@@ -724,8 +724,8 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                         lightBg="#fde8f3"
                         borderColor="#f9a8d4"
                         value={delay.offplanDelay}
-                        onUp={() => adjustDelay(col.projectId, "offplanDelay", -3)}
-                        onDown={() => adjustDelay(col.projectId, "offplanDelay", 3)}
+                        onUp={() => adjustDelay(col.projectId, "offplanDelay", -1)}
+                        onDown={() => adjustDelay(col.projectId, "offplanDelay", 1)}
                       />
 
                       {/* Construction delay controls */}
@@ -735,8 +735,8 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                         lightBg="#e6faf2"
                         borderColor="#6ee7b7"
                         value={delay.constructionDelay}
-                        onUp={() => adjustDelay(col.projectId, "constructionDelay", -3)}
-                        onDown={() => adjustDelay(col.projectId, "constructionDelay", 3)}
+                        onUp={() => adjustDelay(col.projectId, "constructionDelay", -1)}
+                        onDown={() => adjustDelay(col.projectId, "constructionDelay", 1)}
                       />
 
                       {/* Reset button */}
@@ -983,7 +983,7 @@ function DelayControl({
       <button
         onClick={onUp}
         disabled={value === 0}
-        title={`تقديم ${label} 3 أشهر`}
+        title={`تقديم ${label} شهر واحد`}
         style={{
           width: 20, height: 20, borderRadius: 5,
           background: value === 0 ? "#f1f5f9" : lightBg,
@@ -1001,7 +1001,7 @@ function DelayControl({
       </span>
       <button
         onClick={onDown}
-        title={`تأجيل ${label} 3 أشهر`}
+        title={`تأجيل ${label} شهر واحد`}
         style={{
           width: 20, height: 20, borderRadius: 5,
           background: lightBg,

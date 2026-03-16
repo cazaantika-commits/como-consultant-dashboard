@@ -49,3 +49,4 @@
 - [x] Add bidirectional sync: FactSheetPage → cf_projects, ProgramCashFlowPage → projects
 - [x] Verify all pages reflect changes from one place
 - [x] Bug fix: Edit button for last two projects now uses projectId instead of cfProjectId
+- [x] Change delay increment from 3 months to 1 month in capital scheduling
