@@ -288,6 +288,13 @@
       "when": 1772631166478,
       "tag": "0040_quiet_toad_men",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "5",
+      "when": 1773671431517,
+      "tag": "0041_jittery_miss_america",
+      "breakpoints": true
     }
   ]
 }

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { cfProjects, cfCostItems, cfScenarios, cfFiles, projects, costsCashFlow, projectPhases, phaseActivities, phaseCostLinks, competitionPricing, marketOverview, projectCapitalSettings } from "../../drizzle/schema";
+import { cfProjects, cfCostItems, cfScenarios, cfFiles, projects, costsCashFlow, projectPhases, phaseActivities, phaseCostLinks, competitionPricing, marketOverview, projectCapitalSettings, projectPhaseDelays } from "../../drizzle/schema";
 import { DEFAULT_AVG_AREAS } from "../../shared/feasibilityUtils";
 import { calculateDualCashFlow, type CostItemInput, type ProjectInput } from './cashFlowEngine';
 import { computeProjectCapital } from '../investorCashFlow';
@@ -2796,6 +2796,61 @@ export const cashFlowProgramRouter = router({
             .set(cfUpdate)
             .where(eq(cfProjects.id, cfProj.id));
         }
+      }
+      return { success: true };
+    }),
+
+  // ─── Phase Delay Persistence ─────────────────────────────────────
+  getPhaseDelays: publicProcedure.query(async ({ ctx }) => {
+    if (!ctx.user) return {};
+    const db = await getDb();
+    if (!db) return {};
+    const rows = await db.select().from(projectPhaseDelays)
+      .where(eq(projectPhaseDelays.userId, ctx.user.id));
+    const result: Record<number, { designDelay: number; offplanDelay: number; constructionDelay: number }> = {};
+    for (const row of rows) {
+      result[row.projectId] = {
+        designDelay: row.designDelay,
+        offplanDelay: row.offplanDelay,
+        constructionDelay: row.constructionDelay,
+      };
+    }
+    return result;
+  }),
+
+  setPhaseDelay: publicProcedure
+    .input(z.object({
+      projectId: z.number(),
+      designDelay: z.number().min(0).default(0),
+      offplanDelay: z.number().min(0).default(0),
+      constructionDelay: z.number().min(0).default(0),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const db = await getDb();
+      if (!db) throw new Error("DB unavailable");
+      // Upsert: check if row exists
+      const [existing] = await db.select().from(projectPhaseDelays)
+        .where(and(
+          eq(projectPhaseDelays.userId, ctx.user.id),
+          eq(projectPhaseDelays.projectId, input.projectId),
+        ));
+      if (existing) {
+        await db.update(projectPhaseDelays)
+          .set({
+            designDelay: input.designDelay,
+            offplanDelay: input.offplanDelay,
+            constructionDelay: input.constructionDelay,
+          })
+          .where(eq(projectPhaseDelays.id, existing.id));
+      } else {
+        await db.insert(projectPhaseDelays).values({
+          userId: ctx.user.id,
+          projectId: input.projectId,
+          designDelay: input.designDelay,
+          offplanDelay: input.offplanDelay,
+          constructionDelay: input.constructionDelay,
+        });
       }
       return { success: true };
     }),

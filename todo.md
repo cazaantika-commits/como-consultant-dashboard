@@ -52,3 +52,6 @@
 - [x] Change delay increment from 3 months to 1 month in capital scheduling
 - [x] Remove paid/land amounts from monthly schedule rows (should not mix with future required amounts)
 - [x] Add paid summary row at top of capital scheduling table showing total paid per project
+- [x] Fix: colors not consistent at end of each project in capital scheduling (phase detection mismatch)
+- [x] CRITICAL: Delay/shift changes in capital scheduling must persist to DB and reflect in capital requirements page
+- [x] Keep handover phase as separate color (orange) from construction (green)

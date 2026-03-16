@@ -108,22 +108,51 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
     },
   });
 
-  const [delays, setDelays] = useState<Record<number, DelayState>>({});
+  // ─── DB-backed phase delays ─────────────────────────────────────
+  const delaysQuery = trpc.cashFlowProgram.getPhaseDelays.useQuery(
+    undefined,
+    { enabled: isAuthenticated, staleTime: 30000 }
+  );
+  const setDelayMutation = trpc.cashFlowProgram.setPhaseDelay.useMutation({
+    onSuccess: () => { delaysQuery.refetch(); },
+  });
+
+  // Local optimistic state layered on top of DB data
+  const [localDelays, setLocalDelays] = useState<Record<number, DelayState>>({});
+  const dbDelays = useMemo(() => (delaysQuery.data || {}) as Record<number, DelayState>, [delaysQuery.data]);
+
+  // Merge: local overrides take precedence while mutation is in-flight
+  const delays = useMemo(() => {
+    const merged: Record<number, DelayState> = { ...dbDelays };
+    for (const [k, v] of Object.entries(localDelays)) {
+      merged[Number(k)] = v;
+    }
+    return merged;
+  }, [dbDelays, localDelays]);
 
   function getDelay(projectId: number): DelayState {
     return delays[projectId] || { designDelay: 0, offplanDelay: 0, constructionDelay: 0 };
   }
 
   function adjustDelay(projectId: number, phase: keyof DelayState, delta: number) {
-    setDelays(prev => {
-      const cur = prev[projectId] || { designDelay: 0, offplanDelay: 0, constructionDelay: 0 };
-      const newVal = Math.max(0, cur[phase] + delta);
-      return { ...prev, [projectId]: { ...cur, [phase]: newVal } };
+    const cur = getDelay(projectId);
+    const newVal = Math.max(0, cur[phase] + delta);
+    const updated = { ...cur, [phase]: newVal };
+    // Optimistic local update
+    setLocalDelays(prev => ({ ...prev, [projectId]: updated }));
+    // Persist to DB
+    setDelayMutation.mutate({
+      projectId,
+      designDelay: updated.designDelay,
+      offplanDelay: updated.offplanDelay,
+      constructionDelay: updated.constructionDelay,
     });
   }
 
   function resetDelay(projectId: number) {
-    setDelays(prev => ({ ...prev, [projectId]: { designDelay: 0, offplanDelay: 0, constructionDelay: 0 } }));
+    const zero = { designDelay: 0, offplanDelay: 0, constructionDelay: 0 };
+    setLocalDelays(prev => ({ ...prev, [projectId]: zero }));
+    setDelayMutation.mutate({ projectId, ...zero });
   }
 
   // Determine which months are "paid" (past) based on today's date
@@ -271,11 +300,23 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
   }, [effectiveColumns]);
 
   // Determine phase for a given chart index in a project column
+  // Uses actual data (phaseChartAmounts) as primary source, falls back to geometric ranges
   function getPhaseAtIndex(col: typeof effectiveColumns[0], chartIdx: number): PhaseType | null {
+    // First: check which phases actually have amounts at this chart index
+    const phasesWithAmounts: { phase: PhaseType; amount: number }[] = [];
+    const phaseTypes: PhaseType[] = ["design", "offplan", "construction", "handover"];
+    for (const phase of phaseTypes) {
+      const amt = col.phaseChartAmounts[phase]?.[chartIdx] || 0;
+      if (amt > 0) phasesWithAmounts.push({ phase, amount: amt });
+    }
+    // If we have actual data, use the phase with the largest amount
+    if (phasesWithAmounts.length > 0) {
+      phasesWithAmounts.sort((a, b) => b.amount - a.amount);
+      return phasesWithAmounts[0].phase;
+    }
+    // Fallback: use geometric ranges for cells with no amounts (light-colored background)
     const { phaseRanges } = col;
-    // Check in order of priority (offplan can overlap with design)
     if (chartIdx >= phaseRanges.offplan.start && chartIdx <= phaseRanges.offplan.end && col.offplanMonths > 0) return "offplan";
-    // Land/paid phase excluded from monthly display — already paid
     if (chartIdx >= phaseRanges.design.start && chartIdx <= phaseRanges.design.end) return "design";
     if (chartIdx >= phaseRanges.construction.start && chartIdx <= phaseRanges.construction.end) return "construction";
     if (chartIdx >= phaseRanges.handover.start && chartIdx <= phaseRanges.handover.end) return "handover";

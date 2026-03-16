@@ -1893,3 +1893,20 @@ export const cpaEvaluationResults = mysqlTable("cpa_evaluation_results", {
 (table) => [
   index("cpa_er_pc").on(table.projectConsultantId),
 ]);
+
+// ═══════════════════════════════════════════
+// Project Phase Delays (persisted from Capital Scheduling)
+// ═══════════════════════════════════════════
+export const projectPhaseDelays = mysqlTable("project_phase_delays", {
+	id: int().autoincrement().notNull().primaryKey(),
+	userId: int().notNull(),
+	projectId: int().notNull(),
+	designDelay: int().default(0).notNull(),
+	offplanDelay: int().default(0).notNull(),
+	constructionDelay: int().default(0).notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+	index("ppd_user_project").on(table.userId, table.projectId),
+]);

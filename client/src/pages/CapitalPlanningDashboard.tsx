@@ -41,9 +41,32 @@ export default function CapitalPlanningDashboard({ embedded = false }: { embedde
   const [availableCapital, setAvailableCapital] = useState(100_000_000);
   const [capitalInput, setCapitalInput] = useState("100,000,000");
   const [excludeIds, setExcludeIds] = useState<number[]>([]);
-  const [delayMonths, setDelayMonths] = useState<Record<string, number>>({});
+  const [localDelayMonths, setLocalDelayMonths] = useState<Record<string, number>>({});
 
   const utils = trpc.useUtils();
+
+  // Load persisted phase delays from DB
+  const phaseDelaysQuery = trpc.cashFlowProgram.getPhaseDelays.useQuery(undefined, { staleTime: 30000 });
+
+  // Convert DB phase delays (designDelay) to simple delayMonths for the simulation
+  // The CapitalPlanning page uses a single "delay" per project that shifts the whole project start
+  // We map designDelay from DB as the overall project delay
+  const dbDelayMonths = useMemo(() => {
+    const result: Record<string, number> = {};
+    if (phaseDelaysQuery.data) {
+      for (const [projectId, delays] of Object.entries(phaseDelaysQuery.data as Record<string, { designDelay: number }>)) {
+        if (delays.designDelay > 0) {
+          result[String(projectId)] = delays.designDelay;
+        }
+      }
+    }
+    return result;
+  }, [phaseDelaysQuery.data]);
+
+  // Merge: local overrides take precedence
+  const delayMonths = useMemo(() => {
+    return { ...dbDelayMonths, ...localDelayMonths };
+  }, [dbDelayMonths, localDelayMonths]);
 
   const simulationQuery = trpc.cashFlowProgram.getPortfolioSimulation.useQuery({
     availableCapital,
@@ -76,8 +99,8 @@ export default function CapitalPlanningDashboard({ embedded = false }: { embedde
   };
 
   const adjustDelay = (id: number, delta: number) => {
-    setDelayMonths(prev => {
-      const current = prev[String(id)] || 0;
+    setLocalDelayMonths(prev => {
+      const current = delayMonths[String(id)] || 0;
       const next = Math.max(-12, Math.min(24, current + delta));
       return { ...prev, [String(id)]: next };
     });
