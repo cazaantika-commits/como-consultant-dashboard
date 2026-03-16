@@ -13,3 +13,7 @@
 - [x] Capital scheduling: no paid amounts when shifting columns (only required amounts)
 - [x] Capital scheduling: curved corners at row-column intersections instead of rectangles
 - [x] Capital scheduling: beautiful column headers matching current design
+- [x] Capital scheduling: lighter/clearer header colors (not dark) - comfortable and readable
+- [x] Capital scheduling: pick 2 colors from reference image for phases (teal + amber)
+- [x] Capital scheduling: all columns equal width
+- [x] Capital scheduling: phase rectangles with rounded corners at all 4 corners (not just top/bottom)
