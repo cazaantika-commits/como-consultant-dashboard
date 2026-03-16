@@ -71,3 +71,5 @@
 - [x] Complete color redesign: new calming, comfortable palette for phase columns (not faded, not harsh)
 - [x] Fix header colors to be strong and non-faded
 - [x] Add project toggle (hide/show) in settings panel to temporarily exclude projects from the table
+- [x] Color redesign: make capital scheduling colors cheerful, balanced, vibrant - add yellow/pink/bright colors, remove dark/depressing feel
+- [x] Final color: introduce rose (handover color) and teal (icon color) as balanced accents - not overwhelming
