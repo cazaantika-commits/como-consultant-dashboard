@@ -80,3 +80,6 @@
 - [x] Hide redundant project selector in RequiredCapitalPage when accessed from FeasibilityHub
 - [x] Hide redundant project selector in EscrowAccountPage when accessed from FeasibilityHub
 - [x] Hide redundant project selector in RiskDashboardPage (no change needed - page shows all projects as cards, no dropdown selector)
+- [x] Radical color redesign of CapitalSchedulingPage: calm white background with dark muted accent colors
+- [x] Change total and required columns to match Como Projects icon colors (dark orange/green)
+- [x] Make phase colors darker/muted - like dark colors painted on white canvas
