@@ -36,9 +36,9 @@ function fmtFull(n: number): string {
 // Vibrant & balanced: sky blue design, golden yellow offplan, fresh green construction, warm pink handover
 const PHASE_COLORS = {
   land:         { solid: "#6b7280", light: "#f3f4f6", text: "#374151" },
-  design:       { solid: "#3b82f6", light: "#dbeafe", text: "#1d4ed8" },
+  design:       { solid: "#60a5fa", light: "#eff6ff", text: "#2563eb" },
   offplan:      { solid: "#f59e0b", light: "#fef3c7", text: "#b45309" },
-  construction: { solid: "#10b981", light: "#d1fae5", text: "#047857" },
+  construction: { solid: "#34d399", light: "#ecfdf5", text: "#059669" },
   handover:     { solid: "#ec4899", light: "#fce7f3", text: "#be185d" },
 } as const;
 
