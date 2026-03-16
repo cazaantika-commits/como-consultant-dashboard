@@ -1,0 +1,49 @@
+{
+  "query": "SHOW TABLES LIKE 'cpa%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SHOW TABLES LIKE 'cpa%';",
+  "rows": [
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (cpa%)": "cpa_building_categories"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (cpa%)": "cpa_consultant_scope_coverage"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (cpa%)": "cpa_consultant_supervision_team"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (cpa%)": "cpa_consultants_master"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (cpa%)": "cpa_evaluation_results"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (cpa%)": "cpa_project_consultants"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (cpa%)": "cpa_projects"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (cpa%)": "cpa_scope_category_matrix"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (cpa%)": "cpa_scope_items"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (cpa%)": "cpa_scope_reference_costs"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (cpa%)": "cpa_scope_sections"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (cpa%)": "cpa_supervision_baseline"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (cpa%)": "cpa_supervision_roles"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (cpa%)\ncpa_building_categories\ncpa_consultant_scope_coverage\ncpa_consultant_supervision_team\ncpa_consultants_master\ncpa_evaluation_results\ncpa_project_consultants\ncpa_projects\ncpa_scope_category_matrix\ncpa_scope_items\ncpa_scope_reference_costs\ncpa_scope_sections\ncpa_supervision_baseline\ncpa_supervision_roles\n",
+  "stderr": "",
+  "execution_time_ms": 1588
+}

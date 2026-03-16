@@ -50,6 +50,7 @@ import ExcelCashFlowPage from "./pages/ExcelCashFlowPage";
 import EscrowCashFlowPage from "./pages/EscrowCashFlowPage";
 import FinancialCommandCenter from "./pages/FinancialCommandCenter";
 import CapitalPlanningDashboard from "./pages/CapitalPlanningDashboard";
+import CapitalSchedulingPage from "./pages/CapitalSchedulingPage";
 import ConsultantsRegistry from "./pages/ConsultantsRegistry";
 import MarketReportsPage from "./pages/MarketReportsPage";
 import RiskDashboardPage from "./pages/RiskDashboardPage";
@@ -78,6 +79,7 @@ function Router() {
       <Route path="/escrow-cashflow" component={EscrowCashFlowPage} />
       <Route path="/financial-command-center" component={FinancialCommandCenter} />
       <Route path="/capital-planning" component={CapitalPlanningDashboard} />
+      <Route path="/capital-scheduling" component={CapitalSchedulingPage} />
       <Route path="/consultants-registry" component={ConsultantsRegistry} />
       <Route path="/consultant-portal" component={ConsultantPortalPage} />
       <Route path="/consultant-guide" component={ConsultantGuidePage} />

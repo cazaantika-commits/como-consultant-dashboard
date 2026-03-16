@@ -1306,18 +1306,21 @@ export const cpaRouter = router({
       }),
   }),
 
-  // ---- Delete Project ----
+  // ---- Delete Project (legacy alias - delegates to projects.delete) ----
   deleteProject: protectedProcedure
     .input(z.object({ cpaProjectId: z.number() }))
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new Error('DB unavailable');
-      // Delete in order: evaluation results → scope coverage → consultant teams → project consultants → project
-      await db.run(sql`DELETE FROM cpa_evaluation_results WHERE cpa_project_id = ${input.cpaProjectId}`);
-      await db.run(sql`DELETE FROM cpa_consultant_scope_coverage WHERE project_consultant_id IN (SELECT id FROM cpa_project_consultants WHERE cpa_project_id = ${input.cpaProjectId})`);
-      await db.run(sql`DELETE FROM cpa_consultant_supervision_team WHERE project_consultant_id IN (SELECT id FROM cpa_project_consultants WHERE cpa_project_id = ${input.cpaProjectId})`);
-      await db.run(sql`DELETE FROM cpa_project_consultants WHERE cpa_project_id = ${input.cpaProjectId}`);
-      await db.run(sql`DELETE FROM cpa_projects WHERE id = ${input.cpaProjectId}`);
+      // Cascade delete: evaluation results → supervision team → scope coverage → project consultants → project
+      await db.execute(sql`DELETE FROM cpa_evaluation_results WHERE project_consultant_id IN (SELECT id FROM cpa_project_consultants WHERE cpa_project_id = ${input.cpaProjectId})`);
+      const pcs = await qRows<any>(db, sql`SELECT id FROM cpa_project_consultants WHERE cpa_project_id = ${input.cpaProjectId}`);
+      for (const pc of pcs) {
+        await db.execute(sql`DELETE FROM cpa_consultant_supervision_team WHERE project_consultant_id = ${pc.id}`);
+        await db.execute(sql`DELETE FROM cpa_consultant_scope_coverage WHERE project_consultant_id = ${pc.id}`);
+      }
+      await db.execute(sql`DELETE FROM cpa_project_consultants WHERE cpa_project_id = ${input.cpaProjectId}`);
+      await db.execute(sql`DELETE FROM cpa_projects WHERE id = ${input.cpaProjectId}`);
       return { success: true };
     }),
 
