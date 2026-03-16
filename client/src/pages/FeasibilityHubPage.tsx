@@ -100,13 +100,14 @@ function FeasibilityHubInner({ onBack }: { onBack: () => void }) {
   const selectedProject = (projectsQuery.data || []).find((p: any) => p.id === selectedProjectId);
   const currentSection = SUB_SECTIONS.find(s => s.id === activeView);
 
-  // Auto-update durations from project card when project changes
+  // Auto-update durations from project card when project changes (single source of truth)
   useEffect(() => {
     if (!selectedProject) return;
     const preCon = selectedProject.preConMonths ? Number(selectedProject.preConMonths) : 6;
     const construction = selectedProject.constructionMonths ? Number(selectedProject.constructionMonths) : 24;
-    setDurations(prev => ({ ...prev, preCon, construction }));
-  }, [selectedProject?.id, selectedProject?.preConMonths, selectedProject?.constructionMonths]);
+    const handover = (selectedProject as any).handoverMonths ? Number((selectedProject as any).handoverMonths) : 2;
+    setDurations(prev => ({ ...prev, preCon, construction, handover }));
+  }, [selectedProject?.id, selectedProject?.preConMonths, selectedProject?.constructionMonths, (selectedProject as any)?.handoverMonths]);
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">

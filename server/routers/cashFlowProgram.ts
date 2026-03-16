@@ -498,6 +498,22 @@ export const cashFlowProgramRouter = router({
         await db.update(cfProjects)
           .set(updateData)
           .where(and(eq(cfProjects.id, input.id), eq(cfProjects.userId, ctx.user.id)));
+
+        // Sync schedule-related fields back to projects table (single source of truth)
+        const [cfProj] = await db.select().from(cfProjects)
+          .where(and(eq(cfProjects.id, input.id), eq(cfProjects.userId, ctx.user.id)));
+        if (cfProj?.projectId) {
+          const projSync: Record<string, any> = {};
+          if (input.startDate !== undefined) projSync.startDate = input.startDate;
+          if (input.preDevMonths !== undefined) projSync.preConMonths = input.preDevMonths;
+          if (input.constructionMonths !== undefined) projSync.constructionMonths = input.constructionMonths;
+          if (input.handoverMonths !== undefined) projSync.handoverMonths = input.handoverMonths;
+          if (Object.keys(projSync).length > 0) {
+            await db.update(projects)
+              .set(projSync)
+              .where(eq(projects.id, cfProj.projectId));
+          }
+        }
       }
       return { success: true };
     }),
@@ -759,10 +775,27 @@ export const cashFlowProgramRouter = router({
     const db = await getDb();
     if (!db) return null;
 
-    const allProjects = await db.select().from(cfProjects)
+    const allCfProjects = await db.select().from(cfProjects)
       .where(eq(cfProjects.userId, ctx.user.id));
 
-    if (allProjects.length === 0) return null;
+    if (allCfProjects.length === 0) return null;
+
+    // Read from projects table (single source of truth) to override startDate/durations
+    const allMainProjects = await db.select().from(projects)
+      .where(eq(projects.userId, ctx.user.id));
+    const mainProjectMap = new Map<number, typeof allMainProjects[0]>();
+    for (const mp of allMainProjects) mainProjectMap.set(mp.id, mp);
+
+    const allProjects = allCfProjects.map(cfp => {
+      const mp = cfp.projectId ? mainProjectMap.get(cfp.projectId) : null;
+      return {
+        ...cfp,
+        startDate: (mp as any)?.startDate || cfp.startDate,
+        preDevMonths: mp?.preConMonths || cfp.preDevMonths,
+        constructionMonths: mp?.constructionMonths || cfp.constructionMonths,
+        handoverMonths: (mp as any)?.handoverMonths || cfp.handoverMonths,
+      };
+    });
 
     // Calculate cash flow for each project using dual engine
     const projectResults: Array<{
@@ -2060,10 +2093,28 @@ export const cashFlowProgramRouter = router({
       const db = await getDb();
       if (!db) return null;
 
-      const allProjects = await db.select().from(cfProjects)
+      const allCfProjects = await db.select().from(cfProjects)
         .where(eq(cfProjects.userId, ctx.user.id));
 
-      if (allProjects.length === 0) return null;
+      if (allCfProjects.length === 0) return null;
+
+      // Read from projects table (single source of truth) to override startDate/durations
+      const allMainProjects = await db.select().from(projects)
+        .where(eq(projects.userId, ctx.user.id));
+      const mainProjectMap = new Map<number, typeof allMainProjects[0]>();
+      for (const mp of allMainProjects) mainProjectMap.set(mp.id, mp);
+
+      // Merge: use projects table values as primary source
+      const allProjects = allCfProjects.map(cfp => {
+        const mp = cfp.projectId ? mainProjectMap.get(cfp.projectId) : null;
+        return {
+          ...cfp,
+          startDate: (mp as any)?.startDate || cfp.startDate,
+          preDevMonths: mp?.preConMonths || cfp.preDevMonths,
+          constructionMonths: mp?.constructionMonths || cfp.constructionMonths,
+          handoverMonths: (mp as any)?.handoverMonths || cfp.handoverMonths,
+        };
+      });
 
       // Filter out excluded projects
       const activeProjects = allProjects.filter(p => !input.excludeProjectIds.includes(p.id));
@@ -2574,12 +2625,12 @@ export const cashFlowProgramRouter = router({
         .where(eq(marketOverview.projectId, proj.id));
       const [cpRows] = await db.select().from(competitionPricing)
         .where(eq(competitionPricing.projectId, proj.id));
-      // Use cfProject durations/startDate if available, otherwise use project defaults
+      // Use projects table as primary source (single source of truth)
       const cfProj = cfByProjectId.get(proj.id);
-      const startDateStr = cfProj?.startDate || '2026-04';
-      const preDevMonths = cfProj?.preDevMonths || proj.preConMonths || 6;
-      const constructionMonths = cfProj?.constructionMonths || proj.constructionMonths || 16;
-      const handoverMonths = cfProj?.handoverMonths || 2;
+      const startDateStr = (proj as any).startDate || cfProj?.startDate || '2026-04';
+      const preDevMonths = proj.preConMonths || cfProj?.preDevMonths || 6;
+      const constructionMonths = proj.constructionMonths || cfProj?.constructionMonths || 16;
+      const handoverMonths = (proj as any).handoverMonths || cfProj?.handoverMonths || 2;
       const data = computeProjectCapital(
         proj,
         moRows || null,
@@ -2705,5 +2756,48 @@ export const cashFlowProgramRouter = router({
 
     return results;
   }),
+
+  // --- Update project schedule settings (writes to projects table - single source of truth) ---
+  updateProjectScheduleSettings: publicProcedure
+    .input(z.object({
+      projectId: z.number(),
+      startDate: z.string().optional(),
+      preConMonths: z.number().min(1).optional(),
+      constructionMonths: z.number().min(1).optional(),
+      handoverMonths: z.number().min(1).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      const updateData: Record<string, any> = {};
+      if (input.startDate !== undefined) updateData.startDate = input.startDate;
+      if (input.preConMonths !== undefined) updateData.preConMonths = input.preConMonths;
+      if (input.constructionMonths !== undefined) updateData.constructionMonths = input.constructionMonths;
+      if (input.handoverMonths !== undefined) updateData.handoverMonths = input.handoverMonths;
+
+      if (Object.keys(updateData).length > 0) {
+        // Update projects table (single source of truth)
+        await db.update(projects)
+          .set(updateData)
+          .where(and(eq(projects.id, input.projectId), eq(projects.userId, ctx.user.id)));
+
+        // Also sync to cf_projects if a linked record exists
+        const [cfProj] = await db.select().from(cfProjects)
+          .where(and(eq(cfProjects.projectId, input.projectId), eq(cfProjects.userId, ctx.user.id)));
+        if (cfProj) {
+          const cfUpdate: Record<string, any> = {};
+          if (input.startDate !== undefined) cfUpdate.startDate = input.startDate;
+          if (input.preConMonths !== undefined) cfUpdate.preDevMonths = input.preConMonths;
+          if (input.constructionMonths !== undefined) cfUpdate.constructionMonths = input.constructionMonths;
+          if (input.handoverMonths !== undefined) cfUpdate.handoverMonths = input.handoverMonths;
+          await db.update(cfProjects)
+            .set(cfUpdate)
+            .where(eq(cfProjects.id, cfProj.id));
+        }
+      }
+      return { success: true };
+    }),
 });
 

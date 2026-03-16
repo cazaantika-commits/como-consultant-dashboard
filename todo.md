@@ -40,3 +40,12 @@
 - [ ] Bug: Design and offplan phases not showing for مجان متعدد الاستخدامات in capital scheduling
 - [x] Change construction phase color to green (#4AD8A4) instead of orange
 - [x] Add project settings panel to CapitalSchedulingPage for editing startDate and durations directly
+- [x] Add startDate and handoverMonths fields to projects table schema
+- [x] Migrate existing data from cf_projects to projects table
+- [x] Update server routers to read durations from projects table (single source)
+- [x] Update CapitalSchedulingPage settings to write to projects table
+- [x] Update TimeDistributionTab to read actual durations from project (not defaults)
+- [x] Update FeasibilityHubPage, CapitalPlanningDashboard, PortfolioView to use unified source
+- [x] Add bidirectional sync: FactSheetPage → cf_projects, ProgramCashFlowPage → projects
+- [x] Verify all pages reflect changes from one place
+- [x] Bug fix: Edit button for last two projects now uses projectId instead of cfProjectId

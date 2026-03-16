@@ -29,7 +29,7 @@ function getMonthLabel(monthNum: number, projectStart: Date): string {
   return `${ARABIC_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-const PROJECT_START = new Date(2026, 3, 1); // April 2026
+// PROJECT_START is now dynamic, computed from the selected project's startDate
 
 // Phase color mapping
 const PHASE_COLORS: Record<string, { header: string; cell: string }> = {
@@ -42,9 +42,17 @@ export default function TimeDistributionTab({ initialProjectId }: { initialProje
   const { isAuthenticated } = useAuth();
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(initialProjectId ?? null);
-  const [durations] = useState<PhaseDurations>({ ...DEFAULT_DURATIONS });
-
   const selectedProject = (projectsQuery.data || []).find((p: any) => p.id === selectedProjectId);
+
+  // Read durations from the selected project (single source of truth) with fallback to defaults
+  const durations = useMemo<PhaseDurations>(() => {
+    if (!selectedProject) return { ...DEFAULT_DURATIONS };
+    return {
+      preConMonths: selectedProject.preConMonths || DEFAULT_DURATIONS.preConMonths,
+      constructionMonths: selectedProject.constructionMonths || DEFAULT_DURATIONS.constructionMonths,
+      handoverMonths: (selectedProject as any).handoverMonths || DEFAULT_DURATIONS.handoverMonths,
+    };
+  }, [selectedProject]);
   const moQuery = trpc.marketOverview.getByProject.useQuery(selectedProjectId || 0, { enabled: !!selectedProjectId });
   const cpQuery = trpc.competitionPricing.getByProject.useQuery(selectedProjectId || 0, { enabled: !!selectedProjectId });
 
@@ -52,6 +60,13 @@ export default function TimeDistributionTab({ initialProjectId }: { initialProje
     if (!selectedProject) return null;
     return calculateProjectCosts(selectedProject, moQuery.data, cpQuery.data);
   }, [selectedProject, moQuery.data, cpQuery.data]);
+
+  // Compute project start date from the selected project's startDate field
+  const projectStart = useMemo(() => {
+    if (!selectedProject || !(selectedProject as any).startDate) return new Date(2026, 3, 1); // fallback April 2026
+    const [y, m] = (selectedProject as any).startDate.split('-').map(Number);
+    return new Date(y, m - 1, 1);
+  }, [selectedProject]);
 
   const phases = useMemo(() => calculatePhases(durations), [durations]);
   const totalMonths = useMemo(() => getTotalMonths(durations), [durations]);
@@ -301,7 +316,7 @@ export default function TimeDistributionTab({ initialProjectId }: { initialProje
                         PHASE_COLORS[monthPhase[m]]?.cell || "bg-gray-50"
                       }`}
                     >
-                      {getMonthLabel(m, PROJECT_START)}
+                      {getMonthLabel(m, projectStart)}
                     </th>
                   ))}
                   <th className="bg-gray-100 text-gray-600 px-3 py-2 text-center border-b border-gray-200 font-medium">

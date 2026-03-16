@@ -135,7 +135,28 @@ export async function updateProject(projectId: number, userId: number, data: Par
     }
   }
   
-  return await db.update(projects).set(convertedData).where(eq(projects.id, projectId));
+  await db.update(projects).set(convertedData).where(eq(projects.id, projectId));
+
+  // Sync schedule-related fields to cf_projects if linked record exists
+  const scheduleFields = ['preConMonths', 'constructionMonths', 'handoverMonths', 'startDate'];
+  const hasScheduleChange = scheduleFields.some(f => f in convertedData);
+  if (hasScheduleChange) {
+    const { cfProjects } = await import('../drizzle/schema');
+    const [cfProj] = await db.select().from(cfProjects)
+      .where(and(eq(cfProjects.projectId, projectId), eq(cfProjects.userId, userId)));
+    if (cfProj) {
+      const cfSync: Record<string, any> = {};
+      if ('preConMonths' in convertedData) cfSync.preDevMonths = convertedData.preConMonths;
+      if ('constructionMonths' in convertedData) cfSync.constructionMonths = convertedData.constructionMonths;
+      if ('handoverMonths' in convertedData) cfSync.handoverMonths = (convertedData as any).handoverMonths;
+      if ('startDate' in convertedData) cfSync.startDate = (convertedData as any).startDate;
+      if (Object.keys(cfSync).length > 0) {
+        await db.update(cfProjects).set(cfSync).where(eq(cfProjects.id, cfProj.id));
+      }
+    }
+  }
+
+  return { success: true };
 }
 
 export async function deleteProject(projectId: number, userId: number) {

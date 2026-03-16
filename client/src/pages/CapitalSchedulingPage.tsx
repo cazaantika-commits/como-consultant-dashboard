@@ -101,7 +101,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
   const [editingProject, setEditingProject] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<{ startDate: string; preDevMonths: number; constructionMonths: number; handoverMonths: number }>({ startDate: '2026-04', preDevMonths: 6, constructionMonths: 16, handoverMonths: 2 });
 
-  const updateProjectMutation = trpc.cashFlowProgram.updateProject.useMutation({
+  const updateProjectMutation = trpc.cashFlowProgram.updateProjectScheduleSettings.useMutation({
     onSuccess: () => {
       scheduleQuery.refetch();
       setEditingProject(null);
@@ -505,7 +505,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
               </thead>
               <tbody>
                 {baseColumns.map((col) => {
-                  const isEditing = editingProject !== null && editingProject === col.cfProjectId;
+                  const isEditing = editingProject !== null && editingProject === col.projectId;
                   return (
                     <tr key={col.projectId} style={{ borderBottom: "1px solid #f1f5f9" }}>
                       <td style={{ padding: "8px 12px", fontWeight: 700, color: "#1e293b", maxWidth: 200 }}>{col.name}</td>
@@ -539,15 +539,13 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                             <div style={{ display: "flex", gap: 4, justifyContent: "center" }}>
                               <button
                                 onClick={() => {
-                                  if (col.cfProjectId) {
-                                    updateProjectMutation.mutate({
-                                      id: col.cfProjectId,
-                                      startDate: editForm.startDate,
-                                      preDevMonths: editForm.preDevMonths,
-                                      constructionMonths: editForm.constructionMonths,
-                                      handoverMonths: editForm.handoverMonths,
-                                    });
-                                  }
+                                  updateProjectMutation.mutate({
+                                    projectId: col.projectId,
+                                    startDate: editForm.startDate,
+                                    preConMonths: editForm.preDevMonths,
+                                    constructionMonths: editForm.constructionMonths,
+                                    handoverMonths: editForm.handoverMonths,
+                                  });
                                 }}
                                 disabled={updateProjectMutation.isPending}
                                 style={{
@@ -585,7 +583,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                           <td style={{ padding: "8px 12px", textAlign: "center" }}>
                             <button
                               onClick={() => {
-                                setEditingProject(col.cfProjectId);
+                                setEditingProject(col.projectId);
                                 setEditForm({
                                   startDate: col.startDate,
                                   preDevMonths: col.preDevMonths,
