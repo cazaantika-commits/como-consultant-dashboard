@@ -55,3 +55,4 @@
 - [x] Fix: colors not consistent at end of each project in capital scheduling (phase detection mismatch)
 - [x] CRITICAL: Delay/shift changes in capital scheduling must persist to DB and reflect in capital requirements page
 - [x] Keep handover phase as separate color (orange) from construction (green)
+- [x] Add tooltips on capital scheduling cells: amount cells show project+phase+month detail, paid cells show breakdown, total/cumulative show per-project split

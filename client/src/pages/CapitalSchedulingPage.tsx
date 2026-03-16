@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { ArrowRight, Layers, ChevronDown, ChevronUp, RotateCcw, Settings, Calendar, Clock, Save, X } from "lucide-react";
@@ -42,6 +43,79 @@ const PHASE_COLORS = {
 } as const;
 
 type PhaseType = "land" | "design" | "offplan" | "construction" | "handover";
+
+const PHASE_NAMES: Record<PhaseType, string> = {
+  land: "الأرض / المدفوع",
+  design: "التصاميم والاعتمادات",
+  offplan: "أوف بلان",
+  construction: "الإنشاء",
+  handover: "التسليم",
+};
+
+function fmtTooltipNum(n: number): string {
+  if (n === 0) return "0";
+  if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M AED`;
+  if (Math.abs(n) >= 1_000) return `${(n / 1_000).toFixed(1)}K AED`;
+  return `${n.toFixed(0)} AED`;
+}
+
+// ── Lightweight hover tooltip (uses portal to escape overflow:auto) ──────
+function CellTooltip({ children, lines }: { children: React.ReactNode; lines: string[] }) {
+  const [show, setShow] = useState(false);
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+
+  const onEnter = useCallback((e: React.MouseEvent) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setPos({ x: rect.left + rect.width / 2, y: rect.top - 8 });
+    setShow(true);
+  }, []);
+
+  if (!lines.length) return <>{children}</>;
+
+  return (
+    <div
+      onMouseEnter={onEnter}
+      onMouseLeave={() => setShow(false)}
+      style={{ width: "100%", height: "100%" }}
+    >
+      {children}
+      {show && createPortal(
+        <div
+          style={{
+            position: "fixed",
+            left: pos.x,
+            top: pos.y,
+            transform: "translate(-50%, -100%)",
+            zIndex: 99999,
+            background: "#1e293b",
+            color: "#f8fafc",
+            borderRadius: 10,
+            padding: "8px 12px",
+            fontSize: 11,
+            fontWeight: 600,
+            lineHeight: 1.7,
+            whiteSpace: "nowrap",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
+            pointerEvents: "none",
+            direction: "rtl",
+            textAlign: "right",
+          }}
+        >
+          {lines.map((line, i) => (
+            <div key={i} style={{ opacity: i === 0 ? 1 : 0.85 }}>{line}</div>
+          ))}
+          <div style={{
+            position: "absolute", bottom: -5, left: "50%", transform: "translateX(-50%)",
+            width: 0, height: 0,
+            borderLeft: "6px solid transparent", borderRight: "6px solid transparent",
+            borderTop: "6px solid #1e293b",
+          }} />
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
 
 interface ProjectColumn {
   cfProjectId: number | null;
@@ -900,27 +974,35 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                     background: "#f8fafb",
                   }}
                 >
-                  <div
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      background: col.paidTotal > 0 ? "#fef3c7" : "#fafbfc",
-                      borderRadius: 10,
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 1,
-                      border: col.paidTotal > 0 ? "1px solid #fde68a" : "none",
-                    }}
-                  >
-                    {col.paidTotal > 0 && (
-                      <>
-                        <span style={{ fontSize: 7, color: "#92400e", fontWeight: 600 }}>المدفوع</span>
-                        <span style={{ fontSize: 11, color: "#78350f", fontWeight: 800 }}>{fmtCell(col.paidTotal)}</span>
-                      </>
-                    )}
-                  </div>
+                  <CellTooltip lines={col.paidTotal > 0 ? [
+                    `📌 ${col.name}`,
+                    `المدفوع: ${fmtTooltipNum(col.paidTotal)}`,
+                    `من إجمالي: ${fmtTooltipNum(col.grandTotal)}`,
+                    `المطلوب: ${fmtTooltipNum(col.upcomingTotal)}`,
+                  ] : []}>
+                    <div
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        background: col.paidTotal > 0 ? "#fef3c7" : "#fafbfc",
+                        borderRadius: 10,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 1,
+                        border: col.paidTotal > 0 ? "1px solid #fde68a" : "none",
+                        cursor: col.paidTotal > 0 ? "default" : undefined,
+                      }}
+                    >
+                      {col.paidTotal > 0 && (
+                        <>
+                          <span style={{ fontSize: 7, color: "#92400e", fontWeight: 600 }}>المدفوع</span>
+                          <span style={{ fontSize: 11, color: "#78350f", fontWeight: 800 }}>{fmtCell(col.paidTotal)}</span>
+                        </>
+                      )}
+                    </div>
+                  </CellTooltip>
                 </td>
               ))}
               {/* Date cell */}
@@ -939,8 +1021,19 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                 background: "#fef3c7", textAlign: "center",
                 fontSize: 11, fontWeight: 800, color: "#78350f",
                 border: "1px solid #fde68a", borderRadius: 8,
+                padding: 0,
               }}>
-                {fmtCell(effectiveColumns.reduce((s, c) => s + c.paidTotal, 0))}
+                <CellTooltip lines={[
+                  `💰 إجمالي المدفوع: ${fmtTooltipNum(effectiveColumns.reduce((s, c) => s + c.paidTotal, 0))}`,
+                  "─── توزيع حسب المشروع ───",
+                  ...effectiveColumns.filter(c => c.paidTotal > 0).map(c =>
+                    `  ${c.name.split(" ").slice(0, 3).join(" ")}: ${fmtTooltipNum(c.paidTotal)}`
+                  ),
+                ]}>
+                  <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {fmtCell(effectiveColumns.reduce((s, c) => s + c.paidTotal, 0))}
+                  </div>
+                </CellTooltip>
               </td>
               {/* Empty cumulative cell */}
               <td style={{
@@ -990,23 +1083,51 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                           background: "#f8fafb",
                         }}
                       >
-                        <div
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            background: bg,
-                            borderRadius: borderRadiusStyle,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: 11,
-                            fontWeight: fontW,
-                            color: textColor,
-                            transition: "all 0.15s ease",
-                          }}
-                        >
-                          {cd.amount > 0 ? fmtCell(cd.amount) : ""}
-                        </div>
+                        <CellTooltip lines={cd.amount > 0 ? (() => {
+                          const col = effectiveColumns[ci];
+                          const phaseName = phase ? PHASE_NAMES[phase] : "غير محدد";
+                          const lines: string[] = [
+                            `📌 ${col.name}`,
+                            `📅 ${row.label}`,
+                            `🏠 المرحلة: ${phaseName}`,
+                            `💰 ${fmtTooltipNum(cd.amount)}`,
+                          ];
+                          // Show per-phase breakdown if multiple phases contribute
+                          if (phase && groupBy === 1) {
+                            const startIdx = row.startIdx;
+                            const phaseTypes: PhaseType[] = ["design", "offplan", "construction", "handover"];
+                            const breakdown: { name: string; amt: number }[] = [];
+                            for (const p of phaseTypes) {
+                              const amt = col.phaseChartAmounts[p]?.[startIdx] || 0;
+                              if (amt > 0) breakdown.push({ name: PHASE_NAMES[p], amt });
+                            }
+                            if (breakdown.length > 1) {
+                              lines.push("─── تفصيل ───");
+                              for (const b of breakdown) {
+                                lines.push(`  ${b.name}: ${fmtTooltipNum(b.amt)}`);
+                              }
+                            }
+                          }
+                          return lines;
+                        })() : []}>
+                          <div
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              background: bg,
+                              borderRadius: borderRadiusStyle,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: 11,
+                              fontWeight: fontW,
+                              color: textColor,
+                              transition: "all 0.15s ease",
+                            }}
+                          >
+                            {cd.amount > 0 ? fmtCell(cd.amount) : ""}
+                          </div>
+                        </CellTooltip>
                       </td>
                     );
                   })}
@@ -1039,14 +1160,26 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       minWidth: COL_W,
                       height: ROW_H,
                       background: row.total > 0 ? "#fef9e7" : (isEven ? "#ffffff" : "#f8fafc"),
-                      padding: "0 6px",
+                      padding: 0,
                       textAlign: "center",
                       fontSize: 11,
                       fontWeight: row.total > 0 ? 800 : 400,
                       color: row.total > 0 ? "#854d0e" : "#94a3b8",
                     }}
                   >
-                    {row.total > 0 ? fmtCell(row.total) : ""}
+                    <CellTooltip lines={row.total > 0 ? [
+                      `📅 ${row.label}`,
+                      `💰 الإجمالي: ${fmtTooltipNum(row.total)}`,
+                      "─── توزيع حسب المشروع ───",
+                      ...row.colData.filter(cd => cd.amount > 0).map((cd, i) => {
+                        const col = effectiveColumns.find(c => c.projectId === cd.colId);
+                        return `  ${col?.name?.split(" ").slice(0, 3).join(" ") || "مشروع"}: ${fmtTooltipNum(cd.amount)}`;
+                      }),
+                    ] : []}>
+                      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 6px" }}>
+                        {row.total > 0 ? fmtCell(row.total) : ""}
+                      </div>
+                    </CellTooltip>
                   </td>
 
                   {/* Cumulative total cell */}
@@ -1056,7 +1189,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       minWidth: COL_W,
                       height: ROW_H,
                       background: cumulativeTotals[row.gi] > 0 ? "#fef9e7" : (isEven ? "#ffffff" : "#f8fafc"),
-                      padding: "0 6px",
+                      padding: 0,
                       paddingRight: GAP,
                       textAlign: "center",
                       fontSize: 11,
@@ -1064,7 +1197,15 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       color: cumulativeTotals[row.gi] > 0 ? "#78350f" : "#94a3b8",
                     }}
                   >
-                    {cumulativeTotals[row.gi] > 0 ? fmtCell(cumulativeTotals[row.gi]) : ""}
+                    <CellTooltip lines={cumulativeTotals[row.gi] > 0 ? [
+                      `📅 ${row.label}`,
+                      `📊 التراكمي: ${fmtTooltipNum(cumulativeTotals[row.gi])}`,
+                      `💰 هذا الشهر: ${fmtTooltipNum(row.total)}`,
+                    ] : []}>
+                      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 6px" }}>
+                        {cumulativeTotals[row.gi] > 0 ? fmtCell(cumulativeTotals[row.gi]) : ""}
+                      </div>
+                    </CellTooltip>
                   </td>
                 </tr>
               );
