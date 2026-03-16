@@ -36,3 +36,4 @@
 - [x] Independent delay controls per project: 3 delay buttons (design, offplan, construction)
 - [x] Delay badge shows active delays (e.g., "تصاميم +3ش · أوف +3ش")
 - [ ] Import corrected KIEFERLE JSON and recalculate (pending)
+- [x] Update capital scheduling phase colors to match provided color palette (green, orange, pink, cyan, yellow)

@@ -32,13 +32,13 @@ function fmtFull(n: number): string {
 }
 
 // ── Phase colors ─────────────────────────────────────────────────────
-// 4 phases: land (gray), design (purple), offplan (blue), construction (amber)
+// 5 phases: land (green), design (cyan), offplan (pink), construction (orange), handover (yellow)
 const PHASE_COLORS = {
-  land:         { solid: "#64748b", light: "#f1f5f9", text: "#334155" },
-  design:       { solid: "#7c3aed", light: "#ede9fe", text: "#5b21b6" },
-  offplan:      { solid: "#0284c7", light: "#e0f2fe", text: "#075985" },
-  construction: { solid: "#d97706", light: "#fef3c7", text: "#92400e" },
-  handover:     { solid: "#d97706", light: "#fef3c7", text: "#92400e" },
+  land:         { solid: "#4AD8A4", light: "#e6faf2", text: "#1a7a54" },
+  design:       { solid: "#3AD8F0", light: "#e0f7fc", text: "#0e7490" },
+  offplan:      { solid: "#F581BE", light: "#fde8f3", text: "#9d174d" },
+  construction: { solid: "#FF602A", light: "#fff0eb", text: "#9a3412" },
+  handover:     { solid: "#FBC53B", light: "#fef9e7", text: "#854d0e" },
 } as const;
 
 type PhaseType = "land" | "design" | "offplan" | "construction" | "handover";
@@ -375,9 +375,9 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
           <div
             style={{
               width: 44, height: 44, borderRadius: 14,
-              background: "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)",
+              background: "linear-gradient(135deg, #3AD8F0 0%, #0ea5c9 100%)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: "0 4px 12px rgba(124,58,237,0.25)",
+              boxShadow: "0 4px 12px rgba(58,216,240,0.3)",
             }}
           >
             <Layers style={{ width: 22, height: 22, color: "#fff" }} />
@@ -418,7 +418,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                   padding: "5px 14px", borderRadius: 9, fontSize: 12, fontWeight: 700,
                   cursor: "pointer", transition: "all 0.2s",
                   border: "none",
-                  background: groupBy === g ? "#7c3aed" : "transparent",
+                  background: groupBy === g ? "#FF602A" : "transparent",
                   color: groupBy === g ? "#fff" : "#64748b",
                 }}
               >
@@ -474,7 +474,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                         borderRadius: 14,
                         padding: "12px 6px 8px",
                         border: "1px solid #e5e7eb",
-                        borderTop: "3px solid #7c3aed",
+                        borderTop: "3px solid #3AD8F0",
                         boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
                       }}
                     >
@@ -490,10 +490,10 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
 
                       {/* Capital summary */}
                       <div style={{
-                        background: "#f5f3ff", borderRadius: 8,
+                        background: "#f0fdfa", borderRadius: 8,
                         padding: "4px 6px", marginBottom: 6,
                         fontSize: 8, color: "#475569", lineHeight: 1.8,
-                        border: "1px solid #ede9fe",
+                        border: "1px solid #ccfbf1",
                       }}>
                         <div style={{ display: "flex", justifyContent: "space-between", gap: 4 }}>
                           <span style={{ color: "#64748b" }}>الإجمالي:</span>
@@ -501,19 +501,19 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                         </div>
                         <div style={{
                           display: "flex", justifyContent: "space-between", gap: 4,
-                          borderTop: "1px solid #ede9fe", paddingTop: 3, marginTop: 2,
+                          borderTop: "1px solid #ccfbf1", paddingTop: 3, marginTop: 2,
                         }}>
                           <span style={{ color: "#64748b" }}>المطلوب:</span>
-                          <span style={{ fontWeight: 800, color: "#d97706" }}>{fmtFull(col.upcomingTotal)}</span>
+                          <span style={{ fontWeight: 800, color: "#FF602A" }}>{fmtFull(col.upcomingTotal)}</span>
                         </div>
                       </div>
 
                       {/* Delay badge */}
                       {hasDelay && (
                         <div style={{
-                          background: "#fef3c7", borderRadius: 6,
+                          background: "#fef9e7", borderRadius: 6,
                           padding: "2px 4px", marginBottom: 4, textAlign: "center",
-                          fontSize: 8, color: "#92400e", fontWeight: 700,
+                          fontSize: 8, color: "#854d0e", fontWeight: 700,
                           border: "1px solid #fde68a",
                         }}>
                           {delay.designDelay > 0 && `تصاميم +${delay.designDelay}ش`}
@@ -527,9 +527,9 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       {/* Design delay controls */}
                       <DelayControl
                         label="التصاميم"
-                        color="#7c3aed"
-                        lightBg="#ede9fe"
-                        borderColor="#c4b5fd"
+                        color="#3AD8F0"
+                        lightBg="#e0f7fc"
+                        borderColor="#67e8f9"
                         value={delay.designDelay}
                         onUp={() => adjustDelay(col.projectId, "designDelay", -3)}
                         onDown={() => adjustDelay(col.projectId, "designDelay", 3)}
@@ -538,9 +538,9 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       {/* Offplan delay controls */}
                       <DelayControl
                         label="أوف بلان"
-                        color="#0284c7"
-                        lightBg="#e0f2fe"
-                        borderColor="#7dd3fc"
+                        color="#F581BE"
+                        lightBg="#fde8f3"
+                        borderColor="#f9a8d4"
                         value={delay.offplanDelay}
                         onUp={() => adjustDelay(col.projectId, "offplanDelay", -3)}
                         onDown={() => adjustDelay(col.projectId, "offplanDelay", 3)}
@@ -549,9 +549,9 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       {/* Construction delay controls */}
                       <DelayControl
                         label="الإنشاء"
-                        color="#d97706"
-                        lightBg="#fef3c7"
-                        borderColor="#fde68a"
+                        color="#FF602A"
+                        lightBg="#fff0eb"
+                        borderColor="#fdba74"
                         value={delay.constructionDelay}
                         onUp={() => adjustDelay(col.projectId, "constructionDelay", -3)}
                         onDown={() => adjustDelay(col.projectId, "constructionDelay", 3)}
@@ -619,15 +619,15 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                 }}
               >
                 <div style={{
-                  background: "#fffbeb",
+                  background: "#fef9e7",
                   borderRadius: 14,
                   padding: "14px 6px",
                   textAlign: "center",
-                  color: "#92400e",
+                  color: "#854d0e",
                   fontSize: 11,
                   fontWeight: 800,
                   border: "1px solid #fde68a",
-                  borderTop: "3px solid #f59e0b",
+                  borderTop: "3px solid #FBC53B",
                 }}>
                   الإجمالي
                 </div>
@@ -645,7 +645,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                 }}
               >
                 <div style={{
-                  background: "#fef3c7",
+                  background: "#fef9e7",
                   borderRadius: 14,
                   padding: "14px 6px",
                   textAlign: "center",
@@ -653,7 +653,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                   fontSize: 10,
                   fontWeight: 800,
                   border: "1px solid #fde68a",
-                  borderTop: "3px solid #d97706",
+                  borderTop: "3px solid #FBC53B",
                 }}>
                   التراكمي
                 </div>
@@ -746,12 +746,12 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       width: COL_W,
                       minWidth: COL_W,
                       height: ROW_H,
-                      background: row.total > 0 ? "#fffbeb" : (isEven ? "#ffffff" : "#f8fafc"),
+                      background: row.total > 0 ? "#fef9e7" : (isEven ? "#ffffff" : "#f8fafc"),
                       padding: "0 6px",
                       textAlign: "center",
                       fontSize: 11,
                       fontWeight: row.total > 0 ? 800 : 400,
-                      color: row.total > 0 ? "#92400e" : "#94a3b8",
+                      color: row.total > 0 ? "#854d0e" : "#94a3b8",
                     }}
                   >
                     {row.total > 0 ? fmtCell(row.total) : ""}
@@ -763,7 +763,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       width: COL_W,
                       minWidth: COL_W,
                       height: ROW_H,
-                      background: cumulativeTotals[row.gi] > 0 ? "#fef3c7" : (isEven ? "#ffffff" : "#f8fafc"),
+                      background: cumulativeTotals[row.gi] > 0 ? "#fef9e7" : (isEven ? "#ffffff" : "#f8fafc"),
                       padding: "0 6px",
                       paddingRight: GAP,
                       textAlign: "center",
