@@ -505,8 +505,8 @@ export default function Home() {
               <div className="flex items-center gap-5 p-5 lg:p-6">
                 {/* Avatar - compact */}
                 <div className="relative shrink-0">
-                  <div className="w-28 h-28 lg:w-32 lg:h-32 rounded-full overflow-hidden ring-3 ring-amber-300/50 ring-offset-2 ring-offset-background shadow-lg">
-                    <img src={SALWA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover" />
+                  <div className="w-36 h-44 lg:w-40 lg:h-48 rounded-2xl overflow-hidden ring-3 ring-amber-300/50 ring-offset-2 ring-offset-background shadow-lg">
+                    <img src={SALWA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover object-top" />
                   </div>
                   <span className="absolute bottom-0 right-0 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white dark:border-card shadow-sm">
                     <span className="absolute inset-0 w-full h-full rounded-full bg-emerald-500 animate-ping opacity-40" />

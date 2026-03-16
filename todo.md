@@ -89,3 +89,4 @@
 - [x] Reduce column widths in horizontal view
 - [x] Make Salwa's image bigger on the homepage
 - [x] Change 'شيكي على الايميل' to 'البريد الالكتروني'
+- [x] Enlarge Salwa's image to show more of her body, not just face - bigger container and adjust cropping
