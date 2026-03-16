@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import {
@@ -46,7 +46,7 @@ const PROJECT_START = new Date(2026, 3, 1); // April 2026
 const TODAY = new Date();
 
 // ===== COMPONENT =====
-export default function ExcelCashFlowPage({ embedded }: { embedded?: boolean } = {}) {
+export default function ExcelCashFlowPage({ embedded, initialProjectId }: { embedded?: boolean; initialProjectId?: number | null } = {}) {
   const { isAuthenticated } = useAuth();
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
 
@@ -54,7 +54,15 @@ export default function ExcelCashFlowPage({ embedded }: { embedded?: boolean } =
   const shared = useCashFlowSafe();
 
   // Local state fallbacks
-  const [localProjectId, setLocalProjectId] = useState<number | null>(null);
+  const [localProjectId, setLocalProjectId] = useState<number | null>(initialProjectId ?? null);
+
+  // Sync initialProjectId when it changes from parent
+  useEffect(() => {
+    if (initialProjectId != null) {
+      setLocalProjectId(initialProjectId);
+      if (shared) shared.setSelectedProjectId(initialProjectId);
+    }
+  }, [initialProjectId]);
   const [localDurations, setLocalDurations] = useState<PhaseDurations>({ ...DEFAULT_DURATIONS });
   const [localOverrides, setLocalOverrides] = useState<Record<string, { [month: number]: number }>>({});
   const [localShifts, setLocalShifts] = useState<Record<string, number>>({});
@@ -281,7 +289,8 @@ export default function ExcelCashFlowPage({ embedded }: { embedded?: boolean } =
 
   return (
     <div className={`${embedded ? '' : 'min-h-screen'} bg-gray-50 p-4`} dir="rtl">
-      {/* Project Selector */}
+      {/* Project Selector - hidden when initialProjectId is provided from parent */}
+      {!initialProjectId && (
       <div className="mb-3 bg-white rounded-lg border border-gray-200 shadow-sm px-4 py-3">
         <div className="flex items-center gap-4">
           <div className="flex-1 space-y-1">
@@ -299,6 +308,7 @@ export default function ExcelCashFlowPage({ embedded }: { embedded?: boolean } =
           </div>
         </div>
       </div>
+      )}
 
       {!selectedProjectId ? (
         <div className="text-center py-20">

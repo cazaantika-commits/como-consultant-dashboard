@@ -33,7 +33,7 @@ const RISK_CATEGORIES = [
   { key: "executionRisk", label: "مخاطر تنفيذية", icon: Zap, color: "#ef4444" },
 ];
 
-export default function RiskDashboardPage({ embedded = false }: { embedded?: boolean } = {}) {
+export default function RiskDashboardPage({ embedded = false, initialProjectId }: { embedded?: boolean; initialProjectId?: number | null } = {}) {
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
 
   const allRisksQuery = trpc.riskDashboard.getAllProjectRisks.useQuery();

@@ -231,12 +231,12 @@ function FeasibilityHubInner({ onBack }: { onBack: () => void }) {
       )}
       {activeView === "capital" && (
         <main className="py-1">
-          <ExcelCashFlowPage embedded />
+          <ExcelCashFlowPage embedded initialProjectId={selectedProjectId} />
         </main>
       )}
       {activeView === "escrow" && (
         <main className="py-1">
-          <EscrowCashFlowPage embedded />
+          <EscrowCashFlowPage embedded initialProjectId={selectedProjectId} />
         </main>
       )}
       {activeView === "risk-dashboard" && (

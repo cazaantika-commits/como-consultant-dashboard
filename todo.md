@@ -77,3 +77,6 @@
 - [x] Swap cumulative column color (rose) with design phase color (blue)
 - [x] Make all numbers in table columns black color for better readability
 - [x] Fix feasibility study: remove redundant project selector from sub-pages after project is already selected
+- [x] Hide redundant project selector in RequiredCapitalPage when accessed from FeasibilityHub
+- [x] Hide redundant project selector in EscrowAccountPage when accessed from FeasibilityHub
+- [x] Hide redundant project selector in RiskDashboardPage (no change needed - page shows all projects as cards, no dropdown selector)
