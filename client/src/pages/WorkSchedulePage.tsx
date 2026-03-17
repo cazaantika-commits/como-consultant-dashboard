@@ -44,6 +44,30 @@ const addDays = (d: Date, n: number) => {
   return r;
 };
 
+/* Add working days (5-day week: Sun-Thu, skip Fri+Sat) */
+const addWorkingDays = (start: Date, workDays: number): Date => {
+  const d = new Date(start);
+  let remaining = workDays;
+  while (remaining > 0) {
+    d.setDate(d.getDate() + 1);
+    const dow = d.getDay(); // 0=Sun..6=Sat
+    if (dow !== 5 && dow !== 6) remaining--; // skip Fri(5) & Sat(6)
+  }
+  return d;
+};
+
+/* Count working days between two dates (exclusive of end) */
+const countWorkingDays = (start: Date, end: Date): number => {
+  let count = 0;
+  const d = new Date(start);
+  while (d < end) {
+    d.setDate(d.getDate() + 1);
+    const dow = d.getDay();
+    if (dow !== 5 && dow !== 6) count++;
+  }
+  return count;
+};
+
 const STAGE_COLORS: Record<string, { bar: string; barLight: string; text: string }> = {
   "STG-01": { bar: "#0ea5e9", barLight: "#bae6fd", text: "#0c4a6e" },
   "STG-02": { bar: "#10b981", barLight: "#a7f3d0", text: "#064e3b" },
@@ -83,6 +107,7 @@ export default function WorkSchedulePage() {
   const [dayWidth, setDayWidth] = useState(28);
   const [editingRow, setEditingRow] = useState<string | null>(null);
   const [editStart, setEditStart] = useState("");
+  const [editDuration, setEditDuration] = useState<number>(0);
   const [editEnd, setEditEnd] = useState("");
   const timelineRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
@@ -104,16 +129,42 @@ export default function WorkSchedulePage() {
   const startEditing = (row: any) => {
     if (row.type !== "service") return;
     setEditingRow(row.serviceCode);
-    setEditStart(row.startDate ? new Date(row.startDate).toISOString().split("T")[0] : "");
-    setEditEnd(row.endDate ? new Date(row.endDate).toISOString().split("T")[0] : "");
+    const sDate = row.startDate ? new Date(row.startDate).toISOString().split("T")[0] : "";
+    const eDate = row.endDate ? new Date(row.endDate).toISOString().split("T")[0] : "";
+    setEditStart(sDate);
+    setEditEnd(eDate);
+    // Calculate working days between start and end
+    if (sDate && eDate) {
+      setEditDuration(countWorkingDays(new Date(sDate), new Date(eDate)));
+    } else {
+      setEditDuration(row.duration > 0 ? row.duration : 0);
+    }
+  };
+
+  // Recalculate end date whenever start or duration changes
+  const recalcEnd = (start: string, dur: number) => {
+    if (start && dur > 0) {
+      const endDate = addWorkingDays(new Date(start), dur);
+      setEditEnd(endDate.toISOString().split("T")[0]);
+    }
+  };
+
+  const handleStartChange = (val: string) => {
+    setEditStart(val);
+    recalcEnd(val, editDuration);
+  };
+
+  const handleDurationChange = (val: number) => {
+    setEditDuration(val);
+    recalcEnd(editStart, val);
   };
 
   const saveEditing = (row: any) => {
-    if (!editStart && !editEnd) { setEditingRow(null); return; }
-    // Auto-calculate end date from start + duration if only start is set
+    if (!editStart) { setEditingRow(null); return; }
+    // End date is always auto-calculated from start + working days
     let finalEnd = editEnd;
-    if (editStart && !editEnd && row.duration > 0) {
-      finalEnd = addDays(new Date(editStart), row.duration).toISOString().split("T")[0];
+    if (editStart && editDuration > 0 && !finalEnd) {
+      finalEnd = addWorkingDays(new Date(editStart), editDuration).toISOString().split("T")[0];
     }
     upsertMutation.mutate({
       projectId: selectedProjectId!,
@@ -428,7 +479,7 @@ export default function WorkSchedulePage() {
               <div className="w-20 text-center border-l border-cyan-500/40 h-full flex items-center justify-center">الحالة</div>
               <div className="w-20 text-center border-l border-cyan-500/40 h-full flex items-center justify-center">البدء</div>
               <div className="w-20 text-center border-l border-cyan-500/40 h-full flex items-center justify-center">الانتهاء</div>
-              <div className="w-12 text-center border-l border-cyan-500/40 h-full flex items-center justify-center">المدة</div>
+              <div className="w-12 text-center border-l border-cyan-500/40 h-full flex items-center justify-center" title="أيام عمل (أحد-خميس)">المدة</div>
               <div className="w-10 text-center border-l border-cyan-500/40 h-full flex items-center justify-center">✓</div>
               <div className="w-14 text-center h-full flex items-center justify-center">الإنجاز</div>
             </div>
@@ -485,7 +536,7 @@ export default function WorkSchedulePage() {
                     </span>
                   </div>
 
-                  {/* Start */}
+                  {/* Start date */}
                   <div
                     className={`w-20 text-center text-[10px] border-l border-gray-100 ${!isStage && !editingRow ? "cursor-pointer hover:bg-blue-50" : ""} ${editingRow === row.serviceCode ? "p-0.5" : "text-gray-600"}`}
                     onClick={() => !isStage && editingRow !== row.serviceCode && startEditing(row)}
@@ -494,7 +545,7 @@ export default function WorkSchedulePage() {
                       <input
                         type="date"
                         value={editStart}
-                        onChange={(e) => setEditStart(e.target.value)}
+                        onChange={(e) => handleStartChange(e.target.value)}
                         className="w-full h-full text-[9px] border border-blue-300 rounded px-0.5 bg-white"
                       />
                     ) : (
@@ -502,19 +553,15 @@ export default function WorkSchedulePage() {
                     )}
                   </div>
 
-                  {/* End */}
+                  {/* End date (read-only, auto-computed) */}
                   <div
-                    className={`w-20 text-center text-[10px] border-l border-gray-100 ${!isStage && !editingRow ? "cursor-pointer hover:bg-blue-50" : ""} ${editingRow === row.serviceCode ? "p-0.5" : "text-gray-600"}`}
-                    onClick={() => !isStage && editingRow !== row.serviceCode && startEditing(row)}
+                    className={`w-20 text-center text-[10px] border-l border-gray-100 ${editingRow === row.serviceCode ? "p-0.5 bg-gray-50" : "text-gray-600"}`}
                   >
                     {editingRow === row.serviceCode ? (
                       <div className="flex items-center gap-0.5">
-                        <input
-                          type="date"
-                          value={editEnd}
-                          onChange={(e) => setEditEnd(e.target.value)}
-                          className="w-full h-full text-[9px] border border-blue-300 rounded px-0.5 bg-white"
-                        />
+                        <span className="flex-1 text-[9px] text-gray-500 bg-gray-100 rounded px-1 py-0.5">
+                          {editEnd ? fmtDateShort(editEnd) : "—"}
+                        </span>
                         <button
                           onClick={(e) => { e.stopPropagation(); saveEditing(row); }}
                           className="p-0.5 bg-emerald-500 text-white rounded hover:bg-emerald-600 flex-shrink-0"
@@ -528,9 +575,22 @@ export default function WorkSchedulePage() {
                     )}
                   </div>
 
-                  {/* Duration */}
-                  <div className="w-12 text-center text-gray-600 border-l border-gray-100">
-                    {row.duration > 0 ? `${row.duration}d` : "—"}
+                  {/* Duration (editable working days) */}
+                  <div
+                    className={`w-12 text-center border-l border-gray-100 ${editingRow === row.serviceCode ? "p-0.5" : "text-gray-600"}`}
+                    onClick={() => !isStage && editingRow !== row.serviceCode && startEditing(row)}
+                  >
+                    {editingRow === row.serviceCode ? (
+                      <input
+                        type="number"
+                        min={1}
+                        value={editDuration || ""}
+                        onChange={(e) => handleDurationChange(Number(e.target.value))}
+                        className="w-full h-full text-[10px] border border-blue-300 rounded px-0.5 bg-white text-center"
+                      />
+                    ) : (
+                      row.duration > 0 ? `${row.duration}d` : "—"
+                    )}
                   </div>
 
                   {/* Done check */}

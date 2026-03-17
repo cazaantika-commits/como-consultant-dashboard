@@ -109,3 +109,9 @@
 - [x] Rebuild work schedule page as a Gantt chart (task table on left + timeline bars on right)
 - [x] Match reference image style: WBS numbering, colored bars, week/month headers, % complete, duration
 - [x] Integrate with lifecycle data (stages as parent rows, services as child rows)
+- [x] Gantt chart: user inputs start date + working days (5-day week, excl Fri/Sat) → end date auto-calculated
+- [x] Gantt chart: duration column becomes editable input field
+- [x] Gantt chart: end date is read-only, computed from start + working days
+- [x] Gantt chart: start date + working days (5-day week, excl Fri/Sat) → end date auto-calculated
+- [x] Gantt chart: duration column becomes editable input, end date is read-only computed
+- [x] Gantt chart: bars must always appear on timeline when dates are entered
