@@ -106,3 +106,6 @@
 - [x] Explore regulatory compliance pathway in development phases and document all phases/ceilings/details
 - [x] Create comprehensive work schedule table page for regulatory compliance with all phases, ceilings, dates
 - [x] Wire the new page with backend and integrate into navigation
+- [x] Rebuild work schedule page as a Gantt chart (task table on left + timeline bars on right)
+- [x] Match reference image style: WBS numbering, colored bars, week/month headers, % complete, duration
+- [x] Integrate with lifecycle data (stages as parent rows, services as child rows)

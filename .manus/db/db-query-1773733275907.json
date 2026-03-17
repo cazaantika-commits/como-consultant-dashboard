@@ -1,0 +1,30 @@
+{
+  "query": "SELECT serviceCode, nameAr FROM lifecycle_services WHERE stageCode = 'STG-01' ORDER BY sortOrder;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT serviceCode, nameAr FROM lifecycle_services WHERE stageCode = 'STG-01' ORDER BY sortOrder;",
+  "rows": [
+    {
+      "serviceCode": "SRV-SETUP-DED-LICENSE",
+      "nameAr": "الحصول على رخصة التطوير العقاري من دائرة التنمية الاقتصادية"
+    },
+    {
+      "serviceCode": "SRV-SETUP-RERA-TRAINING",
+      "nameAr": "استكمال تدريب واختبار RERA"
+    },
+    {
+      "serviceCode": "SRV-SETUP-POLICE-CERT",
+      "nameAr": "الحصول على شهادة حسن السيرة والسلوك"
+    },
+    {
+      "serviceCode": "SRV-SETUP-RERA-APPROVAL",
+      "nameAr": "الحصول على موافقة RERA للمطور"
+    },
+    {
+      "serviceCode": "SRV-SETUP-RERA-REGISTRATION",
+      "nameAr": "تسجيل الشركة لدى RERA كمطور"
+    }
+  ],
+  "messages": [],
+  "stdout": "serviceCode\tnameAr\nSRV-SETUP-DED-LICENSE\tالحصول على رخصة التطوير العقاري من دائرة التنمية الاقتصادية\nSRV-SETUP-RERA-TRAINING\tاستكمال تدريب واختبار RERA\nSRV-SETUP-POLICE-CERT\tالحصول على شهادة حسن السيرة والسلوك\nSRV-SETUP-RERA-APPROVAL\tالحصول على موافقة RERA للمطور\nSRV-SETUP-RERA-REGISTRATION\tتسجيل الشركة لدى RERA كمطور\n",
+  "stderr": "",
+  "execution_time_ms": 1585
+}
