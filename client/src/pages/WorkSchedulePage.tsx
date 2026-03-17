@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, Fragment } from "react";
+import { useState, useMemo, useRef, useEffect, Fragment, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +16,7 @@ import {
   Check,
   ZoomIn,
   ZoomOut,
+  GripVertical,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -97,9 +98,29 @@ const STATUS_BADGE: Record<string, string> = {
   blocked: "bg-red-100 text-red-700",
 };
 
-/* ── Day-of-week Arabic abbreviations ── */
 const DOW_AR = ["أحد","اثن","ثلا","أرب","خمي","جمع","سبت"];
 const MONTH_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+
+/* ── Row type ── */
+type RowData = {
+  type: "stage" | "service";
+  wbs: string;
+  name: string;
+  stageCode: string;
+  serviceCode?: string;
+  status: string;
+  duration: number;
+  startDate: string | null;
+  endDate: string | null;
+  actualStart: string | null;
+  actualEnd: string | null;
+  pctComplete: number;
+  totalServices?: number;
+  completedServices?: number;
+  externalParty?: string;
+  internalOwner?: string;
+  rowIndex?: number;
+};
 
 export default function WorkSchedulePage() {
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
@@ -111,6 +132,22 @@ export default function WorkSchedulePage() {
   const [editEnd, setEditEnd] = useState("");
   const timelineRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
+
+  /* ── Drag state ── */
+  const [dragInfo, setDragInfo] = useState<{
+    serviceCode: string;
+    stageCode: string;
+    mode: "move" | "resize-end";
+    startX: number;
+    origStartDate: Date;
+    origEndDate: Date;
+    origDuration: number;
+  } | null>(null);
+  const [dragPreview, setDragPreview] = useState<{
+    serviceCode: string;
+    newStart: Date;
+    newEnd: Date;
+  } | null>(null);
 
   const projectsQuery = trpc.projects.list.useQuery();
   const scheduleQuery = trpc.lifecycle.getWorkSchedule.useQuery(
@@ -126,14 +163,13 @@ export default function WorkSchedulePage() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const startEditing = (row: any) => {
+  const startEditing = (row: RowData) => {
     if (row.type !== "service") return;
-    setEditingRow(row.serviceCode);
+    setEditingRow(row.serviceCode!);
     const sDate = row.startDate ? new Date(row.startDate).toISOString().split("T")[0] : "";
     const eDate = row.endDate ? new Date(row.endDate).toISOString().split("T")[0] : "";
     setEditStart(sDate);
     setEditEnd(eDate);
-    // Calculate working days between start and end
     if (sDate && eDate) {
       setEditDuration(countWorkingDays(new Date(sDate), new Date(eDate)));
     } else {
@@ -141,7 +177,6 @@ export default function WorkSchedulePage() {
     }
   };
 
-  // Recalculate end date whenever start or duration changes
   const recalcEnd = (start: string, dur: number) => {
     if (start && dur > 0) {
       const endDate = addWorkingDays(new Date(start), dur);
@@ -159,9 +194,8 @@ export default function WorkSchedulePage() {
     recalcEnd(editStart, val);
   };
 
-  const saveEditing = (row: any) => {
+  const saveEditing = (row: RowData) => {
     if (!editStart) { setEditingRow(null); return; }
-    // End date is always auto-calculated from start + working days
     let finalEnd = editEnd;
     if (editStart && editDuration > 0 && !finalEnd) {
       finalEnd = addWorkingDays(new Date(editStart), editDuration).toISOString().split("T")[0];
@@ -175,10 +209,74 @@ export default function WorkSchedulePage() {
     });
   };
 
+  /* ── Drag handlers ── */
+  const handleDragStart = useCallback((
+    e: React.MouseEvent,
+    row: RowData,
+    mode: "move" | "resize-end",
+    timelineStartDate: Date
+  ) => {
+    if (row.type !== "service" || !row.startDate || !row.endDate) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setDragInfo({
+      serviceCode: row.serviceCode!,
+      stageCode: row.stageCode,
+      mode,
+      startX: e.clientX,
+      origStartDate: new Date(row.startDate),
+      origEndDate: new Date(row.endDate),
+      origDuration: row.duration,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!dragInfo) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - dragInfo.startX;
+      const deltaDays = Math.round(deltaX / dayWidth);
+
+      if (dragInfo.mode === "move") {
+        const newStart = addDays(dragInfo.origStartDate, deltaDays);
+        const newEnd = addDays(dragInfo.origEndDate, deltaDays);
+        setDragPreview({ serviceCode: dragInfo.serviceCode, newStart, newEnd });
+      } else {
+        // resize-end: keep start, extend/shrink end
+        const newEnd = addDays(dragInfo.origEndDate, deltaDays);
+        if (newEnd > dragInfo.origStartDate) {
+          setDragPreview({ serviceCode: dragInfo.serviceCode, newStart: dragInfo.origStartDate, newEnd });
+        }
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (dragPreview) {
+        const startStr = dragPreview.newStart.toISOString().split("T")[0];
+        const endStr = dragPreview.newEnd.toISOString().split("T")[0];
+        upsertMutation.mutate({
+          projectId: selectedProjectId!,
+          serviceCode: dragInfo.serviceCode,
+          stageCode: dragInfo.stageCode,
+          plannedStartDate: startStr,
+          plannedDueDate: endStr,
+        });
+      }
+      setDragInfo(null);
+      setDragPreview(null);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [dragInfo, dragPreview, dayWidth, selectedProjectId, upsertMutation]);
+
   const projects = projectsQuery.data ?? [];
   const stages = scheduleQuery.data ?? [];
 
-  // Expand all stages by default
   useEffect(() => {
     if (stages.length > 0 && expandedStages.size === 0) {
       setExpandedStages(new Set(stages.map((s: any) => s.stageCode)));
@@ -195,29 +293,12 @@ export default function WorkSchedulePage() {
 
   /* ── Build flat row list ── */
   const rows = useMemo(() => {
-    const result: Array<{
-      type: "stage" | "service";
-      wbs: string;
-      name: string;
-      stageCode: string;
-      serviceCode?: string;
-      status: string;
-      duration: number;
-      startDate: string | null;
-      endDate: string | null;
-      actualStart: string | null;
-      actualEnd: string | null;
-      pctComplete: number;
-      totalServices?: number;
-      completedServices?: number;
-      externalParty?: string;
-      internalOwner?: string;
-    }> = [];
-
+    const result: RowData[] = [];
     let stageIdx = 0;
+    let globalIdx = 0;
+
     for (const stage of stages) {
       stageIdx++;
-      // Compute stage-level dates and duration from its services
       const svcDates = (stage as any).services
         .filter((s: any) => s.plannedStartDate && s.plannedDueDate)
         .map((s: any) => ({
@@ -228,7 +309,6 @@ export default function WorkSchedulePage() {
       const stageEnd = svcDates.length > 0 ? new Date(Math.max(...svcDates.map((d: any) => d.end.getTime()))) : null;
       const stageDuration = stageStart && stageEnd ? daysBetween(stageStart, stageEnd) : 0;
 
-      // Stage % complete
       const totalSvcs = (stage as any).services.length;
       const completedSvcs = (stage as any).services.filter(
         (s: any) => s.operationalStatus === "completed" || s.operationalStatus === "submitted"
@@ -249,6 +329,7 @@ export default function WorkSchedulePage() {
         pctComplete: stagePct,
         totalServices: totalSvcs,
         completedServices: completedSvcs,
+        rowIndex: globalIdx++,
       });
 
       if (expandedStages.has((stage as any).stageCode)) {
@@ -271,6 +352,7 @@ export default function WorkSchedulePage() {
             pctComplete: pct,
             externalParty: svc.externalParty,
             internalOwner: svc.internalOwner,
+            rowIndex: globalIdx++,
           });
         }
       }
@@ -287,11 +369,11 @@ export default function WorkSchedulePage() {
       if (row.actualStart) allDates.push(new Date(row.actualStart));
       if (row.actualEnd) allDates.push(new Date(row.actualEnd));
     }
-    // Also include today
     allDates.push(new Date());
 
-    if (allDates.length === 0) {
+    if (allDates.length <= 1) {
       const today = new Date();
+      today.setHours(0, 0, 0, 0);
       return {
         timelineStart: today,
         timelineEnd: addDays(today, 90),
@@ -302,17 +384,14 @@ export default function WorkSchedulePage() {
 
     const minDate = new Date(Math.min(...allDates.map((d) => d.getTime())));
     const maxDate = new Date(Math.max(...allDates.map((d) => d.getTime())));
-
-    // Pad 7 days before and 14 days after
     const start = addDays(minDate, -7);
     const end = addDays(maxDate, 14);
     const total = daysBetween(start, end);
     const daysArr = Array.from({ length: Math.max(total, 30) }, (_, i) => addDays(start, i));
-
     return { timelineStart: start, timelineEnd: end, totalDays: Math.max(total, 30), days: daysArr };
   }, [rows]);
 
-  /* ── Build month/week headers ── */
+  /* ── Build month headers ── */
   const monthHeaders = useMemo(() => {
     const headers: Array<{ label: string; startIdx: number; span: number }> = [];
     let currentMonth = -1;
@@ -325,11 +404,7 @@ export default function WorkSchedulePage() {
       const y = d.getFullYear();
       if (m !== currentMonth || y !== currentYear) {
         if (currentMonth >= 0) {
-          headers.push({
-            label: `${MONTH_AR[currentMonth]} ${currentYear}`,
-            startIdx,
-            span: i - startIdx,
-          });
+          headers.push({ label: `${MONTH_AR[currentMonth]} ${currentYear}`, startIdx, span: i - startIdx });
         }
         currentMonth = m;
         currentYear = y;
@@ -337,11 +412,7 @@ export default function WorkSchedulePage() {
       }
     }
     if (currentMonth >= 0) {
-      headers.push({
-        label: `${MONTH_AR[currentMonth]} ${currentYear}`,
-        startIdx,
-        span: days.length - startIdx,
-      });
+      headers.push({ label: `${MONTH_AR[currentMonth]} ${currentYear}`, startIdx, span: days.length - startIdx });
     }
     return headers;
   }, [days]);
@@ -353,7 +424,7 @@ export default function WorkSchedulePage() {
     return daysBetween(timelineStart, today);
   }, [timelineStart]);
 
-  /* ── Sync scroll between table and timeline ── */
+  /* ── Sync scroll ── */
   const syncScroll = (source: "table" | "timeline") => {
     if (source === "table" && tableRef.current && timelineRef.current) {
       timelineRef.current.scrollTop = tableRef.current.scrollTop;
@@ -373,22 +444,76 @@ export default function WorkSchedulePage() {
   const ROW_H = 36;
 
   /* ── Bar position calculator ── */
-  const getBarStyle = (startDate: string | null, endDate: string | null, duration: number) => {
+  const getBarStyle = (startDate: string | null, endDate: string | null, duration: number, serviceCode?: string) => {
+    // Check if there's a drag preview for this service
+    if (serviceCode && dragPreview && dragPreview.serviceCode === serviceCode) {
+      const startOffset = daysBetween(timelineStart, dragPreview.newStart);
+      const barDays = Math.max(daysBetween(dragPreview.newStart, dragPreview.newEnd), 1);
+      return { left: startOffset * dayWidth, width: barDays * dayWidth };
+    }
     if (!startDate) return null;
     const start = new Date(startDate);
     const end = endDate ? new Date(endDate) : addDays(start, duration);
     const startOffset = daysBetween(timelineStart, start);
     const barDays = Math.max(daysBetween(start, end), 1);
-    return {
-      left: startOffset * dayWidth,
-      width: barDays * dayWidth,
-    };
+    return { left: startOffset * dayWidth, width: barDays * dayWidth };
   };
+
+  /* ── Build dependency lines data ── */
+  const dependencyLines = useMemo(() => {
+    const lines: Array<{
+      fromRow: number;
+      toRow: number;
+      fromEndX: number;
+      fromY: number;
+      toStartX: number;
+      toY: number;
+      color: string;
+    }> = [];
+
+    // For each stage, connect sequential services that have dates
+    for (const stage of stages) {
+      const stageCode = (stage as any).stageCode;
+      const color = getColor(stageCode).bar;
+      
+      // Get services with dates in this stage, in order
+      const servicesWithDates = (stage as any).services
+        .map((svc: any, svcIdx: number) => {
+          // Find the row index for this service
+          const rowIdx = rows.findIndex(
+            (r) => r.type === "service" && r.serviceCode === svc.serviceCode
+          );
+          return {
+            serviceCode: svc.serviceCode,
+            startDate: svc.plannedStartDate,
+            endDate: svc.plannedDueDate,
+            rowIdx,
+          };
+        })
+        .filter((s: any) => s.startDate && s.endDate && s.rowIdx >= 0);
+
+      // Connect consecutive services
+      for (let i = 0; i < servicesWithDates.length - 1; i++) {
+        const from = servicesWithDates[i];
+        const to = servicesWithDates[i + 1];
+        
+        const fromEnd = new Date(from.endDate);
+        const toStart = new Date(to.startDate);
+        
+        const fromEndX = daysBetween(timelineStart, fromEnd) * dayWidth;
+        const toStartX = daysBetween(timelineStart, toStart) * dayWidth;
+        const fromY = from.rowIdx * ROW_H + ROW_H / 2;
+        const toY = to.rowIdx * ROW_H + ROW_H / 2;
+
+        lines.push({ fromRow: from.rowIdx, toRow: to.rowIdx, fromEndX, fromY, toStartX, toY, color });
+      }
+    }
+    return lines;
+  }, [rows, stages, timelineStart, dayWidth]);
 
   if (!selectedProjectId) {
     return (
       <div className="min-h-screen bg-white" dir="rtl">
-        {/* Header */}
         <div className="bg-gradient-to-l from-slate-700 to-slate-800 text-white px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -429,7 +554,7 @@ export default function WorkSchedulePage() {
   }
 
   return (
-    <div className="min-h-screen bg-white" dir="rtl">
+    <div className="min-h-screen bg-white" dir="rtl" style={{ cursor: dragInfo ? (dragInfo.mode === "move" ? "grabbing" : "ew-resize") : undefined }}>
       {/* Header */}
       <div className="bg-gradient-to-l from-slate-700 to-slate-800 text-white px-6 py-3">
         <div className="flex items-center justify-between">
@@ -441,6 +566,11 @@ export default function WorkSchedulePage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {/* Drag hint */}
+            <div className="text-[10px] text-slate-400 flex items-center gap-1">
+              <GripVertical className="w-3 h-3" />
+              <span>اسحب الأشرطة لتحريكها</span>
+            </div>
             {/* Zoom controls */}
             <div className="flex items-center gap-1 bg-white/10 rounded-md px-2 py-1">
               <button onClick={() => setDayWidth((w) => Math.max(12, w - 4))} className="p-1 hover:bg-white/10 rounded">
@@ -497,11 +627,12 @@ export default function WorkSchedulePage() {
               const isExpanded = expandedStages.has(row.stageCode);
               const color = getColor(row.stageCode);
               const bgClass = isStage ? "bg-gray-50 font-bold" : idx % 2 === 0 ? "bg-white" : "bg-gray-50/50";
+              const isDragging = dragInfo?.serviceCode === row.serviceCode;
 
               return (
                 <div
                   key={`${row.wbs}-${row.serviceCode || row.stageCode}`}
-                  className={`flex items-center text-xs border-b border-gray-100 ${bgClass} hover:bg-blue-50/30 transition-colors`}
+                  className={`flex items-center text-xs border-b border-gray-100 ${bgClass} ${isDragging ? "bg-blue-50" : "hover:bg-blue-50/30"} transition-colors`}
                   style={{ height: ROW_H }}
                 >
                   {/* WBS */}
@@ -575,7 +706,7 @@ export default function WorkSchedulePage() {
                     )}
                   </div>
 
-                  {/* Duration (editable working days) */}
+                  {/* Duration */}
                   <div
                     className={`w-12 text-center border-l border-gray-100 ${editingRow === row.serviceCode ? "p-0.5" : "text-gray-600"}`}
                     onClick={() => !isStage && editingRow !== row.serviceCode && startEditing(row)}
@@ -638,15 +769,9 @@ export default function WorkSchedulePage() {
               ))}
             </div>
             {/* Day numbers + day-of-week row */}
-            <div
-              ref={(el) => {
-                // We need to sync horizontal scroll with the timeline body
-              }}
-              className="flex"
-              style={{ height: 40, width: totalDays * dayWidth }}
-            >
+            <div className="flex" style={{ height: 40, width: totalDays * dayWidth }}>
               {days.map((d, i) => {
-                const isWeekend = d.getDay() === 5 || d.getDay() === 6; // Fri/Sat
+                const isWeekend = d.getDay() === 5 || d.getDay() === 6;
                 const isToday = daysBetween(d, new Date()) === 0;
                 return (
                   <div
@@ -673,7 +798,6 @@ export default function WorkSchedulePage() {
             style={{ height: "calc(100vh - 132px)" }}
             onScroll={(e) => {
               syncScroll("timeline");
-              // Also sync horizontal scroll of header
               const target = e.currentTarget;
               const headerEl = target.previousElementSibling;
               if (headerEl) {
@@ -718,11 +842,69 @@ export default function WorkSchedulePage() {
                 </div>
               )}
 
+              {/* Dependency arrows (SVG overlay) */}
+              {dependencyLines.length > 0 && (
+                <svg
+                  className="absolute top-0 left-0 pointer-events-none z-10"
+                  style={{ width: totalDays * dayWidth, height: rows.length * ROW_H }}
+                >
+                  <defs>
+                    {/* Arrow markers for each color */}
+                    {Object.entries(STAGE_COLORS).map(([key, val]) => (
+                      <marker
+                        key={key}
+                        id={`arrow-${key}`}
+                        markerWidth="8"
+                        markerHeight="6"
+                        refX="8"
+                        refY="3"
+                        orient="auto"
+                      >
+                        <polygon points="0 0, 8 3, 0 6" fill={val.bar} opacity="0.6" />
+                      </marker>
+                    ))}
+                    <marker
+                      id="arrow-default"
+                      markerWidth="8"
+                      markerHeight="6"
+                      refX="8"
+                      refY="3"
+                      orient="auto"
+                    >
+                      <polygon points="0 0, 8 3, 0 6" fill="#64748b" opacity="0.6" />
+                    </marker>
+                  </defs>
+                  {dependencyLines.map((line, i) => {
+                    // Find the stage code for the marker
+                    const fromRow = rows[line.fromRow];
+                    const markerKey = fromRow ? (STAGE_COLORS[fromRow.stageCode] ? fromRow.stageCode : "default") : "default";
+                    
+                    // Draw an L-shaped or S-shaped connector
+                    const midX = line.fromEndX + (line.toStartX - line.fromEndX) / 2;
+                    const path = `M ${line.fromEndX} ${line.fromY} L ${midX} ${line.fromY} L ${midX} ${line.toY} L ${line.toStartX} ${line.toY}`;
+                    
+                    return (
+                      <path
+                        key={i}
+                        d={path}
+                        fill="none"
+                        stroke={line.color}
+                        strokeWidth="1.5"
+                        strokeOpacity="0.5"
+                        strokeDasharray="4 2"
+                        markerEnd={`url(#arrow-${markerKey})`}
+                      />
+                    );
+                  })}
+                </svg>
+              )}
+
               {/* Row bars */}
               {rows.map((row, idx) => {
                 const isStage = row.type === "stage";
                 const color = getColor(row.stageCode);
-                const barStyle = getBarStyle(row.startDate, row.endDate, row.duration);
+                const barStyle = getBarStyle(row.startDate, row.endDate, row.duration, row.serviceCode);
+                const isDragging = dragInfo?.serviceCode === row.serviceCode;
 
                 if (!barStyle) {
                   return (
@@ -755,21 +937,13 @@ export default function WorkSchedulePage() {
                           className="w-full h-full rounded-sm relative overflow-hidden"
                           style={{ backgroundColor: color.bar }}
                         >
-                          {/* Progress fill */}
                           <div
                             className="absolute inset-0 rounded-sm"
-                            style={{
-                              width: `${row.pctComplete}%`,
-                              backgroundColor: color.bar,
-                              opacity: 1,
-                            }}
+                            style={{ width: `${row.pctComplete}%`, backgroundColor: color.bar, opacity: 1 }}
                           />
                           <div
                             className="absolute inset-0 rounded-sm"
-                            style={{
-                              left: `${row.pctComplete}%`,
-                              backgroundColor: color.barLight,
-                            }}
+                            style={{ left: `${row.pctComplete}%`, backgroundColor: color.barLight }}
                           />
                         </div>
                         {/* Diamond start */}
@@ -784,9 +958,9 @@ export default function WorkSchedulePage() {
                         />
                       </div>
                     ) : (
-                      /* Service bar: full colored bar */
+                      /* Service bar: draggable colored bar */
                       <div
-                        className="absolute rounded-sm flex items-center overflow-hidden shadow-sm"
+                        className={`absolute rounded-sm flex items-center overflow-visible shadow-sm group ${isDragging ? "opacity-70 ring-2 ring-blue-400" : ""}`}
                         style={{
                           top: ROW_H / 2 - 9,
                           left: barStyle.left,
@@ -794,11 +968,14 @@ export default function WorkSchedulePage() {
                           height: 18,
                           backgroundColor: color.barLight,
                           border: `1px solid ${color.bar}40`,
+                          cursor: row.startDate && row.endDate ? "grab" : "default",
+                          userSelect: "none",
                         }}
+                        onMouseDown={(e) => handleDragStart(e, row, "move", timelineStart)}
                       >
                         {/* Progress fill */}
                         <div
-                          className="absolute inset-0 rounded-sm"
+                          className="absolute inset-0 rounded-sm pointer-events-none"
                           style={{
                             width: `${row.pctComplete}%`,
                             backgroundColor: color.bar,
@@ -808,11 +985,24 @@ export default function WorkSchedulePage() {
                         {/* Label inside bar */}
                         {barStyle.width > 60 && (
                           <span
-                            className="relative z-10 text-[9px] font-medium px-1.5 truncate"
+                            className="relative z-10 text-[9px] font-medium px-1.5 truncate pointer-events-none"
                             style={{ color: row.pctComplete > 50 ? "#fff" : color.text }}
                           >
                             {row.name}
                           </span>
+                        )}
+                        {/* Resize handle on the LEFT end (since RTL, left = end of bar) */}
+                        {row.startDate && row.endDate && (
+                          <div
+                            className="absolute top-0 left-0 w-2 h-full cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                            style={{ backgroundColor: color.bar + "80" }}
+                            onMouseDown={(e) => {
+                              e.stopPropagation();
+                              handleDragStart(e, row, "resize-end", timelineStart);
+                            }}
+                          >
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-0.5 h-3 bg-white rounded-full" />
+                          </div>
                         )}
                       </div>
                     )}
@@ -823,6 +1013,19 @@ export default function WorkSchedulePage() {
           </div>
         </div>
       </div>
+
+      {/* Drag tooltip */}
+      {dragPreview && (
+        <div
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-4 py-2 rounded-lg shadow-lg z-50 flex items-center gap-3"
+        >
+          <span>البدء: {fmtDateShort(dragPreview.newStart.toISOString())}</span>
+          <span className="text-slate-400">|</span>
+          <span>الانتهاء: {fmtDateShort(dragPreview.newEnd.toISOString())}</span>
+          <span className="text-slate-400">|</span>
+          <span>المدة: {daysBetween(dragPreview.newStart, dragPreview.newEnd)}d</span>
+        </div>
+      )}
     </div>
   );
 }

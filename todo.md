@@ -115,3 +115,6 @@
 - [x] Gantt chart: start date + working days (5-day week, excl Fri/Sat) → end date auto-calculated
 - [x] Gantt chart: duration column becomes editable input, end date is read-only computed
 - [x] Gantt chart: bars must always appear on timeline when dates are entered
+- [x] Gantt chart: add drag-and-drop to move bars on the timeline (updates start/end dates)
+- [x] Gantt chart: add resize handles on bars to change duration by dragging
+- [x] Gantt chart: add dependency arrows between sequential tasks within each stage
