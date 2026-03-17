@@ -124,3 +124,7 @@
 - [x] Gantt chart: sync status/completion/dates changes back to lifecycle development phases page (uses same DB table)
 - [x] Gantt chart: minimize row height to maximum compactness (rows nearly touching)
 - [x] Gantt chart: minimize column widths to maximum compactness for wider/more comprehensive view
+- [x] Gantt chart: add filter for overdue tasks only (tasks past their end date but not completed)
+- [x] Gantt chart: add filter for tasks without dates assigned
+- [x] Gantt chart: add filter UI buttons/toggles in the header area
+- [x] Gantt chart: add filter for in-progress and not-started tasks with counts

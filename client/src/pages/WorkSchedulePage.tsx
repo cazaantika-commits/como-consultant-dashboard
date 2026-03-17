@@ -17,6 +17,10 @@ import {
   ZoomIn,
   ZoomOut,
   GripVertical,
+  Filter,
+  AlertTriangle,
+  CalendarX2,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -151,6 +155,10 @@ export default function WorkSchedulePage() {
     newStart: Date;
     newEnd: Date;
   } | null>(null);
+
+  /* ── Filter state ── */
+  type FilterMode = "all" | "overdue" | "no_dates" | "in_progress" | "not_started";
+  const [filterMode, setFilterMode] = useState<FilterMode>("all");
 
   const projectsQuery = trpc.projects.list.useQuery();
   const scheduleQuery = trpc.lifecycle.getWorkSchedule.useQuery(
@@ -381,6 +389,63 @@ export default function WorkSchedulePage() {
     return result;
   }, [stages, expandedStages]);
 
+  /* ── Filter rows ── */
+  const today = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d; }, []);
+
+  const filterStats = useMemo(() => {
+    const services = rows.filter(r => r.type === "service");
+    const overdue = services.filter(r => {
+      if (!r.endDate || r.status === "completed") return false;
+      return new Date(r.endDate) < today;
+    }).length;
+    const noDates = services.filter(r => !r.startDate).length;
+    const inProgress = services.filter(r => r.status === "in_progress").length;
+    const notStarted = services.filter(r => r.status === "not_started").length;
+    return { overdue, noDates, inProgress, notStarted, total: services.length };
+  }, [rows, today]);
+
+  const filteredRows = useMemo(() => {
+    if (filterMode === "all") return rows;
+
+    // Find which stages have matching services
+    const matchingStages = new Set<string>();
+    for (const row of rows) {
+      if (row.type !== "service") continue;
+      let matches = false;
+      switch (filterMode) {
+        case "overdue":
+          matches = !!row.endDate && row.status !== "completed" && new Date(row.endDate) < today;
+          break;
+        case "no_dates":
+          matches = !row.startDate;
+          break;
+        case "in_progress":
+          matches = row.status === "in_progress";
+          break;
+        case "not_started":
+          matches = row.status === "not_started";
+          break;
+      }
+      if (matches) matchingStages.add(row.stageCode);
+    }
+
+    // Return stage headers for matching stages + matching services
+    return rows.filter(row => {
+      if (row.type === "stage") return matchingStages.has(row.stageCode);
+      switch (filterMode) {
+        case "overdue":
+          return !!row.endDate && row.status !== "completed" && new Date(row.endDate) < today;
+        case "no_dates":
+          return !row.startDate;
+        case "in_progress":
+          return row.status === "in_progress";
+        case "not_started":
+          return row.status === "not_started";
+      }
+      return true;
+    });
+  }, [rows, filterMode, today]);
+
   /* ── Compute timeline range ── */
   const { timelineStart, timelineEnd, totalDays, days } = useMemo(() => {
     const allDates: Date[] = [];
@@ -587,6 +652,53 @@ export default function WorkSchedulePage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {/* Filter buttons */}
+            <div className="flex items-center gap-1 bg-white/10 rounded-md px-2 py-1">
+              <Filter className="w-3 h-3 text-slate-300 ml-1" />
+              <button
+                onClick={() => setFilterMode("all")}
+                className={`px-2 py-0.5 rounded text-[10px] transition-colors ${
+                  filterMode === "all" ? "bg-white text-slate-800 font-bold" : "text-slate-300 hover:bg-white/10"
+                }`}
+              >
+                الكل ({filterStats.total})
+              </button>
+              <button
+                onClick={() => setFilterMode("overdue")}
+                className={`px-2 py-0.5 rounded text-[10px] transition-colors flex items-center gap-0.5 ${
+                  filterMode === "overdue" ? "bg-red-500 text-white font-bold" : filterStats.overdue > 0 ? "text-red-300 hover:bg-red-500/20" : "text-slate-400 hover:bg-white/10"
+                }`}
+              >
+                <AlertTriangle className="w-3 h-3" />
+                متأخرة ({filterStats.overdue})
+              </button>
+              <button
+                onClick={() => setFilterMode("no_dates")}
+                className={`px-2 py-0.5 rounded text-[10px] transition-colors flex items-center gap-0.5 ${
+                  filterMode === "no_dates" ? "bg-amber-500 text-white font-bold" : filterStats.noDates > 0 ? "text-amber-300 hover:bg-amber-500/20" : "text-slate-400 hover:bg-white/10"
+                }`}
+              >
+                <CalendarX2 className="w-3 h-3" />
+                بدون تواريخ ({filterStats.noDates})
+              </button>
+              <button
+                onClick={() => setFilterMode("in_progress")}
+                className={`px-2 py-0.5 rounded text-[10px] transition-colors flex items-center gap-0.5 ${
+                  filterMode === "in_progress" ? "bg-sky-500 text-white font-bold" : "text-slate-300 hover:bg-white/10"
+                }`}
+              >
+                <Clock className="w-3 h-3" />
+                جاري ({filterStats.inProgress})
+              </button>
+              <button
+                onClick={() => setFilterMode("not_started")}
+                className={`px-2 py-0.5 rounded text-[10px] transition-colors flex items-center gap-0.5 ${
+                  filterMode === "not_started" ? "bg-gray-500 text-white font-bold" : "text-slate-300 hover:bg-white/10"
+                }`}
+              >
+                لم يبدأ ({filterStats.notStarted})
+              </button>
+            </div>
             {/* Drag hint */}
             <div className="text-[10px] text-slate-400 flex items-center gap-1">
               <GripVertical className="w-3 h-3" />
@@ -644,11 +756,13 @@ export default function WorkSchedulePage() {
             style={{ height: "calc(100vh - 116px)" }}
             onScroll={() => syncScroll("table")}
           >
-            {rows.map((row, idx) => {
+            {filteredRows.map((row, idx) => {
               const isStage = row.type === "stage";
               const isExpanded = expandedStages.has(row.stageCode);
               const color = getColor(row.stageCode);
-              const bgClass = isStage ? "bg-gray-50 font-bold" : idx % 2 === 0 ? "bg-white" : "bg-gray-50/50";
+              // Highlight overdue rows
+              const isOverdue = row.type === "service" && row.endDate && row.status !== "completed" && new Date(row.endDate) < today;
+              const bgClass = isStage ? "bg-gray-50 font-bold" : isOverdue ? "bg-red-50" : idx % 2 === 0 ? "bg-white" : "bg-gray-50/50";
               const isDragging = dragInfo?.serviceCode === row.serviceCode;
 
               return (
@@ -856,7 +970,7 @@ export default function WorkSchedulePage() {
           >
             <div style={{ width: totalDays * dayWidth, position: "relative" }}>
               {/* Background grid */}
-              <div className="absolute inset-0" style={{ height: rows.length * ROW_H }}>
+              <div className="absolute inset-0" style={{ height: filteredRows.length * ROW_H }}>
                 {days.map((d, i) => {
                   const isWeekend = d.getDay() === 5 || d.getDay() === 6;
                   return (
@@ -877,7 +991,7 @@ export default function WorkSchedulePage() {
                   className="absolute top-0 z-20"
                   style={{
                     left: todayIdx * dayWidth + dayWidth / 2,
-                    height: rows.length * ROW_H,
+                    height: filteredRows.length * ROW_H,
                     width: 2,
                     backgroundColor: "#eab308",
                   }}
@@ -892,7 +1006,7 @@ export default function WorkSchedulePage() {
               {dependencyLines.length > 0 && (
                 <svg
                   className="absolute top-0 left-0 pointer-events-none z-10"
-                  style={{ width: totalDays * dayWidth, height: rows.length * ROW_H }}
+                  style={{ width: totalDays * dayWidth, height: filteredRows.length * ROW_H }}
                 >
                   <defs>
                     {/* Arrow markers for each color */}
@@ -946,7 +1060,7 @@ export default function WorkSchedulePage() {
               )}
 
               {/* Row bars */}
-              {rows.map((row, idx) => {
+              {filteredRows.map((row, idx) => {
                 const isStage = row.type === "stage";
                 const color = getColor(row.stageCode);
                 const barStyle = getBarStyle(row.startDate, row.endDate, row.duration, row.serviceCode);
