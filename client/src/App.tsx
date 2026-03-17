@@ -105,6 +105,7 @@ function Router() {
       <Route path="/google-connect" component={GoogleConnectPage} />
       <Route path="/project-management" component={ProjectManagementPage} />
       <Route path="/project/:id" component={ProjectDetailPage} />
+      <Route path="/projects/:id" component={ProjectDetailPage} />
       <Route path="/contracts" component={ContractsRegistryPage} />
           <Route path="/news-manage" component={NewsTickerManagePage} />
       <Route path="/fact-sheet" component={FactSheetPage} />

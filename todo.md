@@ -142,3 +142,8 @@
 - [x] Bug fix: Timeline direction should be RTL (right-to-left) - oldest dates on right, newest on left - matching Arabic layout
 - [x] Feature: Add/delete/edit custom tasks within any stage (user can add 5-6 new tasks inside a stage)
 - [x] Bug fix: Changing duration (e.g. 7 days to 20 days) should update the bar length on the timeline (bar uses start+end dates, duration change recalculates end date)
+- [x] Bug: Dates not saving when entered by user (saveEditing now uses state directly instead of refs)
+- [x] Bug: Weekend days should be Saturday and Sunday (changed from Fri/Sat to Sat/Sun)
+- [x] Bug: Status stuck on "completed" for تأسيس المطور - stage status now auto-computed from services
+- [x] Feature: Add "Today" button for quick navigation in timeline (CalendarDays icon + scrollToToday)
+- [x] Bug: Project 6185392 page not opening (added /projects/:id route alias)

@@ -24,6 +24,7 @@ import {
   Plus,
   Trash2,
   X,
+  Crosshair,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -59,7 +60,7 @@ const addWorkingDays = (start: Date, workDays: number): Date => {
   while (remaining > 0) {
     d.setDate(d.getDate() + 1);
     const dow = d.getDay(); // 0=Sun..6=Sat
-    if (dow !== 5 && dow !== 6) remaining--; // skip Fri(5) & Sat(6)
+    if (dow !== 0 && dow !== 6) remaining--; // skip Sat(6) & Sun(0)
   }
   return d;
 };
@@ -71,7 +72,7 @@ const countWorkingDays = (start: Date, end: Date): number => {
   while (d < end) {
     d.setDate(d.getDate() + 1);
     const dow = d.getDay();
-    if (dow !== 5 && dow !== 6) count++;
+    if (dow !== 0 && dow !== 6) count++; // skip Sat(6) & Sun(0)
   }
   return count;
 };
@@ -251,13 +252,13 @@ export default function WorkSchedulePage() {
   };
 
   const saveEditing = (row: RowData) => {
-    // Read from refs (primary) with DOM fallback for robustness
-    let curStart = editStartRef.current;
-    let curDur = editDurationRef.current;
-    const curEnd = editEndRef.current;
-    const curStatus = editStatusRef.current;
+    // Use multiple sources: ref (most current) → state → DOM fallback
+    let curStart = editStartRef.current || editStart;
+    let curDur = editDurationRef.current || editDuration;
+    let curEnd = editEndRef.current || editEnd;
+    const curStatus = editStatusRef.current || editStatus;
 
-    // DOM fallback: if refs are empty but DOM inputs have values, use those
+    // DOM fallback: if still empty, try reading from DOM inputs
     if (!curStart) {
       const dateInput = document.querySelector('input[type="date"]') as HTMLInputElement;
       if (dateInput?.value) curStart = dateInput.value;
@@ -267,16 +268,17 @@ export default function WorkSchedulePage() {
       if (numInput?.value) curDur = Number(numInput.value);
     }
 
-    let finalEnd = curEnd;
+    // Recalculate end date from start + duration
     if (curStart && curDur > 0) {
-      finalEnd = addWorkingDays(new Date(curStart), curDur).toISOString().split("T")[0];
+      curEnd = addWorkingDays(new Date(curStart), curDur).toISOString().split("T")[0];
     }
+
     upsertMutation.mutate({
       projectId: selectedProjectId!,
       serviceCode: row.serviceCode!,
       stageCode: row.stageCode,
       plannedStartDate: curStart || undefined,
-      plannedDueDate: finalEnd || undefined,
+      plannedDueDate: curEnd || undefined,
       operationalStatus: curStatus as any,
     });
   };
@@ -284,7 +286,7 @@ export default function WorkSchedulePage() {
   /* Quick status toggle (click to cycle) — preserves existing dates */
   const cycleStatus = (row: RowData) => {
     if (row.type !== "service") return;
-    const cycle = ["not_started", "in_progress", "completed"];
+    const cycle = ["not_started", "in_progress", "completed", "submitted"];
     const currentIdx = cycle.indexOf(row.status);
     const nextStatus = cycle[(currentIdx + 1) % cycle.length];
     upsertMutation.mutate({
@@ -404,12 +406,22 @@ export default function WorkSchedulePage() {
       ).length;
       const stagePct = totalSvcs > 0 ? Math.round((completedSvcs / totalSvcs) * 100) : 0;
 
+      // Compute stage status from services
+      const inProgressSvcs = (stage as any).services.filter(
+        (s: any) => s.operationalStatus === "in_progress"
+      ).length;
+      const computedStageStatus = completedSvcs === totalSvcs && totalSvcs > 0
+        ? "completed"
+        : (inProgressSvcs > 0 || completedSvcs > 0)
+          ? "in_progress"
+          : "not_started";
+
       result.push({
         type: "stage",
         wbs: `${stageIdx}`,
         name: (stage as any).nameAr,
         stageCode: (stage as any).stageCode,
-        status: (stage as any).status,
+        status: computedStageStatus,
         duration: stageDuration,
         suggestedDuration: 0,
         startDate: stageStart ? stageStart.toISOString() : null,
@@ -788,6 +800,23 @@ export default function WorkSchedulePage() {
                 لم يبدأ ({filterStats.notStarted})
               </button>
             </div>
+            {/* Today button */}
+            <button
+              onClick={() => {
+                if (timelineRef.current && todayIdx > 0) {
+                  const viewportWidth = timelineRef.current.clientWidth;
+                  const todayPixelsFromRight = todayIdx * dayWidth;
+                  const scrollTarget = -(todayPixelsFromRight - viewportWidth / 2);
+                  const maxScroll = -(timelineRef.current.scrollWidth - viewportWidth);
+                  timelineRef.current.scrollTo({ left: Math.max(maxScroll, Math.min(0, scrollTarget)), behavior: 'smooth' });
+                }
+              }}
+              className="flex items-center gap-1 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 rounded-md px-2 py-1 text-[10px] transition-colors"
+              title="انتقل إلى اليوم"
+            >
+              <Crosshair className="w-3 h-3" />
+              <span>اليوم</span>
+            </button>
             {/* Drag hint */}
             <div className="text-[10px] text-slate-400 flex items-center gap-1">
               <GripVertical className="w-3 h-3" />
@@ -927,6 +956,8 @@ export default function WorkSchedulePage() {
                         <option value="not_started">لم يبدأ</option>
                         <option value="in_progress">جاري</option>
                         <option value="completed">مكتمل</option>
+                        <option value="submitted">مُقدّم</option>
+                        <option value="blocked">معلّق</option>
                       </select>
                     ) : (
                       <span className={`inline-block px-1 py-0 rounded text-[9px] font-medium ${STATUS_BADGE[row.status] || STATUS_BADGE.not_started}`}>
@@ -1120,7 +1151,7 @@ export default function WorkSchedulePage() {
               {/* Day numbers + day-of-week row */}
               <div className="flex" style={{ height: 30 }}>
                 {days.map((d, i) => {
-                  const isWeekend = d.getDay() === 5 || d.getDay() === 6;
+                  const isWeekend = d.getDay() === 0 || d.getDay() === 6; // Sat(6) & Sun(0)
                   const isToday = daysBetween(d, new Date()) === 0;
                   return (
                     <div
@@ -1145,7 +1176,7 @@ export default function WorkSchedulePage() {
               {/* Background grid */}
               <div className="absolute inset-0" style={{ height: filteredRows.length * ROW_H }}>
                 {days.map((d, i) => {
-                  const isWeekend = d.getDay() === 5 || d.getDay() === 6;
+                  const isWeekend = d.getDay() === 0 || d.getDay() === 6; // Sat(6) & Sun(0)
                   return (
                     <div
                       key={i}
