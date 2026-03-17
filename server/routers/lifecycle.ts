@@ -330,17 +330,19 @@ export const lifecycleRouter = router({
           )
         );
 
-      const data = {
+      // Only include fields that are explicitly provided (not undefined)
+      // This prevents accidental overwrites when only updating status
+      const data: Record<string, any> = {
         projectId: input.projectId,
         serviceCode: input.serviceCode,
         stageCode: input.stageCode,
-        plannedStartDate: input.plannedStartDate,
-        plannedDueDate: input.plannedDueDate,
-        actualStartDate: input.actualStartDate,
-        actualCloseDate: input.actualCloseDate,
-        notes: input.notes,
-        ...(input.operationalStatus ? { operationalStatus: input.operationalStatus } : {}),
       };
+      if (input.plannedStartDate !== undefined) data.plannedStartDate = input.plannedStartDate;
+      if (input.plannedDueDate !== undefined) data.plannedDueDate = input.plannedDueDate;
+      if (input.actualStartDate !== undefined) data.actualStartDate = input.actualStartDate;
+      if (input.actualCloseDate !== undefined) data.actualCloseDate = input.actualCloseDate;
+      if (input.notes !== undefined) data.notes = input.notes;
+      if (input.operationalStatus) data.operationalStatus = input.operationalStatus;
 
       if (existing.length > 0) {
         await db

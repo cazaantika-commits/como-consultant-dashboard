@@ -132,11 +132,19 @@ export default function WorkSchedulePage() {
   const [expandedStages, setExpandedStages] = useState<Set<string>>(new Set());
   const [dayWidth, setDayWidth] = useState(28);
   const [editingRow, setEditingRow] = useState<string | null>(null);
-  const [editStart, setEditStart] = useState("");
-  const [editDuration, setEditDuration] = useState<number>(0);
-  const [editEnd, setEditEnd] = useState("");
-  const [editStatus, setEditStatus] = useState<string>("not_started");
+  const [editStart, _setEditStart] = useState("");
+  const [editDuration, _setEditDuration] = useState<number>(0);
+  const [editEnd, _setEditEnd] = useState("");
+  const [editStatus, _setEditStatus] = useState<string>("not_started");
   const [editPct, setEditPct] = useState<number>(0);
+  const editStartRef = useRef("");
+  const editDurationRef = useRef(0);
+  const editEndRef = useRef("");
+  const editStatusRef = useRef("not_started");
+  const setEditStart = (v: string) => { editStartRef.current = v; _setEditStart(v); };
+  const setEditDuration = (v: number) => { editDurationRef.current = v; _setEditDuration(v); };
+  const setEditEnd = (v: string) => { editEndRef.current = v; _setEditEnd(v); };
+  const setEditStatus = (v: string) => { editStatusRef.current = v; _setEditStatus(v); };
   const timelineRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
 
@@ -199,30 +207,46 @@ export default function WorkSchedulePage() {
 
   const handleStartChange = (val: string) => {
     setEditStart(val);
-    recalcEnd(val, editDuration);
+    recalcEnd(val, editDurationRef.current);
   };
 
   const handleDurationChange = (val: number) => {
     setEditDuration(val);
-    recalcEnd(editStart, val);
+    recalcEnd(editStartRef.current, val);
   };
 
   const saveEditing = (row: RowData) => {
-    let finalEnd = editEnd;
-    if (editStart && editDuration > 0 && !finalEnd) {
-      finalEnd = addWorkingDays(new Date(editStart), editDuration).toISOString().split("T")[0];
+    // Read from refs (primary) with DOM fallback for robustness
+    let curStart = editStartRef.current;
+    let curDur = editDurationRef.current;
+    const curEnd = editEndRef.current;
+    const curStatus = editStatusRef.current;
+
+    // DOM fallback: if refs are empty but DOM inputs have values, use those
+    if (!curStart) {
+      const dateInput = document.querySelector('input[type="date"]') as HTMLInputElement;
+      if (dateInput?.value) curStart = dateInput.value;
+    }
+    if (!curDur || curDur === 0) {
+      const numInput = document.querySelector('input[type="number"]') as HTMLInputElement;
+      if (numInput?.value) curDur = Number(numInput.value);
+    }
+
+    let finalEnd = curEnd;
+    if (curStart && curDur > 0) {
+      finalEnd = addWorkingDays(new Date(curStart), curDur).toISOString().split("T")[0];
     }
     upsertMutation.mutate({
       projectId: selectedProjectId!,
       serviceCode: row.serviceCode!,
       stageCode: row.stageCode,
-      plannedStartDate: editStart || undefined,
+      plannedStartDate: curStart || undefined,
       plannedDueDate: finalEnd || undefined,
-      operationalStatus: editStatus as any,
+      operationalStatus: curStatus as any,
     });
   };
 
-  /* Quick status toggle (click to cycle) */
+  /* Quick status toggle (click to cycle) — preserves existing dates */
   const cycleStatus = (row: RowData) => {
     if (row.type !== "service") return;
     const cycle = ["not_started", "in_progress", "completed"];
@@ -232,6 +256,8 @@ export default function WorkSchedulePage() {
       projectId: selectedProjectId!,
       serviceCode: row.serviceCode!,
       stageCode: row.stageCode,
+      plannedStartDate: row.startDate || undefined,
+      plannedDueDate: row.endDate || undefined,
       operationalStatus: nextStatus as any,
     });
   };
@@ -364,7 +390,9 @@ export default function WorkSchedulePage() {
         let svcIdx = 0;
         for (const svc of (stage as any).services) {
           svcIdx++;
-          const pct = svc.totalReqs > 0 ? Math.round((svc.completedReqs / svc.totalReqs) * 100) : 0;
+          const reqPct = svc.totalReqs > 0 ? Math.round((svc.completedReqs / svc.totalReqs) * 100) : 0;
+          const statusPct = svc.operationalStatus === "completed" ? 100 : svc.operationalStatus === "in_progress" ? 50 : 0;
+          const pct = svc.totalReqs > 0 ? reqPct : statusPct;
           result.push({
             type: "service",
             wbs: `${stageIdx}.${svcIdx}`,
@@ -372,7 +400,9 @@ export default function WorkSchedulePage() {
             stageCode: (stage as any).stageCode,
             serviceCode: svc.serviceCode,
             status: svc.operationalStatus,
-            duration: svc.expectedDurationDays ?? 0,
+            duration: svc.plannedStartDate && svc.plannedDueDate
+              ? countWorkingDays(new Date(svc.plannedStartDate), new Date(svc.plannedDueDate))
+              : (svc.expectedDurationDays ?? 0),
             suggestedDuration: svc.expectedDurationDays ?? 0,
             startDate: svc.plannedStartDate,
             endDate: svc.plannedDueDate,

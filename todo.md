@@ -128,3 +128,11 @@
 - [x] Gantt chart: add filter for tasks without dates assigned
 - [x] Gantt chart: add filter UI buttons/toggles in the header area
 - [x] Gantt chart: add filter for in-progress and not-started tasks with counts
+- [ ] Bug fix: Gantt bars not appearing on timeline when dates are entered/saved
+- [ ] Bug fix: Completion % should be auto-calculated from service statuses (not manual input)
+- [ ] Stage completion = count of completed services / total services in stage
+- [x] Bug fix: cycleStatus wipes dates when cycling status (doesn't include existing dates in mutation)
+- [x] Bug fix: saveEditing should be more robust with DOM fallback for date values
+- [x] Bug fix: server-side upsertServiceInstance overwrites dates with NULL when only status is sent
+- [x] Unit tests for upsertServiceInstance data builder (5 tests passing)
+- [ ] Improve: Auto-calculate progress % based on requirements completion and status
