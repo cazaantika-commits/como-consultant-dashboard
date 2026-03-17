@@ -118,3 +118,7 @@
 - [x] Gantt chart: add drag-and-drop to move bars on the timeline (updates start/end dates)
 - [x] Gantt chart: add resize handles on bars to change duration by dragging
 - [x] Gantt chart: add dependency arrows between sequential tasks within each stage
+- [x] Gantt chart: add "suggested duration" column showing default/ceiling days from lifecycle data
+- [x] Gantt chart: make status column editable (click to cycle: لم يبدأ → جاري → مكتمل)
+- [x] Gantt chart: make completion % editable (0-100% input)
+- [x] Gantt chart: sync status/completion/dates changes back to lifecycle development phases page (uses same DB table)

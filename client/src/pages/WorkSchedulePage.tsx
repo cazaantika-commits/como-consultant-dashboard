@@ -110,6 +110,7 @@ type RowData = {
   serviceCode?: string;
   status: string;
   duration: number;
+  suggestedDuration: number;
   startDate: string | null;
   endDate: string | null;
   actualStart: string | null;
@@ -130,6 +131,8 @@ export default function WorkSchedulePage() {
   const [editStart, setEditStart] = useState("");
   const [editDuration, setEditDuration] = useState<number>(0);
   const [editEnd, setEditEnd] = useState("");
+  const [editStatus, setEditStatus] = useState<string>("not_started");
+  const [editPct, setEditPct] = useState<number>(0);
   const timelineRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
 
@@ -170,10 +173,12 @@ export default function WorkSchedulePage() {
     const eDate = row.endDate ? new Date(row.endDate).toISOString().split("T")[0] : "";
     setEditStart(sDate);
     setEditEnd(eDate);
+    setEditStatus(row.status || "not_started");
+    setEditPct(row.pctComplete);
     if (sDate && eDate) {
       setEditDuration(countWorkingDays(new Date(sDate), new Date(eDate)));
     } else {
-      setEditDuration(row.duration > 0 ? row.duration : 0);
+      setEditDuration(row.suggestedDuration > 0 ? row.suggestedDuration : (row.duration > 0 ? row.duration : 0));
     }
   };
 
@@ -195,7 +200,6 @@ export default function WorkSchedulePage() {
   };
 
   const saveEditing = (row: RowData) => {
-    if (!editStart) { setEditingRow(null); return; }
     let finalEnd = editEnd;
     if (editStart && editDuration > 0 && !finalEnd) {
       finalEnd = addWorkingDays(new Date(editStart), editDuration).toISOString().split("T")[0];
@@ -206,6 +210,21 @@ export default function WorkSchedulePage() {
       stageCode: row.stageCode,
       plannedStartDate: editStart || undefined,
       plannedDueDate: finalEnd || undefined,
+      operationalStatus: editStatus as any,
+    });
+  };
+
+  /* Quick status toggle (click to cycle) */
+  const cycleStatus = (row: RowData) => {
+    if (row.type !== "service") return;
+    const cycle = ["not_started", "in_progress", "completed"];
+    const currentIdx = cycle.indexOf(row.status);
+    const nextStatus = cycle[(currentIdx + 1) % cycle.length];
+    upsertMutation.mutate({
+      projectId: selectedProjectId!,
+      serviceCode: row.serviceCode!,
+      stageCode: row.stageCode,
+      operationalStatus: nextStatus as any,
     });
   };
 
@@ -322,6 +341,7 @@ export default function WorkSchedulePage() {
         stageCode: (stage as any).stageCode,
         status: (stage as any).status,
         duration: stageDuration,
+        suggestedDuration: 0,
         startDate: stageStart ? stageStart.toISOString() : null,
         endDate: stageEnd ? stageEnd.toISOString() : null,
         actualStart: null,
@@ -345,6 +365,7 @@ export default function WorkSchedulePage() {
             serviceCode: svc.serviceCode,
             status: svc.operationalStatus,
             duration: svc.expectedDurationDays ?? 0,
+            suggestedDuration: svc.expectedDurationDays ?? 0,
             startDate: svc.plannedStartDate,
             endDate: svc.plannedDueDate,
             actualStart: svc.actualStartDate,
@@ -600,18 +621,19 @@ export default function WorkSchedulePage() {
       {/* Main content: table + timeline side by side */}
       <div className="flex h-[calc(100vh-64px)] overflow-hidden">
         {/* LEFT: Task table */}
-        <div className="flex-shrink-0 border-l border-gray-200" style={{ width: 680 }}>
+        <div className="flex-shrink-0 border-l border-gray-200" style={{ width: 780 }}>
           {/* Table header */}
           <div className="bg-gradient-to-l from-cyan-600 to-cyan-700 text-white text-xs font-semibold" style={{ height: 68 }}>
             <div className="flex items-center h-full">
               <div className="w-12 text-center border-l border-cyan-500/40 h-full flex items-center justify-center">WBS</div>
               <div className="flex-1 pr-3 border-l border-cyan-500/40 h-full flex items-center">المهمة</div>
-              <div className="w-20 text-center border-l border-cyan-500/40 h-full flex items-center justify-center">الحالة</div>
+              <div className="w-20 text-center border-l border-cyan-500/40 h-full flex items-center justify-center cursor-pointer" title="انقر لتغيير الحالة">الحالة</div>
               <div className="w-20 text-center border-l border-cyan-500/40 h-full flex items-center justify-center">البدء</div>
               <div className="w-20 text-center border-l border-cyan-500/40 h-full flex items-center justify-center">الانتهاء</div>
-              <div className="w-12 text-center border-l border-cyan-500/40 h-full flex items-center justify-center" title="أيام عمل (أحد-خميس)">المدة</div>
+              <div className="w-14 text-center border-l border-cyan-500/40 h-full flex items-center justify-center text-cyan-200" title="المدة المقترحة من النظام">مقترح</div>
+              <div className="w-14 text-center border-l border-cyan-500/40 h-full flex items-center justify-center" title="أيام عمل فعلية (أحد-خميس)">المدة</div>
               <div className="w-10 text-center border-l border-cyan-500/40 h-full flex items-center justify-center">✓</div>
-              <div className="w-14 text-center h-full flex items-center justify-center">الإنجاز</div>
+              <div className="w-16 text-center h-full flex items-center justify-center">الإنجاز</div>
             </div>
           </div>
 
@@ -660,11 +682,28 @@ export default function WorkSchedulePage() {
                     )}
                   </div>
 
-                  {/* Status */}
-                  <div className="w-20 text-center border-l border-gray-100">
-                    <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${STATUS_BADGE[row.status] || STATUS_BADGE.not_started}`}>
-                      {STATUS_AR[row.status] || row.status}
-                    </span>
+                  {/* Status - clickable to cycle */}
+                  <div
+                    className={`w-20 text-center border-l border-gray-100 ${!isStage ? "cursor-pointer" : ""}`}
+                    onClick={() => !isStage && cycleStatus(row)}
+                    title={!isStage ? "انقر لتغيير الحالة" : undefined}
+                  >
+                    {editingRow === row.serviceCode ? (
+                      <select
+                        value={editStatus}
+                        onChange={(e) => setEditStatus(e.target.value)}
+                        className="w-full text-[9px] border border-blue-300 rounded bg-white px-0.5 py-0.5"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <option value="not_started">لم يبدأ</option>
+                        <option value="in_progress">جاري</option>
+                        <option value="completed">مكتمل</option>
+                      </select>
+                    ) : (
+                      <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${STATUS_BADGE[row.status] || STATUS_BADGE.not_started}`}>
+                        {STATUS_AR[row.status] || row.status}
+                      </span>
+                    )}
                   </div>
 
                   {/* Start date */}
@@ -691,12 +730,12 @@ export default function WorkSchedulePage() {
                     {editingRow === row.serviceCode ? (
                       <div className="flex items-center gap-0.5">
                         <span className="flex-1 text-[9px] text-gray-500 bg-gray-100 rounded px-1 py-0.5">
-                          {editEnd ? fmtDateShort(editEnd) : "—"}
+                          {editEnd ? fmtDateShort(editEnd) : "\u2014"}
                         </span>
                         <button
                           onClick={(e) => { e.stopPropagation(); saveEditing(row); }}
                           className="p-0.5 bg-emerald-500 text-white rounded hover:bg-emerald-600 flex-shrink-0"
-                          title="حفظ"
+                          title="\u062d\u0641\u0638"
                         >
                           <Check className="w-3 h-3" />
                         </button>
@@ -706,9 +745,16 @@ export default function WorkSchedulePage() {
                     )}
                   </div>
 
-                  {/* Duration */}
+                  {/* Suggested Duration (read-only, from system) */}
+                  <div className="w-14 text-center border-l border-gray-100 text-[10px] text-cyan-600 font-medium">
+                    {!isStage && row.suggestedDuration > 0 ? (
+                      <span className="bg-cyan-50 px-1.5 py-0.5 rounded">{row.suggestedDuration}d</span>
+                    ) : isStage ? "" : "\u2014"}
+                  </div>
+
+                  {/* Actual Duration (editable) */}
                   <div
-                    className={`w-12 text-center border-l border-gray-100 ${editingRow === row.serviceCode ? "p-0.5" : "text-gray-600"}`}
+                    className={`w-14 text-center border-l border-gray-100 ${editingRow === row.serviceCode ? "p-0.5" : "text-gray-600"}`}
                     onClick={() => !isStage && editingRow !== row.serviceCode && startEditing(row)}
                   >
                     {editingRow === row.serviceCode ? (
@@ -720,19 +766,19 @@ export default function WorkSchedulePage() {
                         className="w-full h-full text-[10px] border border-blue-300 rounded px-0.5 bg-white text-center"
                       />
                     ) : (
-                      row.duration > 0 ? `${row.duration}d` : "—"
+                      row.duration > 0 ? `${row.duration}d` : "\u2014"
                     )}
                   </div>
 
                   {/* Done check */}
                   <div className="w-10 text-center border-l border-gray-100">
-                    {row.pctComplete === 100 && (
+                    {(row.status === "completed" || row.pctComplete === 100) && (
                       <Check className="w-3.5 h-3.5 text-emerald-500 mx-auto" />
                     )}
                   </div>
 
-                  {/* % Complete */}
-                  <div className="w-14 text-center">
+                  {/* % Complete - editable for services */}
+                  <div className="w-16 text-center">
                     <div className="flex items-center justify-center gap-1">
                       <div className="w-8 h-2 bg-gray-200 rounded-full overflow-hidden">
                         <div
