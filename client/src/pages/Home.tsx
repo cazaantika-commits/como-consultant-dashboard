@@ -58,6 +58,10 @@ import {
   Loader2,
   X,
   HardHat,
+  Megaphone,
+  FolderOpen,
+  Clock,
+  AlertTriangle,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { AgentChatBox, AgentType } from "@/components/AgentChatBox";
@@ -157,7 +161,7 @@ function SortableMainCard({ item, onNavigate }: { item: NavItem; onNavigate: (pa
       {...attributes}
       {...listeners}
       onClick={() => !isDragging && onNavigate(item.path)}
-      className={`group relative rounded-2xl border transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-[0.97] overflow-hidden cursor-grab active:cursor-grabbing select-none touch-none ${
+      className={`group relative rounded-2xl border transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-[0.97] overflow-hidden cursor-grab active:cursor-grabbing select-none touch-none animate-card-stagger ${
         isCommandCenter
           ? 'border-border/60 py-8 px-6 hover:shadow-2xl hover:-translate-y-1.5 hover:border-border/80 before:absolute before:inset-0 before:bg-gradient-to-br before:from-purple-500/5 before:to-transparent before:opacity-0 before:group-hover:opacity-100 before:transition-opacity before:duration-300'
           : 'border-border/40 py-7 px-5'
@@ -214,7 +218,7 @@ function SortableToolCard({ item, onNavigate }: { item: NavItem; onNavigate: (pa
       {...attributes}
       {...listeners}
       onClick={() => !isDragging && onNavigate(item.path)}
-      className={`group relative bg-card hover:bg-card/90 rounded-xl border border-border/50 p-4 text-right transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] overflow-hidden cursor-grab active:cursor-grabbing select-none touch-none ${isDragging ? 'shadow-2xl scale-105 ring-2 ring-primary/30' : ''}`}
+      className={`group relative bg-card hover:bg-card/90 rounded-xl border border-border/50 p-4 text-right transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] overflow-hidden cursor-grab active:cursor-grabbing select-none touch-none animate-card-stagger ${isDragging ? 'shadow-2xl scale-105 ring-2 ring-primary/30' : ''}`}
     >
       <div className="absolute top-0 left-0 right-0 h-[3px] rounded-t-xl" style={{ backgroundColor: item.borderColor }} />
       <div className="flex items-center gap-3 flex-row-reverse">
@@ -562,6 +566,89 @@ export default function Home() {
                   />
                 </div>
               )}
+            </div>
+          </section>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════ */}
+        {/* -- NEWS TICKER (Authenticated) -- */}
+        {/* ══════════════════════════════════════════════════════════════ */}
+        {isAuthenticated && (
+          <section className="pb-4">
+            <div className="relative overflow-hidden rounded-xl bg-gradient-to-l from-amber-50/60 to-orange-50/40 dark:from-amber-950/10 dark:to-orange-950/10 border border-amber-200/30 dark:border-amber-800/20 py-2.5 px-4">
+              <div className="flex items-center gap-3">
+                <div className="shrink-0 flex items-center gap-1.5 pl-3 border-l border-amber-300/40">
+                  <Megaphone className="w-4 h-4 text-amber-600" />
+                  <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 whitespace-nowrap">آخر الأخبار</span>
+                </div>
+                <div className="overflow-hidden flex-1">
+                  <div className="animate-marquee whitespace-nowrap flex gap-12">
+                    <span className="text-xs text-foreground/80 inline-flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>تم اعتماد عقد مشروع ند الشبا — المرحلة التالية: بدء التصاميم</span>
+                    <span className="text-xs text-foreground/80 inline-flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>اجتماع مجلس الإدارة القادم: الأحد 23 مارس الساعة 10 صباحاً</span>
+                    <span className="text-xs text-foreground/80 inline-flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>تقرير السوق الربع سنوي جاهز للمراجعة — 15 مشروع جديد في المنطقة</span>
+                    <span className="text-xs text-foreground/80 inline-flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>تحديث: نسبة إنجاز مشروع الخليج التجاري وصلت 72%</span>
+                    <span className="text-xs text-foreground/80 inline-flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>تنبيه: موعد تسليم مستندات هيئة التنظيم العقاري خلال 5 أيام</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════ */}
+        {/* -- QUICK STATS BAR (Authenticated) -- */}
+        {/* ══════════════════════════════════════════════════════════════ */}
+        {isAuthenticated && (
+          <section className="pb-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="relative bg-card rounded-xl border border-border/40 p-4 overflow-hidden group hover:shadow-md transition-shadow animate-stat-bounce">
+                <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-emerald-500 to-teal-500 rounded-t-xl" />
+                <div className="flex items-center gap-3 flex-row-reverse">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-sm">
+                    <FolderOpen className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1 text-right">
+                    <p className="text-xl font-extrabold text-foreground">5</p>
+                    <p className="text-[10px] text-muted-foreground">مشاريع نشطة</p>
+                  </div>
+                </div>
+              </div>
+              <div className="relative bg-card rounded-xl border border-border/40 p-4 overflow-hidden group hover:shadow-md transition-shadow animate-stat-bounce">
+                <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-blue-500 to-indigo-500 rounded-t-xl" />
+                <div className="flex items-center gap-3 flex-row-reverse">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm">
+                    <ClipboardList className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1 text-right">
+                    <p className="text-xl font-extrabold text-foreground">12</p>
+                    <p className="text-[10px] text-muted-foreground">مهام معلقة</p>
+                  </div>
+                </div>
+              </div>
+              <div className="relative bg-card rounded-xl border border-border/40 p-4 overflow-hidden group hover:shadow-md transition-shadow animate-stat-bounce">
+                <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-amber-500 to-orange-500 rounded-t-xl" />
+                <div className="flex items-center gap-3 flex-row-reverse">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-sm">
+                    <Clock className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1 text-right">
+                    <p className="text-xl font-extrabold text-foreground">3</p>
+                    <p className="text-[10px] text-muted-foreground">اجتماعات قادمة</p>
+                  </div>
+                </div>
+              </div>
+              <div className="relative bg-card rounded-xl border border-border/40 p-4 overflow-hidden group hover:shadow-md transition-shadow animate-stat-bounce">
+                <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-rose-500 to-pink-500 rounded-t-xl" />
+                <div className="flex items-center gap-3 flex-row-reverse">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow-sm">
+                    <AlertTriangle className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1 text-right">
+                    <p className="text-xl font-extrabold text-foreground">2</p>
+                    <p className="text-[10px] text-muted-foreground">تنبيهات عاجلة</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
         )}

@@ -90,3 +90,6 @@
 - [x] Make Salwa's image bigger on the homepage
 - [x] Change 'شيكي على الايميل' to 'البريد الالكتروني'
 - [x] Enlarge Salwa's image to show more of her body, not just face - bigger container and adjust cropping
+- [x] Add animated news ticker below Salwa section with latest updates
+- [x] Add micro-animations (fade-in, bounce) for section icons on page load
+- [x] Add quick stats bar between Salwa section and main sections (active projects, pending tasks, upcoming meetings)

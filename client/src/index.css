@@ -424,3 +424,55 @@
     transform: translateY(0);
   }
 }
+
+/* ── Stagger fade-in for cards ── */
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-card-stagger {
+  opacity: 0;
+  animation: cardFadeIn 0.5s ease-out forwards;
+}
+
+.animate-card-stagger:nth-child(1) { animation-delay: 0.05s; }
+.animate-card-stagger:nth-child(2) { animation-delay: 0.12s; }
+.animate-card-stagger:nth-child(3) { animation-delay: 0.19s; }
+.animate-card-stagger:nth-child(4) { animation-delay: 0.26s; }
+.animate-card-stagger:nth-child(5) { animation-delay: 0.33s; }
+.animate-card-stagger:nth-child(6) { animation-delay: 0.40s; }
+.animate-card-stagger:nth-child(7) { animation-delay: 0.47s; }
+.animate-card-stagger:nth-child(8) { animation-delay: 0.54s; }
+
+/* ── Stats bar bounce-in ── */
+@keyframes statBounceIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-stat-bounce {
+  opacity: 0;
+  animation: statBounceIn 0.6s ease-out forwards;
+}
+
+.animate-stat-bounce:nth-child(1) { animation-delay: 0.1s; }
+.animate-stat-bounce:nth-child(2) { animation-delay: 0.2s; }
+.animate-stat-bounce:nth-child(3) { animation-delay: 0.3s; }
+.animate-stat-bounce:nth-child(4) { animation-delay: 0.4s; }
