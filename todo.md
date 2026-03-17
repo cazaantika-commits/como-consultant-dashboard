@@ -93,3 +93,4 @@
 - [x] Add animated news ticker below Salwa section with latest updates
 - [x] Add micro-animations (fade-in, bounce) for section icons on page load
 - [x] Add quick stats bar between Salwa section and main sections (active projects, pending tasks, upcoming meetings)
+- [x] Bug fix: Scope matrix (مصفوفة النطاق) edits not saving in financial analysis settings

@@ -66,6 +66,7 @@ export function ScopeMatrixTable() {
   });
 
   const [editingCell, setEditingCell] = useState<string | null>(null);
+  const valueChangedRef = React.useRef(false);
 
   const handleChange = useCallback(
     (
@@ -73,10 +74,23 @@ export function ScopeMatrixTable() {
       buildingCategoryId: number,
       status: MatrixStatus
     ) => {
+      valueChangedRef.current = true;
       upsertMutation.mutate({ scopeItemId, buildingCategoryId, status });
-      setEditingCell(null);
     },
     [upsertMutation]
+  );
+
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) {
+        // Small delay to ensure onValueChange fires first
+        setTimeout(() => {
+          setEditingCell(null);
+          valueChangedRef.current = false;
+        }, 50);
+      }
+    },
+    []
   );
 
   if (matrixQuery.isLoading)
@@ -165,9 +179,7 @@ export function ScopeMatrixTable() {
                               )
                             }
                             open
-                            onOpenChange={(open) => {
-                              if (!open) setEditingCell(null);
-                            }}
+                            onOpenChange={handleOpenChange}
                           >
                             <SelectTrigger className="h-7 text-xs w-full">
                               <SelectValue />
