@@ -1,6 +1,16 @@
 import { mysqlTable, mysqlSchema, AnyMySqlColumn, int, varchar, mysqlEnum, text, mediumtext, timestamp, index, foreignKey, bigint, decimal, longtext, tinyint } from "drizzle-orm/mysql-core"
 import { sql } from "drizzle-orm"
 
+export const newsTicker = mysqlTable("news_ticker", {
+	id: int().autoincrement().notNull(),
+	title: varchar({ length: 500 }).notNull(),
+	color: varchar({ length: 20 }).default('#f59e0b'),
+	isActive: tinyint("is_active").default(1).notNull(),
+	sortOrder: int("sort_order").default(0).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
 export const agentActivityLog = mysqlTable("agentActivityLog", {
 	id: int().autoincrement().notNull(),
 	agentName: varchar({ length: 50 }).notNull(),

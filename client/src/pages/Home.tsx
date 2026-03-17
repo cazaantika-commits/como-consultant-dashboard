@@ -236,6 +236,48 @@ function SortableToolCard({ item, onNavigate }: { item: NavItem; onNavigate: (pa
   );
 }
 
+function NewsTicker({ navigate }: { navigate: (path: string) => void }) {
+  const { data: newsItems } = trpc.newsTicker.getActive.useQuery();
+
+  const fallbackItems = [
+    { id: 0, title: "جاري تحميل الأخبار...", color: "#f59e0b" },
+  ];
+
+  const items = newsItems && newsItems.length > 0 ? newsItems : fallbackItems;
+
+  return (
+    <section className="pb-4">
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-l from-amber-50/60 to-orange-50/40 dark:from-amber-950/10 dark:to-orange-950/10 border border-amber-200/30 dark:border-amber-800/20 py-2.5 px-4">
+        <div className="flex items-center gap-3">
+          <div className="shrink-0 flex items-center gap-1.5 pl-3 border-l border-amber-300/40">
+            <Megaphone className="w-4 h-4 text-amber-600" />
+            <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 whitespace-nowrap">آخر الأخبار</span>
+          </div>
+          <div className="overflow-hidden flex-1">
+            <div className="animate-marquee whitespace-nowrap flex gap-12">
+              {[...Array(2)].map((_, rep) =>
+                items.map((item) => (
+                  <span key={`${rep}-${item.id}`} className="text-xs text-foreground/80 inline-flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color || '#f59e0b' }} />
+                    {item.title}
+                  </span>
+                ))
+              )}
+            </div>
+          </div>
+          <button
+            onClick={() => navigate("/news-manage")}
+            className="shrink-0 text-[10px] text-amber-600 hover:text-amber-800 dark:text-amber-400 hover:underline whitespace-nowrap"
+            title="إدارة الأخبار"
+          >
+            إدارة
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function Home() {
   const { user, loading, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
@@ -574,25 +616,7 @@ export default function Home() {
         {/* -- NEWS TICKER (Authenticated) -- */}
         {/* ══════════════════════════════════════════════════════════════ */}
         {isAuthenticated && (
-          <section className="pb-4">
-            <div className="relative overflow-hidden rounded-xl bg-gradient-to-l from-amber-50/60 to-orange-50/40 dark:from-amber-950/10 dark:to-orange-950/10 border border-amber-200/30 dark:border-amber-800/20 py-2.5 px-4">
-              <div className="flex items-center gap-3">
-                <div className="shrink-0 flex items-center gap-1.5 pl-3 border-l border-amber-300/40">
-                  <Megaphone className="w-4 h-4 text-amber-600" />
-                  <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 whitespace-nowrap">آخر الأخبار</span>
-                </div>
-                <div className="overflow-hidden flex-1">
-                  <div className="animate-marquee whitespace-nowrap flex gap-12">
-                    <span className="text-xs text-foreground/80 inline-flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>تم اعتماد عقد مشروع ند الشبا — المرحلة التالية: بدء التصاميم</span>
-                    <span className="text-xs text-foreground/80 inline-flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>اجتماع مجلس الإدارة القادم: الأحد 23 مارس الساعة 10 صباحاً</span>
-                    <span className="text-xs text-foreground/80 inline-flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>تقرير السوق الربع سنوي جاهز للمراجعة — 15 مشروع جديد في المنطقة</span>
-                    <span className="text-xs text-foreground/80 inline-flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>تحديث: نسبة إنجاز مشروع الخليج التجاري وصلت 72%</span>
-                    <span className="text-xs text-foreground/80 inline-flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>تنبيه: موعد تسليم مستندات هيئة التنظيم العقاري خلال 5 أيام</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
+          <NewsTicker navigate={navigate} />
         )}
 
         {/* ══════════════════════════════════════════════════════════════ */}
