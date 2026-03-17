@@ -101,3 +101,5 @@
 - [x] Connect homepage news ticker to real database data
 - [x] Rollback capital scheduling page to before dashboard cards redesign
 - [x] Simplify capital scheduling colors to basic gray/neutral with minimal color accents
+- [x] Add subtle color tints per phase for better differentiation (light blue, light green, etc.)
+- [x] Improve number contrast inside gray cells for better readability

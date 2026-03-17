@@ -33,14 +33,14 @@ function fmtFull(n: number): string {
   return n.toFixed(0);
 }
 
-// ── Phase colors (basic gray/neutral with minimal accents) ──────────────────
-// Clean, calm, professional — gray base with subtle tints
+// ── Phase colors (neutral base with subtle tints for differentiation) ────────
+// Gray foundation + one soft hue per phase for visual distinction
 const PHASE_COLORS = {
   land:         { solid: "#6b7280", light: "#f9fafb", text: "#4b5563" },
-  design:       { solid: "#9ca3af", light: "#f3f4f6", text: "#6b7280" },
-  offplan:      { solid: "#d1d5db", light: "#f9fafb", text: "#9ca3af" },
-  construction: { solid: "#6b7280", light: "#f3f4f6", text: "#4b5563" },
-  handover:     { solid: "#9ca3af", light: "#f3f4f6", text: "#6b7280" },
+  design:       { solid: "#94a8c7", light: "#f0f4f8", text: "#5a6f8a" },
+  offplan:      { solid: "#c4b99a", light: "#f8f6f1", text: "#8a7e65" },
+  construction: { solid: "#8bb5a2", light: "#f0f6f3", text: "#5a7d6b" },
+  handover:     { solid: "#b8a0b4", light: "#f5f1f5", text: "#7d6479" },
 } as const;
 
 type PhaseType = "land" | "design" | "offplan" | "construction" | "handover";
@@ -628,7 +628,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
               }}>
                 <div style={{
                   position: "absolute", inset: 0,
-                  background: "rgba(156, 163, 175, 0.3)",
+                  background: "rgba(196, 185, 154, 0.3)",
                   borderRadius: 4,
                 }} />
               </div>
@@ -1268,7 +1268,7 @@ border: "1px solid #4b5563",
                     if (phase && PHASE_COLORS[phase]) {
                       const colors = PHASE_COLORS[phase];
                       bg        = cd.amount > 0 ? colors.solid : colors.light;
-                      textColor = cd.amount > 0 ? "#000000" : colors.text;
+                      textColor = cd.amount > 0 ? "#1a1a2e" : colors.text;
                       fontW     = cd.amount > 0 ? 800 : 500;
                       if (cd.isFirst) { tl = CURVE; tr = CURVE; }
                       if (cd.isLast) { bl = CURVE; br = CURVE; }
@@ -1349,13 +1349,13 @@ border: "1px solid #4b5563",
                                 style={{
                                   position: "absolute",
                                   inset: 0,
-                                  background: "rgba(156, 163, 175, 0.2)",
+                                  background: "rgba(196, 185, 154, 0.2)",
                                   borderRadius: offplanOverlayRadius,
                                   pointerEvents: "none",
-                                  borderTop: cd.isOffplanFirst ? "2px solid rgba(156, 163, 175, 0.5)" : "none",
-                                  borderBottom: cd.isOffplanLast ? "2px solid rgba(156, 163, 175, 0.25)" : "none",
-                                  borderRight: "1.5px solid rgba(156, 163, 175, 0.35)",
-                                  borderLeft: "1.5px solid rgba(156, 163, 175, 0.4)",
+                                  borderTop: cd.isOffplanFirst ? "2px solid rgba(196, 185, 154, 0.5)" : "none",
+                                  borderBottom: cd.isOffplanLast ? "2px solid rgba(196, 185, 154, 0.25)" : "none",
+                                  borderRight: "1.5px solid rgba(196, 185, 154, 0.35)",
+                                  borderLeft: "1.5px solid rgba(196, 185, 154, 0.4)",
                                 }}
                               />
                             )}
@@ -1397,7 +1397,7 @@ border: "1px solid #4b5563",
                       textAlign: "center",
                       fontSize: 11,
                       fontWeight: row.total > 0 ? 800 : 400,
-                      color: row.total > 0 ? "#000000" : "#94a3b8",
+                      color: row.total > 0 ? "#ffffff" : "#94a3b8",
                     }}
                   >
                     <CellTooltip lines={row.total > 0 ? (() => {
@@ -1431,7 +1431,7 @@ border: "1px solid #4b5563",
                       textAlign: "center",
                       fontSize: 11,
                       fontWeight: cumulativeTotals[row.gi] > 0 ? 800 : 400,
-                      color: cumulativeTotals[row.gi] > 0 ? "#000000" : "#94a3b8",
+                      color: cumulativeTotals[row.gi] > 0 ? "#ffffff" : "#94a3b8",
                     }}
                   >
                     <CellTooltip lines={cumulativeTotals[row.gi] > 0 ? [

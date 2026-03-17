@@ -35,12 +35,12 @@ function fmtTooltipNum(n: number): string {
   return `${n.toFixed(0)} AED`;
 }
 
-// Simple basic colors - neutral grays
+// Neutral base with subtle tints matching vertical view
 const PHASE_BG: Record<string, string> = {
-  design:       "#e5e7eb", // light gray
-  offplan:      "#f3f4f6", // very light gray
-  construction: "#d1d5db", // medium gray
-  handover:     "#e5e7eb", // light gray
+  design:       "#dce4f0", // soft blue tint
+  offplan:      "#ede9de", // soft warm tint
+  construction: "#d8e8df", // soft green tint
+  handover:     "#e5dce3", // soft mauve tint
 };
 
 type PhaseType = "land" | "design" | "offplan" | "construction" | "handover";
