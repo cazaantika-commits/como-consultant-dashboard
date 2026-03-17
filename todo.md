@@ -94,3 +94,4 @@
 - [x] Add micro-animations (fade-in, bounce) for section icons on page load
 - [x] Add quick stats bar between Salwa section and main sections (active projects, pending tasks, upcoming meetings)
 - [x] Bug fix: Scope matrix (مصفوفة النطاق) edits not saving in financial analysis settings
+- [x] Move capabilities section from bottom to above main sections (keep same design)

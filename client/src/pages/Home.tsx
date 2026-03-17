@@ -654,6 +654,81 @@ export default function Home() {
         )}
 
         {/* ══════════════════════════════════════════════════════════════ */}
+        {/* -- CAPABILITIES (moved above main sections) -- */}
+        {/* ══════════════════════════════════════════════════════════════ */}
+        <section className="pb-6">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-red-500 shadow-md shadow-orange-500/20 mb-3">
+              <Rocket className="w-5 h-5 text-white" />
+            </div>
+            <h2 className="text-xl font-bold text-foreground mb-2">قدرات المنصة</h2>
+            <p className="text-sm text-muted-foreground">أدوات متقدمة لإدارة كل جانب من جوانب مشاريعك</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              {
+                icon: BrainCircuit,
+                title: "وكلاء ذكيون",
+                desc: "فريق من الوكلاء المتخصصين يعملون على مدار الساعة",
+                borderColor: "#6366f1",
+                iconBg: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                shadow: "rgba(99, 102, 241, 0.3)",
+              },
+              {
+                icon: Shield,
+                title: "تدقيق العقود",
+                desc: "مراجعة قانونية ذكية للعقود واكتشاف المخاطر",
+                borderColor: "#06b6d4",
+                iconBg: "linear-gradient(135deg, #06b6d4, #0891b2)",
+                shadow: "rgba(6, 182, 212, 0.3)",
+              },
+              {
+                icon: TrendingUp,
+                title: "تحليل مالي",
+                desc: "تحليل الميزانيات والمستخلصات المالية بدقة",
+                borderColor: "#10b981",
+                iconBg: "linear-gradient(135deg, #10b981, #059669)",
+                shadow: "rgba(16, 185, 129, 0.3)",
+              },
+              {
+                icon: Layers,
+                title: "أرشفة ذكية",
+                desc: "تنظيم وأرشفة الملفات تلقائياً بتسمية احترافية",
+                borderColor: "#f59e0b",
+                iconBg: "linear-gradient(135deg, #f59e0b, #d97706)",
+                shadow: "rgba(245, 158, 11, 0.3)",
+              },
+            ].map((feature, i) => (
+              <div
+                key={i}
+                className="relative bg-card rounded-xl border border-border/50 p-5 overflow-hidden hover:shadow-md transition-shadow duration-200"
+              >
+                <div
+                  className="absolute top-0 left-0 right-0 h-[3px] rounded-t-xl"
+                  style={{ backgroundColor: feature.borderColor }}
+                />
+                <div className="flex items-center gap-3.5 flex-row-reverse">
+                  <div
+                    className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+                    style={{
+                      background: feature.iconBg,
+                      boxShadow: `0 4px 14px ${feature.shadow}`,
+                    }}
+                  >
+                    <feature.icon className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="flex-1 pt-0.5">
+                    <h3 className="font-bold text-foreground mb-1 text-sm">{feature.title}</h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{feature.desc}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ══════════════════════════════════════════════════════════════ */}
         {/* -- MAIN NAVIGATION - Big Cards (Authenticated) -- */}
         {/* ══════════════════════════════════════════════════════════════ */}
         {isAuthenticated && (
@@ -735,81 +810,6 @@ export default function Home() {
             </div>
           </section>
         )}
-
-        {/* ══════════════════════════════════════════════════════════════ */}
-        {/* -- CAPABILITIES (for all users) -- */}
-        {/* ══════════════════════════════════════════════════════════════ */}
-        <section className="py-10 border-t border-border/30">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-red-500 shadow-md shadow-orange-500/20 mb-3">
-              <Rocket className="w-5 h-5 text-white" />
-            </div>
-            <h2 className="text-xl font-bold text-foreground mb-2">قدرات المنصة</h2>
-            <p className="text-sm text-muted-foreground">أدوات متقدمة لإدارة كل جانب من جوانب مشاريعك</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              {
-                icon: BrainCircuit,
-                title: "وكلاء ذكيون",
-                desc: "فريق من الوكلاء المتخصصين يعملون على مدار الساعة",
-                borderColor: "#6366f1",
-                iconBg: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                shadow: "rgba(99, 102, 241, 0.3)",
-              },
-              {
-                icon: Shield,
-                title: "تدقيق العقود",
-                desc: "مراجعة قانونية ذكية للعقود واكتشاف المخاطر",
-                borderColor: "#06b6d4",
-                iconBg: "linear-gradient(135deg, #06b6d4, #0891b2)",
-                shadow: "rgba(6, 182, 212, 0.3)",
-              },
-              {
-                icon: TrendingUp,
-                title: "تحليل مالي",
-                desc: "تحليل الميزانيات والمستخلصات المالية بدقة",
-                borderColor: "#10b981",
-                iconBg: "linear-gradient(135deg, #10b981, #059669)",
-                shadow: "rgba(16, 185, 129, 0.3)",
-              },
-              {
-                icon: Layers,
-                title: "أرشفة ذكية",
-                desc: "تنظيم وأرشفة الملفات تلقائياً بتسمية احترافية",
-                borderColor: "#f59e0b",
-                iconBg: "linear-gradient(135deg, #f59e0b, #d97706)",
-                shadow: "rgba(245, 158, 11, 0.3)",
-              },
-            ].map((feature, i) => (
-              <div
-                key={i}
-                className="relative bg-card rounded-xl border border-border/50 p-5 overflow-hidden hover:shadow-md transition-shadow duration-200"
-              >
-                <div
-                  className="absolute top-0 left-0 right-0 h-[3px] rounded-t-xl"
-                  style={{ backgroundColor: feature.borderColor }}
-                />
-                <div className="flex items-center gap-3.5 flex-row-reverse">
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
-                    style={{
-                      background: feature.iconBg,
-                      boxShadow: `0 4px 14px ${feature.shadow}`,
-                    }}
-                  >
-                    <feature.icon className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="flex-1 pt-0.5">
-                    <h3 className="font-bold text-foreground mb-1 text-sm">{feature.title}</h3>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{feature.desc}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
 
         {/* ══════════════════════════════════════════════════════════════ */}
         {/* -- Agent Team Section -- */}
