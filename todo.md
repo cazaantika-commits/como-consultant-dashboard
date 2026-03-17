@@ -147,3 +147,6 @@
 - [x] Bug: Status stuck on "completed" for تأسيس المطور - stage status now auto-computed from services
 - [x] Feature: Add "Today" button for quick navigation in timeline (CalendarDays icon + scrollToToday)
 - [x] Bug: Project 6185392 page not opening (added /projects/:id route alias)
+- [x] Bug: Today button not working (scroll-to-today logic fixed for RTL)
+- [x] Bug: Project 6185392 still not opening (fixed Invalid Date crash with safeDate helper)
+- [x] Bug: Bar extends in wrong direction when duration changes (fixed RTL bar positioning: right=startOffset*dayWidth)

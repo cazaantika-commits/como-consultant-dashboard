@@ -29,9 +29,16 @@ import {
 import { toast } from "sonner";
 
 /* ── helpers ── */
+const safeDate = (d: string | null | undefined): Date | null => {
+  if (!d) return null;
+  const dt = new Date(d);
+  return isNaN(dt.getTime()) ? null : dt;
+};
+
 const fmtDate = (d: string | null) => {
   if (!d) return "—";
-  const dt = new Date(d);
+  const dt = safeDate(d);
+  if (!dt) return "—";
   const day = dt.getDate().toString().padStart(2, "0");
   const months = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
   return `${day} ${months[dt.getMonth()]} ${dt.getFullYear().toString().slice(2)}`;
@@ -39,7 +46,8 @@ const fmtDate = (d: string | null) => {
 
 const fmtDateShort = (d: string | null) => {
   if (!d) return "—";
-  const dt = new Date(d);
+  const dt = safeDate(d);
+  if (!dt) return "—";
   const day = dt.getDate();
   const mon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][dt.getMonth()];
   return `${day}-${mon}-${dt.getFullYear().toString().slice(2)}`;
@@ -221,8 +229,10 @@ export default function WorkSchedulePage() {
   const startEditing = (row: RowData) => {
     if (row.type !== "service") return;
     setEditingRow(row.serviceCode!);
-    const sDate = row.startDate ? new Date(row.startDate).toISOString().split("T")[0] : "";
-    const eDate = row.endDate ? new Date(row.endDate).toISOString().split("T")[0] : "";
+    const sDateObj = safeDate(row.startDate);
+    const eDateObj = safeDate(row.endDate);
+    const sDate = sDateObj ? sDateObj.toISOString().split("T")[0] : "";
+    const eDate = eDateObj ? eDateObj.toISOString().split("T")[0] : "";
     setEditStart(sDate);
     setEditEnd(eDate);
     setEditStatus(row.status || "not_started");
@@ -307,6 +317,9 @@ export default function WorkSchedulePage() {
     timelineStartDate: Date
   ) => {
     if (row.type !== "service" || !row.startDate || !row.endDate) return;
+    const origStart = safeDate(row.startDate);
+    const origEnd = safeDate(row.endDate);
+    if (!origStart || !origEnd) return;
     e.preventDefault();
     e.stopPropagation();
     setDragInfo({
@@ -314,8 +327,8 @@ export default function WorkSchedulePage() {
       stageCode: row.stageCode,
       mode,
       startX: e.clientX,
-      origStartDate: new Date(row.startDate),
-      origEndDate: new Date(row.endDate),
+      origStartDate: origStart,
+      origEndDate: origEnd,
       origDuration: row.duration,
     });
   }, []);
@@ -391,11 +404,11 @@ export default function WorkSchedulePage() {
     for (const stage of stages) {
       stageIdx++;
       const svcDates = (stage as any).services
-        .filter((s: any) => s.plannedStartDate && s.plannedDueDate)
         .map((s: any) => ({
-          start: new Date(s.plannedStartDate),
-          end: new Date(s.plannedDueDate),
-        }));
+          start: safeDate(s.plannedStartDate),
+          end: safeDate(s.plannedDueDate),
+        }))
+        .filter((d: any) => d.start !== null && d.end !== null);
       const stageStart = svcDates.length > 0 ? new Date(Math.min(...svcDates.map((d: any) => d.start.getTime()))) : null;
       const stageEnd = svcDates.length > 0 ? new Date(Math.max(...svcDates.map((d: any) => d.end.getTime()))) : null;
       const stageDuration = stageStart && stageEnd ? daysBetween(stageStart, stageEnd) : 0;
@@ -448,8 +461,8 @@ export default function WorkSchedulePage() {
             stageCode: (stage as any).stageCode,
             serviceCode: svc.serviceCode,
             status: svc.operationalStatus,
-            duration: svc.plannedStartDate && svc.plannedDueDate
-              ? countWorkingDays(new Date(svc.plannedStartDate), new Date(svc.plannedDueDate))
+            duration: safeDate(svc.plannedStartDate) && safeDate(svc.plannedDueDate)
+              ? countWorkingDays(safeDate(svc.plannedStartDate)!, safeDate(svc.plannedDueDate)!)
               : (svc.expectedDurationDays ?? 0),
             suggestedDuration: svc.expectedDurationDays ?? 0,
             startDate: svc.plannedStartDate,
@@ -474,7 +487,8 @@ export default function WorkSchedulePage() {
     const services = rows.filter(r => r.type === "service");
     const overdue = services.filter(r => {
       if (!r.endDate || r.status === "completed") return false;
-      return new Date(r.endDate) < today;
+      const ed = safeDate(r.endDate);
+      return ed ? ed < today : false;
     }).length;
     const noDates = services.filter(r => !r.startDate).length;
     const inProgress = services.filter(r => r.status === "in_progress").length;
@@ -492,7 +506,7 @@ export default function WorkSchedulePage() {
       let matches = false;
       switch (filterMode) {
         case "overdue":
-          matches = !!row.endDate && row.status !== "completed" && new Date(row.endDate) < today;
+          matches = !!row.endDate && row.status !== "completed" && (safeDate(row.endDate) ? safeDate(row.endDate)! < today : false);
           break;
         case "no_dates":
           matches = !row.startDate;
@@ -512,7 +526,7 @@ export default function WorkSchedulePage() {
       if (row.type === "stage") return matchingStages.has(row.stageCode);
       switch (filterMode) {
         case "overdue":
-          return !!row.endDate && row.status !== "completed" && new Date(row.endDate) < today;
+          return !!row.endDate && row.status !== "completed" && (safeDate(row.endDate) ? safeDate(row.endDate)! < today : false);
         case "no_dates":
           return !row.startDate;
         case "in_progress":
@@ -528,10 +542,10 @@ export default function WorkSchedulePage() {
   const { timelineStart, timelineEnd, totalDays, days } = useMemo(() => {
     const allDates: Date[] = [];
     for (const row of rows) {
-      if (row.startDate) allDates.push(new Date(row.startDate));
-      if (row.endDate) allDates.push(new Date(row.endDate));
-      if (row.actualStart) allDates.push(new Date(row.actualStart));
-      if (row.actualEnd) allDates.push(new Date(row.actualEnd));
+      const sd = safeDate(row.startDate); if (sd) allDates.push(sd);
+      const ed = safeDate(row.endDate); if (ed) allDates.push(ed);
+      const as = safeDate(row.actualStart); if (as) allDates.push(as);
+      const ae = safeDate(row.actualEnd); if (ae) allDates.push(ae);
     }
     allDates.push(new Date());
 
@@ -590,8 +604,8 @@ export default function WorkSchedulePage() {
   }, [timelineStart]);
 
   const todayRightPos = useMemo(() => {
-    return (totalDays - todayIdx) * dayWidth;
-  }, [totalDays, todayIdx, dayWidth]);
+    return todayIdx * dayWidth;
+  }, [todayIdx, dayWidth]);
 
   /* ── Sync scroll ── */
   const syncScroll = (source: "table" | "timeline") => {
@@ -624,22 +638,21 @@ export default function WorkSchedulePage() {
 
   /* ── Bar position calculator (RTL: right = oldest, left = newest) ── */
   const getBarStyle = (startDate: string | null, endDate: string | null, duration: number, serviceCode?: string) => {
-    // In RTL mode, position is calculated from the RIGHT edge
-    // right = (totalDays - daysBetween(timelineStart, endDate)) * dayWidth
-    // which equals: the bar's RIGHT edge starts at the endDate position from the right
+    // RTL: days[0] is at right:0 (oldest). days[i] is at right: i*dayWidth.
+    // Bar starts at startDate, extends LEFT (towards newer dates).
+    // right = daysBetween(timelineStart, startDate) * dayWidth
     if (serviceCode && dragPreview && dragPreview.serviceCode === serviceCode) {
       const barDays = Math.max(daysBetween(dragPreview.newStart, dragPreview.newEnd), 1);
-      const endOffset = daysBetween(timelineStart, dragPreview.newEnd);
-      const rightPos = (totalDays - endOffset) * dayWidth;
-      return { right: rightPos, width: barDays * dayWidth };
+      const startOffset = daysBetween(timelineStart, dragPreview.newStart);
+      return { right: startOffset * dayWidth, width: barDays * dayWidth };
     }
     if (!startDate) return null;
-    const start = new Date(startDate);
-    const end = endDate ? new Date(endDate) : addDays(start, duration);
+    const start = safeDate(startDate);
+    if (!start) return null;
+    const end = safeDate(endDate) || addDays(start, duration);
     const barDays = Math.max(daysBetween(start, end), 1);
-    const endOffset = daysBetween(timelineStart, end);
-    const rightPos = (totalDays - endOffset) * dayWidth;
-    return { right: rightPos, width: barDays * dayWidth };
+    const startOffset = daysBetween(timelineStart, start);
+    return { right: startOffset * dayWidth, width: barDays * dayWidth };
   };
 
   /* ── Build dependency lines data ── */
@@ -680,15 +693,21 @@ export default function WorkSchedulePage() {
         const from = servicesWithDates[i];
         const to = servicesWithDates[i + 1];
         
-        const fromEnd = new Date(from.endDate);
-        const toStart = new Date(to.startDate);
+        const fromEnd = safeDate(from.endDate);
+        const toStart = safeDate(to.startDate);
+        if (!fromEnd || !toStart) continue;
         
-        // In RTL, convert to pixel positions from LEFT edge of the SVG
+        // RTL: bars use CSS `right` from right edge. SVG uses X from left edge.
+        // Convert: X_from_left = totalWidth - right_from_right
+        // Bar right edge (start date) is at right: startOffset*dayWidth from right = totalWidth - startOffset*dayWidth from left
+        // Bar left edge (end date) is at right: startOffset*dayWidth + width from right
         const fromEndOffset = daysBetween(timelineStart, fromEnd);
         const toStartOffset = daysBetween(timelineStart, toStart);
-        // RTL: position from left = totalDays*dayWidth - offset*dayWidth
-        const fromEndX = totalDays * dayWidth - fromEndOffset * dayWidth;
-        const toStartX = totalDays * dayWidth - toStartOffset * dayWidth;
+        // End of 'from' bar (left edge in RTL) = totalWidth - (fromEndOffset * dayWidth)
+        const totalWidth = totalDays * dayWidth;
+        const fromEndX = totalWidth - (fromEndOffset * dayWidth);
+        // Start of 'to' bar (right edge in RTL) = totalWidth - (toStartOffset * dayWidth)
+        const toStartX = totalWidth - (toStartOffset * dayWidth);
         const fromY = from.rowIdx * ROW_H + ROW_H / 2;
         const toY = to.rowIdx * ROW_H + ROW_H / 2;
 
@@ -879,7 +898,7 @@ export default function WorkSchedulePage() {
               const isExpanded = expandedStages.has(row.stageCode);
               const color = getColor(row.stageCode);
               // Highlight overdue rows
-              const isOverdue = row.type === "service" && row.endDate && row.status !== "completed" && new Date(row.endDate) < today;
+              const isOverdue = row.type === "service" && row.endDate && row.status !== "completed" && (safeDate(row.endDate) ? safeDate(row.endDate)! < today : false);
               const bgClass = isStage ? "bg-gray-50 font-bold" : isOverdue ? "bg-red-50" : idx % 2 === 0 ? "bg-white" : "bg-gray-50/50";
               const isDragging = dragInfo?.serviceCode === row.serviceCode;
 
