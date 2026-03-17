@@ -122,3 +122,5 @@
 - [x] Gantt chart: make status column editable (click to cycle: لم يبدأ → جاري → مكتمل)
 - [x] Gantt chart: make completion % editable (0-100% input)
 - [x] Gantt chart: sync status/completion/dates changes back to lifecycle development phases page (uses same DB table)
+- [x] Gantt chart: minimize row height to maximum compactness (rows nearly touching)
+- [x] Gantt chart: minimize column widths to maximum compactness for wider/more comprehensive view

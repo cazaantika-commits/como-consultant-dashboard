@@ -462,7 +462,7 @@ export default function WorkSchedulePage() {
     }
   }, [todayIdx, dayWidth, rows.length]);
 
-  const ROW_H = 36;
+  const ROW_H = 24;
 
   /* ── Bar position calculator ── */
   const getBarStyle = (startDate: string | null, endDate: string | null, duration: number, serviceCode?: string) => {
@@ -621,19 +621,19 @@ export default function WorkSchedulePage() {
       {/* Main content: table + timeline side by side */}
       <div className="flex h-[calc(100vh-64px)] overflow-hidden">
         {/* LEFT: Task table */}
-        <div className="flex-shrink-0 border-l border-gray-200" style={{ width: 780 }}>
+        <div className="flex-shrink-0 border-l border-gray-200" style={{ width: 620 }}>
           {/* Table header */}
-          <div className="bg-gradient-to-l from-cyan-600 to-cyan-700 text-white text-xs font-semibold" style={{ height: 68 }}>
+          <div className="bg-gradient-to-l from-cyan-600 to-cyan-700 text-white text-xs font-semibold" style={{ height: 52 }}>
             <div className="flex items-center h-full">
-              <div className="w-12 text-center border-l border-cyan-500/40 h-full flex items-center justify-center">WBS</div>
-              <div className="flex-1 pr-3 border-l border-cyan-500/40 h-full flex items-center">المهمة</div>
-              <div className="w-20 text-center border-l border-cyan-500/40 h-full flex items-center justify-center cursor-pointer" title="انقر لتغيير الحالة">الحالة</div>
-              <div className="w-20 text-center border-l border-cyan-500/40 h-full flex items-center justify-center">البدء</div>
-              <div className="w-20 text-center border-l border-cyan-500/40 h-full flex items-center justify-center">الانتهاء</div>
-              <div className="w-14 text-center border-l border-cyan-500/40 h-full flex items-center justify-center text-cyan-200" title="المدة المقترحة من النظام">مقترح</div>
-              <div className="w-14 text-center border-l border-cyan-500/40 h-full flex items-center justify-center" title="أيام عمل فعلية (أحد-خميس)">المدة</div>
-              <div className="w-10 text-center border-l border-cyan-500/40 h-full flex items-center justify-center">✓</div>
-              <div className="w-16 text-center h-full flex items-center justify-center">الإنجاز</div>
+             <div className="w-8 text-center border-l border-cyan-500/40 h-full flex items-center justify-center text-[10px]">WBS</div>
+              <div className="flex-1 pr-2 border-l border-cyan-500/40 h-full flex items-center text-[10px]">المهمة</div>
+              <div className="w-14 text-center border-l border-cyan-500/40 h-full flex items-center justify-center cursor-pointer text-[10px]" title="انقر لتغيير الحالة">الحالة</div>
+              <div className="w-16 text-center border-l border-cyan-500/40 h-full flex items-center justify-center text-[10px]">البدء</div>
+              <div className="w-16 text-center border-l border-cyan-500/40 h-full flex items-center justify-center text-[10px]">الانتهاء</div>
+              <div className="w-10 text-center border-l border-cyan-500/40 h-full flex items-center justify-center text-cyan-200 text-[10px]" title="المدة المقترحة من النظام">مقترح</div>
+              <div className="w-10 text-center border-l border-cyan-500/40 h-full flex items-center justify-center text-[10px]" title="أيام عمل فعلية (أحد-خميس)">المدة</div>
+              <div className="w-6 text-center border-l border-cyan-500/40 h-full flex items-center justify-center text-[10px]">✓</div>
+              <div className="w-12 text-center h-full flex items-center justify-center text-[10px]">%</div>
             </div>
           </div>
 
@@ -641,7 +641,7 @@ export default function WorkSchedulePage() {
           <div
             ref={tableRef}
             className="overflow-y-auto overflow-x-hidden"
-            style={{ height: "calc(100vh - 132px)" }}
+            style={{ height: "calc(100vh - 116px)" }}
             onScroll={() => syncScroll("table")}
           >
             {rows.map((row, idx) => {
@@ -658,25 +658,25 @@ export default function WorkSchedulePage() {
                   style={{ height: ROW_H }}
                 >
                   {/* WBS */}
-                  <div className="w-12 text-center text-gray-500 font-mono border-l border-gray-100">
+                  <div className="w-8 text-center text-gray-500 font-mono border-l border-gray-100 text-[9px]">
                     {row.wbs}
                   </div>
 
                   {/* Task name */}
                   <div
-                    className={`flex-1 pr-2 truncate border-l border-gray-100 flex items-center gap-1 ${isStage ? "cursor-pointer" : "pr-6"}`}
+                    className={`flex-1 pr-1 truncate border-l border-gray-100 flex items-center gap-0.5 text-[10px] ${isStage ? "cursor-pointer" : "pr-3"}`}
                     onClick={isStage ? () => toggleStage(row.stageCode) : undefined}
                     style={{ color: isStage ? color.text : "#374151" }}
                   >
                     {isStage && (
                       <ChevronDown
-                        className={`w-3.5 h-3.5 flex-shrink-0 transition-transform ${isExpanded ? "" : "-rotate-90"}`}
+                        className={`w-3 h-3 flex-shrink-0 transition-transform ${isExpanded ? "" : "-rotate-90"}`}
                         style={{ color: color.bar }}
                       />
                     )}
                     <span className="truncate">{row.name}</span>
                     {isStage && (
-                      <span className="text-[10px] text-gray-400 mr-1">
+                      <span className="text-[8px] text-gray-400 mr-0.5">
                         ({row.completedServices}/{row.totalServices})
                       </span>
                     )}
@@ -684,7 +684,7 @@ export default function WorkSchedulePage() {
 
                   {/* Status - clickable to cycle */}
                   <div
-                    className={`w-20 text-center border-l border-gray-100 ${!isStage ? "cursor-pointer" : ""}`}
+                    className={`w-14 text-center border-l border-gray-100 ${!isStage ? "cursor-pointer" : ""}`}
                     onClick={() => !isStage && cycleStatus(row)}
                     title={!isStage ? "انقر لتغيير الحالة" : undefined}
                   >
@@ -692,7 +692,7 @@ export default function WorkSchedulePage() {
                       <select
                         value={editStatus}
                         onChange={(e) => setEditStatus(e.target.value)}
-                        className="w-full text-[9px] border border-blue-300 rounded bg-white px-0.5 py-0.5"
+                        className="w-full text-[8px] border border-blue-300 rounded bg-white px-0 py-0"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <option value="not_started">لم يبدأ</option>
@@ -700,7 +700,7 @@ export default function WorkSchedulePage() {
                         <option value="completed">مكتمل</option>
                       </select>
                     ) : (
-                      <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${STATUS_BADGE[row.status] || STATUS_BADGE.not_started}`}>
+                      <span className={`inline-block px-1 py-0 rounded text-[9px] font-medium ${STATUS_BADGE[row.status] || STATUS_BADGE.not_started}`}>
                         {STATUS_AR[row.status] || row.status}
                       </span>
                     )}
@@ -708,7 +708,7 @@ export default function WorkSchedulePage() {
 
                   {/* Start date */}
                   <div
-                    className={`w-20 text-center text-[10px] border-l border-gray-100 ${!isStage && !editingRow ? "cursor-pointer hover:bg-blue-50" : ""} ${editingRow === row.serviceCode ? "p-0.5" : "text-gray-600"}`}
+                    className={`w-16 text-center text-[9px] border-l border-gray-100 ${!isStage && !editingRow ? "cursor-pointer hover:bg-blue-50" : ""} ${editingRow === row.serviceCode ? "p-0" : "text-gray-600"}`}
                     onClick={() => !isStage && editingRow !== row.serviceCode && startEditing(row)}
                   >
                     {editingRow === row.serviceCode ? (
@@ -716,7 +716,7 @@ export default function WorkSchedulePage() {
                         type="date"
                         value={editStart}
                         onChange={(e) => handleStartChange(e.target.value)}
-                        className="w-full h-full text-[9px] border border-blue-300 rounded px-0.5 bg-white"
+                        className="w-full h-full text-[8px] border border-blue-300 rounded px-0 bg-white"
                       />
                     ) : (
                       fmtDateShort(row.startDate)
@@ -725,11 +725,11 @@ export default function WorkSchedulePage() {
 
                   {/* End date (read-only, auto-computed) */}
                   <div
-                    className={`w-20 text-center text-[10px] border-l border-gray-100 ${editingRow === row.serviceCode ? "p-0.5 bg-gray-50" : "text-gray-600"}`}
+                    className={`w-16 text-center text-[9px] border-l border-gray-100 ${editingRow === row.serviceCode ? "p-0 bg-gray-50" : "text-gray-600"}`}
                   >
                     {editingRow === row.serviceCode ? (
                       <div className="flex items-center gap-0.5">
-                        <span className="flex-1 text-[9px] text-gray-500 bg-gray-100 rounded px-1 py-0.5">
+                        <span className="flex-1 text-[8px] text-gray-500 bg-gray-100 rounded px-0.5 py-0">
                           {editEnd ? fmtDateShort(editEnd) : "\u2014"}
                         </span>
                         <button
@@ -746,15 +746,15 @@ export default function WorkSchedulePage() {
                   </div>
 
                   {/* Suggested Duration (read-only, from system) */}
-                  <div className="w-14 text-center border-l border-gray-100 text-[10px] text-cyan-600 font-medium">
+                  <div className="w-10 text-center border-l border-gray-100 text-[9px] text-cyan-600 font-medium">
                     {!isStage && row.suggestedDuration > 0 ? (
-                      <span className="bg-cyan-50 px-1.5 py-0.5 rounded">{row.suggestedDuration}d</span>
+                      <span className="bg-cyan-50 px-0.5 py-0 rounded text-[8px]">{row.suggestedDuration}d</span>
                     ) : isStage ? "" : "\u2014"}
                   </div>
 
                   {/* Actual Duration (editable) */}
                   <div
-                    className={`w-14 text-center border-l border-gray-100 ${editingRow === row.serviceCode ? "p-0.5" : "text-gray-600"}`}
+                    className={`w-10 text-center border-l border-gray-100 text-[9px] ${editingRow === row.serviceCode ? "p-0" : "text-gray-600"}`}
                     onClick={() => !isStage && editingRow !== row.serviceCode && startEditing(row)}
                   >
                     {editingRow === row.serviceCode ? (
@@ -763,7 +763,7 @@ export default function WorkSchedulePage() {
                         min={1}
                         value={editDuration || ""}
                         onChange={(e) => handleDurationChange(Number(e.target.value))}
-                        className="w-full h-full text-[10px] border border-blue-300 rounded px-0.5 bg-white text-center"
+                        className="w-full h-full text-[8px] border border-blue-300 rounded px-0 bg-white text-center"
                       />
                     ) : (
                       row.duration > 0 ? `${row.duration}d` : "\u2014"
@@ -771,16 +771,16 @@ export default function WorkSchedulePage() {
                   </div>
 
                   {/* Done check */}
-                  <div className="w-10 text-center border-l border-gray-100">
+                  <div className="w-6 text-center border-l border-gray-100">
                     {(row.status === "completed" || row.pctComplete === 100) && (
-                      <Check className="w-3.5 h-3.5 text-emerald-500 mx-auto" />
+                      <Check className="w-3 h-3 text-emerald-500 mx-auto" />
                     )}
                   </div>
 
                   {/* % Complete - editable for services */}
-                  <div className="w-16 text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <div className="w-8 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div className="w-12 text-center">
+                    <div className="flex items-center justify-center gap-0.5">
+                      <div className="w-6 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all"
                           style={{
@@ -789,7 +789,7 @@ export default function WorkSchedulePage() {
                           }}
                         />
                       </div>
-                      <span className="text-[10px] text-gray-500">{row.pctComplete}%</span>
+                      <span className="text-[8px] text-gray-500">{row.pctComplete}%</span>
                     </div>
                   </div>
                 </div>
@@ -801,9 +801,9 @@ export default function WorkSchedulePage() {
         {/* RIGHT: Timeline / Gantt bars */}
         <div className="flex-1 overflow-hidden">
           {/* Timeline header */}
-          <div className="bg-gradient-to-l from-cyan-600 to-cyan-700 text-white" style={{ height: 68 }}>
+          <div className="bg-gradient-to-l from-cyan-600 to-cyan-700 text-white" style={{ height: 52 }}>
             {/* Month row */}
-            <div className="flex text-xs font-semibold" style={{ height: 28, width: totalDays * dayWidth }}>
+            <div className="flex text-[10px] font-semibold" style={{ height: 22, width: totalDays * dayWidth }}>
               {monthHeaders.map((mh, i) => (
                 <div
                   key={i}
@@ -815,14 +815,14 @@ export default function WorkSchedulePage() {
               ))}
             </div>
             {/* Day numbers + day-of-week row */}
-            <div className="flex" style={{ height: 40, width: totalDays * dayWidth }}>
+            <div className="flex" style={{ height: 30, width: totalDays * dayWidth }}>
               {days.map((d, i) => {
                 const isWeekend = d.getDay() === 5 || d.getDay() === 6;
                 const isToday = daysBetween(d, new Date()) === 0;
                 return (
                   <div
                     key={i}
-                    className={`flex flex-col items-center justify-center border-l text-[9px] ${
+                    className={`flex flex-col items-center justify-center border-l text-[8px] ${
                       isWeekend ? "bg-cyan-800/30 border-cyan-500/30" : "border-cyan-500/20"
                     } ${isToday ? "bg-yellow-500/40" : ""}`}
                     style={{ width: dayWidth, minWidth: dayWidth }}
@@ -841,7 +841,7 @@ export default function WorkSchedulePage() {
           <div
             ref={timelineRef}
             className="overflow-auto"
-            style={{ height: "calc(100vh - 132px)" }}
+            style={{ height: "calc(100vh - 116px)" }}
             onScroll={(e) => {
               syncScroll("timeline");
               const target = e.currentTarget;
@@ -973,10 +973,10 @@ export default function WorkSchedulePage() {
                       <div
                         className="absolute flex items-center"
                         style={{
-                          top: ROW_H / 2 - 4,
+                          top: ROW_H / 2 - 3,
                           left: barStyle.left,
                           width: barStyle.width,
-                          height: 8,
+                          height: 6,
                         }}
                       >
                         <div
@@ -994,12 +994,12 @@ export default function WorkSchedulePage() {
                         </div>
                         {/* Diamond start */}
                         <div
-                          className="absolute -right-1 w-2.5 h-2.5 rotate-45"
+                          className="absolute -right-1 w-2 h-2 rotate-45"
                           style={{ backgroundColor: color.bar, top: -1 }}
                         />
                         {/* Diamond end */}
                         <div
-                          className="absolute -left-1 w-2.5 h-2.5 rotate-45"
+                          className="absolute -left-1 w-2 h-2 rotate-45"
                           style={{ backgroundColor: color.bar, top: -1 }}
                         />
                       </div>
@@ -1008,10 +1008,10 @@ export default function WorkSchedulePage() {
                       <div
                         className={`absolute rounded-sm flex items-center overflow-visible shadow-sm group ${isDragging ? "opacity-70 ring-2 ring-blue-400" : ""}`}
                         style={{
-                          top: ROW_H / 2 - 9,
+                          top: ROW_H / 2 - 7,
                           left: barStyle.left,
                           width: barStyle.width,
-                          height: 18,
+                          height: 14,
                           backgroundColor: color.barLight,
                           border: `1px solid ${color.bar}40`,
                           cursor: row.startDate && row.endDate ? "grab" : "default",
