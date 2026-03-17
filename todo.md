@@ -99,3 +99,5 @@
 - [x] Add tRPC CRUD procedures for news management
 - [x] Create admin UI page for managing news (add/edit/delete)
 - [x] Connect homepage news ticker to real database data
+- [x] Rollback capital scheduling page to before dashboard cards redesign
+- [x] Simplify capital scheduling colors to basic gray/neutral with minimal color accents

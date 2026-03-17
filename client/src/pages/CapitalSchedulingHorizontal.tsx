@@ -35,12 +35,12 @@ function fmtTooltipNum(n: number): string {
   return `${n.toFixed(0)} AED`;
 }
 
-// Simple basic colors - light pastels only
+// Simple basic colors - neutral grays
 const PHASE_BG: Record<string, string> = {
-  design:       "#e8eaf6", // light lavender
-  offplan:      "#fff8e1", // light cream
-  construction: "#e8f5e9", // light mint
-  handover:     "#fce4ec", // light pink
+  design:       "#e5e7eb", // light gray
+  offplan:      "#f3f4f6", // very light gray
+  construction: "#d1d5db", // medium gray
+  handover:     "#e5e7eb", // light gray
 };
 
 type PhaseType = "land" | "design" | "offplan" | "construction" | "handover";

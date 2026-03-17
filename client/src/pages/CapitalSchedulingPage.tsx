@@ -33,14 +33,14 @@ function fmtFull(n: number): string {
   return n.toFixed(0);
 }
 
-// ── Phase colors (dark muted on white canvas) ──────────────────────────────
-// Dark ink on white paper: calm, professional, executive-grade
+// ── Phase colors (basic gray/neutral with minimal accents) ──────────────────
+// Clean, calm, professional — gray base with subtle tints
 const PHASE_COLORS = {
-  land:         { solid: "#4a5568", light: "#f7fafc", text: "#2d3748" },
-  design:       { solid: "#5b6abf", light: "#eef0f8", text: "#3c4a8a" },
-  offplan:      { solid: "#b8860b", light: "#faf5eb", text: "#8b6508" },
-  construction: { solid: "#2d6a4f", light: "#edf5f1", text: "#1b4332" },
-  handover:     { solid: "#9b2c4d", light: "#f8eff2", text: "#7b2240" },
+  land:         { solid: "#6b7280", light: "#f9fafb", text: "#4b5563" },
+  design:       { solid: "#9ca3af", light: "#f3f4f6", text: "#6b7280" },
+  offplan:      { solid: "#d1d5db", light: "#f9fafb", text: "#9ca3af" },
+  construction: { solid: "#6b7280", light: "#f3f4f6", text: "#4b5563" },
+  handover:     { solid: "#9ca3af", light: "#f3f4f6", text: "#6b7280" },
 } as const;
 
 type PhaseType = "land" | "design" | "offplan" | "construction" | "handover";
@@ -589,9 +589,9 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
           <div
             style={{
               width: 44, height: 44, borderRadius: 14,
-              background: "linear-gradient(135deg, #c2410c 0%, #ea580c 100%)",
+              background: "linear-gradient(135deg, #4b5563 0%, #6b7280 100%)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: "0 4px 12px rgba(194,65,12,0.3)",
+              boxShadow: "0 4px 12px rgba(75,85,99,0.25)",
             }}
           >
             <Layers style={{ width: 22, height: 22, color: "#fff" }} />
@@ -623,12 +623,12 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
               <div style={{
                 width: 12, height: 12, borderRadius: 4,
-                background: `linear-gradient(135deg, ${PHASE_COLORS.design.solid} 50%, ${PHASE_COLORS.construction.solid} 50%)`,
+                background: `linear-gradient(135deg, ${PHASE_COLORS.design.solid} 50%, ${PHASE_COLORS.construction.solid} 50%)`,  // offplan legend
                 position: "relative", overflow: "hidden",
               }}>
                 <div style={{
                   position: "absolute", inset: 0,
-                  background: "rgba(192, 139, 74, 0.3)",
+                  background: "rgba(156, 163, 175, 0.3)",
                   borderRadius: 4,
                 }} />
               </div>
@@ -641,9 +641,9 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
             onClick={() => setShowSettings(!showSettings)}
             style={{
               display: "flex", alignItems: "center", gap: 6,
-              background: showSettings ? "#c2410c" : "#ffffff",
+              background: showSettings ? "#4b5563" : "#ffffff",
               color: showSettings ? "#fff" : "#64748b",
-              border: "1px solid " + (showSettings ? "#c2410c" : "#e2e8f0"),
+              border: "1px solid " + (showSettings ? "#4b5563" : "#e2e8f0"),
               borderRadius: 10, padding: "6px 14px", cursor: "pointer",
               fontSize: 12, fontWeight: 700, transition: "all 0.2s",
             }}
@@ -659,7 +659,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
               style={{
                 padding: "5px 12px", borderRadius: 9, fontSize: 12, fontWeight: 700,
                 cursor: "pointer", transition: "all 0.2s", border: "none",
-                background: viewMode === "vertical" ? "#c2410c" : "transparent",
+                background: viewMode === "vertical" ? "#4b5563" : "transparent",
                 color: viewMode === "vertical" ? "#fff" : "#94a3b8",
                 display: "flex", alignItems: "center", gap: 4,
               }}
@@ -672,7 +672,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
               style={{
                 padding: "5px 12px", borderRadius: 9, fontSize: 12, fontWeight: 700,
                 cursor: "pointer", transition: "all 0.2s", border: "none",
-                background: viewMode === "horizontal" ? "#c2410c" : "transparent",
+                background: viewMode === "horizontal" ? "#4b5563" : "transparent",
                 color: viewMode === "horizontal" ? "#fff" : "#94a3b8",
                 display: "flex", alignItems: "center", gap: 4,
               }}
@@ -711,7 +711,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
         }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <Settings style={{ width: 16, height: 16, color: "#c2410c" }} />
+              <Settings style={{ width: 16, height: 16, color: "#4b5563" }} />
               <span style={{ fontSize: 14, fontWeight: 800, color: "#0f172a" }}>إعدادات المشاريع — تواريخ البداية والمدد</span>
             </div>
             <button onClick={() => setShowSettings(false)} style={{
@@ -732,12 +732,12 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       <Calendar style={{ width: 12, height: 12 }} /> تاريخ البداية
                     </div>
                   </th>
-                  <th style={{ padding: "8px 12px", textAlign: "center", fontWeight: 700, color: PHASE_COLORS.design.text, borderBottom: "2px solid #e5e7eb", whiteSpace: "nowrap" }}>
+                  <th style={{ padding: "8px 12px", textAlign: "center", fontWeight: 700, color: "#475569", borderBottom: "2px solid #e5e7eb", whiteSpace: "nowrap" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
                       <Clock style={{ width: 12, height: 12 }} /> التصاميم (شهر)
                     </div>
                   </th>
-                  <th style={{ padding: "8px 12px", textAlign: "center", fontWeight: 700, color: PHASE_COLORS.construction.text, borderBottom: "2px solid #e5e7eb", whiteSpace: "nowrap" }}>
+                  <th style={{ padding: "8px 12px", textAlign: "center", fontWeight: 700, color: "#475569", borderBottom: "2px solid #e5e7eb", whiteSpace: "nowrap" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
                       <Clock style={{ width: 12, height: 12 }} /> الإنشاء (شهر)
                     </div>
@@ -762,19 +762,19 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                           <td style={{ padding: "6px 8px", textAlign: "center" }}>
                             <input type="month" value={editForm.startDate}
                               onChange={(e) => setEditForm(f => ({ ...f, startDate: e.target.value }))}
-                              style={{ padding: "4px 8px", borderRadius: 8, border: "2px solid #2b7a8e", fontSize: 12, textAlign: "center", width: 130, outline: "none" }}
+                              style={{ padding: "4px 8px", borderRadius: 8, border: "2px solid #9ca3af", fontSize: 12, textAlign: "center", width: 130, outline: "none" }}
                             />
                           </td>
                           <td style={{ padding: "6px 8px", textAlign: "center" }}>
                             <input type="number" min={1} max={36} value={editForm.preDevMonths}
                               onChange={(e) => setEditForm(f => ({ ...f, preDevMonths: parseInt(e.target.value) || 1 }))}
-                              style={{ padding: "4px 8px", borderRadius: 8, border: `2px solid ${PHASE_COLORS.design.solid}`, fontSize: 12, textAlign: "center", width: 60, outline: "none" }}
+                              style={{ padding: "4px 8px", borderRadius: 8, border: "2px solid #9ca3af", fontSize: 12, textAlign: "center", width: 60, outline: "none" }}
                             />
                           </td>
                           <td style={{ padding: "6px 8px", textAlign: "center" }}>
                             <input type="number" min={1} max={60} value={editForm.constructionMonths}
                               onChange={(e) => setEditForm(f => ({ ...f, constructionMonths: parseInt(e.target.value) || 1 }))}
-                              style={{ padding: "4px 8px", borderRadius: 8, border: `2px solid ${PHASE_COLORS.construction.solid}`, fontSize: 12, textAlign: "center", width: 60, outline: "none" }}
+                              style={{ padding: "4px 8px", borderRadius: 8, border: "2px solid #9ca3af", fontSize: 12, textAlign: "center", width: 60, outline: "none" }}
                             />
                           </td>
                           <td style={{ padding: "6px 8px", textAlign: "center" }}>
@@ -794,9 +794,9 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                                 });
                               }}
                               style={{
-                                background: hiddenProjects.has(col.projectId) ? "#fee2e2" : "#dcfce7",
-                                color: hiddenProjects.has(col.projectId) ? "#dc2626" : "#16a34a",
-                                border: `1px solid ${hiddenProjects.has(col.projectId) ? "#fca5a5" : "#86efac"}`,
+                                background: hiddenProjects.has(col.projectId) ? "#f3f4f6" : "#f3f4f6",
+                                color: hiddenProjects.has(col.projectId) ? "#9ca3af" : "#4b5563",
+                                border: `1px solid ${hiddenProjects.has(col.projectId) ? "#d1d5db" : "#9ca3af"}`,
                                 borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontSize: 11, fontWeight: 700,
                                 display: "inline-flex", alignItems: "center", gap: 4,
                               }}
@@ -819,7 +819,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                                 }}
                                 disabled={updateProjectMutation.isPending}
                                 style={{
-                                  background: "#10B981", color: "#fff", border: "none", borderRadius: 8,
+                                  background: "#4b5563", color: "#fff", border: "none", borderRadius: 8,
                                   padding: "4px 12px", cursor: "pointer", fontSize: 11, fontWeight: 700,
                                   display: "flex", alignItems: "center", gap: 4, opacity: updateProjectMutation.isPending ? 0.6 : 1,
                                 }}
@@ -842,10 +842,10 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                         <>
                           <td style={{ padding: "8px 12px", textAlign: "center", color: "#334155", fontWeight: 600 }}>{col.startDate}</td>
                           <td style={{ padding: "8px 12px", textAlign: "center" }}>
-                            <span style={{ background: PHASE_COLORS.design.light, color: PHASE_COLORS.design.text, padding: "2px 10px", borderRadius: 6, fontWeight: 700, fontSize: 12 }}>{col.preDevMonths}</span>
+                            <span style={{ background: "#f3f4f6", color: "#4b5563", padding: "2px 10px", borderRadius: 6, fontWeight: 700, fontSize: 12 }}>{col.preDevMonths}</span>
                           </td>
                           <td style={{ padding: "8px 12px", textAlign: "center" }}>
-                            <span style={{ background: PHASE_COLORS.construction.light, color: PHASE_COLORS.construction.text, padding: "2px 10px", borderRadius: 6, fontWeight: 700, fontSize: 12 }}>{col.constructionMonths}</span>
+                            <span style={{ background: "#f3f4f6", color: "#4b5563", padding: "2px 10px", borderRadius: 6, fontWeight: 700, fontSize: 12 }}>{col.constructionMonths}</span>
                           </td>
                           <td style={{ padding: "8px 12px", textAlign: "center" }}>
                             <span style={{ background: "#f3f4f6", color: "#475569", padding: "2px 10px", borderRadius: 6, fontWeight: 700, fontSize: 12 }}>{col.handoverMonths}</span>
@@ -861,9 +861,9 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                                 });
                               }}
                               style={{
-                                background: hiddenProjects.has(col.projectId) ? "#fee2e2" : "#dcfce7",
-                                color: hiddenProjects.has(col.projectId) ? "#dc2626" : "#16a34a",
-                                border: `1px solid ${hiddenProjects.has(col.projectId) ? "#fca5a5" : "#86efac"}`,
+                                background: hiddenProjects.has(col.projectId) ? "#f3f4f6" : "#f3f4f6",
+                                color: hiddenProjects.has(col.projectId) ? "#9ca3af" : "#4b5563",
+                                border: `1px solid ${hiddenProjects.has(col.projectId) ? "#d1d5db" : "#9ca3af"}`,
                                 borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontSize: 11, fontWeight: 700,
                                 display: "inline-flex", alignItems: "center", gap: 4,
                               }}
@@ -884,7 +884,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                                 });
                               }}
                               style={{
-                                background: "#fff7ed", color: "#c2410c", border: "1px solid #fdba74", borderRadius: 8,
+                                background: "#f3f4f6", color: "#4b5563", border: "1px solid #d1d5db", borderRadius: 8,
                                 padding: "4px 12px", cursor: "pointer", fontSize: 11, fontWeight: 700,
                                 display: "inline-flex", alignItems: "center", gap: 4,
                               }}
@@ -958,7 +958,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                         borderRadius: 14,
                         padding: "8px 6px 8px",
                         border: "1px solid #d1d5db",
-                        borderTop: "3px solid #c2410c",
+                        borderTop: "3px solid #9ca3af",
                         boxShadow: "0 2px 10px rgba(0,0,0,0.07)",
                       }}
                     >
@@ -977,11 +977,11 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       <div style={{
                         display: "flex", justifyContent: "space-between", alignItems: "center",
                         height: 22,
-                        background: "#c2410c", borderRadius: 6,
+                        background: "#4b5563", borderRadius: 6,
                         padding: "0 6px", marginTop: 4,
                         fontSize: 9,
                       }}>
-                        <span style={{ color: "#fed7aa", fontWeight: 600 }}>الإجمالي</span>
+                        <span style={{ color: "#d1d5db", fontWeight: 600 }}>الإجمالي</span>
                         <span style={{ fontWeight: 800, color: "#ffffff" }}>{fmtFull(col.grandTotal)}</span>
                       </div>
 
@@ -989,11 +989,11 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       <div style={{
                         display: "flex", justifyContent: "space-between", alignItems: "center",
                         height: 22,
-                        background: "#166534", borderRadius: 6,
+                        background: "#6b7280", borderRadius: 6,
                         padding: "0 6px", marginTop: 3, marginBottom: 6,
                         fontSize: 9,
                       }}>
-                        <span style={{ color: "#bbf7d0", fontWeight: 600 }}>المطلوب</span>
+                        <span style={{ color: "#d1d5db", fontWeight: 600 }}>المطلوب</span>
                         <span style={{ fontWeight: 800, color: "#ffffff" }}>{fmtFull(col.upcomingTotal)}</span>
                       </div>
 
@@ -1016,9 +1016,9 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       {/* Design delay controls */}
                       <DelayControl
                         label="التصاميم"
-                        color="#3c4a8a"
-                        lightBg="#eef0f8"
-                        borderColor="#5b6abf"
+                        color="#6b7280"
+                        lightBg="#f3f4f6"
+                        borderColor="#9ca3af"
                         value={delay.designDelay}
                         onUp={() => adjustDelay(col.projectId, "designDelay", -1)}
                         onDown={() => adjustDelay(col.projectId, "designDelay", 1)}
@@ -1027,9 +1027,9 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       {/* Offplan delay controls */}
                       <DelayControl
                         label="أوف بلان"
-                        color="#b45309"
-                        lightBg="#fef3c7"
-                        borderColor="#f59e0b"
+                        color="#6b7280"
+                        lightBg="#f3f4f6"
+                        borderColor="#9ca3af"
                         value={delay.offplanDelay}
                         onUp={() => adjustDelay(col.projectId, "offplanDelay", -1)}
                         onDown={() => adjustDelay(col.projectId, "offplanDelay", 1)}
@@ -1038,9 +1038,9 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       {/* Construction delay controls */}
                       <DelayControl
                         label="الإنشاء"
-                        color="#047857"
-                        lightBg="#d1fae5"
-                        borderColor="#10b981"
+                        color="#6b7280"
+                        lightBg="#f3f4f6"
+                        borderColor="#9ca3af"
                         value={delay.constructionDelay}
                         onUp={() => adjustDelay(col.projectId, "constructionDelay", -1)}
                         onDown={() => adjustDelay(col.projectId, "constructionDelay", 1)}
@@ -1091,7 +1091,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                   fontSize: 11,
                   fontWeight: 800,
                   border: "1px solid #e5e7eb",
-                  borderTop: "3px solid #64748b",
+                  borderTop: "3px solid #9ca3af",
                 }}>
                   الشهر
                 </div>
@@ -1108,15 +1108,15 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                 }}
               >
                 <div style={{
-background: "#c2410c",
+background: "#4b5563",
                    borderRadius: 14,
                    padding: "14px 6px",
                   textAlign: "center",
                   color: "#ffffff",
                   fontSize: 11,
                   fontWeight: 800,
-border: "1px solid #ea580c",
-                   borderTop: "3px solid #c2410c",
+border: "1px solid #6b7280",
+                   borderTop: "3px solid #9ca3af",
                  }}>
                   الإجمالي
                 </div>
@@ -1134,15 +1134,15 @@ border: "1px solid #ea580c",
                 }}
               >
                 <div style={{
-background: "#1e3a5f",
+background: "#374151",
                    borderRadius: 14,
                    padding: "14px 6px",
                   textAlign: "center",
                   color: "#ffffff",
                   fontSize: 10,
                   fontWeight: 800,
-border: "1px solid #2d5a8a",
-                   borderTop: "3px solid #1e3a5f",
+border: "1px solid #4b5563",
+                   borderTop: "3px solid #374151",
                 }}>
                   التراكمي
                 </div>
@@ -1349,13 +1349,13 @@ border: "1px solid #2d5a8a",
                                 style={{
                                   position: "absolute",
                                   inset: 0,
-                                  background: "rgba(245, 158, 11, 0.2)",
+                                  background: "rgba(156, 163, 175, 0.2)",
                                   borderRadius: offplanOverlayRadius,
                                   pointerEvents: "none",
-                                  borderTop: cd.isOffplanFirst ? "2px solid rgba(245, 158, 11, 0.5)" : "none",
-                                  borderBottom: cd.isOffplanLast ? "2px solid rgba(245, 158, 11, 0.25)" : "none",
-                                  borderRight: "1.5px solid rgba(245, 158, 11, 0.35)",
-                                  borderLeft: "1.5px solid rgba(245, 158, 11, 0.4)",
+                                  borderTop: cd.isOffplanFirst ? "2px solid rgba(156, 163, 175, 0.5)" : "none",
+                                  borderBottom: cd.isOffplanLast ? "2px solid rgba(156, 163, 175, 0.25)" : "none",
+                                  borderRight: "1.5px solid rgba(156, 163, 175, 0.35)",
+                                  borderLeft: "1.5px solid rgba(156, 163, 175, 0.4)",
                                 }}
                               />
                             )}
@@ -1392,7 +1392,7 @@ border: "1px solid #2d5a8a",
                       width: COL_W,
                       minWidth: COL_W,
                       height: ROW_H,
-                      background: row.total > 0 ? "#c2410c" : (isEven ? "#ffffff" : "#fafafa"),
+                      background: row.total > 0 ? "#4b5563" : (isEven ? "#ffffff" : "#fafafa"),
                       padding: 0,
                       textAlign: "center",
                       fontSize: 11,
@@ -1425,7 +1425,7 @@ border: "1px solid #2d5a8a",
                       width: COL_W,
                       minWidth: COL_W,
                       height: ROW_H,
-                      background: cumulativeTotals[row.gi] > 0 ? "#1e3a5f" : (isEven ? "#ffffff" : "#fafafa"),
+                      background: cumulativeTotals[row.gi] > 0 ? "#374151" : (isEven ? "#ffffff" : "#fafafa"),
                       padding: 0,
                       paddingRight: GAP,
                       textAlign: "center",
