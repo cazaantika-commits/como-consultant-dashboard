@@ -103,3 +103,6 @@
 - [x] Simplify capital scheduling colors to basic gray/neutral with minimal color accents
 - [x] Add subtle color tints per phase for better differentiation (light blue, light green, etc.)
 - [x] Improve number contrast inside gray cells for better readability
+- [x] Explore regulatory compliance pathway in development phases and document all phases/ceilings/details
+- [x] Create comprehensive work schedule table page for regulatory compliance with all phases, ceilings, dates
+- [x] Wire the new page with backend and integrate into navigation

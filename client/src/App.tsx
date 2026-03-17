@@ -58,6 +58,7 @@ import SelfLearningPage from "./pages/SelfLearningPage";
 import DevelopmentPhasesPage from "./pages/DevelopmentPhasesPage";
 import { ContractAuditPage } from "./pages/ContractAuditPage";
 import NewsTickerManagePage from "./pages/NewsTickerManagePage";
+import WorkSchedulePage from "./pages/WorkSchedulePage";
 
 function Router() {
   return (
@@ -116,6 +117,7 @@ function Router() {
       <Route path="/market-reports" component={MarketReportsPage} />
       <Route path="/risk-dashboard" component={RiskDashboardPage} />
       <Route path="/development-phases" component={DevelopmentPhasesPage} />
+      <Route path="/work-schedule" component={WorkSchedulePage} />
       <Route path="/self-learning" component={SelfLearningPage} />
       <Route path="/contract-audit" component={ContractAuditPage} />
       <Route path="/404" component={NotFound} />

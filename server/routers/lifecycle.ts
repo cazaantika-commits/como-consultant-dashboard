@@ -641,6 +641,105 @@ export const lifecycleRouter = router({
       return alerts;
     }),
 
+  /** Get full work schedule data: all stages + services + requirements + instances in one call */
+  getWorkSchedule: protectedProcedure
+    .input(z.object({ projectId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      const stages = await db
+        .select()
+        .from(lifecycleStages)
+        .where(eq(lifecycleStages.isActive, 1))
+        .orderBy(lifecycleStages.sortOrder);
+
+      const allServices = await db
+        .select()
+        .from(lifecycleServices)
+        .orderBy(lifecycleServices.sortOrder);
+
+      const allReqs = await db
+        .select()
+        .from(lifecycleRequirements)
+        .orderBy(lifecycleRequirements.sortOrder);
+
+      const instances = await db
+        .select()
+        .from(projectServiceInstances)
+        .where(eq(projectServiceInstances.projectId, input.projectId));
+
+      const reqStatuses = await db
+        .select()
+        .from(projectRequirementStatus)
+        .where(eq(projectRequirementStatus.projectId, input.projectId));
+
+      const stageStatuses = await db
+        .select()
+        .from(projectStageStatus)
+        .where(eq(projectStageStatus.projectId, input.projectId));
+
+      return stages.map((stage) => {
+        const stageStatus = stageStatuses.find((s) => s.stageCode === stage.stageCode);
+        const stageServices = allServices.filter((s) => s.stageCode === stage.stageCode);
+
+        const servicesData = stageServices.map((svc) => {
+          const instance = instances.find((i) => i.serviceCode === svc.serviceCode);
+          const svcReqs = allReqs.filter((r) => r.serviceCode === svc.serviceCode);
+          const svcReqStatuses = reqStatuses.filter((r) => r.serviceCode === svc.serviceCode);
+          const completedReqs = svcReqStatuses.filter((s) => s.status === "completed").length;
+          const mandatoryReqs = svcReqs.filter((r) => r.isMandatory === 1);
+          const mandatoryComplete = mandatoryReqs.filter((r) =>
+            svcReqStatuses.find((s) => s.requirementCode === r.requirementCode && s.status === "completed")
+          ).length;
+
+          return {
+            serviceCode: svc.serviceCode,
+            nameAr: svc.nameAr,
+            descriptionAr: svc.descriptionAr,
+            externalParty: svc.externalParty,
+            internalOwner: svc.internalOwner,
+            expectedDurationDays: svc.expectedDurationDays,
+            dependsOn: svc.dependsOn,
+            plannedStartDate: instance?.plannedStartDate ?? null,
+            plannedDueDate: instance?.plannedDueDate ?? null,
+            actualStartDate: instance?.actualStartDate ?? null,
+            actualCloseDate: instance?.actualCloseDate ?? null,
+            operationalStatus: instance?.operationalStatus ?? "not_started",
+            notes: instance?.notes ?? null,
+            totalReqs: svcReqs.length,
+            completedReqs,
+            mandatoryTotal: mandatoryReqs.length,
+            mandatoryComplete,
+            requirements: svcReqs.map((r) => {
+              const rs = svcReqStatuses.find((s) => s.requirementCode === r.requirementCode);
+              return {
+                requirementCode: r.requirementCode,
+                nameAr: r.nameAr,
+                reqType: r.reqType,
+                isMandatory: r.isMandatory,
+                timing: r.timing,
+                status: rs?.status ?? "pending",
+              };
+            }),
+          };
+        });
+
+        const completedServices = servicesData.filter(
+          (s) => s.operationalStatus === "completed" || s.operationalStatus === "submitted"
+        ).length;
+
+        return {
+          stageCode: stage.stageCode,
+          nameAr: stage.nameAr,
+          nameEn: stage.nameEn,
+          category: stage.category,
+          status: stageStatus?.status ?? stage.defaultStatus ?? "not_started",
+          totalServices: servicesData.length,
+          completedServices,
+          services: servicesData,
+        };
+      });
+    }),
+
   /** Get summary stats for a project across all stages */
   getProjectLifecycleSummary: protectedProcedure
     .input(z.object({ projectId: z.number() }))
