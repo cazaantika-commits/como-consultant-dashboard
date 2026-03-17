@@ -136,3 +136,6 @@
 - [x] Bug fix: server-side upsertServiceInstance overwrites dates with NULL when only status is sent
 - [x] Unit tests for upsertServiceInstance data builder (5 tests passing)
 - [ ] Improve: Auto-calculate progress % based on requirements completion and status
+- [x] Bug fix: Gantt timeline header stuck on March/April - cannot scroll horizontally to see other months
+- [x] Bug fix: Horizontal scroll moves rows but not the timeline date header - they should be synchronized
+- [x] Improve: Timeline should show the full date range of the project and be easily navigable

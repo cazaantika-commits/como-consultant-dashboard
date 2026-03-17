@@ -147,6 +147,7 @@ export default function WorkSchedulePage() {
   const setEditStatus = (v: string) => { editStatusRef.current = v; _setEditStatus(v); };
   const timelineRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
+  // timelineHeaderRef removed - header is now inside the single scroll container
 
   /* ── Drag state ── */
   const [dragInfo, setDragInfo] = useState<{
@@ -942,63 +943,58 @@ export default function WorkSchedulePage() {
           </div>
         </div>
 
-        {/* RIGHT: Timeline / Gantt bars */}
-        <div className="flex-1 overflow-hidden">
-          {/* Timeline header */}
-          <div className="bg-gradient-to-l from-cyan-600 to-cyan-700 text-white" style={{ height: 52 }}>
-            {/* Month row */}
-            <div className="flex text-[10px] font-semibold" style={{ height: 22, width: totalDays * dayWidth }}>
-              {monthHeaders.map((mh, i) => (
-                <div
-                  key={i}
-                  className="border-l border-cyan-500/40 flex items-center justify-center"
-                  style={{ width: mh.span * dayWidth, marginRight: i === 0 ? mh.startIdx * dayWidth : 0 }}
-                >
-                  {mh.label}
-                </div>
-              ))}
-            </div>
-            {/* Day numbers + day-of-week row */}
-            <div className="flex" style={{ height: 30, width: totalDays * dayWidth }}>
-              {days.map((d, i) => {
-                const isWeekend = d.getDay() === 5 || d.getDay() === 6;
-                const isToday = daysBetween(d, new Date()) === 0;
-                return (
+        {/* RIGHT: Timeline / Gantt bars — single scroll container with sticky header */}
+        <div
+          ref={timelineRef}
+          className="flex-1 overflow-auto"
+          dir="ltr"
+          onScroll={() => {
+            syncScroll("timeline");
+          }}
+        >
+          <div style={{ width: totalDays * dayWidth, minWidth: totalDays * dayWidth }}>
+            {/* Timeline header - sticky at top */}
+            <div
+              className="bg-gradient-to-r from-cyan-600 to-cyan-700 text-white sticky top-0 z-30"
+              style={{ height: 52 }}
+            >
+              {/* Month row */}
+              <div className="flex text-[10px] font-semibold" style={{ height: 22 }}>
+                {monthHeaders.map((mh, i) => (
                   <div
                     key={i}
-                    className={`flex flex-col items-center justify-center border-l text-[8px] ${
-                      isWeekend ? "bg-cyan-800/30 border-cyan-500/30" : "border-cyan-500/20"
-                    } ${isToday ? "bg-yellow-500/40" : ""}`}
-                    style={{ width: dayWidth, minWidth: dayWidth }}
+                    className="border-r border-cyan-500/40 flex items-center justify-center"
+                    style={{ width: mh.span * dayWidth, marginLeft: i === 0 ? mh.startIdx * dayWidth : 0 }}
                   >
-                    <span className="font-medium">{d.getDate()}</span>
-                    {dayWidth >= 20 && (
-                      <span className="text-[8px] opacity-70">{DOW_AR[d.getDay()]}</span>
-                    )}
+                    {mh.label}
                   </div>
-                );
-              })}
+                ))}
+              </div>
+              {/* Day numbers + day-of-week row */}
+              <div className="flex" style={{ height: 30 }}>
+                {days.map((d, i) => {
+                  const isWeekend = d.getDay() === 5 || d.getDay() === 6;
+                  const isToday = daysBetween(d, new Date()) === 0;
+                  return (
+                    <div
+                      key={i}
+                      className={`flex flex-col items-center justify-center border-r text-[8px] ${
+                        isWeekend ? "bg-cyan-800/30 border-cyan-500/30" : "border-cyan-500/20"
+                      } ${isToday ? "bg-yellow-500/40" : ""}`}
+                      style={{ width: dayWidth, minWidth: dayWidth }}
+                    >
+                      <span className="font-medium">{d.getDate()}</span>
+                      {dayWidth >= 20 && (
+                        <span className="text-[8px] opacity-70">{DOW_AR[d.getDay()]}</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
 
-          {/* Timeline body with bars */}
-          <div
-            ref={timelineRef}
-            className="overflow-auto"
-            style={{ height: "calc(100vh - 116px)" }}
-            onScroll={(e) => {
-              syncScroll("timeline");
-              const target = e.currentTarget;
-              const headerEl = target.previousElementSibling;
-              if (headerEl) {
-                const monthRow = headerEl.children[0] as HTMLElement;
-                const dayRow = headerEl.children[1] as HTMLElement;
-                if (monthRow) monthRow.style.transform = `translateX(-${target.scrollLeft}px)`;
-                if (dayRow) dayRow.style.transform = `translateX(-${target.scrollLeft}px)`;
-              }
-            }}
-          >
-            <div style={{ width: totalDays * dayWidth, position: "relative" }}>
+            {/* Timeline body with bars */}
+            <div style={{ position: "relative" }}>
               {/* Background grid */}
               <div className="absolute inset-0" style={{ height: filteredRows.length * ROW_H }}>
                 {days.map((d, i) => {
