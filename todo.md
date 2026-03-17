@@ -139,3 +139,6 @@
 - [x] Bug fix: Gantt timeline header stuck on March/April - cannot scroll horizontally to see other months
 - [x] Bug fix: Horizontal scroll moves rows but not the timeline date header - they should be synchronized
 - [x] Improve: Timeline should show the full date range of the project and be easily navigable
+- [x] Bug fix: Timeline direction should be RTL (right-to-left) - oldest dates on right, newest on left - matching Arabic layout
+- [x] Feature: Add/delete/edit custom tasks within any stage (user can add 5-6 new tasks inside a stage)
+- [x] Bug fix: Changing duration (e.g. 7 days to 20 days) should update the bar length on the timeline (bar uses start+end dates, duration change recalculates end date)

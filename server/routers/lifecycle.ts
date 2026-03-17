@@ -783,4 +783,131 @@ export const lifecycleRouter = router({
         };
       });
     }),
+
+  /** Add a custom service (task) to a stage */
+  addCustomService: protectedProcedure
+    .input(
+      z.object({
+        stageCode: z.string(),
+        nameAr: z.string().min(1),
+        expectedDurationDays: z.number().min(1).default(7),
+        projectId: z.number(),
+        plannedStartDate: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+
+      // Get the max sortOrder for this stage to append at end
+      const existing = await db
+        .select({ maxSort: max(lifecycleServices.sortOrder) })
+        .from(lifecycleServices)
+        .where(eq(lifecycleServices.stageCode, input.stageCode));
+      const nextSort = (existing[0]?.maxSort ?? 0) + 1;
+
+      // Generate a unique service code
+      const serviceCode = `SRV-CUSTOM-${input.stageCode}-${Date.now()}`;
+
+      // Insert into master services table
+      await db.insert(lifecycleServices).values({
+        serviceCode,
+        stageCode: input.stageCode,
+        nameAr: input.nameAr,
+        expectedDurationDays: input.expectedDurationDays,
+        sortOrder: nextSort,
+        isMandatory: 0,
+      });
+
+      // Create project instance if start date provided
+      if (input.plannedStartDate) {
+        // Calculate end date from start + duration
+        const start = new Date(input.plannedStartDate);
+        const end = new Date(start);
+        end.setDate(end.getDate() + input.expectedDurationDays);
+        const fmtDate = (d: Date) => {
+          const day = d.getDate();
+          const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          const mon = months[d.getMonth()];
+          const yr = String(d.getFullYear()).slice(-2);
+          return `${day}-${mon}-${yr}`;
+        };
+        await db.insert(projectServiceInstances).values({
+          projectId: input.projectId,
+          serviceCode,
+          stageCode: input.stageCode,
+          operationalStatus: 'not_started',
+          plannedStartDate: fmtDate(start),
+          plannedDueDate: fmtDate(end),
+        });
+      }
+
+      return { success: true, serviceCode };
+    }),
+
+  /** Delete a custom service (task) from a stage */
+  deleteCustomService: protectedProcedure
+    .input(
+      z.object({
+        serviceCode: z.string(),
+        projectId: z.number(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+
+      // Delete project instance first
+      await db
+        .delete(projectServiceInstances)
+        .where(
+          and(
+            eq(projectServiceInstances.projectId, input.projectId),
+            eq(projectServiceInstances.serviceCode, input.serviceCode)
+          )
+        );
+
+      // Delete requirement statuses
+      await db
+        .delete(projectRequirementStatus)
+        .where(
+          and(
+            eq(projectRequirementStatus.projectId, input.projectId),
+            eq(projectRequirementStatus.serviceCode, input.serviceCode)
+          )
+        );
+
+      // Delete master service record
+      await db
+        .delete(lifecycleServices)
+        .where(eq(lifecycleServices.serviceCode, input.serviceCode));
+
+      // Delete master requirements for this service
+      await db
+        .delete(lifecycleRequirements)
+        .where(eq(lifecycleRequirements.serviceCode, input.serviceCode));
+
+      return { success: true };
+    }),
+
+  /** Update a service's name and duration */
+  updateService: protectedProcedure
+    .input(
+      z.object({
+        serviceCode: z.string(),
+        nameAr: z.string().min(1).optional(),
+        expectedDurationDays: z.number().min(1).optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      const data: Record<string, any> = {};
+      if (input.nameAr !== undefined) data.nameAr = input.nameAr;
+      if (input.expectedDurationDays !== undefined) data.expectedDurationDays = input.expectedDurationDays;
+      if (Object.keys(data).length > 0) {
+        await db
+          .update(lifecycleServices)
+          .set(data)
+          .where(eq(lifecycleServices.serviceCode, input.serviceCode));
+      }
+      return { success: true };
+    }),
 });

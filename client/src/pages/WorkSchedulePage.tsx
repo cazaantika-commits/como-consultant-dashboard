@@ -21,6 +21,9 @@ import {
   AlertTriangle,
   CalendarX2,
   Clock,
+  Plus,
+  Trash2,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -183,6 +186,37 @@ export default function WorkSchedulePage() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  /* ── Add/Delete task state ── */
+  const [addingToStage, setAddingToStage] = useState<string | null>(null);
+  const [newTaskName, setNewTaskName] = useState("");
+  const [newTaskDuration, setNewTaskDuration] = useState(7);
+
+  const addTaskMutation = trpc.lifecycle.addCustomService.useMutation({
+    onSuccess: () => {
+      toast.success("تمت إضافة المهمة بنجاح");
+      scheduleQuery.refetch();
+      setAddingToStage(null);
+      setNewTaskName("");
+      setNewTaskDuration(7);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const deleteTaskMutation = trpc.lifecycle.deleteCustomService.useMutation({
+    onSuccess: () => {
+      toast.success("تم حذف المهمة بنجاح");
+      scheduleQuery.refetch();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const updateServiceMutation = trpc.lifecycle.updateService.useMutation({
+    onSuccess: () => {
+      scheduleQuery.refetch();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const startEditing = (row: RowData) => {
     if (row.type !== "service") return;
     setEditingRow(row.serviceCode!);
@@ -289,7 +323,8 @@ export default function WorkSchedulePage() {
 
     const handleMouseMove = (e: MouseEvent) => {
       const deltaX = e.clientX - dragInfo.startX;
-      const deltaDays = Math.round(deltaX / dayWidth);
+      // RTL: moving mouse right = going to past (negative days), moving left = going to future (positive days)
+      const deltaDays = Math.round(-deltaX / dayWidth);
 
       if (dragInfo.mode === "move") {
         const newStart = addDays(dragInfo.origStartDate, deltaDays);
@@ -491,11 +526,12 @@ export default function WorkSchedulePage() {
     if (allDates.length <= 1) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
+      const daysArr = Array.from({ length: 90 }, (_, i) => addDays(today, i));
       return {
         timelineStart: today,
         timelineEnd: addDays(today, 90),
         totalDays: 90,
-        days: Array.from({ length: 90 }, (_, i) => addDays(today, i)),
+        days: daysArr, // RTL container handles visual right-to-left order
       };
     }
 
@@ -534,12 +570,16 @@ export default function WorkSchedulePage() {
     return headers;
   }, [days]);
 
-  /* ── Today position ── */
+  /* ── Today position (RTL: from right edge) ── */
   const todayIdx = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return daysBetween(timelineStart, today);
   }, [timelineStart]);
+
+  const todayRightPos = useMemo(() => {
+    return (totalDays - todayIdx) * dayWidth;
+  }, [totalDays, todayIdx, dayWidth]);
 
   /* ── Sync scroll ── */
   const syncScroll = (source: "table" | "timeline") => {
@@ -550,30 +590,44 @@ export default function WorkSchedulePage() {
     }
   };
 
-  /* ── Scroll to today on load ── */
+  /* ── Scroll to today on load (RTL: scrollLeft is 0 at right edge, negative going left) ── */
   useEffect(() => {
     if (timelineRef.current && todayIdx > 0) {
-      const scrollTo = todayIdx * dayWidth - 200;
-      timelineRef.current.scrollLeft = Math.max(0, scrollTo);
+      // In RTL containers in Chrome/Chromium:
+      // scrollLeft = 0 means fully scrolled to the RIGHT (start in RTL)
+      // scrollLeft = -(scrollWidth - clientWidth) means fully scrolled to the LEFT (end in RTL)
+      // Days are in normal order [day0=oldest, day1, day2...], RTL container renders day0 on the RIGHT
+      // Today is at index todayIdx from the left of the array = todayIdx positions from the RIGHT visually
+      // To center today: scroll left by (todayIdx * dayWidth - viewportWidth/2)
+      const viewportWidth = timelineRef.current.clientWidth;
+      const todayPixelsFromRight = todayIdx * dayWidth;
+      const scrollTarget = -(todayPixelsFromRight - viewportWidth / 2);
+      // Clamp: 0 = fully right, -(scrollWidth - clientWidth) = fully left
+      const maxScroll = -(timelineRef.current.scrollWidth - viewportWidth);
+      timelineRef.current.scrollLeft = Math.max(maxScroll, Math.min(0, scrollTarget));
     }
-  }, [todayIdx, dayWidth, rows.length]);
+  }, [todayIdx, dayWidth, rows.length, totalDays]);
 
   const ROW_H = 24;
 
-  /* ── Bar position calculator ── */
+  /* ── Bar position calculator (RTL: right = oldest, left = newest) ── */
   const getBarStyle = (startDate: string | null, endDate: string | null, duration: number, serviceCode?: string) => {
-    // Check if there's a drag preview for this service
+    // In RTL mode, position is calculated from the RIGHT edge
+    // right = (totalDays - daysBetween(timelineStart, endDate)) * dayWidth
+    // which equals: the bar's RIGHT edge starts at the endDate position from the right
     if (serviceCode && dragPreview && dragPreview.serviceCode === serviceCode) {
-      const startOffset = daysBetween(timelineStart, dragPreview.newStart);
       const barDays = Math.max(daysBetween(dragPreview.newStart, dragPreview.newEnd), 1);
-      return { left: startOffset * dayWidth, width: barDays * dayWidth };
+      const endOffset = daysBetween(timelineStart, dragPreview.newEnd);
+      const rightPos = (totalDays - endOffset) * dayWidth;
+      return { right: rightPos, width: barDays * dayWidth };
     }
     if (!startDate) return null;
     const start = new Date(startDate);
     const end = endDate ? new Date(endDate) : addDays(start, duration);
-    const startOffset = daysBetween(timelineStart, start);
     const barDays = Math.max(daysBetween(start, end), 1);
-    return { left: startOffset * dayWidth, width: barDays * dayWidth };
+    const endOffset = daysBetween(timelineStart, end);
+    const rightPos = (totalDays - endOffset) * dayWidth;
+    return { right: rightPos, width: barDays * dayWidth };
   };
 
   /* ── Build dependency lines data ── */
@@ -609,7 +663,7 @@ export default function WorkSchedulePage() {
         })
         .filter((s: any) => s.startDate && s.endDate && s.rowIdx >= 0);
 
-      // Connect consecutive services
+      // Connect consecutive services (RTL: use right-based positions)
       for (let i = 0; i < servicesWithDates.length - 1; i++) {
         const from = servicesWithDates[i];
         const to = servicesWithDates[i + 1];
@@ -617,8 +671,12 @@ export default function WorkSchedulePage() {
         const fromEnd = new Date(from.endDate);
         const toStart = new Date(to.startDate);
         
-        const fromEndX = daysBetween(timelineStart, fromEnd) * dayWidth;
-        const toStartX = daysBetween(timelineStart, toStart) * dayWidth;
+        // In RTL, convert to pixel positions from LEFT edge of the SVG
+        const fromEndOffset = daysBetween(timelineStart, fromEnd);
+        const toStartOffset = daysBetween(timelineStart, toStart);
+        // RTL: position from left = totalDays*dayWidth - offset*dayWidth
+        const fromEndX = totalDays * dayWidth - fromEndOffset * dayWidth;
+        const toStartX = totalDays * dayWidth - toStartOffset * dayWidth;
         const fromY = from.rowIdx * ROW_H + ROW_H / 2;
         const toY = to.rowIdx * ROW_H + ROW_H / 2;
 
@@ -799,7 +857,7 @@ export default function WorkSchedulePage() {
               return (
                 <div
                   key={`${row.wbs}-${row.serviceCode || row.stageCode}`}
-                  className={`flex items-center text-xs border-b border-gray-100 ${bgClass} ${isDragging ? "bg-blue-50" : "hover:bg-blue-50/30"} transition-colors`}
+                  className={`group flex items-center text-xs border-b border-gray-100 ${bgClass} ${isDragging ? "bg-blue-50" : "hover:bg-blue-50/30"} transition-colors`}
                   style={{ height: ROW_H }}
                 >
                   {/* WBS */}
@@ -824,6 +882,32 @@ export default function WorkSchedulePage() {
                       <span className="text-[8px] text-gray-400 mr-0.5">
                         ({row.completedServices}/{row.totalServices})
                       </span>
+                    )}
+                    {isStage && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setAddingToStage(row.stageCode); }}
+                        className="p-0.5 rounded hover:bg-emerald-100 text-emerald-600 flex-shrink-0 mr-auto"
+                        title="إضافة مهمة"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    )}
+                    {!isStage && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(`هل تريد حذف المهمة "${row.name}"?`)) {
+                            deleteTaskMutation.mutate({
+                              serviceCode: row.serviceCode!,
+                              projectId: selectedProjectId!,
+                            });
+                          }
+                        }}
+                        className="p-0.5 rounded hover:bg-red-100 text-red-400 hover:text-red-600 flex-shrink-0 mr-auto opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="حذف المهمة"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
                     )}
                   </div>
 
@@ -943,11 +1027,74 @@ export default function WorkSchedulePage() {
           </div>
         </div>
 
-        {/* RIGHT: Timeline / Gantt bars — single scroll container with sticky header */}
+        {/* Add Task Dialog */}
+        {addingToStage && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setAddingToStage(null)}>
+            <div className="bg-white rounded-lg shadow-xl p-5 w-80" dir="rtl" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold text-gray-800">إضافة مهمة جديدة</h3>
+                <button onClick={() => setAddingToStage(null)} className="p-1 hover:bg-gray-100 rounded">
+                  <X className="w-4 h-4 text-gray-500" />
+                </button>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-gray-600 mb-1 block">اسم المهمة</label>
+                  <input
+                    type="text"
+                    value={newTaskName}
+                    onChange={(e) => setNewTaskName(e.target.value)}
+                    placeholder="أدخل اسم المهمة..."
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-600 mb-1 block">المدة (أيام عمل)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={newTaskDuration}
+                    onChange={(e) => setNewTaskDuration(Number(e.target.value))}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  />
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => {
+                      if (!newTaskName.trim()) {
+                        toast.error("يرجى إدخال اسم المهمة");
+                        return;
+                      }
+                      addTaskMutation.mutate({
+                        stageCode: addingToStage,
+                        nameAr: newTaskName.trim(),
+                        expectedDurationDays: newTaskDuration,
+                        projectId: selectedProjectId!,
+                      });
+                    }}
+                    disabled={addTaskMutation.isPending}
+                    className="flex-1 bg-cyan-600 text-white rounded-md py-2 text-sm font-medium hover:bg-cyan-700 disabled:opacity-50"
+                  >
+                    {addTaskMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "إضافة"}
+                  </button>
+                  <button
+                    onClick={() => setAddingToStage(null)}
+                    className="flex-1 bg-gray-100 text-gray-600 rounded-md py-2 text-sm font-medium hover:bg-gray-200"
+                  >
+                    إلغاء
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* RIGHT: Timeline / Gantt bars — single scroll container with sticky header (RTL) */}
         <div
           ref={timelineRef}
           className="flex-1 overflow-auto"
-          dir="ltr"
+          dir="rtl"
           onScroll={() => {
             syncScroll("timeline");
           }}
@@ -963,8 +1110,8 @@ export default function WorkSchedulePage() {
                 {monthHeaders.map((mh, i) => (
                   <div
                     key={i}
-                    className="border-r border-cyan-500/40 flex items-center justify-center"
-                    style={{ width: mh.span * dayWidth, marginLeft: i === 0 ? mh.startIdx * dayWidth : 0 }}
+                    className="border-l border-cyan-500/40 flex items-center justify-center"
+                    style={{ width: mh.span * dayWidth, marginRight: i === 0 ? mh.startIdx * dayWidth : 0 }}
                   >
                     {mh.label}
                   </div>
@@ -978,7 +1125,7 @@ export default function WorkSchedulePage() {
                   return (
                     <div
                       key={i}
-                      className={`flex flex-col items-center justify-center border-r text-[8px] ${
+                      className={`flex flex-col items-center justify-center border-l text-[8px] ${
                         isWeekend ? "bg-cyan-800/30 border-cyan-500/30" : "border-cyan-500/20"
                       } ${isToday ? "bg-yellow-500/40" : ""}`}
                       style={{ width: dayWidth, minWidth: dayWidth }}
@@ -1002,21 +1149,21 @@ export default function WorkSchedulePage() {
                   return (
                     <div
                       key={i}
-                      className={`absolute top-0 bottom-0 border-l ${
+                      className={`absolute top-0 bottom-0 border-r ${
                         isWeekend ? "bg-gray-50 border-gray-200/50" : "border-gray-100/50"
                       }`}
-                      style={{ left: i * dayWidth, width: dayWidth }}
+                      style={{ right: i * dayWidth, width: dayWidth }}
                     />
                   );
                 })}
               </div>
 
-              {/* Today line */}
+              {/* Today line (RTL positioned from right) */}
               {todayIdx >= 0 && todayIdx < totalDays && (
                 <div
                   className="absolute top-0 z-20"
                   style={{
-                    left: todayIdx * dayWidth + dayWidth / 2,
+                    right: todayRightPos - dayWidth / 2,
                     height: filteredRows.length * ROW_H,
                     width: 2,
                     backgroundColor: "#eab308",
@@ -1114,7 +1261,7 @@ export default function WorkSchedulePage() {
                         className="absolute flex items-center"
                         style={{
                           top: ROW_H / 2 - 3,
-                          left: barStyle.left,
+                          right: barStyle.right,
                           width: barStyle.width,
                           height: 6,
                         }}
@@ -1149,7 +1296,7 @@ export default function WorkSchedulePage() {
                         className={`absolute rounded-sm flex items-center overflow-visible shadow-sm group ${isDragging ? "opacity-70 ring-2 ring-blue-400" : ""}`}
                         style={{
                           top: ROW_H / 2 - 7,
-                          left: barStyle.left,
+                          right: barStyle.right,
                           width: barStyle.width,
                           height: 14,
                           backgroundColor: color.barLight,
@@ -1177,7 +1324,7 @@ export default function WorkSchedulePage() {
                             {row.name}
                           </span>
                         )}
-                        {/* Resize handle on the LEFT end (since RTL, left = end of bar) */}
+                        {/* Resize handle on the LEFT end (in RTL, left = future/end of bar) */}
                         {row.startDate && row.endDate && (
                           <div
                             className="absolute top-0 left-0 w-2 h-full cursor-ew-resize opacity-0 group-hover:opacity-100 transition-opacity z-20"
