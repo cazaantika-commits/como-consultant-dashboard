@@ -99,9 +99,3 @@
 - [x] Add tRPC CRUD procedures for news management
 - [x] Create admin UI page for managing news (add/edit/delete)
 - [x] Connect homepage news ticker to real database data
-- [x] Redesign capital scheduling page: dashboard-style with white cards, colored top borders, icons, large numbers - matching reference image style
-- [x] Keep the data table but add summary cards section above it
-- [x] Add 6 summary cards: total costs, total required, max exposure, paid so far, available capital, funding gap
-- [x] Add project control section with delay controls and visibility toggles
-- [x] Add available capital input with quick preset buttons (50M-300M)
-- [x] Add funding gap calculator with deficit months indicator
