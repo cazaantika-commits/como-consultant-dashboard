@@ -14,8 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   ArrowLeft, Clock, CheckCircle2, Lock, AlertCircle, Circle, FileText, Database,
-  ChevronRight, CalendarDays, Users, Building2, AlertTriangle, Timer, TrendingUp,
-  Edit3, Save, X, Bell, BellRing, RefreshCw, Settings2
+  ChevronRight, ChevronUp, ChevronDown, CalendarDays, Users, Building2, AlertTriangle, Timer, TrendingUp,
+  Edit3, Save, X, Bell, BellRing, RefreshCw, Settings2, GripVertical
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -714,12 +714,32 @@ function ServicesListPanel({
   onBack: () => void;
 }) {
   const [selectedService, setSelectedService] = useState<string | null>(null);
+  const [reorderMode, setReorderMode] = useState(false);
   const utils = trpc.useUtils();
 
   const servicesQuery = trpc.lifecycle.getStageServices.useQuery({
     stageCode,
     projectId,
   });
+
+  const reorderMutation = trpc.lifecycle.reorderServices.useMutation({
+    onSuccess: () => {
+      toast.success("تم حفظ الترتيب");
+      servicesQuery.refetch();
+    },
+    onError: () => toast.error("حدث خطأ في حفظ الترتيب"),
+  });
+
+  const handleMoveService = (idx: number, direction: "up" | "down") => {
+    const list = [...services];
+    const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= list.length) return;
+    // Swap
+    [list[idx], list[targetIdx]] = [list[targetIdx], list[idx]];
+    // Save new sortOrders
+    const updates = list.map((svc, i) => ({ serviceCode: svc.serviceCode, sortOrder: i + 1 }));
+    reorderMutation.mutate({ services: updates });
+  };
 
   const services = servicesQuery.data ?? [];
   const selectedSvc = services.find((s) => s.serviceCode === selectedService);
@@ -765,6 +785,15 @@ function ServicesListPanel({
             </p>
           </div>
           <div className="flex gap-2">
+            <Button
+              variant={reorderMode ? "default" : "outline"}
+              size="sm"
+              className="h-7 px-2 text-xs gap-1"
+              onClick={() => setReorderMode(!reorderMode)}
+            >
+              <GripVertical className="w-3.5 h-3.5" />
+              {reorderMode ? "إنهاء الترتيب" : "إعادة الترتيب"}
+            </Button>
             {overdueCount > 0 && (
               <span className="flex items-center gap-1 text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-medium">
                 <AlertTriangle className="w-3.5 h-3.5" />
@@ -870,8 +899,31 @@ function ServicesListPanel({
                   <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
                 </button>
 
-                {/* Inline date editor button */}
-                <div className="px-4 pb-3 flex justify-end">
+                {/* Inline date editor button + reorder buttons */}
+                <div className="px-4 pb-3 flex justify-between items-center">
+                  {reorderMode ? (
+                    <div className="flex gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 w-7 p-0"
+                        disabled={idx === 0 || reorderMutation.isPending}
+                        onClick={(e) => { e.stopPropagation(); handleMoveService(idx, "up"); }}
+                      >
+                        <ChevronUp className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 w-7 p-0"
+                        disabled={idx === services.length - 1 || reorderMutation.isPending}
+                        onClick={(e) => { e.stopPropagation(); handleMoveService(idx, "down"); }}
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </Button>
+                      <span className="text-xs text-muted-foreground self-center mr-1">رقم {idx + 1}</span>
+                    </div>
+                  ) : <div />}
                   <DateEditor
                     projectId={projectId}
                     service={svc as any}
