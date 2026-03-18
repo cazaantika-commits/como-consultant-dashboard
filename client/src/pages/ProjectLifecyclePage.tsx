@@ -2,6 +2,7 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { StageDataTab } from "@/components/lifecycle/StageDataTab";
 import { StageDocumentsTab } from "@/components/lifecycle/StageDocumentsTab";
+import { LifecycleAdminPanel } from "@/components/lifecycle/LifecycleAdminPanel";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -14,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import {
   ArrowLeft, Clock, CheckCircle2, Lock, AlertCircle, Circle, FileText, Database,
   ChevronRight, CalendarDays, Users, Building2, AlertTriangle, Timer, TrendingUp,
-  Edit3, Save, X, Bell, BellRing, RefreshCw
+  Edit3, Save, X, Bell, BellRing, RefreshCw, Settings2
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -895,6 +896,7 @@ export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean 
   const [showAlerts, setShowAlerts] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [reportStageFilter, setReportStageFilter] = useState<string>("all");
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
 
   const projectsQuery = trpc.projects.list.useQuery();
   const stagesQuery = trpc.lifecycle.getProjectStageStatuses.useQuery(
@@ -976,16 +978,26 @@ export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean 
                 <p className="text-violet-300 text-sm mt-0.5">دورة حياة المشروع العقاري — DLD / RERA</p>
               </div>
             </div>
-            {selectedProjectId && (
+            <div className="flex gap-2 shrink-0">
               <button
-                onClick={() => { setReportStageFilter("all"); setShowReportDialog(true); }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium text-white shrink-0 transition-all hover:scale-105"
+                onClick={() => setShowAdminPanel(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium text-white transition-all hover:scale-105"
                 style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)", backdropFilter: "blur(8px)" }}
               >
-                <FileText className="w-4 h-4" />
-                تقرير الامتثال
+                <Settings2 className="w-4 h-4" />
+                إدارة المسار
               </button>
-            )}
+              {selectedProjectId && (
+                <button
+                  onClick={() => { setReportStageFilter("all"); setShowReportDialog(true); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium text-white transition-all hover:scale-105"
+                  style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)", backdropFilter: "blur(8px)" }}
+                >
+                  <FileText className="w-4 h-4" />
+                  تقرير الامتثال
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Stats row — only when project selected */}
@@ -1286,6 +1298,11 @@ export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean 
           </div>
         )}
       </div>
+
+      {/* Admin Panel Overlay */}
+      {showAdminPanel && (
+        <LifecycleAdminPanel onClose={() => { setShowAdminPanel(false); stagesQuery.refetch(); }} />
+      )}
     </div>
   );
 }

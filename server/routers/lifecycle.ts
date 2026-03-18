@@ -894,19 +894,211 @@ export const lifecycleRouter = router({
       z.object({
         serviceCode: z.string(),
         nameAr: z.string().min(1).optional(),
+        nameEn: z.string().optional(),
+        descriptionAr: z.string().optional(),
+        externalParty: z.string().optional(),
+        internalOwner: z.string().optional(),
         expectedDurationDays: z.number().min(1).optional(),
+        isMandatory: z.number().optional(),
+        sortOrder: z.number().optional(),
       })
     )
     .mutation(async ({ input }) => {
       const db = await getDb();
+      const { serviceCode, ...rest } = input;
       const data: Record<string, any> = {};
-      if (input.nameAr !== undefined) data.nameAr = input.nameAr;
-      if (input.expectedDurationDays !== undefined) data.expectedDurationDays = input.expectedDurationDays;
+      for (const [k, v] of Object.entries(rest)) {
+        if (v !== undefined) data[k] = v;
+      }
       if (Object.keys(data).length > 0) {
         await db
           .update(lifecycleServices)
           .set(data)
-          .where(eq(lifecycleServices.serviceCode, input.serviceCode));
+          .where(eq(lifecycleServices.serviceCode, serviceCode));
+      }
+      return { success: true };
+    }),
+
+  /** Add a new service to a stage (global - affects all projects) */
+  addService: protectedProcedure
+    .input(
+      z.object({
+        stageCode: z.string(),
+        nameAr: z.string().min(1),
+        nameEn: z.string().optional(),
+        descriptionAr: z.string().optional(),
+        externalParty: z.string().optional(),
+        internalOwner: z.string().optional(),
+        expectedDurationDays: z.number().min(1).default(7),
+        isMandatory: z.number().default(1),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      const existing = await db
+        .select({ maxSort: max(lifecycleServices.sortOrder) })
+        .from(lifecycleServices)
+        .where(eq(lifecycleServices.stageCode, input.stageCode));
+      const nextSort = (existing[0]?.maxSort ?? 0) + 1;
+      const serviceCode = `SRV-${input.stageCode}-${Date.now()}`;
+      await db.insert(lifecycleServices).values({
+        serviceCode,
+        stageCode: input.stageCode,
+        nameAr: input.nameAr,
+        nameEn: input.nameEn ?? null,
+        descriptionAr: input.descriptionAr ?? null,
+        externalParty: input.externalParty ?? null,
+        internalOwner: input.internalOwner ?? null,
+        expectedDurationDays: input.expectedDurationDays,
+        sortOrder: nextSort,
+        isMandatory: input.isMandatory,
+      });
+      return { success: true, serviceCode };
+    }),
+
+  /** Delete a service globally (removes from all projects) */
+  deleteService: protectedProcedure
+    .input(z.object({ serviceCode: z.string() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      await db.delete(projectRequirementStatus).where(eq(projectRequirementStatus.serviceCode, input.serviceCode));
+      await db.delete(projectServiceInstances).where(eq(projectServiceInstances.serviceCode, input.serviceCode));
+      await db.delete(lifecycleRequirements).where(eq(lifecycleRequirements.serviceCode, input.serviceCode));
+      await db.delete(lifecycleServices).where(eq(lifecycleServices.serviceCode, input.serviceCode));
+      return { success: true };
+    }),
+
+  /** Delete a stage globally */
+  deleteStage: protectedProcedure
+    .input(z.object({ stageCode: z.string() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      const services = await db.select().from(lifecycleServices).where(eq(lifecycleServices.stageCode, input.stageCode));
+      for (const svc of services) {
+        await db.delete(projectRequirementStatus).where(eq(projectRequirementStatus.serviceCode, svc.serviceCode));
+        await db.delete(projectServiceInstances).where(eq(projectServiceInstances.serviceCode, svc.serviceCode));
+        await db.delete(lifecycleRequirements).where(eq(lifecycleRequirements.serviceCode, svc.serviceCode));
+        await db.delete(lifecycleServices).where(eq(lifecycleServices.serviceCode, svc.serviceCode));
+      }
+      await db.delete(projectStageStatus).where(eq(projectStageStatus.stageCode, input.stageCode));
+      await db.delete(lifecycleStages).where(eq(lifecycleStages.stageCode, input.stageCode));
+      return { success: true };
+    }),
+
+  /** Get all requirements for a service (admin - no project context) */
+  getServiceRequirementsAdmin: protectedProcedure
+    .input(z.object({ serviceCode: z.string() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      return db
+        .select()
+        .from(lifecycleRequirements)
+        .where(eq(lifecycleRequirements.serviceCode, input.serviceCode))
+        .orderBy(lifecycleRequirements.sortOrder);
+    }),
+
+  /** Add a requirement to a service */
+  addRequirement: protectedProcedure
+    .input(
+      z.object({
+        serviceCode: z.string(),
+        nameAr: z.string().min(1),
+        nameEn: z.string().optional(),
+        reqType: z.enum(['document', 'data', 'approval', 'action']).default('document'),
+        descriptionAr: z.string().optional(),
+        sourceNote: z.string().optional(),
+        isMandatory: z.number().default(1),
+        timing: z.string().optional(),
+        internalOwner: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      const existing = await db
+        .select({ maxSort: max(lifecycleRequirements.sortOrder) })
+        .from(lifecycleRequirements)
+        .where(eq(lifecycleRequirements.serviceCode, input.serviceCode));
+      const nextSort = (existing[0]?.maxSort ?? 0) + 1;
+      const requirementCode = `REQ-${input.serviceCode}-${Date.now()}`;
+      await db.insert(lifecycleRequirements).values({
+        requirementCode,
+        serviceCode: input.serviceCode,
+        nameAr: input.nameAr,
+        nameEn: input.nameEn ?? null,
+        reqType: input.reqType,
+        descriptionAr: input.descriptionAr ?? null,
+        sourceNote: input.sourceNote ?? null,
+        isMandatory: input.isMandatory,
+        timing: input.timing ?? null,
+        internalOwner: input.internalOwner ?? null,
+        sortOrder: nextSort,
+      });
+      return { success: true, requirementCode };
+    }),
+
+  /** Update a requirement */
+  updateRequirement: protectedProcedure
+    .input(
+      z.object({
+        requirementCode: z.string(),
+        nameAr: z.string().min(1).optional(),
+        nameEn: z.string().optional(),
+        reqType: z.enum(['document', 'data', 'approval', 'action']).optional(),
+        descriptionAr: z.string().optional(),
+        sourceNote: z.string().optional(),
+        isMandatory: z.number().optional(),
+        timing: z.string().optional(),
+        internalOwner: z.string().optional(),
+        sortOrder: z.number().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      const { requirementCode, ...rest } = input;
+      const data: Record<string, any> = {};
+      for (const [k, v] of Object.entries(rest)) {
+        if (v !== undefined) data[k] = v;
+      }
+      if (Object.keys(data).length > 0) {
+        await db
+          .update(lifecycleRequirements)
+          .set(data)
+          .where(eq(lifecycleRequirements.requirementCode, requirementCode));
+      }
+      return { success: true };
+    }),
+
+  /** Delete a requirement */
+  deleteRequirement: protectedProcedure
+    .input(z.object({ requirementCode: z.string() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      await db.delete(projectRequirementStatus).where(eq(projectRequirementStatus.requirementCode, input.requirementCode));
+      await db.delete(lifecycleRequirements).where(eq(lifecycleRequirements.requirementCode, input.requirementCode));
+      return { success: true };
+    }),
+
+  /** Get services for a stage (admin - no project context) */
+  getStageServicesAdmin: protectedProcedure
+    .input(z.object({ stageCode: z.string() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      return db
+        .select()
+        .from(lifecycleServices)
+        .where(eq(lifecycleServices.stageCode, input.stageCode))
+        .orderBy(lifecycleServices.sortOrder);
+    }),
+
+  /** Reorder services within a stage */
+  reorderServices: protectedProcedure
+    .input(z.object({
+      services: z.array(z.object({ serviceCode: z.string(), sortOrder: z.number() }))
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      for (const s of input.services) {
+        await db.update(lifecycleServices).set({ sortOrder: s.sortOrder }).where(eq(lifecycleServices.serviceCode, s.serviceCode));
       }
       return { success: true };
     }),
