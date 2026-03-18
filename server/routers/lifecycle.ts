@@ -894,7 +894,6 @@ export const lifecycleRouter = router({
       z.object({
         serviceCode: z.string(),
         nameAr: z.string().min(1).optional(),
-        nameEn: z.string().optional(),
         descriptionAr: z.string().optional(),
         externalParty: z.string().optional(),
         internalOwner: z.string().optional(),
@@ -925,7 +924,6 @@ export const lifecycleRouter = router({
       z.object({
         stageCode: z.string(),
         nameAr: z.string().min(1),
-        nameEn: z.string().optional(),
         descriptionAr: z.string().optional(),
         externalParty: z.string().optional(),
         internalOwner: z.string().optional(),
@@ -945,7 +943,6 @@ export const lifecycleRouter = router({
         serviceCode,
         stageCode: input.stageCode,
         nameAr: input.nameAr,
-        nameEn: input.nameEn ?? null,
         descriptionAr: input.descriptionAr ?? null,
         externalParty: input.externalParty ?? null,
         internalOwner: input.internalOwner ?? null,
@@ -1003,7 +1000,6 @@ export const lifecycleRouter = router({
       z.object({
         serviceCode: z.string(),
         nameAr: z.string().min(1),
-        nameEn: z.string().optional(),
         reqType: z.enum(['document', 'data', 'approval', 'action']).default('document'),
         descriptionAr: z.string().optional(),
         sourceNote: z.string().optional(),
@@ -1024,7 +1020,6 @@ export const lifecycleRouter = router({
         requirementCode,
         serviceCode: input.serviceCode,
         nameAr: input.nameAr,
-        nameEn: input.nameEn ?? null,
         reqType: input.reqType,
         descriptionAr: input.descriptionAr ?? null,
         sourceNote: input.sourceNote ?? null,
@@ -1042,7 +1037,6 @@ export const lifecycleRouter = router({
       z.object({
         requirementCode: z.string(),
         nameAr: z.string().min(1).optional(),
-        nameEn: z.string().optional(),
         reqType: z.enum(['document', 'data', 'approval', 'action']).optional(),
         descriptionAr: z.string().optional(),
         sourceNote: z.string().optional(),
