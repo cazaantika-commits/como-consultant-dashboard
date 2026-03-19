@@ -37,10 +37,10 @@ function fmtFull(n: number): string {
 // Gray foundation + one soft hue per phase for visual distinction
 const PHASE_COLORS = {
   land:         { solid: "#6b7280", light: "#f9fafb", text: "#4b5563" },
-  design:       { solid: "#94a8c7", light: "#f0f4f8", text: "#5a6f8a" },
-  offplan:      { solid: "#c4b99a", light: "#f8f6f1", text: "#8a7e65" },
-  construction: { solid: "#8bb5a2", light: "#f0f6f3", text: "#5a7d6b" },
-  handover:     { solid: "#b8a0b4", light: "#f5f1f5", text: "#7d6479" },
+  design:       { solid: "#ea580c", light: "#fff7ed", text: "#9a3412" },
+  offplan:      { solid: "#db2777", light: "#fdf2f8", text: "#9d174d" },
+  construction: { solid: "#7c3aed", light: "#f5f3ff", text: "#5b21b6" },
+  handover:     { solid: "#059669", light: "#ecfdf5", text: "#065f46" },
 } as const;
 
 type PhaseType = "land" | "design" | "offplan" | "construction" | "handover";
@@ -1016,31 +1016,31 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       {/* Design delay controls */}
                       <DelayControl
                         label="التصاميم"
-                        color="#6b7280"
-                        lightBg="#f3f4f6"
-                        borderColor="#9ca3af"
+                        color="#ea580c"
+                        lightBg="#fff7ed"
+                        borderColor="#fb923c"
                         value={delay.designDelay}
                         onUp={() => adjustDelay(col.projectId, "designDelay", -1)}
                         onDown={() => adjustDelay(col.projectId, "designDelay", 1)}
                       />
 
-                      {/* Offplan delay controls */}
+
                       <DelayControl
                         label="أوف بلان"
-                        color="#6b7280"
-                        lightBg="#f3f4f6"
-                        borderColor="#9ca3af"
+                        color="#db2777"
+                        lightBg="#fdf2f8"
+                        borderColor="#f472b6"
                         value={delay.offplanDelay}
                         onUp={() => adjustDelay(col.projectId, "offplanDelay", -1)}
                         onDown={() => adjustDelay(col.projectId, "offplanDelay", 1)}
                       />
 
-                      {/* Construction delay controls */}
+
                       <DelayControl
                         label="الإنشاء"
-                        color="#6b7280"
-                        lightBg="#f3f4f6"
-                        borderColor="#9ca3af"
+                        color="#7c3aed"
+                        lightBg="#f5f3ff"
+                        borderColor="#a78bfa"
                         value={delay.constructionDelay}
                         onUp={() => adjustDelay(col.projectId, "constructionDelay", -1)}
                         onDown={() => adjustDelay(col.projectId, "constructionDelay", 1)}
@@ -1349,10 +1349,10 @@ border: "1px solid #fdba74",
                                 style={{
                                   position: "absolute",
                                   inset: 0,
-                                  background: "rgba(196, 185, 154, 0.2)",
+                                  background: "rgba(219, 39, 119, 0.18)",
                                   borderRadius: offplanOverlayRadius,
                                   pointerEvents: "none",
-                                  borderTop: cd.isOffplanFirst ? "2px solid rgba(196, 185, 154, 0.5)" : "none",
+                                  borderTop: cd.isOffplanFirst ? "2px solid rgba(219, 39, 119, 0.5)" : "none",
                                   borderBottom: cd.isOffplanLast ? "2px solid rgba(196, 185, 154, 0.25)" : "none",
                                   borderRight: "1.5px solid rgba(196, 185, 154, 0.35)",
                                   borderLeft: "1.5px solid rgba(196, 185, 154, 0.4)",
