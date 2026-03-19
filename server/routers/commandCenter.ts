@@ -20,7 +20,7 @@ import {
   aiAdvisoryScores,
   evaluationApprovals,
 } from "../../drizzle/schema";
-import { eq, desc, sql, and, inArray } from "drizzle-orm";
+import { eq, desc, sql, and, inArray, gte } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import crypto from "crypto";
 import { invokeLLM } from "../_core/llm";
@@ -454,7 +454,10 @@ export const commandCenterRouter = router({
       const db = await getDb();
       if (!db) return [];
 
-      // Fetch last 20 active items from all bubble types
+      // Only show items created within the last 72 hours
+      const cutoff = new Date(Date.now() - 72 * 60 * 60 * 1000);
+      const cutoffStr = cutoff.toISOString().slice(0, 19).replace('T', ' ');
+
       const items = await db
         .select({
           id: commandCenterItems.id,
@@ -467,7 +470,12 @@ export const commandCenterRouter = router({
           createdAt: commandCenterItems.createdAt,
         })
         .from(commandCenterItems)
-        .where(inArray(commandCenterItems.itemStatus, ['active', 'pending_response']))
+        .where(
+          and(
+            inArray(commandCenterItems.itemStatus, ['active', 'pending_response']),
+            gte(commandCenterItems.createdAt, cutoffStr)
+          )
+        )
         .orderBy(desc(commandCenterItems.createdAt))
         .limit(30);
 
