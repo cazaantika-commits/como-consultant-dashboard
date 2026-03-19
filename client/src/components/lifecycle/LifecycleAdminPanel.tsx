@@ -589,6 +589,25 @@ function StageAdminSection({
     { enabled: expanded }
   );
 
+  const reorderServicesMutation = trpc.lifecycle.reorderServices.useMutation({
+    onSuccess: () => servicesQuery.refetch(),
+    onError: () => toast.error("حدث خطأ في إعادة ترتيب الخدمات"),
+  });
+
+  const moveService = (index: number, direction: "up" | "down") => {
+    const sorted = [...services].sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= sorted.length) return;
+    const current = sorted[index];
+    const target = sorted[targetIndex];
+    reorderServicesMutation.mutate({
+      services: [
+        { serviceCode: current.serviceCode, sortOrder: target.sortOrder ?? (targetIndex + 1) * 10 },
+        { serviceCode: target.serviceCode, sortOrder: current.sortOrder ?? (index + 1) * 10 },
+      ],
+    });
+  };
+
   const updateMutation = trpc.lifecycle.updateStage.useMutation({
     onSuccess: () => { toast.success("تم تحديث المرحلة"); setEditingStage(false); onUpdated(); },
     onError: () => toast.error("حدث خطأ في التحديث"),
@@ -645,12 +664,36 @@ function StageAdminSection({
             ) : services.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-3">لا توجد خدمات — أضف الأولى</p>
             ) : (
-              services.map((svc: any) => (
-                <ServiceAdminRow
-                  key={svc.serviceCode}
-                  svc={svc}
-                  onUpdated={() => servicesQuery.refetch()}
-                />
+              [...services].sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)).map((svc: any, index: number, arr: any[]) => (
+                <div key={svc.serviceCode} className="flex items-start gap-1.5">
+                  {/* Position controls */}
+                  <div className="flex flex-col items-center gap-0.5 pt-2 shrink-0">
+                    <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center">
+                      <span className="text-[10px] font-bold text-primary">{index + 1}</span>
+                    </div>
+                    <button
+                      disabled={index === 0 || reorderServicesMutation.isPending}
+                      onClick={() => moveService(index, "up")}
+                      className="w-5 h-4 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ChevronDown className="w-3 h-3 rotate-180" />
+                    </button>
+                    <button
+                      disabled={index === arr.length - 1 || reorderServicesMutation.isPending}
+                      onClick={() => moveService(index, "down")}
+                      className="w-5 h-4 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ChevronDown className="w-3 h-3" />
+                    </button>
+                  </div>
+                  {/* Service row */}
+                  <div className="flex-1 min-w-0">
+                    <ServiceAdminRow
+                      svc={svc}
+                      onUpdated={() => servicesQuery.refetch()}
+                    />
+                  </div>
+                </div>
               ))
             )}
             {addingService && (
