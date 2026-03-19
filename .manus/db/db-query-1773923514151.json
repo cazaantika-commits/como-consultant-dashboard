@@ -1,0 +1,26 @@
+{
+  "query": "SELECT serviceCode, COUNT(*) as field_count FROM stage_field_definitions GROUP BY serviceCode LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT serviceCode, COUNT(*) as field_count FROM stage_field_definitions GROUP BY serviceCode LIMIT 20;",
+  "rows": [
+    {
+      "serviceCode": "SRV-DLD-PROJ-REG",
+      "field_count": "9"
+    },
+    {
+      "serviceCode": "SRV-RERA-DEV-REG",
+      "field_count": "4"
+    },
+    {
+      "serviceCode": "SRV-RERA-ESCROW-OPEN",
+      "field_count": "6"
+    },
+    {
+      "serviceCode": "SRV-RERA-PROJ-REG",
+      "field_count": "13"
+    }
+  ],
+  "messages": [],
+  "stdout": "serviceCode\tfield_count\nSRV-DLD-PROJ-REG\t9\nSRV-RERA-DEV-REG\t4\nSRV-RERA-ESCROW-OPEN\t6\nSRV-RERA-PROJ-REG\t13\n",
+  "stderr": "",
+  "execution_time_ms": 1620
+}

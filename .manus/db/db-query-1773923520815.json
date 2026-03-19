@@ -1,0 +1,110 @@
+{
+  "query": "SELECT serviceCode, reqType, COUNT(*) as cnt FROM lifecycle_requirements WHERE reqType = 'data' GROUP BY serviceCode LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT serviceCode, reqType, COUNT(*) as cnt FROM lifecycle_requirements WHERE reqType = 'data' GROUP BY serviceCode LIMIT 20;",
+  "rows": [
+    {
+      "serviceCode": "SRV-SETUP-RERA-TRAINING",
+      "reqType": "data",
+      "cnt": "3"
+    },
+    {
+      "serviceCode": "SRV-SETUP-RERA-APPROVAL",
+      "reqType": "data",
+      "cnt": "1"
+    },
+    {
+      "serviceCode": "SRV-SALES-UNIT-PRICING",
+      "reqType": "data",
+      "cnt": "2"
+    },
+    {
+      "serviceCode": "SRV-MON-PROGRESS-REPORT",
+      "reqType": "data",
+      "cnt": "2"
+    },
+    {
+      "serviceCode": "SRV-EXEC-MAIN",
+      "reqType": "data",
+      "cnt": "3"
+    },
+    {
+      "serviceCode": "SRV-DES-FINAL-DESIGN",
+      "reqType": "data",
+      "cnt": "1"
+    },
+    {
+      "serviceCode": "SRV-SETUP-DED-LICENSE",
+      "reqType": "data",
+      "cnt": "3"
+    },
+    {
+      "serviceCode": "SRV-MON-BUYER-UPDATE",
+      "reqType": "data",
+      "cnt": "2"
+    },
+    {
+      "serviceCode": "SRV-CLOSE-ESCROW-SETTLEMENT",
+      "reqType": "data",
+      "cnt": "3"
+    },
+    {
+      "serviceCode": "SRV-STG10-CONTRACT",
+      "reqType": "data",
+      "cnt": "1"
+    },
+    {
+      "serviceCode": "SRV-STG02-MUNICIPALITY",
+      "reqType": "data",
+      "cnt": "1"
+    },
+    {
+      "serviceCode": "SRV-DES-CNSLT-APPT",
+      "reqType": "data",
+      "cnt": "3"
+    },
+    {
+      "serviceCode": "SRV-MKT-AD-PERMIT",
+      "reqType": "data",
+      "cnt": "3"
+    },
+    {
+      "serviceCode": "SRV-MON-RERA-INSPECTION",
+      "reqType": "data",
+      "cnt": "2"
+    },
+    {
+      "serviceCode": "SRV-CLOSE-COMPLETION-CERT",
+      "reqType": "data",
+      "cnt": "1"
+    },
+    {
+      "serviceCode": "SRV-CLOSE-TITLE-DEED-ISSUE",
+      "reqType": "data",
+      "cnt": "2"
+    },
+    {
+      "serviceCode": "SRV-STG02-RERA-DATA",
+      "reqType": "data",
+      "cnt": "2"
+    },
+    {
+      "serviceCode": "SRV-RERA-PROJ-REG",
+      "reqType": "data",
+      "cnt": "5"
+    },
+    {
+      "serviceCode": "SRV-RERA-ESCROW-OPEN",
+      "reqType": "data",
+      "cnt": "6"
+    },
+    {
+      "serviceCode": "SRV-MKT-BROKERS-SETUP",
+      "reqType": "data",
+      "cnt": "2"
+    }
+  ],
+  "messages": [],
+  "stdout": "serviceCode\treqType\tcnt\nSRV-SETUP-RERA-TRAINING\tdata\t3\nSRV-SETUP-RERA-APPROVAL\tdata\t1\nSRV-SALES-UNIT-PRICING\tdata\t2\nSRV-MON-PROGRESS-REPORT\tdata\t2\nSRV-EXEC-MAIN\tdata\t3\nSRV-DES-FINAL-DESIGN\tdata\t1\nSRV-SETUP-DED-LICENSE\tdata\t3\nSRV-MON-BUYER-UPDATE\tdata\t2\nSRV-CLOSE-ESCROW-SETTLEMENT\tdata\t3\nSRV-STG10-CONTRACT\tdata\t1\nSRV-STG02-MUNICIPALITY\tdata\t1\nSRV-DES-CNSLT-APPT\tdata\t3\nSRV-MKT-AD-PERMIT\tdata\t3\nSRV-MON-RERA-INSPECTION\tdata\t2\nSRV-CLOSE-COMPLETION-CERT\tdata\t1\nSRV-CLOSE-TITLE-DEED-ISSUE\tdata\t2\nSRV-STG02-RERA-DATA\tdata\t2\nSRV-RERA-PROJ-REG\tdata\t5\nSRV-RERA-ESCROW-OPEN\tdata\t6\nSRV-MKT-BROKERS-SETUP\tdata\t2\n",
+  "stderr": "",
+  "execution_time_ms": 1613
+}

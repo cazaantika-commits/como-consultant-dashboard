@@ -589,6 +589,13 @@ function ServiceDetailPanel({
     projectId,
   });
 
+  // Check if this service has rich field definitions in stage_field_definitions table
+  const fieldDefsQuery = trpc.stageData.getFieldDefinitions.useQuery(
+    { serviceCode: service.serviceCode },
+    { enabled: !!service.serviceCode }
+  );
+  const hasStageFieldDefs = (fieldDefsQuery.data?.length ?? 0) > 0;
+
   const submitMutation = trpc.lifecycle.submitService.useMutation({
     onSuccess: () => {
       utils.lifecycle.getStageServices.invalidate();
@@ -765,8 +772,8 @@ function ServiceDetailPanel({
         )}
 
         <div className="p-4 space-y-2">
-          {/* Use rich StageDataTab for البيانات tab, StageDocumentsTab for المستندات tab */}
-          {activeTab === "data" ? (
+          {/* Use rich StageDataTab for البيانات tab only when field definitions exist, otherwise show regular requirements */}
+          {activeTab === "data" && hasStageFieldDefs ? (
             <StageDataTab projectId={projectId} serviceCode={service.serviceCode} />
           ) : activeTab === "documents" ? (
             <StageDocumentsTab projectId={projectId} serviceCode={service.serviceCode} />
