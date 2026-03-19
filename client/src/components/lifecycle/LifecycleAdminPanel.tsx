@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Plus, Pencil, Trash2, ChevronDown, ChevronRight, X, Save,
-  Settings2, GripVertical, AlertTriangle, Layers, FileText, Database, CheckSquare, Zap
+  Settings2, GripVertical, AlertTriangle, Layers, FileText, Database, CheckSquare, Zap, Check
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -777,9 +777,53 @@ function AddStageForm({ onAdded, onCancel }: { onAdded: () => void; onCancel: ()
 // ─────────────────────────────────────────────
 export function LifecycleAdminPanel({ onClose }: { onClose: () => void }) {
   const [addingStage, setAddingStage] = useState(false);
+  const [posInputs, setPosInputs] = useState<Record<string, string>>({});
 
   const stagesQuery = trpc.lifecycle.getAllStages.useQuery();
+  const utils = trpc.useUtils();
   const stages = (stagesQuery.data ?? []) as any[];
+  const sortedStages = [...stages].sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+  const reorderMutation = trpc.lifecycle.reorderStages.useMutation({
+    onSuccess: () => {
+      utils.lifecycle.getAllStages.invalidate();
+      utils.lifecycle.getStages.invalidate();
+      stagesQuery.refetch();
+    },
+    onError: () => toast.error("حدث خطأ في إعادة الترتيب"),
+  });
+
+  const moveToPosition = (stageCode: string, newPos: number) => {
+    const total = sortedStages.length;
+    if (newPos < 1 || newPos > total) {
+      toast.error(`أدخل رقماً بين 1 و ${total}`);
+      return;
+    }
+    const currentIndex = sortedStages.findIndex((s: any) => s.stageCode === stageCode);
+    if (currentIndex === -1 || currentIndex === newPos - 1) {
+      setPosInputs((prev) => { const n = { ...prev }; delete n[stageCode]; return n; });
+      return;
+    }
+    const reordered = [...sortedStages];
+    const [moved] = reordered.splice(currentIndex, 1);
+    reordered.splice(newPos - 1, 0, moved);
+    const updates = reordered.map((s: any, i: number) => ({ id: s.id, sortOrder: (i + 1) * 10 }));
+    reorderMutation.mutate({ stages: updates });
+    setPosInputs((prev) => { const n = { ...prev }; delete n[stageCode]; return n; });
+  };
+
+  const moveStep = (index: number, direction: "up" | "down") => {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= sortedStages.length) return;
+    const current = sortedStages[index];
+    const target = sortedStages[targetIndex];
+    reorderMutation.mutate({
+      stages: [
+        { id: current.id, sortOrder: target.sortOrder ?? (targetIndex + 1) * 10 },
+        { id: target.id, sortOrder: current.sortOrder ?? (index + 1) * 10 },
+      ],
+    });
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm overflow-y-auto" dir="rtl">
@@ -804,7 +848,7 @@ export function LifecycleAdminPanel({ onClose }: { onClose: () => void }) {
         {/* Warning note */}
         <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3 mb-5 text-xs text-amber-700">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-          <p>التغييرات هنا تؤثر على <strong>جميع المشاريع</strong>. الحذف لا يمكن التراجع عنه.</p>
+          <p>التغييرات هنا تؤثر على <strong>جميع المشاريع</strong> وتنعكس فوراً على المسار والجدول. الحذف لا يمكن التراجع عنه.</p>
         </div>
 
         {/* Stages list */}
@@ -812,12 +856,71 @@ export function LifecycleAdminPanel({ onClose }: { onClose: () => void }) {
           <div className="text-center py-12 text-muted-foreground text-sm">جاري التحميل...</div>
         ) : (
           <div className="space-y-3">
-            {stages.map((stage: any) => (
-              <StageAdminSection
-                key={stage.stageCode}
-                stage={stage}
-                onUpdated={() => stagesQuery.refetch()}
-              />
+            {sortedStages.map((stage: any, index: number) => (
+              <div key={stage.stageCode} className="flex items-start gap-2">
+                {/* Position control column */}
+                <div className="flex flex-col items-center gap-1 pt-3 shrink-0">
+                  {/* Current position badge */}
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <span className="text-xs font-bold text-primary">{index + 1}</span>
+                  </div>
+                  {/* Up/Down buttons */}
+                  <button
+                    disabled={index === 0 || reorderMutation.isPending}
+                    onClick={() => moveStep(index, "up")}
+                    className="w-6 h-5 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronDown className="w-3 h-3 rotate-180" />
+                  </button>
+                  <button
+                    disabled={index === sortedStages.length - 1 || reorderMutation.isPending}
+                    onClick={() => moveStep(index, "down")}
+                    className="w-6 h-5 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronDown className="w-3 h-3" />
+                  </button>
+                  {/* Direct position input */}
+                  <div className="flex items-center gap-0.5 mt-0.5">
+                    <Input
+                      type="number"
+                      min={1}
+                      max={sortedStages.length}
+                      value={posInputs[stage.stageCode] ?? ""}
+                      placeholder="#"
+                      className="w-10 h-6 text-center text-xs px-1 py-0"
+                      onChange={(e) => setPosInputs((prev) => ({ ...prev, [stage.stageCode]: e.target.value }))}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          const val = parseInt(posInputs[stage.stageCode] ?? "", 10);
+                          if (!isNaN(val)) moveToPosition(stage.stageCode, val);
+                        }
+                        if (e.key === "Escape") setPosInputs((prev) => { const n = { ...prev }; delete n[stage.stageCode]; return n; });
+                      }}
+                    />
+                    {posInputs[stage.stageCode] && (
+                      <button
+                        disabled={reorderMutation.isPending}
+                        onClick={() => {
+                          const val = parseInt(posInputs[stage.stageCode] ?? "", 10);
+                          if (!isNaN(val)) moveToPosition(stage.stageCode, val);
+                        }}
+                        className="w-6 h-6 flex items-center justify-center rounded text-amber-600 hover:bg-amber-50 disabled:opacity-50"
+                      >
+                        <Check className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Stage card */}
+                <div className="flex-1 min-w-0">
+                  <StageAdminSection
+                    key={stage.stageCode}
+                    stage={stage}
+                    onUpdated={() => stagesQuery.refetch()}
+                  />
+                </div>
+              </div>
             ))}
             {addingStage ? (
               <AddStageForm
@@ -835,6 +938,10 @@ export function LifecycleAdminPanel({ onClose }: { onClose: () => void }) {
             )}
           </div>
         )}
+
+        <div className="mt-4 p-3 rounded-xl bg-blue-500/5 border border-blue-500/20 text-xs text-blue-600">
+          لتغيير موضع مرحلة، اكتب الرقم الجديد في الحقل الصغير واضغط Enter أو ✓ — سيُعاد ترقيم جميع المراحل تلقائياً وينعكس على المسار والجدول فوراً.
+        </div>
       </div>
     </div>
   );
