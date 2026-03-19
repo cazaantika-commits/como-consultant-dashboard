@@ -37,7 +37,7 @@ function fmtFull(n: number): string {
 // Gray foundation + one soft hue per phase for visual distinction
 const PHASE_COLORS = {
   land:         { solid: "#6b7280", light: "#f9fafb", text: "#4b5563" },
-  design:       { solid: "#ea580c", light: "#fff7ed", text: "#9a3412" },
+  design:       { solid: "#fb923c", light: "#fff7ed", text: "#c2410c" },
   offplan:      { solid: "#db2777", light: "#fdf2f8", text: "#9d174d" },
   construction: { solid: "#7c3aed", light: "#f5f3ff", text: "#5b21b6" },
   handover:     { solid: "#059669", light: "#ecfdf5", text: "#065f46" },
@@ -1016,9 +1016,9 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                       {/* Design delay controls */}
                       <DelayControl
                         label="التصاميم"
-                        color="#ea580c"
+                        color="#fb923c"
                         lightBg="#fff7ed"
-                        borderColor="#fb923c"
+                        borderColor="#fed7aa"
                         value={delay.designDelay}
                         onUp={() => adjustDelay(col.projectId, "designDelay", -1)}
                         onDown={() => adjustDelay(col.projectId, "designDelay", 1)}
