@@ -214,33 +214,59 @@ export const commandCenterRouter = router({
       const member = await verifyToken(input.token);
       const db = await getDb();
       if (!db) return { reports: 0, requests: 0, meeting_minutes: 0, evaluations: 0, announcements: 0, milestones_kpis: 0, unread: 0 };
-      
-      const [items, notifications] = await Promise.all([
-        db.select().from(commandCenterItems).where(eq(commandCenterItems.itemStatus, "active")),
+
+      // 72-hour cutoff
+      const cutoff72 = new Date(Date.now() - 72 * 60 * 60 * 1000);
+      const cutoffStr = cutoff72.toISOString().slice(0, 19).replace('T', ' ');
+
+      const [allItems, notifications, milestones, kpis, allSessions, myEvals] = await Promise.all([
+        db.select().from(commandCenterItems),
         db.select().from(commandCenterNotifications)
           .where(and(eq(commandCenterNotifications.memberId, member.memberId), eq(commandCenterNotifications.isRead, 0))),
+        db.select().from(projectMilestones),
+        db.select().from(projectKpis),
+        db.select().from(evaluationSessions),
+        db.select().from(commandCenterEvaluations)
+          .where(and(
+            eq(commandCenterEvaluations.memberId, member.memberId),
+            eq(commandCenterEvaluations.isComplete, 1)
+          )),
       ]);
-      
-      // Filter by member access
-      const accessible = items.filter(item => {
+
+      // Filter accessible items
+      const accessible = allItems.filter(item => {
         if (!item.targetMemberIds) return true;
         try {
           const targets = JSON.parse(item.targetMemberIds) as string[];
           return targets.includes(member.memberId) || item.createdByMemberId === member.memberId;
         } catch { return true; }
       });
-      
-      // Count milestones and KPIs
-      const [milestones, kpis] = await Promise.all([
-        db.select().from(projectMilestones),
-        db.select().from(projectKpis),
-      ]);
-      
-      const counts: Record<string, number> = { reports: 0, requests: 0, meeting_minutes: 0, evaluations: 0, announcements: 0, milestones_kpis: milestones.length + kpis.length, unread: notifications.length };
-      accessible.forEach(item => {
-        if (counts[item.bubbleType] !== undefined) counts[item.bubbleType]++;
-      });
-      
+
+      // reports / meeting_minutes / announcements: count only items within 72h
+      const recentTypes = ['reports', 'meeting_minutes', 'announcements'] as const;
+      const counts: Record<string, number> = {
+        reports: 0,
+        meeting_minutes: 0,
+        announcements: 0,
+        // requests: all-time pending (pending_response or active with requiresResponse)
+        requests: accessible.filter(i =>
+          i.bubbleType === 'requests' &&
+          (i.itemStatus === 'pending_response' || (i.itemStatus === 'active' && i.requiresResponse === 1))
+        ).length,
+        // evaluations: sessions where current member has NOT submitted a complete evaluation
+        evaluations: allSessions.filter(s => {
+          const myCompleted = myEvals.find(e => e.sessionId === s.sessionId);
+          return !myCompleted;
+        }).length,
+        milestones_kpis: milestones.length + kpis.length,
+        unread: notifications.length,
+      };
+
+      // Fill 72h counts for reports / meeting_minutes / announcements
+      accessible
+        .filter(i => recentTypes.includes(i.bubbleType as any) && i.createdAt >= cutoffStr)
+        .forEach(i => { counts[i.bubbleType] = (counts[i.bubbleType] || 0) + 1; });
+
       return counts;
     }),
 

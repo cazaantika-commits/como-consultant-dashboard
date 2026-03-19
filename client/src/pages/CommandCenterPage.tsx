@@ -1199,8 +1199,8 @@ function BubbleDetail({ token, bubbleType, onBack, memberRole }: { token: string
 
   const canCreate = ["announcements", "meeting_minutes", "reports", "requests"].includes(bubbleType);
   const canDelete = ["announcements", "meeting_minutes", "reports", "requests"].includes(bubbleType);
-  const hasFileUpload = ["meeting_minutes", "reports"].includes(bubbleType);
-  const hasLinkField = ["meeting_minutes", "reports"].includes(bubbleType);
+  const hasFileUpload = ["meeting_minutes", "reports", "requests"].includes(bubbleType);
+  const hasLinkField = ["meeting_minutes", "reports", "requests"].includes(bubbleType);
 
   const labels: Record<string, { btn: string; modal: string; success: string }> = {
     announcements: { btn: "إضافة إعلان", modal: "إضافة إعلان جديد", success: "تم إضافة الإعلان بنجاح" },
