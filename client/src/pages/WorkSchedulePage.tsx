@@ -30,6 +30,9 @@ import {
 import { toast } from "sonner";
 
 /* ── helpers ── */
+const DOW_EN = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const MONTH_EN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
 const MONTH_MAP: Record<string, number> = {
   jan:0, feb:1, mar:2, apr:3, may:4, jun:5,
   jul:6, aug:7, sep:8, oct:9, nov:10, dec:11
@@ -154,9 +157,6 @@ const STATUS_BADGE: Record<string, string> = {
   submitted: "bg-amber-100 text-amber-700",
   blocked: "bg-red-100 text-red-700",
 };
-
-const DOW_EN = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-const MONTH_EN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 /* ── Row type ── */
 type RowData = {
