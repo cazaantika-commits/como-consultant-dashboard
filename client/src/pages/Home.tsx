@@ -311,6 +311,13 @@ export default function Home() {
   });
   const chatMutation = trpc.agents.chat.useMutation();
 
+  // Overdue tasks count for the tour card badge
+  const { data: deadlineAlerts = [] } = trpc.lifecycle.getDeadlineAlerts.useQuery(
+    {},
+    { enabled: isAuthenticated, staleTime: 60_000 }
+  );
+  const overdueCount = deadlineAlerts.filter((a: any) => a.severity === 'overdue').length;
+
   const coordinator = agentsList.find((a: any) => a.isCoordinator === 1);
   const teamAgents = agentsList.filter((a: any) => a.isCoordinator !== 1);
 
@@ -382,7 +389,7 @@ export default function Home() {
   /* -- Navigation items organized in groups -- */
   const NAV_MAIN = [
     { id: "main-projects", label: "الدراسات والتخطيط الاستراتيجي", icon: Building2, path: "/project-management", borderColor: "#059669", iconBg: "linear-gradient(135deg, #059669, #047857)", shadow: "rgba(5, 150, 105, 0.25)", badge: 3 },
-    { id: "main-dev", label: "جولة في مراحل التطوير", icon: HardHat, path: "/development-phases", borderColor: "#8b5cf6", iconBg: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)" },
+    { id: "main-dev", label: "جولة في مراحل التطوير", icon: HardHat, path: "/development-phases", borderColor: "#8b5cf6", iconBg: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)", badge: overdueCount > 0 ? overdueCount : undefined },
     { id: "main-cmd", label: "مركز القيادة", icon: Crown, path: "/command-center", borderColor: "#ec4899", iconBg: "linear-gradient(135deg, #ec4899, #db2777)", shadow: "rgba(236, 72, 153, 0.3)", badge: 5 },
     { id: "main-kb", label: "قاعدة المعرفة", icon: BookOpen, path: "/knowledge-base", borderColor: "#8b5cf6", iconBg: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)" },
     { id: "main-audit", label: "تدقيق وتحليل العقود", icon: FileText, path: "/contract-audit", borderColor: "#dc2626", iconBg: "linear-gradient(135deg, #dc2626, #b91c1c)", shadow: "rgba(220, 38, 38, 0.25)", badge: 2 },
