@@ -235,7 +235,7 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
   /* ── Compact mode: hide side columns to show more of task name ── */
   const [compactMode, setCompactMode] = useState(false);
   // Left panel width: compact = WBS(32) + name(flex) + %(48) = ~280, normal = 460
-  const leftPanelWidth = compactMode ? 280 : 460;
+  const leftPanelWidth = compactMode ? 180 : 640;
 
   const projectsQuery = trpc.projects.list.useQuery();
   const scheduleQuery = trpc.lifecycle.getWorkSchedule.useQuery(
@@ -964,11 +964,11 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
               {!compactMode && (
                 <>
                   <div className="w-14 text-center border-l border-cyan-500/40 h-full flex items-center justify-center cursor-pointer text-[10px]" title="انقر لتغيير الحالة">الحالة</div>
-                  <div className="w-16 text-center border-l border-cyan-500/40 h-full flex items-center justify-center text-[10px]">البدء</div>
-                  <div className="w-16 text-center border-l border-cyan-500/40 h-full flex items-center justify-center text-[10px]">الانتهاء</div>
+                  <div className="w-24 text-center border-l border-cyan-500/40 h-full flex items-center justify-center text-[10px]">البدء</div>
+                  <div className="w-24 text-center border-l border-cyan-500/40 h-full flex items-center justify-center text-[10px]">الانتهاء</div>
                   <div className="w-10 text-center border-l border-cyan-500/40 h-full flex items-center justify-center text-cyan-200 text-[10px]" title="المدة المقترحة من النظام">مقترح</div>
                   <div className="w-10 text-center border-l border-cyan-500/40 h-full flex items-center justify-center text-[10px]" title="أيام عمل فعلية (أحد-خميس)">المدة</div>
-                  <div className="w-6 text-center border-l border-cyan-500/40 h-full flex items-center justify-center text-[10px]">✓</div>
+
                 </>
               )}
               <div className="w-12 text-center h-full flex items-center justify-center text-[10px]">%</div>
@@ -1069,7 +1069,7 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
 
                   {/* Start date */}
                   <div
-                    className={`w-16 text-center text-[9px] border-l border-gray-100 ${!isStage && !editingRow ? "cursor-pointer hover:bg-blue-50" : ""} ${editingRow === row.serviceCode ? "p-0" : "text-gray-600"}`}
+                    className={`w-24 text-center text-[9px] border-l border-gray-100 whitespace-nowrap ${!isStage && !editingRow ? "cursor-pointer hover:bg-blue-50" : ""} ${editingRow === row.serviceCode ? "p-0" : "text-gray-600"}`}
                     onClick={() => !isStage && editingRow !== row.serviceCode && startEditing(row)}
                   >
                     {editingRow === row.serviceCode ? (
@@ -1086,7 +1086,7 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
 
                   {/* End date (read-only, auto-computed) */}
                   <div
-                    className={`w-16 text-center text-[9px] border-l border-gray-100 ${editingRow === row.serviceCode ? "p-0 bg-gray-50" : "text-gray-600"}`}
+                    className={`w-24 text-center text-[9px] border-l border-gray-100 whitespace-nowrap ${editingRow === row.serviceCode ? "p-0 bg-gray-50" : "text-gray-600"}`}
                   >
                     {editingRow === row.serviceCode ? (
                       <div className="flex items-center gap-0.5">
@@ -1131,12 +1131,7 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
                     )}
                   </div>
 
-                  {/* Done check */}
-                  <div className="w-6 text-center border-l border-gray-100">
-                    {(row.status === "completed" || row.pctComplete === 100) && (
-                      <Check className="w-3 h-3 text-emerald-500 mx-auto" />
-                    )}
-                  </div>
+
                   </>)}
 
                   {/* % Complete - editable for services */}
