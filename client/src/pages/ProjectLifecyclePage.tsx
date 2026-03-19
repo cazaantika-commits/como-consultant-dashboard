@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { StageDataTab } from "@/components/lifecycle/StageDataTab";
 import { StageDocumentsTab } from "@/components/lifecycle/StageDocumentsTab";
@@ -151,9 +151,39 @@ function DateEditor({
 }) {
   const [open, setOpen] = useState(false);
   const [plannedStart, setPlannedStart] = useState(service.instance?.plannedStartDate ?? "");
-  const [plannedDue, setPlannedDue] = useState(service.instance?.plannedDueDate ?? "");
+  const [plannedWorkDays, setPlannedWorkDays] = useState<string>(() => {
+    const s = service.instance?.plannedStartDate;
+    const e = service.instance?.plannedDueDate;
+    if (s && e) {
+      const start = parseStoredDate(s);
+      const end = parseStoredDate(e);
+      if (start && end) return String(countWorkingDays(start, end));
+    }
+    return "";
+  });
+  const plannedDue = useMemo(() => {
+    if (!plannedStart || !plannedWorkDays) return "";
+    const start = parseStoredDate(plannedStart);
+    if (!start) return "";
+    return formatStoredDate(addWorkingDays(start, parseInt(plannedWorkDays, 10)));
+  }, [plannedStart, plannedWorkDays]);
   const [actualStart, setActualStart] = useState(service.instance?.actualStartDate ?? "");
-  const [actualClose, setActualClose] = useState(service.instance?.actualCloseDate ?? "");
+  const [actualWorkDays, setActualWorkDays] = useState<string>(() => {
+    const s = service.instance?.actualStartDate;
+    const e = service.instance?.actualCloseDate;
+    if (s && e) {
+      const start = parseStoredDate(s);
+      const end = parseStoredDate(e);
+      if (start && end) return String(countWorkingDays(start, end));
+    }
+    return "";
+  });
+  const actualClose = useMemo(() => {
+    if (!actualStart || !actualWorkDays) return "";
+    const start = parseStoredDate(actualStart);
+    if (!start) return "";
+    return formatStoredDate(addWorkingDays(start, parseInt(actualWorkDays, 10)));
+  }, [actualStart, actualWorkDays]);
   const [notes, setNotes] = useState(service.instance?.notes ?? "");
 
   const upsertMutation = trpc.lifecycle.upsertServiceInstance.useMutation({
@@ -196,42 +226,66 @@ function DateEditor({
             <DialogTitle className="text-sm font-bold">تواريخ الخدمة</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs text-muted-foreground mb-1 block">تاريخ البدء المخطط</Label>
-                <Input
-                  type="date"
-                  value={plannedStart ? toInputDate(plannedStart) : ""}
-                  onChange={(e) => setPlannedStart(fromInputDate(e.target.value))}
-                  className="text-sm h-8"
-                />
+            <div className="space-y-3">
+              <div className="border rounded-lg p-3 bg-muted/30">
+                <p className="text-xs font-semibold text-muted-foreground mb-2">المخطط</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1 block">تاريخ البدء</Label>
+                    <Input
+                      type="date"
+                      value={plannedStart ? toInputDate(plannedStart) : ""}
+                      onChange={(e) => setPlannedStart(fromInputDate(e.target.value))}
+                      className="text-sm h-8"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1 block">أيام العمل</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={plannedWorkDays}
+                      onChange={(e) => setPlannedWorkDays(e.target.value)}
+                      placeholder="عدد الأيام"
+                      className="text-sm h-8"
+                    />
+                  </div>
+                </div>
+                {plannedDue && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    تاريخ الانتهاء: <span className="font-medium text-foreground">{plannedDue}</span>
+                  </p>
+                )}
               </div>
-              <div>
-                <Label className="text-xs text-muted-foreground mb-1 block">تاريخ الاستحقاق المخطط</Label>
-                <Input
-                  type="date"
-                  value={plannedDue ? toInputDate(plannedDue) : ""}
-                  onChange={(e) => setPlannedDue(fromInputDate(e.target.value))}
-                  className="text-sm h-8"
-                />
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground mb-1 block">تاريخ البدء الفعلي</Label>
-                <Input
-                  type="date"
-                  value={actualStart ? toInputDate(actualStart) : ""}
-                  onChange={(e) => setActualStart(fromInputDate(e.target.value))}
-                  className="text-sm h-8"
-                />
-              </div>
-              <div>
-                <Label className="text-xs text-muted-foreground mb-1 block">تاريخ الإغلاق الفعلي</Label>
-                <Input
-                  type="date"
-                  value={actualClose ? toInputDate(actualClose) : ""}
-                  onChange={(e) => setActualClose(fromInputDate(e.target.value))}
-                  className="text-sm h-8"
-                />
+              <div className="border rounded-lg p-3 bg-muted/30">
+                <p className="text-xs font-semibold text-muted-foreground mb-2">الفعلي</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1 block">تاريخ البدء</Label>
+                    <Input
+                      type="date"
+                      value={actualStart ? toInputDate(actualStart) : ""}
+                      onChange={(e) => setActualStart(fromInputDate(e.target.value))}
+                      className="text-sm h-8"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground mb-1 block">أيام العمل</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={actualWorkDays}
+                      onChange={(e) => setActualWorkDays(e.target.value)}
+                      placeholder="عدد الأيام"
+                      className="text-sm h-8"
+                    />
+                  </div>
+                </div>
+                {actualClose && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    تاريخ الانتهاء: <span className="font-medium text-foreground">{actualClose}</span>
+                  </p>
+                )}
               </div>
             </div>
             <div>
@@ -258,6 +312,44 @@ function DateEditor({
       </Dialog>
     </>
   );
+}
+
+// Working days helpers (Sat=6, Sun=0 are off)
+function parseStoredDate(stored: string): Date | null {
+  if (!stored) return null;
+  const parts = stored.split("-").map(Number);
+  if (parts.length !== 3) return null;
+  // DD-MM-YYYY
+  if (parts[0] <= 31 && parts[2] > 31) return new Date(parts[2], parts[1] - 1, parts[0]);
+  // YYYY-MM-DD
+  if (parts[0] > 31) return new Date(parts[0], parts[1] - 1, parts[2]);
+  return null;
+}
+function formatStoredDate(d: Date): string {
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${dd}-${mm}-${yyyy}`;
+}
+function addWorkingDays(start: Date, days: number): Date {
+  let count = 0;
+  const d = new Date(start);
+  while (count < days) {
+    d.setDate(d.getDate() + 1);
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) count++; // skip Sun(0) and Sat(6)
+  }
+  return d;
+}
+function countWorkingDays(start: Date, end: Date): number {
+  let count = 0;
+  const d = new Date(start);
+  while (d < end) {
+    d.setDate(d.getDate() + 1);
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) count++;
+  }
+  return count;
 }
 
 // Date format helpers: convert between DD-MM-YYYY (stored) and YYYY-MM-DD (input[type=date])

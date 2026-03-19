@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import {
   ArrowRight,
   ClipboardList,
-  Settings2,
+  CalendarDays,
   FileSignature,
   Plus,
   Pencil,
@@ -21,8 +21,9 @@ import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
 import ProjectLifecyclePage from "./ProjectLifecyclePage";
+import WorkSchedulePage from "./WorkSchedulePage";
 
-type View = "icons" | "compliance" | "settings" | "contracts";
+type View = "icons" | "compliance" | "schedule" | "contracts";
 
 interface Stage {
   id: number;
@@ -274,10 +275,10 @@ const SECTIONS = [
     borderColor: "#8b5cf6",
   },
   {
-    id: "settings" as View,
-    label: "إعدادات المراحل",
-    description: "إضافة وتعديل وترتيب المراحل",
-    icon: Settings2,
+    id: "schedule" as View,
+    label: "جدول العمل التنظيمي",
+    description: "مخطط غانت لمسار الامتثال التنظيمي",
+    icon: CalendarDays,
     gradient: "linear-gradient(135deg, #f59e0b, #d97706)",
     shadow: "rgba(245, 158, 11, 0.35)",
     borderColor: "#f59e0b",
@@ -365,7 +366,7 @@ export default function DevelopmentPhasesPage() {
       )}
 
       {activeView === "compliance" && <ProjectLifecyclePage embedded />}
-      {activeView === "settings" && <StageSettingsView />}
+      {activeView === "schedule" && <WorkSchedulePage />}
       {activeView === "contracts" && <ContractsPlaceholder />}
     </div>
   );
