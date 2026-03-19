@@ -60,7 +60,14 @@ const safeDate = (d: string | null | undefined): Date | null => {
     }
   }
 
-  // Fallback: ISO YYYY-MM-DD or any other JS-parseable format
+  // Handle YYYY-MM-DD (ISO date-only, treat as LOCAL not UTC)
+  const yyyymmdd = d.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (yyyymmdd) {
+    const dt = new Date(Number(yyyymmdd[1]), Number(yyyymmdd[2]) - 1, Number(yyyymmdd[3]));
+    return isNaN(dt.getTime()) ? null : dt;
+  }
+
+  // Fallback: any other JS-parseable format
   const dt = new Date(d);
   return isNaN(dt.getTime()) ? null : dt;
 };
