@@ -25,22 +25,41 @@ import {
   Trash2,
   X,
   Crosshair,
+  Columns2,
 } from "lucide-react";
 import { toast } from "sonner";
 
 /* ── helpers ── */
+const MONTH_MAP: Record<string, number> = {
+  jan:0, feb:1, mar:2, apr:3, may:4, jun:5,
+  jul:6, aug:7, sep:8, oct:9, nov:10, dec:11
+};
+
 const safeDate = (d: string | null | undefined): Date | null => {
   if (!d) return null;
-  // Handle DD-MM-YYYY format stored by the lifecycle module
+
+  // Handle DD-Mon-YY format: "17-Mar-26" stored by the server
+  const ddMonYY = d.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2})$/);
+  if (ddMonYY) {
+    const day = Number(ddMonYY[1]);
+    const mon = MONTH_MAP[ddMonYY[2].toLowerCase()];
+    const yr = 2000 + Number(ddMonYY[3]);
+    if (mon !== undefined) {
+      const dt = new Date(yr, mon, day);
+      return isNaN(dt.getTime()) ? null : dt;
+    }
+  }
+
+  // Handle DD-MM-YYYY numeric format: "17-03-2026"
   const ddmmyyyy = d.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
   if (ddmmyyyy) {
     const [, day, month, year] = ddmmyyyy.map(Number);
-    // If first part <= 31 and third part > 31 it is DD-MM-YYYY
     if (day <= 31 && year > 31) {
       const dt = new Date(year, month - 1, day);
       return isNaN(dt.getTime()) ? null : dt;
     }
   }
+
   // Fallback: ISO YYYY-MM-DD or any other JS-parseable format
   const dt = new Date(d);
   return isNaN(dt.getTime()) ? null : dt;
@@ -199,6 +218,11 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
   /* ── Filter state ── */
   type FilterMode = "all" | "overdue" | "no_dates" | "in_progress" | "not_started";
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
+
+  /* ── Compact mode: hide side columns to show more of task name ── */
+  const [compactMode, setCompactMode] = useState(false);
+  // Left panel width: compact = WBS(32) + name(flex) + %(48) = ~280, normal = 460
+  const leftPanelWidth = compactMode ? 280 : 460;
 
   const projectsQuery = trpc.projects.list.useQuery();
   const scheduleQuery = trpc.lifecycle.getWorkSchedule.useQuery(
@@ -863,6 +887,22 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
               <GripVertical className="w-3 h-3" />
               <span>اسحب الأشرطة لتحريكها</span>
             </div>
+            {/* Compact mode toggle */}
+            <button
+              onClick={() => setCompactMode((v) => !v)}
+              className={`flex items-center gap-1 rounded-md px-2 py-1 text-[10px] transition-colors ${
+                compactMode
+                  ? "bg-cyan-400/30 text-cyan-200 border border-cyan-400/50"
+                  : "bg-white/10 text-slate-300 hover:bg-white/20"
+              }`}
+              title={compactMode ? "إظهار كل الحقول" : "إخفاء الحقول الجانبية"}
+            >
+              {compactMode ? (
+                <><Columns2 className="w-3 h-3" /><span>توسيع</span></>
+              ) : (
+                <><Columns2 className="w-3 h-3" /><span>تضييق</span></>
+              )}
+            </button>
             {/* Zoom controls */}
             <div className="flex items-center gap-1 bg-white/10 rounded-md px-2 py-1">
               <button onClick={() => setDayWidth((w) => Math.max(12, w - 4))} className="p-1 hover:bg-white/10 rounded">
@@ -891,7 +931,7 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
 
       {/* Top horizontal scroll bar mirror for Gantt */}
       <div className="flex border-b border-gray-200 bg-gray-50" style={{ height: 12 }}>
-        <div style={{ width: 460, flexShrink: 0 }} />
+        <div style={{ width: leftPanelWidth, flexShrink: 0 }} />
         <div
           ref={topScrollRef}
           className="flex-1 overflow-x-auto overflow-y-hidden"
@@ -906,18 +946,22 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
       {/* Main content: table + timeline side by side */}
       <div className="flex overflow-hidden" style={{ height: "calc(100vh - 76px)" }}>
         {/* LEFT: Task table */}
-        <div className="flex-shrink-0 border-l border-gray-200" style={{ width: 460 }}>
+        <div className="flex-shrink-0 border-l border-gray-200" style={{ width: leftPanelWidth }}>
           {/* Table header */}
           <div className="bg-gradient-to-l from-cyan-600 to-cyan-700 text-white text-xs font-semibold" style={{ height: 52 }}>
             <div className="flex items-center h-full">
              <div className="w-8 text-center border-l border-cyan-500/40 h-full flex items-center justify-center text-[10px]">WBS</div>
               <div className="flex-1 pr-2 border-l border-cyan-500/40 h-full flex items-center text-[10px]">المهمة</div>
-              <div className="w-14 text-center border-l border-cyan-500/40 h-full flex items-center justify-center cursor-pointer text-[10px]" title="انقر لتغيير الحالة">الحالة</div>
-              <div className="w-16 text-center border-l border-cyan-500/40 h-full flex items-center justify-center text-[10px]">البدء</div>
-              <div className="w-16 text-center border-l border-cyan-500/40 h-full flex items-center justify-center text-[10px]">الانتهاء</div>
-              <div className="w-10 text-center border-l border-cyan-500/40 h-full flex items-center justify-center text-cyan-200 text-[10px]" title="المدة المقترحة من النظام">مقترح</div>
-              <div className="w-10 text-center border-l border-cyan-500/40 h-full flex items-center justify-center text-[10px]" title="أيام عمل فعلية (أحد-خميس)">المدة</div>
-              <div className="w-6 text-center border-l border-cyan-500/40 h-full flex items-center justify-center text-[10px]">✓</div>
+              {!compactMode && (
+                <>
+                  <div className="w-14 text-center border-l border-cyan-500/40 h-full flex items-center justify-center cursor-pointer text-[10px]" title="انقر لتغيير الحالة">الحالة</div>
+                  <div className="w-16 text-center border-l border-cyan-500/40 h-full flex items-center justify-center text-[10px]">البدء</div>
+                  <div className="w-16 text-center border-l border-cyan-500/40 h-full flex items-center justify-center text-[10px]">الانتهاء</div>
+                  <div className="w-10 text-center border-l border-cyan-500/40 h-full flex items-center justify-center text-cyan-200 text-[10px]" title="المدة المقترحة من النظام">مقترح</div>
+                  <div className="w-10 text-center border-l border-cyan-500/40 h-full flex items-center justify-center text-[10px]" title="أيام عمل فعلية (أحد-خميس)">المدة</div>
+                  <div className="w-6 text-center border-l border-cyan-500/40 h-full flex items-center justify-center text-[10px]">✓</div>
+                </>
+              )}
               <div className="w-12 text-center h-full flex items-center justify-center text-[10px]">%</div>
             </div>
           </div>
@@ -987,6 +1031,7 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
                     )}
                   </div>
 
+                  {!compactMode && (<>
                   {/* Status - clickable to cycle */}
                   <div
                     className={`w-14 text-center border-l border-gray-100 ${!isStage ? "cursor-pointer" : ""}`}
@@ -1056,7 +1101,7 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
                   <div className="w-10 text-center border-l border-gray-100 text-[9px] text-cyan-600 font-medium">
                     {!isStage && row.suggestedDuration > 0 ? (
                       <span className="bg-cyan-50 px-0.5 py-0 rounded text-[8px]">{row.suggestedDuration}d</span>
-                    ) : isStage ? "" : "\u2014"}
+                    ) : isStage ? "" : "—"}
                   </div>
 
                   {/* Actual Duration (editable) */}
@@ -1073,7 +1118,7 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
                         className="w-full h-full text-[8px] border border-blue-300 rounded px-0 bg-white text-center"
                       />
                     ) : (
-                      row.duration > 0 ? `${row.duration}d` : "\u2014"
+                      row.duration > 0 ? `${row.duration}d` : "—"
                     )}
                   </div>
 
@@ -1083,6 +1128,7 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
                       <Check className="w-3 h-3 text-emerald-500 mx-auto" />
                     )}
                   </div>
+                  </>)}
 
                   {/* % Complete - editable for services */}
                   <div className="w-12 text-center">
