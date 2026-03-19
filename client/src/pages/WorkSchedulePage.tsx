@@ -51,17 +51,15 @@ const fmtDate = (d: string | null) => {
   const dt = safeDate(d);
   if (!dt) return "—";
   const day = dt.getDate().toString().padStart(2, "0");
-  const months = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
-  return `${day} ${months[dt.getMonth()]} ${dt.getFullYear().toString().slice(2)}`;
+  return `${day} ${MONTH_EN[dt.getMonth()]} ${dt.getFullYear().toString().slice(2)}`;
 };
 
 const fmtDateShort = (d: string | null) => {
   if (!d) return "—";
   const dt = safeDate(d);
   if (!dt) return "—";
-  const day = dt.getDate();
-  const mon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][dt.getMonth()];
-  return `${day}-${mon}-${dt.getFullYear().toString().slice(2)}`;
+  const day = dt.getDate().toString().padStart(2, "0");
+  return `${day} ${MONTH_EN[dt.getMonth()]} ${dt.getFullYear().toString().slice(2)}`;
 };
 
 const daysBetween = (a: Date, b: Date) => Math.round((b.getTime() - a.getTime()) / 86400000);
@@ -125,8 +123,8 @@ const STATUS_BADGE: Record<string, string> = {
   blocked: "bg-red-100 text-red-700",
 };
 
-const DOW_AR = ["أحد","اثن","ثلا","أرب","خمي","جمع","سبت"];
-const MONTH_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+const DOW_EN = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const MONTH_EN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 /* ── Row type ── */
 type RowData = {
@@ -179,6 +177,7 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
   const setEditStatus = (v: string) => { editStatusRef.current = v; _setEditStatus(v); };
   const timelineRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
+  const topScrollRef = useRef<HTMLDivElement>(null);
   // timelineHeaderRef removed - header is now inside the single scroll container
 
   /* ── Drag state ── */
@@ -603,7 +602,7 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
       const y = d.getFullYear();
       if (m !== currentMonth || y !== currentYear) {
         if (currentMonth >= 0) {
-          headers.push({ label: `${MONTH_AR[currentMonth]} ${currentYear}`, startIdx, span: i - startIdx });
+          headers.push({ label: `${MONTH_EN[currentMonth]} ${currentYear}`, startIdx, span: i - startIdx });
         }
         currentMonth = m;
         currentYear = y;
@@ -611,7 +610,7 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
       }
     }
     if (currentMonth >= 0) {
-      headers.push({ label: `${MONTH_AR[currentMonth]} ${currentYear}`, startIdx, span: days.length - startIdx });
+      headers.push({ label: `${MONTH_EN[currentMonth]} ${currentYear}`, startIdx, span: days.length - startIdx });
     }
     return headers;
   }, [days]);
@@ -628,11 +627,14 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
   }, [todayIdx, dayWidth]);
 
   /* ── Sync scroll ── */
-  const syncScroll = (source: "table" | "timeline") => {
+  const syncScroll = (source: "table" | "timeline" | "top") => {
     if (source === "table" && tableRef.current && timelineRef.current) {
       timelineRef.current.scrollTop = tableRef.current.scrollTop;
     } else if (source === "timeline" && timelineRef.current && tableRef.current) {
       tableRef.current.scrollTop = timelineRef.current.scrollTop;
+      if (topScrollRef.current) topScrollRef.current.scrollLeft = timelineRef.current.scrollLeft;
+    } else if (source === "top" && topScrollRef.current && timelineRef.current) {
+      timelineRef.current.scrollLeft = topScrollRef.current.scrollLeft;
     }
   };
 
@@ -887,10 +889,24 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
         </div>
       </div>
 
+      {/* Top horizontal scroll bar mirror for Gantt */}
+      <div className="flex border-b border-gray-200 bg-gray-50" style={{ height: 12 }}>
+        <div style={{ width: 460, flexShrink: 0 }} />
+        <div
+          ref={topScrollRef}
+          className="flex-1 overflow-x-auto overflow-y-hidden"
+          dir="rtl"
+          style={{ height: 12 }}
+          onScroll={() => syncScroll("top")}
+        >
+          <div style={{ width: totalDays * dayWidth, height: 1 }} />
+        </div>
+      </div>
+
       {/* Main content: table + timeline side by side */}
-      <div className="flex h-[calc(100vh-64px)] overflow-hidden">
+      <div className="flex overflow-hidden" style={{ height: "calc(100vh - 76px)" }}>
         {/* LEFT: Task table */}
-        <div className="flex-shrink-0 border-l border-gray-200" style={{ width: 620 }}>
+        <div className="flex-shrink-0 border-l border-gray-200" style={{ width: 460 }}>
           {/* Table header */}
           <div className="bg-gradient-to-l from-cyan-600 to-cyan-700 text-white text-xs font-semibold" style={{ height: 52 }}>
             <div className="flex items-center h-full">
@@ -951,15 +967,7 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
                         ({row.completedServices}/{row.totalServices})
                       </span>
                     )}
-                    {isStage && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setAddingToStage(row.stageCode); }}
-                        className="p-0.5 rounded hover:bg-emerald-100 text-emerald-600 flex-shrink-0 mr-auto"
-                        title="إضافة مهمة"
-                      >
-                        <Plus className="w-3 h-3" />
-                      </button>
-                    )}
+
                     {!isStage && (
                       <button
                         onClick={(e) => {
@@ -1202,7 +1210,7 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
                     >
                       <span className="font-medium">{d.getDate()}</span>
                       {dayWidth >= 20 && (
-                        <span className="text-[8px] opacity-70">{DOW_AR[d.getDay()]}</span>
+                        <span className="text-[8px] opacity-70">{DOW_EN[d.getDay()]}</span>
                       )}
                     </div>
                   );
