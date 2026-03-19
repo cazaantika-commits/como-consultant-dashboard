@@ -89,6 +89,12 @@ const addDays = (d: Date, n: number) => {
   return r;
 };
 
+/** Returns today's date at local midnight (avoids UTC off-by-one in GMT+x timezones) */
+const localToday = (): Date => {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+};
+
 /* Add working days (5-day week: Sun-Thu, skip Fri+Sat) */
 const addWorkingDays = (start: Date, workDays: number): Date => {
   const d = new Date(start);
@@ -524,7 +530,7 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
   }, [stages, expandedStages]);
 
   /* ── Filter rows ── */
-  const today = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d; }, []);
+  const today = useMemo(() => localToday(), []);
 
   const filterStats = useMemo(() => {
     const services = rows.filter(r => r.type === "service");
@@ -590,11 +596,10 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
       const as = safeDate(row.actualStart); if (as) allDates.push(as);
       const ae = safeDate(row.actualEnd); if (ae) allDates.push(ae);
     }
-    allDates.push(new Date());
+    allDates.push(localToday());
 
     if (allDates.length <= 1) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      const today = localToday();
       const daysArr = Array.from({ length: 90 }, (_, i) => addDays(today, i));
       return {
         timelineStart: today,
@@ -641,11 +646,8 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
 
   /* ── Today position (RTL: from right edge) ── */
   const todayIdx = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return daysBetween(timelineStart, today);
-  }, [timelineStart]);
-
+    return daysBetween(timelineStart, localToday());
+  }, [timelineStart, dayWidth]);
   const todayRightPos = useMemo(() => {
     return todayIdx * dayWidth;
   }, [todayIdx, dayWidth]);
