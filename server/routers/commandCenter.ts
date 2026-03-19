@@ -445,6 +445,50 @@ export const commandCenterRouter = router({
       }).from(commandCenterMembers).where(eq(commandCenterMembers.isActive, 1));
     }),
 
+  // ═══ Live Ticker ═══
+
+  getLiveTickerItems: publicProcedure
+    .input(z.object({ token: z.string() }))
+    .query(async ({ input }) => {
+      await verifyToken(input.token);
+      const db = await getDb();
+      if (!db) return [];
+
+      // Fetch last 20 active items from all bubble types
+      const items = await db
+        .select({
+          id: commandCenterItems.id,
+          bubbleType: commandCenterItems.bubbleType,
+          title: commandCenterItems.title,
+          summary: commandCenterItems.summary,
+          itemPriority: commandCenterItems.itemPriority,
+          itemStatus: commandCenterItems.itemStatus,
+          requiresResponse: commandCenterItems.requiresResponse,
+          createdAt: commandCenterItems.createdAt,
+        })
+        .from(commandCenterItems)
+        .where(inArray(commandCenterItems.itemStatus, ['active', 'pending_response']))
+        .orderBy(desc(commandCenterItems.createdAt))
+        .limit(30);
+
+      const bubbleLabels: Record<string, string> = {
+        reports: '\u062a\u0642\u0631\u064a\u0631',
+        requests: '\u0637\u0644\u0628',
+        meeting_minutes: '\u0645\u062d\u0636\u0631',
+        evaluations: '\u062a\u0642\u064a\u064a\u0645',
+        announcements: '\u0625\u0639\u0644\u0627\u0646',
+      };
+
+      return items.map(item => ({
+        id: item.id,
+        label: bubbleLabels[item.bubbleType] || item.bubbleType,
+        text: item.title,
+        isUrgent: item.itemPriority === 'urgent',
+        needsResponse: item.requiresResponse === 1 && item.itemStatus === 'pending_response',
+        createdAt: item.createdAt,
+      }));
+    }),
+
   // ═══ Evaluation System (Blind) ═══
   
   // Get available evaluation sessions

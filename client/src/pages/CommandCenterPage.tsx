@@ -2153,33 +2153,53 @@ function KpiForm({ token, kpi, projects, onClose, onSuccess }: {
 // NEWS TICKER
 // ═══════════════════════════════════════════════════════
 function NewsTicker({ token }: { token: string }) {
-  const items = trpc.commandCenter.getItems.useQuery({ token, bubbleType: "announcements" as any, status: "active" });
-  const newsItems = items.data || [];
-  
-  // Default news if no announcements exist
-  const defaultNews = [
-    "مرحباً بكم في مركز القيادة — COMO Developments Command Center",
-    "تابعوا آخر التطورات في مشاريعنا العقارية",
-    "للتواصل مع سلوى اضغط على الزر العائم",
+  const liveQuery = trpc.commandCenter.getLiveTickerItems.useQuery(
+    { token },
+    { refetchInterval: 60_000 } // refresh every 60s
+  );
+  const liveItems = liveQuery.data || [];
+
+  // Default news if no items exist
+  const defaultItems = [
+    { id: -1, label: 'مركز القيادة', text: 'مرحباً بكم في مركز القيادة — COMO Developments Command Center', isUrgent: false, needsResponse: false },
+    { id: -2, label: 'مركز القيادة', text: 'تابعوا آخر التطورات في مشاريعنا العقارية', isUrgent: false, needsResponse: false },
+    { id: -3, label: 'مركز القيادة', text: 'للتواصل مع سلوى اضغط على الزر العائم', isUrgent: false, needsResponse: false },
   ];
-  
-  const tickerItems = newsItems.length > 0
-    ? newsItems.map((n: any) => n.title)
-    : defaultNews;
-  
+
+  const displayItems = liveItems.length > 0 ? liveItems : defaultItems;
+  const doubled = [...displayItems, ...displayItems];
+
   return (
     <div className="bg-gradient-to-l from-slate-800 via-slate-900 to-slate-800 text-white overflow-hidden border-b border-slate-700">
       <div className="flex items-center h-9">
         <div className="flex-shrink-0 bg-amber-500 text-white px-4 h-full flex items-center gap-1.5 text-xs font-bold z-10 shadow-md">
           <Megaphone className="w-3.5 h-3.5" />
-          أخبار
+          أخر الأخبار
         </div>
         <div className="flex-1 overflow-hidden relative">
           <div className="animate-marquee whitespace-nowrap flex items-center h-9">
-            {[...tickerItems, ...tickerItems].map((text, i) => (
-              <span key={i} className="inline-flex items-center text-xs text-slate-200 mx-8">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 ml-3 flex-shrink-0" />
-                {text}
+            {doubled.map((item: any, i: number) => (
+              <span key={i} className="inline-flex items-center text-xs mx-6">
+                {/* Category badge */}
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ml-2 flex-shrink-0 ${
+                  item.isUrgent
+                    ? 'bg-red-500 text-white'
+                    : item.needsResponse
+                    ? 'bg-orange-400 text-white'
+                    : 'bg-slate-600 text-slate-200'
+                }`}>
+                  {item.label}
+                </span>
+                {/* Urgent indicator */}
+                {item.isUrgent && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 ml-1.5 flex-shrink-0 animate-pulse" />
+                )}
+                {!item.isUrgent && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 ml-1.5 flex-shrink-0" />
+                )}
+                <span className={item.isUrgent ? 'text-red-200' : item.needsResponse ? 'text-orange-200' : 'text-slate-200'}>
+                  {item.text}
+                </span>
               </span>
             ))}
           </div>
