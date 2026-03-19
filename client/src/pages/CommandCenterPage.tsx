@@ -91,7 +91,9 @@ import {
 // Lazy imports for embedded pages
 import WorkSchedulePage from "./WorkSchedulePage";
 import CapitalSchedulingPage from "./CapitalSchedulingPage";
-import FeasibilityHubPage from "./FeasibilityHubPage";
+import FinancialFeasibilityTab from "./FinancialFeasibilityTab";
+import ExcelCashFlowPage from "./ExcelCashFlowPage";
+import EscrowCashFlowPage from "./EscrowCashFlowPage";
 
 const SALWA_AVATAR_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663200809965/Q366eAYG4Q7iaM8VuAmmFX/salwa-enhanced_0251b1a8.png";
 
@@ -3482,6 +3484,9 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
   const [showWorkSchedule, setShowWorkSchedule] = useState(false);
   const [showCapitalScheduling, setShowCapitalScheduling] = useState(false);
   const [showFeasibilityStudy, setShowFeasibilityStudy] = useState(false);
+  const [feasibilityProjectId, setFeasibilityProjectId] = useState<number | null>(null);
+  const [feasibilityTab, setFeasibilityTab] = useState<"fin" | "capital" | "escrow">("fin");
+  const feasibilityProjects = trpc.projects.list.useQuery(undefined, { enabled: showFeasibilityStudy });
 
   const counts = trpc.commandCenter.getBubbleCounts.useQuery({ token });
   const notifications = trpc.commandCenter.getNotifications.useQuery({ token });
@@ -3546,9 +3551,57 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             </Button>
             <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">عرض فقط</span>
           </div>
-          <div className="pointer-events-none opacity-90">
-            <FeasibilityHubPage />
+          {/* Project selector */}
+          <div className="px-4 mb-4">
+            <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col gap-3">
+              <label className="text-sm font-semibold text-slate-700">اختر المشروع</label>
+              <select
+                className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-400"
+                value={feasibilityProjectId ?? ""}
+                onChange={e => setFeasibilityProjectId(e.target.value ? Number(e.target.value) : null)}
+              >
+                <option value="">-- اختر مشروعاً --</option>
+                {(feasibilityProjects.data || []).map((p: any) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              {/* Tabs */}
+              {feasibilityProjectId && (
+                <div className="flex gap-2 mt-1">
+                  {[
+                    { id: "fin" as const, label: "دراسة الجدوى المالية" },
+                    { id: "capital" as const, label: "رأس المال المطلوب" },
+                    { id: "escrow" as const, label: "حساب الضمان" },
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setFeasibilityTab(tab.id)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                        feasibilityTab === tab.id
+                          ? "bg-violet-600 text-white"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
+          {/* Content */}
+          {feasibilityProjectId ? (
+            <div className="pointer-events-none opacity-90">
+              {feasibilityTab === "fin" && <FinancialFeasibilityTab initialProjectId={feasibilityProjectId} />}
+              {feasibilityTab === "capital" && <ExcelCashFlowPage embedded initialProjectId={feasibilityProjectId} />}
+              {feasibilityTab === "escrow" && <EscrowCashFlowPage embedded initialProjectId={feasibilityProjectId} />}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+              <span className="text-4xl mb-3">📊</span>
+              <p className="text-sm">اختر مشروعاً لعرض بيانات الجدوى</p>
+            </div>
+          )}
         </div>
         <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
       </div>

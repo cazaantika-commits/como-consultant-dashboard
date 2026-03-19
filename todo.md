@@ -186,3 +186,4 @@
 - [ ] Add برنامج العمل (read-only) to مركز القيادة as a new bubble/icon
 - [ ] Add جدولة رأس المال (editable) to مركز القيادة as a new bubble/icon
 - [ ] Add دراسة جدوى المشروع (read-only) to مركز القيادة with project selector and 3 sub-sections: دراسة الجدوى المالية، رأس المال المطلوب، حساب الضمان
+- [ ] Fix دراسة جدوى المشروع in مركز القيادة - show only 3 sections (دراسة الجدوى المالية, رأس المال المطلوب, حساب الضمان) with project selector, not full FeasibilityHubPage
