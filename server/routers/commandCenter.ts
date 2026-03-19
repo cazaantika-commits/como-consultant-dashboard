@@ -480,21 +480,57 @@ export const commandCenterRouter = router({
         .limit(30);
 
       const bubbleLabels: Record<string, string> = {
-        reports: '\u062a\u0642\u0631\u064a\u0631',
-        requests: '\u0637\u0644\u0628',
-        meeting_minutes: '\u0645\u062d\u0636\u0631',
-        evaluations: '\u062a\u0642\u064a\u064a\u0645',
-        announcements: '\u0625\u0639\u0644\u0627\u0646',
+        reports: 'تقرير',
+        requests: 'طلب',
+        meeting_minutes: 'محضر',
+        evaluations: 'تقييم',
+        announcements: 'إعلان',
       };
 
-      return items.map(item => ({
-        id: item.id,
-        label: bubbleLabels[item.bubbleType] || item.bubbleType,
-        text: item.title,
-        isUrgent: item.itemPriority === 'urgent',
-        needsResponse: item.requiresResponse === 1 && item.itemStatus === 'pending_response',
-        createdAt: item.createdAt,
-      }));
+      // Format date from createdAt string e.g. "2026-03-18 10:00:00" → "18 مارس 26"
+      const ARABIC_MONTHS = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+      function fmtArabicDate(dateStr: string): string {
+        const d = new Date(dateStr.replace(' ', 'T'));
+        const day = d.getDate();
+        const month = ARABIC_MONTHS[d.getMonth()];
+        const year = String(d.getFullYear()).slice(2);
+        return `${day} ${month} ${year}`;
+      }
+
+      return items.map(item => {
+        let text = item.title;
+        if (item.bubbleType === 'reports') {
+          text = `تم رفع تقرير ال${item.title}`;
+        } else if (item.bubbleType === 'meeting_minutes') {
+          text = `تم رفع محضر الاجتماع المؤرخ ${fmtArabicDate(item.createdAt)}`;
+        } else if (item.bubbleType === 'evaluations') {
+          // Parse target members from summary or title to address them by name
+          const memberMap: Record<string, string> = {
+            wael: 'السيد وائل',
+            sheikh_issa: 'الشيخ عيسى',
+            abdulrahman: 'السيد عبدالرحمن',
+          };
+          // Try to extract member name from title if it contains a member id
+          let addressed = '';
+          for (const [id, name] of Object.entries(memberMap)) {
+            if (item.title.toLowerCase().includes(id) || (item.summary || '').toLowerCase().includes(id)) {
+              addressed = `${name} `;
+              break;
+            }
+          }
+          text = `${addressed}يرجى البدء بالتقييم الفني للاستشاريين`;
+        } else if (item.bubbleType === 'requests') {
+          text = `طلب جديد: ${item.title}`;
+        }
+        return {
+          id: item.id,
+          label: bubbleLabels[item.bubbleType] || item.bubbleType,
+          text,
+          isUrgent: item.itemPriority === 'urgent',
+          needsResponse: item.requiresResponse === 1 && item.itemStatus === 'pending_response',
+          createdAt: item.createdAt,
+        };
+      });
     }),
 
   // ═══ Evaluation System (Blind) ═══
