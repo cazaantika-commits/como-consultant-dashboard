@@ -1,0 +1,388 @@
+{
+  "query": "SELECT sr.code as role_code, sr.label as role_label, bc.code as cat_code, sb.required_allocation_pct \nFROM cpa_supervision_baseline sb\nJOIN cpa_supervision_roles sr ON sr.id = sb.supervision_role_id\nJOIN cpa_building_categories bc ON bc.id = sb.building_category_id\nORDER BY sr.sort_order, bc.sort_order;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT sr.code as role_code, sr.label as role_label, bc.code as cat_code, sb.required_allocation_pct \nFROM cpa_supervision_baseline sb\nJOIN cpa_supervision_roles sr ON sr.id = sb.supervision_role_id\nJOIN cpa_building_categories bc ON bc.id = sb.building_category_id\nORDER BY sr.sort_order, bc.sort_order;",
+  "rows": [
+    {
+      "role_code": "PD",
+      "role_label": "Project director ",
+      "cat_code": "VILLA",
+      "required_allocation_pct": "0.00"
+    },
+    {
+      "role_code": "PD",
+      "role_label": "Project director ",
+      "cat_code": "MEGA",
+      "required_allocation_pct": "100.00"
+    },
+    {
+      "role_code": "PD",
+      "role_label": "Project director ",
+      "cat_code": "MEGA",
+      "required_allocation_pct": "100.00"
+    },
+    {
+      "role_code": "PD",
+      "role_label": "Project director ",
+      "cat_code": "MEGA",
+      "required_allocation_pct": "0.00"
+    },
+    {
+      "role_code": "RE",
+      "role_label": "Resident Engineer",
+      "cat_code": "VILLA",
+      "required_allocation_pct": "100.00"
+    },
+    {
+      "role_code": "RE",
+      "role_label": "Resident Engineer",
+      "cat_code": "VILLA",
+      "required_allocation_pct": "100.00"
+    },
+    {
+      "role_code": "RE",
+      "role_label": "Resident Engineer",
+      "cat_code": "VILLA",
+      "required_allocation_pct": "0.00"
+    },
+    {
+      "role_code": "RE",
+      "role_label": "Resident Engineer",
+      "cat_code": "SMALL",
+      "required_allocation_pct": "100.00"
+    },
+    {
+      "role_code": "RE",
+      "role_label": "Resident Engineer",
+      "cat_code": "MEDIUM",
+      "required_allocation_pct": "100.00"
+    },
+    {
+      "role_code": "RE",
+      "role_label": "Resident Engineer",
+      "cat_code": "LARGE",
+      "required_allocation_pct": "100.00"
+    },
+    {
+      "role_code": "RE",
+      "role_label": "Resident Engineer",
+      "cat_code": "MEGA",
+      "required_allocation_pct": "100.00"
+    },
+    {
+      "role_code": "DEPUTY_RE",
+      "role_label": "Deputy Resident Engineer",
+      "cat_code": "VILLA",
+      "required_allocation_pct": "0.00"
+    },
+    {
+      "role_code": "DEPUTY_RE",
+      "role_label": "Deputy Resident Engineer",
+      "cat_code": "VILLA",
+      "required_allocation_pct": "30.00"
+    },
+    {
+      "role_code": "DEPUTY_RE",
+      "role_label": "Deputy Resident Engineer",
+      "cat_code": "SMALL",
+      "required_allocation_pct": "0.00"
+    },
+    {
+      "role_code": "DEPUTY_RE",
+      "role_label": "Deputy Resident Engineer",
+      "cat_code": "MEDIUM",
+      "required_allocation_pct": "0.00"
+    },
+    {
+      "role_code": "DEPUTY_RE",
+      "role_label": "Deputy Resident Engineer",
+      "cat_code": "LARGE",
+      "required_allocation_pct": "100.00"
+    },
+    {
+      "role_code": "DEPUTY_RE",
+      "role_label": "Deputy Resident Engineer",
+      "cat_code": "MEGA",
+      "required_allocation_pct": "100.00"
+    },
+    {
+      "role_code": "CIVIL_INSPECTOR",
+      "role_label": "Civil Inspector",
+      "cat_code": "VILLA",
+      "required_allocation_pct": "40.00"
+    },
+    {
+      "role_code": "CIVIL_INSPECTOR",
+      "role_label": "Civil Inspector",
+      "cat_code": "VILLA",
+      "required_allocation_pct": "40.00"
+    },
+    {
+      "role_code": "CIVIL_INSPECTOR",
+      "role_label": "Civil Inspector",
+      "cat_code": "SMALL",
+      "required_allocation_pct": "70.00"
+    },
+    {
+      "role_code": "CIVIL_INSPECTOR",
+      "role_label": "Civil Inspector",
+      "cat_code": "MEDIUM",
+      "required_allocation_pct": "100.00"
+    },
+    {
+      "role_code": "CIVIL_INSPECTOR",
+      "role_label": "Civil Inspector",
+      "cat_code": "LARGE",
+      "required_allocation_pct": "100.00"
+    },
+    {
+      "role_code": "CIVIL_INSPECTOR",
+      "role_label": "Civil Inspector",
+      "cat_code": "MEGA",
+      "required_allocation_pct": "100.00"
+    },
+    {
+      "role_code": "MEP_INSPECTOR",
+      "role_label": "MEP Inspector",
+      "cat_code": "VILLA",
+      "required_allocation_pct": "30.00"
+    },
+    {
+      "role_code": "MEP_INSPECTOR",
+      "role_label": "MEP Inspector",
+      "cat_code": "SMALL",
+      "required_allocation_pct": "60.00"
+    },
+    {
+      "role_code": "MEP_INSPECTOR",
+      "role_label": "MEP Inspector",
+      "cat_code": "MEDIUM",
+      "required_allocation_pct": "100.00"
+    },
+    {
+      "role_code": "MEP_INSPECTOR",
+      "role_label": "MEP Inspector",
+      "cat_code": "LARGE",
+      "required_allocation_pct": "100.00"
+    },
+    {
+      "role_code": "MEP_INSPECTOR",
+      "role_label": "MEP Inspector",
+      "cat_code": "MEGA",
+      "required_allocation_pct": "100.00"
+    },
+    {
+      "role_code": "HSE_OFFICER",
+      "role_label": "HSE Officer",
+      "cat_code": "VILLA",
+      "required_allocation_pct": "30.00"
+    },
+    {
+      "role_code": "HSE_OFFICER",
+      "role_label": "HSE Officer",
+      "cat_code": "SMALL",
+      "required_allocation_pct": "100.00"
+    },
+    {
+      "role_code": "HSE_OFFICER",
+      "role_label": "HSE Officer",
+      "cat_code": "MEDIUM",
+      "required_allocation_pct": "100.00"
+    },
+    {
+      "role_code": "HSE_OFFICER",
+      "role_label": "HSE Officer",
+      "cat_code": "LARGE",
+      "required_allocation_pct": "100.00"
+    },
+    {
+      "role_code": "HSE_OFFICER",
+      "role_label": "HSE Officer",
+      "cat_code": "MEGA",
+      "required_allocation_pct": "100.00"
+    },
+    {
+      "role_code": "DOC_CONTROLLER",
+      "role_label": "Document Controller",
+      "cat_code": "VILLA",
+      "required_allocation_pct": "0.00"
+    },
+    {
+      "role_code": "DOC_CONTROLLER",
+      "role_label": "Document Controller",
+      "cat_code": "SMALL",
+      "required_allocation_pct": "50.00"
+    },
+    {
+      "role_code": "DOC_CONTROLLER",
+      "role_label": "Document Controller",
+      "cat_code": "MEDIUM",
+      "required_allocation_pct": "100.00"
+    },
+    {
+      "role_code": "DOC_CONTROLLER",
+      "role_label": "Document Controller",
+      "cat_code": "LARGE",
+      "required_allocation_pct": "100.00"
+    },
+    {
+      "role_code": "DOC_CONTROLLER",
+      "role_label": "Document Controller",
+      "cat_code": "MEGA",
+      "required_allocation_pct": "100.00"
+    },
+    {
+      "role_code": "QA_QC",
+      "role_label": "QA/QC Engineer",
+      "cat_code": "VILLA",
+      "required_allocation_pct": "0.00"
+    },
+    {
+      "role_code": "QA_QC",
+      "role_label": "QA/QC Engineer",
+      "cat_code": "SMALL",
+      "required_allocation_pct": "40.00"
+    },
+    {
+      "role_code": "QA_QC",
+      "role_label": "QA/QC Engineer",
+      "cat_code": "MEDIUM",
+      "required_allocation_pct": "100.00"
+    },
+    {
+      "role_code": "QA_QC",
+      "role_label": "QA/QC Engineer",
+      "cat_code": "LARGE",
+      "required_allocation_pct": "100.00"
+    },
+    {
+      "role_code": "QA_QC",
+      "role_label": "QA/QC Engineer",
+      "cat_code": "MEGA",
+      "required_allocation_pct": "100.00"
+    },
+    {
+      "role_code": "HO_STRUCTURAL",
+      "role_label": "Structural Engineer (H/O)",
+      "cat_code": "VILLA",
+      "required_allocation_pct": "20.00"
+    },
+    {
+      "role_code": "HO_STRUCTURAL",
+      "role_label": "Structural Engineer (H/O)",
+      "cat_code": "SMALL",
+      "required_allocation_pct": "30.00"
+    },
+    {
+      "role_code": "HO_STRUCTURAL",
+      "role_label": "Structural Engineer (H/O)",
+      "cat_code": "MEDIUM",
+      "required_allocation_pct": "40.00"
+    },
+    {
+      "role_code": "HO_STRUCTURAL",
+      "role_label": "Structural Engineer (H/O)",
+      "cat_code": "LARGE",
+      "required_allocation_pct": "40.00"
+    },
+    {
+      "role_code": "HO_STRUCTURAL",
+      "role_label": "Structural Engineer (H/O)",
+      "cat_code": "MEGA",
+      "required_allocation_pct": "40.00"
+    },
+    {
+      "role_code": "HO_ARCH",
+      "role_label": "Architectural Engineer (H/O)",
+      "cat_code": "VILLA",
+      "required_allocation_pct": "20.00"
+    },
+    {
+      "role_code": "HO_ARCH",
+      "role_label": "Architectural Engineer (H/O)",
+      "cat_code": "SMALL",
+      "required_allocation_pct": "30.00"
+    },
+    {
+      "role_code": "HO_ARCH",
+      "role_label": "Architectural Engineer (H/O)",
+      "cat_code": "MEDIUM",
+      "required_allocation_pct": "40.00"
+    },
+    {
+      "role_code": "HO_ARCH",
+      "role_label": "Architectural Engineer (H/O)",
+      "cat_code": "LARGE",
+      "required_allocation_pct": "40.00"
+    },
+    {
+      "role_code": "HO_ARCH",
+      "role_label": "Architectural Engineer (H/O)",
+      "cat_code": "MEGA",
+      "required_allocation_pct": "40.00"
+    },
+    {
+      "role_code": "HO_MECHANICAL",
+      "role_label": "Mechanical Engineer (H/O)",
+      "cat_code": "VILLA",
+      "required_allocation_pct": "20.00"
+    },
+    {
+      "role_code": "HO_MECHANICAL",
+      "role_label": "Mechanical Engineer (H/O)",
+      "cat_code": "SMALL",
+      "required_allocation_pct": "30.00"
+    },
+    {
+      "role_code": "HO_MECHANICAL",
+      "role_label": "Mechanical Engineer (H/O)",
+      "cat_code": "MEDIUM",
+      "required_allocation_pct": "40.00"
+    },
+    {
+      "role_code": "HO_MECHANICAL",
+      "role_label": "Mechanical Engineer (H/O)",
+      "cat_code": "LARGE",
+      "required_allocation_pct": "40.00"
+    },
+    {
+      "role_code": "HO_MECHANICAL",
+      "role_label": "Mechanical Engineer (H/O)",
+      "cat_code": "MEGA",
+      "required_allocation_pct": "40.00"
+    },
+    {
+      "role_code": "HO_ELECTRICAL",
+      "role_label": "Electrical Engineer (H/O)",
+      "cat_code": "VILLA",
+      "required_allocation_pct": "20.00"
+    },
+    {
+      "role_code": "HO_ELECTRICAL",
+      "role_label": "Electrical Engineer (H/O)",
+      "cat_code": "SMALL",
+      "required_allocation_pct": "30.00"
+    },
+    {
+      "role_code": "HO_ELECTRICAL",
+      "role_label": "Electrical Engineer (H/O)",
+      "cat_code": "MEDIUM",
+      "required_allocation_pct": "40.00"
+    },
+    {
+      "role_code": "HO_ELECTRICAL",
+      "role_label": "Electrical Engineer (H/O)",
+      "cat_code": "LARGE",
+      "required_allocation_pct": "40.00"
+    },
+    {
+      "role_code": "HO_ELECTRICAL",
+      "role_label": "Electrical Engineer (H/O)",
+      "cat_code": "MEGA",
+      "required_allocation_pct": "40.00"
+    }
+  ],
+  "messages": [],
+  "stdout": "role_code\trole_label\tcat_code\trequired_allocation_pct\nPD\tProject director \tVILLA\t0.00\nPD\tProject director \tMEGA\t100.00\nPD\tProject director \tMEGA\t100.00\nPD\tProject director \tMEGA\t0.00\nRE\tResident Engineer\tVILLA\t100.00\nRE\tResident Engineer\tVILLA\t100.00\nRE\tResident Engineer\tVILLA\t0.00\nRE\tResident Engineer\tSMALL\t100.00\nRE\tResident Engineer\tMEDIUM\t100.00\nRE\tResident Engineer\tLARGE\t100.00\nRE\tResident Engineer\tMEGA\t100.00\nDEPUTY_RE\tDeputy Resident Engineer\tVILLA\t0.00\nDEPUTY_RE\tDeputy Resident Engineer\tVILLA\t30.00\nDEPUTY_RE\tDeputy Resident Engineer\tSMALL\t0.00\nDEPUTY_RE\tDeputy Resident Engineer\tMEDIUM\t0.00\nDEPUTY_RE\tDeputy Resident Engineer\tLARGE\t100.00\nDEPUTY_RE\tDeputy Resident Engineer\tMEGA\t100.00\nCIVIL_INSPECTOR\tCivil Inspector\tVILLA\t40.00\nCIVIL_INSPECTOR\tCivil Inspector\tVILLA\t40.00\nCIVIL_INSPECTOR\tCivil Inspector\tSMALL\t70.00\nCIVIL_INSPECTOR\tCivil Inspector\tMEDIUM\t100.00\nCIVIL_INSPECTOR\tCivil Inspector\tLARGE\t100.00\nCIVIL_INSPECTOR\tCivil Inspector\tMEGA\t100.00\nMEP_INSPECTOR\tMEP Inspector\tVILLA\t30.00\nMEP_INSPECTOR\tMEP Inspector\tSMALL\t60.00\nMEP_INSPECTOR\tMEP Inspector\tMEDIUM\t100.00\nMEP_INSPECTOR\tMEP Inspector\tLARGE\t100.00\nMEP_INSPECTOR\tMEP Inspector\tMEGA\t100.00\nHSE_OFFICER\tHSE Officer\tVILLA\t30.00\nHSE_OFFICER\tHSE Officer\tSMALL\t100.00\nHSE_OFFICER\tHSE Officer\tMEDIUM\t100.00\nHSE_OFFICER\tHSE Officer\tLARGE\t100.00\nHSE_OFFICER\tHSE Officer\tMEGA\t100.00\nDOC_CONTROLLER\tDocument Controller\tVILLA\t0.00\nDOC_CONTROLLER\tDocument Controller\tSMALL\t50.00\nDOC_CONTROLLER\tDocument Controller\tMEDIUM\t100.00\nDOC_CONTROLLER\tDocument Controller\tLARGE\t100.00\nDOC_CONTROLLER\tDocument Controller\tMEGA\t100.00\nQA_QC\tQA/QC Engineer\tVILLA\t0.00\nQA_QC\tQA/QC Engineer\tSMALL\t40.00\nQA_QC\tQA/QC Engineer\tMEDIUM\t100.00\nQA_QC\tQA/QC Engineer\tLARGE\t100.00\nQA_QC\tQA/QC Engineer\tMEGA\t100.00\nHO_STRUCTURAL\tStructural Engineer (H/O)\tVILLA\t20.00\nHO_STRUCTURAL\tStructural Engineer (H/O)\tSMALL\t30.00\nHO_STRUCTURAL\tStructural Engineer (H/O)\tMEDIUM\t40.00\nHO_STRUCTURAL\tStructural Engineer (H/O)\tLARGE\t40.00\nHO_STRUCTURAL\tStructural Engineer (H/O)\tMEGA\t40.00\nHO_ARCH\tArchitectural Engineer (H/O)\tVILLA\t20.00\nHO_ARCH\tArchitectural Engineer (H/O)\tSMALL\t30.00\nHO_ARCH\tArchitectural Engineer (H/O)\tMEDIUM\t40.00\nHO_ARCH\tArchitectural Engineer (H/O)\tLARGE\t40.00\nHO_ARCH\tArchitectural Engineer (H/O)\tMEGA\t40.00\nHO_MECHANICAL\tMechanical Engineer (H/O)\tVILLA\t20.00\nHO_MECHANICAL\tMechanical Engineer (H/O)\tSMALL\t30.00\nHO_MECHANICAL\tMechanical Engineer (H/O)\tMEDIUM\t40.00\nHO_MECHANICAL\tMechanical Engineer (H/O)\tLARGE\t40.00\nHO_MECHANICAL\tMechanical Engineer (H/O)\tMEGA\t40.00\nHO_ELECTRICAL\tElectrical Engineer (H/O)\tVILLA\t20.00\nHO_ELECTRICAL\tElectrical Engineer (H/O)\tSMALL\t30.00\nHO_ELECTRICAL\tElectrical Engineer (H/O)\tMEDIUM\t40.00\nHO_ELECTRICAL\tElectrical Engineer (H/O)\tLARGE\t40.00\nHO_ELECTRICAL\tElectrical Engineer (H/O)\tMEGA\t40.00\n",
+  "stderr": "",
+  "execution_time_ms": 1493
+}

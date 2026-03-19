@@ -1,0 +1,137 @@
+{
+  "query": "SELECT id, code, label, grade, team_type, monthly_rate_aed, sort_order, is_active FROM cpa_supervision_roles ORDER BY sort_order;\nSELECT id, code, label, bua_min_sqft, bua_max_sqft, supervision_duration_months, sort_order FROM cpa_building_categories ORDER BY sort_order;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, code, label, grade, team_type, monthly_rate_aed, sort_order, is_active FROM cpa_supervision_roles ORDER BY sort_order;\nSELECT id, code, label, bua_min_sqft, bua_max_sqft, supervision_duration_months, sort_order FROM cpa_building_categories ORDER BY sort_order;",
+  "rows": [
+    {
+      "id": "60001",
+      "code": "PD",
+      "label": "Project director ",
+      "grade": "Senior",
+      "team_type": "SITE",
+      "monthly_rate_aed": "60000.00",
+      "sort_order": "0",
+      "is_active": "1"
+    },
+    {
+      "id": "30012",
+      "code": "RE",
+      "label": "Resident Engineer",
+      "grade": "Senior",
+      "team_type": "SITE",
+      "monthly_rate_aed": "45000.00",
+      "sort_order": "1",
+      "is_active": "1"
+    },
+    {
+      "id": "30013",
+      "code": "DEPUTY_RE",
+      "label": "Deputy Resident Engineer",
+      "grade": "Senior",
+      "team_type": "SITE",
+      "monthly_rate_aed": "40000.00",
+      "sort_order": "2",
+      "is_active": "1"
+    },
+    {
+      "id": "30014",
+      "code": "CIVIL_INSPECTOR",
+      "label": "Civil Inspector",
+      "grade": "Mid",
+      "team_type": "SITE",
+      "monthly_rate_aed": "18000.00",
+      "sort_order": "3",
+      "is_active": "1"
+    },
+    {
+      "id": "30015",
+      "code": "MEP_INSPECTOR",
+      "label": "MEP Inspector",
+      "grade": "Mid",
+      "team_type": "SITE",
+      "monthly_rate_aed": "20000.00",
+      "sort_order": "4",
+      "is_active": "1"
+    },
+    {
+      "id": "30016",
+      "code": "HSE_OFFICER",
+      "label": "HSE Officer",
+      "grade": "Mid",
+      "team_type": "SITE",
+      "monthly_rate_aed": "18000.00",
+      "sort_order": "5",
+      "is_active": "1"
+    },
+    {
+      "id": "30017",
+      "code": "DOC_CONTROLLER",
+      "label": "Document Controller",
+      "grade": "Junior/Mid",
+      "team_type": "SITE",
+      "monthly_rate_aed": "12000.00",
+      "sort_order": "6",
+      "is_active": "1"
+    },
+    {
+      "id": "30018",
+      "code": "QA_QC",
+      "label": "QA/QC Engineer",
+      "grade": "Mid/Senior",
+      "team_type": "SITE",
+      "monthly_rate_aed": "28000.00",
+      "sort_order": "7",
+      "is_active": "1"
+    },
+    {
+      "id": "30019",
+      "code": "HO_STRUCTURAL",
+      "label": "Structural Engineer (H/O)",
+      "grade": "Senior",
+      "team_type": "HEAD_OFFICE",
+      "monthly_rate_aed": "35000.00",
+      "sort_order": "8",
+      "is_active": "1"
+    },
+    {
+      "id": "30020",
+      "code": "HO_ARCH",
+      "label": "Architectural Engineer (H/O)",
+      "grade": "Senior",
+      "team_type": "HEAD_OFFICE",
+      "monthly_rate_aed": "32000.00",
+      "sort_order": "9",
+      "is_active": "1"
+    },
+    {
+      "id": "30021",
+      "code": "HO_MECHANICAL",
+      "label": "Mechanical Engineer (H/O)",
+      "grade": "Senior",
+      "team_type": "HEAD_OFFICE",
+      "monthly_rate_aed": "35000.00",
+      "sort_order": "10",
+      "is_active": "1"
+    },
+    {
+      "id": "30022",
+      "code": "HO_ELECTRICAL",
+      "label": "Electrical Engineer (H/O)",
+      "grade": "Senior",
+      "team_type": "HEAD_OFFICE",
+      "monthly_rate_aed": "35000.00",
+      "sort_order": "11",
+      "is_active": "1"
+    }
+  ],
+  "messages": [
+    "id\tcode\tlabel\tbua_min_sqft\tbua_max_sqft\tsupervision_duration_months\tsort_order",
+    "30006\tVILLA\tVilla\tNULL\t39999.00\t16\t1",
+    "30007\tSMALL\tSmall\t40000.00\t120000.00\t18\t2",
+    "30008\tMEDIUM\tMedium\t120001.00\t300000.00\t20\t3",
+    "30009\tLARGE\tLarge\t300001.00\t600000.00\t30\t4",
+    "30010\tMEGA\tMega\t600001.00\tNULL\t36\t5"
+  ],
+  "stdout": "id\tcode\tlabel\tgrade\tteam_type\tmonthly_rate_aed\tsort_order\tis_active\n60001\tPD\tProject director \tSenior\tSITE\t60000.00\t0\t1\n30012\tRE\tResident Engineer\tSenior\tSITE\t45000.00\t1\t1\n30013\tDEPUTY_RE\tDeputy Resident Engineer\tSenior\tSITE\t40000.00\t2\t1\n30014\tCIVIL_INSPECTOR\tCivil Inspector\tMid\tSITE\t18000.00\t3\t1\n30015\tMEP_INSPECTOR\tMEP Inspector\tMid\tSITE\t20000.00\t4\t1\n30016\tHSE_OFFICER\tHSE Officer\tMid\tSITE\t18000.00\t5\t1\n30017\tDOC_CONTROLLER\tDocument Controller\tJunior/Mid\tSITE\t12000.00\t6\t1\n30018\tQA_QC\tQA/QC Engineer\tMid/Senior\tSITE\t28000.00\t7\t1\n30019\tHO_STRUCTURAL\tStructural Engineer (H/O)\tSenior\tHEAD_OFFICE\t35000.00\t8\t1\n30020\tHO_ARCH\tArchitectural Engineer (H/O)\tSenior\tHEAD_OFFICE\t32000.00\t9\t1\n30021\tHO_MECHANICAL\tMechanical Engineer (H/O)\tSenior\tHEAD_OFFICE\t35000.00\t10\t1\n30022\tHO_ELECTRICAL\tElectrical Engineer (H/O)\tSenior\tHEAD_OFFICE\t35000.00\t11\t1\nid\tcode\tlabel\tbua_min_sqft\tbua_max_sqft\tsupervision_duration_months\tsort_order\n30006\tVILLA\tVilla\tNULL\t39999.00\t16\t1\n30007\tSMALL\tSmall\t40000.00\t120000.00\t18\t2\n30008\tMEDIUM\tMedium\t120001.00\t300000.00\t20\t3\n30009\tLARGE\tLarge\t300001.00\t600000.00\t30\t4\n30010\tMEGA\tMega\t600001.00\tNULL\t36\t5\n",
+  "stderr": "",
+  "execution_time_ms": 1804
+}
