@@ -151,4 +151,6 @@
 - [x] Bug: Project 6185392 still not opening (fixed Invalid Date crash with safeDate helper)
 - [x] Bug: Bar extends in wrong direction when duration changes (fixed RTL bar positioning: right=startOffset*dayWidth)
 - [ ] Bug: تبويب "البيانات" في صفحة تفاصيل الخدمة يظهر العدد (0/3) لكن لا يعرض البيانات عند الضغط عليه (قيد التحقيق)
-- [ ] Bug: المشاريع لا تُحمَّل / غير مربوطة في صفحة مسار الامتثال
+- [x] Bug: المشاريع لا تُحمَّل / غير مربوطة في صفحة مسار الامتثال (السبب: المستخدم غير مسجّل - تم إضافة auth guard)
+- [x] Bug: قائمة المشاريع لا تظهر في النسخة المنشورة (مسار الامتثال، مراحل التطوير، وأماكن أخرى) - تم الإصلاح بإضافة auth guard
+- [x] Bug: النسخة المنشورة لا تعرض زر تسجيل الدخول بوضوح - تم إضافة auth guard في ProjectLifecyclePage

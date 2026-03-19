@@ -18,6 +18,8 @@ import {
   Edit3, Save, X, Bell, BellRing, RefreshCw, Settings2, GripVertical
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { getLoginUrl } from "@/const";
 
 // -------------------------------------------------------------
 // Types
@@ -943,6 +945,7 @@ function ServicesListPanel({
 // Main ProjectLifecyclePage
 // -------------------------------------------------------------
 export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean } = {}) {
+  const { user, loading: authLoading } = useAuth();
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [selectedStage, setSelectedStage] = useState<{ code: string; name: string } | null>(null);
   const [showAlerts, setShowAlerts] = useState(false);
@@ -950,7 +953,7 @@ export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean 
   const [reportStageFilter, setReportStageFilter] = useState<string>("all");
   const [showAdminPanel, setShowAdminPanel] = useState(false);
 
-  const projectsQuery = trpc.projects.list.useQuery();
+  const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: !!user });
   const stagesQuery = trpc.lifecycle.getProjectStageStatuses.useQuery(
     { projectId: selectedProjectId! },
     { enabled: !!selectedProjectId }
@@ -984,6 +987,30 @@ export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean 
   const overallPct = totalServices > 0 ? Math.round((completedServices / totalServices) * 100) : 0;
   const completedStages = summary.filter((s) => s.status === "completed").length;
 
+  // Auth guard: show login prompt if not authenticated
+  if (!authLoading && !user) {
+    return (
+      <div className={`${embedded ? "" : "min-h-screen bg-background"} flex items-center justify-center`} dir="rtl">
+        <div className="flex flex-col items-center gap-6 p-8 max-w-sm w-full text-center">
+          <div className="w-16 h-16 rounded-2xl bg-violet-100 flex items-center justify-center">
+            <Lock className="w-8 h-8 text-violet-600" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-foreground mb-2">تسجيل الدخول مطلوب</h2>
+            <p className="text-sm text-muted-foreground">يرجى تسجيل الدخول لعرض مسار الامتثال التنظيمي ومشاريعك</p>
+          </div>
+          <Button
+            size="lg"
+            className="w-full gap-2"
+            onClick={() => { window.location.href = getLoginUrl(); }}
+          >
+            تسجيل الدخول
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
   if (selectedStage && selectedProjectId) {
     return (
       <div className={embedded ? "" : "min-h-screen bg-background"}>
