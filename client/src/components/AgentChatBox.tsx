@@ -61,7 +61,7 @@ const agentDefaults: Record<AgentType, { name: string; title: string; descriptio
     title: "المنسقة والمساعدة التنفيذية",
     description: "فحص الإيميل وإدارة المراسلات والتنسيق",
     gradient: "from-amber-500 to-yellow-600",
-    avatar: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/sFWezOzuQFJxzpKl.png"
+    avatar: "https://d2xsxph8kpxj0f.cloudfront.net/310519663200809965/Q366eAYG4Q7iaM8VuAmmFX/salwa-enhanced_0251b1a8.png"
   },
   farouq: {
     name: "فاروق",
