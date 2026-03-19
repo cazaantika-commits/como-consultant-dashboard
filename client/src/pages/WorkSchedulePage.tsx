@@ -31,6 +31,17 @@ import { toast } from "sonner";
 /* ── helpers ── */
 const safeDate = (d: string | null | undefined): Date | null => {
   if (!d) return null;
+  // Handle DD-MM-YYYY format stored by the lifecycle module
+  const ddmmyyyy = d.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (ddmmyyyy) {
+    const [, day, month, year] = ddmmyyyy.map(Number);
+    // If first part <= 31 and third part > 31 it is DD-MM-YYYY
+    if (day <= 31 && year > 31) {
+      const dt = new Date(year, month - 1, day);
+      return isNaN(dt.getTime()) ? null : dt;
+    }
+  }
+  // Fallback: ISO YYYY-MM-DD or any other JS-parseable format
   const dt = new Date(d);
   return isNaN(dt.getTime()) ? null : dt;
 };

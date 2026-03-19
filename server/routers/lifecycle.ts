@@ -85,7 +85,9 @@ async function computeServiceStatus(
     }
   }
 
-  const opStatus = allMandatoryDone ? "in_progress" : "not_started";
+  // If the service has an actualStartDate it has physically started — never show "not_started"
+  const hasActualStart = !!(instance?.actualStartDate);
+  const opStatus = allMandatoryDone || hasActualStart ? "in_progress" : "not_started";
   return { opStatus, timeStatus };
 }
 
