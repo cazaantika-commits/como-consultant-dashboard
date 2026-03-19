@@ -297,6 +297,7 @@ const SECTIONS = [
 export default function DevelopmentPhasesPage() {
   const [, navigate] = useLocation();
   const [activeView, setActiveView] = useState<View>("icons");
+  const [sharedProjectId, setSharedProjectId] = useState<number | null>(null);
   const activeSection = SECTIONS.find((s) => s.id === activeView);
 
   return (
@@ -365,8 +366,8 @@ export default function DevelopmentPhasesPage() {
         </main>
       )}
 
-      {activeView === "compliance" && <ProjectLifecyclePage embedded />}
-      {activeView === "schedule" && <WorkSchedulePage />}
+      {activeView === "compliance" && <ProjectLifecyclePage embedded onProjectChange={setSharedProjectId} />}
+      {activeView === "schedule" && <WorkSchedulePage initialProjectId={sharedProjectId} onProjectChange={setSharedProjectId} />}
       {activeView === "contracts" && <ContractsPlaceholder />}
     </div>
   );

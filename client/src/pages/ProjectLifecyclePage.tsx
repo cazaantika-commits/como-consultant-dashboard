@@ -1036,9 +1036,13 @@ function ServicesListPanel({
 // -------------------------------------------------------------
 // Main ProjectLifecyclePage
 // -------------------------------------------------------------
-export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean } = {}) {
+export default function ProjectLifecyclePage({ embedded, onProjectChange }: { embedded?: boolean; onProjectChange?: (id: number | null) => void } = {}) {
   const { user, loading: authLoading } = useAuth();
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const handleSetProjectId = (id: number | null) => {
+    setSelectedProjectId(id);
+    onProjectChange?.(id);
+  };
   const [selectedStage, setSelectedStage] = useState<{ code: string; name: string } | null>(null);
   const [showAlerts, setShowAlerts] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
@@ -1267,7 +1271,7 @@ export default function ProjectLifecyclePage({ embedded }: { embedded?: boolean 
           <Select
             value={selectedProjectId?.toString() ?? ""}
             onValueChange={(v) => {
-              setSelectedProjectId(Number(v));
+              handleSetProjectId(Number(v));
               setSelectedStage(null);
             }}
           >

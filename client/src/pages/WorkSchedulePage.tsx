@@ -139,8 +139,17 @@ type RowData = {
   rowIndex?: number;
 };
 
-export default function WorkSchedulePage() {
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+export default function WorkSchedulePage({ initialProjectId, onProjectChange }: { initialProjectId?: number | null; onProjectChange?: (id: number | null) => void } = {}) {
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(initialProjectId ?? null);
+  const handleSetProjectId = (id: number | null) => {
+    setSelectedProjectId(id);
+    onProjectChange?.(id);
+  };
+
+  // Sync when initialProjectId changes (e.g. user picks a project in lifecycle tab)
+  useEffect(() => {
+    if (initialProjectId != null) setSelectedProjectId(initialProjectId);
+  }, [initialProjectId]);
   const [expandedStages, setExpandedStages] = useState<Set<string>>(new Set());
   const [dayWidth, setDayWidth] = useState(28);
   const [editingRow, setEditingRow] = useState<string | null>(null);
@@ -730,7 +739,7 @@ export default function WorkSchedulePage() {
               </div>
             </div>
             <div className="w-64">
-              <Select onValueChange={(v) => setSelectedProjectId(Number(v))}>
+              <Select onValueChange={(v) => handleSetProjectId(Number(v))}>
                 <SelectTrigger className="bg-white/10 border-white/20 text-white">
                   <SelectValue placeholder="اختر المشروع..." />
                 </SelectTrigger>
@@ -852,7 +861,7 @@ export default function WorkSchedulePage() {
               </button>
             </div>
             <div className="w-56">
-              <Select value={String(selectedProjectId)} onValueChange={(v) => setSelectedProjectId(Number(v))}>
+              <Select value={String(selectedProjectId)} onValueChange={(v) => handleSetProjectId(Number(v))}>
                 <SelectTrigger className="bg-white/10 border-white/20 text-white h-8 text-sm">
                   <SelectValue />
                 </SelectTrigger>
