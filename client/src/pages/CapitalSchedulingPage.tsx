@@ -1108,15 +1108,15 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                 }}
               >
                 <div style={{
-background: "#4b5563",
+background: "#fef3c7",
                    borderRadius: 14,
                    padding: "14px 6px",
                   textAlign: "center",
-                  color: "#ffffff",
+                  color: "#92400e",
                   fontSize: 11,
                   fontWeight: 800,
-border: "1px solid #6b7280",
-                   borderTop: "3px solid #9ca3af",
+border: "1px solid #fcd34d",
+                   borderTop: "3px solid #f59e0b",
                  }}>
                   الإجمالي
                 </div>
@@ -1134,15 +1134,15 @@ border: "1px solid #6b7280",
                 }}
               >
                 <div style={{
-background: "#374151",
+background: "#ffedd5",
                    borderRadius: 14,
                    padding: "14px 6px",
                   textAlign: "center",
-                  color: "#ffffff",
+                  color: "#9a3412",
                   fontSize: 10,
                   fontWeight: 800,
-border: "1px solid #4b5563",
-                   borderTop: "3px solid #374151",
+border: "1px solid #fdba74",
+                   borderTop: "3px solid #f97316",
                 }}>
                   التراكمي
                 </div>
@@ -1392,12 +1392,12 @@ border: "1px solid #4b5563",
                       width: COL_W,
                       minWidth: COL_W,
                       height: ROW_H,
-                      background: row.total > 0 ? "#4b5563" : (isEven ? "#ffffff" : "#fafafa"),
+                      background: row.total > 0 ? "#fef9e7" : (isEven ? "#ffffff" : "#fafafa"),
                       padding: 0,
                       textAlign: "center",
                       fontSize: 11,
                       fontWeight: row.total > 0 ? 800 : 400,
-                      color: row.total > 0 ? "#ffffff" : "#94a3b8",
+                      color: row.total > 0 ? "#92400e" : "#94a3b8",
                     }}
                   >
                     <CellTooltip lines={row.total > 0 ? (() => {
@@ -1425,13 +1425,13 @@ border: "1px solid #4b5563",
                       width: COL_W,
                       minWidth: COL_W,
                       height: ROW_H,
-                      background: cumulativeTotals[row.gi] > 0 ? "#374151" : (isEven ? "#ffffff" : "#fafafa"),
+                      background: cumulativeTotals[row.gi] > 0 ? "#fff7ed" : (isEven ? "#ffffff" : "#fafafa"),
                       padding: 0,
                       paddingRight: GAP,
                       textAlign: "center",
                       fontSize: 11,
                       fontWeight: cumulativeTotals[row.gi] > 0 ? 800 : 400,
-                      color: cumulativeTotals[row.gi] > 0 ? "#ffffff" : "#94a3b8",
+                      color: cumulativeTotals[row.gi] > 0 ? "#9a3412" : "#94a3b8",
                     }}
                   >
                     <CellTooltip lines={cumulativeTotals[row.gi] > 0 ? [

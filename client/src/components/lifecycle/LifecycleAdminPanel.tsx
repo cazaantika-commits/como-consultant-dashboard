@@ -625,7 +625,7 @@ function StageAdminSection({
       <div className="border border-border rounded-2xl overflow-hidden">
         {/* Stage header */}
         <div className="flex items-center gap-3 p-4 bg-card group">
-          <button onClick={() => setExpanded(!expanded)} className="flex items-center gap-3 flex-1 min-w-0 text-right">
+          <div onClick={() => setExpanded(!expanded)} className="flex items-center gap-3 flex-1 min-w-0 text-right cursor-pointer">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-primary/10">
               <Layers className="w-5 h-5 text-primary" />
             </div>
@@ -638,7 +638,7 @@ function StageAdminSection({
               <p className="text-sm font-bold text-foreground truncate">{stage.nameAr}</p>
               <p className="text-[10px] text-muted-foreground">{stage.stageCode} · {stage.isActive ? "نشطة" : "غير نشطة"}</p>
             </div>
-          </button>
+          </div>
           <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
             <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setEditingStage(true)}>
               <Pencil className="w-3.5 h-3.5" />
