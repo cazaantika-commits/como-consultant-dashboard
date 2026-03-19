@@ -2,6 +2,7 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { 
   getUserProjects, 
+  getAllProjects,
   getProjectById, 
   createProject, 
   updateProject, 
@@ -121,13 +122,13 @@ export const projectsRouter = router({
   // Basic list
   list: publicProcedure.query(({ ctx }) => {
     if (!ctx.user) return [];
-    return getUserProjects(ctx.user.id);
+    return getAllProjects();
   }),
 
   // List with summary stats (consultant count, financial summary, fact sheet completeness)
   listWithStats: publicProcedure.query(async ({ ctx }) => {
     if (!ctx.user) return [];
-    const projects = await getUserProjects(ctx.user.id);
+    const projects = await getAllProjects();
     
     const enriched = await Promise.all(projects.map(async (project) => {
       const consultants = await getProjectConsultants(project.id);
