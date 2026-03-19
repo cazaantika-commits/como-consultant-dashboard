@@ -51,6 +51,9 @@ function StageSettingsView() {
   const [newNameEn, setNewNameEn] = useState("");
   const [newCategory, setNewCategory] = useState("");
 
+  // Position input state: stageId -> draft position string
+  const [posInputs, setPosInputs] = useState<Record<number, string>>({});
+
   const updateStage = trpc.lifecycle.updateStage.useMutation({
     onSuccess: () => {
       utils.lifecycle.getAllStages.invalidate();
@@ -81,6 +84,8 @@ function StageSettingsView() {
     },
   });
 
+  const sortedStages = [...stages].sort((a, b) => a.sortOrder - b.sortOrder);
+
   const startEdit = (stage: Stage) => {
     setEditingId(stage.id);
     setEditNameAr(stage.nameAr);
@@ -105,12 +110,12 @@ function StageSettingsView() {
     });
   };
 
+  // Move one step up or down
   const moveStage = (index: number, direction: "up" | "down") => {
-    const sorted = [...stages].sort((a, b) => a.sortOrder - b.sortOrder);
     const targetIndex = direction === "up" ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= sorted.length) return;
-    const current = sorted[index];
-    const target = sorted[targetIndex];
+    if (targetIndex < 0 || targetIndex >= sortedStages.length) return;
+    const current = sortedStages[index];
+    const target = sortedStages[targetIndex];
     reorderStages.mutate({
       stages: [
         { id: current.id, sortOrder: target.sortOrder },
@@ -119,7 +124,28 @@ function StageSettingsView() {
     });
   };
 
-  const sortedStages = [...stages].sort((a, b) => a.sortOrder - b.sortOrder);
+  // Move stage to a specific 1-based position, shifting others automatically
+  const moveToPosition = (stageId: number, newPos: number) => {
+    const total = sortedStages.length;
+    if (newPos < 1 || newPos > total) {
+      toast({ title: "رقم غير صالح", description: `أدخل رقماً بين 1 و ${total}`, variant: "destructive" });
+      return;
+    }
+    const currentIndex = sortedStages.findIndex((s) => s.id === stageId);
+    if (currentIndex === -1 || currentIndex === newPos - 1) return;
+
+    // Build new ordered array
+    const reordered = [...sortedStages];
+    const [moved] = reordered.splice(currentIndex, 1);
+    reordered.splice(newPos - 1, 0, moved);
+
+    // Assign sequential sortOrder values (10, 20, 30, …) to keep gaps
+    const updates = reordered.map((s, i) => ({ id: s.id, sortOrder: (i + 1) * 10 }));
+    reorderStages.mutate({ stages: updates });
+
+    // Clear the input
+    setPosInputs((prev) => { const n = { ...prev }; delete n[stageId]; return n; });
+  };
 
   if (isLoading) {
     return (
@@ -210,9 +236,46 @@ function StageSettingsView() {
               </div>
             ) : (
               <div className="flex items-center gap-3 p-3 px-4">
-                <div className="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs font-bold text-amber-400">{index + 1}</span>
+                {/* Position badge + input */}
+                <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                    <span className="text-xs font-bold text-amber-400">{index + 1}</span>
+                  </div>
+                  {/* Direct position input */}
+                  <div className="flex items-center gap-0.5">
+                    <Input
+                      type="number"
+                      min={1}
+                      max={sortedStages.length}
+                      value={posInputs[stage.id] ?? ""}
+                      placeholder="#"
+                      className="w-10 h-6 text-center text-xs px-1 py-0"
+                      onChange={(e) => setPosInputs((prev) => ({ ...prev, [stage.id]: e.target.value }))}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          const val = parseInt(posInputs[stage.id] ?? "", 10);
+                          if (!isNaN(val)) moveToPosition(stage.id, val);
+                        }
+                        if (e.key === "Escape") setPosInputs((prev) => { const n = { ...prev }; delete n[stage.id]; return n; });
+                      }}
+                    />
+                    {posInputs[stage.id] && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="w-6 h-6 text-amber-500 hover:text-amber-600"
+                        disabled={reorderStages.isPending}
+                        onClick={() => {
+                          const val = parseInt(posInputs[stage.id] ?? "", 10);
+                          if (!isNaN(val)) moveToPosition(stage.id, val);
+                        }}
+                      >
+                        <Check className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
+
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-semibold text-foreground">{stage.nameAr}</span>
@@ -222,6 +285,7 @@ function StageSettingsView() {
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">{stage.stageCode}</p>
                 </div>
+
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <Button variant="ghost" size="icon" className="w-7 h-7" disabled={index === 0 || reorderStages.isPending} onClick={() => moveStage(index, "up")}>
                     <ChevronUp className="w-4 h-4" />
@@ -243,7 +307,7 @@ function StageSettingsView() {
       </div>
 
       <div className="mt-6 p-3 rounded-lg bg-blue-500/5 border border-blue-500/20 text-xs text-blue-400">
-        <strong>ملاحظة:</strong> إيقاف مرحلة لن يحذفها من قاعدة البيانات، بل سيخفيها فقط من شاشة مسار الامتثال التنظيمي.
+        <strong>ملاحظة:</strong> لتغيير موضع مرحلة، اكتب رقم الترتيب الجديد في الحقل الصغير تحت رقمها واضغط Enter أو زر ✓ — سيُعاد ترقيم جميع المراحل تلقائياً. إيقاف مرحلة لن يحذفها من قاعدة البيانات، بل سيخفيها فقط من شاشة مسار الامتثال التنظيمي.
       </div>
     </div>
   );
