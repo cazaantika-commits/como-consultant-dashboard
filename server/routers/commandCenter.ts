@@ -476,15 +476,16 @@ export const commandCenterRouter = router({
   getLiveTickerItems: publicProcedure
     .input(z.object({ token: z.string() }))
     .query(async ({ input }) => {
-      await verifyToken(input.token);
+      const member = await verifyToken(input.token);
       const db = await getDb();
       if (!db) return [];
 
-      // Only show items created within the last 72 hours
+      // 72-hour cutoff for non-evaluation items
       const cutoff = new Date(Date.now() - 72 * 60 * 60 * 1000);
       const cutoffStr = cutoff.toISOString().slice(0, 19).replace('T', ' ');
 
-      const items = await db
+      // Fetch all active items — we'll filter by date per type below
+      const allActive = await db
         .select({
           id: commandCenterItems.id,
           bubbleType: commandCenterItems.bubbleType,
@@ -493,17 +494,27 @@ export const commandCenterRouter = router({
           itemPriority: commandCenterItems.itemPriority,
           itemStatus: commandCenterItems.itemStatus,
           requiresResponse: commandCenterItems.requiresResponse,
+          targetMemberIds: commandCenterItems.targetMemberIds,
           createdAt: commandCenterItems.createdAt,
         })
         .from(commandCenterItems)
-        .where(
-          and(
-            inArray(commandCenterItems.itemStatus, ['active', 'pending_response']),
-            gte(commandCenterItems.createdAt, cutoffStr)
-          )
-        )
+        .where(inArray(commandCenterItems.itemStatus, ['active', 'pending_response']))
         .orderBy(desc(commandCenterItems.createdAt))
-        .limit(30);
+        .limit(100);
+
+      // Apply per-type filtering:
+      // - evaluations: show all active (no time limit), but only those targeted at this member
+      // - everything else: only within 72h
+      const items = allActive.filter(item => {
+        if (item.bubbleType === 'evaluations') {
+          if (!item.targetMemberIds) return true;
+          try {
+            const targets = JSON.parse(item.targetMemberIds) as string[];
+            return targets.includes(member.memberId);
+          } catch { return true; }
+        }
+        return item.createdAt >= cutoffStr;
+      }).slice(0, 30);
 
       const bubbleLabels: Record<string, string> = {
         reports: 'تقرير',
@@ -652,18 +663,26 @@ export const commandCenterRouter = router({
         }))
       );
       
-      // Also create a command center item in evaluations bubble
-      await db.insert(commandCenterItems).values({
-        bubbleType: "evaluations",
-        title: input.title,
-        summary: `جلسة تقييم جديدة - يرجى التقييم بشكل مستقل`,
-        priority: "important",
-        status: "active",
-        createdByMemberId: member.memberId,
-        projectId: input.projectId,
-        consultantId: input.consultantId,
-      });
-      
+      // Create one ticker item per evaluator so each can be resolved independently
+      const EVALUATOR_NAMES: Record<string, string> = {
+        abdulrahman: 'السيد عبدالرحمن',
+        wael: 'السيد وائل',
+        sheikh_issa: 'الشيخ عيسى',
+      };
+      await db.insert(commandCenterItems).values(
+        ['abdulrahman', 'wael', 'sheikh_issa'].map(memberId => ({
+          bubbleType: 'evaluations' as const,
+          title: `${EVALUATOR_NAMES[memberId]} يرجى البدء بالتقييم الفني للاستشاريين`,
+          summary: `جلسة: ${input.title} | sessionId: ${sessionId}`,
+          itemPriority: 'important' as const,
+          itemStatus: 'active' as const,
+          createdByMemberId: member.memberId,
+          targetMemberIds: JSON.stringify([memberId]),
+          projectId: input.projectId,
+          consultantId: input.consultantId,
+        }))
+      );
+
       return { success: true, sessionId };
     }),
 
@@ -737,6 +756,26 @@ export const commandCenterRouter = router({
         })
         .where(eq(evaluationSessions.sessionId, input.sessionId));
       
+      // Mark this member's ticker item as resolved so it disappears from their ticker
+      const memberTickerItems = await db.select().from(commandCenterItems)
+        .where(and(
+          eq(commandCenterItems.bubbleType, 'evaluations'),
+          eq(commandCenterItems.itemStatus, 'active')
+        ));
+      const myTickerItem = memberTickerItems.find(item => {
+        if (!item.targetMemberIds) return false;
+        try {
+          const targets = JSON.parse(item.targetMemberIds) as string[];
+          return targets.includes(member.memberId) &&
+            (item.summary || '').includes(`sessionId: ${input.sessionId}`);
+        } catch { return false; }
+      });
+      if (myTickerItem) {
+        await db.update(commandCenterItems)
+          .set({ itemStatus: 'resolved' })
+          .where(eq(commandCenterItems.id, myTickerItem.id));
+      }
+
       // If all completed, notify everyone
       if (completedCount >= session.requiredCount) {
         await db.insert(commandCenterNotifications).values(
@@ -748,7 +787,7 @@ export const commandCenterRouter = router({
           }))
         );
       }
-      
+
       return { success: true, completedCount, isRevealed: completedCount >= session.requiredCount };
     }),
 
