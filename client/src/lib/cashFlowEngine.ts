@@ -720,8 +720,8 @@ export function getEscrowExpenses(costs?: ProjectCosts, scenario: FinancingScena
       behavior: "CUSTOM", phase: "construction", table: "escrow",
     },
     {
-      id: "contractor_payments", name: "دفعات المقاول (85%)",
-      total: constructionCost * 0.85,
+      id: "contractor_payments", name: "دفعات المقاول (70%)",
+      total: constructionCost * 0.70,
       behavior: "DISTRIBUTED", phase: "construction",
       distributeAcross: ["construction"], table: "escrow",
     },

@@ -349,7 +349,7 @@ export default function FinancialFeasibilityTab({ initialProjectId }: { initialP
                     label="بنود حساب الضمان (لا تُحتسب في رأس المال)"
                     value={fmt(escrowTotal)}
                     color="indigo"
-                    sub="دفعات المقاول 85% + أتعاب الإشراف + عمولة المبيعات + رسوم ريرا + رسوم حكومية"
+                    sub="دفعات المقاول 70% + أتعاب الإشراف + عمولة المبيعات + رسوم ريرا + رسوم حكومية"
                   />
                   {manualEscrowTotal > 0 && (
                     <SummaryRow
