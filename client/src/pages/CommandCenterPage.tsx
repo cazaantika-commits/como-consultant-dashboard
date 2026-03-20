@@ -3887,17 +3887,17 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
     <div className="min-h-screen" dir="rtl" style={{background: 'linear-gradient(160deg, #f8f6ff 0%, #fff7ed 55%, #f0fdf4 100%)'}}>
       <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
       <NewsTicker token={token} />
-      <div className="max-w-5xl mx-auto px-4 py-6">
+      <div className="max-w-5xl mx-auto px-4 py-4">
         {/* Hero Card */}
-        <div className="relative overflow-hidden rounded-3xl mb-7 shadow-2xl"
+        <div className="relative overflow-hidden rounded-3xl mb-4 shadow-xl"
           style={{background: 'linear-gradient(135deg, #f8f7ff 0%, #ede9fe 55%, #faf5ff 100%)', border: '1.5px solid #ddd6fe'}}>
           <div className="absolute top-0 left-0 w-80 h-80 rounded-full -translate-x-1/2 -translate-y-1/2 opacity-20"
             style={{background: 'radial-gradient(circle, #c4b5fd, transparent)'}} />
           <div className="absolute bottom-0 right-0 w-60 h-60 rounded-full translate-x-1/3 translate-y-1/3 opacity-15"
             style={{background: 'radial-gradient(circle, #fbbf24, transparent)'}} />
-          <div className="relative z-10 flex flex-col sm:flex-row items-center gap-5 p-6 sm:p-8">
+          <div className="relative z-10 flex flex-col sm:flex-row items-center gap-4 p-4 sm:p-6">
             <div className="relative flex-shrink-0">
-              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden"
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden"
                 style={{boxShadow: '0 0 0 3px rgba(124,58,237,0.4), 0 8px 24px rgba(124,58,237,0.2)'}}>
                 <img src={SALWA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover" />
               </div>
@@ -4015,8 +4015,8 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                   background: theme.bg,
                   border: `1.5px solid ${theme.accent}`,
                   boxShadow: `0 2px 16px ${theme.glow}, 0 1px 3px rgba(0,0,0,0.06)`,
-                  padding: tall ? '1.2rem' : '0.85rem',
-                  minHeight: tall ? '155px' : '85px',
+                  padding: tall ? '0.9rem' : '0.7rem',
+                  minHeight: tall ? '115px' : '72px',
                   display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start',
                 }}
               >
@@ -4031,14 +4031,14 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                   </div>
                 )}
                 <div className="relative z-10 w-full">
-                  <div className="rounded-2xl flex items-center justify-center mb-3 shadow-md group-hover:scale-110 transition-transform duration-300"
+                  <div className="rounded-2xl flex items-center justify-center mb-2 shadow-md group-hover:scale-110 transition-transform duration-300"
                     style={{
                       background: theme.iconBg,
-                      width: tall ? '60px' : '46px',
-                      height: tall ? '60px' : '46px',
+                      width: tall ? '50px' : '40px',
+                      height: tall ? '50px' : '40px',
                       boxShadow: `0 4px 16px ${theme.glow}`,
                     }}>
-                    <bubble.icon style={{width: tall ? '30px':'22px', height: tall ? '30px':'22px', color:'white'}} />
+                    <bubble.icon style={{width: tall ? '24px':'18px', height: tall ? '24px':'18px', color:'white'}} />
                   </div>
                   <p className="font-black leading-tight" style={{color: theme.textColor, fontSize: tall ? '1rem' : '0.8rem'}}>
                     {bubble.label}
@@ -4054,21 +4054,21 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           };
 
           return (
-            <div className="mb-8 space-y-4">
-              <div className="grid grid-cols-3 gap-4 items-stretch">
+            <div className="mb-4 space-y-3">
+              <div className="grid grid-cols-3 gap-3 items-stretch">
                 <BentoCard bubble={BUBBLES[0]} tall />
                 <BentoCard bubble={BUBBLES[1]} tall />
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-3">
                   <BentoCard bubble={BUBBLES[2]} />
                   <BentoCard bubble={BUBBLES[3]} />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-3">
                 <BentoCard bubble={BUBBLES[4]} />
                 <BentoCard bubble={BUBBLES[5]} />
                 <BentoCard bubble={BUBBLES[6]} />
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2"><BentoCard bubble={BUBBLES[7]} /></div>
                 <BentoCard bubble={BUBBLES[8]} />
               </div>
