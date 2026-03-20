@@ -3900,7 +3900,47 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                 {new Date().toLocaleDateString("ar-AE", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
               </span>
               <h2 className="text-2xl sm:text-3xl font-black text-white mb-1 leading-tight">{member.greeting}</h2>
-              <p className="text-sm mb-5" style={{color: 'rgba(255,255,255,0.5)'}}>&#x633;&#x644;&#x648;&#x649; &mdash; &#x627;&#x644;&#x645;&#x646;&#x633;&#x642;&#x629; &#x627;&#x644;&#x630;&#x643;&#x64a;&#x629; &#x644;&#x645;&#x634;&#x627;&#x631;&#x64a;&#x639; COMO Developments</p>
+              <p className="text-sm mb-3" style={{color: 'rgba(255,255,255,0.5)'}}>&#x633;&#x644;&#x648;&#x649; &mdash; &#x627;&#x644;&#x645;&#x646;&#x633;&#x642;&#x629; &#x627;&#x644;&#x630;&#x643;&#x64a;&#x629; &#x644;&#x645;&#x634;&#x627;&#x631;&#x64a;&#x639; COMO Developments</p>
+              {/* Personalized stats chips */}
+              {counts.data && (
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {(counts.data.requests ?? 0) > 0 && (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
+                      style={{background:'rgba(239,68,68,0.2)',color:'#fca5a5',border:'1px solid rgba(239,68,68,0.35)'}}>
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse inline-block" />
+                      لديك {counts.data.requests} طلب{counts.data.requests > 1 ? ' معلقة' : ' معلق'}
+                    </span>
+                  )}
+                  {(counts.data.evaluations ?? 0) > 0 && (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
+                      style={{background:'rgba(168,85,247,0.2)',color:'#d8b4fe',border:'1px solid rgba(168,85,247,0.35)'}}>
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse inline-block" />
+                      {counts.data.evaluations} جلسة تقييم بانتظارك
+                    </span>
+                  )}
+                  {(counts.data.reports ?? 0) > 0 && (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
+                      style={{background:'rgba(59,130,246,0.2)',color:'#93c5fd',border:'1px solid rgba(59,130,246,0.35)'}}>
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400 inline-block" />
+                      {counts.data.reports} تقرير جديد
+                    </span>
+                  )}
+                  {(counts.data.meeting_minutes ?? 0) > 0 && (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
+                      style={{background:'rgba(245,158,11,0.2)',color:'#fcd34d',border:'1px solid rgba(245,158,11,0.35)'}}>
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+                      {counts.data.meeting_minutes} محضر جديد
+                    </span>
+                  )}
+                  {(counts.data.requests ?? 0) === 0 && (counts.data.evaluations ?? 0) === 0 && (counts.data.reports ?? 0) === 0 && (counts.data.meeting_minutes ?? 0) === 0 && (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
+                      style={{background:'rgba(16,185,129,0.2)',color:'#6ee7b7',border:'1px solid rgba(16,185,129,0.35)'}}>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+                      كل شيء على ما يرام ✓
+                    </span>
+                  )}
+                </div>
+              )}
               <div className="flex flex-wrap gap-3 justify-center sm:justify-start">
                 <button onClick={() => setShowSalwa(true)}
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-[1.03] active:scale-[0.97]"
