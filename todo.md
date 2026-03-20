@@ -193,3 +193,8 @@
 - [ ] Cost rules: Each item shows: name, amount type (fixed/%), default value, source (investor/escrow), phase, installment schedule
 - [ ] Cost rules: Installment schedule editor - add/remove rows with month number + percentage
 - [ ] Cost rules: Project override tab - select project, see all 26 items with ability to override value and schedule
+- [ ] Redesign FactSheetPage: 3 sections — (1) AI-extracted, (2) manual inputs with visible formulas, (3) auto-calculated from revenues
+- [ ] FactSheet: link phase durations to compliance track (mسار الامتثال), not manual input
+- [ ] FactSheet: add broker sales commission field (% of revenue)
+- [ ] FactSheet: show formula labels next to each calculated field (e.g. "40 AED × GFA م²")
+- [ ] FactSheet: style like the Excel-sheet draft (clear sections, formula hints, grouped by phase)

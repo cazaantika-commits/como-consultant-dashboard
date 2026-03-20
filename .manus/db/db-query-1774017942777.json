@@ -1,0 +1,75 @@
+{
+  "query": "SELECT * FROM projectPhases WHERE projectId = 4 ORDER BY phaseNumber;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT * FROM projectPhases WHERE projectId = 4 ORDER BY phaseNumber;",
+  "rows": [
+    {
+      "id": "16",
+      "projectId": "4",
+      "phaseNumber": "1",
+      "phaseName": "دراسة السوق والجدوى",
+      "startDate": "2026-01",
+      "durationMonths": "3",
+      "endDate": "NULL",
+      "estimatedCost": "0.00",
+      "notes": "NULL",
+      "createdAt": "2026-02-19 20:06:41",
+      "updatedAt": "2026-02-19 20:06:41"
+    },
+    {
+      "id": "17",
+      "projectId": "4",
+      "phaseNumber": "2",
+      "phaseName": "الاستشاري والتصميم",
+      "startDate": "2026-01",
+      "durationMonths": "6",
+      "endDate": "NULL",
+      "estimatedCost": "0.00",
+      "notes": "NULL",
+      "createdAt": "2026-02-19 20:06:41",
+      "updatedAt": "2026-02-19 20:06:41"
+    },
+    {
+      "id": "18",
+      "projectId": "4",
+      "phaseNumber": "3",
+      "phaseName": "الموافقات الحكومية",
+      "startDate": "2026-01",
+      "durationMonths": "3",
+      "endDate": "NULL",
+      "estimatedCost": "0.00",
+      "notes": "NULL",
+      "createdAt": "2026-02-19 20:06:42",
+      "updatedAt": "2026-02-19 20:06:42"
+    },
+    {
+      "id": "19",
+      "projectId": "4",
+      "phaseNumber": "4",
+      "phaseName": "تعيين المقاول",
+      "startDate": "2026-01",
+      "durationMonths": "3",
+      "endDate": "NULL",
+      "estimatedCost": "0.00",
+      "notes": "NULL",
+      "createdAt": "2026-02-19 20:06:42",
+      "updatedAt": "2026-02-19 20:06:42"
+    },
+    {
+      "id": "20",
+      "projectId": "4",
+      "phaseNumber": "5",
+      "phaseName": "البناء والتسليم",
+      "startDate": "2026-01",
+      "durationMonths": "18",
+      "endDate": "NULL",
+      "estimatedCost": "0.00",
+      "notes": "NULL",
+      "createdAt": "2026-02-19 20:06:43",
+      "updatedAt": "2026-02-19 20:06:43"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tprojectId\tphaseNumber\tphaseName\tstartDate\tdurationMonths\tendDate\testimatedCost\tnotes\tcreatedAt\tupdatedAt\n16\t4\t1\tدراسة السوق والجدوى\t2026-01\t3\tNULL\t0.00\tNULL\t2026-02-19 20:06:41\t2026-02-19 20:06:41\n17\t4\t2\tالاستشاري والتصميم\t2026-01\t6\tNULL\t0.00\tNULL\t2026-02-19 20:06:41\t2026-02-19 20:06:41\n18\t4\t3\tالموافقات الحكومية\t2026-01\t3\tNULL\t0.00\tNULL\t2026-02-19 20:06:42\t2026-02-19 20:06:42\n19\t4\t4\tتعيين المقاول\t2026-01\t3\tNULL\t0.00\tNULL\t2026-02-19 20:06:42\t2026-02-19 20:06:42\n20\t4\t5\tالبناء والتسليم\t2026-01\t18\tNULL\t0.00\tNULL\t2026-02-19 20:06:43\t2026-02-19 20:06:43\n",
+  "stderr": "",
+  "execution_time_ms": 1532
+}

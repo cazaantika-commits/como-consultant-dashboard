@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>جدولة رأس المال — ند الشبا</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 11px; background: #f5f5f5; padding: 20px; }
+  h2 { font-size: 16px; margin-bottom: 4px; color: #1a1a2e; }
+  p.sub { font-size: 11px; color: #666; margin-bottom: 16px; }
+
+  .scroll-wrap { overflow-x: auto; }
+
+  table { border-collapse: collapse; min-width: 100%; background: #fff; }
+  th, td { border: 1px solid #ccc; padding: 4px 6px; white-space: nowrap; text-align: center; }
+
+  /* Header rows */
+  .h-phase { background: #1a1a2e; color: #fff; font-weight: bold; font-size: 11px; }
+  .h-month { background: #2d4a7a; color: #fff; font-size: 10px; }
+
+  /* First two columns */
+  .col-desc { text-align: right; min-width: 180px; background: #f0f4ff; font-weight: 500; }
+  .col-total { min-width: 90px; background: #fff8e1; font-weight: bold; color: #b45309; }
+  .col-investor { min-width: 90px; background: #fef3c7; font-weight: bold; color: #92400e; }
+  .col-paid { min-width: 90px; background: #e8f5e9; color: #1b5e20; font-weight: bold; }
+
+  /* Phase column groups */
+  .ph-design { background: #ede9fe; }
+  .ph-offplan { background: #dbeafe; }
+  .ph-construction { background: #dcfce7; }
+
+  .ph-design-h { background: #7c3aed; color: #fff; }
+  .ph-offplan-h { background: #1d4ed8; color: #fff; }
+  .ph-construction-h { background: #15803d; color: #fff; }
+
+  /* Data cells */
+  td.num { font-family: 'Courier New', monospace; font-size: 10px; }
+  td.num:not(:empty) { background: #fffbeb; }
+  td.zero { color: #ccc; }
+
+  /* Section rows */
+  tr.section-header td { background: #e2e8f0; font-weight: bold; font-size: 11px; color: #334155; text-align: right; }
+  tr.total-row td { background: #1a1a2e; color: #fff; font-weight: bold; }
+  tr.total-row td.num { background: #1a1a2e; color: #fbbf24; }
+
+  /* Sticky first columns */
+  td.col-desc, th.col-desc { position: sticky; right: 0; z-index: 2; }
+</style>
+</head>
+<body>
+
+<h2>جدولة رأس المال — ند الشبا (قطعة 1 / 6185392)</h2>
+<p class="sub">مسودة توزيع المصاريف على المراحل الزمنية | المبالغ بالدرهم الإماراتي</p>
+
+<div class="scroll-wrap">
+<table>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     ROW 1: Phase headers
+═══════════════════════════════════════════════════════════════ -->
+<thead>
+<tr class="h-phase">
+  <th class="col-desc h-phase">البند</th>
+  <th class="col-total h-phase">إجمالي التكاليف</th>
+  <th class="col-investor h-phase">رأس المال المطلوب</th>
+  <th class="col-paid h-phase">مدفوع</th>
+  <!-- Design: 6 months -->
+  <th class="ph-design-h" colspan="6">المرحلة 2 — التصاميم (6 أشهر)</th>
+  <!-- Offplan: 2 months -->
+  <th class="ph-offplan-h" colspan="2">المرحلة 3 — أوف بلان (2 شهر)</th>
+  <!-- Construction: 18 months -->
+  <th class="ph-construction-h" colspan="18">المرحلة 4 — الإنشاء (18 شهر)</th>
+</tr>
+
+<!-- ROW 2: Month numbers -->
+<tr class="h-month">
+  <th class="col-desc" style="background:#e2e8f0;color:#334155;">الوصف</th>
+  <th style="background:#fff8e1;color:#92400e;">الإجمالي</th>
+  <th style="background:#fef3c7;color:#92400e;">من المستثمر</th>
+  <th style="background:#e8f5e9;color:#1b5e20;">مدفوع</th>
+  <th class="ph-design">ش١</th><th class="ph-design">ش٢</th><th class="ph-design">ش٣</th>
+  <th class="ph-design">ش٤</th><th class="ph-design">ش٥</th><th class="ph-design">ش٦</th>
+  <th class="ph-offplan">ش١</th><th class="ph-offplan">ش٢</th>
+  <th class="ph-construction">ش١</th><th class="ph-construction">ش٢</th><th class="ph-construction">ش٣</th>
+  <th class="ph-construction">ش٤</th><th class="ph-construction">ش٥</th><th class="ph-construction">ش٦</th>
+  <th class="ph-construction">ش٧</th><th class="ph-construction">ش٨</th><th class="ph-construction">ش٩</th>
+  <th class="ph-construction">ش١٠</th><th class="ph-construction">ش١١</th><th class="ph-construction">ش١٢</th>
+  <th class="ph-construction">ش١٣</th><th class="ph-construction">ش١٤</th><th class="ph-construction">ش١٥</th>
+  <th class="ph-construction">ش١٦</th><th class="ph-construction">ش١٧</th><th class="ph-construction">ش١٨</th>
+</tr>
+</thead>
+
+<tbody>
+
+<!-- ─── SECTION 1: PAID ─────────────────────────────────────── -->
+<tr class="section-header"><td colspan="30">القسم الأول — المبالغ المدفوعة (الأرض)</td></tr>
+
+<tr>
+  <td class="col-desc">سعر الأرض</td>
+  <td class="col-total num">18,000,000</td>
+  <td class="col-investor num">18,000,000</td>
+  <td class="col-paid num">18,000,000</td>
+  <td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td>
+  <td class="ph-offplan num zero">—</td><td class="ph-offplan num zero">—</td>
+  <td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td>
+</tr>
+
+<tr>
+  <td class="col-desc">عمولة وسيط الأرض (2%)</td>
+  <td class="col-total num">360,000</td>
+  <td class="col-investor num">360,000</td>
+  <td class="col-paid num">360,000</td>
+  <td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td>
+  <td class="ph-offplan num zero">—</td><td class="ph-offplan num zero">—</td>
+  <td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td>
+</tr>
+
+<tr>
+  <td class="col-desc">رسوم تسجيل الأرض (4%)</td>
+  <td class="col-total num">720,000</td>
+  <td class="col-investor num">720,000</td>
+  <td class="col-paid num">720,000</td>
+  <td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td>
+  <td class="ph-offplan num zero">—</td><td class="ph-offplan num zero">—</td>
+  <td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td>
+</tr>
+
+<!-- ─── SECTION 2: DESIGN ───────────────────────────────────── -->
+<tr class="section-header"><td colspan="30">القسم الثاني — التصاميم ورخصة البناء</td></tr>
+
+<tr>
+  <td class="col-desc">فحص التربة</td>
+  <td class="col-total num">16,180</td>
+  <td class="col-investor num">16,180</td>
+  <td class="col-paid num">—</td>
+  <td class="ph-design num">16,180</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td>
+  <td class="ph-offplan num zero">—</td><td class="ph-offplan num zero">—</td>
+  <td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td>
+</tr>
+
+<tr>
+  <td class="col-desc">المسح الطبوغرافي</td>
+  <td class="col-total num">6,180</td>
+  <td class="col-investor num">6,180</td>
+  <td class="col-paid num">—</td>
+  <td class="ph-design num">6,180</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td>
+  <td class="ph-offplan num zero">—</td><td class="ph-offplan num zero">—</td>
+  <td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td>
+</tr>
+
+<tr>
+  <td class="col-desc">رسوم الجهات الحكومية (10%)</td>
+  <td class="col-total num">100,018</td>
+  <td class="col-investor num">100,018</td>
+  <td class="col-paid num">—</td>
+  <td class="ph-design num">100,018</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td>
+  <td class="ph-offplan num zero">—</td><td class="ph-offplan num zero">—</td>
+  <td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td>
+</tr>
+
+<tr>
+  <td class="col-desc">أتعاب التصميم (2% من البناء)</td>
+  <td class="col-total num">799,988</td>
+  <td class="col-investor num">799,988</td>
+  <td class="col-paid num">—</td>
+  <td class="ph-design num">133,331</td><td class="ph-design num">133,331</td><td class="ph-design num">133,331</td><td class="ph-design num">133,331</td><td class="ph-design num">133,331</td><td class="ph-design num">133,333</td>
+  <td class="ph-offplan num zero">—</td><td class="ph-offplan num zero">—</td>
+  <td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td>
+</tr>
+
+<tr>
+  <td class="col-desc">أتعاب المطور — مرحلة التصاميم (1%)</td>
+  <td class="col-total num">909,710</td>
+  <td class="col-investor num">909,710</td>
+  <td class="col-paid num">—</td>
+  <td class="ph-design num">151,618</td><td class="ph-design num">151,618</td><td class="ph-design num">151,618</td><td class="ph-design num">151,618</td><td class="ph-design num">151,618</td><td class="ph-design num">151,620</td>
+  <td class="ph-offplan num zero">—</td><td class="ph-offplan num zero">—</td>
+  <td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td>
+</tr>
+
+<tr>
+  <td class="col-desc">رسوم المجتمع (25%)</td>
+  <td class="col-total num">4,045</td>
+  <td class="col-investor num">4,045</td>
+  <td class="col-paid num">—</td>
+  <td class="ph-design num">4,045</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td>
+  <td class="ph-offplan num zero">—</td><td class="ph-offplan num zero">—</td>
+  <td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td>
+</tr>
+
+<!-- ─── SECTION 3: OFFPLAN ──────────────────────────────────── -->
+<tr class="section-header"><td colspan="30">القسم الثالث — ريرا والبيع أوف بلان</td></tr>
+
+<tr>
+  <td class="col-desc">رسوم الفرز (40 د.إ/قدم²)</td>
+  <td class="col-total num">2,033,060</td>
+  <td class="col-investor num">2,033,060</td>
+  <td class="col-paid num">—</td>
+  <td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td>
+  <td class="ph-offplan num">2,033,060</td><td class="ph-offplan num zero">—</td>
+  <td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td>
+</tr>
+
+<tr>
+  <td class="col-desc">تسجيل المشروع — ريرا</td>
+  <td class="col-total num">150,000</td>
+  <td class="col-investor num">150,000</td>
+  <td class="col-paid num">—</td>
+  <td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td>
+  <td class="ph-offplan num">150,000</td><td class="ph-offplan num zero">—</td>
+  <td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td>
+</tr>
+
+<tr>
+  <td class="col-desc">تسجيل الوحدات — ريرا</td>
+  <td class="col-total num">39,180</td>
+  <td class="col-investor num">39,180</td>
+  <td class="col-paid num">—</td>
+  <td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td>
+  <td class="ph-offplan num">39,180</td><td class="ph-offplan num zero">—</td>
+  <td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td>
+</tr>
+
+<tr>
+  <td class="col-desc">رسوم NOC للبيع</td>
+  <td class="col-total num">10,000</td>
+  <td class="col-investor num">10,000</td>
+  <td class="col-paid num">—</td>
+  <td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td>
+  <td class="ph-offplan num">10,000</td><td class="ph-offplan num zero">—</td>
+  <td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td>
+</tr>
+
+<tr>
+  <td class="col-desc">رسوم حساب الضمان</td>
+  <td class="col-total num">140,000</td>
+  <td class="col-investor num">140,000</td>
+  <td class="col-paid num">—</td>
+  <td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td>
+  <td class="ph-offplan num">140,000</td><td class="ph-offplan num zero">—</td>
+  <td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td>
+</tr>
+
+<tr>
+  <td class="col-desc">رسوم بنكية</td>
+  <td class="col-total num">19,800</td>
+  <td class="col-investor num">19,800</td>
+  <td class="col-paid num">—</td>
+  <td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td>
+  <td class="ph-offplan num">19,800</td><td class="ph-offplan num zero">—</td>
+  <td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td>
+</tr>
+
+<tr>
+  <td class="col-desc">رسوم المساح</td>
+  <td class="col-total num">12,180</td>
+  <td class="col-investor num">12,180</td>
+  <td class="col-paid num">—</td>
+  <td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td>
+  <td class="ph-offplan num">12,180</td><td class="ph-offplan num zero">—</td>
+  <td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td>
+</tr>
+
+<tr>
+  <td class="col-desc">أتعاب المطور — أوف بلان (1%)</td>
+  <td class="col-total num">909,710</td>
+  <td class="col-investor num">909,710</td>
+  <td class="col-paid num">—</td>
+  <td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td>
+  <td class="ph-offplan num">454,855</td><td class="ph-offplan num">454,855</td>
+  <td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td>
+</tr>
+
+<tr>
+  <td class="col-desc">التسويق والإعلان (25% من المرحلة)</td>
+  <td class="col-total num">454,855</td>
+  <td class="col-investor num">454,855</td>
+  <td class="col-paid num">—</td>
+  <td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td>
+  <td class="ph-offplan num">227,428</td><td class="ph-offplan num">227,427</td>
+  <td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td>
+</tr>
+
+<tr>
+  <td class="col-desc">إيداع حساب الضمان (20% من البناء)</td>
+  <td class="col-total num">7,999,880</td>
+  <td class="col-investor num">7,999,880</td>
+  <td class="col-paid num">—</td>
+  <td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td>
+  <td class="ph-offplan num zero">—</td><td class="ph-offplan num">7,999,880</td>
+  <td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td>
+</tr>
+
+<!-- ─── SECTION 4: CONSTRUCTION (Investor portion only) ────── -->
+<tr class="section-header"><td colspan="30">القسم الرابع — الإنشاء (حصة المستثمر فقط)</td></tr>
+
+<tr>
+  <td class="col-desc">دفعة مقدمة للمقاول (10%)</td>
+  <td class="col-total num">3,999,940</td>
+  <td class="col-investor num">3,999,940</td>
+  <td class="col-paid num">—</td>
+  <td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td>
+  <td class="ph-offplan num zero">—</td><td class="ph-offplan num zero">—</td>
+  <td class="ph-construction num">3,999,940</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td>
+</tr>
+
+<tr>
+  <td class="col-desc">احتياطي وطوارئ (2% من البناء)</td>
+  <td class="col-total num">799,988</td>
+  <td class="col-investor num">799,988</td>
+  <td class="col-paid num">—</td>
+  <td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td>
+  <td class="ph-offplan num zero">—</td><td class="ph-offplan num zero">—</td>
+  <td class="ph-construction num">44,444</td><td class="ph-construction num">44,444</td><td class="ph-construction num">44,444</td><td class="ph-construction num">44,444</td><td class="ph-construction num">44,444</td><td class="ph-construction num">44,444</td><td class="ph-construction num">44,444</td><td class="ph-construction num">44,444</td><td class="ph-construction num">44,444</td><td class="ph-construction num">44,444</td><td class="ph-construction num">44,444</td><td class="ph-construction num">44,444</td><td class="ph-construction num">44,444</td><td class="ph-construction num">44,444</td><td class="ph-construction num">44,444</td><td class="ph-construction num">44,444</td><td class="ph-construction num">44,444</td><td class="ph-construction num">44,452</td>
+</tr>
+
+<!-- ─── SECTION 5: ESCROW (from escrow account) ────────────── -->
+<tr class="section-header"><td colspan="30">من حساب الضمان (تُدفع من إيرادات المشترين)</td></tr>
+
+<tr>
+  <td class="col-desc">رسوم الجهات الحكومية (90%)</td>
+  <td class="col-total num">900,162</td>
+  <td class="col-investor num" style="color:#1d4ed8;">من الضمان</td>
+  <td class="col-paid num">—</td>
+  <td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td>
+  <td class="ph-offplan num zero">—</td><td class="ph-offplan num zero">—</td>
+  <td class="ph-construction num" style="background:#dbeafe;">720,130</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num" style="background:#dbeafe;">180,032</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td>
+</tr>
+
+<tr>
+  <td class="col-desc">دفعات المقاول (70% — من الضمان)</td>
+  <td class="col-total num">27,999,580</td>
+  <td class="col-investor num" style="color:#1d4ed8;">من الضمان</td>
+  <td class="col-paid num">—</td>
+  <td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td>
+  <td class="ph-offplan num zero">—</td><td class="ph-offplan num zero">—</td>
+  <td class="ph-construction num" style="background:#dbeafe;">1,555,532</td><td class="ph-construction num" style="background:#dbeafe;">1,555,532</td><td class="ph-construction num" style="background:#dbeafe;">1,555,532</td><td class="ph-construction num" style="background:#dbeafe;">1,555,532</td><td class="ph-construction num" style="background:#dbeafe;">1,555,532</td><td class="ph-construction num" style="background:#dbeafe;">1,555,532</td><td class="ph-construction num" style="background:#dbeafe;">1,555,532</td><td class="ph-construction num" style="background:#dbeafe;">1,555,532</td><td class="ph-construction num" style="background:#dbeafe;">1,555,532</td><td class="ph-construction num" style="background:#dbeafe;">1,555,532</td><td class="ph-construction num" style="background:#dbeafe;">1,555,532</td><td class="ph-construction num" style="background:#dbeafe;">1,555,532</td><td class="ph-construction num" style="background:#dbeafe;">1,555,532</td><td class="ph-construction num" style="background:#dbeafe;">1,555,532</td><td class="ph-construction num" style="background:#dbeafe;">1,555,532</td><td class="ph-construction num" style="background:#dbeafe;">1,555,532</td><td class="ph-construction num" style="background:#dbeafe;">1,555,532</td><td class="ph-construction num" style="background:#dbeafe;">1,555,576</td>
+</tr>
+
+<tr>
+  <td class="col-desc">أتعاب الإشراف (2% — من الضمان)</td>
+  <td class="col-total num">799,988</td>
+  <td class="col-investor num" style="color:#1d4ed8;">من الضمان</td>
+  <td class="col-paid num">—</td>
+  <td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td>
+  <td class="ph-offplan num zero">—</td><td class="ph-offplan num zero">—</td>
+  <td class="ph-construction num" style="background:#dbeafe;">44,444</td><td class="ph-construction num" style="background:#dbeafe;">44,444</td><td class="ph-construction num" style="background:#dbeafe;">44,444</td><td class="ph-construction num" style="background:#dbeafe;">44,444</td><td class="ph-construction num" style="background:#dbeafe;">44,444</td><td class="ph-construction num" style="background:#dbeafe;">44,444</td><td class="ph-construction num" style="background:#dbeafe;">44,444</td><td class="ph-construction num" style="background:#dbeafe;">44,444</td><td class="ph-construction num" style="background:#dbeafe;">44,444</td><td class="ph-construction num" style="background:#dbeafe;">44,444</td><td class="ph-construction num" style="background:#dbeafe;">44,444</td><td class="ph-construction num" style="background:#dbeafe;">44,444</td><td class="ph-construction num" style="background:#dbeafe;">44,444</td><td class="ph-construction num" style="background:#dbeafe;">44,444</td><td class="ph-construction num" style="background:#dbeafe;">44,444</td><td class="ph-construction num" style="background:#dbeafe;">44,444</td><td class="ph-construction num" style="background:#dbeafe;">44,444</td><td class="ph-construction num" style="background:#dbeafe;">44,452</td>
+</tr>
+
+<tr>
+  <td class="col-desc">عمولة وكيل المبيعات (5% — من الضمان)</td>
+  <td class="col-total num">4,548,550</td>
+  <td class="col-investor num" style="color:#1d4ed8;">من الضمان</td>
+  <td class="col-paid num">—</td>
+  <td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td>
+  <td class="ph-offplan num zero">—</td><td class="ph-offplan num zero">—</td>
+  <td class="ph-construction num" style="background:#dbeafe;">252,697</td><td class="ph-construction num" style="background:#dbeafe;">252,697</td><td class="ph-construction num" style="background:#dbeafe;">252,697</td><td class="ph-construction num" style="background:#dbeafe;">252,697</td><td class="ph-construction num" style="background:#dbeafe;">252,697</td><td class="ph-construction num" style="background:#dbeafe;">252,697</td><td class="ph-construction num" style="background:#dbeafe;">252,697</td><td class="ph-construction num" style="background:#dbeafe;">252,697</td><td class="ph-construction num" style="background:#dbeafe;">252,697</td><td class="ph-construction num" style="background:#dbeafe;">252,697</td><td class="ph-construction num" style="background:#dbeafe;">252,697</td><td class="ph-construction num" style="background:#dbeafe;">252,697</td><td class="ph-construction num" style="background:#dbeafe;">252,697</td><td class="ph-construction num" style="background:#dbeafe;">252,697</td><td class="ph-construction num" style="background:#dbeafe;">252,697</td><td class="ph-construction num" style="background:#dbeafe;">252,697</td><td class="ph-construction num" style="background:#dbeafe;">252,697</td><td class="ph-construction num" style="background:#dbeafe;">252,753</td>
+</tr>
+
+<tr>
+  <td class="col-desc">تقارير تدقيق ريرا (من الضمان)</td>
+  <td class="col-total num">105,180</td>
+  <td class="col-investor num" style="color:#1d4ed8;">من الضمان</td>
+  <td class="col-paid num">—</td>
+  <td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td>
+  <td class="ph-offplan num zero">—</td><td class="ph-offplan num zero">—</td>
+  <td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num" style="background:#dbeafe;">26,295</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num" style="background:#dbeafe;">26,295</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num" style="background:#dbeafe;">26,295</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num" style="background:#dbeafe;">26,295</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td>
+</tr>
+
+<tr>
+  <td class="col-desc">تقارير تفتيش ريرا (من الضمان)</td>
+  <td class="col-total num">18,180</td>
+  <td class="col-investor num" style="color:#1d4ed8;">من الضمان</td>
+  <td class="col-paid num">—</td>
+  <td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td>
+  <td class="ph-offplan num zero">—</td><td class="ph-offplan num zero">—</td>
+  <td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num" style="background:#dbeafe;">4,545</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num" style="background:#dbeafe;">4,545</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num" style="background:#dbeafe;">4,545</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num" style="background:#dbeafe;">4,545</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td><td class="ph-construction num zero">—</td>
+</tr>
+
+<tr>
+  <td class="col-desc">التسويق والإعلان (75% — من الضمان)</td>
+  <td class="col-total num">1,364,565</td>
+  <td class="col-investor num" style="color:#1d4ed8;">من الضمان</td>
+  <td class="col-paid num">—</td>
+  <td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td>
+  <td class="ph-offplan num zero">—</td><td class="ph-offplan num zero">—</td>
+  <td class="ph-construction num" style="background:#dbeafe;">75,809</td><td class="ph-construction num" style="background:#dbeafe;">75,809</td><td class="ph-construction num" style="background:#dbeafe;">75,809</td><td class="ph-construction num" style="background:#dbeafe;">75,809</td><td class="ph-construction num" style="background:#dbeafe;">75,809</td><td class="ph-construction num" style="background:#dbeafe;">75,809</td><td class="ph-construction num" style="background:#dbeafe;">75,809</td><td class="ph-construction num" style="background:#dbeafe;">75,809</td><td class="ph-construction num" style="background:#dbeafe;">75,809</td><td class="ph-construction num" style="background:#dbeafe;">75,809</td><td class="ph-construction num" style="background:#dbeafe;">75,809</td><td class="ph-construction num" style="background:#dbeafe;">75,809</td><td class="ph-construction num" style="background:#dbeafe;">75,809</td><td class="ph-construction num" style="background:#dbeafe;">75,809</td><td class="ph-construction num" style="background:#dbeafe;">75,809</td><td class="ph-construction num" style="background:#dbeafe;">75,809</td><td class="ph-construction num" style="background:#dbeafe;">75,809</td><td class="ph-construction num" style="background:#dbeafe;">75,852</td>
+</tr>
+
+<tr>
+  <td class="col-desc">رسوم المجتمع (75%)</td>
+  <td class="col-total num">12,135</td>
+  <td class="col-investor num" style="color:#1d4ed8;">من الضمان</td>
+  <td class="col-paid num">—</td>
+  <td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td>
+  <td class="ph-offplan num zero">—</td><td class="ph-offplan num zero">—</td>
+  <td class="ph-construction num" style="background:#dbeafe;">674</td><td class="ph-construction num" style="background:#dbeafe;">674</td><td class="ph-construction num" style="background:#dbeafe;">674</td><td class="ph-construction num" style="background:#dbeafe;">674</td><td class="ph-construction num" style="background:#dbeafe;">674</td><td class="ph-construction num" style="background:#dbeafe;">674</td><td class="ph-construction num" style="background:#dbeafe;">674</td><td class="ph-construction num" style="background:#dbeafe;">674</td><td class="ph-construction num" style="background:#dbeafe;">674</td><td class="ph-construction num" style="background:#dbeafe;">674</td><td class="ph-construction num" style="background:#dbeafe;">674</td><td class="ph-construction num" style="background:#dbeafe;">674</td><td class="ph-construction num" style="background:#dbeafe;">674</td><td class="ph-construction num" style="background:#dbeafe;">674</td><td class="ph-construction num" style="background:#dbeafe;">674</td><td class="ph-construction num" style="background:#dbeafe;">674</td><td class="ph-construction num" style="background:#dbeafe;">674</td><td class="ph-construction num" style="background:#dbeafe;">681</td>
+</tr>
+
+<tr>
+  <td class="col-desc">أتعاب المطور — الإنشاء (3%)</td>
+  <td class="col-total num">2,729,130</td>
+  <td class="col-investor num" style="color:#1d4ed8;">من الضمان</td>
+  <td class="col-paid num">—</td>
+  <td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td><td class="ph-design num zero">—</td>
+  <td class="ph-offplan num zero">—</td><td class="ph-offplan num zero">—</td>
+  <td class="ph-construction num" style="background:#dbeafe;">151,618</td><td class="ph-construction num" style="background:#dbeafe;">151,618</td><td class="ph-construction num" style="background:#dbeafe;">151,618</td><td class="ph-construction num" style="background:#dbeafe;">151,618</td><td class="ph-construction num" style="background:#dbeafe;">151,618</td><td class="ph-construction num" style="background:#dbeafe;">151,618</td><td class="ph-construction num" style="background:#dbeafe;">151,618</td><td class="ph-construction num" style="background:#dbeafe;">151,618</td><td class="ph-construction num" style="background:#dbeafe;">151,618</td><td class="ph-construction num" style="background:#dbeafe;">151,618</td><td class="ph-construction num" style="background:#dbeafe;">151,618</td><td class="ph-construction num" style="background:#dbeafe;">151,618</td><td class="ph-construction num" style="background:#dbeafe;">151,618</td><td class="ph-construction num" style="background:#dbeafe;">151,618</td><td class="ph-construction num" style="background:#dbeafe;">151,618</td><td class="ph-construction num" style="background:#dbeafe;">151,618</td><td class="ph-construction num" style="background:#dbeafe;">151,618</td><td class="ph-construction num" style="background:#dbeafe;">151,644</td>
+</tr>
+
+<!-- ─── TOTALS ──────────────────────────────────────────────── -->
+<tr class="total-row">
+  <td class="col-desc" style="background:#1a1a2e;color:#fff;">إجمالي الشهر</td>
+  <td class="col-total num">75,962,184</td>
+  <td class="col-investor num">41,490,526</td>
+  <td class="col-paid num">19,080,000</td>
+  <!-- Design totals -->
+  <td class="num">411,172</td><td class="num">285,949</td><td class="num">285,949</td><td class="num">285,949</td><td class="num">285,949</td><td class="num">285,953</td>
+  <!-- Offplan totals -->
+  <td class="num">2,836,503</td><td class="num">8,682,162</td>
+  <!-- Construction totals (investor + escrow) -->
+  <td class="num">6,100,488</td><td class="num">2,124,218</td><td class="num">2,182,453</td><td class="num">2,304,250</td><td class="num">2,124,218</td><td class="num">2,151,763</td><td class="num">2,124,218</td><td class="num">2,124,218</td><td class="num">2,155,058</td><td class="num">2,124,218</td><td class="num">2,124,218</td><td class="num">2,155,058</td><td class="num">2,124,218</td><td class="num">2,124,218</td><td class="num">2,124,218</td><td class="num">2,124,218</td><td class="num">2,124,218</td><td class="num">2,124,910</td>
+</tr>
+
+<tr style="background:#f0f4ff;">
+  <td class="col-desc" style="font-weight:bold;color:#1a1a2e;">إجمالي تراكمي (مستثمر)</td>
+  <td colspan="2" style="background:#f0f4ff;"></td>
+  <td class="col-paid num">19,080,000</td>
+  <td class="ph-design num">19,491,172</td><td class="ph-design num">19,777,121</td><td class="ph-design num">20,063,070</td><td class="ph-design num">20,349,019</td><td class="ph-design num">20,634,968</td><td class="ph-design num">20,920,921</td>
+  <td class="ph-offplan num">23,757,424</td><td class="ph-offplan num">32,439,586</td>
+  <td class="ph-construction num">36,439,526</td><td class="ph-construction num">36,439,526</td><td class="ph-construction num">36,439,526</td><td class="ph-construction num">36,439,526</td><td class="ph-construction num">36,439,526</td><td class="ph-construction num">36,439,526</td><td class="ph-construction num">36,439,526</td><td class="ph-construction num">36,439,526</td><td class="ph-construction num">36,439,526</td><td class="ph-construction num">36,439,526</td><td class="ph-construction num">36,439,526</td><td class="ph-construction num">36,439,526</td><td class="ph-construction num">36,439,526</td><td class="ph-construction num">36,439,526</td><td class="ph-construction num">36,439,526</td><td class="ph-construction num">36,439,526</td><td class="ph-construction num">36,439,526</td><td class="ph-construction num" style="color:#fbbf24;font-weight:bold;">41,490,526</td>
+</tr>
+
+</tbody>
+</table>
+</div>
+
+<div style="margin-top:16px;font-size:10px;color:#666;line-height:1.8;">
+  <strong>ملاحظات:</strong><br>
+  • الخلايا البيضاء = من المستثمر | الخلايا الزرقاء الفاتحة = من حساب الضمان (إيرادات المشترين)<br>
+  • صف "إجمالي الشهر" يجمع المستثمر + الضمان معاً<br>
+  • صف "إجمالي تراكمي" يتتبع رأس المال المطلوب من المستثمر فقط<br>
+  • المبالغ المدفوعة = الأرض وما سبق (لا تاريخ محدد)<br>
+  • هذه مسودة — الأرقام قابلة للتعديل
+</div>
+
+</body>
+</html>
