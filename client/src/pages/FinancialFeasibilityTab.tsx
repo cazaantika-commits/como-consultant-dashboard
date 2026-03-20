@@ -147,8 +147,8 @@ export default function FinancialFeasibilityTab({ initialProjectId }: { initialP
 
       {costs && (
         <>
-          {/* KPI Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {/* KPI Cards - 5 in a row */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <KpiCard
               label="إجمالي التكاليف"
               value={fmt(totalCosts)}
@@ -186,10 +186,13 @@ export default function FinancialFeasibilityTab({ initialProjectId }: { initialP
             />
           </div>
 
+          {/* Two-column layout: Cost Table + Summary Table */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+
           {/* Cost Table */}
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
-              <h3 className="font-bold text-gray-800 text-base">تفصيل التكاليف</h3>
+            <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
+              <h3 className="font-bold text-gray-800 text-sm">تفصيل التكاليف</h3>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -271,8 +274,8 @@ export default function FinancialFeasibilityTab({ initialProjectId }: { initialP
 
           {/* Summary Table */}
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
-              <h3 className="font-bold text-gray-800 text-base">ملخص الجدوى المالية</h3>
+            <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
+              <h3 className="font-bold text-gray-800 text-sm">ملخص الجدوى المالية</h3>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -318,6 +321,8 @@ export default function FinancialFeasibilityTab({ initialProjectId }: { initialP
               </table>
             </div>
           </div>
+
+          </div>{/* end two-column grid */}
         </>
       )}
     </div>
