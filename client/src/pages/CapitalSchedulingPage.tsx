@@ -142,6 +142,7 @@ interface ProjectColumn {
   paidTotal: number;
   upcomingTotal: number;
   itemBreakdown?: Record<string, { name: string; amount: number }[]>;
+  financingScenario?: string;
 }
 
 interface DelayState {
@@ -762,7 +763,18 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                   const isEditing = editingProject !== null && editingProject === col.projectId;
                   return (
                     <tr key={col.projectId} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                      <td style={{ padding: "8px 12px", fontWeight: 700, color: hiddenProjects.has(col.projectId) ? "#94a3b8" : "#1e293b", maxWidth: 200, opacity: hiddenProjects.has(col.projectId) ? 0.5 : 1 }}>{col.name}</td>
+                      <td style={{ padding: "8px 12px", fontWeight: 700, color: hiddenProjects.has(col.projectId) ? "#94a3b8" : "#1e293b", maxWidth: 200, opacity: hiddenProjects.has(col.projectId) ? 0.5 : 1 }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                          <span>{col.name}</span>
+                          {col.financingScenario === 'no_offplan' ? (
+                            <span style={{ fontSize: 10, fontWeight: 600, background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0", borderRadius: 4, padding: "1px 6px", width: "fit-content" }}>بدون أوف بلان</span>
+                          ) : col.financingScenario === 'offplan_construction' ? (
+                            <span style={{ fontSize: 10, fontWeight: 600, background: "#eff6ff", color: "#2563eb", border: "1px solid #bfdbfe", borderRadius: 4, padding: "1px 6px", width: "fit-content" }}>أوف بلان — إنجاز 20%</span>
+                          ) : (
+                            <span style={{ fontSize: 10, fontWeight: 600, background: "#faf5ff", color: "#7c3aed", border: "1px solid #e9d5ff", borderRadius: 4, padding: "1px 6px", width: "fit-content" }}>أوف بلان — ضمان</span>
+                          )}
+                        </div>
+                      </td>
                       {isEditing ? (
                         <>
                           <td style={{ padding: "6px 8px", textAlign: "center" }}>
@@ -977,6 +989,18 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
                         wordBreak: "break-word",
                       }}>
                         {col.name}
+                      </div>
+                      {/* Scenario badge */}
+                      <div style={{
+                        textAlign: "center", marginBottom: 2,
+                      }}>
+                        {col.financingScenario === 'no_offplan' ? (
+                          <span style={{ fontSize: 7, fontWeight: 700, background: "#f0fdf4", color: "#16a34a", border: "1px solid #bbf7d0", borderRadius: 4, padding: "1px 4px" }}>بدون أوف بلان</span>
+                        ) : col.financingScenario === 'offplan_construction' ? (
+                          <span style={{ fontSize: 7, fontWeight: 700, background: "#eff6ff", color: "#2563eb", border: "1px solid #bfdbfe", borderRadius: 4, padding: "1px 4px" }}>أوف بلان — إنجاز 20%</span>
+                        ) : (
+                          <span style={{ fontSize: 7, fontWeight: 700, background: "#faf5ff", color: "#7c3aed", border: "1px solid #e9d5ff", borderRadius: 4, padding: "1px 4px" }}>أوف بلان — ضمان</span>
+                        )}
                       </div>
 
                       {/* الإجمالي row - fixed height for alignment */}

@@ -1,0 +1,35 @@
+{
+  "query": "SELECT id, name, financingScenario FROM projects WHERE name LIKE '%مجان%' OR name LIKE '%مول%' OR name LIKE '%mall%';\nUPDATE projects SET financingScenario = 'no_offplan' WHERE name LIKE '%مجان%' AND name LIKE '%G+4%' AND name NOT LIKE '%P+25%';\nSELECT id, name, financingScenario FROM projects WHERE name LIKE '%مجان%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, name, financingScenario FROM projects WHERE name LIKE '%مجان%' OR name LIKE '%مول%' OR name LIKE '%mall%';\nUPDATE projects SET financingScenario = 'no_offplan' WHERE name LIKE '%مجان%' AND name LIKE '%G+4%' AND name NOT LIKE '%P+25%';\nSELECT id, name, financingScenario FROM projects WHERE name LIKE '%مجان%';",
+  "rows": [
+    {
+      "id": "1",
+      "name": "مركز مجان التجاري (G+4)",
+      "financingScenario": "offplan_escrow"
+    },
+    {
+      "id": "2",
+      "name": "مجان متعدد الاستخدامات (G+4P+25)",
+      "financingScenario": "offplan_escrow"
+    },
+    {
+      "id": "id",
+      "name": "name",
+      "financingScenario": "financingScenario"
+    },
+    {
+      "id": "1",
+      "name": "مركز مجان التجاري (G+4)",
+      "financingScenario": "no_offplan"
+    },
+    {
+      "id": "2",
+      "name": "مجان متعدد الاستخدامات (G+4P+25)",
+      "financingScenario": "offplan_escrow"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tfinancingScenario\n1\tمركز مجان التجاري (G+4)\toffplan_escrow\n2\tمجان متعدد الاستخدامات (G+4P+25)\toffplan_escrow\nid\tname\tfinancingScenario\n1\tمركز مجان التجاري (G+4)\tno_offplan\n2\tمجان متعدد الاستخدامات (G+4P+25)\toffplan_escrow\n",
+  "stderr": "",
+  "execution_time_ms": 1992
+}
