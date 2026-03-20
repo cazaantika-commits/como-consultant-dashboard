@@ -18,6 +18,8 @@ import { useLocation } from "wouter";
 import CostsCashFlowTab from "@/components/feasibility/CostsCashFlowTab";
 import JoelleEngineTab from "@/components/feasibility/JoelleEngineTab";
 import JoelleDataManager from "@/components/feasibility/JoelleDataManager";
+import CashFlowSettingsPage from "@/pages/CashFlowSettingsPage";
+import CashFlowReflectionPage from "@/pages/CashFlowReflectionPage";
 
 // ═══════════════════════════════════════════
 // HELPER COMPONENTS
@@ -398,6 +400,12 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
                     <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-orange-500 rounded-full border border-white" title="بيانات غير متزامنة" />
                   )}
                 </TabsTrigger>
+                <TabsTrigger value="tab_cf_settings" className="gap-1.5 text-xs data-[state=active]:bg-gradient-to-l data-[state=active]:from-blue-600 data-[state=active]:to-cyan-600 data-[state=active]:text-white">
+                  ⚙️ إعدادات التدفق
+                </TabsTrigger>
+                <TabsTrigger value="tab_cf_reflection" className="gap-1.5 text-xs data-[state=active]:bg-gradient-to-l data-[state=active]:from-emerald-700 data-[state=active]:to-teal-700 data-[state=active]:text-white">
+                  📊 جدول الانعكاس
+                </TabsTrigger>
               </TabsList>
 
               {/* ═══════════════════════════════════════════ */}
@@ -416,6 +424,20 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
               </TabsContent>
               <TabsContent value="tab9">
                 <JoelleEngineTab projectId={selectedProjectId} studyId={selectedStudyId} />
+              </TabsContent>
+              <TabsContent value="tab_cf_settings">
+                <CashFlowSettingsPage
+                  embedded
+                  initialProjectId={selectedProjectId}
+                  onNavigateToReflection={() => setActiveTab("tab_cf_reflection")}
+                />
+              </TabsContent>
+              <TabsContent value="tab_cf_reflection">
+                <CashFlowReflectionPage
+                  embedded
+                  initialProjectId={selectedProjectId}
+                  onNavigateToSettings={() => setActiveTab("tab_cf_settings")}
+                />
               </TabsContent>
 
 

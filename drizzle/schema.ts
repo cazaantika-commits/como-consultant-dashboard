@@ -1998,3 +1998,71 @@ export const costDistributionRules = mysqlTable("cost_distribution_rules", {
   index("cdr_item_key").on(table.itemKey),
   index("cdr_sort_order").on(table.sortOrder),
 ]);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PROJECT CASH FLOW SETTINGS — إعدادات التدفق النقدي للمشروع
+// Stores per-project, per-scenario configuration for each cash flow item.
+// Each row represents one cost/revenue line item's time-distribution settings.
+// ═══════════════════════════════════════════════════════════════════════════
+export const projectCashFlowSettings = mysqlTable("project_cash_flow_settings", {
+  id: int().autoincrement().notNull().primaryKey(),
+
+  // ── Project + Scenario ──────────────────────────────────────────────────
+  projectId: int("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  // Which financing scenario these settings apply to
+  scenario: mysqlEnum("scenario", ["offplan_escrow", "offplan_construction", "no_offplan"]).notNull().default("offplan_escrow"),
+
+  // ── Item Identity ────────────────────────────────────────────────────────
+  // Stable key matching the item in investorCashFlow.ts (e.g. "land_price", "construction_cost")
+  itemKey: varchar("item_key", { length: 100 }).notNull(),
+  // Display label in Arabic
+  nameAr: varchar("name_ar", { length: 255 }).notNull(),
+  // Category for grouping (cost/revenue)
+  category: mysqlEnum("category", [
+    "land", "design", "offplan_reg", "construction", "marketing_sales",
+    "admin", "developer_fee", "revenue", "other"
+  ]).notNull().default("other"),
+  // Whether this item is visible/active for the current scenario
+  isActive: tinyint("is_active").notNull().default(1),
+  // Sort order for display
+  sortOrder: int("sort_order").notNull().default(0),
+
+  // ── Amount (pulled from fact sheet / feasibility study at runtime) ───────
+  // The amount is NOT stored here — it's always pulled live from the project data.
+  // These fields only override the amount if the user wants a manual override.
+  amountOverride: decimal("amount_override", { precision: 18, scale: 2 }),
+
+  // ── Time Distribution Settings ───────────────────────────────────────────
+  // Distribution method:
+  //   "lump_sum"    — single payment at a specific month
+  //   "equal_spread" — divided equally from startMonth to endMonth
+  //   "custom"      — fully custom per-month amounts stored in customJson
+  distributionMethod: mysqlEnum("distribution_method", [
+    "lump_sum", "equal_spread", "custom"
+  ]).notNull().default("equal_spread"),
+
+  // For lump_sum: which month (1-based relative to project start)
+  lumpSumMonth: int("lump_sum_month"),
+
+  // For equal_spread: start and end month (1-based relative to project start)
+  startMonth: int("start_month"),
+  endMonth: int("end_month"),
+
+  // For custom: JSON array of {month: number, amount: number} or {month: number, pct: number}
+  customJson: text("custom_json"),
+
+  // ── Funding Source ───────────────────────────────────────────────────────
+  // Who pays this item?
+  fundingSource: mysqlEnum("funding_source", ["investor", "escrow"]).notNull().default("investor"),
+
+  // ── Notes ────────────────────────────────────────────────────────────────
+  notes: text("notes"),
+
+  // ── Audit ────────────────────────────────────────────────────────────────
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+  index("pcfs_project_scenario").on(table.projectId, table.scenario),
+  index("pcfs_item_key").on(table.itemKey),
+]);

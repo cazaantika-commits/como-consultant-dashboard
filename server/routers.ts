@@ -46,6 +46,7 @@ import { stageDataRouter } from "./routers/stageData";
 import { cpaRouter } from "./routers/cpa";
 import { newsTickerRouter } from "./routers/newsTicker";
 import { costDistributionRulesRouter } from "./routers/costDistributionRules";
+import { cashFlowSettingsRouter } from "./routers/cashFlowSettings";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -106,6 +107,7 @@ export const appRouter = router({
   cpa: cpaRouter,
   newsTicker: newsTickerRouter,
   costDistributionRules: costDistributionRulesRouter,
+  cashFlowSettings: cashFlowSettingsRouter,
 });
 
 export type AppRouter = typeof appRouter;

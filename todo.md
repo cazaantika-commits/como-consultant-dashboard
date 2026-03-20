@@ -222,3 +222,19 @@
 - [ ] إضافة شارة السيناريو بجانب اسم كل مشروع في الجدول الشامل
 - [ ] تطبيق السيناريو الثالث (بدون أوف بلان) على مشروع المول في قاعدة البيانات
 - [ ] التحقق من الربط التلقائي بين الـ Fact Sheet والجدول الشامل
+
+## صفحة جدول التدفق المالي (الجديدة)
+- [ ] إضافة جدول project_cash_flow_settings في قاعدة البيانات
+- [ ] إضافة tRPC procedures: getCashFlowSettings و saveCashFlowSettings
+- [ ] بناء CashFlowDistributionPage — جدول الإعدادات (سيناريو + توزيع زمني)
+- [ ] بناء CashFlowDistributionPage — جدول الانعكاس (أفقي شهري)
+- [ ] تسجيل المسار في App.tsx وإضافة الأيقونة في FeasibilityHubPage
+- [ ] تحديث ExcelCashFlowPage ليسحب من الإعدادات بدل الكود الثابت
+
+- [x] Create project_cash_flow_settings database table with full schema (itemKey, distributionMethod, lumpSumMonth, startMonth, endMonth, customJson, fundingSource, etc.)
+- [x] Build cashFlowSettings tRPC router: getSettings, saveSettings, resetSettings, getReflectionData procedures
+- [x] Build CashFlowSettingsPage (جدول الإعدادات): scenario selector, per-item distribution config, amount overrides, funding source, notes
+- [x] Build CashFlowReflectionPage (جدول الانعكاس): horizontal Excel-like monthly matrix, phase-colored columns, category subtotals, grand totals, CSV export
+- [x] Integrate both pages as tabs in FeasibilityStudyPage (⚙️ إعدادات التدفق + 📊 جدول الانعكاس)
+- [x] Add standalone routes /cashflow-settings and /cashflow-reflection in App.tsx
+- [x] Write 15 unit tests for distribution logic (lump_sum, equal_spread, custom, zero amount, total integrity) — all passing
