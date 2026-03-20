@@ -2587,14 +2587,10 @@ export const cashFlowProgramRouter = router({
   // --- Capital Schedule Data for All Projects (used by CapitalSchedulingPage) ---
   // Returns monthly developer outflow per project from cf_cost_items via calculateDualCashFlow
   getCapitalScheduleData: publicProcedure
-    .input(z.object({
-      scenario: z.enum(["offplan_escrow", "offplan_construction", "no_offplan"]).optional().default("offplan_escrow"),
-    }).optional())
-    .query(async ({ ctx, input }) => {
+    .query(async ({ ctx }) => {
     if (!ctx.user) return [];
     const db = await getDb();
     if (!db) return [];
-    const scenario = (input?.scenario || "offplan_escrow") as FinancingScenario;
     // Source projects from the projects table (البطاقة) directly
     const allProjects = await db.select().from(projects)
       .where(eq(projects.userId, ctx.user.id));
@@ -2637,6 +2633,8 @@ export const cashFlowProgramRouter = router({
       const preDevMonths = proj.preConMonths || cfProj?.preDevMonths || 6;
       const constructionMonths = proj.constructionMonths || cfProj?.constructionMonths || 16;
       const handoverMonths = (proj as any).handoverMonths || cfProj?.handoverMonths || 2;
+      // Read per-project scenario from DB (single source of truth)
+      const projectScenario = ((proj as any).financingScenario || 'offplan_escrow') as FinancingScenario;
       const data = computeProjectCapital(
         proj,
         moRows || null,
@@ -2648,7 +2646,7 @@ export const cashFlowProgramRouter = router({
           handoverMonths,
         },
         today,
-        scenario,
+        projectScenario,
       );
       if (!data) continue;
       results.push({
@@ -2862,5 +2860,35 @@ export const cashFlowProgramRouter = router({
       }
       return { success: true };
     }),
+
+  // ─── Per-Project Financing Scenario ─────────────────────────────────────
+  updateProjectScenario: publicProcedure
+    .input(z.object({
+      projectId: z.number(),
+      scenario: z.enum(['offplan_escrow', 'offplan_construction', 'no_offplan']),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      await db.update(projects)
+        .set({ financingScenario: input.scenario })
+        .where(and(eq(projects.id, input.projectId), eq(projects.userId, ctx.user.id)));
+      return { success: true };
+    }),
+
+  getProjectScenarios: publicProcedure.query(async ({ ctx }) => {
+    if (!ctx.user) return {};
+    const db = await getDb();
+    if (!db) return {};
+    const rows = await db.select({ id: projects.id, financingScenario: projects.financingScenario })
+      .from(projects)
+      .where(eq(projects.userId, ctx.user.id));
+    const result: Record<number, string> = {};
+    for (const row of rows) {
+      result[row.id] = row.financingScenario ?? 'offplan_escrow';
+    }
+    return result;
+  }),
 });
 

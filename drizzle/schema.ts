@@ -1129,6 +1129,7 @@ export const projects = mysqlTable("projects", {
 	constructionMonths: int().default(16),
 	handoverMonths: int().default(2),
 	startDate: varchar({ length: 20 }),
+	financingScenario: varchar({ length: 50 }).default('offplan_escrow'),
 });
 
 export const proposalComparisons = mysqlTable("proposalComparisons", {

@@ -1,0 +1,1 @@
+ALTER TABLE `projects` ADD `financingScenario` varchar(50) DEFAULT 'offplan_escrow';

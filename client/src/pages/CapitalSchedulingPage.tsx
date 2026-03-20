@@ -171,10 +171,8 @@ function projectMonthToChartIndex(
 
 export default function CapitalSchedulingPage({ onBack }: Props) {
   const { isAuthenticated } = useAuth();
-  const [scenario, setScenario] = useState<FinancingScenario>("offplan_escrow");
-
   const scheduleQuery = trpc.cashFlowProgram.getCapitalScheduleData.useQuery(
-    { scenario },
+    undefined,
     { enabled: isAuthenticated, staleTime: 60000 }
   );
 
@@ -642,27 +640,6 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
               </div>
               <span style={{ fontWeight: 600 }}>أوف بلان</span>
             </div>
-          </div>
-
-          {/* Scenario selector */}
-          <div style={{ display: "flex", gap: 4, background: "#ffffff", borderRadius: 12, padding: 3, border: "1px solid #e2e8f0" }}>
-            {(Object.entries(SCENARIO_LABELS) as [FinancingScenario, string][]).map(([key, label]) => (
-              <button
-                key={key}
-                onClick={() => setScenario(key)}
-                style={{
-                  padding: "5px 12px", borderRadius: 9, fontSize: 11, fontWeight: 700,
-                  cursor: "pointer", transition: "all 0.2s", border: "none",
-                  background: scenario === key
-                    ? key === "no_offplan" ? "#059669" : key === "offplan_construction" ? "#7c3aed" : "#db2777"
-                    : "transparent",
-                  color: scenario === key ? "#fff" : "#94a3b8",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {label}
-              </button>
-            ))}
           </div>
 
           {/* Settings toggle */}

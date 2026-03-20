@@ -211,3 +211,9 @@
 - [x] Add scenario selector to CapitalSchedulingPage header
 - [x] Ensure CapitalSchedulingPage reads all data from ExcelCashFlowPage/cashFlowEngine (single source)
 - [x] Verify all project costs come from Fact Sheet via calculateProjectCosts() — no hardcoded fallbacks used in production
+
+## السيناريو المالي على مستوى كل مشروع
+- [x] إضافة حقل financing_scenario في جدول projects في قاعدة البيانات
+- [x] إضافة tRPC procedure لقراءة وتحديث سيناريو كل مشروع
+- [x] تحديث صفحة رأس المال المطلوب: منتقي السيناريو لكل مشروع يحفظ في DB
+- [x] تحديث الجدول الشامل: يقرأ السيناريو من DB لكل مشروع، حذف الزر العام

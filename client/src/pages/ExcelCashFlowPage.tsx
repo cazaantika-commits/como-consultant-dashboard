@@ -92,7 +92,17 @@ export default function ExcelCashFlowPage({ embedded, initialProjectId }: { embe
   }, [selectedProject, moQuery.data, cpQuery.data]);
 
   const [showControls, setShowControls] = useState(false);
-  const [scenario, setScenario] = useState<FinancingScenario>("offplan_escrow");
+
+  // Per-project scenario — read from DB, saved to DB
+  const scenariosQuery = trpc.cashFlowProgram.getProjectScenarios.useQuery(undefined, { enabled: isAuthenticated, staleTime: 5000 });
+  const updateScenarioMutation = trpc.cashFlowProgram.updateProjectScenario.useMutation({
+    onSuccess: () => scenariosQuery.refetch(),
+  });
+  const scenario: FinancingScenario = ((scenariosQuery.data?.[selectedProjectId || 0]) || 'offplan_escrow') as FinancingScenario;
+  const setScenario = (s: FinancingScenario) => {
+    if (!selectedProjectId) return;
+    updateScenarioMutation.mutate({ projectId: selectedProjectId, scenario: s });
+  };
   const [editingCell, setEditingCell] = useState<{ itemId: string; qi: number } | null>(null);
   const [editValue, setEditValue] = useState("");
 
