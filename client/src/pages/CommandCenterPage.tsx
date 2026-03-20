@@ -2302,9 +2302,9 @@ function NewsTicker({ token }: { token: string }) {
   const doubled = [...displayItems, ...displayItems];
 
   return (
-    <div className="bg-gradient-to-l from-slate-800 via-slate-900 to-slate-800 text-white overflow-hidden border-b border-slate-700">
+    <div className="overflow-hidden" style={{background: 'rgba(0,0,0,0.4)', borderBottom: '1px solid rgba(255,255,255,0.06)'}}>
       <div className="flex items-center h-9">
-        <div className="flex-shrink-0 bg-amber-500 text-white px-4 h-full flex items-center gap-1.5 text-xs font-bold z-10 shadow-md">
+        <div className="flex-shrink-0 px-4 h-full flex items-center gap-1.5 text-xs font-bold z-10" style={{background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: 'white'}}>
           <Megaphone className="w-3.5 h-3.5" />
           أخر الأخبار
         </div>
@@ -2329,7 +2329,7 @@ function NewsTicker({ token }: { token: string }) {
                 {!item.isUrgent && (
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400 ml-1.5 flex-shrink-0" />
                 )}
-                <span className={item.isUrgent ? 'text-red-200' : item.needsResponse ? 'text-orange-200' : 'text-slate-200'}>
+                <span style={{color: item.isUrgent ? '#fca5a5' : item.needsResponse ? '#fdba74' : 'rgba(255,255,255,0.75)'}}>
                   {item.text}
                 </span>
               </span>
@@ -3875,44 +3875,51 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
 
   // Main dashboard
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white" dir="rtl">
+    <div className="min-h-screen" style={{background: 'linear-gradient(135deg, #0f0c29 0%, #1a1a3e 40%, #24243e 100%)'}} dir="rtl">
       <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
 
       {/* News Ticker */}
       <NewsTicker token={token} />
 
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        {/* --- Salwa Hero Section (same as main platform) --- */}
-        <div className="bg-gradient-to-l from-amber-50 via-white to-amber-50/30 rounded-2xl border border-amber-200/50 p-5 sm:p-6 mb-6 shadow-sm">
-          <div className="flex flex-col sm:flex-row items-center gap-5">
-            {/* Salwa Large Image */}
+      <div className="max-w-5xl mx-auto px-4 py-8">
+        {/* --- Executive Hero Section --- */}
+        <div className="relative overflow-hidden rounded-3xl mb-8" style={{background: 'linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.03) 100%)', border: '1px solid rgba(255,255,255,0.12)', backdropFilter: 'blur(20px)'}}>
+          {/* Decorative orbs */}
+          <div className="absolute -top-16 -left-16 w-64 h-64 rounded-full opacity-10" style={{background: 'radial-gradient(circle, #f59e0b, transparent)'}} />
+          <div className="absolute -bottom-12 -right-12 w-48 h-48 rounded-full opacity-10" style={{background: 'radial-gradient(circle, #8b5cf6, transparent)'}} />
+
+          <div className="relative z-10 flex flex-col sm:flex-row items-center gap-6 p-6 sm:p-8">
+            {/* Salwa Avatar */}
             <div className="relative flex-shrink-0">
-              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden ring-4 ring-amber-400/40 shadow-xl shadow-amber-500/20">
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden shadow-2xl" style={{boxShadow: '0 0 40px rgba(245,158,11,0.3)'}}>
                 <img src={SALWA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover" />
               </div>
-              <div className="absolute bottom-1 right-1 w-5 h-5 bg-emerald-400 rounded-full border-3 border-white animate-pulse" />
+              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-400 rounded-full border-2 border-white animate-pulse shadow-lg" />
             </div>
 
-            {/* Salwa Info + Actions */}
+            {/* Member Greeting */}
             <div className="flex-1 text-center sm:text-right">
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-0.5">{member.greeting}</h2>
-              <p className="text-slate-500 text-sm mb-1">
-                {new Date().toLocaleDateString("ar-AE", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
-              </p>
-              <p className="text-amber-700 text-sm font-medium mb-4">سلوى — المنسقة الرئيسية لمشاريع COMO</p>
+              <div className="flex items-center gap-2 justify-center sm:justify-start mb-1">
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full" style={{background: 'rgba(245,158,11,0.2)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.3)'}}>
+                  {new Date().toLocaleDateString("ar-AE", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+                </span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-1">{member.greeting}</h2>
+              <p className="text-sm mb-5" style={{color: 'rgba(255,255,255,0.5)'}}>سلوى — المنسقة الذكية لمشاريع COMO Developments</p>
 
-              {/* Quick action buttons */}
-              <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+              <div className="flex flex-wrap gap-3 justify-center sm:justify-start">
                 <button
                   onClick={() => setShowSalwa(true)}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white text-sm font-semibold shadow-md shadow-amber-500/20 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all hover:scale-[1.03] active:scale-[0.97]"
+                  style={{background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: 'white', boxShadow: '0 4px 20px rgba(245,158,11,0.4)'}}
                 >
                   <MessageSquare className="w-4 h-4" />
                   تحدث مع سلوى
                 </button>
                 <button
                   onClick={() => setShowSalwa(true)}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-amber-300 bg-amber-50 text-amber-700 text-sm font-medium hover:bg-amber-100 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all hover:scale-[1.03] active:scale-[0.97]"
+                  style={{background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.8)', border: '1px solid rgba(255,255,255,0.15)'}}
                 >
                   <Mic className="w-4 h-4" />
                   رسالة صوتية
@@ -3922,10 +3929,18 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           </div>
         </div>
 
-        {/* --- Smart Bubbles Grid (mobile-friendly) --- */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
+        {/* --- Section Title --- */}
+        <div className="flex items-center gap-3 mb-5">
+          <div className="h-px flex-1" style={{background: 'linear-gradient(to left, rgba(255,255,255,0.1), transparent)'}} />
+          <span className="text-xs font-semibold tracking-widest uppercase" style={{color: 'rgba(255,255,255,0.35)'}}>وحدات مركز القيادة</span>
+          <div className="h-px flex-1" style={{background: 'linear-gradient(to right, rgba(255,255,255,0.1), transparent)'}} />
+        </div>
+
+        {/* --- Premium Bubbles Grid --- */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-5 mb-8">
           {BUBBLES.map(bubble => {
             const count = counts.data?.[bubble.type as keyof typeof counts.data] || 0;
+            const hasCount = typeof count === "number" && count > 0;
             return (
               <button
                 key={bubble.type}
@@ -3949,17 +3964,32 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                     setActiveBubble(bubble.type);
                   }
                 }}
-                className="group relative bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 text-center transition-all duration-300 hover:shadow-lg hover:border-slate-300 active:scale-[0.97]"
+                className="group relative overflow-hidden rounded-2xl p-5 sm:p-6 text-center transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
+                style={{
+                  background: hasCount
+                    ? 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.06) 100%)'
+                    : 'linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.03) 100%)',
+                  border: hasCount ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.08)',
+                  backdropFilter: 'blur(10px)',
+                  boxShadow: hasCount ? '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)' : '0 4px 16px rgba(0,0,0,0.2)'
+                }}
               >
-                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${bubble.color} flex items-center justify-center mx-auto mb-2 sm:mb-3 shadow-md group-hover:scale-110 transition-transform`}>
-                  <bubble.icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                {/* Glow effect on hover */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" style={{background: 'radial-gradient(circle at 50% 0%, rgba(255,255,255,0.08), transparent 70%)'}} />
+
+                {/* Icon */}
+                <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br ${bubble.color} flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300`}
+                  style={{boxShadow: '0 8px 24px rgba(0,0,0,0.3)'}}>
+                  <bubble.icon className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
                 </div>
-                <p className="font-semibold text-slate-700 text-xs sm:text-sm mb-0.5">{bubble.label}</p>
-                <p className="text-[10px] sm:text-xs text-slate-400">
-                  {counts.isLoading ? "..." : `${count} عنصر`}
-                </p>
-                {typeof count === "number" && count > 0 && (
-                  <div className="absolute -top-1 -left-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-red-500 text-white text-[9px] sm:text-[10px] font-bold flex items-center justify-center shadow-md">
+
+                {/* Label */}
+                <p className="font-bold text-sm sm:text-base leading-tight" style={{color: 'rgba(255,255,255,0.9)'}}>{bubble.label}</p>
+
+                {/* Badge */}
+                {hasCount && (
+                  <div className="absolute -top-1.5 -left-1.5 min-w-[24px] h-6 px-1.5 rounded-full flex items-center justify-center text-[11px] font-bold shadow-lg"
+                    style={{background: 'linear-gradient(135deg, #ef4444, #dc2626)', color: 'white', boxShadow: '0 2px 8px rgba(239,68,68,0.5)'}}>
                     {count}
                   </div>
                 )}
@@ -3967,48 +3997,13 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             );
           })}
         </div>
-
-        {/* --- Recent Notifications --- */}
-        {notifications.data && notifications.data.length > 0 && (
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-bold text-slate-800 text-sm flex items-center gap-2">
-                <Bell className="w-4 h-4 text-slate-400" />
-                آخر الإشعارات
-              </h2>
-              {unreadCount > 0 && (
-                <Button variant="ghost" size="sm" onClick={handleMarkAllRead} className="text-xs text-slate-500">
-                  تعليم الكل كمقروء
-                </Button>
-              )}
-            </div>
-            <div className="space-y-2">
-              {notifications.data.slice(0, 5).map((n: any) => (
-                <div
-                  key={n.id}
-                  className={`flex items-start gap-3 p-3 rounded-xl border transition-all ${
-                    n.isRead ? "bg-white border-slate-100" : "bg-amber-50/50 border-amber-200/50"
-                  }`}
-                >
-                  <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${n.isRead ? "bg-slate-300" : "bg-amber-500"}`} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-700">{n.title}</p>
-                    {n.message && <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{n.message}</p>}
-                  </div>
-                  <span className="text-[10px] text-slate-400 flex-shrink-0">
-                    {new Date(n.createdAt).toLocaleDateString("ar-AE", { month: "short", day: "numeric" })}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Floating Salwa Button (large, prominent, mobile-friendly) */}
+      {/* Floating Salwa Button */}
       <button
         onClick={() => setShowSalwa(true)}
-        className="fixed bottom-5 left-5 sm:bottom-6 sm:left-6 w-16 h-16 sm:w-18 sm:h-18 rounded-full shadow-xl shadow-amber-500/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-40 group overflow-hidden ring-3 ring-amber-400/50 ring-offset-2 ring-offset-white"
+        className="fixed bottom-6 left-6 w-16 h-16 rounded-full flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-40 overflow-hidden"
+        style={{boxShadow: '0 0 0 3px rgba(245,158,11,0.4), 0 8px 32px rgba(245,158,11,0.3)'}}
       >
         <img src={SALWA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover" />
         <div className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-emerald-400 rounded-full border-2 border-white animate-pulse" />
@@ -4023,38 +4018,39 @@ function DashboardHeader({ member, onLogout, unreadCount, onNotifications, onSal
   member: any; onLogout: () => void; unreadCount: number; onNotifications: () => void; onSalwa: () => void;
 }) {
   return (
-    <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/50 sticky top-0 z-30">
-      <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
+    <header className="sticky top-0 z-30" style={{background: 'rgba(15,12,41,0.85)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.08)'}}>
+      <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-sm">
-            <span className="text-sm font-bold text-white">C</span>
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-lg" style={{background: 'linear-gradient(135deg, #f59e0b, #d97706)', boxShadow: '0 4px 12px rgba(245,158,11,0.4)'}}>
+            <span className="text-sm font-black text-white">C</span>
           </div>
           <div>
-            <span className="font-bold text-slate-800 text-sm">مركز القيادة</span>
+            <span className="font-bold text-white text-sm tracking-wide">مركز القيادة</span>
+            <p className="text-[10px]" style={{color: 'rgba(255,255,255,0.4)'}}>COMO Developments</p>
           </div>
         </div>
 
         {/* Right side */}
         <div className="flex items-center gap-2">
           {/* Notifications */}
-          <button onClick={onNotifications} className="relative p-2 rounded-lg hover:bg-slate-100 transition-colors">
-            <Bell className="w-4.5 h-4.5 text-slate-500" />
+          <button onClick={onNotifications} className="relative p-2 rounded-xl transition-all hover:scale-105" style={{background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)'}}>
+            <Bell className="w-4 h-4" style={{color: 'rgba(255,255,255,0.7)'}} />
             {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center" style={{boxShadow: '0 2px 6px rgba(239,68,68,0.5)'}}>
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
           </button>
 
           {/* Member name */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50">
-            <User className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-xs font-medium text-slate-600">{member.nameAr}</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl" style={{background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)'}}>
+            <User className="w-3.5 h-3.5" style={{color: 'rgba(255,255,255,0.5)'}} />
+            <span className="text-xs font-semibold" style={{color: 'rgba(255,255,255,0.85)'}}>{member.nameAr}</span>
           </div>
 
           {/* Logout */}
-          <button onClick={onLogout} className="p-2 rounded-lg hover:bg-red-50 transition-colors text-slate-400 hover:text-red-500">
+          <button onClick={onLogout} className="p-2 rounded-xl transition-all hover:scale-105" style={{background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: 'rgba(239,68,68,0.7)'}}>
             <LogOut className="w-4 h-4" />
           </button>
         </div>
