@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE cost_distribution_rules ADD COLUMN payment_schedule_json TEXT NULL COMMENT 'JSON array of {month: number, pct: number} installments within the phase';\nALTER TABLE cost_distribution_rules ADD COLUMN phase_start_month INT NOT NULL DEFAULT 1 COMMENT 'Which month within the phase this item starts (1-based)';\nALTER TABLE cost_distribution_rules ADD COLUMN phase_end_month INT NULL COMMENT 'Which month within the phase this item ends (null = same as start for lump sum)';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute ALTER TABLE cost_distribution_rules ADD COLUMN payment_schedule_json TEXT NULL COMMENT 'JSON array of {month: number, pct: number} installments within the phase';\nALTER TABLE cost_distribution_rules ADD COLUMN phase_start_month INT NOT NULL DEFAULT 1 COMMENT 'Which month within the phase this item starts (1-based)';\nALTER TABLE cost_distribution_rules ADD COLUMN phase_end_month INT NULL COMMENT 'Which month within the phase this item ends (null = same as start for lump sum)';",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 3048
+}

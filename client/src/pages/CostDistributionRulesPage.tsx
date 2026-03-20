@@ -1,28 +1,25 @@
-import { useState, useMemo } from "react";
-import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/_core/hooks/useAuth";
-import { toast } from "sonner";
-import {
-  Pencil, Trash2, Plus, Save, X, ChevronDown, ChevronUp, Info
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Badge } from "@/components/ui/badge";
+/**
+ * قواعد توزيع التكاليف
+ * Cost Distribution Rules — Two-level editable table
+ *
+ * Level 1: Default template rules (applies to all projects unless overridden)
+ * Level 2: Per-project overrides (project-specific values and schedules)
+ */
 
-// ── Types ────────────────────────────────────────────────────────────────────
+import { useState } from "react";
+import { trpc } from "@/lib/trpc";
+import DashboardLayout from "@/components/DashboardLayout";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { Pencil, Check, X, Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type Installment = { month: number; pct: number };
 
 type Rule = {
   id: number;
@@ -30,12 +27,12 @@ type Rule = {
   itemKey: string;
   nameAr: string;
   nameEn?: string | null;
-  amountType: "fixed" | "pct_construction" | "pct_revenue" | "pct_land";
+  amountType: string;
   fixedAmount?: string | null;
   pctValue?: string | null;
-  source: "investor" | "escrow";
-  primaryPhase: "land" | "design" | "offplan" | "construction" | "handover";
-  distributionMethod: "lump_sum" | "equal_spread" | "split_ratio" | "sales_linked" | "periodic" | "custom";
+  source: string;
+  primaryPhase: string;
+  distributionMethod: string;
   relativeMonth?: number | null;
   splitRatioJson?: string | null;
   periodicIntervalMonths?: number | null;
@@ -43,26 +40,27 @@ type Rule = {
   customJson?: string | null;
   notes?: string | null;
   isActive: number;
+  phaseStartMonth?: number | null;
+  phaseEndMonth?: number | null;
+  paymentScheduleJson?: string | null;
 };
 
-type EditForm = Omit<Rule, "id" | "isActive">;
-
-// ── Labels ───────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 const PHASE_LABELS: Record<string, string> = {
-  land: "الأرض",
-  design: "التصاميم",
-  offplan: "أوف بلان",
-  construction: "الإنشاء",
-  handover: "التسليم",
+  land: "المرحلة 1 — الأرض",
+  design: "المرحلة 2 — التصاميم",
+  offplan: "المرحلة 3 — أوف بلان",
+  construction: "المرحلة 4 — الإنشاء",
+  handover: "المرحلة 5 — التسليم",
 };
 
 const PHASE_COLORS: Record<string, string> = {
-  land: "bg-amber-100 text-amber-800 border-amber-200",
-  design: "bg-orange-100 text-orange-800 border-orange-200",
-  offplan: "bg-pink-100 text-pink-800 border-pink-200",
-  construction: "bg-violet-100 text-violet-800 border-violet-200",
-  handover: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  land: "bg-gray-100 text-gray-700 border-gray-300",
+  design: "bg-purple-50 text-purple-700 border-purple-200",
+  offplan: "bg-blue-50 text-blue-700 border-blue-200",
+  construction: "bg-green-50 text-green-700 border-green-200",
+  handover: "bg-orange-50 text-orange-700 border-orange-200",
 };
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -70,558 +68,446 @@ const SOURCE_LABELS: Record<string, string> = {
   escrow: "حساب الضمان",
 };
 
-const SOURCE_COLORS: Record<string, string> = {
-  investor: "bg-blue-100 text-blue-800 border-blue-200",
-  escrow: "bg-teal-100 text-teal-800 border-teal-200",
-};
-
-const AMOUNT_TYPE_LABELS: Record<string, string> = {
-  fixed: "مبلغ ثابت",
-  pct_construction: "% من الإنشاء",
-  pct_revenue: "% من الإيرادات",
-  pct_land: "% من الأرض",
-};
-
-const DIST_METHOD_LABELS: Record<string, string> = {
+const DIST_LABELS: Record<string, string> = {
   lump_sum: "دفعة واحدة",
   equal_spread: "موزع بالتساوي",
-  split_ratio: "نسب موزعة",
+  split_ratio: "نسب محددة",
   sales_linked: "مرتبط بالمبيعات",
   periodic: "دوري",
   custom: "مخصص",
 };
 
-const PHASE_ORDER = ["land", "design", "offplan", "construction", "handover"];
+const AMOUNT_LABELS: Record<string, string> = {
+  fixed: "مبلغ ثابت",
+  pct_construction: "% من البناء",
+  pct_revenue: "% من الإيرادات",
+  pct_land: "% من الأرض",
+};
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+function parseSchedule(json?: string | null): Installment[] {
+  if (!json) return [];
+  try { return JSON.parse(json); } catch { return []; }
+}
 
 function formatAmount(rule: Rule): string {
-  if (rule.amountType === "fixed") {
-    const n = parseFloat(rule.fixedAmount ?? "0");
-    if (!n) return "—";
-    return n.toLocaleString("en-US") + " د.إ";
+  if (rule.amountType === "fixed" && rule.fixedAmount) {
+    return Number(rule.fixedAmount).toLocaleString("ar-AE") + " د.إ";
   }
-  const pct = parseFloat(rule.pctValue ?? "0");
-  if (!pct) return "—";
-  return (pct * 100).toFixed(2) + "%";
+  if (rule.pctValue) {
+    const label = AMOUNT_LABELS[rule.amountType] || rule.amountType;
+    return `${rule.pctValue}% (${label})`;
+  }
+  return "—";
 }
 
-function emptyForm(): EditForm {
-  return {
-    sortOrder: 0,
-    itemKey: "",
-    nameAr: "",
-    nameEn: "",
-    amountType: "fixed",
-    fixedAmount: null,
-    pctValue: null,
-    source: "investor",
-    primaryPhase: "design",
-    distributionMethod: "lump_sum",
-    relativeMonth: 1,
-    splitRatioJson: null,
-    periodicIntervalMonths: null,
-    periodicAmount: null,
-    customJson: null,
-    notes: "",
-  };
-}
+// ── Schedule Editor ───────────────────────────────────────────────────────────
 
-// ── Main Component ───────────────────────────────────────────────────────────
+function ScheduleEditor({
+  schedule,
+  onChange,
+}: {
+  schedule: Installment[];
+  onChange: (s: Installment[]) => void;
+}) {
+  const total = schedule.reduce((s, i) => s + i.pct, 0);
 
-export default function CostDistributionRulesPage() {
-  const { isAuthenticated } = useAuth();
-  const utils = trpc.useUtils();
-
-  const { data: rules = [], isLoading } = trpc.costDistributionRules.list.useQuery(
-    undefined,
-    { enabled: isAuthenticated }
-  );
-
-  const createMutation = trpc.costDistributionRules.create.useMutation({
-    onSuccess: () => { utils.costDistributionRules.list.invalidate(); toast.success("تم إضافة البند"); setShowAddForm(false); },
-    onError: (e) => toast.error("خطأ: " + e.message),
-  });
-  const updateMutation = trpc.costDistributionRules.update.useMutation({
-    onSuccess: () => { utils.costDistributionRules.list.invalidate(); toast.success("تم الحفظ"); setEditingId(null); },
-    onError: (e) => toast.error("خطأ: " + e.message),
-  });
-  const deleteMutation = trpc.costDistributionRules.delete.useMutation({
-    onSuccess: () => { utils.costDistributionRules.list.invalidate(); toast.success("تم الحذف"); },
-    onError: (e) => toast.error("خطأ: " + e.message),
-  });
-
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState<EditForm>(emptyForm());
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newForm, setNewForm] = useState<EditForm>(emptyForm());
-  const [expandedPhase, setExpandedPhase] = useState<string | null>(null);
-
-  // Group rules by phase
-  const grouped = useMemo(() => {
-    const map: Record<string, Rule[]> = {};
-    for (const phase of PHASE_ORDER) map[phase] = [];
-    for (const r of rules) {
-      if (map[r.primaryPhase]) map[r.primaryPhase].push(r);
-    }
-    return map;
-  }, [rules]);
-
-  // Totals per source
-  const totals = useMemo(() => {
-    let investor = 0, escrow = 0;
-    for (const r of rules) {
-      if (r.amountType === "fixed" && r.fixedAmount) {
-        const n = parseFloat(r.fixedAmount);
-        if (r.source === "investor") investor += n;
-        else escrow += n;
-      }
-    }
-    return { investor, escrow };
-  }, [rules]);
-
-  function startEdit(rule: Rule) {
-    setEditingId(rule.id);
-    setEditForm({
-      sortOrder: rule.sortOrder,
-      itemKey: rule.itemKey,
-      nameAr: rule.nameAr,
-      nameEn: rule.nameEn ?? "",
-      amountType: rule.amountType,
-      fixedAmount: rule.fixedAmount ?? null,
-      pctValue: rule.pctValue ?? null,
-      source: rule.source,
-      primaryPhase: rule.primaryPhase,
-      distributionMethod: rule.distributionMethod,
-      relativeMonth: rule.relativeMonth ?? 1,
-      splitRatioJson: rule.splitRatioJson ?? null,
-      periodicIntervalMonths: rule.periodicIntervalMonths ?? null,
-      periodicAmount: rule.periodicAmount ?? null,
-      customJson: rule.customJson ?? null,
-      notes: rule.notes ?? "",
-    });
-  }
-
-  function saveEdit(id: number) {
-    updateMutation.mutate({
-      id,
-      ...editForm,
-      fixedAmount: editForm.fixedAmount ? parseFloat(editForm.fixedAmount as string) : null,
-      pctValue: editForm.pctValue ? parseFloat(editForm.pctValue as string) : null,
-      periodicAmount: editForm.periodicAmount ? parseFloat(editForm.periodicAmount as string) : null,
-      isActive: 1,
-    });
-  }
-
-  function saveNew() {
-    createMutation.mutate({
-      ...newForm,
-      fixedAmount: newForm.fixedAmount ? parseFloat(newForm.fixedAmount as string) : null,
-      pctValue: newForm.pctValue ? parseFloat(newForm.pctValue as string) : null,
-      periodicAmount: newForm.periodicAmount ? parseFloat(newForm.periodicAmount as string) : null,
-      isActive: 1,
-    });
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
+  const update = (idx: number, field: "month" | "pct", val: number) => {
+    const next = schedule.map((item, i) =>
+      i === idx ? { ...item, [field]: val } : item
     );
-  }
+    onChange(next);
+  };
+
+  const remove = (idx: number) => onChange(schedule.filter((_, i) => i !== idx));
+
+  const add = () => onChange([...schedule, { month: schedule.length + 1, pct: 0 }]);
 
   return (
-    <TooltipProvider>
-      <div className="p-6 max-w-7xl mx-auto" dir="rtl">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">قواعد توزيع التكاليف</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              الجدول الأساسي لكل بند تكلفة — المصدر والمرحلة وطريقة الصرف
-            </p>
-          </div>
-          <Button
-            onClick={() => { setShowAddForm(true); setNewForm(emptyForm()); }}
-            className="gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            إضافة بند
-          </Button>
+    <div className="space-y-1">
+      {schedule.map((item, idx) => (
+        <div key={idx} className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground w-12">شهر</span>
+          <Input
+            type="number"
+            min={1}
+            value={item.month}
+            onChange={(e) => update(idx, "month", Number(e.target.value))}
+            className="h-7 w-16 text-xs text-center"
+          />
+          <span className="text-xs text-muted-foreground w-6">%</span>
+          <Input
+            type="number"
+            min={0}
+            max={100}
+            value={item.pct}
+            onChange={(e) => update(idx, "pct", Number(e.target.value))}
+            className="h-7 w-16 text-xs text-center"
+          />
+          <button onClick={() => remove(idx)} className="text-red-400 hover:text-red-600">
+            <X className="w-3 h-3" />
+          </button>
         </div>
+      ))}
+      <div className="flex items-center gap-2 pt-1">
+        <button
+          onClick={add}
+          className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+        >
+          <Plus className="w-3 h-3" /> إضافة دفعة
+        </button>
+        <span className={`text-xs ml-auto font-medium ${total === 100 ? "text-green-600" : "text-red-500"}`}>
+          المجموع: {total}%
+        </span>
+      </div>
+    </div>
+  );
+}
 
-        {/* Summary cards */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="rounded-xl border bg-card p-4">
-            <div className="text-xs text-muted-foreground mb-1">إجمالي البنود</div>
-            <div className="text-2xl font-bold">{rules.length}</div>
-          </div>
-          <div className="rounded-xl border bg-blue-50 dark:bg-blue-950 p-4">
-            <div className="text-xs text-muted-foreground mb-1">بنود المستثمر</div>
-            <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
-              {rules.filter(r => r.source === "investor").length}
-            </div>
-          </div>
-          <div className="rounded-xl border bg-teal-50 dark:bg-teal-950 p-4">
-            <div className="text-xs text-muted-foreground mb-1">بنود حساب الضمان</div>
-            <div className="text-2xl font-bold text-teal-700 dark:text-teal-300">
-              {rules.filter(r => r.source === "escrow").length}
-            </div>
-          </div>
-        </div>
+// ── Rule Row ──────────────────────────────────────────────────────────────────
 
-        {/* Add form */}
-        {showAddForm && (
-          <div className="mb-6 rounded-xl border border-primary/30 bg-primary/5 p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-sm">إضافة بند جديد</h3>
-              <Button variant="ghost" size="sm" onClick={() => setShowAddForm(false)}>
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-            <RuleForm form={newForm} onChange={setNewForm} />
-            <div className="flex gap-2 mt-3">
-              <Button size="sm" onClick={saveNew} disabled={createMutation.isPending}>
-                <Save className="w-4 h-4 ml-1" /> حفظ
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => setShowAddForm(false)}>إلغاء</Button>
-            </div>
-          </div>
-        )}
+function RuleRow({ rule, onSave }: { rule: Rule; onSave: (updated: Partial<Rule> & { id: number }) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [draft, setDraft] = useState<Rule>(rule);
+  const [schedule, setSchedule] = useState<Installment[]>(parseSchedule(rule.paymentScheduleJson));
 
-        {/* Rules grouped by phase */}
-        {PHASE_ORDER.map((phase) => {
-          const phaseRules = grouped[phase] || [];
-          if (phaseRules.length === 0) return null;
-          const isExpanded = expandedPhase === null || expandedPhase === phase;
+  const handleSave = () => {
+    onSave({
+      ...draft,
+      paymentScheduleJson: JSON.stringify(schedule),
+    });
+    setEditing(false);
+  };
 
-          return (
-            <div key={phase} className="mb-4 rounded-xl border overflow-hidden">
-              {/* Phase header */}
-              <button
-                className="w-full flex items-center justify-between px-4 py-3 bg-muted/50 hover:bg-muted transition-colors"
-                onClick={() => setExpandedPhase(isExpanded && expandedPhase === phase ? null : phase)}
-              >
-                <div className="flex items-center gap-3">
-                  <Badge className={`text-xs border ${PHASE_COLORS[phase]}`}>
-                    {PHASE_LABELS[phase]}
-                  </Badge>
-                  <span className="text-sm font-medium">{phaseRules.length} بند</span>
-                </div>
-                {expandedPhase === phase ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+  const handleCancel = () => {
+    setDraft(rule);
+    setSchedule(parseSchedule(rule.paymentScheduleJson));
+    setEditing(false);
+  };
+
+  const scheduleItems = parseSchedule(rule.paymentScheduleJson);
+
+  return (
+    <>
+      <tr className="border-b hover:bg-muted/30 transition-colors">
+        {/* Expand toggle */}
+        <td className="px-2 py-2 w-8">
+          <button onClick={() => setExpanded(!expanded)} className="text-muted-foreground hover:text-foreground">
+            {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+          </button>
+        </td>
+
+        {/* Name */}
+        <td className="px-3 py-2">
+          {editing ? (
+            <Input value={draft.nameAr} onChange={(e) => setDraft({ ...draft, nameAr: e.target.value })}
+              className="h-7 text-sm" />
+          ) : (
+            <span className="text-sm font-medium">{rule.nameAr}</span>
+          )}
+        </td>
+
+        {/* Amount */}
+        <td className="px-3 py-2 text-sm text-right">
+          {editing ? (
+            <div className="flex gap-1">
+              <Select value={draft.amountType} onValueChange={(v) => setDraft({ ...draft, amountType: v })}>
+                <SelectTrigger className="h-7 text-xs w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(AMOUNT_LABELS).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                type="number"
+                value={draft.amountType === "fixed" ? (draft.fixedAmount ?? "") : (draft.pctValue ?? "")}
+                onChange={(e) => {
+                  if (draft.amountType === "fixed") setDraft({ ...draft, fixedAmount: e.target.value });
+                  else setDraft({ ...draft, pctValue: e.target.value });
+                }}
+                className="h-7 w-24 text-xs text-right"
+              />
+            </div>
+          ) : (
+            <span className="font-mono text-xs">{formatAmount(rule)}</span>
+          )}
+        </td>
+
+        {/* Source */}
+        <td className="px-3 py-2">
+          {editing ? (
+            <Select value={draft.source} onValueChange={(v) => setDraft({ ...draft, source: v })}>
+              <SelectTrigger className="h-7 text-xs w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="investor">مستثمر</SelectItem>
+                <SelectItem value="escrow">حساب الضمان</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : (
+            <Badge variant="outline" className={`text-xs ${rule.source === "escrow" ? "border-blue-300 text-blue-700 bg-blue-50" : "border-gray-300 text-gray-700"}`}>
+              {SOURCE_LABELS[rule.source] ?? rule.source}
+            </Badge>
+          )}
+        </td>
+
+        {/* Distribution */}
+        <td className="px-3 py-2">
+          {editing ? (
+            <Select value={draft.distributionMethod} onValueChange={(v) => setDraft({ ...draft, distributionMethod: v })}>
+              <SelectTrigger className="h-7 text-xs w-36">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(DIST_LABELS).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>{v}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <span className="text-xs text-muted-foreground">{DIST_LABELS[rule.distributionMethod] ?? rule.distributionMethod}</span>
+          )}
+        </td>
+
+        {/* Schedule summary */}
+        <td className="px-3 py-2">
+          {scheduleItems.length > 0 ? (
+            <div className="flex flex-wrap gap-1">
+              {scheduleItems.map((s, i) => (
+                <span key={i} className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
+                  ش{s.month}: {s.pct}%
+                </span>
+              ))}
+            </div>
+          ) : (
+            <span className="text-xs text-muted-foreground">—</span>
+          )}
+        </td>
+
+        {/* Actions */}
+        <td className="px-3 py-2 w-20">
+          {editing ? (
+            <div className="flex gap-1">
+              <button onClick={handleSave} className="text-green-600 hover:text-green-800">
+                <Check className="w-4 h-4" />
               </button>
+              <button onClick={handleCancel} className="text-red-400 hover:text-red-600">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => setEditing(true)} className="text-muted-foreground hover:text-foreground">
+              <Pencil className="w-4 h-4" />
+            </button>
+          )}
+        </td>
+      </tr>
 
-              {/* Table */}
-              {(expandedPhase === null || expandedPhase === phase) && (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+      {/* Expanded schedule editor */}
+      {expanded && (
+        <tr className="bg-muted/20">
+          <td colSpan={7} className="px-8 py-3">
+            <div className="max-w-sm">
+              <p className="text-xs font-semibold text-muted-foreground mb-2">جدول الدفعات (شهر من بداية المرحلة — نسبة %)</p>
+              {editing ? (
+                <ScheduleEditor schedule={schedule} onChange={setSchedule} />
+              ) : (
+                scheduleItems.length > 0 ? (
+                  <table className="text-xs w-full">
                     <thead>
-                      <tr className="border-b bg-muted/20 text-muted-foreground text-xs">
-                        <th className="text-right px-3 py-2 font-medium w-8">#</th>
-                        <th className="text-right px-3 py-2 font-medium">البند</th>
-                        <th className="text-right px-3 py-2 font-medium">المبلغ / النسبة</th>
-                        <th className="text-right px-3 py-2 font-medium">نوع المبلغ</th>
-                        <th className="text-right px-3 py-2 font-medium">المصدر</th>
-                        <th className="text-right px-3 py-2 font-medium">طريقة الصرف</th>
-                        <th className="text-right px-3 py-2 font-medium">ملاحظات</th>
-                        <th className="px-3 py-2 w-20"></th>
+                      <tr className="text-muted-foreground">
+                        <th className="text-right pb-1">الشهر</th>
+                        <th className="text-right pb-1">النسبة</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {phaseRules.map((rule, idx) => (
-                        editingId === rule.id ? (
-                          <tr key={rule.id} className="border-b bg-yellow-50 dark:bg-yellow-950/20">
-                            <td className="px-3 py-2 text-muted-foreground">{idx + 1}</td>
-                            <td colSpan={6} className="px-3 py-2">
-                              <RuleForm form={editForm} onChange={setEditForm} compact />
-                            </td>
-                            <td className="px-3 py-2">
-                              <div className="flex gap-1">
-                                <Button size="sm" variant="default" className="h-7 px-2" onClick={() => saveEdit(rule.id)} disabled={updateMutation.isPending}>
-                                  <Save className="w-3 h-3" />
-                                </Button>
-                                <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => setEditingId(null)}>
-                                  <X className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        ) : (
-                          <tr key={rule.id} className="border-b hover:bg-muted/30 transition-colors">
-                            <td className="px-3 py-2 text-muted-foreground text-xs">{idx + 1}</td>
-                            <td className="px-3 py-2">
-                              <div className="font-medium">{rule.nameAr}</div>
-                              {rule.nameEn && <div className="text-xs text-muted-foreground">{rule.nameEn}</div>}
-                            </td>
-                            <td className="px-3 py-2 font-mono text-sm font-semibold">
-                              {formatAmount(rule)}
-                            </td>
-                            <td className="px-3 py-2">
-                              <span className="text-xs text-muted-foreground">
-                                {AMOUNT_TYPE_LABELS[rule.amountType]}
-                              </span>
-                            </td>
-                            <td className="px-3 py-2">
-                              <Badge className={`text-xs border ${SOURCE_COLORS[rule.source]}`}>
-                                {SOURCE_LABELS[rule.source]}
-                              </Badge>
-                            </td>
-                            <td className="px-3 py-2">
-                              <span className="text-xs">{DIST_METHOD_LABELS[rule.distributionMethod]}</span>
-                              {rule.distributionMethod === "lump_sum" && rule.relativeMonth && (
-                                <span className="text-xs text-muted-foreground mr-1">(شهر {rule.relativeMonth})</span>
-                              )}
-                              {rule.distributionMethod === "periodic" && rule.periodicIntervalMonths && (
-                                <span className="text-xs text-muted-foreground mr-1">(كل {rule.periodicIntervalMonths} أشهر)</span>
-                              )}
-                            </td>
-                            <td className="px-3 py-2 max-w-[200px]">
-                              {rule.notes && (
-                                <Tooltip>
-                                  <TooltipTrigger>
-                                    <Info className="w-3.5 h-3.5 text-muted-foreground" />
-                                  </TooltipTrigger>
-                                  <TooltipContent side="top" className="max-w-xs text-xs">
-                                    {rule.notes}
-                                  </TooltipContent>
-                                </Tooltip>
-                              )}
-                            </td>
-                            <td className="px-3 py-2">
-                              <div className="flex gap-1">
-                                <Button
-                                  size="sm" variant="ghost" className="h-7 px-2 text-muted-foreground hover:text-foreground"
-                                  onClick={() => startEdit(rule)}
-                                >
-                                  <Pencil className="w-3 h-3" />
-                                </Button>
-                                <Button
-                                  size="sm" variant="ghost" className="h-7 px-2 text-muted-foreground hover:text-destructive"
-                                  onClick={() => {
-                                    if (confirm("هل تريد حذف هذا البند؟")) deleteMutation.mutate({ id: rule.id });
-                                  }}
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        )
+                      {scheduleItems.map((s, i) => (
+                        <tr key={i} className="border-t">
+                          <td className="py-0.5">الشهر {s.month}</td>
+                          <td className="py-0.5">{s.pct}%</td>
+                        </tr>
                       ))}
                     </tbody>
                   </table>
-                </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">لا يوجد جدول دفعات محدد</p>
+                )
+              )}
+              {rule.notes && (
+                <p className="text-xs text-muted-foreground mt-2 italic">{rule.notes}</p>
               )}
             </div>
-          );
-        })}
-      </div>
-    </TooltipProvider>
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
 
-// ── Rule Form Component ───────────────────────────────────────────────────────
+// ── Phase Section ─────────────────────────────────────────────────────────────
 
-function RuleForm({
-  form,
-  onChange,
-  compact = false,
-}: {
-  form: EditForm;
-  onChange: (f: EditForm) => void;
-  compact?: boolean;
+function PhaseSection({ phase, rules, onSave }: {
+  phase: string;
+  rules: Rule[];
+  onSave: (updated: Partial<Rule> & { id: number }) => void;
 }) {
-  const set = (key: keyof EditForm, val: unknown) => onChange({ ...form, [key]: val });
+  const phaseTotal = rules.reduce((sum, r) => {
+    if (r.amountType === "fixed" && r.fixedAmount) return sum + Number(r.fixedAmount);
+    return sum;
+  }, 0);
 
   return (
-    <div className={`grid gap-2 ${compact ? "grid-cols-4" : "grid-cols-2 md:grid-cols-4"}`}>
-      {/* Name Arabic */}
-      <div className={compact ? "" : "col-span-2"}>
-        <label className="text-xs text-muted-foreground mb-1 block">اسم البند (عربي) *</label>
-        <Input
-          value={form.nameAr}
-          onChange={e => set("nameAr", e.target.value)}
-          placeholder="اسم البند بالعربي"
-          className="h-8 text-sm"
-          dir="rtl"
-        />
-      </div>
-
-      {/* Name English */}
-      <div>
-        <label className="text-xs text-muted-foreground mb-1 block">الاسم (إنجليزي)</label>
-        <Input
-          value={form.nameEn ?? ""}
-          onChange={e => set("nameEn", e.target.value)}
-          placeholder="English name"
-          className="h-8 text-sm"
-          dir="ltr"
-        />
-      </div>
-
-      {/* Item Key */}
-      <div>
-        <label className="text-xs text-muted-foreground mb-1 block">الكود (item_key)</label>
-        <Input
-          value={form.itemKey}
-          onChange={e => set("itemKey", e.target.value.toLowerCase().replace(/\s+/g, "_"))}
-          placeholder="land_cost"
-          className="h-8 text-sm font-mono"
-          dir="ltr"
-        />
-      </div>
-
-      {/* Amount Type */}
-      <div>
-        <label className="text-xs text-muted-foreground mb-1 block">نوع المبلغ *</label>
-        <Select value={form.amountType} onValueChange={v => set("amountType", v)}>
-          <SelectTrigger className="h-8 text-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="fixed">مبلغ ثابت (د.إ)</SelectItem>
-            <SelectItem value="pct_construction">% من تكلفة الإنشاء</SelectItem>
-            <SelectItem value="pct_revenue">% من الإيرادات</SelectItem>
-            <SelectItem value="pct_land">% من سعر الأرض</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Amount Value */}
-      <div>
-        <label className="text-xs text-muted-foreground mb-1 block">
-          {form.amountType === "fixed" ? "المبلغ (د.إ)" : "النسبة (مثال: 0.05 = 5%)"}
-        </label>
-        <Input
-          type="number"
-          value={form.amountType === "fixed" ? (form.fixedAmount ?? "") : (form.pctValue ?? "")}
-          onChange={e => {
-            if (form.amountType === "fixed") set("fixedAmount", e.target.value);
-            else set("pctValue", e.target.value);
-          }}
-          placeholder={form.amountType === "fixed" ? "150000" : "0.0500"}
-          className="h-8 text-sm font-mono"
-          dir="ltr"
-          step={form.amountType === "fixed" ? "1" : "0.0001"}
-        />
-      </div>
-
-      {/* Source */}
-      <div>
-        <label className="text-xs text-muted-foreground mb-1 block">المصدر *</label>
-        <Select value={form.source} onValueChange={v => set("source", v)}>
-          <SelectTrigger className="h-8 text-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="investor">مستثمر</SelectItem>
-            <SelectItem value="escrow">حساب الضمان</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Primary Phase */}
-      <div>
-        <label className="text-xs text-muted-foreground mb-1 block">المرحلة *</label>
-        <Select value={form.primaryPhase} onValueChange={v => set("primaryPhase", v)}>
-          <SelectTrigger className="h-8 text-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="land">الأرض</SelectItem>
-            <SelectItem value="design">التصاميم</SelectItem>
-            <SelectItem value="offplan">أوف بلان</SelectItem>
-            <SelectItem value="construction">الإنشاء</SelectItem>
-            <SelectItem value="handover">التسليم</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Distribution Method */}
-      <div>
-        <label className="text-xs text-muted-foreground mb-1 block">طريقة الصرف *</label>
-        <Select value={form.distributionMethod} onValueChange={v => set("distributionMethod", v)}>
-          <SelectTrigger className="h-8 text-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="lump_sum">دفعة واحدة</SelectItem>
-            <SelectItem value="equal_spread">موزع بالتساوي</SelectItem>
-            <SelectItem value="split_ratio">نسب موزعة على مراحل</SelectItem>
-            <SelectItem value="sales_linked">مرتبط بالمبيعات</SelectItem>
-            <SelectItem value="periodic">دوري (كل N أشهر)</SelectItem>
-            <SelectItem value="custom">مخصص</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Relative Month (for lump_sum) */}
-      {form.distributionMethod === "lump_sum" && (
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">الشهر النسبي (1=أول، -1=آخر)</label>
-          <Input
-            type="number"
-            value={form.relativeMonth ?? 1}
-            onChange={e => set("relativeMonth", parseInt(e.target.value))}
-            className="h-8 text-sm font-mono"
-            dir="ltr"
-          />
+    <div className="mb-6">
+      <div className={`flex items-center justify-between px-4 py-2 rounded-t-lg border ${PHASE_COLORS[phase] ?? ""}`}>
+        <h3 className="font-semibold text-sm">{PHASE_LABELS[phase] ?? phase}</h3>
+        <div className="flex items-center gap-3">
+          <span className="text-xs opacity-70">{rules.length} بند</span>
+          {phaseTotal > 0 && (
+            <span className="text-xs font-mono font-semibold">
+              {phaseTotal.toLocaleString("ar-AE")} د.إ (ثابت)
+            </span>
+          )}
         </div>
-      )}
-
-      {/* Periodic interval */}
-      {form.distributionMethod === "periodic" && (
-        <div>
-          <label className="text-xs text-muted-foreground mb-1 block">الفترة (أشهر)</label>
-          <Input
-            type="number"
-            value={form.periodicIntervalMonths ?? ""}
-            onChange={e => set("periodicIntervalMonths", parseInt(e.target.value))}
-            className="h-8 text-sm font-mono"
-            dir="ltr"
-          />
-        </div>
-      )}
-
-      {/* Split ratio JSON */}
-      {form.distributionMethod === "split_ratio" && (
-        <div className="col-span-2">
-          <label className="text-xs text-muted-foreground mb-1 block">نسب التوزيع (JSON)</label>
-          <Input
-            value={form.splitRatioJson ?? ""}
-            onChange={e => set("splitRatioJson", e.target.value)}
-            placeholder='[{"phase":"design","ratio":0.30},{"phase":"construction","ratio":0.70}]'
-            className="h-8 text-xs font-mono"
-            dir="ltr"
-          />
-        </div>
-      )}
-
-      {/* Notes */}
-      <div className={compact ? "col-span-2" : "col-span-2 md:col-span-4"}>
-        <label className="text-xs text-muted-foreground mb-1 block">ملاحظات</label>
-        <Input
-          value={form.notes ?? ""}
-          onChange={e => set("notes", e.target.value)}
-          placeholder="ملاحظات أو شرح إضافي"
-          className="h-8 text-sm"
-          dir="rtl"
-        />
       </div>
-
-      {/* Sort Order */}
-      <div>
-        <label className="text-xs text-muted-foreground mb-1 block">ترتيب العرض</label>
-        <Input
-          type="number"
-          value={form.sortOrder}
-          onChange={e => set("sortOrder", parseInt(e.target.value))}
-          className="h-8 text-sm font-mono"
-          dir="ltr"
-          step="10"
-        />
+      <div className="border border-t-0 rounded-b-lg overflow-hidden">
+        <table className="w-full text-right" dir="rtl">
+          <thead className="bg-muted/40 text-xs text-muted-foreground">
+            <tr>
+              <th className="px-2 py-2 w-8"></th>
+              <th className="px-3 py-2 text-right">البند</th>
+              <th className="px-3 py-2 text-right">المبلغ / النسبة</th>
+              <th className="px-3 py-2 text-right">المصدر</th>
+              <th className="px-3 py-2 text-right">طريقة التوزيع</th>
+              <th className="px-3 py-2 text-right">جدول الدفعات</th>
+              <th className="px-3 py-2 w-20"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {rules.map((rule) => (
+              <RuleRow key={rule.id} rule={rule} onSave={onSave} />
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
+
+export default function CostDistributionRulesPage() {
+  const { toast } = useToast();
+  const { data: rules = [], refetch } = trpc.costDistributionRules.list.useQuery();
+  const updateMutation = trpc.costDistributionRules.update.useMutation({
+    onSuccess: () => { refetch(); toast({ title: "تم الحفظ", description: "تم تحديث القاعدة بنجاح" }); },
+    onError: () => toast({ title: "خطأ", description: "فشل الحفظ", variant: "destructive" }),
+  });
+
+  const handleSave = (updated: Partial<Rule> & { id: number }) => {
+    const original = rules.find((r) => r.id === updated.id);
+    if (!original) return;
+    const merged = { ...original, ...updated };
+    updateMutation.mutate({
+      id: merged.id,
+      sortOrder: merged.sortOrder ?? 0,
+      itemKey: merged.itemKey,
+      nameAr: merged.nameAr,
+      nameEn: merged.nameEn ?? null,
+      amountType: merged.amountType as any,
+      fixedAmount: merged.fixedAmount ? Number(merged.fixedAmount) : null,
+      pctValue: merged.pctValue ? Number(merged.pctValue) : null,
+      source: merged.source as any,
+      primaryPhase: merged.primaryPhase as any,
+      distributionMethod: merged.distributionMethod as any,
+      relativeMonth: merged.relativeMonth ?? null,
+      splitRatioJson: merged.splitRatioJson ?? null,
+      periodicIntervalMonths: merged.periodicIntervalMonths ?? null,
+      periodicAmount: merged.periodicAmount ? Number(merged.periodicAmount) : null,
+      customJson: merged.customJson ?? null,
+      notes: merged.notes ?? null,
+      isActive: merged.isActive ?? 1,
+    });
+  };
+
+  const phases = ["land", "design", "offplan", "construction"];
+  const byPhase = (phase: string) => rules.filter((r) => r.primaryPhase === phase && r.isActive !== 0);
+
+  const totalInvestor = rules.filter(r => r.source === "investor" && r.amountType === "fixed" && r.fixedAmount)
+    .reduce((s, r) => s + Number(r.fixedAmount), 0);
+  const totalEscrow = rules.filter(r => r.source === "escrow" && r.amountType === "fixed" && r.fixedAmount)
+    .reduce((s, r) => s + Number(r.fixedAmount), 0);
+
+  return (
+    <DashboardLayout>
+      <div className="p-6 max-w-7xl mx-auto" dir="rtl">
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold">قواعد توزيع التكاليف</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            القاعدة الافتراضية لكل بند — المبلغ، المصدر، المرحلة، وجدول الدفعات. قابلة للتعديل لكل مشروع على حدة.
+          </p>
+        </div>
+
+        {/* Summary cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-card border rounded-lg p-4">
+            <p className="text-xs text-muted-foreground">إجمالي التكاليف</p>
+            <p className="text-lg font-bold font-mono mt-1">{(totalInvestor + totalEscrow).toLocaleString("ar-AE")}</p>
+            <p className="text-xs text-muted-foreground">درهم (البنود الثابتة)</p>
+          </div>
+          <div className="bg-card border rounded-lg p-4">
+            <p className="text-xs text-muted-foreground">من المستثمر</p>
+            <p className="text-lg font-bold font-mono mt-1 text-amber-600">{totalInvestor.toLocaleString("ar-AE")}</p>
+            <p className="text-xs text-muted-foreground">درهم</p>
+          </div>
+          <div className="bg-card border rounded-lg p-4">
+            <p className="text-xs text-muted-foreground">من حساب الضمان</p>
+            <p className="text-lg font-bold font-mono mt-1 text-blue-600">{totalEscrow.toLocaleString("ar-AE")}</p>
+            <p className="text-xs text-muted-foreground">درهم</p>
+          </div>
+          <div className="bg-card border rounded-lg p-4">
+            <p className="text-xs text-muted-foreground">عدد البنود</p>
+            <p className="text-lg font-bold mt-1">{rules.filter(r => r.isActive !== 0).length}</p>
+            <p className="text-xs text-muted-foreground">بند نشط</p>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <Tabs defaultValue="template">
+          <TabsList className="mb-4">
+            <TabsTrigger value="template">القاعدة الافتراضية</TabsTrigger>
+            <TabsTrigger value="project">تخصيص مشروع</TabsTrigger>
+          </TabsList>
+
+          {/* Tab 1: Default template */}
+          <TabsContent value="template">
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-sm text-amber-800">
+              <strong>تعليمات:</strong> هذه هي القيم الافتراضية التي تُطبَّق على جميع المشاريع. اضغط على أيقونة التعديل ✏️ لتغيير أي بند. اضغط على السهم ← لعرض وتعديل جدول الدفعات التفصيلي.
+            </div>
+            {phases.map((phase) => (
+              <PhaseSection
+                key={phase}
+                phase={phase}
+                rules={byPhase(phase)}
+                onSave={handleSave}
+              />
+            ))}
+          </TabsContent>
+
+          {/* Tab 2: Project overrides */}
+          <TabsContent value="project">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+              <strong>قريباً:</strong> هنا ستتمكن من اختيار مشروع محدد وتعديل قيم أي بند (النسبة، المبلغ، جدول الدفعات) بشكل مستقل دون التأثير على القاعدة الافتراضية.
+              <br /><br />
+              مثال: أتعاب التصميم في مشروع ند الشبا = 1.5% بدلاً من 2%، مع جدول دفعات مختلف.
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </DashboardLayout>
   );
 }

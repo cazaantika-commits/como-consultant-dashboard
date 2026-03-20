@@ -187,3 +187,9 @@
 - [ ] Add جدولة رأس المال (editable) to مركز القيادة as a new bubble/icon
 - [ ] Add دراسة جدوى المشروع (read-only) to مركز القيادة with project selector and 3 sub-sections: دراسة الجدوى المالية، رأس المال المطلوب، حساب الضمان
 - [ ] Fix دراسة جدوى المشروع in مركز القيادة - show only 3 sections (دراسة الجدوى المالية, رأس المال المطلوب, حساب الضمان) with project selector, not full FeasibilityHubPage
+- [ ] Cost rules: Update DB schema to support payment installments (month + percentage per installment) and project-level overrides table
+- [ ] Cost rules: Seed all 26 items with full payment schedules (default installments per phase month)
+- [ ] Cost rules: Rebuild UI page with two levels - default template (editable) + per-project override (editable)
+- [ ] Cost rules: Each item shows: name, amount type (fixed/%), default value, source (investor/escrow), phase, installment schedule
+- [ ] Cost rules: Installment schedule editor - add/remove rows with month number + percentage
+- [ ] Cost rules: Project override tab - select project, see all 26 items with ability to override value and schedule
