@@ -1922,3 +1922,78 @@ export const projectPhaseDelays = mysqlTable("project_phase_delays", {
 (table) => [
 	index("ppd_user_project").on(table.userId, table.projectId),
 ]);
+
+// ═══════════════════════════════════════════
+// Cost Distribution Rules — قواعد توزيع التكاليف
+// The master table that defines how each cost line item is distributed
+// across project phases and months. This is the foundation for all
+// financial schedules and capital planning reports.
+// ═══════════════════════════════════════════
+export const costDistributionRules = mysqlTable("cost_distribution_rules", {
+  id: int().autoincrement().notNull().primaryKey(),
+
+  // ── Identity ────────────────────────────────────────────────────
+  sortOrder: int("sort_order").default(0).notNull(),        // display order
+  itemKey: varchar("item_key", { length: 100 }).notNull(),  // stable code (e.g. "land_cost")
+  nameAr: varchar("name_ar", { length: 255 }).notNull(),    // Arabic label
+  nameEn: varchar("name_en", { length: 255 }),              // English label (optional)
+
+  // ── Amount ──────────────────────────────────────────────────────
+  // How is the amount determined?
+  //   "fixed"   — a hard AED amount stored in `fixedAmount`
+  //   "pct_construction" — % of construction cost
+  //   "pct_revenue"      — % of total revenue
+  //   "pct_land"         — % of land price
+  amountType: mysqlEnum("amount_type", ["fixed", "pct_construction", "pct_revenue", "pct_land"]).notNull(),
+  fixedAmount: decimal("fixed_amount", { precision: 18, scale: 2 }),  // used when amountType = "fixed"
+  pctValue: decimal("pct_value", { precision: 8, scale: 4 }),         // used for pct_* types (e.g. 0.0200 = 2%)
+
+  // ── Source ──────────────────────────────────────────────────────
+  // Who pays this item?
+  source: mysqlEnum("source", ["investor", "escrow"]).notNull(),
+
+  // ── Phase ───────────────────────────────────────────────────────
+  // Which project phase does this item primarily belong to?
+  //   1 = land (already paid)
+  //   2 = design & approvals
+  //   3 = off-plan registration
+  //   4 = construction
+  primaryPhase: mysqlEnum("primary_phase", ["land", "design", "offplan", "construction", "handover"]).notNull(),
+
+  // ── Distribution Method ─────────────────────────────────────────
+  // How is the amount spread over time?
+  //   "lump_sum"          — single payment at a specific relative month
+  //   "equal_spread"      — divided equally across phase duration
+  //   "split_ratio"       — split across multiple phases by ratio (stored in splitRatioJson)
+  //   "sales_linked"      — proportional to monthly revenue
+  //   "periodic"          — fixed payment every N months
+  //   "custom"            — fully custom (stored in customJson)
+  distributionMethod: mysqlEnum("distribution_method", [
+    "lump_sum", "equal_spread", "split_ratio", "sales_linked", "periodic", "custom"
+  ]).notNull(),
+
+  // Relative month within the phase for lump_sum (1 = first month, -1 = last month)
+  relativeMonth: int("relative_month").default(1),
+
+  // For split_ratio: JSON array of {phase, ratio} e.g. [{"phase":"design","ratio":0.3},...]
+  splitRatioJson: text("split_ratio_json"),
+
+  // For periodic: interval in months and amount per period
+  periodicIntervalMonths: int("periodic_interval_months"),
+  periodicAmount: decimal("periodic_amount", { precision: 18, scale: 2 }),
+
+  // For custom: free-form JSON for complex distributions
+  customJson: text("custom_json"),
+
+  // ── Notes ───────────────────────────────────────────────────────
+  notes: text("notes"),
+
+  // ── Audit ───────────────────────────────────────────────────────
+  isActive: tinyint("is_active").default(1).notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+  index("cdr_item_key").on(table.itemKey),
+  index("cdr_sort_order").on(table.sortOrder),
+]);

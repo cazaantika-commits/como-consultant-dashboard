@@ -58,6 +58,7 @@ import SelfLearningPage from "./pages/SelfLearningPage";
 import DevelopmentPhasesPage from "./pages/DevelopmentPhasesPage";
 import { ContractAuditPage } from "./pages/ContractAuditPage";
 import NewsTickerManagePage from "./pages/NewsTickerManagePage";
+import CostDistributionRulesPage from "./pages/CostDistributionRulesPage";
 import WorkSchedulePage from "./pages/WorkSchedulePage";
 
 function Router() {
@@ -121,6 +122,7 @@ function Router() {
       <Route path="/work-schedule" component={WorkSchedulePage} />
       <Route path="/self-learning" component={SelfLearningPage} />
       <Route path="/contract-audit" component={ContractAuditPage} />
+      <Route path="/cost-distribution-rules" component={CostDistributionRulesPage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
