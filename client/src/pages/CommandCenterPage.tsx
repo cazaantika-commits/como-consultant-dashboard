@@ -944,11 +944,34 @@ function RequestsAndInquiries({ token, memberId, memberNameAr, memberRole, onBac
   const [newContent, setNewContent] = useState("");
   const [newPriority, setNewPriority] = useState<"normal" | "important" | "urgent">("normal");
   const [newTargets, setNewTargets] = useState<string[]>([]);
+  const [reqUploading, setReqUploading] = useState(false);
+  const [reqAttachment, setReqAttachment] = useState<{ name: string; url: string; type: string } | null>(null);
   const allItems = trpc.commandCenter.getItems.useQuery({ token, bubbleType: "requests" });
   const members = trpc.commandCenter.getMembers.useQuery({ token });
   const createItem = trpc.commandCenter.createItem.useMutation();
   const deleteItem = trpc.commandCenter.deleteItem.useMutation();
   const utils = trpc.useUtils();
+
+  const handleReqFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setReqUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("bubbleType", "requests");
+      const res = await fetch("/api/upload/command-center", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "فشل رفع الملف");
+      setReqAttachment({ name: data.name, url: data.url, type: data.type });
+      toast.success("تم رفع الملف بنجاح ✔️");
+    } catch (err: any) {
+      toast.error(err.message || "خطأ في رفع الملف");
+    } finally {
+      setReqUploading(false);
+      e.target.value = "";
+    }
+  };
 
   const items = allItems.data || [];
 
@@ -973,8 +996,9 @@ function RequestsAndInquiries({ token, memberId, memberNameAr, memberRole, onBac
       priority: newPriority,
       targetMemberIds: newTargets.length > 0 ? newTargets : undefined,
       requiresResponse: true,
+      attachments: reqAttachment ? JSON.stringify([reqAttachment]) : undefined,
     });
-    setNewTitle(""); setNewContent(""); setNewTargets([]); setNewPriority("normal");
+    setNewTitle(""); setNewContent(""); setNewTargets([]); setNewPriority("normal"); setReqAttachment(null);
     setShowNewModal(false);
     utils.commandCenter.getItems.invalidate();
   };
@@ -1146,6 +1170,42 @@ function RequestsAndInquiries({ token, memberId, memberNameAr, memberRole, onBac
                   ))}
                 </div>
               </div>
+
+              {/* File Upload */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  مرفق (PDF, Word, Excel, صورة) — اختياري
+                </label>
+                <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center hover:border-amber-300 transition-colors">
+                  {reqAttachment ? (
+                    <div className="flex items-center justify-between gap-2 text-sm">
+                      <div className="flex items-center gap-2 text-emerald-700">
+                        <FileUp className="w-4 h-4" />
+                        <span className="truncate max-w-[240px]">{reqAttachment.name}</span>
+                      </div>
+                      <button onClick={() => setReqAttachment(null)} className="text-slate-400 hover:text-red-500">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : reqUploading ? (
+                    <div className="flex items-center justify-center gap-2 text-slate-500">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-sm">جاري الرفع...</span>
+                    </div>
+                  ) : (
+                    <label className="cursor-pointer block">
+                      <Upload className="w-6 h-6 mx-auto mb-1 text-slate-400" />
+                      <span className="text-sm text-slate-500">اضغط لاختيار ملف</span>
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png"
+                        onChange={handleReqFileChange}
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
             </div>
             <div className="flex gap-3 p-5 border-t border-slate-100">
               <button
@@ -1156,7 +1216,7 @@ function RequestsAndInquiries({ token, memberId, memberNameAr, memberRole, onBac
               </button>
               <button
                 onClick={handleCreate}
-                disabled={!newTitle.trim() || createItem.isPending}
+                disabled={!newTitle.trim() || createItem.isPending || reqUploading}
                 className="flex-1 py-2.5 rounded-xl bg-amber-500 text-white text-sm font-medium hover:bg-amber-600 disabled:opacity-50 transition-colors"
               >
                 {createItem.isPending ? "جاري الإرسال..." : "إرسال الطلب"}
