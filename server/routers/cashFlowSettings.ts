@@ -737,6 +737,33 @@ export const cashFlowSettingsRouter = router({
     }),
 
   /**
+   * Save phase durations for a project (design, construction, handover months).
+   * These replace the legacy preConMonths / constructionMonths / handoverMonths on the project.
+   */
+  saveDurations: publicProcedure
+    .input(z.object({
+      projectId: z.number(),
+      designMonths: z.number().min(1).max(36),
+      constructionMonths: z.number().min(1).max(60),
+      handoverMonths: z.number().min(0).max(24),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      await db.update(projects)
+        .set({
+          preConMonths: input.designMonths,
+          constructionMonths: input.constructionMonths,
+          handoverMonths: input.handoverMonths,
+        })
+        .where(eq(projects.id, input.projectId));
+
+      return { success: true };
+    }),
+
+  /**
    * Reset settings for a project + scenario (delete saved, revert to defaults).
    */
   resetSettings: publicProcedure

@@ -238,3 +238,5 @@
 - [x] Integrate both pages as tabs in FeasibilityStudyPage (⚙️ إعدادات التدفق + 📊 جدول الانعكاس)
 - [x] Add standalone routes /cashflow-settings and /cashflow-reflection in App.tsx
 - [x] Write 15 unit tests for distribution logic (lump_sum, equal_spread, custom, zero amount, total integrity) — all passing
+- [ ] إعادة بناء جدول الانعكاس: مصدره البطاقة التعريفية + الإيرادات من دراسة الجدوى (للبنود الثلاث: أتعاب المطور، التسويق، عمولة الوكيل) + توزيع الأشهر من إعدادات التدفق
+- [x] إعادة تصميم صفحة إعدادات التدفق: إزالة حقول تعديل المبالغ (عرض فقط)، إضافة حقول المدد الزمنية للمراحل، تحديد المرحلة لكل بند (تلقائي قابل للتغيير)، طريقة الدفع (دفعة واحدة + رقم الشهر، أو موزع)، كل هذا لكل سيناريو منفصل
