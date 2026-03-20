@@ -198,3 +198,16 @@
 - [ ] FactSheet: add broker sales commission field (% of revenue)
 - [ ] FactSheet: show formula labels next to each calculated field (e.g. "40 AED × GFA م²")
 - [ ] FactSheet: style like the Excel-sheet draft (clear sections, formula hints, grouped by phase)
+
+## السيناريوهات المالية الثلاثة — جدول رأس المال المطلوب
+
+- [x] Add FinancingScenario type to cashFlowEngine: "offplan_escrow" | "offplan_construction" | "no_offplan"
+- [x] Update getInvestorExpenses() to accept scenario and return correct items per scenario
+- [x] Update getEscrowExpenses() to accept scenario and return correct items per scenario
+- [x] Scenario 1 (offplan_escrow): current behavior — escrow deposit in offplan phase, all regulatory fees in offplan
+- [x] Scenario 2 (offplan_construction): regulatory fees shift to construction month 3-4, escrow_deposit replaced by 3-month contractor payment split
+- [x] Scenario 3 (no_offplan): remove fraz/rera/noc/escrow/marketing/sales_agent/rera_audit/rera_inspection; developer fee = 3% of revenue; fraz_fee stays but moves to construction
+- [x] Add scenario selector (3 radio buttons) to ExcelCashFlowPage header
+- [x] Add scenario selector to CapitalSchedulingPage header
+- [x] Ensure CapitalSchedulingPage reads all data from ExcelCashFlowPage/cashFlowEngine (single source)
+- [x] Verify all project costs come from Fact Sheet via calculateProjectCosts() — no hardcoded fallbacks used in production

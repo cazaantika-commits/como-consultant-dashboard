@@ -1,9 +1,16 @@
-import { useMemo, useState, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { ArrowRight, Layers, ChevronDown, ChevronUp, RotateCcw, Settings, Calendar, Clock, Save, X, Eye, EyeOff, LayoutGrid, Rows3 } from "lucide-react";
 import CapitalSchedulingHorizontal from "./CapitalSchedulingHorizontal";
+
+type FinancingScenario = "offplan_escrow" | "offplan_construction" | "no_offplan";
+const SCENARIO_LABELS: Record<FinancingScenario, string> = {
+  offplan_escrow: "أوف بلان مع إيداع في حساب الضمان",
+  offplan_construction: "أوف بلان بعد إنجاز 20% من الإنشاء",
+  no_offplan: "تطوير بدون بيع على الخارطة",
+};
 
 const TOTAL_MONTHS = 48;
 const CHART_START = new Date(2026, 3, 1); // April 2026
@@ -164,9 +171,10 @@ function projectMonthToChartIndex(
 
 export default function CapitalSchedulingPage({ onBack }: Props) {
   const { isAuthenticated } = useAuth();
+  const [scenario, setScenario] = useState<FinancingScenario>("offplan_escrow");
 
   const scheduleQuery = trpc.cashFlowProgram.getCapitalScheduleData.useQuery(
-    undefined,
+    { scenario },
     { enabled: isAuthenticated, staleTime: 60000 }
   );
 
@@ -634,6 +642,27 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
               </div>
               <span style={{ fontWeight: 600 }}>أوف بلان</span>
             </div>
+          </div>
+
+          {/* Scenario selector */}
+          <div style={{ display: "flex", gap: 4, background: "#ffffff", borderRadius: 12, padding: 3, border: "1px solid #e2e8f0" }}>
+            {(Object.entries(SCENARIO_LABELS) as [FinancingScenario, string][]).map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => setScenario(key)}
+                style={{
+                  padding: "5px 12px", borderRadius: 9, fontSize: 11, fontWeight: 700,
+                  cursor: "pointer", transition: "all 0.2s", border: "none",
+                  background: scenario === key
+                    ? key === "no_offplan" ? "#059669" : key === "offplan_construction" ? "#7c3aed" : "#db2777"
+                    : "transparent",
+                  color: scenario === key ? "#fff" : "#94a3b8",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
           {/* Settings toggle */}

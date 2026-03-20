@@ -285,7 +285,15 @@ export interface ExpenseItem {
 
 // ─── GET INVESTOR EXPENSES (4-phase structure) ──────────────────────────────
 // Includes ONLY items that appear in the رأس المال المطلوب table.
-export function getInvestorExpenses(costs: ProjectCosts): ExpenseItem[] {
+export type FinancingScenario = "offplan_escrow" | "offplan_construction" | "no_offplan";
+
+export const SCENARIO_LABELS: Record<FinancingScenario, string> = {
+  offplan_escrow: "أوف بلان مع إيداع في حساب الضمان",
+  offplan_construction: "أوف بلان بعد إنجاز 20% من الإنشاء",
+  no_offplan: "تطوير بدون بيع على الخارطة",
+};
+
+export function getInvestorExpenses(costs: ProjectCosts, scenario: FinancingScenario = "offplan_escrow"): ExpenseItem[] {
   const c = costs;
   const constructionCost = c.constructionCost;
   return [
@@ -310,49 +318,68 @@ export function getInvestorExpenses(costs: ProjectCosts): ExpenseItem[] {
     // أتعاب التصميم: موزعة على مرحلة التصاميم فقط
     { id: "design_fee", name: "أتعاب التصميم (2%)", total: c.designFee, behavior: "DISTRIBUTED", phase: "design", distributeAcross: ["design"], table: "investor" },
 
-    // ═══ المرحلة 3: تسجيل أوف بلان ═══
-    { id: "fraz_fee", name: "رسوم الفرز (40 د/قدم²)", total: c.separationFee, behavior: "FIXED_RELATIVE", phase: "offplan", relativeMonth: 1, table: "investor" },
-    { id: "rera_registration", name: "تسجيل بيع على الخارطة - ريرا", total: c.reraProjectRegFee, behavior: "FIXED_RELATIVE", phase: "offplan", relativeMonth: 1, table: "investor" },
-    { id: "rera_units", name: "تسجيل الوحدات - ريرا", total: c.reraUnitRegFee, behavior: "FIXED_RELATIVE", phase: "offplan", relativeMonth: 1, table: "investor" },
-    {
-      id: "surveyor_fee", name: "رسوم المساح", total: c.surveyorFees, behavior: "FIXED_RELATIVE", phase: "offplan",
-      multiPayments: [
-        { phase: "offplan", relativeMonth: 1, amount: c.surveyorFees / 2 },
-        { phase: "handover", relativeMonth: 1, amount: c.surveyorFees / 2 },
-      ],
-      table: "investor",
-    },
-    {
-      id: "noc_fee", name: "رسوم NOC للبيع", total: c.developerNocFee, behavior: "FIXED_RELATIVE", phase: "offplan",
-      multiPayments: [
-        { phase: "offplan", relativeMonth: 1, amount: c.developerNocFee * 0.45 },
-        { phase: "handover", relativeMonth: 1, amount: c.developerNocFee * 0.55 },
-      ],
-      table: "investor",
-    },
-    { id: "escrow_fee", name: "رسوم حساب الضمان", total: c.escrowAccountFee, behavior: "FIXED_RELATIVE", phase: "offplan", relativeMonth: 1, table: "investor" },
-    { id: "community_fee", name: "رسوم المجتمع", total: c.communityFees, behavior: "FIXED_RELATIVE", phase: "offplan", relativeMonth: 2, table: "investor" },
+    // ═══ المرحلة 3: تسجيل أوف بلان — يتغير حسب السيناريو ═══
+    ...(scenario === "no_offplan" ? [
+      { id: "fraz_fee", name: "رسوم الفرز (40 د/قدم²)", total: c.separationFee, behavior: "FIXED_RELATIVE" as const, phase: "construction" as const, relativeMonth: 3, table: "investor" as const },
+    ] : scenario === "offplan_construction" ? [
+      { id: "fraz_fee", name: "رسوم الفرز (40 د/قدم²)", total: c.separationFee, behavior: "FIXED_RELATIVE" as const, phase: "construction" as const, relativeMonth: 3, table: "investor" as const },
+      { id: "rera_registration", name: "تسجيل بيع على الخارطة - ريرا", total: c.reraProjectRegFee, behavior: "FIXED_RELATIVE" as const, phase: "construction" as const, relativeMonth: 3, table: "investor" as const },
+      { id: "rera_units", name: "تسجيل الوحدات - ريرا", total: c.reraUnitRegFee, behavior: "FIXED_RELATIVE" as const, phase: "construction" as const, relativeMonth: 3, table: "investor" as const },
+      { id: "surveyor_fee", name: "رسوم المساح", total: c.surveyorFees, behavior: "FIXED_RELATIVE" as const, phase: "construction" as const,
+        multiPayments: [
+          { phase: "construction" as const, relativeMonth: 3, amount: c.surveyorFees / 2 },
+          { phase: "handover" as const, relativeMonth: 1, amount: c.surveyorFees / 2 },
+        ], table: "investor" as const },
+      { id: "noc_fee", name: "رسوم NOC للبيع", total: c.developerNocFee, behavior: "FIXED_RELATIVE" as const, phase: "construction" as const,
+        multiPayments: [
+          { phase: "construction" as const, relativeMonth: 3, amount: c.developerNocFee * 0.45 },
+          { phase: "handover" as const, relativeMonth: 1, amount: c.developerNocFee * 0.55 },
+        ], table: "investor" as const },
+      { id: "escrow_fee", name: "رسوم حساب الضمان", total: c.escrowAccountFee, behavior: "FIXED_RELATIVE" as const, phase: "construction" as const, relativeMonth: 3, table: "investor" as const },
+      { id: "community_fee", name: "رسوم المجتمع", total: c.communityFees, behavior: "FIXED_RELATIVE" as const, phase: "construction" as const, relativeMonth: 4, table: "investor" as const },
+    ] : [
+      // السيناريو 1 (الاعتيادي): كل الرسوم في مرحلة الأوف بلان
+      { id: "fraz_fee", name: "رسوم الفرز (40 د/قدم²)", total: c.separationFee, behavior: "FIXED_RELATIVE" as const, phase: "offplan" as const, relativeMonth: 1, table: "investor" as const },
+      { id: "rera_registration", name: "تسجيل بيع على الخارطة - ريرا", total: c.reraProjectRegFee, behavior: "FIXED_RELATIVE" as const, phase: "offplan" as const, relativeMonth: 1, table: "investor" as const },
+      { id: "rera_units", name: "تسجيل الوحدات - ريرا", total: c.reraUnitRegFee, behavior: "FIXED_RELATIVE" as const, phase: "offplan" as const, relativeMonth: 1, table: "investor" as const },
+      { id: "surveyor_fee", name: "رسوم المساح", total: c.surveyorFees, behavior: "FIXED_RELATIVE" as const, phase: "offplan" as const,
+        multiPayments: [
+          { phase: "offplan" as const, relativeMonth: 1, amount: c.surveyorFees / 2 },
+          { phase: "handover" as const, relativeMonth: 1, amount: c.surveyorFees / 2 },
+        ], table: "investor" as const },
+      { id: "noc_fee", name: "رسوم NOC للبيع", total: c.developerNocFee, behavior: "FIXED_RELATIVE" as const, phase: "offplan" as const,
+        multiPayments: [
+          { phase: "offplan" as const, relativeMonth: 1, amount: c.developerNocFee * 0.45 },
+          { phase: "handover" as const, relativeMonth: 1, amount: c.developerNocFee * 0.55 },
+        ], table: "investor" as const },
+      { id: "escrow_fee", name: "رسوم حساب الضمان", total: c.escrowAccountFee, behavior: "FIXED_RELATIVE" as const, phase: "offplan" as const, relativeMonth: 1, table: "investor" as const },
+      { id: "community_fee", name: "رسوم المجتمع", total: c.communityFees, behavior: "FIXED_RELATIVE" as const, phase: "offplan" as const, relativeMonth: 2, table: "investor" as const },
+    ]),
+
+    // إيداع حساب الضمان أو دفعات المقاول — يتغير حسب السيناريو
+    ...(scenario === "offplan_escrow" ? [
+      { id: "escrow_deposit", name: "إيداع حساب الضمان (20%)", total: constructionCost * 0.20, behavior: "FIXED_RELATIVE" as const, phase: "offplan" as const, relativeMonth: 2, table: "investor" as const },
+    ] : scenario === "offplan_construction" ? [
+      { id: "contractor_20pct_m1", name: "دفعة إنجاز 20% للمقاول — شهر 1", total: constructionCost * 0.20 / 3, behavior: "FIXED_RELATIVE" as const, phase: "construction" as const, relativeMonth: 1, table: "investor" as const },
+      { id: "contractor_20pct_m2", name: "دفعة إنجاز 20% للمقاول — شهر 2", total: constructionCost * 0.20 / 3, behavior: "FIXED_RELATIVE" as const, phase: "construction" as const, relativeMonth: 2, table: "investor" as const },
+      { id: "contractor_20pct_m3", name: "دفعة إنجاز 20% للمقاول — شهر 3", total: constructionCost * 0.20 / 3, behavior: "FIXED_RELATIVE" as const, phase: "construction" as const, relativeMonth: 3, table: "investor" as const },
+    ] : []),
+
     { id: "bank_fees_offplan", name: "رسوم بنكية", total: c.bankFees, behavior: "DISTRIBUTED", phase: "construction", distributeAcross: ["construction", "handover"], table: "investor" },
-    // إيداع حساب الضمان (20% من تكلفة الإنشاء)
-    { id: "escrow_deposit", name: "إيداع حساب الضمان (20%)", total: constructionCost * 0.20, behavior: "FIXED_RELATIVE", phase: "offplan", relativeMonth: 2, table: "investor" },
 
     // ═══ المرحلة 4: الإنشاء ═══
-    // دفعة مقدمة للمقاول — الشهر الأول من الإنشاء
     { id: "contractor_advance", name: "دفعة مقدمة للمقاول (10%)", total: constructionCost * 0.10, behavior: "FIXED_RELATIVE", phase: "construction", relativeMonth: 1, table: "investor" },
-    // احتياطي وطوارئ
     { id: "contingency", name: "احتياطي وطوارئ (2%)", total: c.contingencies, behavior: "DISTRIBUTED", phase: "construction", distributeAcross: ["construction"], table: "investor" },
-    // أتعاب المطور (developer fee) already handled above via splitRatio
-    // التسويق والإعلان: 25% أوف بلان، 75% إنشاء
-    // Construction portion: 75% in first 4 months, 25% in next 6 months
-    {
-      id: "marketing", name: "التسويق والإعلان (2%)", total: c.marketingCost, behavior: "CUSTOM", phase: "offplan",
+    // التسويق والإعلان — يُلغى في السيناريو 3
+    ...(scenario === "no_offplan" ? [] : [{
+      id: "marketing", name: "التسويق والإعلان (2%)", total: c.marketingCost, behavior: "CUSTOM" as const, phase: "offplan" as const,
       customDistribution: [
-        { phase: "offplan", months: 2, ratio: 0.25 },           // 25% across offplan (2 months)
-        { phase: "construction", months: 4, ratio: 0.75 * 0.75 }, // 75%×75% = 56.25% in first 4 months of construction
-        { phase: "construction", months: 6, ratio: 0.75 * 0.25 }, // 75%×25% = 18.75% in next 6 months of construction
+        { phase: "offplan" as const, months: 2, ratio: 0.25 },
+        { phase: "construction" as const, months: 4, ratio: 0.75 * 0.75 },
+        { phase: "construction" as const, months: 6, ratio: 0.75 * 0.25 },
       ],
-      table: "investor",
-    },
+      table: "investor" as const,
+    }]),
 
     // NOTE: The following are EXCLUDED (not in رأس المال المطلوب):
     // - officialBodiesFees (رسوم الجهات الحكومية) → paid from escrow
@@ -540,6 +567,7 @@ export function computeProjectCapital(
   competitionPricing: any,
   cfProject: { startDate: string; preDevMonths: number; constructionMonths: number; handoverMonths: number },
   today: Date,
+  scenario: FinancingScenario = "offplan_escrow",
 ): ProjectCapitalData | null {
   const costs = calculateProjectCosts(project, marketOverview, competitionPricing);
   if (!costs) return null;
@@ -553,7 +581,7 @@ export function computeProjectCapital(
   const durations = legacyToNewDurations(legacyDurations);
   const phases = calculatePhases(durations);
   const totalMonths = getTotalMonths(durations);
-  const expenses = getInvestorExpenses(costs);
+  const expenses = getInvestorExpenses(costs, scenario);
 
   // Build monthly array: index 0 = land (FIXED_ABSOLUTE), index 1..totalMonths = project months
   const monthly: number[] = new Array(totalMonths + 1).fill(0);

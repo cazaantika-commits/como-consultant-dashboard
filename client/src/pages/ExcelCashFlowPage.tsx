@@ -6,6 +6,7 @@ import {
   type ExpenseItem,
   type QuarterDef,
   type ProjectCosts,
+  type FinancingScenario,
   DEFAULT_DURATIONS,
   calculatePhases,
   getTotalMonths,
@@ -18,6 +19,7 @@ import {
   getMonthDate,
   isMonthPaid,
   isCurrentMonth,
+  SCENARIO_LABELS,
 } from "@/lib/cashFlowEngine";
 import { calculateProjectCosts } from "@/lib/projectCostsCalc";
 
@@ -90,6 +92,7 @@ export default function ExcelCashFlowPage({ embedded, initialProjectId }: { embe
   }, [selectedProject, moQuery.data, cpQuery.data]);
 
   const [showControls, setShowControls] = useState(false);
+  const [scenario, setScenario] = useState<FinancingScenario>("offplan_escrow");
   const [editingCell, setEditingCell] = useState<{ itemId: string; qi: number } | null>(null);
   const [editValue, setEditValue] = useState("");
 
@@ -103,8 +106,8 @@ export default function ExcelCashFlowPage({ embedded, initialProjectId }: { embe
     [phases, durations]
   );
 
-  // Get base expenses — now dynamic from project data
-  const baseExpenses = useMemo(() => getInvestorExpenses(projectCosts || undefined), [projectCosts]);
+  // Get base expenses — now dynamic from project data + scenario
+  const baseExpenses = useMemo(() => getInvestorExpenses(projectCosts || undefined, scenario), [projectCosts, scenario]);
 
   // Default revenue for sales-linked items — now dynamic
   const defaultRevenue = useMemo(() => getDefaultRevenue(phases, durations, projectCosts?.totalRevenue), [phases, durations, projectCosts]);
@@ -323,6 +326,24 @@ export default function ExcelCashFlowPage({ embedded, initialProjectId }: { embe
         <div>
           <h1 className="text-base font-bold text-gray-900">{selectedProject?.name || "المشروع"} — جدول رأس المال المطلوب</h1>
           <p className="text-xs text-gray-500 mt-0.5">التمويل المباشر من المستثمر — 4 مراحل (الأرض، التصاميم، أوف بلان، الإنشاء)</p>
+        </div>
+        {/* Scenario Selector */}
+        <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
+          {(Object.entries(SCENARIO_LABELS) as [FinancingScenario, string][]).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setScenario(key)}
+              className={`text-[10px] font-semibold px-3 py-1.5 rounded-lg transition-all ${
+                scenario === key
+                  ? key === "offplan_escrow" ? "bg-violet-600 text-white shadow-sm"
+                  : key === "offplan_construction" ? "bg-sky-600 text-white shadow-sm"
+                  : "bg-emerald-600 text-white shadow-sm"
+                  : "text-gray-600 hover:bg-white hover:shadow-sm"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
         <div className="flex items-center gap-2">
           <button

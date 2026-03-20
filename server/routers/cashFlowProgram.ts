@@ -4,7 +4,7 @@ import { getDb } from "../db";
 import { cfProjects, cfCostItems, cfScenarios, cfFiles, projects, costsCashFlow, projectPhases, phaseActivities, phaseCostLinks, competitionPricing, marketOverview, projectCapitalSettings, projectPhaseDelays } from "../../drizzle/schema";
 import { DEFAULT_AVG_AREAS } from "../../shared/feasibilityUtils";
 import { calculateDualCashFlow, type CostItemInput, type ProjectInput } from './cashFlowEngine';
-import { computeProjectCapital } from '../investorCashFlow';
+import { computeProjectCapital, type FinancingScenario } from '../investorCashFlow';
 import { eq, and, desc } from "drizzle-orm";
 import { storagePut } from "../storage";
 
@@ -2586,10 +2586,15 @@ export const cashFlowProgramRouter = router({
 
   // --- Capital Schedule Data for All Projects (used by CapitalSchedulingPage) ---
   // Returns monthly developer outflow per project from cf_cost_items via calculateDualCashFlow
-  getCapitalScheduleData: publicProcedure.query(async ({ ctx }) => {
+  getCapitalScheduleData: publicProcedure
+    .input(z.object({
+      scenario: z.enum(["offplan_escrow", "offplan_construction", "no_offplan"]).optional().default("offplan_escrow"),
+    }).optional())
+    .query(async ({ ctx, input }) => {
     if (!ctx.user) return [];
     const db = await getDb();
     if (!db) return [];
+    const scenario = (input?.scenario || "offplan_escrow") as FinancingScenario;
     // Source projects from the projects table (البطاقة) directly
     const allProjects = await db.select().from(projects)
       .where(eq(projects.userId, ctx.user.id));
@@ -2643,6 +2648,7 @@ export const cashFlowProgramRouter = router({
           handoverMonths,
         },
         today,
+        scenario,
       );
       if (!data) continue;
       results.push({
