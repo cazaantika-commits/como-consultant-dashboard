@@ -3693,6 +3693,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
   const counts = trpc.commandCenter.getBubbleCounts.useQuery({ token });
   const notifications = trpc.commandCenter.getNotifications.useQuery({ token });
   const markAllRead = trpc.commandCenter.markAllNotificationsRead.useMutation();
+  const checkReminders = trpc.commandCenter.checkPendingReminders.useMutation();
   const utils = trpc.useUtils();
 
   const unreadCount = notifications.data?.filter((n: any) => !n.isRead).length || 0;
@@ -3701,6 +3702,14 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
     await markAllRead.mutateAsync({ token });
     utils.commandCenter.getNotifications.invalidate({ token });
   };
+
+  // Auto-check for 48-hour reminders every 30 minutes
+  useEffect(() => {
+    const runCheck = () => checkReminders.mutate({ token });
+    runCheck(); // run once on mount
+    const interval = setInterval(runCheck, 30 * 60 * 1000); // every 30 min
+    return () => clearInterval(interval);
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // If viewing work schedule (read-only)
   if (activeBubble === "work_schedule" && showWorkSchedule) {
@@ -3881,26 +3890,26 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
       <div className="max-w-5xl mx-auto px-4 py-6">
         {/* Hero Card */}
         <div className="relative overflow-hidden rounded-3xl mb-7 shadow-2xl"
-          style={{background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 55%, #4c1d95 100%)'}}>
+          style={{background: 'linear-gradient(135deg, #f8f7ff 0%, #ede9fe 55%, #faf5ff 100%)', border: '1.5px solid #ddd6fe'}}>
           <div className="absolute top-0 left-0 w-80 h-80 rounded-full -translate-x-1/2 -translate-y-1/2 opacity-20"
-            style={{background: 'radial-gradient(circle, #f59e0b, transparent)'}} />
+            style={{background: 'radial-gradient(circle, #c4b5fd, transparent)'}} />
           <div className="absolute bottom-0 right-0 w-60 h-60 rounded-full translate-x-1/3 translate-y-1/3 opacity-15"
-            style={{background: 'radial-gradient(circle, #a78bfa, transparent)'}} />
+            style={{background: 'radial-gradient(circle, #fbbf24, transparent)'}} />
           <div className="relative z-10 flex flex-col sm:flex-row items-center gap-5 p-6 sm:p-8">
             <div className="relative flex-shrink-0">
               <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden"
-                style={{boxShadow: '0 0 0 3px rgba(245,158,11,0.55), 0 12px 40px rgba(0,0,0,0.4)'}}>
+                style={{boxShadow: '0 0 0 3px rgba(124,58,237,0.4), 0 8px 24px rgba(124,58,237,0.2)'}}>
                 <img src={SALWA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover" />
               </div>
               <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-400 rounded-full border-2 border-white animate-pulse" />
             </div>
             <div className="flex-1 text-center sm:text-right">
               <span className="inline-block text-xs font-semibold px-3 py-1 rounded-full mb-2"
-                style={{background: 'rgba(245,158,11,0.22)', color: '#fcd34d', border: '1px solid rgba(245,158,11,0.35)'}}>
+                style={{background: 'rgba(124,58,237,0.1)', color: '#7c3aed', border: '1px solid rgba(124,58,237,0.25)'}}>
                 {new Date().toLocaleDateString("ar-AE", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
               </span>
-              <h2 className="text-2xl sm:text-3xl font-black text-white mb-1 leading-tight">{member.greeting}</h2>
-              <p className="text-sm mb-3" style={{color: 'rgba(255,255,255,0.5)'}}>&#x633;&#x644;&#x648;&#x649; &mdash; &#x627;&#x644;&#x645;&#x646;&#x633;&#x642;&#x629; &#x627;&#x644;&#x630;&#x643;&#x64a;&#x629; &#x644;&#x645;&#x634;&#x627;&#x631;&#x64a;&#x639; COMO Developments</p>
+              <h2 className="text-2xl sm:text-3xl font-black mb-1 leading-tight" style={{color:"#3730a3"}}>{member.greeting}</h2>
+              <p className="text-sm mb-3" style={{color: '#6b7280'}}>&#x633;&#x644;&#x648;&#x649; &mdash; &#x627;&#x644;&#x645;&#x646;&#x633;&#x642;&#x629; &#x627;&#x644;&#x630;&#x643;&#x64a;&#x629; &#x644;&#x645;&#x634;&#x627;&#x631;&#x64a;&#x639; COMO Developments</p>
               {/* Personalized stats chips - clickable */}
               {counts.data && (
                 <div className="flex flex-wrap gap-2 mb-4">
@@ -3954,7 +3963,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                 </button>
                 <button onClick={() => setShowSalwa(true)}
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all hover:scale-[1.03] active:scale-[0.97]"
-                  style={{background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.85)', border: '1px solid rgba(255,255,255,0.2)'}}>
+                  style={{background: 'rgba(124,58,237,0.08)', color: '#7c3aed', border: '1px solid rgba(124,58,237,0.25)'}}>
                   <Mic className="w-4 h-4" />
                   &#x631;&#x633;&#x627;&#x644;&#x629; &#x635;&#x648;&#x62a;&#x64a;&#x629;
                 </button>
@@ -4006,8 +4015,8 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                   background: theme.bg,
                   border: `1.5px solid ${theme.accent}`,
                   boxShadow: `0 2px 16px ${theme.glow}, 0 1px 3px rgba(0,0,0,0.06)`,
-                  padding: tall ? '1.6rem' : '1.1rem',
-                  minHeight: tall ? '195px' : '108px',
+                  padding: tall ? '1.2rem' : '0.85rem',
+                  minHeight: tall ? '155px' : '85px',
                   display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start',
                 }}
               >

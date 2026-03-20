@@ -1622,4 +1622,65 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       await db.insert(commandCenterNotifications).values(['abdulrahman', 'wael', 'sheikh_issa'].map(m => ({ memberId: m, title: '\u062a\u0645 \u062a\u0623\u0643\u064a\u062f \u0642\u0631\u0627\u0631 \u0627\u0644\u0644\u062c\u0646\u0629', message: '\u062a\u0645 \u062a\u0623\u0643\u064a\u062f \u0642\u0631\u0627\u0631 \u0627\u062e\u062a\u064a\u0627\u0631 \u0627\u0644\u0627\u0633\u062a\u0634\u0627\u0631\u064a \u0644\u0644\u0645\u0634\u0631\u0648\u0639', type: 'evaluation' as const })));
       return { success: true };
     }),
+
+  // Auto-check and send 48-hour reminders for unanswered requests
+  checkPendingReminders: publicProcedure
+    .input(z.object({ token: z.string() }))
+    .mutation(async ({ input }) => {
+      await verifyToken(input.token);
+      const db = await getDb();
+      if (!db) return { sent: 0 };
+
+      const cutoff48h = new Date(Date.now() - 48 * 60 * 60 * 1000);
+      const cutoffStr = cutoff48h.toISOString().replace('T', ' ').substring(0, 19);
+
+      // Find requests with pending_response or active+requiresResponse older than 48h, not yet reminded
+      const allItems = await db.select().from(commandCenterItems).where(
+        and(
+          eq(commandCenterItems.bubbleType, 'requests'),
+          sql`${commandCenterItems.createdAt} <= ${cutoffStr}`,
+          sql`(${commandCenterItems.summary} IS NULL OR ${commandCenterItems.summary} NOT LIKE '%[reminder_sent]%')`
+        )
+      );
+
+      const pendingRequests = allItems.filter(i =>
+        i.itemStatus === 'pending_response' ||
+        (i.itemStatus === 'active' && i.requiresResponse === 1)
+      );
+
+      const memberNames: Record<string, string> = {
+        abdulrahman: 'عبدالرحمن',
+        wael: 'وائل',
+        sheikh_issa: 'الشيخ عيسى',
+      };
+
+      let sent = 0;
+      for (const req of pendingRequests) {
+        const targets = req.targetMemberIds
+          ? (JSON.parse(req.targetMemberIds) as string[])
+          : ['abdulrahman', 'wael', 'sheikh_issa'];
+
+        const notifications = targets.map(memberId => ({
+          memberId,
+          title: '⏰ تذكير: طلب بانتظار الرد',
+          message: `الطلب "${req.title}" لم يتلقَ رداً منذ أكثر من 48 ساعة. يرجى المتابعة.`,
+          type: 'request' as const,
+        }));
+
+        if (notifications.length > 0) {
+          await db.insert(commandCenterNotifications).values(notifications);
+        }
+
+        // Mark reminder as sent to avoid duplicate reminders
+        const existingSummary = req.summary || '';
+        await db
+          .update(commandCenterItems)
+          .set({ summary: existingSummary + ' [reminder_sent]' })
+          .where(eq(commandCenterItems.id, req.id));
+
+        sent++;
+      }
+
+      return { sent };
+    }),
 });
