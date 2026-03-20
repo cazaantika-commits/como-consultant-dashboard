@@ -2302,7 +2302,7 @@ function NewsTicker({ token }: { token: string }) {
   const doubled = [...displayItems, ...displayItems];
 
   return (
-    <div className="overflow-hidden" style={{background: 'rgba(0,0,0,0.4)', borderBottom: '1px solid rgba(255,255,255,0.06)'}}>
+    <div className="overflow-hidden" style={{background: 'rgba(30,27,75,0.96)', borderBottom: '1px solid rgba(99,102,241,0.2)'}}>
       <div className="flex items-center h-9">
         <div className="flex-shrink-0 px-4 h-full flex items-center gap-1.5 text-xs font-bold z-10" style={{background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: 'white'}}>
           <Megaphone className="w-3.5 h-3.5" />
@@ -3875,131 +3875,156 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
 
   // Main dashboard
   return (
-    <div className="min-h-screen" style={{background: 'linear-gradient(135deg, #0f0c29 0%, #1a1a3e 40%, #24243e 100%)'}} dir="rtl">
+    <div className="min-h-screen" dir="rtl" style={{background: 'linear-gradient(160deg, #f8f6ff 0%, #fff7ed 55%, #f0fdf4 100%)'}}>
       <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
-
-      {/* News Ticker */}
       <NewsTicker token={token} />
-
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        {/* --- Executive Hero Section --- */}
-        <div className="relative overflow-hidden rounded-3xl mb-8" style={{background: 'linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.03) 100%)', border: '1px solid rgba(255,255,255,0.12)', backdropFilter: 'blur(20px)'}}>
-          {/* Decorative orbs */}
-          <div className="absolute -top-16 -left-16 w-64 h-64 rounded-full opacity-10" style={{background: 'radial-gradient(circle, #f59e0b, transparent)'}} />
-          <div className="absolute -bottom-12 -right-12 w-48 h-48 rounded-full opacity-10" style={{background: 'radial-gradient(circle, #8b5cf6, transparent)'}} />
-
-          <div className="relative z-10 flex flex-col sm:flex-row items-center gap-6 p-6 sm:p-8">
-            {/* Salwa Avatar */}
+      <div className="max-w-5xl mx-auto px-4 py-6">
+        {/* Hero Card */}
+        <div className="relative overflow-hidden rounded-3xl mb-7 shadow-2xl"
+          style={{background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 55%, #4c1d95 100%)'}}>
+          <div className="absolute top-0 left-0 w-80 h-80 rounded-full -translate-x-1/2 -translate-y-1/2 opacity-20"
+            style={{background: 'radial-gradient(circle, #f59e0b, transparent)'}} />
+          <div className="absolute bottom-0 right-0 w-60 h-60 rounded-full translate-x-1/3 translate-y-1/3 opacity-15"
+            style={{background: 'radial-gradient(circle, #a78bfa, transparent)'}} />
+          <div className="relative z-10 flex flex-col sm:flex-row items-center gap-5 p-6 sm:p-8">
             <div className="relative flex-shrink-0">
-              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden shadow-2xl" style={{boxShadow: '0 0 40px rgba(245,158,11,0.3)'}}>
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden"
+                style={{boxShadow: '0 0 0 3px rgba(245,158,11,0.55), 0 12px 40px rgba(0,0,0,0.4)'}}>
                 <img src={SALWA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover" />
               </div>
-              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-400 rounded-full border-2 border-white animate-pulse shadow-lg" />
+              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-400 rounded-full border-2 border-white animate-pulse" />
             </div>
-
-            {/* Member Greeting */}
             <div className="flex-1 text-center sm:text-right">
-              <div className="flex items-center gap-2 justify-center sm:justify-start mb-1">
-                <span className="text-xs font-medium px-2.5 py-1 rounded-full" style={{background: 'rgba(245,158,11,0.2)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.3)'}}>
-                  {new Date().toLocaleDateString("ar-AE", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
-                </span>
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-1">{member.greeting}</h2>
-              <p className="text-sm mb-5" style={{color: 'rgba(255,255,255,0.5)'}}>سلوى — المنسقة الذكية لمشاريع COMO Developments</p>
-
+              <span className="inline-block text-xs font-semibold px-3 py-1 rounded-full mb-2"
+                style={{background: 'rgba(245,158,11,0.22)', color: '#fcd34d', border: '1px solid rgba(245,158,11,0.35)'}}>
+                {new Date().toLocaleDateString("ar-AE", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-black text-white mb-1 leading-tight">{member.greeting}</h2>
+              <p className="text-sm mb-5" style={{color: 'rgba(255,255,255,0.5)'}}>&#x633;&#x644;&#x648;&#x649; &mdash; &#x627;&#x644;&#x645;&#x646;&#x633;&#x642;&#x629; &#x627;&#x644;&#x630;&#x643;&#x64a;&#x629; &#x644;&#x645;&#x634;&#x627;&#x631;&#x64a;&#x639; COMO Developments</p>
               <div className="flex flex-wrap gap-3 justify-center sm:justify-start">
-                <button
-                  onClick={() => setShowSalwa(true)}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all hover:scale-[1.03] active:scale-[0.97]"
-                  style={{background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: 'white', boxShadow: '0 4px 20px rgba(245,158,11,0.4)'}}
-                >
+                <button onClick={() => setShowSalwa(true)}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-[1.03] active:scale-[0.97]"
+                  style={{background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: 'white', boxShadow: '0 4px 20px rgba(245,158,11,0.45)'}}>
                   <MessageSquare className="w-4 h-4" />
-                  تحدث مع سلوى
+                  &#x62a;&#x62d;&#x62f;&#x62b; &#x645;&#x639; &#x633;&#x644;&#x648;&#x649;
                 </button>
-                <button
-                  onClick={() => setShowSalwa(true)}
+                <button onClick={() => setShowSalwa(true)}
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all hover:scale-[1.03] active:scale-[0.97]"
-                  style={{background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.8)', border: '1px solid rgba(255,255,255,0.15)'}}
-                >
+                  style={{background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.85)', border: '1px solid rgba(255,255,255,0.2)'}}>
                   <Mic className="w-4 h-4" />
-                  رسالة صوتية
+                  &#x631;&#x633;&#x627;&#x644;&#x629; &#x635;&#x648;&#x62a;&#x64a;&#x629;
                 </button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* --- Section Title --- */}
-        <div className="flex items-center gap-3 mb-5">
-          <div className="h-px flex-1" style={{background: 'linear-gradient(to left, rgba(255,255,255,0.1), transparent)'}} />
-          <span className="text-xs font-semibold tracking-widest uppercase" style={{color: 'rgba(255,255,255,0.35)'}}>وحدات مركز القيادة</span>
-          <div className="h-px flex-1" style={{background: 'linear-gradient(to right, rgba(255,255,255,0.1), transparent)'}} />
-        </div>
+        {/* Bento Grid */}
+        {(() => {
+          const handleBubbleClick = (type: string) => {
+            if (type === "milestones_kpis") { setActiveBubble("milestones_kpis"); setShowMilestonesKpis(true); }
+            else if (type === "evaluations") { setActiveBubble("evaluations"); setShowEvaluation(true); }
+            else if (type === "work_schedule") { setActiveBubble("work_schedule"); setShowWorkSchedule(true); }
+            else if (type === "capital_scheduling") { setActiveBubble("capital_scheduling"); setShowCapitalScheduling(true); }
+            else if (type === "feasibility_study") { setActiveBubble("feasibility_study"); setShowFeasibilityStudy(true); }
+            else { setActiveBubble(type); }
+          };
 
-        {/* --- Premium Bubbles Grid --- */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-5 mb-8">
-          {BUBBLES.map(bubble => {
+          const themeMap: Record<string, {bg:string;iconBg:string;accent:string;textColor:string;glow:string}> = {
+            'from-blue-600 to-blue-800':      {bg:'#eff6ff',iconBg:'linear-gradient(135deg,#3b82f6,#1d4ed8)',accent:'#bfdbfe',textColor:'#1e40af',glow:'rgba(59,130,246,0.18)'},
+            'from-amber-600 to-amber-800':    {bg:'#fffbeb',iconBg:'linear-gradient(135deg,#f59e0b,#b45309)',accent:'#fde68a',textColor:'#92400e',glow:'rgba(245,158,11,0.18)'},
+            'from-emerald-600 to-emerald-800':{bg:'#f0fdf4',iconBg:'linear-gradient(135deg,#10b981,#065f46)',accent:'#a7f3d0',textColor:'#065f46',glow:'rgba(16,185,129,0.18)'},
+            'from-purple-600 to-purple-800':  {bg:'#faf5ff',iconBg:'linear-gradient(135deg,#9333ea,#581c87)',accent:'#e9d5ff',textColor:'#6b21a8',glow:'rgba(147,51,234,0.18)'},
+            'from-cyan-600 to-teal-700':      {bg:'#ecfeff',iconBg:'linear-gradient(135deg,#06b6d4,#0f766e)',accent:'#a5f3fc',textColor:'#164e63',glow:'rgba(6,182,212,0.18)'},
+            'from-rose-600 to-rose-800':      {bg:'#fff1f2',iconBg:'linear-gradient(135deg,#f43f5e,#9f1239)',accent:'#fecdd3',textColor:'#9f1239',glow:'rgba(244,63,94,0.18)'},
+            'from-teal-600 to-teal-800':      {bg:'#f0fdfa',iconBg:'linear-gradient(135deg,#14b8a6,#134e4a)',accent:'#99f6e4',textColor:'#134e4a',glow:'rgba(20,184,166,0.18)'},
+            'from-indigo-600 to-indigo-800':  {bg:'#eef2ff',iconBg:'linear-gradient(135deg,#6366f1,#3730a3)',accent:'#c7d2fe',textColor:'#3730a3',glow:'rgba(99,102,241,0.18)'},
+            'from-violet-600 to-violet-800':  {bg:'#f5f3ff',iconBg:'linear-gradient(135deg,#7c3aed,#4c1d95)',accent:'#ddd6fe',textColor:'#4c1d95',glow:'rgba(124,58,237,0.18)'},
+          };
+
+          const subtitles: Record<string,string> = {
+            reports: 'عرض وإدارة جميع التقارير المرفوعة',
+            requests: 'متابعة الطلبات والاستفسارات',
+            meeting_minutes: 'محاضر الاجتماعات والقرارات',
+            evaluations: 'تقييم الاستشاريين الفنيين',
+          };
+
+          const BentoCard = ({ bubble, tall = false }: { bubble: typeof BUBBLES[0]; tall?: boolean }) => {
             const count = counts.data?.[bubble.type as keyof typeof counts.data] || 0;
             const hasCount = typeof count === "number" && count > 0;
+            const theme = themeMap[bubble.color] || {bg:'#f8fafc',iconBg:'linear-gradient(135deg,#64748b,#334155)',accent:'#e2e8f0',textColor:'#334155',glow:'rgba(100,116,139,0.1)'};
+
             return (
               <button
-                key={bubble.type}
-                onClick={() => {
-                  if (bubble.type === "milestones_kpis") {
-                    setActiveBubble("milestones_kpis");
-                    setShowMilestonesKpis(true);
-                  } else if (bubble.type === "evaluations") {
-                    setActiveBubble("evaluations");
-                    setShowEvaluation(true);
-                  } else if (bubble.type === "work_schedule") {
-                    setActiveBubble("work_schedule");
-                    setShowWorkSchedule(true);
-                  } else if (bubble.type === "capital_scheduling") {
-                    setActiveBubble("capital_scheduling");
-                    setShowCapitalScheduling(true);
-                  } else if (bubble.type === "feasibility_study") {
-                    setActiveBubble("feasibility_study");
-                    setShowFeasibilityStudy(true);
-                  } else {
-                    setActiveBubble(bubble.type);
-                  }
-                }}
-                className="group relative overflow-hidden rounded-2xl p-5 sm:p-6 text-center transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]"
+                onClick={() => handleBubbleClick(bubble.type)}
+                className="group relative overflow-hidden rounded-2xl text-right transition-all duration-300 hover:scale-[1.025] hover:-translate-y-0.5 active:scale-[0.98] w-full h-full"
                 style={{
-                  background: hasCount
-                    ? 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.06) 100%)'
-                    : 'linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.03) 100%)',
-                  border: hasCount ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.08)',
-                  backdropFilter: 'blur(10px)',
-                  boxShadow: hasCount ? '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)' : '0 4px 16px rgba(0,0,0,0.2)'
+                  background: theme.bg,
+                  border: `1.5px solid ${theme.accent}`,
+                  boxShadow: `0 2px 16px ${theme.glow}, 0 1px 3px rgba(0,0,0,0.06)`,
+                  padding: tall ? '1.6rem' : '1.1rem',
+                  minHeight: tall ? '195px' : '108px',
+                  display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start',
                 }}
               >
-                {/* Glow effect on hover */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" style={{background: 'radial-gradient(circle at 50% 0%, rgba(255,255,255,0.08), transparent 70%)'}} />
-
-                {/* Icon */}
-                <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br ${bubble.color} flex items-center justify-center mx-auto mb-3 sm:mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300`}
-                  style={{boxShadow: '0 8px 24px rgba(0,0,0,0.3)'}}>
-                  <bubble.icon className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
-                </div>
-
-                {/* Label */}
-                <p className="font-bold text-sm sm:text-base leading-tight" style={{color: 'rgba(255,255,255,0.9)'}}>{bubble.label}</p>
-
-                {/* Badge */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl pointer-events-none"
+                  style={{background: `radial-gradient(ellipse at 30% 0%, ${theme.glow}, transparent 65%)`}} />
+                <div className="absolute -bottom-8 -left-8 w-28 h-28 rounded-full opacity-15 group-hover:opacity-25 group-hover:scale-125 transition-all duration-500 pointer-events-none"
+                  style={{background: theme.iconBg}} />
                 {hasCount && (
-                  <div className="absolute -top-1.5 -left-1.5 min-w-[24px] h-6 px-1.5 rounded-full flex items-center justify-center text-[11px] font-bold shadow-lg"
-                    style={{background: 'linear-gradient(135deg, #ef4444, #dc2626)', color: 'white', boxShadow: '0 2px 8px rgba(239,68,68,0.5)'}}>
+                  <div className="absolute top-2.5 left-2.5 min-w-[22px] h-[22px] px-1.5 rounded-full flex items-center justify-center text-[10px] font-black z-10"
+                    style={{background:'linear-gradient(135deg,#ef4444,#b91c1c)',color:'white',boxShadow:'0 2px 8px rgba(239,68,68,0.5)'}}>
                     {count}
                   </div>
                 )}
+                <div className="relative z-10 w-full">
+                  <div className="rounded-2xl flex items-center justify-center mb-3 shadow-md group-hover:scale-110 transition-transform duration-300"
+                    style={{
+                      background: theme.iconBg,
+                      width: tall ? '60px' : '46px',
+                      height: tall ? '60px' : '46px',
+                      boxShadow: `0 4px 16px ${theme.glow}`,
+                    }}>
+                    <bubble.icon style={{width: tall ? '30px':'22px', height: tall ? '30px':'22px', color:'white'}} />
+                  </div>
+                  <p className="font-black leading-tight" style={{color: theme.textColor, fontSize: tall ? '1rem' : '0.8rem'}}>
+                    {bubble.label}
+                  </p>
+                  {tall && subtitles[bubble.type] && (
+                    <p className="text-xs mt-1.5 leading-relaxed" style={{color: `${theme.textColor}88`}}>
+                      {subtitles[bubble.type]}
+                    </p>
+                  )}
+                </div>
               </button>
             );
-          })}
-        </div>
+          };
+
+          return (
+            <div className="mb-8 space-y-4">
+              <div className="grid grid-cols-3 gap-4 items-stretch">
+                <BentoCard bubble={BUBBLES[0]} tall />
+                <BentoCard bubble={BUBBLES[1]} tall />
+                <div className="flex flex-col gap-4">
+                  <BentoCard bubble={BUBBLES[2]} />
+                  <BentoCard bubble={BUBBLES[3]} />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <BentoCard bubble={BUBBLES[4]} />
+                <BentoCard bubble={BUBBLES[5]} />
+                <BentoCard bubble={BUBBLES[6]} />
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-2"><BentoCard bubble={BUBBLES[7]} /></div>
+                <BentoCard bubble={BUBBLES[8]} />
+              </div>
+            </div>
+          );
+        })()}
+
       </div>
 
-      {/* Floating Salwa Button */}
       <button
         onClick={() => setShowSalwa(true)}
         className="fixed bottom-6 left-6 w-16 h-16 rounded-full flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-40 overflow-hidden"
@@ -4008,17 +4033,17 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
         <img src={SALWA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover" />
         <div className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-emerald-400 rounded-full border-2 border-white animate-pulse" />
       </button>
-
       <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
     </div>
   );
 }
 
+
 function DashboardHeader({ member, onLogout, unreadCount, onNotifications, onSalwa }: {
   member: any; onLogout: () => void; unreadCount: number; onNotifications: () => void; onSalwa: () => void;
 }) {
   return (
-    <header className="sticky top-0 z-30" style={{background: 'rgba(15,12,41,0.85)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.08)'}}>
+    <header className="sticky top-0 z-30" style={{background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(99,102,241,0.12)', boxShadow: '0 1px 20px rgba(99,102,241,0.08)'}}>
       <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-3">
@@ -4026,8 +4051,8 @@ function DashboardHeader({ member, onLogout, unreadCount, onNotifications, onSal
             <span className="text-sm font-black text-white">C</span>
           </div>
           <div>
-            <span className="font-bold text-white text-sm tracking-wide">مركز القيادة</span>
-            <p className="text-[10px]" style={{color: 'rgba(255,255,255,0.4)'}}>COMO Developments</p>
+            <span className="font-bold text-slate-800 text-sm tracking-wide">مركز القيادة</span>
+            <p className="text-[10px] text-slate-400">COMO Developments</p>
           </div>
         </div>
 
