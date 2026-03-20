@@ -103,7 +103,7 @@ export const commandCenterRouter = router({
           role: "admin" as const,
           memberId: "abdulrahman",
           accessToken: generateToken(),
-          greeting: "مرحباً عبدالرحمن، مركز القيادة جاهز لخدمتك",
+          greeting: "أهلاً وسهلاً عبدالرحمن، مركز القيادة بانتظارك",
         },
         {
           name: "Wael",
@@ -111,7 +111,7 @@ export const commandCenterRouter = router({
           role: "executive" as const,
           memberId: "wael",
           accessToken: generateToken(),
-          greeting: "مرحباً وائل، أهلاً بك في مركز القيادة",
+          greeting: "أهلاً وائل، يسعدنا تواجدك في مركز القيادة",
         },
         {
           name: "Sheikh Issa",
@@ -119,7 +119,7 @@ export const commandCenterRouter = router({
           role: "executive" as const,
           memberId: "sheikh_issa",
           accessToken: generateToken(),
-          greeting: "مرحباً شيخ عيسى، أهلاً بك في مركز القيادة",
+          greeting: "حياكم الله شيخ عيسى، مركز القيادة في خدمتكم",
         },
       ];
       
