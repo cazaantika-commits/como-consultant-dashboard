@@ -1,0 +1,40 @@
+{
+  "query": "SELECT id, name, landPrice, agentCommissionLandPct, gfaSqft, manualBuaSqft, estimatedConstructionPricePerSqft, designFeePct, supervisionFeePct, separationFeePerM2, plotAreaSqm, salesCommissionPct, marketingPct, developerFeePct, developerFeePhase1Pct, developerFeePhase2Pct, soilTestFee, topographicSurveyFee, reraUnitRegFee, developerNocFee, escrowAccountFee, bankFees, communityFees, surveyorFees, reraAuditReportFee, reraInspectionReportFee, reraProjectRegFee, officialBodiesFees FROM projects WHERE plotNumber = '6185392';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, name, landPrice, agentCommissionLandPct, gfaSqft, manualBuaSqft, estimatedConstructionPricePerSqft, designFeePct, supervisionFeePct, separationFeePerM2, plotAreaSqm, salesCommissionPct, marketingPct, developerFeePct, developerFeePhase1Pct, developerFeePhase2Pct, soilTestFee, topographicSurveyFee, reraUnitRegFee, developerNocFee, escrowAccountFee, bankFees, communityFees, surveyorFees, reraAuditReportFee, reraInspectionReportFee, reraProjectRegFee, officialBodiesFees FROM projects WHERE plotNumber = '6185392';",
+  "rows": [
+    {
+      "id": "4",
+      "name": "ند الشبا — قطعة 1 (6185392)",
+      "landPrice": "18000000.00",
+      "agentCommissionLandPct": "2.00",
+      "gfaSqft": "50826.11",
+      "manualBuaSqft": "114284.00",
+      "estimatedConstructionPricePerSqft": "350.00",
+      "designFeePct": "2.00",
+      "supervisionFeePct": "2.00",
+      "separationFeePerM2": "40.00",
+      "plotAreaSqm": "1573.97",
+      "salesCommissionPct": "5.00",
+      "marketingPct": "2.00",
+      "developerFeePct": "5.00",
+      "developerFeePhase1Pct": "2.00",
+      "developerFeePhase2Pct": "3.00",
+      "soilTestFee": "16180.00",
+      "topographicSurveyFee": "6180.00",
+      "reraUnitRegFee": "39180.00",
+      "developerNocFee": "10000.00",
+      "escrowAccountFee": "140000.00",
+      "bankFees": "19800.00",
+      "communityFees": "16180.00",
+      "surveyorFees": "12180.00",
+      "reraAuditReportFee": "105180.00",
+      "reraInspectionReportFee": "18180.00",
+      "reraProjectRegFee": "150000.00",
+      "officialBodiesFees": "1000180.00"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tlandPrice\tagentCommissionLandPct\tgfaSqft\tmanualBuaSqft\testimatedConstructionPricePerSqft\tdesignFeePct\tsupervisionFeePct\tseparationFeePerM2\tplotAreaSqm\tsalesCommissionPct\tmarketingPct\tdeveloperFeePct\tdeveloperFeePhase1Pct\tdeveloperFeePhase2Pct\tsoilTestFee\ttopographicSurveyFee\treraUnitRegFee\tdeveloperNocFee\tescrowAccountFee\tbankFees\tcommunityFees\tsurveyorFees\treraAuditReportFee\treraInspectionReportFee\treraProjectRegFee\tofficialBodiesFees\n4\tند الشبا — قطعة 1 (6185392)\t18000000.00\t2.00\t50826.11\t114284.00\t350.00\t2.00\t2.00\t40.00\t1573.97\t5.00\t2.00\t5.00\t2.00\t3.00\t16180.00\t6180.00\t39180.00\t10000.00\t140000.00\t19800.00\t16180.00\t12180.00\t105180.00\t18180.00\t150000.00\t1000180.00\n",
+  "stderr": "",
+  "execution_time_ms": 1542
+}

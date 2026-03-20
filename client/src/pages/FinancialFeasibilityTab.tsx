@@ -64,6 +64,9 @@ export default function FinancialFeasibilityTab({ initialProjectId }: { initialP
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(initialProjectId ?? null);
 
+  // Escrow amounts entered by user per line item
+  const [escrowAmounts, setEscrowAmounts] = useState<Record<string, string>>({});
+
   const selectedProject = (projectsQuery.data || []).find((p: any) => p.id === selectedProjectId);
   const moQuery = trpc.marketOverview.getByProject.useQuery(selectedProjectId || 0, { enabled: !!selectedProjectId });
   const cpQuery = trpc.competitionPricing.getByProject.useQuery(selectedProjectId || 0, { enabled: !!selectedProjectId });
@@ -79,13 +82,21 @@ export default function FinancialFeasibilityTab({ initialProjectId }: { initialP
   const profit = totalRevenue - totalCosts;
   const profitPct = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
 
-  // Escrow items total
+  // Escrow items total (auto-tagged)
   const escrowTotal = useMemo(() => {
     if (!costs) return 0;
     return COST_LINES
       .filter(l => l.isEscrow)
       .reduce((sum, l) => sum + l.getValue(costs), 0);
   }, [costs]);
+
+  // Total of manually entered escrow amounts
+  const manualEscrowTotal = useMemo(() => {
+    return Object.values(escrowAmounts).reduce((sum, v) => {
+      const n = parseFloat(v.replace(/,/g, ""));
+      return sum + (isNaN(n) ? 0 : n);
+    }, 0);
+  }, [escrowAmounts]);
 
   // Required capital = total costs - escrow items - construction cost + 10% advance + 20% deposit
   const requiredCapital = useMemo(() => {
@@ -106,8 +117,13 @@ export default function FinancialFeasibilityTab({ initialProjectId }: { initialP
       total: costs
         ? COST_LINES.filter(l => l.group === group).reduce((s, l) => s + l.getValue(costs), 0)
         : 0,
+      escrowGroupTotal: COST_LINES.filter(l => l.group === group).reduce((s, l) => {
+        const v = escrowAmounts[l.id];
+        const n = parseFloat((v || "").replace(/,/g, ""));
+        return s + (isNaN(n) ? 0 : n);
+      }, 0),
     }));
-  }, [costs]);
+  }, [costs, escrowAmounts]);
 
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(GROUPS));
   const toggleGroup = (g: string) => {
@@ -116,6 +132,19 @@ export default function FinancialFeasibilityTab({ initialProjectId }: { initialP
       if (next.has(g)) next.delete(g); else next.add(g);
       return next;
     });
+  };
+
+  const handleEscrowChange = (id: string, value: string) => {
+    // Allow only numbers, commas, dots
+    const cleaned = value.replace(/[^\d.,]/g, "");
+    setEscrowAmounts(prev => ({ ...prev, [id]: cleaned }));
+  };
+
+  const getEscrowNum = (id: string) => {
+    const v = escrowAmounts[id];
+    if (!v) return 0;
+    const n = parseFloat(v.replace(/,/g, ""));
+    return isNaN(n) ? 0 : n;
   };
 
   return (
@@ -191,20 +220,26 @@ export default function FinancialFeasibilityTab({ initialProjectId }: { initialP
 
           {/* Cost Table */}
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
+            <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
               <h3 className="font-bold text-gray-800 text-sm">تفصيل التكاليف</h3>
+              {manualEscrowTotal > 0 && (
+                <span className="text-xs bg-teal-100 text-teal-700 px-2.5 py-1 rounded-full font-semibold">
+                  إجمالي الإسكرو المُدخل: {fmt(manualEscrowTotal)} درهم
+                </span>
+              )}
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="text-right px-5 py-3 font-semibold text-gray-600 w-1/2">البند</th>
-                    <th className="text-center px-4 py-3 font-semibold text-gray-600">المبلغ (درهم)</th>
-                    <th className="text-center px-4 py-3 font-semibold text-gray-600">% من التكاليف</th>
-                    <th className="text-center px-4 py-3 font-semibold text-gray-600">المصدر</th>
+                    <th className="text-right px-4 py-3 font-semibold text-gray-600">البند</th>
+                    <th className="text-center px-3 py-3 font-semibold text-gray-600 whitespace-nowrap">المبلغ (درهم)</th>
+                    <th className="text-center px-3 py-3 font-semibold text-teal-700 whitespace-nowrap bg-teal-50">مدفوع من الإسكرو</th>
+                    <th className="text-center px-3 py-3 font-semibold text-gray-600 whitespace-nowrap">% من التكاليف</th>
+                    <th className="text-center px-3 py-3 font-semibold text-gray-600 whitespace-nowrap">المصدر</th>
                   </tr>
                 </thead>
-                {groupedLines.map(({ group, lines, total }) => (
+                {groupedLines.map(({ group, lines, total, escrowGroupTotal }) => (
                     <tbody key={`group-${group}`}>
                       {/* Group header */}
                       <tr
@@ -212,27 +247,31 @@ export default function FinancialFeasibilityTab({ initialProjectId }: { initialP
                         className="bg-violet-50 cursor-pointer hover:bg-violet-100 transition-colors"
                         onClick={() => toggleGroup(group)}
                       >
-                        <td className="px-5 py-2.5 font-bold text-violet-800 flex items-center gap-2">
+                        <td className="px-4 py-2.5 font-bold text-violet-800 flex items-center gap-2">
                           <ChevronDown
                             className={`w-4 h-4 transition-transform ${expandedGroups.has(group) ? "" : "-rotate-90"}`}
                           />
                           {group}
                         </td>
-                        <td className="px-4 py-2.5 text-center font-bold text-violet-800">
+                        <td className="px-3 py-2.5 text-center font-bold text-violet-800">
                           {fmt(total)}
                         </td>
-                        <td className="px-4 py-2.5 text-center text-violet-600">
+                        <td className="px-3 py-2.5 text-center font-bold text-teal-700 bg-teal-50/50">
+                          {escrowGroupTotal > 0 ? fmt(escrowGroupTotal) : "—"}
+                        </td>
+                        <td className="px-3 py-2.5 text-center text-violet-600">
                           {totalCosts > 0 ? fmtPct((total / totalCosts) * 100) : "—"}
                         </td>
-                        <td className="px-4 py-2.5 text-center text-violet-500 text-xs">—</td>
+                        <td className="px-3 py-2.5 text-center text-violet-500 text-xs">—</td>
                       </tr>
 
                       {/* Group lines */}
                       {expandedGroups.has(group) && lines.map(line => {
                         const val = line.getValue(costs);
+                        const escrowVal = getEscrowNum(line.id);
                         return (
                           <tr key={line.id} className="border-b border-gray-50 hover:bg-gray-50">
-                            <td className="px-5 py-2 pr-10 text-gray-700">
+                            <td className="px-4 py-2 pr-9 text-gray-700">
                               {line.label}
                               {line.isEscrow && (
                                 <span className="mr-2 text-[10px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded-full">ضمان</span>
@@ -241,13 +280,29 @@ export default function FinancialFeasibilityTab({ initialProjectId }: { initialP
                                 <span className="mr-2 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">مستبدل في رأس المال</span>
                               )}
                             </td>
-                            <td className="px-4 py-2 text-center text-gray-800 font-mono">
+                            <td className="px-3 py-2 text-center text-gray-800 font-mono">
                               {fmt(val)}
                             </td>
-                            <td className="px-4 py-2 text-center text-gray-500">
+                            {/* Editable escrow amount column */}
+                            <td className="px-2 py-1.5 text-center bg-teal-50/30">
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                dir="ltr"
+                                placeholder="—"
+                                value={escrowAmounts[line.id] || ""}
+                                onChange={e => handleEscrowChange(line.id, e.target.value)}
+                                className={`w-full text-center text-sm font-mono rounded-lg border px-2 py-1 outline-none transition-colors
+                                  ${escrowVal > 0
+                                    ? "border-teal-400 bg-teal-50 text-teal-800 font-semibold"
+                                    : "border-gray-200 bg-white text-gray-400 focus:border-teal-400 focus:bg-teal-50"
+                                  }`}
+                              />
+                            </td>
+                            <td className="px-3 py-2 text-center text-gray-500">
                               {totalCosts > 0 && val > 0 ? fmtPct((val / totalCosts) * 100) : "—"}
                             </td>
-                            <td className="px-4 py-2 text-center">
+                            <td className="px-3 py-2 text-center">
                               {line.isEscrow ? (
                                 <span className="text-[10px] bg-indigo-50 text-indigo-500 px-2 py-0.5 rounded-full">حساب الضمان</span>
                               ) : (
@@ -262,10 +317,13 @@ export default function FinancialFeasibilityTab({ initialProjectId }: { initialP
                   <tbody>
                   {/* Total costs row */}
                   <tr className="bg-rose-50 border-t-2 border-rose-200">
-                    <td className="px-5 py-3 font-bold text-rose-800">إجمالي التكاليف</td>
-                    <td className="px-4 py-3 text-center font-bold text-rose-800 font-mono">{fmt(totalCosts)}</td>
-                    <td className="px-4 py-3 text-center font-bold text-rose-600">100%</td>
-                    <td className="px-4 py-3"></td>
+                    <td className="px-4 py-3 font-bold text-rose-800">إجمالي التكاليف</td>
+                    <td className="px-3 py-3 text-center font-bold text-rose-800 font-mono">{fmt(totalCosts)}</td>
+                    <td className="px-3 py-3 text-center font-bold text-teal-700 bg-teal-50/50 font-mono">
+                      {manualEscrowTotal > 0 ? fmt(manualEscrowTotal) : "—"}
+                    </td>
+                    <td className="px-3 py-3 text-center font-bold text-rose-600">100%</td>
+                    <td className="px-3 py-3"></td>
                   </tr>
                   </tbody>
               </table>
@@ -293,6 +351,14 @@ export default function FinancialFeasibilityTab({ initialProjectId }: { initialP
                     color="indigo"
                     sub="دفعات المقاول 85% + أتعاب الإشراف + عمولة المبيعات + رسوم ريرا + رسوم حكومية"
                   />
+                  {manualEscrowTotal > 0 && (
+                    <SummaryRow
+                      label="المبالغ المُدخلة من الإسكرو"
+                      value={fmt(manualEscrowTotal)}
+                      color="teal"
+                      sub="مجموع ما أدخلته يدوياً في عمود الإسكرو"
+                    />
+                  )}
                   <SummaryRow
                     label="تكلفة البناء الكاملة (مستبدلة)"
                     value={fmt(costs.constructionCost)}
@@ -341,6 +407,7 @@ function KpiCard({ label, value, sub, color, icon }: {
     violet: "bg-violet-50 border-violet-200 text-violet-700",
     gray: "bg-gray-50 border-gray-200 text-gray-700",
     indigo: "bg-indigo-50 border-indigo-200 text-indigo-700",
+    teal: "bg-teal-50 border-teal-200 text-teal-700",
   };
   return (
     <div className={`rounded-2xl border p-4 ${colors[color] || colors.gray}`}>
@@ -357,7 +424,7 @@ function SummaryRow({ label, value, color, sub }: {
   const colors: Record<string, string> = {
     rose: "text-rose-700", emerald: "text-emerald-700", blue: "text-blue-700",
     red: "text-red-700", amber: "text-amber-700", violet: "text-violet-700",
-    gray: "text-gray-500", indigo: "text-indigo-700",
+    gray: "text-gray-500", indigo: "text-indigo-700", teal: "text-teal-700",
   };
   return (
     <tr className="border-b border-gray-50 hover:bg-gray-50">
