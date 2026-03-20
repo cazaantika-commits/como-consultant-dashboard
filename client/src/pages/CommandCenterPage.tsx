@@ -794,14 +794,31 @@ function RequestConversation({ token, item, memberId, memberNameAr, onClose }: {
 }) {
   const [replyText, setReplyText] = useState("");
   const [replyType, setReplyType] = useState<"approval" | "rejection" | "comment" | "question">("comment");
+  const [replyAttachment, setReplyAttachment] = useState<{ url: string; name: string } | null>(null);
+  const [replyUploading, setReplyUploading] = useState(false);
   const responses = trpc.commandCenter.getResponses.useQuery({ token, itemId: item.id });
   const respondMutation = trpc.commandCenter.respondToItem.useMutation();
   const updateStatus = trpc.commandCenter.updateItemStatus.useMutation();
   const utils = trpc.useUtils();
 
+  const handleReplyFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setReplyUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload/command-center", { method: "POST", body: fd });
+      const data = await res.json();
+      if (data.url) setReplyAttachment({ url: data.url, name: file.name });
+      else toast.error("فشل رفع الملف");
+    } catch { toast.error("خطأ في رفع الملف"); }
+    finally { setReplyUploading(false); e.target.value = ""; }
+  };
+
   const handleReply = async () => {
     if (!replyText.trim()) return;
-    await respondMutation.mutateAsync({ token, itemId: item.id, responseText: replyText, responseType: replyType });
+    await respondMutation.mutateAsync({ token, itemId: item.id, responseText: replyText, responseType: replyType, attachmentUrl: replyAttachment?.url, attachmentName: replyAttachment?.name });
     // Auto-update status based on reply type
     if (replyType === "approval") {
       await updateStatus.mutateAsync({ token, itemId: item.id, status: "resolved" });
@@ -811,6 +828,7 @@ function RequestConversation({ token, item, memberId, memberNameAr, onClose }: {
       await updateStatus.mutateAsync({ token, itemId: item.id, status: "pending_response" });
     }
     setReplyText("");
+    setReplyAttachment(null);
     utils.commandCenter.getResponses.invalidate({ token, itemId: item.id });
     utils.commandCenter.getItems.invalidate();
   };
@@ -845,6 +863,18 @@ function RequestConversation({ token, item, memberId, memberNameAr, onClose }: {
         {/* Original message */}
         <div className="p-5 bg-amber-50/50 border-b border-amber-100">
           <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">{item.content || item.summary || "لا يوجد وصف"}</p>
+          {(() => { try { const atts = item.attachments ? JSON.parse(item.attachments) : []; return atts.length > 0 ? (
+            <div className="mt-3 space-y-1.5">
+              <p className="text-xs font-semibold text-amber-700">مرفقات الطلب:</p>
+              {atts.map((att: any, idx: number) => (
+                <a key={idx} href={att.url} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-amber-700 hover:text-amber-900 bg-amber-100 rounded-lg px-3 py-2 hover:bg-amber-200 transition-colors">
+                  {att.type === "link" ? <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" /> : <FileUp className="w-3.5 h-3.5 flex-shrink-0" />}
+                  <span className="truncate">{att.name}</span>
+                </a>
+              ))}
+            </div>
+          ) : null; } catch { return null; } })()} 
           <p className="text-xs text-slate-400 mt-2">{new Date(item.createdAt).toLocaleString("ar-SA")}</p>
         </div>
 
@@ -875,6 +905,12 @@ function RequestConversation({ token, item, memberId, memberNameAr, onClose }: {
                   </div>
                   <div className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${isMe ? "bg-amber-500 text-white rounded-tr-sm" : "bg-slate-100 text-slate-700 rounded-tl-sm"}`}>
                     {resp.responseText}
+                    {resp.attachmentUrl && (
+                      <a href={resp.attachmentUrl} target="_blank" rel="noopener noreferrer"
+                        className={`mt-2 flex items-center gap-1.5 text-xs underline ${isMe ? "text-amber-100" : "text-blue-600"}`}>
+                        <FileUp className="w-3 h-3" />{resp.attachmentName || "مرفق"}
+                      </a>
+                    )}
                   </div>
                   <span className="text-xs text-slate-400">{new Date(resp.createdAt).toLocaleString("ar-SA")}</span>
                 </div>
@@ -903,6 +939,14 @@ function RequestConversation({ token, item, memberId, memberNameAr, onClose }: {
                 );
               })}
             </div>
+            {/* Reply attachment preview */}
+            {replyAttachment && (
+              <div className="flex items-center gap-2 mb-2 bg-blue-50 rounded-lg px-3 py-2 text-sm text-blue-700">
+                <FileUp className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate flex-1">{replyAttachment.name}</span>
+                <button onClick={() => setReplyAttachment(null)} className="text-blue-400 hover:text-red-500"><X className="w-3.5 h-3.5" /></button>
+              </div>
+            )}
             <div className="flex gap-2">
               <textarea
                 value={replyText}
@@ -911,14 +955,20 @@ function RequestConversation({ token, item, memberId, memberNameAr, onClose }: {
                 rows={2}
                 className="flex-1 resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
               />
-              <button
-                onClick={handleReply}
-                disabled={!replyText.trim() || respondMutation.isPending}
-                className="px-4 py-2 bg-amber-500 text-white rounded-xl text-sm font-medium hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
-              >
-                <Send className="w-4 h-4" />
-                إرسال
-              </button>
+              <div className="flex flex-col gap-1">
+                <label className="cursor-pointer px-3 py-2 bg-slate-100 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-200 transition-colors flex items-center gap-1.5 justify-center" title="إرفاق ملف">
+                  {replyUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+                  <input type="file" className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,image/*" onChange={handleReplyFileChange} disabled={replyUploading} />
+                </label>
+                <button
+                  onClick={handleReply}
+                  disabled={!replyText.trim() || respondMutation.isPending}
+                  className="px-3 py-2 bg-amber-500 text-white rounded-xl text-sm font-medium hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
+                >
+                  <Send className="w-4 h-4" />
+                  إرسال
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -938,6 +988,7 @@ function RequestsAndInquiries({ token, memberId, memberNameAr, memberRole, onBac
   onBack: () => void;
 }) {
   const [tab, setTab] = useState<"inbox" | "sent" | "all">("inbox");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "pending_response" | "resolved">("all");
   const [showNewModal, setShowNewModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [newTitle, setNewTitle] = useState("");
@@ -984,7 +1035,8 @@ function RequestsAndInquiries({ token, memberId, memberNameAr, memberRole, onBac
 
   const sentItems = items.filter((item: any) => item.createdByMemberId === memberId);
 
-  const displayItems = tab === "inbox" ? inboxItems : tab === "sent" ? sentItems : items;
+  const tabItems = tab === "inbox" ? inboxItems : tab === "sent" ? sentItems : items;
+  const displayItems = statusFilter === "all" ? tabItems : tabItems.filter((item: any) => item.itemStatus === statusFilter);
 
   const handleCreate = async () => {
     if (!newTitle.trim()) return;
@@ -1033,7 +1085,7 @@ function RequestsAndInquiries({ token, memberId, memberNameAr, memberRole, onBac
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl mb-5">
+      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl mb-3">
         {(["inbox", "sent", "all"] as const).map(t => (
           <button
             key={t}
@@ -1043,6 +1095,26 @@ function RequestsAndInquiries({ token, memberId, memberNameAr, memberRole, onBac
             }`}
           >
             {t === "inbox" ? `الوارد (${inboxItems.length})` : t === "sent" ? `المرسل (${sentItems.length})` : `الكل (${items.length})`}
+          </button>
+        ))}
+      </div>
+
+      {/* Status filter */}
+      <div className="flex gap-2 mb-5 flex-wrap">
+        {([
+          { value: "all", label: "جميع الحالات", color: "bg-slate-100 text-slate-700 border-slate-200" },
+          { value: "active", label: "جديد", color: "bg-blue-50 text-blue-700 border-blue-200" },
+          { value: "pending_response", label: "قيد الانتظار", color: "bg-amber-50 text-amber-700 border-amber-200" },
+          { value: "resolved", label: "منجز", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+        ] as const).map(opt => (
+          <button
+            key={opt.value}
+            onClick={() => setStatusFilter(opt.value)}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+              statusFilter === opt.value ? opt.color + " ring-2 ring-offset-1 ring-current" : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
+            }`}
+          >
+            {opt.label}
           </button>
         ))}
       </div>
@@ -2273,6 +2345,14 @@ function EvaluationView({ token, memberRole, memberId }: { token: string; member
   const projectsQuery = trpc.commandCenter.getProjectsForEvaluation.useQuery({ token });
   const [selectedProject, setSelectedProject] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'financial' | 'technical' | 'committee' | 'value' | null>(null);
+  const [showCreateSession, setShowCreateSession] = useState(false);
+  const [sessionTitle, setSessionTitle] = useState('');
+  const [sessionConsultantId, setSessionConsultantId] = useState<number | null>(null);
+  const createSession = trpc.commandCenter.createEvaluationSession.useMutation({
+    onSuccess: () => { toast.success('تم إنشاء جلسة التقييم بنجاح ✔️'); setShowCreateSession(false); setSessionTitle(''); setSessionConsultantId(null); projectsQuery.refetch(); },
+    onError: (err) => toast.error(err.message),
+  });
+  const consultantsForProject = projectsQuery.data?.find((p: any) => p.id === selectedProject)?.consultants || [];
 
   if (selectedProject && activeTab === 'financial') {
     return <FinancialEvaluationView token={token} projectId={selectedProject} onBack={() => setActiveTab(null)} />;
@@ -2291,12 +2371,54 @@ function EvaluationView({ token, memberRole, memberId }: { token: string; member
     const project = projectsQuery.data?.find((p: any) => p.id === selectedProject);
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => setSelectedProject(null)} className="text-slate-500">
-            <ArrowLeft className="w-4 h-4 ml-1" /> العودة
-          </Button>
-          <h2 className="text-xl font-bold text-slate-800">{project?.name}</h2>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={() => setSelectedProject(null)} className="text-slate-500">
+              <ArrowLeft className="w-4 h-4 ml-1" /> العودة
+            </Button>
+            <h2 className="text-xl font-bold text-slate-800">{project?.name}</h2>
+          </div>
+          {memberRole === 'admin' && (
+            <Button onClick={() => setShowCreateSession(true)} className="bg-purple-600 hover:bg-purple-700 text-white text-sm gap-2">
+              <Plus className="w-4 h-4" /> إنشاء جلسة تقييم
+            </Button>
+          )}
         </div>
+
+        {/* Create Session Modal */}
+        {showCreateSession && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" dir="rtl">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+              <div className="flex items-center justify-between p-5 border-b border-slate-100">
+                <h3 className="font-bold text-slate-800 text-lg">إنشاء جلسة تقييم جديدة</h3>
+                <button onClick={() => setShowCreateSession(false)} className="p-2 rounded-full hover:bg-slate-100 text-slate-400"><X className="w-5 h-5" /></button>
+              </div>
+              <div className="p-5 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">عنوان الجلسة <span className="text-red-500">*</span></label>
+                  <input value={sessionTitle} onChange={e => setSessionTitle(e.target.value)} placeholder="مثال: تقييم استشاريي مشروع ند الشيبا" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">الاستشاري <span className="text-red-500">*</span></label>
+                  <select value={sessionConsultantId ?? ''} onChange={e => setSessionConsultantId(Number(e.target.value) || null)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400">
+                    <option value="">— اختر الاستشاري —</option>
+                    {consultantsForProject.map((c: any) => (
+                      <option key={c.id} value={c.id}>{c.nameAr || c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="flex gap-3 p-5 border-t border-slate-100">
+                <button onClick={() => setShowCreateSession(false)} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50">إلغاء</button>
+                <button
+                  onClick={() => selectedProject && sessionConsultantId && createSession.mutate({ token, projectId: selectedProject, consultantId: sessionConsultantId, title: sessionTitle || 'جلسة تقييم' })}
+                  disabled={!sessionTitle.trim() || !sessionConsultantId || createSession.isPending}
+                  className="flex-1 py-2.5 rounded-xl bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 disabled:opacity-50"
+                >{createSession.isPending ? 'جاري الإنشاء...' : 'إنشاء الجلسة'}</button>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {/* التقييم المالي */}
           <button onClick={() => setActiveTab('financial')} className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 p-6 text-white shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] text-right">

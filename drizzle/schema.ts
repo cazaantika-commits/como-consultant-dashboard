@@ -242,6 +242,8 @@ export const commandCenterResponses = mysqlTable("commandCenterResponses", {
 	memberId: varchar({ length: 50 }).notNull(),
 	responseText: text().notNull(),
 	responseType: mysqlEnum(['approval','rejection','comment','question']).default('comment').notNull(),
+	attachmentUrl: text(),
+	attachmentName: varchar({ length: 500 }),
 	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 });
 

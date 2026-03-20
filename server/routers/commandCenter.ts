@@ -333,6 +333,8 @@ export const commandCenterRouter = router({
       itemId: z.number(),
       responseText: z.string(),
       responseType: z.enum(["approval", "rejection", "comment", "question"]).default("comment"),
+      attachmentUrl: z.string().optional(),
+      attachmentName: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
       const member = await verifyToken(input.token);
@@ -344,6 +346,8 @@ export const commandCenterRouter = router({
         memberId: member.memberId,
         responseText: input.responseText,
         responseType: input.responseType,
+        attachmentUrl: input.attachmentUrl || null,
+        attachmentName: input.attachmentName || null,
       });
       
       // Get the item to notify the creator
@@ -1383,7 +1387,7 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
         if (decision?.isConfirmed === 1) status = 'decided';
         else if (allEvaluatorsComplete) status = 'evaluation_complete';
         else if (anyEvaluatorStarted || hasFinancial) status = 'in_progress';
-        return { id: p.id, name: p.name, description: p.description, consultantCount: pConsultants.length, status, hasFinancial, evaluatorStatus, allEvaluatorsComplete, hasDecision: !!decision, isDecisionConfirmed: decision?.isConfirmed === 1 };
+        return { id: p.id, name: p.name, description: p.description, consultantCount: pConsultants.length, consultants: pConsultants.map(c => ({ id: c.id, name: c.name, nameAr: c.nameAr })), status, hasFinancial, evaluatorStatus, allEvaluatorsComplete, hasDecision: !!decision, isDecisionConfirmed: decision?.isConfirmed === 1 };
       });
     }),
 
