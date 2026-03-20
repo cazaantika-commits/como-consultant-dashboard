@@ -19,7 +19,7 @@ import CostsCashFlowTab from "@/components/feasibility/CostsCashFlowTab";
 import JoelleEngineTab from "@/components/feasibility/JoelleEngineTab";
 import JoelleDataManager from "@/components/feasibility/JoelleDataManager";
 import CashFlowSettingsPage from "@/pages/CashFlowSettingsPage";
-import CashFlowReflectionPage from "@/pages/CashFlowReflectionPage";
+import ExcelCashFlowPageEmbedded from "@/pages/ExcelCashFlowPage";
 
 // ═══════════════════════════════════════════
 // HELPER COMPONENTS
@@ -433,10 +433,9 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
                 />
               </TabsContent>
               <TabsContent value="tab_cf_reflection">
-                <CashFlowReflectionPage
+                <ExcelCashFlowPageEmbedded
                   embedded
                   initialProjectId={selectedProjectId}
-                  onNavigateToSettings={() => setActiveTab("tab_cf_settings")}
                 />
               </TabsContent>
 
