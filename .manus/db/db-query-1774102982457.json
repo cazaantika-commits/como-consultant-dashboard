@@ -1,0 +1,54 @@
+{
+  "query": "SELECT item_key, name_ar, distribution_method, lump_sum_month, start_month, end_month, amount_override, funding_source, section FROM project_cash_flow_settings WHERE item_key IN ('design_fee', 'developer_fee_design', 'survey', 'soil_test') ORDER BY project_id, item_key;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT item_key, name_ar, distribution_method, lump_sum_month, start_month, end_month, amount_override, funding_source, section FROM project_cash_flow_settings WHERE item_key IN ('design_fee', 'developer_fee_design', 'survey', 'soil_test') ORDER BY project_id, item_key;",
+  "rows": [
+    {
+      "item_key": "design_fee",
+      "name_ar": "أتعاب التصميم (2%)",
+      "distribution_method": "equal_spread",
+      "lump_sum_month": "NULL",
+      "start_month": "1",
+      "end_month": "6",
+      "amount_override": "NULL",
+      "funding_source": "investor",
+      "section": "design"
+    },
+    {
+      "item_key": "developer_fee_design",
+      "name_ar": "أتعاب المطور — التصاميم (1%)",
+      "distribution_method": "equal_spread",
+      "lump_sum_month": "NULL",
+      "start_month": "1",
+      "end_month": "6",
+      "amount_override": "NULL",
+      "funding_source": "investor",
+      "section": "design"
+    },
+    {
+      "item_key": "soil_test",
+      "name_ar": "فحص التربة",
+      "distribution_method": "lump_sum",
+      "lump_sum_month": "1",
+      "start_month": "NULL",
+      "end_month": "NULL",
+      "amount_override": "NULL",
+      "funding_source": "investor",
+      "section": "design"
+    },
+    {
+      "item_key": "survey",
+      "name_ar": "المسح الطبوغرافي",
+      "distribution_method": "lump_sum",
+      "lump_sum_month": "1",
+      "start_month": "NULL",
+      "end_month": "NULL",
+      "amount_override": "NULL",
+      "funding_source": "investor",
+      "section": "design"
+    }
+  ],
+  "messages": [],
+  "stdout": "item_key\tname_ar\tdistribution_method\tlump_sum_month\tstart_month\tend_month\tamount_override\tfunding_source\tsection\ndesign_fee\tأتعاب التصميم (2%)\tequal_spread\tNULL\t1\t6\tNULL\tinvestor\tdesign\ndeveloper_fee_design\tأتعاب المطور — التصاميم (1%)\tequal_spread\tNULL\t1\t6\tNULL\tinvestor\tdesign\nsoil_test\tفحص التربة\tlump_sum\t1\tNULL\tNULL\tNULL\tinvestor\tdesign\nsurvey\tالمسح الطبوغرافي\tlump_sum\t1\tNULL\tNULL\tNULL\tinvestor\tdesign\n",
+  "stderr": "",
+  "execution_time_ms": 1584
+}

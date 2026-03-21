@@ -196,12 +196,18 @@ export default function CapitalScheduleTablePage({
     Array.from({ length: phases.design.duration }, (_, i) => phases.design.start + i),
     [phases]
   );
-  const offplanMonths = useMemo(() =>
+  // All offplan months (may overlap with design)
+  const offplanMonthsAll = useMemo(() =>
     phases.offplan.duration > 0
       ? Array.from({ length: phases.offplan.duration }, (_, i) => phases.offplan.start + i)
       : [],
     [phases]
   );
+  // Offplan months that are NOT already in design (for display as separate columns)
+  const offplanMonths = useMemo(() => {
+    const designSet = new Set(designMonths);
+    return offplanMonthsAll.filter(m => !designSet.has(m));
+  }, [offplanMonthsAll, designMonths]);
   const constructionMonths = useMemo(() =>
     Array.from({ length: phases.construction.duration }, (_, i) => phases.construction.start + i),
     [phases]
@@ -212,10 +218,15 @@ export default function CapitalScheduleTablePage({
       : [],
     [phases]
   );
-  const allMonths = useMemo(() =>
-    [...designMonths, ...offplanMonths, ...constructionMonths, ...handoverMonths],
-    [designMonths, offplanMonths, constructionMonths, handoverMonths]
-  );
+  // allMonths: unique months in chronological order (no duplicates)
+  const allMonths = useMemo(() => {
+    const seen = new Set<number>();
+    const result: number[] = [];
+    for (const m of [...designMonths, ...offplanMonthsAll, ...constructionMonths, ...handoverMonths]) {
+      if (!seen.has(m)) { seen.add(m); result.push(m); }
+    }
+    return result;
+  }, [designMonths, offplanMonthsAll, constructionMonths, handoverMonths]);
 
   // Separate items by section and funding source
   const allItems = useMemo(() => settingsData?.settings || [], [settingsData]);
@@ -290,9 +301,11 @@ export default function CapitalScheduleTablePage({
   }, [allMonths, monthInvestorTotals, paidTotal]);
 
   // Phase helpers
+  // Note: offplan overlaps with design. Months in both → classified as "design" for display.
+  // offplanMonths (display) only has non-overlapping offplan months.
   function phaseOf(m: number): "design" | "offplan" | "construction" | "handover" {
     if (designMonths.includes(m)) return "design";
-    if (offplanMonths.includes(m)) return "offplan";
+    if (offplanMonths.includes(m)) return "offplan"; // only non-overlapping offplan months
     if (constructionMonths.includes(m)) return "construction";
     return "handover";
   }
@@ -572,7 +585,10 @@ export default function CapitalScheduleTablePage({
         • صف "إجمالي الشهر" يجمع المستثمر + الضمان معاً<br />
         • صف "إجمالي تراكمي" يتتبع رأس المال المطلوب من المستثمر فقط<br />
         • المبالغ المدفوعة = الأرض وما سبق (لا تاريخ محدد)<br />
-        • التوزيع الشهري يعتمد على إعدادات التدفق المحفوظة — عدّل التوزيع من تبويب "إعدادات التدفق"
+        • التوزيع الشهري يعتمد على إعدادات التدفق المحفوظة — عدّل التوزيع من تبويب "إعدادات التدفق"<br />
+        {offplanMonthsAll.length > 0 && offplanMonths.length === 0 && (
+          <span style={{ color: "#1d4ed8" }}>• مرحلة الأوف بلان (شهر {offplanMonthsAll[0]}–{offplanMonthsAll[offplanMonthsAll.length-1]}) تتداخل كلياً مع مرحلة التصاميم وتُعرض ضمنها في الجدول</span>
+        )}
       </div>
     </div>
   );
