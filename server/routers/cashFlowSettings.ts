@@ -365,6 +365,7 @@ const settingItemSchema = z.object({
   itemKey: z.string(),
   nameAr: z.string(),
   category: z.enum(CATEGORIES),
+  section: z.enum(["paid", "design", "offplan", "construction", "escrow"]).optional(),
   isActive: z.boolean().default(true),
   sortOrder: z.number().default(0),
   amountOverride: z.number().nullable().optional(),
@@ -426,10 +427,18 @@ export const cashFlowSettingsRouter = router({
       const totalMonths = getTotalMonths(durations);
 
       if (existing.length > 0) {
+        // Build a lookup of default sections by itemKey for fallback
+        const defaultDefs = getDefaultItemDefs(input.scenario);
+        const defaultSectionByKey: Record<string, string> = {};
+        for (const def of defaultDefs) {
+          defaultSectionByKey[def.itemKey] = def.section;
+        }
         // Return existing settings with computed amounts
         return {
           settings: existing.map(s => ({
             ...s,
+            // Fill section from default defs if not saved in DB yet
+            section: s.section || defaultSectionByKey[s.itemKey] || "construction",
             computedAmount: costs ? computeItemAmountByKey(s.itemKey, costs, input.scenario) : 0,
           })),
           totalMonths,
@@ -544,6 +553,7 @@ export const cashFlowSettingsRouter = router({
             itemKey: item.itemKey,
             nameAr: item.nameAr,
             category: item.category,
+            section: item.section || null,
             isActive: item.isActive ? 1 : 0,
             sortOrder: item.sortOrder,
             amountOverride: item.amountOverride?.toString() || null,

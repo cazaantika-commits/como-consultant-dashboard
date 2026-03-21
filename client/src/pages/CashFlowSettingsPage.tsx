@@ -35,6 +35,8 @@ interface SettingItem {
   nameAr: string;
   /** Which section this belongs to (matches capital-schedule.html sections) */
   section: "paid" | "design" | "offplan" | "construction" | "escrow";
+  /** Category from server (needed to pass back on save) */
+  category?: string;
   isActive: boolean;
   sortOrder: number;
   distributionMethod: DistributionMethod;
@@ -472,9 +474,16 @@ export default function CashFlowSettingsPage({
 
       if (data.settings) {
         setItems(data.settings.map((s: any) => {
-          // Use section from server if available, fallback to CAT_TO_SECTION
+          // Use section from server (always authoritative — set per item in server defaults)
           const section = (s.section as keyof typeof SECTION_META) || CAT_TO_SECTION[s.category] || "construction";
-          const assignedPhase = CAT_TO_PHASE[s.category] || "construction";
+          // Determine assignedPhase from section (more accurate than category)
+          const assignedPhaseFromSection: SettingItem["assignedPhase"] =
+            section === "design" ? "design" :
+            section === "offplan" ? "offplan" :
+            section === "construction" ? "construction" :
+            section === "escrow" ? "construction" :
+            CAT_TO_PHASE[s.category] || "construction";
+          const assignedPhase = assignedPhaseFromSection;
 
           // Parse custom percentages from customJson if present
           let customPercentages: number[] = [];
@@ -501,6 +510,7 @@ export default function CashFlowSettingsPage({
             itemKey: s.itemKey,
             nameAr: s.nameAr,
             section,
+            category: s.category,
             isActive: s.isActive !== false,
             sortOrder: s.sortOrder,
             distributionMethod,
@@ -521,7 +531,7 @@ export default function CashFlowSettingsPage({
 
   function getPhaseDuration(phase: SettingItem["assignedPhase"]): number {
     if (phase === "design") return durations.design;
-    if (phase === "offplan") return 2;
+    if (phase === "offplan") return phases?.offplan?.duration || 2;
     if (phase === "construction") return durations.construction;
     if (phase === "handover") return durations.handover;
     return 1;
@@ -562,7 +572,9 @@ export default function CashFlowSettingsPage({
         return {
           itemKey: item.itemKey,
           nameAr: item.nameAr,
-          category: Object.entries(CAT_TO_SECTION).find(([, s]) => s === item.section)?.[0] || item.section,
+          // category is stored in the item from the server response
+          category: (item as any).category || Object.entries(CAT_TO_SECTION).find(([, s]) => s === item.section)?.[0] || "other",
+          section: item.section,
           isActive: item.isActive,
           sortOrder: item.sortOrder,
           amountOverride: null,
@@ -806,6 +818,8 @@ export default function CashFlowSettingsPage({
                       <tbody>
                         {sectionItems.map(item => {
                           const phaseStart = (() => {
+                            // Use actual phase start from server data when available
+                            if (phases?.[item.assignedPhase]?.start) return phases[item.assignedPhase]!.start;
                             if (item.assignedPhase === "design") return 1;
                             if (item.assignedPhase === "offplan") return durations.design + 1;
                             if (item.assignedPhase === "construction") return durations.design + 3;
