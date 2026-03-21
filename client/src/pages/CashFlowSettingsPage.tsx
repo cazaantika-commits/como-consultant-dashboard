@@ -434,6 +434,7 @@ export default function CashFlowSettingsPage({
 } = {}) {
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
+  const utils = trpc.useUtils();
 
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(initialProjectId ?? null);
   const [scenario, setScenario] = useState<Scenario>("offplan_escrow");
@@ -458,6 +459,7 @@ export default function CashFlowSettingsPage({
       toast({ title: "✅ تم الحفظ", description: "تم حفظ إعدادات التوزيع بنجاح" });
       setIsDirty(false);
       settingsQuery.refetch();
+      utils.cashFlowSettings.getSettings.invalidate();
     },
     onError: (err) => {
       toast({ title: "خطأ في الحفظ", description: err.message, variant: "destructive" });
@@ -469,6 +471,7 @@ export default function CashFlowSettingsPage({
       toast({ title: "✅ تم حفظ المدد", description: "تم تحديث المدد الزمنية للمراحل" });
       setIsDurationDirty(false);
       settingsQuery.refetch();
+      utils.cashFlowSettings.getSettings.invalidate();
     },
     onError: (err) => {
       toast({ title: "خطأ", description: err.message, variant: "destructive" });
@@ -480,6 +483,7 @@ export default function CashFlowSettingsPage({
       toast({ title: "تم الإعادة", description: "تم إعادة الإعدادات إلى القيم الافتراضية" });
       setIsDirty(false);
       settingsQuery.refetch();
+      utils.cashFlowSettings.getSettings.invalidate();
     },
   });
 

@@ -271,3 +271,4 @@
 - [ ] Add SVG icons for 4 main sections in ProjectManagementPage (replace emoji)
 - [ ] Remember last opened project in KnowledgeHubPage and FinancialPlanningHubPage (localStorage)
 - [ ] Fix amount duplication in capital schedule table (computedAmount vs monthly sum mismatch)
+- [ ] Bug: capital schedule table does not reflect updated settings (fundingSource, developer fee %, marketing %) after saving in settings page

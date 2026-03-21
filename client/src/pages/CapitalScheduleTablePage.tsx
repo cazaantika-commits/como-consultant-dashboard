@@ -175,7 +175,7 @@ export default function CapitalScheduleTablePage({
   // Load settings from cashFlowSettings (the source of truth for distribution)
   const settingsQuery = trpc.cashFlowSettings.getSettings.useQuery(
     { projectId: selectedProjectId || 0, scenario: scenario as any },
-    { enabled: !!selectedProjectId, staleTime: 3000 }
+    { enabled: !!selectedProjectId, staleTime: 0, refetchOnWindowFocus: true }
   );
 
   const settingsData = settingsQuery.data;
