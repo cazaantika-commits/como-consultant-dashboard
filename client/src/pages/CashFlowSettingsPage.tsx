@@ -410,7 +410,8 @@ export default function CashFlowSettingsPage({
 
       if (data.settings) {
         setItems(data.settings.map((s: any) => {
-          const section = CAT_TO_SECTION[s.category] || "construction";
+          // Use section from server if available, fallback to CAT_TO_SECTION
+          const section = (s.section as keyof typeof SECTION_META) || CAT_TO_SECTION[s.category] || "construction";
           const assignedPhase = CAT_TO_PHASE[s.category] || "construction";
 
           // Parse custom percentages from customJson if present
