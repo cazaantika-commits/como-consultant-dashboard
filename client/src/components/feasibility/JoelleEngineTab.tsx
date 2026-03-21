@@ -195,7 +195,7 @@ export default function JoelleEngineTab({ projectId, studyId }: { projectId: num
     return (
       <div className="text-center py-16 bg-muted/20 rounded-xl border border-dashed border-border">
         <Brain className="w-16 h-16 mx-auto mb-4 text-muted-foreground/30" />
-        <p className="text-sm font-medium text-muted-foreground">اختر مشروع لتشغيل محرك جويل</p>
+        <p className="text-sm font-medium text-muted-foreground">اختر مشروع لتشغيل الدراسات والأبحاث</p>
       </div>
     );
   }
@@ -209,7 +209,7 @@ export default function JoelleEngineTab({ projectId, studyId }: { projectId: num
             <div className="flex items-center gap-4">
               <img src={JOEL_AVATAR} alt="Joelle" className="w-14 h-14 rounded-full border-2 border-primary/30 shadow-md" />
               <div>
-                <h2 className="text-xl font-bold text-foreground">محرك جويل للذكاء السوقي</h2>
+                <h2 className="text-xl font-bold text-foreground">الدراسات والأبحاث للذكاء السوقي</h2>
                 <p className="text-sm text-muted-foreground">12 محرك تحليلي • 7 تقارير احترافية • تحقق متعدد المصادر</p>
               </div>
             </div>

@@ -605,7 +605,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
           </div>
           <div>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#0f172a" }}>
-              مشاريع كومو — جدولة رأس المال
+              محفظة رأس المال للمشاريع
             </h2>
             <p style={{ margin: 0, fontSize: 12, color: "#64748b" }}>
               {TOTAL_MONTHS} شهراً · أبريل 2026 — مارس 2030 · {baseColumns.length} مشاريع · 4 مراحل

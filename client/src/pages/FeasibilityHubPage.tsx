@@ -37,7 +37,7 @@ const SUB_SECTIONS = [
   },
   {
     id: "fin-feasibility" as SubView,
-    label: "دراسة الجدوى المالية",
+    label: "ملخص الجدوى المالية",
     icon: FileBarChart2,
     gradient: "linear-gradient(135deg, #7c3aed, #6d28d9)",
     shadow: "rgba(124, 58, 237, 0.3)",
@@ -55,7 +55,7 @@ const SUB_SECTIONS = [
   },
   {
     id: "capital" as SubView,
-    label: "رأس المال المطلوب",
+    label: "خطة رأس مال المشروع",
     icon: Wallet,
     gradient: "linear-gradient(135deg, #10b981, #059669)",
     shadow: "rgba(16, 185, 129, 0.3)",
@@ -64,7 +64,7 @@ const SUB_SECTIONS = [
   },
   {
     id: "escrow" as SubView,
-    label: "حساب الضمان",
+    label: "التدفقات النقدية وحساب الضمان",
     icon: Landmark,
     gradient: "linear-gradient(135deg, #4f46e5, #4338ca)",
     shadow: "rgba(79, 70, 229, 0.3)",

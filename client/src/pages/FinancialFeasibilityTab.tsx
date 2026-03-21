@@ -1,6 +1,6 @@
 /**
  * Financial Feasibility Study Tab
- * دراسة الجدوى المالية — جدول ثابت بكل بنود التكاليف والإيرادات والأرباح
+ * ملخص الجدوى المالية — جدول ثابت بكل بنود التكاليف والإيرادات والأرباح
  */
 import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
@@ -167,7 +167,7 @@ export default function FinancialFeasibilityTab({ initialProjectId }: { initialP
       )}
 
       {!selectedProjectId && (
-        <div className="text-center py-16 text-gray-400 text-sm">اختر مشروعاً لعرض دراسة الجدوى المالية</div>
+        <div className="text-center py-16 text-gray-400 text-sm">اختر مشروعاً لعرض ملخص الجدوى المالية</div>
       )}
 
       {selectedProjectId && !costs && (
@@ -200,7 +200,7 @@ export default function FinancialFeasibilityTab({ initialProjectId }: { initialP
               icon={<BarChart2 className="w-5 h-5" />}
             />
             <KpiCard
-              label="رأس المال المطلوب"
+              label="خطة رأس مال المشروع"
               value={fmt(requiredCapital)}
               sub="مصاريف المستثمر"
               color="amber"

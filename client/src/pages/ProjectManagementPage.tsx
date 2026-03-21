@@ -32,7 +32,7 @@ const SECTIONS = [
   },
   {
     id: "capital-scheduling" as View,
-    label: "مشاريع كومو - جدولة رأس المال",
+    label: "محفظة رأس المال للمشاريع",
     icon: Layers,
     gradient: "linear-gradient(135deg, #f97316, #ea580c)",
     shadow: "rgba(249, 115, 22, 0.35)",

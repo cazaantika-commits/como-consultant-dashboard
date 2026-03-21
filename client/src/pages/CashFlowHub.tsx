@@ -10,7 +10,7 @@ import { Wallet, Landmark, BarChart3, FileBarChart2, CalendarRange } from "lucid
 const TABS = [
   {
     id: "feasibility" as const,
-    label: "دراسة الجدوى المالية",
+    label: "ملخص الجدوى المالية",
     description: "إجمالي التكاليف والإيرادات والأرباح",
     icon: FileBarChart2,
     emoji: "📊",
@@ -26,7 +26,7 @@ const TABS = [
   },
   {
     id: "investor" as const,
-    label: "رأس المال المطلوب",
+    label: "خطة رأس مال المشروع",
     description: "التمويل المباشر المطلوب شهرياً",
     icon: Wallet,
     emoji: "💰",
@@ -34,7 +34,7 @@ const TABS = [
   },
   {
     id: "escrow" as const,
-    label: "حساب الضمان",
+    label: "التدفقات النقدية وحساب الضمان",
     description: "مصاريف البناء + إيرادات المبيعات",
     icon: Landmark,
     emoji: "🏦",

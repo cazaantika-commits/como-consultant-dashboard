@@ -113,11 +113,11 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
       if (data.marketOverview && data.competitionPricing) {
         toast.success("تم تطبيق مخرجات جويل بنجاح — توزيع الوحدات + التسعير");
       } else if (data.marketOverview) {
-        toast.success("تم تطبيق توزيع الوحدات من محرك جويل");
+        toast.success("تم تطبيق توزيع الوحدات من الدراسات والأبحاث");
       } else if (data.competitionPricing) {
-        toast.success("تم تطبيق التسعير من محرك جويل");
+        toast.success("تم تطبيق التسعير من الدراسات والأبحاث");
       } else {
-        toast.info("لا توجد مخرجات جاهزة من محرك جويل — شغّل المحركات أولاً");
+        toast.info("لا توجد مخرجات جاهزة من الدراسات والأبحاث — شغّل المحركات أولاً");
       }
     },
     onError: (err) => toast.error(err.message || "فشل في تطبيق مخرجات جويل"),
@@ -571,7 +571,7 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
             <div className="flex items-center gap-3">
               <img src={JOEL_AVATAR} className="w-10 h-10 rounded-full border-2 border-purple-200" alt="جويل" />
               <div>
-                <h3 className="text-sm font-bold text-purple-800">مخرجات محرك جويل جاهزة</h3>
+                <h3 className="text-sm font-bold text-purple-800">مخرجات الدراسات والأبحاث جاهزة</h3>
                 <div className="flex items-center gap-3 mt-1">
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${joelleStatus?.engine6Ready ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
                     {joelleStatus?.engine6Ready ? "✓" : "○"} محرك 6: استراتيجية المنتج
@@ -611,7 +611,7 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
             {moJoelleSource && (
               <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-700">
                 <img src={JOEL_AVATAR} className="w-5 h-5 rounded-full" alt="" />
-                <span>تم تعبئة هذه الحقول تلقائياً من محرك جويل — يمكنك التعديل يدوياً</span>
+                <span>تم تعبئة هذه الحقول تلقائياً من الدراسات والأبحاث — يمكنك التعديل يدوياً</span>
               </div>
             )}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -672,7 +672,7 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
             {cpJoelleSource && (
               <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-700">
                 <img src={JOEL_AVATAR} className="w-5 h-5 rounded-full" alt="" />
-                <span>تم تعبئة الأسعار تلقائياً من محرك جويل — يمكنك التعديل يدوياً</span>
+                <span>تم تعبئة الأسعار تلقائياً من الدراسات والأبحاث — يمكنك التعديل يدوياً</span>
               </div>
             )}
             {/* Scenario selector */}

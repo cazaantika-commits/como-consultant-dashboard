@@ -180,7 +180,7 @@ export default function SelfLearningPage() {
                   <Brain className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
                   <h3 className="text-lg font-semibold mb-2">لا توجد بيانات دقة بعد</h3>
                   <p className="text-muted-foreground mb-4">
-                    شغّل محرك جويل لإنشاء توقعات، ثم سجّل النتائج الفعلية لبدء التعلم
+                    شغّل الدراسات والأبحاث لإنشاء توقعات، ثم سجّل النتائج الفعلية لبدء التعلم
                   </p>
                   <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                     <div className="flex items-center gap-1 px-3 py-1.5 bg-violet-50 rounded-lg">

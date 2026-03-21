@@ -168,7 +168,7 @@ export default function RiskDashboardPage({ embedded = false, initialProjectId }
                   <div className="text-center">
                     <Shield className="w-10 h-10 mx-auto mb-2 opacity-30" />
                     <p>لا توجد تقييمات مخاطر بعد</p>
-                    <p className="text-xs mt-1">شغّل محرك جويل (المحرك 9) لتقييم المخاطر</p>
+                    <p className="text-xs mt-1">شغّل الدراسات والأبحاث (المحرك 9) لتقييم المخاطر</p>
                   </div>
                 </div>
               )}
@@ -252,7 +252,7 @@ export default function RiskDashboardPage({ embedded = false, initialProjectId }
               <CardContent className="py-16 text-center">
                 <Building2 className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
                 <h3 className="text-lg font-semibold mb-2">لا توجد مشاريع</h3>
-                <p className="text-muted-foreground">أنشئ مشاريع وشغّل محرك جويل لتقييم المخاطر</p>
+                <p className="text-muted-foreground">أنشئ مشاريع وشغّل الدراسات والأبحاث لتقييم المخاطر</p>
               </CardContent>
             </Card>
           ) : (
@@ -394,7 +394,7 @@ function ProjectRiskDetail({ projectId, onClose }: { projectId: number; onClose:
           <div className="py-16 text-center text-muted-foreground">
             <Shield className="w-12 h-12 mx-auto mb-4 opacity-30" />
             <h3 className="text-lg font-semibold mb-2">لم يتم تقييم المخاطر بعد</h3>
-            <p>شغّل محرك جويل (المحرك 9 - تقييم المخاطر) لهذا المشروع</p>
+            <p>شغّل الدراسات والأبحاث (المحرك 9 - تقييم المخاطر) لهذا المشروع</p>
           </div>
         ) : (
           <div className="space-y-6 mt-4">

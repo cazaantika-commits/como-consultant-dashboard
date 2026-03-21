@@ -389,13 +389,13 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="w-full justify-start mb-4 bg-card border border-border h-auto flex-wrap gap-1 p-1">
                 <TabsTrigger value="tab10" className="gap-1.5 text-xs data-[state=active]:bg-gradient-to-l data-[state=active]:from-emerald-600 data-[state=active]:to-teal-600 data-[state=active]:text-white">
-                  📦 بيانات جويل
+                  📦 البيانات والمصادر
                 </TabsTrigger>
                 <TabsTrigger value="tab9" className="gap-1.5 text-xs data-[state=active]:bg-gradient-to-l data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white">
-                  🧠 محرك جويل
+                  🧠 الدراسات والأبحاث
                 </TabsTrigger>
                 <TabsTrigger value="tab5" className="gap-1.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground relative">
-                  💰 الميزانية والتسعير
+                  💰 التسعير والإيرادات
                   {syncStatusQuery.data?.isOutOfSync && (
                     <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-orange-500 rounded-full border border-white" title="بيانات غير متزامنة" />
                   )}
@@ -404,12 +404,12 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
                   ⚙️ إعدادات التدفق
                 </TabsTrigger>
                 <TabsTrigger value="tab_cf_reflection" className="gap-1.5 text-xs data-[state=active]:bg-gradient-to-l data-[state=active]:from-emerald-700 data-[state=active]:to-teal-700 data-[state=active]:text-white">
-                  📊 جدول الانعكاس
+                  📊 التكاليف الكلية للمشروع والجدول الزمني
                 </TabsTrigger>
               </TabsList>
 
               {/* ═══════════════════════════════════════════ */}
-              {/* التبويب الموحد: الميزانية والتسعير */}
+              {/* التبويب الموحد: التسعير والإيرادات */}
               {/* يشمل: توزيع الوحدات + التسعير + التكاليف */}
               {/* ═══════════════════════════════════════════ */}
               <TabsContent value="tab5">

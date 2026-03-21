@@ -171,7 +171,7 @@ export default function CashFlowComparisonPage() {
           <Link href="/cashflow-reflection">
             <button className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors">
               <ArrowRight className="w-4 h-4" />
-              جدول الانعكاس
+              التكاليف الكلية للمشروع والجدول الزمني
             </button>
           </Link>
           <div className="w-px h-5 bg-gray-300" />

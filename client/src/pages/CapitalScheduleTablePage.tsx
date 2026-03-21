@@ -361,7 +361,7 @@ export default function CapitalScheduleTablePage({
             <tr>
               <th style={{ ...S.hPhase, ...S.colDesc }}>البند</th>
               <th style={S.hPhase}>إجمالي التكاليف</th>
-              <th style={S.hPhase}>رأس المال المطلوب</th>
+              <th style={S.hPhase}>خطة رأس مال المشروع</th>
               <th style={S.hPhase}>مدفوع</th>
               {designMonths.length > 0 && (
                 <th style={S.phDesignH} colSpan={designMonths.length}>

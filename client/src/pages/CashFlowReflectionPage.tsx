@@ -1,5 +1,5 @@
 /**
- * CashFlowReflectionPage — جدول انعكاس التدفق النقدي
+ * CashFlowReflectionPage — التكاليف الكلية للمشروع والجدول الزمني
  *
  * Displays the monthly cash flow reflection table: a horizontal Excel-like
  * matrix where rows = cost/revenue items and columns = months.
@@ -207,7 +207,7 @@ export default function CashFlowReflectionPage({
             <div className="flex items-center gap-3">
               <Table2 className="w-6 h-6 text-emerald-600" />
               <div>
-                <h1 className="text-xl font-bold text-gray-900">جدول انعكاس التدفق النقدي</h1>
+                <h1 className="text-xl font-bold text-gray-900">التكاليف الكلية للمشروع والجدول الزمني</h1>
                 <p className="text-sm text-gray-500">توزيع التكاليف والإيرادات الشهري</p>
               </div>
             </div>
@@ -337,7 +337,7 @@ export default function CashFlowReflectionPage({
         {!selectedProjectId && !reflectionQuery.isLoading && (
           <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
             <Building2 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 font-medium">اختر مشروعاً لعرض جدول الانعكاس</p>
+            <p className="text-gray-500 font-medium">اختر مشروعاً لعرض التكاليف الكلية والجدول الزمني</p>
           </div>
         )}
 

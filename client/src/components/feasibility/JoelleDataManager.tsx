@@ -135,7 +135,7 @@ export default function JoelleDataManager({ projectId, community }: { projectId:
     return (
       <div className="text-center py-16 bg-muted/20 rounded-xl border border-dashed border-border">
         <Database className="w-16 h-16 mx-auto mb-4 text-muted-foreground/30" />
-        <p className="text-sm font-medium text-muted-foreground">اختر مشروع لعرض بيانات جويل</p>
+        <p className="text-sm font-medium text-muted-foreground">اختر مشروع لعرض البيانات والمصادر</p>
       </div>
     );
   }
@@ -152,7 +152,7 @@ export default function JoelleDataManager({ projectId, community }: { projectId:
           <div className="flex items-center gap-4 mb-4">
             <img src={JOEL_AVATAR} alt="Joelle" className="w-14 h-14 rounded-full border-2 border-emerald-300/50 shadow-md" />
             <div>
-              <h2 className="text-xl font-bold text-foreground">📦 بيانات محرك جويل</h2>
+              <h2 className="text-xl font-bold text-foreground">📦 بيانات الدراسات والأبحاث</h2>
               <p className="text-sm text-muted-foreground">
                 مصادر البيانات • تدفق المحركات • نتائج التحليل
                 {community && <span className="text-emerald-600 font-medium"> — {community}</span>}

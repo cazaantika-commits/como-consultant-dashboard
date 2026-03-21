@@ -65,7 +65,7 @@ const PHASE_COLORS: Record<string, string> = {
 
 const SOURCE_LABELS: Record<string, string> = {
   investor: "مستثمر",
-  escrow: "حساب الضمان",
+  escrow: "التدفقات النقدية وحساب الضمان",
 };
 
 const DIST_LABELS: Record<string, string> = {

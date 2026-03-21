@@ -3780,9 +3780,9 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
               {feasibilityProjectId && (
                 <div className="flex gap-2 mt-1">
                   {[
-                    { id: "fin" as const, label: "دراسة الجدوى المالية" },
-                    { id: "capital" as const, label: "رأس المال المطلوب" },
-                    { id: "escrow" as const, label: "حساب الضمان" },
+                    { id: "fin" as const, label: "ملخص الجدوى المالية" },
+                    { id: "capital" as const, label: "خطة رأس مال المشروع" },
+                    { id: "escrow" as const, label: "التدفقات النقدية وحساب الضمان" },
                   ].map(tab => (
                     <button
                       key={tab.id}
