@@ -1,0 +1,15 @@
+{
+  "query": "SELECT id, name, financingScenario FROM projects WHERE id = 4;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, name, financingScenario FROM projects WHERE id = 4;",
+  "rows": [
+    {
+      "id": "4",
+      "name": "ند الشبا — قطعة 1 (6185392)",
+      "financingScenario": "offplan_construction"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tfinancingScenario\n4\tند الشبا — قطعة 1 (6185392)\toffplan_construction\n",
+  "stderr": "",
+  "execution_time_ms": 1537
+}
