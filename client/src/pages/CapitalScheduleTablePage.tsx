@@ -590,6 +590,41 @@ export default function CapitalScheduleTablePage({
           <span style={{ color: "#1d4ed8" }}>• مرحلة الأوف بلان (شهر {offplanMonthsAll[0]}–{offplanMonthsAll[offplanMonthsAll.length-1]}) تتداخل كلياً مع مرحلة التصاميم وتُعرض ضمنها في الجدول</span>
         )}
       </div>
+
+      {/* Summary Totals */}
+      <div style={{ marginTop: 24, display: "flex", gap: 16, direction: "rtl", flexWrap: "wrap" }}>
+        {/* Total Project Cost */}
+        <div style={{
+          flex: 1, minWidth: 220,
+          background: "#1a1a2e", color: "#fff",
+          borderRadius: 10, padding: "16px 20px",
+          display: "flex", flexDirection: "column", gap: 6,
+        }}>
+          <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 500 }}>إجمالي التكلفة الكلية للمشروع</div>
+          <div style={{ fontSize: 22, fontWeight: "bold", fontFamily: "monospace", color: "#fbbf24", letterSpacing: 1 }}>
+            {Math.round(grandTotal).toLocaleString("ar-AE")} <span style={{ fontSize: 13, fontWeight: 400, color: "#94a3b8" }}>د.إ</span>
+          </div>
+          <div style={{ fontSize: 10, color: "#64748b" }}>
+            مستثمر: {Math.round(investorTotal + paidTotal).toLocaleString("ar-AE")} + ضمان: {Math.round(escrowTotal).toLocaleString("ar-AE")}
+          </div>
+        </div>
+
+        {/* Required Capital */}
+        <div style={{
+          flex: 1, minWidth: 220,
+          background: "#0f4c81", color: "#fff",
+          borderRadius: 10, padding: "16px 20px",
+          display: "flex", flexDirection: "column", gap: 6,
+        }}>
+          <div style={{ fontSize: 11, color: "#93c5fd", fontWeight: 500 }}>إجمالي رأس المال المطلوب (المستثمر)</div>
+          <div style={{ fontSize: 22, fontWeight: "bold", fontFamily: "monospace", color: "#fff", letterSpacing: 1 }}>
+            {Math.round(investorTotal + paidTotal).toLocaleString("ar-AE")} <span style={{ fontSize: 13, fontWeight: 400, color: "#93c5fd" }}>د.إ</span>
+          </div>
+          <div style={{ fontSize: 10, color: "#93c5fd" }}>
+            مدفوع مسبقاً: {Math.round(paidTotal).toLocaleString("ar-AE")} + خلال المشروع: {Math.round(investorTotal).toLocaleString("ar-AE")}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

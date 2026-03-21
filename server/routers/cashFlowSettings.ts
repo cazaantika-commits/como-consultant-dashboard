@@ -267,25 +267,7 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
       scenarios: offplanScenarios, amountKey: "salesCommission",
     },
 
-    // ═══ الإيرادات ═══
-    {
-      itemKey: "revenue_booking", nameAr: "إيرادات الحجز (20%)", category: "revenue", section: "escrow", sortOrder: 70,
-      fundingSource: "escrow", distributionMethod: "equal_spread",
-      distributeAcrossPhases: ["offplan"],
-      scenarios: offplanScenarios, amountFraction: { of: "constructionCost", ratio: 0 }, // computed from totalRevenue
-    },
-    {
-      itemKey: "revenue_construction", nameAr: "إيرادات مرحلة الإنشاء (30%)", category: "revenue", section: "escrow", sortOrder: 71,
-      fundingSource: "escrow", distributionMethod: "equal_spread",
-      distributeAcrossPhases: ["construction"],
-      scenarios: offplanScenarios, amountFraction: { of: "constructionCost", ratio: 0 },
-    },
-    {
-      itemKey: "revenue_handover", nameAr: "إيرادات التسليم (50%)", category: "revenue", section: "escrow", sortOrder: 72,
-      fundingSource: "escrow", distributionMethod: "lump_sum",
-      phase: "handover", phaseRelativeMonth: 1,
-      scenarios: offplanScenarios, amountFraction: { of: "constructionCost", ratio: 0 },
-    },
+    // الإيرادات أُزيلت — لا علاقة لها بصفحة التكاليف
   ].filter(item => item.scenarios.includes(scenario));
 }
 

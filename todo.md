@@ -272,3 +272,5 @@
 - [ ] Remember last opened project in KnowledgeHubPage and FinancialPlanningHubPage (localStorage)
 - [ ] Fix amount duplication in capital schedule table (computedAmount vs monthly sum mismatch)
 - [ ] Bug: capital schedule table does not reflect updated settings (fundingSource, developer fee %, marketing %) after saving in settings page
+- [ ] Remove revenue items from CashFlowSettingsPage and router defaults
+- [ ] Add total project cost and required capital summary rows at bottom of CapitalScheduleTablePage

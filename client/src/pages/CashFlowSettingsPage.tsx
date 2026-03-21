@@ -502,7 +502,7 @@ export default function CashFlowSettingsPage({
       }
 
       if (data.settings) {
-        setItems(data.settings.map((s: any) => {
+        setItems(data.settings.filter((s: any) => s.category !== "revenue").map((s: any) => {
           // Use section from server (always authoritative — set per item in server defaults)
           const section = (s.section as keyof typeof SECTION_META) || CAT_TO_SECTION[s.category] || "construction";
           // Determine assignedPhase from section (more accurate than category)
