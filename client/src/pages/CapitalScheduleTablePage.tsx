@@ -1,20 +1,10 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import {
-  type PhaseDurations,
   type FinancingScenario,
-  DEFAULT_DURATIONS,
-  calculatePhases,
-  getTotalMonths,
-  distributeExpense,
-  getInvestorExpenses,
-  getEscrowExpenses,
-  getDefaultCustomDistribution,
-  getDefaultRevenue,
   SCENARIO_LABELS,
 } from "@/lib/cashFlowEngine";
-import { calculateProjectCosts } from "@/lib/projectCostsCalc";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -28,32 +18,80 @@ function arabicMonth(n: number): string {
   return "ش" + (nums[n - 1] || n.toString());
 }
 
+// ─── Distribution engine (driven by settings) ────────────────────────────────
+
+/**
+ * Given a settings item and the phase timeline, compute the monthly distribution.
+ * Returns a map of { absoluteMonth: amount }
+ */
+function distributeFromSettings(
+  item: {
+    distributionMethod: string;
+    lumpSumMonth: number | null;
+    startMonth: number | null;
+    endMonth: number | null;
+    customJson: string | null;
+    computedAmount: number;
+    fundingSource: string;
+  },
+  phases: { design: { start: number; duration: number }; offplan: { start: number; duration: number }; construction: { start: number; duration: number }; handover: { start: number; duration: number } },
+): Record<number, number> {
+  const amount = item.computedAmount;
+  if (!amount || amount === 0) return {};
+
+  if (item.distributionMethod === "lump_sum") {
+    const month = item.lumpSumMonth || phases.design.start;
+    return { [month]: amount };
+  }
+
+  if (item.distributionMethod === "equal_spread") {
+    const start = item.startMonth || phases.design.start;
+    const end = item.endMonth || (phases.design.start + phases.design.duration - 1);
+    const months = end - start + 1;
+    if (months <= 0) return { [start]: amount };
+    const perMonth = amount / months;
+    const dist: Record<number, number> = {};
+    for (let m = start; m <= end; m++) {
+      dist[m] = perMonth;
+    }
+    return dist;
+  }
+
+  if (item.distributionMethod === "custom") {
+    if (!item.customJson) return {};
+    try {
+      const custom = JSON.parse(item.customJson) as Record<number, number>;
+      // custom is { month: percentage } where percentages sum to 100
+      const dist: Record<number, number> = {};
+      for (const [mStr, pct] of Object.entries(custom)) {
+        dist[parseInt(mStr)] = amount * (pct / 100);
+      }
+      return dist;
+    } catch {
+      return {};
+    }
+  }
+
+  return {};
+}
+
 // ─── styles matching capital-schedule.html ────────────────────────────────────
 
 const S = {
-  // header rows
   hPhase: { background: "#1a1a2e", color: "#fff", fontWeight: "bold", fontSize: 11, padding: "4px 6px", border: "1px solid #ccc", whiteSpace: "nowrap" as const, textAlign: "center" as const },
   hMonth: { background: "#2d4a7a", color: "#fff", fontSize: 10, padding: "4px 6px", border: "1px solid #ccc", whiteSpace: "nowrap" as const, textAlign: "center" as const },
-
-  // fixed columns
   colDesc: { textAlign: "right" as const, minWidth: 180, background: "#f0f4ff", fontWeight: 500, padding: "4px 6px", border: "1px solid #ccc", whiteSpace: "nowrap" as const, position: "sticky" as const, right: 0, zIndex: 2 },
   colTotal: { minWidth: 90, background: "#fff8e1", fontWeight: "bold", color: "#b45309", padding: "4px 6px", border: "1px solid #ccc", whiteSpace: "nowrap" as const, textAlign: "center" as const, fontFamily: "monospace", fontSize: 10 },
   colInvestor: { minWidth: 90, background: "#fef3c7", fontWeight: "bold", color: "#92400e", padding: "4px 6px", border: "1px solid #ccc", whiteSpace: "nowrap" as const, textAlign: "center" as const, fontFamily: "monospace", fontSize: 10 },
   colPaid: { minWidth: 90, background: "#e8f5e9", color: "#1b5e20", fontWeight: "bold", padding: "4px 6px", border: "1px solid #ccc", whiteSpace: "nowrap" as const, textAlign: "center" as const, fontFamily: "monospace", fontSize: 10 },
-
-  // phase column headers
   phDesignH: { background: "#7c3aed", color: "#fff", padding: "4px 6px", border: "1px solid #ccc", whiteSpace: "nowrap" as const, textAlign: "center" as const, fontWeight: "bold", fontSize: 11 },
   phOffplanH: { background: "#1d4ed8", color: "#fff", padding: "4px 6px", border: "1px solid #ccc", whiteSpace: "nowrap" as const, textAlign: "center" as const, fontWeight: "bold", fontSize: 11 },
   phConstructionH: { background: "#15803d", color: "#fff", padding: "4px 6px", border: "1px solid #ccc", whiteSpace: "nowrap" as const, textAlign: "center" as const, fontWeight: "bold", fontSize: 11 },
   phHandoverH: { background: "#b45309", color: "#fff", padding: "4px 6px", border: "1px solid #ccc", whiteSpace: "nowrap" as const, textAlign: "center" as const, fontWeight: "bold", fontSize: 11 },
-
-  // phase month sub-headers
   phDesignSub: { background: "#ede9fe", padding: "4px 6px", border: "1px solid #ccc", whiteSpace: "nowrap" as const, textAlign: "center" as const, fontSize: 10 },
   phOffplanSub: { background: "#dbeafe", padding: "4px 6px", border: "1px solid #ccc", whiteSpace: "nowrap" as const, textAlign: "center" as const, fontSize: 10 },
   phConstructionSub: { background: "#dcfce7", padding: "4px 6px", border: "1px solid #ccc", whiteSpace: "nowrap" as const, textAlign: "center" as const, fontSize: 10 },
   phHandoverSub: { background: "#fef3c7", padding: "4px 6px", border: "1px solid #ccc", whiteSpace: "nowrap" as const, textAlign: "center" as const, fontSize: 10 },
-
-  // data cells
   numCell: { fontFamily: "monospace", fontSize: 10, padding: "4px 6px", border: "1px solid #ccc", textAlign: "center" as const, whiteSpace: "nowrap" as const },
   numCellDesign: { fontFamily: "monospace", fontSize: 10, padding: "4px 6px", border: "1px solid #ccc", textAlign: "center" as const, whiteSpace: "nowrap" as const, background: "#ede9fe" },
   numCellOffplan: { fontFamily: "monospace", fontSize: 10, padding: "4px 6px", border: "1px solid #ccc", textAlign: "center" as const, whiteSpace: "nowrap" as const, background: "#dbeafe" },
@@ -61,16 +99,10 @@ const S = {
   numCellHandover: { fontFamily: "monospace", fontSize: 10, padding: "4px 6px", border: "1px solid #ccc", textAlign: "center" as const, whiteSpace: "nowrap" as const, background: "#fef3c7" },
   numCellEscrow: { fontFamily: "monospace", fontSize: 10, padding: "4px 6px", border: "1px solid #ccc", textAlign: "center" as const, whiteSpace: "nowrap" as const, background: "#dbeafe" },
   numCellValue: { fontFamily: "monospace", fontSize: 10, padding: "4px 6px", border: "1px solid #ccc", textAlign: "center" as const, whiteSpace: "nowrap" as const, background: "#fffbeb" },
-
-  // section header row
   sectionHeader: { background: "#e2e8f0", fontWeight: "bold", fontSize: 11, color: "#334155", textAlign: "right" as const, padding: "4px 6px", border: "1px solid #ccc" },
-
-  // total row
   totalRow: { background: "#1a1a2e", color: "#fff", fontWeight: "bold", fontFamily: "monospace", fontSize: 10, padding: "4px 6px", border: "1px solid #ccc", textAlign: "center" as const, whiteSpace: "nowrap" as const },
   totalRowDesc: { background: "#1a1a2e", color: "#fff", fontWeight: "bold", padding: "4px 6px", border: "1px solid #ccc", textAlign: "right" as const, whiteSpace: "nowrap" as const, position: "sticky" as const, right: 0, zIndex: 2 },
   totalRowNum: { background: "#1a1a2e", color: "#fbbf24", fontFamily: "monospace", fontSize: 10, padding: "4px 6px", border: "1px solid #ccc", textAlign: "center" as const, whiteSpace: "nowrap" as const },
-
-  // cumulative row
   cumRow: { background: "#f0f4ff", fontFamily: "monospace", fontSize: 10, padding: "4px 6px", border: "1px solid #ccc", textAlign: "center" as const, whiteSpace: "nowrap" as const },
   cumRowDesc: { background: "#f0f4ff", fontWeight: "bold", color: "#1a1a2e", padding: "4px 6px", border: "1px solid #ccc", textAlign: "right" as const, whiteSpace: "nowrap" as const, position: "sticky" as const, right: 0, zIndex: 2 },
 };
@@ -95,14 +127,6 @@ export default function CapitalScheduleTablePage({
   const selectedProjectId = localProjectId;
   const selectedProject = (projectsQuery.data || []).find((p: any) => p.id === selectedProjectId);
 
-  const moQuery = trpc.marketOverview.getByProject.useQuery(selectedProjectId || 0, { enabled: !!selectedProjectId, staleTime: 5000 });
-  const cpQuery = trpc.competitionPricing.getByProject.useQuery(selectedProjectId || 0, { enabled: !!selectedProjectId, staleTime: 5000 });
-
-  const projectCosts = useMemo(() => {
-    if (!selectedProject) return null;
-    return calculateProjectCosts(selectedProject, moQuery.data, cpQuery.data);
-  }, [selectedProject, moQuery.data, cpQuery.data]);
-
   // Scenario
   const scenariosQuery = trpc.cashFlowProgram.getProjectScenarios.useQuery(undefined, { enabled: isAuthenticated, staleTime: 5000 });
   const updateScenarioMutation = trpc.cashFlowProgram.updateProjectScenario.useMutation({
@@ -114,98 +138,97 @@ export default function CapitalScheduleTablePage({
     updateScenarioMutation.mutate({ projectId: selectedProjectId, scenario: s });
   };
 
-  // Durations from project or defaults
-  const durations: PhaseDurations = useMemo(() => {
-    if (selectedProject?.designMonths || selectedProject?.constructionMonths) {
-      return {
-        design: selectedProject.designMonths || DEFAULT_DURATIONS.design,
-        offplan: 2,
-        construction: selectedProject.constructionMonths || DEFAULT_DURATIONS.construction,
-        handover: selectedProject.handoverMonths || DEFAULT_DURATIONS.handover,
-      };
+  // Load settings from cashFlowSettings (the source of truth for distribution)
+  const settingsQuery = trpc.cashFlowSettings.getSettings.useQuery(
+    { projectId: selectedProjectId || 0, scenario: scenario as any },
+    { enabled: !!selectedProjectId, staleTime: 3000 }
+  );
+
+  const settingsData = settingsQuery.data;
+
+  // Build phase timeline from settings response (uses saved durations)
+  const phases = useMemo(() => {
+    if (!settingsData) return { design: { start: 1, duration: 6 }, offplan: { start: 3, duration: 2 }, construction: { start: 7, duration: 16 }, handover: { start: 23, duration: 2 } };
+    return settingsData.phases;
+  }, [settingsData]);
+
+  const totalMonths = useMemo(() => {
+    const p = phases;
+    return p.design.duration + p.construction.duration + p.handover.duration;
+  }, [phases]);
+
+  // Build month arrays per phase
+  const designMonths = useMemo(() =>
+    Array.from({ length: phases.design.duration }, (_, i) => phases.design.start + i),
+    [phases]
+  );
+  const offplanMonths = useMemo(() =>
+    phases.offplan.duration > 0
+      ? Array.from({ length: phases.offplan.duration }, (_, i) => phases.offplan.start + i)
+      : [],
+    [phases]
+  );
+  const constructionMonths = useMemo(() =>
+    Array.from({ length: phases.construction.duration }, (_, i) => phases.construction.start + i),
+    [phases]
+  );
+  const handoverMonths = useMemo(() =>
+    phases.handover.duration > 0
+      ? Array.from({ length: phases.handover.duration }, (_, i) => phases.handover.start + i)
+      : [],
+    [phases]
+  );
+  const allMonths = useMemo(() =>
+    [...designMonths, ...offplanMonths, ...constructionMonths, ...handoverMonths],
+    [designMonths, offplanMonths, constructionMonths, handoverMonths]
+  );
+
+  // Separate items by section and funding source
+  const allItems = useMemo(() => settingsData?.settings || [], [settingsData]);
+
+  const paidItems = useMemo(() => allItems.filter((s: any) => s.section === "paid"), [allItems]);
+  const designItems = useMemo(() => allItems.filter((s: any) => s.section === "design" && s.fundingSource === "investor"), [allItems]);
+  const offplanItems = useMemo(() => allItems.filter((s: any) => s.section === "offplan" && s.fundingSource === "investor"), [allItems]);
+  const constructionItems = useMemo(() => allItems.filter((s: any) => s.section === "construction" && s.fundingSource === "investor"), [allItems]);
+  const escrowItems = useMemo(() => allItems.filter((s: any) => s.fundingSource === "escrow"), [allItems]);
+
+  // Compute monthly distributions for each item
+  const itemMonthly = useMemo(() => {
+    const result: Record<string, Record<number, number>> = {};
+    for (const item of allItems) {
+      if (item.section === "paid") {
+        result[item.itemKey] = {}; // paid items have no monthly distribution
+      } else {
+        result[item.itemKey] = distributeFromSettings(item, phases);
+      }
     }
-    return { ...DEFAULT_DURATIONS };
-  }, [selectedProject]);
+    return result;
+  }, [allItems, phases]);
 
-  const phases = useMemo(() => calculatePhases(durations), [durations]);
-  const totalMonths = useMemo(() => getTotalMonths(durations), [durations]);
-
-  // Investor expenses + distributions
-  const investorExpenses = useMemo(() => getInvestorExpenses(projectCosts || undefined, scenario), [projectCosts, scenario]);
-  const escrowExpenses = useMemo(() => getEscrowExpenses(projectCosts || undefined, scenario), [projectCosts, scenario]);
-
-  const defaultRevenue = useMemo(() => getDefaultRevenue(phases, durations, projectCosts?.totalRevenue), [phases, durations, projectCosts]);
-
-  const investorMonthly = useMemo(() => {
-    return investorExpenses.map(item => {
-      if (item.behavior === "FIXED_ABSOLUTE") return {};
-      if (item.behavior === "CUSTOM" && !item.customDistribution) {
-        return getDefaultCustomDistribution(item.id, phases, durations, projectCosts || undefined);
-      }
-      return distributeExpense(item, phases, durations, defaultRevenue);
-    });
-  }, [investorExpenses, phases, durations, defaultRevenue, projectCosts]);
-
-  const escrowMonthly = useMemo(() => {
-    return escrowExpenses.map(item => {
-      if (item.behavior === "CUSTOM" && !item.customDistribution) {
-        return getDefaultCustomDistribution(item.id, phases, durations, projectCosts || undefined);
-      }
-      return distributeExpense(item, phases, durations, defaultRevenue);
-    });
-  }, [escrowExpenses, phases, durations, defaultRevenue, projectCosts]);
-
-  // Build month columns per phase
-  const designMonths = useMemo(() => {
-    const start = phases.find(p => p.type === "design")?.startMonth || 1;
-    return Array.from({ length: durations.design }, (_, i) => start + i);
-  }, [phases, durations]);
-
-  const offplanMonths = useMemo(() => {
-    const p = phases.find(p => p.type === "offplan");
-    if (!p) return [];
-    return Array.from({ length: p.duration }, (_, i) => p.startMonth + i);
-  }, [phases]);
-
-  const constructionMonths = useMemo(() => {
-    const p = phases.find(p => p.type === "construction");
-    if (!p) return [];
-    return Array.from({ length: p.duration }, (_, i) => p.startMonth + i);
-  }, [phases]);
-
-  const handoverMonths = useMemo(() => {
-    const p = phases.find(p => p.type === "handover");
-    if (!p || p.duration === 0) return [];
-    return Array.from({ length: p.duration }, (_, i) => p.startMonth + i);
-  }, [phases]);
-
-  const allMonths = useMemo(() => [...designMonths, ...offplanMonths, ...constructionMonths, ...handoverMonths], [designMonths, offplanMonths, constructionMonths, handoverMonths]);
-
-  // Per-month totals (investor only, for total row)
+  // Per-month totals
   const monthInvestorTotals = useMemo(() => {
     const totals: Record<number, number> = {};
-    investorExpenses.forEach((item, idx) => {
-      if (item.behavior === "FIXED_ABSOLUTE") return;
-      const monthly = investorMonthly[idx];
+    for (const item of [...designItems, ...offplanItems, ...constructionItems]) {
+      const monthly = itemMonthly[item.itemKey] || {};
       for (const [mStr, val] of Object.entries(monthly)) {
         const m = parseInt(mStr);
-        totals[m] = (totals[m] || 0) + val;
+        totals[m] = (totals[m] || 0) + (val as number);
       }
-    });
+    }
     return totals;
-  }, [investorExpenses, investorMonthly]);
+  }, [designItems, offplanItems, constructionItems, itemMonthly]);
 
   const monthEscrowTotals = useMemo(() => {
     const totals: Record<number, number> = {};
-    escrowExpenses.forEach((_, idx) => {
-      const monthly = escrowMonthly[idx];
+    for (const item of escrowItems) {
+      const monthly = itemMonthly[item.itemKey] || {};
       for (const [mStr, val] of Object.entries(monthly)) {
         const m = parseInt(mStr);
-        totals[m] = (totals[m] || 0) + val;
+        totals[m] = (totals[m] || 0) + (val as number);
       }
-    });
+    }
     return totals;
-  }, [escrowExpenses, escrowMonthly]);
+  }, [escrowItems, itemMonthly]);
 
   const monthAllTotals = useMemo(() => {
     const totals: Record<number, number> = {};
@@ -215,39 +238,24 @@ export default function CapitalScheduleTablePage({
     return totals;
   }, [allMonths, monthInvestorTotals, monthEscrowTotals]);
 
-  // Cumulative investor (running sum)
+  // Grand totals
+  const paidTotal = useMemo(() => paidItems.reduce((s: number, e: any) => s + (e.computedAmount || 0), 0), [paidItems]);
+  const investorTotal = useMemo(() => allItems.filter((i: any) => i.fundingSource === "investor").reduce((s: number, e: any) => s + (e.computedAmount || 0), 0), [allItems]);
+  const escrowTotal = useMemo(() => escrowItems.reduce((s: number, e: any) => s + (e.computedAmount || 0), 0), [escrowItems]);
+  const grandTotal = useMemo(() => investorTotal + escrowTotal, [investorTotal, escrowTotal]);
+
+  // Cumulative investor
   const cumulativeInvestor = useMemo(() => {
-    const landTotal = investorExpenses.filter(e => e.behavior === "FIXED_ABSOLUTE").reduce((s, e) => s + e.total, 0);
-    let running = landTotal;
+    let running = paidTotal;
     const cum: Record<number, number> = {};
     for (const m of allMonths) {
       running += (monthInvestorTotals[m] || 0);
       cum[m] = running;
     }
-    return { landTotal, monthly: cum };
-  }, [allMonths, monthInvestorTotals, investorExpenses]);
+    return { landTotal: paidTotal, monthly: cum };
+  }, [allMonths, monthInvestorTotals, paidTotal]);
 
-  // Grand totals
-  const grandTotalCosts = useMemo(() => {
-    const investorTotal = investorExpenses.reduce((s, e) => s + e.total, 0);
-    const escrowTotal = escrowExpenses.reduce((s, e) => s + e.total, 0);
-    return investorTotal + escrowTotal;
-  }, [investorExpenses, escrowExpenses]);
-
-  const grandInvestorTotal = useMemo(() => investorExpenses.reduce((s, e) => s + e.total, 0), [investorExpenses]);
-  const paidTotal = useMemo(() => investorExpenses.filter(e => e.behavior === "FIXED_ABSOLUTE").reduce((s, e) => s + e.total, 0), [investorExpenses]);
-
-  // Helper: get value for a cell
-  function getInvestorVal(itemIdx: number, month: number): number {
-    const item = investorExpenses[itemIdx];
-    if (item.behavior === "FIXED_ABSOLUTE") return 0;
-    return investorMonthly[itemIdx][month] || 0;
-  }
-
-  function getEscrowVal(itemIdx: number, month: number): number {
-    return escrowMonthly[itemIdx][month] || 0;
-  }
-
+  // Phase helpers
   function phaseOf(m: number): "design" | "offplan" | "construction" | "handover" {
     if (designMonths.includes(m)) return "design";
     if (offplanMonths.includes(m)) return "offplan";
@@ -278,6 +286,12 @@ export default function CapitalScheduleTablePage({
     return S.phHandoverSub;
   }
 
+  function getVal(itemKey: string, month: number): number {
+    return itemMonthly[itemKey]?.[month] || 0;
+  }
+
+  // ─── Render ───────────────────────────────────────────────────────────────
+
   if (!selectedProjectId) {
     return (
       <div style={{ padding: 20, textAlign: "center", direction: "rtl" }}>
@@ -287,15 +301,14 @@ export default function CapitalScheduleTablePage({
     );
   }
 
-  // Section groupings
-  const landItems = investorExpenses.filter(e => e.phase === "land");
-  const designItems = investorExpenses.filter(e => e.phase === "design" || (e.phase !== "land" && e.behavior !== "FIXED_ABSOLUTE" && ["soil_test","survey","design_fee","developer_fee"].includes(e.id)));
-  // Sections by id groups matching the HTML
-  const section1 = investorExpenses.filter(e => e.behavior === "FIXED_ABSOLUTE"); // paid/land
-  const section2 = investorExpenses.filter(e => ["soil_test","survey","gov_fees_design","design_fee","developer_fee","community_fee_design"].includes(e.id) || (e.phase === "design" && e.behavior !== "FIXED_ABSOLUTE" && e.table === "investor"));
-  const section3 = investorExpenses.filter(e => ["fraz_fee","rera_registration","rera_units","surveyor_fee","noc_fee","escrow_fee","community_fee","escrow_deposit","contractor_20pct_m1","contractor_20pct_m2","contractor_20pct_m3"].includes(e.id));
-  const section4 = investorExpenses.filter(e => ["contractor_advance","bank_fees","contingency","marketing"].includes(e.id));
-  const section5 = escrowExpenses; // escrow items
+  if (settingsQuery.isLoading) {
+    return (
+      <div style={{ padding: 20, textAlign: "center", direction: "rtl" }}>
+        <div style={{ fontSize: 32, opacity: 0.3, marginBottom: 8 }}>⏳</div>
+        <p style={{ color: "#9ca3af" }}>جارٍ تحميل البيانات...</p>
+      </div>
+    );
+  }
 
   return (
     <div style={{ direction: "rtl", fontFamily: "'Segoe UI', Tahoma, sans-serif", fontSize: 11, background: "#f5f5f5", padding: embedded ? 8 : 20 }}>
@@ -304,35 +317,42 @@ export default function CapitalScheduleTablePage({
         <h2 style={{ fontSize: 16, marginBottom: 4, color: "#1a1a2e" }}>
           جدولة رأس المال — {selectedProject?.name || "المشروع"}
         </h2>
-        <p style={{ fontSize: 11, color: "#666" }}>مسودة توزيع المصاريف على المراحل الزمنية | المبالغ بالدرهم الإماراتي</p>
+        <p style={{ fontSize: 11, color: "#666" }}>توزيع المصاريف على المراحل الزمنية حسب إعدادات التدفق | المبالغ بالدرهم الإماراتي</p>
+        {!settingsData?.hasSavedSettings && (
+          <p style={{ fontSize: 10, color: "#b45309", background: "#fef3c7", padding: "4px 8px", borderRadius: 4, display: "inline-block", marginTop: 4 }}>
+            ⚠️ يستخدم الإعدادات الافتراضية — اذهب إلى تبويب "إعدادات التدفق" لتخصيص التوزيع
+          </p>
+        )}
       </div>
 
       {/* Scenario selector */}
-      <div style={{ marginBottom: 12, display: "flex", gap: 8, alignItems: "center" }}>
-        <span style={{ fontSize: 11, color: "#555", fontWeight: "bold" }}>السيناريو:</span>
-        {(Object.entries(SCENARIO_LABELS) as [FinancingScenario, string][]).map(([key, label]) => (
-          <button
-            key={key}
-            onClick={() => setScenario(key)}
-            style={{
-              fontSize: 10,
-              fontWeight: "bold",
-              padding: "4px 10px",
-              borderRadius: 6,
-              border: "none",
-              cursor: "pointer",
-              background: scenario === key
-                ? key === "offplan_escrow" ? "#7c3aed"
-                : key === "offplan_construction" ? "#1d4ed8"
-                : "#15803d"
-                : "#e5e7eb",
-              color: scenario === key ? "#fff" : "#374151",
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      {!embedded && (
+        <div style={{ marginBottom: 12, display: "flex", gap: 8, alignItems: "center" }}>
+          <span style={{ fontSize: 11, color: "#555", fontWeight: "bold" }}>السيناريو:</span>
+          {(Object.entries(SCENARIO_LABELS) as [FinancingScenario, string][]).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setScenario(key)}
+              style={{
+                fontSize: 10,
+                fontWeight: "bold",
+                padding: "4px 10px",
+                borderRadius: 6,
+                border: "none",
+                cursor: "pointer",
+                background: scenario === key
+                  ? key === "offplan_escrow" ? "#7c3aed"
+                  : key === "offplan_construction" ? "#1d4ed8"
+                  : "#15803d"
+                  : "#e5e7eb",
+                color: scenario === key ? "#fff" : "#374151",
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div style={{ overflowX: "auto" }}>
         <table style={{ borderCollapse: "collapse", minWidth: "100%", background: "#fff" }}>
@@ -345,22 +365,22 @@ export default function CapitalScheduleTablePage({
               <th style={S.hPhase}>مدفوع</th>
               {designMonths.length > 0 && (
                 <th style={S.phDesignH} colSpan={designMonths.length}>
-                  المرحلة 2 — التصاميم ({durations.design} أشهر)
+                  المرحلة 2 — التصاميم ({phases.design.duration} أشهر)
                 </th>
               )}
               {offplanMonths.length > 0 && (
                 <th style={S.phOffplanH} colSpan={offplanMonths.length}>
-                  المرحلة 3 — أوف بلان ({durations.offplan} شهر)
+                  المرحلة 3 — أوف بلان ({phases.offplan.duration} شهر)
                 </th>
               )}
               {constructionMonths.length > 0 && (
                 <th style={S.phConstructionH} colSpan={constructionMonths.length}>
-                  المرحلة 4 — الإنشاء ({durations.construction} شهر)
+                  المرحلة 4 — الإنشاء ({phases.construction.duration} شهر)
                 </th>
               )}
               {handoverMonths.length > 0 && (
                 <th style={S.phHandoverH} colSpan={handoverMonths.length}>
-                  المرحلة 5 — التسليم ({durations.handover} شهر)
+                  المرحلة 5 — التسليم ({phases.handover.duration} شهر)
                 </th>
               )}
             </tr>
@@ -389,12 +409,12 @@ export default function CapitalScheduleTablePage({
             <tr>
               <td colSpan={4 + allMonths.length} style={S.sectionHeader}>القسم الأول — المبالغ المدفوعة (الأرض)</td>
             </tr>
-            {section1.map((item, idx) => (
-              <tr key={item.id}>
-                <td style={S.colDesc}>{item.name}</td>
-                <td style={S.colTotal}>{fmt(item.total)}</td>
-                <td style={S.colInvestor}>{fmt(item.total)}</td>
-                <td style={S.colPaid}>{fmt(item.total)}</td>
+            {paidItems.map((item: any) => (
+              <tr key={item.itemKey}>
+                <td style={S.colDesc}>{item.nameAr}</td>
+                <td style={S.colTotal}>{fmt(item.computedAmount)}</td>
+                <td style={S.colInvestor}>{fmt(item.computedAmount)}</td>
+                <td style={S.colPaid}>{fmt(item.computedAmount)}</td>
                 {allMonths.map(m => (
                   <td key={m} style={{ ...cellStyle(m), color: "#ccc" }}>—</td>
                 ))}
@@ -405,81 +425,75 @@ export default function CapitalScheduleTablePage({
             <tr>
               <td colSpan={4 + allMonths.length} style={S.sectionHeader}>القسم الثاني — التصاميم ورخصة البناء</td>
             </tr>
-            {section2.map((item) => {
-              const idx = investorExpenses.findIndex(e => e.id === item.id);
-              const rowTotal = Object.values(investorMonthly[idx] || {}).reduce((s, v) => s + v, 0);
-              return (
-                <tr key={item.id}>
-                  <td style={S.colDesc}>{item.name}</td>
-                  <td style={S.colTotal}>{fmt(item.total)}</td>
-                  <td style={S.colInvestor}>{fmt(item.total)}</td>
-                  <td style={S.colPaid}>—</td>
-                  {allMonths.map(m => {
-                    const val = getInvestorVal(idx, m);
-                    return <td key={m} style={numStyle(m, val)}>{fmt(val)}</td>;
-                  })}
-                </tr>
-              );
-            })}
+            {designItems.map((item: any) => (
+              <tr key={item.itemKey}>
+                <td style={S.colDesc}>{item.nameAr}</td>
+                <td style={S.colTotal}>{fmt(item.computedAmount)}</td>
+                <td style={S.colInvestor}>{fmt(item.computedAmount)}</td>
+                <td style={S.colPaid}>—</td>
+                {allMonths.map(m => {
+                  const val = getVal(item.itemKey, m);
+                  return <td key={m} style={numStyle(m, val)}>{fmt(val)}</td>;
+                })}
+              </tr>
+            ))}
 
             {/* ── SECTION 3: OFFPLAN / RERA ── */}
-            {section3.length > 0 && (
+            {offplanItems.length > 0 && (
               <>
                 <tr>
                   <td colSpan={4 + allMonths.length} style={S.sectionHeader}>القسم الثالث — ريرا والبيع أوف بلان</td>
                 </tr>
-                {section3.map((item) => {
-                  const idx = investorExpenses.findIndex(e => e.id === item.id);
-                  return (
-                    <tr key={item.id}>
-                      <td style={S.colDesc}>{item.name}</td>
-                      <td style={S.colTotal}>{fmt(item.total)}</td>
-                      <td style={S.colInvestor}>{fmt(item.total)}</td>
-                      <td style={S.colPaid}>—</td>
-                      {allMonths.map(m => {
-                        const val = getInvestorVal(idx, m);
-                        return <td key={m} style={numStyle(m, val)}>{fmt(val)}</td>;
-                      })}
-                    </tr>
-                  );
-                })}
+                {offplanItems.map((item: any) => (
+                  <tr key={item.itemKey}>
+                    <td style={S.colDesc}>{item.nameAr}</td>
+                    <td style={S.colTotal}>{fmt(item.computedAmount)}</td>
+                    <td style={S.colInvestor}>{fmt(item.computedAmount)}</td>
+                    <td style={S.colPaid}>—</td>
+                    {allMonths.map(m => {
+                      const val = getVal(item.itemKey, m);
+                      return <td key={m} style={numStyle(m, val)}>{fmt(val)}</td>;
+                    })}
+                  </tr>
+                ))}
               </>
             )}
 
             {/* ── SECTION 4: CONSTRUCTION (investor) ── */}
-            <tr>
-              <td colSpan={4 + allMonths.length} style={S.sectionHeader}>القسم الرابع — الإنشاء (حصة المستثمر فقط)</td>
-            </tr>
-            {section4.map((item) => {
-              const idx = investorExpenses.findIndex(e => e.id === item.id);
-              return (
-                <tr key={item.id}>
-                  <td style={S.colDesc}>{item.name}</td>
-                  <td style={S.colTotal}>{fmt(item.total)}</td>
-                  <td style={S.colInvestor}>{fmt(item.total)}</td>
-                  <td style={S.colPaid}>—</td>
-                  {allMonths.map(m => {
-                    const val = getInvestorVal(idx, m);
-                    return <td key={m} style={numStyle(m, val)}>{fmt(val)}</td>;
-                  })}
+            {constructionItems.length > 0 && (
+              <>
+                <tr>
+                  <td colSpan={4 + allMonths.length} style={S.sectionHeader}>القسم الرابع — الإنشاء (حصة المستثمر فقط)</td>
                 </tr>
-              );
-            })}
+                {constructionItems.map((item: any) => (
+                  <tr key={item.itemKey}>
+                    <td style={S.colDesc}>{item.nameAr}</td>
+                    <td style={S.colTotal}>{fmt(item.computedAmount)}</td>
+                    <td style={S.colInvestor}>{fmt(item.computedAmount)}</td>
+                    <td style={S.colPaid}>—</td>
+                    {allMonths.map(m => {
+                      const val = getVal(item.itemKey, m);
+                      return <td key={m} style={numStyle(m, val)}>{fmt(val)}</td>;
+                    })}
+                  </tr>
+                ))}
+              </>
+            )}
 
             {/* ── SECTION 5: ESCROW ── */}
-            {section5.length > 0 && (
+            {escrowItems.length > 0 && (
               <>
                 <tr>
                   <td colSpan={4 + allMonths.length} style={S.sectionHeader}>من حساب الضمان (تُدفع من إيرادات المشترين)</td>
                 </tr>
-                {section5.map((item, idx) => (
-                  <tr key={item.id}>
-                    <td style={S.colDesc}>{item.name}</td>
-                    <td style={S.colTotal}>{fmt(item.total)}</td>
+                {escrowItems.map((item: any) => (
+                  <tr key={item.itemKey}>
+                    <td style={S.colDesc}>{item.nameAr}</td>
+                    <td style={S.colTotal}>{fmt(item.computedAmount)}</td>
                     <td style={{ ...S.colInvestor, color: "#1d4ed8" }}>من الضمان</td>
                     <td style={S.colPaid}>—</td>
                     {allMonths.map(m => {
-                      const val = getEscrowVal(idx, m);
+                      const val = getVal(item.itemKey, m);
                       return <td key={m} style={numStyle(m, val, true)}>{fmt(val)}</td>;
                     })}
                   </tr>
@@ -490,8 +504,8 @@ export default function CapitalScheduleTablePage({
             {/* ── TOTAL ROW ── */}
             <tr>
               <td style={S.totalRowDesc}>إجمالي الشهر</td>
-              <td style={S.totalRow}>{fmt(grandTotalCosts)}</td>
-              <td style={S.totalRow}>{fmt(grandInvestorTotal)}</td>
+              <td style={S.totalRow}>{fmt(grandTotal)}</td>
+              <td style={S.totalRow}>{fmt(investorTotal)}</td>
               <td style={S.totalRow}>{fmt(paidTotal)}</td>
               {allMonths.map(m => (
                 <td key={m} style={S.totalRowNum}>{fmt(monthAllTotals[m] || 0)}</td>
@@ -524,7 +538,7 @@ export default function CapitalScheduleTablePage({
         • صف "إجمالي الشهر" يجمع المستثمر + الضمان معاً<br />
         • صف "إجمالي تراكمي" يتتبع رأس المال المطلوب من المستثمر فقط<br />
         • المبالغ المدفوعة = الأرض وما سبق (لا تاريخ محدد)<br />
-        • هذه مسودة — الأرقام قابلة للتعديل
+        • التوزيع الشهري يعتمد على إعدادات التدفق المحفوظة — عدّل التوزيع من تبويب "إعدادات التدفق"
       </div>
     </div>
   );

@@ -204,13 +204,65 @@ function CustomPercentagesEditor({
 
 // ─── ItemRow ──────────────────────────────────────────────────────────────────
 
+function DistributionPreview({
+  method,
+  phaseStart,
+  phaseDuration,
+  phaseMonth,
+  customPercentages,
+  amount,
+}: {
+  method: DistributionMethod;
+  phaseStart: number;
+  phaseDuration: number;
+  phaseMonth: number;
+  customPercentages: number[];
+  amount: number;
+}) {
+  if (!amount || amount === 0) return null;
+
+  const months: { month: number; value: number }[] = [];
+
+  if (method === "lump_sum") {
+    const absMonth = phaseStart + phaseMonth - 1;
+    months.push({ month: absMonth, value: amount });
+  } else if (method === "equal_spread") {
+    const perMonth = amount / phaseDuration;
+    for (let i = 0; i < phaseDuration; i++) {
+      months.push({ month: phaseStart + i, value: perMonth });
+    }
+  } else if (method === "custom") {
+    const pct = Array.from({ length: phaseDuration }, (_, i) => customPercentages[i] ?? 0);
+    for (let i = 0; i < phaseDuration; i++) {
+      if (pct[i] > 0) {
+        months.push({ month: phaseStart + i, value: amount * pct[i] / 100 });
+      }
+    }
+  }
+
+  if (months.length === 0) return null;
+
+  return (
+    <div className="mt-1.5 flex flex-wrap gap-1">
+      {months.map(({ month, value }) => (
+        <div key={month} className="flex items-center gap-0.5 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5">
+          <span className="text-xs text-emerald-700 font-medium">ش{month}</span>
+          <span className="text-xs text-emerald-600">: {value.toLocaleString("ar-AE", { maximumFractionDigits: 0 })}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ItemRow({
   item,
   phaseDuration,
+  phaseStart,
   onUpdate,
 }: {
   item: SettingItem;
   phaseDuration: number;
+  phaseStart: number;
   onUpdate: (updates: Partial<SettingItem>) => void;
 }) {
   const [showCustom, setShowCustom] = useState(false);
@@ -327,6 +379,16 @@ function ItemRow({
                 onChange={(p) => onUpdate({ customPercentages: p })}
               />
             )}
+
+            {/* Distribution preview */}
+            <DistributionPreview
+              method={item.distributionMethod}
+              phaseStart={phaseStart}
+              phaseDuration={phaseDuration}
+              phaseMonth={item.phaseMonth}
+              customPercentages={item.customPercentages}
+              amount={item.computedAmount}
+            />
           </div>
         )}
       </td>
@@ -742,14 +804,24 @@ export default function CashFlowSettingsPage({
                         </tr>
                       </thead>
                       <tbody>
-                        {sectionItems.map(item => (
+                        {sectionItems.map(item => {
+                          const phaseStart = (() => {
+                            if (item.assignedPhase === "design") return 1;
+                            if (item.assignedPhase === "offplan") return durations.design + 1;
+                            if (item.assignedPhase === "construction") return durations.design + 3;
+                            if (item.assignedPhase === "handover") return durations.design + 3 + durations.construction;
+                            return 1;
+                          })();
+                          return (
                           <ItemRow
                             key={item.itemKey}
                             item={item}
                             phaseDuration={getPhaseDuration(item.assignedPhase)}
+                            phaseStart={phaseStart}
                             onUpdate={(updates) => updateItem(item.itemKey, updates)}
                           />
-                        ))}
+                           );
+                        })}
                       </tbody>
                     </table>
                   </div>
