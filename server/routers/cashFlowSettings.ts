@@ -137,7 +137,7 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
     },
     {
       itemKey: "developer_fee_offplan", nameAr: "أتعاب المطور — أوف بلان (1%)", category: "developer_fee", section: "offplan", sortOrder: 14,
-      fundingSource: "investor", distributionMethod: "equal_spread",
+      fundingSource: "escrow", distributionMethod: "equal_spread",
       distributeAcrossPhases: ["offplan"],
       scenarios: offplanScenarios, amountKey: "developerFee",
       splitRatio: [{ phase: "offplan", ratio: 0.2 }],
@@ -146,50 +146,50 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
     // ═══ تسجيل أوف بلان ═══
     {
       itemKey: "fraz_fee", nameAr: "رسوم الفرز (40 د/قدم²)", category: "offplan_reg", section: "offplan", sortOrder: 20,
-      fundingSource: "investor", distributionMethod: "lump_sum",
+      fundingSource: "escrow", distributionMethod: "lump_sum",
       phase: scenario === "no_offplan" ? "construction" : (scenario === "offplan_construction" ? "construction" : "offplan"),
       phaseRelativeMonth: scenario === "offplan_escrow" ? 1 : 3,
       scenarios: allScenarios, amountKey: "separationFee",
     },
     {
       itemKey: "rera_registration", nameAr: "تسجيل بيع على الخارطة - ريرا", category: "offplan_reg", section: "offplan", sortOrder: 21,
-      fundingSource: "investor", distributionMethod: "lump_sum",
+      fundingSource: "escrow", distributionMethod: "lump_sum",
       phase: scenario === "offplan_escrow" ? "offplan" : "construction",
       phaseRelativeMonth: scenario === "offplan_escrow" ? 1 : 3,
       scenarios: offplanScenarios, amountKey: "reraProjectRegFee",
     },
     {
       itemKey: "rera_units", nameAr: "تسجيل الوحدات - ريرا", category: "offplan_reg", section: "offplan", sortOrder: 22,
-      fundingSource: "investor", distributionMethod: "lump_sum",
+      fundingSource: "escrow", distributionMethod: "lump_sum",
       phase: scenario === "offplan_escrow" ? "offplan" : "construction",
       phaseRelativeMonth: scenario === "offplan_escrow" ? 1 : 3,
       scenarios: offplanScenarios, amountKey: "reraUnitRegFee",
     },
     {
       itemKey: "noc_fee", nameAr: "رسوم NOC للبيع", category: "offplan_reg", section: "offplan", sortOrder: 23,
-      fundingSource: "investor", distributionMethod: "lump_sum",
+      fundingSource: "escrow", distributionMethod: "lump_sum",
       phase: scenario === "offplan_escrow" ? "offplan" : "construction",
       phaseRelativeMonth: scenario === "offplan_escrow" ? 1 : 3,
       scenarios: offplanScenarios, amountKey: "developerNocFee",
     },
     {
       itemKey: "escrow_fee", nameAr: "رسوم حساب الضمان", category: "offplan_reg", section: "offplan", sortOrder: 24,
-      fundingSource: "investor", distributionMethod: "lump_sum",
+      fundingSource: "escrow", distributionMethod: "lump_sum",
       phase: scenario === "offplan_escrow" ? "offplan" : "construction",
       phaseRelativeMonth: scenario === "offplan_escrow" ? 1 : 3,
       scenarios: offplanScenarios, amountKey: "escrowAccountFee",
     },
     {
       itemKey: "community_fee", nameAr: "رسوم المجتمع", category: "offplan_reg", section: "offplan", sortOrder: 25,
-      fundingSource: "investor", distributionMethod: "lump_sum",
+      fundingSource: "escrow", distributionMethod: "lump_sum",
       phase: scenario === "offplan_escrow" ? "offplan" : "construction",
       phaseRelativeMonth: scenario === "offplan_escrow" ? 2 : 4,
       scenarios: allScenarios, amountKey: "communityFees",
     },
-    // التسويق والإعلان — 25% في مرحلة أوف بلان (من المستثمر)
+    // التسويق والإعلان — 25% في مرحلة أوف بلان (من حساب الضمان)
     {
       itemKey: "marketing_offplan", nameAr: "التسويق والإعلان — أوف بلان (25%)", category: "marketing_sales", section: "offplan", sortOrder: 26,
-      fundingSource: "investor", distributionMethod: "equal_spread",
+      fundingSource: "escrow", distributionMethod: "equal_spread",
       distributeAcrossPhases: ["offplan"],
       scenarios: offplanScenarios, amountKey: "marketingCost",
       splitRatio: [{ phase: "offplan", ratio: 0.25 }],
@@ -198,14 +198,14 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
     // ═══ إيداع الضمان / دفعات الإنجاز ═══
     {
       itemKey: "escrow_deposit", nameAr: "إيداع حساب الضمان (20%)", category: "offplan_reg", section: "offplan", sortOrder: 27,
-      fundingSource: "investor", distributionMethod: "lump_sum",
+      fundingSource: "escrow", distributionMethod: "lump_sum",
       phase: "offplan", phaseRelativeMonth: 2,
       scenarios: ["offplan_escrow"],
       amountFraction: { of: "constructionCost", ratio: 0.20 },
     },
     {
       itemKey: "contractor_advance", nameAr: "دفعة مقدمة للمقاول (10%)", category: "construction", section: "construction", sortOrder: 31,
-      fundingSource: "investor", distributionMethod: "lump_sum",
+      fundingSource: "escrow", distributionMethod: "lump_sum",
       phase: "construction", phaseRelativeMonth: 1,
       scenarios: allScenarios,
       amountFraction: { of: "constructionCost", ratio: 0.10 },
@@ -495,13 +495,23 @@ export const cashFlowSettingsRouter = router({
               computedAmount: amount,
             };
           });
+        // Build a lookup of default fundingSource by itemKey to auto-correct stale DB values
+        const defaultFundingSourceByKey: Record<string, string> = {};
+        const defaultSortOrderByKey: Record<string, number> = {};
+        for (const def of defaultDefs) {
+          defaultFundingSourceByKey[def.itemKey] = def.fundingSource;
+          defaultSortOrderByKey[def.itemKey] = def.sortOrder;
+        }
         // Return existing settings merged with missing defaults, filtered to remove revenue items
         const mergedSettings = [
           ...existing
             .filter(s => s.category !== "revenue")
             .map(s => ({
               ...s,
-              section: s.section || defaultSectionByKey[s.itemKey] || "construction",
+              section: defaultSectionByKey[s.itemKey] || s.section || "construction",
+              // Use DB fundingSource (user may have changed it manually in settings)
+              fundingSource: s.fundingSource as "investor" | "escrow",
+              sortOrder: defaultSortOrderByKey[s.itemKey] ?? s.sortOrder,
               computedAmount: costs ? computeItemAmountByKey(s.itemKey, costs, input.scenario) : 0,
             })),
           ...missingDefaults,

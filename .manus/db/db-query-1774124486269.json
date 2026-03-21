@@ -1,0 +1,60 @@
+{
+  "query": "SELECT item_key, funding_source, section FROM project_cash_flow_settings WHERE project_id = 4 AND scenario = 'offplan_construction' AND section = 'escrow';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT item_key, funding_source, section FROM project_cash_flow_settings WHERE project_id = 4 AND scenario = 'offplan_construction' AND section = 'escrow';",
+  "rows": [
+    {
+      "item_key": "developer_fee_construction",
+      "funding_source": "escrow",
+      "section": "escrow"
+    },
+    {
+      "item_key": "supervision_fee",
+      "funding_source": "escrow",
+      "section": "escrow"
+    },
+    {
+      "item_key": "surveyor_fee",
+      "funding_source": "escrow",
+      "section": "escrow"
+    },
+    {
+      "item_key": "rera_audit",
+      "funding_source": "escrow",
+      "section": "escrow"
+    },
+    {
+      "item_key": "rera_inspection",
+      "funding_source": "escrow",
+      "section": "escrow"
+    },
+    {
+      "item_key": "marketing_construction",
+      "funding_source": "escrow",
+      "section": "escrow"
+    },
+    {
+      "item_key": "sales_commission",
+      "funding_source": "escrow",
+      "section": "escrow"
+    },
+    {
+      "item_key": "revenue_booking",
+      "funding_source": "escrow",
+      "section": "escrow"
+    },
+    {
+      "item_key": "revenue_construction",
+      "funding_source": "escrow",
+      "section": "escrow"
+    },
+    {
+      "item_key": "revenue_handover",
+      "funding_source": "escrow",
+      "section": "escrow"
+    }
+  ],
+  "messages": [],
+  "stdout": "item_key\tfunding_source\tsection\ndeveloper_fee_construction\tescrow\tescrow\nsupervision_fee\tescrow\tescrow\nsurveyor_fee\tescrow\tescrow\nrera_audit\tescrow\tescrow\nrera_inspection\tescrow\tescrow\nmarketing_construction\tescrow\tescrow\nsales_commission\tescrow\tescrow\nrevenue_booking\tescrow\tescrow\nrevenue_construction\tescrow\tescrow\nrevenue_handover\tescrow\tescrow\n",
+  "stderr": "",
+  "execution_time_ms": 1590
+}
