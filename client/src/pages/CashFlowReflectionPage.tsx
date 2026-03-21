@@ -131,12 +131,33 @@ export default function CashFlowReflectionPage({
     return true;
   });
 
-  // Group visible items by category
-  const categoryOrder: Category[] = ["land", "design", "offplan_reg", "construction", "marketing_sales", "admin", "developer_fee", "revenue", "other"];
-  const groupedItems: Record<Category, typeof items> = {} as any;
-  for (const cat of categoryOrder) {
-    groupedItems[cat] = visibleItems.filter(i => i.category === cat);
+  // Group visible items by section (not category) to avoid duplication of split items
+  type Section = "paid" | "design" | "offplan" | "construction" | "escrow" | "revenue";
+  const SECTION_LABELS: Record<string, string> = {
+    paid:         "القسم الأول — المبالغ المدفوعة (الأرض)",
+    design:       "القسم الثاني — التصاميم وترخيص البناء",
+    offplan:      "القسم الثالث — ريرا والبيع أوف بلان",
+    construction: "القسم الرابع — الإنشاء (حصة المستثمر فقط)",
+    escrow:       "القسم الخامس — من حساب الضمان",
+    revenue:      "الإيرادات",
+  };
+  const SECTION_ROW_COLORS: Record<string, string> = {
+    paid:         "bg-stone-50/60",
+    design:       "bg-amber-50/60",
+    offplan:      "bg-violet-50/60",
+    construction: "bg-sky-50/60",
+    escrow:       "bg-teal-50/60",
+    revenue:      "bg-emerald-50/60",
+  };
+  const sectionOrder: string[] = ["paid", "design", "offplan", "construction", "escrow", "revenue"];
+  const groupedBySection: Record<string, typeof items> = {};
+  for (const sec of sectionOrder) {
+    groupedBySection[sec] = visibleItems.filter(i => (i as any).section === sec);
   }
+  // Fallback: items with unknown section go to construction
+  const allSectioned = new Set(sectionOrder);
+  const unsectioned = visibleItems.filter(i => !allSectioned.has((i as any).section || ""));
+  if (unsectioned.length > 0) groupedBySection["construction"].push(...unsectioned);
 
   // Build column phases for header coloring
   function getColPhase(monthIdx: number): string {
@@ -377,25 +398,25 @@ export default function CashFlowReflectionPage({
                     </tr>
                   </thead>
                   <tbody>
-                    {categoryOrder.map(category => {
-                      const catItems = groupedItems[category];
-                      if (!catItems || catItems.length === 0) return null;
+                    {sectionOrder.map(section => {
+                      const secItems = groupedBySection[section];
+                      if (!secItems || secItems.length === 0) return null;
+                      const rowBg = SECTION_ROW_COLORS[section] || "";
 
                       return (
                         <>
-                          {/* Category separator row */}
-                          <tr key={`cat-${category}`} className="bg-gray-100">
+                          {/* Section separator row */}
+                          <tr key={`sec-${section}`} className="bg-gray-100">
                             <td
                               colSpan={totalMonths + 2}
                               className="sticky right-0 z-10 px-3 py-1.5 font-semibold text-gray-700 text-xs border-b border-gray-200"
                             >
-                              {CATEGORY_LABELS[category]}
+                              {SECTION_LABELS[section]}
                             </td>
                           </tr>
 
                           {/* Item rows */}
-                          {catItems.map((item, idx) => {
-                            const rowBg = CATEGORY_ROW_COLORS[item.category as Category] || "";
+                          {secItems.map((item) => {
                             return (
                               <tr
                                 key={item.itemKey}
@@ -437,18 +458,18 @@ export default function CashFlowReflectionPage({
                             );
                           })}
 
-                          {/* Category subtotal */}
-                          <tr key={`subtotal-${category}`} className="border-b-2 border-gray-300">
+                          {/* Section subtotal */}
+                          <tr key={`subtotal-${section}`} className="border-b-2 border-gray-300">
                             <td className={`sticky right-0 z-10 px-3 py-1.5 font-bold text-gray-700 text-xs border-l border-gray-200 ${
-                              category === "revenue" ? "bg-emerald-100" : "bg-gray-100"
+                              section === "revenue" ? "bg-emerald-100" : "bg-gray-100"
                             }`}>
-                              إجمالي {CATEGORY_LABELS[category]}
+                              إجمالي {SECTION_LABELS[section]}
                             </td>
                             <td className="px-2 py-1.5 text-center font-bold text-gray-800 bg-gray-100 border-l border-gray-200">
-                              {fmtHeader(catItems.reduce((s, i) => s + i.totalAmount, 0))}
+                              {fmtHeader(secItems.reduce((s, i) => s + i.totalAmount, 0))}
                             </td>
                             {Array.from({ length: totalMonths }, (_, mIdx) => {
-                              const total = catItems.reduce((s, i) => s + (i.monthlyAmounts[mIdx] || 0), 0);
+                              const total = secItems.reduce((s, i) => s + (i.monthlyAmounts[mIdx] || 0), 0);
                               const hasValue = total && Math.abs(total) >= 1;
                               const phase = getColPhase(mIdx);
                               const pc = PHASE_COLORS[phase] || PHASE_COLORS.construction;
@@ -457,7 +478,7 @@ export default function CashFlowReflectionPage({
                                   key={mIdx}
                                   className={`px-1 py-1.5 text-center font-bold border-l border-gray-200 ${
                                     hasValue
-                                      ? category === "revenue"
+                                      ? section === "revenue"
                                         ? "bg-emerald-100 text-emerald-800"
                                         : `${pc.cell} text-gray-800`
                                       : "bg-gray-50 text-gray-200"

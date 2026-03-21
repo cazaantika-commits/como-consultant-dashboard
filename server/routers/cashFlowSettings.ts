@@ -625,6 +625,7 @@ export const cashFlowSettingsRouter = router({
         itemKey: string;
         nameAr: string;
         category: Category;
+        section: "paid" | "design" | "offplan" | "construction" | "escrow";
         isActive: boolean;
         sortOrder: number;
         fundingSource: FundingSource;
@@ -657,10 +658,15 @@ export const cashFlowSettingsRouter = router({
             totalMonths,
           );
 
+          // Determine section: use saved section if available, fallback to def
+          const defForKey = getDefaultItemDefs(input.scenario).find(d => d.itemKey === s.itemKey);
+          const itemSection = (s.section || defForKey?.section || "construction") as ReflectionItem["section"];
+
           items.push({
             itemKey: s.itemKey,
             nameAr: s.nameAr,
             category: s.category as Category,
+            section: itemSection,
             isActive: !!s.isActive,
             sortOrder: s.sortOrder,
             fundingSource: s.fundingSource as FundingSource,
@@ -712,6 +718,7 @@ export const cashFlowSettingsRouter = router({
             itemKey: def.itemKey,
             nameAr: def.nameAr,
             category: def.category,
+            section: (def.section || "construction") as ReflectionItem["section"],
             isActive: true,
             sortOrder: def.sortOrder,
             fundingSource: def.fundingSource,
