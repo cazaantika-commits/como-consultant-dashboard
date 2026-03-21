@@ -101,6 +101,13 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
 
     // ═══ التصاميم والموافقات ═══
     {
+      itemKey: "government_fees_investor", nameAr: "رسوم الجهات الحكومية (10%)", category: "design", section: "design", sortOrder: 9,
+      fundingSource: "investor", distributionMethod: "lump_sum",
+      phase: "design", phaseRelativeMonth: 1,
+      scenarios: allScenarios, amountKey: "officialBodiesFees",
+      splitRatio: [{ phase: "design", ratio: 0.10 }],
+    },
+    {
       itemKey: "soil_test", nameAr: "فحص التربة", category: "design", section: "design", sortOrder: 10,
       fundingSource: "investor", distributionMethod: "lump_sum",
       phase: "design", phaseRelativeMonth: 1,
@@ -218,6 +225,22 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
       scenarios: allScenarios, amountKey: "bankFees",
     },
 
+    // رسوم الجهات الحكومية (90% من الضمان)
+    {
+      itemKey: "government_fees_escrow", nameAr: "رسوم الجهات الحكومية (90%)", category: "construction", section: "escrow", sortOrder: 54,
+      fundingSource: "escrow", distributionMethod: "equal_spread",
+      distributeAcrossPhases: ["construction"],
+      scenarios: allScenarios, amountKey: "officialBodiesFees",
+      splitRatio: [{ phase: "construction", ratio: 0.90 }],
+    },
+    // رسوم المجتمع (75% من الضمان)
+    {
+      itemKey: "community_fee_escrow", nameAr: "رسوم المجتمع (75%)", category: "construction", section: "escrow", sortOrder: 56,
+      fundingSource: "escrow", distributionMethod: "equal_spread",
+      distributeAcrossPhases: ["construction"],
+      scenarios: allScenarios, amountKey: "communityFees",
+      splitRatio: [{ phase: "construction", ratio: 0.75 }],
+    },
     // دفعات المقاول (70% من الضمان)
     {
       itemKey: "contractor_payments", nameAr: "دفعات المقاول (70% — من الضمان)", category: "construction", section: "escrow", sortOrder: 55,
