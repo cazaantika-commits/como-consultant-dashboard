@@ -7,7 +7,7 @@
  * Data is fetched from the server using the saved settings (or defaults).
  */
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -410,9 +410,9 @@ export default function CashFlowReflectionPage({
                       const rowBg = SECTION_ROW_COLORS[section] || "";
 
                       return (
-                        <>
+                        <React.Fragment key={section}>
                           {/* Section separator row */}
-                          <tr key={`sec-${section}`} className="bg-gray-100">
+                          <tr className="bg-gray-100">
                             <td
                               colSpan={totalMonths + 2}
                               className="sticky right-0 z-10 px-3 py-1.5 font-semibold text-gray-700 text-xs border-b border-gray-200"
@@ -465,7 +465,7 @@ export default function CashFlowReflectionPage({
                           })}
 
                           {/* Section subtotal */}
-                          <tr key={`subtotal-${section}`} className="border-b-2 border-gray-300">
+                          <tr className="border-b-2 border-gray-300">
                             <td className={`sticky right-0 z-10 px-3 py-1.5 font-bold text-gray-700 text-xs border-l border-gray-200 ${
                               section === "revenue" ? "bg-emerald-100" : "bg-gray-100"
                             }`}>
@@ -495,7 +495,7 @@ export default function CashFlowReflectionPage({
                               );
                             })}
                           </tr>
-                        </>
+                        </React.Fragment>
                       );
                     })}
 
