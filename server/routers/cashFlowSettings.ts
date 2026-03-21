@@ -76,6 +76,7 @@ interface DefaultItemDef {
 function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
   const allScenarios: Scenario[] = ["offplan_escrow", "offplan_construction", "no_offplan"];
   const offplanScenarios: Scenario[] = ["offplan_escrow", "offplan_construction"];
+  const isOffplan = scenario === "offplan_escrow" || scenario === "offplan_construction";
 
   return [
     // ═══ الأرض ═══
@@ -118,12 +119,14 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
       scenarios: allScenarios, amountKey: "designFee",
     },
     // أتعاب المطور — مقسمة إلى 3 بنود منفصلة
+    // في سيناريو أوف بلان: تصاميم 20% + أوف بلان 20% + إنشاء 60% = 100%
+    // في سيناريو بدون أوف بلان: تصاميم 40% + إنشاء 60% = 100%
     {
-      itemKey: "developer_fee_design", nameAr: "أتعاب المطور — التصاميم (1%)", category: "developer_fee", section: "design", sortOrder: 13,
+      itemKey: "developer_fee_design", nameAr: `أتعاب المطور — التصاميم (${isOffplan ? "1" : "2"}%)`, category: "developer_fee", section: "design", sortOrder: 13,
       fundingSource: "investor", distributionMethod: "equal_spread",
       distributeAcrossPhases: ["design"],
       scenarios: allScenarios, amountKey: "developerFee",
-      splitRatio: [{ phase: "design", ratio: 0.2 }],
+      splitRatio: [{ phase: "design", ratio: isOffplan ? 0.2 : 0.4 }],
     },
     {
       itemKey: "developer_fee_offplan", nameAr: "أتعاب المطور — أوف بلان (1%)", category: "developer_fee", section: "offplan", sortOrder: 14,
@@ -295,7 +298,7 @@ function computeItemAmount(
   if (def.amountKey) {
     const val = costs[def.amountKey];
     const base = typeof val === "number" ? val : 0;
-    // If splitRatio is defined, apply the ratio for this item's phase
+    // If splitRatio is defined, apply the total ratio for this item
     if (def.splitRatio && def.splitRatio.length > 0) {
       const totalRatio = def.splitRatio.reduce((s, r) => s + r.ratio, 0);
       return base * totalRatio;
@@ -841,6 +844,24 @@ function computeItemAmountByKey(
   costs: NonNullable<ReturnType<typeof calculateProjectCosts>>,
   scenario: Scenario,
 ): number {
+  // Items with split ratios — each sub-item gets its own fraction of the total
+  // For offplan scenarios: design=20%, offplan=20%, construction=60%
+  // For no_offplan scenario: developer_fee_offplan doesn’t exist, so design=40%, construction=60%
+  const isOffplan = scenario === "offplan_escrow" || scenario === "offplan_construction";
+  const splitMap: Record<string, number> = {
+    // Developer fee split
+    developer_fee_design: costs.developerFee * (isOffplan ? 0.20 : 0.40),
+    developer_fee_offplan: costs.developerFee * 0.20,   // only in offplan scenarios
+    developer_fee_construction: costs.developerFee * 0.60,
+    // Marketing split: 25% offplan + 75% construction = 100%
+    // For no_offplan: marketing_offplan doesn’t exist, so construction = 100%
+    marketing_offplan: costs.marketingCost * 0.25,       // only in offplan scenarios
+    marketing_construction: costs.marketingCost * (isOffplan ? 0.75 : 1.0),
+    // Sales commission (full amount, from escrow)
+    sales_commission: costs.salesCommission,
+  };
+  if (itemKey in splitMap) return splitMap[itemKey];
+
   const keyMap: Record<string, number> = {
     land_cost: costs.landPrice,
     land_broker: costs.agentCommissionLand,

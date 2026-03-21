@@ -284,15 +284,40 @@ function ItemRow({
         </span>
       </td>
 
-      {/* Funding source */}
+      {/* Funding source — editable */}
       <td className="px-3 py-2.5 text-center">
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-          item.fundingSource === "investor"
-            ? "bg-amber-100 text-amber-800 border border-amber-200"
-            : "bg-blue-100 text-blue-800 border border-blue-200"
-        }`}>
-          {item.fundingSource === "investor" ? "المستثمر" : "حساب الضمان"}
-        </span>
+        {isPaid ? (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
+            المستثمر
+          </span>
+        ) : (
+          <Select
+            value={item.fundingSource}
+            onValueChange={(v) => onUpdate({ fundingSource: v as "investor" | "escrow" })}
+          >
+            <SelectTrigger className={`h-7 text-xs w-32 font-medium border ${
+              item.fundingSource === "investor"
+                ? "bg-amber-50 border-amber-200 text-amber-800"
+                : "bg-blue-50 border-blue-200 text-blue-800"
+            }`}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="investor" className="text-xs">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
+                  المستثمر
+                </span>
+              </SelectItem>
+              <SelectItem value="escrow" className="text-xs">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />
+                  حساب الضمان
+                </span>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        )}
       </td>
 
       {/* Distribution controls */}
