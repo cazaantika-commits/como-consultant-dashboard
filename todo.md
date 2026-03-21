@@ -259,3 +259,12 @@
 - [x] Rename: رأس المال المطلوب → خطة رأس مال المشروع
 - [x] Rename: حساب الضمان → التدفقات النقدية وحساب الضمان
 - [x] Rename: جدول الانعكاس → التكاليف الكلية للمشروع والجدول الزمني
+
+- [ ] Restructure project-management into 4 main sections with icons
+- [ ] Section 1: بطاقة المشروع (standalone, no sub-tabs)
+- [ ] Section 2: المعرفة والتحليل (project selector + 5 tabs: الدراسات والأبحاث, تقارير السوق, البيانات والمصادر, لوحة المخاطر, التسعير والإيرادات)
+- [ ] Section 3: التخطيط المالي (project selector + 5 tabs: إعدادات التدفق, ملخص الجدوى المالية, التكاليف الكلية للمشروع والجدول الزمني, خطة رأس مال المشروع, التدفقات النقدية وحساب الضمان)
+- [ ] Section 4: محفظة رأس المال للمشاريع (no project selector, shows all projects)
+- [x] Restructure project-management page into 4 main sections: بطاقة المشروع, المعرفة والتحليل (5 tabs), التخطيط المالي (5 tabs), محفظة رأس المال للمشاريع
+- [x] Create KnowledgeHubPage.tsx with 5 tabs: الدراسات والأبحاث, تقارير السوق, البيانات والمصادر, لوحة المخاطر, التسعير والإيرادات
+- [x] Create FinancialPlanningHubPage.tsx with 5 tabs: إعدادات التدفق, ملخص الجدوى المالية, التكاليف الكلية, خطة رأس المال, التدفقات النقدية

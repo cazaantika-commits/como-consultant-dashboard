@@ -246,7 +246,7 @@ function GroupHeader({ label, color = "stone" }: { label: string; color?: string
 // ─────────────────────────────────────────────
 // MAIN PAGE
 // ─────────────────────────────────────────────
-export default function FactSheetPage({ embedded = false, initialProjectId }: { embedded?: boolean; initialProjectId?: number | null }) {
+export default function FactSheetPage({ embedded = false, initialProjectId, onBack }: { embedded?: boolean; initialProjectId?: number | null; onBack?: () => void }) {
   const { user, loading: authLoading } = useAuth();
   const [, navigate] = useLocation();
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(initialProjectId ?? null);
@@ -624,6 +624,15 @@ export default function FactSheetPage({ embedded = false, initialProjectId }: { 
                   <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="text-muted-foreground hover:text-foreground">
                     <ChevronLeft className="h-4 w-4 ml-1" />
                     الرئيسية
+                  </Button>
+                  <Separator orientation="vertical" className="h-6" />
+                </>
+              )}
+              {embedded && onBack && (
+                <>
+                  <Button variant="ghost" size="sm" onClick={onBack} className="text-muted-foreground hover:text-foreground">
+                    <ChevronLeft className="h-4 w-4 ml-1" />
+                    العودة
                   </Button>
                   <Separator orientation="vertical" className="h-6" />
                 </>
