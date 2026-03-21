@@ -255,7 +255,7 @@ export default function CashFlowReflectionPage({
                 </SelectTrigger>
                 <SelectContent>
                   {(projectsQuery.data || []).map((p: any) => (
-                    <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
+                    <SelectItem key={`proj-${p.id}`} value={p.id.toString()}>{p.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -391,7 +391,7 @@ export default function CashFlowReflectionPage({
                         const pc = PHASE_COLORS[phase] || PHASE_COLORS.construction;
                         return (
                           <th
-                            key={i}
+                            key={`hdr-${i}`}
                             className={`${pc.header} px-1 py-2 text-center font-medium min-w-[65px] border-b border-gray-600`}
                           >
                             <div className="text-xs opacity-80">ش{i + 1}</div>
@@ -450,7 +450,7 @@ export default function CashFlowReflectionPage({
                                   const hasValue = val && Math.abs(val) >= 1;
                                   return (
                                     <td
-                                      key={mIdx}
+                                      key={`cell-${item.itemKey}-${mIdx}`}
                                       className={`px-1 py-1.5 text-center border-l border-gray-100 ${
                                         hasValue ? `${pc.cell} font-medium text-gray-800` : "text-gray-200"
                                       }`}
@@ -481,7 +481,7 @@ export default function CashFlowReflectionPage({
                               const pc = PHASE_COLORS[phase] || PHASE_COLORS.construction;
                               return (
                                 <td
-                                  key={mIdx}
+                                  key={`sub-${section}-${mIdx}`}
                                   className={`px-1 py-1.5 text-center font-bold border-l border-gray-200 ${
                                     hasValue
                                       ? section === "revenue"
@@ -510,7 +510,7 @@ export default function CashFlowReflectionPage({
                         </td>
                         {data.investorMonthlyTotals.map((val, mIdx) => (
                           <td
-                            key={mIdx}
+                            key={`inv-${mIdx}`}
                             className="px-1 py-2 text-center bg-blue-700 border-l border-blue-600"
                           >
                             {fmt(val)}
@@ -529,7 +529,7 @@ export default function CashFlowReflectionPage({
                         </td>
                         {data.escrowMonthlyTotals.map((val, mIdx) => (
                           <td
-                            key={mIdx}
+                            key={`esc-${mIdx}`}
                             className="px-1 py-2 text-center bg-violet-700 border-l border-violet-600"
                           >
                             {fmt(val)}
@@ -548,7 +548,7 @@ export default function CashFlowReflectionPage({
                         </td>
                         {data.grandMonthlyTotals.map((val, mIdx) => (
                           <td
-                            key={mIdx}
+                            key={`all-${mIdx}`}
                             className="px-1 py-2.5 text-center bg-gray-900 border-l border-gray-700"
                           >
                             {fmt(val)}
@@ -569,7 +569,7 @@ export default function CashFlowReflectionPage({
                           return data.investorMonthlyTotals.map((val, mIdx) => {
                             cum += val;
                             return (
-                              <td key={mIdx} className="px-1 py-1.5 text-center text-xs border-l border-blue-100">
+                              <td key={`cum-inv-${mIdx}`} className="px-1 py-1.5 text-center text-xs border-l border-blue-100">
                                 {fmtHeader(cum)}
                               </td>
                             );
