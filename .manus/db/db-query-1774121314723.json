@@ -1,0 +1,80 @@
+{
+  "query": "SELECT item_key, name_ar, section, category, funding_source FROM project_cash_flow_settings WHERE project_id = 4 AND sort_order > 50 ORDER BY sort_order;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT item_key, name_ar, section, category, funding_source FROM project_cash_flow_settings WHERE project_id = 4 AND sort_order > 50 ORDER BY sort_order;",
+  "rows": [
+    {
+      "item_key": "developer_fee_construction",
+      "name_ar": "أتعاب المطور — الإشراف (3%)",
+      "section": "escrow",
+      "category": "developer_fee",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "supervision_fee",
+      "name_ar": "أتعاب الإشراف (2%)",
+      "section": "escrow",
+      "category": "construction",
+      "funding_source": "escrow"
+    },
+    {
+      "item_key": "surveyor_fee",
+      "name_ar": "رسوم المساح",
+      "section": "escrow",
+      "category": "construction",
+      "funding_source": "escrow"
+    },
+    {
+      "item_key": "rera_audit",
+      "name_ar": "تقرير مدقق ريرا",
+      "section": "escrow",
+      "category": "admin",
+      "funding_source": "escrow"
+    },
+    {
+      "item_key": "rera_inspection",
+      "name_ar": "تقرير فحص ريرا",
+      "section": "escrow",
+      "category": "admin",
+      "funding_source": "escrow"
+    },
+    {
+      "item_key": "marketing_construction",
+      "name_ar": "التسويق والإعلان — الإنشاء (75%)",
+      "section": "escrow",
+      "category": "marketing_sales",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "sales_commission",
+      "name_ar": "عمولة وكيل المبيعات (5%)",
+      "section": "escrow",
+      "category": "marketing_sales",
+      "funding_source": "escrow"
+    },
+    {
+      "item_key": "revenue_booking",
+      "name_ar": "إيرادات الحجز (20%)",
+      "section": "escrow",
+      "category": "revenue",
+      "funding_source": "escrow"
+    },
+    {
+      "item_key": "revenue_construction",
+      "name_ar": "إيرادات مرحلة الإنشاء (30%)",
+      "section": "escrow",
+      "category": "revenue",
+      "funding_source": "escrow"
+    },
+    {
+      "item_key": "revenue_handover",
+      "name_ar": "إيرادات التسليم (50%)",
+      "section": "escrow",
+      "category": "revenue",
+      "funding_source": "escrow"
+    }
+  ],
+  "messages": [],
+  "stdout": "item_key\tname_ar\tsection\tcategory\tfunding_source\ndeveloper_fee_construction\tأتعاب المطور — الإشراف (3%)\tescrow\tdeveloper_fee\tinvestor\nsupervision_fee\tأتعاب الإشراف (2%)\tescrow\tconstruction\tescrow\nsurveyor_fee\tرسوم المساح\tescrow\tconstruction\tescrow\nrera_audit\tتقرير مدقق ريرا\tescrow\tadmin\tescrow\nrera_inspection\tتقرير فحص ريرا\tescrow\tadmin\tescrow\nmarketing_construction\tالتسويق والإعلان — الإنشاء (75%)\tescrow\tmarketing_sales\tinvestor\nsales_commission\tعمولة وكيل المبيعات (5%)\tescrow\tmarketing_sales\tescrow\nrevenue_booking\tإيرادات الحجز (20%)\tescrow\trevenue\tescrow\nrevenue_construction\tإيرادات مرحلة الإنشاء (30%)\tescrow\trevenue\tescrow\nrevenue_handover\tإيرادات التسليم (50%)\tescrow\trevenue\tescrow\n",
+  "stderr": "",
+  "execution_time_ms": 1565
+}

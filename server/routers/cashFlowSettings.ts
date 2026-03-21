@@ -218,6 +218,14 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
       scenarios: allScenarios, amountKey: "bankFees",
     },
 
+    // دفعات المقاول (70% من الضمان)
+    {
+      itemKey: "contractor_payments", nameAr: "دفعات المقاول (70% — من الضمان)", category: "construction", section: "escrow", sortOrder: 55,
+      fundingSource: "escrow", distributionMethod: "equal_spread",
+      distributeAcrossPhases: ["construction"],
+      scenarios: allScenarios,
+      amountFraction: { of: "constructionCost", ratio: 0.70 },
+    },
     // ═══ الإشراف والمساح (من الإسكرو) ═══
     // أتعاب المطور — الإنشاء (3%) من حساب الضمان
     {
@@ -412,20 +420,71 @@ export const cashFlowSettingsRouter = router({
       const totalMonths = getTotalMonths(durations);
 
       if (existing.length > 0) {
-        // Build a lookup of default sections by itemKey for fallback
+        // Build a lookup of default defs by itemKey
         const defaultDefs = getDefaultItemDefs(input.scenario);
         const defaultSectionByKey: Record<string, string> = {};
+        const defaultDefByKey: Record<string, typeof defaultDefs[0]> = {};
         for (const def of defaultDefs) {
           defaultSectionByKey[def.itemKey] = def.section;
+          defaultDefByKey[def.itemKey] = def;
         }
-        // Return existing settings with computed amounts
+        // Find default items not yet saved in DB (new items added to defaults after initial save)
+        const existingKeys = new Set(existing.map(s => s.itemKey));
+        const missingDefaults = defaultDefs
+          .filter(def => !existingKeys.has(def.itemKey) && def.category !== "revenue")
+          .map(def => {
+            const amount = costs ? computeItemAmount(def, costs) : 0;
+            let defaultStartMonth: number | null = null;
+            let defaultEndMonth: number | null = null;
+            let defaultLumpSumMonth: number | null = null;
+            if (def.distributionMethod === "lump_sum") {
+              if (def.phase) defaultLumpSumMonth = phaseRelativeToAbsolute(def.phase, def.phaseRelativeMonth || 1, phases);
+            } else if (def.distributionMethod === "equal_spread") {
+              if (def.distributeAcrossPhases && def.distributeAcrossPhases.length > 0) {
+                const firstRange = getPhaseRange(def.distributeAcrossPhases[0], phases);
+                const lastRange = getPhaseRange(def.distributeAcrossPhases[def.distributeAcrossPhases.length - 1], phases);
+                defaultStartMonth = firstRange.start;
+                defaultEndMonth = lastRange.end;
+              } else if (def.phase) {
+                const range = getPhaseRange(def.phase, phases);
+                defaultStartMonth = range.start;
+                defaultEndMonth = range.end;
+              }
+            }
+            return {
+              id: undefined as number | undefined,
+              projectId: input.projectId,
+              scenario: input.scenario,
+              itemKey: def.itemKey,
+              nameAr: def.nameAr,
+              category: def.category,
+              section: def.section,
+              isActive: true,
+              sortOrder: def.sortOrder,
+              amountOverride: null,
+              distributionMethod: def.distributionMethod,
+              lumpSumMonth: defaultLumpSumMonth,
+              startMonth: defaultStartMonth,
+              endMonth: defaultEndMonth,
+              customJson: null,
+              fundingSource: def.fundingSource,
+              notes: null,
+              computedAmount: amount,
+            };
+          });
+        // Return existing settings merged with missing defaults, filtered to remove revenue items
+        const mergedSettings = [
+          ...existing
+            .filter(s => s.category !== "revenue")
+            .map(s => ({
+              ...s,
+              section: s.section || defaultSectionByKey[s.itemKey] || "construction",
+              computedAmount: costs ? computeItemAmountByKey(s.itemKey, costs, input.scenario) : 0,
+            })),
+          ...missingDefaults,
+        ].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
         return {
-          settings: existing.map(s => ({
-            ...s,
-            // Fill section from default defs if not saved in DB yet
-            section: s.section || defaultSectionByKey[s.itemKey] || "construction",
-            computedAmount: costs ? computeItemAmountByKey(s.itemKey, costs, input.scenario) : 0,
-          })),
+          settings: mergedSettings,
           totalMonths,
           phases: {
             design: { start: phases.find(p => p.type === "design")?.startMonth || 1, duration: durations.design },
