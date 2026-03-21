@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import {
-  Table2, Settings2, Building2, ArrowLeft, Download, Info
+  Table2, Settings2, Building2, ArrowLeft, Download, Info, BarChart3
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -222,6 +222,12 @@ export default function CashFlowReflectionPage({
                 <Download className="w-4 h-4" />
                 تصدير CSV
               </Button>
+              <Link href="/cashflow-comparison">
+                <Button variant="outline" size="sm" className="gap-2 border-indigo-300 text-indigo-700 hover:bg-indigo-50">
+                  <BarChart3 className="w-4 h-4" />
+                  مقارنة السيناريوهات
+                </Button>
+              </Link>
               <Link href="/excel-cashflow">
                 <Button variant="ghost" size="sm" className="gap-2">
                   <ArrowLeft className="w-4 h-4" />

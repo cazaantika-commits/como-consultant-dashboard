@@ -62,6 +62,7 @@ import CostDistributionRulesPage from "./pages/CostDistributionRulesPage";
 import WorkSchedulePage from "./pages/WorkSchedulePage";
 import CashFlowSettingsPage from "./pages/CashFlowSettingsPage";
 import CashFlowReflectionPage from "./pages/CashFlowReflectionPage";
+import CashFlowComparisonPage from "./pages/CashFlowComparisonPage";
 
 function Router() {
   return (
@@ -127,6 +128,7 @@ function Router() {
       <Route path="/cost-distribution-rules" component={CostDistributionRulesPage} />
       <Route path="/cashflow-settings" component={CashFlowSettingsPage} />
       <Route path="/cashflow-reflection" component={CashFlowReflectionPage} />
+      <Route path="/cashflow-comparison" component={CashFlowComparisonPage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

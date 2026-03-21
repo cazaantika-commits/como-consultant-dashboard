@@ -821,6 +821,131 @@ export const cashFlowSettingsRouter = router({
     }),
 
   /**
+   * Get comparison data for all three scenarios side by side.
+   * Returns monthly investor totals, escrow totals, and grand totals for each scenario.
+   */
+  getComparisonData: publicProcedure
+    .input(z.object({
+      projectId: z.number(),
+    }))
+    .query(async ({ ctx, input }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      const projectRows = await db.select().from(projects).where(eq(projects.id, input.projectId));
+      const project = projectRows[0];
+      if (!project) throw new Error("Project not found");
+
+      const moRows = await db.select().from(marketOverview).where(eq(marketOverview.projectId, input.projectId));
+      const mo = moRows[0] || null;
+      const cpRows = await db.select().from(competitionPricing).where(eq(competitionPricing.projectId, input.projectId));
+      const cp = cpRows[0] || null;
+      const costs = calculateProjectCosts(project, mo, cp);
+
+      const legacyDurations = {
+        preCon: project.preConMonths || 6,
+        construction: project.constructionMonths || 16,
+        handover: project.handoverMonths || 2,
+      };
+      const durations = legacyToNewDurations(legacyDurations);
+      const phases = calculatePhases(durations);
+      const totalMonths = getTotalMonths(durations);
+      const monthLabels = generateMonthLabels(project.startDate || "2026-01", totalMonths);
+
+      // Helper: build monthly totals for one scenario
+      async function buildScenarioTotals(scenario: Scenario) {
+        const savedSettings = await db!.select().from(projectCashFlowSettings).where(
+          and(
+            eq(projectCashFlowSettings.projectId, input.projectId),
+            eq(projectCashFlowSettings.scenario, scenario),
+          )
+        );
+
+        const investorMonthly = new Array(totalMonths).fill(0);
+        const escrowMonthly = new Array(totalMonths).fill(0);
+        const grandMonthly = new Array(totalMonths).fill(0);
+        let totalCosts = 0;
+        let totalRevenue = 0;
+
+        const processItem = (amount: number, fundingSource: string, distMethod: string, lumpSumMonth: number | null, startMonth: number | null, endMonth: number | null, customJson: string | null) => {
+          const monthly = distributeAmount(amount, distMethod as DistributionMethod, lumpSumMonth, startMonth, endMonth, customJson, totalMonths);
+          for (let m = 0; m < totalMonths; m++) {
+            const val = monthly[m] || 0;
+            grandMonthly[m] += val;
+            if (fundingSource === "investor") investorMonthly[m] += val;
+            else escrowMonthly[m] += val;
+          }
+          return amount;
+        };
+
+        if (savedSettings.length > 0) {
+          for (const s of savedSettings) {
+            if (!s.isActive) continue;
+            const amount = s.amountOverride
+              ? parseFloat(s.amountOverride)
+              : (costs ? computeItemAmountByKey(s.itemKey, costs, scenario) : 0);
+            const cat = s.category as Category;
+            if (cat === "revenue") totalRevenue += amount;
+            else totalCosts += amount;
+            processItem(amount, s.fundingSource, s.distributionMethod, s.lumpSumMonth, s.startMonth, s.endMonth, s.customJson);
+          }
+        } else {
+          const defs = getDefaultItemDefs(scenario);
+          for (const def of defs) {
+            const amount = costs ? computeItemAmount(def, costs) : 0;
+            if (def.category === "revenue") totalRevenue += amount;
+            else totalCosts += amount;
+            let lumpSumMonth: number | null = null;
+            let startMonth: number | null = null;
+            let endMonth: number | null = null;
+            if (def.distributionMethod === "lump_sum" && def.phase) {
+              lumpSumMonth = phaseRelativeToAbsolute(def.phase, def.phaseRelativeMonth || 1, phases);
+            } else if (def.distributionMethod === "equal_spread") {
+              if (def.distributeAcrossPhases && def.distributeAcrossPhases.length > 0) {
+                startMonth = getPhaseRange(def.distributeAcrossPhases[0], phases).start;
+                endMonth = getPhaseRange(def.distributeAcrossPhases[def.distributeAcrossPhases.length - 1], phases).end;
+              } else if (def.phase) {
+                const range = getPhaseRange(def.phase, phases);
+                startMonth = range.start;
+                endMonth = range.end;
+              }
+            }
+            processItem(amount, def.fundingSource, def.distributionMethod, lumpSumMonth, startMonth, endMonth, null);
+          }
+        }
+
+        return { investorMonthly, escrowMonthly, grandMonthly, totalCosts, totalRevenue };
+      }
+
+      const [s1, s2, s3] = await Promise.all([
+        buildScenarioTotals("offplan_escrow"),
+        buildScenarioTotals("offplan_construction"),
+        buildScenarioTotals("no_offplan"),
+      ]);
+
+      // Phase info
+      const phaseInfo = {
+        design: { start: phases.find(p => p.type === "design")?.startMonth || 1, end: (phases.find(p => p.type === "design")?.startMonth || 1) + durations.design - 1, duration: durations.design },
+        offplan: { start: phases.find(p => p.type === "offplan")?.startMonth || 3, end: (phases.find(p => p.type === "offplan")?.startMonth || 3) + durations.offplan - 1, duration: durations.offplan },
+        construction: { start: phases.find(p => p.type === "construction")?.startMonth || 7, end: (phases.find(p => p.type === "construction")?.startMonth || 7) + durations.construction - 1, duration: durations.construction },
+        handover: { start: phases.find(p => p.type === "handover")?.startMonth || 23, end: (phases.find(p => p.type === "handover")?.startMonth || 23) + durations.handover - 1, duration: durations.handover },
+      };
+
+      return {
+        projectName: project.name,
+        totalMonths,
+        monthLabels,
+        phaseInfo,
+        scenarios: {
+          offplan_escrow: { ...s1, label: "أوف بلان مع إيداع الضمان", labelShort: "أوف بلان (ضمان)" },
+          offplan_construction: { ...s2, label: "أوف بلان بعد 20% إنجاز", labelShort: "أوف بلان (إنجاز)" },
+          no_offplan: { ...s3, label: "بدون أوف بلان", labelShort: "بدون أوف بلان" },
+        },
+      };
+    }),
+
+  /**
    * Reset settings for a project + scenario (delete saved, revert to defaults).
    */
   resetSettings: publicProcedure
