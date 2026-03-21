@@ -23,6 +23,7 @@ function arabicMonth(n: number): string {
 /**
  * Given a settings item and the phase timeline, compute the monthly distribution.
  * Returns a map of { absoluteMonth: amount }
+ * Ensures the sum of all monthly values exactly equals computedAmount (no rounding drift).
  */
 function distributeFromSettings(
   item: {
@@ -49,10 +50,13 @@ function distributeFromSettings(
     const end = item.endMonth || (phases.design.start + phases.design.duration - 1);
     const months = end - start + 1;
     if (months <= 0) return { [start]: amount };
-    const perMonth = amount / months;
+    // Use integer division + remainder correction to avoid rounding drift
+    const basePerMonth = Math.floor(amount / months);
+    const remainder = amount - basePerMonth * months;
     const dist: Record<number, number> = {};
     for (let m = start; m <= end; m++) {
-      dist[m] = perMonth;
+      // Add remainder to the last month to ensure exact sum
+      dist[m] = m === end ? basePerMonth + remainder : basePerMonth;
     }
     return dist;
   }
@@ -60,11 +64,41 @@ function distributeFromSettings(
   if (item.distributionMethod === "custom") {
     if (!item.customJson) return {};
     try {
-      const custom = JSON.parse(item.customJson) as Record<number, number>;
-      // custom is { month: percentage } where percentages sum to 100
+      const parsed = JSON.parse(item.customJson);
       const dist: Record<number, number> = {};
-      for (const [mStr, pct] of Object.entries(custom)) {
-        dist[parseInt(mStr)] = amount * (pct / 100);
+      // Support both { month: pct } and [{ month, pct }] formats
+      if (Array.isArray(parsed)) {
+        let allocated = 0;
+        const entries = parsed as Array<{ month: number; amount?: number; pct?: number }>;
+        for (let i = 0; i < entries.length; i++) {
+          const entry = entries[i];
+          const isLast = i === entries.length - 1;
+          const val = entry.amount !== undefined
+            ? entry.amount
+            : (entry.pct !== undefined ? amount * entry.pct / 100 : 0);
+          if (isLast) {
+            // Assign remainder to last entry to avoid rounding drift
+            dist[entry.month] = (dist[entry.month] || 0) + (amount - allocated);
+          } else {
+            dist[entry.month] = (dist[entry.month] || 0) + val;
+            allocated += val;
+          }
+        }
+      } else {
+        // Object format: { month: percentage }
+        const entries = Object.entries(parsed as Record<string, number>);
+        let allocated = 0;
+        for (let i = 0; i < entries.length; i++) {
+          const [mStr, pct] = entries[i];
+          const isLast = i === entries.length - 1;
+          const val = amount * (pct / 100);
+          if (isLast) {
+            dist[parseInt(mStr)] = amount - allocated;
+          } else {
+            dist[parseInt(mStr)] = val;
+            allocated += val;
+          }
+        }
       }
       return dist;
     } catch {

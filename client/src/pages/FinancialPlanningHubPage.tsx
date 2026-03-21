@@ -46,18 +46,35 @@ const TABS: { id: TabId; label: string; icon: React.ElementType; gradient: strin
   },
 ];
 
+const LAST_PROJECT_KEY = "como_last_project_id";
+
 function FinancialPlanningHubInner({ onBack }: { onBack: () => void }) {
   const { isAuthenticated } = useAuth();
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
   const { selectedProjectId, setSelectedProjectId } = useCashFlow();
   const [activeTab, setActiveTab] = useState<TabId>("cf-settings");
 
-  // Auto-select first project
+  // Auto-select last opened project (or first project as fallback)
   useEffect(() => {
     if (projectsQuery.data && projectsQuery.data.length > 0 && !selectedProjectId) {
+      const savedId = localStorage.getItem(LAST_PROJECT_KEY);
+      if (savedId) {
+        const savedNum = Number(savedId);
+        const found = projectsQuery.data.find((p: any) => p.id === savedNum);
+        if (found) {
+          setSelectedProjectId(savedNum);
+          return;
+        }
+      }
       setSelectedProjectId(projectsQuery.data[0].id);
     }
   }, [projectsQuery.data, selectedProjectId]);
+
+  // Persist selected project to localStorage
+  const handleProjectChange = (id: number) => {
+    setSelectedProjectId(id);
+    localStorage.setItem(LAST_PROJECT_KEY, String(id));
+  };
 
   const selectedProject = (projectsQuery.data || []).find((p: any) => p.id === selectedProjectId);
   const currentTab = TABS.find(t => t.id === activeTab)!;
@@ -86,7 +103,7 @@ function FinancialPlanningHubInner({ onBack }: { onBack: () => void }) {
           {/* Project selector */}
           <Select
             value={selectedProjectId?.toString() ?? ""}
-            onValueChange={(v) => setSelectedProjectId(Number(v))}
+            onValueChange={(v) => handleProjectChange(Number(v))}
           >
             <SelectTrigger className="h-8 text-xs w-52 shrink-0">
               <SelectValue placeholder="اختر مشروعاً..." />

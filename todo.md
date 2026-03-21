@@ -268,3 +268,6 @@
 - [x] Restructure project-management page into 4 main sections: بطاقة المشروع, المعرفة والتحليل (5 tabs), التخطيط المالي (5 tabs), محفظة رأس المال للمشاريع
 - [x] Create KnowledgeHubPage.tsx with 5 tabs: الدراسات والأبحاث, تقارير السوق, البيانات والمصادر, لوحة المخاطر, التسعير والإيرادات
 - [x] Create FinancialPlanningHubPage.tsx with 5 tabs: إعدادات التدفق, ملخص الجدوى المالية, التكاليف الكلية, خطة رأس المال, التدفقات النقدية
+- [ ] Add SVG icons for 4 main sections in ProjectManagementPage (replace emoji)
+- [ ] Remember last opened project in KnowledgeHubPage and FinancialPlanningHubPage (localStorage)
+- [ ] Fix amount duplication in capital schedule table (computedAmount vs monthly sum mismatch)
