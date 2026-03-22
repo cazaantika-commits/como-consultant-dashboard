@@ -232,10 +232,12 @@ export default function CapitalScheduleTablePage({
   const allItems = useMemo(() => settingsData?.settings || [], [settingsData]);
 
   const paidItems = useMemo(() => allItems.filter((s: any) => s.section === "paid"), [allItems]);
-  const designItems = useMemo(() => allItems.filter((s: any) => s.section === "design" && s.fundingSource === "investor"), [allItems]);
-  const offplanItems = useMemo(() => allItems.filter((s: any) => s.section === "offplan" && s.fundingSource === "investor"), [allItems]);
-  const constructionItems = useMemo(() => allItems.filter((s: any) => s.section === "construction" && s.fundingSource === "investor"), [allItems]);
-  const escrowItems = useMemo(() => allItems.filter((s: any) => s.fundingSource === "escrow"), [allItems]);
+  // Show ALL items per section regardless of fundingSource — fundingSource only affects totals and labels
+  const designItems = useMemo(() => allItems.filter((s: any) => s.section === "design"), [allItems]);
+  const offplanItems = useMemo(() => allItems.filter((s: any) => s.section === "offplan"), [allItems]);
+  const constructionItems = useMemo(() => allItems.filter((s: any) => s.section === "construction"), [allItems]);
+  // escrowItems = items in the dedicated escrow section (section === "escrow")
+  const escrowItems = useMemo(() => allItems.filter((s: any) => s.section === "escrow"), [allItems]);
 
   // Compute monthly distributions for each item
   const itemMonthly = useMemo(() => {
@@ -250,10 +252,10 @@ export default function CapitalScheduleTablePage({
     return result;
   }, [allItems, phases]);
 
-  // Per-month totals
+  // Per-month totals — based on fundingSource, not section
   const monthInvestorTotals = useMemo(() => {
     const totals: Record<number, number> = {};
-    for (const item of [...designItems, ...offplanItems, ...constructionItems]) {
+    for (const item of allItems.filter((i: any) => i.fundingSource === "investor" && i.section !== "paid")) {
       const monthly = itemMonthly[item.itemKey] || {};
       for (const [mStr, val] of Object.entries(monthly)) {
         const m = parseInt(mStr);
@@ -261,11 +263,11 @@ export default function CapitalScheduleTablePage({
       }
     }
     return totals;
-  }, [designItems, offplanItems, constructionItems, itemMonthly]);
+  }, [allItems, itemMonthly]);
 
   const monthEscrowTotals = useMemo(() => {
     const totals: Record<number, number> = {};
-    for (const item of escrowItems) {
+    for (const item of allItems.filter((i: any) => i.fundingSource === "escrow")) {
       const monthly = itemMonthly[item.itemKey] || {};
       for (const [mStr, val] of Object.entries(monthly)) {
         const m = parseInt(mStr);
@@ -273,7 +275,7 @@ export default function CapitalScheduleTablePage({
       }
     }
     return totals;
-  }, [escrowItems, itemMonthly]);
+  }, [allItems, itemMonthly]);
 
   const monthAllTotals = useMemo(() => {
     const totals: Record<number, number> = {};
@@ -285,8 +287,10 @@ export default function CapitalScheduleTablePage({
 
   // Grand totals
   const paidTotal = useMemo(() => paidItems.reduce((s: number, e: any) => s + (e.computedAmount || 0), 0), [paidItems]);
-  const investorTotal = useMemo(() => allItems.filter((i: any) => i.fundingSource === "investor").reduce((s: number, e: any) => s + (e.computedAmount || 0), 0), [allItems]);
-  const escrowTotal = useMemo(() => escrowItems.reduce((s: number, e: any) => s + (e.computedAmount || 0), 0), [escrowItems]);
+  // investorTotal = all items with fundingSource=investor (excluding paid section)
+  const investorTotal = useMemo(() => allItems.filter((i: any) => i.fundingSource === "investor" && i.section !== "paid").reduce((s: number, e: any) => s + (e.computedAmount || 0), 0), [allItems]);
+  // escrowTotal = all items with fundingSource=escrow (any section)
+  const escrowTotal = useMemo(() => allItems.filter((i: any) => i.fundingSource === "escrow").reduce((s: number, e: any) => s + (e.computedAmount || 0), 0), [allItems]);
   const grandTotal = useMemo(() => investorTotal + escrowTotal, [investorTotal, escrowTotal]);
 
   // Cumulative investor
@@ -495,7 +499,9 @@ export default function CapitalScheduleTablePage({
                   <tr key={item.itemKey}>
                     <td style={S.colDesc}>{item.nameAr}</td>
                     <td style={S.colTotal}>{fmt(item.computedAmount)}</td>
-                    <td style={S.colInvestor}>{fmt(item.computedAmount)}</td>
+                    <td style={item.fundingSource === "escrow" ? { ...S.colInvestor, color: "#1d4ed8" } : S.colInvestor}>
+                      {item.fundingSource === "escrow" ? "من الضمان" : fmt(item.computedAmount)}
+                    </td>
                     <td style={S.colPaid}>—</td>
                     {allMonths.map(m => {
                       const val = getVal(item.itemKey, m);
@@ -516,7 +522,9 @@ export default function CapitalScheduleTablePage({
                   <tr key={item.itemKey}>
                     <td style={S.colDesc}>{item.nameAr}</td>
                     <td style={S.colTotal}>{fmt(item.computedAmount)}</td>
-                    <td style={S.colInvestor}>{fmt(item.computedAmount)}</td>
+                    <td style={item.fundingSource === "escrow" ? { ...S.colInvestor, color: "#1d4ed8" } : S.colInvestor}>
+                      {item.fundingSource === "escrow" ? "من الضمان" : fmt(item.computedAmount)}
+                    </td>
                     <td style={S.colPaid}>—</td>
                     {allMonths.map(m => {
                       const val = getVal(item.itemKey, m);

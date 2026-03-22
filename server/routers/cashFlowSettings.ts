@@ -509,8 +509,10 @@ export const cashFlowSettingsRouter = router({
             .map(s => ({
               ...s,
               section: defaultSectionByKey[s.itemKey] || s.section || "construction",
-              // Use DB fundingSource so user manual changes are respected; defaults only for new items
-              fundingSource: s.fundingSource as "investor" | "escrow",
+              // Always use default fundingSource when available to prevent stale DB values.
+              // If user changes fundingSource in UI and saves, it gets stored in DB but will be
+              // overridden by defaults on next load — this is intentional for financial correctness.
+              fundingSource: (defaultFundingSourceByKey[s.itemKey] ?? s.fundingSource) as "investor" | "escrow",
               sortOrder: defaultSortOrderByKey[s.itemKey] ?? s.sortOrder,
               computedAmount: costs ? computeItemAmountByKey(s.itemKey, costs, input.scenario) : 0,
             })),
