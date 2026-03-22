@@ -1,0 +1,46 @@
+{
+  "query": "SELECT item_key, funding_source, section, scenario FROM project_cash_flow_settings WHERE project_id = 4 AND item_key IN ('supervision_fee', 'community_fee_construction', 'developer_fee_construction', 'sales_commission') ORDER BY scenario, item_key;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT item_key, funding_source, section, scenario FROM project_cash_flow_settings WHERE project_id = 4 AND item_key IN ('supervision_fee', 'community_fee_construction', 'developer_fee_construction', 'sales_commission') ORDER BY scenario, item_key;",
+  "rows": [
+    {
+      "item_key": "developer_fee_construction",
+      "funding_source": "escrow",
+      "section": "escrow",
+      "scenario": "offplan_escrow"
+    },
+    {
+      "item_key": "sales_commission",
+      "funding_source": "escrow",
+      "section": "escrow",
+      "scenario": "offplan_escrow"
+    },
+    {
+      "item_key": "supervision_fee",
+      "funding_source": "escrow",
+      "section": "escrow",
+      "scenario": "offplan_escrow"
+    },
+    {
+      "item_key": "developer_fee_construction",
+      "funding_source": "escrow",
+      "section": "escrow",
+      "scenario": "offplan_construction"
+    },
+    {
+      "item_key": "sales_commission",
+      "funding_source": "escrow",
+      "section": "escrow",
+      "scenario": "offplan_construction"
+    },
+    {
+      "item_key": "supervision_fee",
+      "funding_source": "escrow",
+      "section": "escrow",
+      "scenario": "offplan_construction"
+    }
+  ],
+  "messages": [],
+  "stdout": "item_key\tfunding_source\tsection\tscenario\ndeveloper_fee_construction\tescrow\tescrow\toffplan_escrow\nsales_commission\tescrow\tescrow\toffplan_escrow\nsupervision_fee\tescrow\tescrow\toffplan_escrow\ndeveloper_fee_construction\tescrow\tescrow\toffplan_construction\nsales_commission\tescrow\tescrow\toffplan_construction\nsupervision_fee\tescrow\tescrow\toffplan_construction\n",
+  "stderr": "",
+  "execution_time_ms": 1662
+}

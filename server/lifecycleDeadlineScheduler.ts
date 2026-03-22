@@ -1,6 +1,6 @@
 /**
  * Lifecycle Deadline Scheduler
- * Runs daily at 8:00 AM Dubai time (UTC+4 = 04:00 UTC)
+ * Runs every 2 days at 8:00 AM Dubai time (UTC+4 = 04:00 UTC)
  * Checks all project service instances for overdue or upcoming deadlines (within 3 days)
  * and sends a notification to the owner.
  */
@@ -104,14 +104,16 @@ async function runDeadlineCheck(): Promise<void> {
 }
 
 function shouldRunNow(): boolean {
-  // Run at 8:00 AM Dubai time (UTC+4)
+  // Run at 8:00 AM Dubai time (UTC+4), every 2 days (even days of month)
   const now = new Date();
   const dubaiOffset = 4 * 60; // minutes
   const dubaiMs = now.getTime() + dubaiOffset * 60 * 1000;
   const dubaiDate = new Date(dubaiMs);
   const dubaiHour = dubaiDate.getUTCHours();
   const dubaiMinute = dubaiDate.getUTCMinutes();
-  return dubaiHour === 8 && dubaiMinute === 0;
+  const dubaiDay = dubaiDate.getUTCDate();
+  // Only run on even days (1, 3, 5... = odd days skipped; 2, 4, 6... = run)
+  return dubaiHour === 8 && dubaiMinute === 0 && dubaiDay % 2 === 0;
 }
 
 let lastRunDate: string | null = null;
@@ -133,10 +135,7 @@ export function startLifecycleDeadlineScheduler(): void {
     "[LifecycleScheduler] Starting — will check deadlines daily at 8:00 AM Dubai time"
   );
   schedulerInterval = setInterval(checkSchedule, 60 * 1000); // check every minute
-  // Run immediately on startup to catch any overdue items
-  runDeadlineCheck().catch((err) =>
-    console.error("[LifecycleScheduler] Startup check failed:", err)
-  );
+  // No immediate run on startup — prevents sending emails on every server restart
 }
 
 export function stopLifecycleDeadlineScheduler(): void {

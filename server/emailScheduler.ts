@@ -2,42 +2,31 @@ import { checkAndNotifyEmails } from "./emailIntegration";
 
 /**
  * Email Scheduler
- * Checks emails at specific times: 9:30, 11:30, 14:00, 21:00 (Dubai time, UTC+4)
+ * Checks emails once every 2 days at 9:00 AM Dubai time (UTC+4 = 05:00 UTC)
  */
 
 let schedulerInterval: ReturnType<typeof setInterval> | null = null;
 let isRunning = false;
+let lastRunDate: string | null = null;
 
-// Check every hour from 7 AM to 10 PM Dubai time (UTC+4)
-// That's UTC 3:00 to 18:00
-const SCHEDULE_TIMES_UTC: { hour: number; minute: number }[] = [];
-for (let dubaiHour = 7; dubaiHour <= 22; dubaiHour++) {
-  SCHEDULE_TIMES_UTC.push({ hour: (dubaiHour - 4 + 24) % 24, minute: 0 });
-}
-
-let lastCheckKey = "";
-
-function getCurrentCheckKey(): string {
+function shouldRunNow(): boolean {
+  // Run at 9:00 AM Dubai time (UTC+4 = 05:00 UTC), every 2 days (even days of month)
   const now = new Date();
-  return now.getUTCFullYear() + "-" + now.getUTCMonth() + "-" + now.getUTCDate() + "-" + now.getUTCHours() + "-" + now.getUTCMinutes();
-}
-
-function isScheduledTime(): boolean {
-  const now = new Date();
-  const h = now.getUTCHours();
-  const m = now.getUTCMinutes();
-  for (const t of SCHEDULE_TIMES_UTC) {
-    if (h === t.hour && m >= t.minute && m <= t.minute + 2) return true;
-  }
-  return false;
+  const dubaiOffset = 4 * 60; // minutes
+  const dubaiMs = now.getTime() + dubaiOffset * 60 * 1000;
+  const dubaiDate = new Date(dubaiMs);
+  const dubaiHour = dubaiDate.getUTCHours();
+  const dubaiMinute = dubaiDate.getUTCMinutes();
+  const dubaiDay = dubaiDate.getUTCDate();
+  // Only run on even days at 9:00 AM Dubai time
+  return dubaiHour === 9 && dubaiMinute === 0 && dubaiDay % 2 === 0;
 }
 
 async function checkSchedule() {
   if (isRunning) return;
-  if (isScheduledTime()) {
-    const key = getCurrentCheckKey();
-    if (key === lastCheckKey) return;
-    lastCheckKey = key;
+  const today = new Date().toISOString().split("T")[0];
+  if (shouldRunNow() && lastRunDate !== today) {
+    lastRunDate = today;
     isRunning = true;
     try {
       console.log("[EmailScheduler] Scheduled check at", new Date().toISOString());
@@ -53,9 +42,9 @@ async function checkSchedule() {
 
 export function startEmailScheduler() {
   if (schedulerInterval) return;
-  console.log("[EmailScheduler] Starting - Schedule: every hour from 7 AM to 10 PM Dubai time");
+  console.log("[EmailScheduler] Starting - Schedule: every 2 days at 9:00 AM Dubai time");
   schedulerInterval = setInterval(checkSchedule, 60 * 1000);
-  checkSchedule();
+  // No immediate run on startup — prevents sending emails on every server restart
 }
 
 export function stopEmailScheduler() {
@@ -83,24 +72,18 @@ export async function forceEmailCheck(): Promise<number> {
 
 export function getSchedulerStatus() {
   const now = new Date();
-  const dubaiHour = (now.getUTCHours() + 4) % 24;
-  const dubaiMinute = now.getUTCMinutes();
-  const dubaiTimes: { hour: number; minute: number }[] = [];
-  for (let h = 7; h <= 22; h++) {
-    dubaiTimes.push({ hour: h, minute: 0 });
-  }
-  let nextCheck = "غداً 7:00 صباحاً";
-  for (const t of dubaiTimes) {
-    if (t.hour > dubaiHour || (t.hour === dubaiHour && t.minute > dubaiMinute)) {
-      nextCheck = t.hour + ":" + (t.minute === 0 ? "00" : t.minute);
-      break;
-    }
-  }
+  const dubaiOffset = 4 * 60;
+  const dubaiMs = now.getTime() + dubaiOffset * 60 * 1000;
+  const dubaiDate = new Date(dubaiMs);
+  const dubaiHour = dubaiDate.getUTCHours();
+  const dubaiMinute = dubaiDate.getUTCMinutes();
+  const dubaiDay = dubaiDate.getUTCDate();
+  const nextEvenDay = dubaiDay % 2 === 0 ? dubaiDay + 2 : dubaiDay + 1;
   return {
     isActive: schedulerInterval !== null,
     isRunning,
     currentDubaiTime: dubaiHour + ":" + (dubaiMinute < 10 ? "0" : "") + dubaiMinute,
-    nextScheduledCheck: nextCheck,
-    lastCheckKey,
+    nextScheduledCheck: `يوم ${nextEvenDay} الساعة 9:00 صباحاً`,
+    lastRunDate,
   };
 }
