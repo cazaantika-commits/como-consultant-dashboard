@@ -509,7 +509,7 @@ export const cashFlowSettingsRouter = router({
             .map(s => ({
               ...s,
               section: defaultSectionByKey[s.itemKey] || s.section || "construction",
-              // Use DB fundingSource (user may have changed it manually in settings)
+              // Use DB fundingSource so user manual changes are respected; defaults only for new items
               fundingSource: s.fundingSource as "investor" | "escrow",
               sortOrder: defaultSortOrderByKey[s.itemKey] ?? s.sortOrder,
               computedAmount: costs ? computeItemAmountByKey(s.itemKey, costs, input.scenario) : 0,
