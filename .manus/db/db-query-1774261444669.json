@@ -1,0 +1,122 @@
+{
+  "query": "SELECT name, category, totalAmount, fundingSource, escrowEligible FROM cf_cost_items WHERE cfProjectId = 30012 ORDER BY sortOrder",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT name, category, totalAmount, fundingSource, escrowEligible FROM cf_cost_items WHERE cfProjectId = 30012 ORDER BY sortOrder",
+  "rows": [
+    {
+      "name": "سعر الأرض",
+      "category": "land",
+      "totalAmount": "18000000",
+      "fundingSource": "developer",
+      "escrowEligible": "0"
+    },
+    {
+      "name": "عمولة وسيط الأرض",
+      "category": "land",
+      "totalAmount": "360000",
+      "fundingSource": "developer",
+      "escrowEligible": "0"
+    },
+    {
+      "name": "رسوم تسجيل الأرض (4%)",
+      "category": "authority_fees",
+      "totalAmount": "720000",
+      "fundingSource": "developer",
+      "escrowEligible": "0"
+    },
+    {
+      "name": "أتعاب التصميم",
+      "category": "design_engineering",
+      "totalAmount": "788560",
+      "fundingSource": "developer",
+      "escrowEligible": "0"
+    },
+    {
+      "name": "رسوم الجهات الحكومية",
+      "category": "authority_fees",
+      "totalAmount": "1000000",
+      "fundingSource": "developer",
+      "escrowEligible": "0"
+    },
+    {
+      "name": "فحص التربة",
+      "category": "authority_fees",
+      "totalAmount": "16200",
+      "fundingSource": "developer",
+      "escrowEligible": "0"
+    },
+    {
+      "name": "المسح الطبوغرافي",
+      "category": "authority_fees",
+      "totalAmount": "6500",
+      "fundingSource": "developer",
+      "escrowEligible": "0"
+    },
+    {
+      "name": "المقاول الرئيسي",
+      "category": "contractor",
+      "totalAmount": "39427980",
+      "fundingSource": "mixed",
+      "escrowEligible": "1"
+    },
+    {
+      "name": "أتعاب الإشراف",
+      "category": "consultants",
+      "totalAmount": "788560",
+      "fundingSource": "escrow",
+      "escrowEligible": "1"
+    },
+    {
+      "name": "التسويق",
+      "category": "marketing_sales",
+      "totalAmount": "1242460",
+      "fundingSource": "escrow",
+      "escrowEligible": "1"
+    },
+    {
+      "name": "عمولة البيع",
+      "category": "marketing_sales",
+      "totalAmount": "3106150",
+      "fundingSource": "escrow",
+      "escrowEligible": "1"
+    },
+    {
+      "name": "أتعاب المطور",
+      "category": "developer_fee",
+      "totalAmount": "3106150",
+      "fundingSource": "developer",
+      "escrowEligible": "0"
+    },
+    {
+      "name": "احتياطي",
+      "category": "contingency",
+      "totalAmount": "788560",
+      "fundingSource": "developer",
+      "escrowEligible": "0"
+    },
+    {
+      "name": "رسوم تنظيمية (ريرا وأخرى)",
+      "category": "authority_fees",
+      "totalAmount": "494100",
+      "fundingSource": "developer",
+      "escrowEligible": "0"
+    },
+    {
+      "name": "رسوم الفرز",
+      "category": "authority_fees",
+      "totalAmount": "629567",
+      "fundingSource": "developer",
+      "escrowEligible": "0"
+    },
+    {
+      "name": "رسوم المجتمع",
+      "category": "other",
+      "totalAmount": "16000",
+      "fundingSource": "developer",
+      "escrowEligible": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "name\tcategory\ttotalAmount\tfundingSource\tescrowEligible\nسعر الأرض\tland\t18000000\tdeveloper\t0\nعمولة وسيط الأرض\tland\t360000\tdeveloper\t0\nرسوم تسجيل الأرض (4%)\tauthority_fees\t720000\tdeveloper\t0\nأتعاب التصميم\tdesign_engineering\t788560\tdeveloper\t0\nرسوم الجهات الحكومية\tauthority_fees\t1000000\tdeveloper\t0\nفحص التربة\tauthority_fees\t16200\tdeveloper\t0\nالمسح الطبوغرافي\tauthority_fees\t6500\tdeveloper\t0\nالمقاول الرئيسي\tcontractor\t39427980\tmixed\t1\nأتعاب الإشراف\tconsultants\t788560\tescrow\t1\nالتسويق\tmarketing_sales\t1242460\tescrow\t1\nعمولة البيع\tmarketing_sales\t3106150\tescrow\t1\nأتعاب المطور\tdeveloper_fee\t3106150\tdeveloper\t0\nاحتياطي\tcontingency\t788560\tdeveloper\t0\nرسوم تنظيمية (ريرا وأخرى)\tauthority_fees\t494100\tdeveloper\t0\nرسوم الفرز\tauthority_fees\t629567\tdeveloper\t0\nرسوم المجتمع\tother\t16000\tdeveloper\t0\n",
+  "stderr": "",
+  "execution_time_ms": 1550
+}

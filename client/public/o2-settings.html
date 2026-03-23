@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إعدادات التدفق — O2 أوف بلان دون إيداع في حساب الضمان</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f5f5f5; padding: 20px; direction: rtl; }
+  h2 { text-align: center; margin-bottom: 6px; color: #1a1a2e; font-size: 17px; }
+  h3 { text-align: center; margin-bottom: 16px; color: #1d4ed8; font-size: 13px; }
+  table { border-collapse: collapse; width: 100%; background: #fff; margin-bottom: 20px; }
+  th, td { border: 1px solid #ccc; padding: 5px 8px; font-size: 11px; text-align: center; }
+  th { font-weight: bold; }
+  .col-item { text-align: right; background: #f0f4ff; font-weight: 500; white-space: nowrap; }
+  .col-amount { font-weight: bold; color: #1a1a2e; font-size: 11px; }
+  .col-source { font-weight: bold; cursor: pointer; }
+  .investor { background: #fef3c7; color: #92400e; }
+  .escrow { background: #dbeafe; color: #1d4ed8; }
+  .paid { background: #e8f5e9; color: #1b5e20; font-weight: bold; }
+  .section-header { background: #1d4ed8; color: #fff; font-weight: bold; font-size: 12px; text-align: right; }
+  .section-header td { background: #1d4ed8; color: #fff; }
+  .h-main { background: #1a1a2e; color: #fff; font-size: 11px; }
+  .total-row { background: #1a1a2e; color: #fbbf24; font-weight: bold; font-size: 12px; }
+  .total-row td { border-color: #333; }
+  .capital-row { background: #dc2626; color: #fff; font-weight: bold; font-size: 12px; }
+  .capital-row td { border-color: #991b1b; }
+  .escrow-total-row { background: #1d4ed8; color: #fff; font-weight: bold; font-size: 12px; }
+  .escrow-total-row td { border-color: #1e40af; }
+  select { font-size: 10px; padding: 2px 4px; border: 1px solid #aaa; border-radius: 3px; width: 100%; }
+  input[type="number"] { font-size: 10px; padding: 2px 4px; border: 1px solid #aaa; border-radius: 3px; width: 50px; text-align: center; }
+  .phase-select { background: #f0fdf4; }
+  .method-select { background: #fefce8; }
+  .month-input { background: #fef3c7; }
+  .pct-container { display: none; margin-top: 4px; }
+  .pct-container.show { display: block; }
+  .pct-row { display: flex; gap: 4px; align-items: center; justify-content: center; flex-wrap: wrap; margin: 2px 0; font-size: 9px; }
+  .pct-row label { font-size: 9px; }
+  .pct-row input { width: 40px; font-size: 9px; }
+  .pct-total { font-size: 9px; font-weight: bold; margin-top: 2px; }
+  .pct-total.ok { color: green; }
+  .pct-total.err { color: red; }
+  .na-cell { color: #999; }
+</style>
+</head>
+<body>
+
+<h2>إعدادات التدفق النقدي</h2>
+<h3>السيناريو الثاني — أوف بلان دون إيداع في حساب الضمان</h3>
+
+<table id="mainTable">
+  <thead>
+    <tr>
+      <th class="h-main" style="text-align:right;">البند</th>
+      <th class="h-main">المبلغ (د.إ)</th>
+      <th class="h-main">المصدر</th>
+      <th class="h-main">المرحلة</th>
+      <th class="h-main">طريقة الدفع</th>
+      <th class="h-main">التفاصيل</th>
+    </tr>
+  </thead>
+  <tbody>
+
+    <!-- القسم الأول — الأرض -->
+    <tr class="section-header"><td colspan="6">القسم الأول — المبالغ المدفوعة (الأرض)</td></tr>
+    <tr>
+      <td class="col-item">سعر الأرض</td>
+      <td class="col-amount">18,000,000</td>
+      <td class="paid">مدفوع</td>
+      <td class="na-cell">—</td>
+      <td class="na-cell">—</td>
+      <td class="na-cell">—</td>
+    </tr>
+    <tr>
+      <td class="col-item">عمولة وسيط الأرض</td>
+      <td class="col-amount">360,000</td>
+      <td class="paid">مدفوع</td>
+      <td class="na-cell">—</td>
+      <td class="na-cell">—</td>
+      <td class="na-cell">—</td>
+    </tr>
+    <tr>
+      <td class="col-item">رسوم تسجيل الأرض (4%)</td>
+      <td class="col-amount">720,000</td>
+      <td class="paid">مدفوع</td>
+      <td class="na-cell">—</td>
+      <td class="na-cell">—</td>
+      <td class="na-cell">—</td>
+    </tr>
+
+    <!-- القسم الثاني — التصاميم -->
+    <tr class="section-header"><td colspan="6">القسم الثاني — التصاميم ورخصة البناء</td></tr>
+    <tr data-id="gov_fees_10">
+      <td class="col-item">رسوم الجهات الحكومية (10%)</td>
+      <td class="col-amount">100,018</td>
+      <td class="col-source investor" onclick="toggleSource(this)">المستثمر</td>
+      <td><select class="phase-select" onchange="onPhaseChange(this)"><option value="design" selected>التصاميم</option><option value="construction">التنفيذ</option></select></td>
+      <td><select class="method-select" onchange="onMethodChange(this)"><option value="single">دفعة واحدة</option><option value="equal">دفعات متساوية</option><option value="custom">نسب مخصصة</option></select></td>
+      <td class="detail-cell"><input type="number" class="month-input" min="1" max="6" value="1" placeholder="الشهر"> <span style="font-size:9px;">من المرحلة</span></td>
+    </tr>
+    <tr data-id="soil_test">
+      <td class="col-item">فحص التربة</td>
+      <td class="col-amount">16,180</td>
+      <td class="col-source investor" onclick="toggleSource(this)">المستثمر</td>
+      <td><select class="phase-select" onchange="onPhaseChange(this)"><option value="design" selected>التصاميم</option><option value="construction">التنفيذ</option></select></td>
+      <td><select class="method-select" onchange="onMethodChange(this)"><option value="single">دفعة واحدة</option><option value="equal">دفعات متساوية</option><option value="custom">نسب مخصصة</option></select></td>
+      <td class="detail-cell"><input type="number" class="month-input" min="1" max="6" value="1" placeholder="الشهر"> <span style="font-size:9px;">من المرحلة</span></td>
+    </tr>
+    <tr data-id="topo_survey">
+      <td class="col-item">المسح الطبوغرافي</td>
+      <td class="col-amount">6,180</td>
+      <td class="col-source investor" onclick="toggleSource(this)">المستثمر</td>
+      <td><select class="phase-select" onchange="onPhaseChange(this)"><option value="design" selected>التصاميم</option><option value="construction">التنفيذ</option></select></td>
+      <td><select class="method-select" onchange="onMethodChange(this)"><option value="single">دفعة واحدة</option><option value="equal">دفعات متساوية</option><option value="custom">نسب مخصصة</option></select></td>
+      <td class="detail-cell"><input type="number" class="month-input" min="1" max="6" value="1" placeholder="الشهر"> <span style="font-size:9px;">من المرحلة</span></td>
+    </tr>
+    <tr data-id="design_fee">
+      <td class="col-item">أتعاب الاستشاري — التصاميم</td>
+      <td class="col-amount">799,988</td>
+      <td class="col-source investor" onclick="toggleSource(this)">المستثمر</td>
+      <td><select class="phase-select" onchange="onPhaseChange(this)"><option value="design" selected>التصاميم</option><option value="construction">التنفيذ</option></select></td>
+      <td><select class="method-select" onchange="onMethodChange(this)"><option value="single">دفعة واحدة</option><option value="equal" selected>دفعات متساوية</option><option value="custom">نسب مخصصة</option></select></td>
+      <td class="detail-cell"><span style="font-size:9px;">موزعة على كل أشهر المرحلة</span></td>
+    </tr>
+    <tr data-id="dev_fee_design">
+      <td class="col-item">أتعاب المطور — التصاميم (1%)</td>
+      <td class="col-amount">909,710</td>
+      <td class="col-source investor" onclick="toggleSource(this)">المستثمر</td>
+      <td><select class="phase-select" onchange="onPhaseChange(this)"><option value="design" selected>التصاميم</option><option value="construction">التنفيذ</option></select></td>
+      <td><select class="method-select" onchange="onMethodChange(this)"><option value="single">دفعة واحدة</option><option value="equal" selected>دفعات متساوية</option><option value="custom">نسب مخصصة</option></select></td>
+      <td class="detail-cell"><span style="font-size:9px;">موزعة على كل أشهر المرحلة</span></td>
+    </tr>
+    <tr data-id="community_25">
+      <td class="col-item">رسوم المجتمع (25%)</td>
+      <td class="col-amount">4,045</td>
+      <td class="col-source investor" onclick="toggleSource(this)">المستثمر</td>
+      <td><select class="phase-select" onchange="onPhaseChange(this)"><option value="design" selected>التصاميم</option><option value="construction">التنفيذ</option></select></td>
+      <td><select class="method-select" onchange="onMethodChange(this)"><option value="single">دفعة واحدة</option><option value="equal">دفعات متساوية</option><option value="custom">نسب مخصصة</option></select></td>
+      <td class="detail-cell"><input type="number" class="month-input" min="1" max="6" value="1" placeholder="الشهر"> <span style="font-size:9px;">من المرحلة</span></td>
+    </tr>
+
+    <!-- القسم الثالث — ريرا والبيع أوف بلان -->
+    <tr class="section-header"><td colspan="6">القسم الثالث — ريرا والبيع أوف بلان</td></tr>
+    <tr data-id="dev_fee_offplan">
+      <td class="col-item">أتعاب المطور — أوف بلان (1%)</td>
+      <td class="col-amount">909,710</td>
+      <td class="col-source investor" onclick="toggleSource(this)">المستثمر</td>
+      <td><select class="phase-select" onchange="onPhaseChange(this)"><option value="design">التصاميم</option><option value="construction" selected>التنفيذ</option></select></td>
+      <td><select class="method-select" onchange="onMethodChange(this)"><option value="single">دفعة واحدة</option><option value="equal" selected>دفعات متساوية</option><option value="custom">نسب مخصصة</option></select></td>
+      <td class="detail-cell"><span style="font-size:9px;">موزعة على كل أشهر المرحلة</span></td>
+    </tr>
+    <tr data-id="fraz_fee">
+      <td class="col-item">رسوم الفرز</td>
+      <td class="col-amount">2,033,044</td>
+      <td class="col-source investor" onclick="toggleSource(this)">المستثمر</td>
+      <td><select class="phase-select" onchange="onPhaseChange(this)"><option value="design">التصاميم</option><option value="construction" selected>التنفيذ</option></select></td>
+      <td><select class="method-select" onchange="onMethodChange(this)"><option value="single" selected>دفعة واحدة</option><option value="equal">دفعات متساوية</option><option value="custom">نسب مخصصة</option></select></td>
+      <td class="detail-cell"><input type="number" class="month-input" min="1" max="16" value="1" placeholder="الشهر"> <span style="font-size:9px;">من المرحلة</span></td>
+    </tr>
+    <tr data-id="rera_reg">
+      <td class="col-item">تسجيل بيع على الخارطة - ريرا</td>
+      <td class="col-amount">150,000</td>
+      <td class="col-source investor" onclick="toggleSource(this)">المستثمر</td>
+      <td><select class="phase-select" onchange="onPhaseChange(this)"><option value="design">التصاميم</option><option value="construction" selected>التنفيذ</option></select></td>
+      <td><select class="method-select" onchange="onMethodChange(this)"><option value="single" selected>دفعة واحدة</option><option value="equal">دفعات متساوية</option><option value="custom">نسب مخصصة</option></select></td>
+      <td class="detail-cell"><input type="number" class="month-input" min="1" max="16" value="1" placeholder="الشهر"> <span style="font-size:9px;">من المرحلة</span></td>
+    </tr>
+    <tr data-id="rera_units">
+      <td class="col-item">تسجيل الوحدات - ريرا</td>
+      <td class="col-amount">39,180</td>
+      <td class="col-source investor" onclick="toggleSource(this)">المستثمر</td>
+      <td><select class="phase-select" onchange="onPhaseChange(this)"><option value="design">التصاميم</option><option value="construction" selected>التنفيذ</option></select></td>
+      <td><select class="method-select" onchange="onMethodChange(this)"><option value="single" selected>دفعة واحدة</option><option value="equal">دفعات متساوية</option><option value="custom">نسب مخصصة</option></select></td>
+      <td class="detail-cell"><input type="number" class="month-input" min="1" max="16" value="1" placeholder="الشهر"> <span style="font-size:9px;">من المرحلة</span></td>
+    </tr>
+    <tr data-id="noc_fee">
+      <td class="col-item">رسوم NOC للبيع</td>
+      <td class="col-amount">10,000</td>
+      <td class="col-source investor" onclick="toggleSource(this)">المستثمر</td>
+      <td><select class="phase-select" onchange="onPhaseChange(this)"><option value="design">التصاميم</option><option value="construction" selected>التنفيذ</option></select></td>
+      <td><select class="method-select" onchange="onMethodChange(this)"><option value="single" selected>دفعة واحدة</option><option value="equal">دفعات متساوية</option><option value="custom">نسب مخصصة</option></select></td>
+      <td class="detail-cell"><input type="number" class="month-input" min="1" max="16" value="1" placeholder="الشهر"> <span style="font-size:9px;">من المرحلة</span></td>
+    </tr>
+    <tr data-id="escrow_fee">
+      <td class="col-item">رسوم حساب الضمان</td>
+      <td class="col-amount">140,000</td>
+      <td class="col-source investor" onclick="toggleSource(this)">المستثمر</td>
+      <td><select class="phase-select" onchange="onPhaseChange(this)"><option value="design">التصاميم</option><option value="construction" selected>التنفيذ</option></select></td>
+      <td><select class="method-select" onchange="onMethodChange(this)"><option value="single" selected>دفعة واحدة</option><option value="equal">دفعات متساوية</option><option value="custom">نسب مخصصة</option></select></td>
+      <td class="detail-cell"><input type="number" class="month-input" min="1" max="16" value="1" placeholder="الشهر"> <span style="font-size:9px;">من المرحلة</span></td>
+    </tr>
+    <tr data-id="marketing_offplan">
+      <td class="col-item">التسويق والإعلان — أوف بلان (25%)</td>
+      <td class="col-amount">454,855</td>
+      <td class="col-source investor" onclick="toggleSource(this)">المستثمر</td>
+      <td><select class="phase-select" onchange="onPhaseChange(this)"><option value="design">التصاميم</option><option value="construction" selected>التنفيذ</option></select></td>
+      <td><select class="method-select" onchange="onMethodChange(this)"><option value="single">دفعة واحدة</option><option value="equal" selected>دفعات متساوية</option><option value="custom">نسب مخصصة</option></select></td>
+      <td class="detail-cell"><span style="font-size:9px;">موزعة على كل أشهر المرحلة</span></td>
+    </tr>
+
+    <!-- القسم الرابع — الإنشاء (حصة المستثمر) -->
+    <tr class="section-header"><td colspan="6">القسم الرابع — الإنشاء (حصة المستثمر)</td></tr>
+    <tr data-id="contractor_advance">
+      <td class="col-item">دفعة مقدمة للمقاول (10%)</td>
+      <td class="col-amount">3,999,940</td>
+      <td class="col-source investor" onclick="toggleSource(this)">المستثمر</td>
+      <td><select class="phase-select" onchange="onPhaseChange(this)"><option value="design">التصاميم</option><option value="construction" selected>التنفيذ</option></select></td>
+      <td><select class="method-select" onchange="onMethodChange(this)"><option value="single" selected>دفعة واحدة</option><option value="equal">دفعات متساوية</option><option value="custom">نسب مخصصة</option></select></td>
+      <td class="detail-cell"><input type="number" class="month-input" min="1" max="16" value="1" placeholder="الشهر"> <span style="font-size:9px;">من المرحلة</span></td>
+    </tr>
+    <tr data-id="progress_payment">
+      <td class="col-item">دفعة إنجاز المقاول (20%)</td>
+      <td class="col-amount">7,999,880</td>
+      <td class="col-source investor" onclick="toggleSource(this)">المستثمر</td>
+      <td><select class="phase-select" onchange="onPhaseChange(this)"><option value="design">التصاميم</option><option value="construction" selected>التنفيذ</option></select></td>
+      <td><select class="method-select" onchange="onMethodChange(this)"><option value="single">دفعة واحدة</option><option value="equal" selected>دفعات متساوية</option><option value="custom">نسب مخصصة</option></select></td>
+      <td class="detail-cell"><span style="font-size:9px;">موزعة على كل أشهر المرحلة</span></td>
+    </tr>
+    <tr data-id="community_75">
+      <td class="col-item">رسوم المجتمع (75%)</td>
+      <td class="col-amount">12,135</td>
+      <td class="col-source investor" onclick="toggleSource(this)">المستثمر</td>
+      <td><select class="phase-select" onchange="onPhaseChange(this)"><option value="design">التصاميم</option><option value="construction" selected>التنفيذ</option></select></td>
+      <td><select class="method-select" onchange="onMethodChange(this)"><option value="single">دفعة واحدة</option><option value="equal" selected>دفعات متساوية</option><option value="custom">نسب مخصصة</option></select></td>
+      <td class="detail-cell"><span style="font-size:9px;">موزعة على كل أشهر المرحلة</span></td>
+    </tr>
+    <tr data-id="dev_fee_supervision">
+      <td class="col-item">أتعاب المطور — الإشراف (3%)</td>
+      <td class="col-amount">2,729,130</td>
+      <td class="col-source investor" onclick="toggleSource(this)">المستثمر</td>
+      <td><select class="phase-select" onchange="onPhaseChange(this)"><option value="design">التصاميم</option><option value="construction" selected>التنفيذ</option></select></td>
+      <td><select class="method-select" onchange="onMethodChange(this)"><option value="single">دفعة واحدة</option><option value="equal" selected>دفعات متساوية</option><option value="custom">نسب مخصصة</option></select></td>
+      <td class="detail-cell"><span style="font-size:9px;">موزعة على كل أشهر المرحلة</span></td>
+    </tr>
+    <tr data-id="marketing_construction">
+      <td class="col-item">التسويق والإعلان — الإنشاء (75%)</td>
+      <td class="col-amount">1,364,565</td>
+      <td class="col-source investor" onclick="toggleSource(this)">المستثمر</td>
+      <td><select class="phase-select" onchange="onPhaseChange(this)"><option value="design">التصاميم</option><option value="construction" selected>التنفيذ</option></select></td>
+      <td><select class="method-select" onchange="onMethodChange(this)"><option value="single">دفعة واحدة</option><option value="equal" selected>دفعات متساوية</option><option value="custom">نسب مخصصة</option></select></td>
+      <td class="detail-cell"><span style="font-size:9px;">موزعة على كل أشهر المرحلة</span></td>
+    </tr>
+
+    <tr data-id="surveyor">
+      <td class="col-item">رسوم المساح</td>
+      <td class="col-amount">12,180</td>
+      <td class="col-source investor" onclick="toggleSource(this)">المستثمر</td>
+      <td><select class="phase-select" onchange="onPhaseChange(this)"><option value="design">التصاميم</option><option value="construction" selected>التنفيذ</option></select></td>
+      <td><select class="method-select" onchange="onMethodChange(this)"><option value="single" selected>دفعة واحدة</option><option value="equal">دفعات متساوية</option><option value="custom">نسب مخصصة</option></select></td>
+      <td class="detail-cell"><input type="number" class="month-input" min="1" max="16" value="1" placeholder="الشهر"> <span style="font-size:9px;">من المرحلة</span></td>
+    </tr>
+
+    <tr data-id="contingency">
+      <td class="col-item">احتياطي وطوارئ (2%)</td>
+      <td class="col-amount">799,988</td>
+      <td class="col-source investor" onclick="toggleSource(this)">المستثمر</td>
+      <td><select class="phase-select" onchange="onPhaseChange(this)"><option value="design">التصاميم</option><option value="construction" selected>التنفيذ</option></select></td>
+      <td><select class="method-select" onchange="onMethodChange(this)"><option value="single">دفعة واحدة</option><option value="equal" selected>دفعات متساوية</option><option value="custom">نسب مخصصة</option></select></td>
+      <td class="detail-cell"><span style="font-size:9px;">موزعة على كل أشهر المرحلة</span></td>
+    </tr>
+    <tr data-id="bank_fees">
+      <td class="col-item">رسوم بنكية</td>
+      <td class="col-amount">19,800</td>
+      <td class="col-source investor" onclick="toggleSource(this)">المستثمر</td>
+      <td><select class="phase-select" onchange="onPhaseChange(this)"><option value="design">التصاميم</option><option value="construction" selected>التنفيذ</option></select></td>
+      <td><select class="method-select" onchange="onMethodChange(this)"><option value="single">دفعة واحدة</option><option value="equal" selected>دفعات متساوية</option><option value="custom">نسب مخصصة</option></select></td>
+      <td class="detail-cell"><span style="font-size:9px;">موزعة على كل أشهر المرحلة</span></td>
+    </tr>
+
+    <!-- القسم الخامس — من حساب الضمان -->
+    <tr class="section-header"><td colspan="6">من حساب الضمان (تُدفع من إيرادات المشترين)</td></tr>
+    <tr data-id="escrow_gov_fees">
+      <td class="col-item">رسوم الجهات الحكومية (90%)</td>
+      <td class="col-amount">900,162</td>
+      <td class="col-source escrow" onclick="toggleSource(this)">حساب الضمان</td>
+      <td><select class="phase-select" onchange="onPhaseChange(this)"><option value="design">التصاميم</option><option value="construction" selected>التنفيذ</option></select></td>
+      <td><select class="method-select" onchange="onMethodChange(this)"><option value="single">دفعة واحدة</option><option value="equal" selected>دفعات متساوية</option><option value="custom">نسب مخصصة</option></select></td>
+      <td class="detail-cell"><span style="font-size:9px;">موزعة على كل أشهر المرحلة</span></td>
+    </tr>
+    <tr data-id="escrow_contractor">
+      <td class="col-item">دفعات المقاول (70% — من الضمان)</td>
+      <td class="col-amount">27,999,580</td>
+      <td class="col-source escrow" onclick="toggleSource(this)">حساب الضمان</td>
+      <td><select class="phase-select" onchange="onPhaseChange(this)"><option value="design">التصاميم</option><option value="construction" selected>التنفيذ</option></select></td>
+      <td><select class="method-select" onchange="onMethodChange(this)"><option value="single">دفعة واحدة</option><option value="equal" selected>دفعات متساوية</option><option value="custom">نسب مخصصة</option></select></td>
+      <td class="detail-cell"><span style="font-size:9px;">موزعة على كل أشهر المرحلة</span></td>
+    </tr>
+    <tr data-id="escrow_sales_agent">
+      <td class="col-item">عمولة وكيل المبيعات (5%)</td>
+      <td class="col-amount">4,548,550</td>
+      <td class="col-source escrow" onclick="toggleSource(this)">حساب الضمان</td>
+      <td><select class="phase-select" onchange="onPhaseChange(this)"><option value="design">التصاميم</option><option value="construction" selected>التنفيذ</option></select></td>
+      <td><select class="method-select" onchange="onMethodChange(this)"><option value="single">دفعة واحدة</option><option value="equal" selected>دفعات متساوية</option><option value="custom">نسب مخصصة</option></select></td>
+      <td class="detail-cell"><span style="font-size:9px;">موزعة على كل أشهر المرحلة</span></td>
+    </tr>
+    <tr data-id="escrow_supervision">
+      <td class="col-item">أتعاب الاستشاري — الإشراف</td>
+      <td class="col-amount">799,988</td>
+      <td class="col-source escrow" onclick="toggleSource(this)">حساب الضمان</td>
+      <td><select class="phase-select" onchange="onPhaseChange(this)"><option value="design">التصاميم</option><option value="construction" selected>التنفيذ</option></select></td>
+      <td><select class="method-select" onchange="onMethodChange(this)"><option value="single">دفعة واحدة</option><option value="equal" selected>دفعات متساوية</option><option value="custom">نسب مخصصة</option></select></td>
+      <td class="detail-cell"><span style="font-size:9px;">موزعة على كل أشهر المرحلة</span></td>
+    </tr>
+    <tr data-id="escrow_audit">
+      <td class="col-item">تقرير مدقق ريرا</td>
+      <td class="col-amount">105,180</td>
+      <td class="col-source escrow" onclick="toggleSource(this)">حساب الضمان</td>
+      <td><select class="phase-select" onchange="onPhaseChange(this)"><option value="design">التصاميم</option><option value="construction" selected>التنفيذ</option></select></td>
+      <td><select class="method-select" onchange="onMethodChange(this)"><option value="single">دفعة واحدة</option><option value="equal" selected>دفعات متساوية</option><option value="custom">نسب مخصصة</option></select></td>
+      <td class="detail-cell"><span style="font-size:9px;">موزعة على كل أشهر المرحلة</span></td>
+    </tr>
+    <tr data-id="escrow_inspection">
+      <td class="col-item">تقرير فحص ريرا</td>
+      <td class="col-amount">100,001</td>
+      <td class="col-source escrow" onclick="toggleSource(this)">حساب الضمان</td>
+      <td><select class="phase-select" onchange="onPhaseChange(this)"><option value="design">التصاميم</option><option value="construction" selected>التنفيذ</option></select></td>
+      <td><select class="method-select" onchange="onMethodChange(this)"><option value="single">دفعة واحدة</option><option value="equal" selected>دفعات متساوية</option><option value="custom">نسب مخصصة</option></select></td>
+      <td class="detail-cell"><span style="font-size:9px;">موزعة على كل أشهر المرحلة</span></td>
+    </tr>
+
+    <!-- صف رأس المال المطلوب -->
+    <tr class="capital-row">
+      <td style="text-align:right;background:#dc2626;color:#fff;">رأس المال المطلوب (المستثمر)</td>
+      <td style="background:#dc2626;color:#fff;">41,590,528</td>
+      <td colspan="4" style="background:#dc2626;"></td>
+    </tr>
+    <!-- صف إجمالي حساب الضمان -->
+    <tr class="escrow-total-row">
+      <td style="text-align:right;background:#1d4ed8;color:#fff;">إجمالي حساب الضمان</td>
+      <td style="background:#1d4ed8;color:#fff;">34,453,461</td>
+      <td colspan="4" style="background:#1d4ed8;"></td>
+    </tr>
+    <!-- صف المجموع الكلي -->
+    <tr class="total-row">
+      <td style="text-align:right;background:#1a1a2e;color:#fbbf24;">الإجمالي الكلي</td>
+      <td style="background:#1a1a2e;color:#fbbf24;">76,043,989</td>
+      <td colspan="4" style="background:#1a1a2e;"></td>
+    </tr>
+
+  </tbody>
+</table>
+
+<script>
+function toggleSource(cell) {
+  if (cell.classList.contains('investor')) {
+    cell.classList.remove('investor');
+    cell.classList.add('escrow');
+    cell.textContent = 'حساب الضمان';
+  } else {
+    cell.classList.remove('escrow');
+    cell.classList.add('investor');
+    cell.textContent = 'المستثمر';
+  }
+}
+
+function onPhaseChange(sel) {
+  var row = sel.closest('tr');
+  var methodSel = row.querySelector('.method-select');
+  var maxMonth = sel.value === 'design' ? 6 : 16;
+  var monthInput = row.querySelector('.month-input');
+  if (monthInput) monthInput.max = maxMonth;
+  onMethodChange(methodSel);
+}
+
+function onMethodChange(sel) {
+  var row = sel.closest('tr');
+  var detailCell = row.querySelector('.detail-cell');
+  var phaseSel = row.querySelector('.phase-select');
+  var phase = phaseSel.value;
+  var maxMonth = phase === 'design' ? 6 : 16;
+  var phaseName = phase === 'design' ? 'التصاميم' : 'التنفيذ';
+
+  if (sel.value === 'single') {
+    detailCell.innerHTML = '<input type="number" class="month-input" min="1" max="' + maxMonth + '" value="1" placeholder="الشهر"> <span style="font-size:9px;">من ' + phaseName + '</span>';
+  } else if (sel.value === 'equal') {
+    detailCell.innerHTML = '<span style="font-size:9px;">موزعة على كل أشهر ' + phaseName + '</span>';
+  } else if (sel.value === 'custom') {
+    var html = '<div class="pct-container show">';
+    for (var i = 1; i <= maxMonth; i++) {
+      html += '<div class="pct-row"><label>شهر ' + i + ':</label><input type="number" class="pct-input" min="0" max="100" value="0" onchange="checkTotal(this)">%</div>';
+    }
+    html += '<div class="pct-total" id="pctTotal">المجموع: 0%</div></div>';
+    detailCell.innerHTML = html;
+  }
+}
+
+function checkTotal(input) {
+  var container = input.closest('.pct-container');
+  var inputs = container.querySelectorAll('.pct-input');
+  var total = 0;
+  inputs.forEach(function(inp) { total += parseFloat(inp.value) || 0; });
+  var totalEl = container.querySelector('.pct-total');
+  totalEl.textContent = 'المجموع: ' + total + '%';
+  totalEl.className = 'pct-total ' + (Math.abs(total - 100) < 0.01 ? 'ok' : 'err');
+}
+</script>
+
+</body>
+</html>

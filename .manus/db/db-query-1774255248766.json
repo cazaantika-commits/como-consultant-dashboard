@@ -1,0 +1,250 @@
+{
+  "query": "SELECT item_key, name_ar, section, funding_source, sort_order, is_active FROM project_cash_flow_settings WHERE project_id = 4 AND scenario = 'offplan_escrow' ORDER BY sort_order",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT item_key, name_ar, section, funding_source, sort_order, is_active FROM project_cash_flow_settings WHERE project_id = 4 AND scenario = 'offplan_escrow' ORDER BY sort_order",
+  "rows": [
+    {
+      "item_key": "land_cost",
+      "name_ar": "سعر الأرض",
+      "section": "paid",
+      "funding_source": "investor",
+      "sort_order": "1",
+      "is_active": "1"
+    },
+    {
+      "item_key": "land_broker",
+      "name_ar": "عمولة وسيط الأرض",
+      "section": "paid",
+      "funding_source": "investor",
+      "sort_order": "2",
+      "is_active": "1"
+    },
+    {
+      "item_key": "land_registration",
+      "name_ar": "رسوم تسجيل الأرض (4%)",
+      "section": "paid",
+      "funding_source": "investor",
+      "sort_order": "3",
+      "is_active": "1"
+    },
+    {
+      "item_key": "government_fees_investor",
+      "name_ar": "رسوم الجهات الحكومية (10%)",
+      "section": "design",
+      "funding_source": "investor",
+      "sort_order": "9",
+      "is_active": "1"
+    },
+    {
+      "item_key": "soil_test",
+      "name_ar": "فحص التربة",
+      "section": "design",
+      "funding_source": "investor",
+      "sort_order": "10",
+      "is_active": "1"
+    },
+    {
+      "item_key": "survey",
+      "name_ar": "المسح الطبوغرافي",
+      "section": "design",
+      "funding_source": "investor",
+      "sort_order": "11",
+      "is_active": "1"
+    },
+    {
+      "item_key": "design_fee",
+      "name_ar": "أتعاب التصميم (2%)",
+      "section": "design",
+      "funding_source": "investor",
+      "sort_order": "12",
+      "is_active": "1"
+    },
+    {
+      "item_key": "developer_fee_design",
+      "name_ar": "أتعاب المطور — التصاميم (1%)",
+      "section": "design",
+      "funding_source": "investor",
+      "sort_order": "13",
+      "is_active": "1"
+    },
+    {
+      "item_key": "developer_fee_offplan",
+      "name_ar": "أتعاب المطور — أوف بلان (1%)",
+      "section": "offplan",
+      "funding_source": "investor",
+      "sort_order": "14",
+      "is_active": "1"
+    },
+    {
+      "item_key": "fraz_fee",
+      "name_ar": "رسوم الفرز (40 د/قدم²)",
+      "section": "offplan",
+      "funding_source": "investor",
+      "sort_order": "20",
+      "is_active": "1"
+    },
+    {
+      "item_key": "rera_registration",
+      "name_ar": "تسجيل بيع على الخارطة - ريرا",
+      "section": "offplan",
+      "funding_source": "investor",
+      "sort_order": "21",
+      "is_active": "1"
+    },
+    {
+      "item_key": "rera_units",
+      "name_ar": "تسجيل الوحدات - ريرا",
+      "section": "offplan",
+      "funding_source": "investor",
+      "sort_order": "22",
+      "is_active": "1"
+    },
+    {
+      "item_key": "noc_fee",
+      "name_ar": "رسوم NOC للبيع",
+      "section": "offplan",
+      "funding_source": "investor",
+      "sort_order": "23",
+      "is_active": "1"
+    },
+    {
+      "item_key": "escrow_fee",
+      "name_ar": "رسوم حساب الضمان",
+      "section": "offplan",
+      "funding_source": "investor",
+      "sort_order": "24",
+      "is_active": "1"
+    },
+    {
+      "item_key": "community_fee",
+      "name_ar": "رسوم المجتمع",
+      "section": "offplan",
+      "funding_source": "investor",
+      "sort_order": "25",
+      "is_active": "1"
+    },
+    {
+      "item_key": "marketing_offplan",
+      "name_ar": "التسويق والإعلان — أوف بلان (25%)",
+      "section": "offplan",
+      "funding_source": "investor",
+      "sort_order": "26",
+      "is_active": "1"
+    },
+    {
+      "item_key": "escrow_deposit",
+      "name_ar": "إيداع حساب الضمان (20%)",
+      "section": "offplan",
+      "funding_source": "investor",
+      "sort_order": "27",
+      "is_active": "1"
+    },
+    {
+      "item_key": "contractor_advance",
+      "name_ar": "دفعة مقدمة للمقاول (10%)",
+      "section": "construction",
+      "funding_source": "investor",
+      "sort_order": "31",
+      "is_active": "1"
+    },
+    {
+      "item_key": "contingency",
+      "name_ar": "احتياطي وطوارئ (2%)",
+      "section": "construction",
+      "funding_source": "investor",
+      "sort_order": "40",
+      "is_active": "1"
+    },
+    {
+      "item_key": "bank_fees",
+      "name_ar": "رسوم بنكية",
+      "section": "construction",
+      "funding_source": "investor",
+      "sort_order": "41",
+      "is_active": "1"
+    },
+    {
+      "item_key": "government_fees_escrow",
+      "name_ar": "رسوم الجهات الحكومية (90%)",
+      "section": "escrow",
+      "funding_source": "escrow",
+      "sort_order": "54",
+      "is_active": "1"
+    },
+    {
+      "item_key": "contractor_payments",
+      "name_ar": "دفعات المقاول (70% — من الضمان)",
+      "section": "escrow",
+      "funding_source": "escrow",
+      "sort_order": "55",
+      "is_active": "1"
+    },
+    {
+      "item_key": "community_fee_escrow",
+      "name_ar": "رسوم المجتمع (75%)",
+      "section": "escrow",
+      "funding_source": "escrow",
+      "sort_order": "56",
+      "is_active": "1"
+    },
+    {
+      "item_key": "developer_fee_construction",
+      "name_ar": "أتعاب المطور — الإشراف (3%)",
+      "section": "escrow",
+      "funding_source": "escrow",
+      "sort_order": "58",
+      "is_active": "1"
+    },
+    {
+      "item_key": "supervision_fee",
+      "name_ar": "أتعاب الإشراف (2%)",
+      "section": "escrow",
+      "funding_source": "escrow",
+      "sort_order": "60",
+      "is_active": "1"
+    },
+    {
+      "item_key": "surveyor_fee",
+      "name_ar": "رسوم المساح",
+      "section": "escrow",
+      "funding_source": "escrow",
+      "sort_order": "61",
+      "is_active": "1"
+    },
+    {
+      "item_key": "rera_audit",
+      "name_ar": "تقرير مدقق ريرا",
+      "section": "escrow",
+      "funding_source": "escrow",
+      "sort_order": "62",
+      "is_active": "1"
+    },
+    {
+      "item_key": "rera_inspection",
+      "name_ar": "تقرير فحص ريرا",
+      "section": "escrow",
+      "funding_source": "escrow",
+      "sort_order": "63",
+      "is_active": "1"
+    },
+    {
+      "item_key": "marketing_construction",
+      "name_ar": "التسويق والإعلان — الإنشاء (75%)",
+      "section": "escrow",
+      "funding_source": "escrow",
+      "sort_order": "64",
+      "is_active": "1"
+    },
+    {
+      "item_key": "sales_commission",
+      "name_ar": "عمولة وكيل المبيعات (5%)",
+      "section": "escrow",
+      "funding_source": "escrow",
+      "sort_order": "65",
+      "is_active": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "item_key\tname_ar\tsection\tfunding_source\tsort_order\tis_active\nland_cost\tسعر الأرض\tpaid\tinvestor\t1\t1\nland_broker\tعمولة وسيط الأرض\tpaid\tinvestor\t2\t1\nland_registration\tرسوم تسجيل الأرض (4%)\tpaid\tinvestor\t3\t1\ngovernment_fees_investor\tرسوم الجهات الحكومية (10%)\tdesign\tinvestor\t9\t1\nsoil_test\tفحص التربة\tdesign\tinvestor\t10\t1\nsurvey\tالمسح الطبوغرافي\tdesign\tinvestor\t11\t1\ndesign_fee\tأتعاب التصميم (2%)\tdesign\tinvestor\t12\t1\ndeveloper_fee_design\tأتعاب المطور — التصاميم (1%)\tdesign\tinvestor\t13\t1\ndeveloper_fee_offplan\tأتعاب المطور — أوف بلان (1%)\toffplan\tinvestor\t14\t1\nfraz_fee\tرسوم الفرز (40 د/قدم²)\toffplan\tinvestor\t20\t1\nrera_registration\tتسجيل بيع على الخارطة - ريرا\toffplan\tinvestor\t21\t1\nrera_units\tتسجيل الوحدات - ريرا\toffplan\tinvestor\t22\t1\nnoc_fee\tرسوم NOC للبيع\toffplan\tinvestor\t23\t1\nescrow_fee\tرسوم حساب الضمان\toffplan\tinvestor\t24\t1\ncommunity_fee\tرسوم المجتمع\toffplan\tinvestor\t25\t1\nmarketing_offplan\tالتسويق والإعلان — أوف بلان (25%)\toffplan\tinvestor\t26\t1\nescrow_deposit\tإيداع حساب الضمان (20%)\toffplan\tinvestor\t27\t1\ncontractor_advance\tدفعة مقدمة للمقاول (10%)\tconstruction\tinvestor\t31\t1\ncontingency\tاحتياطي وطوارئ (2%)\tconstruction\tinvestor\t40\t1\nbank_fees\tرسوم بنكية\tconstruction\tinvestor\t41\t1\ngovernment_fees_escrow\tرسوم الجهات الحكومية (90%)\tescrow\tescrow\t54\t1\ncontractor_payments\tدفعات المقاول (70% — من الضمان)\tescrow\tescrow\t55\t1\ncommunity_fee_escrow\tرسوم المجتمع (75%)\tescrow\tescrow\t56\t1\ndeveloper_fee_construction\tأتعاب المطور — الإشراف (3%)\tescrow\tescrow\t58\t1\nsupervision_fee\tأتعاب الإشراف (2%)\tescrow\tescrow\t60\t1\nsurveyor_fee\tرسوم المساح\tescrow\tescrow\t61\t1\nrera_audit\tتقرير مدقق ريرا\tescrow\tescrow\t62\t1\nrera_inspection\tتقرير فحص ريرا\tescrow\tescrow\t63\t1\nmarketing_construction\tالتسويق والإعلان — الإنشاء (75%)\tescrow\tescrow\t64\t1\nsales_commission\tعمولة وكيل المبيعات (5%)\tescrow\tescrow\t65\t1\n",
+  "stderr": "",
+  "execution_time_ms": 1530
+}

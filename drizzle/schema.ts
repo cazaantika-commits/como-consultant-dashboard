@@ -1118,7 +1118,7 @@ export const projects = mysqlTable("projects", {
 	estimatedConstructionPricePerSqft: decimal({ precision: 14, scale: 2 }),
 	designFeePct: decimal({ precision: 5, scale: 2 }),
 	supervisionFeePct: decimal({ precision: 5, scale: 2 }),
-	separationFeePerM2: decimal({ precision: 10, scale: 2 }),
+	separationFeePerSqft: decimal({ precision: 10, scale: 2 }),
 	salesCommissionPct: decimal({ precision: 5, scale: 2 }),
 	marketingPct: decimal({ precision: 5, scale: 2 }),
 	developerFeePct: decimal({ precision: 5, scale: 2 }).default('5'),

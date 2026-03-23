@@ -250,7 +250,11 @@ export default function CapitalScheduleTablePage({
   const paidItems = useMemo(() => allItems.filter((s: any) => s.section === "paid"), [allItems]);
   // Show ALL items per section regardless of fundingSource — fundingSource only affects totals and labels
   const designItems = useMemo(() => allItems.filter((s: any) => s.section === "design"), [allItems]);
-  const offplanItems = useMemo(() => allItems.filter((s: any) => s.section === "offplan"), [allItems]);
+  const offplanItems = useMemo(() => {
+    const items = allItems.filter((s: any) => s.section === "offplan");
+    console.log('[DEBUG] offplanItems count:', items.length, items.map((i: any) => i.itemKey));
+    return items;
+  }, [allItems]);
   const constructionItems = useMemo(() => allItems.filter((s: any) => s.section === "construction"), [allItems]);
   // escrowItems = items in the dedicated escrow section (section === "escrow")
   const escrowItems = useMemo(() => allItems.filter((s: any) => s.section === "escrow"), [allItems]);
@@ -307,7 +311,7 @@ export default function CapitalScheduleTablePage({
   const investorTotal = useMemo(() => allItems.filter((i: any) => i.fundingSource === "investor" && i.section !== "paid").reduce((s: number, e: any) => s + (e.computedAmount || 0), 0), [allItems]);
   // escrowTotal = all items with fundingSource=escrow (any section)
   const escrowTotal = useMemo(() => allItems.filter((i: any) => i.fundingSource === "escrow").reduce((s: number, e: any) => s + (e.computedAmount || 0), 0), [allItems]);
-  const grandTotal = useMemo(() => investorTotal + escrowTotal, [investorTotal, escrowTotal]);
+  const grandTotal = useMemo(() => paidTotal + investorTotal + escrowTotal, [paidTotal, investorTotal, escrowTotal]);
 
   // Cumulative investor
   const cumulativeInvestor = useMemo(() => {

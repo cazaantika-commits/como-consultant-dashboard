@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>خطة رأس مال المشروع</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f5f5f5; padding: 20px; direction: rtl; color: #1a1a2e; }
+  .container { max-width: 66%; margin: 0 auto; }
+
+  .header { text-align: center; margin-bottom: 16px; }
+  .header h2 { font-size: 18px; color: #1a1a2e; margin-bottom: 4px; }
+  .header p { font-size: 11px; color: #64748b; }
+
+  /* Tabs */
+  .tabs { display: flex; justify-content: center; gap: 0; margin-bottom: 16px; }
+  .tab-btn {
+    padding: 8px 20px; font-size: 11px; font-weight: bold; cursor: pointer;
+    border: 1px solid #e2e8f0; background: #fff; color: #94a3b8; transition: all 0.2s;
+  }
+  .tab-btn:first-child { border-radius: 0 8px 8px 0; }
+  .tab-btn:last-child { border-radius: 8px 0 0 8px; }
+  .tab-btn:not(:first-child):not(:last-child) { border-left: none; border-right: none; }
+  .tab-btn.active-o1 { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+  .tab-btn.active-o2 { background: #1d4ed8; color: #fff; border-color: #1d4ed8; }
+  .tab-btn.active-o3 { background: #16a34a; color: #fff; border-color: #16a34a; }
+
+  /* KPI Cards */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+  .kpi-card { border-radius: 12px; border: 1px solid; padding: 12px; text-align: center; }
+  .kpi-label { font-size: 10px; font-weight: 500; margin-bottom: 4px; opacity: 0.7; }
+  .kpi-value { font-size: 15px; font-weight: bold; font-family: 'Courier New', monospace; }
+  .kpi-sub { font-size: 9px; margin-top: 2px; opacity: 0.5; }
+  .kpi-rose { background: #fff1f2; border-color: #fecdd3; color: #be123c; }
+  .kpi-amber { background: #fffbeb; border-color: #fde68a; color: #b45309; }
+  .kpi-emerald { background: #ecfdf5; border-color: #a7f3d0; color: #047857; }
+  .kpi-blue { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+
+  /* Table wrapper */
+  .table-card { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 16px; }
+  .table-title { padding: 10px 16px; font-size: 13px; font-weight: bold; border-bottom: 1px solid #f1f5f9; }
+  .table-title-violet { background: #f5f3ff; color: #7c3aed; }
+  .table-title-blue { background: #eff6ff; color: #1d4ed8; }
+  .table-title-green { background: #ecfdf5; color: #047857; }
+  .table-title-amber { background: #fffbeb; color: #b45309; }
+
+  .scroll-wrapper { overflow-x: auto; }
+  table { border-collapse: collapse; min-width: 100%; }
+  th { text-align: center; padding: 6px 8px; font-size: 9px; color: #64748b; font-weight: 600; background: #fafafa; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+  th.col-item { text-align: right; min-width: 180px; position: sticky; right: 0; background: #fafafa; z-index: 2; }
+  th.col-total { min-width: 90px; background: #f0f4ff; }
+  td { padding: 5px 8px; font-size: 10px; color: #334155; border-bottom: 1px solid #f8fafc; text-align: center; white-space: nowrap; font-family: 'Courier New', monospace; }
+  td.item-name { text-align: right; font-family: 'Segoe UI', Tahoma, sans-serif; font-weight: 500; position: sticky; right: 0; background: #fff; z-index: 1; min-width: 180px; }
+  td.total-col { background: #f0f4ff; font-weight: bold; }
+  td.zero { color: #d4d4d4; }
+
+  .section-header td { background: #f1f5f9; font-weight: bold; font-size: 11px; color: #334155; font-family: 'Segoe UI', Tahoma, sans-serif; text-align: right; }
+  .total-row td { background: #1a1a2e; color: #fbbf24; font-weight: bold; font-size: 11px; border-color: #333; }
+  .subtotal-row td { background: #f8fafc; font-weight: bold; color: #1e40af; font-size: 10px; border-top: 2px solid #e2e8f0; }
+  .escrow-total-row td { background: #1d4ed8; color: #fff; font-weight: bold; font-size: 11px; }
+  .grand-total-row td { background: #dc2626; color: #fff; font-weight: bold; font-size: 11px; }
+  .remaining-row td { background: #f59e0b; color: #fff; font-weight: bold; font-size: 11px; }
+
+  .phase-header { text-align: center; font-size: 9px; font-weight: bold; padding: 4px; }
+  .phase-design { background: #fef3c7; color: #92400e; }
+  .phase-construction { background: #d1fae5; color: #065f46; }
+
+  .note { text-align: center; font-size: 10px; color: #94a3b8; margin-top: 12px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h2>خطة رأس مال المشروع</h2>
+    <p>ند الشبا — قطعة 1 | التصاميم: 6 أشهر | التنفيذ: 16 شهر</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active-o1" onclick="switchTab('o1')">O1 — إيداع ضمان</button>
+    <button class="tab-btn" onclick="switchTab('o2')">O2 — دفعة إنجاز</button>
+    <button class="tab-btn" onclick="switchTab('o3')">O3 — بدون أوف بلان</button>
+  </div>
+
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <!-- Investor Capital Table -->
+  <div class="table-card">
+    <div class="table-title table-title-amber" id="investorTitle">رأس مال المستثمر — التوزيع الشهري</div>
+    <div class="scroll-wrapper">
+      <table id="investorTable"></table>
+    </div>
+  </div>
+
+
+  <p class="note">المبالغ بالدرهم الإماراتي | المصدر: بطاقة المشروع وإعدادات التكاليف</p>
+</div>
+
+<script>
+var DM = 6;   // design months
+var CM = 16;  // construction months
+
+var DATA = {
+  o1: {
+    label: "O1 — أوف بلان + إيداع ضمان",
+    paid: [
+      { name: "سعر الأرض", amount: 18000000 },
+      { name: "عمولة وسيط الأرض", amount: 360000 },
+      { name: "رسوم تسجيل الأرض (4%)", amount: 720000 }
+    ],
+    design: [
+      { name: "رسوم الجهات الحكومية (10%)", amount: 100018, method: "lump", month: 1 },
+      { name: "فحص التربة", amount: 16180, method: "lump", month: 1 },
+      { name: "المسح الطبوغرافي", amount: 6180, method: "lump", month: 1 },
+      { name: "أتعاب الاستشاري — التصاميم", amount: 799988, method: "equal" },
+      { name: "أتعاب المطور — التصاميم (1%)", amount: 909710, method: "equal" },
+      { name: "رسوم المجتمع (25%)", amount: 4045, method: "lump", month: 1 },
+      { name: "أتعاب المطور — أوف بلان (1%)", amount: 909710, method: "equal" },
+      { name: "رسوم الفرز", amount: 2033044, method: "lump", month: 1 },
+      { name: "تسجيل بيع على الخارطة - ريرا", amount: 150000, method: "lump", month: 1 },
+      { name: "تسجيل الوحدات - ريرا", amount: 39180, method: "lump", month: 1 },
+      { name: "رسوم NOC للبيع", amount: 10000, method: "lump", month: 1 },
+      { name: "رسوم حساب الضمان", amount: 140000, method: "lump", month: 1 },
+      { name: "التسويق والإعلان — أوف بلان (25%)", amount: 454855, method: "equal" },
+      { name: "إيداع حساب الضمان (20%)", amount: 7999880, method: "lump", month: 1 }
+    ],
+    construction: [
+      { name: "دفعة مقدمة للمقاول (10%)", amount: 3999940, method: "lump", month: 1 },
+      { name: "رسوم المجتمع (75%)", amount: 12135, method: "equal" },
+      { name: "أتعاب المطور — الإشراف (3%)", amount: 2729130, method: "equal" },
+      { name: "التسويق والإعلان — الإنشاء (75%)", amount: 1364565, method: "equal" },
+      { name: "رسوم المساح", amount: 12180, method: "lump", month: 1 },
+      { name: "احتياطي وطوارئ (2%)", amount: 799988, method: "equal" },
+      { name: "رسوم بنكية", amount: 19800, method: "equal" }
+    ],
+    escrow: [
+      { name: "رسوم الجهات الحكومية (90%)", amount: 900162, method: "equal" },
+      { name: "دفعات المقاول (70%)", amount: 27999580, method: "equal" },
+      { name: "عمولة وكيل المبيعات (5%)", amount: 4548550, method: "equal" },
+      { name: "أتعاب الاستشاري — الإشراف", amount: 799988, method: "equal" },
+      { name: "تقرير مدقق ريرا", amount: 105180, method: "equal" },
+      { name: "تقرير فحص ريرا", amount: 100001, method: "equal" }
+    ]
+  },
+  o2: {
+    label: "O2 — أوف بلان + دفعة إنجاز",
+    paid: [
+      { name: "سعر الأرض", amount: 18000000 },
+      { name: "عمولة وسيط الأرض", amount: 360000 },
+      { name: "رسوم تسجيل الأرض (4%)", amount: 720000 }
+    ],
+    design: [
+      { name: "رسوم الجهات الحكومية (10%)", amount: 100018, method: "lump", month: 1 },
+      { name: "فحص التربة", amount: 16180, method: "lump", month: 1 },
+      { name: "المسح الطبوغرافي", amount: 6180, method: "lump", month: 1 },
+      { name: "أتعاب الاستشاري — التصاميم", amount: 799988, method: "equal" },
+      { name: "أتعاب المطور — التصاميم (1%)", amount: 909710, method: "equal" },
+      { name: "رسوم المجتمع (25%)", amount: 4045, method: "lump", month: 1 }
+    ],
+    construction: [
+      { name: "أتعاب المطور — أوف بلان (1%)", amount: 909710, method: "equal" },
+      { name: "رسوم الفرز", amount: 2033044, method: "lump", month: 1 },
+      { name: "تسجيل بيع على الخارطة - ريرا", amount: 150000, method: "lump", month: 1 },
+      { name: "تسجيل الوحدات - ريرا", amount: 39180, method: "lump", month: 1 },
+      { name: "رسوم NOC للبيع", amount: 10000, method: "lump", month: 1 },
+      { name: "رسوم حساب الضمان", amount: 140000, method: "lump", month: 1 },
+      { name: "التسويق والإعلان — أوف بلان (25%)", amount: 454855, method: "equal" },
+      { name: "دفعة مقدمة للمقاول (10%)", amount: 3999940, method: "lump", month: 1 },
+      { name: "دفعة إنجاز المقاول (20%)", amount: 7999880, method: "equal" },
+      { name: "رسوم المجتمع (75%)", amount: 12135, method: "equal" },
+      { name: "أتعاب المطور — الإشراف (3%)", amount: 2729130, method: "equal" },
+      { name: "التسويق والإعلان — الإنشاء (75%)", amount: 1364565, method: "equal" },
+      { name: "رسوم المساح", amount: 12180, method: "lump", month: 1 },
+      { name: "احتياطي وطوارئ (2%)", amount: 799988, method: "equal" },
+      { name: "رسوم بنكية", amount: 19800, method: "equal" }
+    ],
+    escrow: [
+      { name: "رسوم الجهات الحكومية (90%)", amount: 900162, method: "equal" },
+      { name: "دفعات المقاول (70%)", amount: 27999580, method: "equal" },
+      { name: "عمولة وكيل المبيعات (5%)", amount: 4548550, method: "equal" },
+      { name: "أتعاب الاستشاري — الإشراف", amount: 799988, method: "equal" },
+      { name: "تقرير مدقق ريرا", amount: 105180, method: "equal" },
+      { name: "تقرير فحص ريرا", amount: 100001, method: "equal" }
+    ]
+  },
+  o3: {
+    label: "O3 — بدون أوف بلان",
+    paid: [
+      { name: "سعر الأرض", amount: 18000000 },
+      { name: "عمولة وسيط الأرض", amount: 360000 },
+      { name: "رسوم تسجيل الأرض (4%)", amount: 720000 }
+    ],
+    design: [
+      { name: "رسوم الجهات الحكومية (10%)", amount: 100018, method: "lump", month: 1 },
+      { name: "فحص التربة", amount: 16180, method: "lump", month: 1 },
+      { name: "المسح الطبوغرافي", amount: 6180, method: "lump", month: 1 },
+      { name: "أتعاب الاستشاري — التصاميم", amount: 799988, method: "equal" },
+      { name: "أتعاب المطور — التصاميم (1%)", amount: 909710, method: "equal" },
+      { name: "رسوم المجتمع (25%)", amount: 4045, method: "lump", month: 1 }
+    ],
+    construction: [
+      { name: "رسوم الفرز", amount: 2033044, method: "lump", month: 1 },
+      { name: "دفعة مقدمة للمقاول (10%)", amount: 3999940, method: "lump", month: 1 },
+      { name: "دفعات المقاول (85%)", amount: 33999490, method: "equal" },
+      { name: "رسوم المجتمع (75%)", amount: 12135, method: "equal" },
+      { name: "أتعاب الاستشاري — الإشراف", amount: 799988, method: "equal" },
+      { name: "أتعاب المطور — الإشراف (2%)", amount: 1819420, method: "equal" },
+      { name: "رسوم الجهات الحكومية (90%)", amount: 900162, method: "equal" },
+      { name: "رسوم المساح", amount: 12180, method: "lump", month: 1 },
+      { name: "احتياطي وطوارئ (2%)", amount: 799988, method: "equal" },
+      { name: "رسوم بنكية", amount: 19800, method: "equal" }
+    ],
+    escrow: []
+  }
+};
+
+var currentTab = 'o1';
+
+function fmt(n) {
+  if (n === 0) return '—';
+  return Math.round(n).toLocaleString('en-US');
+}
+
+function getMonthly(item, numMonths) {
+  var arr = new Array(numMonths).fill(0);
+  if (item.method === 'lump') {
+    arr[(item.month || 1) - 1] = item.amount;
+  } else {
+    var per = item.amount / numMonths;
+    for (var i = 0; i < numMonths; i++) arr[i] = per;
+  }
+  return arr;
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  var btns = document.querySelectorAll('.tab-btn');
+  btns.forEach(function(b, i) {
+    b.className = 'tab-btn';
+    if (i === 0 && tab === 'o1') b.className += ' active-o1';
+    if (i === 1 && tab === 'o2') b.className += ' active-o2';
+    if (i === 2 && tab === 'o3') b.className += ' active-o3';
+  });
+  render();
+}
+
+function render() {
+  var sc = DATA[currentTab];
+  var paidTotal = sc.paid.reduce(function(s, x) { return s + x.amount; }, 0);
+  var designTotal = sc.design.reduce(function(s, x) { return s + x.amount; }, 0);
+  var constructionTotal = sc.construction.reduce(function(s, x) { return s + x.amount; }, 0);
+  var escrowTotal = sc.escrow.reduce(function(s, x) { return s + x.amount; }, 0);
+  var investorTotal = paidTotal + designTotal + constructionTotal;
+  var remaining = investorTotal - paidTotal;
+
+  // KPI
+  var kpiHtml = '';
+  kpiHtml += '<div class="kpi-card kpi-rose"><div class="kpi-label">إجمالي التكلفة</div><div class="kpi-value">' + fmt(investorTotal + escrowTotal) + '</div><div class="kpi-sub">AED</div></div>';
+  kpiHtml += '<div class="kpi-card kpi-amber"><div class="kpi-label">رأس المال المطلوب</div><div class="kpi-value">' + fmt(investorTotal) + '</div><div class="kpi-sub">AED</div></div>';
+  kpiHtml += '<div class="kpi-card kpi-emerald"><div class="kpi-label">تم سداده</div><div class="kpi-value">' + fmt(paidTotal) + '</div><div class="kpi-sub">AED</div></div>';
+  kpiHtml += '<div class="kpi-card kpi-blue"><div class="kpi-label">المتبقي للسداد</div><div class="kpi-value">' + fmt(remaining) + '</div><div class="kpi-sub">AED</div></div>';
+  document.getElementById('kpiGrid').innerHTML = kpiHtml;
+
+  // ═══ Investor Table ═══
+  var totalMonths = DM + CM;
+  var html = '';
+
+  // Header row 1: phase labels
+  html += '<thead>';
+  html += '<tr>';
+  html += '<th class="col-item" rowspan="2">البند</th>';
+  html += '<th class="col-total" rowspan="2">الإجمالي</th>';
+  html += '<th colspan="' + DM + '" class="phase-header phase-design">مرحلة التصاميم (' + DM + ' أشهر)</th>';
+  html += '<th colspan="' + CM + '" class="phase-header phase-construction">مرحلة التنفيذ (' + CM + ' شهر)</th>';
+  html += '</tr>';
+
+  // Header row 2: month numbers
+  html += '<tr>';
+  for (var i = 1; i <= DM; i++) html += '<th style="background:#fef3c7;">ش' + i + '</th>';
+  for (var i = 1; i <= CM; i++) html += '<th style="background:#d1fae5;">ش' + i + '</th>';
+  html += '</tr>';
+  html += '</thead><tbody>';
+
+  // ── Paid section ──
+  html += '<tr class="section-header"><td colspan="' + (2 + totalMonths) + '">المبالغ المدفوعة (الأرض)</td></tr>';
+  sc.paid.forEach(function(item) {
+    html += '<tr>';
+    html += '<td class="item-name">' + item.name + '</td>';
+    html += '<td class="total-col">' + fmt(item.amount) + '</td>';
+    for (var i = 0; i < totalMonths; i++) html += '<td class="zero">—</td>';
+    html += '</tr>';
+  });
+  // Paid subtotal
+  html += '<tr class="subtotal-row">';
+  html += '<td class="item-name" style="background:#f8fafc;">مجموع المدفوع</td>';
+  html += '<td class="total-col">' + fmt(paidTotal) + '</td>';
+  for (var i = 0; i < totalMonths; i++) html += '<td class="zero">—</td>';
+  html += '</tr>';
+
+  // ── Design section ──
+  html += '<tr class="section-header"><td colspan="' + (2 + totalMonths) + '">مرحلة التصاميم — رأس مال المستثمر</td></tr>';
+  var designMonthlyTotals = new Array(totalMonths).fill(0);
+  sc.design.forEach(function(item) {
+    var monthly = getMonthly(item, DM);
+    html += '<tr>';
+    html += '<td class="item-name">' + item.name + '</td>';
+    html += '<td class="total-col">' + fmt(item.amount) + '</td>';
+    for (var i = 0; i < DM; i++) {
+      designMonthlyTotals[i] += monthly[i];
+      html += '<td' + (monthly[i] === 0 ? ' class="zero"' : '') + '>' + fmt(monthly[i]) + '</td>';
+    }
+    for (var i = 0; i < CM; i++) html += '<td class="zero">—</td>';
+    html += '</tr>';
+  });
+  // Design subtotal
+  html += '<tr class="subtotal-row">';
+  html += '<td class="item-name" style="background:#f8fafc;">مجموع التصاميم</td>';
+  html += '<td class="total-col">' + fmt(designTotal) + '</td>';
+  for (var i = 0; i < DM; i++) html += '<td>' + fmt(designMonthlyTotals[i]) + '</td>';
+  for (var i = 0; i < CM; i++) html += '<td class="zero">—</td>';
+  html += '</tr>';
+
+  // ── Construction section ──
+  html += '<tr class="section-header"><td colspan="' + (2 + totalMonths) + '">مرحلة التنفيذ — رأس مال المستثمر</td></tr>';
+  var constructionMonthlyTotals = new Array(totalMonths).fill(0);
+  sc.construction.forEach(function(item) {
+    var monthly = getMonthly(item, CM);
+    html += '<tr>';
+    html += '<td class="item-name">' + item.name + '</td>';
+    html += '<td class="total-col">' + fmt(item.amount) + '</td>';
+    for (var i = 0; i < DM; i++) html += '<td class="zero">—</td>';
+    for (var i = 0; i < CM; i++) {
+      constructionMonthlyTotals[DM + i] += monthly[i];
+      html += '<td' + (monthly[i] === 0 ? ' class="zero"' : '') + '>' + fmt(monthly[i]) + '</td>';
+    }
+    html += '</tr>';
+  });
+  // Construction subtotal
+  html += '<tr class="subtotal-row">';
+  html += '<td class="item-name" style="background:#f8fafc;">مجموع التنفيذ</td>';
+  html += '<td class="total-col">' + fmt(constructionTotal) + '</td>';
+  for (var i = 0; i < DM; i++) html += '<td class="zero">—</td>';
+  for (var i = 0; i < CM; i++) html += '<td>' + fmt(constructionMonthlyTotals[DM + i]) + '</td>';
+  html += '</tr>';
+
+  // ── Grand total row ──
+  var grandMonthly = new Array(totalMonths).fill(0);
+  for (var i = 0; i < totalMonths; i++) grandMonthly[i] = designMonthlyTotals[i] + constructionMonthlyTotals[i];
+  html += '<tr class="total-row">';
+  html += '<td class="item-name" style="background:#1a1a2e;color:#fbbf24;">إجمالي رأس المال المطلوب</td>';
+  html += '<td class="total-col" style="background:#1a1a2e;color:#fbbf24;">' + fmt(investorTotal) + '</td>';
+  for (var i = 0; i < totalMonths; i++) html += '<td>' + fmt(grandMonthly[i]) + '</td>';
+  html += '</tr>';
+
+  // ── Remaining row ──
+  html += '<tr class="remaining-row">';
+  html += '<td class="item-name" style="background:#f59e0b;color:#fff;">المتبقي للسداد (بعد خصم المدفوع)</td>';
+  html += '<td class="total-col" style="background:#f59e0b;color:#fff;">' + fmt(remaining) + '</td>';
+  for (var i = 0; i < totalMonths; i++) html += '<td>' + fmt(grandMonthly[i]) + '</td>';
+  html += '</tr>';
+
+  // ── Cumulative row ──
+  var cumulative = 0;
+  html += '<tr style="background:#fef3c7;">';
+  html += '<td class="item-name" style="background:#fef3c7;color:#92400e;font-weight:bold;">التراكمي الشهري</td>';
+  html += '<td class="total-col" style="background:#fef3c7;color:#92400e;">—</td>';
+  for (var i = 0; i < totalMonths; i++) {
+    cumulative += grandMonthly[i];
+    html += '<td style="color:#92400e;font-weight:bold;font-size:9px;">' + fmt(cumulative) + '</td>';
+  }
+  html += '</tr>';
+
+  html += '</tbody>';
+  document.getElementById('investorTable').innerHTML = html;
+
+}
+
+// Initial render
+render();
+</script>
+</body>
+</html>

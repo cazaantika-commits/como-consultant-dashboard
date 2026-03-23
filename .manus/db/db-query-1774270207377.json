@@ -1,0 +1,402 @@
+{
+  "query": "DESCRIBE competition_pricing;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute DESCRIBE competition_pricing;",
+  "rows": [
+    {
+      "Field": "id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": "auto_increment"
+    },
+    {
+      "Field": "userId",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "projectId",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "aiSmartReport",
+      "Type": "longtext",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "aiRecommendationsJson",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "aiReportGeneratedAt",
+      "Type": "timestamp",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "optStudioPrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "opt1brPrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "opt2brPrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "opt3brPrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "optRetailSmallPrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "optRetailMediumPrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "optRetailLargePrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "optOfficeSmallPrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "optOfficeMediumPrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "optOfficeLargePrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "baseStudioPrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "base1brPrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "base2brPrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "base3brPrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "baseRetailSmallPrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "baseRetailMediumPrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "baseRetailLargePrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "baseOfficeSmallPrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "baseOfficeMediumPrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "baseOfficeLargePrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "consStudioPrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "cons1brPrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "cons2brPrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "cons3brPrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "consRetailSmallPrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "consRetailMediumPrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "consRetailLargePrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "consOfficeSmallPrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "consOfficeMediumPrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "consOfficeLargePrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "paymentBookingPct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "10",
+      "Extra": ""
+    },
+    {
+      "Field": "paymentBookingTiming",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "عند التوقيع",
+      "Extra": ""
+    },
+    {
+      "Field": "paymentConstructionPct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "60",
+      "Extra": ""
+    },
+    {
+      "Field": "paymentConstructionTiming",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "أثناء الإنشاء",
+      "Extra": ""
+    },
+    {
+      "Field": "paymentHandoverPct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "30",
+      "Extra": ""
+    },
+    {
+      "Field": "paymentHandoverTiming",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "عند التسليم",
+      "Extra": ""
+    },
+    {
+      "Field": "paymentDeferredPct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "paymentDeferredTiming",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "activeScenario",
+      "Type": "varchar(20)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "base",
+      "Extra": ""
+    },
+    {
+      "Field": "isApproved",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "approvedAt",
+      "Type": "timestamp",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "createdAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": ""
+    },
+    {
+      "Field": "updatedAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": "DEFAULT_GENERATED on update CURRENT_TIMESTAMP"
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nid\tint\tNO\tPRI\tNULL\tauto_increment\nuserId\tint\tNO\tMUL\tNULL\t\nprojectId\tint\tNO\tMUL\tNULL\t\naiSmartReport\tlongtext\tYES\t\tNULL\t\naiRecommendationsJson\ttext\tYES\t\tNULL\t\naiReportGeneratedAt\ttimestamp\tYES\t\tNULL\t\noptStudioPrice\tint\tYES\t\t0\t\nopt1brPrice\tint\tYES\t\t0\t\nopt2brPrice\tint\tYES\t\t0\t\nopt3brPrice\tint\tYES\t\t0\t\noptRetailSmallPrice\tint\tYES\t\t0\t\noptRetailMediumPrice\tint\tYES\t\t0\t\noptRetailLargePrice\tint\tYES\t\t0\t\noptOfficeSmallPrice\tint\tYES\t\t0\t\noptOfficeMediumPrice\tint\tYES\t\t0\t\noptOfficeLargePrice\tint\tYES\t\t0\t\nbaseStudioPrice\tint\tYES\t\t0\t\nbase1brPrice\tint\tYES\t\t0\t\nbase2brPrice\tint\tYES\t\t0\t\nbase3brPrice\tint\tYES\t\t0\t\nbaseRetailSmallPrice\tint\tYES\t\t0\t\nbaseRetailMediumPrice\tint\tYES\t\t0\t\nbaseRetailLargePrice\tint\tYES\t\t0\t\nbaseOfficeSmallPrice\tint\tYES\t\t0\t\nbaseOfficeMediumPrice\tint\tYES\t\t0\t\nbaseOfficeLargePrice\tint\tYES\t\t0\t\nconsStudioPrice\tint\tYES\t\t0\t\ncons1brPrice\tint\tYES\t\t0\t\ncons2brPrice\tint\tYES\t\t0\t\ncons3brPrice\tint\tYES\t\t0\t\nconsRetailSmallPrice\tint\tYES\t\t0\t\nconsRetailMediumPrice\tint\tYES\t\t0\t\nconsRetailLargePrice\tint\tYES\t\t0\t\nconsOfficeSmallPrice\tint\tYES\t\t0\t\nconsOfficeMediumPrice\tint\tYES\t\t0\t\nconsOfficeLargePrice\tint\tYES\t\t0\t\npaymentBookingPct\tdecimal(5,2)\tYES\t\t10\t\npaymentBookingTiming\tvarchar(255)\tYES\t\tعند التوقيع\t\npaymentConstructionPct\tdecimal(5,2)\tYES\t\t60\t\npaymentConstructionTiming\tvarchar(255)\tYES\t\tأثناء الإنشاء\t\npaymentHandoverPct\tdecimal(5,2)\tYES\t\t30\t\npaymentHandoverTiming\tvarchar(255)\tYES\t\tعند التسليم\t\npaymentDeferredPct\tdecimal(5,2)\tYES\t\t0\t\npaymentDeferredTiming\tvarchar(255)\tYES\t\tNULL\t\nactiveScenario\tvarchar(20)\tYES\t\tbase\t\nisApproved\tint\tNO\t\t0\t\napprovedAt\ttimestamp\tYES\t\tNULL\t\ncreatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\t\nupdatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\tDEFAULT_GENERATED on update CURRENT_TIMESTAMP\n",
+  "stderr": "",
+  "execution_time_ms": 1536
+}

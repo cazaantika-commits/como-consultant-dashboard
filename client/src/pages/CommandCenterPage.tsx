@@ -91,9 +91,7 @@ import {
 // Lazy imports for embedded pages
 import WorkSchedulePage from "./WorkSchedulePage";
 import CapitalSchedulingPage from "./CapitalSchedulingPage";
-import FinancialFeasibilityTab from "./FinancialFeasibilityTab";
-import ExcelCashFlowPage from "./ExcelCashFlowPage";
-import EscrowCashFlowPage from "./EscrowCashFlowPage";
+// Old financial components removed - now using iframe embeds
 
 const SALWA_AVATAR_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663200809965/Q366eAYG4Q7iaM8VuAmmFX/salwa-enhanced_0251b1a8.png";
 
@@ -3686,9 +3684,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
   const [showWorkSchedule, setShowWorkSchedule] = useState(false);
   const [showCapitalScheduling, setShowCapitalScheduling] = useState(false);
   const [showFeasibilityStudy, setShowFeasibilityStudy] = useState(false);
-  const [feasibilityProjectId, setFeasibilityProjectId] = useState<number | null>(null);
-  const [feasibilityTab, setFeasibilityTab] = useState<"fin" | "capital" | "escrow">("fin");
-  const feasibilityProjects = trpc.projects.list.useQuery(undefined, { enabled: showFeasibilityStudy });
+  const [feasibilityTab, setFeasibilityTab] = useState<"settings" | "fin" | "capital" | "escrow">("settings");
 
   const counts = trpc.commandCenter.getBubbleCounts.useQuery({ token });
   const notifications = trpc.commandCenter.getNotifications.useQuery({ token });
@@ -3750,8 +3746,15 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
     );
   }
 
-  // If viewing feasibility study (read-only)
+  // If viewing feasibility study
   if (activeBubble === "feasibility_study" && showFeasibilityStudy) {
+    const feasibilityTabs = [
+      { id: "settings" as const, label: "⚙️ إعدادات التدفقات", src: "/cost-settings.html" },
+      { id: "fin" as const, label: "📊 ملخص الجدوى المالية", src: "/feasibility-summary.html" },
+      { id: "capital" as const, label: "💰 خطة رأس مال المشروع", src: "/capital-plan.html" },
+      { id: "escrow" as const, label: "🏦 التدفقات النقدية وحساب الضمان", src: "/escrow-cashflow.html" },
+    ];
+    const currentSrc = feasibilityTabs.find(t => t.id === feasibilityTab)?.src || "/cost-settings.html";
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white" dir="rtl">
         <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
@@ -3760,59 +3763,34 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             <Button variant="ghost" size="sm" onClick={() => { setActiveBubble(null); setShowFeasibilityStudy(false); }} className="text-slate-500">
               <ArrowLeft className="w-4 h-4 ml-1" /> العودة للرئيسية
             </Button>
-            <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">عرض فقط</span>
           </div>
-          {/* Project selector */}
+          {/* Tabs */}
           <div className="px-4 mb-4">
-            <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col gap-3">
-              <label className="text-sm font-semibold text-slate-700">اختر المشروع</label>
-              <select
-                className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-400"
-                value={feasibilityProjectId ?? ""}
-                onChange={e => setFeasibilityProjectId(e.target.value ? Number(e.target.value) : null)}
-              >
-                <option value="">-- اختر مشروعاً --</option>
-                {(feasibilityProjects.data || []).map((p: any) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-              {/* Tabs */}
-              {feasibilityProjectId && (
-                <div className="flex gap-2 mt-1">
-                  {[
-                    { id: "fin" as const, label: "ملخص الجدوى المالية" },
-                    { id: "capital" as const, label: "خطة رأس مال المشروع" },
-                    { id: "escrow" as const, label: "التدفقات النقدية وحساب الضمان" },
-                  ].map(tab => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setFeasibilityTab(tab.id)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                        feasibilityTab === tab.id
-                          ? "bg-violet-600 text-white"
-                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-              )}
+            <div className="bg-white border border-slate-200 rounded-xl p-3 flex items-center gap-2 overflow-x-auto">
+              {feasibilityTabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setFeasibilityTab(tab.id)}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                    feasibilityTab === tab.id
+                      ? tab.id === "settings" ? "bg-gradient-to-br from-slate-600 to-slate-800 text-white shadow-lg" : "bg-violet-600 text-white shadow-lg"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
           </div>
           {/* Content */}
-          {feasibilityProjectId ? (
-            <div className="pointer-events-none opacity-90">
-              {feasibilityTab === "fin" && <FinancialFeasibilityTab initialProjectId={feasibilityProjectId} />}
-              {feasibilityTab === "capital" && <ExcelCashFlowPage embedded initialProjectId={feasibilityProjectId} />}
-              {feasibilityTab === "escrow" && <EscrowCashFlowPage embedded initialProjectId={feasibilityProjectId} />}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-              <span className="text-4xl mb-3">📊</span>
-              <p className="text-sm">اختر مشروعاً لعرض بيانات الجدوى</p>
-            </div>
-          )}
+          <div style={{ height: "calc(100vh - 180px)" }}>
+            <iframe
+              key={feasibilityTab}
+              src={currentSrc}
+              className="w-full h-full border-0 rounded-xl"
+              title={feasibilityTab}
+            />
+          </div>
         </div>
         <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
       </div>

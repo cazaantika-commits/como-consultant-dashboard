@@ -281,3 +281,17 @@
 - [x] FIX: Both pages must wait for DB scenario to load before fetching settings data
 - [x] FIX: When embedded (no scenario selector visible), use DB scenario as default but allow parent to override
 - [x] BUG: Column 1 (إجمالي التكاليف) missing escrow-funded items — must show ALL costs (investor + escrow). Column 2 (خطة رأس مال) should show investor-only amounts. Fixed: added missing items (government_fees_escrow, contractor_payments, community_fee_escrow) to computeItemAmountByKey splitMap.
+- [ ] Audit: Ensure cash flow settings for Scenario 1 (offplan_escrow) has complete item list matching reference HTML (capital-schedule.html)
+- [ ] Ensure all cost items in cash flow settings Scenario 1 are correctly computed from sources (fact sheet + pricing/revenue)
+
+## نقل التقارير المالية الجديدة إلى المنصة
+- [x] إنشاء ملف إعدادات التكاليف (cost-settings.html) مع مقارنة 3 سيناريوهات
+- [x] إنشاء ملفات إعدادات كل سيناريو (o1-settings, o2-settings, o3-settings)
+- [x] إنشاء تقرير ملخص الجدوى المالية (feasibility-summary.html) مع تبديل أوف بلان / بدون أوف بلان
+- [x] إنشاء تقرير خطة رأس مال المشروع (capital-plan.html) مع 3 تابات و22 عمود شهري
+- [x] إنشاء تقرير التدفقات النقدية لحساب الضمان (escrow-cashflow.html) مع خانات يدوية للإيرادات
+- [x] إصلاح O3: إزالة بند التسويق والإعلان — الإنشاء (75%) من O3 (غير موجود في الإعدادات)
+- [x] نقل O1 أوف بلان: بنود من أتعاب المطور أوف بلان إلى إيداع الضمان تنتقل لمرحلة التصاميم
+- [x] إزالة جدول حساب الضمان من تقرير خطة رأس المال
+- [x] حذف المحتوى القديم من أيقونة التخطيط المالي في مركز القيادة
+- [x] إعادة بناء CashFlowHub: أيقونة إعدادات التدفقات + 3 تابات بجانبها (ملخص الجدوى، خطة رأس المال، التدفقات النقدية)

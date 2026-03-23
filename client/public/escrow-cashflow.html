@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>التدفقات النقدية لحساب الضمان</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f5f5f5; padding: 20px; direction: rtl; color: #1a1a2e; }
+  .container { max-width: 66%; margin: 0 auto; }
+
+  .header { text-align: center; margin-bottom: 16px; }
+  .header h2 { font-size: 18px; color: #1a1a2e; margin-bottom: 4px; }
+  .header p { font-size: 11px; color: #64748b; }
+
+  /* Tabs */
+  .tabs { display: flex; justify-content: center; gap: 0; margin-bottom: 16px; }
+  .tab-btn {
+    padding: 8px 24px; font-size: 12px; font-weight: bold; cursor: pointer;
+    border: 1px solid #e2e8f0; background: #fff; color: #94a3b8; transition: all 0.2s;
+  }
+  .tab-btn:first-child { border-radius: 0 8px 8px 0; border-left: none; }
+  .tab-btn:last-child { border-radius: 8px 0 0 8px; }
+  .tab-btn.active { background: #1d4ed8; color: #fff; border-color: #1d4ed8; }
+
+  /* KPI Cards */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+  .kpi-card { border-radius: 12px; border: 1px solid; padding: 12px; text-align: center; }
+  .kpi-label { font-size: 10px; font-weight: 500; margin-bottom: 4px; opacity: 0.7; }
+  .kpi-value { font-size: 16px; font-weight: bold; font-family: 'Courier New', monospace; }
+  .kpi-sub { font-size: 9px; margin-top: 2px; opacity: 0.5; }
+  .kpi-blue { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+  .kpi-emerald { background: #ecfdf5; border-color: #a7f3d0; color: #047857; }
+  .kpi-rose { background: #fff1f2; border-color: #fecdd3; color: #be123c; }
+  .kpi-amber { background: #fffbeb; border-color: #fde68a; color: #b45309; }
+
+  /* Table */
+  .table-card { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 16px; }
+  .table-title { padding: 10px 16px; font-size: 12px; font-weight: bold; border-bottom: 1px solid #e2e8f0; }
+  .table-title-blue { background: #eff6ff; color: #1d4ed8; }
+  .scroll-wrapper { overflow-x: auto; }
+
+  table { border-collapse: collapse; width: max-content; min-width: 100%; }
+  th, td { padding: 6px 10px; font-size: 10px; text-align: center; border: 1px solid #e2e8f0; white-space: nowrap; }
+  th { background: #f8fafc; color: #475569; font-weight: 600; position: sticky; top: 0; z-index: 1; }
+
+  .col-item { text-align: right; min-width: 180px; position: sticky; right: 0; background: #fff; z-index: 2; font-weight: 600; color: #1a1a2e; }
+  th.col-item { background: #f8fafc; z-index: 3; }
+  .col-total { min-width: 90px; font-weight: bold; background: #fefce8; }
+
+  /* Row types */
+  .row-inflow { background: #ecfdf5; }
+  .row-inflow td { color: #047857; }
+  .row-outflow { background: #fff1f2; }
+  .row-outflow td { color: #be123c; }
+  .row-balance { background: #eff6ff; font-weight: bold; }
+  .row-balance td { color: #1d4ed8; font-weight: bold; }
+  .row-opening { background: #fffbeb; font-weight: bold; }
+  .row-opening td { color: #b45309; font-weight: bold; }
+  .row-section { background: #f1f5f9; }
+  .row-section td { font-weight: bold; color: #334155; font-size: 11px; }
+  .row-total-out { background: #fecdd3; font-weight: bold; }
+  .row-total-out td { color: #be123c; font-weight: bold; }
+  .row-total-in { background: #a7f3d0; font-weight: bold; }
+  .row-total-in td { color: #047857; font-weight: bold; }
+
+  .zero { color: #d1d5db; }
+
+  /* Input fields */
+  .inflow-input {
+    width: 70px; padding: 3px 5px; font-size: 10px; text-align: center;
+    border: 1px solid #a7f3d0; border-radius: 4px; background: #ecfdf5; color: #047857;
+    font-family: 'Courier New', monospace; font-weight: bold;
+  }
+  .inflow-input:focus { outline: 2px solid #047857; background: #fff; }
+
+  .note { text-align: center; font-size: 10px; color: #94a3b8; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h2>التدفقات النقدية لحساب الضمان</h2>
+    <p>Como Developments — ناد الشبا</p>
+  </div>
+
+  <!-- Tabs: O1 and O2 only -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('o1')">O1 — إيداع ضمان</button>
+    <button class="tab-btn" onclick="switchTab('o2')">O2 — بدون إيداع</button>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <!-- Cash Flow Table -->
+  <div class="table-card">
+    <div class="table-title table-title-blue">التدفقات النقدية الشهرية لحساب الضمان</div>
+    <div class="scroll-wrapper">
+      <table id="cashflowTable"></table>
+    </div>
+  </div>
+
+  <p class="note">المبالغ بالدرهم الإماراتي | الإيرادات الداخلة: تعبئة يدوية | المصاريف الخارجة: من الإعدادات</p>
+</div>
+
+<script>
+var CM = 16; // construction months
+
+var scenarios = {
+  o1: {
+    label: "O1 — إيداع ضمان",
+    openingBalance: 7999880, // إيداع حساب الضمان 20%
+    outflows: [
+      { name: "رسوم الجهات الحكومية (90%)", amount: 900162, method: "equal" },
+      { name: "دفعات المقاول (70%)", amount: 27999580, method: "equal" },
+      { name: "عمولة وكيل المبيعات (5%)", amount: 4548550, method: "equal" },
+      { name: "أتعاب الاستشاري — الإشراف", amount: 799988, method: "equal" },
+      { name: "تقرير مدقق ريرا", amount: 105180, method: "equal" },
+      { name: "تقرير فحص ريرا", amount: 100001, method: "equal" }
+    ]
+  },
+  o2: {
+    label: "O2 — بدون إيداع",
+    openingBalance: 0,
+    outflows: [
+      { name: "رسوم الجهات الحكومية (90%)", amount: 900162, method: "equal" },
+      { name: "دفعات المقاول (70%)", amount: 27999580, method: "equal" },
+      { name: "عمولة وكيل المبيعات (5%)", amount: 4548550, method: "equal" },
+      { name: "أتعاب الاستشاري — الإشراف", amount: 799988, method: "equal" },
+      { name: "تقرير مدقق ريرا", amount: 105180, method: "equal" },
+      { name: "تقرير فحص ريرا", amount: 100001, method: "equal" }
+    ]
+  }
+};
+
+var currentTab = 'o1';
+var inflowValues = { o1: new Array(CM).fill(0), o2: new Array(CM).fill(0) };
+
+function fmt(n) {
+  if (n === 0) return '—';
+  return Math.round(n).toLocaleString('en-US');
+}
+
+function switchTab(tab) {
+  // Save current inflow values before switching
+  saveInflowValues();
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.tab-btn').forEach(function(b) {
+    if ((tab === 'o1' && b.textContent.indexOf('O1') >= 0) || (tab === 'o2' && b.textContent.indexOf('O2') >= 0)) {
+      b.classList.add('active');
+    }
+  });
+  render();
+}
+
+function saveInflowValues() {
+  for (var i = 0; i < CM; i++) {
+    var inp = document.getElementById('inflow_' + i);
+    if (inp) {
+      inflowValues[currentTab][i] = parseFloat(inp.value) || 0;
+    }
+  }
+}
+
+function onInflowChange() {
+  saveInflowValues();
+  updateCalculations();
+}
+
+function getMonthly(item) {
+  var arr = new Array(CM).fill(0);
+  if (item.method === 'equal') {
+    var per = item.amount / CM;
+    for (var i = 0; i < CM; i++) arr[i] = per;
+  } else if (item.method === 'lump') {
+    arr[(item.month || 1) - 1] = item.amount;
+  }
+  return arr;
+}
+
+function updateCalculations() {
+  var sc = scenarios[currentTab];
+  var inflows = inflowValues[currentTab];
+
+  // Calculate monthly outflows
+  var monthlyOutflows = new Array(CM).fill(0);
+  sc.outflows.forEach(function(item) {
+    var m = getMonthly(item);
+    for (var i = 0; i < CM; i++) monthlyOutflows[i] += m[i];
+  });
+
+  // Calculate balances
+  var totalInflow = 0;
+  var totalOutflow = 0;
+  var balances = [];
+  var balance = sc.openingBalance;
+
+  for (var i = 0; i < CM; i++) {
+    balance += inflows[i] - monthlyOutflows[i];
+    balances.push(balance);
+    totalInflow += inflows[i];
+    totalOutflow += monthlyOutflows[i];
+  }
+
+  // Update KPI cards
+  var kpiHtml = '';
+  kpiHtml += '<div class="kpi-card kpi-amber"><div class="kpi-label">الرصيد الافتتاحي</div><div class="kpi-value">' + fmt(sc.openingBalance) + '</div><div class="kpi-sub">درهم</div></div>';
+  kpiHtml += '<div class="kpi-card kpi-emerald"><div class="kpi-label">إجمالي الإيرادات الداخلة</div><div class="kpi-value">' + fmt(totalInflow) + '</div><div class="kpi-sub">درهم</div></div>';
+  kpiHtml += '<div class="kpi-card kpi-rose"><div class="kpi-label">إجمالي المصاريف الخارجة</div><div class="kpi-value">' + fmt(totalOutflow) + '</div><div class="kpi-sub">درهم</div></div>';
+  var finalBalance = balances[CM - 1];
+  var balClass = finalBalance >= 0 ? 'kpi-blue' : 'kpi-rose';
+  kpiHtml += '<div class="kpi-card ' + balClass + '"><div class="kpi-label">الرصيد الختامي</div><div class="kpi-value">' + fmt(finalBalance) + '</div><div class="kpi-sub">درهم</div></div>';
+  document.getElementById('kpiGrid').innerHTML = kpiHtml;
+
+  // Update balance row and totals in table
+  var totalOutflowRow = sc.outflows.length + 2; // after section header + outflow items
+  // Just re-render the whole table for simplicity
+  render();
+}
+
+function render() {
+  var sc = scenarios[currentTab];
+  var inflows = inflowValues[currentTab];
+
+  // Calculate monthly outflows per item
+  var outflowMonthly = [];
+  var monthlyOutflowTotals = new Array(CM).fill(0);
+  sc.outflows.forEach(function(item) {
+    var m = getMonthly(item);
+    outflowMonthly.push(m);
+    for (var i = 0; i < CM; i++) monthlyOutflowTotals[i] += m[i];
+  });
+
+  var totalOutflow = sc.outflows.reduce(function(s, item) { return s + item.amount; }, 0);
+  var totalInflow = inflows.reduce(function(s, v) { return s + v; }, 0);
+
+  // Build table
+  var html = '<thead>';
+  html += '<tr>';
+  html += '<th class="col-item" rowspan="2">البند</th>';
+  html += '<th class="col-total" rowspan="2">الإجمالي</th>';
+  html += '<th colspan="' + CM + '" style="background:#dbeafe;color:#1d4ed8;">مرحلة التنفيذ (' + CM + ' شهر)</th>';
+  html += '</tr><tr>';
+  for (var i = 1; i <= CM; i++) html += '<th style="background:#eff6ff;">شهر ' + i + '</th>';
+  html += '</tr></thead><tbody>';
+
+  // ── Opening Balance Row ──
+  html += '<tr class="row-opening">';
+  html += '<td class="col-item">الرصيد الافتتاحي</td>';
+  html += '<td class="col-total">' + fmt(sc.openingBalance) + '</td>';
+  for (var i = 0; i < CM; i++) {
+    if (i === 0) html += '<td>' + fmt(sc.openingBalance) + '</td>';
+    else html += '<td class="zero">—</td>';
+  }
+  html += '</tr>';
+
+  // ── Inflow Row (manual inputs) ──
+  html += '<tr class="row-section"><td class="col-item" colspan="' + (CM + 2) + '">الإيرادات الداخلة (مبيعات الوحدات)</td></tr>';
+  html += '<tr class="row-inflow">';
+  html += '<td class="col-item">إيرادات المبيعات</td>';
+  html += '<td class="col-total" id="totalInflowCell">' + fmt(totalInflow) + '</td>';
+  for (var i = 0; i < CM; i++) {
+    html += '<td><input type="number" class="inflow-input" id="inflow_' + i + '" value="' + (inflows[i] || '') + '" onchange="onInflowChange()" placeholder="0"></td>';
+  }
+  html += '</tr>';
+  html += '<tr class="row-total-in">';
+  html += '<td class="col-item">إجمالي الداخل</td>';
+  html += '<td class="col-total">' + fmt(totalInflow + sc.openingBalance) + '</td>';
+  for (var i = 0; i < CM; i++) {
+    var monthIn = inflows[i] + (i === 0 ? sc.openingBalance : 0);
+    html += '<td>' + fmt(monthIn) + '</td>';
+  }
+  html += '</tr>';
+
+  // ── Outflows Section ──
+  html += '<tr class="row-section"><td class="col-item" colspan="' + (CM + 2) + '">المصاريف الخارجة</td></tr>';
+  sc.outflows.forEach(function(item, idx) {
+    html += '<tr class="row-outflow">';
+    html += '<td class="col-item">' + item.name + '</td>';
+    html += '<td class="col-total">' + fmt(item.amount) + '</td>';
+    for (var i = 0; i < CM; i++) {
+      var v = outflowMonthly[idx][i];
+      html += '<td' + (v === 0 ? ' class="zero"' : '') + '>' + fmt(v) + '</td>';
+    }
+    html += '</tr>';
+  });
+
+  // Total outflows row
+  html += '<tr class="row-total-out">';
+  html += '<td class="col-item">إجمالي الخارج</td>';
+  html += '<td class="col-total">' + fmt(totalOutflow) + '</td>';
+  for (var i = 0; i < CM; i++) {
+    html += '<td>' + fmt(monthlyOutflowTotals[i]) + '</td>';
+  }
+  html += '</tr>';
+
+  // ── Net Monthly (Inflow - Outflow) ──
+  html += '<tr class="row-section"><td class="col-item" colspan="' + (CM + 2) + '">صافي التدفق الشهري</td></tr>';
+  html += '<tr style="background:#fefce8;font-weight:bold;">';
+  html += '<td class="col-item" style="background:#fefce8;">صافي الشهر</td>';
+  var totalNet = totalInflow + sc.openingBalance - totalOutflow;
+  html += '<td class="col-total">' + fmt(totalNet) + '</td>';
+  for (var i = 0; i < CM; i++) {
+    var monthIn = inflows[i] + (i === 0 ? sc.openingBalance : 0);
+    var net = monthIn - monthlyOutflowTotals[i];
+    var color = net >= 0 ? 'color:#047857;' : 'color:#be123c;';
+    html += '<td style="' + color + 'font-weight:bold;">' + fmt(net) + '</td>';
+  }
+  html += '</tr>';
+
+  // ── Cumulative Balance ──
+  html += '<tr class="row-balance">';
+  html += '<td class="col-item" style="background:#eff6ff;">الرصيد التراكمي</td>';
+  var cumBalance = 0;
+  var finalBal = 0;
+  var balCells = '';
+  for (var i = 0; i < CM; i++) {
+    var monthIn = inflows[i] + (i === 0 ? sc.openingBalance : 0);
+    cumBalance += monthIn - monthlyOutflowTotals[i];
+    var color = cumBalance >= 0 ? 'color:#047857;' : 'color:#be123c;';
+    balCells += '<td style="' + color + 'font-weight:bold;">' + fmt(cumBalance) + '</td>';
+    finalBal = cumBalance;
+  }
+  var fColor = finalBal >= 0 ? 'color:#047857;' : 'color:#be123c;';
+  html += '<td class="col-total" style="' + fColor + '">' + fmt(finalBal) + '</td>';
+  html += balCells;
+  html += '</tr>';
+
+  html += '</tbody>';
+  document.getElementById('cashflowTable').innerHTML = html;
+
+  // Update KPI cards
+  var kpiHtml = '';
+  kpiHtml += '<div class="kpi-card kpi-amber"><div class="kpi-label">الرصيد الافتتاحي</div><div class="kpi-value">' + fmt(sc.openingBalance) + '</div><div class="kpi-sub">درهم</div></div>';
+  kpiHtml += '<div class="kpi-card kpi-emerald"><div class="kpi-label">إجمالي الإيرادات الداخلة</div><div class="kpi-value">' + fmt(totalInflow) + '</div><div class="kpi-sub">درهم</div></div>';
+  kpiHtml += '<div class="kpi-card kpi-rose"><div class="kpi-label">إجمالي المصاريف الخارجة</div><div class="kpi-value">' + fmt(totalOutflow) + '</div><div class="kpi-sub">درهم</div></div>';
+  var balClass = finalBal >= 0 ? 'kpi-blue' : 'kpi-rose';
+  kpiHtml += '<div class="kpi-card ' + balClass + '"><div class="kpi-label">الرصيد الختامي</div><div class="kpi-value">' + fmt(finalBal) + '</div><div class="kpi-sub">درهم</div></div>';
+  document.getElementById('kpiGrid').innerHTML = kpiHtml;
+}
+
+// Initial render
+render();
+</script>
+</body>
+</html>
