@@ -1,180 +1,153 @@
-import { useState, useEffect } from "react";
-import { useAuth } from "@/_core/hooks/useAuth";
-import { trpc } from "@/lib/trpc";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowRight, Settings2, FileBarChart2, LayoutList, Wallet, Landmark } from "lucide-react";
-import { CashFlowProvider, useCashFlow } from "@/contexts/CashFlowContext";
-import CashFlowSettingsPage from "./CashFlowSettingsPage";
-import FinancialFeasibilityTab from "./FinancialFeasibilityTab";
-import CapitalScheduleTablePage from "./CapitalScheduleTablePage";
-import ExcelCashFlowPage from "./ExcelCashFlowPage";
-import EscrowCashFlowPage from "./EscrowCashFlowPage";
+import { ArrowRight, Settings2, FileBarChart2 } from "lucide-react";
 
-type TabId = "cf-settings" | "fin-feasibility" | "total-costs" | "capital-plan" | "escrow";
+type ActiveView = "main" | "settings" | "reports";
+type SettingsTab = "cost" | "o1" | "o2" | "o3";
+type ReportsTab = "feasibility" | "capital-plan" | "escrow";
 
-const TABS: { id: TabId; label: string; icon: React.ElementType; gradient: string }[] = [
-  {
-    id: "cf-settings",
-    label: "إعدادات التدفق",
-    icon: Settings2,
-    gradient: "linear-gradient(135deg, #3b82f6, #2563eb)",
-  },
-  {
-    id: "fin-feasibility",
-    label: "ملخص الجدوى المالية",
-    icon: FileBarChart2,
-    gradient: "linear-gradient(135deg, #7c3aed, #6d28d9)",
-  },
-  {
-    id: "total-costs",
-    label: "التكاليف الكلية للمشروع والجدول الزمني",
-    icon: LayoutList,
-    gradient: "linear-gradient(135deg, #059669, #10b981)",
-  },
-  {
-    id: "capital-plan",
-    label: "خطة رأس مال المشروع",
-    icon: Wallet,
-    gradient: "linear-gradient(135deg, #d97706, #b45309)",
-  },
-  {
-    id: "escrow",
-    label: "التدفقات النقدية وحساب الضمان",
-    icon: Landmark,
-    gradient: "linear-gradient(135deg, #4f46e5, #4338ca)",
-  },
+const SETTINGS_TABS: { id: SettingsTab; label: string }[] = [
+  { id: "cost", label: "إعدادات التكاليف" },
+  { id: "o1", label: "O1 — إيداع ضمان" },
+  { id: "o2", label: "O2 — دفعة إنجاز" },
+  { id: "o3", label: "O3 — بدون أوف بلان" },
 ];
 
-const LAST_PROJECT_KEY = "como_last_project_id";
+const REPORTS_TABS: { id: ReportsTab; label: string }[] = [
+  { id: "feasibility", label: "ملخص الجدوى المالية" },
+  { id: "capital-plan", label: "خطة رأس مال المشروع" },
+  { id: "escrow", label: "التدفقات النقدية وحساب الضمان" },
+];
 
-function FinancialPlanningHubInner({ onBack }: { onBack: () => void }) {
-  const { isAuthenticated } = useAuth();
-  const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
-  const { selectedProjectId, setSelectedProjectId } = useCashFlow();
-  const [activeTab, setActiveTab] = useState<TabId>("cf-settings");
+const SETTINGS_URLS: Record<SettingsTab, string> = {
+  cost: "/cost-settings.html",
+  o1: "/o1-settings.html",
+  o2: "/o2-settings.html",
+  o3: "/o3-settings.html",
+};
 
-  // Auto-select last opened project (or first project as fallback)
-  useEffect(() => {
-    if (projectsQuery.data && projectsQuery.data.length > 0 && !selectedProjectId) {
-      const savedId = localStorage.getItem(LAST_PROJECT_KEY);
-      if (savedId) {
-        const savedNum = Number(savedId);
-        const found = projectsQuery.data.find((p: any) => p.id === savedNum);
-        if (found) {
-          setSelectedProjectId(savedNum);
-          return;
-        }
-      }
-      setSelectedProjectId(projectsQuery.data[0].id);
-    }
-  }, [projectsQuery.data, selectedProjectId]);
+const REPORTS_URLS: Record<ReportsTab, string> = {
+  feasibility: "/feasibility-summary.html",
+  "capital-plan": "/capital-plan.html",
+  escrow: "/escrow-cashflow.html",
+};
 
-  // Persist selected project to localStorage
-  const handleProjectChange = (id: number) => {
-    setSelectedProjectId(id);
-    localStorage.setItem(LAST_PROJECT_KEY, String(id));
-  };
+export default function FinancialPlanningHubPage({ onBack }: { onBack: () => void }) {
+  const [activeView, setActiveView] = useState<ActiveView>("main");
+  const [activeSettingsTab, setActiveSettingsTab] = useState<SettingsTab>("cost");
+  const [activeReportsTab, setActiveReportsTab] = useState<ReportsTab>("feasibility");
 
-  const selectedProject = (projectsQuery.data || []).find((p: any) => p.id === selectedProjectId);
-  const currentTab = TABS.find(t => t.id === activeTab)!;
+  const viewTitle = activeView === "settings" ? "إعدادات التدفق" : activeView === "reports" ? "التقارير المالية" : "التخطيط المالي";
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
-      {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5 shrink-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              if (activeView !== "main") {
+                setActiveView("main");
+              } else {
+                onBack();
+              }
+            }}
+            className="gap-1.5 shrink-0"
+          >
             <ArrowRight className="w-4 h-4" />
-            العودة
+            {activeView !== "main" ? "العودة للتخطيط المالي" : "العودة"}
           </Button>
           <div className="h-5 w-px bg-border" />
-          {/* Section icon + title */}
-          <div className="flex items-center gap-2 shrink-0">
-            <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center"
-              style={{ background: currentTab.gradient }}
-            >
-              <currentTab.icon className="w-3.5 h-3.5 text-white" />
-            </div>
-            <h1 className="text-sm font-bold text-foreground">{currentTab.label}</h1>
+          <h1 className="text-sm font-bold text-foreground">{viewTitle}</h1>
+        </div>
+
+        {/* Settings sub-tabs */}
+        {activeView === "settings" && (
+          <div className="max-w-7xl mx-auto px-4 flex gap-1 pb-0 overflow-x-auto">
+            {SETTINGS_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveSettingsTab(tab.id)}
+                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-all whitespace-nowrap ${
+                  activeSettingsTab === tab.id
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
-          <div className="h-5 w-px bg-border" />
-          {/* Project selector */}
-          <Select
-            value={selectedProjectId?.toString() ?? ""}
-            onValueChange={(v) => handleProjectChange(Number(v))}
-          >
-            <SelectTrigger className="h-8 text-xs w-52 shrink-0">
-              <SelectValue placeholder="اختر مشروعاً..." />
-            </SelectTrigger>
-            <SelectContent>
-              {(projectsQuery.data || []).map((p: any) => (
-                <SelectItem key={`proj-fp-${p.id}`} value={p.id.toString()}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {selectedProject && (
-            <span className="text-xs text-muted-foreground truncate">({selectedProject.plotNumber || selectedProject.id})</span>
-          )}
-        </div>
-        {/* Tab bar */}
-        <div className="max-w-7xl mx-auto px-4 flex gap-1 pb-0 overflow-x-auto">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-all whitespace-nowrap ${
-                activeTab === tab.id
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
-              }`}
-            >
-              <tab.icon className="w-3.5 h-3.5" />
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        )}
+
+        {/* Reports sub-tabs */}
+        {activeView === "reports" && (
+          <div className="max-w-7xl mx-auto px-4 flex gap-1 pb-0 overflow-x-auto">
+            {REPORTS_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveReportsTab(tab.id)}
+                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-all whitespace-nowrap ${
+                  activeReportsTab === tab.id
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
       </header>
 
-      {/* Content */}
-      <main className="py-4">
-        {activeTab === "cf-settings" && (
-          <CashFlowSettingsPage
-            embedded
-            initialProjectId={selectedProjectId}
-            onNavigateToReflection={() => setActiveTab("total-costs")}
-          />
-        )}
-        {activeTab === "fin-feasibility" && (
-          <div className="max-w-[98%] mx-auto px-4">
-            <FinancialFeasibilityTab initialProjectId={selectedProjectId} />
+      <main>
+        {activeView === "main" && (
+          <div className="max-w-7xl mx-auto px-4 py-12">
+            <div className="flex flex-wrap gap-6 justify-center">
+              {/* Settings icon */}
+              <button
+                onClick={() => setActiveView("settings")}
+                className="group flex flex-col items-center gap-3 p-8 rounded-2xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-all w-56"
+              >
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg group-hover:scale-110 transition-transform">
+                  <Settings2 className="w-8 h-8 text-white" />
+                </div>
+                <span className="text-sm font-bold text-foreground">إعدادات التدفق</span>
+                <span className="text-xs text-muted-foreground">4 ملفات إعدادات</span>
+              </button>
+
+              {/* Reports icon */}
+              <button
+                onClick={() => setActiveView("reports")}
+                className="group flex flex-col items-center gap-3 p-8 rounded-2xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-all w-56"
+              >
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg group-hover:scale-110 transition-transform">
+                  <FileBarChart2 className="w-8 h-8 text-white" />
+                </div>
+                <span className="text-sm font-bold text-foreground">التقارير المالية</span>
+                <span className="text-xs text-muted-foreground">3 تقارير</span>
+              </button>
+            </div>
           </div>
         )}
-        {activeTab === "total-costs" && (
-          <CapitalScheduleTablePage embedded initialProjectId={selectedProjectId} />
+
+        {activeView === "settings" && (
+          <iframe
+            src={SETTINGS_URLS[activeSettingsTab]}
+            className="w-full border-0"
+            style={{ height: "calc(100vh - 110px)" }}
+          />
         )}
-        {activeTab === "capital-plan" && (
-          <main className="py-1">
-            <ExcelCashFlowPage embedded initialProjectId={selectedProjectId} />
-          </main>
-        )}
-        {activeTab === "escrow" && (
-          <main className="py-1">
-            <EscrowCashFlowPage embedded initialProjectId={selectedProjectId} />
-          </main>
+
+        {activeView === "reports" && (
+          <iframe
+            src={REPORTS_URLS[activeReportsTab]}
+            className="w-full border-0"
+            style={{ height: "calc(100vh - 110px)" }}
+          />
         )}
       </main>
     </div>
-  );
-}
-
-export default function FinancialPlanningHubPage({ onBack }: { onBack: () => void }) {
-  return (
-    <CashFlowProvider>
-      <FinancialPlanningHubInner onBack={onBack} />
-    </CashFlowProvider>
   );
 }
