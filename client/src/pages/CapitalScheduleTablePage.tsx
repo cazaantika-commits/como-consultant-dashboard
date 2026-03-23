@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import {
@@ -161,21 +161,37 @@ export default function CapitalScheduleTablePage({
   const selectedProjectId = localProjectId;
   const selectedProject = (projectsQuery.data || []).find((p: any) => p.id === selectedProjectId);
 
-  // Scenario
+  // Scenario — use local state initialized from DB, no DB mutation on switch
   const scenariosQuery = trpc.cashFlowProgram.getProjectScenarios.useQuery(undefined, { enabled: isAuthenticated, staleTime: 5000 });
-  const updateScenarioMutation = trpc.cashFlowProgram.updateProjectScenario.useMutation({
-    onSuccess: () => scenariosQuery.refetch(),
-  });
-  const scenario: FinancingScenario = ((scenariosQuery.data?.[selectedProjectId || 0]) || "offplan_escrow") as FinancingScenario;
+  const [localScenario, setLocalScenario] = useState<FinancingScenario>("offplan_escrow");
+  const [scenarioReady, setScenarioReady] = useState(false);
+
+  // Initialize local scenario from DB when project changes or scenarios load
+  const prevProjectRef = useRef<number | null>(null);
+  useEffect(() => {
+    // Reset when project changes
+    if (selectedProjectId !== prevProjectRef.current) {
+      prevProjectRef.current = selectedProjectId;
+      setScenarioReady(false);
+    }
+    // Set scenario from DB when data is available
+    if (selectedProjectId && scenariosQuery.data) {
+      const dbScenario = scenariosQuery.data[selectedProjectId] as FinancingScenario | undefined;
+      setLocalScenario(dbScenario || "offplan_escrow");
+      setScenarioReady(true);
+    }
+  }, [selectedProjectId, scenariosQuery.data]);
+
+  const scenario = localScenario;
   const setScenario = (s: FinancingScenario) => {
-    if (!selectedProjectId) return;
-    updateScenarioMutation.mutate({ projectId: selectedProjectId, scenario: s });
+    setLocalScenario(s);
   };
 
   // Load settings from cashFlowSettings (the source of truth for distribution)
+  // CRITICAL: Only fetch AFTER scenario is loaded from DB to prevent reading wrong scenario
   const settingsQuery = trpc.cashFlowSettings.getSettings.useQuery(
     { projectId: selectedProjectId || 0, scenario: scenario as any },
-    { enabled: !!selectedProjectId, staleTime: 0, refetchOnWindowFocus: true }
+    { enabled: !!selectedProjectId && scenarioReady, staleTime: 0, refetchOnWindowFocus: true }
   );
 
   const settingsData = settingsQuery.data;
@@ -376,8 +392,7 @@ export default function CapitalScheduleTablePage({
         )}
       </div>
 
-      {/* Scenario selector */}
-      {!embedded && (
+      {/* Scenario selector — always visible, even when embedded */}
         <div style={{ marginBottom: 12, display: "flex", gap: 8, alignItems: "center" }}>
           <span style={{ fontSize: 11, color: "#555", fontWeight: "bold" }}>السيناريو:</span>
           {(Object.entries(SCENARIO_LABELS) as [FinancingScenario, string][]).map(([key, label]) => (
@@ -402,8 +417,7 @@ export default function CapitalScheduleTablePage({
               {label}
             </button>
           ))}
-        </div>
-      )}
+         </div>
 
       <div style={{ overflowX: "auto" }}>
         <table style={{ borderCollapse: "collapse", minWidth: "100%", background: "#fff" }}>

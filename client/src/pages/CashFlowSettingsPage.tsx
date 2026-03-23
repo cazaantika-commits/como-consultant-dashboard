@@ -14,7 +14,7 @@
  * منفصل لكل سيناريو
  */
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -438,6 +438,10 @@ export default function CashFlowSettingsPage({
 
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(initialProjectId ?? null);
   const [scenario, setScenario] = useState<Scenario>("offplan_escrow");
+  const [scenarioInitialized, setScenarioInitialized] = useState(false);
+
+  // Read the project's actual scenario from DB (same source as CapitalScheduleTablePage)
+  const scenariosQuery = trpc.cashFlowProgram.getProjectScenarios.useQuery(undefined, { enabled: isAuthenticated, staleTime: 5000 });
   const [items, setItems] = useState<SettingItem[]>([]);
   const [durations, setDurations] = useState<PhaseDurations>({ design: 6, construction: 16, handover: 2 });
   const [isDirty, setIsDirty] = useState(false);
@@ -447,11 +451,28 @@ export default function CashFlowSettingsPage({
     if (initialProjectId != null) setSelectedProjectId(initialProjectId);
   }, [initialProjectId]);
 
+  // Sync scenario from DB when project changes — single effect to avoid race condition
+  const prevSettingsProjectRef = useRef<number | null>(null);
+  useEffect(() => {
+    // Reset when project changes
+    if (selectedProjectId !== prevSettingsProjectRef.current) {
+      prevSettingsProjectRef.current = selectedProjectId;
+      setScenarioInitialized(false);
+    }
+    // Set scenario from DB when data is available
+    if (selectedProjectId && scenariosQuery.data) {
+      const dbScenario = scenariosQuery.data[selectedProjectId] as Scenario | undefined;
+      setScenario(dbScenario || "offplan_escrow");
+      setScenarioInitialized(true);
+    }
+  }, [selectedProjectId, scenariosQuery.data]);
+
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
 
+  // CRITICAL: Only fetch settings AFTER scenario is loaded from DB to prevent saving to wrong scenario
   const settingsQuery = trpc.cashFlowSettings.getSettings.useQuery(
     { projectId: selectedProjectId!, scenario },
-    { enabled: !!selectedProjectId, staleTime: 0 }
+    { enabled: !!selectedProjectId && scenarioInitialized, staleTime: 0 }
   );
 
   const saveSettingsMutation = trpc.cashFlowSettings.saveSettings.useMutation({

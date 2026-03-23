@@ -274,3 +274,9 @@
 - [ ] Bug: capital schedule table does not reflect updated settings (fundingSource, developer fee %, marketing %) after saving in settings page
 - [ ] Remove revenue items from CashFlowSettingsPage and router defaults
 - [ ] Add total project cost and required capital summary rows at bottom of CapitalScheduleTablePage
+
+- [x] BUG: Changing fundingSource in cash flow settings does not reflect on capital schedule table (root cause: race condition in scenario loading)
+- [x] FIX: CashFlowSettingsPage race condition — settingsQuery fires with default scenario before DB scenario loads
+- [x] FIX: CapitalScheduleTablePage scenario selector should be local state (not update DB on click) — both pages must support switching between 3 scenarios independently
+- [x] FIX: Both pages must wait for DB scenario to load before fetching settings data
+- [x] FIX: When embedded (no scenario selector visible), use DB scenario as default but allow parent to override

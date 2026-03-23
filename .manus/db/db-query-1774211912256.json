@@ -1,0 +1,13 @@
+{
+  "query": "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'projects' AND COLUMN_NAME LIKE '%scenario%' OR COLUMN_NAME LIKE '%financing%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'projects' AND COLUMN_NAME LIKE '%scenario%' OR COLUMN_NAME LIKE '%financing%';",
+  "rows": [
+    {
+      "COLUMN_NAME": "financingScenario"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\nfinancingScenario\n",
+  "stderr": "",
+  "execution_time_ms": 1551
+}

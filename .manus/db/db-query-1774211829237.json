@@ -1,0 +1,162 @@
+{
+  "query": "DESCRIBE project_cash_flow_settings;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute DESCRIBE project_cash_flow_settings;",
+  "rows": [
+    {
+      "Field": "id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": "auto_increment"
+    },
+    {
+      "Field": "project_id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "scenario",
+      "Type": "enum('offplan_escrow','offplan_construction','no_offplan')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "offplan_escrow",
+      "Extra": ""
+    },
+    {
+      "Field": "item_key",
+      "Type": "varchar(100)",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "name_ar",
+      "Type": "varchar(255)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "category",
+      "Type": "enum('land','design','offplan_reg','construction','marketing_sales','admin','developer_fee','revenue','other')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "other",
+      "Extra": ""
+    },
+    {
+      "Field": "section",
+      "Type": "enum('paid','design','offplan','construction','escrow')",
+      "Null": "YES",
+      "Key": "",
+      "Default": "construction",
+      "Extra": ""
+    },
+    {
+      "Field": "is_active",
+      "Type": "tinyint",
+      "Null": "NO",
+      "Key": "",
+      "Default": "1",
+      "Extra": ""
+    },
+    {
+      "Field": "sort_order",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "amount_override",
+      "Type": "decimal(18,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "distribution_method",
+      "Type": "enum('lump_sum','equal_spread','custom')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "equal_spread",
+      "Extra": ""
+    },
+    {
+      "Field": "lump_sum_month",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "start_month",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "end_month",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "custom_json",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "funding_source",
+      "Type": "enum('investor','escrow')",
+      "Null": "NO",
+      "Key": "",
+      "Default": "investor",
+      "Extra": ""
+    },
+    {
+      "Field": "notes",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "created_at",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": ""
+    },
+    {
+      "Field": "updated_at",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": "DEFAULT_GENERATED on update CURRENT_TIMESTAMP"
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nid\tint\tNO\tPRI\tNULL\tauto_increment\nproject_id\tint\tNO\tMUL\tNULL\t\nscenario\tenum('offplan_escrow','offplan_construction','no_offplan')\tNO\t\toffplan_escrow\t\nitem_key\tvarchar(100)\tNO\tMUL\tNULL\t\nname_ar\tvarchar(255)\tNO\t\tNULL\t\ncategory\tenum('land','design','offplan_reg','construction','marketing_sales','admin','developer_fee','revenue','other')\tNO\t\tother\t\nsection\tenum('paid','design','offplan','construction','escrow')\tYES\t\tconstruction\t\nis_active\ttinyint\tNO\t\t1\t\nsort_order\tint\tNO\t\t0\t\namount_override\tdecimal(18,2)\tYES\t\tNULL\t\ndistribution_method\tenum('lump_sum','equal_spread','custom')\tNO\t\tequal_spread\t\nlump_sum_month\tint\tYES\t\tNULL\t\nstart_month\tint\tYES\t\tNULL\t\nend_month\tint\tYES\t\tNULL\t\ncustom_json\ttext\tYES\t\tNULL\t\nfunding_source\tenum('investor','escrow')\tNO\t\tinvestor\t\nnotes\ttext\tYES\t\tNULL\t\ncreated_at\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\t\nupdated_at\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\tDEFAULT_GENERATED on update CURRENT_TIMESTAMP\n",
+  "stderr": "",
+  "execution_time_ms": 1511
+}
