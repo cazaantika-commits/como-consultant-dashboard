@@ -280,3 +280,4 @@
 - [x] FIX: CapitalScheduleTablePage scenario selector should be local state (not update DB on click) — both pages must support switching between 3 scenarios independently
 - [x] FIX: Both pages must wait for DB scenario to load before fetching settings data
 - [x] FIX: When embedded (no scenario selector visible), use DB scenario as default but allow parent to override
+- [x] BUG: Column 1 (إجمالي التكاليف) missing escrow-funded items — must show ALL costs (investor + escrow). Column 2 (خطة رأس مال) should show investor-only amounts. Fixed: added missing items (government_fees_escrow, contractor_payments, community_fee_escrow) to computeItemAmountByKey splitMap.

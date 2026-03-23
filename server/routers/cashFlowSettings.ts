@@ -1066,6 +1066,11 @@ function computeItemAmountByKey(
     marketing_construction: costs.marketingCost * (isOffplan ? 0.75 : 1.0),
     // Sales commission (full amount, from escrow)
     sales_commission: costs.salesCommission,
+    // Escrow split items — percentage of parent amounts paid from escrow
+    government_fees_escrow: costs.officialBodiesFees * 0.90,
+    government_fees_investor: costs.officialBodiesFees * 0.10,
+    community_fee_escrow: costs.communityFees * 0.75,
+    contractor_payments: costs.constructionCost * 0.70,
   };
   if (itemKey in splitMap) return splitMap[itemKey];
 
