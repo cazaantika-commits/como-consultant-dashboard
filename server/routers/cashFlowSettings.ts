@@ -241,21 +241,21 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
       scenarios: allScenarios, amountKey: "communityFees",
       splitRatio: [{ phase: "construction", ratio: 0.75 }],
     },
-    // دفعات المقاول (70% من الضمان) — O1 فقط
+    // دفعات المقاول (70% من الضمان) — الثلاث سيناريوهات
     {
       itemKey: "contractor_payments", nameAr: "دفعات المقاول (70% — من الضمان)", category: "construction", section: "escrow", sortOrder: 54.5,
       fundingSource: "escrow", distributionMethod: "equal_spread",
       distributeAcrossPhases: ["construction"],
-      scenarios: ["offplan_escrow"],
+      scenarios: allScenarios,
       amountFraction: { of: "constructionCost", ratio: 0.70 },
     },
-    // دفعات المقاول (90% من الضمان) — O2 + O3
+    // دفعات المقاول (20% من الضمان) — O2 + O3 فقط
     {
-      itemKey: "contractor_payments_90", nameAr: "دفعات المقاول (90% — من الضمان)", category: "construction", section: "escrow", sortOrder: 55,
+      itemKey: "contractor_payments_20", nameAr: "دفعات المقاول (20% — من الضمان)", category: "construction", section: "escrow", sortOrder: 55,
       fundingSource: "escrow", distributionMethod: "equal_spread",
       distributeAcrossPhases: ["construction"],
       scenarios: ["offplan_construction", "no_offplan"],
-      amountFraction: { of: "constructionCost", ratio: 0.90 },
+      amountFraction: { of: "constructionCost", ratio: 0.20 },
     },
     // ═══ الإشراف والمساح (من الإسكرو) ═══
     // أتعاب المطور — الإنشاء (3%) من حساب الضمان
@@ -1531,7 +1531,7 @@ export const cashFlowSettingsRouter = router({
               allItemKeys.push(s.itemKey);
             }
           }
-          // Add missing default items that are not in DB yet (e.g. contractor_payments_90)
+          // Add missing default items that are not in DB yet (e.g. contractor_payments_20)
           const defs = getDefaultItemDefs(sc);
           for (const def of defs) {
             if (savedKeys.has(def.itemKey)) continue;
@@ -1928,7 +1928,7 @@ function computeItemAmountByKey(
     government_fees_investor: costs.officialBodiesFees * 0.10,
     community_fee_escrow: costs.communityFees * 0.75,
     contractor_payments: costs.constructionCost * 0.70,
-    contractor_payments_90: costs.constructionCost * 0.90,
+    contractor_payments_20: costs.constructionCost * 0.20,
   };
   if (itemKey in splitMap) return splitMap[itemKey];
 
