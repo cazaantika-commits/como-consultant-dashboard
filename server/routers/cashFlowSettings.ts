@@ -1651,6 +1651,199 @@ export const cashFlowSettingsRouter = router({
         },
       };
     }),
+
+  /**
+   * getPortfolioAllScenarios — aggregates getCostSettingsComparison data
+   * for ALL projects across ALL 3 scenarios.
+   */
+  getPortfolioAllScenarios: publicProcedure.query(async ({ ctx }) => {
+    if (!ctx.user) return [];
+    const db = await getDb();
+    if (!db) return [];
+
+    const allProjects = await db.select().from(projects)
+      .where(eq(projects.userId, ctx.user.id));
+    if (allProjects.length === 0) return [];
+
+    const scenarioList: Scenario[] = ["offplan_escrow", "offplan_construction", "no_offplan"];
+
+    interface ScenarioSummary {
+      investorTotal: number;
+      escrowTotal: number;
+      grandTotal: number;
+      monthlyInvestor: number[];
+      monthlyEscrow: number[];
+      monthlyTotal: number[];
+      sectionTotals: Record<string, number>;
+    }
+
+    interface PortfolioProject {
+      projectId: number;
+      name: string;
+      startDate: string;
+      totalMonths: number;
+      totalRevenue: number;
+      phaseInfo: {
+        design: { duration: number; start: number };
+        offplan: { duration: number; start: number };
+        construction: { duration: number; start: number };
+        handover: { duration: number; start: number };
+      };
+      durations: {
+        design: number;
+        offplan: number;
+        construction: number;
+        handover: number;
+      };
+      scenarios: Record<string, ScenarioSummary>;
+    }
+
+    const results: PortfolioProject[] = [];
+
+    for (const project of allProjects) {
+      const moRows = await db.select().from(marketOverview)
+        .where(eq(marketOverview.projectId, project.id));
+      const cpRows = await db.select().from(competitionPricing)
+        .where(eq(competitionPricing.projectId, project.id));
+      const mo = moRows[0] || null;
+      const cp = cpRows[0] || null;
+      const costs = calculateProjectCosts(project, mo, cp);
+      if (!costs) continue;
+
+      const legacyDurations = {
+        preCon: project.preConMonths || 6,
+        construction: project.constructionMonths || 16,
+        handover: project.handoverMonths || 2,
+      };
+      const durations = legacyToNewDurations(legacyDurations);
+      const phasesArr = calculatePhases(durations);
+      const totalMonths = getTotalMonths(durations);
+
+      const phaseInfo = {
+        design: { duration: durations.design, start: phasesArr.find(p => p.type === "design")?.startMonth || 1 },
+        offplan: { duration: durations.offplan, start: phasesArr.find(p => p.type === "offplan")?.startMonth || 3 },
+        construction: { duration: durations.construction, start: phasesArr.find(p => p.type === "construction")?.startMonth || 7 },
+        handover: { duration: durations.handover, start: phasesArr.find(p => p.type === "handover")?.startMonth || 23 },
+      };
+
+      const scenariosData: Record<string, ScenarioSummary> = {};
+
+      for (const sc of scenarioList) {
+        const savedSettings = await db.select().from(projectCashFlowSettings).where(
+          and(
+            eq(projectCashFlowSettings.projectId, project.id),
+            eq(projectCashFlowSettings.scenario, sc),
+          )
+        );
+
+        let investorTotal = 0;
+        let escrowTotal = 0;
+        const monthlyInvestor = new Array(totalMonths).fill(0);
+        const monthlyEscrow = new Array(totalMonths).fill(0);
+        const monthlyAll = new Array(totalMonths).fill(0);
+        const sectionTotals: Record<string, number> = {};
+
+        const processItem = (
+          _itemKey: string,
+          _nameAr: string,
+          amount: number,
+          fundingSource: string,
+          section: string,
+          monthly: number[],
+        ) => {
+          sectionTotals[section] = (sectionTotals[section] || 0) + amount;
+          for (let m = 0; m < totalMonths; m++) {
+            const val = monthly[m] || 0;
+            if (val <= 0) continue;
+            monthlyAll[m] += val;
+            if (fundingSource === "investor") {
+              monthlyInvestor[m] += val;
+              investorTotal += val;
+            } else {
+              monthlyEscrow[m] += val;
+              escrowTotal += val;
+            }
+          }
+        };
+
+        if (savedSettings.length > 0) {
+          for (const s of savedSettings) {
+            if (!s.isActive) continue;
+            const amount = s.amountOverride
+              ? parseFloat(s.amountOverride)
+              : computeItemAmountByKey(s.itemKey, costs, sc);
+            const monthly = distributeAmount(
+              amount,
+              s.distributionMethod as DistributionMethod,
+              s.lumpSumMonth, s.startMonth, s.endMonth, s.customJson,
+              totalMonths,
+            );
+            const defForKey = getDefaultItemDefs(sc).find(d => d.itemKey === s.itemKey);
+            const itemSection = s.section || defForKey?.section || "construction";
+            processItem(s.itemKey, s.nameAr, amount, s.fundingSource, itemSection, monthly);
+          }
+        } else {
+          const defs = getDefaultItemDefs(sc);
+          for (const def of defs) {
+            const amount = computeItemAmount(def, costs);
+            let lumpSumMonth: number | null = null;
+            let startMonth: number | null = null;
+            let endMonth: number | null = null;
+
+            if (def.distributionMethod === "lump_sum" && def.phase) {
+              lumpSumMonth = phaseRelativeToAbsolute(def.phase, def.phaseRelativeMonth || 1, phasesArr);
+            } else if (def.distributionMethod === "equal_spread") {
+              if (def.distributeAcrossPhases && def.distributeAcrossPhases.length > 0) {
+                const firstPhase = def.distributeAcrossPhases[0];
+                const lastPhase = def.distributeAcrossPhases[def.distributeAcrossPhases.length - 1];
+                startMonth = getPhaseRange(firstPhase, phasesArr).start;
+                endMonth = getPhaseRange(lastPhase, phasesArr).end;
+              } else if (def.phase) {
+                const range = getPhaseRange(def.phase, phasesArr);
+                startMonth = range.start;
+                endMonth = range.end;
+              }
+            }
+
+            const monthly = distributeAmount(
+              amount, def.distributionMethod,
+              lumpSumMonth, startMonth, endMonth, null,
+              totalMonths,
+            );
+            processItem(def.itemKey, def.nameAr, amount, def.fundingSource, def.section || "construction", monthly);
+          }
+        }
+
+        scenariosData[sc] = {
+          investorTotal,
+          escrowTotal,
+          grandTotal: investorTotal + escrowTotal,
+          monthlyInvestor,
+          monthlyEscrow,
+          monthlyTotal: monthlyAll,
+          sectionTotals,
+        };
+      }
+
+      results.push({
+        projectId: project.id,
+        name: project.name,
+        startDate: project.startDate || "2026-04",
+        totalMonths,
+        totalRevenue: costs.totalRevenue || 0,
+        phaseInfo,
+        durations: {
+          design: durations.design,
+          offplan: durations.offplan,
+          construction: durations.construction,
+          handover: durations.handover,
+        },
+        scenarios: scenariosData,
+      });
+    }
+
+    return results;
+  }),
 });
 
 // ─── Helper: compute amount by item key ──────────────────────────────────────
