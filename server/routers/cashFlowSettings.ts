@@ -884,6 +884,15 @@ export const cashFlowSettingsRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
+      // 1. Get old durations before update
+      const oldProjectRows = await db.select().from(projects).where(eq(projects.id, input.projectId));
+      const oldProject = oldProjectRows[0];
+      if (!oldProject) throw new Error("Project not found");
+      const oldDesign = oldProject.preConMonths || 6;
+      const oldConstruction = oldProject.constructionMonths || 16;
+      const oldHandover = oldProject.handoverMonths || 2;
+
+      // 2. Update durations in projects table
       await db.update(projects)
         .set({
           preConMonths: input.designMonths,
@@ -891,6 +900,88 @@ export const cashFlowSettingsRouter = router({
           handoverMonths: input.handoverMonths,
         })
         .where(eq(projects.id, input.projectId));
+
+      // 3. Calculate old and new phase boundaries
+      const oldDurations = legacyToNewDurations({ preCon: oldDesign, construction: oldConstruction, handover: oldHandover });
+      const newDurations = legacyToNewDurations({ preCon: input.designMonths, construction: input.constructionMonths, handover: input.handoverMonths });
+      const oldPhases = calculatePhases(oldDurations);
+      const newPhases = calculatePhases(newDurations);
+
+      // 4. Recalculate startMonth/endMonth for all saved items across all scenarios
+      for (const scenario of SCENARIOS) {
+        const savedItems = await db.select().from(projectCashFlowSettings).where(
+          and(
+            eq(projectCashFlowSettings.projectId, input.projectId),
+            eq(projectCashFlowSettings.scenario, scenario),
+          )
+        );
+        if (savedItems.length === 0) continue;
+
+        for (const item of savedItems) {
+          const updates: Record<string, any> = {};
+          // Determine which phase this item belongs to based on section
+          const itemSection = item.section || "construction";
+          let itemPhase: "design" | "offplan" | "construction" | "handover" | null = null;
+          if (itemSection === "design") itemPhase = "design";
+          else if (itemSection === "offplan") itemPhase = "offplan";
+          else if (itemSection === "construction" || itemSection === "escrow") itemPhase = "construction";
+          // Skip paid/land items (they don't have phase-based distribution)
+          if (!itemPhase || itemSection === "paid") continue;
+
+          const newRange = getPhaseRange(itemPhase, newPhases);
+          const oldRange = getPhaseRange(itemPhase, oldPhases);
+
+          if (item.distributionMethod === "equal_spread") {
+            // Always snap equal_spread items to the full new phase range
+            // This is the safest approach: if the phase duration changes,
+            // equal_spread items should always cover the entire phase
+            if (item.startMonth !== null && item.endMonth !== null) {
+              updates.startMonth = newRange.start;
+              updates.endMonth = newRange.end;
+            }
+          } else if (item.distributionMethod === "lump_sum" && item.lumpSumMonth !== null) {
+            if (item.lumpSumMonth >= oldRange.start && item.lumpSumMonth <= oldRange.end) {
+              const oldPhaseDuration = oldRange.end - oldRange.start + 1;
+              const newPhaseDuration = newRange.end - newRange.start + 1;
+              const relativePos = oldPhaseDuration > 1 ? (item.lumpSumMonth - oldRange.start) / (oldPhaseDuration - 1) : 0;
+              updates.lumpSumMonth = Math.round(newRange.start + relativePos * Math.max(0, newPhaseDuration - 1));
+              updates.lumpSumMonth = Math.max(newRange.start, Math.min(newRange.end, updates.lumpSumMonth));
+            }
+          } else if (item.distributionMethod === "custom" && item.customJson) {
+            try {
+              const entries: Array<{ month: number; amount?: number; pct?: number }> = JSON.parse(item.customJson);
+              const newPhaseDuration = newRange.end - newRange.start + 1;
+              if (newPhaseDuration > 0) {
+                const totalPct = entries.reduce((sum, e) => sum + (e.pct || 0), 0);
+                if (totalPct > 0) {
+                  const pctPerMonth = totalPct / newPhaseDuration;
+                  const newEntries = [];
+                  for (let m = 0; m < newPhaseDuration; m++) {
+                    newEntries.push({ month: newRange.start + m, pct: Math.round(pctPerMonth * 100) / 100 });
+                  }
+                  updates.customJson = JSON.stringify(newEntries);
+                } else {
+                  const totalAmount = entries.reduce((sum, e) => sum + (e.amount || 0), 0);
+                  const amtPerMonth = totalAmount / newPhaseDuration;
+                  const newEntries = [];
+                  for (let m = 0; m < newPhaseDuration; m++) {
+                    newEntries.push({ month: newRange.start + m, amount: Math.round(amtPerMonth) });
+                  }
+                  updates.customJson = JSON.stringify(newEntries);
+                }
+              }
+            } catch {
+              // Invalid JSON, skip
+            }
+          }
+
+          if (Object.keys(updates).length > 0) {
+            await db.update(projectCashFlowSettings)
+              .set(updates)
+              .where(eq(projectCashFlowSettings.id, item.id));
+          }
+        }
+      }
 
       return { success: true };
     }),
