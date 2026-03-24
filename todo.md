@@ -330,3 +330,9 @@
 - [ ] مبالغ متساوية: تقسم على عدد أشهر المرحلة الفعلي
 - [ ] نسبة مئوية: حقول بعدد أشهر المرحلة الفعلي للتعبئة اليدوية
 - [ ] تحديث cost-settings.html لعرض البيانات الجديدة
+
+## خطأ: المدة ثابتة 16 شهر في إعدادات التدفق بدلاً من القيمة الفعلية من البطاقة
+- [ ] إصلاح: المدة تظهر 16 شهر ثابتة بينما البطاقة تقول 20 شهر — يجب قراءة constructionMonths و preConMonths من projects table
+- [x] Fix data mismatch: o1-settings.html shows different numbers than cost-settings.html (e.g. broker fee 360k vs 180k)
+- [x] o1/o2/o3-settings.html must pull data from same source as cost-settings.html (cashFlowSettings/cf_settings_items)
+- [x] Verify all numbers match between cost-settings comparison table and individual scenario pages
