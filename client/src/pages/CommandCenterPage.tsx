@@ -3684,7 +3684,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
   const [showWorkSchedule, setShowWorkSchedule] = useState(false);
   const [showCapitalScheduling, setShowCapitalScheduling] = useState(false);
   const [showFeasibilityStudy, setShowFeasibilityStudy] = useState(false);
-  const [feasibilityTab, setFeasibilityTab] = useState<"settings" | "fin" | "capital" | "escrow">("settings");
+
 
   const counts = trpc.commandCenter.getBubbleCounts.useQuery({ token });
   const notifications = trpc.commandCenter.getNotifications.useQuery({ token });
@@ -3748,13 +3748,6 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
 
   // If viewing feasibility study
   if (activeBubble === "feasibility_study" && showFeasibilityStudy) {
-    const feasibilityTabs = [
-      { id: "settings" as const, label: "⚙️ إعدادات التدفقات", src: "/cost-settings.html" },
-      { id: "fin" as const, label: "📊 ملخص الجدوى المالية", src: "/feasibility-summary.html" },
-      { id: "capital" as const, label: "💰 خطة رأس مال المشروع", src: "/capital-plan.html" },
-      { id: "escrow" as const, label: "🏦 التدفقات النقدية وحساب الضمان", src: "/escrow-cashflow.html" },
-    ];
-    const currentSrc = feasibilityTabs.find(t => t.id === feasibilityTab)?.src || "/cost-settings.html";
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white" dir="rtl">
         <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
@@ -3764,32 +3757,8 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
               <ArrowLeft className="w-4 h-4 ml-1" /> العودة للرئيسية
             </Button>
           </div>
-          {/* Tabs */}
-          <div className="px-4 mb-4">
-            <div className="bg-white border border-slate-200 rounded-xl p-3 flex items-center gap-2 overflow-x-auto">
-              {feasibilityTabs.map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setFeasibilityTab(tab.id)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                    feasibilityTab === tab.id
-                      ? tab.id === "settings" ? "bg-gradient-to-br from-slate-600 to-slate-800 text-white shadow-lg" : "bg-violet-600 text-white shadow-lg"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          {/* Content */}
-          <div style={{ height: "calc(100vh - 180px)" }}>
-            <iframe
-              key={feasibilityTab}
-              src={currentSrc}
-              className="w-full h-full border-0 rounded-xl"
-              title={feasibilityTab}
-            />
+          <div className="flex items-center justify-center h-64">
+            <p className="text-slate-400 text-lg">صفحة فارغة — جاهزة للمحتوى الجديد</p>
           </div>
         </div>
         <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />

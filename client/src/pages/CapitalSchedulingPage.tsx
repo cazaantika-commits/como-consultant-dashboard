@@ -172,7 +172,7 @@ function projectMonthToChartIndex(
 
 export default function CapitalSchedulingPage({ onBack }: Props) {
   const { isAuthenticated } = useAuth();
-  const scheduleQuery = trpc.cashFlowProgram.getCapitalScheduleData.useQuery(
+  const scheduleQuery = trpc.cashFlowSettings.getPortfolioCapitalData.useQuery(
     undefined,
     { enabled: isAuthenticated, staleTime: 60000 }
   );

@@ -1042,6 +1042,272 @@ export const cashFlowSettingsRouter = router({
 
       return { success: true };
     }),
+
+  /**
+   * getPortfolioCapitalData — builds the capital portfolio view for ALL projects.
+   * This is the single source of truth for CapitalSchedulingPage.
+   * It reuses the same reflection logic (settings + defaults) so that any change
+   * made in the settings page is immediately reflected in the portfolio.
+   *
+   * For each project it returns the shape expected by CapitalSchedulingPage:
+   *   - monthlyAmounts[]  (investor-only totals per project-relative month)
+   *   - phaseMonthlyAmounts  { land|design|offplan|construction|handover → { monthIdx → amount } }
+   *   - phaseTotals  { phase → total }
+   *   - itemBreakdown  { monthIdx → [{ name, amount }] }
+   *   - grandTotal / paidTotal / upcomingTotal
+   *   - phase durations & startDate
+   */
+  getPortfolioCapitalData: publicProcedure.query(async ({ ctx }) => {
+    if (!ctx.user) return [];
+    const db = await getDb();
+    if (!db) return [];
+
+    // Fetch all user projects
+    const allProjects = await db.select().from(projects)
+      .where(eq(projects.userId, ctx.user.id));
+    if (allProjects.length === 0) return [];
+
+    const today = new Date();
+
+    const results: Array<{
+      cfProjectId: number | null;
+      projectId: number;
+      name: string;
+      startDate: string;
+      preDevMonths: number;
+      designMonths: number;
+      offplanMonths: number;
+      constructionMonths: number;
+      handoverMonths: number;
+      monthlyAmounts: number[];
+      phaseMonthlyAmounts: Record<string, Record<string, number>>;
+      phaseTotals: Record<string, number>;
+      grandTotal: number;
+      paidTotal: number;
+      upcomingTotal: number;
+      itemBreakdown: Record<string, { name: string; amount: number }[]>;
+      financingScenario: string;
+    }> = [];
+
+    for (const project of allProjects) {
+      const scenario = (project.financingScenario || "offplan_escrow") as Scenario;
+
+      // Fetch supporting data
+      const moRows = await db.select().from(marketOverview)
+        .where(eq(marketOverview.projectId, project.id));
+      const cpRows = await db.select().from(competitionPricing)
+        .where(eq(competitionPricing.projectId, project.id));
+      const mo = moRows[0] || null;
+      const cp = cpRows[0] || null;
+
+      const costs = calculateProjectCosts(project, mo, cp);
+      if (!costs) continue;
+
+      // Build phase timeline (same logic as getReflectionData)
+      const legacyDurations = {
+        preCon: project.preConMonths || 6,
+        construction: project.constructionMonths || 16,
+        handover: project.handoverMonths || 2,
+      };
+      const durations = legacyToNewDurations(legacyDurations);
+      const phases = calculatePhases(durations);
+      const totalMonths = getTotalMonths(durations);
+
+      // Get saved settings or use defaults
+      const savedSettings = await db.select().from(projectCashFlowSettings).where(
+        and(
+          eq(projectCashFlowSettings.projectId, project.id),
+          eq(projectCashFlowSettings.scenario, scenario),
+        )
+      );
+
+      // Build items (same logic as getReflectionData)
+      interface PortfolioItem {
+        itemKey: string;
+        nameAr: string;
+        section: "paid" | "design" | "offplan" | "construction" | "escrow";
+        fundingSource: FundingSource;
+        totalAmount: number;
+        monthlyAmounts: number[];
+      }
+
+      const items: PortfolioItem[] = [];
+
+      if (savedSettings.length > 0) {
+        for (const s of savedSettings) {
+          if (!s.isActive) continue;
+          const amount = s.amountOverride
+            ? parseFloat(s.amountOverride)
+            : computeItemAmountByKey(s.itemKey, costs, scenario);
+
+          const monthly = distributeAmount(
+            amount,
+            s.distributionMethod as DistributionMethod,
+            s.lumpSumMonth,
+            s.startMonth,
+            s.endMonth,
+            s.customJson,
+            totalMonths,
+          );
+
+          const defForKey = getDefaultItemDefs(scenario).find(d => d.itemKey === s.itemKey);
+          const itemSection = (s.section || defForKey?.section || "construction") as PortfolioItem["section"];
+
+          items.push({
+            itemKey: s.itemKey,
+            nameAr: s.nameAr,
+            section: itemSection,
+            fundingSource: s.fundingSource as FundingSource,
+            totalAmount: amount,
+            monthlyAmounts: monthly,
+          });
+        }
+      } else {
+        const defs = getDefaultItemDefs(scenario);
+        for (const def of defs) {
+          const amount = computeItemAmount(def, costs);
+
+          let lumpSumMonth: number | null = null;
+          let startMonth: number | null = null;
+          let endMonth: number | null = null;
+
+          if (def.distributionMethod === "lump_sum" && def.phase) {
+            lumpSumMonth = phaseRelativeToAbsolute(def.phase, def.phaseRelativeMonth || 1, phases);
+          } else if (def.distributionMethod === "equal_spread") {
+            if (def.distributeAcrossPhases && def.distributeAcrossPhases.length > 0) {
+              const firstPhase = def.distributeAcrossPhases[0];
+              const lastPhase = def.distributeAcrossPhases[def.distributeAcrossPhases.length - 1];
+              startMonth = getPhaseRange(firstPhase, phases).start;
+              endMonth = getPhaseRange(lastPhase, phases).end;
+            } else if (def.phase) {
+              const range = getPhaseRange(def.phase, phases);
+              startMonth = range.start;
+              endMonth = range.end;
+            }
+          }
+
+          const monthly = distributeAmount(
+            amount,
+            def.distributionMethod,
+            lumpSumMonth,
+            startMonth,
+            endMonth,
+            null,
+            totalMonths,
+          );
+
+          items.push({
+            itemKey: def.itemKey,
+            nameAr: def.nameAr,
+            section: (def.section || "construction") as PortfolioItem["section"],
+            fundingSource: def.fundingSource,
+            totalAmount: amount,
+            monthlyAmounts: monthly,
+          });
+        }
+      }
+
+      // ─── Map section → portfolio phase ───
+      // paid → land, design → design, offplan → offplan,
+      // construction → construction, escrow → construction (escrow items are construction-phase)
+      const sectionToPhase = (section: string): string => {
+        switch (section) {
+          case "paid": return "land";
+          case "design": return "design";
+          case "offplan": return "offplan";
+          case "construction": return "construction";
+          case "escrow": return "construction"; // escrow items happen during construction
+          default: return "construction";
+        }
+      };
+
+      // Build phaseMonthlyAmounts: { phase → { monthIdx(1-based) → amount } }
+      // and itemBreakdown: { monthIdx(1-based) → [{ name, amount }] }
+      // Only investor items go into the capital schedule
+      const phaseMonthlyAmounts: Record<string, Record<string, number>> = {
+        land: {}, design: {}, offplan: {}, construction: {}, handover: {},
+      };
+      const phaseTotals: Record<string, number> = {
+        land: 0, design: 0, offplan: 0, construction: 0, handover: 0,
+      };
+      const monthlyAmounts = new Array(totalMonths).fill(0);
+      const itemBreakdown: Record<string, { name: string; amount: number }[]> = {};
+      let grandTotal = 0;
+
+      for (const item of items) {
+        // Only investor-funded items count toward capital schedule
+        if (item.fundingSource !== "investor") continue;
+
+        const phase = sectionToPhase(item.section);
+
+        for (let m = 0; m < totalMonths; m++) {
+          const val = item.monthlyAmounts[m] || 0;
+          if (val <= 0) continue;
+
+          const monthKey = String(m); // 0-based index as string key
+          grandTotal += val;
+          monthlyAmounts[m] += val;
+          phaseTotals[phase] = (phaseTotals[phase] || 0) + val;
+
+          if (!phaseMonthlyAmounts[phase]) phaseMonthlyAmounts[phase] = {};
+          phaseMonthlyAmounts[phase][monthKey] = (phaseMonthlyAmounts[phase][monthKey] || 0) + val;
+
+          // Item breakdown
+          if (!itemBreakdown[monthKey]) itemBreakdown[monthKey] = [];
+          const existing = itemBreakdown[monthKey].find(e => e.name === item.nameAr);
+          if (existing) {
+            existing.amount += val;
+          } else {
+            itemBreakdown[monthKey].push({ name: item.nameAr, amount: val });
+          }
+        }
+      }
+
+      // Calculate paid vs upcoming based on today's date
+      const startDateStr = project.startDate || "2026-04";
+      const [startYearStr, startMonthStr] = startDateStr.split("-");
+      const startYear = parseInt(startYearStr) || 2026;
+      const startMonthNum = parseInt(startMonthStr) || 4;
+
+      let paidTotal = 0;
+      let upcomingTotal = 0;
+      for (let m = 0; m < totalMonths; m++) {
+        const val = monthlyAmounts[m] || 0;
+        if (val <= 0) continue;
+        // Month m=0 is the start month
+        const absYear = startYear + Math.floor((startMonthNum - 1 + m) / 12);
+        const absMonth = ((startMonthNum - 1 + m) % 12) + 1;
+        const monthDate = new Date(absYear, absMonth - 1, 28);
+        if (monthDate < today) {
+          paidTotal += val;
+        } else {
+          upcomingTotal += val;
+        }
+      }
+
+      results.push({
+        cfProjectId: null,
+        projectId: project.id,
+        name: project.name,
+        startDate: startDateStr,
+        preDevMonths: durations.design,
+        designMonths: durations.design,
+        offplanMonths: durations.offplan,
+        constructionMonths: durations.construction,
+        handoverMonths: durations.handover,
+        monthlyAmounts,
+        phaseMonthlyAmounts,
+        phaseTotals,
+        grandTotal,
+        paidTotal,
+        upcomingTotal,
+        itemBreakdown,
+        financingScenario: scenario,
+      });
+    }
+
+    return results;
+  }),
 });
 
 // ─── Helper: compute amount by item key ──────────────────────────────────────

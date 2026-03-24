@@ -1,17 +1,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Settings2, FileBarChart2 } from "lucide-react";
+import CashFlowSettingsPage from "./CashFlowSettingsPage";
+import FinancialFeasibilityTab from "./FinancialFeasibilityTab";
+import ExcelCashFlowPage from "./ExcelCashFlowPage";
+import EscrowCashFlowPage from "./EscrowCashFlowPage";
 
 type ActiveView = "main" | "settings" | "reports";
-type SettingsTab = "cost" | "o1" | "o2" | "o3";
 type ReportsTab = "feasibility" | "capital-plan" | "escrow";
-
-const SETTINGS_TABS: { id: SettingsTab; label: string }[] = [
-  { id: "cost", label: "إعدادات التكاليف" },
-  { id: "o1", label: "O1 — إيداع ضمان" },
-  { id: "o2", label: "O2 — دفعة إنجاز" },
-  { id: "o3", label: "O3 — بدون أوف بلان" },
-];
 
 const REPORTS_TABS: { id: ReportsTab; label: string }[] = [
   { id: "feasibility", label: "ملخص الجدوى المالية" },
@@ -19,22 +15,8 @@ const REPORTS_TABS: { id: ReportsTab; label: string }[] = [
   { id: "escrow", label: "التدفقات النقدية وحساب الضمان" },
 ];
 
-const SETTINGS_URLS: Record<SettingsTab, string> = {
-  cost: "/cost-settings.html",
-  o1: "/o1-settings.html",
-  o2: "/o2-settings.html",
-  o3: "/o3-settings.html",
-};
-
-const REPORTS_URLS: Record<ReportsTab, string> = {
-  feasibility: "/feasibility-summary.html",
-  "capital-plan": "/capital-plan.html",
-  escrow: "/escrow-cashflow.html",
-};
-
 export default function FinancialPlanningHubPage({ onBack }: { onBack: () => void }) {
   const [activeView, setActiveView] = useState<ActiveView>("main");
-  const [activeSettingsTab, setActiveSettingsTab] = useState<SettingsTab>("cost");
   const [activeReportsTab, setActiveReportsTab] = useState<ReportsTab>("feasibility");
 
   const viewTitle = activeView === "settings" ? "إعدادات التدفق" : activeView === "reports" ? "التقارير المالية" : "التخطيط المالي";
@@ -61,25 +43,6 @@ export default function FinancialPlanningHubPage({ onBack }: { onBack: () => voi
           <div className="h-5 w-px bg-border" />
           <h1 className="text-sm font-bold text-foreground">{viewTitle}</h1>
         </div>
-
-        {/* Settings sub-tabs */}
-        {activeView === "settings" && (
-          <div className="max-w-7xl mx-auto px-4 flex gap-1 pb-0 overflow-x-auto">
-            {SETTINGS_TABS.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveSettingsTab(tab.id)}
-                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-all whitespace-nowrap ${
-                  activeSettingsTab === tab.id
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        )}
 
         {/* Reports sub-tabs */}
         {activeView === "reports" && (
@@ -114,7 +77,7 @@ export default function FinancialPlanningHubPage({ onBack }: { onBack: () => voi
                   <Settings2 className="w-8 h-8 text-white" />
                 </div>
                 <span className="text-sm font-bold text-foreground">إعدادات التدفق</span>
-                <span className="text-xs text-muted-foreground">4 ملفات إعدادات</span>
+                <span className="text-xs text-muted-foreground">إعدادات التوزيع والمدد</span>
               </button>
 
               {/* Reports icon */}
@@ -132,20 +95,18 @@ export default function FinancialPlanningHubPage({ onBack }: { onBack: () => voi
           </div>
         )}
 
+        {/* Settings - uses CashFlowSettingsPage directly */}
         {activeView === "settings" && (
-          <iframe
-            src={SETTINGS_URLS[activeSettingsTab]}
-            className="w-full border-0"
-            style={{ height: "calc(100vh - 110px)" }}
-          />
+          <CashFlowSettingsPage embedded />
         )}
 
+        {/* Reports */}
         {activeView === "reports" && (
-          <iframe
-            src={REPORTS_URLS[activeReportsTab]}
-            className="w-full border-0"
-            style={{ height: "calc(100vh - 110px)" }}
-          />
+          <div>
+            {activeReportsTab === "feasibility" && <FinancialFeasibilityTab />}
+            {activeReportsTab === "capital-plan" && <ExcelCashFlowPage embedded />}
+            {activeReportsTab === "escrow" && <EscrowCashFlowPage embedded />}
+          </div>
         )}
       </main>
     </div>

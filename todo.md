@@ -301,4 +301,14 @@
 - [ ] إضافة ملفات الإعدادات الثلاثة (o1, o2, o3) داخل تاب إعدادات التدفقات
 - [ ] تحويل ملفات الإعدادات من HTML ثابت إلى صفحات React مربوطة بقاعدة البيانات
 - [ ] تحويل التقارير المالية الثلاثة من HTML ثابت إلى صفحات React مربوطة بقاعدة البيانات
-- [ ] ربط محفظة رأس المال بالمصادر الجديدة
+- [x] ربط محفظة رأس المال بالمصادر الجديدة
+
+## ربط محفظة رأس المال بالمصادر الجديدة (cashFlowSettings)
+- [x] Create new server procedure getPortfolioCapitalData that reads from cashFlowSettings/getReflectionData
+- [x] Build per-project monthly arrays from reflection data (investor items only for capital schedule)
+- [x] Map phase info and monthly amounts to match CapitalSchedulingPage expected shape
+- [x] Update CapitalSchedulingPage to call new procedure instead of old getCapitalScheduleData
+- [x] Update CapitalSchedulingHorizontal to use new data shape (already receives data as props)
+- [x] Ensure phase delays still work with new data source
+- [x] Write unit tests for new portfolio data procedure (20 tests passing)
+- [x] Verify all projects display correctly with new data source (6 projects verified)
