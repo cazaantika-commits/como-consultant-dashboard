@@ -42,6 +42,13 @@
   .equal-info { font-size: 9px; color: #166534; background: #f0fdf4; padding: 2px 6px; border-radius: 3px; }
   .lump-info { display: inline-flex; align-items: center; gap: 4px; }
   .phase-info-box { margin-top: 10px; padding: 10px; background: #f0f4ff; border-radius: 6px; font-size: 11px; color: #334155; }
+  .save-bar { text-align: center; margin: 16px 0; }
+  .save-btn { background: #16a34a; color: #fff; border: none; padding: 10px 40px; font-size: 14px; font-weight: bold; border-radius: 8px; cursor: pointer; }
+  .save-btn:hover { background: #15803d; }
+  .save-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+  .save-msg { margin-top: 8px; font-size: 12px; }
+  .save-msg.ok { color: #16a34a; }
+  .save-msg.err { color: #dc2626; }
 </style>
 </head>
 <body>
@@ -55,6 +62,7 @@
 
 <script>
 var SCENARIO_KEY = 'o1';
+var SCENARIO_DB = 'offplan_escrow';
 
 function fmt(n) { return Math.round(n).toLocaleString('en-US'); }
 
@@ -64,11 +72,22 @@ function getDurationForPhase(phaseType, phaseInfo) {
   return 1;
 }
 
-function buildPhaseSelect(itemKey, origSection) {
-  var mapped = (origSection === 'design') ? 'design' : 'construction';
+function getPhaseRange(phaseType, phaseInfo) {
+  if (phaseType === 'design' && phaseInfo.design) {
+    var s = phaseInfo.design.start || phaseInfo.design.startMonth || 1;
+    return { start: s, end: s + phaseInfo.design.duration - 1 };
+  }
+  if (phaseType === 'construction' && phaseInfo.construction) {
+    var s = phaseInfo.construction.start || phaseInfo.construction.startMonth || 1;
+    return { start: s, end: s + phaseInfo.construction.duration - 1 };
+  }
+  return { start: 1, end: 1 };
+}
+
+function buildPhaseSelect(itemKey, currentPhase) {
   var html = '<select class="phase-select" data-item="' + itemKey + '" onchange="onPhaseChange(this)">';
-  html += '<option value="design"' + (mapped === 'design' ? ' selected' : '') + '>التصاميم</option>';
-  html += '<option value="construction"' + (mapped === 'construction' ? ' selected' : '') + '>التنفيذ</option>';
+  html += '<option value="design"' + (currentPhase === 'design' ? ' selected' : '') + '>التصاميم</option>';
+  html += '<option value="construction"' + (currentPhase !== 'design' ? ' selected' : '') + '>التنفيذ</option>';
   html += '</select>';
   return html;
 }
@@ -99,12 +118,14 @@ function buildMethodSelect(itemKey, currentMethod) {
 function buildDetailCell(itemKey, method, phaseType, phaseInfo, item) {
   var duration = getDurationForPhase(phaseType, phaseInfo);
   var amount = item[SCENARIO_KEY].amount;
+  var savedLumpMonth = item._savedLumpMonth || 1;
+  var savedCustom = item._savedCustom || null;
 
   if (method === 'lump_sum') {
     var html = '<div class="lump-info"><span style="font-size:9px;">الشهر</span> ';
-    html += '<select style="width:50px;font-size:10px;" data-item="' + itemKey + '">';
+    html += '<select class="lump-month-select" style="width:50px;font-size:10px;" data-item="' + itemKey + '">';
     for (var m = 1; m <= duration; m++) {
-      html += '<option value="' + m + '"' + (m === 1 ? ' selected' : '') + '>' + m + '</option>';
+      html += '<option value="' + m + '"' + (m === savedLumpMonth ? ' selected' : '') + '>' + m + '</option>';
     }
     html += '</select><span style="font-size:9px;"> من ' + duration + '</span></div>';
     return '<td class="detail-cell">' + html + '</td>';
@@ -118,8 +139,10 @@ function buildDetailCell(itemKey, method, phaseType, phaseInfo, item) {
   if (method === 'custom') {
     var html = '<div class="pct-container" id="pct-' + itemKey + '">';
     for (var m = 0; m < duration; m++) {
+      var val = '';
+      if (savedCustom && savedCustom[m] !== undefined) val = savedCustom[m];
       html += '<div class="pct-field"><label>ش' + (m+1) + '</label>';
-      html += '<input type="number" min="0" max="100" step="0.1" value="" data-item="' + itemKey + '" data-month="' + m + '" oninput="onPctChange(\'' + itemKey + '\',' + duration + ')">';
+      html += '<input type="number" min="0" max="100" step="0.1" value="' + val + '" data-item="' + itemKey + '" data-month="' + m + '" oninput="onPctChange(\'' + itemKey + '\',' + duration + ')">';
       html += '%</div>';
     }
     html += '</div><div class="pct-total" id="pct-total-' + itemKey + '">المجموع: 0%</div>';
@@ -139,6 +162,9 @@ function onPhaseChange(sel) {
   if (!detailCell) return;
   var methodSel = row.querySelector('.method-select');
   var method = methodSel ? methodSel.value : 'lump_sum';
+  // Reset saved custom/lump when phase changes
+  item._savedLumpMonth = 1;
+  item._savedCustom = null;
   detailCell.outerHTML = buildDetailCell(itemKey, method, sel.value, window._phaseInfo, item);
   if (method === 'custom') onPctChange(itemKey, getDurationForPhase(sel.value, window._phaseInfo));
 }
@@ -155,6 +181,9 @@ function onMethodChange(sel) {
   var detailCell = row.querySelector('.detail-cell');
   if (!detailCell) return;
   var phaseType = item._chosenPhase || 'construction';
+  // Reset saved data when method changes
+  item._savedLumpMonth = 1;
+  item._savedCustom = null;
   detailCell.outerHTML = buildDetailCell(itemKey, sel.value, phaseType, window._phaseInfo, item);
   if (sel.value === 'custom') onPctChange(itemKey, getDurationForPhase(phaseType, window._phaseInfo));
 }
@@ -169,6 +198,115 @@ function onPctChange(itemKey, duration) {
   if (el) {
     el.textContent = 'المجموع: ' + total.toFixed(1) + '%';
     el.className = 'pct-total ' + (Math.abs(total - 100) < 0.1 ? 'ok' : 'err');
+  }
+}
+
+function collectSaveData() {
+  var items = [];
+  var allItems = window._allItems || [];
+  for (var item of allItems) {
+    var isPaid = (item.section === 'paid');
+    var row = document.querySelector('tr[data-itemkey="' + item.itemKey + '"]');
+    
+    var fundingSource = item.fundingSource;
+    var chosenPhase = item._chosenPhase || (item.section === 'design' ? 'design' : 'construction');
+    var distributionMethod = item.distributionMethod;
+    var lumpSumMonth = null;
+    var startMonth = null;
+    var endMonth = null;
+    var customJson = null;
+
+    if (row && !isPaid) {
+      var sourceSel = row.querySelector('.source-select');
+      if (sourceSel) fundingSource = sourceSel.value;
+
+      var phaseSel = row.querySelector('.phase-select');
+      if (phaseSel) chosenPhase = phaseSel.value;
+
+      var methodSel = row.querySelector('.method-select');
+      if (methodSel) distributionMethod = methodSel.value;
+
+      var phaseRange = getPhaseRange(chosenPhase, window._phaseInfo);
+      var duration = getDurationForPhase(chosenPhase, window._phaseInfo);
+
+      if (distributionMethod === 'lump_sum') {
+        var lumpSel = row.querySelector('.lump-month-select');
+        var relMonth = lumpSel ? parseInt(lumpSel.value) : 1;
+        lumpSumMonth = phaseRange.start + relMonth - 1;
+        startMonth = lumpSumMonth;
+        endMonth = lumpSumMonth;
+      } else if (distributionMethod === 'equal_spread') {
+        startMonth = phaseRange.start;
+        endMonth = phaseRange.end;
+      } else if (distributionMethod === 'custom') {
+        startMonth = phaseRange.start;
+        endMonth = phaseRange.end;
+        var pctContainer = document.getElementById('pct-' + item.itemKey);
+        if (pctContainer) {
+          var inputs = pctContainer.querySelectorAll('input[type="number"]');
+          var pcts = [];
+          inputs.forEach(function(inp) { pcts.push(parseFloat(inp.value) || 0); });
+          customJson = JSON.stringify(pcts);
+        }
+      }
+    } else if (isPaid) {
+      fundingSource = 'investor';
+      distributionMethod = 'lump_sum';
+      lumpSumMonth = 1;
+      startMonth = 1;
+      endMonth = 1;
+    }
+
+    items.push({
+      itemKey: item.itemKey,
+      nameAr: item.nameAr,
+      category: item.category || 'other',
+      section: item.section || 'construction',
+      isActive: item[SCENARIO_KEY].active,
+      sortOrder: item.sortOrder || 0,
+      amountOverride: null,
+      distributionMethod: distributionMethod,
+      lumpSumMonth: lumpSumMonth,
+      startMonth: startMonth,
+      endMonth: endMonth,
+      customJson: customJson,
+      fundingSource: fundingSource,
+      notes: null,
+    });
+  }
+  return items;
+}
+
+async function saveSettings() {
+  var btn = document.getElementById('save-btn');
+  var msg = document.getElementById('save-msg');
+  btn.disabled = true;
+  btn.textContent = 'جاري الحفظ...';
+  msg.textContent = '';
+  msg.className = 'save-msg';
+
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var projectId = Number(params.get('projectId'));
+    var items = collectSaveData();
+
+    var resp = await fetch('/api/trpc/cashFlowSettings.saveSettings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ json: { projectId: projectId, scenario: SCENARIO_DB, items: items } }),
+    });
+    var json = await resp.json();
+    if (json.error) throw new Error(json.error.message || 'خطأ في الحفظ');
+
+    msg.textContent = 'تم الحفظ بنجاح ✓';
+    msg.className = 'save-msg ok';
+    btn.textContent = 'حفظ الإعدادات';
+    btn.disabled = false;
+  } catch (err) {
+    msg.textContent = 'خطأ: ' + (err.message || 'فشل الحفظ');
+    msg.className = 'save-msg err';
+    btn.textContent = 'حفظ الإعدادات';
+    btn.disabled = false;
   }
 }
 
@@ -192,10 +330,45 @@ async function loadData() {
     var phaseInfo = data.phaseInfo;
     window._phaseInfo = phaseInfo;
     window._itemsMap = {};
+    window._allItems = [];
+
+    // Also load saved settings to get lumpSumMonth, customJson, etc.
+    var savedResp = await fetch('/api/trpc/cashFlowSettings.getSettings?input=' + encodeURIComponent(JSON.stringify({ json: { projectId: Number(projectId), scenario: SCENARIO_DB } })));
+    var savedJson = await savedResp.json();
+    var savedData = savedJson.result ? savedJson.result.data.json : null;
+    var savedMap = {};
+    if (savedData && savedData.items) {
+      for (var si of savedData.items) {
+        savedMap[si.itemKey] = si;
+      }
+    }
 
     for (var item of data.items) {
-      item._chosenPhase = (item.section === 'design') ? 'design' : 'construction';
+      var saved = savedMap[item.itemKey];
+      // Determine phase from saved data or default
+      if (saved && saved.startMonth) {
+        var designEnd = phaseInfo.design ? phaseInfo.design.endMonth : 0;
+        item._chosenPhase = (saved.startMonth <= designEnd) ? 'design' : 'construction';
+      } else {
+        item._chosenPhase = (item.section === 'design') ? 'design' : 'construction';
+      }
+      // Load saved distribution method if exists
+      if (saved) {
+        item.distributionMethod = saved.distributionMethod || item.distributionMethod;
+        item.fundingSource = saved.fundingSource || item.fundingSource;
+        item._savedLumpMonth = null;
+        item._savedCustom = null;
+        if (saved.distributionMethod === 'lump_sum' && saved.lumpSumMonth) {
+          var phaseRange = getPhaseRange(item._chosenPhase, phaseInfo);
+          item._savedLumpMonth = saved.lumpSumMonth - phaseRange.start + 1;
+          if (item._savedLumpMonth < 1) item._savedLumpMonth = 1;
+        }
+        if (saved.distributionMethod === 'custom' && saved.customJson) {
+          try { item._savedCustom = JSON.parse(saved.customJson); } catch(e) {}
+        }
+      }
       window._itemsMap[item.itemKey] = item;
+      window._allItems.push(item);
     }
 
     var html = '<table><thead><tr>';
@@ -222,7 +395,7 @@ async function loadData() {
       for (var item of sec.items) {
         var amount = item[SCENARIO_KEY].amount;
         var isPaid = (item.section === 'paid');
-        html += '<tr>';
+        html += '<tr data-itemkey="' + item.itemKey + '">';
         html += '<td class="col-item">' + item.nameAr + '</td>';
         html += '<td class="col-amount">' + fmt(amount) + '</td>';
 
@@ -233,7 +406,7 @@ async function loadData() {
           html += '<td class="na-cell">—</td>';
         } else {
           html += '<td>' + buildSourceSelect(item.itemKey, item.fundingSource) + '</td>';
-          html += '<td>' + buildPhaseSelect(item.itemKey, item.section) + '</td>';
+          html += '<td>' + buildPhaseSelect(item.itemKey, item._chosenPhase) + '</td>';
           html += '<td>' + buildMethodSelect(item.itemKey, item.distributionMethod) + '</td>';
           html += buildDetailCell(item.itemKey, item.distributionMethod, item._chosenPhase, phaseInfo, item);
         }
@@ -251,6 +424,10 @@ async function loadData() {
     html += '<tr class="total-row"><td style="text-align:right;">الإجمالي الكلي</td><td>' + fmt(grandTotal) + '</td><td colspan="4"></td></tr>';
     html += '</tbody></table>';
 
+    // Save button
+    html += '<div class="save-bar"><button id="save-btn" class="save-btn" onclick="saveSettings()">حفظ الإعدادات</button>';
+    html += '<div id="save-msg" class="save-msg"></div></div>';
+
     html += '<div class="phase-info-box"><strong>المدد الزمنية (من البطاقة التعريفية):</strong> ';
     html += 'التصاميم: ' + phaseInfo.design.duration + ' شهر | ';
     html += 'الإنشاء: ' + phaseInfo.construction.duration + ' شهر | ';
@@ -260,6 +437,14 @@ async function loadData() {
     document.getElementById('loading').style.display = 'none';
     document.getElementById('table-container').style.display = 'block';
     document.getElementById('table-container').innerHTML = html;
+
+    // Trigger pct totals for any custom items
+    for (var item of data.items) {
+      if (item.distributionMethod === 'custom' && item[SCENARIO_KEY].active) {
+        var dur = getDurationForPhase(item._chosenPhase, phaseInfo);
+        onPctChange(item.itemKey, dur);
+      }
+    }
 
   } catch (err) {
     document.getElementById('loading').style.display = 'none';
