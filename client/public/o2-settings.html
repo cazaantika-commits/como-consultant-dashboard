@@ -17,9 +17,6 @@
   th { font-weight: bold; }
   .col-item { text-align: right; background: #f0f4ff; font-weight: 500; white-space: nowrap; }
   .col-amount { font-weight: bold; color: #1a1a2e; font-size: 11px; }
-  .col-source { font-weight: bold; }
-  .investor { background: #fef3c7; color: #92400e; }
-  .escrow { background: #dbeafe; color: #1d4ed8; }
   .paid { background: #e8f5e9; color: #1b5e20; font-weight: bold; }
   .section-header { background: #059669; color: #fff; font-weight: bold; font-size: 12px; text-align: right; }
   .section-header td { background: #059669; color: #fff; }
@@ -31,7 +28,10 @@
   select { font-size: 10px; padding: 2px 4px; border: 1px solid #aaa; border-radius: 3px; width: 100%; }
   input[type="number"] { font-size: 10px; padding: 2px 4px; border: 1px solid #aaa; border-radius: 3px; width: 50px; text-align: center; }
   .method-select { background: #fefce8; }
-  .month-input { background: #fef3c7; }
+  .phase-select { background: #f0f4ff; font-weight: 600; }
+  .source-select { font-weight: 600; }
+  .source-investor { background: #fef3c7; color: #92400e; }
+  .source-escrow { background: #dbeafe; color: #1d4ed8; }
   .pct-container { margin-top: 4px; display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; align-items: center; }
   .pct-field { display: inline-flex; align-items: center; gap: 1px; font-size: 9px; }
   .pct-field label { font-size: 8px; color: #555; }
@@ -56,120 +56,106 @@
 <script>
 var SCENARIO_KEY = 'o2';
 
-function fmt(n) {
-  return Math.round(n).toLocaleString('en-US');
-}
+function fmt(n) { return Math.round(n).toLocaleString('en-US'); }
 
-function getPhaseLabel(section) {
-  if (section === 'paid') return '—';
-  if (section === 'design') return 'التصاميم';
-  if (section === 'offplan') return 'أوف بلان';
-  if (section === 'construction') return 'التنفيذ';
-  if (section === 'escrow') return 'التنفيذ';
-  return 'التنفيذ';
-}
-
-function getPhaseDuration(section, phaseInfo) {
-  if (section === 'design' && phaseInfo.design) return phaseInfo.design.duration;
-  if (section === 'offplan' && phaseInfo.offplan) return phaseInfo.offplan.duration;
-  if ((section === 'construction' || section === 'escrow') && phaseInfo.construction) return phaseInfo.construction.duration;
+function getDurationForPhase(phaseType, phaseInfo) {
+  if (phaseType === 'design' && phaseInfo.design) return phaseInfo.design.duration;
+  if (phaseType === 'construction' && phaseInfo.construction) return phaseInfo.construction.duration;
   return 1;
 }
 
-function getPhaseStart(section, phaseInfo) {
-  if (section === 'design' && phaseInfo.design) return phaseInfo.design.start;
-  if (section === 'offplan' && phaseInfo.offplan) return phaseInfo.offplan.start;
-  if ((section === 'construction' || section === 'escrow') && phaseInfo.construction) return phaseInfo.construction.start;
-  return 1;
+function buildPhaseSelect(itemKey, origSection) {
+  var mapped = (origSection === 'design') ? 'design' : 'construction';
+  var html = '<select class="phase-select" data-item="' + itemKey + '" onchange="onPhaseChange(this)">';
+  html += '<option value="design"' + (mapped === 'design' ? ' selected' : '') + '>التصاميم</option>';
+  html += '<option value="construction"' + (mapped === 'construction' ? ' selected' : '') + '>التنفيذ</option>';
+  html += '</select>';
+  return html;
 }
 
-function renderSourceCell(item) {
-  if (item.fundingSource === 'investor') {
-    if (item.section === 'paid') return '<td class="paid">مدفوع</td>';
-    return '<td class="col-source investor">المستثمر</td>';
-  }
-  return '<td class="col-source escrow">حساب الضمان</td>';
+function buildSourceSelect(itemKey, currentSource) {
+  var cls = (currentSource === 'investor') ? 'source-investor' : 'source-escrow';
+  var html = '<select class="source-select ' + cls + '" data-item="' + itemKey + '" onchange="onSourceChange(this)">';
+  html += '<option value="investor"' + (currentSource === 'investor' ? ' selected' : '') + '>المستثمر</option>';
+  html += '<option value="escrow"' + (currentSource === 'escrow' ? ' selected' : '') + '>حساب الضمان</option>';
+  html += '</select>';
+  return html;
 }
 
 function buildMethodSelect(itemKey, currentMethod) {
-  var options = [
-    { value: 'lump_sum', label: 'دفعة واحدة' },
-    { value: 'equal_spread', label: 'دفعات متساوية' },
-    { value: 'custom', label: 'نسب مخصصة' },
+  var opts = [
+    { v: 'lump_sum', l: 'دفعة واحدة' },
+    { v: 'equal_spread', l: 'دفعات متساوية' },
+    { v: 'custom', l: 'نسب مخصصة' },
   ];
   var html = '<select class="method-select" data-item="' + itemKey + '" onchange="onMethodChange(this)">';
-  for (var o of options) {
-    html += '<option value="' + o.value + '"' + (o.value === currentMethod ? ' selected' : '') + '>' + o.label + '</option>';
+  for (var o of opts) {
+    html += '<option value="' + o.v + '"' + (o.v === currentMethod ? ' selected' : '') + '>' + o.l + '</option>';
   }
   html += '</select>';
   return html;
 }
 
-function buildDetailCell(itemKey, method, section, phaseInfo, item) {
-  var duration = getPhaseDuration(section, phaseInfo);
-  var phaseStart = getPhaseStart(section, phaseInfo);
+function buildDetailCell(itemKey, method, phaseType, phaseInfo, item) {
+  var duration = getDurationForPhase(phaseType, phaseInfo);
   var amount = item[SCENARIO_KEY].amount;
 
   if (method === 'lump_sum') {
-    var relMonth = 1;
-    if (item.lumpSumMonth) {
-      relMonth = Math.max(1, Math.min(duration, item.lumpSumMonth - phaseStart + 1));
-    }
-    var html = '<div class="lump-info">';
-    html += '<span style="font-size:9px;">الشهر</span> ';
-    html += '<select class="month-input" data-item="' + itemKey + '" style="width:50px;">';
+    var html = '<div class="lump-info"><span style="font-size:9px;">الشهر</span> ';
+    html += '<select style="width:50px;font-size:10px;" data-item="' + itemKey + '">';
     for (var m = 1; m <= duration; m++) {
-      html += '<option value="' + m + '"' + (m === relMonth ? ' selected' : '') + '>' + m + '</option>';
+      html += '<option value="' + m + '"' + (m === 1 ? ' selected' : '') + '>' + m + '</option>';
     }
-    html += '</select>';
-    html += '<span style="font-size:9px;"> من ' + duration + '</span>';
-    html += '</div>';
-    return '<td>' + html + '</td>';
+    html += '</select><span style="font-size:9px;"> من ' + duration + '</span></div>';
+    return '<td class="detail-cell">' + html + '</td>';
   }
 
   if (method === 'equal_spread') {
     var perMonth = amount / duration;
-    return '<td><span class="equal-info">÷ ' + duration + ' شهر = ' + fmt(perMonth) + ' / شهر</span></td>';
+    return '<td class="detail-cell"><span class="equal-info">÷ ' + duration + ' شهر = ' + fmt(perMonth) + ' / شهر</span></td>';
   }
 
   if (method === 'custom') {
-    var html = '<td><div class="pct-container" id="pct-' + itemKey + '">';
-    var existingPcts = [];
-    if (item.customJson) {
-      try { existingPcts = JSON.parse(item.customJson); } catch(e) {}
-    }
+    var html = '<div class="pct-container" id="pct-' + itemKey + '">';
     for (var m = 0; m < duration; m++) {
-      var val = existingPcts[m] || '';
-      html += '<div class="pct-field">';
-      html += '<label>ش' + (m+1) + '</label>';
-      html += '<input type="number" min="0" max="100" step="0.1" value="' + val + '" data-item="' + itemKey + '" data-month="' + m + '" oninput="onPctChange(\'' + itemKey + '\',' + duration + ')">';
+      html += '<div class="pct-field"><label>ش' + (m+1) + '</label>';
+      html += '<input type="number" min="0" max="100" step="0.1" value="" data-item="' + itemKey + '" data-month="' + m + '" oninput="onPctChange(\'' + itemKey + '\',' + duration + ')">';
       html += '%</div>';
     }
-    html += '</div>';
-    html += '<div class="pct-total" id="pct-total-' + itemKey + '">المجموع: 0%</div>';
-    html += '</td>';
-    return html;
+    html += '</div><div class="pct-total" id="pct-total-' + itemKey + '">المجموع: 0%</div>';
+    return '<td class="detail-cell">' + html + '</td>';
   }
+  return '<td class="detail-cell na-cell">—</td>';
+}
 
-  return '<td class="na-cell">—</td>';
+function onPhaseChange(sel) {
+  var itemKey = sel.getAttribute('data-item');
+  var item = window._itemsMap[itemKey];
+  if (!item) return;
+  item._chosenPhase = sel.value;
+  var row = sel.closest('tr');
+  var detailCell = row.querySelector('.detail-cell');
+  if (!detailCell) return;
+  var methodSel = row.querySelector('.method-select');
+  var method = methodSel ? methodSel.value : 'lump_sum';
+  detailCell.outerHTML = buildDetailCell(itemKey, method, sel.value, window._phaseInfo, item);
+  if (method === 'custom') onPctChange(itemKey, getDurationForPhase(sel.value, window._phaseInfo));
+}
+
+function onSourceChange(sel) {
+  sel.className = 'source-select ' + (sel.value === 'investor' ? 'source-investor' : 'source-escrow');
 }
 
 function onMethodChange(sel) {
   var itemKey = sel.getAttribute('data-item');
-  var method = sel.value;
+  var item = window._itemsMap[itemKey];
+  if (!item) return;
   var row = sel.closest('tr');
   var detailCell = row.querySelector('.detail-cell');
   if (!detailCell) return;
-
-  var item = window._itemsMap[itemKey];
-  if (!item) return;
-
-  detailCell.outerHTML = buildDetailCell(itemKey, method, item.section, window._phaseInfo, item).replace('<td>', '<td class="detail-cell">');
-
-  if (method === 'custom') {
-    var duration = getPhaseDuration(item.section, window._phaseInfo);
-    onPctChange(itemKey, duration);
-  }
+  var phaseType = item._chosenPhase || 'construction';
+  detailCell.outerHTML = buildDetailCell(itemKey, sel.value, phaseType, window._phaseInfo, item);
+  if (sel.value === 'custom') onPctChange(itemKey, getDurationForPhase(phaseType, window._phaseInfo));
 }
 
 function onPctChange(itemKey, duration) {
@@ -178,30 +164,27 @@ function onPctChange(itemKey, duration) {
   var inputs = container.querySelectorAll('input[type="number"]');
   var total = 0;
   inputs.forEach(function(inp) { total += parseFloat(inp.value) || 0; });
-  var totalEl = document.getElementById('pct-total-' + itemKey);
-  if (totalEl) {
-    totalEl.textContent = 'المجموع: ' + total.toFixed(1) + '%';
-    totalEl.className = 'pct-total ' + (Math.abs(total - 100) < 0.1 ? 'ok' : 'err');
+  var el = document.getElementById('pct-total-' + itemKey);
+  if (el) {
+    el.textContent = 'المجموع: ' + total.toFixed(1) + '%';
+    el.className = 'pct-total ' + (Math.abs(total - 100) < 0.1 ? 'ok' : 'err');
   }
 }
 
 async function loadData() {
   var params = new URLSearchParams(window.location.search);
   var projectId = params.get('projectId');
-
   if (!projectId) {
     document.getElementById('loading').style.display = 'none';
     document.getElementById('error').style.display = 'block';
-    document.getElementById('error').textContent = 'لم يتم تحديد مشروع. اختر مشروعاً من القائمة أعلاه.';
+    document.getElementById('error').textContent = 'لم يتم تحديد مشروع.';
     return;
   }
 
   try {
     var resp = await fetch('/api/trpc/cashFlowSettings.getCostSettingsComparison?input=' + encodeURIComponent(JSON.stringify({ json: { projectId: Number(projectId) } })));
     var json = await resp.json();
-
-    if (json.error) throw new Error(json.error.message || 'خطأ في تحميل البيانات');
-
+    if (json.error) throw new Error(json.error.message || 'خطأ');
     var data = json.result.data.json;
     document.getElementById('project-name').textContent = data.projectName;
 
@@ -210,54 +193,43 @@ async function loadData() {
     window._itemsMap = {};
 
     for (var item of data.items) {
+      item._chosenPhase = (item.section === 'design') ? 'design' : 'construction';
       window._itemsMap[item.itemKey] = item;
     }
 
     var html = '<table><thead><tr>';
     html += '<th class="h-main" style="text-align:right;min-width:160px;">البند</th>';
     html += '<th class="h-main" style="min-width:90px;">المبلغ (د.إ)</th>';
-    html += '<th class="h-main" style="min-width:80px;">المصدر</th>';
-    html += '<th class="h-main" style="min-width:70px;">المرحلة</th>';
+    html += '<th class="h-main" style="min-width:90px;">المصدر</th>';
+    html += '<th class="h-main" style="min-width:80px;">المرحلة</th>';
     html += '<th class="h-main" style="min-width:100px;">طريقة الدفع</th>';
     html += '<th class="h-main" style="min-width:200px;">التفاصيل</th>';
     html += '</tr></thead><tbody>';
 
     var sectionMap = {};
-    for (var s of data.sections) {
-      sectionMap[s.id] = { label: s.label, items: [] };
-    }
+    for (var s of data.sections) sectionMap[s.id] = { label: s.label, items: [] };
     for (var item of data.items) {
       if (!item[SCENARIO_KEY].active) continue;
-      if (sectionMap[item.section]) {
-        sectionMap[item.section].items.push(item);
-      }
+      if (sectionMap[item.section]) sectionMap[item.section].items.push(item);
     }
 
     for (var s of data.sections) {
       var sec = sectionMap[s.id];
       if (sec.items.length === 0) continue;
-
       html += '<tr class="section-header"><td colspan="6">' + sec.label + '</td></tr>';
-
       for (var item of sec.items) {
         var amount = item[SCENARIO_KEY].amount;
-        var isPaid = item.section === 'paid';
-
+        var isPaid = (item.section === 'paid');
         html += '<tr>';
         html += '<td class="col-item">' + item.nameAr + '</td>';
         html += '<td class="col-amount">' + fmt(amount) + '</td>';
-        html += renderSourceCell(item);
-
         if (isPaid) {
-          html += '<td class="na-cell">—</td>';
-          html += '<td class="na-cell">—</td>';
-          html += '<td class="na-cell">—</td>';
+          html += '<td class="paid">مدفوع</td><td class="na-cell">—</td><td class="na-cell">—</td><td class="na-cell">—</td>';
         } else {
-          html += '<td>' + getPhaseLabel(item.section) + '</td>';
+          html += '<td>' + buildSourceSelect(item.itemKey, item.fundingSource) + '</td>';
+          html += '<td>' + buildPhaseSelect(item.itemKey, item.section) + '</td>';
           html += '<td>' + buildMethodSelect(item.itemKey, item.distributionMethod) + '</td>';
-          var detailHtml = buildDetailCell(item.itemKey, item.distributionMethod, item.section, phaseInfo, item);
-          detailHtml = detailHtml.replace('<td>', '<td class="detail-cell">');
-          html += detailHtml;
+          html += buildDetailCell(item.itemKey, item.distributionMethod, item._chosenPhase, phaseInfo, item);
         }
         html += '</tr>';
       }
@@ -267,45 +239,20 @@ async function loadData() {
     var escrowTotal = data.totals.escrowTotal[SCENARIO_KEY];
     var grandTotal = data.totals.grandTotal[SCENARIO_KEY];
 
-    html += '<tr class="capital-row">';
-    html += '<td style="text-align:right;">رأس المال المطلوب (المستثمر)</td>';
-    html += '<td>' + fmt(investorTotal) + '</td>';
-    html += '<td colspan="4"></td>';
-    html += '</tr>';
-
-    html += '<tr class="escrow-total-row">';
-    html += '<td style="text-align:right;">إجمالي حساب الضمان</td>';
-    html += '<td>' + (escrowTotal > 0 ? fmt(escrowTotal) : '—') + '</td>';
-    html += '<td colspan="4"></td>';
-    html += '</tr>';
-
-    html += '<tr class="total-row">';
-    html += '<td style="text-align:right;">الإجمالي الكلي</td>';
-    html += '<td>' + fmt(grandTotal) + '</td>';
-    html += '<td colspan="4"></td>';
-    html += '</tr>';
-
+    html += '<tr class="capital-row"><td style="text-align:right;">رأس المال المطلوب (المستثمر)</td><td>' + fmt(investorTotal) + '</td><td colspan="4"></td></tr>';
+    html += '<tr class="escrow-total-row"><td style="text-align:right;">إجمالي حساب الضمان</td><td>' + (escrowTotal > 0 ? fmt(escrowTotal) : '—') + '</td><td colspan="4"></td></tr>';
+    html += '<tr class="total-row"><td style="text-align:right;">الإجمالي الكلي</td><td>' + fmt(grandTotal) + '</td><td colspan="4"></td></tr>';
     html += '</tbody></table>';
 
-    html += '<div class="phase-info-box">';
-    html += '<strong>المدد الزمنية (من البطاقة التعريفية):</strong> ';
+    html += '<div class="phase-info-box"><strong>المدد الزمنية (من البطاقة التعريفية):</strong> ';
     html += 'التصاميم: ' + phaseInfo.design.duration + ' شهر | ';
-    html += 'أوف بلان: ' + phaseInfo.offplan.duration + ' شهر | ';
     html += 'الإنشاء: ' + phaseInfo.construction.duration + ' شهر | ';
     html += 'التسليم: ' + phaseInfo.handover.duration + ' شهر';
-    html += ' | الإجمالي: ' + data.totalMonths + ' شهر';
-    html += '</div>';
+    html += ' | الإجمالي: ' + data.totalMonths + ' شهر</div>';
 
     document.getElementById('loading').style.display = 'none';
     document.getElementById('table-container').style.display = 'block';
     document.getElementById('table-container').innerHTML = html;
-
-    for (var item of data.items) {
-      if (item.distributionMethod === 'custom' && item[SCENARIO_KEY].active && item.section !== 'paid') {
-        var duration = getPhaseDuration(item.section, phaseInfo);
-        onPctChange(item.itemKey, duration);
-      }
-    }
 
   } catch (err) {
     document.getElementById('loading').style.display = 'none';
@@ -316,6 +263,5 @@ async function loadData() {
 
 loadData();
 </script>
-
 </body>
 </html>
