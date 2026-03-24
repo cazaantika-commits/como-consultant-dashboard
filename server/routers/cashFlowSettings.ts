@@ -1548,6 +1548,7 @@ export const cashFlowSettingsRouter = router({
         items: comparisonItems,
         totalMonths,
         phaseInfo,
+        totalRevenue: costs?.totalRevenue || 0,
         totals: {
           investorCapital: { o1: investorTotalO1, o2: investorTotalO2, o3: investorTotalO3 },
           escrowTotal: { o1: escrowTotalO1, o2: escrowTotalO2, o3: escrowTotalO3 },

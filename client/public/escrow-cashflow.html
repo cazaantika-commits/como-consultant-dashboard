@@ -7,13 +7,12 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f5f5f5; padding: 20px; direction: rtl; color: #1a1a2e; }
-  .container { max-width: 66%; margin: 0 auto; }
+  .container { max-width: 95%; margin: 0 auto; }
 
   .header { text-align: center; margin-bottom: 16px; }
   .header h2 { font-size: 18px; color: #1a1a2e; margin-bottom: 4px; }
   .header p { font-size: 11px; color: #64748b; }
 
-  /* Tabs */
   .tabs { display: flex; justify-content: center; gap: 0; margin-bottom: 16px; }
   .tab-btn {
     padding: 8px 24px; font-size: 12px; font-weight: bold; cursor: pointer;
@@ -23,7 +22,6 @@
   .tab-btn:last-child { border-radius: 8px 0 0 8px; }
   .tab-btn.active { background: #1d4ed8; color: #fff; border-color: #1d4ed8; }
 
-  /* KPI Cards */
   .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
   .kpi-card { border-radius: 12px; border: 1px solid; padding: 12px; text-align: center; }
   .kpi-label { font-size: 10px; font-weight: 500; margin-bottom: 4px; opacity: 0.7; }
@@ -34,7 +32,6 @@
   .kpi-rose { background: #fff1f2; border-color: #fecdd3; color: #be123c; }
   .kpi-amber { background: #fffbeb; border-color: #fde68a; color: #b45309; }
 
-  /* Table */
   .table-card { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 16px; }
   .table-title { padding: 10px 16px; font-size: 12px; font-weight: bold; border-bottom: 1px solid #e2e8f0; }
   .table-title-blue { background: #eff6ff; color: #1d4ed8; }
@@ -48,7 +45,6 @@
   th.col-item { background: #f8fafc; z-index: 3; }
   .col-total { min-width: 90px; font-weight: bold; background: #fefce8; }
 
-  /* Row types */
   .row-inflow { background: #ecfdf5; }
   .row-inflow td { color: #047857; }
   .row-outflow { background: #fff1f2; }
@@ -66,7 +62,6 @@
 
   .zero { color: #d1d5db; }
 
-  /* Input fields */
   .inflow-input {
     width: 70px; padding: 3px 5px; font-size: 10px; text-align: center;
     border: 1px solid #a7f3d0; border-radius: 4px; background: #ecfdf5; color: #047857;
@@ -75,25 +70,23 @@
   .inflow-input:focus { outline: 2px solid #047857; background: #fff; }
 
   .note { text-align: center; font-size: 10px; color: #94a3b8; margin-top: 8px; }
+  .loading { text-align: center; padding: 60px; font-size: 14px; color: #94a3b8; }
 </style>
 </head>
 <body>
 <div class="container">
   <div class="header">
     <h2>التدفقات النقدية لحساب الضمان</h2>
-    <p>Como Developments — ناد الشبا</p>
+    <p id="headerSub">جاري التحميل...</p>
   </div>
 
-  <!-- Tabs: O1 and O2 only -->
   <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('o1')">O1 — إيداع ضمان</button>
-    <button class="tab-btn" onclick="switchTab('o2')">O2 — بدون إيداع</button>
+    <button class="tab-btn active" id="tabO1" onclick="switchTab('o1')">O1 — إيداع ضمان</button>
+    <button class="tab-btn" id="tabO2" onclick="switchTab('o2')">O2 — بدون إيداع</button>
   </div>
 
-  <!-- KPI Cards -->
   <div class="kpi-grid" id="kpiGrid"></div>
 
-  <!-- Cash Flow Table -->
   <div class="table-card">
     <div class="table-title table-title-blue">التدفقات النقدية الشهرية لحساب الضمان</div>
     <div class="scroll-wrapper">
@@ -101,139 +94,101 @@
     </div>
   </div>
 
-  <p class="note">المبالغ بالدرهم الإماراتي | الإيرادات الداخلة: تعبئة يدوية | المصاريف الخارجة: من الإعدادات</p>
+  <p class="note">المبالغ بالدرهم الإماراتي | الإيرادات الداخلة: تعبئة يدوية | المصاريف الخارجة: من إعدادات التدفق</p>
 </div>
 
 <script>
-var CM = 16; // construction months
-
-var scenarios = {
-  o1: {
-    label: "O1 — إيداع ضمان",
-    openingBalance: 7999880, // إيداع حساب الضمان 20%
-    outflows: [
-      { name: "رسوم الجهات الحكومية (90%)", amount: 900162, method: "equal" },
-      { name: "دفعات المقاول (70%)", amount: 27999580, method: "equal" },
-      { name: "عمولة وكيل المبيعات (5%)", amount: 4548550, method: "equal" },
-      { name: "أتعاب الاستشاري — الإشراف", amount: 799988, method: "equal" },
-      { name: "تقرير مدقق ريرا", amount: 105180, method: "equal" },
-      { name: "تقرير فحص ريرا", amount: 100001, method: "equal" }
-    ]
-  },
-  o2: {
-    label: "O2 — بدون إيداع",
-    openingBalance: 0,
-    outflows: [
-      { name: "رسوم الجهات الحكومية (90%)", amount: 900162, method: "equal" },
-      { name: "دفعات المقاول (70%)", amount: 27999580, method: "equal" },
-      { name: "عمولة وكيل المبيعات (5%)", amount: 4548550, method: "equal" },
-      { name: "أتعاب الاستشاري — الإشراف", amount: 799988, method: "equal" },
-      { name: "تقرير مدقق ريرا", amount: 105180, method: "equal" },
-      { name: "تقرير فحص ريرا", amount: 100001, method: "equal" }
-    ]
-  }
-};
-
+var DATA = null;
 var currentTab = 'o1';
-var inflowValues = { o1: new Array(CM).fill(0), o2: new Array(CM).fill(0) };
+var CM = 16; // will be updated from API
+var constructionStart = 0; // 0-indexed
+var inflowValues = { o1: [], o2: [] };
 
 function fmt(n) {
   if (n === 0) return '—';
   return Math.round(n).toLocaleString('en-US');
 }
 
+async function loadData() {
+  var params = new URLSearchParams(window.location.search);
+  var projectId = params.get('projectId');
+  if (!projectId) { document.getElementById('kpiGrid').innerHTML = '<div class="loading">خطأ: لم يتم تحديد المشروع</div>'; return; }
+
+  try {
+    var resp = await fetch('/api/trpc/cashFlowSettings.getCostSettingsComparison?input=' + encodeURIComponent(JSON.stringify({ json: { projectId: Number(projectId) } })));
+    var json = await resp.json();
+    DATA = json.result.data.json;
+    CM = DATA.phaseInfo.construction.duration;
+    constructionStart = DATA.phaseInfo.construction.start - 1; // 0-indexed
+    inflowValues = { o1: new Array(CM).fill(0), o2: new Array(CM).fill(0) };
+    document.getElementById('headerSub').textContent = DATA.projectName + ' | مرحلة التنفيذ: ' + CM + ' شهر';
+    render();
+  } catch (e) {
+    document.getElementById('kpiGrid').innerHTML = '<div class="loading">خطأ في تحميل البيانات: ' + e.message + '</div>';
+  }
+}
+
 function switchTab(tab) {
-  // Save current inflow values before switching
   saveInflowValues();
   currentTab = tab;
-  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
-  document.querySelectorAll('.tab-btn').forEach(function(b) {
-    if ((tab === 'o1' && b.textContent.indexOf('O1') >= 0) || (tab === 'o2' && b.textContent.indexOf('O2') >= 0)) {
-      b.classList.add('active');
-    }
-  });
+  document.getElementById('tabO1').className = 'tab-btn' + (tab === 'o1' ? ' active' : '');
+  document.getElementById('tabO2').className = 'tab-btn' + (tab === 'o2' ? ' active' : '');
   render();
 }
 
 function saveInflowValues() {
   for (var i = 0; i < CM; i++) {
     var inp = document.getElementById('inflow_' + i);
-    if (inp) {
-      inflowValues[currentTab][i] = parseFloat(inp.value) || 0;
-    }
+    if (inp) inflowValues[currentTab][i] = parseFloat(inp.value) || 0;
   }
 }
 
 function onInflowChange() {
   saveInflowValues();
-  updateCalculations();
-}
-
-function getMonthly(item) {
-  var arr = new Array(CM).fill(0);
-  if (item.method === 'equal') {
-    var per = item.amount / CM;
-    for (var i = 0; i < CM; i++) arr[i] = per;
-  } else if (item.method === 'lump') {
-    arr[(item.month || 1) - 1] = item.amount;
-  }
-  return arr;
-}
-
-function updateCalculations() {
-  var sc = scenarios[currentTab];
-  var inflows = inflowValues[currentTab];
-
-  // Calculate monthly outflows
-  var monthlyOutflows = new Array(CM).fill(0);
-  sc.outflows.forEach(function(item) {
-    var m = getMonthly(item);
-    for (var i = 0; i < CM; i++) monthlyOutflows[i] += m[i];
-  });
-
-  // Calculate balances
-  var totalInflow = 0;
-  var totalOutflow = 0;
-  var balances = [];
-  var balance = sc.openingBalance;
-
-  for (var i = 0; i < CM; i++) {
-    balance += inflows[i] - monthlyOutflows[i];
-    balances.push(balance);
-    totalInflow += inflows[i];
-    totalOutflow += monthlyOutflows[i];
-  }
-
-  // Update KPI cards
-  var kpiHtml = '';
-  kpiHtml += '<div class="kpi-card kpi-amber"><div class="kpi-label">الرصيد الافتتاحي</div><div class="kpi-value">' + fmt(sc.openingBalance) + '</div><div class="kpi-sub">درهم</div></div>';
-  kpiHtml += '<div class="kpi-card kpi-emerald"><div class="kpi-label">إجمالي الإيرادات الداخلة</div><div class="kpi-value">' + fmt(totalInflow) + '</div><div class="kpi-sub">درهم</div></div>';
-  kpiHtml += '<div class="kpi-card kpi-rose"><div class="kpi-label">إجمالي المصاريف الخارجة</div><div class="kpi-value">' + fmt(totalOutflow) + '</div><div class="kpi-sub">درهم</div></div>';
-  var finalBalance = balances[CM - 1];
-  var balClass = finalBalance >= 0 ? 'kpi-blue' : 'kpi-rose';
-  kpiHtml += '<div class="kpi-card ' + balClass + '"><div class="kpi-label">الرصيد الختامي</div><div class="kpi-value">' + fmt(finalBalance) + '</div><div class="kpi-sub">درهم</div></div>';
-  document.getElementById('kpiGrid').innerHTML = kpiHtml;
-
-  // Update balance row and totals in table
-  var totalOutflowRow = sc.outflows.length + 2; // after section header + outflow items
-  // Just re-render the whole table for simplicity
   render();
 }
 
 function render() {
-  var sc = scenarios[currentTab];
+  if (!DATA) return;
+
+  var scKey = currentTab;
   var inflows = inflowValues[currentTab];
 
-  // Calculate monthly outflows per item
-  var outflowMonthly = [];
-  var monthlyOutflowTotals = new Array(CM).fill(0);
-  sc.outflows.forEach(function(item) {
-    var m = getMonthly(item);
-    outflowMonthly.push(m);
-    for (var i = 0; i < CM; i++) monthlyOutflowTotals[i] += m[i];
+  // Get escrow items for this scenario
+  var escrowItems = [];
+  DATA.items.forEach(function(item) {
+    var sc = item[scKey];
+    if (!sc || !sc.active) return;
+    if (item.fundingSource !== 'escrow') return;
+    // Extract construction months from monthlyAmounts
+    var constructionMonthly = [];
+    for (var i = constructionStart; i < constructionStart + CM; i++) {
+      constructionMonthly.push(sc.monthlyAmounts[i] || 0);
+    }
+    escrowItems.push({ name: item.nameAr, amount: sc.amount, monthly: constructionMonthly });
   });
 
-  var totalOutflow = sc.outflows.reduce(function(s, item) { return s + item.amount; }, 0);
+  // Find opening balance (escrow deposit from investor items - look for إيداع حساب الضمان)
+  var openingBalance = 0;
+  if (currentTab === 'o1') {
+    DATA.items.forEach(function(item) {
+      var sc = item[scKey];
+      if (!sc || !sc.active) return;
+      if (item.nameAr && item.nameAr.indexOf('إيداع حساب الضمان') >= 0) {
+        openingBalance = sc.amount;
+      }
+    });
+  }
+
+  // Calculate monthly outflows
+  var monthlyOutflowTotals = new Array(CM).fill(0);
+  var outflowMonthly = [];
+  escrowItems.forEach(function(item) {
+    outflowMonthly.push(item.monthly);
+    for (var i = 0; i < CM; i++) monthlyOutflowTotals[i] += item.monthly[i];
+  });
+
+  var totalOutflow = escrowItems.reduce(function(s, item) { return s + item.amount; }, 0);
   var totalInflow = inflows.reduce(function(s, v) { return s + v; }, 0);
 
   // Build table
@@ -249,9 +204,9 @@ function render() {
   // ── Opening Balance Row ──
   html += '<tr class="row-opening">';
   html += '<td class="col-item">الرصيد الافتتاحي</td>';
-  html += '<td class="col-total">' + fmt(sc.openingBalance) + '</td>';
+  html += '<td class="col-total">' + fmt(openingBalance) + '</td>';
   for (var i = 0; i < CM; i++) {
-    if (i === 0) html += '<td>' + fmt(sc.openingBalance) + '</td>';
+    if (i === 0) html += '<td>' + fmt(openingBalance) + '</td>';
     else html += '<td class="zero">—</td>';
   }
   html += '</tr>';
@@ -267,21 +222,21 @@ function render() {
   html += '</tr>';
   html += '<tr class="row-total-in">';
   html += '<td class="col-item">إجمالي الداخل</td>';
-  html += '<td class="col-total">' + fmt(totalInflow + sc.openingBalance) + '</td>';
+  html += '<td class="col-total">' + fmt(totalInflow + openingBalance) + '</td>';
   for (var i = 0; i < CM; i++) {
-    var monthIn = inflows[i] + (i === 0 ? sc.openingBalance : 0);
+    var monthIn = inflows[i] + (i === 0 ? openingBalance : 0);
     html += '<td>' + fmt(monthIn) + '</td>';
   }
   html += '</tr>';
 
   // ── Outflows Section ──
   html += '<tr class="row-section"><td class="col-item" colspan="' + (CM + 2) + '">المصاريف الخارجة</td></tr>';
-  sc.outflows.forEach(function(item, idx) {
+  escrowItems.forEach(function(item, idx) {
     html += '<tr class="row-outflow">';
     html += '<td class="col-item">' + item.name + '</td>';
     html += '<td class="col-total">' + fmt(item.amount) + '</td>';
     for (var i = 0; i < CM; i++) {
-      var v = outflowMonthly[idx][i];
+      var v = item.monthly[i];
       html += '<td' + (v === 0 ? ' class="zero"' : '') + '>' + fmt(v) + '</td>';
     }
     html += '</tr>';
@@ -296,14 +251,14 @@ function render() {
   }
   html += '</tr>';
 
-  // ── Net Monthly (Inflow - Outflow) ──
+  // ── Net Monthly ──
   html += '<tr class="row-section"><td class="col-item" colspan="' + (CM + 2) + '">صافي التدفق الشهري</td></tr>';
   html += '<tr style="background:#fefce8;font-weight:bold;">';
   html += '<td class="col-item" style="background:#fefce8;">صافي الشهر</td>';
-  var totalNet = totalInflow + sc.openingBalance - totalOutflow;
+  var totalNet = totalInflow + openingBalance - totalOutflow;
   html += '<td class="col-total">' + fmt(totalNet) + '</td>';
   for (var i = 0; i < CM; i++) {
-    var monthIn = inflows[i] + (i === 0 ? sc.openingBalance : 0);
+    var monthIn = inflows[i] + (i === 0 ? openingBalance : 0);
     var net = monthIn - monthlyOutflowTotals[i];
     var color = net >= 0 ? 'color:#047857;' : 'color:#be123c;';
     html += '<td style="' + color + 'font-weight:bold;">' + fmt(net) + '</td>';
@@ -317,7 +272,7 @@ function render() {
   var finalBal = 0;
   var balCells = '';
   for (var i = 0; i < CM; i++) {
-    var monthIn = inflows[i] + (i === 0 ? sc.openingBalance : 0);
+    var monthIn = inflows[i] + (i === 0 ? openingBalance : 0);
     cumBalance += monthIn - monthlyOutflowTotals[i];
     var color = cumBalance >= 0 ? 'color:#047857;' : 'color:#be123c;';
     balCells += '<td style="' + color + 'font-weight:bold;">' + fmt(cumBalance) + '</td>';
@@ -333,7 +288,7 @@ function render() {
 
   // Update KPI cards
   var kpiHtml = '';
-  kpiHtml += '<div class="kpi-card kpi-amber"><div class="kpi-label">الرصيد الافتتاحي</div><div class="kpi-value">' + fmt(sc.openingBalance) + '</div><div class="kpi-sub">درهم</div></div>';
+  kpiHtml += '<div class="kpi-card kpi-amber"><div class="kpi-label">الرصيد الافتتاحي</div><div class="kpi-value">' + fmt(openingBalance) + '</div><div class="kpi-sub">درهم</div></div>';
   kpiHtml += '<div class="kpi-card kpi-emerald"><div class="kpi-label">إجمالي الإيرادات الداخلة</div><div class="kpi-value">' + fmt(totalInflow) + '</div><div class="kpi-sub">درهم</div></div>';
   kpiHtml += '<div class="kpi-card kpi-rose"><div class="kpi-label">إجمالي المصاريف الخارجة</div><div class="kpi-value">' + fmt(totalOutflow) + '</div><div class="kpi-sub">درهم</div></div>';
   var balClass = finalBal >= 0 ? 'kpi-blue' : 'kpi-rose';
@@ -341,8 +296,7 @@ function render() {
   document.getElementById('kpiGrid').innerHTML = kpiHtml;
 }
 
-// Initial render
-render();
+loadData();
 </script>
 </body>
 </html>

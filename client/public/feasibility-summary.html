@@ -13,7 +13,6 @@
   .header h2 { font-size: 18px; color: #1a1a2e; margin-bottom: 4px; }
   .header p { font-size: 11px; color: #64748b; }
 
-  /* Toggle */
   .toggle-container { display: flex; justify-content: center; gap: 0; margin-bottom: 16px; }
   .toggle-btn {
     padding: 8px 24px; font-size: 12px; font-weight: bold; cursor: pointer;
@@ -24,7 +23,6 @@
   .toggle-btn.active-offplan { background: #7c3aed; color: #fff; border-color: #7c3aed; }
   .toggle-btn.active-no-offplan { background: #b45309; color: #fff; border-color: #b45309; }
 
-  /* KPI Cards */
   .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px; }
   .kpi-grid.four-cols { grid-template-columns: repeat(4, 1fr); }
   .kpi-card { border-radius: 12px; border: 1px solid; padding: 12px; text-align: center; }
@@ -37,10 +35,8 @@
   .kpi-amber { background: #fffbeb; border-color: #fde68a; color: #b45309; }
   .kpi-violet { background: #f5f3ff; border-color: #ddd6fe; color: #7c3aed; }
 
-  /* Two-column layout */
   .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
 
-  /* Tables */
   .table-card { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; }
   .table-header { padding: 10px 16px; border-bottom: 1px solid #f1f5f9; background: #fafafa; font-size: 12px; font-weight: bold; color: #334155; }
   table { width: 100%; border-collapse: collapse; }
@@ -48,17 +44,14 @@
   td { padding: 6px 12px; font-size: 11px; color: #334155; border-bottom: 1px solid #f8fafc; }
   .amount-col { text-align: left; font-weight: 600; font-family: 'Courier New', monospace; direction: ltr; }
 
-  /* Source badges */
   .badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; display: inline-block; font-weight: 600; }
   .badge-investor { background: #fef3c7; color: #92400e; }
   .badge-escrow { background: #dbeafe; color: #1d4ed8; }
   .badge-paid { background: #dcfce7; color: #166534; }
 
-  /* Section header */
   .section-row { background: #f5f3ff; }
   .section-row td { font-weight: bold; color: #7c3aed; font-size: 11px; padding: 6px 12px; }
 
-  /* Total rows */
   .total-row-cost { background: #fff1f2; border-top: 2px solid #fecdd3; }
   .total-row-cost td { font-weight: bold; color: #be123c; font-size: 12px; }
 
@@ -69,7 +62,6 @@
   .return-row { background: #f5f3ff; }
   .return-row td { font-weight: bold; color: #7c3aed; }
 
-  /* Summary */
   .summary-label { color: #475569; }
   .summary-sub { font-size: 9px; color: #94a3b8; margin-top: 1px; }
   .row-rose td:last-child { color: #be123c; }
@@ -80,213 +72,194 @@
   .row-indigo td:last-child { color: #4338ca; }
 
   .note { text-align: center; font-size: 9px; color: #94a3b8; margin-top: 12px; font-style: italic; }
-  .scenario-view { display: none; }
-  .scenario-view.active { display: block; }
+  .loading { text-align: center; padding: 60px; font-size: 14px; color: #94a3b8; }
 </style>
 </head>
 <body>
 <div class="container">
-
-<div class="header">
-  <h2>ملخص الجدوى المالية</h2>
-  <p>الإيرادات المتوقعة: 90,971,000 درهم &nbsp;|&nbsp; المساحة القابلة للبيع: 50,826.11 قدم²</p>
-</div>
-
-<div class="toggle-container">
-  <button class="toggle-btn active-offplan" id="btn-offplan" onclick="showScenario('offplan')">مع البيع على الخارطة</button>
-  <button class="toggle-btn" id="btn-no-offplan" onclick="showScenario('no-offplan')">بدون البيع على الخارطة</button>
-</div>
-
-<!-- ============ سيناريو أوف بلان (O1/O2) ============ -->
-<div class="scenario-view active" id="view-offplan">
-
-  <div class="kpi-grid">
-    <div class="kpi-card kpi-rose"><div class="kpi-label">إجمالي التكاليف</div><div class="kpi-value">76,043,989</div><div class="kpi-sub">درهم</div></div>
-    <div class="kpi-card kpi-emerald"><div class="kpi-label">إجمالي الإيرادات</div><div class="kpi-value">90,971,000</div><div class="kpi-sub">درهم</div></div>
-    <div class="kpi-card kpi-blue"><div class="kpi-label">صافي الربح</div><div class="kpi-value">14,927,011</div><div class="kpi-sub">19.6% من التكلفة</div></div>
-    <div class="kpi-card kpi-amber"><div class="kpi-label">رأس المال المطلوب</div><div class="kpi-value">41,590,528</div><div class="kpi-sub">مصاريف المستثمر</div></div>
-    <div class="kpi-card kpi-violet"><div class="kpi-label">العائد على رأس المال</div><div class="kpi-value">35.9%</div><div class="kpi-sub">ربح ÷ رأس المال</div></div>
+  <div class="header">
+    <h2>ملخص الجدوى المالية</h2>
+    <p id="headerSub">جاري التحميل...</p>
   </div>
-
-  <div class="two-col">
-
-    <!-- جدول التكاليف -->
-    <div class="table-card">
-      <div class="table-header">تفصيل التكاليف — المستثمر</div>
-      <table>
-        <thead><tr><th>البند</th><th style="text-align:center;">المصدر</th><th style="text-align:left;">المبلغ (درهم)</th></tr></thead>
-        <tbody>
-          <tr class="section-row"><td colspan="3">المبالغ المدفوعة (الأرض)</td></tr>
-          <tr><td>سعر الأرض</td><td style="text-align:center;"><span class="badge badge-paid">مدفوع</span></td><td class="amount-col">18,000,000</td></tr>
-          <tr><td>عمولة وسيط الأرض</td><td style="text-align:center;"><span class="badge badge-paid">مدفوع</span></td><td class="amount-col">360,000</td></tr>
-          <tr><td>رسوم تسجيل الأرض (4%)</td><td style="text-align:center;"><span class="badge badge-paid">مدفوع</span></td><td class="amount-col">720,000</td></tr>
-
-          <tr class="section-row"><td colspan="3">التصاميم ورخصة البناء</td></tr>
-          <tr><td>رسوم الجهات الحكومية (10%)</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">100,018</td></tr>
-          <tr><td>فحص التربة</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">16,180</td></tr>
-          <tr><td>المسح الطبوغرافي</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">6,180</td></tr>
-          <tr><td>أتعاب الاستشاري — التصاميم</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">799,988</td></tr>
-          <tr><td>أتعاب المطور — التصاميم (1%)</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">909,710</td></tr>
-          <tr><td>رسوم المجتمع (25%)</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">4,045</td></tr>
-
-          <tr class="section-row"><td colspan="3">ريرا والبيع أوف بلان</td></tr>
-          <tr><td>أتعاب المطور — أوف بلان (1%)</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">909,710</td></tr>
-          <tr><td>رسوم الفرز</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">2,033,044</td></tr>
-          <tr><td>تسجيل بيع على الخارطة - ريرا</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">150,000</td></tr>
-          <tr><td>تسجيل الوحدات - ريرا</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">39,180</td></tr>
-          <tr><td>رسوم NOC للبيع</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">10,000</td></tr>
-          <tr><td>رسوم حساب الضمان</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">140,000</td></tr>
-          <tr><td>التسويق والإعلان — أوف بلان (25%)</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">454,855</td></tr>
-          <tr><td>إيداع حساب الضمان (20%)</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">7,999,880</td></tr>
-
-          <tr class="section-row"><td colspan="3">الإنشاء (حصة المستثمر)</td></tr>
-          <tr><td>دفعة مقدمة للمقاول (10%)</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">3,999,940</td></tr>
-          <tr><td>رسوم المجتمع (75%)</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">12,135</td></tr>
-          <tr><td>أتعاب المطور — الإشراف (3%)</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">2,729,130</td></tr>
-          <tr><td>التسويق والإعلان — الإنشاء (75%)</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">1,364,565</td></tr>
-          <tr><td>رسوم المساح</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">12,180</td></tr>
-          <tr><td>احتياطي وطوارئ (2%)</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">799,988</td></tr>
-          <tr><td>رسوم بنكية</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">19,800</td></tr>
-
-          <tr class="capital-row">
-            <td>رأس المال المطلوب (المستثمر)</td><td></td><td class="amount-col">41,590,528</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <!-- حساب الضمان -->
-      <div class="table-header" style="border-top:1px solid #e2e8f0;">من حساب الضمان</div>
-      <table>
-        <tbody>
-          <tr><td>رسوم الجهات الحكومية (90%)</td><td style="text-align:center;"><span class="badge badge-escrow">الضمان</span></td><td class="amount-col">900,162</td></tr>
-          <tr><td>دفعات المقاول (70%)</td><td style="text-align:center;"><span class="badge badge-escrow">الضمان</span></td><td class="amount-col">27,999,580</td></tr>
-          <tr><td>عمولة وكيل المبيعات (5%)</td><td style="text-align:center;"><span class="badge badge-escrow">الضمان</span></td><td class="amount-col">4,548,550</td></tr>
-          <tr><td>أتعاب الاستشاري — الإشراف</td><td style="text-align:center;"><span class="badge badge-escrow">الضمان</span></td><td class="amount-col">799,988</td></tr>
-          <tr><td>تقرير مدقق ريرا</td><td style="text-align:center;"><span class="badge badge-escrow">الضمان</span></td><td class="amount-col">105,180</td></tr>
-          <tr><td>تقرير فحص ريرا</td><td style="text-align:center;"><span class="badge badge-escrow">الضمان</span></td><td class="amount-col">100,001</td></tr>
-          <tr class="escrow-total-row">
-            <td>إجمالي حساب الضمان</td><td></td><td class="amount-col">34,453,461</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <!-- الإجمالي الكلي -->
-      <table><tbody>
-        <tr class="total-row-cost">
-          <td>الإجمالي الكلي</td><td></td><td class="amount-col">76,043,989</td>
-        </tr>
-      </tbody></table>
-    </div>
-
-    <!-- ملخص الجدوى -->
-    <div class="table-card">
-      <div class="table-header">ملخص الجدوى المالية</div>
-      <table>
-        <tbody>
-          <tr class="row-rose"><td class="summary-label">إجمالي التكاليف</td><td class="amount-col">76,043,989</td></tr>
-          <tr class="row-emerald"><td class="summary-label">إجمالي الإيرادات</td><td class="amount-col">90,971,000</td></tr>
-          <tr class="row-blue"><td class="summary-label">صافي الربح</td><td class="amount-col">14,927,011</td></tr>
-          <tr class="row-blue"><td class="summary-label">نسبة الربح من التكلفة الكلية</td><td class="amount-col">19.6%</td></tr>
-          <tr><td colspan="2" style="border-top:2px dashed #e2e8f0;padding:4px;"></td></tr>
-          <tr class="row-indigo">
-            <td class="summary-label">بنود حساب الضمان<div class="summary-sub">دفعات المقاول 70% + إشراف + مبيعات + ريرا + حكومية</div></td>
-            <td class="amount-col">34,453,461</td>
-          </tr>
-          <tr><td colspan="2" style="border-top:2px dashed #e2e8f0;padding:4px;"></td></tr>
-          <tr class="capital-row"><td>رأس المال المطلوب من المستثمر</td><td class="amount-col">41,590,528</td></tr>
-          <tr class="return-row"><td>نسبة العائد على رأس المال</td><td class="amount-col">35.9%</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-  </div>
-
-  <p class="note">* سيناريو O1 و O2 لهما نفس التكلفة الإجمالية — الفرق فقط في آلية دفع 20% للمقاول (إيداع ضمان أو دفعة إنجاز)</p>
-</div>
-
-<!-- ============ سيناريو بدون أوف بلان (O3) ============ -->
-<div class="scenario-view" id="view-no-offplan">
-
-  <div class="kpi-grid four-cols">
-    <div class="kpi-card kpi-rose"><div class="kpi-label">إجمالي التكاليف</div><div class="kpi-value">65,312,268</div><div class="kpi-sub">درهم</div></div>
-    <div class="kpi-card kpi-emerald"><div class="kpi-label">إجمالي الإيرادات</div><div class="kpi-value">90,971,000</div><div class="kpi-sub">درهم</div></div>
-    <div class="kpi-card kpi-blue"><div class="kpi-label">صافي الربح</div><div class="kpi-value">25,658,732</div><div class="kpi-sub">39.3% من التكلفة</div></div>
-    <div class="kpi-card kpi-amber"><div class="kpi-label">رأس المال المطلوب</div><div class="kpi-value">65,312,268</div><div class="kpi-sub">المستثمر يتحمل الكامل</div></div>
-  </div>
-
-  <div class="two-col">
-
-    <!-- جدول التكاليف -->
-    <div class="table-card">
-      <div class="table-header">تفصيل التكاليف — المستثمر</div>
-      <table>
-        <thead><tr><th>البند</th><th style="text-align:center;">المصدر</th><th style="text-align:left;">المبلغ (درهم)</th></tr></thead>
-        <tbody>
-          <tr class="section-row"><td colspan="3">المبالغ المدفوعة (الأرض)</td></tr>
-          <tr><td>سعر الأرض</td><td style="text-align:center;"><span class="badge badge-paid">مدفوع</span></td><td class="amount-col">18,000,000</td></tr>
-          <tr><td>عمولة وسيط الأرض</td><td style="text-align:center;"><span class="badge badge-paid">مدفوع</span></td><td class="amount-col">360,000</td></tr>
-          <tr><td>رسوم تسجيل الأرض (4%)</td><td style="text-align:center;"><span class="badge badge-paid">مدفوع</span></td><td class="amount-col">720,000</td></tr>
-
-          <tr class="section-row"><td colspan="3">التصاميم ورخصة البناء</td></tr>
-          <tr><td>رسوم الجهات الحكومية (10%)</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">100,018</td></tr>
-          <tr><td>فحص التربة</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">16,180</td></tr>
-          <tr><td>المسح الطبوغرافي</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">6,180</td></tr>
-          <tr><td>أتعاب الاستشاري — التصاميم</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">799,988</td></tr>
-          <tr><td>أتعاب المطور — التصاميم (1%)</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">909,710</td></tr>
-          <tr><td>رسوم المجتمع (25%)</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">4,045</td></tr>
-
-          <tr class="section-row"><td colspan="3">الإنشاء</td></tr>
-          <tr><td>رسوم الفرز</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">2,033,044</td></tr>
-          <tr><td>دفعة مقدمة للمقاول (10%)</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">3,999,940</td></tr>
-          <tr><td>دفعات المقاول (85%)</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">33,999,490</td></tr>
-          <tr><td>رسوم المجتمع (75%)</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">12,135</td></tr>
-          <tr><td>أتعاب الاستشاري — الإشراف</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">799,988</td></tr>
-          <tr><td>أتعاب المطور — الإشراف (2%)</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">1,819,420</td></tr>
-          <tr><td>رسوم الجهات الحكومية (90%)</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">900,162</td></tr>
-          <tr><td>رسوم المساح</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">12,180</td></tr>
-          <tr><td>احتياطي وطوارئ (2%)</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">799,988</td></tr>
-          <tr><td>رسوم بنكية</td><td style="text-align:center;"><span class="badge badge-investor">المستثمر</span></td><td class="amount-col">19,800</td></tr>
-
-          <tr class="total-row-cost">
-            <td>الإجمالي الكلي</td><td></td><td class="amount-col">65,312,268</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- ملخص الجدوى -->
-    <div class="table-card">
-      <div class="table-header">ملخص الجدوى المالية</div>
-      <table>
-        <tbody>
-          <tr class="row-rose"><td class="summary-label">إجمالي التكاليف</td><td class="amount-col">65,312,268</td></tr>
-          <tr class="row-emerald"><td class="summary-label">إجمالي الإيرادات</td><td class="amount-col">90,971,000</td></tr>
-          <tr class="row-blue"><td class="summary-label">صافي الربح</td><td class="amount-col">25,658,732</td></tr>
-          <tr class="row-blue"><td class="summary-label">نسبة الربح من التكلفة الكلية</td><td class="amount-col">39.3%</td></tr>
-          <tr><td colspan="2" style="border-top:2px dashed #e2e8f0;padding:4px;"></td></tr>
-          <tr class="capital-row">
-            <td>رأس المال المطلوب من المستثمر<div class="summary-sub">لا يوجد حساب ضمان — المستثمر يتحمل كامل التكلفة</div></td>
-            <td class="amount-col">65,312,268</td>
-          </tr>
-          <tr class="return-row"><td>نسبة العائد على رأس المال</td><td class="amount-col">39.3%</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-  </div>
-
-  <p class="note">* بدون البيع على الخارطة — المستثمر يتحمل كامل تكاليف المشروع ولا يوجد حساب ضمان أو وكيل مبيعات أو تسويق</p>
+  <div id="content"><div class="loading">جاري تحميل البيانات...</div></div>
 </div>
 
 <script>
-function showScenario(type) {
-  document.getElementById('view-offplan').classList.toggle('active', type === 'offplan');
-  document.getElementById('view-no-offplan').classList.toggle('active', type !== 'offplan');
-  document.getElementById('btn-offplan').className = 'toggle-btn' + (type === 'offplan' ? ' active-offplan' : '');
-  document.getElementById('btn-no-offplan').className = 'toggle-btn' + (type !== 'offplan' ? ' active-no-offplan' : '');
-}
-</script>
+var DATA = null;
+var currentView = 'offplan';
 
-</div><!-- end container -->
+function fmt(n) {
+  if (n === 0) return '—';
+  return Math.round(n).toLocaleString('en-US');
+}
+
+function pct(a, b) {
+  if (b === 0) return '0%';
+  return (a / b * 100).toFixed(1) + '%';
+}
+
+function getBadge(source) {
+  if (source === 'paid') return '<span class="badge badge-paid">مدفوع</span>';
+  if (source === 'escrow') return '<span class="badge badge-escrow">الضمان</span>';
+  return '<span class="badge badge-investor">المستثمر</span>';
+}
+
+async function loadData() {
+  var params = new URLSearchParams(window.location.search);
+  var projectId = params.get('projectId');
+  if (!projectId) { document.getElementById('content').innerHTML = '<div class="loading">خطأ: لم يتم تحديد المشروع</div>'; return; }
+
+  try {
+    var resp = await fetch('/api/trpc/cashFlowSettings.getCostSettingsComparison?input=' + encodeURIComponent(JSON.stringify({ json: { projectId: Number(projectId) } })));
+    var json = await resp.json();
+    DATA = json.result.data.json;
+    document.getElementById('headerSub').textContent = DATA.projectName + ' — الإيرادات المتوقعة: ' + fmt(DATA.totalRevenue) + ' درهم';
+    render();
+  } catch (e) {
+    document.getElementById('content').innerHTML = '<div class="loading">خطأ في تحميل البيانات: ' + e.message + '</div>';
+  }
+}
+
+function showScenario(type) {
+  currentView = type;
+  render();
+}
+
+function render() {
+  if (!DATA) return;
+
+  // Map scenarios: offplan = O1 (offplan_escrow), no-offplan = O3 (no_offplan)
+  var scKey = currentView === 'offplan' ? 'o1' : 'o3';
+  var totalRevenue = DATA.totalRevenue;
+
+  // Separate items by funding source
+  var investorItems = [];
+  var escrowItems = [];
+  var investorTotal = 0;
+  var escrowTotal = 0;
+
+  // Group items by section
+  var sectionMap = {};
+  DATA.sections.forEach(function(s) { sectionMap[s.id] = s.label; });
+
+  DATA.items.forEach(function(item) {
+    var sc = item[scKey];
+    if (!sc || !sc.active) return;
+    var amount = sc.amount;
+    if (item.fundingSource === 'escrow') {
+      escrowItems.push({ name: item.nameAr, amount: amount, section: item.section });
+      escrowTotal += amount;
+    } else {
+      investorItems.push({ name: item.nameAr, amount: amount, section: item.section, fundingSource: item.fundingSource });
+      investorTotal += amount;
+    }
+  });
+
+  var grandTotal = investorTotal + escrowTotal;
+  var profit = totalRevenue - grandTotal;
+  var profitPct = pct(profit, grandTotal);
+  var roiPct = currentView === 'offplan' ? pct(profit, investorTotal) : pct(profit, grandTotal);
+
+  // Build HTML
+  var html = '';
+
+  // Toggle buttons
+  html += '<div class="toggle-container">';
+  html += '<button class="toggle-btn ' + (currentView === 'offplan' ? 'active-offplan' : '') + '" onclick="showScenario(\'offplan\')">مع البيع على الخارطة</button>';
+  html += '<button class="toggle-btn ' + (currentView !== 'offplan' ? 'active-no-offplan' : '') + '" onclick="showScenario(\'no-offplan\')">بدون البيع على الخارطة</button>';
+  html += '</div>';
+
+  // KPI Cards
+  if (currentView === 'offplan') {
+    html += '<div class="kpi-grid">';
+    html += '<div class="kpi-card kpi-rose"><div class="kpi-label">إجمالي التكاليف</div><div class="kpi-value">' + fmt(grandTotal) + '</div><div class="kpi-sub">درهم</div></div>';
+    html += '<div class="kpi-card kpi-emerald"><div class="kpi-label">إجمالي الإيرادات</div><div class="kpi-value">' + fmt(totalRevenue) + '</div><div class="kpi-sub">درهم</div></div>';
+    html += '<div class="kpi-card kpi-blue"><div class="kpi-label">صافي الربح</div><div class="kpi-value">' + fmt(profit) + '</div><div class="kpi-sub">' + profitPct + ' من التكلفة</div></div>';
+    html += '<div class="kpi-card kpi-amber"><div class="kpi-label">رأس المال المطلوب</div><div class="kpi-value">' + fmt(investorTotal) + '</div><div class="kpi-sub">مصاريف المستثمر</div></div>';
+    html += '<div class="kpi-card kpi-violet"><div class="kpi-label">العائد على رأس المال</div><div class="kpi-value">' + roiPct + '</div><div class="kpi-sub">ربح ÷ رأس المال</div></div>';
+    html += '</div>';
+  } else {
+    html += '<div class="kpi-grid four-cols">';
+    html += '<div class="kpi-card kpi-rose"><div class="kpi-label">إجمالي التكاليف</div><div class="kpi-value">' + fmt(grandTotal) + '</div><div class="kpi-sub">درهم</div></div>';
+    html += '<div class="kpi-card kpi-emerald"><div class="kpi-label">إجمالي الإيرادات</div><div class="kpi-value">' + fmt(totalRevenue) + '</div><div class="kpi-sub">درهم</div></div>';
+    html += '<div class="kpi-card kpi-blue"><div class="kpi-label">صافي الربح</div><div class="kpi-value">' + fmt(profit) + '</div><div class="kpi-sub">' + profitPct + ' من التكلفة</div></div>';
+    html += '<div class="kpi-card kpi-amber"><div class="kpi-label">رأس المال المطلوب</div><div class="kpi-value">' + fmt(grandTotal) + '</div><div class="kpi-sub">المستثمر يتحمل الكامل</div></div>';
+    html += '</div>';
+  }
+
+  html += '<div class="two-col">';
+
+  // ─── Left: Cost breakdown table ───
+  html += '<div class="table-card">';
+  html += '<div class="table-header">تفصيل التكاليف — المستثمر</div>';
+  html += '<table><thead><tr><th>البند</th><th style="text-align:center;">المصدر</th><th style="text-align:left;">المبلغ (درهم)</th></tr></thead><tbody>';
+
+  // Group investor items by section
+  var currentSection = '';
+  investorItems.forEach(function(item) {
+    if (item.section !== currentSection) {
+      currentSection = item.section;
+      var sectionLabel = sectionMap[currentSection] || currentSection;
+      html += '<tr class="section-row"><td colspan="3">' + sectionLabel + '</td></tr>';
+    }
+    var badge = item.fundingSource === 'paid' ? getBadge('paid') : getBadge('investor');
+    html += '<tr><td>' + item.name + '</td><td style="text-align:center;">' + badge + '</td><td class="amount-col">' + fmt(item.amount) + '</td></tr>';
+  });
+
+  html += '<tr class="capital-row"><td>رأس المال المطلوب (المستثمر)</td><td></td><td class="amount-col">' + fmt(investorTotal) + '</td></tr>';
+  html += '</tbody></table>';
+
+  // Escrow section (only for offplan)
+  if (currentView === 'offplan' && escrowItems.length > 0) {
+    html += '<div class="table-header" style="border-top:1px solid #e2e8f0;">من حساب الضمان</div>';
+    html += '<table><tbody>';
+    escrowItems.forEach(function(item) {
+      html += '<tr><td>' + item.name + '</td><td style="text-align:center;">' + getBadge('escrow') + '</td><td class="amount-col">' + fmt(item.amount) + '</td></tr>';
+    });
+    html += '<tr class="escrow-total-row"><td>إجمالي حساب الضمان</td><td></td><td class="amount-col">' + fmt(escrowTotal) + '</td></tr>';
+    html += '</tbody></table>';
+  }
+
+  // Grand total
+  html += '<table><tbody><tr class="total-row-cost"><td>الإجمالي الكلي</td><td></td><td class="amount-col">' + fmt(grandTotal) + '</td></tr></tbody></table>';
+  html += '</div>';
+
+  // ─── Right: Summary table ───
+  html += '<div class="table-card">';
+  html += '<div class="table-header">ملخص الجدوى المالية</div>';
+  html += '<table><tbody>';
+  html += '<tr class="row-rose"><td class="summary-label">إجمالي التكاليف</td><td class="amount-col">' + fmt(grandTotal) + '</td></tr>';
+  html += '<tr class="row-emerald"><td class="summary-label">إجمالي الإيرادات</td><td class="amount-col">' + fmt(totalRevenue) + '</td></tr>';
+  html += '<tr class="row-blue"><td class="summary-label">صافي الربح</td><td class="amount-col">' + fmt(profit) + '</td></tr>';
+  html += '<tr class="row-blue"><td class="summary-label">نسبة الربح من التكلفة الكلية</td><td class="amount-col">' + profitPct + '</td></tr>';
+  html += '<tr><td colspan="2" style="border-top:2px dashed #e2e8f0;padding:4px;"></td></tr>';
+
+  if (currentView === 'offplan') {
+    html += '<tr class="row-indigo"><td class="summary-label">بنود حساب الضمان<div class="summary-sub">دفعات المقاول + إشراف + مبيعات + ريرا + حكومية</div></td><td class="amount-col">' + fmt(escrowTotal) + '</td></tr>';
+    html += '<tr><td colspan="2" style="border-top:2px dashed #e2e8f0;padding:4px;"></td></tr>';
+    html += '<tr class="capital-row"><td>رأس المال المطلوب من المستثمر</td><td class="amount-col">' + fmt(investorTotal) + '</td></tr>';
+    html += '<tr class="return-row"><td>نسبة العائد على رأس المال</td><td class="amount-col">' + roiPct + '</td></tr>';
+  } else {
+    html += '<tr class="capital-row"><td>رأس المال المطلوب من المستثمر<div class="summary-sub">لا يوجد حساب ضمان — المستثمر يتحمل كامل التكلفة</div></td><td class="amount-col">' + fmt(grandTotal) + '</td></tr>';
+    html += '<tr class="return-row"><td>نسبة العائد على رأس المال</td><td class="amount-col">' + roiPct + '</td></tr>';
+  }
+
+  html += '</tbody></table>';
+  html += '</div>';
+
+  html += '</div>'; // end two-col
+
+  // Note
+  if (currentView === 'offplan') {
+    html += '<p class="note">* سيناريو O1 و O2 لهما نفس التكلفة الإجمالية — الفرق فقط في آلية دفع 20% للمقاول (إيداع ضمان أو دفعة إنجاز)</p>';
+  } else {
+    html += '<p class="note">* بدون البيع على الخارطة — المستثمر يتحمل كامل تكاليف المشروع ولا يوجد حساب ضمان أو وكيل مبيعات أو تسويق</p>';
+  }
+
+  document.getElementById('content').innerHTML = html;
+}
+
+loadData();
+</script>
 </body>
 </html>
