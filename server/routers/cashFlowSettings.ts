@@ -120,7 +120,7 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
       scenarios: allScenarios, amountKey: "topographicSurveyFee",
     },
     {
-      itemKey: "design_fee", nameAr: "أتعاب الاستشاري — التصاميم (2%)", category: "design", section: "design", sortOrder: 12,
+      itemKey: "design_fee", nameAr: "أتعاب الاستشاري — التصاميم", category: "design", section: "design", sortOrder: 12,
       fundingSource: "investor", distributionMethod: "equal_spread",
       distributeAcrossPhases: ["design"],
       scenarios: allScenarios, amountKey: "designFee",
@@ -241,12 +241,20 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
       scenarios: allScenarios, amountKey: "communityFees",
       splitRatio: [{ phase: "construction", ratio: 0.75 }],
     },
-    // دفعات المقاول (70% من الضمان)
+    // دفعات المقاول (90% من الضمان) — O1 فقط
+    {
+      itemKey: "contractor_payments_90", nameAr: "دفعات المقاول (90% — من الضمان)", category: "construction", section: "escrow", sortOrder: 54.5,
+      fundingSource: "escrow", distributionMethod: "equal_spread",
+      distributeAcrossPhases: ["construction"],
+      scenarios: ["offplan_escrow"],
+      amountFraction: { of: "constructionCost", ratio: 0.90 },
+    },
+    // دفعات المقاول (70% من الضمان) — O2 فقط
     {
       itemKey: "contractor_payments", nameAr: "دفعات المقاول (70% — من الضمان)", category: "construction", section: "escrow", sortOrder: 55,
       fundingSource: "escrow", distributionMethod: "equal_spread",
       distributeAcrossPhases: ["construction"],
-      scenarios: allScenarios,
+      scenarios: ["offplan_construction"],
       amountFraction: { of: "constructionCost", ratio: 0.70 },
     },
     // ═══ الإشراف والمساح (من الإسكرو) ═══
@@ -259,7 +267,7 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
       splitRatio: [{ phase: "construction", ratio: 0.6 }],
     },
     {
-      itemKey: "supervision_fee", nameAr: "أتعاب الاستشاري — الإشراف (2%)", category: "construction", section: "escrow", sortOrder: 60,
+      itemKey: "supervision_fee", nameAr: "أتعاب الاستشاري — الإشراف", category: "construction", section: "escrow", sortOrder: 60,
       fundingSource: "escrow", distributionMethod: "equal_spread",
       distributeAcrossPhases: ["construction"],
       scenarios: allScenarios, amountKey: "supervisionFee",
@@ -498,9 +506,11 @@ export const cashFlowSettingsRouter = router({
         // Build a lookup of default fundingSource by itemKey to auto-correct stale DB values
         const defaultFundingSourceByKey: Record<string, string> = {};
         const defaultSortOrderByKey: Record<string, number> = {};
+        const defaultNameArByKey: Record<string, string> = {};
         for (const def of defaultDefs) {
           defaultFundingSourceByKey[def.itemKey] = def.fundingSource;
           defaultSortOrderByKey[def.itemKey] = def.sortOrder;
+          defaultNameArByKey[def.itemKey] = def.nameAr;
         }
         // Return existing settings merged with missing defaults, filtered to remove revenue items
         const mergedSettings = [
@@ -508,6 +518,7 @@ export const cashFlowSettingsRouter = router({
             .filter(s => s.category !== "revenue")
             .map(s => ({
               ...s,
+              nameAr: defaultNameArByKey[s.itemKey] ?? s.nameAr,
               section: defaultSectionByKey[s.itemKey] || s.section || "construction",
               // Use DB fundingSource (respects user changes from UI).
               // Fall back to default only if DB has no value.
@@ -739,11 +750,11 @@ export const cashFlowSettingsRouter = router({
 
           items.push({
             itemKey: s.itemKey,
-            nameAr: s.nameAr,
+            nameAr: defForKey?.nameAr ?? s.nameAr,
             category: s.category as Category,
             section: itemSection,
             isActive: !!s.isActive,
-            sortOrder: s.sortOrder,
+            sortOrder: defForKey?.sortOrder ?? s.sortOrder,
             fundingSource: s.fundingSource as FundingSource,
             distributionMethod: s.distributionMethod as DistributionMethod,
             lumpSumMonth: s.lumpSumMonth,
@@ -1246,7 +1257,7 @@ export const cashFlowSettingsRouter = router({
 
           items.push({
             itemKey: s.itemKey,
-            nameAr: s.nameAr,
+            nameAr: defForKey?.nameAr ?? s.nameAr,
             section: itemSection,
             fundingSource: s.fundingSource as FundingSource,
             totalAmount: amount,
@@ -1477,8 +1488,14 @@ export const cashFlowSettingsRouter = router({
 
         if (savedSettings.length > 0) {
           // Use saved settings (same as getReflectionData)
+          // Build a set of valid item keys for this scenario from default definitions
+          const validKeysForScenario = new Set(getDefaultItemDefs(sc).map(d => d.itemKey));
+          const savedKeys = new Set<string>();
           for (const s of savedSettings) {
             if (!s.isActive) continue;
+            // Skip items that don't belong to this scenario per current definitions
+            if (!validKeysForScenario.has(s.itemKey)) continue;
+            savedKeys.add(s.itemKey);
             const amount = s.amountOverride
               ? parseFloat(s.amountOverride)
               : (costs ? computeItemAmountByKey(s.itemKey, costs, sc) : 0);
@@ -1497,11 +1514,11 @@ export const cashFlowSettingsRouter = router({
             const itemSection = (s.section || defForKey?.section || "construction") as string;
 
             scenarioItems[sc].set(s.itemKey, {
-              nameAr: s.nameAr,
+              nameAr: defForKey?.nameAr ?? s.nameAr,
               amount,
               fundingSource: s.fundingSource as string,
               section: itemSection,
-              sortOrder: s.sortOrder,
+              sortOrder: defForKey?.sortOrder ?? s.sortOrder,
               distributionMethod: s.distributionMethod,
               lumpSumMonth: s.lumpSumMonth,
               startMonth: s.startMonth,
@@ -1512,6 +1529,44 @@ export const cashFlowSettingsRouter = router({
 
             if (!allItemKeys.includes(s.itemKey)) {
               allItemKeys.push(s.itemKey);
+            }
+          }
+          // Add missing default items that are not in DB yet (e.g. contractor_payments_90)
+          const defs = getDefaultItemDefs(sc);
+          for (const def of defs) {
+            if (savedKeys.has(def.itemKey)) continue;
+            const amount = costs ? computeItemAmount(def, costs) : 0;
+            let lumpSumMonth: number | null = null;
+            let startMonth: number | null = null;
+            let endMonth: number | null = null;
+            if (def.distributionMethod === "lump_sum" && def.phase) {
+              lumpSumMonth = phaseRelativeToAbsolute(def.phase, def.phaseRelativeMonth || 1, phases);
+            } else if (def.distributionMethod === "equal_spread") {
+              if (def.distributeAcrossPhases && def.distributeAcrossPhases.length > 0) {
+                startMonth = getPhaseRange(def.distributeAcrossPhases[0], phases).start;
+                endMonth = getPhaseRange(def.distributeAcrossPhases[def.distributeAcrossPhases.length - 1], phases).end;
+              } else if (def.phase) {
+                const range = getPhaseRange(def.phase, phases);
+                startMonth = range.start;
+                endMonth = range.end;
+              }
+            }
+            const monthly = distributeAmount(amount, def.distributionMethod, lumpSumMonth, startMonth, endMonth, null, totalMonths);
+            scenarioItems[sc].set(def.itemKey, {
+              nameAr: def.nameAr,
+              amount,
+              fundingSource: def.fundingSource,
+              section: def.section,
+              sortOrder: def.sortOrder,
+              distributionMethod: def.distributionMethod,
+              lumpSumMonth,
+              startMonth,
+              endMonth,
+              customJson: null,
+              monthlyAmounts: monthly,
+            });
+            if (!allItemKeys.includes(def.itemKey)) {
+              allItemKeys.push(def.itemKey);
             }
           }
         } else {
@@ -1873,6 +1928,7 @@ function computeItemAmountByKey(
     government_fees_investor: costs.officialBodiesFees * 0.10,
     community_fee_escrow: costs.communityFees * 0.75,
     contractor_payments: costs.constructionCost * 0.70,
+    contractor_payments_90: costs.constructionCost * 0.90,
   };
   if (itemKey in splitMap) return splitMap[itemKey];
 

@@ -33,7 +33,7 @@ const COST_LINES: CostLine[] = [
   // === ما قبل البناء ===
   { id: "soil_test", label: "فحص التربة", group: "ما قبل البناء", getValue: c => c.soilTestFee },
   { id: "survey", label: "المسح الطبوغرافي", group: "ما قبل البناء", getValue: c => c.topographicSurveyFee },
-  { id: "design_fee", label: "أتعاب التصميم", group: "ما قبل البناء", getValue: c => c.designFee },
+  { id: "design_fee", label: "أتعاب الاستشاري — التصاميم", group: "ما قبل البناء", getValue: c => c.designFee },
   { id: "fraz_fee", label: "رسوم الفرز", group: "ما قبل البناء", getValue: c => c.separationFee },
   { id: "official_bodies", label: "رسوم الجهات الحكومية", group: "ما قبل البناء", getValue: c => c.officialBodiesFees, isEscrow: true },
   { id: "rera_project", label: "تسجيل المشروع - ريرا", group: "ما قبل البناء", getValue: c => c.reraProjectRegFee },
@@ -46,7 +46,7 @@ const COST_LINES: CostLine[] = [
 
   // === البناء ===
   { id: "construction_cost", label: "تكلفة البناء", group: "البناء", getValue: c => c.constructionCost, isConstructionReplaced: true },
-  { id: "supervision_fee", label: "أتعاب الإشراف (2%)", group: "البناء", getValue: c => c.supervisionFee, isEscrow: true },
+  { id: "supervision_fee", label: "أتعاب الاستشاري — الإشراف", group: "البناء", getValue: c => c.supervisionFee, isEscrow: true },
   { id: "contingency", label: "احتياطي وطوارئ (2%)", group: "البناء", getValue: c => c.contingencies },
 
   // === المبيعات ===
@@ -349,7 +349,7 @@ export default function FinancialFeasibilityTab({ initialProjectId }: { initialP
                     label="بنود حساب الضمان (لا تُحتسب في رأس المال)"
                     value={fmt(escrowTotal)}
                     color="indigo"
-                    sub="دفعات المقاول 70% + أتعاب الإشراف + عمولة المبيعات + رسوم ريرا + رسوم حكومية"
+                    sub="دفعات المقاول + أتعاب الاستشاري + عمولة المبيعات + رسوم ريرا + رسوم حكومية"
                   />
                   {manualEscrowTotal > 0 && (
                     <SummaryRow

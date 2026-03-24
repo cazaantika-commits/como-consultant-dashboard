@@ -225,7 +225,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
     governingLaw: "القانون الحاكم", disputeResolution: "آلية حل النزاعات",
     landPrice: "سعر الأرض", agentCommissionLandPct: "عمولة وسيط الأرض",
     estimatedConstructionPricePerSqft: "سعر القدم² التقديري", manualBuaSqft: "مساحة البناء (إدخال يدوي)",
-    designFeePct: "أتعاب التصميم%", supervisionFeePct: "أتعاب الإشراف%",
+    designFeePct: "أتعاب الاستشاري — التصاميم%", supervisionFeePct: "أتعاب الاستشاري — الإشراف%",
     separationFeePerM2: "رسوم الفرز/قدم²", salesCommissionPct: "عمولة وسيط البيع%",
     marketingPct: "التسويق%", developerFeePct: "أتعاب المطور%",
     soilTestFee: "فحص التربة", topographicSurveyFee: "الرفع المساحي",
