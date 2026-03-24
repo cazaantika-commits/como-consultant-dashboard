@@ -241,21 +241,21 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
       scenarios: allScenarios, amountKey: "communityFees",
       splitRatio: [{ phase: "construction", ratio: 0.75 }],
     },
-    // دفعات المقاول (90% من الضمان) — O1 فقط
+    // دفعات المقاول (70% من الضمان) — O1 فقط
     {
-      itemKey: "contractor_payments_90", nameAr: "دفعات المقاول (90% — من الضمان)", category: "construction", section: "escrow", sortOrder: 54.5,
+      itemKey: "contractor_payments", nameAr: "دفعات المقاول (70% — من الضمان)", category: "construction", section: "escrow", sortOrder: 54.5,
       fundingSource: "escrow", distributionMethod: "equal_spread",
       distributeAcrossPhases: ["construction"],
       scenarios: ["offplan_escrow"],
-      amountFraction: { of: "constructionCost", ratio: 0.90 },
+      amountFraction: { of: "constructionCost", ratio: 0.70 },
     },
-    // دفعات المقاول (70% من الضمان) — O2 فقط
+    // دفعات المقاول (90% من الضمان) — O2 + O3
     {
-      itemKey: "contractor_payments", nameAr: "دفعات المقاول (70% — من الضمان)", category: "construction", section: "escrow", sortOrder: 55,
+      itemKey: "contractor_payments_90", nameAr: "دفعات المقاول (90% — من الضمان)", category: "construction", section: "escrow", sortOrder: 55,
       fundingSource: "escrow", distributionMethod: "equal_spread",
       distributeAcrossPhases: ["construction"],
-      scenarios: ["offplan_construction"],
-      amountFraction: { of: "constructionCost", ratio: 0.70 },
+      scenarios: ["offplan_construction", "no_offplan"],
+      amountFraction: { of: "constructionCost", ratio: 0.90 },
     },
     // ═══ الإشراف والمساح (من الإسكرو) ═══
     // أتعاب المطور — الإنشاء (3%) من حساب الضمان
