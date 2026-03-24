@@ -331,7 +331,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
     landPrice: "سعر الأرض", agentCommissionLandPct: "عمولة وسيط الأرض",
     estimatedConstructionPricePerSqft: "سعر القدم² التقديري", manualBuaSqft: "مساحة البناء (إدخال يدوي)",
     designFeePct: "أتعاب التصميم%", supervisionFeePct: "أتعاب الإشراف%",
-    separationFeePerM2: "رسوم الفرز/م²", salesCommissionPct: "عمولة وسيط البيع%",
+    separationFeePerM2: "رسوم الفرز/قدم²", salesCommissionPct: "عمولة وسيط البيع%",
     marketingPct: "التسويق%", developerFeePct: "أتعاب المطور%",
     soilTestFee: "فحص التربة", topographicSurveyFee: "الرفع المساحي",
     officialBodiesFees: "رسوم الجهات", reraUnitRegFee: "تسجيل ريرا وحدات",
@@ -571,7 +571,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
   const constructionCost = manualBuaSqft * constructionPricePerSqft;
   const designFee = constructionCost * (designFeePct / 100);
   const supervisionFee = constructionCost * (supervisionFeePct / 100);
-  const separationFee = gfaSqm * separationFeePerM2;
+  const separationFee = gfaSqft * separationFeePerM2;
 
   const fixedFees =
     n("soilTestFee") + n("topographicSurveyFee") + n("officialBodiesFees") +
@@ -1049,15 +1049,36 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
                     source="manual"
                     formula={`${supervisionFeePct}% × تكلفة البناء`}
                   />
-                  <Field
-                    label="رسوم الفرز (AED/م²)"
-                    value={formData.separationFeePerM2}
-                    onChange={v => updateField("separationFeePerM2", v)}
-                    type="number"
-                    suffix="AED/م²"
-                    source="manual"
-                    formula={`${separationFeePerM2} AED × GFA م² (${gfaSqm.toLocaleString("en-US")} م²)`}
-                  />
+                  {/* رسوم الفرز - حقل مخصص */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1">
+                      <label className="text-[11px] font-medium text-muted-foreground">رسوم الفرز (AED/قدم²)</label>
+                      <span className="text-[9px] px-1 py-0.5 rounded font-medium ml-1 bg-amber-100 text-amber-600">يدوي</span>
+                    </div>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        value={formData.separationFeePerM2 || "40"}
+                        onChange={e => updateField("separationFeePerM2", e.target.value)}
+                        placeholder="40"
+                        className="text-xs h-8 border-stone-200 focus:border-amber-400 focus:ring-amber-400/20 py-1 px-2.5 bg-white/50 pl-14"
+                      />
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">قدم²/AED</span>
+                    </div>
+                    <div className="bg-blue-50/60 border border-blue-100 rounded-md p-2 space-y-1">
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-blue-600 font-medium">GFA (قدم²)</span>
+                        <span className="text-blue-800 font-bold font-mono" dir="ltr">{gfaSqft.toLocaleString("en-US")} sqft</span>
+                      </div>
+                      <div className="border-t border-blue-200 pt-1 flex items-center justify-between">
+                        <div className="flex items-center gap-1 text-[10px] text-blue-500">
+                          <Calculator className="h-2.5 w-2.5" />
+                          <span dir="ltr">{separationFeePerM2} AED × {gfaSqft.toLocaleString("en-US")} قدم²</span>
+                        </div>
+                        <span className="text-xs font-bold text-emerald-700 font-mono" dir="ltr">{separationFee.toLocaleString("en-US")} AED</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </Section>
 
@@ -1226,7 +1247,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
                   />
                   <CalcRow
                     label="رسوم الفرز"
-                    formula={`${separationFeePerM2} AED × ${gfaSqm.toLocaleString("en-US")} م²`}
+                    formula={`${separationFeePerM2} AED × ${gfaSqft.toLocaleString("en-US")} قدم²`}
                     value={separationFee}
                   />
                   <CalcRow

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Settings2, FileBarChart2 } from "lucide-react";
+import { trpc } from "@/lib/trpc";
 
 type ActiveView = "main" | "settings" | "reports";
 
@@ -24,6 +25,10 @@ export default function FinancialPlanningHubPage({ onBack }: { onBack: () => voi
   const [activeView, setActiveView] = useState<ActiveView>("main");
   const [activeSettingsTab, setActiveSettingsTab] = useState<SettingsTab>("cost");
   const [activeReportsTab, setActiveReportsTab] = useState<ReportsTab>("feasibility");
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+
+  // Fetch projects list
+  const { data: projectsList } = trpc.projects.list.useQuery();
 
   const viewTitle =
     activeView === "settings"
@@ -34,7 +39,13 @@ export default function FinancialPlanningHubPage({ onBack }: { onBack: () => voi
 
   const activeTabs = activeView === "settings" ? SETTINGS_TABS : activeView === "reports" ? REPORTS_TABS : [];
   const activeTabId = activeView === "settings" ? activeSettingsTab : activeReportsTab;
-  const currentSrc = activeTabs.find((t) => t.id === activeTabId)?.src;
+  const baseTabSrc = activeTabs.find((t) => t.id === activeTabId)?.src;
+  // Append projectId as query parameter
+  const currentSrc = baseTabSrc && selectedProjectId
+    ? `${baseTabSrc}?projectId=${selectedProjectId}`
+    : baseTabSrc;
+
+  const selectedProject = projectsList?.find((p: any) => p.id === selectedProjectId);
 
   return (
     <div className="min-h-screen bg-background flex flex-col" dir="rtl">
@@ -55,6 +66,25 @@ export default function FinancialPlanningHubPage({ onBack }: { onBack: () => voi
           </Button>
           <div className="h-5 w-px bg-border" />
           <h1 className="text-sm font-bold text-foreground">{viewTitle}</h1>
+
+          {/* Project selector - always visible */}
+          <div className="mr-auto flex items-center gap-2">
+            <select
+              value={selectedProjectId ?? ""}
+              onChange={(e) => setSelectedProjectId(e.target.value ? Number(e.target.value) : null)}
+              className="text-xs h-8 px-2 rounded-md border border-border bg-background text-foreground focus:ring-1 focus:ring-primary"
+            >
+              <option value="">اختر المشروع...</option>
+              {projectsList?.map((p: any) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+            {selectedProject && (
+              <span className="text-[10px] text-muted-foreground hidden sm:inline">
+                {selectedProject.name}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Sub-tabs */}
@@ -83,11 +113,20 @@ export default function FinancialPlanningHubPage({ onBack }: { onBack: () => voi
       {/* Main icons */}
       {activeView === "main" && (
         <main className="max-w-7xl mx-auto px-4 py-12">
+          {!selectedProjectId && (
+            <div className="text-center mb-8 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+              اختر مشروعاً من القائمة أعلاه لعرض الإعدادات والتقارير
+            </div>
+          )}
           <div className="flex flex-wrap gap-6 justify-center">
             {/* Settings icon */}
             <button
-              onClick={() => setActiveView("settings")}
-              className="group flex flex-col items-center gap-3 p-8 rounded-2xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-all w-56"
+              onClick={() => selectedProjectId && setActiveView("settings")}
+              className={`group flex flex-col items-center gap-3 p-8 rounded-2xl border-2 border-dashed transition-all w-56 ${
+                selectedProjectId
+                  ? "border-border hover:border-primary/50 hover:bg-primary/5 cursor-pointer"
+                  : "border-border/50 opacity-50 cursor-not-allowed"
+              }`}
             >
               <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg group-hover:scale-110 transition-transform">
                 <Settings2 className="w-8 h-8 text-white" />
@@ -98,8 +137,12 @@ export default function FinancialPlanningHubPage({ onBack }: { onBack: () => voi
 
             {/* Reports icon */}
             <button
-              onClick={() => setActiveView("reports")}
-              className="group flex flex-col items-center gap-3 p-8 rounded-2xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-all w-56"
+              onClick={() => selectedProjectId && setActiveView("reports")}
+              className={`group flex flex-col items-center gap-3 p-8 rounded-2xl border-2 border-dashed transition-all w-56 ${
+                selectedProjectId
+                  ? "border-border hover:border-primary/50 hover:bg-primary/5 cursor-pointer"
+                  : "border-border/50 opacity-50 cursor-not-allowed"
+              }`}
             >
               <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg group-hover:scale-110 transition-transform">
                 <FileBarChart2 className="w-8 h-8 text-white" />
@@ -120,6 +163,15 @@ export default function FinancialPlanningHubPage({ onBack }: { onBack: () => voi
           style={{ minHeight: "calc(100vh - 7rem)" }}
           title={viewTitle}
         />
+      )}
+
+      {/* No project selected warning in sub-views */}
+      {activeView !== "main" && !selectedProjectId && (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center p-8 rounded-xl bg-amber-50 border border-amber-200">
+            <p className="text-amber-800 text-sm font-medium">اختر مشروعاً من القائمة أعلاه أولاً</p>
+          </div>
+        </div>
       )}
     </div>
   );

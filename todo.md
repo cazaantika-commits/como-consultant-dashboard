@@ -312,3 +312,9 @@
 - [x] Ensure phase delays still work with new data source
 - [x] Write unit tests for new portfolio data procedure (20 tests passing)
 - [x] Verify all projects display correctly with new data source (6 projects verified)
+
+## ربط إعدادات التكاليف (cost-settings.html) بقاعدة البيانات
+- [ ] ربط جدول مقارنة السيناريوهات الثلاثة ببيانات المشروع الحقيقية من DB
+
+## تعديل حقل رسوم الفرز في البطاقة التعريفية
+- [x] تحويل رسوم الفرز إلى حقل يدوي (درهم/م²) مع عرض GFA بالقدم المربع والنتيجة المحسوبة

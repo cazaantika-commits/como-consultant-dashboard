@@ -8,6 +8,9 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f5f5f5; padding: 20px; direction: rtl; }
   h2 { text-align: center; margin-bottom: 16px; color: #1a1a2e; font-size: 18px; }
+  .project-name { text-align: center; margin-bottom: 12px; color: #6366f1; font-size: 14px; font-weight: 600; }
+  .loading { text-align: center; padding: 60px; color: #888; font-size: 14px; }
+  .error { text-align: center; padding: 40px; color: #dc2626; font-size: 14px; background: #fef2f2; border-radius: 8px; margin: 20px; }
   table { border-collapse: collapse; width: 100%; background: #fff; }
   th, td { border: 1px solid #ccc; padding: 6px 8px; font-size: 11px; text-align: center; }
   th { font-weight: bold; }
@@ -37,347 +40,10 @@
 <body>
 
 <h2>إعدادات التكاليف — مقارنة السيناريوهات الثلاثة</h2>
-
-<table>
-  <thead>
-    <tr>
-      <th class="h-main col-item">البند</th>
-      <th class="h-s1">O1</th>
-      <th class="h-s2">O2</th>
-      <th class="h-fund">المصدر</th>
-      <th class="h-s3">O3</th>
-      <th class="h-flow">التدفقات النقدية</th>
-    </tr>
-  </thead>
-  <tbody>
-
-    <!-- القسم الأول — الأرض -->
-    <tr><td colspan="6" class="section-header">القسم الأول — المبالغ المدفوعة (الأرض)</td></tr>
-    <tr>
-      <td class="col-item">سعر الأرض</td>
-      <td class="ok">✓ 18,000,000</td>
-      <td class="ok">✓ 18,000,000</td>
-      <td class="paid">مدفوع</td>
-      <td class="ok">✓ 18,000,000</td>
-      <td>—</td>
-    </tr>
-    <tr>
-      <td class="col-item">عمولة وسيط الأرض</td>
-      <td class="ok">✓ 360,000</td>
-      <td class="ok">✓ 360,000</td>
-      <td class="paid">مدفوع</td>
-      <td class="ok">✓ 360,000</td>
-      <td>—</td>
-    </tr>
-    <tr>
-      <td class="col-item">رسوم تسجيل الأرض (4%)</td>
-      <td class="ok">✓ 720,000</td>
-      <td class="ok">✓ 720,000</td>
-      <td class="paid">مدفوع</td>
-      <td class="ok">✓ 720,000</td>
-      <td>—</td>
-    </tr>
-
-    <!-- القسم الثاني — التصاميم -->
-    <tr><td colspan="6" class="section-header">القسم الثاني — التصاميم ورخصة البناء</td></tr>
-    <tr>
-      <td class="col-item">رسوم الجهات الحكومية (10%)</td>
-      <td class="ok">✓ 100,018</td>
-      <td class="ok">✓ 100,018</td>
-      <td class="investor toggleable" onclick="toggleSource(this)">المستثمر</td>
-      <td class="ok">✓ 100,018</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td class="col-item">فحص التربة</td>
-      <td class="ok">✓ 16,180</td>
-      <td class="ok">✓ 16,180</td>
-      <td class="investor toggleable" onclick="toggleSource(this)">المستثمر</td>
-      <td class="ok">✓ 16,180</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td class="col-item">المسح الطبوغرافي</td>
-      <td class="ok">✓ 6,180</td>
-      <td class="ok">✓ 6,180</td>
-      <td class="investor toggleable" onclick="toggleSource(this)">المستثمر</td>
-      <td class="ok">✓ 6,180</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td class="col-item">أتعاب الاستشاري — التصاميم</td>
-      <td class="ok">✓ 799,988</td>
-      <td class="ok">✓ 799,988</td>
-      <td class="investor toggleable" onclick="toggleSource(this)">المستثمر</td>
-      <td class="ok">✓ 799,988</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td class="col-item">أتعاب المطور — التصاميم (1%)</td>
-      <td class="ok">✓ 909,710</td>
-      <td class="ok">✓ 909,710</td>
-      <td class="investor toggleable" onclick="toggleSource(this)">المستثمر</td>
-      <td class="ok">✓ 909,710</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td class="col-item">رسوم المجتمع (25%)</td>
-      <td class="ok">✓ 4,045</td>
-      <td class="ok">✓ 4,045</td>
-      <td class="investor toggleable" onclick="toggleSource(this)">المستثمر</td>
-      <td class="ok">✓ 4,045</td>
-      <td></td>
-    </tr>
-
-    <!-- القسم الثالث — ريرا والبيع أوف بلان -->
-    <tr><td colspan="6" class="section-header">القسم الثالث — ريرا والبيع أوف بلان</td></tr>
-    <tr>
-      <td class="col-item">أتعاب المطور — أوف بلان (1%)</td>
-      <td class="ok">✓ 909,710</td>
-      <td class="ok">✓ 909,710</td>
-      <td class="investor toggleable" onclick="toggleSource(this)">المستثمر</td>
-      <td class="no">X</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td class="col-item">رسوم الفرز</td>
-      <td class="ok">✓ 2,033,044</td>
-      <td class="ok">✓ 2,033,044</td>
-      <td class="investor toggleable" onclick="toggleSource(this)">المستثمر</td>
-      <td class="ok">✓ 2,033,044</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td class="col-item">تسجيل بيع على الخارطة - ريرا</td>
-      <td class="ok">✓ 150,000</td>
-      <td class="ok">✓ 150,000</td>
-      <td class="investor toggleable" onclick="toggleSource(this)">المستثمر</td>
-      <td class="no">X</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td class="col-item">تسجيل الوحدات - ريرا</td>
-      <td class="ok">✓ 39,180</td>
-      <td class="ok">✓ 39,180</td>
-      <td class="investor toggleable" onclick="toggleSource(this)">المستثمر</td>
-      <td class="no">X</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td class="col-item">رسوم NOC للبيع</td>
-      <td class="ok">✓ 10,000</td>
-      <td class="ok">✓ 10,000</td>
-      <td class="investor toggleable" onclick="toggleSource(this)">المستثمر</td>
-      <td class="no">X</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td class="col-item">رسوم حساب الضمان</td>
-      <td class="ok">✓ 140,000</td>
-      <td class="ok">✓ 140,000</td>
-      <td class="investor toggleable" onclick="toggleSource(this)">المستثمر</td>
-      <td class="no">X</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td class="col-item">التسويق والإعلان — أوف بلان (25%)</td>
-      <td class="ok">✓ 454,855</td>
-      <td class="ok">✓ 454,855</td>
-      <td class="investor toggleable" onclick="toggleSource(this)">المستثمر</td>
-      <td class="no">X</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td class="col-item">إيداع حساب الضمان (20%)</td>
-      <td class="ok">✓ 7,999,880</td>
-      <td class="no">X</td>
-      <td class="investor toggleable" onclick="toggleSource(this)">المستثمر</td>
-      <td class="no">X</td>
-      <td></td>
-    </tr>
-
-    <!-- القسم الرابع — الإنشاء (حصة المستثمر) -->
-    <tr><td colspan="6" class="section-header">القسم الرابع — الإنشاء (حصة المستثمر)</td></tr>
-    <tr>
-      <td class="col-item">دفعة مقدمة للمقاول (10%)</td>
-      <td class="ok">✓ 3,999,940</td>
-      <td class="ok">✓ 3,999,940</td>
-      <td class="investor toggleable" onclick="toggleSource(this)">المستثمر</td>
-      <td class="ok">✓ 3,999,940</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td class="col-item">دفعة إنجاز المقاول (20%)</td>
-      <td class="no">X</td>
-      <td class="ok">✓ 7,999,880</td>
-      <td class="investor toggleable" onclick="toggleSource(this)">المستثمر</td>
-      <td class="no">X</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td class="col-item">دفعات المقاول (85%)</td>
-      <td class="no">X</td>
-      <td class="no">X</td>
-      <td class="investor toggleable" onclick="toggleSource(this)">المستثمر</td>
-      <td class="ok">✓ 33,999,490</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td class="col-item">رسوم المجتمع (75%)</td>
-      <td class="ok">✓ 12,135</td>
-      <td class="ok">✓ 12,135</td>
-      <td class="investor toggleable" onclick="toggleSource(this)">المستثمر</td>
-      <td class="ok">✓ 12,135</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td class="col-item">أتعاب الاستشاري — الإشراف</td>
-      <td class="no">X</td>
-      <td class="no">X</td>
-      <td class="investor toggleable" onclick="toggleSource(this)">المستثمر</td>
-      <td class="ok">✓ 799,988</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td class="col-item">أتعاب المطور — الإشراف (3%)</td>
-      <td class="ok">✓ 2,729,130</td>
-      <td class="ok">✓ 2,729,130</td>
-      <td class="investor toggleable" onclick="toggleSource(this)">المستثمر</td>
-      <td class="no">X</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td class="col-item">أتعاب المطور — الإشراف (2%)</td>
-      <td class="no">X</td>
-      <td class="no">X</td>
-      <td class="investor toggleable" onclick="toggleSource(this)">المستثمر</td>
-      <td class="ok">✓ 1,819,420</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td class="col-item">التسويق والإعلان — الإنشاء (75%)</td>
-      <td class="ok">✓ 1,364,565</td>
-      <td class="ok">✓ 1,364,565</td>
-      <td class="investor toggleable" onclick="toggleSource(this)">المستثمر</td>
-      <td class="no">X</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td class="col-item">رسوم الجهات الحكومية (90%)</td>
-      <td class="no">X</td>
-      <td class="no">X</td>
-      <td class="investor toggleable" onclick="toggleSource(this)">المستثمر</td>
-      <td class="ok">✓ 900,162</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td class="col-item">رسوم المساح</td>
-      <td class="ok">✓ 12,180</td>
-      <td class="ok">✓ 12,180</td>
-      <td class="investor toggleable" onclick="toggleSource(this)">المستثمر</td>
-      <td class="ok">✓ 12,180</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td class="col-item">احتياطي وطوارئ (2%)</td>
-      <td class="ok">✓ 799,988</td>
-      <td class="ok">✓ 799,988</td>
-      <td class="investor toggleable" onclick="toggleSource(this)">المستثمر</td>
-      <td class="ok">✓ 799,988</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td class="col-item">رسوم بنكية</td>
-      <td class="ok">✓ 19,800</td>
-      <td class="ok">✓ 19,800</td>
-      <td class="investor toggleable" onclick="toggleSource(this)">المستثمر</td>
-      <td class="ok">✓ 19,800</td>
-      <td></td>
-    </tr>
-
-    <!-- القسم الخامس — من حساب الضمان -->
-    <tr><td colspan="6" class="section-header">من حساب الضمان (تُدفع من إيرادات المشترين)</td></tr>
-    <tr>
-      <td class="col-item">رسوم الجهات الحكومية (90%)</td>
-      <td class="ok">✓ 900,162</td>
-      <td class="ok">✓ 900,162</td>
-      <td class="escrow toggleable" onclick="toggleSource(this)">حساب الضمان</td>
-      <td class="no">X</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td class="col-item">دفعات المقاول (70% — من الضمان)</td>
-      <td class="ok">✓ 27,999,580</td>
-      <td class="ok">✓ 27,999,580</td>
-      <td class="escrow toggleable" onclick="toggleSource(this)">حساب الضمان</td>
-      <td class="no">X</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td class="col-item">عمولة وكيل المبيعات (5%)</td>
-      <td class="ok">✓ 4,548,550</td>
-      <td class="ok">✓ 4,548,550</td>
-      <td class="escrow toggleable" onclick="toggleSource(this)">حساب الضمان</td>
-      <td class="no">X</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td class="col-item">أتعاب الاستشاري — الإشراف</td>
-      <td class="ok">✓ 799,988</td>
-      <td class="ok">✓ 799,988</td>
-      <td class="escrow toggleable" onclick="toggleSource(this)">حساب الضمان</td>
-      <td class="no">X</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td class="col-item">تقرير مدقق ريرا</td>
-      <td class="ok">✓ 105,180</td>
-      <td class="ok">✓ 105,180</td>
-      <td class="escrow toggleable" onclick="toggleSource(this)">حساب الضمان</td>
-      <td class="no">X</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td class="col-item">تقرير فحص ريرا</td>
-      <td class="ok">✓ 100,001</td>
-      <td class="ok">✓ 100,001</td>
-      <td class="escrow toggleable" onclick="toggleSource(this)">حساب الضمان</td>
-      <td class="no">X</td>
-      <td></td>
-    </tr>
-
-    <!-- صف رأس المال المطلوب -->
-    <tr class="capital-row">
-      <td style="text-align:right;background:#dc2626;color:#fff;">رأس المال المطلوب (المستثمر)</td>
-      <td style="background:#dc2626;color:#fff;">41,590,528</td>
-      <td style="background:#dc2626;color:#fff;">41,590,528</td>
-      <td style="background:#dc2626;"></td>
-      <td style="background:#dc2626;color:#fff;">65,312,268</td>
-      <td style="background:#dc2626;"></td>
-    </tr>
-
-    <!-- صف إجمالي حساب الضمان -->
-    <tr class="escrow-total-row">
-      <td style="text-align:right;background:#1d4ed8;color:#fff;">إجمالي حساب الضمان</td>
-      <td style="background:#1d4ed8;color:#fff;">34,453,461</td>
-      <td style="background:#1d4ed8;color:#fff;">34,453,461</td>
-      <td style="background:#1d4ed8;"></td>
-      <td style="background:#1d4ed8;color:#fff;">—</td>
-      <td style="background:#1d4ed8;"></td>
-    </tr>
-
-    <!-- صف المجموع الكلي -->
-    <tr class="total-row">
-      <td class="col-item" style="background:#1a1a2e;color:#fbbf24;">الإجمالي الكلي</td>
-      <td style="background:#1a1a2e;color:#fbbf24;">76,043,989</td>
-      <td style="background:#1a1a2e;color:#fbbf24;">76,043,989</td>
-      <td style="background:#1a1a2e;"></td>
-      <td style="background:#1a1a2e;color:#fbbf24;">65,312,268</td>
-      <td style="background:#1a1a2e;"></td>
-    </tr>
-
-  </tbody>
-</table>
+<div id="project-name" class="project-name"></div>
+<div id="loading" class="loading">جاري تحميل البيانات...</div>
+<div id="error" class="error" style="display:none;"></div>
+<div id="table-container" style="display:none;"></div>
 
 <script>
 function toggleSource(cell) {
@@ -391,6 +57,133 @@ function toggleSource(cell) {
     cell.textContent = 'المستثمر';
   }
 }
+
+function fmt(n) {
+  return Math.round(n).toLocaleString('en-US');
+}
+
+function renderCell(item, scenario) {
+  const data = item[scenario];
+  if (!data.active) return '<td class="no">X</td>';
+  return '<td class="ok">✓ ' + fmt(data.amount) + '</td>';
+}
+
+function renderSourceCell(item) {
+  if (item.fundingSource === 'investor') {
+    if (item.section === 'paid') {
+      return '<td class="paid">مدفوع</td>';
+    }
+    return '<td class="investor toggleable" onclick="toggleSource(this)">المستثمر</td>';
+  }
+  return '<td class="escrow toggleable" onclick="toggleSource(this)">حساب الضمان</td>';
+}
+
+async function loadData() {
+  const params = new URLSearchParams(window.location.search);
+  const projectId = params.get('projectId');
+  
+  if (!projectId) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display = 'block';
+    document.getElementById('error').textContent = 'لم يتم تحديد مشروع. اختر مشروعاً من القائمة أعلاه.';
+    return;
+  }
+
+  try {
+    const resp = await fetch('/api/trpc/cashFlowSettings.getCostSettingsComparison?input=' + encodeURIComponent(JSON.stringify({ json: { projectId: Number(projectId) } })));
+    const json = await resp.json();
+    
+    if (json.error) {
+      throw new Error(json.error.message || 'خطأ في تحميل البيانات');
+    }
+
+    const data = json.result.data.json;
+    document.getElementById('project-name').textContent = data.projectName;
+    
+    // Build table
+    let html = '<table><thead><tr>';
+    html += '<th class="h-main col-item">البند</th>';
+    html += '<th class="h-s1">O1</th>';
+    html += '<th class="h-s2">O2</th>';
+    html += '<th class="h-fund">المصدر</th>';
+    html += '<th class="h-s3">O3</th>';
+    html += '<th class="h-flow">التدفقات النقدية</th>';
+    html += '</tr></thead><tbody>';
+
+    // Group items by section
+    const sectionMap = {};
+    for (const s of data.sections) {
+      sectionMap[s.id] = { label: s.label, items: [] };
+    }
+    for (const item of data.items) {
+      if (sectionMap[item.section]) {
+        sectionMap[item.section].items.push(item);
+      }
+    }
+
+    // Render each section
+    for (const s of data.sections) {
+      const sec = sectionMap[s.id];
+      if (sec.items.length === 0) continue;
+      
+      html += '<tr><td colspan="6" class="section-header">' + sec.label + '</td></tr>';
+      
+      for (const item of sec.items) {
+        html += '<tr>';
+        html += '<td class="col-item">' + item.nameAr + '</td>';
+        html += renderCell(item, 'o1');
+        html += renderCell(item, 'o2');
+        html += renderSourceCell(item);
+        html += renderCell(item, 'o3');
+        html += '<td></td>';
+        html += '</tr>';
+      }
+    }
+
+    // Capital row (investor total)
+    html += '<tr class="capital-row">';
+    html += '<td style="text-align:right;background:#dc2626;color:#fff;">رأس المال المطلوب (المستثمر)</td>';
+    html += '<td style="background:#dc2626;color:#fff;">' + fmt(data.totals.investorCapital.o1) + '</td>';
+    html += '<td style="background:#dc2626;color:#fff;">' + fmt(data.totals.investorCapital.o2) + '</td>';
+    html += '<td style="background:#dc2626;"></td>';
+    html += '<td style="background:#dc2626;color:#fff;">' + fmt(data.totals.investorCapital.o3) + '</td>';
+    html += '<td style="background:#dc2626;"></td>';
+    html += '</tr>';
+
+    // Escrow total row
+    html += '<tr class="escrow-total-row">';
+    html += '<td style="text-align:right;background:#1d4ed8;color:#fff;">إجمالي حساب الضمان</td>';
+    html += '<td style="background:#1d4ed8;color:#fff;">' + fmt(data.totals.escrowTotal.o1) + '</td>';
+    html += '<td style="background:#1d4ed8;color:#fff;">' + fmt(data.totals.escrowTotal.o2) + '</td>';
+    html += '<td style="background:#1d4ed8;"></td>';
+    html += '<td style="background:#1d4ed8;color:#fff;">' + (data.totals.escrowTotal.o3 > 0 ? fmt(data.totals.escrowTotal.o3) : '—') + '</td>';
+    html += '<td style="background:#1d4ed8;"></td>';
+    html += '</tr>';
+
+    // Grand total row
+    html += '<tr class="total-row">';
+    html += '<td class="col-item" style="background:#1a1a2e;color:#fbbf24;">الإجمالي الكلي</td>';
+    html += '<td style="background:#1a1a2e;color:#fbbf24;">' + fmt(data.totals.grandTotal.o1) + '</td>';
+    html += '<td style="background:#1a1a2e;color:#fbbf24;">' + fmt(data.totals.grandTotal.o2) + '</td>';
+    html += '<td style="background:#1a1a2e;"></td>';
+    html += '<td style="background:#1a1a2e;color:#fbbf24;">' + fmt(data.totals.grandTotal.o3) + '</td>';
+    html += '<td style="background:#1a1a2e;"></td>';
+    html += '</tr>';
+
+    html += '</tbody></table>';
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('table-container').style.display = 'block';
+    document.getElementById('table-container').innerHTML = html;
+
+  } catch (err) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display = 'block';
+    document.getElementById('error').textContent = 'خطأ: ' + (err.message || 'فشل تحميل البيانات');
+  }
+}
+
+loadData();
 </script>
 
 </body>

@@ -1308,6 +1308,137 @@ export const cashFlowSettingsRouter = router({
 
     return results;
   }),
+  /**
+   * getCostSettingsComparison — builds the cost-settings comparison table
+   * for all 3 scenarios for a given project. Used by cost-settings.html.
+   * Returns each item with amounts for O1, O2, O3 + funding source + totals.
+   */
+  getCostSettingsComparison: publicProcedure
+    .input(z.object({ projectId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      const projectRows = await db.select().from(projects).where(eq(projects.id, input.projectId));
+      const project = projectRows[0];
+      if (!project) throw new Error("Project not found");
+
+      const moRows = await db.select().from(marketOverview).where(eq(marketOverview.projectId, input.projectId));
+      const mo = moRows[0] || null;
+      const cpRows = await db.select().from(competitionPricing).where(eq(competitionPricing.projectId, input.projectId));
+      const cp = cpRows[0] || null;
+      const costs = calculateProjectCosts(project, mo, cp);
+
+      if (!costs) throw new Error("Cannot calculate project costs");
+
+      // Build items for each scenario
+      const scenarioList: Scenario[] = ["offplan_escrow", "offplan_construction", "no_offplan"];
+
+      // Collect all unique item keys across all scenarios
+      const allItemKeys: string[] = [];
+      const scenarioItems: Record<Scenario, Map<string, { nameAr: string; amount: number; fundingSource: string; section: string; sortOrder: number }>> = {
+        offplan_escrow: new Map(),
+        offplan_construction: new Map(),
+        no_offplan: new Map(),
+      };
+
+      for (const sc of scenarioList) {
+        const defs = getDefaultItemDefs(sc);
+        for (const def of defs) {
+          const amount = computeItemAmount(def, costs);
+          scenarioItems[sc].set(def.itemKey, {
+            nameAr: def.nameAr,
+            amount,
+            fundingSource: def.fundingSource,
+            section: def.section || "construction",
+            sortOrder: def.sortOrder,
+          });
+          if (!allItemKeys.includes(def.itemKey)) {
+            allItemKeys.push(def.itemKey);
+          }
+        }
+      }
+
+      // Build the comparison rows — use O1 as the primary ordering
+      // Group by section
+      const sections = [
+        { id: "paid", label: "القسم الأول — المبالغ المدفوعة (الأرض)" },
+        { id: "design", label: "القسم الثاني — التصاميم ورخصة البناء" },
+        { id: "offplan", label: "القسم الثالث — ريرا والبيع أوف بلان" },
+        { id: "construction", label: "القسم الرابع — الإنشاء (حصة المستثمر)" },
+        { id: "escrow", label: "من حساب الضمان (تُدفع من إيرادات المشترين)" },
+      ];
+
+      // Build a master list of items with their section and sortOrder from O1 (primary)
+      interface ComparisonItem {
+        itemKey: string;
+        nameAr: string;
+        section: string;
+        sortOrder: number;
+        fundingSource: string;
+        o1: { active: boolean; amount: number };
+        o2: { active: boolean; amount: number };
+        o3: { active: boolean; amount: number };
+      }
+
+      const comparisonItems: ComparisonItem[] = [];
+
+      for (const key of allItemKeys) {
+        // Get info from whichever scenario has it
+        const o1 = scenarioItems.offplan_escrow.get(key);
+        const o2 = scenarioItems.offplan_construction.get(key);
+        const o3 = scenarioItems.no_offplan.get(key);
+        const ref = o1 || o2 || o3;
+        if (!ref) continue;
+
+        comparisonItems.push({
+          itemKey: key,
+          nameAr: ref.nameAr,
+          section: ref.section,
+          sortOrder: ref.sortOrder,
+          fundingSource: ref.fundingSource,
+          o1: { active: !!o1, amount: o1?.amount || 0 },
+          o2: { active: !!o2, amount: o2?.amount || 0 },
+          o3: { active: !!o3, amount: o3?.amount || 0 },
+        });
+      }
+
+      // Sort by sortOrder
+      comparisonItems.sort((a, b) => a.sortOrder - b.sortOrder);
+
+      // Compute totals
+      let investorTotalO1 = 0, investorTotalO2 = 0, investorTotalO3 = 0;
+      let escrowTotalO1 = 0, escrowTotalO2 = 0, escrowTotalO3 = 0;
+
+      for (const item of comparisonItems) {
+        if (item.fundingSource === "investor") {
+          if (item.o1.active) investorTotalO1 += item.o1.amount;
+          if (item.o2.active) investorTotalO2 += item.o2.amount;
+          if (item.o3.active) investorTotalO3 += item.o3.amount;
+        } else {
+          if (item.o1.active) escrowTotalO1 += item.o1.amount;
+          if (item.o2.active) escrowTotalO2 += item.o2.amount;
+          if (item.o3.active) escrowTotalO3 += item.o3.amount;
+        }
+      }
+
+      return {
+        projectName: project.name,
+        projectId: project.id,
+        sections,
+        items: comparisonItems,
+        totals: {
+          investorCapital: { o1: investorTotalO1, o2: investorTotalO2, o3: investorTotalO3 },
+          escrowTotal: { o1: escrowTotalO1, o2: escrowTotalO2, o3: escrowTotalO3 },
+          grandTotal: {
+            o1: investorTotalO1 + escrowTotalO1,
+            o2: investorTotalO2 + escrowTotalO2,
+            o3: investorTotalO3 + escrowTotalO3,
+          },
+        },
+      };
+    }),
 });
 
 // ─── Helper: compute amount by item key ──────────────────────────────────────
