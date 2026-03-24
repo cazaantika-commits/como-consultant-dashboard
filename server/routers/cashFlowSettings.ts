@@ -120,7 +120,7 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
       scenarios: allScenarios, amountKey: "topographicSurveyFee",
     },
     {
-      itemKey: "design_fee", nameAr: "أتعاب التصميم (2%)", category: "design", section: "design", sortOrder: 12,
+      itemKey: "design_fee", nameAr: "أتعاب الاستشاري — التصاميم (2%)", category: "design", section: "design", sortOrder: 12,
       fundingSource: "investor", distributionMethod: "equal_spread",
       distributeAcrossPhases: ["design"],
       scenarios: allScenarios, amountKey: "designFee",
@@ -259,7 +259,7 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
       splitRatio: [{ phase: "construction", ratio: 0.6 }],
     },
     {
-      itemKey: "supervision_fee", nameAr: "أتعاب الإشراف (2%)", category: "construction", section: "escrow", sortOrder: 60,
+      itemKey: "supervision_fee", nameAr: "أتعاب الاستشاري — الإشراف (2%)", category: "construction", section: "escrow", sortOrder: 60,
       fundingSource: "escrow", distributionMethod: "equal_spread",
       distributeAcrossPhases: ["construction"],
       scenarios: allScenarios, amountKey: "supervisionFee",
@@ -1310,8 +1310,9 @@ export const cashFlowSettingsRouter = router({
   }),
   /**
    * getCostSettingsComparison — builds the cost-settings comparison table
-   * for all 3 scenarios for a given project. Used by cost-settings.html.
-   * Returns each item with amounts for O1, O2, O3 + funding source + totals.
+   * for all 3 scenarios using getReflectionData as the single source of truth.
+   * Phase durations come from the project card (البطاقة التعريفية).
+   * Distribution methods respect actual phase month counts.
    */
   getCostSettingsComparison: publicProcedure
     .input(z.object({ projectId: z.number() }))
@@ -1320,6 +1321,7 @@ export const cashFlowSettingsRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
+      // Get project data (durations come from البطاقة)
       const projectRows = await db.select().from(projects).where(eq(projects.id, input.projectId));
       const project = projectRows[0];
       if (!project) throw new Error("Project not found");
@@ -1330,38 +1332,154 @@ export const cashFlowSettingsRouter = router({
       const cp = cpRows[0] || null;
       const costs = calculateProjectCosts(project, mo, cp);
 
-      if (!costs) throw new Error("Cannot calculate project costs");
+      // Phase durations from البطاقة
+      const legacyDurations = {
+        preCon: project.preConMonths || 6,
+        construction: project.constructionMonths || 16,
+        handover: project.handoverMonths || 2,
+      };
+      const durations = legacyToNewDurations(legacyDurations);
+      const phases = calculatePhases(durations);
+      const totalMonths = getTotalMonths(durations);
 
-      // Build items for each scenario
+      // Phase info for display
+      const phaseInfo = {
+        design: { duration: durations.design, start: phases.find(p => p.type === "design")?.startMonth || 1 },
+        offplan: { duration: durations.offplan, start: phases.find(p => p.type === "offplan")?.startMonth || 3 },
+        construction: { duration: durations.construction, start: phases.find(p => p.type === "construction")?.startMonth || 7 },
+        handover: { duration: durations.handover, start: phases.find(p => p.type === "handover")?.startMonth || 23 },
+      };
+
+      // Build items for each scenario using the same logic as getReflectionData
       const scenarioList: Scenario[] = ["offplan_escrow", "offplan_construction", "no_offplan"];
 
-      // Collect all unique item keys across all scenarios
-      const allItemKeys: string[] = [];
-      const scenarioItems: Record<Scenario, Map<string, { nameAr: string; amount: number; fundingSource: string; section: string; sortOrder: number }>> = {
+      interface ScenarioItemData {
+        nameAr: string;
+        amount: number;
+        fundingSource: string;
+        section: string;
+        sortOrder: number;
+        distributionMethod: string;
+        lumpSumMonth: number | null;
+        startMonth: number | null;
+        endMonth: number | null;
+        customJson: string | null;
+        monthlyAmounts: number[];
+      }
+
+      const scenarioItems: Record<Scenario, Map<string, ScenarioItemData>> = {
         offplan_escrow: new Map(),
         offplan_construction: new Map(),
         no_offplan: new Map(),
       };
 
+      const allItemKeys: string[] = [];
+
       for (const sc of scenarioList) {
-        const defs = getDefaultItemDefs(sc);
-        for (const def of defs) {
-          const amount = computeItemAmount(def, costs);
-          scenarioItems[sc].set(def.itemKey, {
-            nameAr: def.nameAr,
-            amount,
-            fundingSource: def.fundingSource,
-            section: def.section || "construction",
-            sortOrder: def.sortOrder,
-          });
-          if (!allItemKeys.includes(def.itemKey)) {
-            allItemKeys.push(def.itemKey);
+        // Check for saved settings first
+        const savedSettings = await db.select().from(projectCashFlowSettings).where(
+          and(
+            eq(projectCashFlowSettings.projectId, input.projectId),
+            eq(projectCashFlowSettings.scenario, sc),
+          )
+        );
+
+        if (savedSettings.length > 0) {
+          // Use saved settings (same as getReflectionData)
+          for (const s of savedSettings) {
+            if (!s.isActive) continue;
+            const amount = s.amountOverride
+              ? parseFloat(s.amountOverride)
+              : (costs ? computeItemAmountByKey(s.itemKey, costs, sc) : 0);
+
+            const monthly = distributeAmount(
+              amount,
+              s.distributionMethod as DistributionMethod,
+              s.lumpSumMonth,
+              s.startMonth,
+              s.endMonth,
+              s.customJson,
+              totalMonths,
+            );
+
+            const defForKey = getDefaultItemDefs(sc).find(d => d.itemKey === s.itemKey);
+            const itemSection = (s.section || defForKey?.section || "construction") as string;
+
+            scenarioItems[sc].set(s.itemKey, {
+              nameAr: s.nameAr,
+              amount,
+              fundingSource: s.fundingSource as string,
+              section: itemSection,
+              sortOrder: s.sortOrder,
+              distributionMethod: s.distributionMethod,
+              lumpSumMonth: s.lumpSumMonth,
+              startMonth: s.startMonth,
+              endMonth: s.endMonth,
+              customJson: s.customJson,
+              monthlyAmounts: monthly,
+            });
+
+            if (!allItemKeys.includes(s.itemKey)) {
+              allItemKeys.push(s.itemKey);
+            }
+          }
+        } else {
+          // Use defaults (same as getReflectionData)
+          const defs = getDefaultItemDefs(sc);
+          for (const def of defs) {
+            const amount = costs ? computeItemAmount(def, costs) : 0;
+
+            let lumpSumMonth: number | null = null;
+            let startMonth: number | null = null;
+            let endMonth: number | null = null;
+
+            if (def.distributionMethod === "lump_sum" && def.phase) {
+              lumpSumMonth = phaseRelativeToAbsolute(def.phase, def.phaseRelativeMonth || 1, phases);
+            } else if (def.distributionMethod === "equal_spread") {
+              if (def.distributeAcrossPhases && def.distributeAcrossPhases.length > 0) {
+                const firstPhase = def.distributeAcrossPhases[0];
+                const lastPhase = def.distributeAcrossPhases[def.distributeAcrossPhases.length - 1];
+                startMonth = getPhaseRange(firstPhase, phases).start;
+                endMonth = getPhaseRange(lastPhase, phases).end;
+              } else if (def.phase) {
+                const range = getPhaseRange(def.phase, phases);
+                startMonth = range.start;
+                endMonth = range.end;
+              }
+            }
+
+            const monthly = distributeAmount(
+              amount,
+              def.distributionMethod,
+              lumpSumMonth,
+              startMonth,
+              endMonth,
+              null,
+              totalMonths,
+            );
+
+            scenarioItems[sc].set(def.itemKey, {
+              nameAr: def.nameAr,
+              amount,
+              fundingSource: def.fundingSource,
+              section: (def.section || "construction") as string,
+              sortOrder: def.sortOrder,
+              distributionMethod: def.distributionMethod,
+              lumpSumMonth,
+              startMonth,
+              endMonth,
+              customJson: null,
+              monthlyAmounts: monthly,
+            });
+
+            if (!allItemKeys.includes(def.itemKey)) {
+              allItemKeys.push(def.itemKey);
+            }
           }
         }
       }
 
-      // Build the comparison rows — use O1 as the primary ordering
-      // Group by section
+      // Build comparison rows
       const sections = [
         { id: "paid", label: "القسم الأول — المبالغ المدفوعة (الأرض)" },
         { id: "design", label: "القسم الثاني — التصاميم ورخصة البناء" },
@@ -1370,22 +1488,22 @@ export const cashFlowSettingsRouter = router({
         { id: "escrow", label: "من حساب الضمان (تُدفع من إيرادات المشترين)" },
       ];
 
-      // Build a master list of items with their section and sortOrder from O1 (primary)
       interface ComparisonItem {
         itemKey: string;
         nameAr: string;
         section: string;
         sortOrder: number;
         fundingSource: string;
-        o1: { active: boolean; amount: number };
-        o2: { active: boolean; amount: number };
-        o3: { active: boolean; amount: number };
+        distributionMethod: string;
+        o1: { active: boolean; amount: number; monthlyAmounts: number[] };
+        o2: { active: boolean; amount: number; monthlyAmounts: number[] };
+        o3: { active: boolean; amount: number; monthlyAmounts: number[] };
       }
 
       const comparisonItems: ComparisonItem[] = [];
+      const emptyMonthly = new Array(totalMonths).fill(0);
 
       for (const key of allItemKeys) {
-        // Get info from whichever scenario has it
         const o1 = scenarioItems.offplan_escrow.get(key);
         const o2 = scenarioItems.offplan_construction.get(key);
         const o3 = scenarioItems.no_offplan.get(key);
@@ -1398,13 +1516,13 @@ export const cashFlowSettingsRouter = router({
           section: ref.section,
           sortOrder: ref.sortOrder,
           fundingSource: ref.fundingSource,
-          o1: { active: !!o1, amount: o1?.amount || 0 },
-          o2: { active: !!o2, amount: o2?.amount || 0 },
-          o3: { active: !!o3, amount: o3?.amount || 0 },
+          distributionMethod: ref.distributionMethod,
+          o1: { active: !!o1, amount: o1?.amount || 0, monthlyAmounts: o1?.monthlyAmounts || emptyMonthly },
+          o2: { active: !!o2, amount: o2?.amount || 0, monthlyAmounts: o2?.monthlyAmounts || emptyMonthly },
+          o3: { active: !!o3, amount: o3?.amount || 0, monthlyAmounts: o3?.monthlyAmounts || emptyMonthly },
         });
       }
 
-      // Sort by sortOrder
       comparisonItems.sort((a, b) => a.sortOrder - b.sortOrder);
 
       // Compute totals
@@ -1428,6 +1546,8 @@ export const cashFlowSettingsRouter = router({
         projectId: project.id,
         sections,
         items: comparisonItems,
+        totalMonths,
+        phaseInfo,
         totals: {
           investorCapital: { o1: investorTotalO1, o2: investorTotalO2, o3: investorTotalO3 },
           escrowTotal: { o1: escrowTotalO1, o2: escrowTotalO2, o3: escrowTotalO3 },

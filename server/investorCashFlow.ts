@@ -315,8 +315,8 @@ export function getInvestorExpenses(costs: ProjectCosts, scenario: FinancingScen
       ],
       table: "investor",
     },
-    // أتعاب التصميم: موزعة على مرحلة التصاميم فقط
-    { id: "design_fee", name: "أتعاب التصميم (2%)", total: c.designFee, behavior: "DISTRIBUTED", phase: "design", distributeAcross: ["design"], table: "investor" },
+    // أتعاب الاستشاري — التصاميم: موزعة على مرحلة التصاميم فقط
+    { id: "design_fee", name: "أتعاب الاستشاري — التصاميم (2%)", total: c.designFee, behavior: "DISTRIBUTED", phase: "design", distributeAcross: ["design"], table: "investor" },
 
     // ═══ المرحلة 3: تسجيل أوف بلان — يتغير حسب السيناريو ═══
     ...(scenario === "no_offplan" ? [
@@ -383,7 +383,7 @@ export function getInvestorExpenses(costs: ProjectCosts, scenario: FinancingScen
 
     // NOTE: The following are EXCLUDED (not in رأس المال المطلوب):
     // - officialBodiesFees (رسوم الجهات الحكومية) → paid from escrow
-    // - supervisionFee (أتعاب الإشراف) → paid from escrow
+    // - supervisionFee (أتعاب الاستشاري — الإشراف) → paid from escrow
     // - salesCommission (عمولة وكيل المبيعات) → paid from sales revenue
     // - reraAuditReportFee, reraInspectionReportFee → paid from escrow
     // - 70% of constructionCost → paid from escrow

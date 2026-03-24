@@ -534,7 +534,7 @@ export function getInvestorExpenses(costs?: ProjectCosts, scenario: FinancingSce
       table: "investor",
     },
     {
-      id: "design_fee", name: "أتعاب التصميم (2%)",
+      id: "design_fee", name: "أتعاب الاستشاري — التصاميم (2%)",
       total: c ? c.designFee : 788559.6,
       behavior: "DISTRIBUTED", phase: "design", distributeAcross: ["design"], table: "investor",
     },
@@ -726,7 +726,7 @@ export function getEscrowExpenses(costs?: ProjectCosts, scenario: FinancingScena
       distributeAcross: ["construction"], table: "escrow",
     },
     {
-      id: "supervision_fee", name: "أتعاب الإشراف (2%)",
+      id: "supervision_fee", name: "أتعاب الاستشاري — الإشراف (2%)",
       total: c ? c.supervisionFee : 788559.6,
       behavior: "DISTRIBUTED", phase: "construction",
       distributeAcross: ["construction"], table: "escrow",
