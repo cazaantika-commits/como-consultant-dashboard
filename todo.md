@@ -336,3 +336,5 @@
 - [x] Fix data mismatch: o1-settings.html shows different numbers than cost-settings.html (e.g. broker fee 360k vs 180k)
 - [x] o1/o2/o3-settings.html must pull data from same source as cost-settings.html (cashFlowSettings/cf_settings_items)
 - [x] Verify all numbers match between cost-settings comparison table and individual scenario pages
+- [x] إعادة حقول اختيار طريقة الدفع في o1/o2/o3-settings.html (دفعة واحدة + رقم الشهر / موزع بالتساوي / نسب مخصصة) مع الحفاظ على سحب المبالغ من نفس API
+- [x] إضافة حقول اختيار طريقة الدفع في o1/o2/o3-settings.html (دفعة واحدة + رقم الشهر / موزع بالتساوي / نسب مخصصة) مع عدد حقول ديناميكي من مدة المرحلة في البطاقة

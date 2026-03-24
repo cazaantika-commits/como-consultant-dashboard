@@ -13,7 +13,7 @@
   .loading { text-align: center; padding: 60px; color: #888; font-size: 14px; }
   .error { text-align: center; padding: 40px; color: #dc2626; font-size: 14px; background: #fef2f2; border-radius: 8px; margin: 20px; }
   table { border-collapse: collapse; width: 100%; background: #fff; margin-bottom: 20px; }
-  th, td { border: 1px solid #ccc; padding: 5px 8px; font-size: 11px; text-align: center; }
+  th, td { border: 1px solid #ccc; padding: 5px 8px; font-size: 11px; text-align: center; vertical-align: middle; }
   th { font-weight: bold; }
   .col-item { text-align: right; background: #f0f4ff; font-weight: 500; white-space: nowrap; }
   .col-amount { font-weight: bold; color: #1a1a2e; font-size: 11px; }
@@ -28,19 +28,20 @@
   .capital-row td { background: #dc2626; color: #fff; font-weight: bold; font-size: 12px; border-color: #991b1b; }
   .escrow-total-row td { background: #1d4ed8; color: #fff; font-weight: bold; font-size: 12px; border-color: #1e40af; }
   .na-cell { color: #999; }
-  .no { color: red; font-weight: bold; font-size: 14px; }
   select { font-size: 10px; padding: 2px 4px; border: 1px solid #aaa; border-radius: 3px; width: 100%; }
   input[type="number"] { font-size: 10px; padding: 2px 4px; border: 1px solid #aaa; border-radius: 3px; width: 50px; text-align: center; }
-  .phase-select { background: #f0fdf4; }
   .method-select { background: #fefce8; }
   .month-input { background: #fef3c7; }
-  .pct-container { margin-top: 4px; }
-  .pct-row { display: flex; gap: 4px; align-items: center; justify-content: center; flex-wrap: wrap; margin: 2px 0; font-size: 9px; }
-  .pct-row label { font-size: 9px; }
-  .pct-row input { width: 40px; font-size: 9px; }
-  .pct-total { font-size: 9px; font-weight: bold; margin-top: 2px; }
+  .pct-container { margin-top: 4px; display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; align-items: center; }
+  .pct-field { display: inline-flex; align-items: center; gap: 1px; font-size: 9px; }
+  .pct-field label { font-size: 8px; color: #555; }
+  .pct-field input { width: 38px; font-size: 9px; padding: 1px 2px; border: 1px solid #bbb; border-radius: 2px; text-align: center; }
+  .pct-total { font-size: 9px; font-weight: bold; margin-top: 2px; text-align: center; }
   .pct-total.ok { color: green; }
   .pct-total.err { color: red; }
+  .equal-info { font-size: 9px; color: #166534; background: #f0fdf4; padding: 2px 6px; border-radius: 3px; }
+  .lump-info { display: inline-flex; align-items: center; gap: 4px; }
+  .phase-info-box { margin-top: 10px; padding: 10px; background: #f0f4ff; border-radius: 6px; font-size: 11px; color: #334155; }
 </style>
 </head>
 <body>
@@ -53,7 +54,7 @@
 <div id="table-container" style="display:none;"></div>
 
 <script>
-const SCENARIO_KEY = 'o1'; // This file shows O1 = offplan_escrow
+var SCENARIO_KEY = 'o1';
 
 function fmt(n) {
   return Math.round(n).toLocaleString('en-US');
@@ -68,11 +69,18 @@ function getPhaseLabel(section) {
   return 'التنفيذ';
 }
 
-function getMethodLabel(method) {
-  if (method === 'lump_sum') return 'دفعة واحدة';
-  if (method === 'equal_spread') return 'دفعات متساوية';
-  if (method === 'custom') return 'نسب مخصصة';
-  return 'دفعة واحدة';
+function getPhaseDuration(section, phaseInfo) {
+  if (section === 'design' && phaseInfo.design) return phaseInfo.design.duration;
+  if (section === 'offplan' && phaseInfo.offplan) return phaseInfo.offplan.duration;
+  if ((section === 'construction' || section === 'escrow') && phaseInfo.construction) return phaseInfo.construction.duration;
+  return 1;
+}
+
+function getPhaseStart(section, phaseInfo) {
+  if (section === 'design' && phaseInfo.design) return phaseInfo.design.start;
+  if (section === 'offplan' && phaseInfo.offplan) return phaseInfo.offplan.start;
+  if ((section === 'construction' || section === 'escrow') && phaseInfo.construction) return phaseInfo.construction.start;
+  return 1;
 }
 
 function renderSourceCell(item) {
@@ -83,39 +91,105 @@ function renderSourceCell(item) {
   return '<td class="col-source escrow">حساب الضمان</td>';
 }
 
-function renderDetailCell(item, phaseInfo) {
-  if (item.section === 'paid') return '<td class="na-cell">—</td>';
-  
-  var method = item.distributionMethod || 'lump_sum';
-  var section = item.section;
-  var phaseDuration = 1;
-  
-  if (section === 'design' && phaseInfo.design) phaseDuration = phaseInfo.design.duration;
-  else if (section === 'offplan' && phaseInfo.offplan) phaseDuration = phaseInfo.offplan.duration;
-  else if ((section === 'construction' || section === 'escrow') && phaseInfo.construction) phaseDuration = phaseInfo.construction.duration;
-  
-  if (method === 'lump_sum') {
-    var phaseStart = 1;
-    if (section === 'design' && phaseInfo.design) phaseStart = phaseInfo.design.start;
-    else if (section === 'offplan' && phaseInfo.offplan) phaseStart = phaseInfo.offplan.start;
-    else if ((section === 'construction' || section === 'escrow') && phaseInfo.construction) phaseStart = phaseInfo.construction.start;
-    
-    var relMonth = 1;
-    if (item.lumpSumMonth) relMonth = Math.max(1, item.lumpSumMonth - phaseStart + 1);
-    
-    return '<td><input type="number" class="month-input" min="1" max="' + phaseDuration + '" value="' + relMonth + '"> <span style="font-size:9px;">من المرحلة</span></td>';
-  } else if (method === 'equal_spread') {
-    return '<td><span style="font-size:9px;">موزعة على ' + phaseDuration + ' شهر</span></td>';
-  } else if (method === 'custom') {
-    return '<td><span style="font-size:9px;">نسب مخصصة</span></td>';
+function buildMethodSelect(itemKey, currentMethod) {
+  var options = [
+    { value: 'lump_sum', label: 'دفعة واحدة' },
+    { value: 'equal_spread', label: 'دفعات متساوية' },
+    { value: 'custom', label: 'نسب مخصصة' },
+  ];
+  var html = '<select class="method-select" data-item="' + itemKey + '" onchange="onMethodChange(this)">';
+  for (var o of options) {
+    html += '<option value="' + o.value + '"' + (o.value === currentMethod ? ' selected' : '') + '>' + o.label + '</option>';
   }
+  html += '</select>';
+  return html;
+}
+
+function buildDetailCell(itemKey, method, section, phaseInfo, item) {
+  var duration = getPhaseDuration(section, phaseInfo);
+  var phaseStart = getPhaseStart(section, phaseInfo);
+  var amount = item[SCENARIO_KEY].amount;
+
+  if (method === 'lump_sum') {
+    var relMonth = 1;
+    if (item.lumpSumMonth) {
+      relMonth = Math.max(1, Math.min(duration, item.lumpSumMonth - phaseStart + 1));
+    }
+    var html = '<div class="lump-info">';
+    html += '<span style="font-size:9px;">الشهر</span> ';
+    html += '<select class="month-input" data-item="' + itemKey + '" style="width:50px;">';
+    for (var m = 1; m <= duration; m++) {
+      html += '<option value="' + m + '"' + (m === relMonth ? ' selected' : '') + '>' + m + '</option>';
+    }
+    html += '</select>';
+    html += '<span style="font-size:9px;"> من ' + duration + '</span>';
+    html += '</div>';
+    return '<td>' + html + '</td>';
+  }
+
+  if (method === 'equal_spread') {
+    var perMonth = amount / duration;
+    return '<td><span class="equal-info">÷ ' + duration + ' شهر = ' + fmt(perMonth) + ' / شهر</span></td>';
+  }
+
+  if (method === 'custom') {
+    var html = '<td><div class="pct-container" id="pct-' + itemKey + '">';
+    var existingPcts = [];
+    if (item.customJson) {
+      try { existingPcts = JSON.parse(item.customJson); } catch(e) {}
+    }
+    for (var m = 0; m < duration; m++) {
+      var val = existingPcts[m] || '';
+      html += '<div class="pct-field">';
+      html += '<label>ش' + (m+1) + '</label>';
+      html += '<input type="number" min="0" max="100" step="0.1" value="' + val + '" data-item="' + itemKey + '" data-month="' + m + '" oninput="onPctChange(\'' + itemKey + '\',' + duration + ')">';
+      html += '%</div>';
+    }
+    html += '</div>';
+    html += '<div class="pct-total" id="pct-total-' + itemKey + '">المجموع: 0%</div>';
+    html += '</td>';
+    return html;
+  }
+
   return '<td class="na-cell">—</td>';
+}
+
+function onMethodChange(sel) {
+  var itemKey = sel.getAttribute('data-item');
+  var method = sel.value;
+  var row = sel.closest('tr');
+  var detailCell = row.querySelector('.detail-cell');
+  if (!detailCell) return;
+
+  var item = window._itemsMap[itemKey];
+  if (!item) return;
+
+  detailCell.outerHTML = buildDetailCell(itemKey, method, item.section, window._phaseInfo, item).replace('<td>', '<td class="detail-cell">');
+
+  // Update pct total if custom
+  if (method === 'custom') {
+    var duration = getPhaseDuration(item.section, window._phaseInfo);
+    onPctChange(itemKey, duration);
+  }
+}
+
+function onPctChange(itemKey, duration) {
+  var container = document.getElementById('pct-' + itemKey);
+  if (!container) return;
+  var inputs = container.querySelectorAll('input[type="number"]');
+  var total = 0;
+  inputs.forEach(function(inp) { total += parseFloat(inp.value) || 0; });
+  var totalEl = document.getElementById('pct-total-' + itemKey);
+  if (totalEl) {
+    totalEl.textContent = 'المجموع: ' + total.toFixed(1) + '%';
+    totalEl.className = 'pct-total ' + (Math.abs(total - 100) < 0.1 ? 'ok' : 'err');
+  }
 }
 
 async function loadData() {
   var params = new URLSearchParams(window.location.search);
   var projectId = params.get('projectId');
-  
+
   if (!projectId) {
     document.getElementById('loading').style.display = 'none';
     document.getElementById('error').style.display = 'block';
@@ -126,22 +200,29 @@ async function loadData() {
   try {
     var resp = await fetch('/api/trpc/cashFlowSettings.getCostSettingsComparison?input=' + encodeURIComponent(JSON.stringify({ json: { projectId: Number(projectId) } })));
     var json = await resp.json();
-    
+
     if (json.error) throw new Error(json.error.message || 'خطأ في تحميل البيانات');
 
     var data = json.result.data.json;
     document.getElementById('project-name').textContent = data.projectName;
-    
+
     var phaseInfo = data.phaseInfo;
-    
+    window._phaseInfo = phaseInfo;
+    window._itemsMap = {};
+
+    // Index items by key
+    for (var item of data.items) {
+      window._itemsMap[item.itemKey] = item;
+    }
+
     // Build table
     var html = '<table><thead><tr>';
-    html += '<th class="h-main" style="text-align:right;">البند</th>';
-    html += '<th class="h-main">المبلغ (د.إ)</th>';
-    html += '<th class="h-main">المصدر</th>';
-    html += '<th class="h-main">المرحلة</th>';
-    html += '<th class="h-main">طريقة الدفع</th>';
-    html += '<th class="h-main">التفاصيل</th>';
+    html += '<th class="h-main" style="text-align:right;min-width:160px;">البند</th>';
+    html += '<th class="h-main" style="min-width:90px;">المبلغ (د.إ)</th>';
+    html += '<th class="h-main" style="min-width:80px;">المصدر</th>';
+    html += '<th class="h-main" style="min-width:70px;">المرحلة</th>';
+    html += '<th class="h-main" style="min-width:100px;">طريقة الدفع</th>';
+    html += '<th class="h-main" style="min-width:200px;">التفاصيل</th>';
     html += '</tr></thead><tbody>';
 
     // Group items by section
@@ -150,7 +231,6 @@ async function loadData() {
       sectionMap[s.id] = { label: s.label, items: [] };
     }
     for (var item of data.items) {
-      // Only show items active in O1
       if (!item[SCENARIO_KEY].active) continue;
       if (sectionMap[item.section]) {
         sectionMap[item.section].items.push(item);
@@ -161,26 +241,29 @@ async function loadData() {
     for (var s of data.sections) {
       var sec = sectionMap[s.id];
       if (sec.items.length === 0) continue;
-      
+
       html += '<tr class="section-header"><td colspan="6">' + sec.label + '</td></tr>';
-      
+
       for (var item of sec.items) {
         var amount = item[SCENARIO_KEY].amount;
         var isPaid = item.section === 'paid';
-        
+
         html += '<tr>';
         html += '<td class="col-item">' + item.nameAr + '</td>';
         html += '<td class="col-amount">' + fmt(amount) + '</td>';
         html += renderSourceCell(item);
-        
+
         if (isPaid) {
           html += '<td class="na-cell">—</td>';
           html += '<td class="na-cell">—</td>';
           html += '<td class="na-cell">—</td>';
         } else {
           html += '<td>' + getPhaseLabel(item.section) + '</td>';
-          html += '<td>' + getMethodLabel(item.distributionMethod) + '</td>';
-          html += renderDetailCell(item, phaseInfo);
+          html += '<td>' + buildMethodSelect(item.itemKey, item.distributionMethod) + '</td>';
+          var detailHtml = buildDetailCell(item.itemKey, item.distributionMethod, item.section, phaseInfo, item);
+          // Add detail-cell class for targeting
+          detailHtml = detailHtml.replace('<td>', '<td class="detail-cell">');
+          html += detailHtml;
         }
         html += '</tr>';
       }
@@ -212,8 +295,8 @@ async function loadData() {
     html += '</tbody></table>';
 
     // Phase durations info
-    html += '<div style="margin-top:10px;padding:10px;background:#f0f4ff;border-radius:6px;font-size:11px;color:#334155;">';
-    html += '<strong>المدد الزمنية:</strong> ';
+    html += '<div class="phase-info-box">';
+    html += '<strong>المدد الزمنية (من البطاقة التعريفية):</strong> ';
     html += 'التصاميم: ' + phaseInfo.design.duration + ' شهر | ';
     html += 'أوف بلان: ' + phaseInfo.offplan.duration + ' شهر | ';
     html += 'الإنشاء: ' + phaseInfo.construction.duration + ' شهر | ';
@@ -224,6 +307,14 @@ async function loadData() {
     document.getElementById('loading').style.display = 'none';
     document.getElementById('table-container').style.display = 'block';
     document.getElementById('table-container').innerHTML = html;
+
+    // Initialize pct totals for any custom items
+    for (var item of data.items) {
+      if (item.distributionMethod === 'custom' && item[SCENARIO_KEY].active && item.section !== 'paid') {
+        var duration = getPhaseDuration(item.section, phaseInfo);
+        onPctChange(item.itemKey, duration);
+      }
+    }
 
   } catch (err) {
     document.getElementById('loading').style.display = 'none';
