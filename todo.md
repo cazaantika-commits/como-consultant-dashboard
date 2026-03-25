@@ -410,3 +410,4 @@
 - [x] Add Joel's suggestions table back (read-only reference with suggested percentages and prices)
 - [x] Make price/sqft field editable in LEFT results table without changing layout
 - [x] Scenario cards clickable — clicking one highlights it and saves its revenue as approved for financial analysis
+- [x] BUG: جدول مقترحات جويل لا يظهر — تم إصلاح قراءة المفاتيح المتداخلة من JSON

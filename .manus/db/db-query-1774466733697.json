@@ -1,0 +1,25 @@
+{
+  "query": "SHOW TABLES LIKE '%market%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SHOW TABLES LIKE '%market%';",
+  "rows": [
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%market%)": "marketOverview"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%market%)": "market_listings"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%market%)": "market_reports"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%market%)": "market_reports_kb"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%market%)": "market_transactions"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%market%)\nmarketOverview\nmarket_listings\nmarket_reports\nmarket_reports_kb\nmarket_transactions\n",
+  "stderr": "",
+  "execution_time_ms": 1715
+}

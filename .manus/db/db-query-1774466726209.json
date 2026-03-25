@@ -1,0 +1,26 @@
+{
+  "query": "SELECT projectId, CASE WHEN aiRecommendationsJson IS NOT NULL AND aiRecommendationsJson != '' THEN 'YES' ELSE 'NO' END as has_ai FROM competition_pricing LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT projectId, CASE WHEN aiRecommendationsJson IS NOT NULL AND aiRecommendationsJson != '' THEN 'YES' ELSE 'NO' END as has_ai FROM competition_pricing LIMIT 10;",
+  "rows": [
+    {
+      "projectId": "4",
+      "has_ai": "YES"
+    },
+    {
+      "projectId": "3",
+      "has_ai": "YES"
+    },
+    {
+      "projectId": "2",
+      "has_ai": "YES"
+    },
+    {
+      "projectId": "5",
+      "has_ai": "YES"
+    }
+  ],
+  "messages": [],
+  "stdout": "projectId\thas_ai\n4\tYES\n3\tYES\n2\tYES\n5\tYES\n",
+  "stderr": "",
+  "execution_time_ms": 1648
+}

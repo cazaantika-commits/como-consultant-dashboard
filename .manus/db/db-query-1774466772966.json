@@ -1,0 +1,103 @@
+{
+  "query": "SELECT LEFT(aiRecommendationsJson, 500) as recs FROM marketOverview WHERE projectId = 4;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT LEFT(aiRecommendationsJson, 500) as recs FROM marketOverview WHERE projectId = 4;",
+  "rows": [
+    {
+      "recs": "{"
+    },
+    {
+      "recs": "  \"residential\": {"
+    },
+    {
+      "recs": "    \"studio\": {"
+    },
+    {
+      "recs": "      \"recommended\": false,"
+    },
+    {
+      "recs": "      \"pct\": 0,"
+    },
+    {
+      "recs": "      \"avgArea\": 0"
+    },
+    {
+      "recs": "    },"
+    },
+    {
+      "recs": "    \"oneBr\": {"
+    },
+    {
+      "recs": "      \"recommended\": true,"
+    },
+    {
+      "recs": "      \"pct\": 40,"
+    },
+    {
+      "recs": "      \"avgArea\": 850"
+    },
+    {
+      "recs": "    },"
+    },
+    {
+      "recs": "    \"twoBr\": {"
+    },
+    {
+      "recs": "      \"recommended\": true,"
+    },
+    {
+      "recs": "      \"pct\": 40,"
+    },
+    {
+      "recs": "      \"avgArea\": 1300"
+    },
+    {
+      "recs": "    },"
+    },
+    {
+      "recs": "    \"threeBr\": {"
+    },
+    {
+      "recs": "      \"recommended\": true,"
+    },
+    {
+      "recs": "      \"pct\": 20,"
+    },
+    {
+      "recs": "      \"avgArea\": 1800"
+    },
+    {
+      "recs": "    }"
+    },
+    {
+      "recs": "  },"
+    },
+    {
+      "recs": "  \"retail\": {"
+    },
+    {
+      "recs": "    \"hasRetail\": true,"
+    },
+    {
+      "recs": "    \"small\": {"
+    },
+    {
+      "recs": "      \"pct\": 50,"
+    },
+    {
+      "recs": "      \"avgArea\": 500"
+    },
+    {
+      "recs": "    },"
+    },
+    {
+      "recs": "    \"medium\": {"
+    },
+    {
+      "recs": "      \"pct\""
+    }
+  ],
+  "messages": [],
+  "stdout": "recs\n{\n  \"residential\": {\n    \"studio\": {\n      \"recommended\": false,\n      \"pct\": 0,\n      \"avgArea\": 0\n    },\n    \"oneBr\": {\n      \"recommended\": true,\n      \"pct\": 40,\n      \"avgArea\": 850\n    },\n    \"twoBr\": {\n      \"recommended\": true,\n      \"pct\": 40,\n      \"avgArea\": 1300\n    },\n    \"threeBr\": {\n      \"recommended\": true,\n      \"pct\": 20,\n      \"avgArea\": 1800\n    }\n  },\n  \"retail\": {\n    \"hasRetail\": true,\n    \"small\": {\n      \"pct\": 50,\n      \"avgArea\": 500\n    },\n    \"medium\": {\n      \"pct\"\n",
+  "stderr": "",
+  "execution_time_ms": 1588
+}

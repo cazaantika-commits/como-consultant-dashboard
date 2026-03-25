@@ -1,0 +1,88 @@
+{
+  "query": "SELECT aiRecommendationsJson FROM competition_pricing WHERE projectId = 4;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT aiRecommendationsJson FROM competition_pricing WHERE projectId = 4;",
+  "rows": [
+    {
+      "aiRecommendationsJson": "{"
+    },
+    {
+      "aiRecommendationsJson": "  \"scenarios\": {"
+    },
+    {
+      "aiRecommendationsJson": "    \"optimistic\": {"
+    },
+    {
+      "aiRecommendationsJson": "      \"residential\": { \"studio\": 1605, \"oneBr\": 1488, \"twoBr\": 1370, \"threeBr\": 1263 },"
+    },
+    {
+      "aiRecommendationsJson": "      \"retail\": { \"small\": 2065, \"medium\": 2065, \"large\": 2065 },"
+    },
+    {
+      "aiRecommendationsJson": "      \"offices\": { \"small\": 2065, \"medium\": 2065, \"large\": 2065 }"
+    },
+    {
+      "aiRecommendationsJson": "    },"
+    },
+    {
+      "aiRecommendationsJson": "    \"base\": {"
+    },
+    {
+      "aiRecommendationsJson": "      \"residential\": { \"studio\": 1500, \"oneBr\": 1390, \"twoBr\": 1280, \"threeBr\": 1180 },"
+    },
+    {
+      "aiRecommendationsJson": "      \"retail\": { \"small\": 1930, \"medium\": 1930, \"large\": 1930 },"
+    },
+    {
+      "aiRecommendationsJson": "      \"offices\": { \"small\": 1930, \"medium\": 1930, \"large\": 1930 }"
+    },
+    {
+      "aiRecommendationsJson": "    },"
+    },
+    {
+      "aiRecommendationsJson": "    \"conservative\": {"
+    },
+    {
+      "aiRecommendationsJson": "      \"residential\": { \"studio\": 1395, \"oneBr\": 1292, \"twoBr\": 1190, \"threeBr\": 1097 },"
+    },
+    {
+      "aiRecommendationsJson": "      \"retail\": { \"small\": 1795, \"medium\": 1795, \"large\": 1795 },"
+    },
+    {
+      "aiRecommendationsJson": "      \"offices\": { \"small\": 1795, \"medium\": 1795, \"large\": 1795 }"
+    },
+    {
+      "aiRecommendationsJson": "    }"
+    },
+    {
+      "aiRecommendationsJson": "  },"
+    },
+    {
+      "aiRecommendationsJson": "  \"paymentPlan\": {"
+    },
+    {
+      "aiRecommendationsJson": "    \"booking\": { \"pct\": 10, \"timing\": \"عند توقيع اتفاقية الحجز (SPA)\" },"
+    },
+    {
+      "aiRecommendationsJson": "    \"construction\": { \"pct\": 50, \"timing\": \"دفعات مجدولة مرتبطة بمراحل البناء\" },"
+    },
+    {
+      "aiRecommendationsJson": "    \"handover\": { \"pct\": 20, \"timing\": \"عند التسليم واستلام المفتاح\" },"
+    },
+    {
+      "aiRecommendationsJson": "    \"deferred\": { \"pct\": 20, \"timing\": \"على دفعات مجدولة لمدة 1-2 سنة بعد التسليم\" }"
+    },
+    {
+      "aiRecommendationsJson": "  },"
+    },
+    {
+      "aiRecommendationsJson": "  \"weightedAvgPrice\": { \"studio\": 1500, \"oneBr\": 1390, \"twoBr\": 1280, \"threeBr\": 1180 }"
+    },
+    {
+      "aiRecommendationsJson": "}"
+    }
+  ],
+  "messages": [],
+  "stdout": "aiRecommendationsJson\n{\n  \"scenarios\": {\n    \"optimistic\": {\n      \"residential\": { \"studio\": 1605, \"oneBr\": 1488, \"twoBr\": 1370, \"threeBr\": 1263 },\n      \"retail\": { \"small\": 2065, \"medium\": 2065, \"large\": 2065 },\n      \"offices\": { \"small\": 2065, \"medium\": 2065, \"large\": 2065 }\n    },\n    \"base\": {\n      \"residential\": { \"studio\": 1500, \"oneBr\": 1390, \"twoBr\": 1280, \"threeBr\": 1180 },\n      \"retail\": { \"small\": 1930, \"medium\": 1930, \"large\": 1930 },\n      \"offices\": { \"small\": 1930, \"medium\": 1930, \"large\": 1930 }\n    },\n    \"conservative\": {\n      \"residential\": { \"studio\": 1395, \"oneBr\": 1292, \"twoBr\": 1190, \"threeBr\": 1097 },\n      \"retail\": { \"small\": 1795, \"medium\": 1795, \"large\": 1795 },\n      \"offices\": { \"small\": 1795, \"medium\": 1795, \"large\": 1795 }\n    }\n  },\n  \"paymentPlan\": {\n    \"booking\": { \"pct\": 10, \"timing\": \"عند توقيع اتفاقية الحجز (SPA)\" },\n    \"construction\": { \"pct\": 50, \"timing\": \"دفعات مجدولة مرتبطة بمراحل البناء\" },\n    \"handover\": { \"pct\": 20, \"timing\": \"عند التسليم واستلام المفتاح\" },\n    \"deferred\": { \"pct\": 20, \"timing\": \"على دفعات مجدولة لمدة 1-2 سنة بعد التسليم\" }\n  },\n  \"weightedAvgPrice\": { \"studio\": 1500, \"oneBr\": 1390, \"twoBr\": 1280, \"threeBr\": 1180 }\n}\n",
+  "stderr": "",
+  "execution_time_ms": 1711
+}

@@ -47,19 +47,23 @@ interface UnitRow {
   catLabel: string; catColor: string; pctKey: string; avgKey: string;
   priceKey: string; baseField: string; divider?: boolean;
   is2br?: boolean;
+  /** Key inside the nested aiRecommendationsJson for marketOverview (e.g. "studio", "oneBr") */
+  joelMoKey?: string;
+  /** Key inside the nested aiRecommendationsJson for competitionPricing (e.g. "studio", "small") */
+  joelCpKey?: string;
 }
 
 const UNIT_ROWS: UnitRow[] = [
-  { key: "studio", label: "استديو", cat: "residential", catLabel: "سكني", catColor: "sky", pctKey: "residentialStudioPct", avgKey: "residentialStudioAvgArea", priceKey: "studioPrice", baseField: "baseStudioPrice" },
-  { key: "1br", label: "غرفة وصالة", cat: "residential", catLabel: "", catColor: "sky", pctKey: "residential1brPct", avgKey: "residential1brAvgArea", priceKey: "oneBrPrice", baseField: "base1brPrice" },
-  { key: "2br", label: "غرفتان وصالة", cat: "residential", catLabel: "", catColor: "sky", pctKey: "residential2brPct", avgKey: "residential2brAvgArea", priceKey: "twoBrPrice", baseField: "base2brPrice", is2br: true },
-  { key: "3br", label: "ثلاث غرف", cat: "residential", catLabel: "", catColor: "sky", pctKey: "residential3brPct", avgKey: "residential3brAvgArea", priceKey: "threeBrPrice", baseField: "base3brPrice" },
-  { key: "retSmall", label: "صغيرة", cat: "retail", catLabel: "تجزئة", catColor: "amber", pctKey: "retailSmallPct", avgKey: "retailSmallAvgArea", priceKey: "retailSmallPrice", baseField: "baseRetailSmallPrice", divider: true },
-  { key: "retMedium", label: "متوسطة", cat: "retail", catLabel: "", catColor: "amber", pctKey: "retailMediumPct", avgKey: "retailMediumAvgArea", priceKey: "retailMediumPrice", baseField: "baseRetailMediumPrice" },
-  { key: "retLarge", label: "كبيرة", cat: "retail", catLabel: "", catColor: "amber", pctKey: "retailLargePct", avgKey: "retailLargeAvgArea", priceKey: "retailLargePrice", baseField: "baseRetailLargePrice" },
-  { key: "offSmall", label: "صغيرة", cat: "offices", catLabel: "مكاتب", catColor: "violet", pctKey: "officeSmallPct", avgKey: "officeSmallAvgArea", priceKey: "officeSmallPrice", baseField: "baseOfficeSmallPrice", divider: true },
-  { key: "offMedium", label: "متوسطة", cat: "offices", catLabel: "", catColor: "violet", pctKey: "officeMediumPct", avgKey: "officeMediumAvgArea", priceKey: "officeMediumPrice", baseField: "baseOfficeMediumPrice" },
-  { key: "offLarge", label: "كبيرة", cat: "offices", catLabel: "", catColor: "violet", pctKey: "officeLargePct", avgKey: "officeLargeAvgArea", priceKey: "officeLargePrice", baseField: "baseOfficeLargePrice" },
+  { key: "studio", label: "استديو", cat: "residential", catLabel: "سكني", catColor: "sky", pctKey: "residentialStudioPct", avgKey: "residentialStudioAvgArea", priceKey: "studioPrice", baseField: "baseStudioPrice", joelMoKey: "studio", joelCpKey: "studio" },
+  { key: "1br", label: "غرفة وصالة", cat: "residential", catLabel: "", catColor: "sky", pctKey: "residential1brPct", avgKey: "residential1brAvgArea", priceKey: "oneBrPrice", baseField: "base1brPrice", joelMoKey: "oneBr", joelCpKey: "oneBr" },
+  { key: "2br", label: "غرفتان وصالة", cat: "residential", catLabel: "", catColor: "sky", pctKey: "residential2brPct", avgKey: "residential2brAvgArea", priceKey: "twoBrPrice", baseField: "base2brPrice", is2br: true, joelMoKey: "twoBr", joelCpKey: "twoBr" },
+  { key: "3br", label: "ثلاث غرف", cat: "residential", catLabel: "", catColor: "sky", pctKey: "residential3brPct", avgKey: "residential3brAvgArea", priceKey: "threeBrPrice", baseField: "base3brPrice", joelMoKey: "threeBr", joelCpKey: "threeBr" },
+  { key: "retSmall", label: "صغيرة", cat: "retail", catLabel: "تجزئة", catColor: "amber", pctKey: "retailSmallPct", avgKey: "retailSmallAvgArea", priceKey: "retailSmallPrice", baseField: "baseRetailSmallPrice", divider: true, joelMoKey: "small", joelCpKey: "small" },
+  { key: "retMedium", label: "متوسطة", cat: "retail", catLabel: "", catColor: "amber", pctKey: "retailMediumPct", avgKey: "retailMediumAvgArea", priceKey: "retailMediumPrice", baseField: "baseRetailMediumPrice", joelMoKey: "medium", joelCpKey: "medium" },
+  { key: "retLarge", label: "كبيرة", cat: "retail", catLabel: "", catColor: "amber", pctKey: "retailLargePct", avgKey: "retailLargeAvgArea", priceKey: "retailLargePrice", baseField: "baseRetailLargePrice", joelMoKey: "large", joelCpKey: "large" },
+  { key: "offSmall", label: "صغيرة", cat: "offices", catLabel: "مكاتب", catColor: "violet", pctKey: "officeSmallPct", avgKey: "officeSmallAvgArea", priceKey: "officeSmallPrice", baseField: "baseOfficeSmallPrice", divider: true, joelMoKey: "small", joelCpKey: "small" },
+  { key: "offMedium", label: "متوسطة", cat: "offices", catLabel: "", catColor: "violet", pctKey: "officeMediumPct", avgKey: "officeMediumAvgArea", priceKey: "officeMediumPrice", baseField: "baseOfficeMediumPrice", joelMoKey: "medium", joelCpKey: "medium" },
+  { key: "offLarge", label: "كبيرة", cat: "offices", catLabel: "", catColor: "violet", pctKey: "officeLargePct", avgKey: "officeLargeAvgArea", priceKey: "officeLargePrice", baseField: "baseOfficeLargePrice", joelMoKey: "large", joelCpKey: "large" },
 ];
 
 const CATS = [
@@ -441,9 +445,15 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
               {UNIT_ROWS.map(row => {
                 const moRec = joelSuggestions.mo;
                 const cpRec = joelSuggestions.cp;
-                const pct = moRec?.[row.pctKey] || 0;
-                const avg = moRec?.[row.avgKey] || 0;
-                const price = cpRec?.[row.baseField] || 0;
+                // Read from nested JSON structure: moRec.{cat}.{joelMoKey}.pct / .avgArea
+                const moCategory = moRec?.[row.cat];
+                const moUnit = moCategory?.[row.joelMoKey || ""];
+                const pct = moUnit?.pct || 0;
+                const avg = moUnit?.avgArea || 0;
+                // Read from nested JSON: cpRec.scenarios.base.{cat}.{joelCpKey}
+                const cpScenarios = cpRec?.scenarios;
+                const cpBase = cpScenarios?.base;
+                const price = cpBase?.[row.cat]?.[row.joelCpKey || ""] || 0;
                 if (!pct && !avg && !price) return null;
                 return (
                   <tr key={row.key} className={`border-b ${row.divider ? "border-t-[3px] border-t-purple-200" : "border-purple-50"} hover:bg-purple-50/20`}>
