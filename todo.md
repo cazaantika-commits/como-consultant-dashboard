@@ -379,3 +379,7 @@
 - [x] Add parking calculations based on Dubai regulations
 - [x] Add three pricing scenarios (base ±10%) with revenue calculations
 - [x] Remove costs/profits section entirely
+- [x] Redesign CostsCashFlowTab: compact rows, minimal spacing, clean white background
+- [x] Add total area column (units × avg area) to distribution table
+- [x] Bold dividers between residential/retail/offices sections
+- [x] Style inspired by reference image: colored badges, clean lines, professional look

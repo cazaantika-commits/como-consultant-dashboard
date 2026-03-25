@@ -2,23 +2,21 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
 import { DEFAULT_AVG_AREAS } from "@shared/feasibilityUtils";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import {
   Loader2, Sparkles, DollarSign,
   TrendingUp, TrendingDown, BarChart3, Save, Zap, CheckCircle2,
-  ChevronDown, ChevronUp, Building2, MapPin, Car, Ruler,
-  LayoutGrid, Calculator
+  Car
 } from "lucide-react";
 
 const JOEL_AVATAR = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/mCOkEovAXTtxsABs.png";
 
 /* ═══ Parking Standards — Dubai Development Authority (sqft) ═══ */
 const PARKING = {
-  residential: { threshold: 1615, below: 1, above: 2 }, // ≤1615sqft → 1 spot, >1615sqft → 2 spots
-  retail: { perSqft: 753 },    // 1 spot per 753 sqft
-  offices: { perSqft: 538 },   // 1 spot per 538 sqft
+  residential: { threshold: 1615, below: 1, above: 2 },
+  retail: { perSqft: 753 },
+  offices: { perSqft: 538 },
 };
 
 /* ═══ Helpers ═══ */
@@ -38,36 +36,16 @@ function EditableNum({ value, onChange, suffix, disabled, className: extraClass 
         onFocus={() => { setFocused(true); setLocalVal(value ? String(value) : ""); }}
         onBlur={() => { setFocused(false); const n = parseFloat(localVal.replace(/,/g, "")); if (!isNaN(n)) onChange(n); }}
         onChange={(e) => setLocalVal(e.target.value)}
-        className={`h-7 text-xs text-center ${extraClass || ""}`}
+        className={`h-6 text-[11px] text-center border-0 border-b border-dashed border-gray-300 rounded-none bg-transparent focus:border-blue-400 focus:bg-blue-50/30 px-1 ${extraClass || ""}`}
         disabled={disabled} dir="ltr" />
-      {suffix && <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[9px] text-muted-foreground">{suffix}</span>}
+      {suffix && <span className="absolute left-0.5 top-1/2 -translate-y-1/2 text-[8px] text-gray-400">{suffix}</span>}
     </div>
-  );
-}
-
-function SectionHeader({ title, icon: Icon, isOpen, onToggle, badge }: { title: string; icon: any; isOpen: boolean; onToggle: () => void; badge?: string }) {
-  return (
-    <button onClick={onToggle} className="w-full flex items-center justify-between px-4 py-2.5 bg-gradient-to-l from-muted/40 to-muted/10 border border-border/50 rounded-xl hover:bg-muted/50 transition-all">
-      <div className="flex items-center gap-2">
-        <Icon className="w-4.5 h-4.5 text-primary" />
-        <span className="text-sm font-bold text-foreground">{title}</span>
-        {badge && <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">{badge}</span>}
-      </div>
-      {isOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-    </button>
   );
 }
 
 type ScenarioKey = "optimistic" | "base" | "conservative";
 
-/* ═══ Zero-Waste Distribution Algorithm ═══
- * 1. Allocate area by percentage for each type
- * 2. Calculate units = floor(allocated / avgArea)
- * 3. Calculate surplus per type = allocated - (units * avgArea)
- * 4. Sum total surplus
- * 5. Add units from smallest type first using surplus
- * 6. Absorb remaining surplus into largest type (increase its unit count)
- */
+/* ═══ Zero-Waste Distribution Algorithm ═══ */
 interface UnitType {
   key: string;
   label: string;
@@ -87,6 +65,7 @@ interface DistResult {
   parking: number;
   basePricePerSqft: number;
   unitPrice: number;
+  totalArea: number;
   revenueBase: number;
   revenueOpt: number;
   revenueCons: number;
@@ -97,65 +76,37 @@ function zeroWasteDistribute(types: UnitType[], totalSellable: number): DistResu
   const activeTypes = types.filter(t => t.pct > 0 && t.avgArea > 0);
   if (activeTypes.length === 0) return [];
 
-  // Step 1: Initial allocation
   let results: DistResult[] = activeTypes.map(t => {
     const allocated = totalSellable * (t.pct / 100);
     const units = Math.floor(allocated / t.avgArea);
-    const surplus = allocated - (units * t.avgArea);
     return {
-      key: t.key,
-      label: t.label,
-      pct: t.pct,
-      avgArea: t.avgArea,
-      allocated,
-      units,
-      surplus,
-      parking: 0,
+      key: t.key, label: t.label, pct: t.pct, avgArea: t.avgArea,
+      allocated, units, surplus: 0, parking: 0,
       basePricePerSqft: t.basePricePerSqft,
       unitPrice: t.avgArea * t.basePricePerSqft,
-      revenueBase: 0,
-      revenueOpt: 0,
-      revenueCons: 0,
+      totalArea: units * t.avgArea,
+      revenueBase: 0, revenueOpt: 0, revenueCons: 0,
     };
   });
 
-  // Step 2: Collect total surplus
-  let totalSurplus = results.reduce((s, r) => s + r.surplus, 0);
-
-  // Step 3: Add units from smallest type first
+  let totalSurplus = results.reduce((s, r) => s + (r.allocated - r.units * r.avgArea), 0);
   const sortedByArea = [...results].sort((a, b) => a.avgArea - b.avgArea);
   for (const item of sortedByArea) {
     while (totalSurplus >= item.avgArea) {
       const r = results.find(r => r.key === item.key)!;
       r.units += 1;
+      r.totalArea = r.units * r.avgArea;
       totalSurplus -= item.avgArea;
     }
   }
 
-  // Step 4: Absorb remaining surplus into largest type
-  if (totalSurplus > 0 && results.length > 0) {
-    const largest = [...results].sort((a, b) => b.avgArea - a.avgArea)[0];
-    // remaining surplus < smallest unit area, so it's truly wasted — but we mark it
-    largest.surplus = totalSurplus;
-  }
-
-  // Recalculate surplus for each
-  results = results.map(r => ({
-    ...r,
-    surplus: r.allocated - (r.units * r.avgArea) + (totalSurplus > 0 && r.key === [...results].sort((a, b) => b.avgArea - a.avgArea)[0].key ? 0 : 0),
-  }));
-
-  // Final surplus = total sellable - sum of (units * avgArea)
   const usedArea = results.reduce((s, r) => s + r.units * r.avgArea, 0);
   const finalSurplus = totalSellable - usedArea;
-
-  // Distribute final surplus display to the largest type
-  results = results.map(r => ({ ...r, surplus: 0 }));
+  results = results.map(r => ({ ...r, surplus: 0, totalArea: r.units * r.avgArea }));
   if (finalSurplus > 0 && results.length > 0) {
     const largestIdx = results.reduce((maxIdx, r, i, arr) => r.avgArea > arr[maxIdx].avgArea ? i : maxIdx, 0);
     results[largestIdx].surplus = finalSurplus;
   }
-
   return results;
 }
 
@@ -192,37 +143,24 @@ interface CostsCashFlowTabProps {
 }
 
 export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTabProps) {
-  const [showLandDetails, setShowLandDetails] = useState(true);
-  const [showJoelTable, setShowJoelTable] = useState(true);
-  const [showDistribution, setShowDistribution] = useState(true);
-
-  // ═══ Data queries ═══
   const projectQuery = trpc.projects.getById.useQuery(projectId || 0, { enabled: !!projectId, staleTime: 5000 });
   const project = projectQuery.data;
   const moQuery = trpc.marketOverview.getByProject.useQuery(projectId || 0, { enabled: !!projectId, staleTime: 5000 });
   const cpQuery = trpc.competitionPricing.getByProject.useQuery(projectId || 0, { enabled: !!projectId, staleTime: 2000, refetchOnWindowFocus: true });
-
-  // ═══ Joelle Engine auto-populate status ═══
   const joelleStatusQuery = trpc.joelleEngine.getAutoPopulateStatus.useQuery(projectId || 0, { enabled: !!projectId, staleTime: 10000 });
+
   const applyJoelleMutation = trpc.joelleEngine.applyJoelleOutputs.useMutation({
     onSuccess: (data) => {
-      moQuery.refetch();
-      cpQuery.refetch();
-      joelleStatusQuery.refetch();
-      if (data.marketOverview && data.competitionPricing) {
-        toast.success("تم تطبيق مخرجات جويل بنجاح — توزيع الوحدات + التسعير");
-      } else if (data.marketOverview) {
-        toast.success("تم تطبيق توزيع الوحدات من الدراسات والأبحاث");
-      } else if (data.competitionPricing) {
-        toast.success("تم تطبيق التسعير من الدراسات والأبحاث");
-      } else {
-        toast.info("لا توجد مخرجات جاهزة من الدراسات والأبحاث — شغّل المحركات أولاً");
-      }
+      moQuery.refetch(); cpQuery.refetch(); joelleStatusQuery.refetch();
+      if (data.marketOverview && data.competitionPricing) toast.success("تم تطبيق مخرجات جويل بنجاح");
+      else if (data.marketOverview) toast.success("تم تطبيق توزيع الوحدات");
+      else if (data.competitionPricing) toast.success("تم تطبيق التسعير");
+      else toast.info("لا توجد مخرجات جاهزة — شغّل المحركات أولاً");
     },
     onError: (err) => toast.error(err.message || "فشل في تطبيق مخرجات جويل"),
   });
 
-  // ═══ Distribution state (from marketOverview) ═══
+  // ═══ Distribution state ═══
   const [moFields, setMoFields] = useState({
     residentialStudioPct: 0, residentialStudioAvgArea: 0,
     residential1brPct: 0, residential1brAvgArea: 0,
@@ -238,7 +176,7 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
   const [moDirty, setMoDirty] = useState(false);
   const [moJoelleSource, setMoJoelleSource] = useState(false);
 
-  // ═══ Pricing state (from competitionPricing) — base prices only ═══
+  // ═══ Pricing state ═══
   const [basePrices, setBasePrices] = useState({
     studioPrice: 0, oneBrPrice: 0, twoBrPrice: 0, threeBrPrice: 0,
     retailSmallPrice: 0, retailMediumPrice: 0, retailLargePrice: 0,
@@ -291,7 +229,6 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
   useEffect(() => {
     if (cpQuery.data) {
       const d = cpQuery.data;
-      // Load base prices
       setBasePrices({
         studioPrice: d.baseStudioPrice || 0,
         oneBrPrice: d.base1brPrice || 0,
@@ -335,13 +272,12 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
   const gfaOffSqft = parseFloat(p.gfaOfficesSqft || "0");
   const buaSqft = parseFloat(p.manualBuaSqft || "0");
 
-  // Sellable areas (efficiency ratios)
   const sellableRes = gfaResSqft * 0.95;
   const sellableRet = gfaRetSqft * 0.97;
   const sellableOff = gfaOffSqft * 0.95;
   const totalSellable = sellableRes + sellableRet + sellableOff;
 
-  // ═══ Joel's suggestions (from AI recommendations JSON) ═══
+  // ═══ Joel's suggestions ═══
   const joelSuggestions = useMemo(() => {
     try {
       const moData = moQuery.data;
@@ -373,12 +309,10 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
     { key: "offLarge", label: "كبيرة", pct: moFields.officeLargePct, avgArea: getAvg("officeLargePct", moFields.officeLargeAvgArea), basePricePerSqft: basePrices.officeLargePrice },
   ], [moFields, basePrices, getAvg]);
 
-  // Run zero-waste algorithm + parking + revenue
   const resResults = useMemo(() => calcRevenue(calcParking(zeroWasteDistribute(resTypes, sellableRes), "residential")), [resTypes, sellableRes]);
   const retResults = useMemo(() => calcRevenue(calcParking(zeroWasteDistribute(retTypes, sellableRet), "retail")), [retTypes, sellableRet]);
   const offResults = useMemo(() => calcRevenue(calcParking(zeroWasteDistribute(offTypes, sellableOff), "offices")), [offTypes, sellableOff]);
 
-  // Totals
   const totalUnits = [...resResults, ...retResults, ...offResults].reduce((s, r) => s + r.units, 0);
   const totalParking = [...resResults, ...retResults, ...offResults].reduce((s, r) => s + r.parking, 0);
   const totalSurplus = [...resResults, ...retResults, ...offResults].reduce((s, r) => s + r.surplus, 0);
@@ -395,10 +329,8 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
     if (!projectId) return;
     moSaveMutation.mutate({ projectId, ...moFields, finishingQuality: "standard" });
   };
-
   const handleSaveCp = () => {
     if (!projectId) return;
-    // Auto-generate optimistic (+10%) and conservative (-10%) from base
     cpSaveMutation.mutate({
       projectId,
       baseStudioPrice: basePrices.studioPrice, base1brPrice: basePrices.oneBrPrice, base2brPrice: basePrices.twoBrPrice, base3brPrice: basePrices.threeBrPrice,
@@ -417,420 +349,339 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
       paymentDeferredPct: 0, paymentDeferredTiming: "",
     });
   };
+  const handleSaveAll = () => { handleSaveMo(); handleSaveCp(); };
 
-  const handleSaveAll = () => {
-    handleSaveMo();
-    handleSaveCp();
-  };
-
-  // ═══ Joelle status ═══
   const joelleStatus = joelleStatusQuery.data;
   const hasAnyJoelleData = joelleStatus?.engine6Ready || joelleStatus?.engine7Ready;
   const alreadyApplied = joelleStatus?.moHasJoelleData && joelleStatus?.cpHasJoelleData;
 
-  const scenarioConfig: Record<ScenarioKey, { label: string; labelEn: string; color: string; bg: string; border: string; icon: any; multiplier: number }> = {
-    optimistic: { label: "المتفائل (+10%)", labelEn: "+10%", color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-300", icon: TrendingUp, multiplier: 1.10 },
-    base: { label: "الأساسي", labelEn: "Base", color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-300", icon: BarChart3, multiplier: 1.00 },
-    conservative: { label: "المتحفظ (-10%)", labelEn: "-10%", color: "text-amber-700", bg: "bg-amber-50", border: "border-amber-300", icon: TrendingDown, multiplier: 0.90 },
+  const scenarioConfig: Record<ScenarioKey, { label: string; color: string; bgBadge: string; multiplier: number; icon: any }> = {
+    optimistic: { label: "متفائل +10%", color: "text-emerald-700", bgBadge: "bg-emerald-500", multiplier: 1.10, icon: TrendingUp },
+    base: { label: "أساسي", color: "text-blue-700", bgBadge: "bg-blue-500", multiplier: 1.00, icon: BarChart3 },
+    conservative: { label: "متحفظ -10%", color: "text-orange-700", bgBadge: "bg-orange-500", multiplier: 0.90, icon: TrendingDown },
   };
 
   // ═══ RENDER ═══
   if (!projectId) return (<div className="text-center py-12 text-muted-foreground"><DollarSign className="w-12 h-12 mx-auto mb-3 opacity-30" /><p>اختر مشروعاً لعرض البيانات</p></div>);
   if (projectQuery.isLoading) return (<div className="text-center py-12"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /><p className="text-sm text-muted-foreground mt-2">جاري تحميل البيانات...</p></div>);
 
-  // ═══ Distribution table sub-component ═══
-  const DistributionTable = ({ title, category, results, totalPct, sellable, pctFields, avgFields, priceFields }: {
-    title: string;
-    category: "residential" | "retail" | "offices";
-    results: DistResult[];
-    totalPct: number;
-    sellable: number;
-    pctFields: { key: string; label: string; pctKey: string; avgKey: string; priceKey: string }[];
-    avgFields?: any;
-    priceFields?: any;
-  }) => {
-    if (sellable <= 0) return null;
-    const catUnits = results.reduce((s, r) => s + r.units, 0);
-    const catParking = results.reduce((s, r) => s + r.parking, 0);
-    const catSurplus = results.reduce((s, r) => s + r.surplus, 0);
-    const catRevBase = results.reduce((s, r) => s + r.revenueBase, 0);
-    const catRevOpt = results.reduce((s, r) => s + r.revenueOpt, 0);
-    const catRevCons = results.reduce((s, r) => s + r.revenueCons, 0);
-    const activeRev = activeScenario === "optimistic" ? catRevOpt : activeScenario === "conservative" ? catRevCons : catRevBase;
+  // ═══ Joel suggestion rows ═══
+  const joelRows = [
+    { cat: "سكني", catColor: "bg-sky-500", label: "استديو", pctKey: "residentialStudioPct", avgKey: "residentialStudioAvgArea", priceKey: "studioPrice", baseField: "baseStudioPrice" },
+    { cat: "", catColor: "", label: "غرفة وصالة", pctKey: "residential1brPct", avgKey: "residential1brAvgArea", priceKey: "oneBrPrice", baseField: "base1brPrice" },
+    { cat: "", catColor: "", label: "غرفتان وصالة", pctKey: "residential2brPct", avgKey: "residential2brAvgArea", priceKey: "twoBrPrice", baseField: "base2brPrice" },
+    { cat: "", catColor: "", label: "ثلاث غرف", pctKey: "residential3brPct", avgKey: "residential3brAvgArea", priceKey: "threeBrPrice", baseField: "base3brPrice" },
+    { cat: "تجزئة", catColor: "bg-amber-500", label: "صغيرة", pctKey: "retailSmallPct", avgKey: "retailSmallAvgArea", priceKey: "retailSmallPrice", baseField: "baseRetailSmallPrice", divider: true },
+    { cat: "", catColor: "", label: "متوسطة", pctKey: "retailMediumPct", avgKey: "retailMediumAvgArea", priceKey: "retailMediumPrice", baseField: "baseRetailMediumPrice" },
+    { cat: "", catColor: "", label: "كبيرة", pctKey: "retailLargePct", avgKey: "retailLargeAvgArea", priceKey: "retailLargePrice", baseField: "baseRetailLargePrice" },
+    { cat: "مكاتب", catColor: "bg-violet-500", label: "صغيرة", pctKey: "officeSmallPct", avgKey: "officeSmallAvgArea", priceKey: "officeSmallPrice", baseField: "baseOfficeSmallPrice", divider: true },
+    { cat: "", catColor: "", label: "متوسطة", pctKey: "officeMediumPct", avgKey: "officeMediumAvgArea", priceKey: "officeMediumPrice", baseField: "baseOfficeMediumPrice" },
+    { cat: "", catColor: "", label: "كبيرة", pctKey: "officeLargePct", avgKey: "officeLargeAvgArea", priceKey: "officeLargePrice", baseField: "baseOfficeLargePrice" },
+  ];
 
-    return (
-      <div className="bg-white rounded-xl border border-border/40 overflow-hidden shadow-sm">
-        {/* Header */}
-        <div className="px-4 py-2.5 bg-gradient-to-l from-muted/30 to-muted/10 border-b border-border/30 flex items-center justify-between">
+  // ═══ Distribution table fields ═══
+  const allDistFields = [
+    { key: "studio", label: "استديو", pctKey: "residentialStudioPct", avgKey: "residentialStudioAvgArea", priceKey: "studioPrice", cat: "residential", catLabel: "سكني", catColor: "bg-sky-500" },
+    { key: "1br", label: "غرفة وصالة", pctKey: "residential1brPct", avgKey: "residential1brAvgArea", priceKey: "oneBrPrice", cat: "residential", catLabel: "", catColor: "" },
+    { key: "2br", label: "غرفتان وصالة", pctKey: "residential2brPct", avgKey: "residential2brAvgArea", priceKey: "twoBrPrice", cat: "residential", catLabel: "", catColor: "" },
+    { key: "3br", label: "ثلاث غرف وصالة", pctKey: "residential3brPct", avgKey: "residential3brAvgArea", priceKey: "threeBrPrice", cat: "residential", catLabel: "", catColor: "" },
+    { key: "retSmall", label: "صغيرة", pctKey: "retailSmallPct", avgKey: "retailSmallAvgArea", priceKey: "retailSmallPrice", cat: "retail", catLabel: "تجزئة", catColor: "bg-amber-500", divider: true },
+    { key: "retMedium", label: "متوسطة", pctKey: "retailMediumPct", avgKey: "retailMediumAvgArea", priceKey: "retailMediumPrice", cat: "retail", catLabel: "", catColor: "" },
+    { key: "retLarge", label: "كبيرة", pctKey: "retailLargePct", avgKey: "retailLargeAvgArea", priceKey: "retailLargePrice", cat: "retail", catLabel: "", catColor: "" },
+    { key: "offSmall", label: "صغيرة", pctKey: "officeSmallPct", avgKey: "officeSmallAvgArea", priceKey: "officeSmallPrice", cat: "offices", catLabel: "مكاتب", catColor: "bg-violet-500", divider: true },
+    { key: "offMedium", label: "متوسطة", pctKey: "officeMediumPct", avgKey: "officeMediumAvgArea", priceKey: "officeMediumPrice", cat: "offices", catLabel: "", catColor: "" },
+    { key: "offLarge", label: "كبيرة", pctKey: "officeLargePct", avgKey: "officeLargeAvgArea", priceKey: "officeLargePrice", cat: "offices", catLabel: "", catColor: "" },
+  ];
+
+  const allResults = [...resResults, ...retResults, ...offResults];
+
+  // Category subtotals
+  const catSummary = (results: DistResult[], sellable: number, totalPct: number, catKey: string) => {
+    const units = results.reduce((s, r) => s + r.units, 0);
+    const area = results.reduce((s, r) => s + r.totalArea, 0);
+    const parking = results.reduce((s, r) => s + r.parking, 0);
+    const surplus = results.reduce((s, r) => s + r.surplus, 0);
+    const revBase = results.reduce((s, r) => s + r.revenueBase, 0);
+    const revOpt = results.reduce((s, r) => s + r.revenueOpt, 0);
+    const revCons = results.reduce((s, r) => s + r.revenueCons, 0);
+    return { units, area, parking, surplus, revBase, revOpt, revCons, sellable, totalPct };
+  };
+  const resSummary = catSummary(resResults, sellableRes, resTotalPct, "residential");
+  const retSummary = catSummary(retResults, sellableRet, retTotalPct, "retail");
+  const offSummary = catSummary(offResults, sellableOff, offTotalPct, "offices");
+
+  return (
+    <div className="space-y-3" dir="rtl">
+
+      {/* ═══ JOELLE BANNER ═══ */}
+      {hasAnyJoelleData && (
+        <div className="flex items-center justify-between bg-gradient-to-l from-purple-50 to-pink-50 border border-purple-200/60 rounded-lg px-3 py-2">
           <div className="flex items-center gap-2">
-            <h4 className="text-xs font-bold">{title}</h4>
-            <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${Math.abs(totalPct - 100) < 0.1 ? "bg-emerald-100 text-emerald-700" : totalPct > 0 ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-500"}`}>
-              {totalPct > 0 ? `${totalPct.toFixed(1)}%` : "—"}
+            <img src={JOEL_AVATAR} className="w-7 h-7 rounded-full border border-purple-200" alt="جويل" />
+            <span className="text-[11px] font-semibold text-purple-800">مخرجات جويل جاهزة</span>
+            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${joelleStatus?.engine6Ready ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
+              {joelleStatus?.engine6Ready ? "✓" : "○"} محرك 6
+            </span>
+            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${joelleStatus?.engine7Ready ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
+              {joelleStatus?.engine7Ready ? "✓" : "○"} محرك 7
             </span>
           </div>
-          <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-            <span>القابل للبيع: <b className="text-foreground" dir="ltr">{fmt(sellable)}</b> sqft</span>
-          </div>
+          <Button size="sm" variant="ghost"
+            onClick={() => { if (projectId) applyJoelleMutation.mutate(projectId); }}
+            disabled={applyJoelleMutation.isPending}
+            className={`gap-1 h-7 text-[11px] ${alreadyApplied ? "text-emerald-700" : "text-purple-700 hover:bg-purple-100"}`}
+          >
+            {applyJoelleMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : alreadyApplied ? <CheckCircle2 className="w-3 h-3" /> : <Zap className="w-3 h-3" />}
+            {alreadyApplied ? "إعادة تطبيق" : "تعبئة من جويل"}
+          </Button>
         </div>
+      )}
 
-        {/* Table */}
-        <div className="overflow-x-auto">
+      {/* ═══════════════════════════════════════════════════════ */}
+      {/* SECTION 1: تفاصيل الأرض و GFA                          */}
+      {/* ═══════════════════════════════════════════════════════ */}
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="px-4 py-2 border-b border-gray-100 bg-gray-50/50">
+          <h3 className="text-xs font-bold text-gray-800">تفاصيل الأرض والمساحات</h3>
+        </div>
+        <div className="px-4 py-2.5">
+          {/* Land info — compact inline */}
+          <div className="flex flex-wrap gap-x-6 gap-y-1 text-[11px] mb-2.5">
+            <span className="text-gray-500">مساحة الأرض: <b className="text-gray-800 font-mono" dir="ltr">{fmt(plotAreaSqft)}</b> sqft <span className="text-gray-400">({fmt(plotAreaSqm)} م²)</span></span>
+            <span className="text-gray-500">BUA: <b className="text-gray-800 font-mono" dir="ltr">{fmt(buaSqft)}</b> sqft</span>
+            <span className="text-gray-500">GFA الإجمالي: <b className="text-gray-800 font-mono" dir="ltr">{fmt(gfaTotalSqft)}</b> sqft</span>
+          </div>
+
+          {/* GFA Breakdown table — compact */}
           <table className="w-full text-[11px]">
             <thead>
-              <tr className="bg-muted/10 border-b border-border/20">
-                <th className="px-3 py-1.5 text-right font-semibold w-28">النوع</th>
-                <th className="px-1.5 py-1.5 text-center font-semibold w-16">النسبة %</th>
-                <th className="px-1.5 py-1.5 text-center font-semibold w-20">المساحة</th>
-                <th className="px-1.5 py-1.5 text-center font-semibold w-14">الوحدات</th>
-                <th className="px-1.5 py-1.5 text-center font-semibold w-16">الفائض</th>
-                <th className="px-1.5 py-1.5 text-center font-semibold w-14">
-                  <div className="flex items-center justify-center gap-0.5"><Car className="w-3 h-3" /><span>P</span></div>
-                </th>
-                <th className="px-1.5 py-1.5 text-center font-semibold w-20">سعر/قدم²</th>
-                <th className="px-1.5 py-1.5 text-center font-semibold w-24">سعر الوحدة</th>
-                <th className={`px-2 py-1.5 text-center font-semibold w-28 ${scenarioConfig[activeScenario].bg} ${scenarioConfig[activeScenario].color}`}>
-                  الإيراد ({scenarioConfig[activeScenario].label})
-                </th>
+              <tr className="border-b border-gray-200">
+                <th className="text-right py-1.5 pr-1 font-semibold text-gray-600 w-8">#</th>
+                <th className="text-right py-1.5 font-semibold text-gray-600">الفئة</th>
+                <th className="text-center py-1.5 font-semibold text-gray-600">GFA (sqft)</th>
+                <th className="text-center py-1.5 font-semibold text-gray-600">الكفاءة</th>
+                <th className="text-center py-1.5 font-semibold text-gray-600">القابل للبيع (sqft)</th>
+                <th className="text-center py-1.5 font-semibold text-gray-600">% من الإجمالي</th>
               </tr>
             </thead>
             <tbody>
-              {pctFields.map((f, i) => {
-                const r = results.find(r => r.key === f.key);
-                const pctVal = (moFields as any)[f.pctKey] || 0;
-                const avgVal = (moFields as any)[f.avgKey] || 0;
-                const priceVal = (basePrices as any)[f.priceKey] || 0;
-                const scenarioPrice = Math.round(priceVal * scenarioConfig[activeScenario].multiplier);
-                const activeRevenue = r ? (activeScenario === "optimistic" ? r.revenueOpt : activeScenario === "conservative" ? r.revenueCons : r.revenueBase) : 0;
-
-                return (
-                  <tr key={f.key} className="border-b border-border/10 hover:bg-muted/5">
-                    <td className="px-3 py-1 font-medium">{f.label}</td>
-                    <td className="px-1 py-1"><EditableNum value={pctVal} onChange={(v) => updateMoField(f.pctKey, v)} suffix="%" /></td>
-                    <td className="px-1 py-1"><EditableNum value={avgVal || getAvg(f.pctKey, avgVal)} onChange={(v) => updateMoField(f.avgKey, v)} suffix="sqft" /></td>
-                    <td className="px-1.5 py-1 text-center font-mono font-bold">{r ? fmt(r.units) : "—"}</td>
-                    <td className="px-1.5 py-1 text-center font-mono text-[10px] text-muted-foreground">{r && r.surplus > 0 ? `${fmt(r.surplus)}` : "0"}</td>
-                    <td className="px-1.5 py-1 text-center font-mono">{r ? r.parking : 0}</td>
-                    <td className="px-1 py-1"><EditableNum value={priceVal} onChange={(v) => updateBasePrice(f.priceKey, v)} /></td>
-                    <td className="px-1.5 py-1 text-center font-mono text-[10px]" dir="ltr">{r ? fmt(r.avgArea * scenarioPrice) : "—"}</td>
-                    <td className={`px-2 py-1 text-center font-mono font-bold ${scenarioConfig[activeScenario].color}`} dir="ltr">{fmt(activeRevenue)}</td>
-                  </tr>
-                );
-              })}
+              {[
+                { n: 1, label: "الوحدات السكنية", gfa: gfaResSqft, eff: 0.95, sell: sellableRes, color: "bg-sky-500" },
+                { n: 2, label: "وحدات التجزئة", gfa: gfaRetSqft, eff: 0.97, sell: sellableRet, color: "bg-amber-500" },
+                { n: 3, label: "المكاتب", gfa: gfaOffSqft, eff: 0.95, sell: sellableOff, color: "bg-violet-500" },
+              ].filter(r => r.gfa > 0).map(r => (
+                <tr key={r.n} className="border-b border-gray-100 hover:bg-gray-50/50">
+                  <td className="py-1.5 pr-1 text-gray-400 font-mono">{r.n}</td>
+                  <td className="py-1.5 font-medium text-gray-800 flex items-center gap-1.5"><span className={`w-2 h-2 rounded-full ${r.color} inline-block`} />{r.label}</td>
+                  <td className="py-1.5 text-center font-mono text-gray-700" dir="ltr">{fmt(r.gfa)}</td>
+                  <td className="py-1.5 text-center"><span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{(r.eff * 100).toFixed(0)}%</span></td>
+                  <td className="py-1.5 text-center font-mono font-bold text-gray-900" dir="ltr">{fmt(r.sell)}</td>
+                  <td className="py-1.5 text-center text-gray-600">{totalSellable > 0 ? ((r.sell / totalSellable) * 100).toFixed(1) : 0}%</td>
+                </tr>
+              ))}
             </tbody>
-            {/* Totals row */}
             <tfoot>
-              <tr className="bg-muted/20 font-bold border-t border-border/30">
-                <td className="px-3 py-1.5">الإجمالي</td>
-                <td className="px-1.5 py-1.5 text-center">{totalPct.toFixed(0)}%</td>
-                <td className="px-1.5 py-1.5 text-center">—</td>
-                <td className="px-1.5 py-1.5 text-center font-mono">{fmt(catUnits)}</td>
-                <td className="px-1.5 py-1.5 text-center font-mono text-[10px]">{fmt(catSurplus)}</td>
-                <td className="px-1.5 py-1.5 text-center font-mono">{fmt(catParking)}</td>
-                <td className="px-1.5 py-1.5 text-center">—</td>
-                <td className="px-1.5 py-1.5 text-center">—</td>
-                <td className={`px-2 py-1.5 text-center font-mono ${scenarioConfig[activeScenario].color}`} dir="ltr">{fmt(activeRev)}</td>
+              <tr className="border-t-2 border-gray-300 font-bold">
+                <td className="py-1.5 pr-1"></td>
+                <td className="py-1.5 text-gray-800">الإجمالي</td>
+                <td className="py-1.5 text-center font-mono text-gray-700" dir="ltr">{fmt(gfaResSqft + gfaRetSqft + gfaOffSqft)}</td>
+                <td className="py-1.5 text-center">—</td>
+                <td className="py-1.5 text-center font-mono text-gray-900" dir="ltr">{fmt(totalSellable)}</td>
+                <td className="py-1.5 text-center">100%</td>
               </tr>
             </tfoot>
           </table>
         </div>
       </div>
-    );
-  };
 
-  return (
-    <div className="space-y-4" dir="rtl">
-
-      {/* ═══ JOELLE AUTO-POPULATE BANNER ═══ */}
-      {hasAnyJoelleData && (
-        <div className="bg-gradient-to-l from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-3">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-2">
-              <img src={JOEL_AVATAR} className="w-8 h-8 rounded-full border-2 border-purple-200" alt="جويل" />
-              <div>
-                <h3 className="text-xs font-bold text-purple-800">مخرجات الدراسات والأبحاث جاهزة</h3>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${joelleStatus?.engine6Ready ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
-                    {joelleStatus?.engine6Ready ? "✓" : "○"} محرك 6
-                  </span>
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${joelleStatus?.engine7Ready ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
-                    {joelleStatus?.engine7Ready ? "✓" : "○"} محرك 7
-                  </span>
-                </div>
-              </div>
-            </div>
-            <Button size="sm"
-              onClick={() => { if (projectId) applyJoelleMutation.mutate(projectId); }}
-              disabled={applyJoelleMutation.isPending}
-              className={`gap-1.5 h-8 text-xs ${alreadyApplied ? "bg-emerald-600 hover:bg-emerald-700" : "bg-gradient-to-l from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"}`}
-            >
-              {applyJoelleMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : alreadyApplied ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Zap className="w-3.5 h-3.5" />}
-              {alreadyApplied ? "إعادة تطبيق" : "تعبئة من جويل"}
-            </Button>
+      {/* ═══════════════════════════════════════════════════════ */}
+      {/* SECTION 2: اقتراحات جويل (مرجع)                        */}
+      {/* ═══════════════════════════════════════════════════════ */}
+      {(moJoelleSource || cpJoelleSource) && (
+        <div className="bg-white rounded-lg border border-purple-200/60 overflow-hidden">
+          <div className="px-4 py-2 border-b border-purple-100 bg-purple-50/30 flex items-center gap-2">
+            <img src={JOEL_AVATAR} className="w-5 h-5 rounded-full" alt="" />
+            <h3 className="text-xs font-bold text-purple-800">اقتراحات جويل</h3>
+            <span className="text-[9px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full font-medium">للقراءة فقط</span>
+          </div>
+          <div className="px-4 py-1.5">
+            <table className="w-full text-[11px]">
+              <thead>
+                <tr className="border-b border-purple-100">
+                  <th className="text-right py-1.5 font-semibold text-purple-700 w-16">الفئة</th>
+                  <th className="text-right py-1.5 font-semibold text-purple-700">النوع</th>
+                  <th className="text-center py-1.5 font-semibold text-purple-700 w-16">النسبة</th>
+                  <th className="text-center py-1.5 font-semibold text-purple-700 w-20">المساحة</th>
+                  <th className="text-center py-1.5 font-semibold text-purple-700 w-20">سعر/قدم²</th>
+                </tr>
+              </thead>
+              <tbody>
+                {joelRows.map((row, i) => {
+                  const pct = moQuery.data ? parseFloat((moQuery.data as any)[row.pctKey] || "0") : 0;
+                  const avg = moQuery.data ? ((moQuery.data as any)[row.avgKey] || 0) : 0;
+                  const actualPrice = cpQuery.data ? ((cpQuery.data as any)[row.baseField] || 0) : 0;
+                  if (pct === 0 && avg === 0 && actualPrice === 0) return null;
+                  return (
+                    <tr key={i} className={`border-b ${(row as any).divider ? "border-t-2 border-t-gray-300" : "border-gray-100/60"} hover:bg-purple-50/30`}>
+                      <td className="py-1 font-medium text-purple-700 flex items-center gap-1">
+                        {row.catColor && <span className={`w-1.5 h-1.5 rounded-full ${row.catColor} inline-block`} />}
+                        {row.cat}
+                      </td>
+                      <td className="py-1 text-gray-700">{row.label}</td>
+                      <td className="py-1 text-center">{pct > 0 ? <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{pct}%</span> : <span className="text-gray-400">—</span>}</td>
+                      <td className="py-1 text-center font-mono text-gray-700" dir="ltr">{avg > 0 ? fmt(avg) : "—"}</td>
+                      <td className="py-1 text-center font-mono text-gray-700" dir="ltr">{actualPrice > 0 ? fmt(actualPrice) : "—"}</td>
+                    </tr>
+                  );
+                }).filter(Boolean)}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
 
       {/* ═══════════════════════════════════════════════════════ */}
-      {/* SECTION 1: تفاصيل الأرض والمساحات                      */}
+      {/* SECTION 3: التوزيع التفاعلي والتسعير (جدول واحد موحد)  */}
       {/* ═══════════════════════════════════════════════════════ */}
-      <SectionHeader title="تفاصيل الأرض والمساحات" icon={MapPin} isOpen={showLandDetails} onToggle={() => setShowLandDetails(!showLandDetails)} />
-      {showLandDetails && (
-        <Card className="border-border/50">
-          <CardContent className="pt-4 space-y-4">
-            {/* Land & Plot info */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <InfoBox label="مساحة الأرض (قدم²)" value={fmt(plotAreaSqft)} icon={<Ruler className="w-3.5 h-3.5" />} />
-              <InfoBox label="مساحة الأرض (م²)" value={fmt(plotAreaSqm)} />
-              <InfoBox label="BUA (قدم²)" value={fmt(buaSqft)} />
-              <InfoBox label="GFA الإجمالي (قدم²)" value={fmt(gfaTotalSqft)} />
-            </div>
-
-            {/* GFA Breakdown */}
-            <div className="bg-white rounded-xl border border-border/40 overflow-hidden">
-              <div className="px-4 py-2 bg-gradient-to-l from-blue-50/50 to-blue-50/20 border-b border-border/30">
-                <h4 className="text-xs font-bold flex items-center gap-1.5"><LayoutGrid className="w-3.5 h-3.5 text-blue-600" /> تفصيل المساحات الإجمالية (GFA)</h4>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-[11px]">
-                  <thead>
-                    <tr className="bg-muted/10 border-b border-border/20">
-                      <th className="px-4 py-1.5 text-right font-semibold">الفئة</th>
-                      <th className="px-3 py-1.5 text-center font-semibold">GFA (قدم²)</th>
-                      <th className="px-3 py-1.5 text-center font-semibold">نسبة الكفاءة</th>
-                      <th className="px-3 py-1.5 text-center font-semibold">القابل للبيع (قدم²)</th>
-                      <th className="px-3 py-1.5 text-center font-semibold">% من الإجمالي</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[
-                      { label: "الوحدات السكنية", gfa: gfaResSqft, eff: 0.95, sell: sellableRes, color: "bg-sky-500" },
-                      { label: "وحدات التجزئة", gfa: gfaRetSqft, eff: 0.97, sell: sellableRet, color: "bg-amber-500" },
-                      { label: "المكاتب", gfa: gfaOffSqft, eff: 0.95, sell: sellableOff, color: "bg-violet-500" },
-                    ].filter(r => r.gfa > 0).map(r => (
-                      <tr key={r.label} className="border-b border-border/10">
-                        <td className="px-4 py-1.5 font-medium flex items-center gap-1.5"><span className={`w-2 h-2 rounded-full ${r.color}`} />{r.label}</td>
-                        <td className="px-3 py-1.5 text-center font-mono" dir="ltr">{fmt(r.gfa)}</td>
-                        <td className="px-3 py-1.5 text-center">{(r.eff * 100).toFixed(0)}%</td>
-                        <td className="px-3 py-1.5 text-center font-mono font-bold" dir="ltr">{fmt(r.sell)}</td>
-                        <td className="px-3 py-1.5 text-center">{totalSellable > 0 ? ((r.sell / totalSellable) * 100).toFixed(1) : 0}%</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-muted/20 font-bold border-t border-border/30">
-                      <td className="px-4 py-1.5">الإجمالي</td>
-                      <td className="px-3 py-1.5 text-center font-mono" dir="ltr">{fmt(gfaResSqft + gfaRetSqft + gfaOffSqft)}</td>
-                      <td className="px-3 py-1.5 text-center">—</td>
-                      <td className="px-3 py-1.5 text-center font-mono" dir="ltr">{fmt(totalSellable)}</td>
-                      <td className="px-3 py-1.5 text-center">100%</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════ */}
-      {/* SECTION 2: اقتراحات جويل (للقراءة فقط)                 */}
-      {/* ═══════════════════════════════════════════════════════ */}
-      {(moJoelleSource || cpJoelleSource) && (
-        <>
-          <SectionHeader title="اقتراحات جويل — مرجع" icon={Sparkles} isOpen={showJoelTable} onToggle={() => setShowJoelTable(!showJoelTable)} badge="للقراءة فقط" />
-          {showJoelTable && (
-            <Card className="border-purple-200/50 bg-gradient-to-br from-purple-50/30 to-pink-50/20">
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <img src={JOEL_AVATAR} className="w-6 h-6 rounded-full" alt="" />
-                  <span className="text-xs text-purple-700">النسب والأسعار المقترحة من محركات الدراسات والأبحاث — يمكنك تعديلها في الجدول التفاعلي أدناه</span>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-[11px]">
-                    <thead>
-                      <tr className="bg-purple-100/50 border-b border-purple-200/50">
-                        <th className="px-3 py-1.5 text-right font-semibold text-purple-800">الفئة</th>
-                        <th className="px-3 py-1.5 text-right font-semibold text-purple-800">النوع</th>
-                        <th className="px-2 py-1.5 text-center font-semibold text-purple-800">النسبة %</th>
-                        <th className="px-2 py-1.5 text-center font-semibold text-purple-800">المساحة (sqft)</th>
-                        <th className="px-2 py-1.5 text-center font-semibold text-purple-800">سعر/قدم² (أساسي)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {/* Residential */}
-                      {[
-                        { cat: "سكني", label: "استديو", pctKey: "residentialStudioPct", avgKey: "residentialStudioAvgArea", priceKey: "studioPrice" },
-                        { cat: "", label: "غرفة وصالة", pctKey: "residential1brPct", avgKey: "residential1brAvgArea", priceKey: "oneBrPrice" },
-                        { cat: "", label: "غرفتان وصالة", pctKey: "residential2brPct", avgKey: "residential2brAvgArea", priceKey: "twoBrPrice" },
-                        { cat: "", label: "ثلاث غرف", pctKey: "residential3brPct", avgKey: "residential3brAvgArea", priceKey: "threeBrPrice" },
-                        { cat: "تجزئة", label: "صغيرة", pctKey: "retailSmallPct", avgKey: "retailSmallAvgArea", priceKey: "retailSmallPrice" },
-                        { cat: "", label: "متوسطة", pctKey: "retailMediumPct", avgKey: "retailMediumAvgArea", priceKey: "retailMediumPrice" },
-                        { cat: "", label: "كبيرة", pctKey: "retailLargePct", avgKey: "retailLargeAvgArea", priceKey: "retailLargePrice" },
-                        { cat: "مكاتب", label: "صغيرة", pctKey: "officeSmallPct", avgKey: "officeSmallAvgArea", priceKey: "officeSmallPrice" },
-                        { cat: "", label: "متوسطة", pctKey: "officeMediumPct", avgKey: "officeMediumAvgArea", priceKey: "officeMediumPrice" },
-                        { cat: "", label: "كبيرة", pctKey: "officeLargePct", avgKey: "officeLargeAvgArea", priceKey: "officeLargePrice" },
-                      ].map((row, i) => {
-                        const pct = moQuery.data ? parseFloat((moQuery.data as any)[row.pctKey] || "0") : 0;
-                        const avg = moQuery.data ? ((moQuery.data as any)[row.avgKey] || 0) : 0;
-                        const price = cpQuery.data ? ((cpQuery.data as any)[`base${row.priceKey.charAt(0).toUpperCase() + row.priceKey.slice(1).replace("Price", "Price")}`] || 0) : 0;
-                        // Reconstruct the base price field name
-                        const baseField = row.priceKey === "studioPrice" ? "baseStudioPrice" :
-                          row.priceKey === "oneBrPrice" ? "base1brPrice" :
-                          row.priceKey === "twoBrPrice" ? "base2brPrice" :
-                          row.priceKey === "threeBrPrice" ? "base3brPrice" :
-                          `base${row.priceKey.charAt(0).toUpperCase()}${row.priceKey.slice(1)}`;
-                        const actualPrice = cpQuery.data ? ((cpQuery.data as any)[baseField] || 0) : 0;
-
-                        if (pct === 0 && avg === 0 && actualPrice === 0) return null;
-                        return (
-                          <tr key={i} className="border-b border-purple-100/30">
-                            <td className="px-3 py-1 font-medium text-purple-700">{row.cat}</td>
-                            <td className="px-3 py-1">{row.label}</td>
-                            <td className="px-2 py-1 text-center font-mono">{pct > 0 ? `${pct}%` : "—"}</td>
-                            <td className="px-2 py-1 text-center font-mono" dir="ltr">{avg > 0 ? fmt(avg) : "—"}</td>
-                            <td className="px-2 py-1 text-center font-mono" dir="ltr">{actualPrice > 0 ? fmt(actualPrice) : "—"}</td>
-                          </tr>
-                        );
-                      }).filter(Boolean)}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════ */}
-      {/* SECTION 3: الجدول التفاعلي — التوزيع والتسعير           */}
-      {/* ═══════════════════════════════════════════════════════ */}
-      <SectionHeader title="التوزيع التفاعلي والتسعير" icon={Calculator} isOpen={showDistribution} onToggle={() => setShowDistribution(!showDistribution)} />
-      {showDistribution && (
-        <div className="space-y-3">
-          {/* Scenario selector */}
-          <div className="flex gap-2">
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        {/* Header with scenario selector */}
+        <div className="px-4 py-2 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between flex-wrap gap-2">
+          <h3 className="text-xs font-bold text-gray-800">التوزيع التفاعلي والتسعير</h3>
+          <div className="flex gap-1">
             {(["optimistic", "base", "conservative"] as const).map(sc => {
               const cfg = scenarioConfig[sc];
-              const Icon = cfg.icon;
               return (
                 <button key={sc} onClick={() => { setActiveScenario(sc); setCpDirty(true); }}
-                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-bold transition-all ${activeScenario === sc ? `${cfg.bg} ${cfg.border} ${cfg.color}` : "bg-muted/20 border-border/30 text-muted-foreground hover:bg-muted/40"}`}>
-                  <Icon className="w-3.5 h-3.5" />{cfg.label}
+                  className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition-all ${activeScenario === sc ? `text-white ${cfg.bgBadge} shadow-sm` : "text-gray-500 bg-gray-100 hover:bg-gray-200"}`}>
+                  {cfg.label}
                 </button>
               );
             })}
           </div>
+        </div>
 
-          {/* Distribution tables per category */}
-          <DistributionTable
-            title="الوحدات السكنية"
-            category="residential"
-            results={resResults}
-            totalPct={resTotalPct}
-            sellable={sellableRes}
-            pctFields={[
-              { key: "studio", label: "استديو", pctKey: "residentialStudioPct", avgKey: "residentialStudioAvgArea", priceKey: "studioPrice" },
-              { key: "1br", label: "غرفة وصالة", pctKey: "residential1brPct", avgKey: "residential1brAvgArea", priceKey: "oneBrPrice" },
-              { key: "2br", label: "غرفتان وصالة", pctKey: "residential2brPct", avgKey: "residential2brAvgArea", priceKey: "twoBrPrice" },
-              { key: "3br", label: "ثلاث غرف وصالة", pctKey: "residential3brPct", avgKey: "residential3brAvgArea", priceKey: "threeBrPrice" },
-            ]}
-          />
+        {/* Single unified table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-[11px]">
+            <thead>
+              <tr className="border-b border-gray-200 bg-gray-50/80">
+                <th className="text-right py-1.5 pr-3 font-semibold text-gray-600 w-14">الفئة</th>
+                <th className="text-right py-1.5 font-semibold text-gray-600 w-24">النوع</th>
+                <th className="text-center py-1.5 font-semibold text-gray-600 w-14">%</th>
+                <th className="text-center py-1.5 font-semibold text-gray-600 w-16">المساحة</th>
+                <th className="text-center py-1.5 font-semibold text-gray-600 w-12">الوحدات</th>
+                <th className="text-center py-1.5 font-semibold text-gray-600 w-20">إجمالي م²</th>
+                <th className="text-center py-1.5 font-semibold text-gray-600 w-12"><Car className="w-3 h-3 mx-auto" /></th>
+                <th className="text-center py-1.5 font-semibold text-gray-600 w-14">الفائض</th>
+                <th className="text-center py-1.5 font-semibold text-gray-600 w-16">سعر/قدم²</th>
+                <th className="text-center py-1.5 font-semibold text-gray-600 w-20">سعر الوحدة</th>
+                <th className={`text-center py-1.5 font-semibold w-24 ${scenarioConfig[activeScenario].color}`}>الإيراد</th>
+              </tr>
+            </thead>
+            <tbody>
+              {allDistFields.map((f, i) => {
+                const r = allResults.find(r => r.key === f.key);
+                const pctVal = (moFields as any)[f.pctKey] || 0;
+                const avgVal = (moFields as any)[f.avgKey] || 0;
+                const priceVal = (basePrices as any)[f.priceKey] || 0;
+                const scenarioPrice = Math.round(priceVal * scenarioConfig[activeScenario].multiplier);
+                const activeRevenue = r ? (activeScenario === "optimistic" ? r.revenueOpt : activeScenario === "conservative" ? r.revenueCons : r.revenueBase) : 0;
+                const sellableForCat = f.cat === "residential" ? sellableRes : f.cat === "retail" ? sellableRet : sellableOff;
 
-          <DistributionTable
-            title="وحدات التجزئة"
-            category="retail"
-            results={retResults}
-            totalPct={retTotalPct}
-            sellable={sellableRet}
-            pctFields={[
-              { key: "retSmall", label: "صغيرة", pctKey: "retailSmallPct", avgKey: "retailSmallAvgArea", priceKey: "retailSmallPrice" },
-              { key: "retMedium", label: "متوسطة", pctKey: "retailMediumPct", avgKey: "retailMediumAvgArea", priceKey: "retailMediumPrice" },
-              { key: "retLarge", label: "كبيرة", pctKey: "retailLargePct", avgKey: "retailLargeAvgArea", priceKey: "retailLargePrice" },
-            ]}
-          />
-
-          <DistributionTable
-            title="المكاتب"
-            category="offices"
-            results={offResults}
-            totalPct={offTotalPct}
-            sellable={sellableOff}
-            pctFields={[
-              { key: "offSmall", label: "صغيرة", pctKey: "officeSmallPct", avgKey: "officeSmallAvgArea", priceKey: "officeSmallPrice" },
-              { key: "offMedium", label: "متوسطة", pctKey: "officeMediumPct", avgKey: "officeMediumAvgArea", priceKey: "officeMediumPrice" },
-              { key: "offLarge", label: "كبيرة", pctKey: "officeLargePct", avgKey: "officeLargeAvgArea", priceKey: "officeLargePrice" },
-            ]}
-          />
-
-          {/* ═══ Grand Totals Banner ═══ */}
-          <div className="rounded-2xl overflow-hidden shadow-lg border border-border/20">
-            {/* Header */}
-            <div className="bg-gradient-to-l from-slate-900 via-slate-800 to-slate-900 px-5 py-2.5 flex items-center gap-2">
-              <div className="w-1.5 h-5 rounded-full bg-sky-400" />
-              <span className="text-xs font-bold text-white/70 tracking-widest">ملخص الإيرادات والتوزيع</span>
-            </div>
-
-            {/* Stats grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-x-reverse divide-border/20">
-              <div className="bg-gradient-to-br from-sky-600 to-sky-700 px-4 py-3 flex flex-col gap-0.5">
-                <span className="text-[10px] font-semibold text-sky-100/80">إجمالي الوحدات</span>
-                <span className="text-xl font-black text-white tabular-nums">{fmt(totalUnits)}</span>
-              </div>
-              <div className="bg-gradient-to-br from-slate-600 to-slate-700 px-4 py-3 flex flex-col gap-0.5">
-                <span className="text-[10px] font-semibold text-slate-200/80">مواقف السيارات</span>
-                <span className="text-xl font-black text-white tabular-nums">{fmt(totalParking)}</span>
-              </div>
-              <div className="bg-gradient-to-br from-amber-600 to-amber-700 px-4 py-3 flex flex-col gap-0.5">
-                <span className="text-[10px] font-semibold text-amber-100/80">الفائض (sqft)</span>
-                <span className="text-xl font-black text-white tabular-nums" dir="ltr">{fmt(totalSurplus)}</span>
-              </div>
-              <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 px-4 py-3 flex flex-col gap-0.5">
-                <span className="text-[10px] font-semibold text-emerald-100/80">القابل للبيع (sqft)</span>
-                <span className="text-xl font-black text-white tabular-nums" dir="ltr">{fmt(totalSellable)}</span>
-              </div>
-            </div>
-
-            {/* Revenue comparison */}
-            <div className="grid grid-cols-3 divide-x divide-x-reverse divide-border/20">
-              {(["optimistic", "base", "conservative"] as const).map(sc => {
-                const rev = sc === "optimistic" ? totalRevenueOpt : sc === "conservative" ? totalRevenueCons : totalRevenueBase;
-                const cfg = scenarioConfig[sc];
-                const isActive = sc === activeScenario;
                 return (
-                  <div key={sc} className={`px-4 py-3 flex flex-col gap-0.5 ${isActive ? "bg-gradient-to-br from-blue-700 to-blue-800" : "bg-gradient-to-br from-slate-700 to-slate-800"}`}>
-                    <span className="text-[10px] font-semibold text-white/70">{cfg.label}</span>
-                    <span className="text-sm md:text-lg font-black text-white tabular-nums" dir="ltr">{fmt(rev)}</span>
-                    <span className="text-[9px] text-white/50">AED</span>
-                  </div>
+                  <tr key={f.key} className={`border-b ${(f as any).divider ? "border-t-2 border-t-gray-300" : "border-gray-100"} hover:bg-gray-50/50`}>
+                    <td className="py-1 pr-3 font-medium text-gray-700">
+                      {f.catLabel && (
+                        <span className="flex items-center gap-1">
+                          <span className={`w-1.5 h-1.5 rounded-full ${f.catColor} inline-block`} />
+                          <span className="text-[10px]">{f.catLabel}</span>
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-1 text-gray-800 font-medium">{f.label}</td>
+                    <td className="py-0.5 w-14"><EditableNum value={pctVal} onChange={(v) => updateMoField(f.pctKey, v)} suffix="%" /></td>
+                    <td className="py-0.5 w-16"><EditableNum value={avgVal || getAvg(f.pctKey, avgVal)} onChange={(v) => updateMoField(f.avgKey, v)} /></td>
+                    <td className="py-1 text-center font-mono font-bold text-gray-900">{r ? fmt(r.units) : "—"}</td>
+                    <td className="py-1 text-center font-mono text-gray-700" dir="ltr">{r ? fmt(r.totalArea) : "—"}</td>
+                    <td className="py-1 text-center font-mono text-gray-600">{r ? r.parking : "—"}</td>
+                    <td className="py-1 text-center font-mono text-[10px] text-gray-400">{r && r.surplus > 0 ? fmt(r.surplus) : "0"}</td>
+                    <td className="py-0.5 w-16"><EditableNum value={priceVal} onChange={(v) => updateBasePrice(f.priceKey, v)} /></td>
+                    <td className="py-1 text-center font-mono text-[10px] text-gray-600" dir="ltr">{r ? fmt(r.avgArea * scenarioPrice) : "—"}</td>
+                    <td className={`py-1 text-center font-mono font-bold ${scenarioConfig[activeScenario].color}`} dir="ltr">{fmt(activeRevenue)}</td>
+                  </tr>
                 );
               })}
-            </div>
-          </div>
 
-          {/* Save buttons */}
-          {(moDirty || cpDirty) && (
-            <div className="flex justify-end gap-2">
-              <Button size="sm" onClick={handleSaveAll} disabled={moSaveMutation.isPending || cpSaveMutation.isPending} className="gap-1.5">
-                {(moSaveMutation.isPending || cpSaveMutation.isPending) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                حفظ التوزيع والتسعير
-              </Button>
-            </div>
-          )}
+              {/* ═══ Category subtotals ═══ */}
+              {[
+                { label: "إجمالي السكني", data: resSummary, color: "bg-sky-50 text-sky-800", show: sellableRes > 0 },
+                { label: "إجمالي التجزئة", data: retSummary, color: "bg-amber-50 text-amber-800", show: sellableRet > 0 },
+                { label: "إجمالي المكاتب", data: offSummary, color: "bg-violet-50 text-violet-800", show: sellableOff > 0 },
+              ].filter(s => s.show).map(s => {
+                const activeRev = activeScenario === "optimistic" ? s.data.revOpt : activeScenario === "conservative" ? s.data.revCons : s.data.revBase;
+                return (
+                  <tr key={s.label} className={`${s.color} font-semibold border-b border-gray-200`}>
+                    <td className="py-1.5 pr-3" colSpan={2}>{s.label}</td>
+                    <td className="py-1.5 text-center">{s.data.totalPct > 0 ? `${s.data.totalPct.toFixed(0)}%` : "—"}</td>
+                    <td className="py-1.5 text-center">—</td>
+                    <td className="py-1.5 text-center font-mono">{fmt(s.data.units)}</td>
+                    <td className="py-1.5 text-center font-mono" dir="ltr">{fmt(s.data.area)}</td>
+                    <td className="py-1.5 text-center font-mono">{fmt(s.data.parking)}</td>
+                    <td className="py-1.5 text-center font-mono text-[10px]">{fmt(s.data.surplus)}</td>
+                    <td className="py-1.5 text-center">—</td>
+                    <td className="py-1.5 text-center">—</td>
+                    <td className={`py-1.5 text-center font-mono font-bold ${scenarioConfig[activeScenario].color}`} dir="ltr">{fmt(activeRev)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+
+            {/* ═══ Grand total ═══ */}
+            <tfoot>
+              <tr className="bg-gray-800 text-white font-bold">
+                <td className="py-2 pr-3" colSpan={2}>الإجمالي الكلي</td>
+                <td className="py-2 text-center">—</td>
+                <td className="py-2 text-center">—</td>
+                <td className="py-2 text-center font-mono">{fmt(totalUnits)}</td>
+                <td className="py-2 text-center font-mono" dir="ltr">{fmt(totalUnits > 0 ? [...resResults, ...retResults, ...offResults].reduce((s, r) => s + r.totalArea, 0) : 0)}</td>
+                <td className="py-2 text-center font-mono">{fmt(totalParking)}</td>
+                <td className="py-2 text-center font-mono text-[10px]">{fmt(totalSurplus)}</td>
+                <td className="py-2 text-center">—</td>
+                <td className="py-2 text-center">—</td>
+                <td className="py-2 text-center font-mono" dir="ltr">
+                  {fmt(activeScenario === "optimistic" ? totalRevenueOpt : activeScenario === "conservative" ? totalRevenueCons : totalRevenueBase)}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        {/* Revenue comparison strip */}
+        <div className="grid grid-cols-3 border-t border-gray-200">
+          {(["optimistic", "base", "conservative"] as const).map(sc => {
+            const rev = sc === "optimistic" ? totalRevenueOpt : sc === "conservative" ? totalRevenueCons : totalRevenueBase;
+            const cfg = scenarioConfig[sc];
+            const isActive = sc === activeScenario;
+            return (
+              <div key={sc} className={`px-3 py-2 text-center border-l first:border-l-0 border-gray-200 ${isActive ? "bg-blue-50" : "bg-gray-50/50"}`}>
+                <div className={`text-[10px] font-semibold ${isActive ? cfg.color : "text-gray-500"}`}>{cfg.label}</div>
+                <div className={`text-sm font-black font-mono ${isActive ? cfg.color : "text-gray-600"}`} dir="ltr">{fmt(rev)}</div>
+                <div className="text-[9px] text-gray-400">AED</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Save button */}
+      {(moDirty || cpDirty) && (
+        <div className="flex justify-end">
+          <Button size="sm" onClick={handleSaveAll} disabled={moSaveMutation.isPending || cpSaveMutation.isPending} className="gap-1.5 h-7 text-[11px]">
+            {(moSaveMutation.isPending || cpSaveMutation.isPending) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            حفظ التوزيع والتسعير
+          </Button>
         </div>
       )}
-    </div>
-  );
-}
-
-/* ═══ Small info box component ═══ */
-function InfoBox({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) {
-  return (
-    <div className="bg-white rounded-lg border border-border/40 px-3 py-2">
-      <div className="flex items-center gap-1.5 mb-0.5">
-        {icon}
-        <span className="text-[10px] text-muted-foreground">{label}</span>
-      </div>
-      <span className="text-sm font-bold font-mono" dir="ltr">{value}</span>
     </div>
   );
 }
