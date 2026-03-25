@@ -149,7 +149,10 @@ export function calculateProjectCosts(
     revenueOff += calcTypeRevenue(parseFloat(mo.officeMediumPct || "0"), getAvg("officeMediumPct", mo.officeMediumAvgArea), prices.officeMediumPrice, saleableOff);
     revenueOff += calcTypeRevenue(parseFloat(mo.officeLargePct || "0"), getAvg("officeLargePct", mo.officeLargeAvgArea), prices.officeLargePrice, saleableOff);
   }
-  const totalRevenue = revenueRes + revenueRet + revenueOff;
+  const calculatedRevenue = revenueRes + revenueRet + revenueOff;
+  // Use approvedRevenue if the user has explicitly approved a scenario, otherwise use calculated
+  const approvedRev = cp?.approvedRevenue ? Number(cp.approvedRevenue) : 0;
+  const totalRevenue = (approvedRev > 0) ? approvedRev : calculatedRevenue;
 
   const agentCommissionLand = landPrice * (agentCommissionLandPct / 100);
   const landRegistration = landPrice * 0.04;

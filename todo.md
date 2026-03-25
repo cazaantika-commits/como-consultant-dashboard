@@ -411,3 +411,5 @@
 - [x] Make price/sqft field editable in LEFT results table without changing layout
 - [x] Scenario cards clickable — clicking one highlights it and saves its revenue as approved for financial analysis
 - [x] BUG: جدول مقترحات جويل لا يظهر — تم إصلاح قراءة المفاتيح المتداخلة من JSON
+- [x] BUG: صفحة التخطيط المالي لا تفتح بسبب خطأ في تحميل البيانات — تم إضافة الأعمدة المفقودة في DB
+- [x] ربط الإيرادات المعتمدة من التسعير والإيرادات بصفحة التخطيط المالي — تم عبر calculateProjectCosts
