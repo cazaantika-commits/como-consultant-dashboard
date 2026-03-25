@@ -876,6 +876,11 @@ export const cashFlowSettingsRouter = router({
         scenario: input.scenario,
         totalCosts: costs?.totalCosts || 0,
         totalRevenue: costs?.totalRevenue || 0,
+        revenueSource: costs?.revenueSource || "calculated",
+        activeScenario: costs?.activeScenario || "base",
+        scenarioLabel: costs?.scenarioLabel || "أساسي",
+        calculatedRevenue: costs?.calculatedRevenue || 0,
+        approvedRevenue: costs?.approvedRevenue || 0,
       };
     }),
 
@@ -1695,6 +1700,11 @@ export const cashFlowSettingsRouter = router({
         totalMonths,
         phaseInfo,
         totalRevenue: costs?.totalRevenue || 0,
+        revenueSource: costs?.revenueSource || "calculated",
+        activeScenario: costs?.activeScenario || "base",
+        scenarioLabel: costs?.scenarioLabel || "أساسي",
+        calculatedRevenue: costs?.calculatedRevenue || 0,
+        approvedRevenue: costs?.approvedRevenue || 0,
         totals: {
           investorCapital: { o1: investorTotalO1, o2: investorTotalO2, o3: investorTotalO3 },
           escrowTotal: { o1: escrowTotalO1, o2: escrowTotalO2, o3: escrowTotalO3 },
@@ -1886,6 +1896,9 @@ export const cashFlowSettingsRouter = router({
         startDate: project.startDate || "2026-04",
         totalMonths,
         totalRevenue: costs.totalRevenue || 0,
+        revenueSource: costs.revenueSource || "calculated",
+        activeScenario: costs.activeScenario || "base",
+        scenarioLabel: costs.scenarioLabel || "أساسي",
         phaseInfo,
         durations: {
           design: durations.design,

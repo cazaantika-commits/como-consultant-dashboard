@@ -35,12 +35,39 @@
   .escrow-total-row { background: #1d4ed8; color: #fff; font-weight: bold; font-size: 12px; }
   .escrow-total-row td { border-color: #1e40af; }
   .toggleable:hover { opacity: 0.7; }
+
+  .revenue-banner {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; border-radius: 10px; margin-bottom: 14px;
+    font-size: 11px; font-weight: 600; gap: 12px;
+  }
+  .revenue-banner.approved {
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5); border: 1px solid #6ee7b7; color: #065f46;
+  }
+  .revenue-banner.calculated {
+    background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fcd34d; color: #92400e;
+  }
+  .revenue-banner .info { display: flex; align-items: center; gap: 8px; }
+  .revenue-banner .info .icon { font-size: 16px; }
+  .revenue-banner .amounts { display: flex; gap: 16px; font-family: 'Courier New', monospace; font-size: 12px; }
+  .revenue-banner .amounts .label { font-size: 9px; opacity: 0.7; font-family: 'Segoe UI', Tahoma, sans-serif; }
+  .refresh-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 5px 12px; border-radius: 6px; border: 1px solid #d1d5db;
+    background: #fff; color: #374151; font-size: 10px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+  .refresh-btn:hover { background: #f3f4f6; border-color: #9ca3af; }
+  .refresh-btn:active { transform: scale(0.97); }
+  .refresh-btn .spin { display: inline-block; animation: spin 1s linear infinite; }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
 
 <h2>إعدادات التكاليف — مقارنة السيناريوهات الثلاثة</h2>
 <div id="project-name" class="project-name"></div>
+<div id="revenueBanner"></div>
 <div id="loading" class="loading">جاري تحميل البيانات...</div>
 <div id="error" class="error" style="display:none;"></div>
 <div id="table-container" style="display:none;"></div>
@@ -99,6 +126,7 @@ async function loadData() {
 
     const data = json.result.data.json;
     document.getElementById('project-name').textContent = data.projectName;
+    buildRevenueBanner(data);
     
     // Build table
     let html = '<table><thead><tr>';
@@ -181,6 +209,32 @@ async function loadData() {
     document.getElementById('error').style.display = 'block';
     document.getElementById('error').textContent = 'خطأ: ' + (err.message || 'فشل تحميل البيانات');
   }
+}
+
+function buildRevenueBanner(data) {
+  if (!data) return;
+  var el = document.getElementById('revenueBanner');
+  if (!el) return;
+  var isApproved = data.revenueSource === 'approved';
+  var cls = isApproved ? 'approved' : 'calculated';
+  var icon = isApproved ? '\u2705' : '\u26A0\uFE0F';
+  var msg = isApproved
+    ? '\u0627\u0644\u0625\u064A\u0631\u0627\u062F \u0627\u0644\u0645\u0639\u062A\u0645\u062F \u0645\u0633\u062A\u062E\u062F\u0645 \u2014 \u0627\u0644\u0633\u064A\u0646\u0627\u0631\u064A\u0648: ' + data.scenarioLabel
+    : '\u0625\u064A\u0631\u0627\u062F \u0645\u062D\u0633\u0648\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u2014 \u0644\u0645 \u064A\u062A\u0645 \u0627\u0639\u062A\u0645\u0627\u062F \u0633\u064A\u0646\u0627\u0631\u064A\u0648 \u0628\u0639\u062F';
+  var h = '<div class="revenue-banner ' + cls + '">';
+  h += '<div class="info"><span class="icon">' + icon + '</span><span>' + msg + '</span></div>';
+  h += '<div style="display:flex;align-items:center;gap:12px;">';
+  h += '<div class="amounts"><div><div class="label">\u0627\u0644\u0625\u064A\u0631\u0627\u062F</div>' + fmt(data.totalRevenue) + '</div></div>';
+  h += '<button class="refresh-btn" onclick="refreshData()" id="refreshBtn">\u21BB \u062A\u062D\u062F\u064A\u062B</button>';
+  h += '</div></div>';
+  el.innerHTML = h;
+}
+
+async function refreshData() {
+  var btn = document.getElementById('refreshBtn');
+  if (btn) btn.innerHTML = '<span class="spin">\u21BB</span> \u062C\u0627\u0631\u064A...';
+  await loadData();
+  if (btn) btn.innerHTML = '\u21BB \u062A\u062D\u062F\u064A\u062B';
 }
 
 loadData();

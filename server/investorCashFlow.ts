@@ -168,12 +168,16 @@ export function calculateProjectCosts(
   const totalRegulatory = reraUnitRegFee + reraProjectRegFee + developerNocFee + escrowAccountFee + bankFees + surveyorFees + reraAuditReportFee + reraInspectionReportFee;
   const totalCosts = landPrice + agentCommissionLand + landRegistration + soilTestFee + topographicSurveyFee + officialBodiesFees + designFee + supervisionFee + separationFee + constructionCost + communityFees + contingencies + developerFee + salesCommission + marketingCost + totalRegulatory;
 
+  const revenueSource: "approved" | "calculated" = (approvedRev > 0) ? "approved" : "calculated";
+  const scenarioLabel = activeScenario === "optimistic" ? "متفائل" : activeScenario === "conservative" ? "متحفظ" : "أساسي";
+
   return {
     landPrice, agentCommissionLand, landRegistration, soilTestFee, topographicSurveyFee,
     officialBodiesFees, designFee, supervisionFee, separationFee, constructionCost,
     communityFees, contingencies, developerFee, salesCommission, marketingCost,
     reraUnitRegFee, reraProjectRegFee, developerNocFee, escrowAccountFee, bankFees,
     surveyorFees, reraAuditReportFee, reraInspectionReportFee, totalRevenue, totalCosts,
+    revenueSource, activeScenario, scenarioLabel, calculatedRevenue, approvedRevenue: approvedRev,
   };
 }
 
