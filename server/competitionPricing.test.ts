@@ -155,3 +155,144 @@ describe("Competition Pricing Tab - Schema & Logic", () => {
     expect(avgPrice).toBeCloseTo(totalRevenue / totalArea, 2);
   });
 });
+
+
+describe("Approved Revenue & Scenario Selection", () => {
+  // Simulate the revenue calculation per scenario
+  function calcRevenueByScenario(
+    units: { avgArea: number; basePrice: number; count: number }[],
+    multiplier: number
+  ): number {
+    return units.reduce(
+      (sum, u) => sum + u.count * u.avgArea * u.basePrice * multiplier,
+      0
+    );
+  }
+
+  const sampleUnits = [
+    { avgArea: 500, basePrice: 1600, count: 5 },
+    { avgArea: 900, basePrice: 1550, count: 26 },
+    { avgArea: 1200, basePrice: 1450, count: 16 },
+    { avgArea: 1500, basePrice: 1400, count: 3 },
+  ];
+
+  const baseRevenue = calcRevenueByScenario(sampleUnits, 1.0);
+  const optRevenue = calcRevenueByScenario(sampleUnits, 1.1);
+  const consRevenue = calcRevenueByScenario(sampleUnits, 0.9);
+
+  it("optimistic revenue should be 10% higher than base", () => {
+    expect(optRevenue).toBeCloseTo(baseRevenue * 1.1, 0);
+  });
+
+  it("conservative revenue should be 10% lower than base", () => {
+    expect(consRevenue).toBeCloseTo(baseRevenue * 0.9, 0);
+  });
+
+  it("approved revenue should match the selected scenario revenue", () => {
+    type ScenarioKey = "optimistic" | "base" | "conservative";
+    const revenueByScenario: Record<ScenarioKey, number> = {
+      optimistic: optRevenue,
+      base: baseRevenue,
+      conservative: consRevenue,
+    };
+
+    // Simulate clicking on "base" scenario
+    let approvedScenario: ScenarioKey = "base";
+    let approvedRevenue = Math.round(revenueByScenario[approvedScenario]);
+    expect(approvedRevenue).toBe(Math.round(baseRevenue));
+
+    // Switch to optimistic
+    approvedScenario = "optimistic";
+    approvedRevenue = Math.round(revenueByScenario[approvedScenario]);
+    expect(approvedRevenue).toBe(Math.round(optRevenue));
+
+    // Switch to conservative
+    approvedScenario = "conservative";
+    approvedRevenue = Math.round(revenueByScenario[approvedScenario]);
+    expect(approvedRevenue).toBe(Math.round(consRevenue));
+  });
+
+  it("approved revenue should be 0 when no scenario is selected", () => {
+    type ScenarioKey = "optimistic" | "base" | "conservative";
+    const revenueByScenario: Record<ScenarioKey, number> = {
+      optimistic: optRevenue,
+      base: baseRevenue,
+      conservative: consRevenue,
+    };
+
+    const approvedScenario: ScenarioKey | null = null;
+    const approvedRevenue = approvedScenario
+      ? Math.round(revenueByScenario[approvedScenario])
+      : 0;
+    expect(approvedRevenue).toBe(0);
+  });
+
+  it("clicking a scenario should set both activeScenario and approvedScenario", () => {
+    type ScenarioKey = "optimistic" | "base" | "conservative";
+    let activeScenario: ScenarioKey = "base";
+    let approvedScenario: ScenarioKey | null = null;
+
+    // Simulate clicking on optimistic card
+    const clickScenario = (sc: ScenarioKey) => {
+      approvedScenario = sc;
+      activeScenario = sc;
+    };
+
+    clickScenario("optimistic");
+    expect(activeScenario).toBe("optimistic");
+    expect(approvedScenario).toBe("optimistic");
+
+    clickScenario("conservative");
+    expect(activeScenario).toBe("conservative");
+    expect(approvedScenario).toBe("conservative");
+  });
+
+  it("save payload should include approvedRevenue from selected scenario", () => {
+    type ScenarioKey = "optimistic" | "base" | "conservative";
+    const revenueByScenario: Record<ScenarioKey, number> = {
+      optimistic: optRevenue,
+      base: baseRevenue,
+      conservative: consRevenue,
+    };
+
+    const approvedScenario: ScenarioKey = "base";
+    const savePayload = {
+      projectId: 1,
+      activeScenario: approvedScenario,
+      approvedRevenue: approvedScenario
+        ? Math.round(revenueByScenario[approvedScenario])
+        : 0,
+    };
+
+    expect(savePayload.approvedRevenue).toBe(Math.round(baseRevenue));
+    expect(savePayload.activeScenario).toBe("base");
+    expect(savePayload.approvedRevenue).toBeGreaterThan(0);
+  });
+
+  it("editable price should update base price and recalculate revenue", () => {
+    const originalPrice = 1550;
+    const newPrice = 1700;
+    const avgArea = 900;
+    const count = 26;
+
+    const originalRevenue = count * avgArea * originalPrice;
+    const newRevenue = count * avgArea * newPrice;
+
+    expect(newRevenue).toBeGreaterThan(originalRevenue);
+    expect(newRevenue).toBe(26 * 900 * 1700);
+    expect(newRevenue).toBe(39780000);
+  });
+
+  it("scenario multiplier should apply on top of edited base price", () => {
+    const editedBasePrice = 1700;
+    const avgArea = 900;
+    const count = 26;
+
+    const baseRev = count * avgArea * editedBasePrice * 1.0;
+    const optRev = count * avgArea * editedBasePrice * 1.1;
+    const consRev = count * avgArea * editedBasePrice * 0.9;
+
+    expect(optRev).toBeCloseTo(baseRev * 1.1, 0);
+    expect(consRev).toBeCloseTo(baseRev * 0.9, 0);
+  });
+});

@@ -315,6 +315,7 @@ export const competitionPricing = mysqlTable("competition_pricing", {
 	paymentDeferredPct: decimal({ precision: 5, scale: 2 }).default('0'),
 	paymentDeferredTiming: varchar({ length: 255 }),
 	activeScenario: varchar({ length: 20 }).default('base'),
+	approvedRevenue: bigint({ mode: 'number' }).default(0),
 	isApproved: int().default(0).notNull(),
 	approvedAt: timestamp({ mode: 'string' }),
 	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),

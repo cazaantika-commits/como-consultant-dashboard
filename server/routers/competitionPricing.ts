@@ -51,6 +51,8 @@ const pricingInput = z.object({
   paymentDeferredTiming: z.string().optional().nullable(),
   // السيناريو النشط
   activeScenario: z.string().optional().nullable(),
+  // الإيراد المعتمد
+  approvedRevenue: z.number().optional().nullable(),
 });
 
 export const competitionPricingRouter = router({
@@ -139,6 +141,8 @@ export const competitionPricingRouter = router({
         paymentDeferredTiming: input.paymentDeferredTiming ?? null,
         // السيناريو النشط
         activeScenario: input.activeScenario ?? 'base',
+        // الإيراد المعتمد
+        approvedRevenue: input.approvedRevenue ?? 0,
       };
 
       if (existing[0]) {

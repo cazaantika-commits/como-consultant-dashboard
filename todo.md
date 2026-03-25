@@ -407,3 +407,6 @@
 - [x] RIGHT panel: remove price column, add إجمالي (عدد×مساحة)
 - [x] LEFT panel: add النسبة % column next to النوع
 - [x] LEFT panel: auto-absorb surplus into غرفتين وصالة
+- [x] Add Joel's suggestions table back (read-only reference with suggested percentages and prices)
+- [x] Make price/sqft field editable in LEFT results table without changing layout
+- [x] Scenario cards clickable — clicking one highlights it and saves its revenue as approved for financial analysis

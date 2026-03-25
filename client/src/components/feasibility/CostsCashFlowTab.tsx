@@ -99,6 +99,7 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
   const [basePrices, setBasePrices] = useState<Record<string, number>>({});
   const [activeScenario, setActiveScenario] = useState<ScenarioKey>("base");
   const [dirty, setDirty] = useState(false);
+  const [approvedScenario, setApprovedScenario] = useState<ScenarioKey | null>(null);
   const [moJoelleSource, setMoJoelleSource] = useState(false);
   const [cpJoelleSource, setCpJoelleSource] = useState(false);
 
@@ -145,6 +146,9 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
     UNIT_ROWS.forEach(row => { newPrices[row.key] = (d as any)[row.baseField] || 0; });
     setBasePrices(newPrices);
     if (d.activeScenario) setActiveScenario(d.activeScenario as ScenarioKey);
+    if (d.approvedRevenue && d.approvedRevenue > 0 && d.activeScenario) {
+      setApprovedScenario(d.activeScenario as ScenarioKey);
+    }
     if (d.aiRecommendationsJson) setCpJoelleSource(true);
   }, [cpQuery.data]);
 
@@ -293,6 +297,7 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
       consRetailSmallPrice: Math.round((bp.retSmall || 0) * 0.9), consRetailMediumPrice: Math.round((bp.retMedium || 0) * 0.9), consRetailLargePrice: Math.round((bp.retLarge || 0) * 0.9),
       consOfficeSmallPrice: Math.round((bp.offSmall || 0) * 0.9), consOfficeMediumPrice: Math.round((bp.offMedium || 0) * 0.9), consOfficeLargePrice: Math.round((bp.offLarge || 0) * 0.9),
       activeScenario,
+      approvedRevenue: approvedScenario ? Math.round(revenueByScenario[approvedScenario]) : 0,
       paymentBookingPct: 10, paymentBookingTiming: "عند التوقيع",
       paymentConstructionPct: 60, paymentConstructionTiming: "أثناء الإنشاء",
       paymentHandoverPct: 30, paymentHandoverTiming: "عند التسليم",
@@ -568,7 +573,7 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
                             ) : "—"}
                           </td>
                           <td className="py-1 text-center font-mono text-[10px] text-gray-700 font-semibold" dir="ltr">{r.effectiveTotalArea > 0 ? fmt(r.effectiveTotalArea) : "—"}</td>
-                          <td className="py-1 text-center font-mono text-[10px] text-gray-600" dir="ltr">{r.scenarioPrice > 0 ? fmt(r.scenarioPrice) : "—"}</td>
+                          <td className="py-0 w-14"><EditableNum value={r.price} onChange={(v) => updatePrice(r.key, v)} cls="text-gray-700" /></td>
                           <td className={`py-1 text-center font-mono text-[10px] font-bold ${scenarioConfig[activeScenario].color}`} dir="ltr">{r.revenue > 0 ? fmt(r.revenue) : "—"}</td>
                         </tr>
                       ))}
@@ -626,19 +631,35 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
           </div>
         )}
 
-        {/* Revenue comparison strip */}
+        {/* Revenue comparison strip — clickable scenario cards */}
         <div className="grid grid-cols-3 border-t-2 border-gray-200">
           {(["optimistic", "base", "conservative"] as const).map(sc => {
             const rev = revenueByScenario[sc];
             const cfg = scenarioConfig[sc];
             const isActive = sc === activeScenario;
+            const isApproved = sc === approvedScenario;
             const activeBg = sc === "optimistic" ? "bg-emerald-50" : sc === "conservative" ? "bg-orange-50" : "bg-blue-50";
+            const approvedRing = sc === "optimistic" ? "ring-emerald-500" : sc === "conservative" ? "ring-orange-500" : "ring-blue-500";
             return (
-              <div key={sc} className={`px-3 py-2 text-center border-l first:border-l-0 border-gray-200 transition-colors ${isActive ? activeBg : "bg-gray-50/50"}`}>
-                <div className={`text-[10px] font-bold ${isActive ? cfg.color : "text-gray-500"}`}>{cfg.label}</div>
-                <div className={`text-sm font-black font-mono ${isActive ? cfg.color : "text-gray-600"}`} dir="ltr">{fmt(rev)}</div>
+              <button key={sc}
+                onClick={() => {
+                  setApprovedScenario(sc);
+                  setActiveScenario(sc);
+                  setDirty(true);
+                  toast.success(`تم اعتماد السيناريو ${cfg.label} — اضغط حفظ لتأكيد الإيراد المعتمد`);
+                }}
+                className={`px-3 py-2.5 text-center border-l first:border-l-0 border-gray-200 transition-all cursor-pointer hover:shadow-md relative
+                  ${isApproved ? `${activeBg} ring-2 ${approvedRing} ring-inset shadow-inner` : isActive ? activeBg : "bg-gray-50/50 hover:bg-gray-100/60"}`}>
+                {isApproved && (
+                  <span className="absolute top-1 left-1">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                  </span>
+                )}
+                <div className={`text-[10px] font-bold ${isActive || isApproved ? cfg.color : "text-gray-500"}`}>{cfg.label}</div>
+                <div className={`text-sm font-black font-mono ${isActive || isApproved ? cfg.color : "text-gray-600"}`} dir="ltr">{fmt(rev)}</div>
                 <div className="text-[9px] text-gray-400 font-medium">AED</div>
-              </div>
+                {isApproved && <div className="text-[8px] font-bold text-emerald-600 mt-0.5">الإيراد المعتمد</div>}
+              </button>
             );
           })}
         </div>

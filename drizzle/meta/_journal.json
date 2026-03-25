@@ -337,6 +337,13 @@
       "when": 1774070996307,
       "tag": "0047_flashy_weapon_omega",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "5",
+      "when": 1774465797315,
+      "tag": "0048_tough_thor",
+      "breakpoints": true
     }
   ]
 }
