@@ -371,3 +371,11 @@
 
 ## إصلاح خلل طريقة السداد "نسبة"
 - [x] إصلاح عدم حفظ طريقة السداد عند اختيار "نسبة" وظهور الحقول فارغة في التقارير (السبب: الفرونت كان يقرأ savedData.items بدل savedData.settings)
+- [x] Rebuild CostsCashFlowTab from scratch — remove all existing content
+- [x] Add land details and GFA breakdown section from project card
+- [x] Add sellable areas breakdown section
+- [x] Add Joel's suggestions table (read-only reference)
+- [x] Add interactive distribution table with zero-waste algorithm
+- [x] Add parking calculations based on Dubai regulations
+- [x] Add three pricing scenarios (base ±10%) with revenue calculations
+- [x] Remove costs/profits section entirely

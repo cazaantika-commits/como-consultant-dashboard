@@ -1,197 +1,266 @@
 import { describe, it, expect } from "vitest";
 
-// Test the cost computation logic that mirrors the frontend CostsCashFlowTab
-describe("CostsCashFlow Computations", () => {
-  const computeCosts = (fields: any, feasData: any) => {
-    const bua = feasData.estimatedBua || 0;
-    const plotAreaM2 = (feasData.plotArea || 0) * 0.0929;
-    const totalUnits = feasData.totalUnits || 0;
-    const totalRevenue = feasData.totalRevenue || 0;
+/* ═══════════════════════════════════════════════════════════════ */
+/* Part 1: Zero-Waste Distribution, Parking, and Revenue Tests   */
+/* ═══════════════════════════════════════════════════════════════ */
 
-    const agentCommissionLand = fields.landPrice * (fields.agentCommissionLandPct / 100);
-    const landRegistration = fields.landPrice * (fields.landRegistrationPct / 100);
-    const designFee = (bua * fields.constructionCostPerSqft) * (fields.designFeePct / 100);
-    const supervisionFee = (bua * fields.constructionCostPerSqft) * (fields.supervisionFeePct / 100);
-    const separationFee = plotAreaM2 * fields.separationFeePerM2;
-    const constructionCost = bua * fields.constructionCostPerSqft;
-    const contingencies = constructionCost * (fields.contingenciesPct / 100);
-    const developerFee = totalRevenue * (fields.developerFeePct / 100);
-    const agentCommissionSale = totalRevenue * (fields.agentCommissionSalePct / 100);
-    const marketing = totalRevenue * (fields.marketingPct / 100);
-    const reraUnitTotal = totalUnits * fields.reraUnitFee;
+const PARKING = {
+  residential: { threshold: 1615, below: 1, above: 2 },
+  retail: { perSqft: 753 },
+  offices: { perSqft: 538 },
+};
 
-    const totalCosts = fields.landPrice + agentCommissionLand + landRegistration +
-      fields.soilInvestigation + fields.topographySurvey +
-      designFee + supervisionFee + fields.authoritiesFee + separationFee +
-      constructionCost + fields.communityFee + contingencies +
-      developerFee + agentCommissionSale + marketing +
-      fields.reraOffplanFee + reraUnitTotal + fields.nocFee +
-      fields.escrowFee + fields.bankCharges + fields.surveyorFees +
-      fields.reraAuditFees + fields.reraInspectionFees;
+interface UnitType {
+  key: string;
+  label: string;
+  pct: number;
+  avgArea: number;
+  basePricePerSqft: number;
+}
 
-    const profit = totalRevenue - totalCosts;
-    const roi = totalCosts > 0 ? (profit / totalCosts) * 100 : 0;
-    const comoProfit = profit * (fields.comoProfitSharePct / 100);
-    const profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
+interface DistResult {
+  key: string;
+  label: string;
+  pct: number;
+  avgArea: number;
+  allocated: number;
+  units: number;
+  surplus: number;
+  parking: number;
+  basePricePerSqft: number;
+  unitPrice: number;
+  revenueBase: number;
+  revenueOpt: number;
+  revenueCons: number;
+}
 
+function zeroWasteDistribute(types: UnitType[], totalSellable: number): DistResult[] {
+  if (totalSellable <= 0 || types.length === 0) return [];
+  const activeTypes = types.filter(t => t.pct > 0 && t.avgArea > 0);
+  if (activeTypes.length === 0) return [];
+
+  let results: DistResult[] = activeTypes.map(t => {
+    const allocated = totalSellable * (t.pct / 100);
+    const units = Math.floor(allocated / t.avgArea);
+    const surplus = allocated - (units * t.avgArea);
     return {
-      bua, totalRevenue, totalUnits, plotAreaM2,
-      agentCommissionLand, landRegistration, designFee, supervisionFee,
-      separationFee, constructionCost, contingencies, developerFee,
-      agentCommissionSale, marketing, reraUnitTotal, totalCosts,
-      profit, roi, comoProfit, profitMargin,
+      key: t.key, label: t.label, pct: t.pct, avgArea: t.avgArea,
+      allocated, units, surplus, parking: 0,
+      basePricePerSqft: t.basePricePerSqft,
+      unitPrice: t.avgArea * t.basePricePerSqft,
+      revenueBase: 0, revenueOpt: 0, revenueCons: 0,
     };
-  };
-
-  const defaultFields = {
-    landPrice: 10000000,
-    agentCommissionLandPct: 1,
-    landRegistrationPct: 4,
-    soilInvestigation: 50000,
-    topographySurvey: 30000,
-    designFeePct: 2,
-    supervisionFeePct: 2,
-    authoritiesFee: 100000,
-    separationFeePerM2: 40,
-    constructionCostPerSqft: 250,
-    communityFee: 200000,
-    contingenciesPct: 2,
-    developerFeePct: 5,
-    agentCommissionSalePct: 5,
-    marketingPct: 2,
-    reraOffplanFee: 150000,
-    reraUnitFee: 850,
-    nocFee: 10000,
-    escrowFee: 140000,
-    bankCharges: 20000,
-    surveyorFees: 12000,
-    reraAuditFees: 18000,
-    reraInspectionFees: 70000,
-    comoProfitSharePct: 15,
-  };
-
-  const defaultFeasData = {
-    estimatedBua: 50000,
-    plotArea: 10000,
-    totalUnits: 100,
-    totalRevenue: 80000000,
-  };
-
-  it("should calculate land costs correctly", () => {
-    const result = computeCosts(defaultFields, defaultFeasData);
-    expect(result.agentCommissionLand).toBe(100000); // 10M * 1%
-    expect(result.landRegistration).toBe(400000); // 10M * 4%
   });
 
-  it("should calculate construction cost correctly", () => {
-    const result = computeCosts(defaultFields, defaultFeasData);
-    expect(result.constructionCost).toBe(12500000); // 50000 sqft * 250 AED/sqft
+  let totalSurplus = results.reduce((s, r) => s + r.surplus, 0);
+  const sortedByArea = [...results].sort((a, b) => a.avgArea - b.avgArea);
+  for (const item of sortedByArea) {
+    while (totalSurplus >= item.avgArea) {
+      const r = results.find(r => r.key === item.key)!;
+      r.units += 1;
+      totalSurplus -= item.avgArea;
+    }
+  }
+
+  const usedArea = results.reduce((s, r) => s + r.units * r.avgArea, 0);
+  const finalSurplus = totalSellable - usedArea;
+  results = results.map(r => ({ ...r, surplus: 0 }));
+  if (finalSurplus > 0 && results.length > 0) {
+    const largestIdx = results.reduce((maxIdx, r, i, arr) => r.avgArea > arr[maxIdx].avgArea ? i : maxIdx, 0);
+    results[largestIdx].surplus = finalSurplus;
+  }
+
+  return results;
+}
+
+function calcParking(results: DistResult[], category: "residential" | "retail" | "offices"): DistResult[] {
+  return results.map(r => {
+    let parking = 0;
+    if (category === "residential") {
+      parking = r.units * (r.avgArea <= PARKING.residential.threshold ? PARKING.residential.below : PARKING.residential.above);
+    } else if (category === "retail") {
+      parking = Math.ceil((r.units * r.avgArea) / PARKING.retail.perSqft);
+    } else {
+      parking = Math.ceil((r.units * r.avgArea) / PARKING.offices.perSqft);
+    }
+    return { ...r, parking };
+  });
+}
+
+function calcRevenue(results: DistResult[]): DistResult[] {
+  return results.map(r => ({
+    ...r,
+    unitPrice: r.avgArea * r.basePricePerSqft,
+    revenueBase: r.units * r.avgArea * r.basePricePerSqft,
+    revenueOpt: r.units * r.avgArea * r.basePricePerSqft * 1.10,
+    revenueCons: r.units * r.avgArea * r.basePricePerSqft * 0.90,
+  }));
+}
+
+describe("Zero-Waste Distribution Algorithm", () => {
+  it("returns empty array for zero sellable area", () => {
+    const types: UnitType[] = [
+      { key: "studio", label: "استديو", pct: 30, avgArea: 400, basePricePerSqft: 1500 },
+    ];
+    expect(zeroWasteDistribute(types, 0)).toEqual([]);
   });
 
-  it("should calculate design and supervision fees correctly", () => {
-    const result = computeCosts(defaultFields, defaultFeasData);
-    // design fee = constructionCost * 2% = 12500000 * 0.02 = 250000
-    expect(result.designFee).toBe(250000);
-    // supervision fee = constructionCost * 2% = 250000
-    expect(result.supervisionFee).toBe(250000);
+  it("returns empty array for no active types", () => {
+    const types: UnitType[] = [
+      { key: "studio", label: "استديو", pct: 0, avgArea: 400, basePricePerSqft: 1500 },
+    ];
+    expect(zeroWasteDistribute(types, 10000)).toEqual([]);
   });
 
-  it("should calculate separation fee correctly", () => {
-    const result = computeCosts(defaultFields, defaultFeasData);
-    // plotAreaM2 = 10000 * 0.0929 = 929 m2
-    // separationFee = 929 * 40 = 37160
-    expect(result.separationFee).toBeCloseTo(37160, 0);
+  it("distributes units correctly for a single type", () => {
+    const types: UnitType[] = [
+      { key: "studio", label: "استديو", pct: 100, avgArea: 400, basePricePerSqft: 1500 },
+    ];
+    const results = zeroWasteDistribute(types, 10000);
+    expect(results).toHaveLength(1);
+    expect(results[0].units).toBe(25);
+    expect(results[0].surplus).toBe(0);
   });
 
-  it("should calculate contingencies correctly", () => {
-    const result = computeCosts(defaultFields, defaultFeasData);
-    // contingencies = constructionCost * 2% = 12500000 * 0.02 = 250000
-    expect(result.contingencies).toBe(250000);
+  it("distributes units with surplus correctly", () => {
+    const types: UnitType[] = [
+      { key: "studio", label: "استديو", pct: 100, avgArea: 400, basePricePerSqft: 1500 },
+    ];
+    const results = zeroWasteDistribute(types, 10100);
+    expect(results[0].units).toBe(25);
+    expect(results[0].surplus).toBe(100);
   });
 
-  it("should calculate revenue-based costs correctly", () => {
-    const result = computeCosts(defaultFields, defaultFeasData);
-    // developerFee = 80M * 5% = 4000000
-    expect(result.developerFee).toBe(4000000);
-    // agentCommissionSale = 80M * 5% = 4000000
-    expect(result.agentCommissionSale).toBe(4000000);
-    // marketing = 80M * 2% = 1600000
-    expect(result.marketing).toBe(1600000);
+  it("uses zero-waste: adds extra units from surplus using smallest type first", () => {
+    const types: UnitType[] = [
+      { key: "studio", label: "استديو", pct: 50, avgArea: 400, basePricePerSqft: 1500 },
+      { key: "1br", label: "غرفة وصالة", pct: 50, avgArea: 700, basePricePerSqft: 1800 },
+    ];
+    const results = zeroWasteDistribute(types, 10000);
+    expect(results).toHaveLength(2);
+    
+    const studio = results.find(r => r.key === "studio")!;
+    const oneBr = results.find(r => r.key === "1br")!;
+    
+    expect(studio.units).toBe(12);
+    expect(oneBr.units).toBe(7);
+    expect(oneBr.surplus).toBe(300);
   });
 
-  it("should calculate RERA unit total correctly", () => {
-    const result = computeCosts(defaultFields, defaultFeasData);
-    // 100 units * 850 = 85000
-    expect(result.reraUnitTotal).toBe(85000);
+  it("adds extra units when surplus is enough for smallest type", () => {
+    const types: UnitType[] = [
+      { key: "studio", label: "استديو", pct: 60, avgArea: 400, basePricePerSqft: 1500 },
+      { key: "1br", label: "غرفة وصالة", pct: 40, avgArea: 700, basePricePerSqft: 1800 },
+    ];
+    const results = zeroWasteDistribute(types, 10000);
+    
+    const studio = results.find(r => r.key === "studio")!;
+    const oneBr = results.find(r => r.key === "1br")!;
+    
+    expect(studio.units).toBe(16);
+    expect(oneBr.units).toBe(5);
+    expect(oneBr.surplus).toBe(100);
   });
 
-  it("should calculate total costs as sum of all cost items", () => {
-    const result = computeCosts(defaultFields, defaultFeasData);
-    // Verify total costs is positive and reasonable
-    expect(result.totalCosts).toBeGreaterThan(0);
-    // Manual check: land(10M) + commission(100k) + registration(400k) + soil(50k) + topo(30k) +
-    // design(250k) + supervision(250k) + authorities(100k) + separation(37160) +
-    // construction(12.5M) + community(200k) + contingencies(250k) +
-    // developer(4M) + agentSale(4M) + marketing(1.6M) +
-    // rera(150k) + reraUnits(85k) + noc(10k) + escrow(140k) + bank(20k) +
-    // surveyor(12k) + reraAudit(18k) + reraInspection(70k)
-    const expectedTotal = 10000000 + 100000 + 400000 + 50000 + 30000 +
-      250000 + 250000 + 100000 + 37160 +
-      12500000 + 200000 + 250000 +
-      4000000 + 4000000 + 1600000 +
-      150000 + 85000 + 10000 + 140000 + 20000 +
-      12000 + 18000 + 70000;
-    expect(result.totalCosts).toBeCloseTo(expectedTotal, 0);
+  it("total used area + surplus equals total sellable", () => {
+    const types: UnitType[] = [
+      { key: "studio", label: "استديو", pct: 25, avgArea: 400, basePricePerSqft: 1500 },
+      { key: "1br", label: "غرفة وصالة", pct: 35, avgArea: 700, basePricePerSqft: 1800 },
+      { key: "2br", label: "غرفتان", pct: 25, avgArea: 1000, basePricePerSqft: 2000 },
+      { key: "3br", label: "ثلاث غرف", pct: 15, avgArea: 1400, basePricePerSqft: 2200 },
+    ];
+    const totalSellable = 50000;
+    const results = zeroWasteDistribute(types, totalSellable);
+    
+    const usedArea = results.reduce((s, r) => s + r.units * r.avgArea, 0);
+    const totalSurplus = results.reduce((s, r) => s + r.surplus, 0);
+    
+    expect(usedArea + totalSurplus).toBe(totalSellable);
+  });
+});
+
+describe("Parking Calculations", () => {
+  it("calculates residential parking: 1 spot for units <= 1615 sqft", () => {
+    const results: DistResult[] = [{
+      key: "studio", label: "استديو", pct: 100, avgArea: 400, allocated: 10000,
+      units: 25, surplus: 0, parking: 0, basePricePerSqft: 1500,
+      unitPrice: 600000, revenueBase: 0, revenueOpt: 0, revenueCons: 0,
+    }];
+    const parked = calcParking(results, "residential");
+    expect(parked[0].parking).toBe(25);
   });
 
-  it("should calculate profit correctly", () => {
-    const result = computeCosts(defaultFields, defaultFeasData);
-    expect(result.profit).toBe(result.totalRevenue - result.totalCosts);
+  it("calculates residential parking: 2 spots for units > 1615 sqft", () => {
+    const results: DistResult[] = [{
+      key: "3br", label: "ثلاث غرف", pct: 100, avgArea: 1800, allocated: 18000,
+      units: 10, surplus: 0, parking: 0, basePricePerSqft: 2200,
+      unitPrice: 3960000, revenueBase: 0, revenueOpt: 0, revenueCons: 0,
+    }];
+    const parked = calcParking(results, "residential");
+    expect(parked[0].parking).toBe(20);
   });
 
-  it("should calculate ROI correctly", () => {
-    const result = computeCosts(defaultFields, defaultFeasData);
-    const expectedRoi = (result.profit / result.totalCosts) * 100;
-    expect(result.roi).toBeCloseTo(expectedRoi, 2);
+  it("calculates retail parking: 1 spot per 753 sqft", () => {
+    const results: DistResult[] = [{
+      key: "retSmall", label: "صغيرة", pct: 100, avgArea: 300, allocated: 3000,
+      units: 10, surplus: 0, parking: 0, basePricePerSqft: 2500,
+      unitPrice: 750000, revenueBase: 0, revenueOpt: 0, revenueCons: 0,
+    }];
+    const parked = calcParking(results, "retail");
+    expect(parked[0].parking).toBe(4);
   });
 
-  it("should calculate COMO profit share correctly", () => {
-    const result = computeCosts(defaultFields, defaultFeasData);
-    expect(result.comoProfit).toBe(result.profit * 0.15);
+  it("calculates office parking: 1 spot per 538 sqft", () => {
+    const results: DistResult[] = [{
+      key: "offSmall", label: "صغيرة", pct: 100, avgArea: 400, allocated: 4000,
+      units: 10, surplus: 0, parking: 0, basePricePerSqft: 1200,
+      unitPrice: 480000, revenueBase: 0, revenueOpt: 0, revenueCons: 0,
+    }];
+    const parked = calcParking(results, "offices");
+    expect(parked[0].parking).toBe(8);
+  });
+});
+
+describe("Revenue Calculations", () => {
+  it("calculates base, optimistic (+10%), and conservative (-10%) revenue", () => {
+    const results: DistResult[] = [{
+      key: "studio", label: "استديو", pct: 100, avgArea: 400, allocated: 10000,
+      units: 25, surplus: 0, parking: 25, basePricePerSqft: 1500,
+      unitPrice: 0, revenueBase: 0, revenueOpt: 0, revenueCons: 0,
+    }];
+    const revenue = calcRevenue(results);
+    
+    expect(revenue[0].revenueBase).toBe(15000000);
+    expect(revenue[0].revenueOpt).toBeCloseTo(16500000, 0);
+    expect(revenue[0].revenueCons).toBeCloseTo(13500000, 0);
+    expect(revenue[0].unitPrice).toBe(600000);
   });
 
-  it("should calculate profit margin correctly", () => {
-    const result = computeCosts(defaultFields, defaultFeasData);
-    const expectedMargin = (result.profit / result.totalRevenue) * 100;
-    expect(result.profitMargin).toBeCloseTo(expectedMargin, 2);
+  it("handles zero price correctly", () => {
+    const results: DistResult[] = [{
+      key: "studio", label: "استديو", pct: 100, avgArea: 400, allocated: 10000,
+      units: 25, surplus: 0, parking: 25, basePricePerSqft: 0,
+      unitPrice: 0, revenueBase: 0, revenueOpt: 0, revenueCons: 0,
+    }];
+    const revenue = calcRevenue(results);
+    expect(revenue[0].revenueBase).toBe(0);
+    expect(revenue[0].revenueOpt).toBe(0);
+    expect(revenue[0].revenueCons).toBe(0);
   });
+});
 
-  it("should handle zero BUA gracefully", () => {
-    const result = computeCosts(defaultFields, { ...defaultFeasData, estimatedBua: 0 });
-    expect(result.constructionCost).toBe(0);
-    expect(result.designFee).toBe(0);
-    expect(result.supervisionFee).toBe(0);
-    expect(result.contingencies).toBe(0);
-  });
-
-  it("should handle zero revenue gracefully", () => {
-    const result = computeCosts(defaultFields, { ...defaultFeasData, totalRevenue: 0 });
-    expect(result.developerFee).toBe(0);
-    expect(result.agentCommissionSale).toBe(0);
-    expect(result.marketing).toBe(0);
-    expect(result.profit).toBeLessThan(0);
-    expect(result.profitMargin).toBe(0);
-  });
-
-  it("should handle zero total costs for ROI", () => {
-    const zeroFields = { ...defaultFields, landPrice: 0, soilInvestigation: 0, topographySurvey: 0, authoritiesFee: 0, constructionCostPerSqft: 0, communityFee: 0, reraOffplanFee: 0, reraUnitFee: 0, nocFee: 0, escrowFee: 0, bankCharges: 0, surveyorFees: 0, reraAuditFees: 0, reraInspectionFees: 0, separationFeePerM2: 0 };
-    const result = computeCosts(zeroFields, { ...defaultFeasData, totalRevenue: 0, totalUnits: 0, plotArea: 0 });
-    expect(result.roi).toBe(0);
-  });
-
-  it("should calculate sales phases total validation", () => {
-    const salesPhases = { salesPhase1Pct: 30, salesPhase2Pct: 40, salesPhase3Pct: 30 };
-    const total = salesPhases.salesPhase1Pct + salesPhases.salesPhase2Pct + salesPhases.salesPhase3Pct;
-    expect(total).toBe(100);
+describe("Sellable Area Efficiency Ratios", () => {
+  it("applies correct efficiency ratios", () => {
+    const gfaRes = 100000;
+    const gfaRet = 50000;
+    const gfaOff = 30000;
+    
+    const sellableRes = gfaRes * 0.95;
+    const sellableRet = gfaRet * 0.97;
+    const sellableOff = gfaOff * 0.95;
+    
+    expect(sellableRes).toBe(95000);
+    expect(sellableRet).toBe(48500);
+    expect(sellableOff).toBe(28500);
   });
 });
