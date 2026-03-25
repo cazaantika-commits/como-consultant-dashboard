@@ -26,7 +26,7 @@ function fmt(n: number | null | undefined): string {
   return Math.round(n).toLocaleString("en-US");
 }
 
-function EditableNum({ value, onChange, disabled, className: cls }: { value: number; onChange: (v: number) => void; disabled?: boolean; className?: string }) {
+function EditableNum({ value, onChange, disabled, cls }: { value: number; onChange: (v: number) => void; disabled?: boolean; cls?: string }) {
   const [localVal, setLocalVal] = useState("");
   const [focused, setFocused] = useState(false);
   const display = focused ? localVal : (value ? fmt(value) : "");
@@ -35,25 +35,17 @@ function EditableNum({ value, onChange, disabled, className: cls }: { value: num
       onFocus={() => { setFocused(true); setLocalVal(value ? String(value) : ""); }}
       onBlur={() => { setFocused(false); const n = parseFloat(localVal.replace(/,/g, "")); if (!isNaN(n) && n >= 0) onChange(n); }}
       onChange={(e) => setLocalVal(e.target.value)}
-      className={`h-7 text-xs text-center border-0 border-b border-dashed border-gray-300 rounded-none bg-transparent focus:border-blue-500 focus:bg-blue-50/40 px-1 font-mono ${cls || ""}`}
+      className={`h-6 text-[11px] text-center border-0 border-b border-dashed border-gray-300 rounded-none bg-transparent focus:border-blue-500 focus:bg-blue-50/40 px-0.5 font-mono ${cls || ""}`}
       disabled={disabled} dir="ltr" />
   );
 }
 
 type ScenarioKey = "optimistic" | "base" | "conservative";
 
-/* ═══ Row definition for each unit type ═══ */
 interface UnitRow {
-  key: string;
-  label: string;
-  cat: "residential" | "retail" | "offices";
-  catLabel: string;
-  catColor: string;
-  pctKey: string;
-  avgKey: string;
-  priceKey: string;
-  baseField: string;
-  divider?: boolean;
+  key: string; label: string; cat: "residential" | "retail" | "offices";
+  catLabel: string; catColor: string; pctKey: string; avgKey: string;
+  priceKey: string; baseField: string; divider?: boolean;
 }
 
 const UNIT_ROWS: UnitRow[] = [
@@ -95,18 +87,14 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
     onError: (err) => toast.error(err.message || "فشل في تطبيق مخرجات جويل"),
   });
 
-  /* ═══ Unit counts state (the PRIMARY input) ═══ */
   const [unitCounts, setUnitCounts] = useState<Record<string, number>>({});
-  /* ═══ Average areas state ═══ */
   const [avgAreas, setAvgAreas] = useState<Record<string, number>>({});
-  /* ═══ Pricing state ═══ */
   const [basePrices, setBasePrices] = useState<Record<string, number>>({});
   const [activeScenario, setActiveScenario] = useState<ScenarioKey>("base");
   const [dirty, setDirty] = useState(false);
   const [moJoelleSource, setMoJoelleSource] = useState(false);
   const [cpJoelleSource, setCpJoelleSource] = useState(false);
 
-  /* ═══ Save mutations ═══ */
   const moSaveMutation = trpc.marketOverview.save.useMutation({
     onSuccess: () => { moQuery.refetch(); toast.success("تم حفظ التوزيع"); },
     onError: () => toast.error("خطأ في الحفظ"),
@@ -122,15 +110,12 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
     const d = moQuery.data;
     const newAvg: Record<string, number> = {};
     const newCounts: Record<string, number> = {};
-
     UNIT_ROWS.forEach(row => {
       const pct = parseFloat((d as any)[row.pctKey] || "0");
       const avg = (d as any)[row.avgKey] || 0;
       const defaultArea = DEFAULT_AVG_AREAS[row.pctKey]?.defaultArea || 0;
-      const effectiveAvg = avg > 0 ? avg : (pct > 0 ? defaultArea : defaultArea);
+      const effectiveAvg = avg > 0 ? avg : defaultArea;
       newAvg[row.key] = effectiveAvg;
-
-      // Calculate initial unit count from percentage
       const sellable = getSellableForCat(row.cat, d);
       if (pct > 0 && effectiveAvg > 0 && sellable > 0) {
         newCounts[row.key] = Math.floor((sellable * pct / 100) / effectiveAvg);
@@ -138,10 +123,8 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
         newCounts[row.key] = 0;
       }
     });
-
     setAvgAreas(newAvg);
     setUnitCounts(prev => {
-      // Only set if we haven't manually edited yet
       const hasManualEdits = Object.values(prev).some(v => v > 0);
       return hasManualEdits ? prev : newCounts;
     });
@@ -152,16 +135,13 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
     if (!cpQuery.data) return;
     const d = cpQuery.data;
     const newPrices: Record<string, number> = {};
-    UNIT_ROWS.forEach(row => {
-      newPrices[row.key] = (d as any)[row.baseField] || 0;
-    });
+    UNIT_ROWS.forEach(row => { newPrices[row.key] = (d as any)[row.baseField] || 0; });
     setBasePrices(newPrices);
     if (d.activeScenario) setActiveScenario(d.activeScenario as ScenarioKey);
     if (d.aiRecommendationsJson) setCpJoelleSource(true);
   }, [cpQuery.data]);
 
-  /* Helper to get sellable area for a category from raw query data or project */
-  function getSellableForCat(cat: string, moData?: any): number {
+  function getSellableForCat(cat: string, _moData?: any): number {
     const p2 = project || {} as any;
     const gfaRes = parseFloat(p2.gfaResidentialSqft || "0");
     const gfaRet = parseFloat(p2.gfaRetailSqft || "0");
@@ -171,7 +151,6 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
     return gfaOff * 0.95;
   }
 
-  /* ═══ Project data ═══ */
   const p = project || {} as any;
   const plotAreaSqft = parseFloat(p.plotAreaSqft || "0");
   const plotAreaSqm = parseFloat(p.plotAreaSqm || "0");
@@ -205,8 +184,6 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
       const scenarioPrice = price * multiplier;
       const unitPrice = avg * scenarioPrice;
       const revenue = count * unitPrice;
-
-      // Parking
       let parking = 0;
       if (row.cat === "residential") {
         parking = count * (avg <= PARKING.residential.threshold ? PARKING.residential.below : PARKING.residential.above);
@@ -215,12 +192,10 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
       } else {
         parking = Math.ceil(totalArea / PARKING.offices.perSqft);
       }
-
       return { ...row, count, avg, price, totalArea, pct, scenarioPrice, unitPrice, revenue, parking, sellable };
     });
   }, [unitCounts, avgAreas, basePrices, activeScenario, getSellable]);
 
-  /* ═══ Category summaries ═══ */
   const catSummary = useCallback((cat: string) => {
     const rows = rowResults.filter(r => r.cat === cat);
     const sellable = getSellable(cat);
@@ -243,7 +218,6 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
   const grandTotalRevenue = resSummary.totalRevenue + retSummary.totalRevenue + offSummary.totalRevenue;
   const grandSurplus = totalSellable - grandTotalArea;
 
-  /* ═══ Revenue for all 3 scenarios (for comparison strip) ═══ */
   const revenueByScenario = useMemo(() => {
     const calc = (mult: number) => UNIT_ROWS.reduce((s, row) => {
       const count = unitCounts[row.key] || 0;
@@ -254,7 +228,6 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
     return { optimistic: calc(1.10), base: calc(1.00), conservative: calc(0.90) };
   }, [unitCounts, avgAreas, basePrices]);
 
-  /* ═══ Joel's suggestions ═══ */
   const joelSuggestions = useMemo(() => {
     try {
       const moData = moQuery.data;
@@ -264,26 +237,12 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
     } catch { return null; }
   }, [moQuery.data, cpQuery.data]);
 
-  /* ═══ Update handlers ═══ */
-  const updateCount = useCallback((key: string, val: number) => {
-    setUnitCounts(prev => ({ ...prev, [key]: Math.max(0, Math.round(val)) }));
-    setDirty(true);
-  }, []);
+  const updateCount = useCallback((key: string, val: number) => { setUnitCounts(prev => ({ ...prev, [key]: Math.max(0, Math.round(val)) })); setDirty(true); }, []);
+  const updateAvg = useCallback((key: string, val: number) => { setAvgAreas(prev => ({ ...prev, [key]: val })); setDirty(true); }, []);
+  const updatePrice = useCallback((key: string, val: number) => { setBasePrices(prev => ({ ...prev, [key]: val })); setDirty(true); }, []);
 
-  const updateAvg = useCallback((key: string, val: number) => {
-    setAvgAreas(prev => ({ ...prev, [key]: val }));
-    setDirty(true);
-  }, []);
-
-  const updatePrice = useCallback((key: string, val: number) => {
-    setBasePrices(prev => ({ ...prev, [key]: val }));
-    setDirty(true);
-  }, []);
-
-  /* ═══ Save ═══ */
   const handleSave = () => {
     if (!projectId) return;
-    // Convert unit counts back to percentages for storage
     const moPayload: any = { projectId, finishingQuality: "standard" };
     UNIT_ROWS.forEach(row => {
       const count = unitCounts[row.key] || 0;
@@ -294,7 +253,6 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
       moPayload[row.avgKey] = avg;
     });
     moSaveMutation.mutate(moPayload);
-
     const bp = basePrices;
     cpSaveMutation.mutate({
       projectId,
@@ -326,21 +284,64 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
     conservative: { label: "متحفظ -10%", color: "text-orange-700", bgBadge: "bg-orange-500", icon: TrendingDown },
   };
 
-  /* ═══ RENDER ═══ */
-  if (!projectId) return (<div className="text-center py-12 text-muted-foreground"><DollarSign className="w-12 h-12 mx-auto mb-3 opacity-30" /><p>اختر مشروعاً لعرض البيانات</p></div>);
-  if (projectQuery.isLoading) return (<div className="text-center py-12"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /><p className="text-sm text-muted-foreground mt-2">جاري تحميل البيانات...</p></div>);
-
-  /* Surplus indicator helper */
-  const SurplusBar = ({ surplus, sellable }: { surplus: number; sellable: number }) => {
+  /* ═══ Surplus helper ═══ */
+  const SurplusBar = ({ surplus, sellable, label }: { surplus: number; sellable: number; label: string }) => {
     if (sellable <= 0) return null;
     const pct = (surplus / sellable) * 100;
     const isNeg = surplus < 0;
     const isZero = Math.abs(surplus) < 1;
+    const barPct = Math.min(100, Math.abs(pct));
     return (
-      <div className={`flex items-center gap-1.5 text-[10px] font-bold ${isZero ? "text-emerald-600" : isNeg ? "text-red-600" : "text-amber-600"}`}>
-        {isZero ? <CheckCircle className="w-3 h-3" /> : isNeg ? <AlertTriangle className="w-3 h-3" /> : null}
-        <span>{isZero ? "صفر هدر" : `${isNeg ? "عجز" : "فائض"}: ${fmt(Math.abs(surplus))} sqft (${Math.abs(pct).toFixed(1)}%)`}</span>
+      <div className="space-y-0.5">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-bold text-gray-600">{label}</span>
+          <span className={`text-[10px] font-bold ${isZero ? "text-emerald-600" : isNeg ? "text-red-600" : "text-amber-600"}`}>
+            {isZero ? "صفر هدر ✓" : `${isNeg ? "عجز" : "فائض"}: ${fmt(Math.abs(surplus))} sqft (${Math.abs(pct).toFixed(1)}%)`}
+          </span>
+        </div>
+        <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div className={`h-full rounded-full transition-all ${isZero ? "bg-emerald-500" : isNeg ? "bg-red-400" : "bg-amber-400"}`}
+            style={{ width: `${isZero ? 100 : 100 - barPct}%` }} />
+        </div>
       </div>
+    );
+  };
+
+  /* ═══ RENDER ═══ */
+  if (!projectId) return (<div className="text-center py-12 text-muted-foreground"><DollarSign className="w-12 h-12 mx-auto mb-3 opacity-30" /><p>اختر مشروعاً لعرض البيانات</p></div>);
+  if (projectQuery.isLoading) return (<div className="text-center py-12"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /><p className="text-sm text-muted-foreground mt-2">جاري تحميل البيانات...</p></div>);
+
+  /* Category rows helper for results table */
+  const renderCatRows = (cat: string, catLabel: string, summary: ReturnType<typeof catSummary>, bgClass: string, textClass: string) => {
+    const rows = rowResults.filter(r => r.cat === cat && (r.count > 0 || r.price > 0));
+    if (rows.length === 0 && summary.sellable <= 0) return null;
+    return (
+      <>
+        {rows.map((r, i) => (
+          <tr key={r.key} className="border-b border-gray-100 hover:bg-gray-50/40">
+            <td className="py-1 pr-2 text-gray-800 text-[11px]">
+              {i === 0 && <span className="text-[9px] font-bold text-gray-400 ml-1">{catLabel} /</span>}
+              {r.label}
+            </td>
+            <td className="py-1 text-center font-mono text-[11px] text-gray-800">{r.count || "—"}</td>
+            <td className="py-1 text-center font-mono text-[11px] text-gray-600" dir="ltr">{r.avg > 0 ? fmt(r.avg) : "—"}</td>
+            <td className="py-1 text-center font-mono text-[11px] text-gray-700 font-semibold" dir="ltr">{r.totalArea > 0 ? fmt(r.totalArea) : "—"}</td>
+            <td className="py-1 text-center font-mono text-[11px] text-gray-600" dir="ltr">{r.scenarioPrice > 0 ? fmt(r.scenarioPrice) : "—"}</td>
+            <td className={`py-1 text-center font-mono text-[11px] font-bold ${scenarioConfig[activeScenario].color}`} dir="ltr">{r.revenue > 0 ? fmt(r.revenue) : "—"}</td>
+          </tr>
+        ))}
+        {/* Category subtotal */}
+        {summary.sellable > 0 && (
+          <tr className={`${bgClass} font-semibold border-b-2 border-gray-200`}>
+            <td className={`py-1.5 pr-2 text-[11px] ${textClass}`}>إجمالي {catLabel}</td>
+            <td className={`py-1.5 text-center font-mono text-[11px] ${textClass}`}>{fmt(summary.totalUnits)}</td>
+            <td className="py-1.5 text-center text-[11px] text-gray-400">—</td>
+            <td className={`py-1.5 text-center font-mono text-[11px] font-bold ${textClass}`} dir="ltr">{fmt(summary.totalArea)}</td>
+            <td className="py-1.5 text-center text-[11px] text-gray-400">—</td>
+            <td className={`py-1.5 text-center font-mono text-[11px] font-bold ${scenarioConfig[activeScenario].color}`} dir="ltr">{fmt(summary.totalRevenue)}</td>
+          </tr>
+        )}
+      </>
     );
   };
 
@@ -389,16 +390,14 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
               </div>
             ))}
           </div>
-
-          {/* GFA Breakdown */}
           <table className="w-full text-[11px]">
             <thead>
               <tr className="border-b-2 border-gray-200">
                 <th className="text-right py-1.5 pr-2 font-bold text-gray-500 w-8">#</th>
                 <th className="text-right py-1.5 font-bold text-gray-500">الفئة</th>
-                <th className="text-center py-1.5 font-bold text-gray-500">GFA</th>
+                <th className="text-center py-1.5 font-bold text-gray-500">GFA (sqft)</th>
                 <th className="text-center py-1.5 font-bold text-gray-500">الكفاءة</th>
-                <th className="text-center py-1.5 font-bold text-gray-500">القابل للبيع</th>
+                <th className="text-center py-1.5 font-bold text-gray-500">القابل للبيع (sqft)</th>
                 <th className="text-center py-1.5 font-bold text-gray-500">%</th>
               </tr>
             </thead>
@@ -412,73 +411,68 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
                   <td className="py-1.5 pr-2"><span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold text-white ${r.badge}`}>{r.n}</span></td>
                   <td className="py-1.5 font-semibold text-gray-800">{r.label}</td>
                   <td className="py-1.5 text-center font-mono text-gray-700" dir="ltr">{fmt(r.gfa)}</td>
-                  <td className="py-1.5 text-center"><span className={`${r.effBadge} text-[10px] font-bold px-2 py-0.5 rounded-full`}>{(r.eff * 100)}%</span></td>
-                  <td className="py-1.5 text-center font-mono font-bold text-gray-900" dir="ltr">{fmt(r.sell)}</td>
-                  <td className="py-1.5 text-center"><span className="bg-gray-100 text-gray-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{totalSellable > 0 ? ((r.sell / totalSellable) * 100).toFixed(1) : 0}%</span></td>
+                  <td className="py-1.5 text-center"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.effBadge}`}>{(r.eff * 100).toFixed(0)}%</span></td>
+                  <td className="py-1.5 text-center font-mono font-semibold text-gray-800" dir="ltr">{fmt(r.sell)}</td>
+                  <td className="py-1.5 text-center font-mono text-gray-600">{totalSellable > 0 ? `${((r.sell / totalSellable) * 100).toFixed(1)}%` : "—"}</td>
                 </tr>
               ))}
-            </tbody>
-            <tfoot>
-              <tr className="border-t-2 border-gray-300 bg-gray-50/50">
+              <tr className="bg-gray-50 font-bold border-t-2 border-gray-200">
                 <td className="py-1.5 pr-2"></td>
-                <td className="py-1.5 font-bold text-gray-800">الإجمالي</td>
-                <td className="py-1.5 text-center font-mono font-bold" dir="ltr">{fmt(gfaResSqft + gfaRetSqft + gfaOffSqft)}</td>
+                <td className="py-1.5 text-gray-800">الإجمالي</td>
+                <td className="py-1.5 text-center font-mono text-gray-800" dir="ltr">{fmt(gfaTotalSqft)}</td>
                 <td className="py-1.5 text-center">—</td>
-                <td className="py-1.5 text-center font-mono font-black text-gray-900" dir="ltr">{fmt(totalSellable)}</td>
-                <td className="py-1.5 text-center"><span className="bg-gray-200 text-gray-800 text-[10px] font-bold px-2 py-0.5 rounded-full">100%</span></td>
+                <td className="py-1.5 text-center font-mono text-gray-800" dir="ltr">{fmt(totalSellable)}</td>
+                <td className="py-1.5 text-center font-mono text-gray-800">100%</td>
               </tr>
-            </tfoot>
+            </tbody>
           </table>
         </div>
       </div>
 
-      {/* ═══ SECTION 2: اقتراحات جويل ═══ */}
-      {(moJoelleSource || cpJoelleSource) && (
+      {/* ═══ SECTION 2: Joel's Suggestions ═══ */}
+      {joelSuggestions && (
         <div className="bg-white rounded-xl border border-purple-200/60 overflow-hidden shadow-sm">
-          <div className="px-4 py-2 border-b border-purple-100 bg-gradient-to-l from-purple-50/60 to-pink-50/40 flex items-center gap-2">
+          <div className="px-4 py-2 border-b border-purple-100 bg-gradient-to-l from-purple-50 to-pink-50/40 flex items-center gap-2">
             <img src={JOEL_AVATAR} className="w-5 h-5 rounded-full" alt="" />
             <h3 className="text-xs font-bold text-purple-800">اقتراحات جويل</h3>
-            <span className="text-[9px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full font-medium">للقراءة فقط</span>
+            <span className="text-[9px] text-purple-500 font-medium">(للقراءة فقط)</span>
           </div>
-          <div className="px-3 py-1.5">
-            <table className="w-full text-[11px]">
-              <thead>
-                <tr className="border-b border-purple-100">
-                  <th className="text-right py-1 font-semibold text-purple-700 w-14">الفئة</th>
-                  <th className="text-right py-1 font-semibold text-purple-700">النوع</th>
-                  <th className="text-center py-1 font-semibold text-purple-700 w-14">النسبة</th>
-                  <th className="text-center py-1 font-semibold text-purple-700 w-16">المساحة</th>
-                  <th className="text-center py-1 font-semibold text-purple-700 w-16">سعر/قدم²</th>
-                </tr>
-              </thead>
-              <tbody>
-                {UNIT_ROWS.map((row, i) => {
-                  const pct = moQuery.data ? parseFloat((moQuery.data as any)[row.pctKey] || "0") : 0;
-                  const avg = moQuery.data ? ((moQuery.data as any)[row.avgKey] || 0) : 0;
-                  const price = cpQuery.data ? ((cpQuery.data as any)[row.baseField] || 0) : 0;
-                  if (pct === 0 && avg === 0 && price === 0) return null;
-                  const catColorMap: Record<string, string> = { sky: "bg-sky-500", amber: "bg-amber-500", violet: "bg-violet-500" };
-                  return (
-                    <tr key={i} className={`border-b ${row.divider ? "border-t-2 border-t-gray-300" : "border-gray-100/60"} hover:bg-purple-50/20`}>
-                      <td className="py-1 font-medium text-purple-700 text-[11px]">
-                        {row.catLabel && <span className="flex items-center gap-1"><span className={`w-1.5 h-1.5 rounded-full ${catColorMap[row.catColor]} inline-block`} />{row.catLabel}</span>}
-                      </td>
-                      <td className="py-1 text-gray-700">{row.label}</td>
-                      <td className="py-1 text-center">{pct > 0 ? <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{pct}%</span> : "—"}</td>
-                      <td className="py-1 text-center font-mono text-gray-700" dir="ltr">{avg > 0 ? fmt(avg) : "—"}</td>
-                      <td className="py-1 text-center font-mono text-gray-700" dir="ltr">{price > 0 ? fmt(price) : "—"}</td>
-                    </tr>
-                  );
-                }).filter(Boolean)}
-              </tbody>
-            </table>
-          </div>
+          <table className="w-full text-[11px]">
+            <thead>
+              <tr className="border-b-2 border-purple-100 bg-purple-50/20">
+                <th className="text-right py-1.5 pr-3 font-bold text-purple-600">النوع</th>
+                <th className="text-center py-1.5 font-bold text-purple-600">النسبة</th>
+                <th className="text-center py-1.5 font-bold text-purple-600">المساحة (sqft)</th>
+                <th className="text-center py-1.5 font-bold text-purple-600">السعر/قدم²</th>
+              </tr>
+            </thead>
+            <tbody>
+              {UNIT_ROWS.map(row => {
+                const moRec = joelSuggestions.mo;
+                const cpRec = joelSuggestions.cp;
+                const pct = moRec?.[row.pctKey] || 0;
+                const avg = moRec?.[row.avgKey] || 0;
+                const price = cpRec?.[row.baseField] || 0;
+                if (!pct && !avg && !price) return null;
+                return (
+                  <tr key={row.key} className={`border-b ${row.divider ? "border-t-[3px] border-t-purple-200" : "border-purple-50"} hover:bg-purple-50/20`}>
+                    <td className="py-1 pr-3 text-gray-700">
+                      {row.catLabel && <span className="text-[9px] font-bold text-purple-400 ml-1">{row.catLabel} /</span>}
+                      {row.label}
+                    </td>
+                    <td className="py-1 text-center">{pct > 0 ? <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{typeof pct === "number" ? pct.toFixed(1) : pct}%</span> : "—"}</td>
+                    <td className="py-1 text-center font-mono text-gray-600" dir="ltr">{avg > 0 ? fmt(avg) : "—"}</td>
+                    <td className="py-1 text-center font-mono text-gray-600" dir="ltr">{price > 0 ? fmt(price) : "—"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
-      {/* ═══ SECTION 3: التوزيع التفاعلي والتسعير — TWO PANELS ═══ */}
+      {/* ═══ SECTION 3: التوزيع التفاعلي والتسعير ═══ */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-        {/* Header */}
         <div className="px-4 py-2 border-b border-gray-100 bg-gradient-to-l from-slate-50 to-indigo-50/30 flex items-center justify-between flex-wrap gap-2">
           <h3 className="text-xs font-bold text-gray-800">التوزيع التفاعلي والتسعير</h3>
           <div className="flex gap-1">
@@ -494,135 +488,117 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
           </div>
         </div>
 
-        {/* Two-panel layout */}
-        <div className="flex divide-x divide-x-reverse divide-gray-200">
+        {/* ═══ TWO PANELS with gap ═══ */}
+        <div className="flex gap-3 p-3">
 
-          {/* ═══ RIGHT PANEL: المدخلات ═══ */}
-          <div className="w-[42%] min-w-0">
-            <div className="px-3 py-1.5 bg-blue-50/40 border-b border-gray-100">
+          {/* ═══ RIGHT PANEL: المدخلات + الفائض ═══ */}
+          <div className="w-[38%] min-w-0 border border-blue-200/60 rounded-lg overflow-hidden bg-blue-50/10">
+            <div className="px-3 py-1.5 bg-blue-50/60 border-b border-blue-200/40">
               <span className="text-[10px] font-bold text-blue-700">المدخلات — غيّر العدد أو المساحة</span>
             </div>
             <table className="w-full text-[11px]">
               <thead>
-                <tr className="border-b-2 border-gray-200 bg-gray-50/60">
-                  <th className="text-right py-1.5 pr-2 font-bold text-gray-500 w-14">الفئة</th>
-                  <th className="text-right py-1.5 font-bold text-gray-500">النوع</th>
-                  <th className="text-center py-1.5 font-bold text-gray-500 w-16">المساحة</th>
-                  <th className="text-center py-1.5 font-bold text-gray-500 w-14">العدد</th>
-                  <th className="text-center py-1.5 font-bold text-gray-500 w-16">سعر/قدم²</th>
+                <tr className="border-b-2 border-blue-100 bg-blue-50/30">
+                  <th className="text-right py-1 pr-2 font-bold text-blue-600 text-[10px]">النوع</th>
+                  <th className="text-center py-1 font-bold text-blue-600 text-[10px] w-14">المساحة</th>
+                  <th className="text-center py-1 font-bold text-blue-600 text-[10px] w-12">العدد</th>
+                  <th className="text-center py-1 font-bold text-blue-600 text-[10px] w-14">سعر/sqft</th>
                 </tr>
               </thead>
               <tbody>
                 {UNIT_ROWS.map((row) => {
-                  const catColorMap: Record<string, string> = { sky: "bg-sky-500", amber: "bg-amber-500", violet: "bg-violet-500" };
-                  const catRingMap: Record<string, string> = { sky: "ring-sky-200", amber: "ring-amber-200", violet: "ring-violet-200" };
+                  const catDotColor: Record<string, string> = { sky: "bg-sky-500", amber: "bg-amber-500", violet: "bg-violet-500" };
                   return (
                     <tr key={row.key} className={`border-b ${row.divider ? "border-t-[3px] border-t-gray-300" : "border-gray-100"} hover:bg-blue-50/20`}>
-                      <td className="py-1 pr-2 font-medium text-gray-700">
-                        {row.catLabel && (
+                      <td className="py-0.5 pr-2 text-[10px] text-gray-700">
+                        {row.catLabel ? (
                           <span className="flex items-center gap-1">
-                            <span className={`w-2 h-2 rounded-full ${catColorMap[row.catColor]} ring-2 ring-offset-1 ${catRingMap[row.catColor]}`} />
-                            <span className="text-[10px] font-bold">{row.catLabel}</span>
+                            <span className={`w-2 h-2 rounded-full ${catDotColor[row.catColor]}`} />
+                            <span className="font-bold text-gray-500">{row.catLabel} /</span>
+                            <span>{row.label}</span>
                           </span>
-                        )}
+                        ) : <span className="pr-3">{row.label}</span>}
                       </td>
-                      <td className="py-1 text-gray-800 font-medium text-[11px]">{row.label}</td>
-                      <td className="py-0.5 w-16"><EditableNum value={avgAreas[row.key] || DEFAULT_AVG_AREAS[row.pctKey]?.defaultArea || 0} onChange={(v) => updateAvg(row.key, v)} /></td>
-                      <td className="py-0.5 w-14"><EditableNum value={unitCounts[row.key] || 0} onChange={(v) => updateCount(row.key, v)} cls="font-bold text-blue-700" /></td>
-                      <td className="py-0.5 w-16"><EditableNum value={basePrices[row.key] || 0} onChange={(v) => updatePrice(row.key, v)} /></td>
+                      <td className="py-0 w-14"><EditableNum value={avgAreas[row.key] || DEFAULT_AVG_AREAS[row.pctKey]?.defaultArea || 0} onChange={(v) => updateAvg(row.key, v)} /></td>
+                      <td className="py-0 w-12"><EditableNum value={unitCounts[row.key] || 0} onChange={(v) => updateCount(row.key, v)} cls="font-bold text-blue-700" /></td>
+                      <td className="py-0 w-14"><EditableNum value={basePrices[row.key] || 0} onChange={(v) => updatePrice(row.key, v)} /></td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
 
-            {/* Surplus indicators per category */}
-            <div className="px-3 py-2 space-y-1 border-t border-gray-100 bg-gray-50/30">
-              {sellableRes > 0 && <div className="flex items-center justify-between"><span className="text-[10px] text-gray-500">سكني:</span><SurplusBar surplus={resSummary.surplus} sellable={sellableRes} /></div>}
-              {sellableRet > 0 && <div className="flex items-center justify-between"><span className="text-[10px] text-gray-500">تجزئة:</span><SurplusBar surplus={retSummary.surplus} sellable={sellableRet} /></div>}
-              {sellableOff > 0 && <div className="flex items-center justify-between"><span className="text-[10px] text-gray-500">مكاتب:</span><SurplusBar surplus={offSummary.surplus} sellable={sellableOff} /></div>}
-              <div className="flex items-center justify-between pt-1 border-t border-gray-200">
-                <span className="text-[10px] font-bold text-gray-700">الإجمالي:</span>
-                <SurplusBar surplus={grandSurplus} sellable={totalSellable} />
+            {/* ═══ SURPLUS INDICATORS ═══ */}
+            <div className="px-3 py-2 space-y-2 border-t-2 border-blue-200/40 bg-gradient-to-b from-blue-50/30 to-white">
+              <div className="text-[10px] font-bold text-gray-700 mb-1">الفائض / العجز</div>
+              {sellableRes > 0 && <SurplusBar surplus={resSummary.surplus} sellable={sellableRes} label="سكني" />}
+              {sellableRet > 0 && <SurplusBar surplus={retSummary.surplus} sellable={sellableRet} label="تجزئة" />}
+              {sellableOff > 0 && <SurplusBar surplus={offSummary.surplus} sellable={sellableOff} label="مكاتب" />}
+              <div className="pt-1.5 border-t border-gray-200">
+                <SurplusBar surplus={grandSurplus} sellable={totalSellable} label="الإجمالي" />
               </div>
             </div>
           </div>
 
           {/* ═══ LEFT PANEL: النتائج ═══ */}
-          <div className="w-[58%] min-w-0">
-            <div className="px-3 py-1.5 bg-emerald-50/40 border-b border-gray-100">
+          <div className="w-[62%] min-w-0 border border-emerald-200/60 rounded-lg overflow-hidden bg-emerald-50/10">
+            <div className="px-3 py-1.5 bg-emerald-50/60 border-b border-emerald-200/40">
               <span className="text-[10px] font-bold text-emerald-700">النتائج — محسوبة تلقائياً</span>
             </div>
             <table className="w-full text-[11px]">
               <thead>
-                <tr className="border-b-2 border-gray-200 bg-gray-50/60">
-                  <th className="text-right py-1.5 pr-2 font-bold text-gray-500">النوع</th>
-                  <th className="text-center py-1.5 font-bold text-gray-500 w-12">النسبة</th>
-                  <th className="text-center py-1.5 font-bold text-gray-500 w-12">العدد</th>
-                  <th className="text-center py-1.5 font-bold text-gray-500 w-20">إجمالي م²</th>
-                  <th className="text-center py-1.5 font-bold text-gray-500 w-10"><Car className="w-3 h-3 mx-auto text-gray-400" /></th>
-                  <th className="text-center py-1.5 font-bold text-gray-500 w-20">سعر الوحدة</th>
-                  <th className={`text-center py-1.5 font-bold w-24 ${scenarioConfig[activeScenario].color}`}>الإيراد</th>
+                <tr className="border-b-2 border-emerald-100 bg-emerald-50/30">
+                  <th className="text-right py-1 pr-2 font-bold text-emerald-600 text-[10px]">النوع</th>
+                  <th className="text-center py-1 font-bold text-emerald-600 text-[10px] w-10">العدد</th>
+                  <th className="text-center py-1 font-bold text-emerald-600 text-[10px] w-14">مساحة الوحدة</th>
+                  <th className="text-center py-1 font-bold text-emerald-600 text-[10px] w-16">إجمالي (sqft)</th>
+                  <th className="text-center py-1 font-bold text-emerald-600 text-[10px] w-14">سعر/sqft</th>
+                  <th className={`text-center py-1 font-bold text-[10px] w-20 ${scenarioConfig[activeScenario].color}`}>الإيراد</th>
                 </tr>
               </thead>
               <tbody>
-                {rowResults.map((r) => {
-                  const catColorMap: Record<string, string> = { sky: "bg-sky-500", amber: "bg-amber-500", violet: "bg-violet-500" };
-                  if (r.count === 0 && (basePrices[r.key] || 0) === 0 && (avgAreas[r.key] || 0) === 0) return null;
-                  return (
-                    <tr key={r.key} className={`border-b ${r.divider ? "border-t-[3px] border-t-gray-300" : "border-gray-100"} hover:bg-emerald-50/20`}>
-                      <td className="py-1 pr-2 text-gray-800 font-medium">
-                        <span className="flex items-center gap-1">
-                          {r.catLabel && <span className={`w-1.5 h-1.5 rounded-full ${catColorMap[r.catColor]}`} />}
-                          {r.catLabel ? <span className="text-[10px] font-bold text-gray-500">{r.catLabel} /</span> : null}
-                          <span>{r.label}</span>
-                        </span>
-                      </td>
-                      <td className="py-1 text-center">
-                        {r.pct > 0 ? <span className="bg-blue-50 text-blue-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{r.pct.toFixed(1)}%</span> : "—"}
-                      </td>
-                      <td className="py-1 text-center font-mono font-bold text-gray-800">{r.count || "—"}</td>
-                      <td className="py-1 text-center font-mono text-gray-700" dir="ltr">{r.totalArea > 0 ? fmt(r.totalArea) : "—"}</td>
-                      <td className="py-1 text-center font-mono text-gray-500">{r.parking || "—"}</td>
-                      <td className="py-1 text-center font-mono text-gray-600" dir="ltr">{r.unitPrice > 0 ? fmt(r.unitPrice) : "—"}</td>
-                      <td className={`py-1 text-center font-mono font-bold ${scenarioConfig[activeScenario].color}`} dir="ltr">{r.revenue > 0 ? fmt(r.revenue) : "—"}</td>
-                    </tr>
-                  );
-                })}
-
-                {/* Category subtotals */}
-                {[
-                  { label: "إجمالي السكني", data: resSummary, bg: "bg-sky-50 text-sky-800", show: sellableRes > 0 },
-                  { label: "إجمالي التجزئة", data: retSummary, bg: "bg-amber-50 text-amber-800", show: sellableRet > 0 },
-                  { label: "إجمالي المكاتب", data: offSummary, bg: "bg-violet-50 text-violet-800", show: sellableOff > 0 },
-                ].filter(s => s.show).map(s => (
-                  <tr key={s.label} className={`${s.bg} font-semibold border-b border-gray-200`}>
-                    <td className="py-1.5 pr-2">{s.label}</td>
-                    <td className="py-1.5 text-center">{s.data.usedPct > 0 ? `${s.data.usedPct.toFixed(0)}%` : "—"}</td>
-                    <td className="py-1.5 text-center font-mono">{fmt(s.data.totalUnits)}</td>
-                    <td className="py-1.5 text-center font-mono" dir="ltr">{fmt(s.data.totalArea)}</td>
-                    <td className="py-1.5 text-center font-mono">{fmt(s.data.totalParking)}</td>
-                    <td className="py-1.5 text-center">—</td>
-                    <td className={`py-1.5 text-center font-mono font-bold ${scenarioConfig[activeScenario].color}`} dir="ltr">{fmt(s.data.totalRevenue)}</td>
-                  </tr>
-                ))}
+                {renderCatRows("residential", "سكني", resSummary, "bg-sky-50/60", "text-sky-800")}
+                {renderCatRows("retail", "تجزئة", retSummary, "bg-amber-50/60", "text-amber-800")}
+                {renderCatRows("offices", "مكاتب", offSummary, "bg-violet-50/60", "text-violet-800")}
               </tbody>
-
-              {/* Grand total */}
               <tfoot>
                 <tr className="bg-gradient-to-l from-gray-800 to-gray-900 text-white font-bold">
-                  <td className="py-2 pr-2">الإجمالي الكلي</td>
-                  <td className="py-2 text-center">—</td>
-                  <td className="py-2 text-center font-mono">{fmt(grandTotalUnits)}</td>
-                  <td className="py-2 text-center font-mono" dir="ltr">{fmt(grandTotalArea)}</td>
-                  <td className="py-2 text-center font-mono">{fmt(grandTotalParking)}</td>
-                  <td className="py-2 text-center">—</td>
-                  <td className="py-2 text-center font-mono" dir="ltr">{fmt(grandTotalRevenue)}</td>
+                  <td className="py-1.5 pr-2 text-[11px]">الإجمالي الكلي</td>
+                  <td className="py-1.5 text-center font-mono text-[11px]">{fmt(grandTotalUnits)}</td>
+                  <td className="py-1.5 text-center text-[11px]">—</td>
+                  <td className="py-1.5 text-center font-mono text-[11px]" dir="ltr">{fmt(grandTotalArea)}</td>
+                  <td className="py-1.5 text-center text-[11px]">—</td>
+                  <td className="py-1.5 text-center font-mono text-[11px]" dir="ltr">{fmt(grandTotalRevenue)}</td>
                 </tr>
               </tfoot>
             </table>
           </div>
         </div>
+
+        {/* ═══ PARKING — separate section ═══ */}
+        {grandTotalParking > 0 && (
+          <div className="mx-3 mb-3 border border-orange-200/60 rounded-lg overflow-hidden">
+            <div className="px-3 py-1.5 bg-orange-50/60 border-b border-orange-200/40 flex items-center gap-2">
+              <Car className="w-4 h-4 text-orange-900" />
+              <span className="text-[10px] font-bold text-orange-800">المواقف المطلوبة — معايير دبي</span>
+            </div>
+            <div className="px-3 py-2">
+              <div className="grid grid-cols-4 gap-2 text-[11px]">
+                {[
+                  { label: "سكني", val: resSummary.totalParking, show: sellableRes > 0 },
+                  { label: "تجزئة", val: retSummary.totalParking, show: sellableRet > 0 },
+                  { label: "مكاتب", val: offSummary.totalParking, show: sellableOff > 0 },
+                  { label: "الإجمالي", val: grandTotalParking, show: true },
+                ].filter(x => x.show).map(x => (
+                  <div key={x.label} className="flex items-center justify-between bg-orange-50/40 rounded px-2 py-1">
+                    <span className="text-gray-600 font-medium">{x.label}</span>
+                    <span className="font-mono font-bold text-orange-800">{fmt(x.val)} <span className="text-[9px] font-normal text-orange-600">موقف</span></span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Revenue comparison strip */}
         <div className="grid grid-cols-3 border-t-2 border-gray-200">
@@ -632,9 +608,9 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
             const isActive = sc === activeScenario;
             const activeBg = sc === "optimistic" ? "bg-emerald-50" : sc === "conservative" ? "bg-orange-50" : "bg-blue-50";
             return (
-              <div key={sc} className={`px-3 py-2.5 text-center border-l first:border-l-0 border-gray-200 transition-colors ${isActive ? activeBg : "bg-gray-50/50"}`}>
+              <div key={sc} className={`px-3 py-2 text-center border-l first:border-l-0 border-gray-200 transition-colors ${isActive ? activeBg : "bg-gray-50/50"}`}>
                 <div className={`text-[10px] font-bold ${isActive ? cfg.color : "text-gray-500"}`}>{cfg.label}</div>
-                <div className={`text-base font-black font-mono ${isActive ? cfg.color : "text-gray-600"}`} dir="ltr">{fmt(rev)}</div>
+                <div className={`text-sm font-black font-mono ${isActive ? cfg.color : "text-gray-600"}`} dir="ltr">{fmt(rev)}</div>
                 <div className="text-[9px] text-gray-400 font-medium">AED</div>
               </div>
             );

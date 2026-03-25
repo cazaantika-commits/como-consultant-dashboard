@@ -389,3 +389,9 @@
 - [x] Add tooltip or visual explanation for zero-waste algorithm behavior
 - [x] Fix zero-waste: when final surplus < smallest unit, distribute it equally across largest type units (increase their area)
 - [x] Fix zero-waste: when final surplus < smallest unit, distribute it equally across 2BR units (غرفتين وصالة) always — not largest type
+- [x] Results table columns: النوع → العدد → مساحة الوحدة (sqft) → إجمالي المساحة (sqft) → سعر/قدم² → الإيراد
+- [x] Separate right panel from left panel with clear visual gap
+- [x] Surplus shown on RIGHT panel (inputs side) not left
+- [x] Parking in separate section, not mixed with revenue table, car icon dark orange
+- [x] Category subtotals (residential / retail / offices) each separate
+- [x] All areas in sqft not m²
