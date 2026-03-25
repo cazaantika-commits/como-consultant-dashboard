@@ -7,12 +7,12 @@ import { toast } from "sonner";
 import {
   Loader2, Sparkles, DollarSign,
   TrendingUp, TrendingDown, BarChart3, Save, Zap, CheckCircle2,
-  Car
+  Car, AlertTriangle, CheckCircle
 } from "lucide-react";
 
 const JOEL_AVATAR = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/mCOkEovAXTtxsABs.png";
 
-/* ═══ Parking Standards — Dubai Development Authority (sqft) ═══ */
+/* ═══ Parking Standards — Dubai (sqft) ═══ */
 const PARKING = {
   residential: { threshold: 1615, below: 1, above: 2 },
   retail: { perSqft: 753 },
@@ -22,141 +22,52 @@ const PARKING = {
 /* ═══ Helpers ═══ */
 function fmt(n: number | null | undefined): string {
   if (n == null || isNaN(n)) return "0";
-  if (n < 100 && n % 1 !== 0) return n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  if (n < 100 && n % 1 !== 0) return n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 1 });
   return Math.round(n).toLocaleString("en-US");
 }
 
-function EditableNum({ value, onChange, suffix, disabled, className: extraClass }: { value: number; onChange: (v: number) => void; suffix?: string; disabled?: boolean; className?: string }) {
+function EditableNum({ value, onChange, disabled, className: cls }: { value: number; onChange: (v: number) => void; disabled?: boolean; className?: string }) {
   const [localVal, setLocalVal] = useState("");
   const [focused, setFocused] = useState(false);
-  const displayVal = focused ? localVal : (value ? fmt(value) : "");
+  const display = focused ? localVal : (value ? fmt(value) : "");
   return (
-    <div className="relative">
-      <Input type="text" value={displayVal}
-        onFocus={() => { setFocused(true); setLocalVal(value ? String(value) : ""); }}
-        onBlur={() => { setFocused(false); const n = parseFloat(localVal.replace(/,/g, "")); if (!isNaN(n)) onChange(n); }}
-        onChange={(e) => setLocalVal(e.target.value)}
-        className={`h-6 text-[11px] text-center border-0 border-b border-dashed border-gray-300 rounded-none bg-transparent focus:border-blue-400 focus:bg-blue-50/30 px-1 ${extraClass || ""}`}
-        disabled={disabled} dir="ltr" />
-      {suffix && <span className="absolute left-0.5 top-1/2 -translate-y-1/2 text-[8px] text-gray-400">{suffix}</span>}
-    </div>
+    <Input type="text" value={display}
+      onFocus={() => { setFocused(true); setLocalVal(value ? String(value) : ""); }}
+      onBlur={() => { setFocused(false); const n = parseFloat(localVal.replace(/,/g, "")); if (!isNaN(n) && n >= 0) onChange(n); }}
+      onChange={(e) => setLocalVal(e.target.value)}
+      className={`h-7 text-xs text-center border-0 border-b border-dashed border-gray-300 rounded-none bg-transparent focus:border-blue-500 focus:bg-blue-50/40 px-1 font-mono ${cls || ""}`}
+      disabled={disabled} dir="ltr" />
   );
 }
 
 type ScenarioKey = "optimistic" | "base" | "conservative";
 
-/* ═══ Zero-Waste Distribution Algorithm ═══ */
-interface UnitType {
+/* ═══ Row definition for each unit type ═══ */
+interface UnitRow {
   key: string;
   label: string;
-  pct: number;
-  avgArea: number;
-  basePricePerSqft: number;
+  cat: "residential" | "retail" | "offices";
+  catLabel: string;
+  catColor: string;
+  pctKey: string;
+  avgKey: string;
+  priceKey: string;
+  baseField: string;
+  divider?: boolean;
 }
 
-interface DistResult {
-  key: string;
-  label: string;
-  pct: number;
-  avgArea: number;
-  allocated: number;
-  baseUnits: number;   // units from percentage allocation only
-  bonusUnits: number;  // extra units added from surplus redistribution
-  units: number;       // total = baseUnits + bonusUnits
-  surplus: number;     // remaining unallocated sqft (should be 0 with true zero-waste)
-  absorbed: number;     // extra sqft absorbed per unit (distributed from final surplus)
-  parking: number;
-  basePricePerSqft: number;
-  unitPrice: number;
-  totalArea: number;
-  revenueBase: number;
-  revenueOpt: number;
-  revenueCons: number;
-}
-
-function zeroWasteDistribute(types: UnitType[], totalSellable: number): DistResult[] {
-  if (totalSellable <= 0 || types.length === 0) return [];
-  const activeTypes = types.filter(t => t.pct > 0 && t.avgArea > 0);
-  if (activeTypes.length === 0) return [];
-
-  // Step 1: Allocate by percentage
-  let results: DistResult[] = activeTypes.map(t => {
-    const allocated = totalSellable * (t.pct / 100);
-    const baseUnits = Math.floor(allocated / t.avgArea);
-    return {
-      key: t.key, label: t.label, pct: t.pct, avgArea: t.avgArea,
-      allocated, baseUnits, bonusUnits: 0, units: baseUnits, surplus: 0, absorbed: 0, parking: 0,
-      basePricePerSqft: t.basePricePerSqft,
-      unitPrice: t.avgArea * t.basePricePerSqft,
-      totalArea: baseUnits * t.avgArea,
-      revenueBase: 0, revenueOpt: 0, revenueCons: 0,
-    };
-  });
-
-  // Step 2: Collect leftover from all types and redistribute as bonus units (smallest first)
-  let totalSurplus = results.reduce((s, r) => s + (r.allocated - r.baseUnits * r.avgArea), 0);
-  const sortedByArea = [...results].sort((a, b) => a.avgArea - b.avgArea);
-  for (const item of sortedByArea) {
-    while (totalSurplus >= item.avgArea) {
-      const r = results.find(r => r.key === item.key)!;
-      r.bonusUnits += 1;
-      r.units = r.baseUnits + r.bonusUnits;
-      r.totalArea = r.units * r.avgArea;
-      totalSurplus -= item.avgArea;
-    }
-  }
-
-  // Step 3: Absorb final surplus into 2BR units (غرفتين وصالة) by increasing their area equally
-  // If no 2BR, fall back to largest type
-  const usedArea = results.reduce((s, r) => s + r.units * r.avgArea, 0);
-  const finalSurplus = totalSellable - usedArea;
-  results = results.map(r => ({ ...r, surplus: 0, absorbed: 0, totalArea: r.units * r.avgArea }));
-  if (finalSurplus > 0 && results.length > 0) {
-    // Priority: 2BR (key contains "2br"), fallback to largest type
-    let absorberIdx = results.findIndex(r => r.key.includes("2br"));
-    if (absorberIdx === -1) {
-      absorberIdx = results.reduce((maxIdx, r, i, arr) => r.avgArea > arr[maxIdx].avgArea ? i : maxIdx, 0);
-    }
-    const absorber = results[absorberIdx];
-    if (absorber.units > 0) {
-      const extraPerUnit = finalSurplus / absorber.units;
-      absorber.absorbed = extraPerUnit;
-      absorber.totalArea = absorber.units * (absorber.avgArea + extraPerUnit);
-    } else {
-      // If absorber has 0 units, just record as surplus on largest
-      const largestIdx = results.reduce((maxIdx, r, i, arr) => r.avgArea > arr[maxIdx].avgArea ? i : maxIdx, 0);
-      results[largestIdx].surplus = finalSurplus;
-    }
-  }
-  return results;
-}
-
-function calcParking(results: DistResult[], category: "residential" | "retail" | "offices"): DistResult[] {
-  return results.map(r => {
-    let parking = 0;
-    if (category === "residential") {
-      parking = r.units * (r.avgArea <= PARKING.residential.threshold ? PARKING.residential.below : PARKING.residential.above);
-    } else if (category === "retail") {
-      parking = Math.ceil((r.units * r.avgArea) / PARKING.retail.perSqft);
-    } else {
-      parking = Math.ceil((r.units * r.avgArea) / PARKING.offices.perSqft);
-    }
-    return { ...r, parking };
-  });
-}
-
-function calcRevenue(results: DistResult[]): DistResult[] {
-  return results.map(r => {
-    const effectiveArea = r.avgArea + (r.absorbed || 0); // include absorbed surplus per unit
-    return {
-      ...r,
-      unitPrice: effectiveArea * r.basePricePerSqft,
-      revenueBase: r.units * effectiveArea * r.basePricePerSqft,
-      revenueOpt: r.units * effectiveArea * r.basePricePerSqft * 1.10,
-      revenueCons: r.units * effectiveArea * r.basePricePerSqft * 0.90,
-    };
-  });
-}
+const UNIT_ROWS: UnitRow[] = [
+  { key: "studio", label: "استديو", cat: "residential", catLabel: "سكني", catColor: "sky", pctKey: "residentialStudioPct", avgKey: "residentialStudioAvgArea", priceKey: "studioPrice", baseField: "baseStudioPrice" },
+  { key: "1br", label: "غرفة وصالة", cat: "residential", catLabel: "", catColor: "sky", pctKey: "residential1brPct", avgKey: "residential1brAvgArea", priceKey: "oneBrPrice", baseField: "base1brPrice" },
+  { key: "2br", label: "غرفتان وصالة", cat: "residential", catLabel: "", catColor: "sky", pctKey: "residential2brPct", avgKey: "residential2brAvgArea", priceKey: "twoBrPrice", baseField: "base2brPrice" },
+  { key: "3br", label: "ثلاث غرف", cat: "residential", catLabel: "", catColor: "sky", pctKey: "residential3brPct", avgKey: "residential3brAvgArea", priceKey: "threeBrPrice", baseField: "base3brPrice" },
+  { key: "retSmall", label: "صغيرة", cat: "retail", catLabel: "تجزئة", catColor: "amber", pctKey: "retailSmallPct", avgKey: "retailSmallAvgArea", priceKey: "retailSmallPrice", baseField: "baseRetailSmallPrice", divider: true },
+  { key: "retMedium", label: "متوسطة", cat: "retail", catLabel: "", catColor: "amber", pctKey: "retailMediumPct", avgKey: "retailMediumAvgArea", priceKey: "retailMediumPrice", baseField: "baseRetailMediumPrice" },
+  { key: "retLarge", label: "كبيرة", cat: "retail", catLabel: "", catColor: "amber", pctKey: "retailLargePct", avgKey: "retailLargeAvgArea", priceKey: "retailLargePrice", baseField: "baseRetailLargePrice" },
+  { key: "offSmall", label: "صغيرة", cat: "offices", catLabel: "مكاتب", catColor: "violet", pctKey: "officeSmallPct", avgKey: "officeSmallAvgArea", priceKey: "officeSmallPrice", baseField: "baseOfficeSmallPrice", divider: true },
+  { key: "offMedium", label: "متوسطة", cat: "offices", catLabel: "", catColor: "violet", pctKey: "officeMediumPct", avgKey: "officeMediumAvgArea", priceKey: "officeMediumPrice", baseField: "baseOfficeMediumPrice" },
+  { key: "offLarge", label: "كبيرة", cat: "offices", catLabel: "", catColor: "violet", pctKey: "officeLargePct", avgKey: "officeLargeAvgArea", priceKey: "officeLargePrice", baseField: "baseOfficeLargePrice" },
+];
 
 /* ═══ MAIN COMPONENT ═══ */
 interface CostsCashFlowTabProps {
@@ -166,7 +77,7 @@ interface CostsCashFlowTabProps {
   computed: Record<string, any>;
 }
 
-export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTabProps) {
+export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
   const projectQuery = trpc.projects.getById.useQuery(projectId || 0, { enabled: !!projectId, staleTime: 5000 });
   const project = projectQuery.data;
   const moQuery = trpc.marketOverview.getByProject.useQuery(projectId || 0, { enabled: !!projectId, staleTime: 5000 });
@@ -184,109 +95,83 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
     onError: (err) => toast.error(err.message || "فشل في تطبيق مخرجات جويل"),
   });
 
-  // ═══ Distribution state ═══
-  const [moFields, setMoFields] = useState({
-    residentialStudioPct: 0, residentialStudioAvgArea: 0,
-    residential1brPct: 0, residential1brAvgArea: 0,
-    residential2brPct: 0, residential2brAvgArea: 0,
-    residential3brPct: 0, residential3brAvgArea: 0,
-    retailSmallPct: 0, retailSmallAvgArea: 0,
-    retailMediumPct: 0, retailMediumAvgArea: 0,
-    retailLargePct: 0, retailLargeAvgArea: 0,
-    officeSmallPct: 0, officeSmallAvgArea: 0,
-    officeMediumPct: 0, officeMediumAvgArea: 0,
-    officeLargePct: 0, officeLargeAvgArea: 0,
-  });
-  const [moDirty, setMoDirty] = useState(false);
-  const [moJoelleSource, setMoJoelleSource] = useState(false);
-
-  // ═══ Pricing state ═══
-  const [basePrices, setBasePrices] = useState({
-    studioPrice: 0, oneBrPrice: 0, twoBrPrice: 0, threeBrPrice: 0,
-    retailSmallPrice: 0, retailMediumPrice: 0, retailLargePrice: 0,
-    officeSmallPrice: 0, officeMediumPrice: 0, officeLargePrice: 0,
-  });
+  /* ═══ Unit counts state (the PRIMARY input) ═══ */
+  const [unitCounts, setUnitCounts] = useState<Record<string, number>>({});
+  /* ═══ Average areas state ═══ */
+  const [avgAreas, setAvgAreas] = useState<Record<string, number>>({});
+  /* ═══ Pricing state ═══ */
+  const [basePrices, setBasePrices] = useState<Record<string, number>>({});
   const [activeScenario, setActiveScenario] = useState<ScenarioKey>("base");
-  const [cpDirty, setCpDirty] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [moJoelleSource, setMoJoelleSource] = useState(false);
   const [cpJoelleSource, setCpJoelleSource] = useState(false);
 
-  // ═══ Save mutations ═══
+  /* ═══ Save mutations ═══ */
   const moSaveMutation = trpc.marketOverview.save.useMutation({
-    onSuccess: () => { moQuery.refetch(); toast.success("تم حفظ توزيع الوحدات"); setMoDirty(false); },
+    onSuccess: () => { moQuery.refetch(); toast.success("تم حفظ التوزيع"); },
     onError: () => toast.error("خطأ في الحفظ"),
   });
   const cpSaveMutation = trpc.competitionPricing.save.useMutation({
-    onSuccess: () => { cpQuery.refetch(); toast.success("تم حفظ التسعير"); setCpDirty(false); },
+    onSuccess: () => { cpQuery.refetch(); toast.success("تم حفظ التسعير"); },
     onError: () => toast.error("خطأ في الحفظ"),
   });
 
-  // ═══ Load data from DB ═══
+  /* ═══ Load data from DB ═══ */
   useEffect(() => {
-    if (moQuery.data) {
-      const d = moQuery.data;
-      setMoFields({
-        residentialStudioPct: parseFloat(d.residentialStudioPct || "0"),
-        residentialStudioAvgArea: d.residentialStudioAvgArea || 0,
-        residential1brPct: parseFloat(d.residential1brPct || "0"),
-        residential1brAvgArea: d.residential1brAvgArea || 0,
-        residential2brPct: parseFloat(d.residential2brPct || "0"),
-        residential2brAvgArea: d.residential2brAvgArea || 0,
-        residential3brPct: parseFloat(d.residential3brPct || "0"),
-        residential3brAvgArea: d.residential3brAvgArea || 0,
-        retailSmallPct: parseFloat(d.retailSmallPct || "0"),
-        retailSmallAvgArea: d.retailSmallAvgArea || 0,
-        retailMediumPct: parseFloat(d.retailMediumPct || "0"),
-        retailMediumAvgArea: d.retailMediumAvgArea || 0,
-        retailLargePct: parseFloat(d.retailLargePct || "0"),
-        retailLargeAvgArea: d.retailLargeAvgArea || 0,
-        officeSmallPct: parseFloat(d.officeSmallPct || "0"),
-        officeSmallAvgArea: d.officeSmallAvgArea || 0,
-        officeMediumPct: parseFloat(d.officeMediumPct || "0"),
-        officeMediumAvgArea: d.officeMediumAvgArea || 0,
-        officeLargePct: parseFloat(d.officeLargePct || "0"),
-        officeLargeAvgArea: d.officeLargeAvgArea || 0,
-      });
-      if (d.aiRecommendationsJson) setMoJoelleSource(true);
-    }
+    if (!moQuery.data) return;
+    const d = moQuery.data;
+    const newAvg: Record<string, number> = {};
+    const newCounts: Record<string, number> = {};
+
+    UNIT_ROWS.forEach(row => {
+      const pct = parseFloat((d as any)[row.pctKey] || "0");
+      const avg = (d as any)[row.avgKey] || 0;
+      const defaultArea = DEFAULT_AVG_AREAS[row.pctKey]?.defaultArea || 0;
+      const effectiveAvg = avg > 0 ? avg : (pct > 0 ? defaultArea : defaultArea);
+      newAvg[row.key] = effectiveAvg;
+
+      // Calculate initial unit count from percentage
+      const sellable = getSellableForCat(row.cat, d);
+      if (pct > 0 && effectiveAvg > 0 && sellable > 0) {
+        newCounts[row.key] = Math.floor((sellable * pct / 100) / effectiveAvg);
+      } else {
+        newCounts[row.key] = 0;
+      }
+    });
+
+    setAvgAreas(newAvg);
+    setUnitCounts(prev => {
+      // Only set if we haven't manually edited yet
+      const hasManualEdits = Object.values(prev).some(v => v > 0);
+      return hasManualEdits ? prev : newCounts;
+    });
+    if (d.aiRecommendationsJson) setMoJoelleSource(true);
   }, [moQuery.data]);
 
   useEffect(() => {
-    if (cpQuery.data) {
-      const d = cpQuery.data;
-      setBasePrices({
-        studioPrice: d.baseStudioPrice || 0,
-        oneBrPrice: d.base1brPrice || 0,
-        twoBrPrice: d.base2brPrice || 0,
-        threeBrPrice: d.base3brPrice || 0,
-        retailSmallPrice: d.baseRetailSmallPrice || 0,
-        retailMediumPrice: d.baseRetailMediumPrice || 0,
-        retailLargePrice: d.baseRetailLargePrice || 0,
-        officeSmallPrice: d.baseOfficeSmallPrice || 0,
-        officeMediumPrice: d.baseOfficeMediumPrice || 0,
-        officeLargePrice: d.baseOfficeLargePrice || 0,
-      });
-      if (d.activeScenario) setActiveScenario(d.activeScenario as ScenarioKey);
-      if (d.aiRecommendationsJson) setCpJoelleSource(true);
-    }
+    if (!cpQuery.data) return;
+    const d = cpQuery.data;
+    const newPrices: Record<string, number> = {};
+    UNIT_ROWS.forEach(row => {
+      newPrices[row.key] = (d as any)[row.baseField] || 0;
+    });
+    setBasePrices(newPrices);
+    if (d.activeScenario) setActiveScenario(d.activeScenario as ScenarioKey);
+    if (d.aiRecommendationsJson) setCpJoelleSource(true);
   }, [cpQuery.data]);
 
-  const updateMoField = useCallback((key: string, value: number) => {
-    setMoFields(prev => ({ ...prev, [key]: value }));
-    setMoDirty(true);
-  }, []);
+  /* Helper to get sellable area for a category from raw query data or project */
+  function getSellableForCat(cat: string, moData?: any): number {
+    const p2 = project || {} as any;
+    const gfaRes = parseFloat(p2.gfaResidentialSqft || "0");
+    const gfaRet = parseFloat(p2.gfaRetailSqft || "0");
+    const gfaOff = parseFloat(p2.gfaOfficesSqft || "0");
+    if (cat === "residential") return gfaRes * 0.95;
+    if (cat === "retail") return gfaRet * 0.97;
+    return gfaOff * 0.95;
+  }
 
-  const updateBasePrice = useCallback((key: string, value: number) => {
-    setBasePrices(prev => ({ ...prev, [key]: value }));
-    setCpDirty(true);
-  }, []);
-
-  const getAvg = useCallback((pctKey: string, avgVal: number) => {
-    if (avgVal > 0) return avgVal;
-    const mapping = DEFAULT_AVG_AREAS[pctKey];
-    return mapping ? mapping.defaultArea : 0;
-  }, []);
-
-  // ═══ Project data ═══
+  /* ═══ Project data ═══ */
   const p = project || {} as any;
   const plotAreaSqft = parseFloat(p.plotAreaSqft || "0");
   const plotAreaSqm = parseFloat(p.plotAreaSqm || "0");
@@ -301,157 +186,166 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
   const sellableOff = gfaOffSqft * 0.95;
   const totalSellable = sellableRes + sellableRet + sellableOff;
 
-  // ═══ Joel's suggestions ═══
+  const getSellable = useCallback((cat: string) => {
+    if (cat === "residential") return sellableRes;
+    if (cat === "retail") return sellableRet;
+    return sellableOff;
+  }, [sellableRes, sellableRet, sellableOff]);
+
+  /* ═══ Computed results per row ═══ */
+  const rowResults = useMemo(() => {
+    return UNIT_ROWS.map(row => {
+      const count = unitCounts[row.key] || 0;
+      const avg = avgAreas[row.key] || DEFAULT_AVG_AREAS[row.pctKey]?.defaultArea || 0;
+      const price = basePrices[row.key] || 0;
+      const sellable = getSellable(row.cat);
+      const totalArea = count * avg;
+      const pct = sellable > 0 ? (totalArea / sellable) * 100 : 0;
+      const multiplier = activeScenario === "optimistic" ? 1.10 : activeScenario === "conservative" ? 0.90 : 1.00;
+      const scenarioPrice = price * multiplier;
+      const unitPrice = avg * scenarioPrice;
+      const revenue = count * unitPrice;
+
+      // Parking
+      let parking = 0;
+      if (row.cat === "residential") {
+        parking = count * (avg <= PARKING.residential.threshold ? PARKING.residential.below : PARKING.residential.above);
+      } else if (row.cat === "retail") {
+        parking = Math.ceil(totalArea / PARKING.retail.perSqft);
+      } else {
+        parking = Math.ceil(totalArea / PARKING.offices.perSqft);
+      }
+
+      return { ...row, count, avg, price, totalArea, pct, scenarioPrice, unitPrice, revenue, parking, sellable };
+    });
+  }, [unitCounts, avgAreas, basePrices, activeScenario, getSellable]);
+
+  /* ═══ Category summaries ═══ */
+  const catSummary = useCallback((cat: string) => {
+    const rows = rowResults.filter(r => r.cat === cat);
+    const sellable = getSellable(cat);
+    const totalUnits = rows.reduce((s, r) => s + r.count, 0);
+    const totalArea = rows.reduce((s, r) => s + r.totalArea, 0);
+    const totalParking = rows.reduce((s, r) => s + r.parking, 0);
+    const totalRevenue = rows.reduce((s, r) => s + r.revenue, 0);
+    const surplus = sellable - totalArea;
+    const usedPct = sellable > 0 ? (totalArea / sellable) * 100 : 0;
+    return { totalUnits, totalArea, totalParking, totalRevenue, surplus, usedPct, sellable };
+  }, [rowResults, getSellable]);
+
+  const resSummary = useMemo(() => catSummary("residential"), [catSummary]);
+  const retSummary = useMemo(() => catSummary("retail"), [catSummary]);
+  const offSummary = useMemo(() => catSummary("offices"), [catSummary]);
+
+  const grandTotalUnits = resSummary.totalUnits + retSummary.totalUnits + offSummary.totalUnits;
+  const grandTotalArea = resSummary.totalArea + retSummary.totalArea + offSummary.totalArea;
+  const grandTotalParking = resSummary.totalParking + retSummary.totalParking + offSummary.totalParking;
+  const grandTotalRevenue = resSummary.totalRevenue + retSummary.totalRevenue + offSummary.totalRevenue;
+  const grandSurplus = totalSellable - grandTotalArea;
+
+  /* ═══ Revenue for all 3 scenarios (for comparison strip) ═══ */
+  const revenueByScenario = useMemo(() => {
+    const calc = (mult: number) => UNIT_ROWS.reduce((s, row) => {
+      const count = unitCounts[row.key] || 0;
+      const avg = avgAreas[row.key] || DEFAULT_AVG_AREAS[row.pctKey]?.defaultArea || 0;
+      const price = basePrices[row.key] || 0;
+      return s + count * avg * price * mult;
+    }, 0);
+    return { optimistic: calc(1.10), base: calc(1.00), conservative: calc(0.90) };
+  }, [unitCounts, avgAreas, basePrices]);
+
+  /* ═══ Joel's suggestions ═══ */
   const joelSuggestions = useMemo(() => {
     try {
       const moData = moQuery.data;
       const cpData = cpQuery.data;
       if (!moData?.aiRecommendationsJson && !cpData?.aiRecommendationsJson) return null;
-      const moRec = moData?.aiRecommendationsJson ? JSON.parse(moData.aiRecommendationsJson) : {};
-      const cpRec = cpData?.aiRecommendationsJson ? JSON.parse(cpData.aiRecommendationsJson) : {};
-      return { distribution: moRec, pricing: cpRec };
+      return { mo: moData?.aiRecommendationsJson ? JSON.parse(moData.aiRecommendationsJson) : {}, cp: cpData?.aiRecommendationsJson ? JSON.parse(cpData.aiRecommendationsJson) : {} };
     } catch { return null; }
   }, [moQuery.data, cpQuery.data]);
 
-  // ═══ Distribution calculations ═══
-  const resTypes: UnitType[] = useMemo(() => [
-    { key: "studio", label: "استديو", pct: moFields.residentialStudioPct, avgArea: getAvg("residentialStudioPct", moFields.residentialStudioAvgArea), basePricePerSqft: basePrices.studioPrice },
-    { key: "1br", label: "غرفة وصالة", pct: moFields.residential1brPct, avgArea: getAvg("residential1brPct", moFields.residential1brAvgArea), basePricePerSqft: basePrices.oneBrPrice },
-    { key: "2br", label: "غرفتان وصالة", pct: moFields.residential2brPct, avgArea: getAvg("residential2brPct", moFields.residential2brAvgArea), basePricePerSqft: basePrices.twoBrPrice },
-    { key: "3br", label: "ثلاث غرف وصالة", pct: moFields.residential3brPct, avgArea: getAvg("residential3brPct", moFields.residential3brAvgArea), basePricePerSqft: basePrices.threeBrPrice },
-  ], [moFields, basePrices, getAvg]);
+  /* ═══ Update handlers ═══ */
+  const updateCount = useCallback((key: string, val: number) => {
+    setUnitCounts(prev => ({ ...prev, [key]: Math.max(0, Math.round(val)) }));
+    setDirty(true);
+  }, []);
 
-  const retTypes: UnitType[] = useMemo(() => [
-    { key: "retSmall", label: "صغيرة", pct: moFields.retailSmallPct, avgArea: getAvg("retailSmallPct", moFields.retailSmallAvgArea), basePricePerSqft: basePrices.retailSmallPrice },
-    { key: "retMedium", label: "متوسطة", pct: moFields.retailMediumPct, avgArea: getAvg("retailMediumPct", moFields.retailMediumAvgArea), basePricePerSqft: basePrices.retailMediumPrice },
-    { key: "retLarge", label: "كبيرة", pct: moFields.retailLargePct, avgArea: getAvg("retailLargePct", moFields.retailLargeAvgArea), basePricePerSqft: basePrices.retailLargePrice },
-  ], [moFields, basePrices, getAvg]);
+  const updateAvg = useCallback((key: string, val: number) => {
+    setAvgAreas(prev => ({ ...prev, [key]: val }));
+    setDirty(true);
+  }, []);
 
-  const offTypes: UnitType[] = useMemo(() => [
-    { key: "offSmall", label: "صغيرة", pct: moFields.officeSmallPct, avgArea: getAvg("officeSmallPct", moFields.officeSmallAvgArea), basePricePerSqft: basePrices.officeSmallPrice },
-    { key: "offMedium", label: "متوسطة", pct: moFields.officeMediumPct, avgArea: getAvg("officeMediumPct", moFields.officeMediumAvgArea), basePricePerSqft: basePrices.officeMediumPrice },
-    { key: "offLarge", label: "كبيرة", pct: moFields.officeLargePct, avgArea: getAvg("officeLargePct", moFields.officeLargeAvgArea), basePricePerSqft: basePrices.officeLargePrice },
-  ], [moFields, basePrices, getAvg]);
+  const updatePrice = useCallback((key: string, val: number) => {
+    setBasePrices(prev => ({ ...prev, [key]: val }));
+    setDirty(true);
+  }, []);
 
-  const resResults = useMemo(() => calcRevenue(calcParking(zeroWasteDistribute(resTypes, sellableRes), "residential")), [resTypes, sellableRes]);
-  const retResults = useMemo(() => calcRevenue(calcParking(zeroWasteDistribute(retTypes, sellableRet), "retail")), [retTypes, sellableRet]);
-  const offResults = useMemo(() => calcRevenue(calcParking(zeroWasteDistribute(offTypes, sellableOff), "offices")), [offTypes, sellableOff]);
-
-  const totalUnits = [...resResults, ...retResults, ...offResults].reduce((s, r) => s + r.units, 0);
-  const totalParking = [...resResults, ...retResults, ...offResults].reduce((s, r) => s + r.parking, 0);
-  const totalSurplus = [...resResults, ...retResults, ...offResults].reduce((s, r) => s + r.surplus, 0);
-  const totalAbsorbed = [...resResults, ...retResults, ...offResults].reduce((s, r) => s + (r.absorbed * r.units), 0);
-  const totalRevenueBase = [...resResults, ...retResults, ...offResults].reduce((s, r) => s + r.revenueBase, 0);
-  const totalRevenueOpt = [...resResults, ...retResults, ...offResults].reduce((s, r) => s + r.revenueOpt, 0);
-  const totalRevenueCons = [...resResults, ...retResults, ...offResults].reduce((s, r) => s + r.revenueCons, 0);
-
-  const resTotalPct = moFields.residentialStudioPct + moFields.residential1brPct + moFields.residential2brPct + moFields.residential3brPct;
-  const retTotalPct = moFields.retailSmallPct + moFields.retailMediumPct + moFields.retailLargePct;
-  const offTotalPct = moFields.officeSmallPct + moFields.officeMediumPct + moFields.officeLargePct;
-
-  // ═══ Save handlers ═══
-  const handleSaveMo = () => {
+  /* ═══ Save ═══ */
+  const handleSave = () => {
     if (!projectId) return;
-    moSaveMutation.mutate({ projectId, ...moFields, finishingQuality: "standard" });
-  };
-  const handleSaveCp = () => {
-    if (!projectId) return;
+    // Convert unit counts back to percentages for storage
+    const moPayload: any = { projectId, finishingQuality: "standard" };
+    UNIT_ROWS.forEach(row => {
+      const count = unitCounts[row.key] || 0;
+      const avg = avgAreas[row.key] || DEFAULT_AVG_AREAS[row.pctKey]?.defaultArea || 0;
+      const sellable = getSellable(row.cat);
+      const pct = sellable > 0 ? ((count * avg) / sellable) * 100 : 0;
+      moPayload[row.pctKey] = pct;
+      moPayload[row.avgKey] = avg;
+    });
+    moSaveMutation.mutate(moPayload);
+
+    const bp = basePrices;
     cpSaveMutation.mutate({
       projectId,
-      baseStudioPrice: basePrices.studioPrice, base1brPrice: basePrices.oneBrPrice, base2brPrice: basePrices.twoBrPrice, base3brPrice: basePrices.threeBrPrice,
-      baseRetailSmallPrice: basePrices.retailSmallPrice, baseRetailMediumPrice: basePrices.retailMediumPrice, baseRetailLargePrice: basePrices.retailLargePrice,
-      baseOfficeSmallPrice: basePrices.officeSmallPrice, baseOfficeMediumPrice: basePrices.officeMediumPrice, baseOfficeLargePrice: basePrices.officeLargePrice,
-      optStudioPrice: Math.round(basePrices.studioPrice * 1.1), opt1brPrice: Math.round(basePrices.oneBrPrice * 1.1), opt2brPrice: Math.round(basePrices.twoBrPrice * 1.1), opt3brPrice: Math.round(basePrices.threeBrPrice * 1.1),
-      optRetailSmallPrice: Math.round(basePrices.retailSmallPrice * 1.1), optRetailMediumPrice: Math.round(basePrices.retailMediumPrice * 1.1), optRetailLargePrice: Math.round(basePrices.retailLargePrice * 1.1),
-      optOfficeSmallPrice: Math.round(basePrices.officeSmallPrice * 1.1), optOfficeMediumPrice: Math.round(basePrices.officeMediumPrice * 1.1), optOfficeLargePrice: Math.round(basePrices.officeLargePrice * 1.1),
-      consStudioPrice: Math.round(basePrices.studioPrice * 0.9), cons1brPrice: Math.round(basePrices.oneBrPrice * 0.9), cons2brPrice: Math.round(basePrices.twoBrPrice * 0.9), cons3brPrice: Math.round(basePrices.threeBrPrice * 0.9),
-      consRetailSmallPrice: Math.round(basePrices.retailSmallPrice * 0.9), consRetailMediumPrice: Math.round(basePrices.retailMediumPrice * 0.9), consRetailLargePrice: Math.round(basePrices.retailLargePrice * 0.9),
-      consOfficeSmallPrice: Math.round(basePrices.officeSmallPrice * 0.9), consOfficeMediumPrice: Math.round(basePrices.officeMediumPrice * 0.9), consOfficeLargePrice: Math.round(basePrices.officeLargePrice * 0.9),
+      baseStudioPrice: bp.studio || 0, base1brPrice: bp["1br"] || 0, base2brPrice: bp["2br"] || 0, base3brPrice: bp["3br"] || 0,
+      baseRetailSmallPrice: bp.retSmall || 0, baseRetailMediumPrice: bp.retMedium || 0, baseRetailLargePrice: bp.retLarge || 0,
+      baseOfficeSmallPrice: bp.offSmall || 0, baseOfficeMediumPrice: bp.offMedium || 0, baseOfficeLargePrice: bp.offLarge || 0,
+      optStudioPrice: Math.round((bp.studio || 0) * 1.1), opt1brPrice: Math.round((bp["1br"] || 0) * 1.1), opt2brPrice: Math.round((bp["2br"] || 0) * 1.1), opt3brPrice: Math.round((bp["3br"] || 0) * 1.1),
+      optRetailSmallPrice: Math.round((bp.retSmall || 0) * 1.1), optRetailMediumPrice: Math.round((bp.retMedium || 0) * 1.1), optRetailLargePrice: Math.round((bp.retLarge || 0) * 1.1),
+      optOfficeSmallPrice: Math.round((bp.offSmall || 0) * 1.1), optOfficeMediumPrice: Math.round((bp.offMedium || 0) * 1.1), optOfficeLargePrice: Math.round((bp.offLarge || 0) * 1.1),
+      consStudioPrice: Math.round((bp.studio || 0) * 0.9), cons1brPrice: Math.round((bp["1br"] || 0) * 0.9), cons2brPrice: Math.round((bp["2br"] || 0) * 0.9), cons3brPrice: Math.round((bp["3br"] || 0) * 0.9),
+      consRetailSmallPrice: Math.round((bp.retSmall || 0) * 0.9), consRetailMediumPrice: Math.round((bp.retMedium || 0) * 0.9), consRetailLargePrice: Math.round((bp.retLarge || 0) * 0.9),
+      consOfficeSmallPrice: Math.round((bp.offSmall || 0) * 0.9), consOfficeMediumPrice: Math.round((bp.offMedium || 0) * 0.9), consOfficeLargePrice: Math.round((bp.offLarge || 0) * 0.9),
       activeScenario,
       paymentBookingPct: 10, paymentBookingTiming: "عند التوقيع",
       paymentConstructionPct: 60, paymentConstructionTiming: "أثناء الإنشاء",
       paymentHandoverPct: 30, paymentHandoverTiming: "عند التسليم",
       paymentDeferredPct: 0, paymentDeferredTiming: "",
     });
+    setDirty(false);
   };
-  const handleSaveAll = () => { handleSaveMo(); handleSaveCp(); };
 
   const joelleStatus = joelleStatusQuery.data;
   const hasAnyJoelleData = joelleStatus?.engine6Ready || joelleStatus?.engine7Ready;
   const alreadyApplied = joelleStatus?.moHasJoelleData && joelleStatus?.cpHasJoelleData;
 
-  const scenarioConfig: Record<ScenarioKey, { label: string; color: string; bgBadge: string; multiplier: number; icon: any }> = {
-    optimistic: { label: "متفائل +10%", color: "text-emerald-700", bgBadge: "bg-emerald-500", multiplier: 1.10, icon: TrendingUp },
-    base: { label: "أساسي", color: "text-blue-700", bgBadge: "bg-blue-500", multiplier: 1.00, icon: BarChart3 },
-    conservative: { label: "متحفظ -10%", color: "text-orange-700", bgBadge: "bg-orange-500", multiplier: 0.90, icon: TrendingDown },
+  const scenarioConfig: Record<ScenarioKey, { label: string; color: string; bgBadge: string; icon: any }> = {
+    optimistic: { label: "متفائل +10%", color: "text-emerald-700", bgBadge: "bg-emerald-500", icon: TrendingUp },
+    base: { label: "أساسي", color: "text-blue-700", bgBadge: "bg-blue-500", icon: BarChart3 },
+    conservative: { label: "متحفظ -10%", color: "text-orange-700", bgBadge: "bg-orange-500", icon: TrendingDown },
   };
 
-  // ═══ RENDER ═══
+  /* ═══ RENDER ═══ */
   if (!projectId) return (<div className="text-center py-12 text-muted-foreground"><DollarSign className="w-12 h-12 mx-auto mb-3 opacity-30" /><p>اختر مشروعاً لعرض البيانات</p></div>);
   if (projectQuery.isLoading) return (<div className="text-center py-12"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /><p className="text-sm text-muted-foreground mt-2">جاري تحميل البيانات...</p></div>);
 
-  // ═══ Joel suggestion rows ═══
-  const joelRows = [
-    { cat: "سكني", catColor: "bg-sky-500", label: "استديو", pctKey: "residentialStudioPct", avgKey: "residentialStudioAvgArea", priceKey: "studioPrice", baseField: "baseStudioPrice" },
-    { cat: "", catColor: "", label: "غرفة وصالة", pctKey: "residential1brPct", avgKey: "residential1brAvgArea", priceKey: "oneBrPrice", baseField: "base1brPrice" },
-    { cat: "", catColor: "", label: "غرفتان وصالة", pctKey: "residential2brPct", avgKey: "residential2brAvgArea", priceKey: "twoBrPrice", baseField: "base2brPrice" },
-    { cat: "", catColor: "", label: "ثلاث غرف", pctKey: "residential3brPct", avgKey: "residential3brAvgArea", priceKey: "threeBrPrice", baseField: "base3brPrice" },
-    { cat: "تجزئة", catColor: "bg-amber-500", label: "صغيرة", pctKey: "retailSmallPct", avgKey: "retailSmallAvgArea", priceKey: "retailSmallPrice", baseField: "baseRetailSmallPrice", divider: true },
-    { cat: "", catColor: "", label: "متوسطة", pctKey: "retailMediumPct", avgKey: "retailMediumAvgArea", priceKey: "retailMediumPrice", baseField: "baseRetailMediumPrice" },
-    { cat: "", catColor: "", label: "كبيرة", pctKey: "retailLargePct", avgKey: "retailLargeAvgArea", priceKey: "retailLargePrice", baseField: "baseRetailLargePrice" },
-    { cat: "مكاتب", catColor: "bg-violet-500", label: "صغيرة", pctKey: "officeSmallPct", avgKey: "officeSmallAvgArea", priceKey: "officeSmallPrice", baseField: "baseOfficeSmallPrice", divider: true },
-    { cat: "", catColor: "", label: "متوسطة", pctKey: "officeMediumPct", avgKey: "officeMediumAvgArea", priceKey: "officeMediumPrice", baseField: "baseOfficeMediumPrice" },
-    { cat: "", catColor: "", label: "كبيرة", pctKey: "officeLargePct", avgKey: "officeLargeAvgArea", priceKey: "officeLargePrice", baseField: "baseOfficeLargePrice" },
-  ];
-
-  // ═══ Distribution table fields ═══
-  const allDistFields = [
-    { key: "studio", label: "استديو", pctKey: "residentialStudioPct", avgKey: "residentialStudioAvgArea", priceKey: "studioPrice", cat: "residential", catLabel: "سكني", catColor: "bg-sky-500" },
-    { key: "1br", label: "غرفة وصالة", pctKey: "residential1brPct", avgKey: "residential1brAvgArea", priceKey: "oneBrPrice", cat: "residential", catLabel: "", catColor: "" },
-    { key: "2br", label: "غرفتان وصالة", pctKey: "residential2brPct", avgKey: "residential2brAvgArea", priceKey: "twoBrPrice", cat: "residential", catLabel: "", catColor: "" },
-    { key: "3br", label: "ثلاث غرف وصالة", pctKey: "residential3brPct", avgKey: "residential3brAvgArea", priceKey: "threeBrPrice", cat: "residential", catLabel: "", catColor: "" },
-    { key: "retSmall", label: "صغيرة", pctKey: "retailSmallPct", avgKey: "retailSmallAvgArea", priceKey: "retailSmallPrice", cat: "retail", catLabel: "تجزئة", catColor: "bg-amber-500", divider: true },
-    { key: "retMedium", label: "متوسطة", pctKey: "retailMediumPct", avgKey: "retailMediumAvgArea", priceKey: "retailMediumPrice", cat: "retail", catLabel: "", catColor: "" },
-    { key: "retLarge", label: "كبيرة", pctKey: "retailLargePct", avgKey: "retailLargeAvgArea", priceKey: "retailLargePrice", cat: "retail", catLabel: "", catColor: "" },
-    { key: "offSmall", label: "صغيرة", pctKey: "officeSmallPct", avgKey: "officeSmallAvgArea", priceKey: "officeSmallPrice", cat: "offices", catLabel: "مكاتب", catColor: "bg-violet-500", divider: true },
-    { key: "offMedium", label: "متوسطة", pctKey: "officeMediumPct", avgKey: "officeMediumAvgArea", priceKey: "officeMediumPrice", cat: "offices", catLabel: "", catColor: "" },
-    { key: "offLarge", label: "كبيرة", pctKey: "officeLargePct", avgKey: "officeLargeAvgArea", priceKey: "officeLargePrice", cat: "offices", catLabel: "", catColor: "" },
-  ];
-
-  const allResults = [...resResults, ...retResults, ...offResults];
-
-  // Category subtotals
-  const catSummary = (results: DistResult[], sellable: number, totalPct: number, catKey: string) => {
-    const units = results.reduce((s, r) => s + r.units, 0);
-    const area = results.reduce((s, r) => s + r.totalArea, 0);
-    const parking = results.reduce((s, r) => s + r.parking, 0);
-    const surplus = results.reduce((s, r) => s + r.surplus, 0);
-    const totalAbsorbed = results.reduce((s, r) => s + (r.absorbed * r.units), 0);
-    const revBase = results.reduce((s, r) => s + r.revenueBase, 0);
-    const revOpt = results.reduce((s, r) => s + r.revenueOpt, 0);
-    const revCons = results.reduce((s, r) => s + r.revenueCons, 0);
-    return { units, area, parking, surplus, totalAbsorbed, revBase, revOpt, revCons, sellable, totalPct };
+  /* Surplus indicator helper */
+  const SurplusBar = ({ surplus, sellable }: { surplus: number; sellable: number }) => {
+    if (sellable <= 0) return null;
+    const pct = (surplus / sellable) * 100;
+    const isNeg = surplus < 0;
+    const isZero = Math.abs(surplus) < 1;
+    return (
+      <div className={`flex items-center gap-1.5 text-[10px] font-bold ${isZero ? "text-emerald-600" : isNeg ? "text-red-600" : "text-amber-600"}`}>
+        {isZero ? <CheckCircle className="w-3 h-3" /> : isNeg ? <AlertTriangle className="w-3 h-3" /> : null}
+        <span>{isZero ? "صفر هدر" : `${isNeg ? "عجز" : "فائض"}: ${fmt(Math.abs(surplus))} sqft (${Math.abs(pct).toFixed(1)}%)`}</span>
+      </div>
+    );
   };
-  const resSummary = catSummary(resResults, sellableRes, resTotalPct, "residential");
-  const retSummary = catSummary(retResults, sellableRet, retTotalPct, "retail");
-  const offSummary = catSummary(offResults, sellableOff, offTotalPct, "offices");
-
-  // Row number badge colors (cycling like reference image)
-  const badgeColors = [
-    "bg-orange-500 text-white",
-    "bg-emerald-500 text-white",
-    "bg-blue-500 text-white",
-    "bg-pink-500 text-white",
-    "bg-teal-500 text-white",
-    "bg-amber-500 text-white",
-    "bg-indigo-500 text-white",
-    "bg-rose-500 text-white",
-    "bg-cyan-500 text-white",
-    "bg-purple-500 text-white",
-  ];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-3" dir="rtl">
+    <div className="max-w-5xl mx-auto space-y-3" dir="rtl">
 
       {/* ═══ JOELLE BANNER ═══ */}
       {hasAnyJoelleData && (
@@ -469,118 +363,110 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
           <Button size="sm" variant="ghost"
             onClick={() => { if (projectId) applyJoelleMutation.mutate(projectId); }}
             disabled={applyJoelleMutation.isPending}
-            className={`gap-1 h-7 text-[11px] ${alreadyApplied ? "text-emerald-700" : "text-purple-700 hover:bg-purple-100"}`}
-          >
+            className={`gap-1 h-7 text-[11px] ${alreadyApplied ? "text-emerald-700" : "text-purple-700 hover:bg-purple-100"}`}>
             {applyJoelleMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : alreadyApplied ? <CheckCircle2 className="w-3 h-3" /> : <Zap className="w-3 h-3" />}
             {alreadyApplied ? "إعادة تطبيق" : "تعبئة من جويل"}
           </Button>
         </div>
       )}
 
-      {/* ═══════════════════════════════════════════════════════ */}
-      {/* SECTION 1: تفاصيل الأرض و GFA                          */}
-      {/* ═══════════════════════════════════════════════════════ */}
+      {/* ═══ SECTION 1: تفاصيل الأرض و GFA ═══ */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-        <div className="px-5 py-2.5 border-b border-gray-100 bg-gradient-to-l from-slate-50 to-blue-50/40">
-          <h3 className="text-[13px] font-bold text-gray-800">تفاصيل الأرض والمساحات</h3>
+        <div className="px-4 py-2 border-b border-gray-100 bg-gradient-to-l from-slate-50 to-blue-50/40">
+          <h3 className="text-xs font-bold text-gray-800">تفاصيل الأرض والمساحات</h3>
         </div>
-        <div className="px-5 py-3">
-          {/* Land info — colored stat cards */}
-          <div className="grid grid-cols-3 gap-3 mb-3">
-            <div className="bg-gradient-to-br from-sky-50 to-sky-100/50 rounded-lg px-3 py-2 border border-sky-200/50">
-              <div className="text-[10px] text-sky-600 font-medium">مساحة الأرض</div>
-              <div className="text-sm font-black text-sky-800 font-mono" dir="ltr">{fmt(plotAreaSqft)} <span className="text-[10px] font-normal">sqft</span></div>
-              <div className="text-[9px] text-sky-500">{fmt(plotAreaSqm)} م²</div>
-            </div>
-            <div className="bg-gradient-to-br from-amber-50 to-amber-100/50 rounded-lg px-3 py-2 border border-amber-200/50">
-              <div className="text-[10px] text-amber-600 font-medium">BUA</div>
-              <div className="text-sm font-black text-amber-800 font-mono" dir="ltr">{fmt(buaSqft)} <span className="text-[10px] font-normal">sqft</span></div>
-            </div>
-            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-lg px-3 py-2 border border-emerald-200/50">
-              <div className="text-[10px] text-emerald-600 font-medium">GFA الإجمالي</div>
-              <div className="text-sm font-black text-emerald-800 font-mono" dir="ltr">{fmt(gfaTotalSqft)} <span className="text-[10px] font-normal">sqft</span></div>
-            </div>
+        <div className="px-4 py-2.5">
+          <div className="grid grid-cols-3 gap-2.5 mb-2.5">
+            {[
+              { label: "مساحة الأرض", val: `${fmt(plotAreaSqft)} sqft`, sub: `${fmt(plotAreaSqm)} م²`, from: "from-sky-50", to: "to-sky-100/50", border: "border-sky-200/50", textColor: "text-sky-800", labelColor: "text-sky-600", subColor: "text-sky-500" },
+              { label: "BUA", val: `${fmt(buaSqft)} sqft`, sub: "", from: "from-amber-50", to: "to-amber-100/50", border: "border-amber-200/50", textColor: "text-amber-800", labelColor: "text-amber-600", subColor: "" },
+              { label: "GFA الإجمالي", val: `${fmt(gfaTotalSqft)} sqft`, sub: "", from: "from-emerald-50", to: "to-emerald-100/50", border: "border-emerald-200/50", textColor: "text-emerald-800", labelColor: "text-emerald-600", subColor: "" },
+            ].map(c => (
+              <div key={c.label} className={`bg-gradient-to-br ${c.from} ${c.to} rounded-lg px-3 py-2 border ${c.border}`}>
+                <div className={`text-[10px] ${c.labelColor} font-medium`}>{c.label}</div>
+                <div className={`text-sm font-black ${c.textColor} font-mono`} dir="ltr">{c.val}</div>
+                {c.sub && <div className={`text-[9px] ${c.subColor}`}>{c.sub}</div>}
+              </div>
+            ))}
           </div>
 
-          {/* GFA Breakdown table — compact */}
+          {/* GFA Breakdown */}
           <table className="w-full text-[11px]">
             <thead>
               <tr className="border-b-2 border-gray-200">
-                <th className="text-right py-2 pr-2 font-bold text-gray-500 w-8">#</th>
-                <th className="text-right py-2 font-bold text-gray-500">الفئة</th>
-                <th className="text-center py-2 font-bold text-gray-500">GFA (sqft)</th>
-                <th className="text-center py-2 font-bold text-gray-500">الكفاءة</th>
-                <th className="text-center py-2 font-bold text-gray-500">القابل للبيع (sqft)</th>
-                <th className="text-center py-2 font-bold text-gray-500">% من الإجمالي</th>
+                <th className="text-right py-1.5 pr-2 font-bold text-gray-500 w-8">#</th>
+                <th className="text-right py-1.5 font-bold text-gray-500">الفئة</th>
+                <th className="text-center py-1.5 font-bold text-gray-500">GFA</th>
+                <th className="text-center py-1.5 font-bold text-gray-500">الكفاءة</th>
+                <th className="text-center py-1.5 font-bold text-gray-500">القابل للبيع</th>
+                <th className="text-center py-1.5 font-bold text-gray-500">%</th>
               </tr>
             </thead>
             <tbody>
               {[
-                { n: 1, label: "الوحدات السكنية", gfa: gfaResSqft, eff: 0.95, sell: sellableRes, color: "bg-sky-500", effBadge: "bg-sky-100 text-sky-700" },
-                { n: 2, label: "وحدات التجزئة", gfa: gfaRetSqft, eff: 0.97, sell: sellableRet, color: "bg-amber-500", effBadge: "bg-amber-100 text-amber-700" },
-                { n: 3, label: "المكاتب", gfa: gfaOffSqft, eff: 0.95, sell: sellableOff, color: "bg-violet-500", effBadge: "bg-violet-100 text-violet-700" },
+                { n: 1, label: "سكني", gfa: gfaResSqft, eff: 0.95, sell: sellableRes, badge: "bg-sky-500", effBadge: "bg-sky-100 text-sky-700" },
+                { n: 2, label: "تجزئة", gfa: gfaRetSqft, eff: 0.97, sell: sellableRet, badge: "bg-amber-500", effBadge: "bg-amber-100 text-amber-700" },
+                { n: 3, label: "مكاتب", gfa: gfaOffSqft, eff: 0.95, sell: sellableOff, badge: "bg-violet-500", effBadge: "bg-violet-100 text-violet-700" },
               ].filter(r => r.gfa > 0).map(r => (
-                <tr key={r.n} className="border-b border-gray-100 hover:bg-gray-50/30 transition-colors">
-                  <td className="py-2 pr-2"><span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold ${badgeColors[(r.n - 1) % badgeColors.length]}`}>{r.n}</span></td>
-                  <td className="py-2 font-semibold text-gray-800">{r.label}</td>
-                  <td className="py-2 text-center font-mono text-gray-700" dir="ltr">{fmt(r.gfa)}</td>
-                  <td className="py-2 text-center"><span className={`${r.effBadge} text-[10px] font-bold px-2.5 py-0.5 rounded-full`}>{(r.eff * 100).toFixed(0)}%</span></td>
-                  <td className="py-2 text-center font-mono font-bold text-gray-900" dir="ltr">{fmt(r.sell)}</td>
-                  <td className="py-2 text-center"><span className="bg-gray-100 text-gray-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{totalSellable > 0 ? ((r.sell / totalSellable) * 100).toFixed(1) : 0}%</span></td>
+                <tr key={r.n} className="border-b border-gray-100 hover:bg-gray-50/30">
+                  <td className="py-1.5 pr-2"><span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold text-white ${r.badge}`}>{r.n}</span></td>
+                  <td className="py-1.5 font-semibold text-gray-800">{r.label}</td>
+                  <td className="py-1.5 text-center font-mono text-gray-700" dir="ltr">{fmt(r.gfa)}</td>
+                  <td className="py-1.5 text-center"><span className={`${r.effBadge} text-[10px] font-bold px-2 py-0.5 rounded-full`}>{(r.eff * 100)}%</span></td>
+                  <td className="py-1.5 text-center font-mono font-bold text-gray-900" dir="ltr">{fmt(r.sell)}</td>
+                  <td className="py-1.5 text-center"><span className="bg-gray-100 text-gray-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{totalSellable > 0 ? ((r.sell / totalSellable) * 100).toFixed(1) : 0}%</span></td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-gray-300 bg-gray-50/50">
-                <td className="py-2 pr-2"></td>
-                <td className="py-2 font-bold text-gray-800">الإجمالي</td>
-                <td className="py-2 text-center font-mono font-bold text-gray-700" dir="ltr">{fmt(gfaResSqft + gfaRetSqft + gfaOffSqft)}</td>
-                <td className="py-2 text-center">—</td>
-                <td className="py-2 text-center font-mono font-black text-gray-900" dir="ltr">{fmt(totalSellable)}</td>
-                <td className="py-2 text-center"><span className="bg-gray-200 text-gray-800 text-[10px] font-bold px-2 py-0.5 rounded-full">100%</span></td>
+                <td className="py-1.5 pr-2"></td>
+                <td className="py-1.5 font-bold text-gray-800">الإجمالي</td>
+                <td className="py-1.5 text-center font-mono font-bold" dir="ltr">{fmt(gfaResSqft + gfaRetSqft + gfaOffSqft)}</td>
+                <td className="py-1.5 text-center">—</td>
+                <td className="py-1.5 text-center font-mono font-black text-gray-900" dir="ltr">{fmt(totalSellable)}</td>
+                <td className="py-1.5 text-center"><span className="bg-gray-200 text-gray-800 text-[10px] font-bold px-2 py-0.5 rounded-full">100%</span></td>
               </tr>
             </tfoot>
           </table>
         </div>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════ */}
-      {/* SECTION 2: اقتراحات جويل (مرجع)                        */}
-      {/* ═══════════════════════════════════════════════════════ */}
+      {/* ═══ SECTION 2: اقتراحات جويل ═══ */}
       {(moJoelleSource || cpJoelleSource) && (
         <div className="bg-white rounded-xl border border-purple-200/60 overflow-hidden shadow-sm">
-          <div className="px-5 py-2.5 border-b border-purple-100 bg-gradient-to-l from-purple-50/60 to-pink-50/40 flex items-center gap-2">
+          <div className="px-4 py-2 border-b border-purple-100 bg-gradient-to-l from-purple-50/60 to-pink-50/40 flex items-center gap-2">
             <img src={JOEL_AVATAR} className="w-5 h-5 rounded-full" alt="" />
             <h3 className="text-xs font-bold text-purple-800">اقتراحات جويل</h3>
             <span className="text-[9px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full font-medium">للقراءة فقط</span>
           </div>
-          <div className="px-4 py-1.5">
+          <div className="px-3 py-1.5">
             <table className="w-full text-[11px]">
               <thead>
                 <tr className="border-b border-purple-100">
-                  <th className="text-right py-1.5 font-semibold text-purple-700 w-16">الفئة</th>
-                  <th className="text-right py-1.5 font-semibold text-purple-700">النوع</th>
-                  <th className="text-center py-1.5 font-semibold text-purple-700 w-16">النسبة</th>
-                  <th className="text-center py-1.5 font-semibold text-purple-700 w-20">المساحة</th>
-                  <th className="text-center py-1.5 font-semibold text-purple-700 w-20">سعر/قدم²</th>
+                  <th className="text-right py-1 font-semibold text-purple-700 w-14">الفئة</th>
+                  <th className="text-right py-1 font-semibold text-purple-700">النوع</th>
+                  <th className="text-center py-1 font-semibold text-purple-700 w-14">النسبة</th>
+                  <th className="text-center py-1 font-semibold text-purple-700 w-16">المساحة</th>
+                  <th className="text-center py-1 font-semibold text-purple-700 w-16">سعر/قدم²</th>
                 </tr>
               </thead>
               <tbody>
-                {joelRows.map((row, i) => {
+                {UNIT_ROWS.map((row, i) => {
                   const pct = moQuery.data ? parseFloat((moQuery.data as any)[row.pctKey] || "0") : 0;
                   const avg = moQuery.data ? ((moQuery.data as any)[row.avgKey] || 0) : 0;
-                  const actualPrice = cpQuery.data ? ((cpQuery.data as any)[row.baseField] || 0) : 0;
-                  if (pct === 0 && avg === 0 && actualPrice === 0) return null;
+                  const price = cpQuery.data ? ((cpQuery.data as any)[row.baseField] || 0) : 0;
+                  if (pct === 0 && avg === 0 && price === 0) return null;
+                  const catColorMap: Record<string, string> = { sky: "bg-sky-500", amber: "bg-amber-500", violet: "bg-violet-500" };
                   return (
-                    <tr key={i} className={`border-b ${(row as any).divider ? "border-t-2 border-t-gray-300" : "border-gray-100/60"} hover:bg-purple-50/30`}>
-                      <td className="py-1 font-medium text-purple-700 flex items-center gap-1">
-                        {row.catColor && <span className={`w-1.5 h-1.5 rounded-full ${row.catColor} inline-block`} />}
-                        {row.cat}
+                    <tr key={i} className={`border-b ${row.divider ? "border-t-2 border-t-gray-300" : "border-gray-100/60"} hover:bg-purple-50/20`}>
+                      <td className="py-1 font-medium text-purple-700 text-[11px]">
+                        {row.catLabel && <span className="flex items-center gap-1"><span className={`w-1.5 h-1.5 rounded-full ${catColorMap[row.catColor]} inline-block`} />{row.catLabel}</span>}
                       </td>
                       <td className="py-1 text-gray-700">{row.label}</td>
-                      <td className="py-1 text-center">{pct > 0 ? <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{pct}%</span> : <span className="text-gray-400">—</span>}</td>
+                      <td className="py-1 text-center">{pct > 0 ? <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{pct}%</span> : "—"}</td>
                       <td className="py-1 text-center font-mono text-gray-700" dir="ltr">{avg > 0 ? fmt(avg) : "—"}</td>
-                      <td className="py-1 text-center font-mono text-gray-700" dir="ltr">{actualPrice > 0 ? fmt(actualPrice) : "—"}</td>
+                      <td className="py-1 text-center font-mono text-gray-700" dir="ltr">{price > 0 ? fmt(price) : "—"}</td>
                     </tr>
                   );
                 }).filter(Boolean)}
@@ -590,18 +476,16 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
         </div>
       )}
 
-      {/* ═══════════════════════════════════════════════════════ */}
-      {/* SECTION 3: التوزيع التفاعلي والتسعير (جدول واحد موحد)  */}
-      {/* ═══════════════════════════════════════════════════════ */}
+      {/* ═══ SECTION 3: التوزيع التفاعلي والتسعير — TWO PANELS ═══ */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-        {/* Header with scenario selector */}
-        <div className="px-5 py-2.5 border-b border-gray-100 bg-gradient-to-l from-slate-50 to-indigo-50/30 flex items-center justify-between flex-wrap gap-2">
-          <h3 className="text-[13px] font-bold text-gray-800">التوزيع التفاعلي والتسعير</h3>
+        {/* Header */}
+        <div className="px-4 py-2 border-b border-gray-100 bg-gradient-to-l from-slate-50 to-indigo-50/30 flex items-center justify-between flex-wrap gap-2">
+          <h3 className="text-xs font-bold text-gray-800">التوزيع التفاعلي والتسعير</h3>
           <div className="flex gap-1">
             {(["optimistic", "base", "conservative"] as const).map(sc => {
               const cfg = scenarioConfig[sc];
               return (
-                <button key={sc} onClick={() => { setActiveScenario(sc); setCpDirty(true); }}
+                <button key={sc} onClick={() => { setActiveScenario(sc); setDirty(true); }}
                   className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition-all ${activeScenario === sc ? `text-white ${cfg.bgBadge} shadow-sm` : "text-gray-500 bg-gray-100 hover:bg-gray-200"}`}>
                   {cfg.label}
                 </button>
@@ -610,165 +494,145 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
           </div>
         </div>
 
-        {/* Single unified table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-[11px]">
-            <thead>
-              <tr className="border-b-2 border-gray-200 bg-gray-50/80">
-                <th className="text-right py-2 pr-3 font-bold text-gray-500 w-14">الفئة</th>
-                <th className="text-right py-2 font-bold text-gray-500 w-24">النوع</th>
-                <th className="text-center py-2 font-bold text-gray-500 w-14">%</th>
-                <th className="text-center py-2 font-bold text-gray-500 w-16">المساحة</th>
-                <th className="text-center py-2 font-bold text-gray-500 w-16">الوحدات</th>
-                <th className="text-center py-2 font-bold text-gray-500 w-20">إجمالي م²</th>
-                <th className="text-center py-2 font-bold text-gray-500 w-12"><Car className="w-3.5 h-3.5 mx-auto text-gray-400" /></th>
-                <th className="text-center py-2 font-bold text-gray-500 w-14">الامتصاص</th>
-                <th className="text-center py-2 font-bold text-gray-500 w-16">سعر/قدم²</th>
-                <th className="text-center py-2 font-bold text-gray-500 w-20">سعر الوحدة</th>
-                <th className={`text-center py-2 font-bold w-24 ${scenarioConfig[activeScenario].color}`}>الإيراد</th>
-              </tr>
-            </thead>
-            <tbody>
-              {allDistFields.map((f, i) => {
-                const r = allResults.find(r => r.key === f.key);
-                const pctVal = (moFields as any)[f.pctKey] || 0;
-                const avgVal = (moFields as any)[f.avgKey] || 0;
-                const priceVal = (basePrices as any)[f.priceKey] || 0;
-                const scenarioPrice = Math.round(priceVal * scenarioConfig[activeScenario].multiplier);
-                const activeRevenue = r ? (activeScenario === "optimistic" ? r.revenueOpt : activeScenario === "conservative" ? r.revenueCons : r.revenueBase) : 0;
-                const sellableForCat = f.cat === "residential" ? sellableRes : f.cat === "retail" ? sellableRet : sellableOff;
+        {/* Two-panel layout */}
+        <div className="flex divide-x divide-x-reverse divide-gray-200">
 
-                return (
-                  <tr key={f.key} className={`border-b ${(f as any).divider ? "border-t-[3px] border-t-gray-300" : "border-gray-100"} hover:bg-gray-50/30 transition-colors`}>
-                    <td className="py-1.5 pr-3 font-medium text-gray-700">
-                      {f.catLabel && (
-                        <span className="flex items-center gap-1.5">
-                          <span className={`w-2 h-2 rounded-full ${f.catColor} inline-block ring-2 ring-offset-1 ${f.catColor === 'bg-sky-500' ? 'ring-sky-200' : f.catColor === 'bg-amber-500' ? 'ring-amber-200' : 'ring-violet-200'}`} />
-                          <span className="text-[11px] font-bold">{f.catLabel}</span>
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-1.5 text-gray-800 font-medium">{f.label}</td>
-                    <td className="py-0.5 w-14"><EditableNum value={pctVal} onChange={(v) => updateMoField(f.pctKey, v)} suffix="%" /></td>
-                    <td className="py-0.5 w-16"><EditableNum value={avgVal || getAvg(f.pctKey, avgVal)} onChange={(v) => updateMoField(f.avgKey, v)} /></td>
-                    <td className="py-1.5 text-center">
-                      {r ? (
-                        <span className="inline-flex items-center gap-0.5">
-                          <span className="bg-blue-50 text-blue-800 font-mono font-bold text-[11px] px-2 py-0.5 rounded">{fmt(r.baseUnits)}</span>
-                          {r.bonusUnits > 0 && <span className="bg-emerald-100 text-emerald-700 font-mono font-bold text-[10px] px-1.5 py-0.5 rounded">+{r.bonusUnits}</span>}
-                        </span>
-                      ) : "—"}
-                    </td>
-                    <td className="py-1.5 text-center font-mono text-gray-700" dir="ltr">{r ? fmt(r.totalArea) : "—"}</td>
-                    <td className="py-1.5 text-center font-mono text-gray-500">{r ? r.parking : "—"}</td>
-                    <td className="py-1.5 text-center">
-                      {r && r.absorbed > 0 ? (
-                        <span className="bg-teal-100 text-teal-700 font-mono font-bold text-[10px] px-1.5 py-0.5 rounded" title={`+${r.absorbed.toFixed(1)} sqft/وحدة`}>+{r.absorbed.toFixed(1)}</span>
-                      ) : r && r.surplus > 0 ? (
-                        <span className="bg-orange-100 text-orange-700 font-mono font-bold text-[10px] px-1.5 py-0.5 rounded">{fmt(r.surplus)}</span>
-                      ) : <span className="text-gray-300 text-[10px]">—</span>}
-                    </td>
-                    <td className="py-0.5 w-16"><EditableNum value={priceVal} onChange={(v) => updateBasePrice(f.priceKey, v)} /></td>
-                    <td className="py-1.5 text-center font-mono text-[10px] text-gray-600" dir="ltr">{r ? fmt((r.avgArea + (r.absorbed || 0)) * scenarioPrice) : "—"}</td>
-                    <td className={`py-1.5 text-center font-mono font-bold ${scenarioConfig[activeScenario].color}`} dir="ltr">{fmt(activeRevenue)}</td>
-                  </tr>
-                );
-              })}
+          {/* ═══ RIGHT PANEL: المدخلات ═══ */}
+          <div className="w-[42%] min-w-0">
+            <div className="px-3 py-1.5 bg-blue-50/40 border-b border-gray-100">
+              <span className="text-[10px] font-bold text-blue-700">المدخلات — غيّر العدد أو المساحة</span>
+            </div>
+            <table className="w-full text-[11px]">
+              <thead>
+                <tr className="border-b-2 border-gray-200 bg-gray-50/60">
+                  <th className="text-right py-1.5 pr-2 font-bold text-gray-500 w-14">الفئة</th>
+                  <th className="text-right py-1.5 font-bold text-gray-500">النوع</th>
+                  <th className="text-center py-1.5 font-bold text-gray-500 w-16">المساحة</th>
+                  <th className="text-center py-1.5 font-bold text-gray-500 w-14">العدد</th>
+                  <th className="text-center py-1.5 font-bold text-gray-500 w-16">سعر/قدم²</th>
+                </tr>
+              </thead>
+              <tbody>
+                {UNIT_ROWS.map((row) => {
+                  const catColorMap: Record<string, string> = { sky: "bg-sky-500", amber: "bg-amber-500", violet: "bg-violet-500" };
+                  const catRingMap: Record<string, string> = { sky: "ring-sky-200", amber: "ring-amber-200", violet: "ring-violet-200" };
+                  return (
+                    <tr key={row.key} className={`border-b ${row.divider ? "border-t-[3px] border-t-gray-300" : "border-gray-100"} hover:bg-blue-50/20`}>
+                      <td className="py-1 pr-2 font-medium text-gray-700">
+                        {row.catLabel && (
+                          <span className="flex items-center gap-1">
+                            <span className={`w-2 h-2 rounded-full ${catColorMap[row.catColor]} ring-2 ring-offset-1 ${catRingMap[row.catColor]}`} />
+                            <span className="text-[10px] font-bold">{row.catLabel}</span>
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-1 text-gray-800 font-medium text-[11px]">{row.label}</td>
+                      <td className="py-0.5 w-16"><EditableNum value={avgAreas[row.key] || DEFAULT_AVG_AREAS[row.pctKey]?.defaultArea || 0} onChange={(v) => updateAvg(row.key, v)} /></td>
+                      <td className="py-0.5 w-14"><EditableNum value={unitCounts[row.key] || 0} onChange={(v) => updateCount(row.key, v)} cls="font-bold text-blue-700" /></td>
+                      <td className="py-0.5 w-16"><EditableNum value={basePrices[row.key] || 0} onChange={(v) => updatePrice(row.key, v)} /></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
 
-              {/* ═══ Category subtotals ═══ */}
-              {[
-                { label: "إجمالي السكني", data: resSummary, color: "bg-sky-50 text-sky-800", show: sellableRes > 0 },
-                { label: "إجمالي التجزئة", data: retSummary, color: "bg-amber-50 text-amber-800", show: sellableRet > 0 },
-                { label: "إجمالي المكاتب", data: offSummary, color: "bg-violet-50 text-violet-800", show: sellableOff > 0 },
-              ].filter(s => s.show).map(s => {
-                const activeRev = activeScenario === "optimistic" ? s.data.revOpt : activeScenario === "conservative" ? s.data.revCons : s.data.revBase;
-                return (
-                  <tr key={s.label} className={`${s.color} font-semibold border-b border-gray-200`}>
-                    <td className="py-1.5 pr-3" colSpan={2}>{s.label}</td>
-                    <td className="py-1.5 text-center">{s.data.totalPct > 0 ? `${s.data.totalPct.toFixed(0)}%` : "—"}</td>
-                    <td className="py-1.5 text-center">—</td>
-                    <td className="py-1.5 text-center font-mono">{fmt(s.data.units)}</td>
-                    <td className="py-1.5 text-center font-mono" dir="ltr">{fmt(s.data.area)}</td>
-                    <td className="py-1.5 text-center font-mono">{fmt(s.data.parking)}</td>
-                    <td className="py-1.5 text-center font-mono text-[10px]">{s.data.totalAbsorbed > 0 ? <span className="bg-teal-100 text-teal-700 font-bold px-1 py-0.5 rounded">{fmt(Math.round(s.data.totalAbsorbed))}</span> : fmt(s.data.surplus)}</td>
-                    <td className="py-1.5 text-center">—</td>
-                    <td className="py-1.5 text-center">—</td>
-                    <td className={`py-1.5 text-center font-mono font-bold ${scenarioConfig[activeScenario].color}`} dir="ltr">{fmt(activeRev)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-
-            {/* ═══ Grand total ═══ */}
-            <tfoot>
-              <tr className="bg-gradient-to-l from-gray-800 to-gray-900 text-white font-bold">
-                <td className="py-2.5 pr-3" colSpan={2}>الإجمالي الكلي</td>
-                <td className="py-2 text-center">—</td>
-                <td className="py-2 text-center">—</td>
-                <td className="py-2 text-center font-mono">{fmt(totalUnits)}</td>
-                <td className="py-2 text-center font-mono" dir="ltr">{fmt(totalUnits > 0 ? [...resResults, ...retResults, ...offResults].reduce((s, r) => s + r.totalArea, 0) : 0)}</td>
-                <td className="py-2 text-center font-mono">{fmt(totalParking)}</td>
-                <td className="py-2 text-center font-mono text-[10px]">{totalAbsorbed > 0 ? <span className="bg-teal-200 text-teal-800 font-bold px-1 py-0.5 rounded">{fmt(Math.round(totalAbsorbed))}</span> : fmt(totalSurplus)}</td>
-                <td className="py-2 text-center">—</td>
-                <td className="py-2 text-center">—</td>
-                <td className="py-2 text-center font-mono" dir="ltr">
-                  {fmt(activeScenario === "optimistic" ? totalRevenueOpt : activeScenario === "conservative" ? totalRevenueCons : totalRevenueBase)}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-
-        {/* ═══ Zero-waste explanation banner ═══ */}
-        {(() => {
-          const allR = [...resResults, ...retResults, ...offResults];
-          const totalBonus = allR.reduce((s, r) => s + r.bonusUnits, 0);
-          const totalAbsorbedVal = allR.reduce((s, r) => s + (r.absorbed * r.units), 0);
-          const absorbedTypes = allR.filter(r => r.absorbed > 0);
-          const totalSellableAll = sellableRes + sellableRet + sellableOff;
-          const usedAreaAll = allR.reduce((s, r) => s + r.totalArea, 0);
-          if (totalBonus === 0 && totalAbsorbedVal === 0) return null;
-          const bonusDetails = allR.filter(r => r.bonusUnits > 0).map(r => `${r.bonusUnits} ${r.label}`).join(" + ");
-          return (
-            <div className="px-5 py-2.5 bg-gradient-to-l from-emerald-50/60 to-blue-50/40 border-t border-emerald-200/50">
-              <div className="text-[11px] text-gray-700 leading-relaxed space-y-1">
-                <div className="flex items-center gap-1.5 font-bold text-emerald-800">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>خوارزمية صفر هدر</span>
-                </div>
-                {totalBonus > 0 && (
-                  <p>
-                    <span className="text-gray-500">الفوائض المجمّعة أُعيد توزيعها كوحدات إضافية:</span>{" "}
-                    <span className="font-bold text-emerald-700">{bonusDetails}</span>
-                    <span className="text-gray-500"> = </span>
-                    <span className="bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 rounded text-[10px]">+{totalBonus} وحدة إضافية</span>
-                  </p>
-                )}
-                {totalAbsorbedVal > 0 && absorbedTypes.map(r => (
-                  <p key={r.key}>
-                    <span className="text-gray-500">الفائض المتبقي ({fmt(Math.round(totalAbsorbedVal))} sqft) تم امتصاصه في وحدات {r.label}:</span>{" "}
-                    <span className="bg-teal-100 text-teal-700 font-bold px-1.5 py-0.5 rounded text-[10px]">+{r.absorbed.toFixed(1)} sqft/وحدة</span>
-                    <span className="text-gray-400"> × {r.units} = </span>
-                    <span className="font-bold text-teal-700">{r.avgArea} → {(r.avgArea + r.absorbed).toFixed(1)} sqft</span>
-                  </p>
-                ))}
-                <p className="text-[10px] text-gray-400">
-                  الاستخدام الفعلي: {fmt(usedAreaAll)} sqft من {fmt(totalSellableAll)} sqft = <span className="font-bold text-emerald-600">{totalSellableAll > 0 ? ((usedAreaAll / totalSellableAll) * 100).toFixed(2) : 0}%</span>
-                </p>
+            {/* Surplus indicators per category */}
+            <div className="px-3 py-2 space-y-1 border-t border-gray-100 bg-gray-50/30">
+              {sellableRes > 0 && <div className="flex items-center justify-between"><span className="text-[10px] text-gray-500">سكني:</span><SurplusBar surplus={resSummary.surplus} sellable={sellableRes} /></div>}
+              {sellableRet > 0 && <div className="flex items-center justify-between"><span className="text-[10px] text-gray-500">تجزئة:</span><SurplusBar surplus={retSummary.surplus} sellable={sellableRet} /></div>}
+              {sellableOff > 0 && <div className="flex items-center justify-between"><span className="text-[10px] text-gray-500">مكاتب:</span><SurplusBar surplus={offSummary.surplus} sellable={sellableOff} /></div>}
+              <div className="flex items-center justify-between pt-1 border-t border-gray-200">
+                <span className="text-[10px] font-bold text-gray-700">الإجمالي:</span>
+                <SurplusBar surplus={grandSurplus} sellable={totalSellable} />
               </div>
             </div>
-          );
-        })()}
+          </div>
+
+          {/* ═══ LEFT PANEL: النتائج ═══ */}
+          <div className="w-[58%] min-w-0">
+            <div className="px-3 py-1.5 bg-emerald-50/40 border-b border-gray-100">
+              <span className="text-[10px] font-bold text-emerald-700">النتائج — محسوبة تلقائياً</span>
+            </div>
+            <table className="w-full text-[11px]">
+              <thead>
+                <tr className="border-b-2 border-gray-200 bg-gray-50/60">
+                  <th className="text-right py-1.5 pr-2 font-bold text-gray-500">النوع</th>
+                  <th className="text-center py-1.5 font-bold text-gray-500 w-12">النسبة</th>
+                  <th className="text-center py-1.5 font-bold text-gray-500 w-12">العدد</th>
+                  <th className="text-center py-1.5 font-bold text-gray-500 w-20">إجمالي م²</th>
+                  <th className="text-center py-1.5 font-bold text-gray-500 w-10"><Car className="w-3 h-3 mx-auto text-gray-400" /></th>
+                  <th className="text-center py-1.5 font-bold text-gray-500 w-20">سعر الوحدة</th>
+                  <th className={`text-center py-1.5 font-bold w-24 ${scenarioConfig[activeScenario].color}`}>الإيراد</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rowResults.map((r) => {
+                  const catColorMap: Record<string, string> = { sky: "bg-sky-500", amber: "bg-amber-500", violet: "bg-violet-500" };
+                  if (r.count === 0 && (basePrices[r.key] || 0) === 0 && (avgAreas[r.key] || 0) === 0) return null;
+                  return (
+                    <tr key={r.key} className={`border-b ${r.divider ? "border-t-[3px] border-t-gray-300" : "border-gray-100"} hover:bg-emerald-50/20`}>
+                      <td className="py-1 pr-2 text-gray-800 font-medium">
+                        <span className="flex items-center gap-1">
+                          {r.catLabel && <span className={`w-1.5 h-1.5 rounded-full ${catColorMap[r.catColor]}`} />}
+                          {r.catLabel ? <span className="text-[10px] font-bold text-gray-500">{r.catLabel} /</span> : null}
+                          <span>{r.label}</span>
+                        </span>
+                      </td>
+                      <td className="py-1 text-center">
+                        {r.pct > 0 ? <span className="bg-blue-50 text-blue-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{r.pct.toFixed(1)}%</span> : "—"}
+                      </td>
+                      <td className="py-1 text-center font-mono font-bold text-gray-800">{r.count || "—"}</td>
+                      <td className="py-1 text-center font-mono text-gray-700" dir="ltr">{r.totalArea > 0 ? fmt(r.totalArea) : "—"}</td>
+                      <td className="py-1 text-center font-mono text-gray-500">{r.parking || "—"}</td>
+                      <td className="py-1 text-center font-mono text-gray-600" dir="ltr">{r.unitPrice > 0 ? fmt(r.unitPrice) : "—"}</td>
+                      <td className={`py-1 text-center font-mono font-bold ${scenarioConfig[activeScenario].color}`} dir="ltr">{r.revenue > 0 ? fmt(r.revenue) : "—"}</td>
+                    </tr>
+                  );
+                })}
+
+                {/* Category subtotals */}
+                {[
+                  { label: "إجمالي السكني", data: resSummary, bg: "bg-sky-50 text-sky-800", show: sellableRes > 0 },
+                  { label: "إجمالي التجزئة", data: retSummary, bg: "bg-amber-50 text-amber-800", show: sellableRet > 0 },
+                  { label: "إجمالي المكاتب", data: offSummary, bg: "bg-violet-50 text-violet-800", show: sellableOff > 0 },
+                ].filter(s => s.show).map(s => (
+                  <tr key={s.label} className={`${s.bg} font-semibold border-b border-gray-200`}>
+                    <td className="py-1.5 pr-2">{s.label}</td>
+                    <td className="py-1.5 text-center">{s.data.usedPct > 0 ? `${s.data.usedPct.toFixed(0)}%` : "—"}</td>
+                    <td className="py-1.5 text-center font-mono">{fmt(s.data.totalUnits)}</td>
+                    <td className="py-1.5 text-center font-mono" dir="ltr">{fmt(s.data.totalArea)}</td>
+                    <td className="py-1.5 text-center font-mono">{fmt(s.data.totalParking)}</td>
+                    <td className="py-1.5 text-center">—</td>
+                    <td className={`py-1.5 text-center font-mono font-bold ${scenarioConfig[activeScenario].color}`} dir="ltr">{fmt(s.data.totalRevenue)}</td>
+                  </tr>
+                ))}
+              </tbody>
+
+              {/* Grand total */}
+              <tfoot>
+                <tr className="bg-gradient-to-l from-gray-800 to-gray-900 text-white font-bold">
+                  <td className="py-2 pr-2">الإجمالي الكلي</td>
+                  <td className="py-2 text-center">—</td>
+                  <td className="py-2 text-center font-mono">{fmt(grandTotalUnits)}</td>
+                  <td className="py-2 text-center font-mono" dir="ltr">{fmt(grandTotalArea)}</td>
+                  <td className="py-2 text-center font-mono">{fmt(grandTotalParking)}</td>
+                  <td className="py-2 text-center">—</td>
+                  <td className="py-2 text-center font-mono" dir="ltr">{fmt(grandTotalRevenue)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
 
         {/* Revenue comparison strip */}
         <div className="grid grid-cols-3 border-t-2 border-gray-200">
           {(["optimistic", "base", "conservative"] as const).map(sc => {
-            const rev = sc === "optimistic" ? totalRevenueOpt : sc === "conservative" ? totalRevenueCons : totalRevenueBase;
+            const rev = revenueByScenario[sc];
             const cfg = scenarioConfig[sc];
             const isActive = sc === activeScenario;
             const activeBg = sc === "optimistic" ? "bg-emerald-50" : sc === "conservative" ? "bg-orange-50" : "bg-blue-50";
             return (
-              <div key={sc} className={`px-3 py-3 text-center border-l first:border-l-0 border-gray-200 transition-colors ${isActive ? activeBg : "bg-gray-50/50"}`}>
+              <div key={sc} className={`px-3 py-2.5 text-center border-l first:border-l-0 border-gray-200 transition-colors ${isActive ? activeBg : "bg-gray-50/50"}`}>
                 <div className={`text-[10px] font-bold ${isActive ? cfg.color : "text-gray-500"}`}>{cfg.label}</div>
                 <div className={`text-base font-black font-mono ${isActive ? cfg.color : "text-gray-600"}`} dir="ltr">{fmt(rev)}</div>
                 <div className="text-[9px] text-gray-400 font-medium">AED</div>
@@ -779,9 +643,9 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
       </div>
 
       {/* Save button */}
-      {(moDirty || cpDirty) && (
+      {dirty && (
         <div className="flex justify-end">
-          <Button size="sm" onClick={handleSaveAll} disabled={moSaveMutation.isPending || cpSaveMutation.isPending} className="gap-1.5 h-7 text-[11px]">
+          <Button size="sm" onClick={handleSave} disabled={moSaveMutation.isPending || cpSaveMutation.isPending} className="gap-1.5 h-7 text-[11px]">
             {(moSaveMutation.isPending || cpSaveMutation.isPending) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
             حفظ التوزيع والتسعير
           </Button>
