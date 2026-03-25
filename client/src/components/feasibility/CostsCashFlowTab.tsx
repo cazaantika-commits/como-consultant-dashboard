@@ -60,8 +60,10 @@ interface DistResult {
   pct: number;
   avgArea: number;
   allocated: number;
-  units: number;
-  surplus: number;
+  baseUnits: number;   // units from percentage allocation only
+  bonusUnits: number;  // extra units added from surplus redistribution
+  units: number;       // total = baseUnits + bonusUnits
+  surplus: number;     // remaining unallocated sqft (only on largest type)
   parking: number;
   basePricePerSqft: number;
   unitPrice: number;
@@ -76,30 +78,34 @@ function zeroWasteDistribute(types: UnitType[], totalSellable: number): DistResu
   const activeTypes = types.filter(t => t.pct > 0 && t.avgArea > 0);
   if (activeTypes.length === 0) return [];
 
+  // Step 1: Allocate by percentage
   let results: DistResult[] = activeTypes.map(t => {
     const allocated = totalSellable * (t.pct / 100);
-    const units = Math.floor(allocated / t.avgArea);
+    const baseUnits = Math.floor(allocated / t.avgArea);
     return {
       key: t.key, label: t.label, pct: t.pct, avgArea: t.avgArea,
-      allocated, units, surplus: 0, parking: 0,
+      allocated, baseUnits, bonusUnits: 0, units: baseUnits, surplus: 0, parking: 0,
       basePricePerSqft: t.basePricePerSqft,
       unitPrice: t.avgArea * t.basePricePerSqft,
-      totalArea: units * t.avgArea,
+      totalArea: baseUnits * t.avgArea,
       revenueBase: 0, revenueOpt: 0, revenueCons: 0,
     };
   });
 
-  let totalSurplus = results.reduce((s, r) => s + (r.allocated - r.units * r.avgArea), 0);
+  // Step 2: Collect leftover from all types and redistribute as bonus units (smallest first)
+  let totalSurplus = results.reduce((s, r) => s + (r.allocated - r.baseUnits * r.avgArea), 0);
   const sortedByArea = [...results].sort((a, b) => a.avgArea - b.avgArea);
   for (const item of sortedByArea) {
     while (totalSurplus >= item.avgArea) {
       const r = results.find(r => r.key === item.key)!;
-      r.units += 1;
+      r.bonusUnits += 1;
+      r.units = r.baseUnits + r.bonusUnits;
       r.totalArea = r.units * r.avgArea;
       totalSurplus -= item.avgArea;
     }
   }
 
+  // Step 3: Final surplus (less than smallest unit) goes to largest type
   const usedArea = results.reduce((s, r) => s + r.units * r.avgArea, 0);
   const finalSurplus = totalSellable - usedArea;
   results = results.map(r => ({ ...r, surplus: 0, totalArea: r.units * r.avgArea }));
@@ -593,7 +599,7 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
                 <th className="text-right py-2 font-bold text-gray-500 w-24">النوع</th>
                 <th className="text-center py-2 font-bold text-gray-500 w-14">%</th>
                 <th className="text-center py-2 font-bold text-gray-500 w-16">المساحة</th>
-                <th className="text-center py-2 font-bold text-gray-500 w-12">الوحدات</th>
+                <th className="text-center py-2 font-bold text-gray-500 w-16">الوحدات</th>
                 <th className="text-center py-2 font-bold text-gray-500 w-20">إجمالي م²</th>
                 <th className="text-center py-2 font-bold text-gray-500 w-12"><Car className="w-3.5 h-3.5 mx-auto text-gray-400" /></th>
                 <th className="text-center py-2 font-bold text-gray-500 w-14">الفائض</th>
@@ -625,10 +631,21 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
                     <td className="py-1.5 text-gray-800 font-medium">{f.label}</td>
                     <td className="py-0.5 w-14"><EditableNum value={pctVal} onChange={(v) => updateMoField(f.pctKey, v)} suffix="%" /></td>
                     <td className="py-0.5 w-16"><EditableNum value={avgVal || getAvg(f.pctKey, avgVal)} onChange={(v) => updateMoField(f.avgKey, v)} /></td>
-                    <td className="py-1.5 text-center"><span className="bg-blue-50 text-blue-800 font-mono font-bold text-[11px] px-2 py-0.5 rounded">{r ? fmt(r.units) : "—"}</span></td>
+                    <td className="py-1.5 text-center">
+                      {r ? (
+                        <span className="inline-flex items-center gap-0.5">
+                          <span className="bg-blue-50 text-blue-800 font-mono font-bold text-[11px] px-2 py-0.5 rounded">{fmt(r.baseUnits)}</span>
+                          {r.bonusUnits > 0 && <span className="bg-emerald-100 text-emerald-700 font-mono font-bold text-[10px] px-1.5 py-0.5 rounded">+{r.bonusUnits}</span>}
+                        </span>
+                      ) : "—"}
+                    </td>
                     <td className="py-1.5 text-center font-mono text-gray-700" dir="ltr">{r ? fmt(r.totalArea) : "—"}</td>
                     <td className="py-1.5 text-center font-mono text-gray-500">{r ? r.parking : "—"}</td>
-                    <td className="py-1.5 text-center font-mono text-[10px] text-gray-400">{r && r.surplus > 0 ? fmt(r.surplus) : "0"}</td>
+                    <td className="py-1.5 text-center">
+                      {r && r.surplus > 0 ? (
+                        <span className="bg-orange-100 text-orange-700 font-mono font-bold text-[10px] px-1.5 py-0.5 rounded">{fmt(r.surplus)}</span>
+                      ) : <span className="text-gray-300 text-[10px]">—</span>}
+                    </td>
                     <td className="py-0.5 w-16"><EditableNum value={priceVal} onChange={(v) => updateBasePrice(f.priceKey, v)} /></td>
                     <td className="py-1.5 text-center font-mono text-[10px] text-gray-600" dir="ltr">{r ? fmt(r.avgArea * scenarioPrice) : "—"}</td>
                     <td className={`py-1.5 text-center font-mono font-bold ${scenarioConfig[activeScenario].color}`} dir="ltr">{fmt(activeRevenue)}</td>
@@ -679,6 +696,45 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
             </tfoot>
           </table>
         </div>
+
+        {/* ═══ Zero-waste explanation banner ═══ */}
+        {(() => {
+          const allR = [...resResults, ...retResults, ...offResults];
+          const totalBonus = allR.reduce((s, r) => s + r.bonusUnits, 0);
+          const finalSurplusVal = allR.reduce((s, r) => s + r.surplus, 0);
+          const totalSellableAll = sellableRes + sellableRet + sellableOff;
+          const usedAreaAll = allR.reduce((s, r) => s + r.totalArea, 0);
+          if (totalBonus === 0 && finalSurplusVal === 0) return null;
+          const bonusDetails = allR.filter(r => r.bonusUnits > 0).map(r => `${r.bonusUnits} ${r.label}`).join(" + ");
+          return (
+            <div className="px-5 py-2.5 bg-gradient-to-l from-emerald-50/60 to-blue-50/40 border-t border-emerald-200/50">
+              <div className="text-[11px] text-gray-700 leading-relaxed space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-emerald-800">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>خوارزمية صفر هدر</span>
+                </div>
+                {totalBonus > 0 && (
+                  <p>
+                    <span className="text-gray-500">الفوائض المجمّعة من جميع الأنواع أُعيد توزيعها كوحدات إضافية:</span>{" "}
+                    <span className="font-bold text-emerald-700">{bonusDetails}</span>
+                    <span className="text-gray-500"> = </span>
+                    <span className="bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 rounded text-[10px]">+{totalBonus} وحدة إضافية</span>
+                  </p>
+                )}
+                {finalSurplusVal > 0 && (
+                  <p>
+                    <span className="text-gray-500">المتبقي غير القابل للتوزيع (أقل من أصغر وحدة):</span>{" "}
+                    <span className="bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded text-[10px]">{fmt(finalSurplusVal)} sqft</span>
+                    <span className="text-gray-400"> من أصل {fmt(totalSellableAll)} sqft ({((finalSurplusVal / totalSellableAll) * 100).toFixed(2)}%)</span>
+                  </p>
+                )}
+                <p className="text-[10px] text-gray-400">
+                  الاستخدام الفعلي: {fmt(usedAreaAll)} sqft من {fmt(totalSellableAll)} sqft = <span className="font-bold text-gray-600">{totalSellableAll > 0 ? ((usedAreaAll / totalSellableAll) * 100).toFixed(2) : 0}%</span>
+                </p>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Revenue comparison strip */}
         <div className="grid grid-cols-3 border-t-2 border-gray-200">
