@@ -387,3 +387,5 @@
 - [x] Add more colorful badges and accents (varied colors like reference image)
 - [x] Improve surplus display — make it clear what happens to the surplus (where it goes)
 - [x] Add tooltip or visual explanation for zero-waste algorithm behavior
+- [x] Fix zero-waste: when final surplus < smallest unit, distribute it equally across largest type units (increase their area)
+- [x] Fix zero-waste: when final surplus < smallest unit, distribute it equally across 2BR units (غرفتين وصالة) always — not largest type

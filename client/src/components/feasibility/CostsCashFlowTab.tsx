@@ -63,7 +63,8 @@ interface DistResult {
   baseUnits: number;   // units from percentage allocation only
   bonusUnits: number;  // extra units added from surplus redistribution
   units: number;       // total = baseUnits + bonusUnits
-  surplus: number;     // remaining unallocated sqft (only on largest type)
+  surplus: number;     // remaining unallocated sqft (should be 0 with true zero-waste)
+  absorbed: number;     // extra sqft absorbed per unit (distributed from final surplus)
   parking: number;
   basePricePerSqft: number;
   unitPrice: number;
@@ -84,7 +85,7 @@ function zeroWasteDistribute(types: UnitType[], totalSellable: number): DistResu
     const baseUnits = Math.floor(allocated / t.avgArea);
     return {
       key: t.key, label: t.label, pct: t.pct, avgArea: t.avgArea,
-      allocated, baseUnits, bonusUnits: 0, units: baseUnits, surplus: 0, parking: 0,
+      allocated, baseUnits, bonusUnits: 0, units: baseUnits, surplus: 0, absorbed: 0, parking: 0,
       basePricePerSqft: t.basePricePerSqft,
       unitPrice: t.avgArea * t.basePricePerSqft,
       totalArea: baseUnits * t.avgArea,
@@ -105,13 +106,27 @@ function zeroWasteDistribute(types: UnitType[], totalSellable: number): DistResu
     }
   }
 
-  // Step 3: Final surplus (less than smallest unit) goes to largest type
+  // Step 3: Absorb final surplus into 2BR units (غرفتين وصالة) by increasing their area equally
+  // If no 2BR, fall back to largest type
   const usedArea = results.reduce((s, r) => s + r.units * r.avgArea, 0);
   const finalSurplus = totalSellable - usedArea;
-  results = results.map(r => ({ ...r, surplus: 0, totalArea: r.units * r.avgArea }));
+  results = results.map(r => ({ ...r, surplus: 0, absorbed: 0, totalArea: r.units * r.avgArea }));
   if (finalSurplus > 0 && results.length > 0) {
-    const largestIdx = results.reduce((maxIdx, r, i, arr) => r.avgArea > arr[maxIdx].avgArea ? i : maxIdx, 0);
-    results[largestIdx].surplus = finalSurplus;
+    // Priority: 2BR (key contains "2br"), fallback to largest type
+    let absorberIdx = results.findIndex(r => r.key.includes("2br"));
+    if (absorberIdx === -1) {
+      absorberIdx = results.reduce((maxIdx, r, i, arr) => r.avgArea > arr[maxIdx].avgArea ? i : maxIdx, 0);
+    }
+    const absorber = results[absorberIdx];
+    if (absorber.units > 0) {
+      const extraPerUnit = finalSurplus / absorber.units;
+      absorber.absorbed = extraPerUnit;
+      absorber.totalArea = absorber.units * (absorber.avgArea + extraPerUnit);
+    } else {
+      // If absorber has 0 units, just record as surplus on largest
+      const largestIdx = results.reduce((maxIdx, r, i, arr) => r.avgArea > arr[maxIdx].avgArea ? i : maxIdx, 0);
+      results[largestIdx].surplus = finalSurplus;
+    }
   }
   return results;
 }
@@ -131,13 +146,16 @@ function calcParking(results: DistResult[], category: "residential" | "retail" |
 }
 
 function calcRevenue(results: DistResult[]): DistResult[] {
-  return results.map(r => ({
-    ...r,
-    unitPrice: r.avgArea * r.basePricePerSqft,
-    revenueBase: r.units * r.avgArea * r.basePricePerSqft,
-    revenueOpt: r.units * r.avgArea * r.basePricePerSqft * 1.10,
-    revenueCons: r.units * r.avgArea * r.basePricePerSqft * 0.90,
-  }));
+  return results.map(r => {
+    const effectiveArea = r.avgArea + (r.absorbed || 0); // include absorbed surplus per unit
+    return {
+      ...r,
+      unitPrice: effectiveArea * r.basePricePerSqft,
+      revenueBase: r.units * effectiveArea * r.basePricePerSqft,
+      revenueOpt: r.units * effectiveArea * r.basePricePerSqft * 1.10,
+      revenueCons: r.units * effectiveArea * r.basePricePerSqft * 0.90,
+    };
+  });
 }
 
 /* ═══ MAIN COMPONENT ═══ */
@@ -322,6 +340,7 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
   const totalUnits = [...resResults, ...retResults, ...offResults].reduce((s, r) => s + r.units, 0);
   const totalParking = [...resResults, ...retResults, ...offResults].reduce((s, r) => s + r.parking, 0);
   const totalSurplus = [...resResults, ...retResults, ...offResults].reduce((s, r) => s + r.surplus, 0);
+  const totalAbsorbed = [...resResults, ...retResults, ...offResults].reduce((s, r) => s + (r.absorbed * r.units), 0);
   const totalRevenueBase = [...resResults, ...retResults, ...offResults].reduce((s, r) => s + r.revenueBase, 0);
   const totalRevenueOpt = [...resResults, ...retResults, ...offResults].reduce((s, r) => s + r.revenueOpt, 0);
   const totalRevenueCons = [...resResults, ...retResults, ...offResults].reduce((s, r) => s + r.revenueCons, 0);
@@ -407,10 +426,11 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
     const area = results.reduce((s, r) => s + r.totalArea, 0);
     const parking = results.reduce((s, r) => s + r.parking, 0);
     const surplus = results.reduce((s, r) => s + r.surplus, 0);
+    const totalAbsorbed = results.reduce((s, r) => s + (r.absorbed * r.units), 0);
     const revBase = results.reduce((s, r) => s + r.revenueBase, 0);
     const revOpt = results.reduce((s, r) => s + r.revenueOpt, 0);
     const revCons = results.reduce((s, r) => s + r.revenueCons, 0);
-    return { units, area, parking, surplus, revBase, revOpt, revCons, sellable, totalPct };
+    return { units, area, parking, surplus, totalAbsorbed, revBase, revOpt, revCons, sellable, totalPct };
   };
   const resSummary = catSummary(resResults, sellableRes, resTotalPct, "residential");
   const retSummary = catSummary(retResults, sellableRet, retTotalPct, "retail");
@@ -602,7 +622,7 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
                 <th className="text-center py-2 font-bold text-gray-500 w-16">الوحدات</th>
                 <th className="text-center py-2 font-bold text-gray-500 w-20">إجمالي م²</th>
                 <th className="text-center py-2 font-bold text-gray-500 w-12"><Car className="w-3.5 h-3.5 mx-auto text-gray-400" /></th>
-                <th className="text-center py-2 font-bold text-gray-500 w-14">الفائض</th>
+                <th className="text-center py-2 font-bold text-gray-500 w-14">الامتصاص</th>
                 <th className="text-center py-2 font-bold text-gray-500 w-16">سعر/قدم²</th>
                 <th className="text-center py-2 font-bold text-gray-500 w-20">سعر الوحدة</th>
                 <th className={`text-center py-2 font-bold w-24 ${scenarioConfig[activeScenario].color}`}>الإيراد</th>
@@ -642,12 +662,14 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
                     <td className="py-1.5 text-center font-mono text-gray-700" dir="ltr">{r ? fmt(r.totalArea) : "—"}</td>
                     <td className="py-1.5 text-center font-mono text-gray-500">{r ? r.parking : "—"}</td>
                     <td className="py-1.5 text-center">
-                      {r && r.surplus > 0 ? (
+                      {r && r.absorbed > 0 ? (
+                        <span className="bg-teal-100 text-teal-700 font-mono font-bold text-[10px] px-1.5 py-0.5 rounded" title={`+${r.absorbed.toFixed(1)} sqft/وحدة`}>+{r.absorbed.toFixed(1)}</span>
+                      ) : r && r.surplus > 0 ? (
                         <span className="bg-orange-100 text-orange-700 font-mono font-bold text-[10px] px-1.5 py-0.5 rounded">{fmt(r.surplus)}</span>
                       ) : <span className="text-gray-300 text-[10px]">—</span>}
                     </td>
                     <td className="py-0.5 w-16"><EditableNum value={priceVal} onChange={(v) => updateBasePrice(f.priceKey, v)} /></td>
-                    <td className="py-1.5 text-center font-mono text-[10px] text-gray-600" dir="ltr">{r ? fmt(r.avgArea * scenarioPrice) : "—"}</td>
+                    <td className="py-1.5 text-center font-mono text-[10px] text-gray-600" dir="ltr">{r ? fmt((r.avgArea + (r.absorbed || 0)) * scenarioPrice) : "—"}</td>
                     <td className={`py-1.5 text-center font-mono font-bold ${scenarioConfig[activeScenario].color}`} dir="ltr">{fmt(activeRevenue)}</td>
                   </tr>
                 );
@@ -668,7 +690,7 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
                     <td className="py-1.5 text-center font-mono">{fmt(s.data.units)}</td>
                     <td className="py-1.5 text-center font-mono" dir="ltr">{fmt(s.data.area)}</td>
                     <td className="py-1.5 text-center font-mono">{fmt(s.data.parking)}</td>
-                    <td className="py-1.5 text-center font-mono text-[10px]">{fmt(s.data.surplus)}</td>
+                    <td className="py-1.5 text-center font-mono text-[10px]">{s.data.totalAbsorbed > 0 ? <span className="bg-teal-100 text-teal-700 font-bold px-1 py-0.5 rounded">{fmt(Math.round(s.data.totalAbsorbed))}</span> : fmt(s.data.surplus)}</td>
                     <td className="py-1.5 text-center">—</td>
                     <td className="py-1.5 text-center">—</td>
                     <td className={`py-1.5 text-center font-mono font-bold ${scenarioConfig[activeScenario].color}`} dir="ltr">{fmt(activeRev)}</td>
@@ -686,7 +708,7 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
                 <td className="py-2 text-center font-mono">{fmt(totalUnits)}</td>
                 <td className="py-2 text-center font-mono" dir="ltr">{fmt(totalUnits > 0 ? [...resResults, ...retResults, ...offResults].reduce((s, r) => s + r.totalArea, 0) : 0)}</td>
                 <td className="py-2 text-center font-mono">{fmt(totalParking)}</td>
-                <td className="py-2 text-center font-mono text-[10px]">{fmt(totalSurplus)}</td>
+                <td className="py-2 text-center font-mono text-[10px]">{totalAbsorbed > 0 ? <span className="bg-teal-200 text-teal-800 font-bold px-1 py-0.5 rounded">{fmt(Math.round(totalAbsorbed))}</span> : fmt(totalSurplus)}</td>
                 <td className="py-2 text-center">—</td>
                 <td className="py-2 text-center">—</td>
                 <td className="py-2 text-center font-mono" dir="ltr">
@@ -701,10 +723,11 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
         {(() => {
           const allR = [...resResults, ...retResults, ...offResults];
           const totalBonus = allR.reduce((s, r) => s + r.bonusUnits, 0);
-          const finalSurplusVal = allR.reduce((s, r) => s + r.surplus, 0);
+          const totalAbsorbedVal = allR.reduce((s, r) => s + (r.absorbed * r.units), 0);
+          const absorbedTypes = allR.filter(r => r.absorbed > 0);
           const totalSellableAll = sellableRes + sellableRet + sellableOff;
           const usedAreaAll = allR.reduce((s, r) => s + r.totalArea, 0);
-          if (totalBonus === 0 && finalSurplusVal === 0) return null;
+          if (totalBonus === 0 && totalAbsorbedVal === 0) return null;
           const bonusDetails = allR.filter(r => r.bonusUnits > 0).map(r => `${r.bonusUnits} ${r.label}`).join(" + ");
           return (
             <div className="px-5 py-2.5 bg-gradient-to-l from-emerald-50/60 to-blue-50/40 border-t border-emerald-200/50">
@@ -715,21 +738,22 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
                 </div>
                 {totalBonus > 0 && (
                   <p>
-                    <span className="text-gray-500">الفوائض المجمّعة من جميع الأنواع أُعيد توزيعها كوحدات إضافية:</span>{" "}
+                    <span className="text-gray-500">الفوائض المجمّعة أُعيد توزيعها كوحدات إضافية:</span>{" "}
                     <span className="font-bold text-emerald-700">{bonusDetails}</span>
                     <span className="text-gray-500"> = </span>
                     <span className="bg-emerald-100 text-emerald-700 font-bold px-1.5 py-0.5 rounded text-[10px]">+{totalBonus} وحدة إضافية</span>
                   </p>
                 )}
-                {finalSurplusVal > 0 && (
-                  <p>
-                    <span className="text-gray-500">المتبقي غير القابل للتوزيع (أقل من أصغر وحدة):</span>{" "}
-                    <span className="bg-orange-100 text-orange-700 font-bold px-1.5 py-0.5 rounded text-[10px]">{fmt(finalSurplusVal)} sqft</span>
-                    <span className="text-gray-400"> من أصل {fmt(totalSellableAll)} sqft ({((finalSurplusVal / totalSellableAll) * 100).toFixed(2)}%)</span>
+                {totalAbsorbedVal > 0 && absorbedTypes.map(r => (
+                  <p key={r.key}>
+                    <span className="text-gray-500">الفائض المتبقي ({fmt(Math.round(totalAbsorbedVal))} sqft) تم امتصاصه في وحدات {r.label}:</span>{" "}
+                    <span className="bg-teal-100 text-teal-700 font-bold px-1.5 py-0.5 rounded text-[10px]">+{r.absorbed.toFixed(1)} sqft/وحدة</span>
+                    <span className="text-gray-400"> × {r.units} = </span>
+                    <span className="font-bold text-teal-700">{r.avgArea} → {(r.avgArea + r.absorbed).toFixed(1)} sqft</span>
                   </p>
-                )}
+                ))}
                 <p className="text-[10px] text-gray-400">
-                  الاستخدام الفعلي: {fmt(usedAreaAll)} sqft من {fmt(totalSellableAll)} sqft = <span className="font-bold text-gray-600">{totalSellableAll > 0 ? ((usedAreaAll / totalSellableAll) * 100).toFixed(2) : 0}%</span>
+                  الاستخدام الفعلي: {fmt(usedAreaAll)} sqft من {fmt(totalSellableAll)} sqft = <span className="font-bold text-emerald-600">{totalSellableAll > 0 ? ((usedAreaAll / totalSellableAll) * 100).toFixed(2) : 0}%</span>
                 </p>
               </div>
             </div>
