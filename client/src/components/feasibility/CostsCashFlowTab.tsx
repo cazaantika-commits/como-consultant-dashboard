@@ -410,8 +410,22 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
   const retSummary = catSummary(retResults, sellableRet, retTotalPct, "retail");
   const offSummary = catSummary(offResults, sellableOff, offTotalPct, "offices");
 
+  // Row number badge colors (cycling like reference image)
+  const badgeColors = [
+    "bg-orange-500 text-white",
+    "bg-emerald-500 text-white",
+    "bg-blue-500 text-white",
+    "bg-pink-500 text-white",
+    "bg-teal-500 text-white",
+    "bg-amber-500 text-white",
+    "bg-indigo-500 text-white",
+    "bg-rose-500 text-white",
+    "bg-cyan-500 text-white",
+    "bg-purple-500 text-white",
+  ];
+
   return (
-    <div className="space-y-3" dir="rtl">
+    <div className="max-w-4xl mx-auto space-y-3" dir="rtl">
 
       {/* ═══ JOELLE BANNER ═══ */}
       {hasAnyJoelleData && (
@@ -440,54 +454,64 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
       {/* ═══════════════════════════════════════════════════════ */}
       {/* SECTION 1: تفاصيل الأرض و GFA                          */}
       {/* ═══════════════════════════════════════════════════════ */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="px-4 py-2 border-b border-gray-100 bg-gray-50/50">
-          <h3 className="text-xs font-bold text-gray-800">تفاصيل الأرض والمساحات</h3>
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+        <div className="px-5 py-2.5 border-b border-gray-100 bg-gradient-to-l from-slate-50 to-blue-50/40">
+          <h3 className="text-[13px] font-bold text-gray-800">تفاصيل الأرض والمساحات</h3>
         </div>
-        <div className="px-4 py-2.5">
-          {/* Land info — compact inline */}
-          <div className="flex flex-wrap gap-x-6 gap-y-1 text-[11px] mb-2.5">
-            <span className="text-gray-500">مساحة الأرض: <b className="text-gray-800 font-mono" dir="ltr">{fmt(plotAreaSqft)}</b> sqft <span className="text-gray-400">({fmt(plotAreaSqm)} م²)</span></span>
-            <span className="text-gray-500">BUA: <b className="text-gray-800 font-mono" dir="ltr">{fmt(buaSqft)}</b> sqft</span>
-            <span className="text-gray-500">GFA الإجمالي: <b className="text-gray-800 font-mono" dir="ltr">{fmt(gfaTotalSqft)}</b> sqft</span>
+        <div className="px-5 py-3">
+          {/* Land info — colored stat cards */}
+          <div className="grid grid-cols-3 gap-3 mb-3">
+            <div className="bg-gradient-to-br from-sky-50 to-sky-100/50 rounded-lg px-3 py-2 border border-sky-200/50">
+              <div className="text-[10px] text-sky-600 font-medium">مساحة الأرض</div>
+              <div className="text-sm font-black text-sky-800 font-mono" dir="ltr">{fmt(plotAreaSqft)} <span className="text-[10px] font-normal">sqft</span></div>
+              <div className="text-[9px] text-sky-500">{fmt(plotAreaSqm)} م²</div>
+            </div>
+            <div className="bg-gradient-to-br from-amber-50 to-amber-100/50 rounded-lg px-3 py-2 border border-amber-200/50">
+              <div className="text-[10px] text-amber-600 font-medium">BUA</div>
+              <div className="text-sm font-black text-amber-800 font-mono" dir="ltr">{fmt(buaSqft)} <span className="text-[10px] font-normal">sqft</span></div>
+            </div>
+            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-lg px-3 py-2 border border-emerald-200/50">
+              <div className="text-[10px] text-emerald-600 font-medium">GFA الإجمالي</div>
+              <div className="text-sm font-black text-emerald-800 font-mono" dir="ltr">{fmt(gfaTotalSqft)} <span className="text-[10px] font-normal">sqft</span></div>
+            </div>
           </div>
 
           {/* GFA Breakdown table — compact */}
           <table className="w-full text-[11px]">
             <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-right py-1.5 pr-1 font-semibold text-gray-600 w-8">#</th>
-                <th className="text-right py-1.5 font-semibold text-gray-600">الفئة</th>
-                <th className="text-center py-1.5 font-semibold text-gray-600">GFA (sqft)</th>
-                <th className="text-center py-1.5 font-semibold text-gray-600">الكفاءة</th>
-                <th className="text-center py-1.5 font-semibold text-gray-600">القابل للبيع (sqft)</th>
-                <th className="text-center py-1.5 font-semibold text-gray-600">% من الإجمالي</th>
+              <tr className="border-b-2 border-gray-200">
+                <th className="text-right py-2 pr-2 font-bold text-gray-500 w-8">#</th>
+                <th className="text-right py-2 font-bold text-gray-500">الفئة</th>
+                <th className="text-center py-2 font-bold text-gray-500">GFA (sqft)</th>
+                <th className="text-center py-2 font-bold text-gray-500">الكفاءة</th>
+                <th className="text-center py-2 font-bold text-gray-500">القابل للبيع (sqft)</th>
+                <th className="text-center py-2 font-bold text-gray-500">% من الإجمالي</th>
               </tr>
             </thead>
             <tbody>
               {[
-                { n: 1, label: "الوحدات السكنية", gfa: gfaResSqft, eff: 0.95, sell: sellableRes, color: "bg-sky-500" },
-                { n: 2, label: "وحدات التجزئة", gfa: gfaRetSqft, eff: 0.97, sell: sellableRet, color: "bg-amber-500" },
-                { n: 3, label: "المكاتب", gfa: gfaOffSqft, eff: 0.95, sell: sellableOff, color: "bg-violet-500" },
+                { n: 1, label: "الوحدات السكنية", gfa: gfaResSqft, eff: 0.95, sell: sellableRes, color: "bg-sky-500", effBadge: "bg-sky-100 text-sky-700" },
+                { n: 2, label: "وحدات التجزئة", gfa: gfaRetSqft, eff: 0.97, sell: sellableRet, color: "bg-amber-500", effBadge: "bg-amber-100 text-amber-700" },
+                { n: 3, label: "المكاتب", gfa: gfaOffSqft, eff: 0.95, sell: sellableOff, color: "bg-violet-500", effBadge: "bg-violet-100 text-violet-700" },
               ].filter(r => r.gfa > 0).map(r => (
-                <tr key={r.n} className="border-b border-gray-100 hover:bg-gray-50/50">
-                  <td className="py-1.5 pr-1 text-gray-400 font-mono">{r.n}</td>
-                  <td className="py-1.5 font-medium text-gray-800 flex items-center gap-1.5"><span className={`w-2 h-2 rounded-full ${r.color} inline-block`} />{r.label}</td>
-                  <td className="py-1.5 text-center font-mono text-gray-700" dir="ltr">{fmt(r.gfa)}</td>
-                  <td className="py-1.5 text-center"><span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{(r.eff * 100).toFixed(0)}%</span></td>
-                  <td className="py-1.5 text-center font-mono font-bold text-gray-900" dir="ltr">{fmt(r.sell)}</td>
-                  <td className="py-1.5 text-center text-gray-600">{totalSellable > 0 ? ((r.sell / totalSellable) * 100).toFixed(1) : 0}%</td>
+                <tr key={r.n} className="border-b border-gray-100 hover:bg-gray-50/30 transition-colors">
+                  <td className="py-2 pr-2"><span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold ${badgeColors[(r.n - 1) % badgeColors.length]}`}>{r.n}</span></td>
+                  <td className="py-2 font-semibold text-gray-800">{r.label}</td>
+                  <td className="py-2 text-center font-mono text-gray-700" dir="ltr">{fmt(r.gfa)}</td>
+                  <td className="py-2 text-center"><span className={`${r.effBadge} text-[10px] font-bold px-2.5 py-0.5 rounded-full`}>{(r.eff * 100).toFixed(0)}%</span></td>
+                  <td className="py-2 text-center font-mono font-bold text-gray-900" dir="ltr">{fmt(r.sell)}</td>
+                  <td className="py-2 text-center"><span className="bg-gray-100 text-gray-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{totalSellable > 0 ? ((r.sell / totalSellable) * 100).toFixed(1) : 0}%</span></td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
-              <tr className="border-t-2 border-gray-300 font-bold">
-                <td className="py-1.5 pr-1"></td>
-                <td className="py-1.5 text-gray-800">الإجمالي</td>
-                <td className="py-1.5 text-center font-mono text-gray-700" dir="ltr">{fmt(gfaResSqft + gfaRetSqft + gfaOffSqft)}</td>
-                <td className="py-1.5 text-center">—</td>
-                <td className="py-1.5 text-center font-mono text-gray-900" dir="ltr">{fmt(totalSellable)}</td>
-                <td className="py-1.5 text-center">100%</td>
+              <tr className="border-t-2 border-gray-300 bg-gray-50/50">
+                <td className="py-2 pr-2"></td>
+                <td className="py-2 font-bold text-gray-800">الإجمالي</td>
+                <td className="py-2 text-center font-mono font-bold text-gray-700" dir="ltr">{fmt(gfaResSqft + gfaRetSqft + gfaOffSqft)}</td>
+                <td className="py-2 text-center">—</td>
+                <td className="py-2 text-center font-mono font-black text-gray-900" dir="ltr">{fmt(totalSellable)}</td>
+                <td className="py-2 text-center"><span className="bg-gray-200 text-gray-800 text-[10px] font-bold px-2 py-0.5 rounded-full">100%</span></td>
               </tr>
             </tfoot>
           </table>
@@ -498,8 +522,8 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
       {/* SECTION 2: اقتراحات جويل (مرجع)                        */}
       {/* ═══════════════════════════════════════════════════════ */}
       {(moJoelleSource || cpJoelleSource) && (
-        <div className="bg-white rounded-lg border border-purple-200/60 overflow-hidden">
-          <div className="px-4 py-2 border-b border-purple-100 bg-purple-50/30 flex items-center gap-2">
+        <div className="bg-white rounded-xl border border-purple-200/60 overflow-hidden shadow-sm">
+          <div className="px-5 py-2.5 border-b border-purple-100 bg-gradient-to-l from-purple-50/60 to-pink-50/40 flex items-center gap-2">
             <img src={JOEL_AVATAR} className="w-5 h-5 rounded-full" alt="" />
             <h3 className="text-xs font-bold text-purple-800">اقتراحات جويل</h3>
             <span className="text-[9px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full font-medium">للقراءة فقط</span>
@@ -543,10 +567,10 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
       {/* ═══════════════════════════════════════════════════════ */}
       {/* SECTION 3: التوزيع التفاعلي والتسعير (جدول واحد موحد)  */}
       {/* ═══════════════════════════════════════════════════════ */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
         {/* Header with scenario selector */}
-        <div className="px-4 py-2 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between flex-wrap gap-2">
-          <h3 className="text-xs font-bold text-gray-800">التوزيع التفاعلي والتسعير</h3>
+        <div className="px-5 py-2.5 border-b border-gray-100 bg-gradient-to-l from-slate-50 to-indigo-50/30 flex items-center justify-between flex-wrap gap-2">
+          <h3 className="text-[13px] font-bold text-gray-800">التوزيع التفاعلي والتسعير</h3>
           <div className="flex gap-1">
             {(["optimistic", "base", "conservative"] as const).map(sc => {
               const cfg = scenarioConfig[sc];
@@ -564,18 +588,18 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
         <div className="overflow-x-auto">
           <table className="w-full text-[11px]">
             <thead>
-              <tr className="border-b border-gray-200 bg-gray-50/80">
-                <th className="text-right py-1.5 pr-3 font-semibold text-gray-600 w-14">الفئة</th>
-                <th className="text-right py-1.5 font-semibold text-gray-600 w-24">النوع</th>
-                <th className="text-center py-1.5 font-semibold text-gray-600 w-14">%</th>
-                <th className="text-center py-1.5 font-semibold text-gray-600 w-16">المساحة</th>
-                <th className="text-center py-1.5 font-semibold text-gray-600 w-12">الوحدات</th>
-                <th className="text-center py-1.5 font-semibold text-gray-600 w-20">إجمالي م²</th>
-                <th className="text-center py-1.5 font-semibold text-gray-600 w-12"><Car className="w-3 h-3 mx-auto" /></th>
-                <th className="text-center py-1.5 font-semibold text-gray-600 w-14">الفائض</th>
-                <th className="text-center py-1.5 font-semibold text-gray-600 w-16">سعر/قدم²</th>
-                <th className="text-center py-1.5 font-semibold text-gray-600 w-20">سعر الوحدة</th>
-                <th className={`text-center py-1.5 font-semibold w-24 ${scenarioConfig[activeScenario].color}`}>الإيراد</th>
+              <tr className="border-b-2 border-gray-200 bg-gray-50/80">
+                <th className="text-right py-2 pr-3 font-bold text-gray-500 w-14">الفئة</th>
+                <th className="text-right py-2 font-bold text-gray-500 w-24">النوع</th>
+                <th className="text-center py-2 font-bold text-gray-500 w-14">%</th>
+                <th className="text-center py-2 font-bold text-gray-500 w-16">المساحة</th>
+                <th className="text-center py-2 font-bold text-gray-500 w-12">الوحدات</th>
+                <th className="text-center py-2 font-bold text-gray-500 w-20">إجمالي م²</th>
+                <th className="text-center py-2 font-bold text-gray-500 w-12"><Car className="w-3.5 h-3.5 mx-auto text-gray-400" /></th>
+                <th className="text-center py-2 font-bold text-gray-500 w-14">الفائض</th>
+                <th className="text-center py-2 font-bold text-gray-500 w-16">سعر/قدم²</th>
+                <th className="text-center py-2 font-bold text-gray-500 w-20">سعر الوحدة</th>
+                <th className={`text-center py-2 font-bold w-24 ${scenarioConfig[activeScenario].color}`}>الإيراد</th>
               </tr>
             </thead>
             <tbody>
@@ -589,25 +613,25 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
                 const sellableForCat = f.cat === "residential" ? sellableRes : f.cat === "retail" ? sellableRet : sellableOff;
 
                 return (
-                  <tr key={f.key} className={`border-b ${(f as any).divider ? "border-t-2 border-t-gray-300" : "border-gray-100"} hover:bg-gray-50/50`}>
-                    <td className="py-1 pr-3 font-medium text-gray-700">
+                  <tr key={f.key} className={`border-b ${(f as any).divider ? "border-t-[3px] border-t-gray-300" : "border-gray-100"} hover:bg-gray-50/30 transition-colors`}>
+                    <td className="py-1.5 pr-3 font-medium text-gray-700">
                       {f.catLabel && (
-                        <span className="flex items-center gap-1">
-                          <span className={`w-1.5 h-1.5 rounded-full ${f.catColor} inline-block`} />
-                          <span className="text-[10px]">{f.catLabel}</span>
+                        <span className="flex items-center gap-1.5">
+                          <span className={`w-2 h-2 rounded-full ${f.catColor} inline-block ring-2 ring-offset-1 ${f.catColor === 'bg-sky-500' ? 'ring-sky-200' : f.catColor === 'bg-amber-500' ? 'ring-amber-200' : 'ring-violet-200'}`} />
+                          <span className="text-[11px] font-bold">{f.catLabel}</span>
                         </span>
                       )}
                     </td>
-                    <td className="py-1 text-gray-800 font-medium">{f.label}</td>
+                    <td className="py-1.5 text-gray-800 font-medium">{f.label}</td>
                     <td className="py-0.5 w-14"><EditableNum value={pctVal} onChange={(v) => updateMoField(f.pctKey, v)} suffix="%" /></td>
                     <td className="py-0.5 w-16"><EditableNum value={avgVal || getAvg(f.pctKey, avgVal)} onChange={(v) => updateMoField(f.avgKey, v)} /></td>
-                    <td className="py-1 text-center font-mono font-bold text-gray-900">{r ? fmt(r.units) : "—"}</td>
-                    <td className="py-1 text-center font-mono text-gray-700" dir="ltr">{r ? fmt(r.totalArea) : "—"}</td>
-                    <td className="py-1 text-center font-mono text-gray-600">{r ? r.parking : "—"}</td>
-                    <td className="py-1 text-center font-mono text-[10px] text-gray-400">{r && r.surplus > 0 ? fmt(r.surplus) : "0"}</td>
+                    <td className="py-1.5 text-center"><span className="bg-blue-50 text-blue-800 font-mono font-bold text-[11px] px-2 py-0.5 rounded">{r ? fmt(r.units) : "—"}</span></td>
+                    <td className="py-1.5 text-center font-mono text-gray-700" dir="ltr">{r ? fmt(r.totalArea) : "—"}</td>
+                    <td className="py-1.5 text-center font-mono text-gray-500">{r ? r.parking : "—"}</td>
+                    <td className="py-1.5 text-center font-mono text-[10px] text-gray-400">{r && r.surplus > 0 ? fmt(r.surplus) : "0"}</td>
                     <td className="py-0.5 w-16"><EditableNum value={priceVal} onChange={(v) => updateBasePrice(f.priceKey, v)} /></td>
-                    <td className="py-1 text-center font-mono text-[10px] text-gray-600" dir="ltr">{r ? fmt(r.avgArea * scenarioPrice) : "—"}</td>
-                    <td className={`py-1 text-center font-mono font-bold ${scenarioConfig[activeScenario].color}`} dir="ltr">{fmt(activeRevenue)}</td>
+                    <td className="py-1.5 text-center font-mono text-[10px] text-gray-600" dir="ltr">{r ? fmt(r.avgArea * scenarioPrice) : "—"}</td>
+                    <td className={`py-1.5 text-center font-mono font-bold ${scenarioConfig[activeScenario].color}`} dir="ltr">{fmt(activeRevenue)}</td>
                   </tr>
                 );
               })}
@@ -638,8 +662,8 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
 
             {/* ═══ Grand total ═══ */}
             <tfoot>
-              <tr className="bg-gray-800 text-white font-bold">
-                <td className="py-2 pr-3" colSpan={2}>الإجمالي الكلي</td>
+              <tr className="bg-gradient-to-l from-gray-800 to-gray-900 text-white font-bold">
+                <td className="py-2.5 pr-3" colSpan={2}>الإجمالي الكلي</td>
                 <td className="py-2 text-center">—</td>
                 <td className="py-2 text-center">—</td>
                 <td className="py-2 text-center font-mono">{fmt(totalUnits)}</td>
@@ -657,16 +681,17 @@ export default function CostsCashFlowTab({ projectId, studyId }: CostsCashFlowTa
         </div>
 
         {/* Revenue comparison strip */}
-        <div className="grid grid-cols-3 border-t border-gray-200">
+        <div className="grid grid-cols-3 border-t-2 border-gray-200">
           {(["optimistic", "base", "conservative"] as const).map(sc => {
             const rev = sc === "optimistic" ? totalRevenueOpt : sc === "conservative" ? totalRevenueCons : totalRevenueBase;
             const cfg = scenarioConfig[sc];
             const isActive = sc === activeScenario;
+            const activeBg = sc === "optimistic" ? "bg-emerald-50" : sc === "conservative" ? "bg-orange-50" : "bg-blue-50";
             return (
-              <div key={sc} className={`px-3 py-2 text-center border-l first:border-l-0 border-gray-200 ${isActive ? "bg-blue-50" : "bg-gray-50/50"}`}>
-                <div className={`text-[10px] font-semibold ${isActive ? cfg.color : "text-gray-500"}`}>{cfg.label}</div>
-                <div className={`text-sm font-black font-mono ${isActive ? cfg.color : "text-gray-600"}`} dir="ltr">{fmt(rev)}</div>
-                <div className="text-[9px] text-gray-400">AED</div>
+              <div key={sc} className={`px-3 py-3 text-center border-l first:border-l-0 border-gray-200 transition-colors ${isActive ? activeBg : "bg-gray-50/50"}`}>
+                <div className={`text-[10px] font-bold ${isActive ? cfg.color : "text-gray-500"}`}>{cfg.label}</div>
+                <div className={`text-base font-black font-mono ${isActive ? cfg.color : "text-gray-600"}`} dir="ltr">{fmt(rev)}</div>
+                <div className="text-[9px] text-gray-400 font-medium">AED</div>
               </div>
             );
           })}

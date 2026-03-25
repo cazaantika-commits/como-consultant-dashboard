@@ -383,3 +383,5 @@
 - [x] Add total area column (units × avg area) to distribution table
 - [x] Bold dividers between residential/retail/offices sections
 - [x] Style inspired by reference image: colored badges, clean lines, professional look
+- [x] Limit CostsCashFlowTab content to 2/3 page width, centered
+- [x] Add more colorful badges and accents (varied colors like reference image)
