@@ -395,3 +395,15 @@
 - [x] Parking in separate section, not mixed with revenue table, car icon dark orange
 - [x] Category subtotals (residential / retail / offices) each separate
 - [x] All areas in sqft not m²
+- [x] RIGHT panel: remove price column, replace with إجمالي (عدد×مساحة)
+- [x] LEFT panel: add النسبة % column next to النوع
+- [x] LEFT panel: auto-absorb surplus into غرفتين وصالة (increase their unit area)
+- [x] LEFT panel shows adjusted areas after absorption, RIGHT panel shows raw inputs + surplus
+- [x] Align RIGHT and LEFT panel rows on same horizontal line
+- [x] Surplus for each category appears directly below its rows (سكني→فائض سكني، تجزئة→فائض تجزئة، مكاتب→فائض مكاتب)
+- [x] Align RIGHT and LEFT panel rows on same horizontal line
+- [x] Surplus for each category directly below its rows (not grouped at bottom)
+- [x] Remove total surplus row — no مجموع فوائض
+- [x] RIGHT panel: remove price column, add إجمالي (عدد×مساحة)
+- [x] LEFT panel: add النسبة % column next to النوع
+- [x] LEFT panel: auto-absorb surplus into غرفتين وصالة

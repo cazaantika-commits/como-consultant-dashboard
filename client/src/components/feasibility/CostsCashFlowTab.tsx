@@ -46,12 +46,13 @@ interface UnitRow {
   key: string; label: string; cat: "residential" | "retail" | "offices";
   catLabel: string; catColor: string; pctKey: string; avgKey: string;
   priceKey: string; baseField: string; divider?: boolean;
+  is2br?: boolean;
 }
 
 const UNIT_ROWS: UnitRow[] = [
   { key: "studio", label: "استديو", cat: "residential", catLabel: "سكني", catColor: "sky", pctKey: "residentialStudioPct", avgKey: "residentialStudioAvgArea", priceKey: "studioPrice", baseField: "baseStudioPrice" },
   { key: "1br", label: "غرفة وصالة", cat: "residential", catLabel: "", catColor: "sky", pctKey: "residential1brPct", avgKey: "residential1brAvgArea", priceKey: "oneBrPrice", baseField: "base1brPrice" },
-  { key: "2br", label: "غرفتان وصالة", cat: "residential", catLabel: "", catColor: "sky", pctKey: "residential2brPct", avgKey: "residential2brAvgArea", priceKey: "twoBrPrice", baseField: "base2brPrice" },
+  { key: "2br", label: "غرفتان وصالة", cat: "residential", catLabel: "", catColor: "sky", pctKey: "residential2brPct", avgKey: "residential2brAvgArea", priceKey: "twoBrPrice", baseField: "base2brPrice", is2br: true },
   { key: "3br", label: "ثلاث غرف", cat: "residential", catLabel: "", catColor: "sky", pctKey: "residential3brPct", avgKey: "residential3brAvgArea", priceKey: "threeBrPrice", baseField: "base3brPrice" },
   { key: "retSmall", label: "صغيرة", cat: "retail", catLabel: "تجزئة", catColor: "amber", pctKey: "retailSmallPct", avgKey: "retailSmallAvgArea", priceKey: "retailSmallPrice", baseField: "baseRetailSmallPrice", divider: true },
   { key: "retMedium", label: "متوسطة", cat: "retail", catLabel: "", catColor: "amber", pctKey: "retailMediumPct", avgKey: "retailMediumAvgArea", priceKey: "retailMediumPrice", baseField: "baseRetailMediumPrice" },
@@ -60,6 +61,12 @@ const UNIT_ROWS: UnitRow[] = [
   { key: "offMedium", label: "متوسطة", cat: "offices", catLabel: "", catColor: "violet", pctKey: "officeMediumPct", avgKey: "officeMediumAvgArea", priceKey: "officeMediumPrice", baseField: "baseOfficeMediumPrice" },
   { key: "offLarge", label: "كبيرة", cat: "offices", catLabel: "", catColor: "violet", pctKey: "officeLargePct", avgKey: "officeLargeAvgArea", priceKey: "officeLargePrice", baseField: "baseOfficeLargePrice" },
 ];
+
+const CATS = [
+  { key: "residential", label: "سكني", color: "sky", bgSub: "bg-sky-50/60", textSub: "text-sky-800" },
+  { key: "retail", label: "تجزئة", color: "amber", bgSub: "bg-amber-50/60", textSub: "text-amber-800" },
+  { key: "offices", label: "مكاتب", color: "violet", bgSub: "bg-violet-50/60", textSub: "text-violet-800" },
+] as const;
 
 /* ═══ MAIN COMPONENT ═══ */
 interface CostsCashFlowTabProps {
@@ -116,7 +123,7 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
       const defaultArea = DEFAULT_AVG_AREAS[row.pctKey]?.defaultArea || 0;
       const effectiveAvg = avg > 0 ? avg : defaultArea;
       newAvg[row.key] = effectiveAvg;
-      const sellable = getSellableForCat(row.cat, d);
+      const sellable = getSellableFromProject(row.cat);
       if (pct > 0 && effectiveAvg > 0 && sellable > 0) {
         newCounts[row.key] = Math.floor((sellable * pct / 100) / effectiveAvg);
       } else {
@@ -141,7 +148,7 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
     if (d.aiRecommendationsJson) setCpJoelleSource(true);
   }, [cpQuery.data]);
 
-  function getSellableForCat(cat: string, _moData?: any): number {
+  function getSellableFromProject(cat: string): number {
     const p2 = project || {} as any;
     const gfaRes = parseFloat(p2.gfaResidentialSqft || "0");
     const gfaRet = parseFloat(p2.gfaRetailSqft || "0");
@@ -171,41 +178,65 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
     return sellableOff;
   }, [sellableRes, sellableRet, sellableOff]);
 
-  /* ═══ Computed results per row ═══ */
+  /* ═══ Computed results per row (with absorption into 2BR) ═══ */
   const rowResults = useMemo(() => {
-    return UNIT_ROWS.map(row => {
+    // Step 1: basic calculations
+    const basic = UNIT_ROWS.map(row => {
       const count = unitCounts[row.key] || 0;
       const avg = avgAreas[row.key] || DEFAULT_AVG_AREAS[row.pctKey]?.defaultArea || 0;
       const price = basePrices[row.key] || 0;
-      const sellable = getSellable(row.cat);
       const totalArea = count * avg;
-      const pct = sellable > 0 ? (totalArea / sellable) * 100 : 0;
-      const multiplier = activeScenario === "optimistic" ? 1.10 : activeScenario === "conservative" ? 0.90 : 1.00;
-      const scenarioPrice = price * multiplier;
-      const unitPrice = avg * scenarioPrice;
-      const revenue = count * unitPrice;
-      let parking = 0;
-      if (row.cat === "residential") {
-        parking = count * (avg <= PARKING.residential.threshold ? PARKING.residential.below : PARKING.residential.above);
-      } else if (row.cat === "retail") {
-        parking = Math.ceil(totalArea / PARKING.retail.perSqft);
-      } else {
-        parking = Math.ceil(totalArea / PARKING.offices.perSqft);
-      }
-      return { ...row, count, avg, price, totalArea, pct, scenarioPrice, unitPrice, revenue, parking, sellable };
+      return { ...row, count, avg, price, totalArea };
     });
+
+    // Step 2: per-category surplus → absorb into 2BR
+    const results = basic.map(r => {
+      const sellable = getSellable(r.cat);
+      const catRows = basic.filter(x => x.cat === r.cat);
+      const catTotalArea = catRows.reduce((s, x) => s + x.totalArea, 0);
+      const surplus = sellable - catTotalArea;
+
+      // Effective area = avg area (default)
+      let effectiveAvg = r.avg;
+
+      // If this is 2BR and there's surplus > 0, absorb it
+      if (r.is2br && surplus > 0 && r.count > 0) {
+        effectiveAvg = r.avg + (surplus / r.count);
+      }
+
+      const effectiveTotalArea = r.is2br && surplus > 0 && r.count > 0 ? r.count * effectiveAvg : r.totalArea;
+      const pct = sellable > 0 ? (effectiveTotalArea / sellable) * 100 : 0;
+      const multiplier = activeScenario === "optimistic" ? 1.10 : activeScenario === "conservative" ? 0.90 : 1.00;
+      const scenarioPrice = r.price * multiplier;
+      const unitPrice = effectiveAvg * scenarioPrice;
+      const revenue = r.count * unitPrice;
+
+      let parking = 0;
+      if (r.cat === "residential") {
+        parking = r.count * (r.avg <= PARKING.residential.threshold ? PARKING.residential.below : PARKING.residential.above);
+      } else if (r.cat === "retail") {
+        parking = Math.ceil(r.totalArea / PARKING.retail.perSqft);
+      } else {
+        parking = Math.ceil(r.totalArea / PARKING.offices.perSqft);
+      }
+
+      return { ...r, effectiveAvg, effectiveTotalArea, pct, scenarioPrice, unitPrice, revenue, parking, sellable };
+    });
+
+    return results;
   }, [unitCounts, avgAreas, basePrices, activeScenario, getSellable]);
 
   const catSummary = useCallback((cat: string) => {
     const rows = rowResults.filter(r => r.cat === cat);
     const sellable = getSellable(cat);
     const totalUnits = rows.reduce((s, r) => s + r.count, 0);
-    const totalArea = rows.reduce((s, r) => s + r.totalArea, 0);
+    const rawTotalArea = rows.reduce((s, r) => s + r.totalArea, 0);
+    const effectiveTotalArea = rows.reduce((s, r) => s + r.effectiveTotalArea, 0);
     const totalParking = rows.reduce((s, r) => s + r.parking, 0);
     const totalRevenue = rows.reduce((s, r) => s + r.revenue, 0);
-    const surplus = sellable - totalArea;
-    const usedPct = sellable > 0 ? (totalArea / sellable) * 100 : 0;
-    return { totalUnits, totalArea, totalParking, totalRevenue, surplus, usedPct, sellable };
+    const surplus = sellable - rawTotalArea;
+    const usedPct = sellable > 0 ? (rawTotalArea / sellable) * 100 : 0;
+    return { totalUnits, rawTotalArea, effectiveTotalArea, totalParking, totalRevenue, surplus, usedPct, sellable };
   }, [rowResults, getSellable]);
 
   const resSummary = useMemo(() => catSummary("residential"), [catSummary]);
@@ -213,20 +244,16 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
   const offSummary = useMemo(() => catSummary("offices"), [catSummary]);
 
   const grandTotalUnits = resSummary.totalUnits + retSummary.totalUnits + offSummary.totalUnits;
-  const grandTotalArea = resSummary.totalArea + retSummary.totalArea + offSummary.totalArea;
+  const grandTotalArea = resSummary.effectiveTotalArea + retSummary.effectiveTotalArea + offSummary.effectiveTotalArea;
   const grandTotalParking = resSummary.totalParking + retSummary.totalParking + offSummary.totalParking;
   const grandTotalRevenue = resSummary.totalRevenue + retSummary.totalRevenue + offSummary.totalRevenue;
-  const grandSurplus = totalSellable - grandTotalArea;
 
   const revenueByScenario = useMemo(() => {
-    const calc = (mult: number) => UNIT_ROWS.reduce((s, row) => {
-      const count = unitCounts[row.key] || 0;
-      const avg = avgAreas[row.key] || DEFAULT_AVG_AREAS[row.pctKey]?.defaultArea || 0;
-      const price = basePrices[row.key] || 0;
-      return s + count * avg * price * mult;
+    const calc = (mult: number) => rowResults.reduce((s, r) => {
+      return s + r.count * r.effectiveAvg * r.price * mult;
     }, 0);
     return { optimistic: calc(1.10), base: calc(1.00), conservative: calc(0.90) };
-  }, [unitCounts, avgAreas, basePrices]);
+  }, [rowResults]);
 
   const joelSuggestions = useMemo(() => {
     try {
@@ -284,24 +311,20 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
     conservative: { label: "متحفظ -10%", color: "text-orange-700", bgBadge: "bg-orange-500", icon: TrendingDown },
   };
 
-  /* ═══ Surplus helper ═══ */
-  const SurplusBar = ({ surplus, sellable, label }: { surplus: number; sellable: number; label: string }) => {
+  /* ═══ Surplus inline bar ═══ */
+  const SurplusInline = ({ surplus, sellable }: { surplus: number; sellable: number }) => {
     if (sellable <= 0) return null;
     const pct = (surplus / sellable) * 100;
     const isNeg = surplus < 0;
     const isZero = Math.abs(surplus) < 1;
-    const barPct = Math.min(100, Math.abs(pct));
     return (
-      <div className="space-y-0.5">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-bold text-gray-600">{label}</span>
-          <span className={`text-[10px] font-bold ${isZero ? "text-emerald-600" : isNeg ? "text-red-600" : "text-amber-600"}`}>
-            {isZero ? "صفر هدر ✓" : `${isNeg ? "عجز" : "فائض"}: ${fmt(Math.abs(surplus))} sqft (${Math.abs(pct).toFixed(1)}%)`}
-          </span>
-        </div>
-        <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-          <div className={`h-full rounded-full transition-all ${isZero ? "bg-emerald-500" : isNeg ? "bg-red-400" : "bg-amber-400"}`}
-            style={{ width: `${isZero ? 100 : 100 - barPct}%` }} />
+      <div className="flex items-center gap-1.5 py-0.5">
+        <span className={`text-[10px] font-bold ${isZero ? "text-emerald-600" : isNeg ? "text-red-600" : "text-amber-600"}`}>
+          {isZero ? "✓ صفر" : `${isNeg ? "عجز" : "فائض"}: ${fmt(Math.abs(surplus))} sqft (${Math.abs(pct).toFixed(1)}%)`}
+        </span>
+        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div className={`h-full rounded-full ${isZero ? "bg-emerald-400" : isNeg ? "bg-red-400" : "bg-amber-400"}`}
+            style={{ width: `${isZero ? 100 : Math.max(5, 100 - Math.min(100, Math.abs(pct)))}%` }} />
         </div>
       </div>
     );
@@ -311,39 +334,13 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
   if (!projectId) return (<div className="text-center py-12 text-muted-foreground"><DollarSign className="w-12 h-12 mx-auto mb-3 opacity-30" /><p>اختر مشروعاً لعرض البيانات</p></div>);
   if (projectQuery.isLoading) return (<div className="text-center py-12"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /><p className="text-sm text-muted-foreground mt-2">جاري تحميل البيانات...</p></div>);
 
-  /* Category rows helper for results table */
-  const renderCatRows = (cat: string, catLabel: string, summary: ReturnType<typeof catSummary>, bgClass: string, textClass: string) => {
-    const rows = rowResults.filter(r => r.cat === cat && (r.count > 0 || r.price > 0));
-    if (rows.length === 0 && summary.sellable <= 0) return null;
-    return (
-      <>
-        {rows.map((r, i) => (
-          <tr key={r.key} className="border-b border-gray-100 hover:bg-gray-50/40">
-            <td className="py-1 pr-2 text-gray-800 text-[11px]">
-              {i === 0 && <span className="text-[9px] font-bold text-gray-400 ml-1">{catLabel} /</span>}
-              {r.label}
-            </td>
-            <td className="py-1 text-center font-mono text-[11px] text-gray-800">{r.count || "—"}</td>
-            <td className="py-1 text-center font-mono text-[11px] text-gray-600" dir="ltr">{r.avg > 0 ? fmt(r.avg) : "—"}</td>
-            <td className="py-1 text-center font-mono text-[11px] text-gray-700 font-semibold" dir="ltr">{r.totalArea > 0 ? fmt(r.totalArea) : "—"}</td>
-            <td className="py-1 text-center font-mono text-[11px] text-gray-600" dir="ltr">{r.scenarioPrice > 0 ? fmt(r.scenarioPrice) : "—"}</td>
-            <td className={`py-1 text-center font-mono text-[11px] font-bold ${scenarioConfig[activeScenario].color}`} dir="ltr">{r.revenue > 0 ? fmt(r.revenue) : "—"}</td>
-          </tr>
-        ))}
-        {/* Category subtotal */}
-        {summary.sellable > 0 && (
-          <tr className={`${bgClass} font-semibold border-b-2 border-gray-200`}>
-            <td className={`py-1.5 pr-2 text-[11px] ${textClass}`}>إجمالي {catLabel}</td>
-            <td className={`py-1.5 text-center font-mono text-[11px] ${textClass}`}>{fmt(summary.totalUnits)}</td>
-            <td className="py-1.5 text-center text-[11px] text-gray-400">—</td>
-            <td className={`py-1.5 text-center font-mono text-[11px] font-bold ${textClass}`} dir="ltr">{fmt(summary.totalArea)}</td>
-            <td className="py-1.5 text-center text-[11px] text-gray-400">—</td>
-            <td className={`py-1.5 text-center font-mono text-[11px] font-bold ${scenarioConfig[activeScenario].color}`} dir="ltr">{fmt(summary.totalRevenue)}</td>
-          </tr>
-        )}
-      </>
-    );
-  };
+  /* Build aligned row data per category */
+  const catData = CATS.map(c => {
+    const rows = UNIT_ROWS.filter(r => r.cat === c.key);
+    const summary = c.key === "residential" ? resSummary : c.key === "retail" ? retSummary : offSummary;
+    const sellable = getSellable(c.key);
+    return { ...c, rows, summary, sellable };
+  }).filter(c => c.sellable > 0);
 
   return (
     <div className="max-w-5xl mx-auto space-y-3" dir="rtl">
@@ -376,54 +373,43 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
         <div className="px-4 py-2 border-b border-gray-100 bg-gradient-to-l from-slate-50 to-blue-50/40">
           <h3 className="text-xs font-bold text-gray-800">تفاصيل الأرض والمساحات</h3>
         </div>
-        <div className="px-4 py-2.5">
-          <div className="grid grid-cols-3 gap-2.5 mb-2.5">
-            {[
-              { label: "مساحة الأرض", val: `${fmt(plotAreaSqft)} sqft`, sub: `${fmt(plotAreaSqm)} م²`, from: "from-sky-50", to: "to-sky-100/50", border: "border-sky-200/50", textColor: "text-sky-800", labelColor: "text-sky-600", subColor: "text-sky-500" },
-              { label: "BUA", val: `${fmt(buaSqft)} sqft`, sub: "", from: "from-amber-50", to: "to-amber-100/50", border: "border-amber-200/50", textColor: "text-amber-800", labelColor: "text-amber-600", subColor: "" },
-              { label: "GFA الإجمالي", val: `${fmt(gfaTotalSqft)} sqft`, sub: "", from: "from-emerald-50", to: "to-emerald-100/50", border: "border-emerald-200/50", textColor: "text-emerald-800", labelColor: "text-emerald-600", subColor: "" },
-            ].map(c => (
-              <div key={c.label} className={`bg-gradient-to-br ${c.from} ${c.to} rounded-lg px-3 py-2 border ${c.border}`}>
-                <div className={`text-[10px] ${c.labelColor} font-medium`}>{c.label}</div>
-                <div className={`text-sm font-black ${c.textColor} font-mono`} dir="ltr">{c.val}</div>
-                {c.sub && <div className={`text-[9px] ${c.subColor}`}>{c.sub}</div>}
-              </div>
-            ))}
-          </div>
+        <div className="grid grid-cols-3 gap-0 divide-x divide-gray-100" dir="rtl">
+          {[
+            { label: "مساحة الأرض", val: `${fmt(plotAreaSqft)} sqft`, sub: `${fmt(plotAreaSqm)} م²`, color: "text-sky-700", bg: "bg-sky-50/40" },
+            { label: "BUA", val: `${fmt(buaSqft)} sqft`, sub: "", color: "text-amber-700", bg: "bg-amber-50/40" },
+            { label: "GFA الإجمالي", val: `${fmt(gfaTotalSqft)} sqft`, sub: "", color: "text-emerald-700", bg: "bg-emerald-50/40" },
+          ].map(item => (
+            <div key={item.label} className={`px-3 py-2 ${item.bg}`}>
+              <div className="text-[9px] font-bold text-gray-500 uppercase">{item.label}</div>
+              <div className={`text-sm font-black font-mono ${item.color}`} dir="ltr">{item.val}</div>
+              {item.sub && <div className="text-[9px] text-gray-400 font-mono" dir="ltr">{item.sub}</div>}
+            </div>
+          ))}
+        </div>
+        {/* GFA breakdown */}
+        <div className="border-t border-gray-100">
           <table className="w-full text-[11px]">
             <thead>
-              <tr className="border-b-2 border-gray-200">
-                <th className="text-right py-1.5 pr-2 font-bold text-gray-500 w-8">#</th>
-                <th className="text-right py-1.5 font-bold text-gray-500">الفئة</th>
-                <th className="text-center py-1.5 font-bold text-gray-500">GFA (sqft)</th>
-                <th className="text-center py-1.5 font-bold text-gray-500">الكفاءة</th>
-                <th className="text-center py-1.5 font-bold text-gray-500">القابل للبيع (sqft)</th>
-                <th className="text-center py-1.5 font-bold text-gray-500">%</th>
+              <tr className="bg-gray-50/60 border-b border-gray-100">
+                <th className="text-right py-1 pr-3 font-bold text-gray-500 text-[10px]">الفئة</th>
+                <th className="text-center py-1 font-bold text-gray-500 text-[10px]">GFA (sqft)</th>
+                <th className="text-center py-1 font-bold text-gray-500 text-[10px]">الكفاءة</th>
+                <th className="text-center py-1 font-bold text-gray-500 text-[10px]">قابل للبيع (sqft)</th>
               </tr>
             </thead>
             <tbody>
               {[
-                { n: 1, label: "سكني", gfa: gfaResSqft, eff: 0.95, sell: sellableRes, badge: "bg-sky-500", effBadge: "bg-sky-100 text-sky-700" },
-                { n: 2, label: "تجزئة", gfa: gfaRetSqft, eff: 0.97, sell: sellableRet, badge: "bg-amber-500", effBadge: "bg-amber-100 text-amber-700" },
-                { n: 3, label: "مكاتب", gfa: gfaOffSqft, eff: 0.95, sell: sellableOff, badge: "bg-violet-500", effBadge: "bg-violet-100 text-violet-700" },
+                { label: "سكني", gfa: gfaResSqft, eff: 95, sell: sellableRes, dot: "bg-sky-500" },
+                { label: "تجزئة", gfa: gfaRetSqft, eff: 97, sell: sellableRet, dot: "bg-amber-500" },
+                { label: "مكاتب", gfa: gfaOffSqft, eff: 95, sell: sellableOff, dot: "bg-violet-500" },
               ].filter(r => r.gfa > 0).map(r => (
-                <tr key={r.n} className="border-b border-gray-100 hover:bg-gray-50/30">
-                  <td className="py-1.5 pr-2"><span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold text-white ${r.badge}`}>{r.n}</span></td>
-                  <td className="py-1.5 font-semibold text-gray-800">{r.label}</td>
-                  <td className="py-1.5 text-center font-mono text-gray-700" dir="ltr">{fmt(r.gfa)}</td>
-                  <td className="py-1.5 text-center"><span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${r.effBadge}`}>{(r.eff * 100).toFixed(0)}%</span></td>
-                  <td className="py-1.5 text-center font-mono font-semibold text-gray-800" dir="ltr">{fmt(r.sell)}</td>
-                  <td className="py-1.5 text-center font-mono text-gray-600">{totalSellable > 0 ? `${((r.sell / totalSellable) * 100).toFixed(1)}%` : "—"}</td>
+                <tr key={r.label} className="border-b border-gray-50 hover:bg-gray-50/40">
+                  <td className="py-1 pr-3 flex items-center gap-1.5"><span className={`w-2 h-2 rounded-full ${r.dot}`} />{r.label}</td>
+                  <td className="py-1 text-center font-mono text-gray-700" dir="ltr">{fmt(r.gfa)}</td>
+                  <td className="py-1 text-center"><span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{r.eff}%</span></td>
+                  <td className="py-1 text-center font-mono font-semibold text-gray-800" dir="ltr">{fmt(r.sell)}</td>
                 </tr>
               ))}
-              <tr className="bg-gray-50 font-bold border-t-2 border-gray-200">
-                <td className="py-1.5 pr-2"></td>
-                <td className="py-1.5 text-gray-800">الإجمالي</td>
-                <td className="py-1.5 text-center font-mono text-gray-800" dir="ltr">{fmt(gfaTotalSqft)}</td>
-                <td className="py-1.5 text-center">—</td>
-                <td className="py-1.5 text-center font-mono text-gray-800" dir="ltr">{fmt(totalSellable)}</td>
-                <td className="py-1.5 text-center font-mono text-gray-800">100%</td>
-              </tr>
             </tbody>
           </table>
         </div>
@@ -488,11 +474,11 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
           </div>
         </div>
 
-        {/* ═══ TWO PANELS with gap ═══ */}
-        <div className="flex gap-3 p-3">
+        {/* ═══ TWO PANELS — aligned rows ═══ */}
+        <div className="flex gap-4 p-3">
 
-          {/* ═══ RIGHT PANEL: المدخلات + الفائض ═══ */}
-          <div className="w-[38%] min-w-0 border border-blue-200/60 rounded-lg overflow-hidden bg-blue-50/10">
+          {/* ═══ RIGHT PANEL: المدخلات ═══ */}
+          <div className="w-[35%] min-w-0 border border-blue-200/60 rounded-lg overflow-hidden bg-blue-50/10">
             <div className="px-3 py-1.5 bg-blue-50/60 border-b border-blue-200/40">
               <span className="text-[10px] font-bold text-blue-700">المدخلات — غيّر العدد أو المساحة</span>
             </div>
@@ -502,72 +488,112 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
                   <th className="text-right py-1 pr-2 font-bold text-blue-600 text-[10px]">النوع</th>
                   <th className="text-center py-1 font-bold text-blue-600 text-[10px] w-14">المساحة</th>
                   <th className="text-center py-1 font-bold text-blue-600 text-[10px] w-12">العدد</th>
-                  <th className="text-center py-1 font-bold text-blue-600 text-[10px] w-14">سعر/sqft</th>
+                  <th className="text-center py-1 font-bold text-blue-600 text-[10px] w-16">الإجمالي</th>
                 </tr>
               </thead>
               <tbody>
-                {UNIT_ROWS.map((row) => {
-                  const catDotColor: Record<string, string> = { sky: "bg-sky-500", amber: "bg-amber-500", violet: "bg-violet-500" };
-                  return (
-                    <tr key={row.key} className={`border-b ${row.divider ? "border-t-[3px] border-t-gray-300" : "border-gray-100"} hover:bg-blue-50/20`}>
-                      <td className="py-0.5 pr-2 text-[10px] text-gray-700">
-                        {row.catLabel ? (
-                          <span className="flex items-center gap-1">
-                            <span className={`w-2 h-2 rounded-full ${catDotColor[row.catColor]}`} />
-                            <span className="font-bold text-gray-500">{row.catLabel} /</span>
-                            <span>{row.label}</span>
-                          </span>
-                        ) : <span className="pr-3">{row.label}</span>}
+                {catData.map(cat => (
+                  <>
+                    {cat.rows.map((row) => {
+                      const count = unitCounts[row.key] || 0;
+                      const avg = avgAreas[row.key] || DEFAULT_AVG_AREAS[row.pctKey]?.defaultArea || 0;
+                      const total = count * avg;
+                      const catDotColor: Record<string, string> = { sky: "bg-sky-500", amber: "bg-amber-500", violet: "bg-violet-500" };
+                      return (
+                        <tr key={row.key} className={`border-b ${row.divider ? "border-t-[3px] border-t-gray-300" : "border-gray-100"} hover:bg-blue-50/20`}>
+                          <td className="py-0.5 pr-2 text-[10px] text-gray-700">
+                            {row.catLabel ? (
+                              <span className="flex items-center gap-1">
+                                <span className={`w-2 h-2 rounded-full ${catDotColor[row.catColor]}`} />
+                                <span className="font-bold text-gray-500">{row.catLabel} /</span>
+                                <span>{row.label}</span>
+                              </span>
+                            ) : <span className="pr-3">{row.label}</span>}
+                          </td>
+                          <td className="py-0 w-14"><EditableNum value={avg} onChange={(v) => updateAvg(row.key, v)} /></td>
+                          <td className="py-0 w-12"><EditableNum value={count} onChange={(v) => updateCount(row.key, v)} cls="font-bold text-blue-700" /></td>
+                          <td className="py-0.5 text-center font-mono text-[10px] text-gray-600 w-16" dir="ltr">{total > 0 ? fmt(total) : "—"}</td>
+                        </tr>
+                      );
+                    })}
+                    {/* Surplus for this category — directly below its rows */}
+                    <tr className="border-b-2 border-gray-200">
+                      <td colSpan={4} className="px-2 py-1">
+                        <SurplusInline surplus={cat.summary.surplus} sellable={cat.sellable} />
                       </td>
-                      <td className="py-0 w-14"><EditableNum value={avgAreas[row.key] || DEFAULT_AVG_AREAS[row.pctKey]?.defaultArea || 0} onChange={(v) => updateAvg(row.key, v)} /></td>
-                      <td className="py-0 w-12"><EditableNum value={unitCounts[row.key] || 0} onChange={(v) => updateCount(row.key, v)} cls="font-bold text-blue-700" /></td>
-                      <td className="py-0 w-14"><EditableNum value={basePrices[row.key] || 0} onChange={(v) => updatePrice(row.key, v)} /></td>
                     </tr>
-                  );
-                })}
+                  </>
+                ))}
               </tbody>
             </table>
-
-            {/* ═══ SURPLUS INDICATORS ═══ */}
-            <div className="px-3 py-2 space-y-2 border-t-2 border-blue-200/40 bg-gradient-to-b from-blue-50/30 to-white">
-              <div className="text-[10px] font-bold text-gray-700 mb-1">الفائض / العجز</div>
-              {sellableRes > 0 && <SurplusBar surplus={resSummary.surplus} sellable={sellableRes} label="سكني" />}
-              {sellableRet > 0 && <SurplusBar surplus={retSummary.surplus} sellable={sellableRet} label="تجزئة" />}
-              {sellableOff > 0 && <SurplusBar surplus={offSummary.surplus} sellable={sellableOff} label="مكاتب" />}
-              <div className="pt-1.5 border-t border-gray-200">
-                <SurplusBar surplus={grandSurplus} sellable={totalSellable} label="الإجمالي" />
-              </div>
-            </div>
           </div>
 
           {/* ═══ LEFT PANEL: النتائج ═══ */}
-          <div className="w-[62%] min-w-0 border border-emerald-200/60 rounded-lg overflow-hidden bg-emerald-50/10">
+          <div className="w-[65%] min-w-0 border border-emerald-200/60 rounded-lg overflow-hidden bg-emerald-50/10">
             <div className="px-3 py-1.5 bg-emerald-50/60 border-b border-emerald-200/40">
-              <span className="text-[10px] font-bold text-emerald-700">النتائج — محسوبة تلقائياً</span>
+              <span className="text-[10px] font-bold text-emerald-700">النتائج — محسوبة تلقائياً (الفائض يُمتص في غرفتين وصالة)</span>
             </div>
             <table className="w-full text-[11px]">
               <thead>
                 <tr className="border-b-2 border-emerald-100 bg-emerald-50/30">
                   <th className="text-right py-1 pr-2 font-bold text-emerald-600 text-[10px]">النوع</th>
+                  <th className="text-center py-1 font-bold text-emerald-600 text-[10px] w-12">النسبة</th>
                   <th className="text-center py-1 font-bold text-emerald-600 text-[10px] w-10">العدد</th>
-                  <th className="text-center py-1 font-bold text-emerald-600 text-[10px] w-14">مساحة الوحدة</th>
-                  <th className="text-center py-1 font-bold text-emerald-600 text-[10px] w-16">إجمالي (sqft)</th>
+                  <th className="text-center py-1 font-bold text-emerald-600 text-[10px] w-14">م. الوحدة</th>
+                  <th className="text-center py-1 font-bold text-emerald-600 text-[10px] w-16">إجمالي sqft</th>
                   <th className="text-center py-1 font-bold text-emerald-600 text-[10px] w-14">سعر/sqft</th>
                   <th className={`text-center py-1 font-bold text-[10px] w-20 ${scenarioConfig[activeScenario].color}`}>الإيراد</th>
                 </tr>
               </thead>
               <tbody>
-                {renderCatRows("residential", "سكني", resSummary, "bg-sky-50/60", "text-sky-800")}
-                {renderCatRows("retail", "تجزئة", retSummary, "bg-amber-50/60", "text-amber-800")}
-                {renderCatRows("offices", "مكاتب", offSummary, "bg-violet-50/60", "text-violet-800")}
+                {catData.map(cat => {
+                  const catRows = rowResults.filter(r => r.cat === cat.key && (r.count > 0 || r.price > 0));
+                  return (
+                    <>
+                      {catRows.map((r, i) => (
+                        <tr key={r.key} className={`border-b ${r.divider ? "border-t-[3px] border-t-gray-300" : "border-gray-100"} hover:bg-gray-50/40`}>
+                          <td className="py-1 pr-2 text-gray-800 text-[10px]">
+                            {i === 0 && <span className="text-[9px] font-bold text-gray-400 ml-1">{cat.label} /</span>}
+                            {r.label}
+                          </td>
+                          <td className="py-1 text-center">
+                            {r.pct > 0 ? <span className="bg-gray-100 text-gray-700 text-[9px] font-bold px-1 py-0.5 rounded-full">{r.pct.toFixed(1)}%</span> : "—"}
+                          </td>
+                          <td className="py-1 text-center font-mono text-[11px] text-gray-800">{r.count || "—"}</td>
+                          <td className="py-1 text-center font-mono text-[10px] text-gray-600" dir="ltr">
+                            {r.effectiveAvg > 0 ? (
+                              r.is2br && r.effectiveAvg !== r.avg ? (
+                                <span className="text-emerald-700 font-bold">{fmt(r.effectiveAvg)}</span>
+                              ) : fmt(r.effectiveAvg)
+                            ) : "—"}
+                          </td>
+                          <td className="py-1 text-center font-mono text-[10px] text-gray-700 font-semibold" dir="ltr">{r.effectiveTotalArea > 0 ? fmt(r.effectiveTotalArea) : "—"}</td>
+                          <td className="py-1 text-center font-mono text-[10px] text-gray-600" dir="ltr">{r.scenarioPrice > 0 ? fmt(r.scenarioPrice) : "—"}</td>
+                          <td className={`py-1 text-center font-mono text-[10px] font-bold ${scenarioConfig[activeScenario].color}`} dir="ltr">{r.revenue > 0 ? fmt(r.revenue) : "—"}</td>
+                        </tr>
+                      ))}
+                      {/* Category subtotal */}
+                      <tr className={`${cat.bgSub} font-semibold border-b-2 border-gray-200`}>
+                        <td className={`py-1 pr-2 text-[10px] ${cat.textSub}`}>إجمالي {cat.label}</td>
+                        <td className={`py-1 text-center text-[9px] ${cat.textSub}`}>{cat.summary.sellable > 0 ? "100%" : "—"}</td>
+                        <td className={`py-1 text-center font-mono text-[10px] ${cat.textSub}`}>{fmt(cat.summary.totalUnits)}</td>
+                        <td className="py-1 text-center text-[10px] text-gray-400">—</td>
+                        <td className={`py-1 text-center font-mono text-[10px] font-bold ${cat.textSub}`} dir="ltr">{fmt(cat.summary.effectiveTotalArea)}</td>
+                        <td className="py-1 text-center text-[10px] text-gray-400">—</td>
+                        <td className={`py-1 text-center font-mono text-[10px] font-bold ${scenarioConfig[activeScenario].color}`} dir="ltr">{fmt(cat.summary.totalRevenue)}</td>
+                      </tr>
+                    </>
+                  );
+                })}
               </tbody>
               <tfoot>
                 <tr className="bg-gradient-to-l from-gray-800 to-gray-900 text-white font-bold">
                   <td className="py-1.5 pr-2 text-[11px]">الإجمالي الكلي</td>
+                  <td className="py-1.5 text-center text-[10px]">—</td>
                   <td className="py-1.5 text-center font-mono text-[11px]">{fmt(grandTotalUnits)}</td>
-                  <td className="py-1.5 text-center text-[11px]">—</td>
+                  <td className="py-1.5 text-center text-[10px]">—</td>
                   <td className="py-1.5 text-center font-mono text-[11px]" dir="ltr">{fmt(grandTotalArea)}</td>
-                  <td className="py-1.5 text-center text-[11px]">—</td>
+                  <td className="py-1.5 text-center text-[10px]">—</td>
                   <td className="py-1.5 text-center font-mono text-[11px]" dir="ltr">{fmt(grandTotalRevenue)}</td>
                 </tr>
               </tfoot>
@@ -579,7 +605,7 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
         {grandTotalParking > 0 && (
           <div className="mx-3 mb-3 border border-orange-200/60 rounded-lg overflow-hidden">
             <div className="px-3 py-1.5 bg-orange-50/60 border-b border-orange-200/40 flex items-center gap-2">
-              <Car className="w-4 h-4 text-orange-900" />
+              <Car className="w-4 h-4" style={{ color: "#c2410c" }} />
               <span className="text-[10px] font-bold text-orange-800">المواقف المطلوبة — معايير دبي</span>
             </div>
             <div className="px-3 py-2">
