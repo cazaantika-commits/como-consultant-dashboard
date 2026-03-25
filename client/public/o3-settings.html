@@ -330,8 +330,9 @@ async function loadData() {
     var savedJson = await savedResp.json();
     var savedData = savedJson.result ? savedJson.result.data.json : null;
     var savedMap = {};
-    if (savedData && savedData.items) {
-      for (var si of savedData.items) { savedMap[si.itemKey] = si; }
+    if (savedData && (savedData.settings || savedData.items)) {
+      var savedItems = savedData.settings || savedData.items;
+      for (var si of savedItems) { savedMap[si.itemKey] = si; }
     }
 
     for (var item of data.items) {

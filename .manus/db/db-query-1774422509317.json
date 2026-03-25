@@ -1,0 +1,15 @@
+{
+  "query": "SELECT item_key, distribution_method, custom_json FROM project_cash_flow_settings WHERE project_id = 4 AND scenario = 'offplan_escrow' AND distribution_method = 'custom' LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT item_key, distribution_method, custom_json FROM project_cash_flow_settings WHERE project_id = 4 AND scenario = 'offplan_escrow' AND distribution_method = 'custom' LIMIT 10;",
+  "rows": [
+    {
+      "item_key": "government_fees_investor",
+      "distribution_method": "custom",
+      "custom_json": "[50,30,20,0,0,0]"
+    }
+  ],
+  "messages": [],
+  "stdout": "item_key\tdistribution_method\tcustom_json\ngovernment_fees_investor\tcustom\t[50,30,20,0,0,0]\n",
+  "stderr": "",
+  "execution_time_ms": 1599
+}

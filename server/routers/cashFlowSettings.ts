@@ -2003,14 +2003,33 @@ function distributeAmount(
     case "custom": {
       if (customJson) {
         try {
-          const entries: Array<{ month: number; amount?: number; pct?: number }> = JSON.parse(customJson);
-          for (const entry of entries) {
-            const m = entry.month - 1;
-            if (m >= 0 && m < totalMonths) {
-              const val = entry.amount !== undefined
-                ? entry.amount
-                : (entry.pct !== undefined ? amount * entry.pct / 100 : 0);
-              monthly[m] += val;
+          const parsed = JSON.parse(customJson);
+          // Handle two formats:
+          // 1) Simple array of percentages from frontend: [50, 30, 20, 0, ...]
+          //    Each index maps to a month within the phase (startMonth-based)
+          // 2) Object array: [{month: 1, pct: 50}, ...]
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            if (typeof parsed[0] === "number" || (typeof parsed[0] === "string" && !isNaN(Number(parsed[0])))) {
+              // Format 1: simple percentage array — distribute relative to startMonth
+              const baseMonth = (startMonth || 1) - 1; // 0-based
+              for (let i = 0; i < parsed.length; i++) {
+                const pct = parseFloat(parsed[i]) || 0;
+                const m = baseMonth + i;
+                if (m >= 0 && m < totalMonths && pct > 0) {
+                  monthly[m] = amount * pct / 100;
+                }
+              }
+            } else {
+              // Format 2: object array [{month, pct/amount}]
+              for (const entry of parsed as Array<{ month: number; amount?: number; pct?: number }>) {
+                const m = entry.month - 1;
+                if (m >= 0 && m < totalMonths) {
+                  const val = entry.amount !== undefined
+                    ? entry.amount
+                    : (entry.pct !== undefined ? amount * entry.pct / 100 : 0);
+                  monthly[m] += val;
+                }
+              }
             }
           }
         } catch {
