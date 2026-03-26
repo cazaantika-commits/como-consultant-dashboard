@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Settings, FileBarChart2, Wallet, Landmark, Layers } from "lucide-react";
+import { Settings, FileBarChart2, Wallet, Landmark, Layers, BarChart3 } from "lucide-react";
 import PortfolioAllScenariosPage from "./PortfolioAllScenariosPage";
+import CapitalPortfolioPage from "./CapitalPortfolioPage";
 
-type ViewId = "settings" | "feasibility" | "capital" | "escrow" | "portfolio";
+type ViewId = "settings" | "feasibility" | "capital" | "escrow" | "portfolio" | "capital_portfolio";
 
 export default function CashFlowHub({ embedded }: { embedded?: boolean } = {}) {
   const [activeView, setActiveView] = useState<ViewId | null>(null);
@@ -47,6 +48,13 @@ export default function CashFlowHub({ embedded }: { embedded?: boolean } = {}) {
       emoji: "📁",
       activeClass: "bg-gray-700 text-white shadow-lg shadow-gray-300",
     },
+    {
+      id: "capital_portfolio" as const,
+      label: "محفظة رأس المال",
+      icon: BarChart3,
+      emoji: "💼",
+      activeClass: "bg-amber-600 text-white shadow-lg shadow-amber-200",
+    },
   ];
 
   const getIframeSrc = (view: ViewId): string => {
@@ -56,6 +64,7 @@ export default function CashFlowHub({ embedded }: { embedded?: boolean } = {}) {
       case "capital": return "/capital-plan.html";
       case "escrow": return "/escrow-cashflow.html";
       case "portfolio": return ""; // handled as React component
+      case "capital_portfolio": return ""; // handled as React component
     }
   };
 
@@ -108,6 +117,10 @@ export default function CashFlowHub({ embedded }: { embedded?: boolean } = {}) {
         {activeView === "portfolio" ? (
           <div className="w-full h-full overflow-auto">
             <PortfolioAllScenariosPage />
+          </div>
+        ) : activeView === "capital_portfolio" ? (
+          <div className="w-full h-full overflow-auto">
+            <CapitalPortfolioPage />
           </div>
         ) : activeView ? (
           <iframe

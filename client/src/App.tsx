@@ -64,6 +64,7 @@ import CashFlowSettingsPage from "./pages/CashFlowSettingsPage";
 import CashFlowReflectionPage from "./pages/CashFlowReflectionPage";
 import CashFlowComparisonPage from "./pages/CashFlowComparisonPage";
 import PortfolioAllScenariosPage from "./pages/PortfolioAllScenariosPage";
+import CapitalPortfolioPage from "./pages/CapitalPortfolioPage";
 
 function Router() {
   return (
@@ -131,6 +132,7 @@ function Router() {
       <Route path="/cashflow-reflection" component={CashFlowReflectionPage} />
       <Route path="/cashflow-comparison" component={CashFlowComparisonPage} />
       <Route path="/portfolio-scenarios" component={PortfolioAllScenariosPage} />
+      <Route path="/capital-portfolio" component={CapitalPortfolioPage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
