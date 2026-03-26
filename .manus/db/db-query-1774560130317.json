@@ -1,0 +1,388 @@
+{
+  "query": "SELECT p.name, p.preConMonths, p.constructionMonths, s.item_key, s.section, s.start_month, s.end_month\nFROM projects p\nJOIN project_cash_flow_settings s ON s.project_id = p.id AND s.scenario = COALESCE(p.financingScenario, 'offplan_escrow') AND s.is_active = 1\nWHERE s.funding_source = 'investor' AND s.section IN ('construction', 'escrow')\nORDER BY p.id, s.start_month",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT p.name, p.preConMonths, p.constructionMonths, s.item_key, s.section, s.start_month, s.end_month\nFROM projects p\nJOIN project_cash_flow_settings s ON s.project_id = p.id AND s.scenario = COALESCE(p.financingScenario, 'offplan_escrow') AND s.is_active = 1\nWHERE s.funding_source = 'investor' AND s.section IN ('construction', 'escrow')\nORDER BY p.id, s.start_month",
+  "rows": [
+    {
+      "name": "مركز مجان التجاري (G+4)",
+      "preConMonths": "9",
+      "constructionMonths": "36",
+      "item_key": "surveyor_fee",
+      "section": "escrow",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "name": "مركز مجان التجاري (G+4)",
+      "preConMonths": "9",
+      "constructionMonths": "36",
+      "item_key": "supervision_fee",
+      "section": "escrow",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "name": "مركز مجان التجاري (G+4)",
+      "preConMonths": "9",
+      "constructionMonths": "36",
+      "item_key": "developer_fee_construction",
+      "section": "escrow",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "name": "مركز مجان التجاري (G+4)",
+      "preConMonths": "9",
+      "constructionMonths": "36",
+      "item_key": "community_fee_escrow",
+      "section": "escrow",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "name": "مركز مجان التجاري (G+4)",
+      "preConMonths": "9",
+      "constructionMonths": "36",
+      "item_key": "contractor_payments_20",
+      "section": "escrow",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "name": "مركز مجان التجاري (G+4)",
+      "preConMonths": "9",
+      "constructionMonths": "36",
+      "item_key": "contractor_payments",
+      "section": "escrow",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "name": "مركز مجان التجاري (G+4)",
+      "preConMonths": "9",
+      "constructionMonths": "36",
+      "item_key": "government_fees_escrow",
+      "section": "escrow",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "name": "مركز مجان التجاري (G+4)",
+      "preConMonths": "9",
+      "constructionMonths": "36",
+      "item_key": "bank_fees",
+      "section": "construction",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "name": "مركز مجان التجاري (G+4)",
+      "preConMonths": "9",
+      "constructionMonths": "36",
+      "item_key": "contingency",
+      "section": "construction",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "name": "مركز مجان التجاري (G+4)",
+      "preConMonths": "9",
+      "constructionMonths": "36",
+      "item_key": "contractor_advance",
+      "section": "construction",
+      "start_month": "6",
+      "end_month": "6"
+    },
+    {
+      "name": "مجان متعدد الاستخدامات (G+4P+25)",
+      "preConMonths": "8",
+      "constructionMonths": "30",
+      "item_key": "marketing_construction",
+      "section": "escrow",
+      "start_month": "9",
+      "end_month": "38"
+    },
+    {
+      "name": "مجان متعدد الاستخدامات (G+4P+25)",
+      "preConMonths": "8",
+      "constructionMonths": "30",
+      "item_key": "developer_fee_construction",
+      "section": "escrow",
+      "start_month": "9",
+      "end_month": "38"
+    },
+    {
+      "name": "مجان متعدد الاستخدامات (G+4P+25)",
+      "preConMonths": "8",
+      "constructionMonths": "30",
+      "item_key": "community_fee_escrow",
+      "section": "escrow",
+      "start_month": "9",
+      "end_month": "38"
+    },
+    {
+      "name": "مجان متعدد الاستخدامات (G+4P+25)",
+      "preConMonths": "8",
+      "constructionMonths": "30",
+      "item_key": "bank_fees",
+      "section": "construction",
+      "start_month": "9",
+      "end_month": "38"
+    },
+    {
+      "name": "مجان متعدد الاستخدامات (G+4P+25)",
+      "preConMonths": "8",
+      "constructionMonths": "30",
+      "item_key": "contingency",
+      "section": "construction",
+      "start_month": "9",
+      "end_month": "38"
+    },
+    {
+      "name": "مجان متعدد الاستخدامات (G+4P+25)",
+      "preConMonths": "8",
+      "constructionMonths": "30",
+      "item_key": "contractor_advance",
+      "section": "construction",
+      "start_month": "9",
+      "end_month": "9"
+    },
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "preConMonths": "6",
+      "constructionMonths": "18",
+      "item_key": "contingency",
+      "section": "construction",
+      "start_month": "7",
+      "end_month": "24"
+    },
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "preConMonths": "6",
+      "constructionMonths": "18",
+      "item_key": "developer_fee_construction",
+      "section": "escrow",
+      "start_month": "7",
+      "end_month": "24"
+    },
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "preConMonths": "6",
+      "constructionMonths": "18",
+      "item_key": "community_fee_escrow",
+      "section": "escrow",
+      "start_month": "7",
+      "end_month": "7"
+    },
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "preConMonths": "6",
+      "constructionMonths": "18",
+      "item_key": "bank_fees",
+      "section": "construction",
+      "start_month": "7",
+      "end_month": "24"
+    },
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "preConMonths": "6",
+      "constructionMonths": "18",
+      "item_key": "marketing_construction",
+      "section": "escrow",
+      "start_month": "7",
+      "end_month": "24"
+    },
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "preConMonths": "6",
+      "constructionMonths": "18",
+      "item_key": "contractor_advance",
+      "section": "construction",
+      "start_month": "7",
+      "end_month": "7"
+    },
+    {
+      "name": "ند الشبا — قطعة 1 (6185392)",
+      "preConMonths": "6",
+      "constructionMonths": "18",
+      "item_key": "marketing_construction",
+      "section": "escrow",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "name": "ند الشبا — قطعة 1 (6185392)",
+      "preConMonths": "6",
+      "constructionMonths": "18",
+      "item_key": "developer_fee_construction",
+      "section": "escrow",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "name": "ند الشبا — قطعة 1 (6185392)",
+      "preConMonths": "6",
+      "constructionMonths": "18",
+      "item_key": "community_fee_escrow",
+      "section": "escrow",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "name": "ند الشبا — قطعة 1 (6185392)",
+      "preConMonths": "6",
+      "constructionMonths": "18",
+      "item_key": "contractor_payments_20",
+      "section": "escrow",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "name": "ند الشبا — قطعة 1 (6185392)",
+      "preConMonths": "6",
+      "constructionMonths": "18",
+      "item_key": "bank_fees",
+      "section": "construction",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "name": "ند الشبا — قطعة 1 (6185392)",
+      "preConMonths": "6",
+      "constructionMonths": "18",
+      "item_key": "contingency",
+      "section": "construction",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "name": "ند الشبا — قطعة 1 (6185392)",
+      "preConMonths": "6",
+      "constructionMonths": "18",
+      "item_key": "contractor_advance",
+      "section": "construction",
+      "start_month": "6",
+      "end_month": "6"
+    },
+    {
+      "name": "ند الشبا — قطعة 2 المدمجة (6182776)",
+      "preConMonths": "6",
+      "constructionMonths": "20",
+      "item_key": "contractor_advance",
+      "section": "construction",
+      "start_month": "NULL",
+      "end_month": "NULL"
+    },
+    {
+      "name": "ند الشبا — قطعة 2 المدمجة (6182776)",
+      "preConMonths": "6",
+      "constructionMonths": "20",
+      "item_key": "supervision_fee",
+      "section": "escrow",
+      "start_month": "7",
+      "end_month": "26"
+    },
+    {
+      "name": "ند الشبا — قطعة 2 المدمجة (6182776)",
+      "preConMonths": "6",
+      "constructionMonths": "20",
+      "item_key": "developer_fee_construction",
+      "section": "escrow",
+      "start_month": "7",
+      "end_month": "26"
+    },
+    {
+      "name": "ند الشبا — قطعة 2 المدمجة (6182776)",
+      "preConMonths": "6",
+      "constructionMonths": "20",
+      "item_key": "community_fee_escrow",
+      "section": "escrow",
+      "start_month": "7",
+      "end_month": "26"
+    },
+    {
+      "name": "ند الشبا — قطعة 2 المدمجة (6182776)",
+      "preConMonths": "6",
+      "constructionMonths": "20",
+      "item_key": "bank_fees",
+      "section": "construction",
+      "start_month": "7",
+      "end_month": "26"
+    },
+    {
+      "name": "ند الشبا — قطعة 2 المدمجة (6182776)",
+      "preConMonths": "6",
+      "constructionMonths": "20",
+      "item_key": "contingency",
+      "section": "construction",
+      "start_month": "7",
+      "end_month": "26"
+    },
+    {
+      "name": "ند الشبا — قطعة 2 المدمجة (6182776)",
+      "preConMonths": "6",
+      "constructionMonths": "20",
+      "item_key": "marketing_construction",
+      "section": "escrow",
+      "start_month": "7",
+      "end_month": "26"
+    },
+    {
+      "name": "ند الشبا — قطعة 3 الفلل (6180578)",
+      "preConMonths": "4",
+      "constructionMonths": "14",
+      "item_key": "marketing_construction",
+      "section": "escrow",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "name": "ند الشبا — قطعة 3 الفلل (6180578)",
+      "preConMonths": "4",
+      "constructionMonths": "14",
+      "item_key": "developer_fee_construction",
+      "section": "escrow",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "name": "ند الشبا — قطعة 3 الفلل (6180578)",
+      "preConMonths": "4",
+      "constructionMonths": "14",
+      "item_key": "community_fee_escrow",
+      "section": "escrow",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "name": "ند الشبا — قطعة 3 الفلل (6180578)",
+      "preConMonths": "4",
+      "constructionMonths": "14",
+      "item_key": "bank_fees",
+      "section": "construction",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "name": "ند الشبا — قطعة 3 الفلل (6180578)",
+      "preConMonths": "4",
+      "constructionMonths": "14",
+      "item_key": "contingency",
+      "section": "construction",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "name": "ند الشبا — قطعة 3 الفلل (6180578)",
+      "preConMonths": "4",
+      "constructionMonths": "14",
+      "item_key": "contractor_advance",
+      "section": "construction",
+      "start_month": "6",
+      "end_month": "6"
+    }
+  ],
+  "messages": [],
+  "stdout": "name\tpreConMonths\tconstructionMonths\titem_key\tsection\tstart_month\tend_month\nمركز مجان التجاري (G+4)\t9\t36\tsurveyor_fee\tescrow\t6\t23\nمركز مجان التجاري (G+4)\t9\t36\tsupervision_fee\tescrow\t6\t23\nمركز مجان التجاري (G+4)\t9\t36\tdeveloper_fee_construction\tescrow\t6\t23\nمركز مجان التجاري (G+4)\t9\t36\tcommunity_fee_escrow\tescrow\t6\t23\nمركز مجان التجاري (G+4)\t9\t36\tcontractor_payments_20\tescrow\t6\t23\nمركز مجان التجاري (G+4)\t9\t36\tcontractor_payments\tescrow\t6\t23\nمركز مجان التجاري (G+4)\t9\t36\tgovernment_fees_escrow\tescrow\t6\t23\nمركز مجان التجاري (G+4)\t9\t36\tbank_fees\tconstruction\t6\t23\nمركز مجان التجاري (G+4)\t9\t36\tcontingency\tconstruction\t6\t23\nمركز مجان التجاري (G+4)\t9\t36\tcontractor_advance\tconstruction\t6\t6\nمجان متعدد الاستخدامات (G+4P+25)\t8\t30\tmarketing_construction\tescrow\t9\t38\nمجان متعدد الاستخدامات (G+4P+25)\t8\t30\tdeveloper_fee_construction\tescrow\t9\t38\nمجان متعدد الاستخدامات (G+4P+25)\t8\t30\tcommunity_fee_escrow\tescrow\t9\t38\nمجان متعدد الاستخدامات (G+4P+25)\t8\t30\tbank_fees\tconstruction\t9\t38\nمجان متعدد الاستخدامات (G+4P+25)\t8\t30\tcontingency\tconstruction\t9\t38\nمجان متعدد الاستخدامات (G+4P+25)\t8\t30\tcontractor_advance\tconstruction\t9\t9\nمبنى الجداف السكني (G+7)\t6\t18\tcontingency\tconstruction\t7\t24\nمبنى الجداف السكني (G+7)\t6\t18\tdeveloper_fee_construction\tescrow\t7\t24\nمبنى الجداف السكني (G+7)\t6\t18\tcommunity_fee_escrow\tescrow\t7\t7\nمبنى الجداف السكني (G+7)\t6\t18\tbank_fees\tconstruction\t7\t24\nمبنى الجداف السكني (G+7)\t6\t18\tmarketing_construction\tescrow\t7\t24\nمبنى الجداف السكني (G+7)\t6\t18\tcontractor_advance\tconstruction\t7\t7\nند الشبا — قطعة 1 (6185392)\t6\t18\tmarketing_construction\tescrow\t6\t23\nند الشبا — قطعة 1 (6185392)\t6\t18\tdeveloper_fee_construction\tescrow\t6\t23\nند الشبا — قطعة 1 (6185392)\t6\t18\tcommunity_fee_escrow\tescrow\t6\t23\nند الشبا — قطعة 1 (6185392)\t6\t18\tcontractor_payments_20\tescrow\t6\t23\nند الشبا — قطعة 1 (6185392)\t6\t18\tbank_fees\tconstruction\t6\t23\nند الشبا — قطعة 1 (6185392)\t6\t18\tcontingency\tconstruction\t6\t23\nند الشبا — قطعة 1 (6185392)\t6\t18\tcontractor_advance\tconstruction\t6\t6\nند الشبا — قطعة 2 المدمجة (6182776)\t6\t20\tcontractor_advance\tconstruction\tNULL\tNULL\nند الشبا — قطعة 2 المدمجة (6182776)\t6\t20\tsupervision_fee\tescrow\t7\t26\nند الشبا — قطعة 2 المدمجة (6182776)\t6\t20\tdeveloper_fee_construction\tescrow\t7\t26\nند الشبا — قطعة 2 المدمجة (6182776)\t6\t20\tcommunity_fee_escrow\tescrow\t7\t26\nند الشبا — قطعة 2 المدمجة (6182776)\t6\t20\tbank_fees\tconstruction\t7\t26\nند الشبا — قطعة 2 المدمجة (6182776)\t6\t20\tcontingency\tconstruction\t7\t26\nند الشبا — قطعة 2 المدمجة (6182776)\t6\t20\tmarketing_construction\tescrow\t7\t26\nند الشبا — قطعة 3 الفلل (6180578)\t4\t14\tmarketing_construction\tescrow\t6\t23\nند الشبا — قطعة 3 الفلل (6180578)\t4\t14\tdeveloper_fee_construction\tescrow\t6\t23\nند الشبا — قطعة 3 الفلل (6180578)\t4\t14\tcommunity_fee_escrow\tescrow\t6\t23\nند الشبا — قطعة 3 الفلل (6180578)\t4\t14\tbank_fees\tconstruction\t6\t23\nند الشبا — قطعة 3 الفلل (6180578)\t4\t14\tcontingency\tconstruction\t6\t23\nند الشبا — قطعة 3 الفلل (6180578)\t4\t14\tcontractor_advance\tconstruction\t6\t6\n",
+  "stderr": "",
+  "execution_time_ms": 1572
+}

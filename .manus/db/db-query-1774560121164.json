@@ -1,0 +1,240 @@
+{
+  "query": "SELECT p.name, s.item_key, s.section, s.distribution_method, s.start_month, s.end_month, s.lump_sum_month, s.funding_source\nFROM projects p\nJOIN project_cash_flow_settings s ON s.project_id = p.id AND s.scenario = COALESCE(p.financingScenario, 'offplan_escrow') AND s.is_active = 1\nWHERE p.name LIKE '%جداف%' AND s.funding_source = 'investor'\nORDER BY s.sort_order",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT p.name, s.item_key, s.section, s.distribution_method, s.start_month, s.end_month, s.lump_sum_month, s.funding_source\nFROM projects p\nJOIN project_cash_flow_settings s ON s.project_id = p.id AND s.scenario = COALESCE(p.financingScenario, 'offplan_escrow') AND s.is_active = 1\nWHERE p.name LIKE '%جداف%' AND s.funding_source = 'investor'\nORDER BY s.sort_order",
+  "rows": [
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "item_key": "land_cost",
+      "section": "paid",
+      "distribution_method": "lump_sum",
+      "start_month": "1",
+      "end_month": "1",
+      "lump_sum_month": "1",
+      "funding_source": "investor"
+    },
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "item_key": "land_broker",
+      "section": "paid",
+      "distribution_method": "lump_sum",
+      "start_month": "1",
+      "end_month": "1",
+      "lump_sum_month": "1",
+      "funding_source": "investor"
+    },
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "item_key": "land_registration",
+      "section": "paid",
+      "distribution_method": "lump_sum",
+      "start_month": "1",
+      "end_month": "1",
+      "lump_sum_month": "1",
+      "funding_source": "investor"
+    },
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "item_key": "government_fees_investor",
+      "section": "design",
+      "distribution_method": "lump_sum",
+      "start_month": "1",
+      "end_month": "1",
+      "lump_sum_month": "1",
+      "funding_source": "investor"
+    },
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "item_key": "soil_test",
+      "section": "design",
+      "distribution_method": "lump_sum",
+      "start_month": "1",
+      "end_month": "1",
+      "lump_sum_month": "1",
+      "funding_source": "investor"
+    },
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "item_key": "survey",
+      "section": "design",
+      "distribution_method": "lump_sum",
+      "start_month": "1",
+      "end_month": "1",
+      "lump_sum_month": "1",
+      "funding_source": "investor"
+    },
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "item_key": "design_fee",
+      "section": "design",
+      "distribution_method": "custom",
+      "start_month": "1",
+      "end_month": "6",
+      "lump_sum_month": "NULL",
+      "funding_source": "investor"
+    },
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "item_key": "developer_fee_design",
+      "section": "design",
+      "distribution_method": "equal_spread",
+      "start_month": "1",
+      "end_month": "6",
+      "lump_sum_month": "NULL",
+      "funding_source": "investor"
+    },
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "item_key": "developer_fee_offplan",
+      "section": "offplan",
+      "distribution_method": "equal_spread",
+      "start_month": "3",
+      "end_month": "4",
+      "lump_sum_month": "NULL",
+      "funding_source": "investor"
+    },
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "item_key": "fraz_fee",
+      "section": "offplan",
+      "distribution_method": "lump_sum",
+      "start_month": "3",
+      "end_month": "3",
+      "lump_sum_month": "3",
+      "funding_source": "investor"
+    },
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "item_key": "rera_registration",
+      "section": "offplan",
+      "distribution_method": "lump_sum",
+      "start_month": "3",
+      "end_month": "3",
+      "lump_sum_month": "3",
+      "funding_source": "investor"
+    },
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "item_key": "rera_units",
+      "section": "offplan",
+      "distribution_method": "lump_sum",
+      "start_month": "3",
+      "end_month": "3",
+      "lump_sum_month": "3",
+      "funding_source": "investor"
+    },
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "item_key": "noc_fee",
+      "section": "offplan",
+      "distribution_method": "lump_sum",
+      "start_month": "3",
+      "end_month": "3",
+      "lump_sum_month": "3",
+      "funding_source": "investor"
+    },
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "item_key": "escrow_fee",
+      "section": "offplan",
+      "distribution_method": "lump_sum",
+      "start_month": "3",
+      "end_month": "3",
+      "lump_sum_month": "3",
+      "funding_source": "investor"
+    },
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "item_key": "community_fee",
+      "section": "offplan",
+      "distribution_method": "lump_sum",
+      "start_month": "3",
+      "end_month": "3",
+      "lump_sum_month": "3",
+      "funding_source": "investor"
+    },
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "item_key": "marketing_offplan",
+      "section": "offplan",
+      "distribution_method": "custom",
+      "start_month": "3",
+      "end_month": "4",
+      "lump_sum_month": "NULL",
+      "funding_source": "investor"
+    },
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "item_key": "escrow_deposit",
+      "section": "offplan",
+      "distribution_method": "lump_sum",
+      "start_month": "3",
+      "end_month": "3",
+      "lump_sum_month": "3",
+      "funding_source": "investor"
+    },
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "item_key": "contractor_advance",
+      "section": "construction",
+      "distribution_method": "lump_sum",
+      "start_month": "7",
+      "end_month": "7",
+      "lump_sum_month": "7",
+      "funding_source": "investor"
+    },
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "item_key": "contingency",
+      "section": "construction",
+      "distribution_method": "equal_spread",
+      "start_month": "7",
+      "end_month": "24",
+      "lump_sum_month": "NULL",
+      "funding_source": "investor"
+    },
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "item_key": "bank_fees",
+      "section": "construction",
+      "distribution_method": "equal_spread",
+      "start_month": "7",
+      "end_month": "24",
+      "lump_sum_month": "NULL",
+      "funding_source": "investor"
+    },
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "item_key": "community_fee_escrow",
+      "section": "escrow",
+      "distribution_method": "lump_sum",
+      "start_month": "7",
+      "end_month": "7",
+      "lump_sum_month": "7",
+      "funding_source": "investor"
+    },
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "item_key": "developer_fee_construction",
+      "section": "escrow",
+      "distribution_method": "equal_spread",
+      "start_month": "7",
+      "end_month": "24",
+      "lump_sum_month": "NULL",
+      "funding_source": "investor"
+    },
+    {
+      "name": "مبنى الجداف السكني (G+7)",
+      "item_key": "marketing_construction",
+      "section": "escrow",
+      "distribution_method": "custom",
+      "start_month": "7",
+      "end_month": "24",
+      "lump_sum_month": "NULL",
+      "funding_source": "investor"
+    }
+  ],
+  "messages": [],
+  "stdout": "name\titem_key\tsection\tdistribution_method\tstart_month\tend_month\tlump_sum_month\tfunding_source\nمبنى الجداف السكني (G+7)\tland_cost\tpaid\tlump_sum\t1\t1\t1\tinvestor\nمبنى الجداف السكني (G+7)\tland_broker\tpaid\tlump_sum\t1\t1\t1\tinvestor\nمبنى الجداف السكني (G+7)\tland_registration\tpaid\tlump_sum\t1\t1\t1\tinvestor\nمبنى الجداف السكني (G+7)\tgovernment_fees_investor\tdesign\tlump_sum\t1\t1\t1\tinvestor\nمبنى الجداف السكني (G+7)\tsoil_test\tdesign\tlump_sum\t1\t1\t1\tinvestor\nمبنى الجداف السكني (G+7)\tsurvey\tdesign\tlump_sum\t1\t1\t1\tinvestor\nمبنى الجداف السكني (G+7)\tdesign_fee\tdesign\tcustom\t1\t6\tNULL\tinvestor\nمبنى الجداف السكني (G+7)\tdeveloper_fee_design\tdesign\tequal_spread\t1\t6\tNULL\tinvestor\nمبنى الجداف السكني (G+7)\tdeveloper_fee_offplan\toffplan\tequal_spread\t3\t4\tNULL\tinvestor\nمبنى الجداف السكني (G+7)\tfraz_fee\toffplan\tlump_sum\t3\t3\t3\tinvestor\nمبنى الجداف السكني (G+7)\trera_registration\toffplan\tlump_sum\t3\t3\t3\tinvestor\nمبنى الجداف السكني (G+7)\trera_units\toffplan\tlump_sum\t3\t3\t3\tinvestor\nمبنى الجداف السكني (G+7)\tnoc_fee\toffplan\tlump_sum\t3\t3\t3\tinvestor\nمبنى الجداف السكني (G+7)\tescrow_fee\toffplan\tlump_sum\t3\t3\t3\tinvestor\nمبنى الجداف السكني (G+7)\tcommunity_fee\toffplan\tlump_sum\t3\t3\t3\tinvestor\nمبنى الجداف السكني (G+7)\tmarketing_offplan\toffplan\tcustom\t3\t4\tNULL\tinvestor\nمبنى الجداف السكني (G+7)\tescrow_deposit\toffplan\tlump_sum\t3\t3\t3\tinvestor\nمبنى الجداف السكني (G+7)\tcontractor_advance\tconstruction\tlump_sum\t7\t7\t7\tinvestor\nمبنى الجداف السكني (G+7)\tcontingency\tconstruction\tequal_spread\t7\t24\tNULL\tinvestor\nمبنى الجداف السكني (G+7)\tbank_fees\tconstruction\tequal_spread\t7\t24\tNULL\tinvestor\nمبنى الجداف السكني (G+7)\tcommunity_fee_escrow\tescrow\tlump_sum\t7\t7\t7\tinvestor\nمبنى الجداف السكني (G+7)\tdeveloper_fee_construction\tescrow\tequal_spread\t7\t24\tNULL\tinvestor\nمبنى الجداف السكني (G+7)\tmarketing_construction\tescrow\tcustom\t7\t24\tNULL\tinvestor\n",
+  "stderr": "",
+  "execution_time_ms": 1583
+}
