@@ -1,0 +1,134 @@
+{
+  "query": "SELECT item_key, funding_source FROM project_cash_flow_settings WHERE project_id = 3 AND scenario = 'offplan_escrow' ORDER BY sort_order;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT item_key, funding_source FROM project_cash_flow_settings WHERE project_id = 3 AND scenario = 'offplan_escrow' ORDER BY sort_order;",
+  "rows": [
+    {
+      "item_key": "land_cost",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "land_broker",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "land_registration",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "government_fees_investor",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "soil_test",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "survey",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "design_fee",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "developer_fee_design",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "developer_fee_offplan",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "fraz_fee",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "rera_registration",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "rera_units",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "noc_fee",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "escrow_fee",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "community_fee",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "marketing_offplan",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "escrow_deposit",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "contractor_advance",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "contingency",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "bank_fees",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "government_fees_escrow",
+      "funding_source": "escrow"
+    },
+    {
+      "item_key": "contractor_payments",
+      "funding_source": "escrow"
+    },
+    {
+      "item_key": "contractor_payments_20",
+      "funding_source": "escrow"
+    },
+    {
+      "item_key": "community_fee_escrow",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "developer_fee_construction",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "supervision_fee",
+      "funding_source": "escrow"
+    },
+    {
+      "item_key": "surveyor_fee",
+      "funding_source": "escrow"
+    },
+    {
+      "item_key": "rera_audit",
+      "funding_source": "escrow"
+    },
+    {
+      "item_key": "rera_inspection",
+      "funding_source": "escrow"
+    },
+    {
+      "item_key": "marketing_construction",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "sales_commission",
+      "funding_source": "escrow"
+    }
+  ],
+  "messages": [],
+  "stdout": "item_key\tfunding_source\nland_cost\tinvestor\nland_broker\tinvestor\nland_registration\tinvestor\ngovernment_fees_investor\tinvestor\nsoil_test\tinvestor\nsurvey\tinvestor\ndesign_fee\tinvestor\ndeveloper_fee_design\tinvestor\ndeveloper_fee_offplan\tinvestor\nfraz_fee\tinvestor\nrera_registration\tinvestor\nrera_units\tinvestor\nnoc_fee\tinvestor\nescrow_fee\tinvestor\ncommunity_fee\tinvestor\nmarketing_offplan\tinvestor\nescrow_deposit\tinvestor\ncontractor_advance\tinvestor\ncontingency\tinvestor\nbank_fees\tinvestor\ngovernment_fees_escrow\tescrow\ncontractor_payments\tescrow\ncontractor_payments_20\tescrow\ncommunity_fee_escrow\tinvestor\ndeveloper_fee_construction\tinvestor\nsupervision_fee\tescrow\nsurveyor_fee\tescrow\nrera_audit\tescrow\nrera_inspection\tescrow\nmarketing_construction\tinvestor\nsales_commission\tescrow\n",
+  "stderr": "",
+  "execution_time_ms": 1578
+}

@@ -1,0 +1,50 @@
+{
+  "query": "SELECT item_key, funding_source FROM project_cash_flow_settings WHERE project_id = 5 AND scenario = 'offplan_escrow' ORDER BY sort_order LIMIT 20 OFFSET 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT item_key, funding_source FROM project_cash_flow_settings WHERE project_id = 5 AND scenario = 'offplan_escrow' ORDER BY sort_order LIMIT 20 OFFSET 20;",
+  "rows": [
+    {
+      "item_key": "government_fees_escrow",
+      "funding_source": "escrow"
+    },
+    {
+      "item_key": "contractor_payments",
+      "funding_source": "escrow"
+    },
+    {
+      "item_key": "community_fee_escrow",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "developer_fee_construction",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "supervision_fee",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "surveyor_fee",
+      "funding_source": "escrow"
+    },
+    {
+      "item_key": "rera_audit",
+      "funding_source": "escrow"
+    },
+    {
+      "item_key": "rera_inspection",
+      "funding_source": "escrow"
+    },
+    {
+      "item_key": "marketing_construction",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "sales_commission",
+      "funding_source": "escrow"
+    }
+  ],
+  "messages": [],
+  "stdout": "item_key\tfunding_source\ngovernment_fees_escrow\tescrow\ncontractor_payments\tescrow\ncommunity_fee_escrow\tinvestor\ndeveloper_fee_construction\tinvestor\nsupervision_fee\tinvestor\nsurveyor_fee\tescrow\nrera_audit\tescrow\nrera_inspection\tescrow\nmarketing_construction\tinvestor\nsales_commission\tescrow\n",
+  "stderr": "",
+  "execution_time_ms": 1551
+}

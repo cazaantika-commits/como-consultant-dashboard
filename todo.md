@@ -452,3 +452,5 @@
 - [x] إصلاح O3 في السيرفر: getPortfolioAllScenarios يجب أن يُرجع investorTotal = grandTotal في O3
 - [x] إصلاح o3-settings.html: جميع البنود مصدرها المستثمر تلقائياً (لا خيار تغيير لحساب الضمان)
 - [x] إصلاح التقارير المالية: رأس المال المطلوب في O3 = إجمالي كل التكاليف
+- [ ] Bug fix: tRPC API returns HTML instead of JSON on home page — 'Unexpected token <' error
+- [x] تطبيق نمط مصدر التمويل (مستثمر/ضمان) من مشروع ند الشبا على كل المشاريع الأخرى

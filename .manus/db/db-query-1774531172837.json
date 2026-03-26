@@ -1,0 +1,65 @@
+{
+  "query": "SELECT item_key, name_ar, funding_source FROM project_cash_flow_settings WHERE project_id = 4 AND scenario = 'offplan_escrow' ORDER BY sort_order LIMIT 20 OFFSET 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT item_key, name_ar, funding_source FROM project_cash_flow_settings WHERE project_id = 4 AND scenario = 'offplan_escrow' ORDER BY sort_order LIMIT 20 OFFSET 20;",
+  "rows": [
+    {
+      "item_key": "government_fees_escrow",
+      "name_ar": "رسوم الجهات الحكومية (90%)",
+      "funding_source": "escrow"
+    },
+    {
+      "item_key": "contractor_payments",
+      "name_ar": "دفعات المقاول (70% — من الضمان)",
+      "funding_source": "escrow"
+    },
+    {
+      "item_key": "contractor_payments_20",
+      "name_ar": "دفعات المقاول (20% — من الضمان)",
+      "funding_source": "escrow"
+    },
+    {
+      "item_key": "community_fee_escrow",
+      "name_ar": "رسوم المجتمع (75%)",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "developer_fee_construction",
+      "name_ar": "أتعاب المطور — الإشراف (3%)",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "supervision_fee",
+      "name_ar": "أتعاب الاستشاري — الإشراف",
+      "funding_source": "escrow"
+    },
+    {
+      "item_key": "surveyor_fee",
+      "name_ar": "رسوم المساح",
+      "funding_source": "escrow"
+    },
+    {
+      "item_key": "rera_audit",
+      "name_ar": "تقرير مدقق ريرا",
+      "funding_source": "escrow"
+    },
+    {
+      "item_key": "rera_inspection",
+      "name_ar": "تقرير فحص ريرا",
+      "funding_source": "escrow"
+    },
+    {
+      "item_key": "marketing_construction",
+      "name_ar": "التسويق والإعلان — الإنشاء (75%)",
+      "funding_source": "investor"
+    },
+    {
+      "item_key": "sales_commission",
+      "name_ar": "عمولة وكيل المبيعات (5%)",
+      "funding_source": "escrow"
+    }
+  ],
+  "messages": [],
+  "stdout": "item_key\tname_ar\tfunding_source\ngovernment_fees_escrow\tرسوم الجهات الحكومية (90%)\tescrow\ncontractor_payments\tدفعات المقاول (70% — من الضمان)\tescrow\ncontractor_payments_20\tدفعات المقاول (20% — من الضمان)\tescrow\ncommunity_fee_escrow\tرسوم المجتمع (75%)\tinvestor\ndeveloper_fee_construction\tأتعاب المطور — الإشراف (3%)\tinvestor\nsupervision_fee\tأتعاب الاستشاري — الإشراف\tescrow\nsurveyor_fee\tرسوم المساح\tescrow\nrera_audit\tتقرير مدقق ريرا\tescrow\nrera_inspection\tتقرير فحص ريرا\tescrow\nmarketing_construction\tالتسويق والإعلان — الإنشاء (75%)\tinvestor\nsales_commission\tعمولة وكيل المبيعات (5%)\tescrow\n",
+  "stderr": "",
+  "execution_time_ms": 1503
+}

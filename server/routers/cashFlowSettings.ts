@@ -137,7 +137,7 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
     },
     {
       itemKey: "developer_fee_offplan", nameAr: "أتعاب المطور — أوف بلان (1%)", category: "developer_fee", section: "offplan", sortOrder: 14,
-      fundingSource: "escrow", distributionMethod: "equal_spread",
+      fundingSource: "investor", distributionMethod: "equal_spread",
       distributeAcrossPhases: ["offplan"],
       scenarios: offplanScenarios, amountKey: "developerFee",
       splitRatio: [{ phase: "offplan", ratio: 0.2 }],
@@ -146,42 +146,42 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
     // ═══ تسجيل أوف بلان ═══
     {
       itemKey: "fraz_fee", nameAr: "رسوم الفرز (40 د/قدم²)", category: "offplan_reg", section: "offplan", sortOrder: 20,
-      fundingSource: "escrow", distributionMethod: "lump_sum",
+      fundingSource: "investor", distributionMethod: "lump_sum",
       phase: scenario === "no_offplan" ? "construction" : (scenario === "offplan_construction" ? "construction" : "offplan"),
       phaseRelativeMonth: scenario === "offplan_escrow" ? 1 : 3,
       scenarios: allScenarios, amountKey: "separationFee",
     },
     {
       itemKey: "rera_registration", nameAr: "تسجيل بيع على الخارطة - ريرا", category: "offplan_reg", section: "offplan", sortOrder: 21,
-      fundingSource: "escrow", distributionMethod: "lump_sum",
+      fundingSource: "investor", distributionMethod: "lump_sum",
       phase: scenario === "offplan_escrow" ? "offplan" : "construction",
       phaseRelativeMonth: scenario === "offplan_escrow" ? 1 : 3,
       scenarios: offplanScenarios, amountKey: "reraProjectRegFee",
     },
     {
       itemKey: "rera_units", nameAr: "تسجيل الوحدات - ريرا", category: "offplan_reg", section: "offplan", sortOrder: 22,
-      fundingSource: "escrow", distributionMethod: "lump_sum",
+      fundingSource: "investor", distributionMethod: "lump_sum",
       phase: scenario === "offplan_escrow" ? "offplan" : "construction",
       phaseRelativeMonth: scenario === "offplan_escrow" ? 1 : 3,
       scenarios: offplanScenarios, amountKey: "reraUnitRegFee",
     },
     {
       itemKey: "noc_fee", nameAr: "رسوم NOC للبيع", category: "offplan_reg", section: "offplan", sortOrder: 23,
-      fundingSource: "escrow", distributionMethod: "lump_sum",
+      fundingSource: "investor", distributionMethod: "lump_sum",
       phase: scenario === "offplan_escrow" ? "offplan" : "construction",
       phaseRelativeMonth: scenario === "offplan_escrow" ? 1 : 3,
       scenarios: offplanScenarios, amountKey: "developerNocFee",
     },
     {
       itemKey: "escrow_fee", nameAr: "رسوم حساب الضمان", category: "offplan_reg", section: "offplan", sortOrder: 24,
-      fundingSource: "escrow", distributionMethod: "lump_sum",
+      fundingSource: "investor", distributionMethod: "lump_sum",
       phase: scenario === "offplan_escrow" ? "offplan" : "construction",
       phaseRelativeMonth: scenario === "offplan_escrow" ? 1 : 3,
       scenarios: offplanScenarios, amountKey: "escrowAccountFee",
     },
     {
       itemKey: "community_fee", nameAr: "رسوم المجتمع", category: "offplan_reg", section: "offplan", sortOrder: 25,
-      fundingSource: "escrow", distributionMethod: "lump_sum",
+      fundingSource: "investor", distributionMethod: "lump_sum",
       phase: scenario === "offplan_escrow" ? "offplan" : "construction",
       phaseRelativeMonth: scenario === "offplan_escrow" ? 2 : 4,
       scenarios: allScenarios, amountKey: "communityFees",
@@ -189,7 +189,7 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
     // التسويق والإعلان — 25% في مرحلة أوف بلان (من حساب الضمان)
     {
       itemKey: "marketing_offplan", nameAr: "التسويق والإعلان — أوف بلان (25%)", category: "marketing_sales", section: "offplan", sortOrder: 26,
-      fundingSource: "escrow", distributionMethod: "equal_spread",
+      fundingSource: "investor", distributionMethod: "equal_spread",
       distributeAcrossPhases: ["offplan"],
       scenarios: offplanScenarios, amountKey: "marketingCost",
       splitRatio: [{ phase: "offplan", ratio: 0.25 }],
@@ -198,14 +198,14 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
     // ═══ إيداع الضمان / دفعات الإنجاز ═══
     {
       itemKey: "escrow_deposit", nameAr: "إيداع حساب الضمان (20%)", category: "offplan_reg", section: "offplan", sortOrder: 27,
-      fundingSource: "escrow", distributionMethod: "lump_sum",
+      fundingSource: "investor", distributionMethod: "lump_sum",
       phase: "offplan", phaseRelativeMonth: 2,
       scenarios: ["offplan_escrow"],
       amountFraction: { of: "constructionCost", ratio: 0.20 },
     },
     {
       itemKey: "contractor_advance", nameAr: "دفعة مقدمة للمقاول (10%)", category: "construction", section: "construction", sortOrder: 31,
-      fundingSource: "escrow", distributionMethod: "lump_sum",
+      fundingSource: "investor", distributionMethod: "lump_sum",
       phase: "construction", phaseRelativeMonth: 1,
       scenarios: allScenarios,
       amountFraction: { of: "constructionCost", ratio: 0.10 },
@@ -236,7 +236,7 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
     // رسوم المجتمع (75% من الضمان)
     {
       itemKey: "community_fee_escrow", nameAr: "رسوم المجتمع (75%)", category: "construction", section: "escrow", sortOrder: 56,
-      fundingSource: "escrow", distributionMethod: "equal_spread",
+      fundingSource: "investor", distributionMethod: "equal_spread",
       distributeAcrossPhases: ["construction"],
       scenarios: allScenarios, amountKey: "communityFees",
       splitRatio: [{ phase: "construction", ratio: 0.75 }],
@@ -261,7 +261,7 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
     // أتعاب المطور — الإشراف: O1/O2 = 3% | O3 = 2% (من حساب الضمان)
     {
       itemKey: "developer_fee_construction", nameAr: `أتعاب المطور — الإشراف (${isOffplan ? "3" : "2"}%)`, category: "developer_fee", section: "escrow", sortOrder: 58,
-      fundingSource: "escrow", distributionMethod: "equal_spread",
+      fundingSource: "investor", distributionMethod: "equal_spread",
       distributeAcrossPhases: ["construction"],
       scenarios: allScenarios, amountKey: "developerFee",
       splitRatio: [{ phase: "construction", ratio: isOffplan ? 0.6 : 0.4 }],  // O1/O2: 60% of 5% = 3% | O3: 40% of 5% = 2%
@@ -274,7 +274,7 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
     },
     {
       itemKey: "surveyor_fee", nameAr: "رسوم المساح", category: "construction", section: "escrow", sortOrder: 61,
-      fundingSource: "investor", distributionMethod: "equal_spread",
+      fundingSource: "escrow", distributionMethod: "equal_spread",
       distributeAcrossPhases: ["construction", "handover"],
       scenarios: allScenarios, amountKey: "surveyorFees",
     },
@@ -293,7 +293,7 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
     // التسويق — 75% من حساب الضمان في مرحلة الإنشاء
     {
       itemKey: "marketing_construction", nameAr: "التسويق والإعلان — الإنشاء (75%)", category: "marketing_sales", section: "escrow", sortOrder: 64,
-      fundingSource: "escrow", distributionMethod: "equal_spread",
+      fundingSource: "investor", distributionMethod: "equal_spread",
       distributeAcrossPhases: ["construction"],
       scenarios: offplanScenarios, amountKey: "marketingCost",
       splitRatio: [{ phase: "construction", ratio: 0.75 }],

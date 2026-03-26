@@ -1,0 +1,466 @@
+{
+  "query": "SELECT ci.cfProjectId, ci.name, ci.category, ci.fundingSource, ci.escrowEligible, ci.phaseTag FROM cf_cost_items ci WHERE ci.cfProjectId IN (90001, 90002, 90003) ORDER BY ci.cfProjectId, ci.sortOrder;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT ci.cfProjectId, ci.name, ci.category, ci.fundingSource, ci.escrowEligible, ci.phaseTag FROM cf_cost_items ci WHERE ci.cfProjectId IN (90001, 90002, 90003) ORDER BY ci.cfProjectId, ci.sortOrder;",
+  "rows": [
+    {
+      "cfProjectId": "90001",
+      "name": "سعر الأرض",
+      "category": "land",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90001",
+      "name": "عمولة وسيط الأرض",
+      "category": "land",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90001",
+      "name": "رسوم تسجيل الأرض (4%)",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90001",
+      "name": "رسوم تسجيل المشروع — ريرا",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90001",
+      "name": "رسوم عدم ممانعة — المطور",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90001",
+      "name": "حساب الضمان (Escrow)",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90001",
+      "name": "الرسوم البنكية",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90001",
+      "name": "أتعاب المسّاح",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90001",
+      "name": "تدقيق ريرا",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90001",
+      "name": "تفتيش ريرا",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90001",
+      "name": "رسوم الفرز",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90002",
+      "name": "سعر الأرض",
+      "category": "land",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90002",
+      "name": "عمولة وسيط الأرض",
+      "category": "land",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90002",
+      "name": "رسوم تسجيل الأرض (4%)",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90002",
+      "name": "أتعاب التصميم",
+      "category": "design_engineering",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90002",
+      "name": "رسوم الجهات الرسمية",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90002",
+      "name": "فحص التربة",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90002",
+      "name": "المسح الطبوغرافي",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90002",
+      "name": "تكلفة البناء",
+      "category": "contractor",
+      "fundingSource": "mixed",
+      "escrowEligible": "1",
+      "phaseTag": "construction"
+    },
+    {
+      "cfProjectId": "90002",
+      "name": "أتعاب الإشراف",
+      "category": "consultants",
+      "fundingSource": "escrow",
+      "escrowEligible": "1",
+      "phaseTag": "construction"
+    },
+    {
+      "cfProjectId": "90002",
+      "name": "التسويق",
+      "category": "marketing_sales",
+      "fundingSource": "escrow",
+      "escrowEligible": "1",
+      "phaseTag": "construction"
+    },
+    {
+      "cfProjectId": "90002",
+      "name": "عمولة البيع",
+      "category": "marketing_sales",
+      "fundingSource": "escrow",
+      "escrowEligible": "1",
+      "phaseTag": "construction"
+    },
+    {
+      "cfProjectId": "90002",
+      "name": "أتعاب المطور",
+      "category": "developer_fee",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "all"
+    },
+    {
+      "cfProjectId": "90002",
+      "name": "احتياطي",
+      "category": "contingency",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "construction"
+    },
+    {
+      "cfProjectId": "90002",
+      "name": "رسوم تسجيل الوحدات — ريرا",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90002",
+      "name": "رسوم تسجيل المشروع — ريرا",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90002",
+      "name": "رسوم عدم ممانعة — المطور",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90002",
+      "name": "حساب الضمان (Escrow)",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90002",
+      "name": "الرسوم البنكية",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90002",
+      "name": "أتعاب المسّاح",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90002",
+      "name": "تدقيق ريرا",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90002",
+      "name": "تفتيش ريرا",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90002",
+      "name": "رسوم الفرز",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90002",
+      "name": "رسوم المجتمع",
+      "category": "other",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90003",
+      "name": "سعر الأرض",
+      "category": "land",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90003",
+      "name": "عمولة وسيط الأرض",
+      "category": "land",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90003",
+      "name": "رسوم تسجيل الأرض (4%)",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90003",
+      "name": "أتعاب التصميم",
+      "category": "design_engineering",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90003",
+      "name": "رسوم الجهات الرسمية",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90003",
+      "name": "فحص التربة",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90003",
+      "name": "المسح الطبوغرافي",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90003",
+      "name": "تكلفة البناء",
+      "category": "contractor",
+      "fundingSource": "mixed",
+      "escrowEligible": "1",
+      "phaseTag": "construction"
+    },
+    {
+      "cfProjectId": "90003",
+      "name": "أتعاب الإشراف",
+      "category": "consultants",
+      "fundingSource": "escrow",
+      "escrowEligible": "1",
+      "phaseTag": "construction"
+    },
+    {
+      "cfProjectId": "90003",
+      "name": "التسويق",
+      "category": "marketing_sales",
+      "fundingSource": "escrow",
+      "escrowEligible": "1",
+      "phaseTag": "construction"
+    },
+    {
+      "cfProjectId": "90003",
+      "name": "عمولة البيع",
+      "category": "marketing_sales",
+      "fundingSource": "escrow",
+      "escrowEligible": "1",
+      "phaseTag": "construction"
+    },
+    {
+      "cfProjectId": "90003",
+      "name": "أتعاب المطور",
+      "category": "developer_fee",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "all"
+    },
+    {
+      "cfProjectId": "90003",
+      "name": "احتياطي",
+      "category": "contingency",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "construction"
+    },
+    {
+      "cfProjectId": "90003",
+      "name": "رسوم تسجيل الوحدات — ريرا",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90003",
+      "name": "رسوم تسجيل المشروع — ريرا",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90003",
+      "name": "رسوم عدم ممانعة — المطور",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90003",
+      "name": "حساب الضمان (Escrow)",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90003",
+      "name": "الرسوم البنكية",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90003",
+      "name": "أتعاب المسّاح",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90003",
+      "name": "تدقيق ريرا",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90003",
+      "name": "تفتيش ريرا",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90003",
+      "name": "رسوم الفرز",
+      "category": "authority_fees",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    },
+    {
+      "cfProjectId": "90003",
+      "name": "رسوم المجتمع",
+      "category": "other",
+      "fundingSource": "developer",
+      "escrowEligible": "0",
+      "phaseTag": "pre_dev"
+    }
+  ],
+  "messages": [],
+  "stdout": "cfProjectId\tname\tcategory\tfundingSource\tescrowEligible\tphaseTag\n90001\tسعر الأرض\tland\tdeveloper\t0\tpre_dev\n90001\tعمولة وسيط الأرض\tland\tdeveloper\t0\tpre_dev\n90001\tرسوم تسجيل الأرض (4%)\tauthority_fees\tdeveloper\t0\tpre_dev\n90001\tرسوم تسجيل المشروع — ريرا\tauthority_fees\tdeveloper\t0\tpre_dev\n90001\tرسوم عدم ممانعة — المطور\tauthority_fees\tdeveloper\t0\tpre_dev\n90001\tحساب الضمان (Escrow)\tauthority_fees\tdeveloper\t0\tpre_dev\n90001\tالرسوم البنكية\tauthority_fees\tdeveloper\t0\tpre_dev\n90001\tأتعاب المسّاح\tauthority_fees\tdeveloper\t0\tpre_dev\n90001\tتدقيق ريرا\tauthority_fees\tdeveloper\t0\tpre_dev\n90001\tتفتيش ريرا\tauthority_fees\tdeveloper\t0\tpre_dev\n90001\tرسوم الفرز\tauthority_fees\tdeveloper\t0\tpre_dev\n90002\tسعر الأرض\tland\tdeveloper\t0\tpre_dev\n90002\tعمولة وسيط الأرض\tland\tdeveloper\t0\tpre_dev\n90002\tرسوم تسجيل الأرض (4%)\tauthority_fees\tdeveloper\t0\tpre_dev\n90002\tأتعاب التصميم\tdesign_engineering\tdeveloper\t0\tpre_dev\n90002\tرسوم الجهات الرسمية\tauthority_fees\tdeveloper\t0\tpre_dev\n90002\tفحص التربة\tauthority_fees\tdeveloper\t0\tpre_dev\n90002\tالمسح الطبوغرافي\tauthority_fees\tdeveloper\t0\tpre_dev\n90002\tتكلفة البناء\tcontractor\tmixed\t1\tconstruction\n90002\tأتعاب الإشراف\tconsultants\tescrow\t1\tconstruction\n90002\tالتسويق\tmarketing_sales\tescrow\t1\tconstruction\n90002\tعمولة البيع\tmarketing_sales\tescrow\t1\tconstruction\n90002\tأتعاب المطور\tdeveloper_fee\tdeveloper\t0\tall\n90002\tاحتياطي\tcontingency\tdeveloper\t0\tconstruction\n90002\tرسوم تسجيل الوحدات — ريرا\tauthority_fees\tdeveloper\t0\tpre_dev\n90002\tرسوم تسجيل المشروع — ريرا\tauthority_fees\tdeveloper\t0\tpre_dev\n90002\tرسوم عدم ممانعة — المطور\tauthority_fees\tdeveloper\t0\tpre_dev\n90002\tحساب الضمان (Escrow)\tauthority_fees\tdeveloper\t0\tpre_dev\n90002\tالرسوم البنكية\tauthority_fees\tdeveloper\t0\tpre_dev\n90002\tأتعاب المسّاح\tauthority_fees\tdeveloper\t0\tpre_dev\n90002\tتدقيق ريرا\tauthority_fees\tdeveloper\t0\tpre_dev\n90002\tتفتيش ريرا\tauthority_fees\tdeveloper\t0\tpre_dev\n90002\tرسوم الفرز\tauthority_fees\tdeveloper\t0\tpre_dev\n90002\tرسوم المجتمع\tother\tdeveloper\t0\tpre_dev\n90003\tسعر الأرض\tland\tdeveloper\t0\tpre_dev\n90003\tعمولة وسيط الأرض\tland\tdeveloper\t0\tpre_dev\n90003\tرسوم تسجيل الأرض (4%)\tauthority_fees\tdeveloper\t0\tpre_dev\n90003\tأتعاب التصميم\tdesign_engineering\tdeveloper\t0\tpre_dev\n90003\tرسوم الجهات الرسمية\tauthority_fees\tdeveloper\t0\tpre_dev\n90003\tفحص التربة\tauthority_fees\tdeveloper\t0\tpre_dev\n90003\tالمسح الطبوغرافي\tauthority_fees\tdeveloper\t0\tpre_dev\n90003\tتكلفة البناء\tcontractor\tmixed\t1\tconstruction\n90003\tأتعاب الإشراف\tconsultants\tescrow\t1\tconstruction\n90003\tالتسويق\tmarketing_sales\tescrow\t1\tconstruction\n90003\tعمولة البيع\tmarketing_sales\tescrow\t1\tconstruction\n90003\tأتعاب المطور\tdeveloper_fee\tdeveloper\t0\tall\n90003\tاحتياطي\tcontingency\tdeveloper\t0\tconstruction\n90003\tرسوم تسجيل الوحدات — ريرا\tauthority_fees\tdeveloper\t0\tpre_dev\n90003\tرسوم تسجيل المشروع — ريرا\tauthority_fees\tdeveloper\t0\tpre_dev\n90003\tرسوم عدم ممانعة — المطور\tauthority_fees\tdeveloper\t0\tpre_dev\n90003\tحساب الضمان (Escrow)\tauthority_fees\tdeveloper\t0\tpre_dev\n90003\tالرسوم البنكية\tauthority_fees\tdeveloper\t0\tpre_dev\n90003\tأتعاب المسّاح\tauthority_fees\tdeveloper\t0\tpre_dev\n90003\tتدقيق ريرا\tauthority_fees\tdeveloper\t0\tpre_dev\n90003\tتفتيش ريرا\tauthority_fees\tdeveloper\t0\tpre_dev\n90003\tرسوم الفرز\tauthority_fees\tdeveloper\t0\tpre_dev\n90003\tرسوم المجتمع\tother\tdeveloper\t0\tpre_dev\n",
+  "stderr": "",
+  "execution_time_ms": 1515
+}
