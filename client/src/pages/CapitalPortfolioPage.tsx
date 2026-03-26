@@ -292,12 +292,8 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
 
         const hasOffplan = option !== "o3";
 
-        // Phase start positions (0-indexed)
+        // Phase start positions (0-indexed) — sequential: design → offplan → construction
         const designStartRel = (phaseInfo.design.start || 1) - 1;
-        const constructionStartRel = (phaseInfo.construction.start || 7) - 1;
-        const constructionEndRel = constructionStartRel + durations.construction - 1;
-        const handoverStartRel = (phaseInfo.handover?.start || (constructionEndRel + 2)) - 1;
-        const offplanStartRel = hasOffplan ? ((phaseInfo.offplan?.start || 3) - 1) : -1;
 
         // Build chart-level amounts using section-level data
         // Each section maps to a delay rule:
@@ -366,11 +362,12 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
         const designStart = baseStart + delay.designDelay;
         const designEnd = designStart + durations.design - 1;
 
-        const offplanNormalStart = hasOffplan ? (baseStart + (offplanStartRel - designStartRel)) : -1;
-        const offplanStart = hasOffplan ? (offplanNormalStart + delay.offplanDelay) : -1;
+        // Offplan (registration) starts AFTER design ends — sequential
+        const offplanStart = hasOffplan ? (designEnd + 1 + delay.offplanDelay) : -1;
         const offplanEnd = hasOffplan ? (offplanStart + (durations.offplan || 2) - 1) : -1;
 
-        const constructionNormalStart = baseStart + (constructionStartRel - designStartRel);
+        // Construction starts AFTER offplan ends (or after design if no offplan/O3)
+        const constructionNormalStart = hasOffplan ? (offplanEnd! + 1) : (designEnd + 1);
         const constructionStart = constructionNormalStart + delay.constructionDelay;
         const constructionEnd = constructionStart + durations.construction - 1;
 

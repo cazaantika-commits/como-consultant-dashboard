@@ -238,12 +238,12 @@ export function calculatePhases(d: PhaseDurations, offplanDelay = 0): PhaseConfi
   const designStart = 1;
   const designEnd = designStart + d.design - 1;
 
-  // Offplan earliest start = design month 3 (absolute month 3)
-  const offplanEarliestStart = designStart + 2; // after 2 months of design
-  const offplanStart = offplanEarliestStart + offplanDelay;
+  // Offplan (registration) starts AFTER design ends (sequential, not overlapping)
+  const offplanStart = designEnd + 1 + offplanDelay;
+  const offplanEnd = offplanStart + d.offplan - 1;
 
-  // Construction starts after design ends (in normal flow)
-  const constructionStart = designEnd + 1;
+  // Construction starts AFTER offplan ends (sequential)
+  const constructionStart = offplanEnd + 1;
   const constructionEnd = constructionStart + d.construction - 1;
 
   const handoverStart = constructionEnd + 1;
@@ -263,7 +263,7 @@ export function calculatePhases(d: PhaseDurations, offplanDelay = 0): PhaseConfi
  * (offplan doesn't extend the timeline in normal flow)
  */
 export function getTotalMonths(d: PhaseDurations): number {
-  return d.design + d.construction + d.handover;
+  return d.design + d.offplan + d.construction + d.handover;
 }
 
 export function getPhaseMonthRange(phases: PhaseConfig[], phaseType: PhaseType): { start: number; end: number } {
