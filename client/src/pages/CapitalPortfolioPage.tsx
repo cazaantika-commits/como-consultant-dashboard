@@ -544,7 +544,14 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
         const nextHasOffplan = endIdx < TOTAL_MONTHS - 1 ? hasOffplanAtIndex(col, endIdx + 1) : false;
         const isOffplanFirst = offplanOverlay && !prevHasOffplan;
         const isOffplanLast = offplanOverlay && !nextHasOffplan;
-        return { colId: col.projectId, amount, phase, isFirst, isLast, offplanOverlay, isOffplanFirst, isOffplanLast };
+        // Check if this cell is within a geometric phase range (should always be solid colored)
+        const inGeometricRange = (
+          (midIdx >= col.phaseRanges.design.start && midIdx <= col.phaseRanges.design.end) ||
+          (midIdx >= col.phaseRanges.construction.start && midIdx <= col.phaseRanges.construction.end) ||
+          (col.hasOffplan && midIdx >= col.phaseRanges.offplan.start && midIdx <= col.phaseRanges.offplan.end) ||
+          (midIdx >= col.phaseRanges.handover.start && midIdx <= col.phaseRanges.handover.end)
+        );
+        return { colId: col.projectId, amount, phase, isFirst, isLast, offplanOverlay, isOffplanFirst, isOffplanLast, inGeometricRange };
       });
       return { gi, startIdx, endIdx, label, total, colData };
     });
@@ -1058,8 +1065,11 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
                     const phase = cd.phase as PhaseType | null;
                     if (phase && PHASE_COLORS[phase]) {
                       const colors = PHASE_COLORS[phase];
-                      bg = cd.amount > 0 ? colors.solid : colors.light;
-                      textColor = cd.amount > 0 ? "#1a1a2e" : colors.text;
+                      // If cell is within a geometric phase range, ALWAYS use solid color
+                      // This prevents "white gaps" when amounts shift due to delay adjustments
+                      const useSolid = cd.amount > 0 || cd.inGeometricRange;
+                      bg = useSolid ? colors.solid : colors.light;
+                      textColor = useSolid ? "#1a1a2e" : colors.text;
                       fontW = cd.amount > 0 ? 800 : 500;
                       if (cd.isFirst) { tl = CURVE; tr = CURVE; }
                       if (cd.isLast) { bl = CURVE; br = CURVE; }
