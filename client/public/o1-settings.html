@@ -307,7 +307,7 @@ function collectSaveData() {
       itemKey: item.itemKey,
       nameAr: item.nameAr,
       category: item.category || 'other',
-      section: item.section || 'construction',
+      section: isPaid ? 'paid' : (chosenPhase || item.section || 'construction'),
       isActive: item[SCENARIO_KEY].active,
       sortOrder: item.sortOrder || 0,
       amountOverride: null,
@@ -393,11 +393,19 @@ async function loadData() {
     for (var item of data.items) {
       var saved = savedMap[item.itemKey];
       // Determine phase from saved data or default
-      if (saved && saved.startMonth) {
-        var designEnd = phaseInfo.design ? phaseInfo.design.endMonth : 0;
-        var offplanStart = phaseInfo.offplan ? phaseInfo.offplan.startMonth : 0;
-        var offplanEnd = phaseInfo.offplan ? (phaseInfo.offplan.startMonth + phaseInfo.offplan.duration - 1) : 0;
-        if (saved.startMonth >= offplanStart && saved.startMonth <= offplanEnd && item.section === 'offplan') {
+      // Use saved section from DB if available (this preserves user's phase choice)
+      if (saved && saved.section) {
+        var savedSection = saved.section;
+        if (savedSection === 'design') item._chosenPhase = 'design';
+        else if (savedSection === 'offplan') item._chosenPhase = 'offplan';
+        else if (savedSection === 'construction' || savedSection === 'escrow') item._chosenPhase = 'construction';
+        else item._chosenPhase = 'construction';
+      } else if (saved && saved.startMonth) {
+        var designStart = phaseInfo.design ? (phaseInfo.design.start || phaseInfo.design.startMonth || 1) : 1;
+        var designEnd = phaseInfo.design ? (designStart + phaseInfo.design.duration - 1) : 0;
+        var offplanStart = phaseInfo.offplan ? (phaseInfo.offplan.start || phaseInfo.offplan.startMonth || 3) : 0;
+        var offplanEnd = phaseInfo.offplan ? (offplanStart + phaseInfo.offplan.duration - 1) : 0;
+        if (saved.startMonth >= offplanStart && saved.startMonth <= offplanEnd) {
           item._chosenPhase = 'offplan';
         } else if (saved.startMonth <= designEnd) {
           item._chosenPhase = 'design';

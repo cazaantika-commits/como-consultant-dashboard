@@ -519,7 +519,7 @@ export const cashFlowSettingsRouter = router({
             .map(s => ({
               ...s,
               nameAr: defaultNameArByKey[s.itemKey] ?? s.nameAr,
-              section: defaultSectionByKey[s.itemKey] || s.section || "construction",
+              section: s.section || defaultSectionByKey[s.itemKey] || "construction",
               // Use DB fundingSource (respects user changes from UI).
               // Fall back to default only if DB has no value.
               fundingSource: (s.fundingSource ?? defaultFundingSourceByKey[s.itemKey]) as "investor" | "escrow",

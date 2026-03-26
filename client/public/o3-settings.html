@@ -92,8 +92,7 @@ function getPhaseRange(phaseType, phaseInfo) {
 function buildPhaseSelect(itemKey, currentPhase) {
   var html = '<select class="phase-select" data-item="' + itemKey + '" onchange="onPhaseChange(this)">';
   html += '<option value="design"' + (currentPhase === 'design' ? ' selected' : '') + '>التصاميم</option>';
-  html += '<option value="offplan"' + (currentPhase === 'offplan' ? ' selected' : '') + '>التسجيل</option>';
-  html += '<option value="construction"' + (currentPhase === 'construction' ? ' selected' : '') + '>التنفيذ</option>';
+  html += '<option value="construction"' + (currentPhase !== 'design' ? ' selected' : '') + '>التنفيذ</option>';
   html += '</select>';
   return html;
 }
@@ -234,7 +233,7 @@ function collectSaveData() {
     var isPaid = (item.section === 'paid');
     var row = document.querySelector('tr[data-itemkey="' + item.itemKey + '"]');
     var fundingSource = item.fundingSource;
-    var chosenPhase = item._chosenPhase || (item.section === 'design' ? 'design' : item.section === 'offplan' ? 'offplan' : 'construction');
+    var chosenPhase = item._chosenPhase || (item.section === 'design' ? 'design' : 'construction');
     var distributionMethod = item.distributionMethod;
     var lumpSumMonth = null;
     var startMonth = null;
@@ -283,7 +282,7 @@ function collectSaveData() {
       itemKey: item.itemKey,
       nameAr: item.nameAr,
       category: item.category || 'other',
-      section: item.section || 'construction',
+      section: isPaid ? 'paid' : (chosenPhase || item.section || 'construction'),
       isActive: item[SCENARIO_KEY].active,
       sortOrder: item.sortOrder || 0,
       amountOverride: null,
@@ -365,19 +364,22 @@ async function loadData() {
 
     for (var item of data.items) {
       var saved = savedMap[item.itemKey];
-      if (saved && saved.startMonth) {
-        var designEnd = phaseInfo.design ? phaseInfo.design.endMonth : 0;
-        var offplanStart = phaseInfo.offplan ? phaseInfo.offplan.startMonth : 0;
-        var offplanEnd = phaseInfo.offplan ? (phaseInfo.offplan.startMonth + phaseInfo.offplan.duration - 1) : 0;
-        if (saved.startMonth >= offplanStart && saved.startMonth <= offplanEnd && item.section === 'offplan') {
-          item._chosenPhase = 'offplan';
-        } else if (saved.startMonth <= designEnd) {
+      // Use saved section from DB if available (this preserves user's phase choice)
+      // O3 has no offplan, so map offplan to construction
+      if (saved && saved.section) {
+        var savedSection = saved.section;
+        if (savedSection === 'design') item._chosenPhase = 'design';
+        else item._chosenPhase = 'construction';
+      } else if (saved && saved.startMonth) {
+        var designStart = phaseInfo.design ? (phaseInfo.design.start || phaseInfo.design.startMonth || 1) : 1;
+        var designEnd = phaseInfo.design ? (designStart + phaseInfo.design.duration - 1) : 0;
+        if (saved.startMonth <= designEnd) {
           item._chosenPhase = 'design';
         } else {
           item._chosenPhase = 'construction';
         }
       } else {
-        item._chosenPhase = (item.section === 'design') ? 'design' : (item.section === 'offplan') ? 'offplan' : 'construction';
+        item._chosenPhase = (item.section === 'design') ? 'design' : 'construction';
       }
       if (saved) {
         item.distributionMethod = saved.distributionMethod || item.distributionMethod;
