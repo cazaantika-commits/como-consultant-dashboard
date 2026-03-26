@@ -68,6 +68,7 @@ function fmt(n) { return Math.round(n).toLocaleString('en-US'); }
 
 function getDurationForPhase(phaseType, phaseInfo) {
   if (phaseType === 'design' && phaseInfo.design) return phaseInfo.design.duration;
+  if (phaseType === 'offplan' && phaseInfo.offplan) return phaseInfo.offplan.duration;
   if (phaseType === 'construction' && phaseInfo.construction) return phaseInfo.construction.duration;
   return 1;
 }
@@ -76,6 +77,10 @@ function getPhaseRange(phaseType, phaseInfo) {
   if (phaseType === 'design' && phaseInfo.design) {
     var s = phaseInfo.design.start || phaseInfo.design.startMonth || 1;
     return { start: s, end: s + phaseInfo.design.duration - 1 };
+  }
+  if (phaseType === 'offplan' && phaseInfo.offplan) {
+    var s = phaseInfo.offplan.start || phaseInfo.offplan.startMonth || 1;
+    return { start: s, end: s + phaseInfo.offplan.duration - 1 };
   }
   if (phaseType === 'construction' && phaseInfo.construction) {
     var s = phaseInfo.construction.start || phaseInfo.construction.startMonth || 1;
@@ -87,7 +92,8 @@ function getPhaseRange(phaseType, phaseInfo) {
 function buildPhaseSelect(itemKey, currentPhase) {
   var html = '<select class="phase-select" data-item="' + itemKey + '" onchange="onPhaseChange(this)">';
   html += '<option value="design"' + (currentPhase === 'design' ? ' selected' : '') + '>التصاميم</option>';
-  html += '<option value="construction"' + (currentPhase !== 'design' ? ' selected' : '') + '>التنفيذ</option>';
+  html += '<option value="offplan"' + (currentPhase === 'offplan' ? ' selected' : '') + '>التسجيل</option>';
+  html += '<option value="construction"' + (currentPhase === 'construction' ? ' selected' : '') + '>التنفيذ</option>';
   html += '</select>';
   return html;
 }
@@ -246,7 +252,7 @@ function collectSaveData() {
     var isPaid = (item.section === 'paid');
     var row = document.querySelector('tr[data-itemkey="' + item.itemKey + '"]');
     var fundingSource = item.fundingSource;
-    var chosenPhase = item._chosenPhase || (item.section === 'design' ? 'design' : 'construction');
+    var chosenPhase = item._chosenPhase || (item.section === 'design' ? 'design' : item.section === 'offplan' ? 'offplan' : 'construction');
     var distributionMethod = item.distributionMethod;
     var lumpSumMonth = null;
     var startMonth = null;
@@ -379,9 +385,17 @@ async function loadData() {
       var saved = savedMap[item.itemKey];
       if (saved && saved.startMonth) {
         var designEnd = phaseInfo.design ? phaseInfo.design.endMonth : 0;
-        item._chosenPhase = (saved.startMonth <= designEnd) ? 'design' : 'construction';
+        var offplanStart = phaseInfo.offplan ? phaseInfo.offplan.startMonth : 0;
+        var offplanEnd = phaseInfo.offplan ? (phaseInfo.offplan.startMonth + phaseInfo.offplan.duration - 1) : 0;
+        if (saved.startMonth >= offplanStart && saved.startMonth <= offplanEnd && item.section === 'offplan') {
+          item._chosenPhase = 'offplan';
+        } else if (saved.startMonth <= designEnd) {
+          item._chosenPhase = 'design';
+        } else {
+          item._chosenPhase = 'construction';
+        }
       } else {
-        item._chosenPhase = (item.section === 'design') ? 'design' : 'construction';
+        item._chosenPhase = (item.section === 'design') ? 'design' : (item.section === 'offplan') ? 'offplan' : 'construction';
       }
       if (saved) {
         item.distributionMethod = saved.distributionMethod || item.distributionMethod;
