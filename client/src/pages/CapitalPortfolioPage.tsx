@@ -134,24 +134,25 @@ function CellTooltip({ children, lines }: { children: React.ReactNode; lines: st
 
 // ── Delay Control ────────────────────────────────────────────────────────────
 function DelayControl({
-  label, color, lightBg, borderColor, value, onUp, onDown,
+  label, color, lightBg, borderColor, value, onUp, onDown, minValue = 0,
 }: {
   label: string; color: string; lightBg: string; borderColor: string;
-  value: number; onUp: () => void; onDown: () => void;
+  value: number; onUp: () => void; onDown: () => void; minValue?: number;
 }) {
+  const upDisabled = value <= minValue;
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 3, marginBottom: 3 }}>
       <button
         onClick={onUp}
-        disabled={value === 0}
+        disabled={upDisabled}
         title={`تقديم ${label} شهر واحد`}
         style={{
           width: 20, height: 20, borderRadius: 5,
-          background: value === 0 ? "#f1f5f9" : lightBg,
-          border: `1px solid ${value === 0 ? "#e2e8f0" : borderColor}`,
-          cursor: value === 0 ? "default" : "pointer",
+          background: upDisabled ? "#f1f5f9" : lightBg,
+          border: `1px solid ${upDisabled ? "#e2e8f0" : borderColor}`,
+          cursor: upDisabled ? "default" : "pointer",
           display: "flex", alignItems: "center", justifyContent: "center",
-          color: value === 0 ? "#cbd5e1" : color, transition: "all 0.2s",
+          color: upDisabled ? "#cbd5e1" : color, transition: "all 0.2s",
         }}
       >
         <ChevronUp style={{ width: 11, height: 11 }} />
@@ -247,7 +248,9 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
 
   function adjustDelay(projectId: number, phase: keyof DelayState, delta: number) {
     const cur = getDelay(projectId);
-    const newVal = Math.max(0, cur[phase] + delta);
+    // For offplan, allow negative delays (to move registration earlier into design)
+    // For design and construction, minimum is 0
+    const newVal = phase === 'offplanDelay' ? cur[phase] + delta : Math.max(0, cur[phase] + delta);
     const updated = { ...cur, [phase]: newVal };
 
     // Get project info for constraint enforcement
@@ -257,23 +260,33 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
 
     if (hasOffplan && project) {
       const durations = project.durations as { design: number; offplan: number; construction: number; handover: number };
-      // Registration constraint: start >= month 3 of design, end <= month 4 of construction
-      // Registration start = designDelay + 2 + offplanDelay (starts after month 3 of design = index 2)
-      // Registration end = registrationStart + offplanDuration - 1
-      // Construction start = designDelay + designDuration + constructionDelay
-      // Constraint: registrationEnd <= constructionStart + 3 (month 4 of construction = index 3)
       const offplanDuration = durations.offplan || 2;
       const designDuration = durations.design || 5;
 
-      // offplanStart = designDelay + 2 + offplanDelay
-      // constructionStart = designDelay + designDuration + constructionDelay
-      // maxStart = constructionStart + 3 - (offplanDuration - 1)
-      // offplanDelay <= maxStart - designDelay - 2 = designDuration + constructionDelay + 3 - offplanDuration + 1 - 2
-      // offplanDelay <= designDuration + constructionDelay + 2 - offplanDuration
-      const maxOffplanDelay = designDuration + updated.constructionDelay + 2 - offplanDuration;
-      if (updated.offplanDelay > Math.max(0, maxOffplanDelay)) {
-        updated.offplanDelay = Math.max(0, maxOffplanDelay);
+      // Registration default position (from server): starts at designEnd + 1 = designDuration + 1 (relative)
+      // With offplanDelay: offplanStart = designEnd + 1 + offplanDelay (in chart coords)
+      // Constraint 1: offplanStart >= designStart + 2 (month 3 of design)
+      //   => designEnd + 1 + offplanDelay >= designStart + 2
+      //   => offplanDelay >= -(designDuration - 2)
+      const minOffplanDelay = -(designDuration - 2);
+
+      // Constraint 2: offplanEnd <= constructionStart + 3 (month 4 of construction)
+      //   offplanEnd = designEnd + 1 + offplanDelay + offplanDuration - 1
+      //   constructionStart = designEnd + 1 + constructionDelay
+      //   => designEnd + 1 + offplanDelay + offplanDuration - 1 <= designEnd + 1 + constructionDelay + 3
+      //   => offplanDelay <= constructionDelay + 3 - offplanDuration + 1
+      //   => offplanDelay <= constructionDelay + 4 - offplanDuration
+      const maxOffplanDelay = updated.constructionDelay + 4 - offplanDuration;
+
+      if (updated.offplanDelay < minOffplanDelay) {
+        updated.offplanDelay = minOffplanDelay;
       }
+      if (updated.offplanDelay > maxOffplanDelay) {
+        updated.offplanDelay = maxOffplanDelay;
+      }
+    } else if (phase === 'offplanDelay') {
+      // No offplan for o3, keep at 0
+      updated.offplanDelay = 0;
     }
 
     setDelays(prev => ({ ...prev, [projectId]: updated }));
@@ -324,16 +337,15 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
         const designStartRel = (phaseInfo.design.start || 1) - 1;
 
         // Build chart-level amounts using section-level data
-        // NEW CONSTRAINT SYSTEM:
+        // CONSTRAINT SYSTEM:
         //   paid → no delay (already paid)
         //   design → shifts by designDelay (free movement)
-        //   offplan → shifts by designDelay + 2 + offplanDelay (starts at month 3 of design, then offplan's own delay)
-        //   construction → shifts by designDelay + constructionDelay (follows design directly, NOT after registration)
-        //   escrow → same as construction (escrow payments are during construction)
-        //
-        // The offplan (registration) section amounts start at month 3 of design in the base data,
-        // so we only need to add the offplanDelay on top of the designDelay.
-        // Construction amounts start after design ends in the base data.
+        //   offplan → shifts by designDelay + offplanDelay
+        //     Server default: offplan starts AFTER design ends
+        //     offplanDelay can be NEGATIVE to move registration earlier into design
+        //     offplanDelay can be POSITIVE to move registration later into construction
+        //   construction → shifts by designDelay + constructionDelay (follows design directly)
+        //   escrow → same as construction
         const constructionEffectiveDelay = delay.designDelay + delay.constructionDelay;
         const offplanEffectiveDelay = delay.designDelay + delay.offplanDelay;
         const sectionDelayMap: Record<string, number> = {
@@ -405,22 +417,19 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
         const constructionStart = designEnd + 1 + delay.constructionDelay;
         const constructionEnd = constructionStart + durations.construction - 1;
 
-        // Registration (offplan) floats independently with constraints:
-        //   Start >= designStart + 2 (month 3 of design, 0-indexed)
-        //   End <= constructionStart + 3 (month 4 of construction, 0-indexed)
+        // Registration (offplan) default position: AFTER design ends (matching server)
+        // offplanDelay moves it: negative = earlier (into design), positive = later (into construction)
+        // Constraints: start >= month 3 of design, end <= month 4 of construction
         const offplanDuration = durations.offplan || 2;
-        let offplanStart = hasOffplan ? (designStart + 2 + delay.offplanDelay) : -1;
+        let offplanStart = hasOffplan ? (designEnd + 1 + delay.offplanDelay) : -1;
         let offplanEnd = hasOffplan ? (offplanStart + offplanDuration - 1) : -1;
 
-        // Enforce constraints on registration — ALWAYS exactly offplanDuration months (e.g. 2)
-        // Just clamp the START position within the allowed range, duration never changes
+        // Enforce constraints — ALWAYS exactly offplanDuration months
         if (hasOffplan) {
           const minStart = designStart + 2; // month 3 of design (0-indexed)
           const maxStart = constructionStart + 3 - (offplanDuration - 1); // so last month doesn't exceed month 4 of construction
-          // Clamp start
           if (offplanStart < minStart) offplanStart = minStart;
           if (offplanStart > maxStart) offplanStart = maxStart;
-          // End is ALWAYS start + duration - 1 (never stretched)
           offplanEnd = offplanStart + offplanDuration - 1;
         }
 
@@ -898,13 +907,18 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
                         onUp={() => adjustDelay(col.projectId, "designDelay", -1)}
                         onDown={() => adjustDelay(col.projectId, "designDelay", 1)}
                       />
-                      {col.hasOffplan && (
-                        <DelayControl label="التسجيل" color="#db2777" lightBg="#fdf2f8" borderColor="#f472b6"
-                          value={delay.offplanDelay}
-                          onUp={() => adjustDelay(col.projectId, "offplanDelay", -1)}
-                          onDown={() => adjustDelay(col.projectId, "offplanDelay", 1)}
-                        />
-                      )}
+                      {col.hasOffplan && (() => {
+                        const designDur = col.durations?.design || 5;
+                        const minOffplan = -(designDur - 2);
+                        return (
+                          <DelayControl label="التسجيل" color="#db2777" lightBg="#fdf2f8" borderColor="#f472b6"
+                            value={delay.offplanDelay}
+                            minValue={minOffplan}
+                            onUp={() => adjustDelay(col.projectId, "offplanDelay", -1)}
+                            onDown={() => adjustDelay(col.projectId, "offplanDelay", 1)}
+                          />
+                        );
+                      })()}
                       <DelayControl label="الإنشاء" color="#7c3aed" lightBg="#f5f3ff" borderColor="#a78bfa"
                         value={delay.constructionDelay}
                         onUp={() => adjustDelay(col.projectId, "constructionDelay", -1)}
