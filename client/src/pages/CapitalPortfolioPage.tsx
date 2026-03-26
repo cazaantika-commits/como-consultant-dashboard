@@ -792,24 +792,34 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
                         onChange={(opt) => setProjectOption(col.projectId, opt)}
                       />
 
-                      {/* الإجمالي */}
+                      {/* رأس المال المطلوب */}
                       <div style={{
                         display: "flex", justifyContent: "space-between", alignItems: "center",
                         height: 22, background: "#4b5563", borderRadius: 6,
                         padding: "0 6px", marginTop: 4, fontSize: 9,
                       }}>
-                        <span style={{ color: "#d1d5db", fontWeight: 600 }}>الإجمالي</span>
+                        <span style={{ color: "#d1d5db", fontWeight: 600 }}>رأس المال المطلوب</span>
                         <span style={{ fontWeight: 800, color: "#ffffff" }}>{fmtFull(col.grandTotal)}</span>
                       </div>
 
-                      {/* المطلوب */}
+                      {/* تم السداد */}
+                      <div style={{
+                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                        height: 22, background: "#166534", borderRadius: 6,
+                        padding: "0 6px", marginTop: 3, fontSize: 9,
+                      }}>
+                        <span style={{ color: "#bbf7d0", fontWeight: 600 }}>تم السداد</span>
+                        <span style={{ fontWeight: 800, color: "#ffffff" }}>{fmtFull(col.paidTotal)}</span>
+                      </div>
+
+                      {/* المتبقي */}
                       <div style={{
                         display: "flex", justifyContent: "space-between", alignItems: "center",
                         height: 22, background: "#6b7280", borderRadius: 6,
                         padding: "0 6px", marginTop: 3, marginBottom: 6, fontSize: 9,
                       }}>
-                        <span style={{ color: "#d1d5db", fontWeight: 600 }}>المطلوب</span>
-                        <span style={{ fontWeight: 800, color: "#ffffff" }}>{fmtFull(col.upcomingTotal)}</span>
+                        <span style={{ color: "#d1d5db", fontWeight: 600 }}>المتبقي</span>
+                        <span style={{ fontWeight: 800, color: "#ffffff" }}>{fmtFull(col.grandTotal - col.paidTotal)}</span>
                       </div>
 
                       {/* Delay badge */}
@@ -895,7 +905,7 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
                   textAlign: "center", color: "#92400e", fontSize: 11, fontWeight: 800,
                   border: "1px solid #fcd34d", borderTop: "3px solid #f59e0b",
                 }}>
-                  الإجمالي
+                  الإجمالي الشهري
                 </div>
               </th>
 
