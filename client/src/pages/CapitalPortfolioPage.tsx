@@ -424,23 +424,26 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
 
   // Phase detection helpers
   function getBasePhaseAtIndex(col: typeof effectiveColumns[0], chartIdx: number): PhaseType | null {
-    const basePhases: PhaseType[] = ["design", "construction", "handover"];
-    for (const phase of basePhases) {
-      const amt = col.phaseChartAmounts[phase]?.[chartIdx] || 0;
-      if (amt > 0) return phase;
-    }
-    // Check offplan
-    const offplanAmt = col.phaseChartAmounts.offplan?.[chartIdx] || 0;
-    if (offplanAmt > 0) {
-      if (chartIdx >= col.phaseRanges.design.start && chartIdx <= col.phaseRanges.design.end) return "design";
-      if (chartIdx >= col.phaseRanges.construction.start && chartIdx <= col.phaseRanges.construction.end) return "construction";
-      return "offplan";
-    }
-    // Geometric ranges
+    // 1. Check if there are actual amounts in any phase at this index
+    const hasDesignAmt = (col.phaseChartAmounts.design?.[chartIdx] || 0) > 0;
+    const hasConstructionAmt = (col.phaseChartAmounts.construction?.[chartIdx] || 0) > 0;
+    const hasOffplanAmt = (col.phaseChartAmounts.offplan?.[chartIdx] || 0) > 0;
+    const hasHandoverAmt = (col.phaseChartAmounts.handover?.[chartIdx] || 0) > 0;
+
+    // 2. If there are amounts, determine phase by amounts
+    //    When offplan amounts exist alongside another phase, the base phase takes priority for coloring
+    //    (offplan shows as overlay)
+    if (hasDesignAmt) return "design";
+    if (hasConstructionAmt) return "construction";
+    if (hasHandoverAmt) return "handover";
+    if (hasOffplanAmt) return "offplan";
+
+    // 3. No amounts — use geometric ranges
+    //    Check offplan FIRST (it's a short 2-month phase, should not be hidden by longer phases)
+    if (col.hasOffplan && chartIdx >= col.phaseRanges.offplan.start && chartIdx <= col.phaseRanges.offplan.end) return "offplan";
     if (chartIdx >= col.phaseRanges.design.start && chartIdx <= col.phaseRanges.design.end) return "design";
     if (chartIdx >= col.phaseRanges.construction.start && chartIdx <= col.phaseRanges.construction.end) return "construction";
     if (chartIdx >= col.phaseRanges.handover.start && chartIdx <= col.phaseRanges.handover.end) return "handover";
-    if (col.hasOffplan && chartIdx >= col.phaseRanges.offplan.start && chartIdx <= col.phaseRanges.offplan.end) return "offplan";
     return null;
   }
 

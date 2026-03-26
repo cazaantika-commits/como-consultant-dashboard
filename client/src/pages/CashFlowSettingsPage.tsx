@@ -85,7 +85,7 @@ const SECTION_META = {
     badge: "bg-amber-100 text-amber-800",
   },
   offplan: {
-    label: "القسم الثالث — ريرا والبيع أوف بلان",
+    label: "القسم الثالث — التسجيل (ريرا والبيع أوف بلان)",
     headerBg: "bg-violet-50 border-violet-200",
     headerText: "text-violet-900",
     badge: "bg-violet-100 text-violet-800",
@@ -356,7 +356,7 @@ function ItemRow({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="design" className="text-xs">التصاميم</SelectItem>
-                  <SelectItem value="offplan" className="text-xs">أوف بلان</SelectItem>
+                  <SelectItem value="offplan" className="text-xs">التسجيل</SelectItem>
                   <SelectItem value="construction" className="text-xs">الإنشاء</SelectItem>
                   <SelectItem value="handover" className="text-xs">التسليم</SelectItem>
                 </SelectContent>
@@ -544,11 +544,13 @@ export default function CashFlowSettingsPage({
             } catch {}
           }
 
-          // Determine phase month from lumpSumMonth
+          // Determine phase month from lumpSumMonth (clamped to phase duration)
           const phaseStart = data.phases?.[assignedPhase]?.start || 1;
-          const phaseMonth = s.lumpSumMonth != null
+          const phaseDur = data.phases?.[assignedPhase]?.duration || 2;
+          const rawPhaseMonth = s.lumpSumMonth != null
             ? Math.max(1, s.lumpSumMonth - phaseStart + 1)
             : 1;
+          const phaseMonth = Math.min(rawPhaseMonth, phaseDur);
 
           // Determine distribution method
           let distributionMethod: DistributionMethod = "lump_sum";

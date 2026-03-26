@@ -170,6 +170,46 @@ function onPhaseChange(sel) {
 
 function onSourceChange(sel) {
   sel.className = 'source-select ' + (sel.value === 'investor' ? 'source-investor' : 'source-escrow');
+  recalcTotals();
+}
+
+function recalcTotals() {
+  var investorTotal = 0;
+  var escrowTotal = 0;
+  var allItems = window._allItems || [];
+  for (var item of allItems) {
+    if (!item[SCENARIO_KEY].active) continue;
+    var amount = item[SCENARIO_KEY].amount;
+    var row = document.querySelector('tr[data-itemkey="' + item.itemKey + '"]');
+    var fundingSource = item.fundingSource;
+    if (row) {
+      var sourceSel = row.querySelector('.source-select');
+      if (sourceSel) fundingSource = sourceSel.value;
+    }
+    if (item.section === 'paid') fundingSource = 'investor';
+    if (fundingSource === 'investor') {
+      investorTotal += amount;
+    } else {
+      escrowTotal += amount;
+    }
+  }
+  var grandTotal = investorTotal + escrowTotal;
+  var rows = document.querySelectorAll('tr');
+  for (var r of rows) {
+    var firstTd = r.querySelector('td');
+    if (!firstTd) continue;
+    var text = firstTd.textContent.trim();
+    if (text.indexOf('رأس المال المطلوب') >= 0) {
+      var amountTd = r.querySelectorAll('td')[1];
+      if (amountTd) amountTd.textContent = fmt(investorTotal);
+    } else if (text.indexOf('إجمالي حساب الضمان') >= 0) {
+      var amountTd = r.querySelectorAll('td')[1];
+      if (amountTd) amountTd.textContent = escrowTotal > 0 ? fmt(escrowTotal) : '—';
+    } else if (text.indexOf('الإجمالي الكلي') >= 0) {
+      var amountTd = r.querySelectorAll('td')[1];
+      if (amountTd) amountTd.textContent = fmt(grandTotal);
+    }
+  }
 }
 
 function onMethodChange(sel) {

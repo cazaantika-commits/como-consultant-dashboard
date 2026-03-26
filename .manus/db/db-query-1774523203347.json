@@ -1,0 +1,127 @@
+{
+  "query": "SELECT pcfs.item_key, pcfs.section, pcfs.funding_source, pcfs.distribution_method, pcfs.lump_sum_month, pcfs.start_month, pcfs.end_month\nFROM project_cash_flow_settings pcfs\nWHERE pcfs.project_id = 4 AND pcfs.scenario = 'offplan_escrow' AND pcfs.is_active = 1 AND pcfs.section IN ('construction', 'escrow')\nORDER BY pcfs.section, pcfs.sort_order;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT pcfs.item_key, pcfs.section, pcfs.funding_source, pcfs.distribution_method, pcfs.lump_sum_month, pcfs.start_month, pcfs.end_month\nFROM project_cash_flow_settings pcfs\nWHERE pcfs.project_id = 4 AND pcfs.scenario = 'offplan_escrow' AND pcfs.is_active = 1 AND pcfs.section IN ('construction', 'escrow')\nORDER BY pcfs.section, pcfs.sort_order;",
+  "rows": [
+    {
+      "item_key": "contractor_advance",
+      "section": "construction",
+      "funding_source": "investor",
+      "distribution_method": "lump_sum",
+      "lump_sum_month": "6",
+      "start_month": "7",
+      "end_month": "7"
+    },
+    {
+      "item_key": "contingency",
+      "section": "construction",
+      "funding_source": "investor",
+      "distribution_method": "equal_spread",
+      "lump_sum_month": "NULL",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "item_key": "bank_fees",
+      "section": "construction",
+      "funding_source": "investor",
+      "distribution_method": "equal_spread",
+      "lump_sum_month": "NULL",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "item_key": "government_fees_escrow",
+      "section": "escrow",
+      "funding_source": "escrow",
+      "distribution_method": "equal_spread",
+      "lump_sum_month": "NULL",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "item_key": "contractor_payments",
+      "section": "escrow",
+      "funding_source": "escrow",
+      "distribution_method": "equal_spread",
+      "lump_sum_month": "NULL",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "item_key": "community_fee_escrow",
+      "section": "escrow",
+      "funding_source": "investor",
+      "distribution_method": "equal_spread",
+      "lump_sum_month": "NULL",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "item_key": "developer_fee_construction",
+      "section": "escrow",
+      "funding_source": "investor",
+      "distribution_method": "equal_spread",
+      "lump_sum_month": "NULL",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "item_key": "supervision_fee",
+      "section": "escrow",
+      "funding_source": "escrow",
+      "distribution_method": "equal_spread",
+      "lump_sum_month": "NULL",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "item_key": "surveyor_fee",
+      "section": "escrow",
+      "funding_source": "escrow",
+      "distribution_method": "equal_spread",
+      "lump_sum_month": "NULL",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "item_key": "rera_audit",
+      "section": "escrow",
+      "funding_source": "escrow",
+      "distribution_method": "equal_spread",
+      "lump_sum_month": "NULL",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "item_key": "rera_inspection",
+      "section": "escrow",
+      "funding_source": "escrow",
+      "distribution_method": "equal_spread",
+      "lump_sum_month": "NULL",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "item_key": "marketing_construction",
+      "section": "escrow",
+      "funding_source": "investor",
+      "distribution_method": "equal_spread",
+      "lump_sum_month": "NULL",
+      "start_month": "6",
+      "end_month": "23"
+    },
+    {
+      "item_key": "sales_commission",
+      "section": "escrow",
+      "funding_source": "escrow",
+      "distribution_method": "equal_spread",
+      "lump_sum_month": "NULL",
+      "start_month": "6",
+      "end_month": "23"
+    }
+  ],
+  "messages": [],
+  "stdout": "item_key\tsection\tfunding_source\tdistribution_method\tlump_sum_month\tstart_month\tend_month\ncontractor_advance\tconstruction\tinvestor\tlump_sum\t6\t7\t7\ncontingency\tconstruction\tinvestor\tequal_spread\tNULL\t6\t23\nbank_fees\tconstruction\tinvestor\tequal_spread\tNULL\t6\t23\ngovernment_fees_escrow\tescrow\tescrow\tequal_spread\tNULL\t6\t23\ncontractor_payments\tescrow\tescrow\tequal_spread\tNULL\t6\t23\ncommunity_fee_escrow\tescrow\tinvestor\tequal_spread\tNULL\t6\t23\ndeveloper_fee_construction\tescrow\tinvestor\tequal_spread\tNULL\t6\t23\nsupervision_fee\tescrow\tescrow\tequal_spread\tNULL\t6\t23\nsurveyor_fee\tescrow\tescrow\tequal_spread\tNULL\t6\t23\nrera_audit\tescrow\tescrow\tequal_spread\tNULL\t6\t23\nrera_inspection\tescrow\tescrow\tequal_spread\tNULL\t6\t23\nmarketing_construction\tescrow\tinvestor\tequal_spread\tNULL\t6\t23\nsales_commission\tescrow\tescrow\tequal_spread\tNULL\t6\t23\n",
+  "stderr": "",
+  "execution_time_ms": 1509
+}
