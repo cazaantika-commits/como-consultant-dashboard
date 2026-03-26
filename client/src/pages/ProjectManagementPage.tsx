@@ -6,8 +6,9 @@ import FactSheetPage from "./FactSheetPage";
 import KnowledgeHubPage from "./KnowledgeHubPage";
 import FinancialPlanningHubPage from "./FinancialPlanningHubPage";
 import CapitalSchedulingPage from "./CapitalSchedulingPage";
+import CapitalPortfolioPage from "./CapitalPortfolioPage";
 
-type View = "icons" | "fact-sheet" | "knowledge" | "financial" | "capital-portfolio";
+type View = "icons" | "fact-sheet" | "knowledge" | "financial" | "capital-portfolio" | "dynamic-portfolio";
 
 // Custom SVG icon components for each section
 const FactSheetIcon = () => (
@@ -57,6 +58,31 @@ const PortfolioIcon = () => (
   </svg>
 );
 
+const DynamicPortfolioIcon = () => (
+  <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-7 h-7">
+    {/* Grid of project cards */}
+    <rect x="4" y="12" width="14" height="10" rx="2.5" fill="white" fillOpacity="0.3" stroke="white" strokeWidth="1.5"/>
+    <rect x="22" y="12" width="14" height="10" rx="2.5" fill="white" fillOpacity="0.3" stroke="white" strokeWidth="1.5"/>
+    <rect x="4" y="26" width="14" height="10" rx="2.5" fill="white" fillOpacity="0.5" stroke="white" strokeWidth="1.5"/>
+    <rect x="22" y="26" width="14" height="10" rx="2.5" fill="white" fillOpacity="0.5" stroke="white" strokeWidth="1.5"/>
+    {/* Dynamic arrows / switch indicator */}
+    <path d="M40 16l4 4-4 4" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M40 28l4 4-4 4" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+    {/* O1/O2/O3 labels */}
+    <circle cx="11" cy="8" r="3.5" fill="white" fillOpacity="0.6"/>
+    <circle cx="24" cy="8" r="3.5" fill="white" fillOpacity="0.8"/>
+    <circle cx="37" cy="8" r="3.5" fill="white"/>
+    <text x="11" y="10" textAnchor="middle" fill="currentColor" fontSize="5" fontWeight="bold" opacity="0.7">1</text>
+    <text x="24" y="10" textAnchor="middle" fill="currentColor" fontSize="5" fontWeight="bold" opacity="0.7">2</text>
+    <text x="37" y="10" textAnchor="middle" fill="currentColor" fontSize="5" fontWeight="bold" opacity="0.7">3</text>
+    {/* Mini bar charts inside cards */}
+    <path d="M7 19v-2M10 19v-3M13 19v-1.5" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M25 19v-1.5M28 19v-3M31 19v-2" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M7 33v-2M10 33v-1M13 33v-3" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M25 33v-3M28 33v-1.5M31 33v-2" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+  </svg>
+);
+
 const SECTIONS = [
   {
     id: "fact-sheet" as View,
@@ -94,6 +120,15 @@ const SECTIONS = [
     borderColor: "#059669",
     description: "جدولة رأس المال لجميع المشاريع",
   },
+  {
+    id: "dynamic-portfolio" as View,
+    label: "محفظة رأس المال الديناميكية",
+    SvgIcon: DynamicPortfolioIcon,
+    gradient: "linear-gradient(135deg, #e65100, #ff8f00)",
+    shadow: "rgba(230, 81, 0, 0.35)",
+    borderColor: "#e65100",
+    description: "اختيار السيناريو (O1/O2/O3) لكل مشروع بشكل مستقل مع تحكم بالتأخير",
+  },
 ];
 
 export default function ProjectManagementPage() {
@@ -112,6 +147,9 @@ export default function ProjectManagementPage() {
   }
   if (activeView === "capital-portfolio") {
     return <CapitalSchedulingPage embedded onBack={() => setActiveView("icons")} />;
+  }
+  if (activeView === "dynamic-portfolio") {
+    return <CapitalPortfolioPage onBack={() => setActiveView("icons")} />;
   }
 
   // Icons grid
@@ -134,14 +172,14 @@ export default function ProjectManagementPage() {
         </div>
       </header>
 
-      {/* 4 Cards Grid */}
-      <main className="max-w-4xl mx-auto px-6 py-12">
+      {/* 5 Cards Grid */}
+      <main className="max-w-5xl mx-auto px-6 py-12">
         <div className="text-center mb-10">
           <h2 className="text-2xl font-bold text-foreground mb-2">الدراسات والتخطيط الاستراتيجي</h2>
           <p className="text-sm text-muted-foreground">اختر القسم المطلوب للبدء</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {SECTIONS.map((section) => {
             const { SvgIcon } = section;
             return (
