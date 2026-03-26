@@ -265,20 +265,13 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
       const offplanDuration = durations.offplan || 2;
       const designDuration = durations.design || 5;
 
-      // Min offplan delay: registration start >= month 3 of design
-      // offplanStart = designDelay + 2 + offplanDelay >= designDelay + 2 → offplanDelay >= 0 (always true)
-      // Actually: offplanStart = designDelay + 2 + offplanDelay, and we need it >= designDelay + 2
-      // So offplanDelay >= 0 is the minimum (already enforced by Math.max(0))
-
-      // Max offplan delay: registration end <= month 4 of construction
-      // offplanEnd = designDelay + 2 + offplanDelay + offplanDuration - 1
+      // offplanStart = designDelay + 2 + offplanDelay
       // constructionStart = designDelay + designDuration + constructionDelay
-      // offplanEnd <= constructionStart + 3
-      // designDelay + 2 + offplanDelay + offplanDuration - 1 <= designDelay + designDuration + constructionDelay + 3
-      // offplanDelay <= designDuration + constructionDelay + 3 - 2 - offplanDuration + 1
+      // maxStart = constructionStart + 3 - (offplanDuration - 1)
+      // offplanDelay <= maxStart - designDelay - 2 = designDuration + constructionDelay + 3 - offplanDuration + 1 - 2
       // offplanDelay <= designDuration + constructionDelay + 2 - offplanDuration
       const maxOffplanDelay = designDuration + updated.constructionDelay + 2 - offplanDuration;
-      if (updated.offplanDelay > maxOffplanDelay) {
+      if (updated.offplanDelay > Math.max(0, maxOffplanDelay)) {
         updated.offplanDelay = Math.max(0, maxOffplanDelay);
       }
     }
@@ -419,22 +412,16 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
         let offplanStart = hasOffplan ? (designStart + 2 + delay.offplanDelay) : -1;
         let offplanEnd = hasOffplan ? (offplanStart + offplanDuration - 1) : -1;
 
-        // Enforce constraints on registration
+        // Enforce constraints on registration — ALWAYS exactly offplanDuration months (e.g. 2)
+        // Just clamp the START position within the allowed range, duration never changes
         if (hasOffplan) {
-          // Cannot start before month 3 of design
-          const minStart = designStart + 2;
+          const minStart = designStart + 2; // month 3 of design (0-indexed)
+          const maxStart = constructionStart + 3 - (offplanDuration - 1); // so last month doesn't exceed month 4 of construction
+          // Clamp start
           if (offplanStart < minStart) offplanStart = minStart;
+          if (offplanStart > maxStart) offplanStart = maxStart;
+          // End is ALWAYS start + duration - 1 (never stretched)
           offplanEnd = offplanStart + offplanDuration - 1;
-
-          // Cannot end after month 4 of construction
-          const maxEnd = constructionStart + 3;
-          if (offplanEnd > maxEnd) {
-            offplanEnd = maxEnd;
-            offplanStart = offplanEnd - offplanDuration + 1;
-            // Re-check minimum
-            if (offplanStart < minStart) offplanStart = minStart;
-            offplanEnd = offplanStart + offplanDuration - 1;
-          }
         }
 
         const handoverStart = constructionEnd + 1;
@@ -493,27 +480,31 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
     const hasOffplanAmt = (col.phaseChartAmounts.offplan?.[chartIdx] || 0) > 0;
     const hasHandoverAmt = (col.phaseChartAmounts.handover?.[chartIdx] || 0) > 0;
 
-    // 2. If there are amounts, determine phase by amounts
-    //    When offplan amounts exist alongside another phase, the base phase takes priority for coloring
-    //    (offplan shows as overlay)
-    if (hasDesignAmt) return "design";
-    if (hasConstructionAmt) return "construction";
-    if (hasHandoverAmt) return "handover";
-    if (hasOffplanAmt) return "offplan";
+    // 2. Geometric ranges (single source of truth for phase boundaries)
+    const inDesign = chartIdx >= col.phaseRanges.design.start && chartIdx <= col.phaseRanges.design.end;
+    const inConstruction = chartIdx >= col.phaseRanges.construction.start && chartIdx <= col.phaseRanges.construction.end;
+    const inOffplan = col.hasOffplan && chartIdx >= col.phaseRanges.offplan.start && chartIdx <= col.phaseRanges.offplan.end;
+    const inHandover = chartIdx >= col.phaseRanges.handover.start && chartIdx <= col.phaseRanges.handover.end;
 
-    // 3. No amounts — use geometric ranges
-    //    Check offplan FIRST (it's a short 2-month phase, should not be hidden by longer phases)
-    if (col.hasOffplan && chartIdx >= col.phaseRanges.offplan.start && chartIdx <= col.phaseRanges.offplan.end) return "offplan";
-    if (chartIdx >= col.phaseRanges.design.start && chartIdx <= col.phaseRanges.design.end) return "design";
-    if (chartIdx >= col.phaseRanges.construction.start && chartIdx <= col.phaseRanges.construction.end) return "construction";
-    if (chartIdx >= col.phaseRanges.handover.start && chartIdx <= col.phaseRanges.handover.end) return "handover";
+    // 3. If there are amounts, determine base phase.
+    //    Design/construction/handover amounts take priority.
+    //    Offplan amounts: only use as base if NOT inside design/construction geometric range.
+    if (hasDesignAmt || (inDesign && !hasOffplanAmt)) return "design";
+    if (hasConstructionAmt || (inConstruction && !hasOffplanAmt)) return "construction";
+    if (hasHandoverAmt || inHandover) return "handover";
+    // Offplan is base phase ONLY when it's alone (not overlapping design/construction)
+    if (hasOffplanAmt && !inDesign && !inConstruction) return "offplan";
+    if (inOffplan && !inDesign && !inConstruction) return "offplan";
+
+    // 4. Fallback to geometric ranges for cells with no amounts
+    if (inDesign) return "design";
+    if (inConstruction) return "construction";
     return null;
   }
 
   function hasOffplanAtIndex(col: typeof effectiveColumns[0], chartIdx: number): boolean {
     if (!col.hasOffplan) return false;
-    const offplanAmt = col.phaseChartAmounts.offplan?.[chartIdx] || 0;
-    if (offplanAmt > 0) return true;
+    // Use ONLY geometric range for overlay position — amounts may be at different positions
     return chartIdx >= col.phaseRanges.offplan.start && chartIdx <= col.phaseRanges.offplan.end;
   }
 
@@ -1064,6 +1055,8 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
                     }
 
                     const borderRadiusStyle = `${tl}px ${tr}px ${br}px ${bl}px`;
+                    // Show transparent overlay when offplan overlaps with design or construction
+                    // When offplan is alone (phase === "offplan"), it shows its own solid color naturally
                     const showOffplanOverlay = cd.offplanOverlay && phase !== "offplan";
                     const offplanOverlayTl = cd.isOffplanFirst ? CURVE : 0;
                     const offplanOverlayTr = cd.isOffplanFirst ? CURVE : 0;
