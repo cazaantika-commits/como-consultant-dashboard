@@ -171,9 +171,11 @@ function render() {
     var sc = item[scKey];
     if (!sc || !sc.active) return;
     var obj = { name: item.nameAr, amount: sc.amount, monthly: sc.monthlyAmounts, section: item.section, fundingSource: item.fundingSource };
+    // O3 = no sales, no escrow — ALL items are investor-funded
+    var effectiveSource = (currentTab === 'o3') ? 'investor' : item.fundingSource;
     if (item.section === 'paid') {
       paidItems.push(obj);
-    } else if (item.fundingSource === 'escrow') {
+    } else if (effectiveSource === 'escrow') {
       escrowItems.push(obj);
     } else if (item.section === 'design' || item.section === 'offplan') {
       designItems.push(obj);

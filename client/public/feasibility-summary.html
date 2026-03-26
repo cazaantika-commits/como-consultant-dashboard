@@ -172,7 +172,9 @@ function render() {
     var sc = item[scKey];
     if (!sc || !sc.active) return;
     var amount = sc.amount;
-    if (item.fundingSource === 'escrow') {
+    // O3 (no-offplan) = no sales, no escrow — ALL items are investor-funded
+    var effectiveSource = (currentView === 'no-offplan') ? 'investor' : item.fundingSource;
+    if (effectiveSource === 'escrow') {
       escrowItems.push({ name: item.nameAr, amount: amount, section: item.section });
       escrowTotal += amount;
     } else {

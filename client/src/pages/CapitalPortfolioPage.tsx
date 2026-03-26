@@ -799,7 +799,7 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
                         padding: "0 6px", marginTop: 4, fontSize: 9,
                       }}>
                         <span style={{ color: "#d1d5db", fontWeight: 600 }}>رأس المال المطلوب</span>
-                        <span style={{ fontWeight: 800, color: "#ffffff" }}>{fmtFull(col.grandTotal)}</span>
+                        <span style={{ fontWeight: 800, color: "#ffffff" }}>{fmtFull(col.investorTotal)}</span>
                       </div>
 
                       {/* تم السداد */}
@@ -819,7 +819,7 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
                         padding: "0 6px", marginTop: 3, marginBottom: 6, fontSize: 9,
                       }}>
                         <span style={{ color: "#d1d5db", fontWeight: 600 }}>المتبقي</span>
-                        <span style={{ fontWeight: 800, color: "#ffffff" }}>{fmtFull(col.grandTotal - col.paidTotal)}</span>
+                        <span style={{ fontWeight: 800, color: "#ffffff" }}>{fmtFull(col.investorTotal - col.paidTotal)}</span>
                       </div>
 
                       {/* Delay badge */}

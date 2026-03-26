@@ -174,39 +174,20 @@ function onSourceChange(sel) {
 }
 
 function recalcTotals() {
-  var investorTotal = 0;
-  var escrowTotal = 0;
+  // O3 = no escrow, all items are investor-funded
+  var grandTotal = 0;
   var allItems = window._allItems || [];
   for (var item of allItems) {
     if (!item[SCENARIO_KEY].active) continue;
-    var amount = item[SCENARIO_KEY].amount;
-    var row = document.querySelector('tr[data-itemkey="' + item.itemKey + '"]');
-    var fundingSource = item.fundingSource;
-    if (row) {
-      var sourceSel = row.querySelector('.source-select');
-      if (sourceSel) fundingSource = sourceSel.value;
-    }
-    if (item.section === 'paid') fundingSource = 'investor';
-    if (fundingSource === 'investor') {
-      investorTotal += amount;
-    } else {
-      escrowTotal += amount;
-    }
+    grandTotal += item[SCENARIO_KEY].amount;
   }
-  var grandTotal = investorTotal + escrowTotal;
-  // Update the totals rows in the table
+  // Update the total row in the table
   var rows = document.querySelectorAll('tr');
   for (var r of rows) {
     var firstTd = r.querySelector('td');
     if (!firstTd) continue;
     var text = firstTd.textContent.trim();
     if (text.indexOf('رأس المال المطلوب') >= 0) {
-      var amountTd = r.querySelectorAll('td')[1];
-      if (amountTd) amountTd.textContent = fmt(investorTotal);
-    } else if (text.indexOf('إجمالي حساب الضمان') >= 0) {
-      var amountTd = r.querySelectorAll('td')[1];
-      if (amountTd) amountTd.textContent = escrowTotal > 0 ? fmt(escrowTotal) : '—';
-    } else if (text.indexOf('الإجمالي الكلي') >= 0) {
       var amountTd = r.querySelectorAll('td')[1];
       if (amountTd) amountTd.textContent = fmt(grandTotal);
     }
@@ -255,8 +236,8 @@ function collectSaveData() {
     var customJson = null;
 
     if (row && !isPaid) {
-      var sourceSel = row.querySelector('.source-select');
-      if (sourceSel) fundingSource = sourceSel.value;
+      // O3 = no escrow, all items are investor-funded
+      fundingSource = 'investor';
       var phaseSel = row.querySelector('.phase-select');
       if (phaseSel) chosenPhase = phaseSel.value;
       var methodSel = row.querySelector('.method-select');
@@ -431,7 +412,8 @@ async function loadData() {
         if (isPaid) {
           html += '<td class="paid">مدفوع</td><td class="na-cell">—</td><td class="na-cell">—</td><td class="na-cell">—</td>';
         } else {
-          html += '<td>' + buildSourceSelect(item.itemKey, item.fundingSource) + '</td>';
+          // O3 = no sales, no escrow — ALL items are investor-funded (no choice)
+          html += '<td><span class="source-select source-investor" style="padding:4px 8px;border-radius:6px;font-size:12px;font-weight:700;">المستثمر</span></td>';
           html += '<td>' + buildPhaseSelect(item.itemKey, item._chosenPhase) + '</td>';
           html += '<td>' + buildMethodSelect(item.itemKey, item.distributionMethod) + '</td>';
           html += buildDetailCell(item.itemKey, item.distributionMethod, item._chosenPhase, phaseInfo, item);
@@ -444,9 +426,8 @@ async function loadData() {
     var escrowTotal = data.totals.escrowTotal[SCENARIO_KEY];
     var grandTotal = data.totals.grandTotal[SCENARIO_KEY];
 
-    html += '<tr class="capital-row"><td style="text-align:right;">رأس المال المطلوب (المستثمر)</td><td>' + fmt(investorTotal) + '</td><td colspan="4"></td></tr>';
-    html += '<tr class="escrow-total-row"><td style="text-align:right;">إجمالي حساب الضمان</td><td>' + (escrowTotal > 0 ? fmt(escrowTotal) : '—') + '</td><td colspan="4"></td></tr>';
-    html += '<tr class="total-row"><td style="text-align:right;">الإجمالي الكلي</td><td>' + fmt(grandTotal) + '</td><td colspan="4"></td></tr>';
+    // O3 = no escrow, all costs are investor-funded
+    html += '<tr class="capital-row"><td style="text-align:right;">رأس المال المطلوب (المستثمر)</td><td>' + fmt(grandTotal) + '</td><td colspan="4"></td></tr>';
     html += '</tbody></table>';
 
     html += '<div class="save-bar"><button id="save-btn" class="save-btn" onclick="saveSettings()">حفظ الإعدادات</button>';

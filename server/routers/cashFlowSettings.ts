@@ -828,10 +828,12 @@ export const cashFlowSettingsRouter = router({
       const grandMonthlyTotals = new Array(totalMonths).fill(0);
 
       for (const item of items) {
+        // O3 (no_offplan) = no sales, no escrow — ALL costs are investor-funded
+        const effectiveSource = input.scenario === "no_offplan" ? "investor" : item.fundingSource;
         for (let m = 0; m < totalMonths; m++) {
           const val = item.monthlyAmounts[m] || 0;
           grandMonthlyTotals[m] += val;
-          if (item.fundingSource === "investor") {
+          if (effectiveSource === "investor") {
             investorMonthlyTotals[m] += val;
           } else {
             escrowMonthlyTotals[m] += val;
@@ -1052,10 +1054,12 @@ export const cashFlowSettingsRouter = router({
 
         const processItem = (amount: number, fundingSource: string, distMethod: string, lumpSumMonth: number | null, startMonth: number | null, endMonth: number | null, customJson: string | null) => {
           const monthly = distributeAmount(amount, distMethod as DistributionMethod, lumpSumMonth, startMonth, endMonth, customJson, totalMonths);
+          // O3 (no_offplan) = no sales, no escrow — ALL costs are investor-funded
+          const effectiveSource = scenario === "no_offplan" ? "investor" : fundingSource;
           for (let m = 0; m < totalMonths; m++) {
             const val = monthly[m] || 0;
             grandMonthly[m] += val;
-            if (fundingSource === "investor") investorMonthly[m] += val;
+            if (effectiveSource === "investor") investorMonthly[m] += val;
             else escrowMonthly[m] += val;
           }
           return amount;
@@ -1343,7 +1347,8 @@ export const cashFlowSettingsRouter = router({
 
       for (const item of items) {
         // Only investor-funded items count toward capital schedule
-        if (item.fundingSource !== "investor") continue;
+        // O3 (no_offplan) = no sales, no escrow — ALL costs are investor-funded
+        if (scenario !== "no_offplan" && item.fundingSource !== "investor") continue;
 
         const phase = sectionToPhase(item.section);
 
@@ -1677,6 +1682,7 @@ export const cashFlowSettingsRouter = router({
       comparisonItems.sort((a, b) => a.sortOrder - b.sortOrder);
 
       // Compute totals
+      // O3 (no_offplan) = no sales, no escrow — ALL costs are investor-funded
       let investorTotalO1 = 0, investorTotalO2 = 0, investorTotalO3 = 0;
       let escrowTotalO1 = 0, escrowTotalO2 = 0, escrowTotalO3 = 0;
 
@@ -1684,12 +1690,12 @@ export const cashFlowSettingsRouter = router({
         if (item.fundingSource === "investor") {
           if (item.o1.active) investorTotalO1 += item.o1.amount;
           if (item.o2.active) investorTotalO2 += item.o2.amount;
-          if (item.o3.active) investorTotalO3 += item.o3.amount;
         } else {
           if (item.o1.active) escrowTotalO1 += item.o1.amount;
           if (item.o2.active) escrowTotalO2 += item.o2.amount;
-          if (item.o3.active) escrowTotalO3 += item.o3.amount;
         }
+        // O3: ALL items go to investor (no escrow in no_offplan scenario)
+        if (item.o3.active) investorTotalO3 += item.o3.amount;
       }
 
       return {
@@ -1830,12 +1836,14 @@ export const cashFlowSettingsRouter = router({
           if (!monthlyBySection[section]) {
             monthlyBySection[section] = new Array(totalMonths).fill(0);
           }
+          // O3 (no_offplan) = no sales, no escrow — ALL costs are investor-funded
+          const effectiveSource = sc === "no_offplan" ? "investor" : fundingSource;
           for (let m = 0; m < totalMonths; m++) {
             const val = monthly[m] || 0;
             if (val <= 0) continue;
             monthlyAll[m] += val;
             monthlyBySection[section][m] += val;
-            if (fundingSource === "investor") {
+            if (effectiveSource === "investor") {
               monthlyInvestor[m] += val;
               investorTotal += val;
             } else {
