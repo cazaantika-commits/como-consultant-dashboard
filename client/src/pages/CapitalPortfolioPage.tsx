@@ -495,19 +495,16 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
     const inOffplan = col.hasOffplan && chartIdx >= col.phaseRanges.offplan.start && chartIdx <= col.phaseRanges.offplan.end;
     const inHandover = chartIdx >= col.phaseRanges.handover.start && chartIdx <= col.phaseRanges.handover.end;
 
-    // 3. If there are amounts, determine base phase.
-    //    Design/construction/handover amounts take priority.
-    //    Offplan amounts: only use as base if NOT inside design/construction geometric range.
-    if (hasDesignAmt || (inDesign && !hasOffplanAmt)) return "design";
-    if (hasConstructionAmt || (inConstruction && !hasOffplanAmt)) return "construction";
-    if (hasHandoverAmt || inHandover) return "handover";
-    // Offplan is base phase ONLY when it's alone (not overlapping design/construction)
-    if (hasOffplanAmt && !inDesign && !inConstruction) return "offplan";
-    if (inOffplan && !inDesign && !inConstruction) return "offplan";
-
-    // 4. Fallback to geometric ranges for cells with no amounts
+    // 3. Geometric ranges are the SINGLE SOURCE OF TRUTH for base phase.
+    //    If a cell is inside design or construction range, it's ALWAYS that phase.
+    //    Offplan is only the base phase when geometrically OUTSIDE both design and construction.
+    //    This ensures the offplan overlay always shows as transparent over design/construction.
     if (inDesign) return "design";
     if (inConstruction) return "construction";
+    if (inHandover || hasHandoverAmt) return "handover";
+    // Offplan is base phase ONLY when it's alone (not overlapping design/construction)
+    if (hasOffplanAmt || inOffplan) return "offplan";
+
     return null;
   }
 
