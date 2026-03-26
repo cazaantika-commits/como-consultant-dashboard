@@ -1859,14 +1859,38 @@ export const cashFlowSettingsRouter = router({
             const amount = s.amountOverride
               ? parseFloat(s.amountOverride)
               : computeItemAmountByKey(s.itemKey, costs, sc);
+            const defForKey = getDefaultItemDefs(sc).find(d => d.itemKey === s.itemKey);
+            const itemSection = s.section || defForKey?.section || "construction";
+
+            // Recalculate start/end months from the project's actual phases
+            // instead of using saved values (which may be from a different project)
+            let effectiveStartMonth = s.startMonth;
+            let effectiveEndMonth = s.endMonth;
+            let effectiveLumpSumMonth = s.lumpSumMonth;
+
+            if (defForKey) {
+              if (s.distributionMethod === "lump_sum" && defForKey.phase) {
+                effectiveLumpSumMonth = phaseRelativeToAbsolute(defForKey.phase, defForKey.phaseRelativeMonth || 1, phasesArr);
+              } else if (s.distributionMethod === "equal_spread") {
+                if (defForKey.distributeAcrossPhases && defForKey.distributeAcrossPhases.length > 0) {
+                  const firstPhase = defForKey.distributeAcrossPhases[0];
+                  const lastPhase = defForKey.distributeAcrossPhases[defForKey.distributeAcrossPhases.length - 1];
+                  effectiveStartMonth = getPhaseRange(firstPhase, phasesArr).start;
+                  effectiveEndMonth = getPhaseRange(lastPhase, phasesArr).end;
+                } else if (defForKey.phase) {
+                  const range = getPhaseRange(defForKey.phase, phasesArr);
+                  effectiveStartMonth = range.start;
+                  effectiveEndMonth = range.end;
+                }
+              }
+            }
+
             const monthly = distributeAmount(
               amount,
               s.distributionMethod as DistributionMethod,
-              s.lumpSumMonth, s.startMonth, s.endMonth, s.customJson,
+              effectiveLumpSumMonth, effectiveStartMonth, effectiveEndMonth, s.customJson,
               totalMonths,
             );
-            const defForKey = getDefaultItemDefs(sc).find(d => d.itemKey === s.itemKey);
-            const itemSection = s.section || defForKey?.section || "construction";
             processItem(s.itemKey, s.nameAr, amount, s.fundingSource, itemSection, monthly);
           }
         } else {

@@ -1,0 +1,73 @@
+{
+  "query": "SELECT id, name, preConMonths, constructionMonths, handoverMonths FROM projects ORDER BY id",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, name, preConMonths, constructionMonths, handoverMonths FROM projects ORDER BY id",
+  "rows": [
+    {
+      "id": "1",
+      "name": "مركز مجان التجاري (G+4)",
+      "preConMonths": "9",
+      "constructionMonths": "36",
+      "handoverMonths": "3"
+    },
+    {
+      "id": "2",
+      "name": "مجان متعدد الاستخدامات (G+4P+25)",
+      "preConMonths": "8",
+      "constructionMonths": "30",
+      "handoverMonths": "2"
+    },
+    {
+      "id": "3",
+      "name": "مبنى الجداف السكني (G+7)",
+      "preConMonths": "6",
+      "constructionMonths": "18",
+      "handoverMonths": "2"
+    },
+    {
+      "id": "4",
+      "name": "ند الشبا — قطعة 1 (6185392)",
+      "preConMonths": "5",
+      "constructionMonths": "18",
+      "handoverMonths": "2"
+    },
+    {
+      "id": "5",
+      "name": "ند الشبا — قطعة 2 المدمجة (6182776)",
+      "preConMonths": "6",
+      "constructionMonths": "20",
+      "handoverMonths": "2"
+    },
+    {
+      "id": "6",
+      "name": "ند الشبا — قطعة 3 الفلل (6180578)",
+      "preConMonths": "4",
+      "constructionMonths": "14",
+      "handoverMonths": "2"
+    },
+    {
+      "id": "60001",
+      "name": "مشروع آلات البيع في ميسيسوجا، أونتاريو",
+      "preConMonths": "6",
+      "constructionMonths": "16",
+      "handoverMonths": "2"
+    },
+    {
+      "id": "60002",
+      "name": "مشروع آلات البيع في ميسيسوجا، أونتاريو",
+      "preConMonths": "6",
+      "constructionMonths": "16",
+      "handoverMonths": "2"
+    },
+    {
+      "id": "60003",
+      "name": "آلات البيع في كلية طب الأسنان",
+      "preConMonths": "6",
+      "constructionMonths": "16",
+      "handoverMonths": "2"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tpreConMonths\tconstructionMonths\thandoverMonths\n1\tمركز مجان التجاري (G+4)\t9\t36\t3\n2\tمجان متعدد الاستخدامات (G+4P+25)\t8\t30\t2\n3\tمبنى الجداف السكني (G+7)\t6\t18\t2\n4\tند الشبا — قطعة 1 (6185392)\t5\t18\t2\n5\tند الشبا — قطعة 2 المدمجة (6182776)\t6\t20\t2\n6\tند الشبا — قطعة 3 الفلل (6180578)\t4\t14\t2\n60001\tمشروع آلات البيع في ميسيسوجا، أونتاريو\t6\t16\t2\n60002\tمشروع آلات البيع في ميسيسوجا، أونتاريو\t6\t16\t2\n60003\tآلات البيع في كلية طب الأسنان\t6\t16\t2\n",
+  "stderr": "",
+  "execution_time_ms": 1572
+}

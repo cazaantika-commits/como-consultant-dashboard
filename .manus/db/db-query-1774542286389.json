@@ -1,0 +1,190 @@
+{
+  "query": "SELECT project_id, scenario, section, COUNT(*) as cnt FROM project_cash_flow_settings WHERE scenario = 'offplan_escrow' GROUP BY project_id, scenario, section ORDER BY project_id, section",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT project_id, scenario, section, COUNT(*) as cnt FROM project_cash_flow_settings WHERE scenario = 'offplan_escrow' GROUP BY project_id, scenario, section ORDER BY project_id, section",
+  "rows": [
+    {
+      "project_id": "1",
+      "scenario": "offplan_escrow",
+      "section": "paid",
+      "cnt": "3"
+    },
+    {
+      "project_id": "1",
+      "scenario": "offplan_escrow",
+      "section": "design",
+      "cnt": "5"
+    },
+    {
+      "project_id": "1",
+      "scenario": "offplan_escrow",
+      "section": "offplan",
+      "cnt": "9"
+    },
+    {
+      "project_id": "1",
+      "scenario": "offplan_escrow",
+      "section": "construction",
+      "cnt": "3"
+    },
+    {
+      "project_id": "1",
+      "scenario": "offplan_escrow",
+      "section": "escrow",
+      "cnt": "11"
+    },
+    {
+      "project_id": "2",
+      "scenario": "offplan_escrow",
+      "section": "paid",
+      "cnt": "3"
+    },
+    {
+      "project_id": "2",
+      "scenario": "offplan_escrow",
+      "section": "design",
+      "cnt": "5"
+    },
+    {
+      "project_id": "2",
+      "scenario": "offplan_escrow",
+      "section": "offplan",
+      "cnt": "9"
+    },
+    {
+      "project_id": "2",
+      "scenario": "offplan_escrow",
+      "section": "construction",
+      "cnt": "3"
+    },
+    {
+      "project_id": "2",
+      "scenario": "offplan_escrow",
+      "section": "escrow",
+      "cnt": "11"
+    },
+    {
+      "project_id": "3",
+      "scenario": "offplan_escrow",
+      "section": "paid",
+      "cnt": "3"
+    },
+    {
+      "project_id": "3",
+      "scenario": "offplan_escrow",
+      "section": "design",
+      "cnt": "5"
+    },
+    {
+      "project_id": "3",
+      "scenario": "offplan_escrow",
+      "section": "offplan",
+      "cnt": "9"
+    },
+    {
+      "project_id": "3",
+      "scenario": "offplan_escrow",
+      "section": "construction",
+      "cnt": "3"
+    },
+    {
+      "project_id": "3",
+      "scenario": "offplan_escrow",
+      "section": "escrow",
+      "cnt": "11"
+    },
+    {
+      "project_id": "4",
+      "scenario": "offplan_escrow",
+      "section": "paid",
+      "cnt": "3"
+    },
+    {
+      "project_id": "4",
+      "scenario": "offplan_escrow",
+      "section": "design",
+      "cnt": "5"
+    },
+    {
+      "project_id": "4",
+      "scenario": "offplan_escrow",
+      "section": "offplan",
+      "cnt": "9"
+    },
+    {
+      "project_id": "4",
+      "scenario": "offplan_escrow",
+      "section": "construction",
+      "cnt": "3"
+    },
+    {
+      "project_id": "4",
+      "scenario": "offplan_escrow",
+      "section": "escrow",
+      "cnt": "11"
+    },
+    {
+      "project_id": "5",
+      "scenario": "offplan_escrow",
+      "section": "paid",
+      "cnt": "3"
+    },
+    {
+      "project_id": "5",
+      "scenario": "offplan_escrow",
+      "section": "design",
+      "cnt": "5"
+    },
+    {
+      "project_id": "5",
+      "scenario": "offplan_escrow",
+      "section": "offplan",
+      "cnt": "9"
+    },
+    {
+      "project_id": "5",
+      "scenario": "offplan_escrow",
+      "section": "construction",
+      "cnt": "3"
+    },
+    {
+      "project_id": "5",
+      "scenario": "offplan_escrow",
+      "section": "escrow",
+      "cnt": "10"
+    },
+    {
+      "project_id": "6",
+      "scenario": "offplan_escrow",
+      "section": "paid",
+      "cnt": "3"
+    },
+    {
+      "project_id": "6",
+      "scenario": "offplan_escrow",
+      "section": "design",
+      "cnt": "5"
+    },
+    {
+      "project_id": "6",
+      "scenario": "offplan_escrow",
+      "section": "offplan",
+      "cnt": "9"
+    },
+    {
+      "project_id": "6",
+      "scenario": "offplan_escrow",
+      "section": "construction",
+      "cnt": "3"
+    },
+    {
+      "project_id": "6",
+      "scenario": "offplan_escrow",
+      "section": "escrow",
+      "cnt": "11"
+    }
+  ],
+  "messages": [],
+  "stdout": "project_id\tscenario\tsection\tcnt\n1\toffplan_escrow\tpaid\t3\n1\toffplan_escrow\tdesign\t5\n1\toffplan_escrow\toffplan\t9\n1\toffplan_escrow\tconstruction\t3\n1\toffplan_escrow\tescrow\t11\n2\toffplan_escrow\tpaid\t3\n2\toffplan_escrow\tdesign\t5\n2\toffplan_escrow\toffplan\t9\n2\toffplan_escrow\tconstruction\t3\n2\toffplan_escrow\tescrow\t11\n3\toffplan_escrow\tpaid\t3\n3\toffplan_escrow\tdesign\t5\n3\toffplan_escrow\toffplan\t9\n3\toffplan_escrow\tconstruction\t3\n3\toffplan_escrow\tescrow\t11\n4\toffplan_escrow\tpaid\t3\n4\toffplan_escrow\tdesign\t5\n4\toffplan_escrow\toffplan\t9\n4\toffplan_escrow\tconstruction\t3\n4\toffplan_escrow\tescrow\t11\n5\toffplan_escrow\tpaid\t3\n5\toffplan_escrow\tdesign\t5\n5\toffplan_escrow\toffplan\t9\n5\toffplan_escrow\tconstruction\t3\n5\toffplan_escrow\tescrow\t10\n6\toffplan_escrow\tpaid\t3\n6\toffplan_escrow\tdesign\t5\n6\toffplan_escrow\toffplan\t9\n6\toffplan_escrow\tconstruction\t3\n6\toffplan_escrow\tescrow\t11\n",
+  "stderr": "",
+  "execution_time_ms": 1499
+}
