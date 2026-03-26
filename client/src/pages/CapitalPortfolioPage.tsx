@@ -286,38 +286,43 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
           handover: { duration: number; start: number };
         };
 
-        // Monthly investor amounts (these are project-relative months, 0-indexed)
-        const monthlyInvestor: number[] = scenarioData.monthlyInvestor || [];
-        const totalMonths = project.totalMonths || monthlyInvestor.length;
+        // Use monthlyBySection from API — each section's amounts are already correctly assigned
+        const monthlyBySection: Record<string, number[]> = scenarioData.monthlyBySection || {};
+        const totalMonths = project.totalMonths || (scenarioData.monthlyInvestor?.length || 24);
 
-        // Map project-relative months to chart indices, applying delays
-        // Design phase: months [designStart-1 .. designStart-1+designDuration-1]
-        // Construction phase: months [constructionStart-1 .. constructionStart-1+constructionDuration-1]
-        const designStartRel = (phaseInfo.design.start || 1) - 1; // 0-indexed
-        const designEndRel = designStartRel + durations.design - 1;
+        const hasOffplan = option !== "o3";
+
+        // Phase start positions (0-indexed)
+        const designStartRel = (phaseInfo.design.start || 1) - 1;
         const constructionStartRel = (phaseInfo.construction.start || 7) - 1;
         const constructionEndRel = constructionStartRel + durations.construction - 1;
         const handoverStartRel = (phaseInfo.handover?.start || (constructionEndRel + 2)) - 1;
-        const handoverEndRel = handoverStartRel + (durations.handover || 2) - 1;
-
-        // Offplan: only for o1 and o2
-        const hasOffplan = option !== "o3";
         const offplanStartRel = hasOffplan ? ((phaseInfo.offplan?.start || 3) - 1) : -1;
-        const offplanEndRel = hasOffplan ? (offplanStartRel + (durations.offplan || 2) - 1) : -1;
 
-        // Determine phase for each project-relative month
-        function getPhaseForRelMonth(m: number): PhaseType {
-          if (m === 0 && designStartRel > 0) return "land"; // month 0 before design = paid/land
-          if (m >= designStartRel && m <= designEndRel) return "design";
-          if (m >= constructionStartRel && m <= constructionEndRel) return "construction";
-          if (m >= handoverStartRel && m <= handoverEndRel) return "handover";
-          if (hasOffplan && m >= offplanStartRel && m <= offplanEndRel) return "offplan";
-          // Between design and construction
-          if (m > designEndRel && m < constructionStartRel) return hasOffplan ? "offplan" : "design";
-          return "construction";
-        }
+        // Build chart-level amounts using section-level data
+        // Each section maps to a delay rule:
+        //   paid → no delay (already paid)
+        //   design → shifts by designDelay
+        //   offplan → shifts by offplanDelay (ريرا)
+        //   construction → shifts by constructionDelay
+        //   escrow → shifts by constructionDelay (escrow payments are during construction)
+        const sectionDelayMap: Record<string, number> = {
+          paid: 0,
+          design: delay.designDelay,
+          offplan: delay.offplanDelay,
+          construction: delay.constructionDelay,
+          escrow: delay.constructionDelay,
+        };
 
-        // Build chart-level amounts
+        // Map sections to visual phase types for coloring
+        const sectionToPhaseType: Record<string, PhaseType> = {
+          paid: "land",
+          design: "design",
+          offplan: "offplan",
+          construction: "construction",
+          escrow: "construction",
+        };
+
         const chartAmounts: Record<number, number> = {};
         const phaseChartAmounts: Record<PhaseType, Record<number, number>> = {
           land: {}, design: {}, offplan: {}, construction: {}, handover: {},
@@ -326,48 +331,47 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
         let paidTotal = 0;
         let upcomingTotal = 0;
 
-        for (let m = 0; m < totalMonths; m++) {
-          const val = monthlyInvestor[m] || 0;
-          if (val <= 0) continue;
+        for (const [section, monthlyArr] of Object.entries(monthlyBySection)) {
+          if (!monthlyArr || !Array.isArray(monthlyArr)) continue;
+          const delayMonths = sectionDelayMap[section] ?? 0;
+          const phaseType = sectionToPhaseType[section] ?? "construction";
 
-          const phase = getPhaseForRelMonth(m);
+          for (let m = 0; m < totalMonths; m++) {
+            const val = monthlyArr[m] || 0;
+            if (val <= 0) continue;
 
-          // Apply delay based on phase
-          let chartIdx: number;
-          if (phase === "land") {
-            chartIdx = projectMonthToChartIndex(project.startDate, m);
-            paidTotal += val;
-            phaseChartAmounts.land[chartIdx] = (phaseChartAmounts.land[chartIdx] || 0) + val;
-            continue; // Don't add to chartAmounts (paid)
-          } else if (phase === "design") {
-            chartIdx = projectMonthToChartIndex(project.startDate, m) + delay.designDelay;
-          } else if (phase === "offplan") {
-            chartIdx = projectMonthToChartIndex(project.startDate, m) + delay.designDelay + delay.offplanDelay;
-          } else {
-            // construction + handover
-            chartIdx = projectMonthToChartIndex(project.startDate, m) + delay.designDelay + delay.constructionDelay;
-          }
+            const chartIdx = projectMonthToChartIndex(project.startDate, m) + delayMonths;
 
-          if (chartIdx >= 0 && chartIdx < TOTAL_MONTHS) {
-            chartAmounts[chartIdx] = (chartAmounts[chartIdx] || 0) + val;
-            phaseChartAmounts[phase][chartIdx] = (phaseChartAmounts[phase][chartIdx] || 0) + val;
-            upcomingTotal += val;
+            if (section === "paid") {
+              // Paid/land amounts — no delay, separate tracking
+              const landIdx = projectMonthToChartIndex(project.startDate, m);
+              paidTotal += val;
+              phaseChartAmounts.land[landIdx] = (phaseChartAmounts.land[landIdx] || 0) + val;
+              continue;
+            }
+
+            if (chartIdx >= 0 && chartIdx < TOTAL_MONTHS) {
+              chartAmounts[chartIdx] = (chartAmounts[chartIdx] || 0) + val;
+              phaseChartAmounts[phaseType][chartIdx] = (phaseChartAmounts[phaseType][chartIdx] || 0) + val;
+              upcomingTotal += val;
+            }
           }
         }
 
         const grandTotal = paidTotal + upcomingTotal;
 
         // Compute phase ranges for visual display
+        // Each phase shifts independently — "السكة ثابتة والقطار يتحرك"
         const baseStart = projectMonthToChartIndex(project.startDate, designStartRel);
         const designStart = baseStart + delay.designDelay;
         const designEnd = designStart + durations.design - 1;
 
         const offplanNormalStart = hasOffplan ? (baseStart + (offplanStartRel - designStartRel)) : -1;
-        const offplanStart = hasOffplan ? (offplanNormalStart + delay.designDelay + delay.offplanDelay) : -1;
+        const offplanStart = hasOffplan ? (offplanNormalStart + delay.offplanDelay) : -1;
         const offplanEnd = hasOffplan ? (offplanStart + (durations.offplan || 2) - 1) : -1;
 
         const constructionNormalStart = baseStart + (constructionStartRel - designStartRel);
-        const constructionStart = constructionNormalStart + delay.designDelay + delay.constructionDelay;
+        const constructionStart = constructionNormalStart + delay.constructionDelay;
         const constructionEnd = constructionStart + durations.construction - 1;
 
         const handoverStart = constructionEnd + 1;

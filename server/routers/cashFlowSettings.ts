@@ -1740,6 +1740,8 @@ export const cashFlowSettingsRouter = router({
       monthlyEscrow: number[];
       monthlyTotal: number[];
       sectionTotals: Record<string, number>;
+      /** Monthly amounts broken down by section (paid/design/offplan/construction/escrow) */
+      monthlyBySection: Record<string, number[]>;
     }
 
     interface PortfolioProject {
@@ -1807,6 +1809,13 @@ export const cashFlowSettingsRouter = router({
         const monthlyEscrow = new Array(totalMonths).fill(0);
         const monthlyAll = new Array(totalMonths).fill(0);
         const sectionTotals: Record<string, number> = {};
+        const monthlyBySection: Record<string, number[]> = {
+          paid: new Array(totalMonths).fill(0),
+          design: new Array(totalMonths).fill(0),
+          offplan: new Array(totalMonths).fill(0),
+          construction: new Array(totalMonths).fill(0),
+          escrow: new Array(totalMonths).fill(0),
+        };
 
         const processItem = (
           _itemKey: string,
@@ -1817,10 +1826,15 @@ export const cashFlowSettingsRouter = router({
           monthly: number[],
         ) => {
           sectionTotals[section] = (sectionTotals[section] || 0) + amount;
+          // Ensure section array exists
+          if (!monthlyBySection[section]) {
+            monthlyBySection[section] = new Array(totalMonths).fill(0);
+          }
           for (let m = 0; m < totalMonths; m++) {
             const val = monthly[m] || 0;
             if (val <= 0) continue;
             monthlyAll[m] += val;
+            monthlyBySection[section][m] += val;
             if (fundingSource === "investor") {
               monthlyInvestor[m] += val;
               investorTotal += val;
@@ -1887,6 +1901,7 @@ export const cashFlowSettingsRouter = router({
           monthlyEscrow,
           monthlyTotal: monthlyAll,
           sectionTotals,
+          monthlyBySection,
         };
       }
 
