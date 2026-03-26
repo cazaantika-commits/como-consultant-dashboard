@@ -248,7 +248,42 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
   function adjustDelay(projectId: number, phase: keyof DelayState, delta: number) {
     const cur = getDelay(projectId);
     const newVal = Math.max(0, cur[phase] + delta);
-    setDelays(prev => ({ ...prev, [projectId]: { ...cur, [phase]: newVal } }));
+    const updated = { ...cur, [phase]: newVal };
+
+    // Get project info for constraint enforcement
+    const project = rawProjects.find(p => p.projectId === projectId);
+    const option = getProjectOption(projectId);
+    const hasOffplan = option !== "o3";
+
+    if (hasOffplan && project) {
+      const durations = project.durations as { design: number; offplan: number; construction: number; handover: number };
+      // Registration constraint: start >= month 3 of design, end <= month 4 of construction
+      // Registration start = designDelay + 2 + offplanDelay (starts after month 3 of design = index 2)
+      // Registration end = registrationStart + offplanDuration - 1
+      // Construction start = designDelay + designDuration + constructionDelay
+      // Constraint: registrationEnd <= constructionStart + 3 (month 4 of construction = index 3)
+      const offplanDuration = durations.offplan || 2;
+      const designDuration = durations.design || 5;
+
+      // Min offplan delay: registration start >= month 3 of design
+      // offplanStart = designDelay + 2 + offplanDelay >= designDelay + 2 → offplanDelay >= 0 (always true)
+      // Actually: offplanStart = designDelay + 2 + offplanDelay, and we need it >= designDelay + 2
+      // So offplanDelay >= 0 is the minimum (already enforced by Math.max(0))
+
+      // Max offplan delay: registration end <= month 4 of construction
+      // offplanEnd = designDelay + 2 + offplanDelay + offplanDuration - 1
+      // constructionStart = designDelay + designDuration + constructionDelay
+      // offplanEnd <= constructionStart + 3
+      // designDelay + 2 + offplanDelay + offplanDuration - 1 <= designDelay + designDuration + constructionDelay + 3
+      // offplanDelay <= designDuration + constructionDelay + 3 - 2 - offplanDuration + 1
+      // offplanDelay <= designDuration + constructionDelay + 2 - offplanDuration
+      const maxOffplanDelay = designDuration + updated.constructionDelay + 2 - offplanDuration;
+      if (updated.offplanDelay > maxOffplanDelay) {
+        updated.offplanDelay = Math.max(0, maxOffplanDelay);
+      }
+    }
+
+    setDelays(prev => ({ ...prev, [projectId]: updated }));
   }
 
   function resetDelay(projectId: number) {
@@ -296,18 +331,24 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
         const designStartRel = (phaseInfo.design.start || 1) - 1;
 
         // Build chart-level amounts using section-level data
-        // Each section maps to a delay rule:
+        // NEW CONSTRAINT SYSTEM:
         //   paid → no delay (already paid)
-        //   design → shifts by designDelay
-        //   offplan → shifts by offplanDelay (ريرا)
-        //   construction → shifts by constructionDelay
-        //   escrow → shifts by constructionDelay (escrow payments are during construction)
+        //   design → shifts by designDelay (free movement)
+        //   offplan → shifts by designDelay + 2 + offplanDelay (starts at month 3 of design, then offplan's own delay)
+        //   construction → shifts by designDelay + constructionDelay (follows design directly, NOT after registration)
+        //   escrow → same as construction (escrow payments are during construction)
+        //
+        // The offplan (registration) section amounts start at month 3 of design in the base data,
+        // so we only need to add the offplanDelay on top of the designDelay.
+        // Construction amounts start after design ends in the base data.
+        const constructionEffectiveDelay = delay.designDelay + delay.constructionDelay;
+        const offplanEffectiveDelay = delay.designDelay + delay.offplanDelay;
         const sectionDelayMap: Record<string, number> = {
           paid: 0,
           design: delay.designDelay,
-          offplan: delay.offplanDelay,
-          construction: delay.constructionDelay,
-          escrow: delay.constructionDelay,
+          offplan: offplanEffectiveDelay,
+          construction: constructionEffectiveDelay,
+          escrow: constructionEffectiveDelay,
         };
 
         // Map sections to visual phase types for coloring
@@ -357,19 +398,44 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
         const grandTotal = paidTotal + upcomingTotal;
 
         // Compute phase ranges for visual display
-        // Each phase shifts independently — "السكة ثابتة والقطار يتحرك"
+        // NEW CONSTRAINT SYSTEM:
+        //   Design: moves freely
+        //   Construction: starts immediately after Design ends, then adds its own delay
+        //   Registration (offplan): floats independently, starts at month 3 of Design + offplanDelay
+        //     Constraint: registration cannot start before month 3 of Design
+        //     Constraint: registration cannot end after month 4 of Construction
         const baseStart = projectMonthToChartIndex(project.startDate, designStartRel);
         const designStart = baseStart + delay.designDelay;
         const designEnd = designStart + durations.design - 1;
 
-        // Offplan (registration) starts AFTER design ends — sequential
-        const offplanStart = hasOffplan ? (designEnd + 1 + delay.offplanDelay) : -1;
-        const offplanEnd = hasOffplan ? (offplanStart + (durations.offplan || 2) - 1) : -1;
-
-        // Construction starts AFTER offplan ends (or after design if no offplan/O3)
-        const constructionNormalStart = hasOffplan ? (offplanEnd! + 1) : (designEnd + 1);
-        const constructionStart = constructionNormalStart + delay.constructionDelay;
+        // Construction starts AFTER design ends (NOT after registration) + its own delay
+        const constructionStart = designEnd + 1 + delay.constructionDelay;
         const constructionEnd = constructionStart + durations.construction - 1;
+
+        // Registration (offplan) floats independently with constraints:
+        //   Start >= designStart + 2 (month 3 of design, 0-indexed)
+        //   End <= constructionStart + 3 (month 4 of construction, 0-indexed)
+        const offplanDuration = durations.offplan || 2;
+        let offplanStart = hasOffplan ? (designStart + 2 + delay.offplanDelay) : -1;
+        let offplanEnd = hasOffplan ? (offplanStart + offplanDuration - 1) : -1;
+
+        // Enforce constraints on registration
+        if (hasOffplan) {
+          // Cannot start before month 3 of design
+          const minStart = designStart + 2;
+          if (offplanStart < minStart) offplanStart = minStart;
+          offplanEnd = offplanStart + offplanDuration - 1;
+
+          // Cannot end after month 4 of construction
+          const maxEnd = constructionStart + 3;
+          if (offplanEnd > maxEnd) {
+            offplanEnd = maxEnd;
+            offplanStart = offplanEnd - offplanDuration + 1;
+            // Re-check minimum
+            if (offplanStart < minStart) offplanStart = minStart;
+            offplanEnd = offplanStart + offplanDuration - 1;
+          }
+        }
 
         const handoverStart = constructionEnd + 1;
         const handoverEnd = handoverStart + (durations.handover || 2) - 1;
@@ -589,7 +655,7 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
               }}>
                 <div style={{ position: "absolute", inset: 0, background: "rgba(196, 185, 154, 0.3)", borderRadius: 4 }} />
               </div>
-              <span style={{ fontWeight: 600 }}>أوف بلان</span>
+              <span style={{ fontWeight: 600 }}>التسجيل</span>
             </div>
           </div>
 
@@ -829,7 +895,7 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
                         }}>
                           {delay.designDelay > 0 && `تصاميم +${delay.designDelay}ش`}
                           {delay.designDelay > 0 && (delay.offplanDelay > 0 || delay.constructionDelay > 0) && " · "}
-                          {delay.offplanDelay > 0 && `أوف +${delay.offplanDelay}ش`}
+                          {delay.offplanDelay > 0 && `تسجيل +${delay.offplanDelay}ش`}
                           {delay.offplanDelay > 0 && delay.constructionDelay > 0 && " · "}
                           {delay.constructionDelay > 0 && `إنشاء +${delay.constructionDelay}ش`}
                         </div>
@@ -842,7 +908,7 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
                         onDown={() => adjustDelay(col.projectId, "designDelay", 1)}
                       />
                       {col.hasOffplan && (
-                        <DelayControl label="أوف بلان" color="#db2777" lightBg="#fdf2f8" borderColor="#f472b6"
+                        <DelayControl label="التسجيل" color="#db2777" lightBg="#fdf2f8" borderColor="#f472b6"
                           value={delay.offplanDelay}
                           onUp={() => adjustDelay(col.projectId, "offplanDelay", -1)}
                           onDown={() => adjustDelay(col.projectId, "offplanDelay", 1)}
