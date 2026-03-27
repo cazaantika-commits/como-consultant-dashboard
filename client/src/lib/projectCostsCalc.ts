@@ -63,9 +63,12 @@ export function calculateProjectCosts(
   const gfaResSqft = parseFloat(p.gfaResidentialSqft || "0");
   const gfaRetSqft = parseFloat(p.gfaRetailSqft || "0");
   const gfaOffSqft = parseFloat(p.gfaOfficesSqft || "0");
-  const saleableRes = gfaResSqft * 0.95;
-  const saleableRet = gfaRetSqft * 0.97;
-  const saleableOff = gfaOffSqft * 0.95;
+  const saleableResPct = parseFloat(p.saleableResidentialPct ?? "95") / 100;
+  const saleableRetPct = parseFloat(p.saleableRetailPct ?? "97") / 100;
+  const saleableOffPct = parseFloat(p.saleableOfficesPct ?? "95") / 100;
+  const saleableRes = gfaResSqft * saleableResPct;
+  const saleableRet = gfaRetSqft * saleableRetPct;
+  const saleableOff = gfaOffSqft * saleableOffPct;
 
   // Get prices for the specific scenario
   const getPrices = () => {

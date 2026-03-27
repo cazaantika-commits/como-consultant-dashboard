@@ -344,6 +344,13 @@
       "when": 1774465797315,
       "tag": "0048_tough_thor",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "5",
+      "when": 1774639492152,
+      "tag": "0049_clean_patriot",
+      "breakpoints": true
     }
   ]
 }

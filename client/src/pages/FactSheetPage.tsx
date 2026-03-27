@@ -689,12 +689,18 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
                   <div className="bg-emerald-50 border border-emerald-200 rounded p-1.5 mt-1.5">
                     <div className="flex items-center gap-0.5 mb-1">
                       <Calculator className="h-2.5 w-2.5 text-emerald-600" />
-                      <span className="text-[9px] font-semibold text-emerald-700">قابل للبيع</span>
+                      <span className="text-[9px] font-semibold text-emerald-700">نسب قابل للبيع</span>
                     </div>
+                    <div className="grid grid-cols-3 gap-1.5 mb-2">
+                      {n("gfaResidentialSqft") > 0 && <Field label="سكني%" value={formData.saleableResidentialPct ?? "95"} onChange={v => updateField("saleableResidentialPct", v)} type="number" suffix="%" source="manual" />}
+                      {n("gfaRetailSqft") > 0 && <Field label="محلات%" value={formData.saleableRetailPct ?? "97"} onChange={v => updateField("saleableRetailPct", v)} type="number" suffix="%" source="manual" />}
+                      {n("gfaOfficesSqft") > 0 && <Field label="مكاتب%" value={formData.saleableOfficesPct ?? "95"} onChange={v => updateField("saleableOfficesPct", v)} type="number" suffix="%" source="manual" />}
+                    </div>
+                    <div className="text-[9px] font-semibold text-emerald-700 mb-1">قابل للبيع</div>
                     <div className="grid grid-cols-3 gap-1.5 text-center">
-                      {n("gfaResidentialSqft") > 0 && <div><div className="text-[9px] text-emerald-500">سكني×95%</div><div className="text-[11px] font-bold text-emerald-700 font-mono" dir="ltr">{Math.round(n("gfaResidentialSqft") * 0.95).toLocaleString("en-US")}</div></div>}
-                      {n("gfaRetailSqft") > 0 && <div><div className="text-[9px] text-emerald-500">محلات×97%</div><div className="text-[11px] font-bold text-emerald-700 font-mono" dir="ltr">{Math.round(n("gfaRetailSqft") * 0.97).toLocaleString("en-US")}</div></div>}
-                      {n("gfaOfficesSqft") > 0 && <div><div className="text-[9px] text-emerald-500">مكاتب×95%</div><div className="text-[11px] font-bold text-emerald-700 font-mono" dir="ltr">{Math.round(n("gfaOfficesSqft") * 0.95).toLocaleString("en-US")}</div></div>}
+                      {n("gfaResidentialSqft") > 0 && <div><div className="text-[9px] text-emerald-500">سكني×{n("saleableResidentialPct", 95)}%</div><div className="text-[11px] font-bold text-emerald-700 font-mono" dir="ltr">{Math.round(n("gfaResidentialSqft") * (n("saleableResidentialPct", 95) / 100)).toLocaleString("en-US")}</div></div>}
+                      {n("gfaRetailSqft") > 0 && <div><div className="text-[9px] text-emerald-500">محلات×{n("saleableRetailPct", 97)}%</div><div className="text-[11px] font-bold text-emerald-700 font-mono" dir="ltr">{Math.round(n("gfaRetailSqft") * (n("saleableRetailPct", 97) / 100)).toLocaleString("en-US")}</div></div>}
+                      {n("gfaOfficesSqft") > 0 && <div><div className="text-[9px] text-emerald-500">مكاتب×{n("saleableOfficesPct", 95)}%</div><div className="text-[11px] font-bold text-emerald-700 font-mono" dir="ltr">{Math.round(n("gfaOfficesSqft") * (n("saleableOfficesPct", 95) / 100)).toLocaleString("en-US")}</div></div>}
                     </div>
                   </div>
                 )}
