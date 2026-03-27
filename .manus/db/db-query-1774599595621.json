@@ -1,0 +1,80 @@
+{
+  "query": "SELECT serviceCode, nameAr, sortOrder FROM lifecycle_services WHERE stageCode = (SELECT stageCode FROM lifecycle_stages ORDER BY sortOrder LIMIT 1) ORDER BY sortOrder LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT serviceCode, nameAr, sortOrder FROM lifecycle_services WHERE stageCode = (SELECT stageCode FROM lifecycle_stages ORDER BY sortOrder LIMIT 1) ORDER BY sortOrder LIMIT 20;",
+  "rows": [
+    {
+      "serviceCode": "SRV-DES-CONCEPT-DEV",
+      "nameAr": "تطوير واعتماد الكونسبت التصميمي",
+      "sortOrder": "0"
+    },
+    {
+      "serviceCode": "SRV-DES-FINAL-DESIGN",
+      "nameAr": "التصميم النهائي واعتماد الرسومات",
+      "sortOrder": "0"
+    },
+    {
+      "serviceCode": "SRV-STG10-EVAL",
+      "nameAr": "استلام العروض وتقييمها وترشيح الاستشاري",
+      "sortOrder": "0"
+    },
+    {
+      "serviceCode": "SRV-DES-PRELIM-DESIGN",
+      "nameAr": "التصميم الابتدائي واعتماده",
+      "sortOrder": "0"
+    },
+    {
+      "serviceCode": "SRV-STG10-RFP",
+      "nameAr": "إرسال طلب العروض للاستشاريين",
+      "sortOrder": "0"
+    },
+    {
+      "serviceCode": "SRV-DES-CNSLT-APPT",
+      "nameAr": "تعيين الاستشاري الرئيسي",
+      "sortOrder": "1"
+    },
+    {
+      "serviceCode": "SRV-DES-BLDG-PERMIT",
+      "nameAr": "الحصول على رخصة البناء",
+      "sortOrder": "2"
+    },
+    {
+      "serviceCode": "SRV-STG10-CONTRACT",
+      "nameAr": "التفاوض النهائي وتوقيع عقد الاستشاري",
+      "sortOrder": "3"
+    },
+    {
+      "serviceCode": "SRV-STG10-CONCEPT",
+      "nameAr": "إعداد وتصميم الكونسبت",
+      "sortOrder": "4"
+    },
+    {
+      "serviceCode": "SRV-STG10-SCHEMATIC",
+      "nameAr": "إعداد التصميم التخطيطي",
+      "sortOrder": "5"
+    },
+    {
+      "serviceCode": "SRV-STG10-DETAILED",
+      "nameAr": "إعداد التصميم التفصيلي",
+      "sortOrder": "6"
+    },
+    {
+      "serviceCode": "SRV-STG10-PERMITS",
+      "nameAr": "الحصول على موافقات ورخص الجهات الرسمية",
+      "sortOrder": "7"
+    },
+    {
+      "serviceCode": "SRV-STG10-TENDER-DOCS",
+      "nameAr": "إعداد وثائق ورسومات المناقصة",
+      "sortOrder": "8"
+    },
+    {
+      "serviceCode": "SRV-STG10-CONTRACTOR",
+      "nameAr": "طرح المناقصة وتقييم عروض المقاولين وتوقيع العقد",
+      "sortOrder": "9"
+    }
+  ],
+  "messages": [],
+  "stdout": "serviceCode\tnameAr\tsortOrder\nSRV-DES-CONCEPT-DEV\tتطوير واعتماد الكونسبت التصميمي\t0\nSRV-DES-FINAL-DESIGN\tالتصميم النهائي واعتماد الرسومات\t0\nSRV-STG10-EVAL\tاستلام العروض وتقييمها وترشيح الاستشاري\t0\nSRV-DES-PRELIM-DESIGN\tالتصميم الابتدائي واعتماده\t0\nSRV-STG10-RFP\tإرسال طلب العروض للاستشاريين\t0\nSRV-DES-CNSLT-APPT\tتعيين الاستشاري الرئيسي\t1\nSRV-DES-BLDG-PERMIT\tالحصول على رخصة البناء\t2\nSRV-STG10-CONTRACT\tالتفاوض النهائي وتوقيع عقد الاستشاري\t3\nSRV-STG10-CONCEPT\tإعداد وتصميم الكونسبت\t4\nSRV-STG10-SCHEMATIC\tإعداد التصميم التخطيطي\t5\nSRV-STG10-DETAILED\tإعداد التصميم التفصيلي\t6\nSRV-STG10-PERMITS\tالحصول على موافقات ورخص الجهات الرسمية\t7\nSRV-STG10-TENDER-DOCS\tإعداد وثائق ورسومات المناقصة\t8\nSRV-STG10-CONTRACTOR\tطرح المناقصة وتقييم عروض المقاولين وتوقيع العقد\t9\n",
+  "stderr": "",
+  "execution_time_ms": 1571
+}

@@ -598,14 +598,15 @@ function StageAdminSection({
     const sorted = [...services].sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
     const targetIndex = direction === "up" ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= sorted.length) return;
-    const current = sorted[index];
-    const target = sorted[targetIndex];
-    reorderServicesMutation.mutate({
-      services: [
-        { serviceCode: current.serviceCode, sortOrder: target.sortOrder ?? (targetIndex + 1) * 10 },
-        { serviceCode: target.serviceCode, sortOrder: current.sortOrder ?? (index + 1) * 10 },
-      ],
-    });
+    // Reassign ALL sortOrders after the swap to guarantee uniqueness
+    const reordered = [...sorted];
+    const [moved] = reordered.splice(index, 1);
+    reordered.splice(targetIndex, 0, moved);
+    const updates = reordered.map((svc: any, i: number) => ({
+      serviceCode: svc.serviceCode,
+      sortOrder: (i + 1) * 10,
+    }));
+    reorderServicesMutation.mutate({ services: updates });
   };
 
   const updateMutation = trpc.lifecycle.updateStage.useMutation({
