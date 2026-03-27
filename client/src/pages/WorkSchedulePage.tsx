@@ -130,14 +130,20 @@ const countWorkingDays = (start: Date, end: Date): number => {
 };
 
 const STAGE_COLORS: Record<string, { bar: string; barLight: string; text: string }> = {
-  "STG-01": { bar: "#0ea5e9", barLight: "#bae6fd", text: "#0c4a6e" },
-  "STG-02": { bar: "#10b981", barLight: "#a7f3d0", text: "#064e3b" },
-  "STG-03": { bar: "#8b5cf6", barLight: "#ddd6fe", text: "#4c1d95" },
-  "STG-04": { bar: "#f59e0b", barLight: "#fde68a", text: "#78350f" },
-  "STG-05": { bar: "#ec4899", barLight: "#fbcfe8", text: "#831843" },
-  "STG-06": { bar: "#06b6d4", barLight: "#a5f3fc", text: "#164e63" },
-  "STG-07": { bar: "#ef4444", barLight: "#fecaca", text: "#7f1d1d" },
-  default: { bar: "#64748b", barLight: "#cbd5e1", text: "#1e293b" },
+  // Core numbered stages
+  "STG-01": { bar: "#0ea5e9", barLight: "#bae6fd", text: "#0c4a6e" },   // Sky blue — تأسيس المطور
+  "STG-02": { bar: "#10b981", barLight: "#a7f3d0", text: "#064e3b" },   // Emerald — التسجيل وريرا
+  "STG-03": { bar: "#8b5cf6", barLight: "#ddd6fe", text: "#4c1d95" },   // Violet — المبيعات
+  "STG-04": { bar: "#f59e0b", barLight: "#fde68a", text: "#78350f" },   // Amber — الرقابة المالية
+  "STG-05": { bar: "#ec4899", barLight: "#fbcfe8", text: "#831843" },   // Pink — إغلاق المشروع
+  "STG-06": { bar: "#06b6d4", barLight: "#a5f3fc", text: "#164e63" },   // Cyan
+  "STG-07": { bar: "#ef4444", barLight: "#fecaca", text: "#7f1d1d" },   // Red
+  // Named stages
+  "STG-10":   { bar: "#6366f1", barLight: "#e0e7ff", text: "#312e81" }, // Indigo — الاستشاري والتصاميم
+  "STG-EXEC": { bar: "#f97316", barLight: "#fed7aa", text: "#7c2d12" }, // Orange — التنفيذ والبناء
+  "STG-20":   { bar: "#14b8a6", barLight: "#ccfbf1", text: "#134e4a" }, // Teal — الدعاية والتسويق
+  "STG-CLOSE":{ bar: "#a855f7", barLight: "#f3e8ff", text: "#581c87" }, // Purple — الإقفال والتسليم
+  default:    { bar: "#64748b", barLight: "#cbd5e1", text: "#1e293b" },  // Slate gray — fallback
 };
 
 const getColor = (stageCode: string) => STAGE_COLORS[stageCode] || STAGE_COLORS.default;
