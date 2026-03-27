@@ -447,7 +447,7 @@ export const cashFlowSettingsRouter = router({
         handover: project.handoverMonths || 2,
       };
       const durations = legacyToNewDurations(legacyDurations);
-      const phases = calculatePhases(durations);
+      const phases = calculatePhases(durations, 0, input.scenario);
       const totalMonths = getTotalMonths(durations);
 
       if (existing.length > 0) {
@@ -694,7 +694,7 @@ export const cashFlowSettingsRouter = router({
         handover: project.handoverMonths || 2,
       };
       const durations = legacyToNewDurations(legacyDurations);
-      const phases = calculatePhases(durations);
+      const phases = calculatePhases(durations, 0, input.scenario);
       const totalMonths = getTotalMonths(durations);
       const monthLabels = generateMonthLabels(project.startDate || "2026-01", totalMonths);
 
@@ -919,14 +919,15 @@ export const cashFlowSettingsRouter = router({
         })
         .where(eq(projects.id, input.projectId));
 
-      // 3. Calculate old and new phase boundaries
+      // 3. Calculate old and new phase boundaries (per scenario, since offplan timing differs)
       const oldDurations = legacyToNewDurations({ preCon: oldDesign, construction: oldConstruction, handover: oldHandover });
       const newDurations = legacyToNewDurations({ preCon: input.designMonths, construction: input.constructionMonths, handover: input.handoverMonths });
-      const oldPhases = calculatePhases(oldDurations);
-      const newPhases = calculatePhases(newDurations);
 
       // 4. Recalculate startMonth/endMonth for all saved items across all scenarios
       for (const scenario of SCENARIOS) {
+        // Calculate phase boundaries per scenario (offplan timing differs by scenario)
+        const oldPhases = calculatePhases(oldDurations, 0, scenario);
+        const newPhases = calculatePhases(newDurations, 0, scenario);
         const savedItems = await db.select().from(projectCashFlowSettings).where(
           and(
             eq(projectCashFlowSettings.projectId, input.projectId),
@@ -1033,12 +1034,14 @@ export const cashFlowSettingsRouter = router({
         handover: project.handoverMonths || 2,
       };
       const durations = legacyToNewDurations(legacyDurations);
-      const phases = calculatePhases(durations);
       const totalMonths = getTotalMonths(durations);
       const monthLabels = generateMonthLabels(project.startDate || "2026-01", totalMonths);
 
       // Helper: build monthly totals for one scenario
+      // IMPORTANT: phases are calculated per-scenario because offplan timing differs by scenario
       async function buildScenarioTotals(scenario: Scenario) {
+        // Calculate phases for this specific scenario
+        const phases = calculatePhases(durations, 0, scenario);
         const savedSettings = await db!.select().from(projectCashFlowSettings).where(
           and(
             eq(projectCashFlowSettings.projectId, input.projectId),
@@ -1101,7 +1104,7 @@ export const cashFlowSettingsRouter = router({
           }
         }
 
-        return { investorMonthly, escrowMonthly, grandMonthly, totalCosts, totalRevenue };
+        return { investorMonthly, escrowMonthly, grandMonthly, totalCosts, totalRevenue, phases };
       }
 
       const [s1, s2, s3] = await Promise.all([
@@ -1110,7 +1113,8 @@ export const cashFlowSettingsRouter = router({
         buildScenarioTotals("no_offplan"),
       ]);
 
-      // Phase info
+      // Phase info — use O1 (offplan_escrow) phases as the reference for display
+      const phases = s1.phases;
       const phaseInfo = {
         design: { start: phases.find(p => p.type === "design")?.startMonth || 1, end: (phases.find(p => p.type === "design")?.startMonth || 1) + durations.design - 1, duration: durations.design },
         offplan: { start: phases.find(p => p.type === "offplan")?.startMonth || 3, end: (phases.find(p => p.type === "offplan")?.startMonth || 3) + durations.offplan - 1, duration: durations.offplan },
@@ -1221,7 +1225,7 @@ export const cashFlowSettingsRouter = router({
         handover: project.handoverMonths || 2,
       };
       const durations = legacyToNewDurations(legacyDurations);
-      const phases = calculatePhases(durations);
+      const phases = calculatePhases(durations, 0, scenario);
       const totalMonths = getTotalMonths(durations);
 
       // Get saved settings or use defaults
@@ -1492,15 +1496,16 @@ export const cashFlowSettingsRouter = router({
         handover: project.handoverMonths || 2,
       };
       const durations = legacyToNewDurations(legacyDurations);
-      const phases = calculatePhases(durations);
+      // Use O1 phases for phaseInfo display (offplan_escrow is the reference)
+      const phasesForDisplay = calculatePhases(durations, 0, "offplan_escrow");
       const totalMonths = getTotalMonths(durations);
 
       // Phase info for display
       const phaseInfo = {
-        design: { duration: durations.design, start: phases.find(p => p.type === "design")?.startMonth || 1 },
-        offplan: { duration: durations.offplan, start: phases.find(p => p.type === "offplan")?.startMonth || 3 },
-        construction: { duration: durations.construction, start: phases.find(p => p.type === "construction")?.startMonth || 7 },
-        handover: { duration: durations.handover, start: phases.find(p => p.type === "handover")?.startMonth || 23 },
+        design: { duration: durations.design, start: phasesForDisplay.find(p => p.type === "design")?.startMonth || 1 },
+        offplan: { duration: durations.offplan, start: phasesForDisplay.find(p => p.type === "offplan")?.startMonth || 3 },
+        construction: { duration: durations.construction, start: phasesForDisplay.find(p => p.type === "construction")?.startMonth || 7 },
+        handover: { duration: durations.handover, start: phasesForDisplay.find(p => p.type === "handover")?.startMonth || 23 },
       };
 
       // Build items for each scenario using the same logic as getReflectionData
@@ -1529,6 +1534,8 @@ export const cashFlowSettingsRouter = router({
       const allItemKeys: string[] = [];
 
       for (const sc of scenarioList) {
+        // Calculate phases per scenario (offplan timing differs by scenario)
+        const phases = calculatePhases(durations, 0, sc);
         // Check for saved settings first
         const savedSettings = await db.select().from(projectCashFlowSettings).where(
           and(
@@ -1830,19 +1837,22 @@ export const cashFlowSettingsRouter = router({
         handover: project.handoverMonths || 2,
       };
       const durations = legacyToNewDurations(legacyDurations);
-      const phasesArr = calculatePhases(durations);
       const totalMonths = getTotalMonths(durations);
+      // Use O1 (offplan_escrow) phases for phaseInfo display
+      const phasesArrForDisplay = calculatePhases(durations, 0, "offplan_escrow");
 
       const phaseInfo = {
-        design: { duration: durations.design, start: phasesArr.find(p => p.type === "design")?.startMonth || 1 },
-        offplan: { duration: durations.offplan, start: phasesArr.find(p => p.type === "offplan")?.startMonth || 3 },
-        construction: { duration: durations.construction, start: phasesArr.find(p => p.type === "construction")?.startMonth || 7 },
-        handover: { duration: durations.handover, start: phasesArr.find(p => p.type === "handover")?.startMonth || 23 },
+        design: { duration: durations.design, start: phasesArrForDisplay.find(p => p.type === "design")?.startMonth || 1 },
+        offplan: { duration: durations.offplan, start: phasesArrForDisplay.find(p => p.type === "offplan")?.startMonth || 3 },
+        construction: { duration: durations.construction, start: phasesArrForDisplay.find(p => p.type === "construction")?.startMonth || 7 },
+        handover: { duration: durations.handover, start: phasesArrForDisplay.find(p => p.type === "handover")?.startMonth || 23 },
       };
 
       const scenariosData: Record<string, ScenarioSummary> = {};
 
       for (const sc of scenarioList) {
+        // Calculate phases per scenario (offplan timing differs by scenario)
+        const phasesArr = calculatePhases(durations, 0, sc);
         const savedSettings = await db.select().from(projectCashFlowSettings).where(
           and(
             eq(projectCashFlowSettings.projectId, project.id),

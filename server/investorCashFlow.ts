@@ -222,30 +222,46 @@ export function legacyToNewDurations(legacy: LegacyPhaseDurations): PhaseDuratio
 
 /**
  * Calculate phase configs for the 4-phase structure.
- * In normal flow:
- *  - land: month 0 (instant)
- *  - design: starts month 1, lasts designMonths
- *  - offplan: starts at design month 3 (i.e., month 3 absolute), lasts 2 months
- *    → offplan overlaps with design and ends at same time
- *  - construction: starts after design ends
- *  - handover: starts after construction ends
+ *
+ * Scenario rules:
+ *  - O1 (offplan_escrow): offplan starts at month 3 (overlaps with design from month 3)
+ *    construction starts after design ends (offplan runs in parallel with design)
+ *  - O2 (offplan_construction): offplan starts at month 1 of construction
+ *    (offplan runs in parallel with construction start)
+ *  - O3 (no_offplan): no offplan phase, construction starts after design
  *
  * offplanDelay: extra months to delay offplan start beyond its earliest possible start.
- *   0 = normal (starts at design month 3)
- *   positive = delayed further
  */
-export function calculatePhases(d: PhaseDurations, offplanDelay = 0): PhaseConfig[] {
+export function calculatePhases(
+  d: PhaseDurations,
+  offplanDelay = 0,
+  scenario: "offplan_escrow" | "offplan_construction" | "no_offplan" = "offplan_escrow"
+): PhaseConfig[] {
   const designStart = 1;
   const designEnd = designStart + d.design - 1;
 
-  // Offplan (registration) starts AFTER design ends (sequential, not overlapping)
-  const offplanStart = designEnd + 1 + offplanDelay;
-  const offplanEnd = offplanStart + d.offplan - 1;
+  let offplanStart: number;
+  let offplanEnd: number;
+  let constructionStart: number;
 
-  // Construction starts AFTER offplan ends (sequential)
-  const constructionStart = offplanEnd + 1;
+  if (scenario === "offplan_escrow") {
+    // O1: offplan starts at month 3 (overlaps with design), construction starts after design ends
+    offplanStart = 3 + offplanDelay;
+    offplanEnd = offplanStart + d.offplan - 1;
+    constructionStart = designEnd + 1; // construction starts right after design
+  } else if (scenario === "offplan_construction") {
+    // O2: construction starts after design, offplan starts at month 1 of construction
+    constructionStart = designEnd + 1;
+    offplanStart = constructionStart + offplanDelay;
+    offplanEnd = offplanStart + d.offplan - 1;
+  } else {
+    // O3: no offplan, construction starts after design
+    offplanStart = designEnd + 1;
+    offplanEnd = offplanStart + d.offplan - 1;
+    constructionStart = designEnd + 1;
+  }
+
   const constructionEnd = constructionStart + d.construction - 1;
-
   const handoverStart = constructionEnd + 1;
 
   return [
