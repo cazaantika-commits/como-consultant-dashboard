@@ -112,7 +112,7 @@ export async function createProject(userId: number, data: Omit<InsertProject, 'u
   return result;
 }
 
-export async function updateProject(projectId: number, userId: number, data: Partial<InsertProject>) {
+export async function updateProject(projectId: number, userId: number, data: Partial<InsertProject> & Record<string, any>) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   const project = await getProjectById(projectId, userId);
@@ -122,7 +122,8 @@ export async function updateProject(projectId: number, userId: number, data: Par
   const percentageFields = [
     'agentCommissionLandPct', 'designFeePct', 'supervisionFeePct', 
     'separationFeePerM2', 'salesCommissionPct', 'marketingPct',
-    'developerFeePhase1Pct', 'developerFeePhase2Pct'
+    'developerFeePhase1Pct', 'developerFeePhase2Pct',
+    'saleableResidentialPct', 'saleableRetailPct', 'saleableOfficesPct'
   ];
   
   const convertedData = { ...data };
