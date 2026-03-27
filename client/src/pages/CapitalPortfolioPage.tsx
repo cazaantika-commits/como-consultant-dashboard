@@ -262,21 +262,30 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
       const durations = project.durations as { design: number; offplan: number; construction: number; handover: number };
       const offplanDuration = durations.offplan || 2;
       const designDuration = durations.design || 5;
+      const scenario = OPTION_TO_SCENARIO[option];
 
-      // Registration default position (from server): starts at designEnd + 1 = designDuration + 1 (relative)
-      // With offplanDelay: offplanStart = designEnd + 1 + offplanDelay (in chart coords)
-      // Constraint 1: offplanStart >= designStart + 2 (month 3 of design)
-      //   => designEnd + 1 + offplanDelay >= designStart + 2
-      //   => offplanDelay >= -(designDuration - 2)
-      const minOffplanDelay = -(designDuration - 2);
-
-      // Constraint 2: offplanEnd <= constructionStart + 3 (month 4 of construction)
-      //   offplanEnd = designEnd + 1 + offplanDelay + offplanDuration - 1
-      //   constructionStart = designEnd + 1 + constructionDelay
-      //   => designEnd + 1 + offplanDelay + offplanDuration - 1 <= designEnd + 1 + constructionDelay + 3
-      //   => offplanDelay <= constructionDelay + 3 - offplanDuration + 1
-      //   => offplanDelay <= constructionDelay + 4 - offplanDuration
-      const maxOffplanDelay = updated.constructionDelay + 4 - offplanDuration;
+      // Scenario-aware constraints:
+      // O1 (offplan_escrow): offplanStart = designStart + 2 + offplanDelay
+      //   Constraint: offplanStart >= designStart + 2 => offplanDelay >= 0 (can't go earlier than month 3)
+      //   Constraint: offplanEnd <= constructionStart + 3
+      //     designStart + 2 + offplanDelay + offplanDuration - 1 <= designDuration + constructionDelay + 3
+      //     offplanDelay <= designDuration - 2 + constructionDelay + 3 - offplanDuration + 1
+      //     offplanDelay <= designDuration + constructionDelay + 2 - offplanDuration
+      // O2 (offplan_construction): offplanStart = constructionStart + offplanDelay
+      //   Constraint: offplanStart >= designStart + 2 => constructionDelay + offplanDelay >= -(designDuration - 2)
+      //     offplanDelay >= -(designDuration - 2) - constructionDelay
+      //   Constraint: offplanEnd <= constructionStart + 3
+      //     constructionDelay + offplanDelay + offplanDuration - 1 <= constructionDelay + 3
+      //     offplanDelay <= 4 - offplanDuration
+      let minOffplanDelay: number;
+      let maxOffplanDelay: number;
+      if (scenario === "offplan_escrow") {
+        minOffplanDelay = 0; // Can't move earlier than month 3 of design
+        maxOffplanDelay = designDuration + updated.constructionDelay + 2 - offplanDuration;
+      } else {
+        minOffplanDelay = -(designDuration - 2) - updated.constructionDelay;
+        maxOffplanDelay = 4 - offplanDuration;
+      }
 
       if (updated.offplanDelay < minOffplanDelay) {
         updated.offplanDelay = minOffplanDelay;
@@ -340,10 +349,10 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
         // CONSTRAINT SYSTEM:
         //   paid → no delay (already paid)
         //   design → shifts by designDelay (free movement)
-        //   offplan → shifts by designDelay + offplanDelay
-        //     Server default: offplan starts AFTER design ends
-        //     offplanDelay can be NEGATIVE to move registration earlier into design
-        //     offplanDelay can be POSITIVE to move registration later into construction
+        //   offplan → scenario-aware:
+        //     O1 (offplan_escrow): starts at month 3 of design (designStart + 2)
+        //     O2 (offplan_construction): starts at constructionStart
+        //     offplanDelay shifts the position further
         //   construction → shifts by designDelay + constructionDelay (follows design directly)
         //   escrow → same as construction
         const constructionEffectiveDelay = delay.designDelay + delay.constructionDelay;
@@ -417,16 +426,30 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
         const constructionStart = designEnd + 1 + delay.constructionDelay;
         const constructionEnd = constructionStart + durations.construction - 1;
 
-        // Registration (offplan) default position: AFTER design ends (matching server)
-        // offplanDelay moves it: negative = earlier (into design), positive = later (into construction)
-        // Constraints: start >= month 3 of design, end <= month 4 of construction
+        // Registration (offplan) default position — scenario-aware (matching server logic):
+        //   O1 (offplan_escrow): starts at month 3 of design (designStart + 2)
+        //   O2 (offplan_construction): starts at constructionStart
+        //   offplanDelay shifts position further
         const offplanDuration = durations.offplan || 2;
-        let offplanStart = hasOffplan ? (designEnd + 1 + delay.offplanDelay) : -1;
-        let offplanEnd = hasOffplan ? (offplanStart + offplanDuration - 1) : -1;
+        let offplanStart: number;
+        let offplanEnd: number;
+        if (!hasOffplan) {
+          offplanStart = -1;
+          offplanEnd = -1;
+        } else if (scenario === "offplan_escrow") {
+          // O1: starts at month 3 of design (0-indexed: designStart + 2) + offplanDelay
+          offplanStart = designStart + 2 + delay.offplanDelay;
+          offplanEnd = offplanStart + offplanDuration - 1;
+        } else {
+          // O2: starts at constructionStart + offplanDelay
+          offplanStart = constructionStart + delay.offplanDelay;
+          offplanEnd = offplanStart + offplanDuration - 1;
+        }
 
         // Enforce constraints — ALWAYS exactly offplanDuration months
         if (hasOffplan) {
-          const minStart = designStart + 2; // month 3 of design (0-indexed)
+          // O1: min start = month 3 of design; O2: min start = constructionStart
+          const minStart = scenario === "offplan_escrow" ? designStart + 2 : constructionStart;
           const maxStart = constructionStart + 3 - (offplanDuration - 1); // so last month doesn't exceed month 4 of construction
           if (offplanStart < minStart) offplanStart = minStart;
           if (offplanStart > maxStart) offplanStart = maxStart;
@@ -545,10 +568,11 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
         const isOffplanFirst = offplanOverlay && !prevHasOffplan;
         const isOffplanLast = offplanOverlay && !nextHasOffplan;
         // Check if this cell is within a geometric phase range (should always be solid colored)
+        // NOTE: offplan is intentionally EXCLUDED — it only shows when it has actual amounts
+        // This prevents empty offplan rectangles from appearing
         const inGeometricRange = (
           (midIdx >= col.phaseRanges.design.start && midIdx <= col.phaseRanges.design.end) ||
           (midIdx >= col.phaseRanges.construction.start && midIdx <= col.phaseRanges.construction.end) ||
-          (col.hasOffplan && midIdx >= col.phaseRanges.offplan.start && midIdx <= col.phaseRanges.offplan.end) ||
           (midIdx >= col.phaseRanges.handover.start && midIdx <= col.phaseRanges.handover.end)
         );
         return { colId: col.projectId, amount, phase, isFirst, isLast, offplanOverlay, isOffplanFirst, isOffplanLast, inGeometricRange };

@@ -384,9 +384,13 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
       const designStart = baseStart + delay.designDelay;
       const designEnd = designStart + col.designMonths - 1;
 
-      // Offplan range (normal: starts at design month 3, but with delay it shifts)
-      // In normal flow, offplan starts at design start + 2
-      const offplanNormalStart = designStart + 2;
+      // Offplan range — scenario-aware (matching server logic):
+      //   O1 (offplan_escrow): starts at month 3 of design (designStart + 2) + offplanDelay
+      //   O2 (offplan_construction): starts at constructionStart + offplanDelay
+      const constructionNormalStartForOffplan = designEnd + 1;
+      const offplanNormalStart = col.financingScenario === "offplan_construction"
+        ? constructionNormalStartForOffplan + delay.constructionDelay
+        : designStart + 2;
       const offplanStart = offplanNormalStart + delay.offplanDelay;
       const offplanEnd = offplanStart + (col.offplanMonths || 2) - 1;
 
