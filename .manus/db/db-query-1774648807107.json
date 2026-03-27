@@ -1,0 +1,34 @@
+{
+  "query": "SELECT id, saleableResidentialPct, saleableRetailPct, saleableOfficesPct, saleable_residential_pct, saleable_retail_pct FROM projects LIMIT 3;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, saleableResidentialPct, saleableRetailPct, saleableOfficesPct, saleable_residential_pct, saleable_retail_pct FROM projects LIMIT 3;",
+  "rows": [
+    {
+      "id": "1",
+      "saleableResidentialPct": "95.00",
+      "saleableRetailPct": "97.00",
+      "saleableOfficesPct": "95.00",
+      "saleable_residential_pct": "95.00",
+      "saleable_retail_pct": "97.00"
+    },
+    {
+      "id": "2",
+      "saleableResidentialPct": "95.00",
+      "saleableRetailPct": "80.00",
+      "saleableOfficesPct": "89.00",
+      "saleable_residential_pct": "95.00",
+      "saleable_retail_pct": "97.00"
+    },
+    {
+      "id": "3",
+      "saleableResidentialPct": "94.00",
+      "saleableRetailPct": "97.00",
+      "saleableOfficesPct": "95.00",
+      "saleable_residential_pct": "95.00",
+      "saleable_retail_pct": "97.00"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tsaleableResidentialPct\tsaleableRetailPct\tsaleableOfficesPct\tsaleable_residential_pct\tsaleable_retail_pct\n1\t95.00\t97.00\t95.00\t95.00\t97.00\n2\t95.00\t80.00\t89.00\t95.00\t97.00\n3\t94.00\t97.00\t95.00\t95.00\t97.00\n",
+  "stderr": "",
+  "execution_time_ms": 1591
+}

@@ -343,6 +343,9 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
         developerFeePct: p.developerFeePct ? String(p.developerFeePct) : "5",
         preConMonths: p.preConMonths ? String(p.preConMonths) : "6",
         constructionMonths: p.constructionMonths ? String(p.constructionMonths) : "18",
+        saleableResidentialPct: p.saleableResidentialPct ? String(p.saleableResidentialPct) : "95",
+        saleableRetailPct: p.saleableRetailPct ? String(p.saleableRetailPct) : "97",
+        saleableOfficesPct: p.saleableOfficesPct ? String(p.saleableOfficesPct) : "95",
         notes: p.notes || "",
       });
       setHasChanges(false);
