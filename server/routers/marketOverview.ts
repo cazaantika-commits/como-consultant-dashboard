@@ -193,9 +193,9 @@ export const marketOverviewRouter = router({
       }
       const projectTypeStr = projectType.length > 0 ? projectType.join(' + ') : (project.description || 'غير محدد');
 
-      const saleableResArea = feasStudy ? gfaRes * ((feasStudy.saleableResidentialPct || 90) / 100) : 0;
-      const saleableRetArea = feasStudy ? gfaRet * ((feasStudy.saleableRetailPct || 99) / 100) : 0;
-      const saleableOffArea = feasStudy ? gfaOff * ((feasStudy.saleableOfficesPct || 90) / 100) : 0;
+      const saleableResArea = feasStudy ? gfaRes * ((feasStudy.saleableResidentialPct || 95) / 100) : 0;
+      const saleableRetArea = feasStudy ? gfaRet * ((feasStudy.saleableRetailPct || 97) / 100) : 0;
+      const saleableOffArea = feasStudy ? gfaOff * ((feasStudy.saleableOfficesPct || 95) / 100) : 0;
 
       // Format competition pricing data for the report
       const competitionPricingSection = compPricing ? `

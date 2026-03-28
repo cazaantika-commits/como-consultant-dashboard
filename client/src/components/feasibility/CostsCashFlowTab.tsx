@@ -161,9 +161,12 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
     const gfaRes = parseFloat(p2.gfaResidentialSqft || "0");
     const gfaRet = parseFloat(p2.gfaRetailSqft || "0");
     const gfaOff = parseFloat(p2.gfaOfficesSqft || "0");
-    if (cat === "residential") return gfaRes * 0.95;
-    if (cat === "retail") return gfaRet * 0.97;
-    return gfaOff * 0.95;
+    const resPct2 = parseFloat(p2.saleableResidentialPct ?? "95") / 100;
+    const retPct2 = parseFloat(p2.saleableRetailPct ?? "97") / 100;
+    const offPct2 = parseFloat(p2.saleableOfficesPct ?? "95") / 100;
+    if (cat === "residential") return gfaRes * resPct2;
+    if (cat === "retail") return gfaRet * retPct2;
+    return gfaOff * offPct2;
   }
 
   const p = project || {} as any;
@@ -175,9 +178,12 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
   const gfaOffSqft = parseFloat(p.gfaOfficesSqft || "0");
   const buaSqft = parseFloat(p.manualBuaSqft || "0");
 
-  const sellableRes = gfaResSqft * 0.95;
-  const sellableRet = gfaRetSqft * 0.97;
-  const sellableOff = gfaOffSqft * 0.95;
+  const resPct = parseFloat(p.saleableResidentialPct ?? "95") / 100;
+  const retPct = parseFloat(p.saleableRetailPct ?? "97") / 100;
+  const offPct = parseFloat(p.saleableOfficesPct ?? "95") / 100;
+  const sellableRes = gfaResSqft * resPct;
+  const sellableRet = gfaRetSqft * retPct;
+  const sellableOff = gfaOffSqft * offPct;
   const totalSellable = sellableRes + sellableRet + sellableOff;
 
   const getSellable = useCallback((cat: string) => {
@@ -408,9 +414,9 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
             </thead>
             <tbody>
               {[
-                { label: "سكني", gfa: gfaResSqft, eff: 95, sell: sellableRes, dot: "bg-sky-500" },
-                { label: "تجزئة", gfa: gfaRetSqft, eff: 97, sell: sellableRet, dot: "bg-amber-500" },
-                { label: "مكاتب", gfa: gfaOffSqft, eff: 95, sell: sellableOff, dot: "bg-violet-500" },
+                { label: "سكني", gfa: gfaResSqft, eff: Math.round(resPct * 100), sell: sellableRes, dot: "bg-sky-500" },
+                { label: "تجزئة", gfa: gfaRetSqft, eff: Math.round(retPct * 100), sell: sellableRet, dot: "bg-amber-500" },
+                { label: "مكاتب", gfa: gfaOffSqft, eff: Math.round(offPct * 100), sell: sellableOff, dot: "bg-violet-500" },
               ].filter(r => r.gfa > 0).map(r => (
                 <tr key={r.label} className="border-b border-gray-50 hover:bg-gray-50/40">
                   <td className="py-1 pr-3 flex items-center gap-1.5"><span className={`w-2 h-2 rounded-full ${r.dot}`} />{r.label}</td>

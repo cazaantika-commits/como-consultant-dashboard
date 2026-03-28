@@ -106,9 +106,12 @@ export function calculateProjectCosts(
   const gfaResSqft = parseFloat(p.gfaResidentialSqft || "0");
   const gfaRetSqft = parseFloat(p.gfaRetailSqft || "0");
   const gfaOffSqft = parseFloat(p.gfaOfficesSqft || "0");
-  const saleableRes = gfaResSqft * 0.95;
-  const saleableRet = gfaRetSqft * 0.97;
-  const saleableOff = gfaOffSqft * 0.95;
+  const saleableResPct = parseFloat(p.saleableResidentialPct ?? "95");
+  const saleableRetPct = parseFloat(p.saleableRetailPct ?? "97");
+  const saleableOffPct = parseFloat(p.saleableOfficesPct ?? "95");
+  const saleableRes = gfaResSqft * (saleableResPct / 100);
+  const saleableRet = gfaRetSqft * (saleableRetPct / 100);
+  const saleableOff = gfaOffSqft * (saleableOffPct / 100);
 
   const getPrices = () => {
     if (!cp) return { studioPrice: 0, oneBrPrice: 0, twoBrPrice: 0, threeBrPrice: 0, retailSmallPrice: 0, retailMediumPrice: 0, retailLargePrice: 0, officeSmallPrice: 0, officeMediumPrice: 0, officeLargePrice: 0 };

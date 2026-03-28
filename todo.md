@@ -474,3 +474,7 @@
 - [ ] Bug fix: مصاريف الإنشاء لا تبدأ من أول شهر في المرحلة — الجداف صحيح لكن باقي المشاريع عندها شهور فارغة ملونة بدون أرقام في بداية مرحلة الإنشاء (الأرقام لا تتحرك مع تأجيل الإنشاء)
 - [x] Bug fix: مصاريف الإنشاء تبدأ من الشهر 3 بدل الشهر 1 في كل المشاريع ما عدا الجداف — يجب أن تبدأ من الشهر الأول مثل الجداف
 - [ ] Bug fix: مرحلة التسجيل غير محددة بداية شهرها بشكل صحيح — O1: التسجيل يبدأ من الشهر 3 (بعد شهرين من بداية التصاميم)، O2: التسجيل يبدأ من الشهر الأول من الإنشاء — هذا السبب الجذري لعدم صحة التقارير
+- [x] Fix FeasibilityStudyPage.tsx: replace hardcoded fallback 90/99 with project's saleableResidentialPct/saleableRetailPct/saleableOfficesPct
+- [x] Fix cashFlowProgram.ts: replace 4 hardcoded 0.95/0.97 occurrences with project's percentage values
+- [x] Fix investorCashFlow.ts: replace hardcoded 0.95/0.97 with project's percentage values
+- [x] Ensure all saleable area calculations across the platform use the project-specific percentages

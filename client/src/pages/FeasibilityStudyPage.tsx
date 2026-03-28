@@ -226,9 +226,9 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
     const gfaOff = f.gfaOffices || 0;
     const totalGfa = gfaRes + gfaRet + gfaOff;
 
-    const saleableRes = gfaRes * ((f.saleableResidentialPct || 90) / 100);
-    const saleableRet = gfaRet * ((f.saleableRetailPct || 99) / 100);
-    const saleableOff = gfaOff * ((f.saleableOfficesPct || 90) / 100);
+    const saleableRes = gfaRes * ((f.saleableResidentialPct || 95) / 100);
+    const saleableRet = gfaRet * ((f.saleableRetailPct || 97) / 100);
+    const saleableOff = gfaOff * ((f.saleableOfficesPct || 95) / 100);
     const totalSaleable = saleableRes + saleableRet + saleableOff;
 
     const bua = f.estimatedBua || 0;

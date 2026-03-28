@@ -140,9 +140,9 @@ export const feasibilityRouter = router({
 
       // Calculate key metrics
       const totalGfa = (study.gfaResidential || 0) + (study.gfaRetail || 0) + (study.gfaOffices || 0);
-      const saleableRes = (study.gfaResidential || 0) * ((study.saleableResidentialPct || 90) / 100);
-      const saleableRet = (study.gfaRetail || 0) * ((study.saleableRetailPct || 99) / 100);
-      const saleableOff = (study.gfaOffices || 0) * ((study.saleableOfficesPct || 90) / 100);
+      const saleableRes = (study.gfaResidential || 0) * ((study.saleableResidentialPct || 95) / 100);
+      const saleableRet = (study.gfaRetail || 0) * ((study.saleableRetailPct || 97) / 100);
+      const saleableOff = (study.gfaOffices || 0) * ((study.saleableOfficesPct || 95) / 100);
       const constructionCost = (study.estimatedBua || 0) * (study.constructionCostPerSqft || 0);
       const revenueRes = saleableRes * (study.residentialSalePrice || 0);
       const revenueRet = saleableRet * (study.retailSalePrice || 0);
@@ -560,9 +560,9 @@ ${mo ? `
       if (!results[0]) throw new Error("Study not found");
       const study = results[0];
 
-      const saleableRes = (study.gfaResidential || 0) * ((study.saleableResidentialPct || 90) / 100);
-      const saleableRet = (study.gfaRetail || 0) * ((study.saleableRetailPct || 99) / 100);
-      const saleableOff = (study.gfaOffices || 0) * ((study.saleableOfficesPct || 90) / 100);
+      const saleableRes = (study.gfaResidential || 0) * ((study.saleableResidentialPct || 95) / 100);
+      const saleableRet = (study.gfaRetail || 0) * ((study.saleableRetailPct || 97) / 100);
+      const saleableOff = (study.gfaOffices || 0) * ((study.saleableOfficesPct || 95) / 100);
       const constructionCost = (study.estimatedBua || 0) * (study.constructionCostPerSqft || 0);
       const revenueRes = saleableRes * (study.residentialSalePrice || 0);
       const revenueRet = saleableRet * (study.retailSalePrice || 0);

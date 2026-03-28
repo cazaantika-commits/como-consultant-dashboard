@@ -1004,9 +1004,12 @@ export const cashFlowProgramRouter = router({
       const gfaResSqft = pf(proj.gfaResidentialSqft);
       const gfaRetSqft = pf(proj.gfaRetailSqft);
       const gfaOffSqft = pf(proj.gfaOfficesSqft);
-      const saleableRes = gfaResSqft * 0.95;
-      const saleableRet = gfaRetSqft * 0.97;
-      const saleableOff = gfaOffSqft * 0.95;
+      const saleableResPct = pf(proj.saleableResidentialPct) || 95;
+      const saleableRetPct = pf(proj.saleableRetailPct) || 97;
+      const saleableOffPct = pf(proj.saleableOfficesPct) || 95;
+      const saleableRes = gfaResSqft * (saleableResPct / 100);
+      const saleableRet = gfaRetSqft * (saleableRetPct / 100);
+      const saleableOff = gfaOffSqft * (saleableOffPct / 100);
 
       // Helper: get avg area with DEFAULT_AVG_AREAS fallback
       const getAvg = (pctKey: string, avgVal: number | null | undefined): number => {
@@ -1558,7 +1561,8 @@ export const cashFlowProgramRouter = router({
       let totalRevenue = 0;
       if (cpData && moData) {
         const gfaRes = pf(proj.gfaResidentialSqft), gfaRet = pf(proj.gfaRetailSqft), gfaOff = pf(proj.gfaOfficesSqft);
-        const sRes = gfaRes * 0.95, sRet = gfaRet * 0.97, sOff = gfaOff * 0.95;
+        const sResP = pf(proj.saleableResidentialPct) || 95, sRetP = pf(proj.saleableRetailPct) || 97, sOffP = pf(proj.saleableOfficesPct) || 95;
+        const sRes = gfaRes * (sResP / 100), sRet = gfaRet * (sRetP / 100), sOff = gfaOff * (sOffP / 100);
         const pr = { s: cpData.baseStudioPrice||0, o: cpData.base1brPrice||0, t: cpData.base2brPrice||0, th: cpData.base3brPrice||0, rs: cpData.baseRetailSmallPrice||0, rm: cpData.baseRetailMediumPrice||0, rl: cpData.baseRetailLargePrice||0, os: cpData.baseOfficeSmallPrice||0, om: cpData.baseOfficeMediumPrice||0, ol: cpData.baseOfficeLargePrice||0 };
         const ga = (k: string, v: any) => { const n = v||0; if(n>0) return n; const m = DEFAULT_AVG_AREAS[k]; return m ? m.defaultArea : 0; };
         const c = (p: number, a: number, pr2: number, s: number) => { const al = s*(p/100); const u = a>0 ? Math.floor(al/a) : 0; return a*pr2*u; };
@@ -1949,9 +1953,12 @@ export const cashFlowProgramRouter = router({
       const gfaResSqft = pf(proj.gfaResidentialSqft);
       const gfaRetSqft = pf(proj.gfaRetailSqft);
       const gfaOffSqft = pf(proj.gfaOfficesSqft);
-      const saleableRes = gfaResSqft * 0.95;
-      const saleableRet = gfaRetSqft * 0.97;
-      const saleableOff = gfaOffSqft * 0.95;
+      const saleableResPct2 = pf(proj.saleableResidentialPct) || 95;
+      const saleableRetPct2 = pf(proj.saleableRetailPct) || 97;
+      const saleableOffPct2 = pf(proj.saleableOfficesPct) || 95;
+      const saleableRes = gfaResSqft * (saleableResPct2 / 100);
+      const saleableRet = gfaRetSqft * (saleableRetPct2 / 100);
+      const saleableOff = gfaOffSqft * (saleableOffPct2 / 100);
 
       // Revenue calculation - use DEFAULT_AVG_AREAS for fallback like frontend does
       const getAvg = (pctKey: string, avgVal: number | null | undefined) => {
@@ -2402,7 +2409,8 @@ export const cashFlowProgramRouter = router({
         let totalRevenue = 0;
         if (cpData && moData) {
           const gfaRes = pf(proj.gfaResidentialSqft), gfaRet = pf(proj.gfaRetailSqft), gfaOff = pf(proj.gfaOfficesSqft);
-          const sRes = gfaRes * 0.95, sRet = gfaRet * 0.97, sOff = gfaOff * 0.95;
+          const sResP2 = pf(proj.saleableResidentialPct) || 95, sRetP2 = pf(proj.saleableRetailPct) || 97, sOffP2 = pf(proj.saleableOfficesPct) || 95;
+          const sRes = gfaRes * (sResP2 / 100), sRet = gfaRet * (sRetP2 / 100), sOff = gfaOff * (sOffP2 / 100);
           const getAvg = (k: string, v: any) => { const n = v||0; if(n>0) return n; const m = DEFAULT_AVG_AREAS[k]; return m ? m.defaultArea : 0; };
           const prices = { studio: cpData.baseStudioPrice||0, oneBr: cpData.base1brPrice||0, twoBr: cpData.base2brPrice||0, threeBr: cpData.base3brPrice||0, retSmall: cpData.baseRetailSmallPrice||0, retMed: cpData.baseRetailMediumPrice||0, retLrg: cpData.baseRetailLargePrice||0, offSmall: cpData.baseOfficeSmallPrice||0, offMed: cpData.baseOfficeMediumPrice||0, offLrg: cpData.baseOfficeLargePrice||0 };
           const calc = (pct: number, avg: number, pr: number, sal: number) => { const al = sal*(pct/100); const u = avg>0 ? Math.floor(al/avg) : 0; return avg*pr*u; };
