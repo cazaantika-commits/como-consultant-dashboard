@@ -478,3 +478,6 @@
 - [x] Fix cashFlowProgram.ts: replace 4 hardcoded 0.95/0.97 occurrences with project's percentage values
 - [x] Fix investorCashFlow.ts: replace hardcoded 0.95/0.97 with project's percentage values
 - [x] Ensure all saleable area calculations across the platform use the project-specific percentages
+
+## إصلاح خلل الحفظ في صفحة التسعير والإيرادات
+- [x] Bug fix: التعديلات على المساحات والأسعار في CostsCashFlowTab تظهر محفوظة لكن تختفي عند العودة للصفحة — تم إصلاح منطق الحفظ/التحميل (إضافة countKey لحفظ العدد مباشرة، staleTime=0، initialized refs)

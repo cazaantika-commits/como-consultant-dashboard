@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { DEFAULT_AVG_AREAS } from "@shared/feasibilityUtils";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,7 @@ type ScenarioKey = "optimistic" | "base" | "conservative";
 interface UnitRow {
   key: string; label: string; cat: "residential" | "retail" | "offices";
   catLabel: string; catColor: string; pctKey: string; avgKey: string;
+  countKey: string;
   priceKey: string; baseField: string; divider?: boolean;
   is2br?: boolean;
   /** Key inside the nested aiRecommendationsJson for marketOverview (e.g. "studio", "oneBr") */
@@ -54,16 +55,16 @@ interface UnitRow {
 }
 
 const UNIT_ROWS: UnitRow[] = [
-  { key: "studio", label: "استديو", cat: "residential", catLabel: "سكني", catColor: "sky", pctKey: "residentialStudioPct", avgKey: "residentialStudioAvgArea", priceKey: "studioPrice", baseField: "baseStudioPrice", joelMoKey: "studio", joelCpKey: "studio" },
-  { key: "1br", label: "غرفة وصالة", cat: "residential", catLabel: "", catColor: "sky", pctKey: "residential1brPct", avgKey: "residential1brAvgArea", priceKey: "oneBrPrice", baseField: "base1brPrice", joelMoKey: "oneBr", joelCpKey: "oneBr" },
-  { key: "2br", label: "غرفتان وصالة", cat: "residential", catLabel: "", catColor: "sky", pctKey: "residential2brPct", avgKey: "residential2brAvgArea", priceKey: "twoBrPrice", baseField: "base2brPrice", is2br: true, joelMoKey: "twoBr", joelCpKey: "twoBr" },
-  { key: "3br", label: "ثلاث غرف", cat: "residential", catLabel: "", catColor: "sky", pctKey: "residential3brPct", avgKey: "residential3brAvgArea", priceKey: "threeBrPrice", baseField: "base3brPrice", joelMoKey: "threeBr", joelCpKey: "threeBr" },
-  { key: "retSmall", label: "صغيرة", cat: "retail", catLabel: "تجزئة", catColor: "amber", pctKey: "retailSmallPct", avgKey: "retailSmallAvgArea", priceKey: "retailSmallPrice", baseField: "baseRetailSmallPrice", divider: true, joelMoKey: "small", joelCpKey: "small" },
-  { key: "retMedium", label: "متوسطة", cat: "retail", catLabel: "", catColor: "amber", pctKey: "retailMediumPct", avgKey: "retailMediumAvgArea", priceKey: "retailMediumPrice", baseField: "baseRetailMediumPrice", joelMoKey: "medium", joelCpKey: "medium" },
-  { key: "retLarge", label: "كبيرة", cat: "retail", catLabel: "", catColor: "amber", pctKey: "retailLargePct", avgKey: "retailLargeAvgArea", priceKey: "retailLargePrice", baseField: "baseRetailLargePrice", joelMoKey: "large", joelCpKey: "large" },
-  { key: "offSmall", label: "صغيرة", cat: "offices", catLabel: "مكاتب", catColor: "violet", pctKey: "officeSmallPct", avgKey: "officeSmallAvgArea", priceKey: "officeSmallPrice", baseField: "baseOfficeSmallPrice", divider: true, joelMoKey: "small", joelCpKey: "small" },
-  { key: "offMedium", label: "متوسطة", cat: "offices", catLabel: "", catColor: "violet", pctKey: "officeMediumPct", avgKey: "officeMediumAvgArea", priceKey: "officeMediumPrice", baseField: "baseOfficeMediumPrice", joelMoKey: "medium", joelCpKey: "medium" },
-  { key: "offLarge", label: "كبيرة", cat: "offices", catLabel: "", catColor: "violet", pctKey: "officeLargePct", avgKey: "officeLargeAvgArea", priceKey: "officeLargePrice", baseField: "baseOfficeLargePrice", joelMoKey: "large", joelCpKey: "large" },
+  { key: "studio", label: "استديو", cat: "residential", catLabel: "سكني", catColor: "sky", pctKey: "residentialStudioPct", avgKey: "residentialStudioAvgArea", countKey: "residentialStudioCount", priceKey: "studioPrice", baseField: "baseStudioPrice", joelMoKey: "studio", joelCpKey: "studio" },
+  { key: "1br", label: "غرفة وصالة", cat: "residential", catLabel: "", catColor: "sky", pctKey: "residential1brPct", avgKey: "residential1brAvgArea", countKey: "residential1brCount", priceKey: "oneBrPrice", baseField: "base1brPrice", joelMoKey: "oneBr", joelCpKey: "oneBr" },
+  { key: "2br", label: "غرفتان وصالة", cat: "residential", catLabel: "", catColor: "sky", pctKey: "residential2brPct", avgKey: "residential2brAvgArea", countKey: "residential2brCount", priceKey: "twoBrPrice", baseField: "base2brPrice", is2br: true, joelMoKey: "twoBr", joelCpKey: "twoBr" },
+  { key: "3br", label: "ثلاث غرف", cat: "residential", catLabel: "", catColor: "sky", pctKey: "residential3brPct", avgKey: "residential3brAvgArea", countKey: "residential3brCount", priceKey: "threeBrPrice", baseField: "base3brPrice", joelMoKey: "threeBr", joelCpKey: "threeBr" },
+  { key: "retSmall", label: "صغيرة", cat: "retail", catLabel: "تجزئة", catColor: "amber", pctKey: "retailSmallPct", avgKey: "retailSmallAvgArea", countKey: "retailSmallCount", priceKey: "retailSmallPrice", baseField: "baseRetailSmallPrice", divider: true, joelMoKey: "small", joelCpKey: "small" },
+  { key: "retMedium", label: "متوسطة", cat: "retail", catLabel: "", catColor: "amber", pctKey: "retailMediumPct", avgKey: "retailMediumAvgArea", countKey: "retailMediumCount", priceKey: "retailMediumPrice", baseField: "baseRetailMediumPrice", joelMoKey: "medium", joelCpKey: "medium" },
+  { key: "retLarge", label: "كبيرة", cat: "retail", catLabel: "", catColor: "amber", pctKey: "retailLargePct", avgKey: "retailLargeAvgArea", countKey: "retailLargeCount", priceKey: "retailLargePrice", baseField: "baseRetailLargePrice", joelMoKey: "large", joelCpKey: "large" },
+  { key: "offSmall", label: "صغيرة", cat: "offices", catLabel: "مكاتب", catColor: "violet", pctKey: "officeSmallPct", avgKey: "officeSmallAvgArea", countKey: "officeSmallCount", priceKey: "officeSmallPrice", baseField: "baseOfficeSmallPrice", divider: true, joelMoKey: "small", joelCpKey: "small" },
+  { key: "offMedium", label: "متوسطة", cat: "offices", catLabel: "", catColor: "violet", pctKey: "officeMediumPct", avgKey: "officeMediumAvgArea", countKey: "officeMediumCount", priceKey: "officeMediumPrice", baseField: "baseOfficeMediumPrice", joelMoKey: "medium", joelCpKey: "medium" },
+  { key: "offLarge", label: "كبيرة", cat: "offices", catLabel: "", catColor: "violet", pctKey: "officeLargePct", avgKey: "officeLargeAvgArea", countKey: "officeLargeCount", priceKey: "officeLargePrice", baseField: "baseOfficeLargePrice", joelMoKey: "large", joelCpKey: "large" },
 ];
 
 const CATS = [
@@ -83,8 +84,8 @@ interface CostsCashFlowTabProps {
 export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
   const projectQuery = trpc.projects.getById.useQuery(projectId || 0, { enabled: !!projectId, staleTime: 5000 });
   const project = projectQuery.data;
-  const moQuery = trpc.marketOverview.getByProject.useQuery(projectId || 0, { enabled: !!projectId, staleTime: 5000 });
-  const cpQuery = trpc.competitionPricing.getByProject.useQuery(projectId || 0, { enabled: !!projectId, staleTime: 2000, refetchOnWindowFocus: true });
+  const moQuery = trpc.marketOverview.getByProject.useQuery(projectId || 0, { enabled: !!projectId, staleTime: 0, refetchOnMount: true });
+  const cpQuery = trpc.competitionPricing.getByProject.useQuery(projectId || 0, { enabled: !!projectId, staleTime: 0, refetchOnMount: true, refetchOnWindowFocus: true });
   const joelleStatusQuery = trpc.joelleEngine.getAutoPopulateStatus.useQuery(projectId || 0, { enabled: !!projectId, staleTime: 10000 });
 
   const applyJoelleMutation = trpc.joelleEngine.applyJoelleOutputs.useMutation({
@@ -106,13 +107,23 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
   const [approvedScenario, setApprovedScenario] = useState<ScenarioKey | null>(null);
   const [moJoelleSource, setMoJoelleSource] = useState(false);
   const [cpJoelleSource, setCpJoelleSource] = useState(false);
+  // Track if we have initialized from DB — ensures first load always wins over empty state
+  const moInitialized = useRef(false);
+  const cpInitialized = useRef(false);
+
+  // Reset initialization flags when project changes
+  useEffect(() => {
+    moInitialized.current = false;
+    cpInitialized.current = false;
+    setDirty(false);
+  }, [projectId]);
 
   const moSaveMutation = trpc.marketOverview.save.useMutation({
-    onSuccess: () => { moQuery.refetch(); toast.success("تم حفظ التوزيع"); },
+    onSuccess: () => { moInitialized.current = false; moQuery.refetch(); },
     onError: () => toast.error("خطأ في الحفظ"),
   });
   const cpSaveMutation = trpc.competitionPricing.save.useMutation({
-    onSuccess: () => { cpQuery.refetch(); toast.success("تم حفظ التسعير"); },
+    onSuccess: () => { cpInitialized.current = false; cpQuery.refetch(); toast.success("تم الحفظ بنجاح"); },
     onError: () => toast.error("خطأ في الحفظ"),
   });
 
@@ -123,35 +134,48 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
     const newAvg: Record<string, number> = {};
     const newCounts: Record<string, number> = {};
     UNIT_ROWS.forEach(row => {
-      const pct = parseFloat((d as any)[row.pctKey] || "0");
       const avg = (d as any)[row.avgKey] || 0;
       const defaultArea = DEFAULT_AVG_AREAS[row.pctKey]?.defaultArea || 0;
       const effectiveAvg = avg > 0 ? avg : defaultArea;
       newAvg[row.key] = effectiveAvg;
-      const sellable = getSellableFromProject(row.cat);
-      if (pct > 0 && effectiveAvg > 0 && sellable > 0) {
-        newCounts[row.key] = Math.floor((sellable * pct / 100) / effectiveAvg);
+      // Prefer saved count directly; fall back to computing from pct for legacy records
+      const savedCount = (d as any)[row.countKey];
+      if (savedCount != null && savedCount > 0) {
+        newCounts[row.key] = savedCount;
       } else {
-        newCounts[row.key] = 0;
+        const pct = parseFloat((d as any)[row.pctKey] || "0");
+        const sellable = getSellableFromProject(row.cat);
+        if (pct > 0 && effectiveAvg > 0 && sellable > 0) {
+          newCounts[row.key] = Math.floor((sellable * pct / 100) / effectiveAvg);
+        } else {
+          newCounts[row.key] = 0;
+        }
       }
     });
     setAvgAreas(newAvg);
-    setUnitCounts(prev => {
-      const hasManualEdits = Object.values(prev).some(v => v > 0);
-      return hasManualEdits ? prev : newCounts;
-    });
+    // Always load from DB on first initialization; after that, only update if not dirty
+    if (!moInitialized.current) {
+      moInitialized.current = true;
+      setUnitCounts(newCounts);
+    } else if (!dirty) {
+      setUnitCounts(newCounts);
+    }
     if (d.aiRecommendationsJson) setMoJoelleSource(true);
   }, [moQuery.data]);
 
   useEffect(() => {
     if (!cpQuery.data) return;
     const d = cpQuery.data;
-    const newPrices: Record<string, number> = {};
-    UNIT_ROWS.forEach(row => { newPrices[row.key] = (d as any)[row.baseField] || 0; });
-    setBasePrices(newPrices);
-    if (d.activeScenario) setActiveScenario(d.activeScenario as ScenarioKey);
-    if (d.approvedRevenue && d.approvedRevenue > 0 && d.activeScenario) {
-      setApprovedScenario(d.activeScenario as ScenarioKey);
+    // Always load from DB on first initialization; after that, only update if not dirty
+    if (!cpInitialized.current || !dirty) {
+      cpInitialized.current = true;
+      const newPrices: Record<string, number> = {};
+      UNIT_ROWS.forEach(row => { newPrices[row.key] = (d as any)[row.baseField] || 0; });
+      setBasePrices(newPrices);
+      if (d.activeScenario) setActiveScenario(d.activeScenario as ScenarioKey);
+      if (d.approvedRevenue && d.approvedRevenue > 0 && d.activeScenario) {
+        setApprovedScenario(d.activeScenario as ScenarioKey);
+      }
     }
     if (d.aiRecommendationsJson) setCpJoelleSource(true);
   }, [cpQuery.data]);
@@ -292,6 +316,7 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
       const pct = sellable > 0 ? ((count * avg) / sellable) * 100 : 0;
       moPayload[row.pctKey] = pct;
       moPayload[row.avgKey] = avg;
+      moPayload[row.countKey] = count; // Save count directly to avoid round-trip precision loss
     });
     moSaveMutation.mutate(moPayload);
     const bp = basePrices;
