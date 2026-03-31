@@ -1384,7 +1384,7 @@ export default function ProjectLifecyclePage({ embedded, onProjectChange }: { em
           <div className="text-center py-12 text-muted-foreground text-sm">جاري تحميل المراحل...</div>
         ) : (
           <div className="space-y-3">
-            {stages.map((stage: any) => {
+            {stages.map((stage: any, stageIndex: number) => {
               const colors = STAGE_COLORS[stage.stageCode] ?? STAGE_COLORS["STG-01"];
               const isNotStarted = stage.status === "not_started";
               const stageSummary = summary.find((s) => s.stageCode === stage.stageCode);
@@ -1422,7 +1422,7 @@ export default function ProjectLifecyclePage({ embedded, onProjectChange }: { em
                     }}
                   >
                     <span className={`text-lg font-black leading-none ${isNotStarted ? "text-slate-400" : "text-white"}`}>
-                      {stage.stageCode.replace("STG-", "")}
+                      {String(stageIndex + 1).padStart(2, "0")}
                     </span>
                     <span className={`text-[8px] font-medium mt-0.5 ${isNotStarted ? "text-slate-400" : "text-white/70"}`}>مرحلة</span>
                   </div>
