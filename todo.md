@@ -495,3 +495,7 @@
 - [x] إصلاح getPortfolioAllScenarios: استخدام startMonth/endMonth المحفوظة مباشرةً بدلاً من إعادة الحساب من phasesArr
 
 - [x] إعادة كتابة getPortfolioAllScenarios: استدعاء getCostSettingsComparison لكل مشروع ونسخ monthlyAmounts مباشرةً من o1/o2/o3
+
+- [ ] تشخيص: كتابة سكريبت يطبع الأرقام الشهرية من getCostSettingsComparison وgetPortfolioAllScenarios لمشروع ند الشبا قطعة 2 ومقارنتها بند ببند
+
+- [x] إصلاح المحفظة: إضافة monthlyInvestorBySection واستخدامه بدلاً من monthlyBySection لعرض مبالغ المستثمر فقط

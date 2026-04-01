@@ -336,8 +336,9 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
           handover: { duration: number; start: number };
         };
 
-        // Use monthlyBySection from API — each section's amounts are already correctly assigned
-        const monthlyBySection: Record<string, number[]> = scenarioData.monthlyBySection || {};
+        // Use monthlyInvestorBySection from API — investor-only amounts per section (excludes escrow/buyer-funded)
+        // This ensures portfolio numbers match the O1/O2/O3 investor column in capital planning
+        const monthlyBySection: Record<string, number[]> = scenarioData.monthlyInvestorBySection || scenarioData.monthlyBySection || {};
         const totalMonths = project.totalMonths || (scenarioData.monthlyInvestor?.length || 24);
 
         const hasOffplan = option !== "o3";

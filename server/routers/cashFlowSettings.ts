@@ -1932,18 +1932,33 @@ export const cashFlowSettingsRouter = router({
           construction: new Array(totalMonths).fill(0),
           escrow: new Array(totalMonths).fill(0),
         };
+        // Investor-only by section (excludes escrow/buyer-funded amounts — matches O1/O2/O3 investor column)
+        const monthlyInvestorBySection: Record<string, number[]> = {
+          paid: new Array(totalMonths).fill(0),
+          design: new Array(totalMonths).fill(0),
+          offplan: new Array(totalMonths).fill(0),
+          construction: new Array(totalMonths).fill(0),
+          escrow: new Array(totalMonths).fill(0),
+        };
 
         for (const [, item] of itemsMap) {
           const effectiveSource = sc === "no_offplan" ? "investor" : item.fundingSource;
           sectionTotals[item.section] = (sectionTotals[item.section] || 0) + item.amount;
           if (!monthlyBySection[item.section]) monthlyBySection[item.section] = new Array(totalMonths).fill(0);
+          if (!monthlyInvestorBySection[item.section]) monthlyInvestorBySection[item.section] = new Array(totalMonths).fill(0);
           for (let m = 0; m < totalMonths; m++) {
             const val = item.monthlyAmounts[m] || 0;
             if (val <= 0) continue;
             monthlyAll[m] += val;
             monthlyBySection[item.section][m] += val;
-            if (effectiveSource === "investor") { monthlyInvestor[m] += val; investorTotal += val; }
-            else { monthlyEscrow[m] += val; escrowTotal += val; }
+            if (effectiveSource === "investor") {
+              monthlyInvestor[m] += val;
+              investorTotal += val;
+              monthlyInvestorBySection[item.section][m] += val;
+            } else {
+              monthlyEscrow[m] += val;
+              escrowTotal += val;
+            }
           }
         }
 
@@ -1956,6 +1971,7 @@ export const cashFlowSettingsRouter = router({
           monthlyTotal: monthlyAll,
           sectionTotals,
           monthlyBySection,
+          monthlyInvestorBySection,
         };
       }
 
