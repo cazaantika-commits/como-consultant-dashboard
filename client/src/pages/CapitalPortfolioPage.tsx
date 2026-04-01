@@ -1072,7 +1072,7 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
                     let tl = 0, tr = 0, br = 0, bl = 0;
 
                     const phase = cd.phase as PhaseType | null;
-                    if (phase && PHASE_COLORS[phase]) {
+                    if (phase && PHASE_COLORS[phase] && phase !== "handover") {
                       const colors = PHASE_COLORS[phase];
                       // If cell is within a geometric phase range, ALWAYS use solid color
                       // This prevents "white gaps" when amounts shift due to delay adjustments
