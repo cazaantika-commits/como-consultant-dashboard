@@ -1905,44 +1905,56 @@ export const cashFlowSettingsRouter = router({
         };
 
         if (savedSettings.length > 0) {
+          // Use saved startMonth/endMonth/lumpSumMonth DIRECTLY
+          // so portfolio numbers exactly match the capital planning O1/O2/O3 pages
+          const validKeysForScenario = new Set(getDefaultItemDefs(sc).map(d => d.itemKey));
+          const savedKeys = new Set<string>();
           for (const s of savedSettings) {
             if (!s.isActive) continue;
+            if (!validKeysForScenario.has(s.itemKey)) continue;
+            savedKeys.add(s.itemKey);
             const amount = s.amountOverride
               ? parseFloat(s.amountOverride)
               : computeItemAmountByKey(s.itemKey, costs, sc);
             const defForKey = getDefaultItemDefs(sc).find(d => d.itemKey === s.itemKey);
             const itemSection = s.section || defForKey?.section || "construction";
-
-            // Recalculate start/end months from the project's actual phases
-            // instead of using saved values (which may be from a different project)
-            let effectiveStartMonth = s.startMonth;
-            let effectiveEndMonth = s.endMonth;
-            let effectiveLumpSumMonth = s.lumpSumMonth;
-
-            if (defForKey) {
-              if (s.distributionMethod === "lump_sum" && defForKey.phase) {
-                effectiveLumpSumMonth = phaseRelativeToAbsolute(defForKey.phase, defForKey.phaseRelativeMonth || 1, phasesArr);
-              } else if (s.distributionMethod === "equal_spread") {
-                if (defForKey.distributeAcrossPhases && defForKey.distributeAcrossPhases.length > 0) {
-                  const firstPhase = defForKey.distributeAcrossPhases[0];
-                  const lastPhase = defForKey.distributeAcrossPhases[defForKey.distributeAcrossPhases.length - 1];
-                  effectiveStartMonth = getPhaseRange(firstPhase, phasesArr).start;
-                  effectiveEndMonth = getPhaseRange(lastPhase, phasesArr).end;
-                } else if (defForKey.phase) {
-                  const range = getPhaseRange(defForKey.phase, phasesArr);
-                  effectiveStartMonth = range.start;
-                  effectiveEndMonth = range.end;
-                }
-              }
-            }
-
+            // Use saved values directly — same as getCostSettingsComparison
             const monthly = distributeAmount(
               amount,
               s.distributionMethod as DistributionMethod,
-              effectiveLumpSumMonth, effectiveStartMonth, effectiveEndMonth, s.customJson,
+              s.lumpSumMonth, s.startMonth, s.endMonth, s.customJson,
               totalMonths,
             );
             processItem(s.itemKey, s.nameAr, amount, s.fundingSource, itemSection, monthly);
+          }
+          // Add missing default items not yet in DB (same as getCostSettingsComparison)
+          const defsForMissing = getDefaultItemDefs(sc);
+          for (const def of defsForMissing) {
+            if (savedKeys.has(def.itemKey)) continue;
+            const amount = computeItemAmount(def, costs);
+            let lumpSumMonth: number | null = null;
+            let startMonth: number | null = null;
+            let endMonth: number | null = null;
+            if (def.distributionMethod === "lump_sum" && def.phase) {
+              lumpSumMonth = phaseRelativeToAbsolute(def.phase, def.phaseRelativeMonth || 1, phasesArr);
+            } else if (def.distributionMethod === "equal_spread") {
+              if (def.distributeAcrossPhases && def.distributeAcrossPhases.length > 0) {
+                const firstPhase = def.distributeAcrossPhases[0];
+                const lastPhase = def.distributeAcrossPhases[def.distributeAcrossPhases.length - 1];
+                startMonth = getPhaseRange(firstPhase, phasesArr).start;
+                endMonth = getPhaseRange(lastPhase, phasesArr).end;
+              } else if (def.phase) {
+                const range = getPhaseRange(def.phase, phasesArr);
+                startMonth = range.start;
+                endMonth = range.end;
+              }
+            }
+            const monthly = distributeAmount(
+              amount, def.distributionMethod,
+              lumpSumMonth, startMonth, endMonth, null,
+              totalMonths,
+            );
+            processItem(def.itemKey, def.nameAr, amount, def.fundingSource, def.section || "construction", monthly);
           }
         } else {
           const defs = getDefaultItemDefs(sc);
