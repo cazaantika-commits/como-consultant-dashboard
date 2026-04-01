@@ -493,3 +493,5 @@
 - [ ] تتبع مصدر البيانات في كلا الصفحتين وتوحيدهما
 
 - [x] إصلاح getPortfolioAllScenarios: استخدام startMonth/endMonth المحفوظة مباشرةً بدلاً من إعادة الحساب من phasesArr
+
+- [x] إعادة كتابة getPortfolioAllScenarios: استدعاء getCostSettingsComparison لكل مشروع ونسخ monthlyAmounts مباشرةً من o1/o2/o3
