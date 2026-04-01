@@ -4,6 +4,7 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { CCAuthProvider } from "./contexts/CCAuthContext";
 import Home from "./pages/Home";
 import ConsultantDashboardPage from "./pages/ConsultantDashboardPage";
 import ConsultantProfilesPage from "./pages/ConsultantProfilesPage";
@@ -147,7 +148,9 @@ function App() {
       >
         <TooltipProvider>
           <Toaster />
-          <Router />
+          <CCAuthProvider>
+            <Router />
+          </CCAuthProvider>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

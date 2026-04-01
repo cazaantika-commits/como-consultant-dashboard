@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useCCAuth } from "@/contexts/CCAuthContext";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   DndContext,
@@ -282,6 +283,10 @@ function NewsTicker({ navigate }: { navigate: (path: string) => void }) {
 
 export default function Home() {
   const { user, loading, isAuthenticated } = useAuth();
+  const { ccMember, isCCAuth, isOwner: isCCOwner } = useCCAuth();
+  // CC members see the full platform (read-only)
+  const effectivelyAuthenticated = isAuthenticated || isCCAuth;
+  const effectiveUser = user ?? (ccMember ? { name: ccMember.nameAr, role: ccMember.role } : null);
   const [, navigate] = useLocation();
   const [activeAgent, setActiveAgent] = useState<AgentType | null>(null);
   const [quickActionLoading, setQuickActionLoading] = useState<string | null>(null);
@@ -308,14 +313,14 @@ export default function Home() {
     useSensor(KeyboardSensor)
   );
   const { data: agentsList = [] } = trpc.agents.list.useQuery(undefined, {
-    enabled: isAuthenticated,
+    enabled: effectivelyAuthenticated,
   });
   const chatMutation = trpc.agents.chat.useMutation();
 
   // Overdue tasks count for the tour card badge
   const { data: deadlineAlerts = [] } = trpc.lifecycle.getDeadlineAlerts.useQuery(
     {},
-    { enabled: isAuthenticated, staleTime: 60_000 }
+    { enabled: effectivelyAuthenticated, staleTime: 60_000 }
   );
   const overdueCount = deadlineAlerts.filter((a: any) => a.severity === 'overdue').length;
 
@@ -475,10 +480,10 @@ export default function Home() {
           <div className="flex items-center gap-2">
             {loading ? (
               <div className="w-20 h-8 rounded-md shimmer" />
-            ) : isAuthenticated ? (
+            ) : effectivelyAuthenticated ? (
               <>
                 <span className="text-xs text-muted-foreground hidden sm:inline">
-                  مرحباً، <span className="font-medium text-foreground">{user?.name}</span>
+                  مرحباً، <span className="font-medium text-foreground">{effectiveUser?.name}</span>
                 </span>
                 <NotificationBell />
                 <Button
@@ -510,7 +515,7 @@ export default function Home() {
         {/* ══════════════════════════════════════════════════════════════ */}
         {/* -- Hero Section (for non-authenticated) -- */}
         {/* ══════════════════════════════════════════════════════════════ */}
-        {!isAuthenticated && (
+        {!effectivelyAuthenticated && (
           <section className="relative py-20 lg:py-28 overflow-hidden">
             <div className="absolute inset-0 pattern-overlay opacity-40" />
             <div className="absolute top-10 right-1/4 w-[400px] h-[400px] rounded-full bg-amber-500/8 blur-[100px]" />
@@ -552,7 +557,7 @@ export default function Home() {
         {/* ══════════════════════════════════════════════════════════════ */}
         {/* -- SALWA - TOP OF PAGE (Authenticated) -- */}
         {/* ══════════════════════════════════════════════════════════════ */}
-        {isAuthenticated && (
+        {effectivelyAuthenticated && (
           <section className="pt-8 pb-6">
             <div className="relative rounded-2xl bg-gradient-to-l from-amber-50/80 via-white to-yellow-50/50 dark:from-amber-950/15 dark:via-card dark:to-yellow-950/10 border border-amber-200/40 dark:border-amber-800/20 shadow-sm overflow-hidden">
               {/* Subtle gold accent */}
@@ -625,14 +630,14 @@ export default function Home() {
         {/* ══════════════════════════════════════════════════════════════ */}
         {/* -- NEWS TICKER (Authenticated) -- */}
         {/* ══════════════════════════════════════════════════════════════ */}
-        {isAuthenticated && (
+        {effectivelyAuthenticated && (
           <NewsTicker navigate={navigate} />
         )}
 
         {/* ══════════════════════════════════════════════════════════════ */}
         {/* -- QUICK STATS BAR (Authenticated) -- */}
         {/* ══════════════════════════════════════════════════════════════ */}
-        {isAuthenticated && (
+        {effectivelyAuthenticated && (
           <section className="pb-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="relative bg-card rounded-xl border border-border/40 p-4 overflow-hidden group hover:shadow-md transition-shadow animate-stat-bounce">
@@ -765,7 +770,7 @@ export default function Home() {
         {/* ══════════════════════════════════════════════════════════════ */}
         {/* -- MAIN NAVIGATION - Big Cards (Authenticated) -- */}
         {/* ══════════════════════════════════════════════════════════════ */}
-        {isAuthenticated && (
+        {effectivelyAuthenticated && (
           <section className="pb-8">
             {/* Section Title */}
             <div className="flex items-center gap-2.5 mb-5">
@@ -791,7 +796,7 @@ export default function Home() {
         {/* ══════════════════════════════════════════════════════════════ */}
         {/* -- TOOLS & REPORTS - White cards with colored top border -- */}
         {/* ══════════════════════════════════════════════════════════════ */}
-        {isAuthenticated && (
+        {effectivelyAuthenticated && (
           <section className="pb-8">
             <div className="flex items-center gap-2.5 mb-5">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-sm">
@@ -848,7 +853,7 @@ export default function Home() {
         {/* ══════════════════════════════════════════════════════════════ */}
         {/* -- Agent Team Section -- */}
         {/* ══════════════════════════════════════════════════════════════ */}
-        {isAuthenticated && teamAgents.length > 0 && (
+        {effectivelyAuthenticated && teamAgents.length > 0 && (
           <section className="py-10 border-t border-border/30">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2.5">
