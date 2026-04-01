@@ -48,6 +48,9 @@ interface SettingItem {
   computedAmount: number;
   /** Which phase the item distributes within */
   assignedPhase: "design" | "offplan" | "construction" | "handover";
+  /** Saved start/end month from DB (used for equal_spread) */
+  startMonth: number | null;
+  endMonth: number | null;
 }
 
 interface PhaseDurations {
@@ -571,6 +574,8 @@ export default function CashFlowSettingsPage({
             assignedPhase: (assignedPhase) as SettingItem["assignedPhase"],
             fundingSource: s.fundingSource as "investor" | "escrow",
             computedAmount: (s as any).computedAmount ?? 0,
+            startMonth: s.startMonth ?? null,
+            endMonth: s.endMonth ?? null,
           };
         }));
         setIsDirty(false);
@@ -617,9 +622,13 @@ export default function CashFlowSettingsPage({
           ? phaseStart + item.phaseMonth - 1
           : null;
 
+        // Use saved startMonth/endMonth from DB (loaded into item state)
+        // Only fall back to phase range if not saved yet (new items)
         const phaseData = phases?.[item.assignedPhase];
-        const spreadStart = phaseData?.start ?? null;
-        const spreadEnd = phaseData ? phaseData.start + phaseData.duration - 1 : null;
+        const fallbackStart = phaseData?.start ?? null;
+        const fallbackEnd = phaseData ? phaseData.start + phaseData.duration - 1 : null;
+        const spreadStart = item.startMonth ?? fallbackStart;
+        const spreadEnd = item.endMonth ?? fallbackEnd;
 
         return {
           itemKey: item.itemKey,
