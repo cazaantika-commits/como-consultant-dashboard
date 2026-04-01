@@ -44,7 +44,7 @@ const PHASE_COLORS = {
   design:       { solid: "#fb923c", light: "#fff7ed", text: "#c2410c" },
   offplan:      { solid: "#db2777", light: "#fdf2f8", text: "#9d174d" },
   construction: { solid: "#7c3aed", light: "#f5f3ff", text: "#5b21b6" },
-  handover:     { solid: "#059669", light: "#ecfdf5", text: "#065f46" },
+  handover:     { solid: "#64748b", light: "#f8fafc", text: "#334155" },
 } as const;
 
 type PhaseType = "land" | "design" | "offplan" | "construction" | "handover";
