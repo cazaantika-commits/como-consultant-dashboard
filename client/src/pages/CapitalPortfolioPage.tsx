@@ -58,23 +58,17 @@ function getMonthLabel(offset: number): string {
 
 function fmtCell(n: number): string {
   if (n === 0) return "";
-  if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
-  if (Math.abs(n) >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
-  return n.toFixed(0);
+  return Math.round(n).toLocaleString("en-US");
 }
 
 function fmtFull(n: number): string {
   if (n === 0) return "—";
-  if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
-  if (Math.abs(n) >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
-  return n.toFixed(0);
+  return Math.round(n).toLocaleString("en-US");
 }
 
 function fmtTooltipNum(n: number): string {
   if (n === 0) return "0";
-  if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M AED`;
-  if (Math.abs(n) >= 1_000) return `${(n / 1_000).toFixed(1)}K AED`;
-  return `${n.toFixed(0)} AED`;
+  return `${Math.round(n).toLocaleString("en-US")} AED`;
 }
 
 function projectMonthToChartIndex(
