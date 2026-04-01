@@ -888,16 +888,6 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
                         <span style={{ fontWeight: 800, color: "#ffffff" }}>{fmtFull(col.investorTotal)}</span>
                       </div>
 
-                      {/* تم السداد */}
-                      <div style={{
-                        display: "flex", justifyContent: "space-between", alignItems: "center",
-                        height: 22, background: "#166534", borderRadius: 6,
-                        padding: "0 6px", marginTop: 3, fontSize: 9,
-                      }}>
-                        <span style={{ color: "#bbf7d0", fontWeight: 600 }}>تم السداد</span>
-                        <span style={{ fontWeight: 800, color: "#ffffff" }}>{fmtFull(col.paidTotal)}</span>
-                      </div>
-
                       {/* المتبقي */}
                       <div style={{
                         display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -1179,6 +1169,55 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
                 </tr>
               );
             })}
+
+            {/* ── Separator ─────────────────────────── */}
+            <tr>
+              <td colSpan={effectiveColumns.length + 3} style={{ height: 6, background: "#f3f4f6" }} />
+            </tr>
+
+            {/* ── Column Totals Row ─────────────────────────── */}
+            <tr>
+              {effectiveColumns.map((col, ci) => (
+                <td key={`total-${col.projectId}`} style={{
+                  width: COL_W, minWidth: COL_W, height: ROW_H + 4, padding: 0,
+                  borderLeft: ci < effectiveColumns.length - 1 ? `${GAP}px solid #f3f4f6` : "none",
+                  background: "#f3f4f6",
+                }}>
+                  <div style={{
+                    width: "100%", height: "100%",
+                    background: "#1e293b",
+                    borderRadius: 10,
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1,
+                    border: "1px solid #334155",
+                  }}>
+                    <span style={{ fontSize: 7, color: "#94a3b8", fontWeight: 600 }}>الإجمالي</span>
+                    <span style={{ fontSize: 11, color: "#ffffff", fontWeight: 800 }}>{fmtCell(col.investorTotal)}</span>
+                  </div>
+                </td>
+              ))}
+              <td style={{
+                width: COL_W, minWidth: COL_W, height: ROW_H + 4,
+                fontSize: 10, fontWeight: 700, color: "#ffffff",
+                textAlign: "center", background: "#1e293b",
+                borderLeft: `${GAP}px solid #f3f4f6`, borderRight: `${GAP}px solid #f3f4f6`,
+              }}>
+                الإجمالي
+              </td>
+              <td style={{
+                width: COL_W, minWidth: COL_W, height: ROW_H + 4,
+                background: "#1e293b", textAlign: "center",
+                fontSize: 11, fontWeight: 800, color: "#ffffff",
+                border: "1px solid #334155", borderRadius: 8, padding: 0,
+              }}>
+                <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {fmtCell(effectiveColumns.reduce((s, c) => s + c.investorTotal, 0))}
+                </div>
+              </td>
+              <td style={{
+                width: COL_W, minWidth: COL_W, height: ROW_H + 4,
+                background: "#f3f4f6", paddingRight: GAP,
+              }} />
+            </tr>
           </tbody>
         </table>
       </div>
