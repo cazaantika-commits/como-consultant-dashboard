@@ -555,28 +555,37 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
 
   // ── Auto-save / Auto-load ────────────────────────────────────────────────────
   const STORAGE_KEY = "capital_portfolio_settings";
+  // isLoaded guards against saving empty defaults before loading completes
+  const [isLoaded, setIsLoaded] = useState(false);
   const saveScenario = trpc.portfolioScenarios.save.useMutation();
   const defaultScenario = trpc.portfolioScenarios.getDefault.useQuery(
     undefined,
     { enabled: isAuthenticated, staleTime: Infinity }
   );
 
-  // Auto-load: try DB first, fallback to localStorage
+  // Auto-load: run once when auth state and DB query are settled
   useEffect(() => {
-    // If logged in via Manus OAuth and DB has data, use it
+    // Wait for auth check to complete
+    if (isAuthenticated === undefined) return;
+    // If logged in via Manus OAuth, wait for DB query to finish
+    if (isAuthenticated && defaultScenario.isLoading) return;
+
+    // If logged in and DB has data, use it
     if (isAuthenticated && defaultScenario.data) {
       try {
         const parsed = JSON.parse(defaultScenario.data.settings);
         if (parsed.projectOptions) setProjectOptions(parsed.projectOptions);
         if (parsed.delays) setDelays(parsed.delays);
         if (parsed.hiddenProjects) setHiddenProjects(new Set(parsed.hiddenProjects));
-        if (parsed.groupBy) setGroupBy(parsed.groupBy);
+        if (parsed.groupBy) setGroupBy(parsed.groupBy as 1|3|6);
         if (parsed.viewMode) setViewMode(parsed.viewMode);
+        setIsLoaded(true);
         return;
       } catch (e) {
         console.error("Failed to parse DB scenario:", e);
       }
     }
+
     // Fallback: load from localStorage (works for CC Auth and unauthenticated)
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -585,16 +594,18 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
         if (parsed.projectOptions) setProjectOptions(parsed.projectOptions);
         if (parsed.delays) setDelays(parsed.delays);
         if (parsed.hiddenProjects) setHiddenProjects(new Set(parsed.hiddenProjects));
-        if (parsed.groupBy) setGroupBy(parsed.groupBy);
+        if (parsed.groupBy) setGroupBy(parsed.groupBy as 1|3|6);
         if (parsed.viewMode) setViewMode(parsed.viewMode);
       }
     } catch (e) {
       console.error("Failed to load from localStorage:", e);
     }
-  }, [isAuthenticated, defaultScenario.data]);
+    setIsLoaded(true);
+  }, [isAuthenticated, defaultScenario.data, defaultScenario.isLoading]);
 
-  // Auto-save: save to DB if Manus-authenticated, always save to localStorage
+  // Auto-save: only runs AFTER loading is complete (prevents overwriting saved data)
   useEffect(() => {
+    if (!isLoaded) return; // ← key guard: don't save before load finishes
     const timer = setTimeout(() => {
       const settings = {
         projectOptions,
@@ -604,7 +615,7 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
         viewMode,
       };
       const settingsStr = JSON.stringify(settings);
-      
+
       // Always save to localStorage (works for all users)
       try {
         localStorage.setItem(STORAGE_KEY, settingsStr);
@@ -622,7 +633,7 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
       }
     }, 1000); // 1s debounce
     return () => clearTimeout(timer);
-  }, [projectOptions, delays, hiddenProjects, groupBy, viewMode, isAuthenticated]);
+  }, [projectOptions, delays, hiddenProjects, groupBy, viewMode, isAuthenticated, isLoaded]);
 
   function getDelay(projectId: number): DelayState {
     return delays[projectId] || { designDelay: 0, offplanDelay: 0, constructionDelay: 0 };
