@@ -509,3 +509,4 @@
 - [x] Add scenario name input + save/load UI in CapitalPortfolioPage toolbar
 - [x] Redesign statistical summary: make it more compact and reorder from largest to smallest (Total Cost → Capital → Paid → Remaining)
 - [x] Fix auto-save: add localStorage fallback so settings persist for all users (CC Auth and unauthenticated)
+- [x] Redesign Command Center: premium executive layout, Capital Portfolio as hero section, beautiful and logical structure for board meetings

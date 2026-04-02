@@ -351,16 +351,23 @@ const CRITERIA = [
 
 // --- Bubble Config ---
 const BUBBLES = [
-  { type: "reports" as const, label: "التقارير", icon: FileText, color: "from-blue-600 to-blue-800", bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700" },
-  { type: "requests" as const, label: "الطلبات والاستفسارات", icon: ClipboardList, color: "from-amber-600 to-amber-800", bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700" },
-  { type: "meeting_minutes" as const, label: "محاضر الاجتماعات", icon: BookOpen, color: "from-emerald-600 to-emerald-800", bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700" },
+  // ── PRIORITY 1: Financial Core (Hero cards) ──
+  { type: "capital_portfolio" as const, label: "محفظة رأس المال", icon: TrendingUp, color: "from-indigo-600 to-indigo-800", bg: "bg-indigo-50", border: "border-indigo-200", text: "text-indigo-700" },
+  { type: "financial_reports" as const, label: "التقارير المالية", icon: FileBarChart2, color: "from-emerald-600 to-emerald-800", bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700" },
+  
+  // ── PRIORITY 2: Operations & Evaluation ──
   { type: "evaluations" as const, label: "تقييم الاستشاريين", icon: Star, color: "from-purple-600 to-purple-800", bg: "bg-purple-50", border: "border-purple-200", text: "text-purple-700" },
   { type: "milestones_kpis" as const, label: "المراحل والأداء", icon: Target, color: "from-cyan-600 to-teal-700", bg: "bg-cyan-50", border: "border-cyan-200", text: "text-cyan-700" },
-  { type: "announcements" as const, label: "الإعلانات", icon: Megaphone, color: "from-rose-600 to-rose-800", bg: "bg-rose-50", border: "border-rose-200", text: "text-rose-700" },
+  
+  // ── PRIORITY 3: Communication & Requests ──
+  { type: "requests" as const, label: "الطلبات والاستفسارات", icon: ClipboardList, color: "from-amber-600 to-amber-800", bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700" },
+  { type: "reports" as const, label: "التقارير", icon: FileText, color: "from-blue-600 to-blue-800", bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700" },
+  { type: "meeting_minutes" as const, label: "محاضر الاجتماعات", icon: BookOpen, color: "from-emerald-600 to-emerald-800", bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700" },
+  
+  // ── PRIORITY 4: Planning & Studies ──
   { type: "work_schedule" as const, label: "برنامج العمل", icon: Layers, color: "from-teal-600 to-teal-800", bg: "bg-teal-50", border: "border-teal-200", text: "text-teal-700" },
-  { type: "feasibility_study" as const, label: "دراسة جدوى المشروع", icon: Wallet, color: "from-violet-600 to-violet-800", bg: "bg-violet-50", border: "border-violet-200", text: "text-violet-700" },
-  { type: "financial_reports" as const, label: "تقارير التخطيط المالي", icon: FileBarChart2, color: "from-emerald-600 to-emerald-800", bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700" },
-  { type: "capital_portfolio" as const, label: "محفظة رأس المال الديناميكية", icon: TrendingUp, color: "from-indigo-600 to-indigo-800", bg: "bg-indigo-50", border: "border-indigo-200", text: "text-indigo-700" },
+  { type: "feasibility_study" as const, label: "دراسة الجدوى", icon: Wallet, color: "from-violet-600 to-violet-800", bg: "bg-violet-50", border: "border-violet-200", text: "text-violet-700" },
+  { type: "announcements" as const, label: "الإعلانات", icon: Megaphone, color: "from-rose-600 to-rose-800", bg: "bg-rose-50", border: "border-rose-200", text: "text-rose-700" },
 ];
 
 const BUBBLE_LABELS: Record<string, string> = {
@@ -4035,10 +4042,13 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           };
 
           const subtitles: Record<string,string> = {
+            capital_portfolio: 'تحريك وتعديل رأس المال عبر المشاريع والمراحل',
+            financial_reports: 'تقارير الجدوى والتدفقات وحساب الضمان',
+            evaluations: 'تقييم الاستشاريين الفنيين',
+            milestones_kpis: 'متابعة المراحل ومؤشرات الأداء',
             reports: 'عرض وإدارة جميع التقارير المرفوعة',
             requests: 'متابعة الطلبات والاستفسارات',
             meeting_minutes: 'محاضر الاجتماعات والقرارات',
-            evaluations: 'تقييم الاستشاريين الفنيين',
           };
 
           const BentoCard = ({ bubble, tall = false }: { bubble: typeof BUBBLES[0]; tall?: boolean }) => {
@@ -4093,20 +4103,87 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           };
 
           return (
-            <div className="mb-4 space-y-3">
-              <div className="grid grid-cols-3 gap-3 items-stretch">
-                <BentoCard bubble={BUBBLES[0]} tall />
-                <BentoCard bubble={BUBBLES[1]} tall />
-                <div className="flex flex-col gap-3">
-                  <BentoCard bubble={BUBBLES[2]} />
-                  <BentoCard bubble={BUBBLES[3]} />
-                </div>
+            <div className="mb-4 space-y-4">
+              {/* Hero Section: Capital Portfolio & Financial Reports */}
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={() => handleBubbleClick(BUBBLES[0].type)}
+                  className="group relative overflow-hidden rounded-3xl text-right transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 active:scale-[0.98] p-8"
+                  style={{
+                    background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)',
+                    border: '2px solid #c7d2fe',
+                    boxShadow: '0 8px 32px rgba(99,102,241,0.15), 0 2px 8px rgba(0,0,0,0.05)',
+                  }}
+                >
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-3xl pointer-events-none"
+                    style={{background: 'radial-gradient(ellipse at 30% 0%, rgba(99,102,241,0.12), transparent 70%)'}} />
+                  <div className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full opacity-10 group-hover:opacity-20 group-hover:scale-125 transition-all duration-500 pointer-events-none"
+                    style={{background: 'linear-gradient(135deg,#6366f1,#3730a3)'}} />
+                  <div className="relative z-10">
+                    <div className="rounded-2xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300"
+                      style={{
+                        background: 'linear-gradient(135deg,#6366f1,#3730a3)',
+                        width: '64px',
+                        height: '64px',
+                        boxShadow: '0 8px 24px rgba(99,102,241,0.3)',
+                      }}>
+                      <TrendingUp style={{width: '32px', height: '32px', color:'white'}} />
+                    </div>
+                    <p className="font-black text-2xl leading-tight mb-2" style={{color: '#3730a3'}}>
+                      {BUBBLES[0].label}
+                    </p>
+                    <p className="text-sm leading-relaxed" style={{color: '#6b7280'}}>
+                      تحريك وتعديل رأس المال عبر المشاريع والمراحل
+                    </p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => handleBubbleClick(BUBBLES[1].type)}
+                  className="group relative overflow-hidden rounded-3xl text-right transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 active:scale-[0.98] p-8"
+                  style={{
+                    background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+                    border: '2px solid #bbf7d0',
+                    boxShadow: '0 8px 32px rgba(16,185,129,0.15), 0 2px 8px rgba(0,0,0,0.05)',
+                  }}
+                >
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-3xl pointer-events-none"
+                    style={{background: 'radial-gradient(ellipse at 30% 0%, rgba(16,185,129,0.12), transparent 70%)'}} />
+                  <div className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full opacity-10 group-hover:opacity-20 group-hover:scale-125 transition-all duration-500 pointer-events-none"
+                    style={{background: 'linear-gradient(135deg,#10b981,#065f46)'}} />
+                  <div className="relative z-10">
+                    <div className="rounded-2xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300"
+                      style={{
+                        background: 'linear-gradient(135deg,#10b981,#065f46)',
+                        width: '64px',
+                        height: '64px',
+                        boxShadow: '0 8px 24px rgba(16,185,129,0.3)',
+                      }}>
+                      <FileBarChart2 style={{width: '32px', height: '32px', color:'white'}} />
+                    </div>
+                    <p className="font-black text-2xl leading-tight mb-2" style={{color: '#065f46'}}>
+                      {BUBBLES[1].label}
+                    </p>
+                    <p className="text-sm leading-relaxed" style={{color: '#6b7280'}}>
+                      تقارير الجدوى والتدفقات وحساب الضمان
+                    </p>
+                  </div>
+                </button>
               </div>
+
+              {/* Operations & Evaluation */}
+              <div className="grid grid-cols-2 gap-3">
+                <BentoCard bubble={BUBBLES[2]} tall />
+                <BentoCard bubble={BUBBLES[3]} tall />
+              </div>
+
+              {/* Communication & Requests */}
               <div className="grid grid-cols-3 gap-3">
                 <BentoCard bubble={BUBBLES[4]} />
                 <BentoCard bubble={BUBBLES[5]} />
                 <BentoCard bubble={BUBBLES[6]} />
               </div>
+
+              {/* Planning & Studies */}
               <div className="grid grid-cols-3 gap-3">
                 <BentoCard bubble={BUBBLES[7]} />
                 <BentoCard bubble={BUBBLES[8]} />
