@@ -72,8 +72,6 @@
     "imap": "^0.8.19",
     "input-otp": "^1.4.2",
     "jose": "6.1.0",
-    "jspdf": "^4.2.0",
-    "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.453.0",
     "mailparser": "^3.9.3",
     "multer": "^2.1.1",
