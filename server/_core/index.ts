@@ -16,6 +16,7 @@ import { startLifecycleDeadlineScheduler } from "../lifecycleDeadlineScheduler";
 import complianceReportRoute from "../complianceReport";
 import lifecycleApiRoute from "../lifecycleApiRoute";
 import cpaReportRoute from "../cpaReportRoute";
+import portfolioPdfRoute from "../portfolioPdfRoute";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -67,6 +68,8 @@ async function startServer() {
   app.use("/api/lifecycle", lifecycleApiRoute);
   // CPA True Cost Report (printable HTML)
   app.use("/api/cpa/report", cpaReportRoute);
+  // Capital Portfolio PDF export
+  app.use("/api/portfolio/pdf", portfolioPdfRoute);
 
   // tRPC API
   app.use(
