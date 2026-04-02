@@ -254,31 +254,71 @@ async function exportToPDF(
       }
     }
 
+    // Phase color helper — determine dominant phase for a set of indices in a column
+    const PHASE_COLORS: Record<string, string> = {
+      design: "#fff3e0",       // light orange
+      offplan: "#fce4ec",      // light pink
+      construction: "#ede7f6", // light purple
+      handover: "#e3f2fd",     // light blue
+    };
+    const PHASE_COLORS_DARK: Record<string, string> = {
+      design: "#fb923c",
+      offplan: "#db2777",
+      construction: "#7c3aed",
+      handover: "#0ea5e9",
+    };
+
+    function getDominantPhase(col: any, indices: number[]): string | null {
+      const counts: Record<string, number> = {};
+      for (const idx of indices) {
+        const amt = col.chartAmounts[idx] || 0;
+        if (amt === 0) continue;
+        // Determine phase by index range using phaseRanges
+        const pr = col.phaseRanges as any;
+        let phase = "construction";
+        if (pr) {
+          if (idx >= pr.design.start && idx <= pr.design.end) phase = "design";
+          else if (pr.offplan && idx >= pr.offplan.start && idx <= pr.offplan.end) phase = "offplan";
+          else if (idx >= pr.construction.start && idx <= pr.construction.end) phase = "construction";
+          else if (idx >= pr.handover.start && idx <= pr.handover.end) phase = "handover";
+        }
+        counts[phase] = (counts[phase] || 0) + amt;
+      }
+      if (Object.keys(counts).length === 0) return null;
+      return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+    }
+
     // Build table rows HTML
     const rowsHtml = effectiveColumns.map((col: any) => {
       const qCells = quarters.map(({ indices }) => {
         const total = indices.reduce((s, idx) => s + (col.chartAmounts[idx] || 0), 0);
-        return `<td>${fmt(total)}</td>`;
+        if (total === 0) return `<td style="color:#cbd5e1">—</td>`;
+        const phase = getDominantPhase(col, indices);
+        const bg = phase ? PHASE_COLORS[phase] : "#f8fafc";
+        const border = phase ? `border-right: 3px solid ${PHASE_COLORS_DARK[phase]}` : "";
+        return `<td style="background:${bg};${border};font-weight:600">${fmt(total)}</td>`;
       }).join("");
       const totalProjectCost = col.totalCosts || 0;
+      const optBg = col.option === "o1" ? "#dcfce7" : col.option === "o2" ? "#dbeafe" : "#fef9c3";
+      const optColor = col.option === "o1" ? "#166534" : col.option === "o2" ? "#1e40af" : "#854d0e";
       return `<tr>
-        <td style="text-align:right;font-weight:600">${col.name}</td>
-        <td>${optionLabel[col.option] || col.option}</td>
-        <td>${fmt(totalProjectCost)}</td>
-        <td>${fmt(col.investorTotal)}</td>
-        <td>${fmt(col.paidTotal)}</td>
-        <td>${fmt(col.upcomingTotal)}</td>
+        <td style="text-align:right;font-weight:700;white-space:nowrap;padding-right:8px">${col.name}</td>
+        <td style="background:${optBg};color:${optColor};font-weight:700">${optionLabel[col.option] || col.option}</td>
+        <td style="font-weight:600">${fmt(totalProjectCost)}</td>
+        <td style="font-weight:600;color:#0f172a">${fmt(col.investorTotal)}</td>
+        <td style="color:#16a34a;font-weight:600">${fmt(col.paidTotal)}</td>
+        <td style="color:#dc2626;font-weight:600">${fmt(col.upcomingTotal)}</td>
         ${qCells}
-        <td style="font-weight:700">${fmt(col.investorTotal)}</td>
+        <td style="font-weight:800;background:#f1f5f9">${fmt(col.upcomingTotal)}</td>
       </tr>`;
     }).join("");
 
     const totalQCells = quarters.map(({ indices }) => {
       const total = effectiveColumns.reduce((s, c) => s + indices.reduce((ss, idx) => ss + (c.chartAmounts[idx] || 0), 0), 0);
-      return `<td style="font-weight:700">${fmt(total)}</td>`;
+      return `<td style="font-weight:800">${fmt(total)}</td>`;
     }).join("");
 
-    const qHeaders = quarters.map(q => `<th>${q.label}</th>`).join("");
+    const qHeaders = quarters.map(q => `<th style="min-width:80px;white-space:nowrap">${q.label}</th>`).join("");
 
     const html = `
 <!DOCTYPE html>
@@ -287,8 +327,9 @@ async function exportToPDF(
 <meta charset="UTF-8">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
+  @page { size: A3 landscape; margin: 15mm; }
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family:'Cairo',sans-serif; direction:rtl; padding:16px; font-size:11px; }
+  body { font-family:'Cairo',sans-serif; direction:rtl; padding:16px; font-size:10px; }
   .header { background:#0f172a; color:#fff; padding:16px 20px; border-radius:8px; margin-bottom:16px; }
   .header h1 { font-size:20px; font-weight:800; margin-bottom:4px; }
   .header .sub { font-size:11px; color:#94a3b8; }
@@ -296,9 +337,9 @@ async function exportToPDF(
   .card { flex:1; background:#f8fafc; border-right:4px solid #0f172a; padding:12px; border-radius:6px; }
   .card .lbl { font-size:9px; color:#64748b; margin-bottom:4px; }
   .card .val { font-size:15px; font-weight:800; color:#0f172a; }
-  table { width:100%; border-collapse:collapse; font-size:10px; }
-  th { background:#0f172a; color:#fff; padding:8px 6px; border:1px solid #334155; font-weight:700; text-align:center; }
-  td { padding:7px 6px; border:1px solid #cbd5e1; text-align:center; }
+  table { width:100%; border-collapse:collapse; font-size:9px; table-layout:auto; }
+  th { background:#0f172a; color:#fff; padding:6px 4px; border:1px solid #334155; font-weight:700; text-align:center; font-size:9px; white-space:nowrap; }
+  td { padding:5px 4px; border:1px solid #cbd5e1; text-align:center; white-space:nowrap; }
   tr:nth-child(even) td { background:#f8fafc; }
   .total-row td { background:#1e293b !important; color:#fff; font-weight:700; }
   .footer { text-align:center; font-size:9px; color:#94a3b8; margin-top:14px; padding-top:10px; border-top:1px solid #e2e8f0; }

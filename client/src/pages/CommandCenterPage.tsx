@@ -3822,11 +3822,13 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white" dir="rtl">
         <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
         <div className="px-2 py-4">
-          <div className="flex items-center gap-2 mb-4 px-4">
-            <Button variant="ghost" size="sm" onClick={() => { setActiveBubble(null); setShowCapitalPortfolio(false); }} className="text-slate-500">
-              <ArrowLeft className="w-4 h-4 ml-1" /> العودة للرئيسية
-            </Button>
-            <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">تحريك متاح • لا يحفظ</span>
+          <div className="flex items-center justify-between mb-4 px-4">
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => { setActiveBubble(null); setShowCapitalPortfolio(false); }} className="text-slate-500">
+                <ArrowLeft className="w-4 h-4 ml-1" /> العودة للرئيسية
+              </Button>
+              <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">تحريك متاح • لا يحفظ</span>
+            </div>
           </div>
           <CapitalPortfolioPage />
         </div>
