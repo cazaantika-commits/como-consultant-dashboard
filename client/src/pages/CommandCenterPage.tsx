@@ -4089,94 +4089,94 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             meeting_minutes: 'محاضر الاجتماعات والقرارات',
           };
 
-          const BentoCard = ({ bubble, tall = false, wide = false }: { bubble: typeof BUBBLES[0]; tall?: boolean; wide?: boolean }) => {
+          // Shape types for visual diversity
+          type ShapeType = 'circle' | 'hexagon' | 'pill' | 'diamond' | 'squircle' | 'wide-pill' | 'rect';
+
+          const ShapeCard = ({ bubble, shape = 'squircle' }: { bubble: typeof BUBBLES[0]; shape?: ShapeType }) => {
             const count = counts.data?.[bubble.type as keyof typeof counts.data] || 0;
             const hasCount = typeof count === "number" && count > 0;
             const sc = solidColorMap[bubble.color] || {solid:'#64748b', shadow:'rgba(100,116,139,0.45)'};
 
-            return (
-              <button
-                onClick={() => handleBubbleClick(bubble.type)}
-                className="group relative overflow-hidden rounded-2xl text-right transition-all duration-200 hover:scale-[1.04] hover:-translate-y-0.5 active:scale-[0.97] w-full"
-                style={{
-                  background: sc.solid,
-                  boxShadow: `0 4px 16px ${sc.shadow}, 0 1px 4px rgba(0,0,0,0.08)`,
-                  padding: tall ? '1rem 0.9rem' : '0.7rem 0.8rem',
-                  minHeight: tall ? '100px' : '68px',
-                  display: 'flex',
-                  flexDirection: tall ? 'column' : 'row',
-                  justifyContent: tall ? 'space-between' : 'flex-start',
-                  alignItems: tall ? 'flex-start' : 'center',
-                  gap: tall ? '0' : '0.6rem',
-                }}
-              >
-                {/* Shine overlay on hover */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-2xl pointer-events-none"
-                  style={{background: 'linear-gradient(135deg, rgba(255,255,255,0.18) 0%, transparent 55%)'}} />
+            const shapeStyle: React.CSSProperties = {
+              circle:     { borderRadius: '50%', aspectRatio: '1', padding: '0', width: '100%', maxWidth: '120px', margin: '0 auto' },
+              hexagon:    { clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', borderRadius: '0', aspectRatio: '1', padding: '0', width: '100%', maxWidth: '120px', margin: '0 auto' },
+              pill:       { borderRadius: '9999px', padding: '0.9rem 1.2rem', minHeight: '72px' },
+              'wide-pill':{ borderRadius: '9999px', padding: '1rem 1.4rem', minHeight: '80px' },
+              diamond:    { transform: 'rotate(45deg)', borderRadius: '18%', aspectRatio: '1', padding: '0', width: '100%', maxWidth: '110px', margin: '0 auto' },
+              squircle:   { borderRadius: '28%', aspectRatio: '1', padding: '0', width: '100%', maxWidth: '120px', margin: '0 auto' },
+              rect:       { borderRadius: '16px', padding: '0.8rem 1rem', minHeight: '72px' },
+            }[shape];
 
-                {/* Icon container */}
-                <div
-                  className="relative flex-shrink-0 flex items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-110"
+            const isSymmetric = ['circle','hexagon','diamond','squircle'].includes(shape);
+
+            return (
+              <div className="flex flex-col items-center gap-2">
+                <button
+                  onClick={() => handleBubbleClick(bubble.type)}
+                  className="group relative overflow-hidden transition-all duration-200 hover:scale-[1.08] hover:-translate-y-1 active:scale-[0.95] flex items-center justify-center"
                   style={{
-                    width: tall ? '44px' : '36px',
-                    height: tall ? '44px' : '36px',
-                    background: 'rgba(255,255,255,0.22)',
-                    backdropFilter: 'blur(4px)',
-                    order: tall ? 0 : 1,
+                    background: sc.solid,
+                    boxShadow: `0 6px 20px ${sc.shadow}, 0 2px 6px rgba(0,0,0,0.1)`,
+                    ...shapeStyle,
                   }}
                 >
-                  <bubble.icon style={{width: tall ? '22px' : '18px', height: tall ? '22px' : '18px', color:'white'}} />
-                </div>
+                  {/* Shine */}
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
+                    style={{background: 'linear-gradient(135deg, rgba(255,255,255,0.25) 0%, transparent 55%)'}} />
 
-                {/* Count badge */}
-                {hasCount && (
-                  <div className="absolute top-2 right-2 min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center text-[9px] font-black z-10"
-                    style={{background:'rgba(0,0,0,0.35)',color:'white'}}>
-                    {count}
+                  {/* Inner content — rotated back for diamond */}
+                  <div className={`relative z-10 flex flex-col items-center justify-center gap-1 ${shape === 'diamond' ? 'rotate-[-45deg]' : ''}`}
+                    style={{padding: isSymmetric ? '8px' : undefined}}>
+                    <bubble.icon style={{width:'20px', height:'20px', color:'white', filter:'drop-shadow(0 1px 2px rgba(0,0,0,0.3))'}} />
+                    {!isSymmetric && (
+                      <span className="font-bold text-white text-center leading-tight" style={{fontSize:'0.72rem', textShadow:'0 1px 3px rgba(0,0,0,0.25)', maxWidth:'90px'}}>
+                        {bubble.label}
+                      </span>
+                    )}
                   </div>
-                )}
 
-                {/* Content */}
-                <div className="relative z-10 flex-1" style={{order: tall ? 1 : 0}}>
-                  <p className="font-bold text-white leading-tight" style={{fontSize: tall ? '0.9rem' : '0.78rem', textShadow:'0 1px 3px rgba(0,0,0,0.2)'}}>
-                    {bubble.label}
-                  </p>
-                  {tall && subtitles[bubble.type] && (
-                    <p className="mt-0.5 leading-snug" style={{fontSize:'0.68rem', color:'rgba(255,255,255,0.75)'}}>
-                      {subtitles[bubble.type]}
-                    </p>
+                  {/* Count badge */}
+                  {hasCount && (
+                    <div className="absolute top-1 right-1 min-w-[16px] h-[16px] px-1 rounded-full flex items-center justify-center text-[8px] font-black z-20"
+                      style={{background:'rgba(0,0,0,0.4)',color:'white'}}>
+                      {count}
+                    </div>
                   )}
-                </div>
-              </button>
+                </button>
+
+                {/* Label below symmetric shapes */}
+                {isSymmetric && (
+                  <span className="font-bold text-center leading-tight" style={{fontSize:'0.72rem', color:'#374151', maxWidth:'90px', display:'block'}}>
+                    {bubble.label}
+                  </span>
+                )}
+              </div>
             );
           };
 
           return (
-            <div className="mb-4 space-y-2.5">
-              {/* Row 1: Hero — Capital Portfolio (wide) + Financial Reports */}
-              <div className="grid grid-cols-5 gap-2.5">
-                <div className="col-span-3">
-                  <BentoCard bubble={BUBBLES[0]} tall />
-                </div>
-                <div className="col-span-2">
-                  <BentoCard bubble={BUBBLES[1]} tall />
-                </div>
+            <div className="mb-4">
+              {/* Row 1: Hero row — 2 wide pills */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <ShapeCard bubble={BUBBLES[0]} shape="wide-pill" />
+                <ShapeCard bubble={BUBBLES[1]} shape="wide-pill" />
               </div>
 
-              {/* Row 2: Evaluations + Milestones + Requests */}
-              <div className="grid grid-cols-3 gap-2.5">
-                <BentoCard bubble={BUBBLES[2]} tall />
-                <BentoCard bubble={BUBBLES[3]} tall />
-                <BentoCard bubble={BUBBLES[4]} tall />
+              {/* Row 2: Mixed shapes — circle, squircle, hexagon, circle, squircle */}
+              <div className="grid grid-cols-5 gap-3 mb-4 items-end">
+                <ShapeCard bubble={BUBBLES[2]} shape="circle" />
+                <ShapeCard bubble={BUBBLES[3]} shape="squircle" />
+                <ShapeCard bubble={BUBBLES[4]} shape="hexagon" />
+                <ShapeCard bubble={BUBBLES[5]} shape="circle" />
+                <ShapeCard bubble={BUBBLES[6]} shape="squircle" />
               </div>
 
-              {/* Row 3: Reports + Meeting Minutes + Work Schedule + Feasibility + Announcements */}
-              <div className="grid grid-cols-5 gap-2.5">
-                <BentoCard bubble={BUBBLES[5]} />
-                <BentoCard bubble={BUBBLES[6]} />
-                <BentoCard bubble={BUBBLES[7]} />
-                <BentoCard bubble={BUBBLES[8]} />
-                <BentoCard bubble={BUBBLES[9]} />
+              {/* Row 3: Diamond + pill + diamond */}
+              <div className="grid grid-cols-4 gap-3 items-center">
+                <ShapeCard bubble={BUBBLES[7]} shape="diamond" />
+                <ShapeCard bubble={BUBBLES[8]} shape="pill" />
+                <ShapeCard bubble={BUBBLES[9]} shape="pill" />
+                {BUBBLES[10] && <ShapeCard bubble={BUBBLES[10]} shape="diamond" />}
               </div>
             </div>
           );

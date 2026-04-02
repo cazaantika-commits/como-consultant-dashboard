@@ -514,3 +514,4 @@
 - [x] Fix auto-save race condition: prevent saving before loading completes (add isLoaded guard)
 - [x] Redesign Command Center cards: diverse icons, smaller sizes, fresh new layout style
 - [x] Make Command Center card prominent on Home page: unique icon, special styling, eye-catching placement
+- [ ] Redesign Command Center grid: diverse shapes (circles, hexagons, bubbles, diamonds, rectangles) for each card
