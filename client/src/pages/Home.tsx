@@ -1,5 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useCCAuth } from "@/contexts/CCAuthContext";
+import { useOwner } from "@/contexts/OwnerContext";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   DndContext,
@@ -272,6 +273,7 @@ function NewsTicker({ navigate }: { navigate: (path: string) => void }) {
             onClick={() => navigate("/news-manage")}
             className="shrink-0 text-[10px] text-amber-600 hover:text-amber-800 dark:text-amber-400 hover:underline whitespace-nowrap"
             title="إدارة الأخبار"
+            style={{ display: isOwner ? undefined : 'none' }}
           >
             إدارة
           </button>
@@ -284,6 +286,7 @@ function NewsTicker({ navigate }: { navigate: (path: string) => void }) {
 export default function Home() {
   const { user, loading, isAuthenticated } = useAuth();
   const { ccMember, isCCAuth, isOwner: isCCOwner } = useCCAuth();
+  const { isOwner } = useOwner();
   // CC members see the full platform (read-only)
   const effectivelyAuthenticated = isAuthenticated || isCCAuth;
   const effectiveUser = user ?? (ccMember ? { name: ccMember.nameAr, role: ccMember.role } : null);
@@ -410,7 +413,8 @@ export default function Home() {
     { id: "tool-market", label: "تقارير السوق", icon: BarChart3, path: "/market-reports", borderColor: "#0891b2", iconBg: "linear-gradient(135deg, #0891b2, #06b6d4)", shadow: "rgba(8, 145, 178, 0.25)" },
     { id: "tool-assign", label: "ملخص التكليفات", icon: ClipboardList, path: "/agent-assignments-summary", borderColor: "#f59e0b", iconBg: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245, 158, 11, 0.25)" },
     { id: "tool-learn", label: "التعلم الذاتي", icon: Brain, path: "/self-learning", borderColor: "#ec4899", iconBg: "linear-gradient(135deg, #ec4899, #db2777)", shadow: "rgba(236, 72, 153, 0.25)" },
-    { id: "tool-news", label: "إدارة الأخبار", icon: Newspaper, path: "/news-manage", borderColor: "#f59e0b", iconBg: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245, 158, 11, 0.25)" },
+    { id: "tool-news", label: "إدارة الأخبار", icon: Newspaper, path: "/news-manage", borderColor: "#f59e0b", iconBg: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245, 158, 11, 0.25)", ownerOnly: true },
+    { id: "tool-users", label: "إدارة المستخدمين", icon: Users, path: "/user-management", borderColor: "#6366f1", iconBg: "linear-gradient(135deg, #6366f1, #8b5cf6)", shadow: "rgba(99, 102, 241, 0.25)", ownerOnly: true },
   ];
 
   /* -- Sorted arrays based on saved order -- */

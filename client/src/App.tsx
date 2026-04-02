@@ -5,6 +5,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { CCAuthProvider } from "./contexts/CCAuthContext";
+import { OwnerProvider } from "./contexts/OwnerContext";
 import Home from "./pages/Home";
 import ConsultantDashboardPage from "./pages/ConsultantDashboardPage";
 import ConsultantProfilesPage from "./pages/ConsultantProfilesPage";
@@ -66,6 +67,7 @@ import CashFlowReflectionPage from "./pages/CashFlowReflectionPage";
 import CashFlowComparisonPage from "./pages/CashFlowComparisonPage";
 import PortfolioAllScenariosPage from "./pages/PortfolioAllScenariosPage";
 import CapitalPortfolioPage from "./pages/CapitalPortfolioPage";
+import UserManagementPage from "./pages/UserManagementPage";
 
 function Router() {
   return (
@@ -134,6 +136,7 @@ function Router() {
       <Route path="/cashflow-comparison" component={CashFlowComparisonPage} />
       <Route path="/portfolio-scenarios" component={PortfolioAllScenariosPage} />
       <Route path="/capital-portfolio" component={CapitalPortfolioPage} />
+      <Route path="/user-management" component={UserManagementPage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
@@ -149,7 +152,9 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <CCAuthProvider>
-            <Router />
+            <OwnerProvider>
+              <Router />
+            </OwnerProvider>
           </CCAuthProvider>
         </TooltipProvider>
       </ThemeProvider>

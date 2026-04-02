@@ -47,6 +47,11 @@ import { cpaRouter } from "./routers/cpa";
 import { newsTickerRouter } from "./routers/newsTicker";
 import { costDistributionRulesRouter } from "./routers/costDistributionRules";
 import { cashFlowSettingsRouter } from "./routers/cashFlowSettings";
+import { adminProcedure } from "./_core/trpc";
+import { users } from "../drizzle/schema";
+import { eq } from "drizzle-orm";
+import { z } from "zod";
+import { getDb } from "./db";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -108,6 +113,31 @@ export const appRouter = router({
   newsTicker: newsTickerRouter,
   costDistributionRules: costDistributionRulesRouter,
   cashFlowSettings: cashFlowSettingsRouter,
+
+  // User Management (admin only)
+  userManagement: router({
+    listUsers: adminProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return [];
+      const allUsers = await db.select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        role: users.role,
+        createdAt: users.createdAt,
+        lastSignedIn: users.lastSignedIn,
+      }).from(users).orderBy(users.createdAt);
+      return allUsers;
+    }),
+    setRole: adminProcedure
+      .input(z.object({ userId: z.number(), role: z.enum(['user', 'admin']) }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB not available');
+        await db.update(users).set({ role: input.role }).where(eq(users.id, input.userId));
+        return { success: true };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

@@ -17,6 +17,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useOwner } from "@/contexts/OwnerContext";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -436,6 +437,7 @@ export default function CashFlowSettingsPage({
   initialProjectId?: number | null;
 } = {}) {
   const { isAuthenticated } = useAuth();
+  const { isOwner } = useOwner();
   const { toast } = useToast();
   const utils = trpc.useUtils();
 
@@ -905,7 +907,7 @@ export default function CashFlowSettingsPage({
             })}
 
             {/* ── Save / Reset ── */}
-            {items.length > 0 && (
+            {items.length > 0 && isOwner && (
               <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex items-center justify-between">
                 <div className="text-xs text-gray-500">
                   {isDirty
