@@ -345,6 +345,9 @@ async function exportToPDF(
   .footer { text-align:center; font-size:9px; color:#94a3b8; margin-top:14px; padding-top:10px; border-top:1px solid #e2e8f0; }
   .legend { display:flex; gap:16px; margin-top:12px; font-size:9px; color:#64748b; }
   .legend-dot { width:12px; height:12px; border-radius:3px; display:inline-block; margin-left:5px; }
+  .print-btn { position:fixed; top:20px; left:20px; background:#0f172a; color:#fff; padding:12px 24px; border:none; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.3); z-index:9999; }
+  .print-btn:hover { background:#1e293b; }
+  @media print { .print-btn { display:none; } }
 </style>
 </head>
 <body>
@@ -392,6 +395,7 @@ async function exportToPDF(
     <span><span class="legend-dot" style="background:#64748b"></span>التسليم</span>
   </div>
   <div class="footer">Como Developments &middot; سري &middot; للاستخدام الداخلي فقط</div>
+  <button class="print-btn" onclick="window.print()">🖨️ طباعة / حفظ PDF</button>
 </body>
 </html>`;
 
@@ -404,11 +408,9 @@ async function exportToPDF(
     printWin.document.open();
     printWin.document.write(html);
     printWin.document.close();
-    // Wait for fonts to load then print
+    // Wait for fonts to load, then focus the window (no auto-print)
     await new Promise(r => setTimeout(r, 1800));
     printWin.focus();
-    printWin.print();
-    setTimeout(() => printWin.close(), 1000);
   } catch (err) {
     console.error("PDF export error:", err);
     alert("حدث خطأ أثناء توليد الـ PDF. يرجى المحاولة مرة أخرى.");
