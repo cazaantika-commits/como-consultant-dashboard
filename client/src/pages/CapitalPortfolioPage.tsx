@@ -6,8 +6,10 @@ import { useCCAuth } from "@/contexts/CCAuthContext";
 import {
   Layers, ArrowRight, ChevronDown, ChevronUp,
   RotateCcw, Settings, Calendar, Clock, Save, X,
-  Eye, EyeOff, LayoutGrid, Rows3,
+  Eye, EyeOff, LayoutGrid, Rows3, Download,
 } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 type ScenarioKey = "offplan_escrow" | "offplan_construction" | "no_offplan";
@@ -202,6 +204,263 @@ function OptionSelector({
       })}
     </div>
   );
+}
+
+// ── PDF Export ──────────────────────────────────────────────────────────────
+function exportToPDF(
+  effectiveColumns: any[],
+  groupedRows: any[],
+  rawProjects: any[]
+) {
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a3" });
+
+  // ── Fonts & Colors ──
+  const DARK = [15, 23, 42] as [number, number, number];
+  const SLATE = [71, 85, 105] as [number, number, number];
+  const LIGHT = [248, 250, 252] as [number, number, number];
+  const GREEN = [16, 185, 129] as [number, number, number];
+  const ORANGE = [251, 146, 60] as [number, number, number];
+  const PURPLE = [124, 58, 237] as [number, number, number];
+  const BLUE = [100, 116, 139] as [number, number, number];
+  const TOTAL_ROW = [30, 41, 59] as [number, number, number];
+
+  const phaseColor: Record<string, [number, number, number]> = {
+    design: ORANGE,
+    offplan: [219, 39, 119],
+    construction: PURPLE,
+    handover: BLUE,
+    land: BLUE,
+  };
+
+  const optionLabel: Record<string, string> = { o1: "O1", o2: "O2", o3: "O3" };
+
+  const fmt = (n: number) => n === 0 ? "—" : Math.round(n).toLocaleString("en-US");
+
+  const pageW = doc.internal.pageSize.getWidth();
+  const margin = 12;
+  const now = new Date();
+  const dateStr = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+
+  // ── Header ──
+  doc.setFillColor(...DARK);
+  doc.rect(0, 0, pageW, 22, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(16);
+  doc.setFont("helvetica", "bold");
+  doc.text("Capital Portfolio Report", margin, 10);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.text("Como Developments - Dynamic Capital Portfolio", margin, 16);
+  doc.text(`Export Date: ${dateStr}`, pageW - margin, 16, { align: "right" });
+
+  // ── Summary Cards ──
+  const grandTotalAll = effectiveColumns.reduce((s: number, c: any) => s + c.investorTotal, 0);
+  const paidAll = effectiveColumns.reduce((s: number, c: any) => s + c.paidTotal, 0);
+  const upcomingAll = effectiveColumns.reduce((s: number, c: any) => s + c.upcomingTotal, 0);
+
+  const cards = [
+    { label: "Total Projects", value: effectiveColumns.length.toString(), color: DARK },
+    { label: "Grand Total (AED)", value: fmt(grandTotalAll), color: DARK },
+    { label: "Paid (AED)", value: fmt(paidAll), color: [22, 163, 74] as [number, number, number] },
+    { label: "Remaining (AED)", value: fmt(upcomingAll), color: [220, 38, 38] as [number, number, number] },
+  ];
+
+  const cardW = (pageW - margin * 2 - 9) / 4;
+  let cx = margin;
+  const cy = 26;
+  cards.forEach((card) => {
+    doc.setFillColor(...LIGHT);
+    doc.roundedRect(cx, cy, cardW, 14, 2, 2, "F");
+    doc.setFillColor(...card.color);
+    doc.rect(cx, cy, 2, 14, "F");
+    doc.setTextColor(...SLATE);
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.text(card.label, cx + 5, cy + 5);
+    doc.setTextColor(...DARK);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text(card.value, cx + 5, cy + 11);
+    cx += cardW + 3;
+  });
+
+  // ── Build Table ──
+  // Columns: Project | Option | Total Cost | Capital | Paid | Remaining | Month1 | Month2 | ... | Grand Total
+  const activeMonths: number[] = [];
+  for (let i = 0; i < 48; i++) {
+    const hasData = effectiveColumns.some((c: any) => (c.chartAmounts[i] || 0) > 0);
+    if (hasData) activeMonths.push(i);
+  }
+
+  // Group months by quarter for readability
+  const quarterGroups: { label: string; indices: number[] }[] = [];
+  const seen = new Set<number>();
+  for (const idx of activeMonths) {
+    const qStart = Math.floor(idx / 3) * 3;
+    if (!seen.has(qStart)) {
+      seen.add(qStart);
+      const indices = [qStart, qStart + 1, qStart + 2].filter(i => i < 48);
+      const d = new Date(2026, 3 + qStart, 1);
+      const label = `Q${Math.floor(qStart / 3) + 1} ${d.getFullYear()}`;
+      quarterGroups.push({ label, indices });
+    }
+  }
+
+  const ARABIC_MONTHS_EN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  function getMonthLabelEn(offset: number): string {
+    const d = new Date(2026, 3 + offset, 1);
+    return `${ARABIC_MONTHS_EN[d.getMonth()]} ${d.getFullYear()}`;
+  }
+
+  // Use monthly columns (only active months)
+  const head: string[] = ["Project", "Option", "Total (AED)", "Capital (AED)", "Paid (AED)", "Remaining (AED)", ...activeMonths.map(i => getMonthLabelEn(i)), "Total"];
+
+  const body: (string | { content: string; styles: object })[][] = effectiveColumns.map((col: any) => {
+    const monthCells = activeMonths.map((idx) => {
+      const val = col.chartAmounts[idx] || 0;
+      return val > 0 ? fmt(val) : "";
+    });
+    return [
+      col.name,
+      optionLabel[col.option] || col.option,
+      fmt(col.grandTotal),
+      fmt(col.investorTotal),
+      fmt(col.paidTotal),
+      fmt(col.upcomingTotal),
+      ...monthCells,
+      fmt(col.investorTotal),
+    ];
+  });
+
+  // Monthly totals row
+  const totalRow: string[] = [
+    "TOTAL", "",
+    fmt(effectiveColumns.reduce((s: number, c: any) => s + c.grandTotal, 0)),
+    fmt(effectiveColumns.reduce((s: number, c: any) => s + c.investorTotal, 0)),
+    fmt(paidAll),
+    fmt(upcomingAll),
+    ...activeMonths.map((idx) => {
+      const t = effectiveColumns.reduce((s: number, c: any) => s + (c.chartAmounts[idx] || 0), 0);
+      return t > 0 ? fmt(t) : "";
+    }),
+    fmt(grandTotalAll),
+  ];
+
+  // Phase color per cell
+  const willDrawCell = (data: any) => {
+    if (data.section !== "body") return;
+    const colIdx = data.column.index;
+    const rowIdx = data.row.index;
+    if (rowIdx >= effectiveColumns.length) return; // total row handled separately
+    if (colIdx < 6) return; // fixed columns
+    const monthColIdx = colIdx - 6;
+    if (monthColIdx >= activeMonths.length) return;
+    const chartIdx = activeMonths[monthColIdx];
+    const col = effectiveColumns[rowIdx];
+    if (!col) return;
+    const val = col.chartAmounts[chartIdx] || 0;
+    if (val <= 0) return;
+    // Determine phase
+    let phase = "construction";
+    if ((col.phaseChartAmounts.design?.[chartIdx] || 0) > 0) phase = "design";
+    else if ((col.phaseChartAmounts.offplan?.[chartIdx] || 0) > 0) phase = "offplan";
+    else if ((col.phaseChartAmounts.handover?.[chartIdx] || 0) > 0) phase = "handover";
+    const [r, g, b] = phaseColor[phase] || PURPLE;
+    data.cell.styles.fillColor = [r, g, b];
+    data.cell.styles.textColor = [255, 255, 255];
+    data.cell.styles.fontStyle = "bold";
+  };
+
+  autoTable(doc, {
+    startY: 44,
+    head: [head],
+    body: [...body, totalRow],
+    theme: "grid",
+    styles: {
+      font: "helvetica",
+      fontSize: 6.5,
+      cellPadding: 2,
+      halign: "center",
+      valign: "middle",
+      overflow: "linebreak",
+    },
+    headStyles: {
+      fillColor: DARK,
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+      fontSize: 7,
+      cellPadding: 3,
+    },
+    columnStyles: {
+      0: { halign: "left", fontStyle: "bold", cellWidth: 28 },
+      1: { cellWidth: 12 },
+      2: { cellWidth: 22 },
+      3: { cellWidth: 22 },
+      4: { cellWidth: 18 },
+      5: { cellWidth: 22 },
+    },
+    bodyStyles: {
+      textColor: DARK,
+      lineColor: [226, 232, 240],
+      lineWidth: 0.2,
+    },
+    alternateRowStyles: {
+      fillColor: [248, 250, 252],
+    },
+    willDrawCell,
+    didParseCell: (data: any) => {
+      // Style total row
+      if (data.row.index === effectiveColumns.length) {
+        data.cell.styles.fillColor = TOTAL_ROW;
+        data.cell.styles.textColor = [255, 255, 255];
+        data.cell.styles.fontStyle = "bold";
+        data.cell.styles.fontSize = 7.5;
+      }
+      // Style fixed financial columns
+      if (data.section === "body" && data.column.index >= 2 && data.column.index <= 5 && data.row.index < effectiveColumns.length) {
+        data.cell.styles.fillColor = [241, 245, 249];
+        data.cell.styles.textColor = DARK;
+        data.cell.styles.fontStyle = "bold";
+      }
+    },
+    margin: { left: margin, right: margin },
+  });
+
+  // ── Legend ──
+  const finalY = (doc as any).lastAutoTable?.finalY || 200;
+  if (finalY + 20 < doc.internal.pageSize.getHeight()) {
+    const legendY = finalY + 6;
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...SLATE);
+    doc.text("Phase Legend:", margin, legendY);
+    const legendItems = [
+      { label: "Design", color: ORANGE },
+      { label: "Registration", color: [219, 39, 119] as [number, number, number] },
+      { label: "Construction", color: PURPLE },
+      { label: "Handover", color: BLUE },
+    ];
+    let lx = margin + 22;
+    legendItems.forEach(({ label, color }) => {
+      doc.setFillColor(...color);
+      doc.roundedRect(lx, legendY - 4, 8, 5, 1, 1, "F");
+      doc.setTextColor(...SLATE);
+      doc.setFont("helvetica", "normal");
+      doc.text(label, lx + 10, legendY);
+      lx += 38;
+    });
+  }
+
+  // ── Footer ──
+  const pageH = doc.internal.pageSize.getHeight();
+  doc.setFillColor(...DARK);
+  doc.rect(0, pageH - 8, pageW, 8, "F");
+  doc.setTextColor(148, 163, 184);
+  doc.setFontSize(6.5);
+  doc.setFont("helvetica", "normal");
+  doc.text("Como Developments · Confidential · For Internal Use Only", pageW / 2, pageH - 3, { align: "center" });
+
+  doc.save(`Capital-Portfolio-${dateStr.replace(/\//g, "-")}.pdf`);
 }
 
 // ── Main Component ───────────────────────────────────────────────────────────
@@ -684,6 +943,21 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
               <span style={{ fontWeight: 600 }}>التسجيل</span>
             </div>
           </div>
+
+          {/* Export PDF button */}
+          <button
+            onClick={() => exportToPDF(effectiveColumns, groupedRows, rawProjects)}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              background: "#10b981",
+              color: "#fff",
+              border: "1px solid #10b981",
+              borderRadius: 10, padding: "6px 14px", cursor: "pointer",
+              fontSize: 12, fontWeight: 700, transition: "all 0.2s",
+            }}
+          >
+            <Download style={{ width: 14, height: 14 }} /> تصدير PDF
+          </button>
 
           {/* Settings toggle — owner only */}
           {canEdit && <button
