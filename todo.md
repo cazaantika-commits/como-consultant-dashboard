@@ -501,3 +501,4 @@
 - [x] إصلاح المحفظة: إضافة monthlyInvestorBySection واستخدامه بدلاً من monthlyBySection لعرض مبالغ المستثمر فقط
 - [x] Add export dialog with scenario name + grouping options (monthly/quarterly/semi-annual) to PDF export in CapitalPortfolioPage
 - [x] Add Capital Portfolio card to CommandCenterPage (full interactive with controls, no persistence)
+- [x] Add comprehensive statistical summary section at the beginning of PDF export with key financial and operational indicators

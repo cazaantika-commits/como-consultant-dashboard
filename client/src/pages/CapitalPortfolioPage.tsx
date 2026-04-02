@@ -227,6 +227,40 @@ async function exportToPDF(
     const dateStr = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
     const groupLabel = grouping === 1 ? "شهري" : grouping === 3 ? "ربع سنوي" : "نصف سنوي";
 
+    // ── Statistical summary calculations ──────────────────────────────────
+    // Option distribution
+    const o1Count = effectiveColumns.filter(c => c.option === "o1").length;
+    const o2Count = effectiveColumns.filter(c => c.option === "o2").length;
+    const o3Count = effectiveColumns.filter(c => c.option === "o3").length;
+    // Payment progress %
+    const paymentPct = capitalAll > 0 ? Math.round((paidAll / capitalAll) * 100) : 0;
+    const remainingPct = 100 - paymentPct;
+    // Highest cost project
+    const topProject = effectiveColumns.reduce((best, c) => (c.totalCosts || 0) > (best.totalCosts || 0) ? c : best, effectiveColumns[0]);
+    // Phase distribution across all projects (sum amounts per phase)
+    let designTotal = 0, offplanTotal = 0, constructionTotal = 0, handoverTotal = 0;
+    effectiveColumns.forEach(col => {
+      const pr = col.phaseRanges as any;
+      if (!pr) return;
+      for (let idx = 0; idx < 48; idx++) {
+        const amt = col.chartAmounts[idx] || 0;
+        if (amt === 0) continue;
+        if (idx >= pr.design.start && idx <= pr.design.end) designTotal += amt;
+        else if (pr.offplan && idx >= pr.offplan.start && idx <= pr.offplan.end) offplanTotal += amt;
+        else if (idx >= pr.construction.start && idx <= pr.construction.end) constructionTotal += amt;
+        else if (idx >= pr.handover.start && idx <= pr.handover.end) handoverTotal += amt;
+      }
+    });
+    const phaseGrandTotal = designTotal + offplanTotal + constructionTotal + handoverTotal || 1;
+    const designPct = Math.round((designTotal / phaseGrandTotal) * 100);
+    const offplanPct = Math.round((offplanTotal / phaseGrandTotal) * 100);
+    const constructionPct = Math.round((constructionTotal / phaseGrandTotal) * 100);
+    const handoverPct = Math.round((handoverTotal / phaseGrandTotal) * 100);
+    // Average capital per project
+    const avgCapital = effectiveColumns.length > 0 ? Math.round(capitalAll / effectiveColumns.length) : 0;
+    // Total cost vs capital ratio
+    const costCapitalRatio = capitalAll > 0 ? (totalProjectCostAll / capitalAll).toFixed(2) : "—";
+
     // Build period groups based on grouping
     const ARABIC_MONTHS_SHORT = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
     const quarters: { label: string; indices: number[] }[] = [];
@@ -348,6 +382,21 @@ async function exportToPDF(
   .print-btn { position:fixed; top:20px; left:20px; background:#0f172a; color:#fff; padding:12px 24px; border:none; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.3); z-index:9999; }
   .print-btn:hover { background:#1e293b; }
   @media print { .print-btn { display:none; } }
+  .summary { background:#f8fafc; border:2px solid #0f172a; border-radius:8px; padding:16px; margin-bottom:16px; }
+  .summary h2 { font-size:14px; font-weight:800; color:#0f172a; margin-bottom:12px; border-bottom:2px solid #cbd5e1; padding-bottom:6px; }
+  .summary-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:12px; }
+  .summary-item { background:#fff; border-right:3px solid #0ea5e9; padding:10px; border-radius:4px; }
+  .summary-item.accent-green { border-right-color:#10b981; }
+  .summary-item.accent-orange { border-right-color:#f97316; }
+  .summary-item.accent-purple { border-right-color:#a855f7; }
+  .summary-item .s-lbl { font-size:9px; color:#64748b; margin-bottom:3px; }
+  .summary-item .s-val { font-size:13px; font-weight:700; color:#0f172a; }
+  .progress-bar { height:20px; background:#e2e8f0; border-radius:4px; overflow:hidden; display:flex; margin-top:6px; }
+  .progress-bar .seg { display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; color:#fff; }
+  .phase-dist { display:flex; gap:8px; margin-top:8px; }
+  .phase-dist-item { flex:1; text-align:center; padding:8px; border-radius:4px; }
+  .phase-dist-item .p-lbl { font-size:8px; color:#64748b; margin-bottom:2px; }
+  .phase-dist-item .p-val { font-size:11px; font-weight:700; color:#0f172a; }
 </style>
 </head>
 <body>
@@ -355,11 +404,74 @@ async function exportToPDF(
     <h1>تقرير محفظة رأس المال${scenarioName ? ` — ${scenarioName}` : ""}</h1>
     <div class="sub">Como Developments &middot; تاريخ التصدير: ${dateStr} &middot; التجميع: ${groupLabel}</div>
   </div>
-  <div class="cards">
-    <div class="card"><div class="lbl">عدد المشاريع</div><div class="val">${effectiveColumns.length}</div></div>
-    <div class="card"><div class="lbl">إجمالي رأس المال (درهم)</div><div class="val">${fmt(capitalAll)}</div></div>
-    <div class="card"><div class="lbl">المدفوع (درهم)</div><div class="val">${fmt(paidAll)}</div></div>
-    <div class="card"><div class="lbl">المتبقي (درهم)</div><div class="val">${fmt(upcomingAll)}</div></div>
+  <div class="summary">
+    <h2>📊 الملخص الإحصائي</h2>
+    <div class="summary-grid">
+      <div class="summary-item">
+        <div class="s-lbl">عدد المشاريع</div>
+        <div class="s-val">${effectiveColumns.length} مشروع</div>
+      </div>
+      <div class="summary-item accent-green">
+        <div class="s-lbl">إجمالي رأس المال</div>
+        <div class="s-val">${fmt(capitalAll)} درهم</div>
+      </div>
+      <div class="summary-item accent-orange">
+        <div class="s-lbl">إجمالي التكلفة الكلية</div>
+        <div class="s-val">${fmt(totalProjectCostAll)} درهم</div>
+      </div>
+      <div class="summary-item">
+        <div class="s-lbl">المدفوع</div>
+        <div class="s-val">${fmt(paidAll)} درهم</div>
+      </div>
+      <div class="summary-item">
+        <div class="s-lbl">المتبقي</div>
+        <div class="s-val">${fmt(upcomingAll)} درهم</div>
+      </div>
+      <div class="summary-item accent-purple">
+        <div class="s-lbl">متوسط رأس المال / مشروع</div>
+        <div class="s-val">${fmt(avgCapital)} درهم</div>
+      </div>
+      <div class="summary-item">
+        <div class="s-lbl">توزيع الخيارات</div>
+        <div class="s-val">O1: ${o1Count} | O2: ${o2Count} | O3: ${o3Count}</div>
+      </div>
+      <div class="summary-item accent-orange">
+        <div class="s-lbl">أعلى مشروع تكلفة</div>
+        <div class="s-val">${topProject?.name || "—"}</div>
+      </div>
+      <div class="summary-item">
+        <div class="s-lbl">نسبة التكلفة / رأس المال</div>
+        <div class="s-val">${costCapitalRatio}x</div>
+      </div>
+    </div>
+    <div style="margin-bottom:10px">
+      <div style="font-size:10px;font-weight:700;color:#0f172a;margin-bottom:4px">نسبة الإنجاز المالي</div>
+      <div class="progress-bar">
+        <div class="seg" style="width:${paymentPct}%;background:#10b981">${paymentPct}% مدفوع</div>
+        <div class="seg" style="width:${remainingPct}%;background:#ef4444">${remainingPct}% متبقي</div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:10px;font-weight:700;color:#0f172a;margin-bottom:4px">توزيع التكاليف حسب المرحلة</div>
+      <div class="phase-dist">
+        <div class="phase-dist-item" style="background:#fff3e0">
+          <div class="p-lbl">التصاميم</div>
+          <div class="p-val">${designPct}%</div>
+        </div>
+        <div class="phase-dist-item" style="background:#fce4ec">
+          <div class="p-lbl">التسجيل</div>
+          <div class="p-val">${offplanPct}%</div>
+        </div>
+        <div class="phase-dist-item" style="background:#ede7f6">
+          <div class="p-lbl">الإنشاء</div>
+          <div class="p-val">${constructionPct}%</div>
+        </div>
+        <div class="phase-dist-item" style="background:#e3f2fd">
+          <div class="p-lbl">التسليم</div>
+          <div class="p-val">${handoverPct}%</div>
+        </div>
+      </div>
+    </div>
   </div>
   <table>
     <thead>
