@@ -789,17 +789,17 @@ export default function Home() {
               onClick={() => navigate('/command-center')}
               className="group relative mb-5 rounded-2xl overflow-hidden cursor-pointer select-none transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl active:scale-[0.99]"
               style={{
-                background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 35%, #4c1d95 65%, #6b21a8 100%)',
-                boxShadow: '0 8px 32px rgba(99,102,241,0.35), 0 2px 8px rgba(0,0,0,0.2)',
+                background: 'linear-gradient(135deg, #be185d 0%, #db2777 35%, #ec4899 65%, #f472b6 100%)',
+                boxShadow: '0 8px 32px rgba(236,72,153,0.45), 0 2px 8px rgba(0,0,0,0.2)',
               }}
             >
               {/* Animated shimmer overlay */}
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
                 style={{background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.07) 50%, transparent 60%)'}} />
               {/* Decorative circles */}
-              <div className="absolute -top-10 -left-10 w-48 h-48 rounded-full opacity-10" style={{background: 'radial-gradient(circle, #a78bfa, transparent)'}} />
-              <div className="absolute -bottom-8 -right-8 w-40 h-40 rounded-full opacity-15" style={{background: 'radial-gradient(circle, #c084fc, transparent)'}} />
-              <div className="absolute top-1/2 left-1/3 -translate-y-1/2 w-64 h-64 rounded-full opacity-5" style={{background: 'radial-gradient(circle, #818cf8, transparent)'}} />
+              <div className="absolute -top-10 -left-10 w-48 h-48 rounded-full opacity-10" style={{background: 'radial-gradient(circle, #fda4af, transparent)'}} />
+              <div className="absolute -bottom-8 -right-8 w-40 h-40 rounded-full opacity-15" style={{background: 'radial-gradient(circle, #fbcfe8, transparent)'}} />
+              <div className="absolute top-1/2 left-1/3 -translate-y-1/2 w-64 h-64 rounded-full opacity-5" style={{background: 'radial-gradient(circle, #f9a8d4, transparent)'}} />
 
               <div className="relative z-10 flex items-center gap-5 px-7 py-5">
                 {/* Icon */}
@@ -813,10 +813,10 @@ export default function Home() {
                       boxShadow: '0 4px 20px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.2)',
                     }}
                   >
-                    <Crown className="w-8 h-8 text-white drop-shadow-lg" />
+                    <Crown className="w-8 h-8 drop-shadow-lg" style={{color:'#fbbf24', filter:'drop-shadow(0 0 6px rgba(251,191,36,0.8)) drop-shadow(0 2px 4px rgba(0,0,0,0.3))'}} />
                   </div>
                   {/* Pulse ring */}
-                  <div className="absolute inset-0 rounded-2xl animate-ping opacity-20" style={{background: 'rgba(167,139,250,0.4)'}} />
+                  <div className="absolute inset-0 rounded-2xl animate-ping opacity-20" style={{background: 'rgba(251,191,36,0.4)'}} />
                 </div>
 
                 {/* Text */}
