@@ -90,6 +90,7 @@ import {
 
 // Lazy imports for embedded pages
 import WorkSchedulePage from "./WorkSchedulePage";
+import CapitalPortfolioPage from "./CapitalPortfolioPage";
 // Old financial components removed - now using iframe embeds
 
 // --- Financial Reports View (read-only, embedded in Command Center) ---
@@ -359,6 +360,7 @@ const BUBBLES = [
   { type: "work_schedule" as const, label: "برنامج العمل", icon: Layers, color: "from-teal-600 to-teal-800", bg: "bg-teal-50", border: "border-teal-200", text: "text-teal-700" },
   { type: "feasibility_study" as const, label: "دراسة جدوى المشروع", icon: Wallet, color: "from-violet-600 to-violet-800", bg: "bg-violet-50", border: "border-violet-200", text: "text-violet-700" },
   { type: "financial_reports" as const, label: "تقارير التخطيط المالي", icon: FileBarChart2, color: "from-emerald-600 to-emerald-800", bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700" },
+  { type: "capital_portfolio" as const, label: "محفظة رأس المال الديناميكية", icon: TrendingUp, color: "from-indigo-600 to-indigo-800", bg: "bg-indigo-50", border: "border-indigo-200", text: "text-indigo-700" },
 ];
 
 const BUBBLE_LABELS: Record<string, string> = {
@@ -3754,6 +3756,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
   const [showWorkSchedule, setShowWorkSchedule] = useState(false);
   const [showFeasibilityStudy, setShowFeasibilityStudy] = useState(false);
   const [showFinancialReports, setShowFinancialReports] = useState(false);
+  const [showCapitalPortfolio, setShowCapitalPortfolio] = useState(false);
   const projectsList = trpc.projects.list.useQuery();
 
   const counts = trpc.commandCenter.getBubbleCounts.useQuery({ token });
@@ -3808,6 +3811,25 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           onBack={() => { setActiveBubble(null); setShowFinancialReports(false); }}
           projectsList={projectsList.data || []}
         />
+        <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
+      </div>
+    );
+  }
+
+  // If viewing capital portfolio (interactive, no persistence)
+  if (activeBubble === "capital_portfolio" && showCapitalPortfolio) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white" dir="rtl">
+        <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
+        <div className="px-2 py-4">
+          <div className="flex items-center gap-2 mb-4 px-4">
+            <Button variant="ghost" size="sm" onClick={() => { setActiveBubble(null); setShowCapitalPortfolio(false); }} className="text-slate-500">
+              <ArrowLeft className="w-4 h-4 ml-1" /> العودة للرئيسية
+            </Button>
+            <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">تحريك متاح • لا يحفظ</span>
+          </div>
+          <CapitalPortfolioPage />
+        </div>
         <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
       </div>
     );
@@ -3994,6 +4016,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             else if (type === "work_schedule") { setActiveBubble("work_schedule"); setShowWorkSchedule(true); }
             else if (type === "feasibility_study") { setActiveBubble("feasibility_study"); setShowFeasibilityStudy(true); }
             else if (type === "financial_reports") { setActiveBubble("financial_reports"); setShowFinancialReports(true); }
+            else if (type === "capital_portfolio") { setActiveBubble("capital_portfolio"); setShowCapitalPortfolio(true); }
             else { setActiveBubble(type); }
           };
 
@@ -4085,6 +4108,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
               <div className="grid grid-cols-3 gap-3">
                 <BentoCard bubble={BUBBLES[7]} />
                 <BentoCard bubble={BUBBLES[8]} />
+                <BentoCard bubble={BUBBLES[9]} />
               </div>
             </div>
           );

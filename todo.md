@@ -499,3 +499,5 @@
 - [ ] تشخيص: كتابة سكريبت يطبع الأرقام الشهرية من getCostSettingsComparison وgetPortfolioAllScenarios لمشروع ند الشبا قطعة 2 ومقارنتها بند ببند
 
 - [x] إصلاح المحفظة: إضافة monthlyInvestorBySection واستخدامه بدلاً من monthlyBySection لعرض مبالغ المستثمر فقط
+- [x] Add export dialog with scenario name + grouping options (monthly/quarterly/semi-annual) to PDF export in CapitalPortfolioPage
+- [x] Add Capital Portfolio card to CommandCenterPage (full interactive with controls, no persistence)

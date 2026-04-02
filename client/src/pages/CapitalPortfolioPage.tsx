@@ -210,7 +210,9 @@ async function exportToPDF(
   effectiveColumns: any[],
   groupedRows: any[],
   rawProjects: any[],
-  setExporting: (v: boolean) => void
+  setExporting: (v: boolean) => void,
+  scenarioName: string = "",
+  grouping: 1 | 3 | 6 = 3
 ) {
   setExporting(true);
   try {
@@ -221,20 +223,32 @@ async function exportToPDF(
     const upcomingAll = effectiveColumns.reduce((s, c) => s + c.upcomingTotal, 0);
     const now = new Date();
     const dateStr = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+    const groupLabel = grouping === 1 ? "شهري" : grouping === 3 ? "ربع سنوي" : "نصف سنوي";
 
-    // Build quarters
+    // Build period groups based on grouping
+    const ARABIC_MONTHS_SHORT = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
     const quarters: { label: string; indices: number[] }[] = [];
-    for (let q = 0; q < 16; q++) {
-      const qStart = q * 3;
-      const indices = [qStart, qStart + 1, qStart + 2].filter(i => i < 48);
+    const totalPeriods = Math.ceil(48 / grouping);
+    for (let p = 0; p < totalPeriods; p++) {
+      const pStart = p * grouping;
+      const indices = Array.from({ length: grouping }, (_, i) => pStart + i).filter(i => i < 48);
       const hasData = effectiveColumns.some((c: any) =>
         indices.some(idx => (c.chartAmounts[idx] || 0) > 0)
       );
       if (hasData) {
-        const d = new Date(2026, 3 + qStart, 1);
+        const d = new Date(2026, 3 + pStart, 1);
         const year = d.getFullYear();
-        const qNum = Math.floor(qStart / 3) + 1;
-        quarters.push({ label: `ربع ${qNum} - ${year}`, indices });
+        let label: string;
+        if (grouping === 1) {
+          label = `${ARABIC_MONTHS_SHORT[d.getMonth()]} ${year}`;
+        } else if (grouping === 3) {
+          const qNum = Math.floor(pStart / 3) + 1;
+          label = `ربع ${qNum} - ${year}`;
+        } else {
+          const hNum = Math.floor(pStart / 6) + 1;
+          label = `نصف ${hNum} - ${year}`;
+        }
+        quarters.push({ label, indices });
       }
     }
 
@@ -290,9 +304,9 @@ async function exportToPDF(
 </style>
 </head>
 <body>
-  <div class="header">
-    <h1>تقرير محفظة رأس المال</h1>
-    <div class="sub">Como Developments &middot; تاريخ التصدير: ${dateStr}</div>
+    <div class="header">
+    <h1>تقرير محفظة رأس المال${scenarioName ? ` — ${scenarioName}` : ""}</h1>
+    <div class="sub">Como Developments &middot; تاريخ التصدير: ${dateStr} &middot; التجميع: ${groupLabel}</div>
   </div>
   <div class="cards">
     <div class="card"><div class="lbl">عدد المشاريع</div><div class="val">${effectiveColumns.length}</div></div>
@@ -394,6 +408,9 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
   // Per-project delays (local state)
   const [delays, setDelays] = useState<Record<number, DelayState>>({});
   const [isExporting, setIsExporting] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [exportScenarioName, setExportScenarioName] = useState("");
+  const [exportGrouping, setExportGrouping] = useState<1 | 3 | 6>(3);
 
   function getDelay(projectId: number): DelayState {
     return delays[projectId] || { designDelay: 0, offplanDelay: 0, constructionDelay: 0 };
@@ -843,7 +860,7 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
 
           {/* Export PDF button */}
           <button
-            onClick={() => exportToPDF(effectiveColumns, groupedRows, rawProjects, setIsExporting)}
+            onClick={() => setShowExportDialog(true)}
             disabled={isExporting}
             style={{
               display: "flex", alignItems: "center", gap: 6,
@@ -856,6 +873,85 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
           >
             <Download style={{ width: 14, height: 14 }} /> {isExporting ? "جاري التوليد..." : "تصدير PDF"}
           </button>
+
+          {/* Export Dialog */}
+          {showExportDialog && createPortal(
+            <div style={{
+              position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              zIndex: 9999, direction: "rtl",
+            }}>
+              <div style={{
+                background: "#fff", borderRadius: 16, padding: 28, width: 420,
+                boxShadow: "0 20px 60px rgba(0,0,0,0.3)", fontFamily: "Cairo, sans-serif",
+              }}>
+                <h2 style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", marginBottom: 6 }}>تصدير محفظة رأس المال</h2>
+                <p style={{ fontSize: 12, color: "#64748b", marginBottom: 20 }}>خصص التقرير قبل التصدير</p>
+
+                {/* Scenario Name */}
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 6 }}>اسم الاحتمال (اختياري)</label>
+                  <input
+                    type="text"
+                    placeholder="مثال: احتمال 1 - بدء مبكر"
+                    value={exportScenarioName}
+                    onChange={e => setExportScenarioName(e.target.value)}
+                    style={{
+                      width: "100%", padding: "8px 12px", border: "1px solid #e2e8f0",
+                      borderRadius: 8, fontSize: 13, fontFamily: "Cairo, sans-serif",
+                      outline: "none", direction: "rtl",
+                    }}
+                  />
+                </div>
+
+                {/* Grouping */}
+                <div style={{ marginBottom: 24 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 8 }}>تجميع الفترات</label>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {([1, 3, 6] as const).map(g => (
+                      <button
+                        key={g}
+                        onClick={() => setExportGrouping(g)}
+                        style={{
+                          flex: 1, padding: "8px 0", borderRadius: 8, cursor: "pointer",
+                          fontSize: 12, fontWeight: 700, transition: "all 0.2s",
+                          background: exportGrouping === g ? "#0f172a" : "#f8fafc",
+                          color: exportGrouping === g ? "#fff" : "#64748b",
+                          border: `1px solid ${exportGrouping === g ? "#0f172a" : "#e2e8f0"}`,
+                        }}
+                      >
+                        {g === 1 ? "شهري" : g === 3 ? "ربع سنوي" : "نصف سنوي"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                  <button
+                    onClick={() => setShowExportDialog(false)}
+                    style={{
+                      padding: "8px 18px", borderRadius: 8, border: "1px solid #e2e8f0",
+                      background: "#f8fafc", color: "#64748b", cursor: "pointer",
+                      fontSize: 13, fontWeight: 600, fontFamily: "Cairo, sans-serif",
+                    }}
+                  >إلغاء</button>
+                  <button
+                    onClick={() => {
+                      setShowExportDialog(false);
+                      exportToPDF(effectiveColumns, groupedRows, rawProjects, setIsExporting, exportScenarioName, exportGrouping);
+                    }}
+                    style={{
+                      padding: "8px 20px", borderRadius: 8, border: "none",
+                      background: "#10b981", color: "#fff", cursor: "pointer",
+                      fontSize: 13, fontWeight: 700, fontFamily: "Cairo, sans-serif",
+                    }}
+                  >تصدير PDF</button>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )}
 
           {/* Settings toggle — owner only */}
           {canEdit && <button
