@@ -65,6 +65,22 @@ import {
   Layers,
   Wallet,
   FileBarChart2,
+  PieChart,
+  BarChart2,
+  Briefcase,
+  FolderOpen,
+  CalendarDays,
+  ClipboardCheck,
+  Users,
+  LineChart,
+  Building2,
+  FileSearch,
+  BellRing,
+  Landmark,
+  LayoutDashboard,
+  Gauge,
+  Map,
+  Handshake,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -352,22 +368,22 @@ const CRITERIA = [
 // --- Bubble Config ---
 const BUBBLES = [
   // ── PRIORITY 1: Financial Core (Hero cards) ──
-  { type: "capital_portfolio" as const, label: "محفظة رأس المال", icon: TrendingUp, color: "from-indigo-600 to-indigo-800", bg: "bg-indigo-50", border: "border-indigo-200", text: "text-indigo-700" },
-  { type: "financial_reports" as const, label: "التقارير المالية", icon: FileBarChart2, color: "from-emerald-600 to-emerald-800", bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700" },
-  
+  { type: "capital_portfolio" as const, label: "محفظة رأس المال", icon: Landmark, color: "from-indigo-600 to-indigo-800", bg: "bg-indigo-50", border: "border-indigo-200", text: "text-indigo-700" },
+  { type: "financial_reports" as const, label: "التقارير المالية", icon: PieChart, color: "from-emerald-500 to-teal-700", bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700" },
+
   // ── PRIORITY 2: Operations & Evaluation ──
-  { type: "evaluations" as const, label: "تقييم الاستشاريين", icon: Star, color: "from-purple-600 to-purple-800", bg: "bg-purple-50", border: "border-purple-200", text: "text-purple-700" },
-  { type: "milestones_kpis" as const, label: "المراحل والأداء", icon: Target, color: "from-cyan-600 to-teal-700", bg: "bg-cyan-50", border: "border-cyan-200", text: "text-cyan-700" },
-  
+  { type: "evaluations" as const, label: "تقييم الاستشاريين", icon: Handshake, color: "from-violet-600 to-purple-800", bg: "bg-purple-50", border: "border-purple-200", text: "text-purple-700" },
+  { type: "milestones_kpis" as const, label: "المراحل والأداء", icon: Gauge, color: "from-cyan-500 to-sky-700", bg: "bg-cyan-50", border: "border-cyan-200", text: "text-cyan-700" },
+
   // ── PRIORITY 3: Communication & Requests ──
-  { type: "requests" as const, label: "الطلبات والاستفسارات", icon: ClipboardList, color: "from-amber-600 to-amber-800", bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700" },
-  { type: "reports" as const, label: "التقارير", icon: FileText, color: "from-blue-600 to-blue-800", bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700" },
-  { type: "meeting_minutes" as const, label: "محاضر الاجتماعات", icon: BookOpen, color: "from-emerald-600 to-emerald-800", bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700" },
-  
+  { type: "requests" as const, label: "الطلبات والاستفسارات", icon: ClipboardCheck, color: "from-orange-500 to-amber-700", bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700" },
+  { type: "reports" as const, label: "التقارير", icon: FileSearch, color: "from-blue-500 to-blue-700", bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700" },
+  { type: "meeting_minutes" as const, label: "محاضر الاجتماعات", icon: Users, color: "from-rose-500 to-pink-700", bg: "bg-rose-50", border: "border-rose-200", text: "text-rose-700" },
+
   // ── PRIORITY 4: Planning & Studies ──
-  { type: "work_schedule" as const, label: "برنامج العمل", icon: Layers, color: "from-teal-600 to-teal-800", bg: "bg-teal-50", border: "border-teal-200", text: "text-teal-700" },
-  { type: "feasibility_study" as const, label: "دراسة الجدوى", icon: Wallet, color: "from-violet-600 to-violet-800", bg: "bg-violet-50", border: "border-violet-200", text: "text-violet-700" },
-  { type: "announcements" as const, label: "الإعلانات", icon: Megaphone, color: "from-rose-600 to-rose-800", bg: "bg-rose-50", border: "border-rose-200", text: "text-rose-700" },
+  { type: "work_schedule" as const, label: "برنامج العمل", icon: CalendarDays, color: "from-teal-500 to-teal-700", bg: "bg-teal-50", border: "border-teal-200", text: "text-teal-700" },
+  { type: "feasibility_study" as const, label: "دراسة الجدوى", icon: LineChart, color: "from-fuchsia-500 to-violet-700", bg: "bg-violet-50", border: "border-violet-200", text: "text-violet-700" },
+  { type: "announcements" as const, label: "الإعلانات", icon: BellRing, color: "from-red-500 to-rose-700", bg: "bg-rose-50", border: "border-rose-200", text: "text-rose-700" },
 ];
 
 const BUBBLE_LABELS: Record<string, string> = {
@@ -4033,13 +4049,22 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           const solidColorMap: Record<string, {solid:string;shadow:string}> = {
             'from-indigo-600 to-indigo-800':  {solid:'#6366f1', shadow:'rgba(99,102,241,0.45)'},
             'from-emerald-600 to-emerald-800':{solid:'#10b981', shadow:'rgba(16,185,129,0.45)'},
+            'from-emerald-500 to-teal-700':   {solid:'#059669', shadow:'rgba(5,150,105,0.45)'},
             'from-purple-600 to-purple-800':  {solid:'#9333ea', shadow:'rgba(147,51,234,0.45)'},
+            'from-violet-600 to-purple-800':  {solid:'#7c3aed', shadow:'rgba(124,58,237,0.45)'},
             'from-cyan-600 to-teal-700':      {solid:'#06b6d4', shadow:'rgba(6,182,212,0.45)'},
+            'from-cyan-500 to-sky-700':       {solid:'#0891b2', shadow:'rgba(8,145,178,0.45)'},
             'from-amber-600 to-amber-800':    {solid:'#f59e0b', shadow:'rgba(245,158,11,0.45)'},
+            'from-orange-500 to-amber-700':   {solid:'#f97316', shadow:'rgba(249,115,22,0.45)'},
             'from-blue-600 to-blue-800':      {solid:'#3b82f6', shadow:'rgba(59,130,246,0.45)'},
+            'from-blue-500 to-blue-700':      {solid:'#2563eb', shadow:'rgba(37,99,235,0.45)'},
             'from-rose-600 to-rose-800':      {solid:'#f43f5e', shadow:'rgba(244,63,94,0.45)'},
+            'from-rose-500 to-pink-700':      {solid:'#e11d48', shadow:'rgba(225,29,72,0.45)'},
+            'from-red-500 to-rose-700':       {solid:'#ef4444', shadow:'rgba(239,68,68,0.45)'},
             'from-teal-600 to-teal-800':      {solid:'#14b8a6', shadow:'rgba(20,184,166,0.45)'},
+            'from-teal-500 to-teal-700':      {solid:'#0d9488', shadow:'rgba(13,148,136,0.45)'},
             'from-violet-600 to-violet-800':  {solid:'#7c3aed', shadow:'rgba(124,58,237,0.45)'},
+            'from-fuchsia-500 to-violet-700': {solid:'#a21caf', shadow:'rgba(162,28,175,0.45)'},
           };
           // Keep themeMap for backward compat (not used in new BentoCard)
           const themeMap: Record<string, {bg:string;iconBg:string;accent:string;textColor:string;glow:string}> = {
@@ -4072,36 +4097,52 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             return (
               <button
                 onClick={() => handleBubbleClick(bubble.type)}
-                className="group relative overflow-hidden rounded-3xl text-right transition-all duration-300 hover:scale-[1.03] hover:-translate-y-1 active:scale-[0.97] w-full"
+                className="group relative overflow-hidden rounded-2xl text-right transition-all duration-200 hover:scale-[1.04] hover:-translate-y-0.5 active:scale-[0.97] w-full"
                 style={{
                   background: sc.solid,
-                  boxShadow: `0 6px 24px ${sc.shadow}, 0 2px 6px rgba(0,0,0,0.1)`,
-                  padding: tall ? '1.2rem 1rem' : '0.85rem 0.9rem',
-                  minHeight: tall ? '130px' : '80px',
-                  display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'flex-start',
+                  boxShadow: `0 4px 16px ${sc.shadow}, 0 1px 4px rgba(0,0,0,0.08)`,
+                  padding: tall ? '1rem 0.9rem' : '0.7rem 0.8rem',
+                  minHeight: tall ? '100px' : '68px',
+                  display: 'flex',
+                  flexDirection: tall ? 'column' : 'row',
+                  justifyContent: tall ? 'space-between' : 'flex-start',
+                  alignItems: tall ? 'flex-start' : 'center',
+                  gap: tall ? '0' : '0.6rem',
                 }}
               >
-                {/* Large background icon */}
-                <div className="absolute top-1 left-1/2 -translate-x-1/2 opacity-20 group-hover:opacity-30 group-hover:scale-110 transition-all duration-400 pointer-events-none">
-                  <bubble.icon style={{width: tall ? '90px' : '64px', height: tall ? '90px' : '64px', color:'white'}} />
-                </div>
                 {/* Shine overlay on hover */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-3xl pointer-events-none"
-                  style={{background: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%)'}} />
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-2xl pointer-events-none"
+                  style={{background: 'linear-gradient(135deg, rgba(255,255,255,0.18) 0%, transparent 55%)'}} />
+
+                {/* Icon container */}
+                <div
+                  className="relative flex-shrink-0 flex items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-110"
+                  style={{
+                    width: tall ? '44px' : '36px',
+                    height: tall ? '44px' : '36px',
+                    background: 'rgba(255,255,255,0.22)',
+                    backdropFilter: 'blur(4px)',
+                    order: tall ? 0 : 1,
+                  }}
+                >
+                  <bubble.icon style={{width: tall ? '22px' : '18px', height: tall ? '22px' : '18px', color:'white'}} />
+                </div>
+
                 {/* Count badge */}
                 {hasCount && (
-                  <div className="absolute top-2.5 left-2.5 min-w-[22px] h-[22px] px-1.5 rounded-full flex items-center justify-center text-[10px] font-black z-10"
-                    style={{background:'rgba(0,0,0,0.3)',color:'white',backdropFilter:'blur(4px)'}}>
+                  <div className="absolute top-2 right-2 min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center text-[9px] font-black z-10"
+                    style={{background:'rgba(0,0,0,0.35)',color:'white'}}>
                     {count}
                   </div>
                 )}
+
                 {/* Content */}
-                <div className="relative z-10 w-full">
-                  <p className="font-black text-white leading-tight" style={{fontSize: tall ? '1.05rem' : '0.85rem', textShadow:'0 1px 4px rgba(0,0,0,0.2)'}}>
+                <div className="relative z-10 flex-1" style={{order: tall ? 1 : 0}}>
+                  <p className="font-bold text-white leading-tight" style={{fontSize: tall ? '0.9rem' : '0.78rem', textShadow:'0 1px 3px rgba(0,0,0,0.2)'}}>
                     {bubble.label}
                   </p>
                   {tall && subtitles[bubble.type] && (
-                    <p className="text-xs mt-1 leading-relaxed" style={{color:'rgba(255,255,255,0.78)'}}>
+                    <p className="mt-0.5 leading-snug" style={{fontSize:'0.68rem', color:'rgba(255,255,255,0.75)'}}>
                       {subtitles[bubble.type]}
                     </p>
                   )}
@@ -4111,32 +4152,28 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           };
 
           return (
-            <div className="mb-4 space-y-3">
+            <div className="mb-4 space-y-2.5">
               {/* Row 1: Hero — Capital Portfolio (wide) + Financial Reports */}
-              <div className="grid grid-cols-3 gap-3">
-                {/* Capital Portfolio spans 2 cols */}
-                <div className="col-span-2">
+              <div className="grid grid-cols-5 gap-2.5">
+                <div className="col-span-3">
                   <BentoCard bubble={BUBBLES[0]} tall />
                 </div>
-                {/* Financial Reports */}
-                <BentoCard bubble={BUBBLES[1]} tall />
+                <div className="col-span-2">
+                  <BentoCard bubble={BUBBLES[1]} tall />
+                </div>
               </div>
 
-              {/* Row 2: Evaluations + Milestones (equal) */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* Row 2: Evaluations + Milestones + Requests */}
+              <div className="grid grid-cols-3 gap-2.5">
                 <BentoCard bubble={BUBBLES[2]} tall />
                 <BentoCard bubble={BUBBLES[3]} tall />
+                <BentoCard bubble={BUBBLES[4]} tall />
               </div>
 
-              {/* Row 3: Requests + Reports + Meeting Minutes */}
-              <div className="grid grid-cols-3 gap-3">
-                <BentoCard bubble={BUBBLES[4]} />
+              {/* Row 3: Reports + Meeting Minutes + Work Schedule + Feasibility + Announcements */}
+              <div className="grid grid-cols-5 gap-2.5">
                 <BentoCard bubble={BUBBLES[5]} />
                 <BentoCard bubble={BUBBLES[6]} />
-              </div>
-
-              {/* Row 4: Work Schedule + Feasibility + Announcements */}
-              <div className="grid grid-cols-3 gap-3">
                 <BentoCard bubble={BUBBLES[7]} />
                 <BentoCard bubble={BUBBLES[8]} />
                 <BentoCard bubble={BUBBLES[9]} />
