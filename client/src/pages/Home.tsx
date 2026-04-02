@@ -240,7 +240,7 @@ function SortableToolCard({ item, onNavigate }: { item: NavItem; onNavigate: (pa
   );
 }
 
-function NewsTicker({ navigate }: { navigate: (path: string) => void }) {
+function NewsTicker({ navigate, isOwner }: { navigate: (path: string) => void; isOwner?: boolean }) {
   const { data: newsItems } = trpc.newsTicker.getActive.useQuery();
 
   const fallbackItems = [
@@ -635,7 +635,7 @@ export default function Home() {
         {/* -- NEWS TICKER (Authenticated) -- */}
         {/* ══════════════════════════════════════════════════════════════ */}
         {effectivelyAuthenticated && (
-          <NewsTicker navigate={navigate} />
+          <NewsTicker navigate={navigate} isOwner={isOwner} />
         )}
 
         {/* ══════════════════════════════════════════════════════════════ */}
