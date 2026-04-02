@@ -339,13 +339,25 @@ async function exportToPDF(
 </html>`;
 
     const fileDate = `${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}`;
+    // Render inside an isolated iframe to avoid oklch CSS from the host page
+    const iframe = document.createElement("iframe");
+    iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:1400px;height:900px;border:none;";
+    document.body.appendChild(iframe);
+    const iDoc = iframe.contentDocument!;
+    iDoc.open();
+    iDoc.write(html);
+    iDoc.close();
+    // Wait for fonts
+    await new Promise(r => setTimeout(r, 1500));
+    const el = iDoc.body;
     await html2pdf().set({
       margin: 8,
       filename: `Capital-Portfolio-${fileDate}.pdf`,
       image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, logging: false },
+      html2canvas: { scale: 2, useCORS: true, logging: false, allowTaint: true },
       jsPDF: { unit: "mm", format: "a3", orientation: "landscape" },
-    }).from(html).save();
+    }).from(el).save();
+    document.body.removeChild(iframe);
   } catch (err) {
     console.error("PDF export error:", err);
     alert("حدث خطأ أثناء توليد الـ PDF. يرجى المحاولة مرة أخرى.");
