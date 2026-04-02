@@ -789,17 +789,17 @@ export default function Home() {
               onClick={() => navigate('/command-center')}
               className="group relative mb-5 rounded-2xl overflow-hidden cursor-pointer select-none transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl active:scale-[0.99]"
               style={{
-                background: 'linear-gradient(135deg, #be185d 0%, #db2777 35%, #ec4899 65%, #f472b6 100%)',
-                boxShadow: '0 8px 32px rgba(236,72,153,0.45), 0 2px 8px rgba(0,0,0,0.2)',
+                background: 'linear-gradient(135deg, #92400e 0%, #b45309 35%, #d97706 65%, #f59e0b 100%)',
+                boxShadow: '0 8px 32px rgba(217,119,6,0.45), 0 2px 8px rgba(0,0,0,0.2)',
               }}
             >
               {/* Animated shimmer overlay */}
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
                 style={{background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.07) 50%, transparent 60%)'}} />
               {/* Decorative circles */}
-              <div className="absolute -top-10 -left-10 w-48 h-48 rounded-full opacity-10" style={{background: 'radial-gradient(circle, #fda4af, transparent)'}} />
-              <div className="absolute -bottom-8 -right-8 w-40 h-40 rounded-full opacity-15" style={{background: 'radial-gradient(circle, #fbcfe8, transparent)'}} />
-              <div className="absolute top-1/2 left-1/3 -translate-y-1/2 w-64 h-64 rounded-full opacity-5" style={{background: 'radial-gradient(circle, #f9a8d4, transparent)'}} />
+              <div className="absolute -top-10 -left-10 w-48 h-48 rounded-full opacity-10" style={{background: 'radial-gradient(circle, #fde68a, transparent)'}} />
+              <div className="absolute -bottom-8 -right-8 w-40 h-40 rounded-full opacity-15" style={{background: 'radial-gradient(circle, #fcd34d, transparent)'}} />
+              <div className="absolute top-1/2 left-1/3 -translate-y-1/2 w-64 h-64 rounded-full opacity-5" style={{background: 'radial-gradient(circle, #fbbf24, transparent)'}} />
 
               <div className="relative z-10 flex items-center gap-5 px-7 py-5">
                 {/* Icon */}
