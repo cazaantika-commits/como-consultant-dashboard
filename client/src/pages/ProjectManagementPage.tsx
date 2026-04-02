@@ -5,10 +5,9 @@ import { ArrowRight, Layers } from "lucide-react";
 import FactSheetPage from "./FactSheetPage";
 import KnowledgeHubPage from "./KnowledgeHubPage";
 import FinancialPlanningHubPage from "./FinancialPlanningHubPage";
-import CapitalSchedulingPage from "./CapitalSchedulingPage";
 import CapitalPortfolioPage from "./CapitalPortfolioPage";
 
-type View = "icons" | "fact-sheet" | "knowledge" | "financial" | "capital-portfolio" | "dynamic-portfolio";
+type View = "icons" | "fact-sheet" | "knowledge" | "financial" | "dynamic-portfolio";
 
 // Custom SVG icon components for each section
 const FactSheetIcon = () => (
@@ -112,15 +111,6 @@ const SECTIONS = [
     description: "الجدوى المالية والتدفقات النقدية وجدول التكاليف",
   },
   {
-    id: "capital-portfolio" as View,
-    label: "محفظة رأس المال للمشاريع",
-    SvgIcon: PortfolioIcon,
-    gradient: "linear-gradient(135deg, #059669, #10b981)",
-    shadow: "rgba(5, 150, 105, 0.35)",
-    borderColor: "#059669",
-    description: "جدولة رأس المال لجميع المشاريع",
-  },
-  {
     id: "dynamic-portfolio" as View,
     label: "محفظة رأس المال الديناميكية",
     SvgIcon: DynamicPortfolioIcon,
@@ -144,9 +134,6 @@ export default function ProjectManagementPage() {
   }
   if (activeView === "financial") {
     return <FinancialPlanningHubPage onBack={() => setActiveView("icons")} />;
-  }
-  if (activeView === "capital-portfolio") {
-    return <CapitalSchedulingPage embedded onBack={() => setActiveView("icons")} />;
   }
   if (activeView === "dynamic-portfolio") {
     return <CapitalPortfolioPage onBack={() => setActiveView("icons")} />;

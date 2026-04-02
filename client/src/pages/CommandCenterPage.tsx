@@ -64,7 +64,6 @@ import {
   HelpCircle,
   Layers,
   Wallet,
-  BarChart2,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -90,7 +89,6 @@ import {
 
 // Lazy imports for embedded pages
 import WorkSchedulePage from "./WorkSchedulePage";
-import CapitalSchedulingPage from "./CapitalSchedulingPage";
 // Old financial components removed - now using iframe embeds
 
 const SALWA_AVATAR_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663200809965/Q366eAYG4Q7iaM8VuAmmFX/salwa-enhanced_0251b1a8.png";
@@ -287,7 +285,6 @@ const BUBBLES = [
   { type: "milestones_kpis" as const, label: "المراحل والأداء", icon: Target, color: "from-cyan-600 to-teal-700", bg: "bg-cyan-50", border: "border-cyan-200", text: "text-cyan-700" },
   { type: "announcements" as const, label: "الإعلانات", icon: Megaphone, color: "from-rose-600 to-rose-800", bg: "bg-rose-50", border: "border-rose-200", text: "text-rose-700" },
   { type: "work_schedule" as const, label: "برنامج العمل", icon: Layers, color: "from-teal-600 to-teal-800", bg: "bg-teal-50", border: "border-teal-200", text: "text-teal-700" },
-  { type: "capital_scheduling" as const, label: "جدولة رأس المال", icon: BarChart2, color: "from-indigo-600 to-indigo-800", bg: "bg-indigo-50", border: "border-indigo-200", text: "text-indigo-700" },
   { type: "feasibility_study" as const, label: "دراسة جدوى المشروع", icon: Wallet, color: "from-violet-600 to-violet-800", bg: "bg-violet-50", border: "border-violet-200", text: "text-violet-700" },
 ];
 
@@ -3682,7 +3679,6 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
   const [showEvaluation, setShowEvaluation] = useState(false);
   const [showMilestonesKpis, setShowMilestonesKpis] = useState(false);
   const [showWorkSchedule, setShowWorkSchedule] = useState(false);
-  const [showCapitalScheduling, setShowCapitalScheduling] = useState(false);
   const [showFeasibilityStudy, setShowFeasibilityStudy] = useState(false);
 
 
@@ -3728,23 +3724,6 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
     );
   }
 
-  // If viewing capital scheduling (editable)
-  if (activeBubble === "capital_scheduling" && showCapitalScheduling) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white" dir="rtl">
-        <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
-        <div className="px-2 py-4">
-          <div className="flex items-center gap-2 mb-4 px-4">
-            <Button variant="ghost" size="sm" onClick={() => { setActiveBubble(null); setShowCapitalScheduling(false); }} className="text-slate-500">
-              <ArrowLeft className="w-4 h-4 ml-1" /> العودة للرئيسية
-            </Button>
-          </div>
-          <CapitalSchedulingPage />
-        </div>
-        <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
-      </div>
-    );
-  }
 
   // If viewing feasibility study
   if (activeBubble === "feasibility_study" && showFeasibilityStudy) {
@@ -3925,7 +3904,6 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             if (type === "milestones_kpis") { setActiveBubble("milestones_kpis"); setShowMilestonesKpis(true); }
             else if (type === "evaluations") { setActiveBubble("evaluations"); setShowEvaluation(true); }
             else if (type === "work_schedule") { setActiveBubble("work_schedule"); setShowWorkSchedule(true); }
-            else if (type === "capital_scheduling") { setActiveBubble("capital_scheduling"); setShowCapitalScheduling(true); }
             else if (type === "feasibility_study") { setActiveBubble("feasibility_study"); setShowFeasibilityStudy(true); }
             else { setActiveBubble(type); }
           };
