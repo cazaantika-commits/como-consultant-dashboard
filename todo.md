@@ -507,3 +507,4 @@
 - [x] Add tRPC procedures: saveScenario, loadScenario, listScenarios, deleteScenario
 - [x] Update CapitalPortfolioPage: auto-save settings on every change, auto-load on page open
 - [x] Add scenario name input + save/load UI in CapitalPortfolioPage toolbar
+- [x] Redesign statistical summary: make it more compact and reorder from largest to smallest (Total Cost → Capital → Paid → Remaining)

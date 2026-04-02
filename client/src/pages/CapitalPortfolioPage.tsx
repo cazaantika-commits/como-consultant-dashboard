@@ -408,72 +408,35 @@ async function exportToPDF(
     <div class="sub">Como Developments &middot; تاريخ التصدير: ${dateStr} &middot; التجميع: ${groupLabel}</div>
   </div>
   <div class="summary">
-    <h2>📊 الملخص الإحصائي</h2>
-    <div class="summary-grid">
-      <div class="summary-item">
-        <div class="s-lbl">عدد المشاريع</div>
-        <div class="s-val">${effectiveColumns.length} مشروع</div>
+    <h2 style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:10px;border-bottom:2px solid #cbd5e1;padding-bottom:5px">📊 الملخص الإحصائي</h2>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px">
+      <div style="background:#fff;border-right:3px solid #f97316;padding:10px;border-radius:4px">
+        <div style="font-size:8px;color:#64748b;margin-bottom:3px">إجمالي التكلفة</div>
+        <div style="font-size:12px;font-weight:700;color:#0f172a">${fmt(totalProjectCostAll)}</div>
+        <div style="font-size:7px;color:#94a3b8">درهم</div>
       </div>
-      <div class="summary-item accent-green">
-        <div class="s-lbl">إجمالي رأس المال</div>
-        <div class="s-val">${fmt(capitalAll)} درهم</div>
+      <div style="background:#fff;border-right:3px solid #10b981;padding:10px;border-radius:4px">
+        <div style="font-size:8px;color:#64748b;margin-bottom:3px">رأس المال</div>
+        <div style="font-size:12px;font-weight:700;color:#0f172a">${fmt(capitalAll)}</div>
+        <div style="font-size:7px;color:#94a3b8">درهم</div>
       </div>
-      <div class="summary-item accent-orange">
-        <div class="s-lbl">إجمالي التكلفة الكلية</div>
-        <div class="s-val">${fmt(totalProjectCostAll)} درهم</div>
+      <div style="background:#fff;border-right:3px solid:#0ea5e9;padding:10px;border-radius:4px">
+        <div style="font-size:8px;color:#64748b;margin-bottom:3px">المدفوع</div>
+        <div style="font-size:12px;font-weight:700;color:#0f172a">${fmt(paidAll)}</div>
+        <div style="font-size:7px;color:#94a3b8">درهم (≈${paymentPct}%)</div>
       </div>
-      <div class="summary-item">
-        <div class="s-lbl">المدفوع</div>
-        <div class="s-val">${fmt(paidAll)} درهم</div>
-      </div>
-      <div class="summary-item">
-        <div class="s-lbl">المتبقي</div>
-        <div class="s-val">${fmt(upcomingAll)} درهم</div>
-      </div>
-      <div class="summary-item accent-purple">
-        <div class="s-lbl">متوسط رأس المال / مشروع</div>
-        <div class="s-val">${fmt(avgCapital)} درهم</div>
-      </div>
-      <div class="summary-item">
-        <div class="s-lbl">توزيع الخيارات</div>
-        <div class="s-val">O1: ${o1Count} | O2: ${o2Count} | O3: ${o3Count}</div>
-      </div>
-      <div class="summary-item accent-orange">
-        <div class="s-lbl">أعلى مشروع تكلفة</div>
-        <div class="s-val">${topProject?.name || "—"}</div>
-      </div>
-      <div class="summary-item">
-        <div class="s-lbl">نسبة التكلفة / رأس المال</div>
-        <div class="s-val">${costCapitalRatio}x</div>
+      <div style="background:#fff;border-right:3px solid #ef4444;padding:10px;border-radius:4px">
+        <div style="font-size:8px;color:#64748b;margin-bottom:3px">المتبقي</div>
+        <div style="font-size:12px;font-weight:700;color:#0f172a">${fmt(upcomingAll)}</div>
+        <div style="font-size:7px;color:#94a3b8">درهم (≈${remainingPct}%)</div>
       </div>
     </div>
-    <div style="margin-bottom:10px">
-      <div style="font-size:10px;font-weight:700;color:#0f172a;margin-bottom:4px">نسبة الإنجاز المالي</div>
-      <div class="progress-bar">
-        <div class="seg" style="width:${paymentPct}%;background:#10b981">${paymentPct}% مدفوع</div>
-        <div class="seg" style="width:${remainingPct}%;background:#ef4444">${remainingPct}% متبقي</div>
-      </div>
-    </div>
-    <div>
-      <div style="font-size:10px;font-weight:700;color:#0f172a;margin-bottom:4px">توزيع التكاليف حسب المرحلة</div>
-      <div class="phase-dist">
-        <div class="phase-dist-item" style="background:#fff3e0">
-          <div class="p-lbl">التصاميم</div>
-          <div class="p-val">${designPct}%</div>
-        </div>
-        <div class="phase-dist-item" style="background:#fce4ec">
-          <div class="p-lbl">التسجيل</div>
-          <div class="p-val">${offplanPct}%</div>
-        </div>
-        <div class="phase-dist-item" style="background:#ede7f6">
-          <div class="p-lbl">الإنشاء</div>
-          <div class="p-val">${constructionPct}%</div>
-        </div>
-        <div class="phase-dist-item" style="background:#e3f2fd">
-          <div class="p-lbl">التسليم</div>
-          <div class="p-val">${handoverPct}%</div>
-        </div>
-      </div>
+    <div style="display:flex;gap:10px;font-size:8px;color:#64748b">
+      <span>📈 ${effectiveColumns.length} مشروع</span>
+      <span>•</span>
+      <span>🎯 متوسط رأس المال: ${fmt(avgCapital)} درهم</span>
+      <span>•</span>
+      <span>O1: ${o1Count} | O2: ${o2Count} | O3: ${o3Count}</span>
     </div>
   </div>
   <table>
