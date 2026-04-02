@@ -205,7 +205,7 @@ function OptionSelector({
   );
 }
 
-// ── PDF Export (server-side via Puppeteer for proper Arabic support) ──────────
+// ── PDF Export (browser-side via html2pdf.js) ─────────────────────────
 async function exportToPDF(
   effectiveColumns: any[],
   groupedRows: any[],
@@ -214,21 +214,138 @@ async function exportToPDF(
 ) {
   setExporting(true);
   try {
-    const response = await fetch("/api/portfolio/pdf", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ effectiveColumns, rawProjects }),
-    });
-    if (!response.ok) throw new Error("PDF generation failed");
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    const html2pdf = (await import("html2pdf.js")).default;
+    const fmt = (n: number) => n === 0 ? "—" : Math.round(n).toLocaleString("ar-AE");
+    const optionLabel: Record<string, string> = { o1: "الخيار 1", o2: "الخيار 2", o3: "الخيار 3" };
+    const grandTotalAll = effectiveColumns.reduce((s, c) => s + c.investorTotal, 0);
+    const paidAll = effectiveColumns.reduce((s, c) => s + c.paidTotal, 0);
+    const upcomingAll = effectiveColumns.reduce((s, c) => s + c.upcomingTotal, 0);
     const now = new Date();
-    const dateStr = `${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}`;
-    a.href = url;
-    a.download = `Capital-Portfolio-${dateStr}.pdf`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const dateStr = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+
+    // Build quarters
+    const quarters: { label: string; indices: number[] }[] = [];
+    for (let q = 0; q < 16; q++) {
+      const qStart = q * 3;
+      const indices = [qStart, qStart + 1, qStart + 2].filter(i => i < 48);
+      const hasData = effectiveColumns.some((c: any) =>
+        indices.some(idx => (c.chartAmounts[idx] || 0) > 0)
+      );
+      if (hasData) {
+        const d = new Date(2026, 3 + qStart, 1);
+        const year = d.getFullYear();
+        const qNum = Math.floor(qStart / 3) + 1;
+        quarters.push({ label: `ربع ${qNum} - ${year}`, indices });
+      }
+    }
+
+    // Build table rows HTML
+    const rowsHtml = effectiveColumns.map((col: any) => {
+      const qCells = quarters.map(({ indices }) => {
+        const total = indices.reduce((s, idx) => s + (col.chartAmounts[idx] || 0), 0);
+        return `<td>${fmt(total)}</td>`;
+      }).join("");
+      return `<tr>
+        <td style="text-align:right;font-weight:600">${col.name}</td>
+        <td>${optionLabel[col.option] || col.option}</td>
+        <td>${fmt(col.grandTotal)}</td>
+        <td>${fmt(col.investorTotal)}</td>
+        <td>${fmt(col.paidTotal)}</td>
+        <td>${fmt(col.upcomingTotal)}</td>
+        ${qCells}
+        <td style="font-weight:700">${fmt(col.investorTotal)}</td>
+      </tr>`;
+    }).join("");
+
+    const totalQCells = quarters.map(({ indices }) => {
+      const total = effectiveColumns.reduce((s, c) => s + indices.reduce((ss, idx) => ss + (c.chartAmounts[idx] || 0), 0), 0);
+      return `<td style="font-weight:700">${fmt(total)}</td>`;
+    }).join("");
+
+    const qHeaders = quarters.map(q => `<th>${q.label}</th>`).join("");
+
+    const html = `
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Cairo',sans-serif; direction:rtl; padding:16px; font-size:11px; }
+  .header { background:#0f172a; color:#fff; padding:16px 20px; border-radius:8px; margin-bottom:16px; }
+  .header h1 { font-size:20px; font-weight:800; margin-bottom:4px; }
+  .header .sub { font-size:11px; color:#94a3b8; }
+  .cards { display:flex; gap:12px; margin-bottom:16px; }
+  .card { flex:1; background:#f8fafc; border-right:4px solid #0f172a; padding:12px; border-radius:6px; }
+  .card .lbl { font-size:9px; color:#64748b; margin-bottom:4px; }
+  .card .val { font-size:15px; font-weight:800; color:#0f172a; }
+  table { width:100%; border-collapse:collapse; font-size:10px; }
+  th { background:#0f172a; color:#fff; padding:8px 6px; border:1px solid #334155; font-weight:700; text-align:center; }
+  td { padding:7px 6px; border:1px solid #cbd5e1; text-align:center; }
+  tr:nth-child(even) td { background:#f8fafc; }
+  .total-row td { background:#1e293b !important; color:#fff; font-weight:700; }
+  .footer { text-align:center; font-size:9px; color:#94a3b8; margin-top:14px; padding-top:10px; border-top:1px solid #e2e8f0; }
+  .legend { display:flex; gap:16px; margin-top:12px; font-size:9px; color:#64748b; }
+  .legend-dot { width:12px; height:12px; border-radius:3px; display:inline-block; margin-left:5px; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>تقرير محفظة رأس المال</h1>
+    <div class="sub">Como Developments &middot; تاريخ التصدير: ${dateStr}</div>
+  </div>
+  <div class="cards">
+    <div class="card"><div class="lbl">عدد المشاريع</div><div class="val">${effectiveColumns.length}</div></div>
+    <div class="card"><div class="lbl">الإجمالي الكلي (درهم)</div><div class="val">${fmt(grandTotalAll)}</div></div>
+    <div class="card"><div class="lbl">المدفوع (درهم)</div><div class="val">${fmt(paidAll)}</div></div>
+    <div class="card"><div class="lbl">المتبقي (درهم)</div><div class="val">${fmt(upcomingAll)}</div></div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="min-width:160px">المشروع</th>
+        <th>الخيار</th>
+        <th>التكلفة الكلية</th>
+        <th>رأس المال</th>
+        <th>المدفوع</th>
+        <th>المتبقي</th>
+        ${qHeaders}
+        <th>الإجمالي</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rowsHtml}
+      <tr class="total-row">
+        <td style="text-align:right">الإجمالي</td>
+        <td></td>
+        <td>${fmt(effectiveColumns.reduce((s, c) => s + c.grandTotal, 0))}</td>
+        <td>${fmt(grandTotalAll)}</td>
+        <td>${fmt(paidAll)}</td>
+        <td>${fmt(upcomingAll)}</td>
+        ${totalQCells}
+        <td>${fmt(grandTotalAll)}</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="legend">
+    <span><span class="legend-dot" style="background:#fb923c"></span>التصاميم</span>
+    <span><span class="legend-dot" style="background:#db2777"></span>التسجيل</span>
+    <span><span class="legend-dot" style="background:#7c3aed"></span>الإنشاء</span>
+    <span><span class="legend-dot" style="background:#64748b"></span>التسليم</span>
+  </div>
+  <div class="footer">Como Developments &middot; سري &middot; للاستخدام الداخلي فقط</div>
+</body>
+</html>`;
+
+    const fileDate = `${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}`;
+    await html2pdf().set({
+      margin: 8,
+      filename: `Capital-Portfolio-${fileDate}.pdf`,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
+      jsPDF: { unit: "mm", format: "a3", orientation: "landscape" },
+    }).from(html).save();
   } catch (err) {
     console.error("PDF export error:", err);
     alert("حدث خطأ أثناء توليد الـ PDF. يرجى المحاولة مرة أخرى.");
