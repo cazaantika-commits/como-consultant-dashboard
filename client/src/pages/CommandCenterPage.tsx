@@ -3995,7 +3995,6 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2"><BentoCard bubble={BUBBLES[7]} /></div>
-                <BentoCard bubble={BUBBLES[8]} />
               </div>
             </div>
           );
