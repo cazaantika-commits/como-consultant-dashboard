@@ -502,3 +502,4 @@
 - [x] Add export dialog with scenario name + grouping options (monthly/quarterly/semi-annual) to PDF export in CapitalPortfolioPage
 - [x] Add Capital Portfolio card to CommandCenterPage (full interactive with controls, no persistence)
 - [x] Add comprehensive statistical summary section at the beginning of PDF export with key financial and operational indicators
+- [x] Add 'Save as HTML' button to PDF export preview window for downloading the report as an HTML file

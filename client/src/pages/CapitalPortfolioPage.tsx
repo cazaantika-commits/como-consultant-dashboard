@@ -379,9 +379,12 @@ async function exportToPDF(
   .footer { text-align:center; font-size:9px; color:#94a3b8; margin-top:14px; padding-top:10px; border-top:1px solid #e2e8f0; }
   .legend { display:flex; gap:16px; margin-top:12px; font-size:9px; color:#64748b; }
   .legend-dot { width:12px; height:12px; border-radius:3px; display:inline-block; margin-left:5px; }
-  .print-btn { position:fixed; top:20px; left:20px; background:#0f172a; color:#fff; padding:12px 24px; border:none; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.3); z-index:9999; }
-  .print-btn:hover { background:#1e293b; }
-  @media print { .print-btn { display:none; } }
+  .action-btns { position:fixed; top:20px; left:20px; display:flex; gap:12px; z-index:9999; }
+  .action-btn { background:#0f172a; color:#fff; padding:12px 20px; border:none; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.3); }
+  .action-btn:hover { background:#1e293b; }
+  .action-btn.secondary { background:#475569; }
+  .action-btn.secondary:hover { background:#334155; }
+  @media print { .action-btns { display:none; } }
   .summary { background:#f8fafc; border:2px solid #0f172a; border-radius:8px; padding:16px; margin-bottom:16px; }
   .summary h2 { font-size:14px; font-weight:800; color:#0f172a; margin-bottom:12px; border-bottom:2px solid #cbd5e1; padding-bottom:6px; }
   .summary-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:12px; }
@@ -507,7 +510,24 @@ async function exportToPDF(
     <span><span class="legend-dot" style="background:#64748b"></span>التسليم</span>
   </div>
   <div class="footer">Como Developments &middot; سري &middot; للاستخدام الداخلي فقط</div>
-  <button class="print-btn" onclick="window.print()">🖨️ طباعة / حفظ PDF</button>
+  <div class="action-btns">
+    <button class="action-btn" onclick="window.print()">🖨️ طباعة / حفظ PDF</button>
+    <button class="action-btn secondary" onclick="saveAsHTML()">💾 حفظ كـ HTML</button>
+  </div>
+  <script>
+    function saveAsHTML() {
+      const html = document.documentElement.outerHTML;
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'تقرير-محفظة-رأس-المال-' + new Date().toISOString().split('T')[0] + '.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  </script>
 </body>
 </html>`;
 
