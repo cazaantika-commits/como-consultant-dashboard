@@ -784,11 +784,62 @@ export default function Home() {
               <h2 className="text-base font-bold text-foreground">الأقسام الرئيسية</h2>
             </div>
 
-            {/* 5 Main Cards - Draggable */}
+            {/* Command Center — Full-width Hero Banner */}
+            <div
+              onClick={() => navigate('/command-center')}
+              className="group relative mb-5 rounded-2xl overflow-hidden cursor-pointer select-none transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl active:scale-[0.99]"
+              style={{
+                background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 35%, #4c1d95 65%, #6b21a8 100%)',
+                boxShadow: '0 8px 32px rgba(99,102,241,0.35), 0 2px 8px rgba(0,0,0,0.2)',
+              }}
+            >
+              {/* Animated shimmer overlay */}
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                style={{background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.07) 50%, transparent 60%)'}} />
+              {/* Decorative circles */}
+              <div className="absolute -top-10 -left-10 w-48 h-48 rounded-full opacity-10" style={{background: 'radial-gradient(circle, #a78bfa, transparent)'}} />
+              <div className="absolute -bottom-8 -right-8 w-40 h-40 rounded-full opacity-15" style={{background: 'radial-gradient(circle, #c084fc, transparent)'}} />
+              <div className="absolute top-1/2 left-1/3 -translate-y-1/2 w-64 h-64 rounded-full opacity-5" style={{background: 'radial-gradient(circle, #818cf8, transparent)'}} />
+
+              <div className="relative z-10 flex items-center gap-5 px-7 py-5">
+                {/* Icon */}
+                <div className="relative shrink-0">
+                  <div
+                    className="w-16 h-16 rounded-2xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.1))',
+                      backdropFilter: 'blur(8px)',
+                      border: '1.5px solid rgba(255,255,255,0.3)',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.2)',
+                    }}
+                  >
+                    <Crown className="w-8 h-8 text-white drop-shadow-lg" />
+                  </div>
+                  {/* Pulse ring */}
+                  <div className="absolute inset-0 rounded-2xl animate-ping opacity-20" style={{background: 'rgba(167,139,250,0.4)'}} />
+                </div>
+
+                {/* Text */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-xl font-black text-white tracking-wide">مركز القيادة</h3>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{background:'rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.9)', border:'1px solid rgba(255,255,255,0.2)'}}>COMMAND CENTER</span>
+                  </div>
+                  <p className="text-sm" style={{color:'rgba(255,255,255,0.7)'}}>المحفظة المالية · التقارير · التقييمات · المراحل · الطلبات</p>
+                </div>
+
+                {/* Arrow */}
+                <div className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:translate-x-[-4px]" style={{background:'rgba(255,255,255,0.12)', border:'1px solid rgba(255,255,255,0.2)'}}>
+                  <ChevronLeft className="w-5 h-5 text-white" />
+                </div>
+              </div>
+            </div>
+
+            {/* 4 Remaining Main Cards - Draggable (excluding command center) */}
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleMainDragEnd}>
-              <SortableContext items={sortedMain.map(i => i.id)} strategy={rectSortingStrategy}>
-                <div className="grid grid-cols-2 lg:grid-cols-5 gap-5">
-                  {sortedMain.map((item) => (
+              <SortableContext items={sortedMain.filter(i => i.id !== 'main-cmd').map(i => i.id)} strategy={rectSortingStrategy}>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+                  {sortedMain.filter(i => i.id !== 'main-cmd').map((item) => (
                     <SortableMainCard key={item.id} item={item} onNavigate={navigate} />
                   ))}
                 </div>
