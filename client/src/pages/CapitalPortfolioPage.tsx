@@ -554,43 +554,72 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
   const [exportGrouping, setExportGrouping] = useState<1 | 3 | 6>(3);
 
   // ── Auto-save / Auto-load ────────────────────────────────────────────────────
+  const STORAGE_KEY = "capital_portfolio_settings";
   const saveScenario = trpc.portfolioScenarios.save.useMutation();
   const defaultScenario = trpc.portfolioScenarios.getDefault.useQuery(
     undefined,
     { enabled: isAuthenticated, staleTime: Infinity }
   );
 
-  // Auto-load default scenario on mount
+  // Auto-load: try DB first, fallback to localStorage
   useEffect(() => {
-    if (!defaultScenario.data) return;
-    try {
-      const parsed = JSON.parse(defaultScenario.data.settings);
-      if (parsed.projectOptions) setProjectOptions(parsed.projectOptions);
-      if (parsed.delays) setDelays(parsed.delays);
-      if (parsed.hiddenProjects) setHiddenProjects(new Set(parsed.hiddenProjects));
-      if (parsed.groupBy) setGroupBy(parsed.groupBy);
-      if (parsed.viewMode) setViewMode(parsed.viewMode);
-    } catch (e) {
-      console.error("Failed to parse scenario settings:", e);
+    // If logged in via Manus OAuth and DB has data, use it
+    if (isAuthenticated && defaultScenario.data) {
+      try {
+        const parsed = JSON.parse(defaultScenario.data.settings);
+        if (parsed.projectOptions) setProjectOptions(parsed.projectOptions);
+        if (parsed.delays) setDelays(parsed.delays);
+        if (parsed.hiddenProjects) setHiddenProjects(new Set(parsed.hiddenProjects));
+        if (parsed.groupBy) setGroupBy(parsed.groupBy);
+        if (parsed.viewMode) setViewMode(parsed.viewMode);
+        return;
+      } catch (e) {
+        console.error("Failed to parse DB scenario:", e);
+      }
     }
-  }, [defaultScenario.data]);
+    // Fallback: load from localStorage (works for CC Auth and unauthenticated)
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.projectOptions) setProjectOptions(parsed.projectOptions);
+        if (parsed.delays) setDelays(parsed.delays);
+        if (parsed.hiddenProjects) setHiddenProjects(new Set(parsed.hiddenProjects));
+        if (parsed.groupBy) setGroupBy(parsed.groupBy);
+        if (parsed.viewMode) setViewMode(parsed.viewMode);
+      }
+    } catch (e) {
+      console.error("Failed to load from localStorage:", e);
+    }
+  }, [isAuthenticated, defaultScenario.data]);
 
-  // Auto-save on every state change (debounced)
+  // Auto-save: save to DB if Manus-authenticated, always save to localStorage
   useEffect(() => {
-    if (!isAuthenticated) return;
     const timer = setTimeout(() => {
-      const settings = JSON.stringify({
+      const settings = {
         projectOptions,
         delays,
         hiddenProjects: Array.from(hiddenProjects),
         groupBy,
         viewMode,
-      });
-      saveScenario.mutate({
-        name: "الإعداد الافتراضي",
-        settings,
-        isDefault: true,
-      });
+      };
+      const settingsStr = JSON.stringify(settings);
+      
+      // Always save to localStorage (works for all users)
+      try {
+        localStorage.setItem(STORAGE_KEY, settingsStr);
+      } catch (e) {
+        console.error("Failed to save to localStorage:", e);
+      }
+
+      // If Manus-authenticated, also save to DB
+      if (isAuthenticated) {
+        saveScenario.mutate({
+          name: "الإعداد الافتراضي",
+          settings: settingsStr,
+          isDefault: true,
+        });
+      }
     }, 1000); // 1s debounce
     return () => clearTimeout(timer);
   }, [projectOptions, delays, hiddenProjects, groupBy, viewMode, isAuthenticated]);
