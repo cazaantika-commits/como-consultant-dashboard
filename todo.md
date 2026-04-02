@@ -503,3 +503,7 @@
 - [x] Add Capital Portfolio card to CommandCenterPage (full interactive with controls, no persistence)
 - [x] Add comprehensive statistical summary section at the beginning of PDF export with key financial and operational indicators
 - [x] Add 'Save as HTML' button to PDF export preview window for downloading the report as an HTML file
+- [x] Add portfolio_scenarios table to DB schema (id, name, userId, settings JSON, updatedAt)
+- [x] Add tRPC procedures: saveScenario, loadScenario, listScenarios, deleteScenario
+- [x] Update CapitalPortfolioPage: auto-save settings on every change, auto-load on page open
+- [x] Add scenario name input + save/load UI in CapitalPortfolioPage toolbar

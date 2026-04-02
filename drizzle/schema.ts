@@ -2082,3 +2082,16 @@ export const projectCashFlowSettings = mysqlTable("project_cash_flow_settings", 
   index("pcfs_project_scenario").on(table.projectId, table.scenario),
   index("pcfs_item_key").on(table.itemKey),
 ]);
+
+// ── Portfolio Scenarios ───────────────────────────────────────────────────────
+// Stores user-saved capital portfolio view settings (option selections, delays, visibility)
+export const portfolioScenarios = mysqlTable("portfolio_scenarios", {
+  id: int("id").autoincrement().notNull(),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull().default("الإعداد الافتراضي"),
+  isDefault: tinyint("is_default").default(0).notNull(),
+  // JSON blob: { projectSettings: { [projectId]: { option, designDelay, offplanDelay, constructionDelay, hidden } } }
+  settings: text("settings").notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+});

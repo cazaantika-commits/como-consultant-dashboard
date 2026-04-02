@@ -590,6 +590,48 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
   const [exportScenarioName, setExportScenarioName] = useState("");
   const [exportGrouping, setExportGrouping] = useState<1 | 3 | 6>(3);
 
+  // ── Auto-save / Auto-load ────────────────────────────────────────────────────
+  const saveScenario = trpc.portfolioScenarios.save.useMutation();
+  const defaultScenario = trpc.portfolioScenarios.getDefault.useQuery(
+    undefined,
+    { enabled: isAuthenticated, staleTime: Infinity }
+  );
+
+  // Auto-load default scenario on mount
+  useEffect(() => {
+    if (!defaultScenario.data) return;
+    try {
+      const parsed = JSON.parse(defaultScenario.data.settings);
+      if (parsed.projectOptions) setProjectOptions(parsed.projectOptions);
+      if (parsed.delays) setDelays(parsed.delays);
+      if (parsed.hiddenProjects) setHiddenProjects(new Set(parsed.hiddenProjects));
+      if (parsed.groupBy) setGroupBy(parsed.groupBy);
+      if (parsed.viewMode) setViewMode(parsed.viewMode);
+    } catch (e) {
+      console.error("Failed to parse scenario settings:", e);
+    }
+  }, [defaultScenario.data]);
+
+  // Auto-save on every state change (debounced)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const timer = setTimeout(() => {
+      const settings = JSON.stringify({
+        projectOptions,
+        delays,
+        hiddenProjects: Array.from(hiddenProjects),
+        groupBy,
+        viewMode,
+      });
+      saveScenario.mutate({
+        name: "الإعداد الافتراضي",
+        settings,
+        isDefault: true,
+      });
+    }, 1000); // 1s debounce
+    return () => clearTimeout(timer);
+  }, [projectOptions, delays, hiddenProjects, groupBy, viewMode, isAuthenticated]);
+
   function getDelay(projectId: number): DelayState {
     return delays[projectId] || { designDelay: 0, offplanDelay: 0, constructionDelay: 0 };
   }
@@ -1130,6 +1172,20 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
               </div>
             </div>,
             document.body
+          )}
+
+          {/* Auto-save indicator */}
+          {isAuthenticated && (
+            <span style={{
+              fontSize: 11, color: saveScenario.isPending ? "#f59e0b" : "#10b981",
+              display: "flex", alignItems: "center", gap: 4, fontWeight: 600,
+            }}>
+              {saveScenario.isPending ? (
+                <><Clock style={{ width: 11, height: 11 }} /> جاري الحفظ...</>
+              ) : (
+                <><Save style={{ width: 11, height: 11 }} /> محفوظ تلقائياً</>
+              )}
+            </span>
           )}
 
           {/* Settings toggle — owner only */}
