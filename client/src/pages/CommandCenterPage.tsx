@@ -368,22 +368,22 @@ const CRITERIA = [
 // --- Bubble Config ---
 const BUBBLES = [
   // ── PRIORITY 1: Financial Core (Hero cards) ──
-  { type: "capital_portfolio" as const, label: "محفظة رأس المال", icon: Landmark, color: "from-indigo-600 to-indigo-800", bg: "bg-indigo-50", border: "border-indigo-200", text: "text-indigo-700" },
-  { type: "financial_reports" as const, label: "التقارير المالية", icon: PieChart, color: "from-emerald-500 to-teal-700", bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700" },
+  { type: "capital_portfolio" as const, label: "محفظة رأس المال", icon: Wallet, color: "from-indigo-600 to-indigo-800", bg: "bg-indigo-50", border: "border-indigo-200", text: "text-indigo-700" },
+  { type: "financial_reports" as const, label: "التقارير المالية", icon: BarChart2, color: "from-emerald-500 to-teal-700", bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700" },
 
   // ── PRIORITY 2: Operations & Evaluation ──
-  { type: "evaluations" as const, label: "تقييم الاستشاريين", icon: Handshake, color: "from-violet-600 to-purple-800", bg: "bg-purple-50", border: "border-purple-200", text: "text-purple-700" },
-  { type: "milestones_kpis" as const, label: "المراحل والأداء", icon: Gauge, color: "from-cyan-500 to-sky-700", bg: "bg-cyan-50", border: "border-cyan-200", text: "text-cyan-700" },
+  { type: "evaluations" as const, label: "تقييم الاستشاريين", icon: Star, color: "from-violet-600 to-purple-800", bg: "bg-purple-50", border: "border-purple-200", text: "text-purple-700" },
+  { type: "milestones_kpis" as const, label: "المراحل والأداء", icon: Target, color: "from-cyan-500 to-sky-700", bg: "bg-cyan-50", border: "border-cyan-200", text: "text-cyan-700" },
 
   // ── PRIORITY 3: Communication & Requests ──
-  { type: "requests" as const, label: "الطلبات والاستفسارات", icon: ClipboardCheck, color: "from-orange-500 to-amber-700", bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700" },
-  { type: "reports" as const, label: "التقارير", icon: FileSearch, color: "from-blue-500 to-blue-700", bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700" },
-  { type: "meeting_minutes" as const, label: "محاضر الاجتماعات", icon: Users, color: "from-rose-500 to-pink-700", bg: "bg-rose-50", border: "border-rose-200", text: "text-rose-700" },
+  { type: "requests" as const, label: "الطلبات والاستفسارات", icon: Send, color: "from-orange-500 to-amber-700", bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700" },
+  { type: "reports" as const, label: "التقارير", icon: FileBarChart2, color: "from-blue-500 to-blue-700", bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700" },
+  { type: "meeting_minutes" as const, label: "محاضر الاجتماعات", icon: BookText, color: "from-rose-500 to-pink-700", bg: "bg-rose-50", border: "border-rose-200", text: "text-rose-700" },
 
   // ── PRIORITY 4: Planning & Studies ──
   { type: "work_schedule" as const, label: "برنامج العمل", icon: CalendarDays, color: "from-teal-500 to-teal-700", bg: "bg-teal-50", border: "border-teal-200", text: "text-teal-700" },
-  { type: "feasibility_study" as const, label: "دراسة الجدوى", icon: LineChart, color: "from-fuchsia-500 to-violet-700", bg: "bg-violet-50", border: "border-violet-200", text: "text-violet-700" },
-  { type: "announcements" as const, label: "الإعلانات", icon: BellRing, color: "from-red-500 to-rose-700", bg: "bg-rose-50", border: "border-rose-200", text: "text-rose-700" },
+  { type: "feasibility_study" as const, label: "دراسة الجدوى", icon: TrendingUp, color: "from-fuchsia-500 to-violet-700", bg: "bg-violet-50", border: "border-violet-200", text: "text-violet-700" },
+  { type: "announcements" as const, label: "الإعلانات", icon: Megaphone, color: "from-red-500 to-rose-700", bg: "bg-rose-50", border: "border-rose-200", text: "text-rose-700" },
 ];
 
 const BUBBLE_LABELS: Record<string, string> = {
@@ -4089,94 +4089,68 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             meeting_minutes: 'محاضر الاجتماعات والقرارات',
           };
 
-          // Shape types for visual diversity
-          type ShapeType = 'circle' | 'hexagon' | 'pill' | 'diamond' | 'squircle' | 'wide-pill' | 'rect';
-
-          const ShapeCard = ({ bubble, shape = 'squircle' }: { bubble: typeof BUBBLES[0]; shape?: ShapeType }) => {
+          // Clean icon-tile card — large icon + label below
+          const IconTile = ({ bubble, size = 'md' }: { bubble: typeof BUBBLES[0]; size?: 'lg' | 'md' | 'sm' }) => {
             const count = counts.data?.[bubble.type as keyof typeof counts.data] || 0;
             const hasCount = typeof count === "number" && count > 0;
             const sc = solidColorMap[bubble.color] || {solid:'#64748b', shadow:'rgba(100,116,139,0.45)'};
-
-            const shapeStyle: React.CSSProperties = {
-              circle:     { borderRadius: '50%', aspectRatio: '1', padding: '0', width: '100%', maxWidth: '120px', margin: '0 auto' },
-              hexagon:    { clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', borderRadius: '0', aspectRatio: '1', padding: '0', width: '100%', maxWidth: '120px', margin: '0 auto' },
-              pill:       { borderRadius: '9999px', padding: '0.9rem 1.2rem', minHeight: '72px' },
-              'wide-pill':{ borderRadius: '9999px', padding: '1rem 1.4rem', minHeight: '80px' },
-              diamond:    { transform: 'rotate(45deg)', borderRadius: '18%', aspectRatio: '1', padding: '0', width: '100%', maxWidth: '110px', margin: '0 auto' },
-              squircle:   { borderRadius: '28%', aspectRatio: '1', padding: '0', width: '100%', maxWidth: '120px', margin: '0 auto' },
-              rect:       { borderRadius: '16px', padding: '0.8rem 1rem', minHeight: '72px' },
-            }[shape];
-
-            const isSymmetric = ['circle','hexagon','diamond','squircle'].includes(shape);
+            const tileSize = size === 'lg' ? 80 : size === 'md' ? 64 : 52;
+            const iconSize = size === 'lg' ? 32 : size === 'md' ? 26 : 22;
+            const fontSize = size === 'lg' ? '0.82rem' : size === 'md' ? '0.72rem' : '0.65rem';
 
             return (
-              <div className="flex flex-col items-center gap-2">
-                <button
-                  onClick={() => handleBubbleClick(bubble.type)}
-                  className="group relative overflow-hidden transition-all duration-200 hover:scale-[1.08] hover:-translate-y-1 active:scale-[0.95] flex items-center justify-center"
+              <button
+                onClick={() => handleBubbleClick(bubble.type)}
+                className="group flex flex-col items-center gap-2 transition-all duration-200 hover:-translate-y-1 active:scale-95"
+                style={{background:'transparent', border:'none', cursor:'pointer'}}
+              >
+                <div
+                  className="relative flex items-center justify-center transition-all duration-200 group-hover:scale-110 group-hover:shadow-xl"
                   style={{
+                    width: tileSize, height: tileSize,
                     background: sc.solid,
-                    boxShadow: `0 6px 20px ${sc.shadow}, 0 2px 6px rgba(0,0,0,0.1)`,
-                    ...shapeStyle,
+                    boxShadow: `0 4px 16px ${sc.shadow}`,
+                    borderRadius: size === 'lg' ? '22px' : '18px',
                   }}
                 >
-                  {/* Shine */}
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
-                    style={{background: 'linear-gradient(135deg, rgba(255,255,255,0.25) 0%, transparent 55%)'}} />
-
-                  {/* Inner content — rotated back for diamond */}
-                  <div className={`relative z-10 flex flex-col items-center justify-center gap-1 ${shape === 'diamond' ? 'rotate-[-45deg]' : ''}`}
-                    style={{padding: isSymmetric ? '8px' : undefined}}>
-                    <bubble.icon style={{width:'20px', height:'20px', color:'white', filter:'drop-shadow(0 1px 2px rgba(0,0,0,0.3))'}} />
-                    {!isSymmetric && (
-                      <span className="font-bold text-white text-center leading-tight" style={{fontSize:'0.72rem', textShadow:'0 1px 3px rgba(0,0,0,0.25)', maxWidth:'90px'}}>
-                        {bubble.label}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Count badge */}
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                    style={{background:'linear-gradient(135deg,rgba(255,255,255,0.28) 0%,transparent 60%)', borderRadius: 'inherit'}} />
+                  <bubble.icon style={{width:iconSize, height:iconSize, color:'white', filter:'drop-shadow(0 1px 3px rgba(0,0,0,0.25))'}} />
                   {hasCount && (
-                    <div className="absolute top-1 right-1 min-w-[16px] h-[16px] px-1 rounded-full flex items-center justify-center text-[8px] font-black z-20"
-                      style={{background:'rgba(0,0,0,0.4)',color:'white'}}>
+                    <div className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center text-[9px] font-black"
+                      style={{background:'#ef4444', color:'white', boxShadow:'0 2px 6px rgba(239,68,68,0.5)'}}>
                       {count}
                     </div>
                   )}
-                </button>
-
-                {/* Label below symmetric shapes */}
-                {isSymmetric && (
-                  <span className="font-bold text-center leading-tight" style={{fontSize:'0.72rem', color:'#374151', maxWidth:'90px', display:'block'}}>
-                    {bubble.label}
-                  </span>
-                )}
-              </div>
+                </div>
+                <span className="font-semibold text-center leading-tight text-slate-700 group-hover:text-slate-900 transition-colors"
+                  style={{fontSize, maxWidth: tileSize + 16, display:'block'}}>
+                  {bubble.label}
+                </span>
+              </button>
             );
           };
 
           return (
-            <div className="mb-4">
-              {/* Row 1: Hero row — 2 wide pills */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <ShapeCard bubble={BUBBLES[0]} shape="wide-pill" />
-                <ShapeCard bubble={BUBBLES[1]} shape="wide-pill" />
+            <div className="mb-4 space-y-6">
+              {/* Row 1: Hero — 2 large tiles */}
+              <div className="grid grid-cols-2 gap-6">
+                <IconTile bubble={BUBBLES[0]} size="lg" />
+                <IconTile bubble={BUBBLES[1]} size="lg" />
               </div>
-
-              {/* Row 2: Mixed shapes — circle, squircle, hexagon, circle, squircle */}
-              <div className="grid grid-cols-5 gap-3 mb-4 items-end">
-                <ShapeCard bubble={BUBBLES[2]} shape="circle" />
-                <ShapeCard bubble={BUBBLES[3]} shape="squircle" />
-                <ShapeCard bubble={BUBBLES[4]} shape="hexagon" />
-                <ShapeCard bubble={BUBBLES[5]} shape="circle" />
-                <ShapeCard bubble={BUBBLES[6]} shape="squircle" />
+              {/* Row 2: 4 medium tiles */}
+              <div className="grid grid-cols-4 gap-4">
+                <IconTile bubble={BUBBLES[2]} size="md" />
+                <IconTile bubble={BUBBLES[3]} size="md" />
+                <IconTile bubble={BUBBLES[4]} size="md" />
+                <IconTile bubble={BUBBLES[5]} size="md" />
               </div>
-
-              {/* Row 3: Diamond + pill + diamond */}
-              <div className="grid grid-cols-4 gap-3 items-center">
-                <ShapeCard bubble={BUBBLES[7]} shape="diamond" />
-                <ShapeCard bubble={BUBBLES[8]} shape="pill" />
-                <ShapeCard bubble={BUBBLES[9]} shape="pill" />
-                {BUBBLES[10] && <ShapeCard bubble={BUBBLES[10]} shape="diamond" />}
+              {/* Row 3: 4 small tiles */}
+              <div className="grid grid-cols-4 gap-4">
+                <IconTile bubble={BUBBLES[6]} size="sm" />
+                <IconTile bubble={BUBBLES[7]} size="sm" />
+                <IconTile bubble={BUBBLES[8]} size="sm" />
+                <IconTile bubble={BUBBLES[9]} size="sm" />
               </div>
             </div>
           );
