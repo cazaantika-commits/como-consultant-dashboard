@@ -555,22 +555,31 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
 
   // ── Auto-save / Auto-load ────────────────────────────────────────────────────
   const STORAGE_KEY = "capital_portfolio_settings";
-  // isLoaded guards against saving empty defaults before loading completes
+  // isLoaded: true only after we've finished reading saved data (prevents overwriting on mount)
   const [isLoaded, setIsLoaded] = useState(false);
   const saveScenario = trpc.portfolioScenarios.save.useMutation();
+
+  // Get auth loading state directly from the meQuery inside useAuth
+  const authQuery = trpc.auth.me.useQuery(undefined, { retry: false, refetchOnWindowFocus: false });
+  const authLoading = authQuery.isLoading;
+
   const defaultScenario = trpc.portfolioScenarios.getDefault.useQuery(
     undefined,
     { enabled: isAuthenticated, staleTime: Infinity }
   );
 
-  // Auto-load: run once when auth state and DB query are settled
+  // Auto-load: wait for auth to finish, then load from DB or localStorage
   useEffect(() => {
-    // Wait for auth check to complete
-    if (isAuthenticated === undefined) return;
-    // If logged in via Manus OAuth, wait for DB query to finish
+    // Step 1: Wait for auth query to finish (isLoading = false)
+    if (authLoading) return;
+
+    // Step 2: If authenticated, wait for DB query too
     if (isAuthenticated && defaultScenario.isLoading) return;
 
-    // If logged in and DB has data, use it
+    // Step 3: Already loaded once, don't run again
+    if (isLoaded) return;
+
+    // Step 4: If authenticated and DB has data, use DB
     if (isAuthenticated && defaultScenario.data) {
       try {
         const parsed = JSON.parse(defaultScenario.data.settings);
@@ -586,7 +595,7 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
       }
     }
 
-    // Fallback: load from localStorage (works for CC Auth and unauthenticated)
+    // Step 5: Fallback to localStorage
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
@@ -601,11 +610,11 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
       console.error("Failed to load from localStorage:", e);
     }
     setIsLoaded(true);
-  }, [isAuthenticated, defaultScenario.data, defaultScenario.isLoading]);
+  }, [authLoading, isAuthenticated, defaultScenario.data, defaultScenario.isLoading, isLoaded]);
 
-  // Auto-save: only runs AFTER loading is complete (prevents overwriting saved data)
+  // Auto-save: only runs AFTER loading is complete
   useEffect(() => {
-    if (!isLoaded) return; // ← key guard: don't save before load finishes
+    if (!isLoaded) return;
     const timer = setTimeout(() => {
       const settings = {
         projectOptions,
@@ -616,7 +625,7 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
       };
       const settingsStr = JSON.stringify(settings);
 
-      // Always save to localStorage (works for all users)
+      // Always save to localStorage
       try {
         localStorage.setItem(STORAGE_KEY, settingsStr);
       } catch (e) {
@@ -631,7 +640,7 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
           isDefault: true,
         });
       }
-    }, 1000); // 1s debounce
+    }, 1500);
     return () => clearTimeout(timer);
   }, [projectOptions, delays, hiddenProjects, groupBy, viewMode, isAuthenticated, isLoaded]);
 
