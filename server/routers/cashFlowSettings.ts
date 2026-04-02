@@ -1966,6 +1966,7 @@ export const cashFlowSettingsRouter = router({
           investorTotal,
           escrowTotal,
           grandTotal: investorTotal + escrowTotal,
+          totalProjectCost: investorTotal + escrowTotal, // التكلفة الكلية من ملخص الجدوى
           monthlyInvestor,
           monthlyEscrow,
           monthlyTotal: monthlyAll,
@@ -1980,6 +1981,7 @@ export const cashFlowSettingsRouter = router({
         name: project.name,
         startDate: project.startDate || "2026-04",
         totalMonths,
+        totalCosts: costs.totalCosts || 0, // التكلفة الكلية من تقارير التخطيط المالي مباشرة
         totalRevenue: costs.totalRevenue || 0,
         revenueSource: costs.revenueSource || "calculated",
         activeScenario: costs.activeScenario || "base",

@@ -218,8 +218,8 @@ async function exportToPDF(
   try {
     const fmt = (n: number) => n === 0 ? "—" : Math.round(n).toLocaleString("ar-AE");
     const optionLabel: Record<string, string> = { o1: "الخيار 1", o2: "الخيار 2", o3: "الخيار 3" };
-    // التكلفة الكلية = رأس المال (investor) + الضمان (escrow)
-    const totalProjectCostAll = effectiveColumns.reduce((s, c) => s + c.investorTotal + c.escrowTotal, 0);
+    // التكلفة الكلية مباشرة من تقارير التخطيط المالي (costs.totalCosts)
+    const totalProjectCostAll = effectiveColumns.reduce((s, c) => s + (c.totalCosts || 0), 0);
     const capitalAll = effectiveColumns.reduce((s, c) => s + c.investorTotal, 0);
     const paidAll = effectiveColumns.reduce((s, c) => s + c.paidTotal, 0);
     const upcomingAll = effectiveColumns.reduce((s, c) => s + c.upcomingTotal, 0);
@@ -260,7 +260,7 @@ async function exportToPDF(
         const total = indices.reduce((s, idx) => s + (col.chartAmounts[idx] || 0), 0);
         return `<td>${fmt(total)}</td>`;
       }).join("");
-      const totalProjectCost = col.investorTotal + col.escrowTotal;
+      const totalProjectCost = col.totalCosts || 0;
       return `<tr>
         <td style="text-align:right;font-weight:600">${col.name}</td>
         <td>${optionLabel[col.option] || col.option}</td>
@@ -653,6 +653,7 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
           phaseInfo,
           investorTotal: scenarioData.investorTotal || 0,
           escrowTotal: scenarioData.escrowTotal || 0,
+          totalCosts: (project as any).totalCosts || 0, // التكلفة الكلية من تقارير التخطيط المالي مباشرة
           grandTotal,
           paidTotal,
           upcomingTotal,
