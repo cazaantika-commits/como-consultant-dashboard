@@ -218,7 +218,9 @@ async function exportToPDF(
   try {
     const fmt = (n: number) => n === 0 ? "—" : Math.round(n).toLocaleString("ar-AE");
     const optionLabel: Record<string, string> = { o1: "الخيار 1", o2: "الخيار 2", o3: "الخيار 3" };
-    const grandTotalAll = effectiveColumns.reduce((s, c) => s + c.investorTotal, 0);
+    // التكلفة الكلية = رأس المال (investor) + الضمان (escrow)
+    const totalProjectCostAll = effectiveColumns.reduce((s, c) => s + c.investorTotal + c.escrowTotal, 0);
+    const capitalAll = effectiveColumns.reduce((s, c) => s + c.investorTotal, 0);
     const paidAll = effectiveColumns.reduce((s, c) => s + c.paidTotal, 0);
     const upcomingAll = effectiveColumns.reduce((s, c) => s + c.upcomingTotal, 0);
     const now = new Date();
@@ -258,10 +260,11 @@ async function exportToPDF(
         const total = indices.reduce((s, idx) => s + (col.chartAmounts[idx] || 0), 0);
         return `<td>${fmt(total)}</td>`;
       }).join("");
+      const totalProjectCost = col.investorTotal + col.escrowTotal;
       return `<tr>
         <td style="text-align:right;font-weight:600">${col.name}</td>
         <td>${optionLabel[col.option] || col.option}</td>
-        <td>${fmt(col.grandTotal)}</td>
+        <td>${fmt(totalProjectCost)}</td>
         <td>${fmt(col.investorTotal)}</td>
         <td>${fmt(col.paidTotal)}</td>
         <td>${fmt(col.upcomingTotal)}</td>
@@ -310,7 +313,7 @@ async function exportToPDF(
   </div>
   <div class="cards">
     <div class="card"><div class="lbl">عدد المشاريع</div><div class="val">${effectiveColumns.length}</div></div>
-    <div class="card"><div class="lbl">الإجمالي الكلي (درهم)</div><div class="val">${fmt(grandTotalAll)}</div></div>
+    <div class="card"><div class="lbl">إجمالي رأس المال (درهم)</div><div class="val">${fmt(capitalAll)}</div></div>
     <div class="card"><div class="lbl">المدفوع (درهم)</div><div class="val">${fmt(paidAll)}</div></div>
     <div class="card"><div class="lbl">المتبقي (درهم)</div><div class="val">${fmt(upcomingAll)}</div></div>
   </div>
@@ -332,12 +335,12 @@ async function exportToPDF(
       <tr class="total-row">
         <td style="text-align:right">الإجمالي</td>
         <td></td>
-        <td>${fmt(effectiveColumns.reduce((s, c) => s + c.grandTotal, 0))}</td>
-        <td>${fmt(grandTotalAll)}</td>
+        <td>${fmt(totalProjectCostAll)}</td>
+        <td>${fmt(capitalAll)}</td>
         <td>${fmt(paidAll)}</td>
         <td>${fmt(upcomingAll)}</td>
         ${totalQCells}
-        <td>${fmt(grandTotalAll)}</td>
+        <td>${fmt(capitalAll)}</td>
       </tr>
     </tbody>
   </table>
