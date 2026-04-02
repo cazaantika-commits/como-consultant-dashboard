@@ -64,6 +64,7 @@ import {
   HelpCircle,
   Layers,
   Wallet,
+  FileBarChart2,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -90,6 +91,77 @@ import {
 // Lazy imports for embedded pages
 import WorkSchedulePage from "./WorkSchedulePage";
 // Old financial components removed - now using iframe embeds
+
+// --- Financial Reports View (read-only, embedded in Command Center) ---
+const CC_REPORTS_TABS = [
+  { id: "feasibility", label: "ملخص الجدوى المالية", src: "/feasibility-summary.html" },
+  { id: "capital", label: "خطة رأس مال المشروع", src: "/capital-plan.html" },
+  { id: "escrow", label: "التدفقات النقدية وحساب الضمان", src: "/escrow-cashflow.html" },
+] as const;
+type CCFinancialTab = (typeof CC_REPORTS_TABS)[number]["id"];
+
+function FinancialReportsView({ onBack, projectsList }: { onBack: () => void; projectsList: any[] }) {
+  const [activeTab, setActiveTab] = useState<CCFinancialTab>("feasibility");
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const tabSrc = CC_REPORTS_TABS.find((t) => t.id === activeTab)?.src;
+  const currentSrc = tabSrc && selectedProjectId ? `${tabSrc}?projectId=${selectedProjectId}` : undefined;
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col" dir="rtl">
+      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5 shrink-0">
+            <ArrowLeft className="w-4 h-4" /> العودة
+          </Button>
+          <div className="h-5 w-px bg-border" />
+          <h1 className="text-sm font-bold text-foreground">تقارير التخطيط المالي</h1>
+          <div className="mr-auto">
+            <select
+              value={selectedProjectId ?? ""}
+              onChange={(e) => setSelectedProjectId(e.target.value ? Number(e.target.value) : null)}
+              className="text-xs h-8 px-2 rounded-md border border-border bg-background text-foreground focus:ring-1 focus:ring-primary"
+            >
+              <option value="">اختر المشروع...</option>
+              {projectsList?.map((p: any) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 flex gap-1 pb-0 overflow-x-auto">
+          {CC_REPORTS_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-all whitespace-nowrap ${
+                activeTab === tab.id
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </header>
+      {currentSrc ? (
+        <iframe
+          key={currentSrc}
+          src={currentSrc}
+          className="flex-1 w-full border-0"
+          style={{ minHeight: "calc(100vh - 7rem)" }}
+          title="تقارير التخطيط المالي"
+        />
+      ) : (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center p-8 rounded-xl bg-amber-50 border border-amber-200">
+            <p className="text-amber-800 text-sm font-medium">اختر مشروعاً من القائمة أعلاه أولاً</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const SALWA_AVATAR_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663200809965/Q366eAYG4Q7iaM8VuAmmFX/salwa-enhanced_0251b1a8.png";
 
@@ -286,6 +358,7 @@ const BUBBLES = [
   { type: "announcements" as const, label: "الإعلانات", icon: Megaphone, color: "from-rose-600 to-rose-800", bg: "bg-rose-50", border: "border-rose-200", text: "text-rose-700" },
   { type: "work_schedule" as const, label: "برنامج العمل", icon: Layers, color: "from-teal-600 to-teal-800", bg: "bg-teal-50", border: "border-teal-200", text: "text-teal-700" },
   { type: "feasibility_study" as const, label: "دراسة جدوى المشروع", icon: Wallet, color: "from-violet-600 to-violet-800", bg: "bg-violet-50", border: "border-violet-200", text: "text-violet-700" },
+  { type: "financial_reports" as const, label: "تقارير التخطيط المالي", icon: FileBarChart2, color: "from-emerald-600 to-emerald-800", bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700" },
 ];
 
 const BUBBLE_LABELS: Record<string, string> = {
@@ -3680,7 +3753,8 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
   const [showMilestonesKpis, setShowMilestonesKpis] = useState(false);
   const [showWorkSchedule, setShowWorkSchedule] = useState(false);
   const [showFeasibilityStudy, setShowFeasibilityStudy] = useState(false);
-
+  const [showFinancialReports, setShowFinancialReports] = useState(false);
+  const projectsList = trpc.projects.list.useQuery();
 
   const counts = trpc.commandCenter.getBubbleCounts.useQuery({ token });
   const notifications = trpc.commandCenter.getNotifications.useQuery({ token });
@@ -3724,6 +3798,20 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
     );
   }
 
+
+  // If viewing financial reports (read-only)
+  if (activeBubble === "financial_reports" && showFinancialReports) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white" dir="rtl">
+        <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
+        <FinancialReportsView
+          onBack={() => { setActiveBubble(null); setShowFinancialReports(false); }}
+          projectsList={projectsList.data || []}
+        />
+        <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
+      </div>
+    );
+  }
 
   // If viewing feasibility study
   if (activeBubble === "feasibility_study" && showFeasibilityStudy) {
@@ -3905,6 +3993,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             else if (type === "evaluations") { setActiveBubble("evaluations"); setShowEvaluation(true); }
             else if (type === "work_schedule") { setActiveBubble("work_schedule"); setShowWorkSchedule(true); }
             else if (type === "feasibility_study") { setActiveBubble("feasibility_study"); setShowFeasibilityStudy(true); }
+            else if (type === "financial_reports") { setActiveBubble("financial_reports"); setShowFinancialReports(true); }
             else { setActiveBubble(type); }
           };
 
@@ -3994,7 +4083,8 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                 <BentoCard bubble={BUBBLES[6]} />
               </div>
               <div className="grid grid-cols-3 gap-3">
-                <div className="col-span-2"><BentoCard bubble={BUBBLES[7]} /></div>
+                <BentoCard bubble={BUBBLES[7]} />
+                <BentoCard bubble={BUBBLES[8]} />
               </div>
             </div>
           );
