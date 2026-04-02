@@ -4029,6 +4029,19 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             else { setActiveBubble(type); }
           };
 
+          // Bold solid-color theme map — each card is a vivid solid color with white text
+          const solidColorMap: Record<string, {solid:string;shadow:string}> = {
+            'from-indigo-600 to-indigo-800':  {solid:'#6366f1', shadow:'rgba(99,102,241,0.45)'},
+            'from-emerald-600 to-emerald-800':{solid:'#10b981', shadow:'rgba(16,185,129,0.45)'},
+            'from-purple-600 to-purple-800':  {solid:'#9333ea', shadow:'rgba(147,51,234,0.45)'},
+            'from-cyan-600 to-teal-700':      {solid:'#06b6d4', shadow:'rgba(6,182,212,0.45)'},
+            'from-amber-600 to-amber-800':    {solid:'#f59e0b', shadow:'rgba(245,158,11,0.45)'},
+            'from-blue-600 to-blue-800':      {solid:'#3b82f6', shadow:'rgba(59,130,246,0.45)'},
+            'from-rose-600 to-rose-800':      {solid:'#f43f5e', shadow:'rgba(244,63,94,0.45)'},
+            'from-teal-600 to-teal-800':      {solid:'#14b8a6', shadow:'rgba(20,184,166,0.45)'},
+            'from-violet-600 to-violet-800':  {solid:'#7c3aed', shadow:'rgba(124,58,237,0.45)'},
+          };
+          // Keep themeMap for backward compat (not used in new BentoCard)
           const themeMap: Record<string, {bg:string;iconBg:string;accent:string;textColor:string;glow:string}> = {
             'from-blue-600 to-blue-800':      {bg:'#eff6ff',iconBg:'linear-gradient(135deg,#3b82f6,#1d4ed8)',accent:'#bfdbfe',textColor:'#1e40af',glow:'rgba(59,130,246,0.18)'},
             'from-amber-600 to-amber-800':    {bg:'#fffbeb',iconBg:'linear-gradient(135deg,#f59e0b,#b45309)',accent:'#fde68a',textColor:'#92400e',glow:'rgba(245,158,11,0.18)'},
@@ -4051,49 +4064,44 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             meeting_minutes: 'محاضر الاجتماعات والقرارات',
           };
 
-          const BentoCard = ({ bubble, tall = false }: { bubble: typeof BUBBLES[0]; tall?: boolean }) => {
+          const BentoCard = ({ bubble, tall = false, wide = false }: { bubble: typeof BUBBLES[0]; tall?: boolean; wide?: boolean }) => {
             const count = counts.data?.[bubble.type as keyof typeof counts.data] || 0;
             const hasCount = typeof count === "number" && count > 0;
-            const theme = themeMap[bubble.color] || {bg:'#f8fafc',iconBg:'linear-gradient(135deg,#64748b,#334155)',accent:'#e2e8f0',textColor:'#334155',glow:'rgba(100,116,139,0.1)'};
+            const sc = solidColorMap[bubble.color] || {solid:'#64748b', shadow:'rgba(100,116,139,0.45)'};
 
             return (
               <button
                 onClick={() => handleBubbleClick(bubble.type)}
-                className="group relative overflow-hidden rounded-2xl text-right transition-all duration-300 hover:scale-[1.025] hover:-translate-y-0.5 active:scale-[0.98] w-full h-full"
+                className="group relative overflow-hidden rounded-3xl text-right transition-all duration-300 hover:scale-[1.03] hover:-translate-y-1 active:scale-[0.97] w-full"
                 style={{
-                  background: theme.bg,
-                  border: `1.5px solid ${theme.accent}`,
-                  boxShadow: `0 2px 16px ${theme.glow}, 0 1px 3px rgba(0,0,0,0.06)`,
-                  padding: tall ? '0.9rem' : '0.7rem',
-                  minHeight: tall ? '115px' : '72px',
-                  display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'flex-start',
+                  background: sc.solid,
+                  boxShadow: `0 6px 24px ${sc.shadow}, 0 2px 6px rgba(0,0,0,0.1)`,
+                  padding: tall ? '1.2rem 1rem' : '0.85rem 0.9rem',
+                  minHeight: tall ? '130px' : '80px',
+                  display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'flex-start',
                 }}
               >
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl pointer-events-none"
-                  style={{background: `radial-gradient(ellipse at 30% 0%, ${theme.glow}, transparent 65%)`}} />
-                <div className="absolute -bottom-8 -left-8 w-28 h-28 rounded-full opacity-15 group-hover:opacity-25 group-hover:scale-125 transition-all duration-500 pointer-events-none"
-                  style={{background: theme.iconBg}} />
+                {/* Large background icon */}
+                <div className="absolute top-1 left-1/2 -translate-x-1/2 opacity-20 group-hover:opacity-30 group-hover:scale-110 transition-all duration-400 pointer-events-none">
+                  <bubble.icon style={{width: tall ? '90px' : '64px', height: tall ? '90px' : '64px', color:'white'}} />
+                </div>
+                {/* Shine overlay on hover */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-3xl pointer-events-none"
+                  style={{background: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%)'}} />
+                {/* Count badge */}
                 {hasCount && (
                   <div className="absolute top-2.5 left-2.5 min-w-[22px] h-[22px] px-1.5 rounded-full flex items-center justify-center text-[10px] font-black z-10"
-                    style={{background:'linear-gradient(135deg,#ef4444,#b91c1c)',color:'white',boxShadow:'0 2px 8px rgba(239,68,68,0.5)'}}>
+                    style={{background:'rgba(0,0,0,0.3)',color:'white',backdropFilter:'blur(4px)'}}>
                     {count}
                   </div>
                 )}
+                {/* Content */}
                 <div className="relative z-10 w-full">
-                  <div className="rounded-2xl flex items-center justify-center mb-2 shadow-md group-hover:scale-110 transition-transform duration-300"
-                    style={{
-                      background: theme.iconBg,
-                      width: tall ? '50px' : '40px',
-                      height: tall ? '50px' : '40px',
-                      boxShadow: `0 4px 16px ${theme.glow}`,
-                    }}>
-                    <bubble.icon style={{width: tall ? '24px':'18px', height: tall ? '24px':'18px', color:'white'}} />
-                  </div>
-                  <p className="font-black leading-tight" style={{color: theme.textColor, fontSize: tall ? '1rem' : '0.8rem'}}>
+                  <p className="font-black text-white leading-tight" style={{fontSize: tall ? '1.05rem' : '0.85rem', textShadow:'0 1px 4px rgba(0,0,0,0.2)'}}>
                     {bubble.label}
                   </p>
                   {tall && subtitles[bubble.type] && (
-                    <p className="text-xs mt-1.5 leading-relaxed" style={{color: `${theme.textColor}88`}}>
+                    <p className="text-xs mt-1 leading-relaxed" style={{color:'rgba(255,255,255,0.78)'}}>
                       {subtitles[bubble.type]}
                     </p>
                   )}
@@ -4103,87 +4111,31 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           };
 
           return (
-            <div className="mb-4 space-y-4">
-              {/* Hero Section: Capital Portfolio & Financial Reports */}
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  onClick={() => handleBubbleClick(BUBBLES[0].type)}
-                  className="group relative overflow-hidden rounded-3xl text-right transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 active:scale-[0.98] p-8"
-                  style={{
-                    background: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)',
-                    border: '2px solid #c7d2fe',
-                    boxShadow: '0 8px 32px rgba(99,102,241,0.15), 0 2px 8px rgba(0,0,0,0.05)',
-                  }}
-                >
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-3xl pointer-events-none"
-                    style={{background: 'radial-gradient(ellipse at 30% 0%, rgba(99,102,241,0.12), transparent 70%)'}} />
-                  <div className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full opacity-10 group-hover:opacity-20 group-hover:scale-125 transition-all duration-500 pointer-events-none"
-                    style={{background: 'linear-gradient(135deg,#6366f1,#3730a3)'}} />
-                  <div className="relative z-10">
-                    <div className="rounded-2xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300"
-                      style={{
-                        background: 'linear-gradient(135deg,#6366f1,#3730a3)',
-                        width: '64px',
-                        height: '64px',
-                        boxShadow: '0 8px 24px rgba(99,102,241,0.3)',
-                      }}>
-                      <TrendingUp style={{width: '32px', height: '32px', color:'white'}} />
-                    </div>
-                    <p className="font-black text-2xl leading-tight mb-2" style={{color: '#3730a3'}}>
-                      {BUBBLES[0].label}
-                    </p>
-                    <p className="text-sm leading-relaxed" style={{color: '#6b7280'}}>
-                      تحريك وتعديل رأس المال عبر المشاريع والمراحل
-                    </p>
-                  </div>
-                </button>
-                <button
-                  onClick={() => handleBubbleClick(BUBBLES[1].type)}
-                  className="group relative overflow-hidden rounded-3xl text-right transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 active:scale-[0.98] p-8"
-                  style={{
-                    background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
-                    border: '2px solid #bbf7d0',
-                    boxShadow: '0 8px 32px rgba(16,185,129,0.15), 0 2px 8px rgba(0,0,0,0.05)',
-                  }}
-                >
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-3xl pointer-events-none"
-                    style={{background: 'radial-gradient(ellipse at 30% 0%, rgba(16,185,129,0.12), transparent 70%)'}} />
-                  <div className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full opacity-10 group-hover:opacity-20 group-hover:scale-125 transition-all duration-500 pointer-events-none"
-                    style={{background: 'linear-gradient(135deg,#10b981,#065f46)'}} />
-                  <div className="relative z-10">
-                    <div className="rounded-2xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300"
-                      style={{
-                        background: 'linear-gradient(135deg,#10b981,#065f46)',
-                        width: '64px',
-                        height: '64px',
-                        boxShadow: '0 8px 24px rgba(16,185,129,0.3)',
-                      }}>
-                      <FileBarChart2 style={{width: '32px', height: '32px', color:'white'}} />
-                    </div>
-                    <p className="font-black text-2xl leading-tight mb-2" style={{color: '#065f46'}}>
-                      {BUBBLES[1].label}
-                    </p>
-                    <p className="text-sm leading-relaxed" style={{color: '#6b7280'}}>
-                      تقارير الجدوى والتدفقات وحساب الضمان
-                    </p>
-                  </div>
-                </button>
+            <div className="mb-4 space-y-3">
+              {/* Row 1: Hero — Capital Portfolio (wide) + Financial Reports */}
+              <div className="grid grid-cols-3 gap-3">
+                {/* Capital Portfolio spans 2 cols */}
+                <div className="col-span-2">
+                  <BentoCard bubble={BUBBLES[0]} tall />
+                </div>
+                {/* Financial Reports */}
+                <BentoCard bubble={BUBBLES[1]} tall />
               </div>
 
-              {/* Operations & Evaluation */}
+              {/* Row 2: Evaluations + Milestones (equal) */}
               <div className="grid grid-cols-2 gap-3">
                 <BentoCard bubble={BUBBLES[2]} tall />
                 <BentoCard bubble={BUBBLES[3]} tall />
               </div>
 
-              {/* Communication & Requests */}
+              {/* Row 3: Requests + Reports + Meeting Minutes */}
               <div className="grid grid-cols-3 gap-3">
                 <BentoCard bubble={BUBBLES[4]} />
                 <BentoCard bubble={BUBBLES[5]} />
                 <BentoCard bubble={BUBBLES[6]} />
               </div>
 
-              {/* Planning & Studies */}
+              {/* Row 4: Work Schedule + Feasibility + Announcements */}
               <div className="grid grid-cols-3 gap-3">
                 <BentoCard bubble={BUBBLES[7]} />
                 <BentoCard bubble={BUBBLES[8]} />
