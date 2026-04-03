@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useSearch } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +51,7 @@ function WorkflowStep({ label, status, active, done }: { label: string; status: 
 }
 
 export default function PaymentRequests() {
+  const searchStr = useSearch();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [showCreate, setShowCreate] = useState(false);
@@ -67,6 +69,17 @@ export default function PaymentRequests() {
     amount: "",
     currency: "AED",
   });
+
+  // Auto-open create form if navigated from BusinessPartnersRegistry with partnerId
+  useEffect(() => {
+    if (!searchStr) return;
+    const params = new URLSearchParams(searchStr);
+    const partnerId = params.get("partnerId");
+    if (partnerId) {
+      setCreateForm(prev => ({ ...prev, partnerId }));
+      setShowCreate(true);
+    }
+  }, [searchStr]);
 
   const utils = trpc.useUtils();
   const { data: requests = [], isLoading } = trpc.paymentRequests.list.useQuery();

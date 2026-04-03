@@ -8,11 +8,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import {
-  Building2, Plus, Search, Edit2, Trash2, Eye, Upload, FileText,
+import { Building2, Plus, Search, Edit2, Trash2, Eye, Upload, FileText,
   Globe, Phone, Mail, CheckCircle, AlertCircle, Banknote, Shield,
-  ExternalLink, User,
+  ExternalLink, User, CreditCard,
 } from "lucide-react";
+import { useLocation } from "wouter";
 
 type Partner = {
   id: number;
@@ -144,6 +144,7 @@ const EMPTY_FORM: FormData = {
 };
 
 export default function BusinessPartnersRegistry() {
+  const [, navigate] = useLocation();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [showForm, setShowForm] = useState(false);
@@ -582,9 +583,22 @@ export default function BusinessPartnersRegistry() {
                 </CardContent>
               </Card>
             </div>
-            <div className="flex justify-end gap-3 mt-4 pt-4 border-t">
-              <Button variant="outline" onClick={() => { setViewingPartner(null); openEdit(viewingPartner); }}><Edit2 className="w-4 h-4 ml-2" />تعديل</Button>
-              <Button onClick={() => setViewingPartner(null)}>إغلاق</Button>
+            <div className="flex justify-between items-center mt-4 pt-4 border-t">
+              <Button
+                variant="default"
+                className="bg-amber-600 hover:bg-amber-700 text-white gap-2"
+                onClick={() => {
+                  setViewingPartner(null);
+                  navigate(`/payment-requests?partnerId=${viewingPartner.id}&partnerName=${encodeURIComponent(viewingPartner.companyName)}`);
+                }}
+              >
+                <CreditCard className="w-4 h-4" />
+                إنشاء طلب صرف
+              </Button>
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={() => { setViewingPartner(null); openEdit(viewingPartner); }}><Edit2 className="w-4 h-4 ml-2" />تعديل</Button>
+                <Button onClick={() => setViewingPartner(null)}>إغلاق</Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>

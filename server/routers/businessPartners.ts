@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
-import { getDb } from "../db";
-import { businessPartners, paymentRequests } from "../../drizzle/schema";
+import { getDb, createEmailNotification } from "../db";
+import { businessPartners, paymentRequests, users } from "../../drizzle/schema";
 import { eq, desc, sql } from "drizzle-orm";
 import { storagePut } from "../storage";
 import { sendReply } from "../emailMonitor";
@@ -285,6 +285,27 @@ export const paymentRequestsRouter = router({
         status: newStatus,
       }).where(eq(paymentRequests.id, input.id));
 
+      // Get request info and notify submitter
+      try {
+        const [pr] = await db.select().from(paymentRequests).where(eq(paymentRequests.id, input.id));
+        if (pr?.submittedBy) {
+          const decisionLabel = input.decision === "approved" ? "تمت الموافقة عليه من وائل وأُحيل للشيخ عيسى"
+            : input.decision === "rejected" ? "تم رفضه من وائل"
+            : "يحتاج إلى مراجعة (وائل)";
+          await createEmailNotification({
+            userId: pr.submittedBy,
+            emailUid: Date.now(),
+            fromEmail: "noreply@comodevelopments.com",
+            fromName: "نظام طلبات الصرف",
+            subject: `طلب الصرف ${pr.requestNumber} - ${decisionLabel}`,
+            preview: input.notes ? `ملاحظة وائل: ${input.notes}` : decisionLabel,
+            receivedAt: Date.now(),
+          });
+        }
+      } catch (notifErr) {
+        console.error("[PaymentRequest] Failed to send waelReview notification:", notifErr);
+      }
+
       return { success: true, newStatus };
     }),
 
@@ -451,6 +472,27 @@ export const paymentRequestsRouter = router({
             console.error("[PaymentRequest] Failed to send finance email:", emailErr);
           }
         }
+      }
+
+      // Notify submitter about sheikh's decision
+      try {
+        const [pr] = await db.select().from(paymentRequests).where(eq(paymentRequests.id, input.id));
+        if (pr?.submittedBy) {
+          const decisionLabel = input.decision === "approved"
+            ? "تم اعتماده من الشيخ عيسى ✔️ وسيتم إخطار فريق المالية"
+            : "تم رفضه من الشيخ عيسى";
+          await createEmailNotification({
+            userId: pr.submittedBy,
+            emailUid: Date.now() + 1,
+            fromEmail: "noreply@comodevelopments.com",
+            fromName: "نظام طلبات الصرف",
+            subject: `طلب الصرف ${pr.requestNumber} - ${decisionLabel}`,
+            preview: input.notes ? `ملاحظة الشيخ عيسى: ${input.notes}` : decisionLabel,
+            receivedAt: Date.now() + 1,
+          });
+        }
+      } catch (notifErr) {
+        console.error("[PaymentRequest] Failed to send sheikhReview notification:", notifErr);
       }
 
       return { success: true, newStatus };

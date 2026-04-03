@@ -535,3 +535,9 @@
 - [x] Build approval workflow: User → Wael → Sheikh Issa → Finance
 - [x] Add document completeness validation before allowing payment request
 - [x] Add approved quote stamp feature
+
+## Payment Requests Enhancements
+
+- [x] Verify and fix full approval workflow (User → Wael → Sheikh Issa → Finance)
+- [x] Add internal bell notifications when payment request is approved or rejected
+- [x] Add "Create Payment Request" button from Business Partner details page
