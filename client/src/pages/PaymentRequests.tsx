@@ -394,9 +394,22 @@ export default function PaymentRequests() {
         </Button>
       </div>
 
-      {/* Table */}
+      {/* Cards List */}
       {isLoading ? (
-        <div className="text-center py-20 text-gray-400">جاري التحميل...</div>
+        <div className="space-y-4">
+          {[1,2,3].map(i => (
+            <div key={i} className="bg-white rounded-2xl border border-gray-100 p-6 animate-pulse">
+              <div className="flex justify-between">
+                <div className="h-5 bg-gray-100 rounded w-32" />
+                <div className="h-6 bg-gray-100 rounded-full w-24" />
+              </div>
+              <div className="mt-4 flex gap-4">
+                <div className="h-4 bg-gray-100 rounded w-48" />
+                <div className="h-4 bg-gray-100 rounded w-32" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-20">
           <CreditCard className="w-16 h-16 text-gray-200 mx-auto mb-4" />
@@ -406,87 +419,117 @@ export default function PaymentRequests() {
           </Button>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gradient-to-r from-gray-50 to-slate-50 border-b border-gray-100">
-                  <th className="text-right p-4 text-sm font-semibold text-gray-600">رقم الطلب</th>
-                  <th className="text-right p-4 text-sm font-semibold text-gray-600">الشريك</th>
-                  <th className="text-right p-4 text-sm font-semibold text-gray-600">المشروع</th>
-                  <th className="text-right p-4 text-sm font-semibold text-gray-600">المبلغ</th>
-                  <th className="text-right p-4 text-sm font-semibold text-gray-600">سير الموافقة</th>
-                  <th className="text-right p-4 text-sm font-semibold text-gray-600">الحالة</th>
-                  <th className="text-right p-4 text-sm font-semibold text-gray-600">إجراءات</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((r, i) => {
-                  const StatusIcon = STATUS_CONFIG[r.status].icon;
-                  return (
-                    <tr key={r.id} className={`border-b border-gray-50 hover:bg-emerald-50/30 transition-colors ${i % 2 === 0 ? "" : "bg-gray-50/30"}`}>
-                      <td className="p-4">
-                        <div className="font-mono font-semibold text-gray-900 text-sm">{r.requestNumber}</div>
-                        <div className="text-xs text-gray-400 mt-0.5">{new Date(r.createdAt).toLocaleDateString("ar-AE")}</div>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <Building2 className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                          <span className="text-sm font-medium text-gray-700">{r.partnerName || "—"}</span>
+        <div className="space-y-4">
+          {filtered.map((r) => {
+            const StatusIcon = STATUS_CONFIG[r.status].icon;
+            const steps = getWorkflowSteps(r.status);
+            return (
+              <div
+                key={r.id}
+                className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
+              >
+                {/* Card Top: colored status bar */}
+                <div className={`h-1 w-full ${
+                  r.status === "approved" ? "bg-gradient-to-r from-emerald-400 to-green-500" :
+                  r.status === "rejected" ? "bg-gradient-to-r from-red-400 to-rose-500" :
+                  r.status === "needs_revision" ? "bg-gradient-to-r from-yellow-400 to-amber-500" :
+                  r.status === "pending_sheikh" ? "bg-gradient-to-r from-purple-400 to-violet-500" :
+                  r.status === "pending_wael" ? "bg-gradient-to-r from-blue-400 to-indigo-500" :
+                  "bg-gradient-to-r from-gray-300 to-slate-400"
+                }`} />
+
+                <div className="p-5">
+                  {/* Row 1: Request number + status badge + actions */}
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-100 flex items-center justify-center flex-shrink-0">
+                        <FileText className="w-5 h-5 text-emerald-600" />
+                      </div>
+                      <div>
+                        <div className="font-mono font-bold text-gray-900 text-base tracking-wide">{r.requestNumber}</div>
+                        <div className="text-xs text-gray-400 mt-0.5">{new Date(r.createdAt).toLocaleDateString("ar-AE", { year: "numeric", month: "long", day: "numeric" })}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${STATUS_CONFIG[r.status].color}`}>
+                        <StatusIcon className="w-3.5 h-3.5" />
+                        {STATUS_CONFIG[r.status].label}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Row 2: Partner + Project + Amount */}
+                  <div className="grid grid-cols-3 gap-4 mb-4 p-3 bg-gray-50 rounded-xl">
+                    <div>
+                      <div className="text-xs text-gray-400 mb-1 flex items-center gap-1">
+                        <Building2 className="w-3 h-3" /> الشريك
+                      </div>
+                      <div className="text-sm font-semibold text-gray-800 truncate">{r.partnerName || "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-400 mb-1">المشروع</div>
+                      <div className="text-sm font-medium text-gray-700 truncate">{r.projectName || "—"}</div>
+                    </div>
+                    <div className="text-left">
+                      <div className="text-xs text-gray-400 mb-1">المبلغ</div>
+                      <div className="text-base font-bold text-gray-900">
+                        {Number(r.amount).toLocaleString("en-US", { minimumFractionDigits: 0 })}
+                        <span className="text-xs font-normal text-gray-500 mr-1">{r.currency}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Row 3: Workflow steps */}
+                  <div className="flex items-center gap-2 mb-4 flex-wrap">
+                    {steps.map((step, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        {idx > 0 && <ChevronRight className="w-3.5 h-3.5 text-gray-300" />}
+                        <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                          step.done ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
+                          step.active ? "bg-blue-50 text-blue-700 border border-blue-300 ring-1 ring-blue-200" :
+                          "bg-gray-50 text-gray-400 border border-gray-200"
+                        }`}>
+                          {step.done ? <CheckCircle className="w-3 h-3" /> : step.active ? <Clock className="w-3 h-3 animate-pulse" /> : <div className="w-3 h-3 rounded-full border-2 border-current opacity-40" />}
+                          {step.label}
                         </div>
-                      </td>
-                      <td className="p-4"><span className="text-sm text-gray-600">{r.projectName || "—"}</span></td>
-                      <td className="p-4">
-                        <div className="font-bold text-gray-900">{Number(r.amount).toLocaleString("en-US", { minimumFractionDigits: 0 })}</div>
-                        <div className="text-xs text-gray-500">{r.currency}</div>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-1 flex-wrap">
-                          {getWorkflowSteps(r.status).map((step, idx) => (
-                            <div key={idx} className="flex items-center gap-1">
-                              {idx > 0 && <ChevronRight className="w-3 h-3 text-gray-300" />}
-                              <WorkflowStep {...step} status={r.status} />
-                            </div>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${STATUS_CONFIG[r.status].color}`}>
-                          <StatusIcon className="w-3 h-3" />
-                          {STATUS_CONFIG[r.status].label}
-                        </span>
-                        {r.financeEmailSentAt && (
-                          <div className="flex items-center gap-1 text-xs text-green-600 mt-1">
-                            <Mail className="w-3 h-3" />أُرسل للمالية
-                          </div>
-                        )}
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => { setViewingRequest(r); setReviewMode(null); }}
-                            className="h-8 w-8 p-0 hover:bg-blue-100 hover:text-blue-600">
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          {r.status === "pending_wael" && (
-                            <Button variant="ghost" size="sm" onClick={() => { setViewingRequest(r); setReviewMode("wael"); setReviewDecision(""); setReviewNotes(""); }}
-                              className="h-8 px-2 text-xs hover:bg-blue-100 hover:text-blue-600">
-                              مراجعة وائل
-                            </Button>
-                          )}
-                          {r.status === "pending_sheikh" && (
-                            <Button variant="ghost" size="sm" onClick={() => { setViewingRequest(r); setReviewMode("sheikh"); setReviewDecision(""); setReviewNotes(""); }}
-                              className="h-8 px-2 text-xs hover:bg-purple-100 hover:text-purple-600">
-                              قرار الشيخ
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+                    ))}
+                    {r.financeEmailSentAt && (
+                      <span className="flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                        <Mail className="w-3 h-3" /> أُرسل للمالية
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Row 4: Action buttons */}
+                  <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
+                    <Button variant="outline" size="sm" onClick={() => { setViewingRequest(r); setReviewMode(null); }}
+                      className="gap-1.5 text-xs h-8">
+                      <Eye className="w-3.5 h-3.5" /> عرض التفاصيل
+                    </Button>
+                    {r.status === "pending_wael" && (
+                      <Button size="sm" onClick={() => { setViewingRequest(r); setReviewMode("wael"); setReviewDecision(""); setReviewNotes(""); }}
+                        className="gap-1.5 text-xs h-8 bg-blue-600 hover:bg-blue-700 text-white">
+                        <CheckCircle className="w-3.5 h-3.5" /> مراجعة وائل
+                      </Button>
+                    )}
+                    {r.status === "pending_sheikh" && (
+                      <Button size="sm" onClick={() => { setViewingRequest(r); setReviewMode("sheikh"); setReviewDecision(""); setReviewNotes(""); }}
+                        className="gap-1.5 text-xs h-8 bg-purple-600 hover:bg-purple-700 text-white">
+                        <CheckCircle className="w-3.5 h-3.5" /> قرار الشيخ عيسى
+                      </Button>
+                    )}
+                    {r.status === "needs_revision" && (
+                      <Button size="sm" onClick={() => { setViewingRequest(r); setEditMode(true); setEditForm({ description: r.description, amount: r.amount, projectName: r.projectName || "", currency: r.currency }); }}
+                        className="gap-1.5 text-xs h-8 bg-amber-600 hover:bg-amber-700 text-white">
+                        <RotateCcw className="w-3.5 h-3.5" /> تعديل وإعادة إرسال
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 

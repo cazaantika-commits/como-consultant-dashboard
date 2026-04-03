@@ -566,3 +566,6 @@
 - [x] Add COMO REAL ESTATE DEVELOPMENT L.L.C logo to PDF payment order export
 - [x] Add COMO REAL ESTATE DEVELOPMENT L.L.C logo to monthly report PDF
 - [x] Add archive feature for approved/rejected payment requests (hide from main list, view in archive tab)
+
+## Payment Requests - UI Redesign
+- [x] Redesign payment requests list as elegant cards with proper spacing (not a dense table)
