@@ -441,75 +441,81 @@ export default function PaymentRequests() {
                 className={`bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 border-r-4 ${statusColor}`}
               >
                 <div className="px-4 py-3">
-                  {/* Single compact row */}
-                  <div className="flex items-center gap-3 flex-wrap">
-                    {/* Request number + date */}
-                    <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex items-center gap-0">
+
+                    {/* Col 1: Request number + date — fixed 160px */}
+                    <div className="flex items-center gap-2 w-40 flex-shrink-0">
                       <FileText className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                      <div>
+                      <div className="min-w-0">
                         <div className="font-mono font-bold text-gray-900 text-sm tracking-wide leading-tight">{r.requestNumber}</div>
                         <div className="text-xs text-gray-400">{new Date(r.createdAt).toLocaleDateString("ar-AE", { year: "numeric", month: "short", day: "numeric" })}</div>
                       </div>
                     </div>
 
-                    <div className="w-px h-8 bg-gray-200 flex-shrink-0 hidden sm:block" />
+                    <div className="w-px h-8 bg-gray-200 mx-3 flex-shrink-0" />
 
-                    {/* Partner */}
-                    <div className="flex items-center gap-1.5 min-w-0">
+                    {/* Col 2: Partner — fixed 160px */}
+                    <div className="flex items-center gap-1.5 w-40 flex-shrink-0">
                       <Building2 className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                      <span className="text-sm font-medium text-gray-700 truncate max-w-[140px]">{r.partnerName || "—"}</span>
+                      <span className="text-sm font-medium text-gray-700 truncate">{r.partnerName || "—"}</span>
                     </div>
 
-                    {/* Project */}
-                    {r.projectName && (
-                      <>
-                        <div className="w-px h-8 bg-gray-200 flex-shrink-0 hidden sm:block" />
-                        <span className="text-xs text-gray-500 truncate max-w-[120px]">{r.projectName}</span>
-                      </>
-                    )}
+                    <div className="w-px h-8 bg-gray-200 mx-3 flex-shrink-0" />
 
-                    <div className="w-px h-8 bg-gray-200 flex-shrink-0 hidden sm:block" />
+                    {/* Col 3: Project — fixed 160px */}
+                    <div className="w-40 flex-shrink-0">
+                      <span className="text-xs text-gray-500 truncate block">{r.projectName || "—"}</span>
+                    </div>
 
-                    {/* Amount */}
-                    <div className="font-bold text-gray-900 text-sm tabular-nums whitespace-nowrap">
-                      {Number(r.amount).toLocaleString("en-US", { minimumFractionDigits: 0 })}
+                    <div className="w-px h-8 bg-gray-200 mx-3 flex-shrink-0" />
+
+                    {/* Col 4: Amount — fixed 110px */}
+                    <div className="w-28 flex-shrink-0 text-left">
+                      <span className="font-bold text-gray-900 text-sm tabular-nums">
+                        {Number(r.amount).toLocaleString("en-US", { minimumFractionDigits: 0 })}
+                      </span>
                       <span className="text-xs font-normal text-gray-400 mr-1">{r.currency}</span>
+                    </div>
+
+                    <div className="w-px h-8 bg-gray-200 mx-3 flex-shrink-0" />
+
+                    {/* Col 5: Workflow steps — fixed 4 steps always shown */}
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {[
+                        { label: "تقديم", done: true, active: false },
+                        { label: "وائل", done: ["pending_sheikh", "approved", "rejected"].includes(r.status), active: r.status === "pending_wael" },
+                        { label: "الشيخ عيسى", done: r.status === "approved", active: r.status === "pending_sheikh" },
+                        { label: "المالية", done: r.status === "approved" && !!r.financeEmailSentAt, active: r.status === "approved" && !r.financeEmailSentAt },
+                      ].map((step, idx) => (
+                        <div key={idx} className="flex items-center gap-0.5">
+                          {idx > 0 && <ChevronRight className="w-3 h-3 text-gray-200 flex-shrink-0" />}
+                          <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs whitespace-nowrap ${
+                            step.done ? "bg-emerald-50 text-emerald-600" :
+                            step.active ? "bg-blue-50 text-blue-600 font-semibold" :
+                            "text-gray-300"
+                          }`}>
+                            {step.done
+                              ? <CheckCircle className="w-2.5 h-2.5 flex-shrink-0" />
+                              : step.active
+                              ? <Clock className="w-2.5 h-2.5 flex-shrink-0" />
+                              : <div className="w-2 h-2 rounded-full border border-current opacity-30 flex-shrink-0" />}
+                            {step.label}
+                          </div>
+                        </div>
+                      ))}
                     </div>
 
                     {/* Spacer */}
                     <div className="flex-1" />
 
-                    {/* Workflow mini steps */}
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      {steps.map((step, idx) => (
-                        <div key={idx} className="flex items-center gap-0.5">
-                          {idx > 0 && <ChevronRight className="w-3 h-3 text-gray-200" />}
-                          <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${
-                            step.done ? "bg-emerald-50 text-emerald-600" :
-                            step.active ? "bg-blue-50 text-blue-600 font-semibold" :
-                            "text-gray-300"
-                          }`}>
-                            {step.done ? <CheckCircle className="w-2.5 h-2.5" /> : step.active ? <Clock className="w-2.5 h-2.5" /> : <div className="w-2 h-2 rounded-full border border-current opacity-30" />}
-                            <span className="hidden md:inline">{step.label}</span>
-                          </div>
-                        </div>
-                      ))}
-                      {r.financeEmailSentAt && (
-                        <span className="flex items-center gap-0.5 text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                          <Mail className="w-2.5 h-2.5" />
-                          <span className="hidden md:inline">المالية</span>
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Status badge */}
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border flex-shrink-0 ${STATUS_CONFIG[r.status].color}`}>
+                    {/* Status badge — fixed width */}
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border flex-shrink-0 w-32 justify-center ${STATUS_CONFIG[r.status].color}`}>
                       <StatusIcon className="w-3 h-3" />
                       {STATUS_CONFIG[r.status].label}
                     </span>
 
-                    {/* Action buttons */}
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {/* Action buttons — fixed width */}
+                    <div className="flex items-center gap-1.5 flex-shrink-0 mr-2 w-24 justify-end">
                       <Button variant="ghost" size="sm" onClick={() => { setViewingRequest(r); setReviewMode(null); }}
                         className="h-7 px-2 text-xs text-gray-500 hover:text-gray-800">
                         <Eye className="w-3.5 h-3.5" />
@@ -533,6 +539,7 @@ export default function PaymentRequests() {
                         </Button>
                       )}
                     </div>
+
                   </div>
                 </div>
               </div>
