@@ -541,3 +541,9 @@
 - [x] Verify and fix full approval workflow (User → Wael → Sheikh Issa → Finance)
 - [x] Add internal bell notifications when payment request is approved or rejected
 - [x] Add "Create Payment Request" button from Business Partner details page
+
+## Payment Requests - Round 3 Enhancements
+
+- [x] Add statistics dashboard cards at top of Payment Requests page (total approved, pending, rejected amounts)
+- [x] Add PDF export for approved payment orders
+- [x] Add project filter to Payment Requests page

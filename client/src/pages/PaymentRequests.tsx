@@ -169,13 +169,16 @@ export default function PaymentRequests() {
     });
   };
 
+  const [projectFilter, setProjectFilter] = useState<string>("all");
+
   const filtered = requests.filter(r => {
     const matchSearch = !search ||
       r.requestNumber.toLowerCase().includes(search.toLowerCase()) ||
       (r.partnerName || "").toLowerCase().includes(search.toLowerCase()) ||
       (r.projectName || "").toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || r.status === statusFilter;
-    return matchSearch && matchStatus;
+    const matchProject = projectFilter === "all" || r.projectName === projectFilter;
+    return matchSearch && matchStatus && matchProject;
   });
 
   const counts = {
@@ -186,6 +189,17 @@ export default function PaymentRequests() {
     rejected: requests.filter(r => r.status === "rejected").length,
     needs_revision: requests.filter(r => r.status === "needs_revision").length,
   };
+
+  // Financial summary
+  const financialStats = {
+    approvedTotal: requests.filter(r => r.status === "approved").reduce((sum, r) => sum + Number(r.amount), 0),
+    pendingTotal: requests.filter(r => ["pending_wael", "pending_sheikh", "new"].includes(r.status)).reduce((sum, r) => sum + Number(r.amount), 0),
+    rejectedTotal: requests.filter(r => r.status === "rejected").reduce((sum, r) => sum + Number(r.amount), 0),
+    totalAll: requests.reduce((sum, r) => sum + Number(r.amount), 0),
+  };
+
+  // Unique projects for filter
+  const uniqueProjects = Array.from(new Set(requests.map(r => r.projectName).filter(Boolean))) as string[];
 
   const getWorkflowSteps = (status: string) => {
     const steps = [
@@ -212,7 +226,28 @@ export default function PaymentRequests() {
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Financial Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        {[
+          { label: "إجمالي جميع الطلبات", value: financialStats.totalAll, color: "from-slate-600 to-gray-700", bg: "bg-slate-50", border: "border-slate-200", icon: Banknote },
+          { label: "المبالغ المعتمدة", value: financialStats.approvedTotal, color: "from-green-600 to-emerald-700", bg: "bg-green-50", border: "border-green-200", icon: CheckCircle },
+          { label: "المبالغ المعلقة", value: financialStats.pendingTotal, color: "from-blue-600 to-indigo-700", bg: "bg-blue-50", border: "border-blue-200", icon: Clock },
+          { label: "المبالغ المرفوضة", value: financialStats.rejectedTotal, color: "from-red-600 to-rose-700", bg: "bg-red-50", border: "border-red-200", icon: XCircle },
+        ].map((stat, i) => (
+          <div key={i} className={`${stat.bg} border ${stat.border} rounded-2xl p-4 shadow-sm`}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-gray-500">{stat.label}</span>
+              <stat.icon className="w-4 h-4 text-gray-400" />
+            </div>
+            <div className={`text-xl font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent`}>
+              {stat.value.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            </div>
+            <div className="text-xs text-gray-400 mt-0.5">درهم إماراتي</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Status Stats */}
       <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-6">
         {[
           { key: "all", label: "الكل", color: "from-gray-500 to-gray-600" },
@@ -232,13 +267,26 @@ export default function PaymentRequests() {
         ))}
       </div>
 
-      {/* Search + Add */}
-      <div className="flex gap-3 mb-6">
-        <div className="relative flex-1">
+      {/* Search + Filter + Add */}
+      <div className="flex gap-3 mb-6 flex-wrap">
+        <div className="relative flex-1 min-w-48">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input placeholder="بحث برقم الطلب أو الشريك أو المشروع..." value={search}
             onChange={e => setSearch(e.target.value)} className="pr-10 bg-white" />
         </div>
+        {uniqueProjects.length > 0 && (
+          <Select value={projectFilter} onValueChange={setProjectFilter}>
+            <SelectTrigger className="w-48 bg-white">
+              <SelectValue placeholder="فلتر حسب المشروع" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">جميع المشاريع</SelectItem>
+              {uniqueProjects.map(p => (
+                <SelectItem key={p} value={p}>{p}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         <Button onClick={() => setShowCreate(true)} className="bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white shadow-md">
           <Plus className="w-4 h-4 ml-2" />
           طلب صرف جديد
@@ -587,20 +635,58 @@ export default function PaymentRequests() {
               )}
             </div>
 
-            <div className="flex justify-end gap-3 mt-4 pt-4 border-t">
-              {!reviewMode && viewingRequest.status === "pending_wael" && (
-                <Button onClick={() => { setReviewMode("wael"); setReviewDecision(""); setReviewNotes(""); }}
-                  className="bg-blue-600 hover:bg-blue-700 text-white">
-                  مراجعة وائل
-                </Button>
-              )}
-              {!reviewMode && viewingRequest.status === "pending_sheikh" && (
-                <Button onClick={() => { setReviewMode("sheikh"); setReviewDecision(""); setReviewNotes(""); }}
-                  className="bg-purple-600 hover:bg-purple-700 text-white">
-                  قرار الشيخ عيسى
-                </Button>
-              )}
-              <Button variant="outline" onClick={() => { setViewingRequest(null); setReviewMode(null); }}>إغلاق</Button>
+            <div className="flex justify-between items-center mt-4 pt-4 border-t">
+              <div>
+                {viewingRequest.status === "approved" && (
+                  <Button
+                    variant="outline"
+                    className="border-emerald-300 text-emerald-700 hover:bg-emerald-50 gap-2"
+                    onClick={() => {
+                      const content = `
+شركة كومو للتطوير العقاري
+أمر صرف رقم: ${viewingRequest.requestNumber}
+تاريخ: ${new Date(viewingRequest.createdAt).toLocaleDateString("ar-AE")}
+
+الشريك / المتعامل: ${viewingRequest.partnerName || "—"}
+المشروع: ${viewingRequest.projectName || "—"}
+الوصف: ${viewingRequest.description}
+
+المبلغ: ${Number(viewingRequest.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })} ${viewingRequest.currency}
+
+الحالة: معتمد
+معتمد من قبل الشيخ عيسى
+${viewingRequest.financeEmailSentAt ? `أرسل لفريق المالية: ${new Date(viewingRequest.financeEmailSentAt).toLocaleDateString("ar-AE")}` : ""}
+                      `.trim();
+                      const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `أمر-صرف-${viewingRequest.requestNumber}.txt`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                      toast.success("تم تصدير أمر الصرف");
+                    }}
+                  >
+                    <FileText className="w-4 h-4" />
+                    تصدير أمر الصرف
+                  </Button>
+                )}
+              </div>
+              <div className="flex gap-3">
+                {!reviewMode && viewingRequest.status === "pending_wael" && (
+                  <Button onClick={() => { setReviewMode("wael"); setReviewDecision(""); setReviewNotes(""); }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white">
+                    مراجعة وائل
+                  </Button>
+                )}
+                {!reviewMode && viewingRequest.status === "pending_sheikh" && (
+                  <Button onClick={() => { setReviewMode("sheikh"); setReviewDecision(""); setReviewNotes(""); }}
+                    className="bg-purple-600 hover:bg-purple-700 text-white">
+                    قرار الشيخ عيسى
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => { setViewingRequest(null); setReviewMode(null); }}>إغلاق</Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
