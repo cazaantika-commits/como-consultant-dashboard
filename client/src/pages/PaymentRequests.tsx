@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import {
   CreditCard, Plus, Search, Eye, CheckCircle, XCircle, Clock,
   AlertCircle, Upload, FileText, Building2, DollarSign, Send,
-  ChevronRight, RotateCcw, Mail, ExternalLink, Banknote, Settings, Download, Calendar
+  ChevronRight, RotateCcw, Mail, ExternalLink, Banknote, Settings, Download, Calendar, Archive, ArchiveRestore
 } from "lucide-react";
 
 type PaymentRequest = {
@@ -237,8 +237,21 @@ export default function PaymentRequests() {
   };
 
   const [projectFilter, setProjectFilter] = useState<string>("all");
+  const [showArchived, setShowArchived] = useState(false);
 
-  const filtered = requests.filter(r => {
+  const archiveMutation = trpc.paymentRequests.archive.useMutation({
+    onSuccess: (_, vars) => {
+      utils.paymentRequests.list.invalidate();
+      setViewingRequest(null);
+      toast.success(vars.archive ? "تم أرشفة الطلب" : "تم إلغاء الأرشفة");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const filtered = requests.filter((r: any) => {
+    const isArchived = r.isArchived === 1 || r.isArchived === true;
+    if (!showArchived && isArchived) return false;
+    if (showArchived && !isArchived) return false;
     const matchSearch = !search ||
       r.requestNumber.toLowerCase().includes(search.toLowerCase()) ||
       (r.partnerName || "").toLowerCase().includes(search.toLowerCase()) ||
@@ -296,6 +309,15 @@ export default function PaymentRequests() {
             <Button variant="outline" size="sm" onClick={() => setShowMonthlyReport(true)} className="gap-2 text-sm">
               <Calendar className="w-4 h-4" />
               تقرير شهري
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowArchived(!showArchived)}
+              className={`gap-2 text-sm ${showArchived ? "bg-amber-50 border-amber-300 text-amber-700" : ""}`}
+            >
+              {showArchived ? <ArchiveRestore className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
+              {showArchived ? "عرض النشطة" : "الأرشيف"}
             </Button>
             <Button variant="outline" size="sm" onClick={() => navigate("/approval-settings")} className="gap-2 text-sm">
               <Settings className="w-4 h-4" />
@@ -786,7 +808,7 @@ export default function PaymentRequests() {
             )}
 
             <div className="flex justify-between items-center mt-4 pt-4 border-t">
-              <div>
+              <div className="flex gap-2">
                 {viewingRequest.status === "approved" && (
                   <Button
                     variant="outline"
@@ -795,7 +817,18 @@ export default function PaymentRequests() {
                     onClick={() => exportPDFMutation.mutate({ id: viewingRequest.id })}
                   >
                     <Download className="w-4 h-4" />
-                    {exportPDFMutation.isPending ? "جاري توليد PDF..." : "تصدير أمر الصرف PDF"}
+                    {exportPDFMutation.isPending ? "جاري توليد PDF..." : "تصدير PDF"}
+                  </Button>
+                )}
+                {(viewingRequest.status === "approved" || viewingRequest.status === "rejected") && (
+                  <Button
+                    variant="outline"
+                    className="border-amber-300 text-amber-700 hover:bg-amber-50 gap-2"
+                    disabled={archiveMutation.isPending}
+                    onClick={() => archiveMutation.mutate({ id: viewingRequest.id, archive: !(viewingRequest as any).isArchived })}
+                  >
+                    {(viewingRequest as any).isArchived ? <ArchiveRestore className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
+                    {(viewingRequest as any).isArchived ? "إلغاء الأرشفة" : "أرشفة"}
                   </Button>
                 )}
               </div>

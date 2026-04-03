@@ -560,3 +560,9 @@
 - [x] Real PDF export for approved payment orders (server-side, with company logo and approved stamp)
 - [x] Approval authority management panel (configure approver emails/names from UI)
 - [x] Monthly PDF report for payment requests
+
+## Payment Requests - Round 5 Enhancements
+
+- [x] Add COMO REAL ESTATE DEVELOPMENT L.L.C logo to PDF payment order export
+- [x] Add COMO REAL ESTATE DEVELOPMENT L.L.C logo to monthly report PDF
+- [x] Add archive feature for approved/rejected payment requests (hide from main list, view in archive tab)

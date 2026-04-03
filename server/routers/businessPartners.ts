@@ -5,7 +5,7 @@ import { businessPartners, paymentRequests, users, approvalSettings } from "../.
 import { eq, desc, sql } from "drizzle-orm";
 import { storagePut } from "../storage";
 import { sendReply } from "../emailMonitor";
-import { generatePaymentOrderPDF } from "../pdfGenerator";
+import { generatePaymentOrderPDF, generateMonthlyReportPDF } from "../pdfGenerator";
 import { storagePut as s3Put } from "../storage";
 
 // Finance team emails (defaults - overridden by approval_settings table)
@@ -717,7 +717,6 @@ export const paymentRequestsRouter = router({
         .leftJoin(businessPartners, eq(paymentRequests.partnerId, businessPartners.id))
         .orderBy(desc(paymentRequests.createdAt));
 
-      // Filter by month
       const filtered = requests.filter(r => {
         const d = new Date(r.createdAt);
         return d.getFullYear() === input.year && d.getMonth() + 1 === input.month;
@@ -730,103 +729,43 @@ export const paymentRequestsRouter = router({
       const totalPending = filtered.filter(r => r.status !== "approved" && r.status !== "rejected").reduce((s, r) => s + Number(r.amount), 0);
       const totalRejected = filtered.filter(r => r.status === "rejected").reduce((s, r) => s + Number(r.amount), 0);
 
-      const PDFDocument = (await import("pdfkit")).default;
-      const chunks: Buffer[] = [];
-      const pdfBuffer = await new Promise<Buffer>((resolve, reject) => {
-        const doc = new PDFDocument({ size: "A4", margin: 50 });
-        doc.on("data", (c: Buffer) => chunks.push(c));
-        doc.on("end", () => resolve(Buffer.concat(chunks)));
-        doc.on("error", reject);
-
-        const pageWidth = doc.page.width;
-        const margin = 50;
-        const contentWidth = pageWidth - margin * 2;
-
-        // Header
-        doc.rect(0, 0, pageWidth, 90).fill("#1a3c5e");
-        doc.fillColor("white").font("Helvetica-Bold").fontSize(20)
-          .text("COMO DEVELOPMENTS", margin, 22, { width: contentWidth / 2 });
-        doc.fillColor("white").font("Helvetica-Bold").fontSize(16)
-          .text(`PAYMENT REQUESTS REPORT`, margin + contentWidth / 2, 22, { width: contentWidth / 2, align: "right" });
-        doc.fillColor("rgba(255,255,255,0.7)").font("Helvetica").fontSize(11)
-          .text(`${monthName} ${input.year}`, margin + contentWidth / 2, 46, { width: contentWidth / 2, align: "right" });
-
-        let y = 110;
-
-        // Summary cards
-        const cardW = (contentWidth - 20) / 3;
-        const cards = [
-          { label: "Approved", amount: totalApproved, color: "#16a34a" },
-          { label: "Pending", amount: totalPending, color: "#d97706" },
-          { label: "Rejected", amount: totalRejected, color: "#dc2626" },
-        ];
-        cards.forEach((card, i) => {
-          const cx = margin + i * (cardW + 10);
-          doc.rect(cx, y, cardW, 60).fill(card.color);
-          doc.fillColor("white").font("Helvetica-Bold").fontSize(10).text(card.label, cx + 10, y + 10, { width: cardW - 20 });
-          doc.fillColor("white").font("Helvetica-Bold").fontSize(14)
-            .text(`AED ${card.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}`, cx + 10, y + 30, { width: cardW - 20 });
-        });
-        y += 80;
-
-        // Table header
-        doc.rect(margin, y, contentWidth, 22).fill("#1a3c5e");
-        const cols = [{ label: "#", w: 30 }, { label: "Request No", w: 100 }, { label: "Partner", w: 130 }, { label: "Project", w: 100 }, { label: "Amount", w: 90 }, { label: "Status", w: 75 }];
-        let cx2 = margin;
-        doc.fillColor("white").font("Helvetica-Bold").fontSize(9);
-        cols.forEach(col => {
-          doc.text(col.label, cx2 + 4, y + 6, { width: col.w - 8 });
-          cx2 += col.w;
-        });
-        y += 22;
-
-        filtered.forEach((r, idx) => {
-          if (y > 750) { doc.addPage(); y = 50; }
-          const bg = idx % 2 === 0 ? "#fafafa" : "#ffffff";
-          doc.rect(margin, y, contentWidth, 20).fill(bg);
-          doc.rect(margin, y, contentWidth, 20).lineWidth(0.3).strokeColor("#e0e0e0").stroke();
-
-          const statusColors: Record<string, string> = { approved: "#16a34a", rejected: "#dc2626", pending_wael: "#d97706", pending_sheikh: "#2563eb", needs_revision: "#7c3aed" };
-          const statusLabels: Record<string, string> = { approved: "Approved", rejected: "Rejected", pending_wael: "Pending Wael", pending_sheikh: "Pending Sheikh", needs_revision: "Needs Revision" };
-
-          let cx3 = margin;
-          const vals = [
-            String(idx + 1),
-            r.requestNumber,
-            (r.partnerName || "—").substring(0, 18),
-            (r.projectName || "—").substring(0, 15),
-            `${Number(r.amount).toLocaleString("en-US", { minimumFractionDigits: 0 })} ${r.currency}`,
-            statusLabels[r.status] || r.status,
-          ];
-          vals.forEach((val, vi) => {
-            const col = cols[vi];
-            if (vi === 5) {
-              doc.fillColor(statusColors[r.status] || "#333");
-            } else {
-              doc.fillColor("#1a1a1a");
-            }
-            doc.font("Helvetica").fontSize(8.5).text(val, cx3 + 4, y + 5, { width: col.w - 8 });
-            cx3 += col.w;
-          });
-          y += 20;
-        });
-
-        if (filtered.length === 0) {
-          doc.fillColor("#888").font("Helvetica").fontSize(12)
-            .text("No payment requests found for this period.", margin, y + 20, { width: contentWidth, align: "center" });
-        }
-
-        // Footer
-        doc.rect(0, doc.page.height - 40, pageWidth, 40).fill("#1a3c5e");
-        doc.fillColor("rgba(255,255,255,0.7)").font("Helvetica").fontSize(9)
-          .text(`Como Developments  |  Monthly Payment Report  |  ${monthName} ${input.year}  |  Total Requests: ${filtered.length}`, margin, doc.page.height - 25, { width: contentWidth, align: "center" });
-
-        doc.end();
+      const pdfBuffer = await generateMonthlyReportPDF({
+        month: monthName,
+        year: String(input.year),
+        requests: filtered.map(r => ({
+          requestNumber: r.requestNumber,
+          partnerName: r.partnerName || "—",
+          projectName: r.projectName || "—",
+          amount: r.amount,
+          currency: r.currency,
+          status: r.status,
+          description: r.description || "",
+          createdAt: r.createdAt,
+        })),
+        totalApproved,
+        totalPending,
+        totalRejected,
+        grandTotal: totalApproved + totalPending + totalRejected,
+        currency: "AED",
       });
 
       const key = `payment-orders/reports/monthly-${input.year}-${String(input.month).padStart(2, "0")}-${Date.now()}.pdf`;
       const { url } = await s3Put(key, pdfBuffer, "application/pdf");
       return { url, fileName: `Payment-Report-${monthName}-${input.year}.pdf` };
+    }),
+
+  // ── Archive / Unarchive ────────────────────────────────────────────────────
+  archive: protectedProcedure
+    .input(z.object({ id: z.number(), archive: z.boolean() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      await db.update(paymentRequests)
+        .set({
+          isArchived: input.archive ? 1 : 0,
+          archivedAt: input.archive ? new Date().toISOString().slice(0, 19).replace("T", " ") : null,
+        })
+        .where(eq(paymentRequests.id, input.id));
+      return { success: true };
     }),
 });
 

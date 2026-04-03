@@ -2150,6 +2150,9 @@ export const paymentRequests = mysqlTable("payment_requests", {
   stampedQuoteUrl: text("stamped_quote_url"),
   // Submitter
   submittedBy: int("submitted_by").references(() => users.id),
+  // Archive
+  isArchived: tinyint("is_archived").default(0).notNull(),
+  archivedAt: timestamp("archived_at", { mode: "string" }),
   // Audit
   createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
   updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
