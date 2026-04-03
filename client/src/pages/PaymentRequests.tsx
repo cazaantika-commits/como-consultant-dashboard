@@ -65,6 +65,7 @@ export default function PaymentRequests() {
   const [reviewNotes, setReviewNotes] = useState("");
   const [quoteFile, setQuoteFile] = useState<{ url: string; name: string } | null>(null);
   const quoteInputRef = useRef<HTMLInputElement>(null);
+  const viewQuoteInputRef = useRef<HTMLInputElement>(null);
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState({ description: "", amount: "", projectName: "", currency: "AED" });
   const editQuoteInputRef = useRef<HTMLInputElement>(null);
@@ -223,14 +224,38 @@ export default function PaymentRequests() {
     });
   };
 
+  const handleViewQuoteUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !viewingRequest) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(",")[1];
+      uploadQuoteMutation.mutate(
+        { fileName: file.name, fileBase64: base64, mimeType: file.type, requestId: viewingRequest.id },
+        { onSuccess: (data) => {
+          toast.success("تم رفع العرض المعتمد بنجاح");
+          utils.paymentRequests.list.invalidate();
+          // Update the viewing request locally so UI reflects immediately
+          setViewingRequest(prev => prev ? { ...prev, approvedQuoteUrl: data.url, approvedQuoteName: data.fileName } : null);
+          if (viewQuoteInputRef.current) viewQuoteInputRef.current.value = "";
+        }}
+      );
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleEditQuoteUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
       const base64 = (reader.result as string).split(",")[1];
-      uploadQuoteMutation.mutate({ fileName: file.name, fileBase64: base64, mimeType: file.type },
-        { onSuccess: (data) => setEditQuoteFile({ url: data.url, name: data.fileName }) }
+      uploadQuoteMutation.mutate(
+        { fileName: file.name, fileBase64: base64, mimeType: file.type, requestId: viewingRequest?.id },
+        { onSuccess: (data) => {
+          setEditQuoteFile({ url: data.url, name: data.fileName });
+          utils.paymentRequests.list.invalidate();
+        }}
       );
     };
     reader.readAsDataURL(file);
@@ -727,16 +752,30 @@ export default function PaymentRequests() {
                     <span className="text-gray-500">تاريخ الطلب:</span>
                     <div className="font-medium">{new Date(viewingRequest.createdAt).toLocaleDateString("ar-AE")}</div>
                   </div>
-                  {viewingRequest.approvedQuoteUrl && (
-                    <div className="col-span-2">
-                      <a href={viewingRequest.approvedQuoteUrl} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-2 p-2 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-sm hover:bg-blue-100">
-                        <FileText className="w-4 h-4" />
-                        <span className="flex-1">{viewingRequest.approvedQuoteName || "العرض المعتمد"}</span>
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    </div>
-                  )}
+                  <div className="col-span-2">
+                    {viewingRequest.approvedQuoteUrl ? (
+                      <div className="flex items-center gap-2">
+                        <a href={viewingRequest.approvedQuoteUrl} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-2 p-2 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-sm hover:bg-blue-100 flex-1">
+                          <FileText className="w-4 h-4" />
+                          <span className="flex-1">{viewingRequest.approvedQuoteName || "العرض المعتمد"}</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                        <Button variant="outline" size="sm" onClick={() => viewQuoteInputRef.current?.click()}
+                          disabled={uploadQuoteMutation.isPending} className="h-8 px-2 text-xs gap-1">
+                          <Upload className="w-3 h-3" />
+                          {uploadQuoteMutation.isPending ? "..." : "تغيير"}
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button variant="outline" onClick={() => viewQuoteInputRef.current?.click()}
+                        disabled={uploadQuoteMutation.isPending} className="w-full border-dashed text-sm gap-2">
+                        <Upload className="w-4 h-4" />
+                        {uploadQuoteMutation.isPending ? "جاري رفع الملف..." : "رفع العرض المعتمد (PDF أو صورة)"}
+                      </Button>
+                    )}
+                    <input ref={viewQuoteInputRef} type="file" className="hidden" onChange={handleViewQuoteUpload} accept=".pdf,.jpg,.jpeg,.png" />
+                  </div>
                   {viewingRequest.financeEmailSentAt && (
                     <div className="col-span-2 flex items-center gap-2 p-2 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">
                       <Mail className="w-4 h-4" />
