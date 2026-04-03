@@ -547,3 +547,10 @@
 - [x] Add statistics dashboard cards at top of Payment Requests page (total approved, pending, rejected amounts)
 - [x] Add PDF export for approved payment orders
 - [x] Add project filter to Payment Requests page
+
+## Payment Requests - Gap Fixes
+
+- [x] Send email to Wael when a new payment request is created
+- [x] Send email to Sheikh Issa when Wael approves a request
+- [x] Add "needs revision" option for Sheikh Issa (same as Wael)
+- [x] Allow editing a request when status is "needs_revision"

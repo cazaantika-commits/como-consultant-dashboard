@@ -9,6 +9,8 @@ import { sendReply } from "../emailMonitor";
 // Finance team emails
 const FINANCE_EMAILS = ["shahid@zooma.ae", "account.mrt@zooma.ae", "thanseeh@globalhightrend.com"];
 const CC_EMAILS = ["wael@zooma.ae", "a.zaqout@comodevelopments.com"];
+const WAEL_EMAIL = "wael@zooma.ae";
+const SHEIKH_EMAIL = "issa@comodevelopments.com"; // Sheikh Issa's email
 
 function generateRequestNumber(): string {
   const year = new Date().getFullYear();
@@ -239,7 +241,37 @@ export const paymentRequestsRouter = router({
         status: "pending_wael",
         submittedBy: ctx.user.id,
       });
-      return { id: (result as any).insertId, requestNumber };
+      const insertId = (result as any).insertId;
+
+      // Notify Wael by email about new payment request
+      try {
+        const [partner] = await db.select().from(businessPartners).where(eq(businessPartners.id, input.partnerId));
+        const waelSubject = `طلب صرف جديد يحتاج موافقتك - ${requestNumber}`;
+        const waelBody = `
+<div style="font-family: Arial, sans-serif; direction: rtl; max-width: 650px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+  <div style="background: #1a3c5e; color: white; padding: 20px 30px; text-align: right;">
+    <h2 style="margin: 0; font-size: 20px;">طلب صرف جديد</h2>
+    <p style="margin: 5px 0 0; opacity: 0.8; font-size: 13px;">كومو للتطوير العقاري</p>
+  </div>
+  <div style="padding: 25px 30px; background: #f9f9f9; text-align: right;">
+    <p style="color: #333; font-size: 15px;">وائل، يوجد طلب صرف جديد يحتاج موافقتك:</p>
+    <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+      <tr style="background: #f0f4f8;"><td style="padding: 10px 14px; font-weight: bold; color: #555;">رقم الطلب</td><td style="padding: 10px 14px; font-weight: bold; color: #1a3c5e;">${requestNumber}</td></tr>
+      <tr><td style="padding: 10px 14px; font-weight: bold; color: #555;">الجهة المستفيدة</td><td style="padding: 10px 14px;">${partner?.companyName || "—"}</td></tr>
+      <tr style="background: #f0f4f8;"><td style="padding: 10px 14px; font-weight: bold; color: #555;">المشروع</td><td style="padding: 10px 14px;">${input.projectName || "—"}</td></tr>
+      <tr><td style="padding: 10px 14px; font-weight: bold; color: #555;">المبلغ</td><td style="padding: 10px 14px; font-weight: bold; color: #1a3c5e; font-size: 16px;">${Number(input.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })} ${input.currency}</td></tr>
+      <tr style="background: #f0f4f8;"><td style="padding: 10px 14px; font-weight: bold; color: #555;">الوصف</td><td style="padding: 10px 14px;">${input.description}</td></tr>
+      <tr><td style="padding: 10px 14px; font-weight: bold; color: #555;">مقدم الطلب</td><td style="padding: 10px 14px;">${ctx.user.name}</td></tr>
+    </table>
+    <p style="margin-top: 15px; color: #666; font-size: 13px;">يرجى الدخول على المنصة لمراجعة الطلب والبت فيه.</p>
+  </div>
+</div>`;
+        await sendReply(WAEL_EMAIL, waelSubject, waelBody);
+      } catch (emailErr) {
+        console.error("[PaymentRequest] Failed to send Wael notification email:", emailErr);
+      }
+
+      return { id: insertId, requestNumber };
     }),
 
   // ── Upload approved quote ──────────────────────────────────────────────────
@@ -285,9 +317,11 @@ export const paymentRequestsRouter = router({
         status: newStatus,
       }).where(eq(paymentRequests.id, input.id));
 
-      // Get request info and notify submitter
+      // Get request info
+      const [pr] = await db.select().from(paymentRequests).where(eq(paymentRequests.id, input.id));
+
+      // Notify submitter internally
       try {
-        const [pr] = await db.select().from(paymentRequests).where(eq(paymentRequests.id, input.id));
         if (pr?.submittedBy) {
           const decisionLabel = input.decision === "approved" ? "تمت الموافقة عليه من وائل وأُحيل للشيخ عيسى"
             : input.decision === "rejected" ? "تم رفضه من وائل"
@@ -306,6 +340,37 @@ export const paymentRequestsRouter = router({
         console.error("[PaymentRequest] Failed to send waelReview notification:", notifErr);
       }
 
+      // If Wael approved → email Sheikh Issa
+      if (input.decision === "approved" && pr) {
+        try {
+          const [partnerRow] = await db.select().from(businessPartners).where(eq(businessPartners.id, pr.partnerId));
+          const sheikhSubject = `طلب صرف يحتاج اعتمادك - ${pr.requestNumber}`;
+          const sheikhBody = `
+<div style="font-family: Arial, sans-serif; direction: rtl; max-width: 650px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+  <div style="background: #1a3c5e; color: white; padding: 20px 30px; text-align: right;">
+    <h2 style="margin: 0; font-size: 20px;">طلب صرف يحتاج اعتمادكم</h2>
+    <p style="margin: 5px 0 0; opacity: 0.8; font-size: 13px;">كومو للتطوير العقاري</p>
+  </div>
+  <div style="padding: 25px 30px; background: #f9f9f9; text-align: right;">
+    <p style="color: #333; font-size: 15px;">سعادة الشيخ عيسى، وافق وائل على طلب الصرف التالي ويحتاج اعتمادكم:</p>
+    <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+      <tr style="background: #f0f4f8;"><td style="padding: 10px 14px; font-weight: bold; color: #555;">رقم الطلب</td><td style="padding: 10px 14px; font-weight: bold; color: #1a3c5e;">${pr.requestNumber}</td></tr>
+      <tr><td style="padding: 10px 14px; font-weight: bold; color: #555;">الجهة المستفيدة</td><td style="padding: 10px 14px;">${partnerRow?.companyName || "—"}</td></tr>
+      <tr style="background: #f0f4f8;"><td style="padding: 10px 14px; font-weight: bold; color: #555;">المشروع</td><td style="padding: 10px 14px;">${pr.projectName || "—"}</td></tr>
+      <tr><td style="padding: 10px 14px; font-weight: bold; color: #555;">المبلغ</td><td style="padding: 10px 14px; font-weight: bold; color: #1a3c5e; font-size: 16px;">${Number(pr.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })} ${pr.currency}</td></tr>
+      <tr style="background: #f0f4f8;"><td style="padding: 10px 14px; font-weight: bold; color: #555;">الوصف</td><td style="padding: 10px 14px;">${pr.description}</td></tr>
+      <tr><td style="padding: 10px 14px; font-weight: bold; color: #555;">ملاحظة وائل</td><td style="padding: 10px 14px;">${input.notes || "—"}</td></tr>
+      ${pr.approvedQuoteUrl ? `<tr style="background: #f0f4f8;"><td style="padding: 10px 14px; font-weight: bold; color: #555;">العرض المعتمد</td><td style="padding: 10px 14px;"><a href="${pr.approvedQuoteUrl}" style="color: #1a3c5e;">عرض الملف</a></td></tr>` : ""}
+    </table>
+    <p style="margin-top: 15px; color: #666; font-size: 13px;">يرجى الدخول على المنصة لمراجعة الطلب واعتماده أو رفضه.</p>
+  </div>
+</div>`;
+          await sendReply(SHEIKH_EMAIL, sheikhSubject, sheikhBody, undefined, WAEL_EMAIL);
+        } catch (sheikhEmailErr) {
+          console.error("[PaymentRequest] Failed to send Sheikh Issa email:", sheikhEmailErr);
+        }
+      }
+
       return { success: true, newStatus };
     }),
 
@@ -313,15 +378,17 @@ export const paymentRequestsRouter = router({
   sheikhReview: protectedProcedure
     .input(z.object({
       id: z.number(),
-      decision: z.enum(["approved", "rejected"]),
+      decision: z.enum(["approved", "rejected", "needs_revision"]),
       notes: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
-      const newStatus = input.decision === "approved" ? "approved" : "rejected";
+      const newStatus = input.decision === "approved" ? "approved"
+        : input.decision === "rejected" ? "rejected"
+        : "needs_revision";
 
       await db.update(paymentRequests).set({
-        sheikhDecision: input.decision,
+        sheikhDecision: input.decision as any,
         sheikhNotes: input.notes,
         sheikhReviewedAt: new Date().toISOString().slice(0, 19).replace("T", " "),
         status: newStatus,
@@ -480,6 +547,8 @@ export const paymentRequestsRouter = router({
         if (pr?.submittedBy) {
           const decisionLabel = input.decision === "approved"
             ? "تم اعتماده من الشيخ عيسى ✔️ وسيتم إخطار فريق المالية"
+            : input.decision === "needs_revision"
+            ? "يحتاج إلى مراجعة (الشيخ عيسى)"
             : "تم رفضه من الشيخ عيسى";
           await createEmailNotification({
             userId: pr.submittedBy,
@@ -496,6 +565,34 @@ export const paymentRequestsRouter = router({
       }
 
       return { success: true, newStatus };
+    }),
+
+  // ── Update payment request (for needs_revision state) ───────────────────────
+  update: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      projectName: z.string().optional(),
+      description: z.string().min(1).optional(),
+      amount: z.string().optional(),
+      currency: z.string().optional(),
+      approvedQuoteUrl: z.string().optional(),
+      approvedQuoteName: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      const { id, ...data } = input;
+      // Reset to pending_wael so it goes through approval again
+      await db.update(paymentRequests).set({
+        ...data,
+        status: "pending_wael",
+        waelDecision: null as any,
+        waelNotes: null as any,
+        waelReviewedAt: null as any,
+        sheikhDecision: null as any,
+        sheikhNotes: null as any,
+        sheikhReviewedAt: null as any,
+      }).where(eq(paymentRequests.id, id));
+      return { success: true };
     }),
 
   // ── Check document completeness ────────────────────────────────────────────

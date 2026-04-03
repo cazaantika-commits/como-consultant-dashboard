@@ -61,6 +61,10 @@ export default function PaymentRequests() {
   const [reviewNotes, setReviewNotes] = useState("");
   const [quoteFile, setQuoteFile] = useState<{ url: string; name: string } | null>(null);
   const quoteInputRef = useRef<HTMLInputElement>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [editForm, setEditForm] = useState({ description: "", amount: "", projectName: "", currency: "AED" });
+  const editQuoteInputRef = useRef<HTMLInputElement>(null);
+  const [editQuoteFile, setEditQuoteFile] = useState<{ url: string; name: string } | null>(null);
 
   const [createForm, setCreateForm] = useState({
     partnerId: "",
@@ -114,13 +118,27 @@ export default function PaymentRequests() {
   });
 
   const sheikhReviewMutation = trpc.paymentRequests.sheikhReview.useMutation({
-    onSuccess: () => {
+    onSuccess: (_, vars) => {
       utils.paymentRequests.list.invalidate();
       setViewingRequest(null);
       setReviewMode(null);
       setReviewDecision("");
       setReviewNotes("");
-      toast.success("تم تسجيل قرار الشيخ عيسى وإرسال أمر الصرف للمالية");
+      const msg = vars.decision === "approved" ? "تم اعتماد الطلب وإرسال أمر الصرف للمالية"
+        : vars.decision === "needs_revision" ? "تم إعادة الطلب للمراجعة"
+        : "تم رفض الطلب";
+      toast.success(msg);
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const updateMutation = trpc.paymentRequests.update.useMutation({
+    onSuccess: () => {
+      utils.paymentRequests.list.invalidate();
+      setViewingRequest(null);
+      setEditMode(false);
+      setEditQuoteFile(null);
+      toast.success("تم تحديث الطلب وإعادة إرساله لوائل");
     },
     onError: (e) => toast.error(e.message),
   });
@@ -167,6 +185,34 @@ export default function PaymentRequests() {
       decision: reviewDecision as any,
       notes: reviewNotes || undefined,
     });
+  };
+
+  const handleEditSubmit = () => {
+    if (!viewingRequest) return;
+    if (!editForm.description.trim()) { toast.error("وصف الطلب مطلوب"); return; }
+    if (!editForm.amount || isNaN(Number(editForm.amount))) { toast.error("المبلغ غير صحيح"); return; }
+    updateMutation.mutate({
+      id: viewingRequest.id,
+      description: editForm.description,
+      amount: editForm.amount,
+      projectName: editForm.projectName || undefined,
+      currency: editForm.currency,
+      approvedQuoteUrl: editQuoteFile?.url || viewingRequest.approvedQuoteUrl || undefined,
+      approvedQuoteName: editQuoteFile?.name || viewingRequest.approvedQuoteName || undefined,
+    });
+  };
+
+  const handleEditQuoteUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(",")[1];
+      uploadQuoteMutation.mutate({ fileName: file.name, fileBase64: base64, mimeType: file.type },
+        { onSuccess: (data) => setEditQuoteFile({ url: data.url, name: data.fileName }) }
+      );
+    };
+    reader.readAsDataURL(file);
   };
 
   const [projectFilter, setProjectFilter] = useState<string>("all");
@@ -603,12 +649,16 @@ export default function PaymentRequests() {
                         ) : (
                           <>
                             <button onClick={() => setReviewDecision("approved")}
-                              className={`flex-1 py-3 rounded-lg border-2 text-sm font-medium transition-all ${reviewDecision === "approved" ? "border-green-500 bg-green-50 text-green-700" : "border-gray-200 hover:border-green-300"}`}>
-                              <CheckCircle className="w-4 h-4 inline ml-1" />اعتماد وإرسال للمالية
+                              className={`flex-1 py-2 rounded-lg border-2 text-xs font-medium transition-all ${reviewDecision === "approved" ? "border-green-500 bg-green-50 text-green-700" : "border-gray-200 hover:border-green-300"}`}>
+                              <CheckCircle className="w-3 h-3 inline ml-1" />اعتماد وإرسال للمالية
+                            </button>
+                            <button onClick={() => setReviewDecision("needs_revision")}
+                              className={`flex-1 py-2 rounded-lg border-2 text-xs font-medium transition-all ${reviewDecision === "needs_revision" ? "border-yellow-500 bg-yellow-50 text-yellow-700" : "border-gray-200 hover:border-yellow-300"}`}>
+                              <RotateCcw className="w-3 h-3 inline ml-1" />يحتاج مراجعة
                             </button>
                             <button onClick={() => setReviewDecision("rejected")}
-                              className={`flex-1 py-3 rounded-lg border-2 text-sm font-medium transition-all ${reviewDecision === "rejected" ? "border-red-500 bg-red-50 text-red-700" : "border-gray-200 hover:border-red-300"}`}>
-                              <XCircle className="w-4 h-4 inline ml-1" />رفض
+                              className={`flex-1 py-2 rounded-lg border-2 text-xs font-medium transition-all ${reviewDecision === "rejected" ? "border-red-500 bg-red-50 text-red-700" : "border-gray-200 hover:border-red-300"}`}>
+                              <XCircle className="w-3 h-3 inline ml-1" />رفض
                             </button>
                           </>
                         )}
@@ -634,6 +684,73 @@ export default function PaymentRequests() {
                 </Card>
               )}
             </div>
+
+            {/* Edit form for needs_revision */}
+            {editMode && viewingRequest.status === "needs_revision" && (
+              <Card className="border-2 border-yellow-200 bg-yellow-50/50 mt-4">
+                <CardHeader className="pb-2 pt-4 px-4">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <RotateCcw className="w-4 h-4 text-yellow-600" />تعديل الطلب وإعادة الإرسال
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-4 space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">المشروع</label>
+                    <Input value={editForm.projectName} onChange={e => setEditForm(p => ({ ...p, projectName: e.target.value }))} placeholder="اسم المشروع" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">وصف الطلب *</label>
+                    <Textarea value={editForm.description} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))} rows={3} />
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="col-span-2">
+                      <label className="text-sm font-medium text-gray-700 mb-1 block">المبلغ *</label>
+                      <Input value={editForm.amount} onChange={e => setEditForm(p => ({ ...p, amount: e.target.value }))} type="number" dir="ltr" />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-1 block">العملة</label>
+                      <Select value={editForm.currency} onValueChange={v => setEditForm(p => ({ ...p, currency: v }))}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="AED">AED</SelectItem>
+                          <SelectItem value="USD">USD</SelectItem>
+                          <SelectItem value="EUR">EUR</SelectItem>
+                          <SelectItem value="SAR">SAR</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">العرض المعتمد</label>
+                    {editQuoteFile ? (
+                      <div className="flex items-center gap-2 p-2 rounded-lg bg-green-50 border border-green-200">
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                        <span className="text-sm text-green-700 flex-1 truncate">{editQuoteFile.name}</span>
+                        <Button variant="ghost" size="sm" onClick={() => setEditQuoteFile(null)} className="h-6 w-6 p-0 text-gray-400"><XCircle className="w-4 h-4" /></Button>
+                      </div>
+                    ) : viewingRequest.approvedQuoteUrl ? (
+                      <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-50 border border-blue-200">
+                        <FileText className="w-4 h-4 text-blue-600" />
+                        <span className="text-sm text-blue-700 flex-1 truncate">{viewingRequest.approvedQuoteName || "العرض الحالي"}</span>
+                        <Button variant="ghost" size="sm" onClick={() => editQuoteInputRef.current?.click()} className="text-xs text-blue-600">تغيير</Button>
+                      </div>
+                    ) : (
+                      <Button variant="outline" onClick={() => editQuoteInputRef.current?.click()} className="w-full border-dashed">
+                        <Upload className="w-4 h-4 ml-2" />رفع عرض جديد
+                      </Button>
+                    )}
+                    <input ref={editQuoteInputRef} type="file" className="hidden" onChange={handleEditQuoteUpload} accept=".pdf,.jpg,.jpeg,.png" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={handleEditSubmit} disabled={updateMutation.isPending}
+                      className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white">
+                      {updateMutation.isPending ? "جاري الإرسال..." : "تحديث وإعادة الإرسال لوائل"}
+                    </Button>
+                    <Button variant="outline" onClick={() => setEditMode(false)}>إلغاء</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <div className="flex justify-between items-center mt-4 pt-4 border-t">
               <div>
@@ -673,19 +790,33 @@ ${viewingRequest.financeEmailSentAt ? `أرسل لفريق المالية: ${new
                 )}
               </div>
               <div className="flex gap-3">
-                {!reviewMode && viewingRequest.status === "pending_wael" && (
+                {!reviewMode && !editMode && viewingRequest.status === "pending_wael" && (
                   <Button onClick={() => { setReviewMode("wael"); setReviewDecision(""); setReviewNotes(""); }}
                     className="bg-blue-600 hover:bg-blue-700 text-white">
                     مراجعة وائل
                   </Button>
                 )}
-                {!reviewMode && viewingRequest.status === "pending_sheikh" && (
+                {!reviewMode && !editMode && viewingRequest.status === "pending_sheikh" && (
                   <Button onClick={() => { setReviewMode("sheikh"); setReviewDecision(""); setReviewNotes(""); }}
                     className="bg-purple-600 hover:bg-purple-700 text-white">
                     قرار الشيخ عيسى
                   </Button>
                 )}
-                <Button variant="outline" onClick={() => { setViewingRequest(null); setReviewMode(null); }}>إغلاق</Button>
+                {!editMode && viewingRequest.status === "needs_revision" && (
+                  <Button onClick={() => {
+                    setEditMode(true);
+                    setEditForm({
+                      description: viewingRequest.description,
+                      amount: viewingRequest.amount,
+                      projectName: viewingRequest.projectName || "",
+                      currency: viewingRequest.currency,
+                    });
+                    setEditQuoteFile(null);
+                  }} className="bg-yellow-600 hover:bg-yellow-700 text-white">
+                    <RotateCcw className="w-4 h-4 ml-1" />تعديل وإعادة الإرسال
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => { setViewingRequest(null); setReviewMode(null); setEditMode(false); }}>إغلاق</Button>
               </div>
             </div>
           </DialogContent>

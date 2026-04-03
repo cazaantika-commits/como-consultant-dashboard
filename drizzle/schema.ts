@@ -2142,7 +2142,7 @@ export const paymentRequests = mysqlTable("payment_requests", {
   waelNotes: text("wael_notes"),
   // Sheikh Issa Review
   sheikhReviewedAt: timestamp("sheikh_reviewed_at", { mode: "string" }),
-  sheikhDecision: mysqlEnum("sheikh_decision", ["approved", "rejected"]),
+  sheikhDecision: mysqlEnum("sheikh_decision", ["approved", "rejected", "needs_revision"]),
   sheikhNotes: text("sheikh_notes"),
   // Finance Email
   financeEmailSentAt: timestamp("finance_email_sent_at", { mode: "string" }),
