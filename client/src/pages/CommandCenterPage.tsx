@@ -3774,6 +3774,7 @@ function CommitteeDecisionView({ token, projectId, memberId, onBack }: { token: 
 // MAIN DASHBOARD
 // ═══════════════════════════════════════════════════════
 function Dashboard({ token, member, onLogout }: { token: string; member: any; onLogout: () => void }) {
+  const [, navigate] = useLocation();
   const [activeBubble, setActiveBubble] = useState<string | null>(null);
   const [showSalwa, setShowSalwa] = useState(false);
   const [showEvaluation, setShowEvaluation] = useState(false);
