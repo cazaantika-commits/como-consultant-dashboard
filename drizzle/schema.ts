@@ -2083,6 +2083,78 @@ export const projectCashFlowSettings = mysqlTable("project_cash_flow_settings", 
   index("pcfs_item_key").on(table.itemKey),
 ]);
 
+// ── Business Partners & Vendors Registry ─────────────────────────────────────
+export const businessPartners = mysqlTable("business_partners", {
+  id: int("id").autoincrement().notNull(),
+  // Company Info
+  companyName: varchar("company_name", { length: 255 }).notNull(),
+  category: varchar("category", { length: 100 }),
+  contactPerson: varchar("contact_person", { length: 255 }),
+  mobileNumber: varchar("mobile_number", { length: 50 }),
+  emailAddress: varchar("email_address", { length: 255 }),
+  website: varchar("website", { length: 255 }),
+  status: mysqlEnum("status", ["quoted_only", "under_review", "appointed", "not_selected"]).default("quoted_only").notNull(),
+  notes: text("notes"),
+  // Documents (S3 URLs)
+  commercialLicenseUrl: text("commercial_license_url"),
+  commercialLicenseName: varchar("commercial_license_name", { length: 255 }),
+  vatCertificateUrl: text("vat_certificate_url"),
+  vatCertificateName: varchar("vat_certificate_name", { length: 255 }),
+  authorizedSignatoryDocUrl: text("authorized_signatory_doc_url"),
+  authorizedSignatoryDocName: varchar("authorized_signatory_doc_name", { length: 255 }),
+  otherDocumentsJson: text("other_documents_json"), // JSON array of {url, name}
+  // Bank Account Details
+  beneficiaryName: varchar("beneficiary_name", { length: 255 }),
+  accountNumber: varchar("account_number", { length: 100 }),
+  iban: varchar("iban", { length: 100 }),
+  bankName: varchar("bank_name", { length: 255 }),
+  branchName: varchar("branch_name", { length: 255 }),
+  currency: varchar("currency", { length: 10 }).default("AED"),
+  bankNotes: text("bank_notes"),
+  // Authorized Signatory
+  signatoryName: varchar("signatory_name", { length: 255 }),
+  signatoryTitle: varchar("signatory_title", { length: 255 }),
+  signatoryEmail: varchar("signatory_email", { length: 255 }),
+  signatoryPhone: varchar("signatory_phone", { length: 50 }),
+  signatoryImageUrl: text("signatory_image_url"),
+  // Audit
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+});
+
+// ── Payment Requests ──────────────────────────────────────────────────────────
+export const paymentRequests = mysqlTable("payment_requests", {
+  id: int("id").autoincrement().notNull(),
+  requestNumber: varchar("request_number", { length: 50 }).notNull(), // PAY-2026-001
+  partnerId: int("partner_id").notNull().references(() => businessPartners.id),
+  projectName: varchar("project_name", { length: 255 }),
+  description: text("description").notNull(),
+  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 10 }).default("AED").notNull(),
+  // Approved Quote
+  approvedQuoteUrl: text("approved_quote_url"),
+  approvedQuoteName: varchar("approved_quote_name", { length: 255 }),
+  // Status: new → pending_wael → pending_sheikh → approved / rejected / needs_revision
+  status: mysqlEnum("status", ["new", "pending_wael", "pending_sheikh", "approved", "rejected", "needs_revision"]).default("new").notNull(),
+  // Wael Review
+  waelReviewedAt: timestamp("wael_reviewed_at", { mode: "string" }),
+  waelDecision: mysqlEnum("wael_decision", ["approved", "rejected", "needs_revision"]),
+  waelNotes: text("wael_notes"),
+  // Sheikh Issa Review
+  sheikhReviewedAt: timestamp("sheikh_reviewed_at", { mode: "string" }),
+  sheikhDecision: mysqlEnum("sheikh_decision", ["approved", "rejected"]),
+  sheikhNotes: text("sheikh_notes"),
+  // Finance Email
+  financeEmailSentAt: timestamp("finance_email_sent_at", { mode: "string" }),
+  // Stamp
+  stampedQuoteUrl: text("stamped_quote_url"),
+  // Submitter
+  submittedBy: int("submitted_by").references(() => users.id),
+  // Audit
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+});
+
 // ── Portfolio Scenarios ───────────────────────────────────────────────────────
 // Stores user-saved capital portfolio view settings (option selections, delays, visibility)
 export const portfolioScenarios = mysqlTable("portfolio_scenarios", {

@@ -519,3 +519,19 @@
 - [x] Command Center: Place all 4 card-style icons in a single row with equal sizes (grid-cols-4)
 - [x] Command Center: Improve Salwa hero rectangle design (better visuals, white/light background)
 - [x] Command Center: Change all text in Salwa rectangle from blue/purple to black/dark
+
+## Business Partners & Vendors Registry + Payment Request System
+
+- [x] Rebuild BusinessPartnersRegistry with complete fields: company info, documents, bank details, signatory
+- [x] Add file upload sections: Commercial License, VAT Certificate, Authorized Signatory, Quotes, Other Docs
+- [x] Add bank account section: Beneficiary, Account, IBAN, Bank, Branch, Currency
+- [x] Add authorized signatory section: Name, Title, Email, Phone, Signature Image
+- [x] Add category management (add/edit/delete categories)
+- [x] Create Payment Requests page with full approval workflow UI
+- [x] Add payment request icon to Command Center
+- [x] Build backend DB schema for business_partners and payment_requests tables
+- [x] Build tRPC procedures for partners CRUD and payment request workflow
+- [x] Implement email notifications: English for finance team, Arabic for management
+- [x] Build approval workflow: User → Wael → Sheikh Issa → Finance
+- [x] Add document completeness validation before allowing payment request
+- [x] Add approved quote stamp feature

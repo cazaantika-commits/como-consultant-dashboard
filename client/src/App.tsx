@@ -55,6 +55,7 @@ import CapitalPlanningDashboard from "./pages/CapitalPlanningDashboard";
 import CapitalSchedulingPage from "./pages/CapitalSchedulingPage";
 import ConsultantsRegistry from "./pages/ConsultantsRegistry";
 import BusinessPartnersRegistry from "./pages/BusinessPartnersRegistry";
+import PaymentRequests from "./pages/PaymentRequests";
 import MarketReportsPage from "./pages/MarketReportsPage";
 import RiskDashboardPage from "./pages/RiskDashboardPage";
 import SelfLearningPage from "./pages/SelfLearningPage";
@@ -94,6 +95,7 @@ function Router() {
       <Route path="/capital-scheduling" component={CapitalSchedulingPage} />
       <Route path="/consultants-registry" component={ConsultantsRegistry} />
       <Route path="/business-partners-registry" component={BusinessPartnersRegistry} />
+      <Route path="/payment-requests" component={PaymentRequests} />
       <Route path="/consultant-portal" component={ConsultantPortalPage} />
       <Route path="/consultant-guide" component={ConsultantGuidePage} />
       <Route path="/consultant-proposals" component={CPAPage} />

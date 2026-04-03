@@ -1,0 +1,478 @@
+import { z } from "zod";
+import { protectedProcedure, router } from "../_core/trpc";
+import { getDb } from "../db";
+import { businessPartners, paymentRequests } from "../../drizzle/schema";
+import { eq, desc, sql } from "drizzle-orm";
+import { storagePut } from "../storage";
+import { sendReply } from "../emailMonitor";
+
+// Finance team emails
+const FINANCE_EMAILS = ["shahid@zooma.ae", "account.mrt@zooma.ae", "thanseeh@globalhightrend.com"];
+const CC_EMAILS = ["wael@zooma.ae", "a.zaqout@comodevelopments.com"];
+
+function generateRequestNumber(): string {
+  const year = new Date().getFullYear();
+  const random = Math.floor(Math.random() * 9000) + 1000;
+  return `PAY-${year}-${random}`;
+}
+
+export const businessPartnersRouter = router({
+  // ── List all partners ──────────────────────────────────────────────────────
+  list: protectedProcedure.query(async () => {
+    const db = await getDb();
+    return db.select().from(businessPartners).orderBy(desc(businessPartners.createdAt));
+  }),
+
+  // ── Get single partner ─────────────────────────────────────────────────────
+  getById: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      const [partner] = await db.select().from(businessPartners).where(eq(businessPartners.id, input.id));
+      return partner || null;
+    }),
+
+  // ── Create partner ─────────────────────────────────────────────────────────
+  create: protectedProcedure
+    .input(z.object({
+      companyName: z.string().min(1),
+      category: z.string().optional(),
+      contactPerson: z.string().optional(),
+      mobileNumber: z.string().optional(),
+      emailAddress: z.string().optional(),
+      website: z.string().optional(),
+      status: z.enum(["quoted_only", "under_review", "appointed", "not_selected"]).default("quoted_only"),
+      notes: z.string().optional(),
+      // Bank
+      beneficiaryName: z.string().optional(),
+      accountNumber: z.string().optional(),
+      iban: z.string().optional(),
+      bankName: z.string().optional(),
+      branchName: z.string().optional(),
+      currency: z.string().optional(),
+      bankNotes: z.string().optional(),
+      // Signatory
+      signatoryName: z.string().optional(),
+      signatoryTitle: z.string().optional(),
+      signatoryEmail: z.string().optional(),
+      signatoryPhone: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      const [result] = await db.insert(businessPartners).values({
+        companyName: input.companyName,
+        category: input.category,
+        contactPerson: input.contactPerson,
+        mobileNumber: input.mobileNumber,
+        emailAddress: input.emailAddress,
+        website: input.website,
+        status: input.status,
+        notes: input.notes,
+        beneficiaryName: input.beneficiaryName,
+        accountNumber: input.accountNumber,
+        iban: input.iban,
+        bankName: input.bankName,
+        branchName: input.branchName,
+        currency: input.currency || "AED",
+        bankNotes: input.bankNotes,
+        signatoryName: input.signatoryName,
+        signatoryTitle: input.signatoryTitle,
+        signatoryEmail: input.signatoryEmail,
+        signatoryPhone: input.signatoryPhone,
+      });
+      return { id: (result as any).insertId };
+    }),
+
+  // ── Update partner ─────────────────────────────────────────────────────────
+  update: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      companyName: z.string().min(1).optional(),
+      category: z.string().optional(),
+      contactPerson: z.string().optional(),
+      mobileNumber: z.string().optional(),
+      emailAddress: z.string().optional(),
+      website: z.string().optional(),
+      status: z.enum(["quoted_only", "under_review", "appointed", "not_selected"]).optional(),
+      notes: z.string().optional(),
+      // Bank
+      beneficiaryName: z.string().optional(),
+      accountNumber: z.string().optional(),
+      iban: z.string().optional(),
+      bankName: z.string().optional(),
+      branchName: z.string().optional(),
+      currency: z.string().optional(),
+      bankNotes: z.string().optional(),
+      // Signatory
+      signatoryName: z.string().optional(),
+      signatoryTitle: z.string().optional(),
+      signatoryEmail: z.string().optional(),
+      signatoryPhone: z.string().optional(),
+      // Document URLs (set by upload procedure)
+      commercialLicenseUrl: z.string().optional(),
+      commercialLicenseName: z.string().optional(),
+      vatCertificateUrl: z.string().optional(),
+      vatCertificateName: z.string().optional(),
+      authorizedSignatoryDocUrl: z.string().optional(),
+      authorizedSignatoryDocName: z.string().optional(),
+      otherDocumentsJson: z.string().optional(),
+      signatoryImageUrl: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      const { id, ...data } = input;
+      await db.update(businessPartners).set(data).where(eq(businessPartners.id, id));
+      return { success: true };
+    }),
+
+  // ── Delete partner ─────────────────────────────────────────────────────────
+  delete: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      await db.delete(businessPartners).where(eq(businessPartners.id, input.id));
+      return { success: true };
+    }),
+
+  // ── Upload document ────────────────────────────────────────────────────────
+  uploadDocument: protectedProcedure
+    .input(z.object({
+      partnerId: z.number(),
+      fieldType: z.enum(["commercialLicense", "vatCertificate", "authorizedSignatoryDoc", "signatoryImage", "other"]),
+      fileName: z.string(),
+      fileBase64: z.string(),
+      mimeType: z.string(),
+    }))
+    .mutation(async ({ input }) => {
+      const buffer = Buffer.from(input.fileBase64, "base64");
+      const key = `partners/${input.partnerId}/${input.fieldType}-${Date.now()}-${input.fileName}`;
+      const { url } = await storagePut(key, buffer, input.mimeType);
+
+      const db = await getDb();
+      const updateData: Record<string, string> = {};
+
+      if (input.fieldType === "commercialLicense") {
+        updateData.commercialLicenseUrl = url;
+        updateData.commercialLicenseName = input.fileName;
+      } else if (input.fieldType === "vatCertificate") {
+        updateData.vatCertificateUrl = url;
+        updateData.vatCertificateName = input.fileName;
+      } else if (input.fieldType === "authorizedSignatoryDoc") {
+        updateData.authorizedSignatoryDocUrl = url;
+        updateData.authorizedSignatoryDocName = input.fileName;
+      } else if (input.fieldType === "signatoryImage") {
+        updateData.signatoryImageUrl = url;
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        await db.update(businessPartners).set(updateData).where(eq(businessPartners.id, input.partnerId));
+      }
+
+      return { url, fileName: input.fileName };
+    }),
+});
+
+export const paymentRequestsRouter = router({
+  // ── List all payment requests ──────────────────────────────────────────────
+  list: protectedProcedure.query(async () => {
+    const db = await getDb();
+    const requests = await db
+      .select({
+        id: paymentRequests.id,
+        requestNumber: paymentRequests.requestNumber,
+        partnerId: paymentRequests.partnerId,
+        partnerName: businessPartners.companyName,
+        projectName: paymentRequests.projectName,
+        description: paymentRequests.description,
+        amount: paymentRequests.amount,
+        currency: paymentRequests.currency,
+        status: paymentRequests.status,
+        waelDecision: paymentRequests.waelDecision,
+        sheikhDecision: paymentRequests.sheikhDecision,
+        financeEmailSentAt: paymentRequests.financeEmailSentAt,
+        createdAt: paymentRequests.createdAt,
+        approvedQuoteUrl: paymentRequests.approvedQuoteUrl,
+        approvedQuoteName: paymentRequests.approvedQuoteName,
+      })
+      .from(paymentRequests)
+      .leftJoin(businessPartners, eq(paymentRequests.partnerId, businessPartners.id))
+      .orderBy(desc(paymentRequests.createdAt));
+    return requests;
+  }),
+
+  // ── Get single request ─────────────────────────────────────────────────────
+  getById: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      const [req] = await db
+        .select()
+        .from(paymentRequests)
+        .leftJoin(businessPartners, eq(paymentRequests.partnerId, businessPartners.id))
+        .where(eq(paymentRequests.id, input.id));
+      return req || null;
+    }),
+
+  // ── Create payment request ─────────────────────────────────────────────────
+  create: protectedProcedure
+    .input(z.object({
+      partnerId: z.number(),
+      projectName: z.string().optional(),
+      description: z.string().min(1),
+      amount: z.string(), // decimal as string
+      currency: z.string().default("AED"),
+      approvedQuoteUrl: z.string().optional(),
+      approvedQuoteName: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      const requestNumber = generateRequestNumber();
+      const [result] = await db.insert(paymentRequests).values({
+        requestNumber,
+        partnerId: input.partnerId,
+        projectName: input.projectName,
+        description: input.description,
+        amount: input.amount,
+        currency: input.currency,
+        approvedQuoteUrl: input.approvedQuoteUrl,
+        approvedQuoteName: input.approvedQuoteName,
+        status: "pending_wael",
+        submittedBy: ctx.user.id,
+      });
+      return { id: (result as any).insertId, requestNumber };
+    }),
+
+  // ── Upload approved quote ──────────────────────────────────────────────────
+  uploadQuote: protectedProcedure
+    .input(z.object({
+      requestId: z.number().optional(),
+      fileName: z.string(),
+      fileBase64: z.string(),
+      mimeType: z.string(),
+    }))
+    .mutation(async ({ input }) => {
+      const buffer = Buffer.from(input.fileBase64, "base64");
+      const key = `payment-quotes/${Date.now()}-${input.fileName}`;
+      const { url } = await storagePut(key, buffer, input.mimeType);
+
+      if (input.requestId) {
+        const db = await getDb();
+        await db.update(paymentRequests)
+          .set({ approvedQuoteUrl: url, approvedQuoteName: input.fileName })
+          .where(eq(paymentRequests.id, input.requestId));
+      }
+
+      return { url, fileName: input.fileName };
+    }),
+
+  // ── Wael review ────────────────────────────────────────────────────────────
+  waelReview: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      decision: z.enum(["approved", "rejected", "needs_revision"]),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      const newStatus = input.decision === "approved" ? "pending_sheikh"
+        : input.decision === "rejected" ? "rejected"
+        : "needs_revision";
+
+      await db.update(paymentRequests).set({
+        waelDecision: input.decision,
+        waelNotes: input.notes,
+        waelReviewedAt: new Date().toISOString().slice(0, 19).replace("T", " "),
+        status: newStatus,
+      }).where(eq(paymentRequests.id, input.id));
+
+      return { success: true, newStatus };
+    }),
+
+  // ── Sheikh Issa review ─────────────────────────────────────────────────────
+  sheikhReview: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      decision: z.enum(["approved", "rejected"]),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      const newStatus = input.decision === "approved" ? "approved" : "rejected";
+
+      await db.update(paymentRequests).set({
+        sheikhDecision: input.decision,
+        sheikhNotes: input.notes,
+        sheikhReviewedAt: new Date().toISOString().slice(0, 19).replace("T", " "),
+        status: newStatus,
+      }).where(eq(paymentRequests.id, input.id));
+
+      // If approved, send email to finance
+      if (input.decision === "approved") {
+        // Get full request + partner data
+        const [req] = await db
+          .select()
+          .from(paymentRequests)
+          .leftJoin(businessPartners, eq(paymentRequests.partnerId, businessPartners.id))
+          .where(eq(paymentRequests.id, input.id));
+
+        if (req) {
+          const pr = req.payment_requests;
+          const partner = req.business_partners;
+          const approvalDate = new Date().toLocaleDateString("en-GB");
+
+          // English email for finance team
+          const financeSubject = `Payment Order - ${pr.requestNumber}`;
+          const financeBody = `
+<div style="font-family: Arial, sans-serif; direction: ltr; max-width: 700px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+  <div style="background: #1a3c5e; color: white; padding: 20px 30px;">
+    <h2 style="margin: 0; font-size: 22px;">PAYMENT ORDER</h2>
+    <p style="margin: 5px 0 0; opacity: 0.8; font-size: 14px;">Como Developments</p>
+  </div>
+  <div style="padding: 30px; background: #f9f9f9;">
+    <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+      <tr style="background: #f0f4f8;">
+        <td style="padding: 12px 16px; font-weight: bold; color: #555; width: 40%;">Order Number</td>
+        <td style="padding: 12px 16px; font-weight: bold; color: #1a3c5e;">${pr.requestNumber}</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px 16px; font-weight: bold; color: #555;">Project</td>
+        <td style="padding: 12px 16px;">${pr.projectName || "—"}</td>
+      </tr>
+      <tr style="background: #f0f4f8;">
+        <td style="padding: 12px 16px; font-weight: bold; color: #555;">Company / Beneficiary</td>
+        <td style="padding: 12px 16px;">${partner?.companyName || "—"}</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px 16px; font-weight: bold; color: #555;">Beneficiary Name</td>
+        <td style="padding: 12px 16px;">${partner?.beneficiaryName || "—"}</td>
+      </tr>
+      <tr style="background: #f0f4f8;">
+        <td style="padding: 12px 16px; font-weight: bold; color: #555;">Account Number</td>
+        <td style="padding: 12px 16px;">${partner?.accountNumber || "—"}</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px 16px; font-weight: bold; color: #555;">IBAN</td>
+        <td style="padding: 12px 16px; font-family: monospace;">${partner?.iban || "—"}</td>
+      </tr>
+      <tr style="background: #f0f4f8;">
+        <td style="padding: 12px 16px; font-weight: bold; color: #555;">Bank Name</td>
+        <td style="padding: 12px 16px;">${partner?.bankName || "—"}</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px 16px; font-weight: bold; color: #555;">Branch</td>
+        <td style="padding: 12px 16px;">${partner?.branchName || "—"}</td>
+      </tr>
+      <tr style="background: #f0f4f8;">
+        <td style="padding: 12px 16px; font-weight: bold; color: #555; font-size: 16px;">Amount</td>
+        <td style="padding: 12px 16px; font-weight: bold; color: #1a3c5e; font-size: 18px;">${Number(pr.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })} ${pr.currency}</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px 16px; font-weight: bold; color: #555;">Description</td>
+        <td style="padding: 12px 16px;">${pr.description}</td>
+      </tr>
+      <tr style="background: #f0f4f8;">
+        <td style="padding: 12px 16px; font-weight: bold; color: #555;">Approved Quote</td>
+        <td style="padding: 12px 16px;">${pr.approvedQuoteUrl ? `<a href="${pr.approvedQuoteUrl}" style="color: #1a3c5e;">View Document</a>` : "—"}</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px 16px; font-weight: bold; color: #555;">Approved By</td>
+        <td style="padding: 12px 16px;">Sheikh Issa & Wael</td>
+      </tr>
+      <tr style="background: #f0f4f8;">
+        <td style="padding: 12px 16px; font-weight: bold; color: #555;">Approval Date</td>
+        <td style="padding: 12px 16px;">${approvalDate}</td>
+      </tr>
+    </table>
+    <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+      <p style="margin: 0; font-size: 13px; color: #856404;">This is an official payment order approved by Como Developments management. Please process within 2 business days.</p>
+    </div>
+  </div>
+  <div style="padding: 15px 30px; background: #1a3c5e; color: rgba(255,255,255,0.7); font-size: 12px; text-align: center;">
+    Como Developments | Confidential Payment Order
+  </div>
+</div>`;
+
+          // Arabic email for management CC
+          const arabicBody = `
+<div style="font-family: Arial, sans-serif; direction: rtl; max-width: 700px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+  <div style="background: #1a3c5e; color: white; padding: 20px 30px; text-align: right;">
+    <h2 style="margin: 0; font-size: 22px;">أمر صرف معتمد</h2>
+    <p style="margin: 5px 0 0; opacity: 0.8; font-size: 14px;">كومو للتطوير العقاري</p>
+  </div>
+  <div style="padding: 30px; background: #f9f9f9; text-align: right;">
+    <p style="color: #333;">تم اعتماد طلب الصرف التالي من قبل الشيخ عيسى ووائل:</p>
+    <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+      <tr style="background: #f0f4f8;">
+        <td style="padding: 12px 16px; font-weight: bold; color: #555; text-align: right;">رقم الأمر</td>
+        <td style="padding: 12px 16px; font-weight: bold; color: #1a3c5e; text-align: right;">${pr.requestNumber}</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px 16px; font-weight: bold; color: #555; text-align: right;">المشروع</td>
+        <td style="padding: 12px 16px; text-align: right;">${pr.projectName || "—"}</td>
+      </tr>
+      <tr style="background: #f0f4f8;">
+        <td style="padding: 12px 16px; font-weight: bold; color: #555; text-align: right;">الجهة المستفيدة</td>
+        <td style="padding: 12px 16px; text-align: right;">${partner?.companyName || "—"}</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px 16px; font-weight: bold; color: #555; text-align: right; font-size: 16px;">المبلغ</td>
+        <td style="padding: 12px 16px; font-weight: bold; color: #1a3c5e; font-size: 18px; text-align: right;">${Number(pr.amount).toLocaleString("ar-AE", { minimumFractionDigits: 2 })} ${pr.currency}</td>
+      </tr>
+      <tr style="background: #f0f4f8;">
+        <td style="padding: 12px 16px; font-weight: bold; color: #555; text-align: right;">الوصف</td>
+        <td style="padding: 12px 16px; text-align: right;">${pr.description}</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px 16px; font-weight: bold; color: #555; text-align: right;">تاريخ الاعتماد</td>
+        <td style="padding: 12px 16px; text-align: right;">${approvalDate}</td>
+      </tr>
+    </table>
+    <p style="margin-top: 15px; color: #666; font-size: 13px;">تم إرسال أمر الصرف الرسمي إلى فريق المالية.</p>
+  </div>
+</div>`;
+
+          // Send to finance team
+          try {
+            for (const financeEmail of FINANCE_EMAILS) {
+              await sendReply(
+                financeEmail,
+                financeSubject,
+                financeBody,
+                undefined,
+                CC_EMAILS.join(",")
+              );
+            }
+
+            // Update finance email sent timestamp
+            await db.update(paymentRequests).set({
+              financeEmailSentAt: new Date().toISOString().slice(0, 19).replace("T", " "),
+            }).where(eq(paymentRequests.id, input.id));
+          } catch (emailErr) {
+            console.error("[PaymentRequest] Failed to send finance email:", emailErr);
+          }
+        }
+      }
+
+      return { success: true, newStatus };
+    }),
+
+  // ── Check document completeness ────────────────────────────────────────────
+  checkCompleteness: protectedProcedure
+    .input(z.object({ partnerId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      const [partner] = await db.select().from(businessPartners).where(eq(businessPartners.id, input.partnerId));
+      if (!partner) return { complete: false, missing: ["Partner not found"] };
+
+      const missing: string[] = [];
+      if (!partner.commercialLicenseUrl) missing.push("Commercial License");
+      if (!partner.vatCertificateUrl) missing.push("VAT Certificate");
+      if (!partner.authorizedSignatoryDocUrl) missing.push("Authorized Signatory Document");
+      if (!partner.beneficiaryName) missing.push("Beneficiary Name");
+      if (!partner.accountNumber) missing.push("Account Number");
+      if (!partner.iban) missing.push("IBAN");
+      if (!partner.bankName) missing.push("Bank Name");
+
+      return { complete: missing.length === 0, missing };
+    }),
+});

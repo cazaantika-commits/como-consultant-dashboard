@@ -10,6 +10,7 @@ import {
   Megaphone,
   Bell,
   Send,
+  CreditCard,
   ChevronLeft,
   ChevronRight,
   LogOut,
@@ -370,6 +371,7 @@ const BUBBLES = [
   // ── PRIORITY 1: Financial Core (Hero cards) ──
   { type: "capital_portfolio" as const, label: "محفظة رأس المال", icon: Wallet, color: "from-indigo-600 to-indigo-800", bg: "bg-indigo-50", border: "border-indigo-200", text: "text-indigo-700" },
   { type: "financial_reports" as const, label: "التقارير المالية", icon: BarChart2, color: "from-emerald-500 to-teal-700", bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700" },
+  { type: "payment_requests" as const, label: "طلبات الصرف", icon: CreditCard, color: "from-amber-500 to-orange-700", bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700" },
 
   // ── PRIORITY 2: Operations & Evaluation ──
   { type: "evaluations" as const, label: "تقييم الاستشاريين", icon: Star, color: "from-violet-600 to-purple-800", bg: "bg-purple-50", border: "border-purple-200", text: "text-purple-700" },
@@ -4047,6 +4049,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             else if (type === "feasibility_study") { setActiveBubble("feasibility_study"); setShowFeasibilityStudy(true); }
             else if (type === "financial_reports") { setActiveBubble("financial_reports"); setShowFinancialReports(true); }
             else if (type === "capital_portfolio") { setActiveBubble("capital_portfolio"); setShowCapitalPortfolio(true); }
+            else if (type === "payment_requests") { navigate("/payment-requests"); }
             else { setActiveBubble(type); }
           };
 
@@ -4061,6 +4064,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             'from-cyan-500 to-sky-700':       {solid:'#0891b2', shadow:'rgba(8,145,178,0.45)'},
             'from-amber-600 to-amber-800':    {solid:'#f59e0b', shadow:'rgba(245,158,11,0.45)'},
             'from-orange-500 to-amber-700':   {solid:'#f97316', shadow:'rgba(249,115,22,0.45)'},
+            'from-amber-500 to-orange-700':   {solid:'#f59e0b', shadow:'rgba(245,158,11,0.45)'},
             'from-blue-600 to-blue-800':      {solid:'#3b82f6', shadow:'rgba(59,130,246,0.45)'},
             'from-blue-500 to-blue-700':      {solid:'#2563eb', shadow:'rgba(37,99,235,0.45)'},
             'from-rose-600 to-rose-800':      {solid:'#f43f5e', shadow:'rgba(244,63,94,0.45)'},
@@ -4087,6 +4091,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           const subtitles: Record<string,string> = {
             capital_portfolio: 'تحريك وتعديل رأس المال عبر المشاريع والمراحل',
             financial_reports: 'تقارير الجدوى والتدفقات وحساب الضمان',
+            payment_requests: 'إنشاء ومتابعة طلبات الصرف وسير الموافقة',
             evaluations: 'تقييم الاستشاريين الفنيين',
             milestones_kpis: 'متابعة المراحل ومؤشرات الأداء',
             reports: 'عرض وإدارة جميع التقارير المرفوعة',

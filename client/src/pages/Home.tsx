@@ -463,6 +463,7 @@ export default function Home() {
     { label: "سجل الإيميلات المرسلة", path: "/sent-emails" },
     { label: "سجل الاستشاريين", path: "/consultants-registry" },
     { label: "سجل الشركاء والمتعاملين", path: "/business-partners-registry" },
+    { label: "طلبات الصرف", path: "/payment-requests" },
   ];
 
   return (
