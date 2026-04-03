@@ -4175,24 +4175,27 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             );
           };
 
+          // BUBBLES index reference:
+          // 0=محفظة رأس المال, 1=التقارير المالية, 2=تقييم الاستشاريين, 3=المراحل والأداء
+          // 4=الطلبات والاستفسارات, 5=التقارير, 6=محاضر الاجتماعات, 7=برنامج العمل, 8=دراسة الجدوى, 9=الإعلانات
           return (
             <div className="mb-4 space-y-6">
-              {/* Row 1: Hero — محفظة رأس المال + التقارير المالية (card style) */}
-              <div className="grid grid-cols-2 gap-6">
-                <CardTile bubble={BUBBLES[0]} size="lg" />
-                <CardTile bubble={BUBBLES[1]} size="lg" />
+              {/* Row 1: 4 card-style icons equal size — محفظة رأس المال + التقارير المالية + الطلبات والاستفسارات + برنامج العمل */}
+              <div className="grid grid-cols-4 gap-4">
+                <CardTile bubble={BUBBLES[0]} size="md" />
+                <CardTile bubble={BUBBLES[1]} size="md" />
+                <CardTile bubble={BUBBLES[4]} size="md" />
+                <CardTile bubble={BUBBLES[7]} size="md" />
               </div>
-              {/* Row 2: 4 medium tiles — الطلبات والاستفسارات uses card style */}
+              {/* Row 2: remaining 4 medium icon-tiles */}
               <div className="grid grid-cols-4 gap-4">
                 <IconTile bubble={BUBBLES[2]} size="md" />
                 <IconTile bubble={BUBBLES[3]} size="md" />
-                <CardTile bubble={BUBBLES[4]} size="md" />
                 <IconTile bubble={BUBBLES[5]} size="md" />
+                <IconTile bubble={BUBBLES[6]} size="md" />
               </div>
-              {/* Row 3: 4 small tiles — برنامج العمل uses card style */}
+              {/* Row 3: remaining 2 small tiles */}
               <div className="grid grid-cols-4 gap-4">
-                <IconTile bubble={BUBBLES[6]} size="sm" />
-                <CardTile bubble={BUBBLES[7]} size="sm" />
                 <IconTile bubble={BUBBLES[8]} size="sm" />
                 <IconTile bubble={BUBBLES[9]} size="sm" />
               </div>

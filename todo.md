@@ -516,3 +516,4 @@
 - [x] Make Command Center card prominent on Home page: unique icon, special styling, eye-catching placement
 - [ ] Redesign Command Center grid: diverse shapes (circles, hexagons, bubbles, diamonds, rectangles) for each card
 - [x] Command Center: Change 4 icons (التقارير المالية، محفظة رأس المال، برنامج العمل، الطلبات والاستفسارات) to card-style design with white card background, colored square icon with rounded corners, and red badge counter
+- [x] Command Center: Place all 4 card-style icons in a single row with equal sizes (grid-cols-4)
