@@ -519,4 +519,3 @@
 - [x] Command Center: Place all 4 card-style icons in a single row with equal sizes (grid-cols-4)
 - [x] Command Center: Improve Salwa hero rectangle design (better visuals, white/light background)
 - [x] Command Center: Change all text in Salwa rectangle from blue/purple to black/dark
-- [x] Command Center: Add back button to navigate back to home page
