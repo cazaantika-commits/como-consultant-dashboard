@@ -23,7 +23,8 @@ type PaymentRequest = {
   description: string;
   amount: string;
   currency: string;
-  status: "new" | "pending_wael" | "pending_sheikh" | "approved" | "rejected" | "needs_revision";
+  status: "new" | "pending_wael" | "pending_sheikh" | "approved" | "rejected" | "needs_revision" | "disbursed";
+  disbursedAt?: string | null;
   waelDecision?: string | null;
   sheikhDecision?: string | null;
   financeEmailSentAt?: string | null;
@@ -39,6 +40,7 @@ const STATUS_CONFIG = {
   approved: { label: "معتمد", color: "bg-green-100 text-green-700 border-green-200", icon: CheckCircle },
   rejected: { label: "مرفوض", color: "bg-red-100 text-red-700 border-red-200", icon: XCircle },
   needs_revision: { label: "يحتاج مراجعة", color: "bg-yellow-100 text-yellow-700 border-yellow-200", icon: RotateCcw },
+  disbursed: { label: "تم الصرف", color: "bg-teal-100 text-teal-700 border-teal-200", icon: CheckCircle },
 };
 
 function WorkflowStep({ label, status, active, done }: { label: string; status: string; active: boolean; done: boolean }) {
@@ -273,6 +275,15 @@ export default function PaymentRequests() {
     onError: (e) => toast.error(e.message),
   });
 
+  const disburseMutation = trpc.paymentRequests.confirmDisbursement.useMutation({
+    onSuccess: () => {
+      utils.paymentRequests.list.invalidate();
+      setViewingRequest(null);
+      toast.success("تم تأكيد صرف المبلغ بنجاح");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
   const filtered = requests.filter((r: any) => {
     const isArchived = r.isArchived === 1 || r.isArchived === true;
     if (!showArchived && isArchived) return false;
@@ -293,6 +304,7 @@ export default function PaymentRequests() {
     approved: requests.filter(r => r.status === "approved").length,
     rejected: requests.filter(r => r.status === "rejected").length,
     needs_revision: requests.filter(r => r.status === "needs_revision").length,
+    disbursed: requests.filter(r => r.status === "disbursed").length,
   };
 
   // Financial summary
@@ -309,10 +321,9 @@ export default function PaymentRequests() {
   const getWorkflowSteps = (status: string) => {
     const steps = [
       { label: "تقديم الطلب", done: true, active: false },
-      { label: "مراجعة وائل", done: ["pending_sheikh", "approved", "rejected"].includes(status), active: status === "pending_wael" },
-      { label: "اعتماد الشيخ عيسى", done: status === "approved", active: status === "pending_sheikh" },
-      { label: "إشعار المالية", done: status === "approved", active: false },
-      // Finance notification is automatic upon approval
+      { label: "مراجعة وائل", done: ["pending_sheikh", "approved", "rejected", "disbursed"].includes(status), active: status === "pending_wael" },
+      { label: "اعتماد الشيخ عيسى", done: ["approved", "disbursed"].includes(status), active: status === "pending_sheikh" },
+      { label: "تم الصرف", done: status === "disbursed", active: status === "approved" },
     ];
     return steps;
   };
@@ -388,6 +399,7 @@ export default function PaymentRequests() {
           { key: "approved", label: "معتمد", color: "from-green-500 to-emerald-600" },
           { key: "needs_revision", label: "مراجعة", color: "from-yellow-500 to-amber-600" },
           { key: "rejected", label: "مرفوض", color: "from-red-500 to-rose-600" },
+          { key: "disbursed", label: "تم الصرف", color: "from-teal-500 to-cyan-600" },
         ].map(s => (
           <button key={s.key} onClick={() => setStatusFilter(s.key)}
             className={`p-3 rounded-xl border-2 transition-all text-right ${statusFilter === s.key ? "border-emerald-500 bg-white shadow-md" : "border-transparent bg-white/60 hover:bg-white"}`}>
@@ -959,6 +971,19 @@ export default function PaymentRequests() {
                   <Button onClick={() => { setReviewMode("sheikh"); setReviewDecision(""); setReviewNotes(""); }}
                     className="bg-purple-600 hover:bg-purple-700 text-white">
                     قرار الشيخ عيسى
+                  </Button>
+                )}
+                {!reviewMode && !editMode && viewingRequest.status === "approved" && (
+                  <Button
+                    onClick={() => {
+                      if (confirm("تأكيد تأكيد صرف المبلغ لهذا الطلب؟")) {
+                        disburseMutation.mutate({ id: viewingRequest.id });
+                      }
+                    }}
+                    disabled={disburseMutation.isPending}
+                    className="bg-teal-600 hover:bg-teal-700 text-white gap-2">
+                    <CheckCircle className="w-4 h-4" />
+                    {disburseMutation.isPending ? "جاري..." : "تأكيد الصرف"}
                   </Button>
                 )}
                 {!editMode && viewingRequest.status === "needs_revision" && (

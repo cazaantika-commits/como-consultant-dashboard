@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb, createEmailNotification } from "../db";
 import { businessPartners, paymentRequests, users, approvalSettings } from "../../drizzle/schema";
@@ -754,7 +755,7 @@ export const paymentRequestsRouter = router({
       return { url, fileName: `Payment-Report-${monthName}-${input.year}.pdf` };
     }),
 
-  // ── Archive / Unarchive ────────────────────────────────────────────────────
+  // ── Archive / Unarchive ────────────────────────────────────────────────────────────────────────────
   archive: protectedProcedure
     .input(z.object({ id: z.number(), archive: z.boolean() }))
     .mutation(async ({ input }) => {
@@ -765,6 +766,27 @@ export const paymentRequestsRouter = router({
           archivedAt: input.archive ? new Date().toISOString().slice(0, 19).replace("T", " ") : null,
         })
         .where(eq(paymentRequests.id, input.id));
+      return { success: true };
+    }),
+
+  // ── Confirm Disbursement ──────────────────────────────────────────────────────────────────────
+  confirmDisbursement: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      note: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      const [pr] = await db.select().from(paymentRequests).where(eq(paymentRequests.id, input.id));
+      if (!pr) throw new TRPCError({ code: "NOT_FOUND", message: "الطلب غير موجود" });
+      if (pr.status !== "approved") throw new TRPCError({ code: "BAD_REQUEST", message: "يجب أن يكون الطلب معتمداً أولاً" });
+      const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+      await db.update(paymentRequests).set({
+        status: "disbursed",
+        disbursedAt: now,
+        disbursedBy: ctx.user.id,
+        disbursementNote: input.note || null,
+      }).where(eq(paymentRequests.id, input.id));
       return { success: true };
     }),
 });

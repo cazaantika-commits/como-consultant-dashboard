@@ -2134,8 +2134,8 @@ export const paymentRequests = mysqlTable("payment_requests", {
   // Approved Quote
   approvedQuoteUrl: text("approved_quote_url"),
   approvedQuoteName: varchar("approved_quote_name", { length: 255 }),
-  // Status: new → pending_wael → pending_sheikh → approved / rejected / needs_revision
-  status: mysqlEnum("status", ["new", "pending_wael", "pending_sheikh", "approved", "rejected", "needs_revision"]).default("new").notNull(),
+  // Status: new → pending_wael → pending_sheikh → approved / rejected / needs_revision / disbursed
+  status: mysqlEnum("status", ["new", "pending_wael", "pending_sheikh", "approved", "rejected", "needs_revision", "disbursed"]).default("new").notNull(),
   // Wael Review
   waelReviewedAt: timestamp("wael_reviewed_at", { mode: "string" }),
   waelDecision: mysqlEnum("wael_decision", ["approved", "rejected", "needs_revision"]),
@@ -2146,6 +2146,10 @@ export const paymentRequests = mysqlTable("payment_requests", {
   sheikhNotes: text("sheikh_notes"),
   // Finance Email
   financeEmailSentAt: timestamp("finance_email_sent_at", { mode: "string" }),
+  // Disbursement
+  disbursedAt: timestamp("disbursed_at", { mode: "string" }),
+  disbursedBy: int("disbursed_by").references(() => users.id),
+  disbursementNote: text("disbursement_note"),
   // Stamp
   stampedQuoteUrl: text("stamped_quote_url"),
   // Submitter
