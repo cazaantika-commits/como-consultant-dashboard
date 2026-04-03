@@ -70,6 +70,7 @@ import CashFlowComparisonPage from "./pages/CashFlowComparisonPage";
 import PortfolioAllScenariosPage from "./pages/PortfolioAllScenariosPage";
 import CapitalPortfolioPage from "./pages/CapitalPortfolioPage";
 import UserManagementPage from "./pages/UserManagementPage";
+import ApprovalSettings from "./pages/ApprovalSettings";
 
 function Router() {
   return (
@@ -141,6 +142,7 @@ function Router() {
       <Route path="/portfolio-scenarios" component={PortfolioAllScenariosPage} />
       <Route path="/capital-portfolio" component={CapitalPortfolioPage} />
       <Route path="/user-management" component={UserManagementPage} />
+      <Route path="/approval-settings" component={ApprovalSettings} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

@@ -48,7 +48,7 @@ import { newsTickerRouter } from "./routers/newsTicker";
 import { costDistributionRulesRouter } from "./routers/costDistributionRules";
 import { cashFlowSettingsRouter } from "./routers/cashFlowSettings";
 import { portfolioScenariosRouter } from "./routers/portfolioScenarios";
-import { businessPartnersRouter, paymentRequestsRouter } from "./routers/businessPartners";
+import { businessPartnersRouter, paymentRequestsRouter, approvalSettingsRouter } from "./routers/businessPartners";
 import { adminProcedure } from "./_core/trpc";
 import { users } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -118,6 +118,7 @@ export const appRouter = router({
   portfolioScenarios: portfolioScenariosRouter,
   businessPartners: businessPartnersRouter,
   paymentRequests: paymentRequestsRouter,
+  approvalSettings: approvalSettingsRouter,
 
   // User Management (admin only)
   userManagement: router({

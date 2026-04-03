@@ -554,3 +554,9 @@
 - [x] Send email to Sheikh Issa when Wael approves a request
 - [x] Add "needs revision" option for Sheikh Issa (same as Wael)
 - [x] Allow editing a request when status is "needs_revision"
+
+## Payment Requests - Round 4 Enhancements
+
+- [x] Real PDF export for approved payment orders (server-side, with company logo and approved stamp)
+- [x] Approval authority management panel (configure approver emails/names from UI)
+- [x] Monthly PDF report for payment requests

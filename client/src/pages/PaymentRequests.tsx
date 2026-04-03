@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useSearch } from "wouter";
+import { useSearch, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import {
   CreditCard, Plus, Search, Eye, CheckCircle, XCircle, Clock,
   AlertCircle, Upload, FileText, Building2, DollarSign, Send,
-  ChevronRight, RotateCcw, Mail, ExternalLink, Banknote
+  ChevronRight, RotateCcw, Mail, ExternalLink, Banknote, Settings, Download, Calendar
 } from "lucide-react";
 
 type PaymentRequest = {
@@ -52,6 +52,10 @@ function WorkflowStep({ label, status, active, done }: { label: string; status: 
 
 export default function PaymentRequests() {
   const searchStr = useSearch();
+  const [, navigate] = useLocation();
+  const [showMonthlyReport, setShowMonthlyReport] = useState(false);
+  const [reportMonth, setReportMonth] = useState(new Date().getMonth() + 1);
+  const [reportYear, setReportYear] = useState(new Date().getFullYear());
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [showCreate, setShowCreate] = useState(false);
@@ -128,6 +132,23 @@ export default function PaymentRequests() {
         : vars.decision === "needs_revision" ? "تم إعادة الطلب للمراجعة"
         : "تم رفض الطلب";
       toast.success(msg);
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const exportPDFMutation = trpc.paymentRequests.exportPDF.useMutation({
+    onSuccess: (data) => {
+      window.open(data.url, "_blank");
+      toast.success(`تم توليد PDF: ${data.fileName}`);
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const monthlyReportMutation = trpc.paymentRequests.monthlyReportPDF.useMutation({
+    onSuccess: (data) => {
+      window.open(data.url, "_blank");
+      toast.success(`تم توليد التقرير: ${data.fileName}`);
+      setShowMonthlyReport(false);
     },
     onError: (e) => toast.error(e.message),
   });
@@ -261,13 +282,25 @@ export default function PaymentRequests() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-emerald-50/30 p-6" dir="rtl">
       {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 flex items-center justify-center shadow-lg">
-            <CreditCard className="w-6 h-6 text-white" />
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 flex items-center justify-center shadow-lg">
+              <CreditCard className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">طلبات الصرف</h1>
+              <p className="text-sm text-gray-500">إدارة أوامر الدفع مع سير الموافقة الكامل</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">طلبات الصرف</h1>
-            <p className="text-sm text-gray-500">إدارة أوامر الدفع مع سير الموافقة الكامل</p>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowMonthlyReport(true)} className="gap-2 text-sm">
+              <Calendar className="w-4 h-4" />
+              تقرير شهري
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate("/approval-settings")} className="gap-2 text-sm">
+              <Settings className="w-4 h-4" />
+              إعدادات الموافقة
+            </Button>
           </div>
         </div>
       </div>
@@ -758,34 +791,11 @@ export default function PaymentRequests() {
                   <Button
                     variant="outline"
                     className="border-emerald-300 text-emerald-700 hover:bg-emerald-50 gap-2"
-                    onClick={() => {
-                      const content = `
-شركة كومو للتطوير العقاري
-أمر صرف رقم: ${viewingRequest.requestNumber}
-تاريخ: ${new Date(viewingRequest.createdAt).toLocaleDateString("ar-AE")}
-
-الشريك / المتعامل: ${viewingRequest.partnerName || "—"}
-المشروع: ${viewingRequest.projectName || "—"}
-الوصف: ${viewingRequest.description}
-
-المبلغ: ${Number(viewingRequest.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })} ${viewingRequest.currency}
-
-الحالة: معتمد
-معتمد من قبل الشيخ عيسى
-${viewingRequest.financeEmailSentAt ? `أرسل لفريق المالية: ${new Date(viewingRequest.financeEmailSentAt).toLocaleDateString("ar-AE")}` : ""}
-                      `.trim();
-                      const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement("a");
-                      a.href = url;
-                      a.download = `أمر-صرف-${viewingRequest.requestNumber}.txt`;
-                      a.click();
-                      URL.revokeObjectURL(url);
-                      toast.success("تم تصدير أمر الصرف");
-                    }}
+                    disabled={exportPDFMutation.isPending}
+                    onClick={() => exportPDFMutation.mutate({ id: viewingRequest.id })}
                   >
-                    <FileText className="w-4 h-4" />
-                    تصدير أمر الصرف
+                    <Download className="w-4 h-4" />
+                    {exportPDFMutation.isPending ? "جاري توليد PDF..." : "تصدير أمر الصرف PDF"}
                   </Button>
                 )}
               </div>
@@ -822,6 +832,53 @@ ${viewingRequest.financeEmailSentAt ? `أرسل لفريق المالية: ${new
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Monthly Report Dialog */}
+      <Dialog open={showMonthlyReport} onOpenChange={setShowMonthlyReport}>
+        <DialogContent className="max-w-sm" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-emerald-600" />
+              تقرير شهري
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <p className="text-sm text-gray-500">اختر الشهر والسنة لتوليد تقرير PDF بجميع طلبات الصرف</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">الشهر</label>
+                <Select value={String(reportMonth)} onValueChange={v => setReportMonth(Number(v))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"].map((m, i) => (
+                      <SelectItem key={i+1} value={String(i+1)}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">السنة</label>
+                <Select value={String(reportYear)} onValueChange={v => setReportYear(Number(v))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[2024, 2025, 2026, 2027].map(y => (
+                      <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <Button
+              onClick={() => monthlyReportMutation.mutate({ year: reportYear, month: reportMonth })}
+              disabled={monthlyReportMutation.isPending}
+              className="w-full bg-gradient-to-r from-emerald-600 to-teal-700 text-white gap-2"
+            >
+              <Download className="w-4 h-4" />
+              {monthlyReportMutation.isPending ? "جاري توليد التقرير..." : "توليد وتحميل PDF"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

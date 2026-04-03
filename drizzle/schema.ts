@@ -2167,3 +2167,12 @@ export const portfolioScenarios = mysqlTable("portfolio_scenarios", {
   createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
   updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
 });
+
+// ── Approval Settings ─────────────────────────────────────────────────────────
+// Stores configurable approver info for payment request workflow
+export const approvalSettings = mysqlTable("approval_settings", {
+  id: int("id").autoincrement().notNull(),
+  key: varchar("key", { length: 100 }).notNull(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+});

@@ -1,16 +1,44 @@
 import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb, createEmailNotification } from "../db";
-import { businessPartners, paymentRequests, users } from "../../drizzle/schema";
+import { businessPartners, paymentRequests, users, approvalSettings } from "../../drizzle/schema";
 import { eq, desc, sql } from "drizzle-orm";
 import { storagePut } from "../storage";
 import { sendReply } from "../emailMonitor";
+import { generatePaymentOrderPDF } from "../pdfGenerator";
+import { storagePut as s3Put } from "../storage";
 
-// Finance team emails
-const FINANCE_EMAILS = ["shahid@zooma.ae", "account.mrt@zooma.ae", "thanseeh@globalhightrend.com"];
-const CC_EMAILS = ["wael@zooma.ae", "a.zaqout@comodevelopments.com"];
-const WAEL_EMAIL = "wael@zooma.ae";
-const SHEIKH_EMAIL = "issa@comodevelopments.com"; // Sheikh Issa's email
+// Finance team emails (defaults - overridden by approval_settings table)
+const DEFAULT_FINANCE_EMAILS = ["shahid@zooma.ae", "account.mrt@zooma.ae", "thanseeh@globalhightrend.com"];
+const DEFAULT_CC_EMAILS = ["wael@zooma.ae", "a.zaqout@comodevelopments.com"];
+const DEFAULT_WAEL_EMAIL = "wael@zooma.ae";
+const DEFAULT_SHEIKH_EMAIL = "issa@comodevelopments.com";
+
+async function getApprovalConfig() {
+  try {
+    const db = await getDb();
+    const rows = await db.select().from(approvalSettings);
+    const cfg: Record<string, string> = {};
+    for (const row of rows) cfg[row.key] = row.value;
+    return {
+      waelEmail: cfg["wael_email"] || DEFAULT_WAEL_EMAIL,
+      waelName: cfg["wael_name"] || "وائل",
+      sheikhEmail: cfg["sheikh_email"] || DEFAULT_SHEIKH_EMAIL,
+      sheikhName: cfg["sheikh_name"] || "الشيخ عيسى",
+      financeEmails: (cfg["finance_emails"] || DEFAULT_FINANCE_EMAILS.join(",")).split(",").map(e => e.trim()).filter(Boolean),
+      ccEmails: (cfg["cc_emails"] || DEFAULT_CC_EMAILS.join(",")).split(",").map(e => e.trim()).filter(Boolean),
+    };
+  } catch {
+    return {
+      waelEmail: DEFAULT_WAEL_EMAIL,
+      waelName: "وائل",
+      sheikhEmail: DEFAULT_SHEIKH_EMAIL,
+      sheikhName: "الشيخ عيسى",
+      financeEmails: DEFAULT_FINANCE_EMAILS,
+      ccEmails: DEFAULT_CC_EMAILS,
+    };
+  }
+}
 
 function generateRequestNumber(): string {
   const year = new Date().getFullYear();
@@ -613,5 +641,223 @@ export const paymentRequestsRouter = router({
       if (!partner.bankName) missing.push("Bank Name");
 
       return { complete: missing.length === 0, missing };
+    }),
+
+  // ── Export payment order as PDF ────────────────────────────────────────────
+  exportPDF: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      const [req] = await db
+        .select()
+        .from(paymentRequests)
+        .leftJoin(businessPartners, eq(paymentRequests.partnerId, businessPartners.id))
+        .where(eq(paymentRequests.id, input.id));
+
+      if (!req) throw new Error("Payment request not found");
+
+      const pr = req.payment_requests;
+      const partner = req.business_partners;
+
+      // Get submitter name
+      let submittedByName = "—";
+      if (pr.submittedBy) {
+        const [submitter] = await db.select().from(users).where(eq(users.id, pr.submittedBy));
+        submittedByName = submitter?.name || "—";
+      }
+
+      const approvalDate = pr.sheikhReviewedAt
+        ? new Date(pr.sheikhReviewedAt).toLocaleDateString("en-GB")
+        : new Date().toLocaleDateString("en-GB");
+
+      const pdfBuffer = await generatePaymentOrderPDF({
+        requestNumber: pr.requestNumber,
+        projectName: pr.projectName,
+        companyName: partner?.companyName,
+        beneficiaryName: partner?.beneficiaryName,
+        accountNumber: partner?.accountNumber,
+        iban: partner?.iban,
+        bankName: partner?.bankName,
+        branchName: partner?.branchName,
+        amount: pr.amount,
+        currency: pr.currency,
+        description: pr.description,
+        approvedQuoteUrl: pr.approvedQuoteUrl,
+        approvedQuoteName: pr.approvedQuoteName,
+        approvalDate,
+        submittedByName,
+        waelNotes: pr.waelNotes,
+        sheikhNotes: pr.sheikhNotes,
+      });
+
+      const key = `payment-orders/pdf/${pr.requestNumber}-${Date.now()}.pdf`;
+      const { url } = await s3Put(key, pdfBuffer, "application/pdf");
+      return { url, fileName: `${pr.requestNumber}.pdf` };
+    }),
+
+  // ── Monthly report PDF ─────────────────────────────────────────────────────
+  monthlyReportPDF: protectedProcedure
+    .input(z.object({ year: z.number(), month: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      const requests = await db
+        .select({
+          id: paymentRequests.id,
+          requestNumber: paymentRequests.requestNumber,
+          partnerId: paymentRequests.partnerId,
+          partnerName: businessPartners.companyName,
+          projectName: paymentRequests.projectName,
+          description: paymentRequests.description,
+          amount: paymentRequests.amount,
+          currency: paymentRequests.currency,
+          status: paymentRequests.status,
+          createdAt: paymentRequests.createdAt,
+        })
+        .from(paymentRequests)
+        .leftJoin(businessPartners, eq(paymentRequests.partnerId, businessPartners.id))
+        .orderBy(desc(paymentRequests.createdAt));
+
+      // Filter by month
+      const filtered = requests.filter(r => {
+        const d = new Date(r.createdAt);
+        return d.getFullYear() === input.year && d.getMonth() + 1 === input.month;
+      });
+
+      const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+      const monthName = monthNames[input.month - 1];
+
+      const totalApproved = filtered.filter(r => r.status === "approved").reduce((s, r) => s + Number(r.amount), 0);
+      const totalPending = filtered.filter(r => r.status !== "approved" && r.status !== "rejected").reduce((s, r) => s + Number(r.amount), 0);
+      const totalRejected = filtered.filter(r => r.status === "rejected").reduce((s, r) => s + Number(r.amount), 0);
+
+      const PDFDocument = (await import("pdfkit")).default;
+      const chunks: Buffer[] = [];
+      const pdfBuffer = await new Promise<Buffer>((resolve, reject) => {
+        const doc = new PDFDocument({ size: "A4", margin: 50 });
+        doc.on("data", (c: Buffer) => chunks.push(c));
+        doc.on("end", () => resolve(Buffer.concat(chunks)));
+        doc.on("error", reject);
+
+        const pageWidth = doc.page.width;
+        const margin = 50;
+        const contentWidth = pageWidth - margin * 2;
+
+        // Header
+        doc.rect(0, 0, pageWidth, 90).fill("#1a3c5e");
+        doc.fillColor("white").font("Helvetica-Bold").fontSize(20)
+          .text("COMO DEVELOPMENTS", margin, 22, { width: contentWidth / 2 });
+        doc.fillColor("white").font("Helvetica-Bold").fontSize(16)
+          .text(`PAYMENT REQUESTS REPORT`, margin + contentWidth / 2, 22, { width: contentWidth / 2, align: "right" });
+        doc.fillColor("rgba(255,255,255,0.7)").font("Helvetica").fontSize(11)
+          .text(`${monthName} ${input.year}`, margin + contentWidth / 2, 46, { width: contentWidth / 2, align: "right" });
+
+        let y = 110;
+
+        // Summary cards
+        const cardW = (contentWidth - 20) / 3;
+        const cards = [
+          { label: "Approved", amount: totalApproved, color: "#16a34a" },
+          { label: "Pending", amount: totalPending, color: "#d97706" },
+          { label: "Rejected", amount: totalRejected, color: "#dc2626" },
+        ];
+        cards.forEach((card, i) => {
+          const cx = margin + i * (cardW + 10);
+          doc.rect(cx, y, cardW, 60).fill(card.color);
+          doc.fillColor("white").font("Helvetica-Bold").fontSize(10).text(card.label, cx + 10, y + 10, { width: cardW - 20 });
+          doc.fillColor("white").font("Helvetica-Bold").fontSize(14)
+            .text(`AED ${card.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}`, cx + 10, y + 30, { width: cardW - 20 });
+        });
+        y += 80;
+
+        // Table header
+        doc.rect(margin, y, contentWidth, 22).fill("#1a3c5e");
+        const cols = [{ label: "#", w: 30 }, { label: "Request No", w: 100 }, { label: "Partner", w: 130 }, { label: "Project", w: 100 }, { label: "Amount", w: 90 }, { label: "Status", w: 75 }];
+        let cx2 = margin;
+        doc.fillColor("white").font("Helvetica-Bold").fontSize(9);
+        cols.forEach(col => {
+          doc.text(col.label, cx2 + 4, y + 6, { width: col.w - 8 });
+          cx2 += col.w;
+        });
+        y += 22;
+
+        filtered.forEach((r, idx) => {
+          if (y > 750) { doc.addPage(); y = 50; }
+          const bg = idx % 2 === 0 ? "#fafafa" : "#ffffff";
+          doc.rect(margin, y, contentWidth, 20).fill(bg);
+          doc.rect(margin, y, contentWidth, 20).lineWidth(0.3).strokeColor("#e0e0e0").stroke();
+
+          const statusColors: Record<string, string> = { approved: "#16a34a", rejected: "#dc2626", pending_wael: "#d97706", pending_sheikh: "#2563eb", needs_revision: "#7c3aed" };
+          const statusLabels: Record<string, string> = { approved: "Approved", rejected: "Rejected", pending_wael: "Pending Wael", pending_sheikh: "Pending Sheikh", needs_revision: "Needs Revision" };
+
+          let cx3 = margin;
+          const vals = [
+            String(idx + 1),
+            r.requestNumber,
+            (r.partnerName || "—").substring(0, 18),
+            (r.projectName || "—").substring(0, 15),
+            `${Number(r.amount).toLocaleString("en-US", { minimumFractionDigits: 0 })} ${r.currency}`,
+            statusLabels[r.status] || r.status,
+          ];
+          vals.forEach((val, vi) => {
+            const col = cols[vi];
+            if (vi === 5) {
+              doc.fillColor(statusColors[r.status] || "#333");
+            } else {
+              doc.fillColor("#1a1a1a");
+            }
+            doc.font("Helvetica").fontSize(8.5).text(val, cx3 + 4, y + 5, { width: col.w - 8 });
+            cx3 += col.w;
+          });
+          y += 20;
+        });
+
+        if (filtered.length === 0) {
+          doc.fillColor("#888").font("Helvetica").fontSize(12)
+            .text("No payment requests found for this period.", margin, y + 20, { width: contentWidth, align: "center" });
+        }
+
+        // Footer
+        doc.rect(0, doc.page.height - 40, pageWidth, 40).fill("#1a3c5e");
+        doc.fillColor("rgba(255,255,255,0.7)").font("Helvetica").fontSize(9)
+          .text(`Como Developments  |  Monthly Payment Report  |  ${monthName} ${input.year}  |  Total Requests: ${filtered.length}`, margin, doc.page.height - 25, { width: contentWidth, align: "center" });
+
+        doc.end();
+      });
+
+      const key = `payment-orders/reports/monthly-${input.year}-${String(input.month).padStart(2, "0")}-${Date.now()}.pdf`;
+      const { url } = await s3Put(key, pdfBuffer, "application/pdf");
+      return { url, fileName: `Payment-Report-${monthName}-${input.year}.pdf` };
+    }),
+});
+
+// ── Approval Settings Router ───────────────────────────────────────────────────
+export const approvalSettingsRouter = router({
+  getAll: protectedProcedure.query(async () => {
+    const db = await getDb();
+    const rows = await db.select().from(approvalSettings);
+    const cfg: Record<string, string> = {};
+    for (const row of rows) cfg[row.key] = row.value;
+    return cfg;
+  }),
+
+  update: protectedProcedure
+    .input(z.object({
+      wael_name: z.string().min(1),
+      wael_email: z.string().email(),
+      sheikh_name: z.string().min(1),
+      sheikh_email: z.string().email(),
+      finance_emails: z.string().min(1),
+      cc_emails: z.string().optional().default(""),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      const entries = Object.entries(input) as [string, string][];
+      for (const [key, value] of entries) {
+        await db
+          .insert(approvalSettings)
+          .values({ key, value })
+          .onDuplicateKeyUpdate({ set: { value } });
+      }
+      return { success: true };
     }),
 });
