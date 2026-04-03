@@ -4089,6 +4089,50 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             meeting_minutes: 'محاضر الاجتماعات والقرارات',
           };
 
+          // Card-style tile (white card + colored square icon + badge) — used for 4 specific icons
+          const CardTile = ({ bubble, size = 'md' }: { bubble: typeof BUBBLES[0]; size?: 'lg' | 'md' | 'sm' }) => {
+            const count = counts.data?.[bubble.type as keyof typeof counts.data] || 0;
+            const hasCount = typeof count === 'number' && count > 0;
+            const sc = solidColorMap[bubble.color] || {solid:'#64748b', shadow:'rgba(100,116,139,0.45)'};
+            const iconBoxSize = size === 'lg' ? 72 : size === 'md' ? 60 : 52;
+            const iconSize = size === 'lg' ? 30 : size === 'md' ? 26 : 22;
+            const fontSize = size === 'lg' ? '0.85rem' : size === 'md' ? '0.78rem' : '0.72rem';
+            return (
+              <button
+                onClick={() => handleBubbleClick(bubble.type)}
+                className="group flex flex-col items-center gap-3 p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 active:scale-95 w-full"
+                style={{background:'#ffffff', border:'1px solid rgba(0,0,0,0.07)'}}
+              >
+                <div className="relative" style={{width: iconBoxSize, height: iconBoxSize}}>
+                  <div
+                    className="flex items-center justify-center w-full h-full transition-transform duration-200 group-hover:scale-105"
+                    style={{
+                      background: sc.solid,
+                      borderRadius: size === 'lg' ? '20px' : '16px',
+                      boxShadow: `0 4px 14px ${sc.shadow}`,
+                    }}
+                  >
+                    <bubble.icon style={{width: iconSize, height: iconSize, color:'white', filter:'drop-shadow(0 1px 3px rgba(0,0,0,0.2))'}} />
+                  </div>
+                  {hasCount && (
+                    <div
+                      className="absolute -top-2 -right-2 min-w-[22px] h-[22px] px-1.5 rounded-full flex items-center justify-center text-[10px] font-black"
+                      style={{background:'#ef4444', color:'white', boxShadow:'0 2px 8px rgba(239,68,68,0.55)', zIndex:10}}
+                    >
+                      {count}
+                    </div>
+                  )}
+                </div>
+                <span
+                  className="font-semibold text-center leading-tight text-slate-700 group-hover:text-slate-900 transition-colors"
+                  style={{fontSize, maxWidth: iconBoxSize + 24, display:'block'}}
+                >
+                  {bubble.label}
+                </span>
+              </button>
+            );
+          };
+
           // Clean icon-tile card — large icon + label below
           const IconTile = ({ bubble, size = 'md' }: { bubble: typeof BUBBLES[0]; size?: 'lg' | 'md' | 'sm' }) => {
             const count = counts.data?.[bubble.type as keyof typeof counts.data] || 0;
@@ -4133,22 +4177,22 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
 
           return (
             <div className="mb-4 space-y-6">
-              {/* Row 1: Hero — 2 large tiles */}
+              {/* Row 1: Hero — محفظة رأس المال + التقارير المالية (card style) */}
               <div className="grid grid-cols-2 gap-6">
-                <IconTile bubble={BUBBLES[0]} size="lg" />
-                <IconTile bubble={BUBBLES[1]} size="lg" />
+                <CardTile bubble={BUBBLES[0]} size="lg" />
+                <CardTile bubble={BUBBLES[1]} size="lg" />
               </div>
-              {/* Row 2: 4 medium tiles */}
+              {/* Row 2: 4 medium tiles — الطلبات والاستفسارات uses card style */}
               <div className="grid grid-cols-4 gap-4">
                 <IconTile bubble={BUBBLES[2]} size="md" />
                 <IconTile bubble={BUBBLES[3]} size="md" />
-                <IconTile bubble={BUBBLES[4]} size="md" />
+                <CardTile bubble={BUBBLES[4]} size="md" />
                 <IconTile bubble={BUBBLES[5]} size="md" />
               </div>
-              {/* Row 3: 4 small tiles */}
+              {/* Row 3: 4 small tiles — برنامج العمل uses card style */}
               <div className="grid grid-cols-4 gap-4">
                 <IconTile bubble={BUBBLES[6]} size="sm" />
-                <IconTile bubble={BUBBLES[7]} size="sm" />
+                <CardTile bubble={BUBBLES[7]} size="sm" />
                 <IconTile bubble={BUBBLES[8]} size="sm" />
                 <IconTile bubble={BUBBLES[9]} size="sm" />
               </div>
