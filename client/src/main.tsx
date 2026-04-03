@@ -38,7 +38,11 @@ queryClient.getQueryCache().subscribe(event => {
   if (event.type === "updated" && event.action.type === "error") {
     const error = event.query.state.error;
     redirectToLoginIfUnauthorized(error);
-    console.error("[API Query Error]", error);
+    // Suppress JSON parse errors (server returned HTML during restart/cold-start) - these are retried automatically
+    const isJsonParseError = error instanceof TRPCClientError && error.message.includes('is not valid JSON');
+    if (!isJsonParseError) {
+      console.error("[API Query Error]", error);
+    }
   }
 });
 

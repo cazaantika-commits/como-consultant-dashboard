@@ -791,8 +791,12 @@ export async function dismissNotification(id: number, userId: number) {
 export async function isEmailAlreadyNotified(emailUid: number) {
   const db = await getDb();
   if (!db) return false;
-  const result = await db.select({ count: sql<number>`count(*)` })
-    .from(emailNotifications)
-    .where(eq(emailNotifications.emailUid, emailUid));
-  return (result[0]?.count || 0) > 0;
+  try {
+    const result = await db.select({ count: sql<number>`count(*)` })
+      .from(emailNotifications)
+      .where(eq(emailNotifications.emailUid, emailUid));
+    return (result[0]?.count || 0) > 0;
+  } catch {
+    return false;
+  }
 }
