@@ -4230,8 +4230,15 @@ function DashboardHeader({ member, onLogout, unreadCount, onNotifications, onSal
   return (
     <header className="sticky top-0 z-30" style={{background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(99,102,241,0.12)', boxShadow: '0 1px 20px rgba(99,102,241,0.08)'}}>
       <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-        {/* Logo */}
+        {/* Logo + Back button */}
         <div className="flex items-center gap-3">
+          {/* Back to home button */}
+          <a href="/" className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all hover:scale-105 active:scale-95"
+            style={{background: 'rgba(0,0,0,0.05)', color: '#374151', border: '1px solid rgba(0,0,0,0.1)'}}>
+            <ArrowRight className="w-3.5 h-3.5" />
+            الرئيسية
+          </a>
+          <div className="w-px h-5 bg-slate-200" />
           <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-lg" style={{background: 'linear-gradient(135deg, #f59e0b, #d97706)', boxShadow: '0 4px 12px rgba(245,158,11,0.4)'}}>
             <span className="text-sm font-black text-white">C</span>
           </div>
