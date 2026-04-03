@@ -14,6 +14,7 @@ import { initTelegramBot, registerCallbackHandler, getBotInfo } from "../telegra
 import { startEmailNotificationService } from "../emailNotificationService";
 import { startLifecycleDeadlineScheduler } from "../lifecycleDeadlineScheduler";
 import { startPaymentReminderScheduler } from "../paymentReminderScheduler";
+import { startGeneralRequestReminderScheduler } from "../generalRequestReminderScheduler";
 import complianceReportRoute from "../complianceReport";
 import lifecycleApiRoute from "../lifecycleApiRoute";
 import cpaReportRoute from "../cpaReportRoute";
@@ -120,6 +121,9 @@ async function startServer() {
 
   // Start payment request reminder (every 36 hours for pending requests)
   startPaymentReminderScheduler();
+
+  // Start general request reminder (every 36 hours for pending non-financial requests)
+  startGeneralRequestReminderScheduler();
 }
 
 startServer().catch(console.error);

@@ -71,6 +71,7 @@ import PortfolioAllScenariosPage from "./pages/PortfolioAllScenariosPage";
 import CapitalPortfolioPage from "./pages/CapitalPortfolioPage";
 import UserManagementPage from "./pages/UserManagementPage";
 import ApprovalSettings from "./pages/ApprovalSettings";
+import GeneralRequests from "./pages/GeneralRequests";
 
 function Router() {
   return (
@@ -97,6 +98,7 @@ function Router() {
       <Route path="/consultants-registry" component={ConsultantsRegistry} />
       <Route path="/business-partners-registry" component={BusinessPartnersRegistry} />
       <Route path="/payment-requests" component={PaymentRequests} />
+      <Route path="/general-requests" component={GeneralRequests} />
       <Route path="/consultant-portal" component={ConsultantPortalPage} />
       <Route path="/consultant-guide" component={ConsultantGuidePage} />
       <Route path="/consultant-proposals" component={CPAPage} />

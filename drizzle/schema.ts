@@ -2183,3 +2183,48 @@ export const approvalSettings = mysqlTable("approval_settings", {
   value: text("value").notNull(),
   updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
 });
+
+// ── General Requests & Inquiries ──────────────────────────────────────────────
+// Non-financial requests: proposal approval, contract approval, meeting request, Zoom, inquiry, decision
+export const generalRequests = mysqlTable("general_requests", {
+  id: int("id").autoincrement().notNull(),
+  requestNumber: varchar("request_number", { length: 50 }).notNull(), // REQ-2026-001
+  requestType: mysqlEnum("request_type", [
+    "proposal_approval",   // اعتماد عرض
+    "contract_approval",   // اعتماد عقد
+    "meeting_request",     // طلب اجتماع
+    "zoom_meeting",        // اجتماع زووم
+    "inquiry",             // استفسار
+    "decision_request",    // طلب قرار
+    "other",               // أخرى
+  ]).notNull(),
+  subject: varchar("subject", { length: 500 }).notNull(),
+  description: text("description").notNull(),
+  projectName: varchar("project_name", { length: 255 }),
+  relatedParty: varchar("related_party", { length: 255 }), // consultant / contractor / partner name
+  // Attachment (e.g., proposal PDF, contract draft)
+  attachmentUrl: text("attachment_url"),
+  attachmentName: varchar("attachment_name", { length: 255 }),
+  // Proposed meeting date/time (for meeting requests)
+  proposedDate: varchar("proposed_date", { length: 100 }),
+  // Status: new → pending_wael → pending_sheikh → approved / rejected / needs_revision
+  status: mysqlEnum("gr_status", ["new", "pending_wael", "pending_sheikh", "approved", "rejected", "needs_revision"]).default("new").notNull(),
+  // Wael Review
+  waelReviewedAt: timestamp("wael_reviewed_at", { mode: "string" }),
+  waelDecision: mysqlEnum("gr_wael_decision", ["approved", "rejected", "needs_revision"]),
+  waelNotes: text("wael_notes"),
+  // Sheikh Issa Review
+  sheikhReviewedAt: timestamp("sheikh_reviewed_at", { mode: "string" }),
+  sheikhDecision: mysqlEnum("gr_sheikh_decision", ["approved", "rejected", "needs_revision"]),
+  sheikhNotes: text("sheikh_notes"),
+  // Finance Email (sent after approval)
+  financeEmailSentAt: timestamp("finance_email_sent_at", { mode: "string" }),
+  // Submitter
+  submittedBy: int("submitted_by").references(() => users.id),
+  // Archive
+  isArchived: tinyint("is_archived").default(0).notNull(),
+  archivedAt: timestamp("archived_at", { mode: "string" }),
+  // Audit
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+});

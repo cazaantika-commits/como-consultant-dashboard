@@ -407,6 +407,13 @@
       "when": 1775250560516,
       "tag": "0057_gigantic_jimmy_woo",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "5",
+      "when": 1775252528518,
+      "tag": "0058_chilly_prowler",
+      "breakpoints": true
     }
   ]
 }
