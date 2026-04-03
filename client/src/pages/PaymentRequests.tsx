@@ -312,6 +312,7 @@ export default function PaymentRequests() {
       { label: "مراجعة وائل", done: ["pending_sheikh", "approved", "rejected"].includes(status), active: status === "pending_wael" },
       { label: "اعتماد الشيخ عيسى", done: status === "approved", active: status === "pending_sheikh" },
       { label: "إشعار المالية", done: status === "approved", active: false },
+      // Finance notification is automatic upon approval
     ];
     return steps;
   };
@@ -530,7 +531,7 @@ export default function PaymentRequests() {
                     { label: "تقديم الطلب", done: true, active: false },
                     { label: "مراجعة وائل", done: ["pending_sheikh", "approved", "rejected"].includes(r.status), active: r.status === "pending_wael" },
                     { label: "الشيخ عيسى", done: r.status === "approved", active: r.status === "pending_sheikh" },
-                    { label: "إشعار المالية", done: r.status === "approved" && !!r.financeEmailSentAt, active: r.status === "approved" && !r.financeEmailSentAt },
+                    { label: "إشعار المالية", done: r.status === "approved", active: false },
                   ].map((step, idx) => (
                     <div key={idx} className="flex items-center gap-0.5">
                       {idx > 0 && <ChevronRight className="w-2.5 h-2.5 text-gray-300 flex-shrink-0" />}
