@@ -462,6 +462,7 @@ export default function Home() {
     { label: "سجل العقود", path: "/contracts" },
     { label: "سجل الإيميلات المرسلة", path: "/sent-emails" },
     { label: "سجل الاستشاريين", path: "/consultants-registry" },
+    { label: "سجل الشركاء والمتعاملين", path: "/business-partners-registry" },
   ];
 
   return (
