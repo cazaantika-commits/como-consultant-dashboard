@@ -13,6 +13,7 @@ import { serveStatic, setupVite } from "./vite";
 import { initTelegramBot, registerCallbackHandler, getBotInfo } from "../telegramBot";
 import { startEmailNotificationService } from "../emailNotificationService";
 import { startLifecycleDeadlineScheduler } from "../lifecycleDeadlineScheduler";
+import { startPaymentReminderScheduler } from "../paymentReminderScheduler";
 import complianceReportRoute from "../complianceReport";
 import lifecycleApiRoute from "../lifecycleApiRoute";
 import cpaReportRoute from "../cpaReportRoute";
@@ -116,6 +117,9 @@ async function startServer() {
 
   // Start lifecycle deadline checker (daily at 8 AM Dubai time)
   startLifecycleDeadlineScheduler();
+
+  // Start payment request reminder (every 36 hours for pending requests)
+  startPaymentReminderScheduler();
 }
 
 startServer().catch(console.error);

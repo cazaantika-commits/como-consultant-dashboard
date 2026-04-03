@@ -13,7 +13,7 @@ import { storagePut as s3Put } from "../storage";
 const DEFAULT_FINANCE_EMAILS = ["shahid@zooma.ae", "account.mrt@zooma.ae", "thanseeh@globalhightrend.com"];
 const DEFAULT_CC_EMAILS = ["wael@zooma.ae", "a.zaqout@comodevelopments.com"];
 const DEFAULT_WAEL_EMAIL = "wael@zooma.ae";
-const DEFAULT_SHEIKH_EMAIL = "issa@comodevelopments.com";
+const DEFAULT_SHEIKH_EMAIL = "essaabuseif@gmail.com";
 
 async function getApprovalConfig() {
   try {
