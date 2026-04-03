@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import {
   CreditCard, Plus, Search, Eye, CheckCircle, XCircle, Clock,
   AlertCircle, Upload, FileText, Building2, DollarSign, Send,
-  ChevronRight, RotateCcw, Mail, ExternalLink, Banknote, Settings, Download, Calendar, Archive, ArchiveRestore
+  ChevronRight, RotateCcw, Mail, ExternalLink, Banknote, Settings, Download, Calendar, Archive, ArchiveRestore, ArrowRight
 } from "lucide-react";
 
 type PaymentRequest = {
@@ -297,6 +297,11 @@ export default function PaymentRequests() {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="gap-1.5 text-gray-500 hover:text-gray-800 -mr-1">
+              <ArrowRight className="w-4 h-4" />
+              الرئيسية
+            </Button>
+            <div className="w-px h-6 bg-gray-200" />
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 flex items-center justify-center shadow-lg">
               <CreditCard className="w-6 h-6 text-white" />
             </div>
