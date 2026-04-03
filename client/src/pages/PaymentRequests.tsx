@@ -428,7 +428,7 @@ export default function PaymentRequests() {
           {/* Table Header */}
           <div
             className="grid bg-gray-50 border-b border-gray-200 px-4 py-2 text-xs font-semibold text-gray-500"
-            style={{ gridTemplateColumns: "160px 1px 1fr 1px 1fr 1px 120px 1px 320px 1px 130px 100px" }}
+            style={{ gridTemplateColumns: "120px 1px 1fr 1px 160px 1px 110px 1px 420px 1px 130px 100px" }}
           >
             <div>رقم الطلب</div>
             <div />
@@ -459,7 +459,7 @@ export default function PaymentRequests() {
                 key={r.id}
                 className="grid items-center bg-white hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
                 style={{
-                  gridTemplateColumns: "160px 1px 1fr 1px 1fr 1px 120px 1px 320px 1px 130px 100px",
+                  gridTemplateColumns: "120px 1px 1fr 1px 160px 1px 110px 1px 420px 1px 130px 100px",
                   borderRight: `4px solid ${borderColor}`,
                 }}
               >
