@@ -590,3 +590,8 @@
 - [x] Upload approval PDF to S3 and store URL in DB (approvalDocumentUrl field)
 - [x] Send approval document to finance team by email with download link
 - [x] Show approval document when clicking approved status badge in detail view
+
+## Phase 10 Enhancements
+- [x] Add project/partner dropdowns and multi-file upload to Payment Requests form
+- [x] Add recommended company field for proposal approval type in General Requests
+- [x] Add archive tab to General Requests page

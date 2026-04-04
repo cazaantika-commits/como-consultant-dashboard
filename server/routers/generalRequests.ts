@@ -177,6 +177,8 @@ export const generalRequestsRouter = router({
       contractName: z.string().optional(),
       additionalAttachments: z.string().optional(), // JSON string
       attachmentsJson: z.string().optional(), // JSON array of {name, url}
+      recommendedCompanyId: z.number().optional().nullable(),
+      recommendedCompanyName: z.string().optional().nullable(),
     }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
@@ -197,6 +199,8 @@ export const generalRequestsRouter = router({
         contractName: input.contractName,
         additionalAttachments: input.additionalAttachments,
         attachmentsJson: input.attachmentsJson || null,
+        recommendedCompanyId: input.recommendedCompanyId || null,
+        recommendedCompanyName: input.recommendedCompanyName || null,
         status: "pending_wael",
         submittedBy: ctx.user.id,
       });
@@ -430,6 +434,13 @@ export const generalRequestsRouter = router({
         <div class="field-value">${req.relatedParty || 'N/A'}</div>
       </div>
     </div>
+    ${req.recommendedCompanyName ? `
+    <div class="field" style="background:#f0fdf4;border:2px solid #10b981;border-radius:10px;padding:16px 20px;margin-bottom:20px;">
+      <div class="section-title" style="color:#059669;font-size:14px;font-weight:bold;">&#x2B50; الشركة المُوصى باعتمادها</div>
+      <div class="field-value" style="font-size:20px;color:#065f46;font-weight:bold;margin-top:6px;">${req.recommendedCompanyName}</div>
+      <div style="font-size:12px;color:#6b7280;margin-top:4px;">تمت التوصية باعتماد هذه الشركة من بين العروض المقدمة</div>
+    </div>
+    ` : ''}
     <div class="field">
       <div class="section-title">المرفقات</div>
       <div class="field-value">${attachmentsHtml}</div>
@@ -535,6 +546,8 @@ export const generalRequestsRouter = router({
       contractName: z.string().optional(),
       additionalAttachments: z.string().optional(),
       attachmentsJson: z.string().optional(),
+      recommendedCompanyId: z.number().optional().nullable(),
+      recommendedCompanyName: z.string().optional().nullable(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();

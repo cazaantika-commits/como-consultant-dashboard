@@ -83,6 +83,7 @@ export default function PaymentRequests() {
 
   const [createForm, setCreateForm] = useState({
     partnerId: "",
+    projectId: "",
     projectName: "",
     description: "",
     amount: "",
@@ -103,12 +104,14 @@ export default function PaymentRequests() {
   const utils = trpc.useUtils();
   const { data: requests = [], isLoading } = trpc.paymentRequests.list.useQuery();
   const { data: partners = [] } = trpc.businessPartners.list.useQuery();
+  const { data: projectsList = [] } = trpc.paymentRequests.getProjects.useQuery();
+  const [pendingAdditionalFileName, setPendingAdditionalFileName] = useState("");
 
   const createMutation = trpc.paymentRequests.create.useMutation({
     onSuccess: (data) => {
       utils.paymentRequests.list.invalidate();
       setShowCreate(false);
-      setCreateForm({ partnerId: "", projectName: "", description: "", amount: "", currency: "AED" });
+      setCreateForm({ partnerId: "", projectId: "", projectName: "", description: "", amount: "", currency: "AED" });
       setQuoteFile(null);
       setContractFile(null);
       setAdditionalFiles([]);
@@ -194,7 +197,7 @@ export default function PaymentRequests() {
     if (!createForm.amount || isNaN(Number(createForm.amount))) { toast.error("المبلغ غير صحيح"); return; }
     createMutation.mutate({
       partnerId: Number(createForm.partnerId),
-      projectName: createForm.projectName || undefined,
+      projectName: createForm.projectId ? (projectsList.find(p => String(p.id) === createForm.projectId)?.name || createForm.projectName || undefined) : (createForm.projectName || undefined),
       description: createForm.description,
       amount: createForm.amount,
       currency: createForm.currency,
@@ -274,19 +277,22 @@ export default function PaymentRequests() {
   };
 
   const handleAdditionalFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64 = (reader.result as string).split(",")[1];
-        uploadQuoteMutation.mutate(
-          { fileName: file.name, fileBase64: base64, mimeType: file.type },
-          { onSuccess: (data) => { setAdditionalFiles(prev => [...prev, { url: data.url, name: data.fileName }]); toast.success(`تم رفع: ${data.fileName}`); } }
-        );
-      };
-      reader.readAsDataURL(file);
-    });
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const displayName = pendingAdditionalFileName.trim() || file.name;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(",")[1];
+      uploadQuoteMutation.mutate(
+        { fileName: file.name, fileBase64: base64, mimeType: file.type },
+        { onSuccess: (data) => {
+          setAdditionalFiles(prev => [...prev, { url: data.url, name: displayName }]);
+          setPendingAdditionalFileName("");
+          toast.success(`تم رفع: ${displayName}`);
+        }}
+      );
+    };
+    reader.readAsDataURL(file);
     if (additionalInputRef.current) additionalInputRef.current.value = "";
   };
 
@@ -753,8 +759,21 @@ export default function PaymentRequests() {
 
             <div>
               <label className="text-sm font-medium text-gray-700 mb-1 block">المشروع</label>
-              <Input value={createForm.projectName} onChange={e => setCreateForm(p => ({ ...p, projectName: e.target.value }))}
-                placeholder="اسم المشروع (اختياري)" />
+              {projectsList.length > 0 ? (
+                <Select value={createForm.projectId} onValueChange={v => setCreateForm(p => ({ ...p, projectId: v, projectName: projectsList.find(x => String(x.id) === v)?.name || "" }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر المشروع (اختياري)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projectsList.map(proj => (
+                      <SelectItem key={proj.id} value={String(proj.id)}>{proj.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input value={createForm.projectName} onChange={e => setCreateForm(p => ({ ...p, projectName: e.target.value }))}
+                  placeholder="اسم المشروع (اختياري)" />
+              )}
             </div>
 
             <div>
@@ -860,13 +879,21 @@ export default function PaymentRequests() {
                   ))}
                 </div>
               )}
-              <Button variant="outline" onClick={() => additionalInputRef.current?.click()}
-                disabled={uploadQuoteMutation.isPending} className="w-full border-dashed border-orange-300 text-orange-700 hover:bg-orange-50">
-                <Upload className="w-4 h-4 ml-2" />
-                إضافة مرفق
-              </Button>
+              <div className="flex gap-2 mb-2">
+                <Input
+                  value={pendingAdditionalFileName}
+                  onChange={e => setPendingAdditionalFileName(e.target.value)}
+                  placeholder="اسم المرفق (مثال: عرض شركة X)"
+                  className="flex-1 text-sm"
+                />
+                <Button variant="outline" onClick={() => additionalInputRef.current?.click()}
+                  disabled={uploadQuoteMutation.isPending} className="border-dashed border-orange-300 text-orange-700 hover:bg-orange-50 shrink-0">
+                  <Upload className="w-4 h-4 ml-1" />
+                  {uploadQuoteMutation.isPending ? "جاري..." : "رفع"}
+                </Button>
+              </div>
               <input ref={additionalInputRef} type="file" className="hidden" onChange={handleAdditionalFileUpload}
-                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xlsx,.xls" multiple />
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xlsx,.xls" />
             </div>
           </div>
 

@@ -32,6 +32,8 @@ type GeneralRequest = {
   attachmentName?: string | null;
   attachmentsJson?: string | null; // JSON array of {name, url}
   approvalDocumentUrl?: string | null;
+  recommendedCompanyId?: number | null;
+  recommendedCompanyName?: string | null;
   status: RequestStatus;
   waelDecision?: string | null;
   waelNotes?: string | null;
@@ -109,6 +111,7 @@ export default function GeneralRequests() {
     partnerId: "",
     relatedParty: "",
     proposedDate: "",
+    recommendedCompanyId: "",
   });
 
   const utils = trpc.useUtils();
@@ -123,7 +126,7 @@ export default function GeneralRequests() {
       utils.generalRequests.list.invalidate();
       utils.generalRequests.counts.invalidate();
       setShowCreate(false);
-      setCreateForm({ requestType: "", subject: "", description: "", projectId: "", projectName: "", partnerId: "", relatedParty: "", proposedDate: "" });
+      setCreateForm({ requestType: "", subject: "", description: "", projectId: "", projectName: "", partnerId: "", relatedParty: "", proposedDate: "", recommendedCompanyId: "" });
       setAttachFiles([]);
       setPendingFileName("");
       toast.success(`تم إنشاء الطلب ${data.requestNumber}`);
@@ -179,18 +182,18 @@ export default function GeneralRequests() {
       utils.generalRequests.counts.invalidate();
       setViewingRequest(null);
       setEditMode(false);
-      setEditAttachFile(null);
+      setEditAttachFiles([]);
       toast.success("تم تحديث الطلب وإعادة إرساله لوائل");
     },
     onError: (e) => toast.error(e.message),
   });
 
   const archiveMutation = trpc.generalRequests.archive.useMutation({
-    onSuccess: () => {
+    onSuccess: (_, vars) => {
       utils.generalRequests.list.invalidate();
       utils.generalRequests.counts.invalidate();
       setViewingRequest(null);
-      toast.success("تم أرشفة الطلب");
+      toast.success(vars.archive ? "تم أرشفة الطلب" : "تم إلغاء أرشفة الطلب");
     },
     onError: (e) => toast.error(e.message),
   });
@@ -242,6 +245,8 @@ export default function GeneralRequests() {
     const attachmentsJson = attachFiles.length > 0 ? JSON.stringify(attachFiles) : undefined;
     // Use first file as legacy attachmentUrl for backward compat
     const firstFile = attachFiles[0];
+    // Resolve recommended company
+    const selectedRecommendedCompany = partnersList.find(p => String(p.id) === createForm.recommendedCompanyId);
     createMutation.mutate({
       requestType: createForm.requestType as RequestType,
       subject: createForm.subject,
@@ -252,6 +257,8 @@ export default function GeneralRequests() {
       attachmentUrl: firstFile?.url,
       attachmentName: firstFile?.name,
       attachmentsJson,
+      recommendedCompanyId: selectedRecommendedCompany ? Number(createForm.recommendedCompanyId) : undefined,
+      recommendedCompanyName: selectedRecommendedCompany?.companyName || undefined,
     });
   };
 
@@ -329,14 +336,27 @@ export default function GeneralRequests() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline" size="sm"
-              onClick={() => setShowArchived(!showArchived)}
-              className={`gap-2 text-sm ${showArchived ? "bg-amber-50 border-amber-300 text-amber-700" : ""}`}
-            >
-              {showArchived ? <ArchiveRestore className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
-              {showArchived ? "عرض النشطة" : "الأرشيف"}
-            </Button>
+            {/* Archive / Active tab toggle */}
+            <div className="flex rounded-lg border border-gray-200 bg-white overflow-hidden shadow-sm">
+              <button
+                onClick={() => setShowArchived(false)}
+                className={`px-3 py-1.5 text-sm font-medium flex items-center gap-1.5 transition-all ${
+                  !showArchived ? "bg-violet-600 text-white" : "text-gray-500 hover:bg-gray-50"
+                }`}
+              >
+                <ClipboardList className="w-3.5 h-3.5" />
+                النشطة
+              </button>
+              <button
+                onClick={() => setShowArchived(true)}
+                className={`px-3 py-1.5 text-sm font-medium flex items-center gap-1.5 transition-all border-r border-gray-200 ${
+                  showArchived ? "bg-amber-500 text-white" : "text-gray-500 hover:bg-gray-50"
+                }`}
+              >
+                <Archive className="w-3.5 h-3.5" />
+                الأرشيف
+              </button>
+            </div>
             <Button variant="outline" size="sm" onClick={() => navigate("/approval-settings")} className="gap-2 text-sm">
               <Settings className="w-4 h-4" />
               إعدادات الموافقة
@@ -461,6 +481,15 @@ export default function GeneralRequests() {
         )}
       </div>
 
+      {/* Archive mode banner */}
+      {showArchived && (
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2 text-amber-700">
+          <Archive className="w-4 h-4 flex-shrink-0" />
+          <span className="text-sm font-medium">أنت تعرض الطلبات المؤرشفة — هذه الطلبات لا تظهر في العدادات الرئيسية</span>
+          <button onClick={() => setShowArchived(false)} className="mr-auto text-xs underline hover:no-underline">عودة للنشطة</button>
+        </div>
+      )}
+
       {/* Table */}
       {isLoading ? (
         <div className="space-y-3">
@@ -476,11 +505,23 @@ export default function GeneralRequests() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-20">
-          <ClipboardList className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-          <p className="text-gray-400 text-lg">لا توجد طلبات</p>
-          <Button onClick={() => setShowCreate(true)} variant="outline" className="mt-4">
-            <Plus className="w-4 h-4 ml-2" /> إنشاء أول طلب
-          </Button>
+          {showArchived ? (
+            <>
+              <Archive className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+              <p className="text-gray-400 text-lg">لا توجد طلبات مؤرشفة</p>
+              <Button onClick={() => setShowArchived(false)} variant="outline" className="mt-4">
+                <ArchiveRestore className="w-4 h-4 ml-2" /> عودة للطلبات النشطة
+              </Button>
+            </>
+          ) : (
+            <>
+              <ClipboardList className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+              <p className="text-gray-400 text-lg">لا توجد طلبات</p>
+              <Button onClick={() => setShowCreate(true)} variant="outline" className="mt-4">
+                <Plus className="w-4 h-4 ml-2" /> إنشاء أول طلب
+              </Button>
+            </>
+          )}
         </div>
       ) : (
         <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm">
@@ -702,6 +743,33 @@ export default function GeneralRequests() {
               </div>
             </div>
 
+            {/* Recommended Company (for proposal_approval type only) */}
+            {createForm.requestType === "proposal_approval" && (
+              <div className="p-3 bg-blue-50 rounded-xl border border-blue-200">
+                <label className="text-sm font-semibold text-blue-800 mb-1.5 block flex items-center gap-1.5">
+                  <span className="text-base">⭐</span>
+                  الشركة المُوصى باعتمادها
+                  <span className="text-xs font-normal text-blue-500">(اختياري — للعروض المتعددة)</span>
+                </label>
+                <Select value={createForm.recommendedCompanyId} onValueChange={v => setCreateForm(p => ({ ...p, recommendedCompanyId: v }))}>
+                  <SelectTrigger className="bg-white border-blue-200">
+                    <SelectValue placeholder="اختر الشركة المُوصى بها من بين العروض" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {partnersList.map(partner => (
+                      <SelectItem key={partner.id} value={String(partner.id)}>
+                        <div className="flex items-center gap-2">
+                          <span>{partner.companyName}</span>
+                          {partner.category && <span className="text-xs text-gray-400">({partner.category})</span>}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-blue-500 mt-1">عند رفع عروض متعددة، حدد الشركة التي تُوصي باعتمادها — ستظهر بشكل بارز في وثيقة الاعتماد</p>
+              </div>
+            )}
+
             {/* Proposed Date (for meetings) */}
             {(createForm.requestType === "meeting_request" || createForm.requestType === "zoom_meeting") && (
               <div>
@@ -806,6 +874,14 @@ export default function GeneralRequests() {
                         <div className="text-sm font-medium">{viewingRequest.relatedParty}</div>
                       </div>
                     )}
+                    {viewingRequest.recommendedCompanyName && (
+                      <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                        <div className="text-xs font-medium text-green-600 mb-0.5 flex items-center gap-1">
+                          <span>⭐</span> الشركة المُوصى باعتمادها
+                        </div>
+                        <div className="text-base font-bold text-green-800">{viewingRequest.recommendedCompanyName}</div>
+                      </div>
+                    )}
                     {viewingRequest.proposedDate && (
                       <div>
                         <div className="text-xs text-gray-400 mb-0.5">التاريخ المقترح</div>
@@ -900,9 +976,10 @@ export default function GeneralRequests() {
                         <RotateCcw className="w-4 h-4" /> تعديل وإعادة الإرسال
                       </Button>
                     )}
-                    <Button variant="outline" size="sm" onClick={() => archiveMutation.mutate({ id: viewingRequest.id, archive: true })}
-                      className="gap-1.5 text-gray-500 mr-auto">
-                      <Archive className="w-3.5 h-3.5" /> أرشفة
+                    <Button variant="outline" size="sm" onClick={() => archiveMutation.mutate({ id: viewingRequest.id, archive: !(viewingRequest.isArchived) })}
+                      className={`gap-1.5 mr-auto ${viewingRequest.isArchived ? "text-amber-600 border-amber-300 hover:bg-amber-50" : "text-gray-500"}`}>
+                      {viewingRequest.isArchived ? <ArchiveRestore className="w-3.5 h-3.5" /> : <Archive className="w-3.5 h-3.5" />}
+                      {viewingRequest.isArchived ? "إلغاء الأرشفة" : "أرشفة"}
                     </Button>
                   </div>
                 </div>

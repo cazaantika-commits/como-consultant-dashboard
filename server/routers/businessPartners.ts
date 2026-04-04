@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb, createEmailNotification } from "../db";
-import { businessPartners, paymentRequests, users, approvalSettings } from "../../drizzle/schema";
+import { businessPartners, paymentRequests, users, approvalSettings, projects } from "../../drizzle/schema";
 import { eq, desc, sql } from "drizzle-orm";
 import { storagePut } from "../storage";
 import { sendReply } from "../emailMonitor";
@@ -889,6 +889,19 @@ export const paymentRequestsRouter = router({
       }).where(eq(paymentRequests.id, input.id));
       return { success: true };
     }),
+
+  // -- Helper queries for dropdowns --
+  getProjects: protectedProcedure.query(async () => {
+    const db = await getDb();
+    const rows = await db.select({ id: projects.id, name: projects.name }).from(projects).orderBy(projects.name);
+    return rows;
+  }),
+
+  getPartners: protectedProcedure.query(async () => {
+    const db = await getDb();
+    const rows = await db.select({ id: businessPartners.id, name: businessPartners.companyName, category: businessPartners.category }).from(businessPartners).orderBy(businessPartners.companyName);
+    return rows;
+  }),
 });
 
 // ── Approval Settings Router ───────────────────────────────────────────────────

@@ -2225,6 +2225,9 @@ export const generalRequests = mysqlTable("general_requests", {
   attachmentsJson: text("attachments_json"),
   // Official approval document PDF (generated on Sheikh Issa approval)
   approvalDocumentUrl: text("approval_document_url"),
+  // Recommended company for proposal_approval type
+  recommendedCompanyId: int("recommended_company_id").references(() => businessPartners.id),
+  recommendedCompanyName: varchar("recommended_company_name", { length: 255 }),
   // Proposed meeting date/time (for meeting requests)
   proposedDate: varchar("proposed_date", { length: 100 }),
   // Status: new → pending_wael → pending_sheikh → approved / rejected / needs_revision
