@@ -603,3 +603,6 @@
 
 ## Command Center - Back Button
 - [x] Add back-to-home button in Command Center main page header
+
+## Command Center - Priority Cards Redesign
+- [x] Redesign bento grid to show payment requests and general requests as large hero priority cards at top

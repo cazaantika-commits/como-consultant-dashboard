@@ -4228,28 +4228,115 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           };
 
           // BUBBLES index reference:
-          // 0=محفظة رأس المال, 1=التقارير المالية, 2=تقييم الاستشاريين, 3=المراحل والأداء
-          // 4=الطلبات والاستفسارات, 5=التقارير, 6=محاضر الاجتماعات, 7=برنامج العمل, 8=دراسة الجدوى, 9=الإعلانات
+          // 0=محفظة رأس المال, 1=التقارير المالية, 2=طلبات الصرف, 3=تقييم الاستشاريين
+          // 4=المراحل والأداء, 5=الطلبات والاستفسارات, 6=التقارير, 7=محاضر الاجتماعات
+          // 8=برنامج العمل, 9=دراسة الجدوى, 10=الإعلانات
+
+          // Hero priority card — large horizontal card for payment/general requests
+          const HeroPriorityCard = ({ bubble, accentColor, gradientFrom, gradientTo }: {
+            bubble: typeof BUBBLES[0];
+            accentColor: string;
+            gradientFrom: string;
+            gradientTo: string;
+          }) => {
+            const count = counts.data?.[bubble.type as keyof typeof counts.data] || 0;
+            const hasCount = typeof count === 'number' && count > 0;
+            const sc = solidColorMap[bubble.color] || {solid:'#64748b', shadow:'rgba(100,116,139,0.45)'};
+            return (
+              <button
+                onClick={() => handleBubbleClick(bubble.type)}
+                className="group relative overflow-hidden flex items-center gap-5 p-5 rounded-2xl w-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-2xl active:scale-[0.98]"
+                style={{
+                  background: `linear-gradient(135deg, ${gradientFrom} 0%, ${gradientTo} 100%)`,
+                  boxShadow: `0 6px 28px ${sc.shadow}`,
+                  border: `1.5px solid rgba(255,255,255,0.25)`,
+                }}
+              >
+                {/* Decorative shimmer */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                  style={{background:'linear-gradient(135deg,rgba(255,255,255,0.15) 0%,transparent 60%)', borderRadius:'inherit'}} />
+                {/* Icon box */}
+                <div className="relative flex-shrink-0 flex items-center justify-center rounded-2xl"
+                  style={{width:64, height:64, background:'rgba(255,255,255,0.2)', backdropFilter:'blur(8px)', border:'1.5px solid rgba(255,255,255,0.3)'}}>
+                  <bubble.icon style={{width:30, height:30, color:'white', filter:'drop-shadow(0 2px 6px rgba(0,0,0,0.25))'}} />
+                  {hasCount && (
+                    <div className="absolute -top-2 -right-2 min-w-[26px] h-[26px] px-1.5 rounded-full flex items-center justify-center text-xs font-black animate-pulse"
+                      style={{background:'#ef4444', color:'white', boxShadow:'0 3px 10px rgba(239,68,68,0.7)', border:'2px solid white'}}>
+                      {count}
+                    </div>
+                  )}
+                </div>
+                {/* Text */}
+                <div className="flex-1 text-right">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <div className="flex items-center gap-2">
+                      {hasCount ? (
+                        <span className="text-xs font-bold px-2.5 py-1 rounded-full"
+                          style={{background:'rgba(239,68,68,0.2)', color:'#fecaca', border:'1px solid rgba(239,68,68,0.35)'}}>
+                          {count} معلق
+                        </span>
+                      ) : (
+                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                          style={{background:'rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.8)'}}>
+                          لا يوجد معلق
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="text-lg font-black text-white tracking-tight">{bubble.label}</h3>
+                  </div>
+                  <p className="text-sm text-right" style={{color:'rgba(255,255,255,0.75)'}}>
+                    {subtitles[bubble.type] || ''}
+                  </p>
+                </div>
+                {/* Arrow */}
+                <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full transition-transform group-hover:-translate-x-1"
+                  style={{background:'rgba(255,255,255,0.15)'}}>
+                  <ArrowRight className="w-4 h-4 text-white" />
+                </div>
+              </button>
+            );
+          };
+
           return (
-            <div className="mb-4 space-y-6">
-              {/* Row 1: 4 card-style icons equal size — محفظة رأس المال + التقارير المالية + الطلبات والاستفسارات + برنامج العمل */}
-              <div className="grid grid-cols-4 gap-4">
-                <CardTile bubble={BUBBLES[0]} size="md" />
-                <CardTile bubble={BUBBLES[1]} size="md" />
-                <CardTile bubble={BUBBLES[4]} size="md" />
-                <CardTile bubble={BUBBLES[7]} size="md" />
+            <div className="mb-4 space-y-4">
+              {/* ═══ PRIORITY SECTION ═══ */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-1 h-5 rounded-full" style={{background:'linear-gradient(180deg,#f59e0b,#ef4444)'}} />
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">الأولوية القصوى</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <HeroPriorityCard bubble={BUBBLES[2]} accentColor="#f59e0b" gradientFrom="#f59e0b" gradientTo="#d97706" />
+                  <HeroPriorityCard bubble={BUBBLES[5]} accentColor="#f97316" gradientFrom="#ea580c" gradientTo="#c2410c" />
+                </div>
               </div>
-              {/* Row 2: remaining 4 medium icon-tiles */}
-              <div className="grid grid-cols-4 gap-4">
-                <IconTile bubble={BUBBLES[2]} size="md" />
-                <IconTile bubble={BUBBLES[3]} size="md" />
-                <IconTile bubble={BUBBLES[5]} size="md" />
-                <IconTile bubble={BUBBLES[6]} size="md" />
+
+              {/* ═══ SECONDARY SECTION ═══ */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-1 h-5 rounded-full" style={{background:'linear-gradient(180deg,#6366f1,#10b981)'}} />
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">المالية والتشغيل</span>
+                </div>
+                <div className="grid grid-cols-4 gap-4">
+                  <CardTile bubble={BUBBLES[0]} size="md" />
+                  <CardTile bubble={BUBBLES[1]} size="md" />
+                  <CardTile bubble={BUBBLES[3]} size="md" />
+                  <CardTile bubble={BUBBLES[4]} size="md" />
+                </div>
               </div>
-              {/* Row 3: remaining 2 small tiles */}
-              <div className="grid grid-cols-4 gap-4">
-                <IconTile bubble={BUBBLES[8]} size="sm" />
-                <IconTile bubble={BUBBLES[9]} size="sm" />
+
+              {/* ═══ OTHER SECTION ═══ */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-1 h-5 rounded-full" style={{background:'linear-gradient(180deg,#3b82f6,#ec4899)'}} />
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">أدوات أخرى</span>
+                </div>
+                <div className="grid grid-cols-4 gap-4">
+                  <IconTile bubble={BUBBLES[6]} size="md" />
+                  <IconTile bubble={BUBBLES[7]} size="md" />
+                  <IconTile bubble={BUBBLES[8]} size="sm" />
+                  <IconTile bubble={BUBBLES[9]} size="sm" />
+                </div>
               </div>
             </div>
           );
