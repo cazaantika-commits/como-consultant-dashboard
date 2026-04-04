@@ -30,6 +30,8 @@ type GeneralRequest = {
   proposedDate?: string | null;
   attachmentUrl?: string | null;
   attachmentName?: string | null;
+  attachmentsJson?: string | null; // JSON array of {name, url}
+  approvalDocumentUrl?: string | null;
   status: RequestStatus;
   waelDecision?: string | null;
   waelNotes?: string | null;
@@ -39,6 +41,8 @@ type GeneralRequest = {
   createdAt: string;
   isArchived?: number | boolean;
 };
+
+type AttachmentItem = { name: string; url: string };
 
 // ── Config ─────────────────────────────────────────────────────────────────────
 const REQUEST_TYPE_CONFIG: Record<RequestType, { label: string; icon: any; color: string }> = {
@@ -85,17 +89,24 @@ export default function GeneralRequests() {
   const [reviewNotes, setReviewNotes] = useState("");
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState({ subject: "", description: "", projectName: "", relatedParty: "", proposedDate: "" });
-  const [attachFile, setAttachFile] = useState<{ url: string; name: string } | null>(null);
-  const [editAttachFile, setEditAttachFile] = useState<{ url: string; name: string } | null>(null);
+  // Multi-file attachments state
+  const [attachFiles, setAttachFiles] = useState<AttachmentItem[]>([]);
+  const [pendingFileName, setPendingFileName] = useState("");
+  const [editAttachFiles, setEditAttachFiles] = useState<AttachmentItem[]>([]);
+  const [pendingEditFileName, setPendingEditFileName] = useState("");
   const attachInputRef = useRef<HTMLInputElement>(null);
   const editAttachInputRef = useRef<HTMLInputElement>(null);
   const viewAttachInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingAttach, setUploadingAttach] = useState(false);
+  const [uploadingEditAttach, setUploadingEditAttach] = useState(false);
 
   const [createForm, setCreateForm] = useState({
     requestType: "" as RequestType | "",
     subject: "",
     description: "",
+    projectId: "",
     projectName: "",
+    partnerId: "",
     relatedParty: "",
     proposedDate: "",
   });
@@ -103,6 +114,8 @@ export default function GeneralRequests() {
   const utils = trpc.useUtils();
   const { data: requests = [], isLoading } = trpc.generalRequests.list.useQuery({ showArchived });
   const { data: counts = { all: 0, pending_wael: 0, pending_sheikh: 0, approved: 0, rejected: 0, needs_revision: 0 } } = trpc.generalRequests.counts.useQuery();
+  const { data: projectsList = [] } = trpc.generalRequests.getProjects.useQuery();
+  const { data: partnersList = [] } = trpc.generalRequests.getPartners.useQuery();
 
   // ── Mutations ────────────────────────────────────────────────────────────────
   const createMutation = trpc.generalRequests.create.useMutation({
@@ -110,28 +123,24 @@ export default function GeneralRequests() {
       utils.generalRequests.list.invalidate();
       utils.generalRequests.counts.invalidate();
       setShowCreate(false);
-      setCreateForm({ requestType: "", subject: "", description: "", projectName: "", relatedParty: "", proposedDate: "" });
-      setAttachFile(null);
+      setCreateForm({ requestType: "", subject: "", description: "", projectId: "", projectName: "", partnerId: "", relatedParty: "", proposedDate: "" });
+      setAttachFiles([]);
+      setPendingFileName("");
       toast.success(`تم إنشاء الطلب ${data.requestNumber}`);
     },
     onError: (e) => toast.error(e.message),
   });
 
   const uploadMutation = trpc.generalRequests.uploadAttachment.useMutation({
-    onSuccess: (data) => { setAttachFile({ url: data.url, name: data.fileName }); toast.success("تم رفع المرفق"); },
-    onError: () => toast.error("فشل رفع الملف"),
+    onError: () => { setUploadingAttach(false); toast.error("فشل رفع الملف"); },
   });
 
   const uploadEditMutation = trpc.generalRequests.uploadAttachment.useMutation({
-    onSuccess: (data) => { setEditAttachFile({ url: data.url, name: data.fileName }); toast.success("تم رفع المرفق"); },
-    onError: () => toast.error("فشل رفع الملف"),
+    onError: () => { setUploadingEditAttach(false); toast.error("فشل رفع الملف"); },
   });
 
   const uploadViewMutation = trpc.generalRequests.uploadAttachment.useMutation({
-    onSuccess: (data) => {
-      utils.generalRequests.list.invalidate();
-      toast.success("تم رفع المرفق وحفظه");
-    },
+    onSuccess: () => { utils.generalRequests.list.invalidate(); toast.success("تم رفع المرفق وحفظه"); },
     onError: () => toast.error("فشل رفع الملف"),
   });
 
@@ -191,12 +200,30 @@ export default function GeneralRequests() {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       const base64 = (reader.result as string).split(",")[1];
       const requestId = mode === "view" && viewingRequest ? viewingRequest.id : undefined;
-      if (mode === "create") uploadMutation.mutate({ fileName: file.name, fileData: base64, mimeType: file.type });
-      else if (mode === "edit") uploadEditMutation.mutate({ fileName: file.name, fileData: base64, mimeType: file.type });
-      else uploadViewMutation.mutate({ requestId, fileName: file.name, fileData: base64, mimeType: file.type });
+      if (mode === "create") {
+        setUploadingAttach(true);
+        const label = pendingFileName.trim() || file.name;
+        try {
+          const result = await uploadMutation.mutateAsync({ fileName: file.name, fileData: base64, mimeType: file.type });
+          setAttachFiles(prev => [...prev, { name: label, url: result.url }]);
+          setPendingFileName("");
+          toast.success(`تم رفع: ${label}`);
+        } finally { setUploadingAttach(false); }
+      } else if (mode === "edit") {
+        setUploadingEditAttach(true);
+        const label = pendingEditFileName.trim() || file.name;
+        try {
+          const result = await uploadEditMutation.mutateAsync({ fileName: file.name, fileData: base64, mimeType: file.type });
+          setEditAttachFiles(prev => [...prev, { name: label, url: result.url }]);
+          setPendingEditFileName("");
+          toast.success(`تم رفع: ${label}`);
+        } finally { setUploadingEditAttach(false); }
+      } else {
+        uploadViewMutation.mutate({ requestId, fileName: file.name, fileData: base64, mimeType: file.type });
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -205,15 +232,26 @@ export default function GeneralRequests() {
     if (!createForm.requestType) { toast.error("اختر نوع الطلب"); return; }
     if (!createForm.subject.trim()) { toast.error("موضوع الطلب مطلوب"); return; }
     if (!createForm.description.trim()) { toast.error("تفاصيل الطلب مطلوبة"); return; }
+    // Resolve project name from selected project
+    const selectedProject = projectsList.find(p => String(p.id) === createForm.projectId);
+    const projectName = selectedProject?.name || createForm.projectName || undefined;
+    // Resolve partner name from selected partner
+    const selectedPartner = partnersList.find(p => String(p.id) === createForm.partnerId);
+    const relatedParty = selectedPartner?.companyName || createForm.relatedParty || undefined;
+    // Build attachments JSON
+    const attachmentsJson = attachFiles.length > 0 ? JSON.stringify(attachFiles) : undefined;
+    // Use first file as legacy attachmentUrl for backward compat
+    const firstFile = attachFiles[0];
     createMutation.mutate({
       requestType: createForm.requestType as RequestType,
       subject: createForm.subject,
       description: createForm.description,
-      projectName: createForm.projectName || undefined,
-      relatedParty: createForm.relatedParty || undefined,
+      projectName,
+      relatedParty,
       proposedDate: createForm.proposedDate || undefined,
-      attachmentUrl: attachFile?.url,
-      attachmentName: attachFile?.name,
+      attachmentUrl: firstFile?.url,
+      attachmentName: firstFile?.name,
+      attachmentsJson,
     });
   };
 
@@ -229,6 +267,8 @@ export default function GeneralRequests() {
 
   const handleUpdate = () => {
     if (!viewingRequest) return;
+    const attachmentsJson = editAttachFiles.length > 0 ? JSON.stringify(editAttachFiles) : undefined;
+    const firstFile = editAttachFiles[0];
     updateMutation.mutate({
       id: viewingRequest.id,
       subject: editForm.subject || undefined,
@@ -236,8 +276,9 @@ export default function GeneralRequests() {
       projectName: editForm.projectName || undefined,
       relatedParty: editForm.relatedParty || undefined,
       proposedDate: editForm.proposedDate || undefined,
-      attachmentUrl: editAttachFile?.url || undefined,
-      attachmentName: editAttachFile?.name || undefined,
+      attachmentUrl: firstFile?.url || undefined,
+      attachmentName: firstFile?.name || undefined,
+      attachmentsJson,
     });
   };
 
@@ -630,13 +671,34 @@ export default function GeneralRequests() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-1 block">المشروع</label>
-                <Input placeholder="اسم المشروع (اختياري)" value={createForm.projectName}
-                  onChange={e => setCreateForm(p => ({ ...p, projectName: e.target.value }))} />
+                <Select value={createForm.projectId} onValueChange={v => setCreateForm(p => ({ ...p, projectId: v }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر المشروع" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projectsList.map(proj => (
+                      <SelectItem key={proj.id} value={String(proj.id)}>{proj.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-1 block">الجهة المعنية</label>
-                <Input placeholder="مثال: مكتب المعمار، المقاول..." value={createForm.relatedParty}
-                  onChange={e => setCreateForm(p => ({ ...p, relatedParty: e.target.value }))} />
+                <Select value={createForm.partnerId} onValueChange={v => setCreateForm(p => ({ ...p, partnerId: v }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر شريك / متعامل" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {partnersList.map(partner => (
+                      <SelectItem key={partner.id} value={String(partner.id)}>
+                        <div className="flex items-center gap-2">
+                          <span>{partner.companyName}</span>
+                          {partner.category && <span className="text-xs text-gray-400">({partner.category})</span>}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -649,25 +711,37 @@ export default function GeneralRequests() {
               </div>
             )}
 
-            {/* Attachment */}
+            {/* Multi-file Attachments */}
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">مرفق (اختياري)</label>
-              <input type="file" ref={attachInputRef} className="hidden" onChange={e => handleAttachUpload(e, "create")} />
-              {attachFile ? (
-                <div className="flex items-center gap-2 p-2 bg-violet-50 rounded-lg border border-violet-200 text-sm">
-                  <FileText className="w-4 h-4 text-violet-600" />
-                  <span className="flex-1 text-violet-700 truncate">{attachFile.name}</span>
-                  <a href={attachFile.url} target="_blank" rel="noreferrer" className="text-violet-600 hover:underline text-xs flex items-center gap-1">
-                    <ExternalLink className="w-3 h-3" /> فتح
-                  </a>
-                  <button onClick={() => setAttachFile(null)} className="text-gray-400 hover:text-red-500 text-xs">✕</button>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">المرفقات (يمكن رفع أكثر من ملف)</label>
+              {attachFiles.length > 0 && (
+                <div className="space-y-1.5 mb-3">
+                  {attachFiles.map((f, i) => (
+                    <div key={i} className="flex items-center gap-2 p-2 bg-violet-50 rounded-lg border border-violet-200 text-sm">
+                      <FileText className="w-4 h-4 text-violet-600 flex-shrink-0" />
+                      <span className="flex-1 truncate text-violet-700 font-medium">{f.name}</span>
+                      <a href={f.url} target="_blank" rel="noreferrer" className="text-violet-500 hover:text-violet-700">
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                      <button onClick={() => setAttachFiles(prev => prev.filter((_, idx) => idx !== i))} className="text-gray-400 hover:text-red-500">✕</button>
+                    </div>
+                  ))}
                 </div>
-              ) : (
-                <Button variant="outline" size="sm" onClick={() => attachInputRef.current?.click()} disabled={uploadMutation.isPending} className="gap-2">
-                  <Upload className="w-4 h-4" />
-                  {uploadMutation.isPending ? "جاري الرفع..." : "رفع مرفق"}
-                </Button>
               )}
+              <div className="flex gap-2 items-center">
+                <Input
+                  placeholder="اسم الملف (مثال: عرض شركة X)"
+                  value={pendingFileName}
+                  onChange={e => setPendingFileName(e.target.value)}
+                  className="flex-1 text-sm"
+                />
+                <input type="file" ref={attachInputRef} className="hidden" onChange={e => handleAttachUpload(e, "create")} />
+                <Button variant="outline" size="sm" onClick={() => attachInputRef.current?.click()} disabled={uploadingAttach} className="gap-1.5 whitespace-nowrap">
+                  <Upload className="w-4 h-4" />
+                  {uploadingAttach ? "جاري..." : "إضافة ملف"}
+                </Button>
+              </div>
+              <p className="text-xs text-gray-400 mt-1">اكتب اسم الملف ثم اضغط "إضافة ملف" لرفعه</p>
             </div>
 
             <div className="flex gap-3 pt-2">
@@ -740,27 +814,45 @@ export default function GeneralRequests() {
                     )}
                   </div>
 
-                  {/* Attachment */}
+                  {/* Attachments - multi-file support */}
                   <div>
-                    <div className="text-xs text-gray-400 mb-1">المرفق</div>
-                    {viewingRequest.attachmentUrl ? (
-                      <a href={viewingRequest.attachmentUrl} target="_blank" rel="noreferrer"
-                        className="inline-flex items-center gap-2 px-3 py-2 bg-violet-50 border border-violet-200 rounded-lg text-sm text-violet-700 hover:bg-violet-100 transition-colors">
+                    <div className="text-xs text-gray-400 mb-1">المرفقات</div>
+                    {(() => {
+                      // Parse attachmentsJson first, fall back to legacy attachmentUrl
+                      const items: AttachmentItem[] = viewingRequest.attachmentsJson
+                        ? (() => { try { return JSON.parse(viewingRequest.attachmentsJson!); } catch { return []; } })()
+                        : viewingRequest.attachmentUrl
+                          ? [{ name: viewingRequest.attachmentName || "مرفق", url: viewingRequest.attachmentUrl }]
+                          : [];
+                      return items.length > 0 ? (
+                        <div className="space-y-1.5">
+                          {items.map((f, i) => (
+                            <a key={i} href={f.url} target="_blank" rel="noreferrer"
+                              className="flex items-center gap-2 px-3 py-2 bg-violet-50 border border-violet-200 rounded-lg text-sm text-violet-700 hover:bg-violet-100 transition-colors">
+                              <FileText className="w-4 h-4 flex-shrink-0" />
+                              <span className="flex-1 truncate font-medium">{f.name}</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-400">لا يوجد مرفق</span>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Approval Document */}
+                  {viewingRequest.approvalDocumentUrl && (
+                    <div>
+                      <div className="text-xs text-gray-400 mb-1">وثيقة الاعتماد</div>
+                      <a href={viewingRequest.approvalDocumentUrl} target="_blank" rel="noreferrer"
+                        className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-700 hover:bg-emerald-100 transition-colors">
                         <FileText className="w-4 h-4" />
-                        {viewingRequest.attachmentName || "فتح المرفق"}
+                        فتح وثيقة الاعتماد (الشيخ عيسى)
                         <ExternalLink className="w-3 h-3" />
                       </a>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-400">لا يوجد مرفق</span>
-                        <input type="file" ref={viewAttachInputRef} className="hidden" onChange={e => handleAttachUpload(e, "view")} />
-                        <Button variant="outline" size="sm" onClick={() => viewAttachInputRef.current?.click()} disabled={uploadViewMutation.isPending} className="gap-1.5 text-xs">
-                          <Upload className="w-3 h-3" />
-                          {uploadViewMutation.isPending ? "جاري الرفع..." : "رفع مرفق"}
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
                   {/* Wael notes */}
                   {viewingRequest.waelNotes && (
@@ -893,22 +985,36 @@ export default function GeneralRequests() {
                     <Input value={editForm.proposedDate} onChange={e => setEditForm(p => ({ ...p, proposedDate: e.target.value }))} />
                   </div>
 
-                  {/* Attachment */}
+                  {/* Multi-file Attachments for edit */}
                   <div>
-                    <label className="text-sm font-medium text-gray-700 mb-1 block">مرفق جديد (اختياري)</label>
-                    <input type="file" ref={editAttachInputRef} className="hidden" onChange={e => handleAttachUpload(e, "edit")} />
-                    {editAttachFile ? (
-                      <div className="flex items-center gap-2 p-2 bg-violet-50 rounded-lg border border-violet-200 text-sm">
-                        <FileText className="w-4 h-4 text-violet-600" />
-                        <span className="flex-1 truncate text-violet-700">{editAttachFile.name}</span>
-                        <button onClick={() => setEditAttachFile(null)} className="text-gray-400 hover:text-red-500 text-xs">✕</button>
+                    <label className="text-sm font-medium text-gray-700 mb-2 block">مرفقات جديدة (اختياري)</label>
+                    {editAttachFiles.length > 0 && (
+                      <div className="space-y-1.5 mb-3">
+                        {editAttachFiles.map((f, i) => (
+                          <div key={i} className="flex items-center gap-2 p-2 bg-violet-50 rounded-lg border border-violet-200 text-sm">
+                            <FileText className="w-4 h-4 text-violet-600 flex-shrink-0" />
+                            <span className="flex-1 truncate text-violet-700 font-medium">{f.name}</span>
+                            <a href={f.url} target="_blank" rel="noreferrer" className="text-violet-500 hover:text-violet-700">
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                            <button onClick={() => setEditAttachFiles(prev => prev.filter((_, idx) => idx !== i))} className="text-gray-400 hover:text-red-500">✕</button>
+                          </div>
+                        ))}
                       </div>
-                    ) : (
-                      <Button variant="outline" size="sm" onClick={() => editAttachInputRef.current?.click()} disabled={uploadEditMutation.isPending} className="gap-2">
-                        <Upload className="w-4 h-4" />
-                        {uploadEditMutation.isPending ? "جاري الرفع..." : "رفع مرفق"}
-                      </Button>
                     )}
+                    <div className="flex gap-2 items-center">
+                      <Input
+                        placeholder="اسم الملف (مثال: عرض شركة X)"
+                        value={pendingEditFileName}
+                        onChange={e => setPendingEditFileName(e.target.value)}
+                        className="flex-1 text-sm"
+                      />
+                      <input type="file" ref={editAttachInputRef} className="hidden" onChange={e => handleAttachUpload(e, "edit")} />
+                      <Button variant="outline" size="sm" onClick={() => editAttachInputRef.current?.click()} disabled={uploadingEditAttach} className="gap-1.5 whitespace-nowrap">
+                        <Upload className="w-4 h-4" />
+                        {uploadingEditAttach ? "جاري..." : "إضافة ملف"}
+                      </Button>
+                    </div>
                   </div>
 
                   <div className="flex gap-3">

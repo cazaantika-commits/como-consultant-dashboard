@@ -576,3 +576,17 @@
 ## Command Center Enhancements - Phase 8
 - [x] Personalize pending counters per user role (Wael: pending_wael, Sheikh Issa: pending_sheikh)
 - [x] Weekly automated email summary report (every Monday 9AM Dubai time)
+
+## General Requests Enhancement - Phase 9
+- [x] Add projectId field (dropdown from projects table) to generalRequests schema
+- [x] Add partnerId field (dropdown from businessPartners) to generalRequests schema
+- [x] Replace single attachment with multi-file attachments JSON array (name+url) in generalRequests schema
+- [x] Push DB migration for new fields
+- [x] Add getProjects and getPartners queries to generalRequests router
+- [x] Update create/update procedures to handle new fields and multi-file attachments
+- [x] Update GeneralRequests form: project dropdown, partner dropdown, multi-file upload with naming
+- [x] Update GeneralRequests list/detail view to show project, partner, and all attachments
+- [x] Auto-generate official PDF approval document on Sheikh Issa approval (puppeteer-core + chromium)
+- [x] Upload approval PDF to S3 and store URL in DB (approvalDocumentUrl field)
+- [x] Send approval document to finance team by email with download link
+- [x] Show approval document when clicking approved status badge in detail view

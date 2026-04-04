@@ -9,8 +9,8 @@ import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
-import { generalRequests, users, approvalSettings } from "../../drizzle/schema";
-import { eq, desc, inArray } from "drizzle-orm";
+import { generalRequests, users, approvalSettings, projects, businessPartners } from "../../drizzle/schema";
+import { eq, desc, inArray, asc } from "drizzle-orm";
 import { sendReply } from "../emailMonitor";
 import { storagePut } from "../storage";
 
@@ -167,13 +167,16 @@ export const generalRequestsRouter = router({
       subject: z.string().min(1),
       description: z.string().min(1),
       projectName: z.string().optional(),
+      projectId: z.number().optional(),
       relatedParty: z.string().optional(),
+      partnerId: z.number().optional(),
       proposedDate: z.string().optional(),
       attachmentUrl: z.string().optional(),
       attachmentName: z.string().optional(),
       contractUrl: z.string().optional(),
       contractName: z.string().optional(),
       additionalAttachments: z.string().optional(), // JSON string
+      attachmentsJson: z.string().optional(), // JSON array of {name, url}
     }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
@@ -184,13 +187,16 @@ export const generalRequestsRouter = router({
         subject: input.subject,
         description: input.description,
         projectName: input.projectName,
+        projectId: input.projectId || null,
         relatedParty: input.relatedParty,
+        partnerId: input.partnerId || null,
         proposedDate: input.proposedDate,
         attachmentUrl: input.attachmentUrl,
         attachmentName: input.attachmentName,
         contractUrl: input.contractUrl,
         contractName: input.contractName,
         additionalAttachments: input.additionalAttachments,
+        attachmentsJson: input.attachmentsJson || null,
         status: "pending_wael",
         submittedBy: ctx.user.id,
       });
@@ -223,6 +229,24 @@ export const generalRequestsRouter = router({
 
       return { success: true, requestNumber, id: (result as any).insertId };
     }),
+
+  // ── Get projects list (for dropdown) ────────────────────────────────────────
+  getProjects: protectedProcedure.query(async () => {
+    const db = await getDb();
+    const rows = await db.select({ id: projects.id, name: projects.name }).from(projects).orderBy(asc(projects.name));
+    return rows;
+  }),
+
+  // ── Get partners list (for dropdown) ──────────────────────────────────────────
+  getPartners: protectedProcedure.query(async () => {
+    const db = await getDb();
+    const rows = await db.select({
+      id: businessPartners.id,
+      companyName: businessPartners.companyName,
+      category: businessPartners.category,
+    }).from(businessPartners).orderBy(asc(businessPartners.companyName));
+    return rows;
+  }),
 
   // ── Upload attachment ──────────────────────────────────────────────────────
   uploadAttachment: protectedProcedure
@@ -333,9 +357,118 @@ export const generalRequestsRouter = router({
       const cfg = await getApprovalConfig();
       const typeLabel = REQUEST_TYPE_LABELS[req.requestType] || req.requestType;
 
-      // Notify Finance if approved
+      // Generate approval document PDF and notify Finance if approved
       if (input.decision === "approved") {
         try {
+          // Build HTML for PDF
+          const approvalDate = new Date().toLocaleDateString("ar-AE", { year: "numeric", month: "long", day: "numeric", timeZone: "Asia/Dubai" });
+          const attachmentsHtml = (() => {
+            try {
+              const items: { name: string; url: string }[] = req.attachmentsJson ? JSON.parse(req.attachmentsJson) : [];
+              if (items.length === 0 && req.attachmentUrl) items.push({ name: req.attachmentName || "مرفق", url: req.attachmentUrl });
+              return items.length > 0
+                ? `<ul style="margin:4px 0 0 0;padding-right:20px;">${items.map(f => `<li><a href="${f.url}">${f.name}</a></li>`).join("")}</ul>`
+                : `<span style="color:#888">لا يوجد مرفق</span>`;
+            } catch { return `<span style="color:#888">لا يوجد مرفق</span>`; }
+          })();
+
+          const htmlContent = `<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<style>
+  body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background: #fff; color: #1a1a1a; direction: rtl; }
+  .header { background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%); color: white; padding: 32px 40px; text-align: center; }
+  .header h1 { margin: 0; font-size: 28px; font-weight: bold; letter-spacing: 1px; }
+  .header p { margin: 8px 0 0; font-size: 14px; opacity: 0.85; }
+  .badge { display: inline-block; background: #10b981; color: white; padding: 6px 20px; border-radius: 20px; font-size: 14px; font-weight: bold; margin-top: 12px; }
+  .content { padding: 32px 40px; }
+  .section-title { font-size: 13px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
+  .field { margin-bottom: 20px; }
+  .field-value { font-size: 16px; font-weight: 600; color: #111827; margin-top: 4px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .signature-box { margin-top: 40px; border: 2px solid #1e3a5f; border-radius: 12px; padding: 24px; text-align: center; background: #f0f4ff; }
+  .signature-box .name { font-size: 20px; font-weight: bold; color: #1e3a5f; margin-bottom: 4px; }
+  .signature-box .title { font-size: 13px; color: #6b7280; }
+  .signature-box .date { font-size: 13px; color: #374151; margin-top: 8px; }
+  .footer { margin-top: 40px; padding: 16px 40px; background: #f9fafb; border-top: 1px solid #e5e7eb; text-align: center; font-size: 12px; color: #9ca3af; }
+  .ref { font-size: 12px; color: #9ca3af; margin-top: 4px; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>وثيقة اعتماد رسمية</h1>
+    <p>Como Developments — مركز القيادة</p>
+    <div class="badge">✔ معتمد</div>
+  </div>
+  <div class="content">
+    <div class="grid">
+      <div class="field">
+        <div class="section-title">رقم الطلب</div>
+        <div class="field-value">${req.requestNumber}</div>
+      </div>
+      <div class="field">
+        <div class="section-title">نوع الطلب</div>
+        <div class="field-value">${typeLabel}</div>
+      </div>
+    </div>
+    <div class="field">
+      <div class="section-title">موضوع الطلب</div>
+      <div class="field-value">${req.subject}</div>
+    </div>
+    <div class="field">
+      <div class="section-title">التفاصيل</div>
+      <div class="field-value" style="font-weight:400;font-size:14px;line-height:1.6;">${req.description || 'N/A'}</div>
+    </div>
+    <div class="grid">
+      <div class="field">
+        <div class="section-title">المشروع</div>
+        <div class="field-value">${req.projectName || 'N/A'}</div>
+      </div>
+      <div class="field">
+        <div class="section-title">الجهة المعنية</div>
+        <div class="field-value">${req.relatedParty || 'N/A'}</div>
+      </div>
+    </div>
+    <div class="field">
+      <div class="section-title">المرفقات</div>
+      <div class="field-value">${attachmentsHtml}</div>
+    </div>
+    <div class="signature-box">
+      <div class="name">${cfg.sheikhName}</div>
+      <div class="title">الشيخ عيسى — المعتمد</div>
+      <div class="date">تاريخ الاعتماد: ${approvalDate}</div>
+      ${input.notes ? `<div style="margin-top:8px;font-size:13px;color:#374151;">ملاحظات: ${input.notes}</div>` : ""}
+    </div>
+    <div class="ref">مرجع: ${req.requestNumber} | تاريخ الإصدار: ${approvalDate}</div>
+  </div>
+  <div class="footer">Como Developments &copy; ${new Date().getFullYear()} | وثيقة رسمية مولدة تلقائياً من منصة كومو</div>
+</body>
+</html>`;
+
+          // Convert HTML to PDF using puppeteer-core
+          let approvalDocUrl: string | null = null;
+          try {
+            const puppeteer = await import("puppeteer-core");
+            const browser = await puppeteer.default.launch({
+              executablePath: "/usr/bin/chromium-browser",
+              args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+            });
+            const page = await browser.newPage();
+            await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+            const pdfBuffer = await page.pdf({ format: "A4", printBackground: true, margin: { top: "0", bottom: "0", left: "0", right: "0" } });
+            await browser.close();
+            const fileKey = `approval-docs/${req.requestNumber}-${Date.now()}.pdf`;
+            const { url } = await storagePut(fileKey, Buffer.from(pdfBuffer), "application/pdf");
+            approvalDocUrl = url;
+            // Save URL to DB
+            await db.update(generalRequests).set({ approvalDocumentUrl: url }).where(eq(generalRequests.id, input.id));
+            console.log(`[GeneralRequests] Approval document generated: ${url}`);
+          } catch (pdfErr) {
+            console.error("[GeneralRequests] PDF generation failed:", pdfErr);
+          }
+
+          // Send email to Finance with PDF attachment
           const emailBody = buildNotificationEmail({
             recipientName: "فريق المالية",
             requestNumber: req.requestNumber,
@@ -346,7 +479,9 @@ export const generalRequestsRouter = router({
             relatedParty: req.relatedParty,
             proposedDate: req.proposedDate,
             submitterName: `${cfg.sheikhName} (بعد الاعتماد)`,
-            actionRequired: "الإحاطة والمتابعة",
+            actionRequired: approvalDocUrl
+              ? `الإحاطة والمتابعة — <a href="${approvalDocUrl}">تحميل وثيقة الاعتماد</a>`
+              : "الإحاطة والمتابعة",
             accentColor: "#059669",
           });
           const financeSubject = `✅ ${typeLabel} معتمد — ${req.requestNumber}`;
@@ -390,13 +525,16 @@ export const generalRequestsRouter = router({
       subject: z.string().optional(),
       description: z.string().optional(),
       projectName: z.string().optional(),
+      projectId: z.number().optional().nullable(),
       relatedParty: z.string().optional(),
+      partnerId: z.number().optional().nullable(),
       proposedDate: z.string().optional(),
       attachmentUrl: z.string().optional(),
       attachmentName: z.string().optional(),
       contractUrl: z.string().optional(),
       contractName: z.string().optional(),
       additionalAttachments: z.string().optional(),
+      attachmentsJson: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();

@@ -2208,8 +2208,12 @@ export const generalRequests = mysqlTable("general_requests", {
   subject: varchar("subject", { length: 500 }).notNull(),
   description: text("description").notNull(),
   projectName: varchar("project_name", { length: 255 }),
+  // Linked project (from projects table — centralised source)
+  projectId: int("project_id").references(() => projects.id),
   relatedParty: varchar("related_party", { length: 255 }), // consultant / contractor / partner name
-  // Attachment (e.g., proposal PDF, contract draft)
+  // Linked partner (from businessPartners table)
+  partnerId: int("partner_id").references(() => businessPartners.id),
+  // Attachment (e.g., proposal PDF, contract draft) — kept for backwards compat
   attachmentUrl: text("attachment_url"),
   attachmentName: varchar("attachment_name", { length: 255 }),
   // Contract document
@@ -2217,6 +2221,10 @@ export const generalRequests = mysqlTable("general_requests", {
   contractName: varchar("contract_name", { length: 255 }),
   // Additional attachments (JSON array of {url, name})
   additionalAttachments: text("additional_attachments"),
+  // Unified multi-file attachments (JSON array of {name, url, size?, type?})
+  attachmentsJson: text("attachments_json"),
+  // Official approval document PDF (generated on Sheikh Issa approval)
+  approvalDocumentUrl: text("approval_document_url"),
   // Proposed meeting date/time (for meeting requests)
   proposedDate: varchar("proposed_date", { length: 100 }),
   // Status: new → pending_wael → pending_sheikh → approved / rejected / needs_revision
