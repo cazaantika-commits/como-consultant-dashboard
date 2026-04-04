@@ -4051,6 +4051,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             else if (type === "financial_reports") { setActiveBubble("financial_reports"); setShowFinancialReports(true); }
             else if (type === "capital_portfolio") { setActiveBubble("capital_portfolio"); setShowCapitalPortfolio(true); }
             else if (type === "payment_requests") { navigate("/payment-requests"); }
+            else if (type === "requests") { navigate("/general-requests"); }
             else { setActiveBubble(type); }
           };
 
