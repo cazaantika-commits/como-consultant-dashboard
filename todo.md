@@ -600,3 +600,6 @@
 - [x] Remove settings buttons/links from CommandCenterPage (إعدادات الموافقة, approval-settings, any admin settings)
 - [x] Hide settings button in PaymentRequests header when rendered inside CommandCenter
 - [x] Hide settings button in GeneralRequests header when rendered inside CommandCenter
+
+## Command Center - Back Button
+- [x] Add back-to-home button in Command Center main page header

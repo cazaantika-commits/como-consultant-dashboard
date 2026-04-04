@@ -3989,7 +3989,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
   // Main dashboard
   return (
     <div className="min-h-screen" dir="rtl" style={{background: 'linear-gradient(160deg, #f8f6ff 0%, #fff7ed 55%, #f0fdf4 100%)'}}>
-      <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
+      <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} onNavigateHome={() => navigate("/")} />
       <NewsTicker token={token} />
       <div className="max-w-5xl mx-auto px-4 py-4">
         {/* Hero Card */}
@@ -4271,14 +4271,24 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
 }
 
 
-function DashboardHeader({ member, onLogout, unreadCount, onNotifications, onSalwa }: {
-  member: any; onLogout: () => void; unreadCount: number; onNotifications: () => void; onSalwa: () => void;
+function DashboardHeader({ member, onLogout, unreadCount, onNotifications, onSalwa, onNavigateHome }: {
+  member: any; onLogout: () => void; unreadCount: number; onNotifications: () => void; onSalwa: () => void; onNavigateHome?: () => void;
 }) {
   return (
     <header className="sticky top-0 z-30" style={{background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(99,102,241,0.12)', boxShadow: '0 1px 20px rgba(99,102,241,0.08)'}}>
       <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-        {/* Logo */}
+        {/* Logo + back button */}
         <div className="flex items-center gap-3">
+          {onNavigateHome && (
+            <button
+              onClick={onNavigateHome}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all"
+              title="العودة للرئيسية"
+            >
+              <ArrowRight className="w-3.5 h-3.5" />
+              الرئيسية
+            </button>
+          )}
           <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-lg" style={{background: 'linear-gradient(135deg, #f59e0b, #d97706)', boxShadow: '0 4px 12px rgba(245,158,11,0.4)'}}>
             <span className="text-sm font-black text-white">C</span>
           </div>
