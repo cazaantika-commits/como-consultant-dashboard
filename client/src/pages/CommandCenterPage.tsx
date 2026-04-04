@@ -108,6 +108,8 @@ import {
 // Lazy imports for embedded pages
 import WorkSchedulePage from "./WorkSchedulePage";
 import CapitalPortfolioPage from "./CapitalPortfolioPage";
+import PaymentRequestsPage from "./PaymentRequests";
+import GeneralRequestsPage from "./GeneralRequests";
 // Old financial components removed - now using iframe embeds
 
 // --- Financial Reports View (read-only, embedded in Command Center) ---
@@ -3783,6 +3785,8 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
   const [showFeasibilityStudy, setShowFeasibilityStudy] = useState(false);
   const [showFinancialReports, setShowFinancialReports] = useState(false);
   const [showCapitalPortfolio, setShowCapitalPortfolio] = useState(false);
+  const [showPaymentRequests, setShowPaymentRequests] = useState(false);
+  const [showGeneralRequests, setShowGeneralRequests] = useState(false);
   const projectsList = trpc.projects.list.useQuery();
 
   const counts = trpc.commandCenter.getBubbleCounts.useQuery({ token });
@@ -3837,6 +3841,42 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           onBack={() => { setActiveBubble(null); setShowFinancialReports(false); }}
           projectsList={projectsList.data || []}
         />
+        <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
+      </div>
+    );
+  }
+
+  // If viewing payment requests
+  if (activeBubble === "payment_requests" && showPaymentRequests) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white" dir="rtl">
+        <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
+        <div className="px-0 py-0">
+          <div className="flex items-center gap-2 px-4 pt-3 pb-1">
+            <Button variant="ghost" size="sm" onClick={() => { setActiveBubble(null); setShowPaymentRequests(false); utils.commandCenter.getBubbleCounts.invalidate({ token }); }} className="text-slate-500">
+              <ArrowLeft className="w-4 h-4 ml-1" /> العودة للرئيسية
+            </Button>
+          </div>
+          <PaymentRequestsPage />
+        </div>
+        <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
+      </div>
+    );
+  }
+
+  // If viewing general requests
+  if (activeBubble === "general_requests" && showGeneralRequests) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white" dir="rtl">
+        <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
+        <div className="px-0 py-0">
+          <div className="flex items-center gap-2 px-4 pt-3 pb-1">
+            <Button variant="ghost" size="sm" onClick={() => { setActiveBubble(null); setShowGeneralRequests(false); utils.commandCenter.getBubbleCounts.invalidate({ token }); }} className="text-slate-500">
+              <ArrowLeft className="w-4 h-4 ml-1" /> العودة للرئيسية
+            </Button>
+          </div>
+          <GeneralRequestsPage />
+        </div>
         <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
       </div>
     );
@@ -4050,8 +4090,8 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             else if (type === "feasibility_study") { setActiveBubble("feasibility_study"); setShowFeasibilityStudy(true); }
             else if (type === "financial_reports") { setActiveBubble("financial_reports"); setShowFinancialReports(true); }
             else if (type === "capital_portfolio") { setActiveBubble("capital_portfolio"); setShowCapitalPortfolio(true); }
-            else if (type === "payment_requests") { navigate("/payment-requests"); }
-            else if (type === "requests") { navigate("/general-requests"); }
+            else if (type === "payment_requests") { setActiveBubble("payment_requests"); setShowPaymentRequests(true); }
+            else if (type === "requests") { setActiveBubble("general_requests"); setShowGeneralRequests(true); }
             else { setActiveBubble(type); }
           };
 

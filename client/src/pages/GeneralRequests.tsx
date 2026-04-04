@@ -76,6 +76,8 @@ export default function GeneralRequests() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [showArchived, setShowArchived] = useState(false);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [viewingRequest, setViewingRequest] = useState<GeneralRequest | null>(null);
   const [reviewMode, setReviewMode] = useState<"wael" | "sheikh" | null>(null);
@@ -251,7 +253,10 @@ export default function GeneralRequests() {
       (r.relatedParty || "").toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || r.status === statusFilter;
     const matchType = typeFilter === "all" || r.requestType === typeFilter;
-    return matchSearch && matchStatus && matchType;
+    const rDate = r.createdAt ? new Date(r.createdAt) : null;
+    const matchDateFrom = !dateFrom || (rDate && rDate >= new Date(dateFrom));
+    const matchDateTo = !dateTo || (rDate && rDate <= new Date(dateTo + "T23:59:59"));
+    return matchSearch && matchStatus && matchType && matchDateFrom && matchDateTo;
   });
 
   // ── Summary stats ────────────────────────────────────────────────────────────
@@ -361,7 +366,7 @@ export default function GeneralRequests() {
         <Button
           variant="outline"
           onClick={() => {
-            const rows = filteredRequests.map((r: any) => ({
+            const rows = filtered.map((r: any) => ({
               "رقم الطلب": r.requestNumber,
               "التاريخ": r.createdAt ? new Date(r.createdAt).toLocaleDateString("ar-AE") : "",
               "نوع الطلب": r.requestType,
@@ -388,6 +393,31 @@ export default function GeneralRequests() {
           <Plus className="w-4 h-4 ml-2" />
           طلب جديد
         </Button>
+      </div>
+      {/* Date Range Filter */}
+      <div className="flex gap-3 mb-6 flex-wrap items-center">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-gray-400" />
+          <span className="text-sm text-gray-500">من:</span>
+          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+            className="h-9 w-36 rounded-md border border-input bg-white px-3 text-sm focus:outline-none focus:ring-1 focus:ring-violet-400" />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">إلى:</span>
+          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+            className="h-9 w-36 rounded-md border border-input bg-white px-3 text-sm focus:outline-none focus:ring-1 focus:ring-violet-400" />
+        </div>
+        {(dateFrom || dateTo) && (
+          <button onClick={() => { setDateFrom(""); setDateTo(""); }}
+            className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded hover:bg-gray-100">
+            مسح الفلتر
+          </button>
+        )}
+        {(dateFrom || dateTo) && (
+          <span className="text-xs text-violet-600 font-medium">
+            النتائج: {filtered.length} طلب
+          </span>
+        )}
       </div>
 
       {/* Table */}

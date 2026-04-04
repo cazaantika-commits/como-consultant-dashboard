@@ -309,6 +309,8 @@ export default function PaymentRequests() {
 
   const [projectFilter, setProjectFilter] = useState<string>("all");
   const [showArchived, setShowArchived] = useState(false);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   const archiveMutation = trpc.paymentRequests.archive.useMutation({
     onSuccess: (_, vars) => {
@@ -338,7 +340,10 @@ export default function PaymentRequests() {
       (r.projectName || "").toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || r.status === statusFilter;
     const matchProject = projectFilter === "all" || r.projectName === projectFilter;
-    return matchSearch && matchStatus && matchProject;
+    const rDate = r.createdAt ? new Date(r.createdAt) : null;
+    const matchDateFrom = !dateFrom || (rDate && rDate >= new Date(dateFrom));
+    const matchDateTo = !dateTo || (rDate && rDate <= new Date(dateTo + "T23:59:59"));
+    return matchSearch && matchStatus && matchProject && matchDateFrom && matchDateTo;
   });
 
   const counts = {
@@ -456,7 +461,7 @@ export default function PaymentRequests() {
       </div>
 
       {/* Search + Filter + Add */}
-      <div className="flex gap-3 mb-6 flex-wrap">
+      <div className="flex gap-3 mb-3 flex-wrap">
         <div className="relative flex-1 min-w-48">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input placeholder="بحث برقم الطلب أو الشريك أو المشروع..." value={search}
@@ -478,7 +483,7 @@ export default function PaymentRequests() {
         <Button
           variant="outline"
           onClick={() => {
-            const rows = filteredRequests.map((r: any) => ({
+            const rows = filtered.map((r: any) => ({
               "رقم الطلب": r.requestNumber,
               "التاريخ": r.createdAt ? new Date(r.createdAt).toLocaleDateString("ar-AE") : "",
               "الشريك / المتعامل": r.partnerName || "",
@@ -505,6 +510,31 @@ export default function PaymentRequests() {
           <Plus className="w-4 h-4 ml-2" />
           طلب صرف جديد
         </Button>
+      </div>
+      {/* Date Range Filter */}
+      <div className="flex gap-3 mb-6 flex-wrap items-center">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-gray-400" />
+          <span className="text-sm text-gray-500">من:</span>
+          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+            className="h-9 w-36 rounded-md border border-input bg-white px-3 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-400" />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">إلى:</span>
+          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+            className="h-9 w-36 rounded-md border border-input bg-white px-3 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-400" />
+        </div>
+        {(dateFrom || dateTo) && (
+          <button onClick={() => { setDateFrom(""); setDateTo(""); }}
+            className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded hover:bg-gray-100">
+            مسح الفلتر
+          </button>
+        )}
+        {(dateFrom || dateTo) && (
+          <span className="text-xs text-emerald-600 font-medium">
+            النتائج: {filtered.length} طلب
+          </span>
+        )}
       </div>
 
       {/* Cards List */}
