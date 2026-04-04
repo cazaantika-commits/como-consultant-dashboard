@@ -19,6 +19,8 @@ import {
   committeeDecisions,
   aiAdvisoryScores,
   evaluationApprovals,
+  paymentRequests,
+  generalRequests,
 } from "../../drizzle/schema";
 import { eq, desc, sql, and, inArray, gte } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -213,13 +215,13 @@ export const commandCenterRouter = router({
     .query(async ({ input }) => {
       const member = await verifyToken(input.token);
       const db = await getDb();
-      if (!db) return { reports: 0, requests: 0, meeting_minutes: 0, evaluations: 0, announcements: 0, milestones_kpis: 0, unread: 0 };
+      if (!db) return { reports: 0, requests: 0, meeting_minutes: 0, evaluations: 0, announcements: 0, milestones_kpis: 0, unread: 0, payment_requests_pending: 0, general_requests_pending: 0 };
 
       // 72-hour cutoff
       const cutoff72 = new Date(Date.now() - 72 * 60 * 60 * 1000);
       const cutoffStr = cutoff72.toISOString().slice(0, 19).replace('T', ' ');
 
-      const [allItems, notifications, milestones, kpis, allSessions, myEvals] = await Promise.all([
+      const [allItems, notifications, milestones, kpis, allSessions, myEvals, pendingPayments, pendingGeneral] = await Promise.all([
         db.select().from(commandCenterItems),
         db.select().from(commandCenterNotifications)
           .where(and(eq(commandCenterNotifications.memberId, member.memberId), eq(commandCenterNotifications.isRead, 0))),
@@ -230,6 +232,18 @@ export const commandCenterRouter = router({
           .where(and(
             eq(commandCenterEvaluations.memberId, member.memberId),
             eq(commandCenterEvaluations.isComplete, 1)
+          )),
+        // Pending payment requests (not archived, not approved/rejected/disbursed)
+        db.select({ id: paymentRequests.id }).from(paymentRequests)
+          .where(and(
+            eq(paymentRequests.isArchived, 0),
+            inArray(paymentRequests.status, ["new", "pending_wael", "pending_sheikh", "needs_revision"])
+          )),
+        // Pending general requests (not archived, not approved/rejected)
+        db.select({ id: generalRequests.id }).from(generalRequests)
+          .where(and(
+            eq(generalRequests.isArchived, 0),
+            inArray(generalRequests.status, ["new", "pending_wael", "pending_sheikh", "needs_revision"])
           )),
       ]);
 
@@ -260,6 +274,9 @@ export const commandCenterRouter = router({
         }).length,
         milestones_kpis: milestones.length + kpis.length,
         unread: notifications.length,
+        payment_requests: pendingPayments.length,
+        // Override the old 'requests' count with the new general_requests pending count
+        requests: pendingGeneral.length,
       };
 
       // Fill 72h counts for reports / meeting_minutes / announcements

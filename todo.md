@@ -569,3 +569,6 @@
 
 ## Payment Requests - UI Redesign
 - [x] Redesign payment requests list as elegant cards with proper spacing (not a dense table)
+
+## Command Center Enhancements - Phase 7
+- [x] Add pending request counters on payment_requests and general_requests cards in the bento grid
