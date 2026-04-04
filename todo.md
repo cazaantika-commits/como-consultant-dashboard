@@ -572,3 +572,7 @@
 
 ## Command Center Enhancements - Phase 7
 - [x] Add pending request counters on payment_requests and general_requests cards in the bento grid
+
+## Command Center Enhancements - Phase 8
+- [x] Personalize pending counters per user role (Wael: pending_wael, Sheikh Issa: pending_sheikh)
+- [x] Weekly automated email summary report (every Monday 9AM Dubai time)

@@ -233,14 +233,14 @@ export const commandCenterRouter = router({
             eq(commandCenterEvaluations.memberId, member.memberId),
             eq(commandCenterEvaluations.isComplete, 1)
           )),
-        // Pending payment requests (not archived, not approved/rejected/disbursed)
-        db.select({ id: paymentRequests.id }).from(paymentRequests)
+        // Pending payment requests — personalized by role
+        db.select({ id: paymentRequests.id, status: paymentRequests.status }).from(paymentRequests)
           .where(and(
             eq(paymentRequests.isArchived, 0),
             inArray(paymentRequests.status, ["new", "pending_wael", "pending_sheikh", "needs_revision"])
           )),
-        // Pending general requests (not archived, not approved/rejected)
-        db.select({ id: generalRequests.id }).from(generalRequests)
+        // Pending general requests — personalized by role
+        db.select({ id: generalRequests.id, status: generalRequests.status }).from(generalRequests)
           .where(and(
             eq(generalRequests.isArchived, 0),
             inArray(generalRequests.status, ["new", "pending_wael", "pending_sheikh", "needs_revision"])
@@ -274,9 +274,20 @@ export const commandCenterRouter = router({
         }).length,
         milestones_kpis: milestones.length + kpis.length,
         unread: notifications.length,
-        payment_requests: pendingPayments.length,
-        // Override the old 'requests' count with the new general_requests pending count
-        requests: pendingGeneral.length,
+        // Personalized pending counts by role:
+        // wael → only pending_wael (awaiting his approval)
+        // sheikh_issa → only pending_sheikh (awaiting his approval)
+        // abdulrahman (admin) → all pending
+        payment_requests: member.memberId === 'wael'
+          ? pendingPayments.filter(r => r.status === 'pending_wael').length
+          : member.memberId === 'sheikh_issa'
+          ? pendingPayments.filter(r => r.status === 'pending_sheikh').length
+          : pendingPayments.length,
+        requests: member.memberId === 'wael'
+          ? pendingGeneral.filter(r => r.status === 'pending_wael').length
+          : member.memberId === 'sheikh_issa'
+          ? pendingGeneral.filter(r => r.status === 'pending_sheikh').length
+          : pendingGeneral.length,
       };
 
       // Fill 72h counts for reports / meeting_minutes / announcements

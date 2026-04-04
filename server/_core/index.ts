@@ -15,6 +15,7 @@ import { startEmailNotificationService } from "../emailNotificationService";
 import { startLifecycleDeadlineScheduler } from "../lifecycleDeadlineScheduler";
 import { startPaymentReminderScheduler } from "../paymentReminderScheduler";
 import { startGeneralRequestReminderScheduler } from "../generalRequestReminderScheduler";
+import { startWeeklyReportScheduler } from "../weeklyReportScheduler";
 import complianceReportRoute from "../complianceReport";
 import lifecycleApiRoute from "../lifecycleApiRoute";
 import cpaReportRoute from "../cpaReportRoute";
@@ -124,6 +125,8 @@ async function startServer() {
 
   // Start general request reminder (every 36 hours for pending non-financial requests)
   startGeneralRequestReminderScheduler();
+  // Start weekly summary report (every Monday at 9:00 AM Dubai time)
+  startWeeklyReportScheduler();
 }
 
 startServer().catch(console.error);
