@@ -2134,6 +2134,13 @@ export const paymentRequests = mysqlTable("payment_requests", {
   // Approved Quote
   approvedQuoteUrl: text("approved_quote_url"),
   approvedQuoteName: varchar("approved_quote_name", { length: 255 }),
+  // Contract Document
+  contractUrl: text("contract_url"),
+  contractName: varchar("contract_name", { length: 255 }),
+  // Additional Attachments (JSON array of {url, name})
+  additionalAttachments: text("additional_attachments"),
+  // Auto-generated Payment Order PDF
+  paymentOrderPdfUrl: text("payment_order_pdf_url"),
   // Status: new → pending_wael → pending_sheikh → approved / rejected / needs_revision / disbursed
   status: mysqlEnum("status", ["new", "pending_wael", "pending_sheikh", "approved", "rejected", "needs_revision", "disbursed"]).default("new").notNull(),
   // Wael Review
@@ -2208,14 +2215,14 @@ export const generalRequests = mysqlTable("general_requests", {
   // Proposed meeting date/time (for meeting requests)
   proposedDate: varchar("proposed_date", { length: 100 }),
   // Status: new → pending_wael → pending_sheikh → approved / rejected / needs_revision
-  status: mysqlEnum("gr_status", ["new", "pending_wael", "pending_sheikh", "approved", "rejected", "needs_revision"]).default("new").notNull(),
+  status: mysqlEnum("status", ["new", "pending_wael", "pending_sheikh", "approved", "rejected", "needs_revision"]).default("new").notNull(),
   // Wael Review
   waelReviewedAt: timestamp("wael_reviewed_at", { mode: "string" }),
-  waelDecision: mysqlEnum("gr_wael_decision", ["approved", "rejected", "needs_revision"]),
+  waelDecision: mysqlEnum("wael_decision", ["approved", "rejected", "needs_revision"]),
   waelNotes: text("wael_notes"),
   // Sheikh Issa Review
   sheikhReviewedAt: timestamp("sheikh_reviewed_at", { mode: "string" }),
-  sheikhDecision: mysqlEnum("gr_sheikh_decision", ["approved", "rejected", "needs_revision"]),
+  sheikhDecision: mysqlEnum("sheikh_decision", ["approved", "rejected", "needs_revision"]),
   sheikhNotes: text("sheikh_notes"),
   // Finance Email (sent after approval)
   financeEmailSentAt: timestamp("finance_email_sent_at", { mode: "string" }),

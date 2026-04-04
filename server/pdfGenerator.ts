@@ -33,6 +33,9 @@ export interface PaymentOrderData {
   description: string;
   approvedQuoteUrl?: string | null;
   approvedQuoteName?: string | null;
+  contractUrl?: string | null;
+  contractName?: string | null;
+  additionalAttachments?: Array<{ url: string; name: string }> | null;
   approvalDate: string;
   submittedByName?: string | null;
   waelNotes?: string | null;
@@ -205,6 +208,14 @@ export async function generatePaymentOrderPDF(data: PaymentOrderData): Promise<B
     y = drawRow("Approval Date", data.approvalDate, y);
     if (data.approvedQuoteUrl) {
       y = drawRow("Approved Quote", data.approvedQuoteName || "Attached", y, true);
+    }
+    if (data.contractUrl) {
+      y = drawRow("Contract Document", data.contractName || "Attached", y);
+    }
+    if (data.additionalAttachments && data.additionalAttachments.length > 0) {
+      data.additionalAttachments.forEach((att, i) => {
+        y = drawRow(`Attachment ${i + 1}`, att.name || "Document", y, i % 2 === 0);
+      });
     }
 
     // ── Notice box ────────────────────────────────────────────────────────────

@@ -224,6 +224,11 @@ export const paymentRequestsRouter = router({
         createdAt: paymentRequests.createdAt,
         approvedQuoteUrl: paymentRequests.approvedQuoteUrl,
         approvedQuoteName: paymentRequests.approvedQuoteName,
+        contractUrl: paymentRequests.contractUrl,
+        contractName: paymentRequests.contractName,
+        additionalAttachments: paymentRequests.additionalAttachments,
+        disbursedAt: paymentRequests.disbursedAt,
+        isArchived: paymentRequests.isArchived,
       })
       .from(paymentRequests)
       .leftJoin(businessPartners, eq(paymentRequests.partnerId, businessPartners.id))
@@ -254,6 +259,9 @@ export const paymentRequestsRouter = router({
       currency: z.string().default("AED"),
       approvedQuoteUrl: z.string().optional(),
       approvedQuoteName: z.string().optional(),
+      contractUrl: z.string().optional(),
+      contractName: z.string().optional(),
+      additionalAttachments: z.string().optional(), // JSON string of [{url, name}]
     }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
@@ -267,6 +275,9 @@ export const paymentRequestsRouter = router({
         currency: input.currency,
         approvedQuoteUrl: input.approvedQuoteUrl,
         approvedQuoteName: input.approvedQuoteName,
+        contractUrl: input.contractUrl,
+        contractName: input.contractName,
+        additionalAttachments: input.additionalAttachments,
         status: "pending_wael",
         submittedBy: ctx.user.id,
       });
@@ -437,6 +448,60 @@ export const paymentRequestsRouter = router({
           const partner = req.business_partners;
           const approvalDate = new Date().toLocaleDateString("en-GB");
 
+          // Auto-generate Payment Order PDF and upload to S3
+          let paymentOrderPdfUrl: string | null = null;
+          try {
+            let additionalAttachments: Array<{ url: string; name: string }> | null = null;
+            if (pr.additionalAttachments) {
+              try { additionalAttachments = JSON.parse(pr.additionalAttachments); } catch { /* ignore */ }
+            }
+            const pdfBuffer = await generatePaymentOrderPDF({
+              requestNumber: pr.requestNumber,
+              projectName: pr.projectName,
+              companyName: partner?.companyName,
+              beneficiaryName: partner?.beneficiaryName,
+              accountNumber: partner?.accountNumber,
+              iban: partner?.iban,
+              bankName: partner?.bankName,
+              branchName: partner?.branchName,
+              amount: pr.amount,
+              currency: pr.currency,
+              description: pr.description,
+              approvedQuoteUrl: pr.approvedQuoteUrl,
+              approvedQuoteName: pr.approvedQuoteName,
+              contractUrl: pr.contractUrl,
+              contractName: pr.contractName,
+              additionalAttachments,
+              approvalDate,
+              waelNotes: pr.waelNotes,
+              sheikhNotes: input.notes,
+            });
+            const pdfKey = `payment-orders/pdf/${pr.requestNumber}-${Date.now()}.pdf`;
+            const { url: pdfUrl } = await s3Put(pdfKey, pdfBuffer, "application/pdf");
+            paymentOrderPdfUrl = pdfUrl;
+            // Save PDF URL to DB
+            await db.update(paymentRequests).set({ paymentOrderPdfUrl: pdfUrl }).where(eq(paymentRequests.id, input.id));
+          } catch (pdfErr) {
+            console.error("[PaymentRequest] Failed to generate payment order PDF:", pdfErr);
+          }
+
+          // Build document links section for email
+          const docLinks: string[] = [];
+          if (paymentOrderPdfUrl) docLinks.push(`<tr style="background:#e8f5e9"><td style="padding:12px 16px;font-weight:bold;color:#555;">Payment Order PDF</td><td style="padding:12px 16px;"><a href="${paymentOrderPdfUrl}" style="color:#1a3c5e;font-weight:bold;">📄 Download Official Payment Order</a></td></tr>`);
+          if (pr.approvedQuoteUrl) docLinks.push(`<tr><td style="padding:12px 16px;font-weight:bold;color:#555;">Approved Quote</td><td style="padding:12px 16px;"><a href="${pr.approvedQuoteUrl}" style="color:#1a3c5e;">📎 ${pr.approvedQuoteName || 'View Document'}</a></td></tr>`);
+          if (pr.contractUrl) docLinks.push(`<tr style="background:#f0f4f8"><td style="padding:12px 16px;font-weight:bold;color:#555;">Contract</td><td style="padding:12px 16px;"><a href="${pr.contractUrl}" style="color:#1a3c5e;">📋 ${pr.contractName || 'View Contract'}</a></td></tr>`);
+          if (pr.additionalAttachments) {
+            try {
+              const atts: Array<{ url: string; name: string }> = JSON.parse(pr.additionalAttachments);
+              atts.forEach((att, i) => {
+                docLinks.push(`<tr><td style="padding:12px 16px;font-weight:bold;color:#555;">Attachment ${i+1}</td><td style="padding:12px 16px;"><a href="${att.url}" style="color:#1a3c5e;">📎 ${att.name || 'Document'}</a></td></tr>`);
+              });
+            } catch { /* ignore */ }
+          }
+          const docSection = docLinks.length > 0 ? `
+    <h3 style="margin:20px 0 10px;color:#1a3c5e;">Attached Documents</h3>
+    <table style="width:100%;border-collapse:collapse;background:white;border-radius:6px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">${docLinks.join('')}</table>` : '';
+
           // English email for finance team
           const financeSubject = `Payment Order - ${pr.requestNumber}`;
           const financeBody = `
@@ -487,10 +552,6 @@ export const paymentRequestsRouter = router({
         <td style="padding: 12px 16px; font-weight: bold; color: #555;">Description</td>
         <td style="padding: 12px 16px;">${pr.description}</td>
       </tr>
-      <tr style="background: #f0f4f8;">
-        <td style="padding: 12px 16px; font-weight: bold; color: #555;">Approved Quote</td>
-        <td style="padding: 12px 16px;">${pr.approvedQuoteUrl ? `<a href="${pr.approvedQuoteUrl}" style="color: #1a3c5e;">View Document</a>` : "—"}</td>
-      </tr>
       <tr>
         <td style="padding: 12px 16px; font-weight: bold; color: #555;">Approved By</td>
         <td style="padding: 12px 16px;">Sheikh Issa & Wael</td>
@@ -500,6 +561,7 @@ export const paymentRequestsRouter = router({
         <td style="padding: 12px 16px;">${approvalDate}</td>
       </tr>
     </table>
+    ${docSection}
     <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
       <p style="margin: 0; font-size: 13px; color: #856404;">This is an official payment order approved by Como Developments management. Please process within 2 business days.</p>
     </div>
@@ -671,6 +733,11 @@ export const paymentRequestsRouter = router({
         ? new Date(pr.sheikhReviewedAt).toLocaleDateString("en-GB")
         : new Date().toLocaleDateString("en-GB");
 
+      let additionalAttachments: Array<{ url: string; name: string }> | null = null;
+      if (pr.additionalAttachments) {
+        try { additionalAttachments = JSON.parse(pr.additionalAttachments); } catch { /* ignore */ }
+      }
+
       const pdfBuffer = await generatePaymentOrderPDF({
         requestNumber: pr.requestNumber,
         projectName: pr.projectName,
@@ -685,6 +752,9 @@ export const paymentRequestsRouter = router({
         description: pr.description,
         approvedQuoteUrl: pr.approvedQuoteUrl,
         approvedQuoteName: pr.approvedQuoteName,
+        contractUrl: pr.contractUrl,
+        contractName: pr.contractName,
+        additionalAttachments,
         approvalDate,
         submittedByName,
         waelNotes: pr.waelNotes,

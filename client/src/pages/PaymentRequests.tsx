@@ -31,6 +31,9 @@ type PaymentRequest = {
   createdAt: string;
   approvedQuoteUrl?: string | null;
   approvedQuoteName?: string | null;
+  contractUrl?: string | null;
+  contractName?: string | null;
+  additionalAttachments?: string | null; // JSON string of [{url, name}]
 };
 
 const STATUS_CONFIG = {
@@ -66,7 +69,11 @@ export default function PaymentRequests() {
   const [reviewDecision, setReviewDecision] = useState<string>("");
   const [reviewNotes, setReviewNotes] = useState("");
   const [quoteFile, setQuoteFile] = useState<{ url: string; name: string } | null>(null);
+  const [contractFile, setContractFile] = useState<{ url: string; name: string } | null>(null);
+  const [additionalFiles, setAdditionalFiles] = useState<Array<{ url: string; name: string }>>([]);
   const quoteInputRef = useRef<HTMLInputElement>(null);
+  const contractInputRef = useRef<HTMLInputElement>(null);
+  const additionalInputRef = useRef<HTMLInputElement>(null);
   const viewQuoteInputRef = useRef<HTMLInputElement>(null);
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState({ description: "", amount: "", projectName: "", currency: "AED" });
@@ -102,6 +109,8 @@ export default function PaymentRequests() {
       setShowCreate(false);
       setCreateForm({ partnerId: "", projectName: "", description: "", amount: "", currency: "AED" });
       setQuoteFile(null);
+      setContractFile(null);
+      setAdditionalFiles([]);
       toast.success(`تم إنشاء طلب الصرف ${data.requestNumber}`);
     },
     onError: (e) => toast.error(e.message),
@@ -190,6 +199,9 @@ export default function PaymentRequests() {
       currency: createForm.currency,
       approvedQuoteUrl: quoteFile?.url,
       approvedQuoteName: quoteFile?.name,
+      contractUrl: contractFile?.url,
+      contractName: contractFile?.name,
+      additionalAttachments: additionalFiles.length > 0 ? JSON.stringify(additionalFiles) : undefined,
     });
   };
 
@@ -244,6 +256,37 @@ export default function PaymentRequests() {
       );
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleContractUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(",")[1];
+      uploadQuoteMutation.mutate(
+        { fileName: file.name, fileBase64: base64, mimeType: file.type },
+        { onSuccess: (data) => { setContractFile({ url: data.url, name: data.fileName }); toast.success("تم رفع العقد"); } }
+      );
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleAdditionalFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(",")[1];
+        uploadQuoteMutation.mutate(
+          { fileName: file.name, fileBase64: base64, mimeType: file.type },
+          { onSuccess: (data) => { setAdditionalFiles(prev => [...prev, { url: data.url, name: data.fileName }]); toast.success(`تم رفع: ${data.fileName}`); } }
+        );
+      };
+      reader.readAsDataURL(file);
+    });
+    if (additionalInputRef.current) additionalInputRef.current.value = "";
   };
 
   const handleEditQuoteUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -709,6 +752,65 @@ export default function PaymentRequests() {
               <input ref={quoteInputRef} type="file" className="hidden" onChange={handleQuoteUpload}
                 accept=".pdf,.jpg,.jpeg,.png" />
             </div>
+
+            {/* Contract Upload */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block flex items-center gap-2">
+                <FileText className="w-4 h-4 text-purple-600" />
+                العقد (اختياري)
+              </label>
+              {contractFile ? (
+                <div className="flex items-center gap-2 p-2 rounded-lg bg-purple-50 border border-purple-200">
+                  <CheckCircle className="w-4 h-4 text-purple-600" />
+                  <span className="text-sm text-purple-700 flex-1 truncate">{contractFile.name}</span>
+                  <a href={contractFile.url} target="_blank" rel="noopener noreferrer" className="text-purple-600 hover:text-purple-700">
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                  <Button variant="ghost" size="sm" onClick={() => setContractFile(null)} className="h-6 w-6 p-0 text-gray-400">
+                    <XCircle className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <Button variant="outline" onClick={() => contractInputRef.current?.click()}
+                  disabled={uploadQuoteMutation.isPending} className="w-full border-dashed border-purple-300 text-purple-700 hover:bg-purple-50">
+                  <Upload className="w-4 h-4 ml-2" />
+                  رفع العقد
+                </Button>
+              )}
+              <input ref={contractInputRef} type="file" className="hidden" onChange={handleContractUpload}
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" />
+            </div>
+
+            {/* Additional Attachments */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block flex items-center gap-2">
+                <FileText className="w-4 h-4 text-orange-600" />
+                مرفقات إضافية (اختياري)
+              </label>
+              {additionalFiles.length > 0 && (
+                <div className="space-y-1 mb-2">
+                  {additionalFiles.map((f, i) => (
+                    <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-orange-50 border border-orange-200">
+                      <CheckCircle className="w-4 h-4 text-orange-600" />
+                      <span className="text-sm text-orange-700 flex-1 truncate">{f.name}</span>
+                      <a href={f.url} target="_blank" rel="noopener noreferrer" className="text-orange-600">
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                      <Button variant="ghost" size="sm" onClick={() => setAdditionalFiles(prev => prev.filter((_, j) => j !== i))} className="h-6 w-6 p-0 text-gray-400">
+                        <XCircle className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <Button variant="outline" onClick={() => additionalInputRef.current?.click()}
+                disabled={uploadQuoteMutation.isPending} className="w-full border-dashed border-orange-300 text-orange-700 hover:bg-orange-50">
+                <Upload className="w-4 h-4 ml-2" />
+                إضافة مرفق
+              </Button>
+              <input ref={additionalInputRef} type="file" className="hidden" onChange={handleAdditionalFileUpload}
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xlsx,.xls" multiple />
+            </div>
           </div>
 
           <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
@@ -789,6 +891,35 @@ export default function PaymentRequests() {
                     )}
                     <input ref={viewQuoteInputRef} type="file" className="hidden" onChange={handleViewQuoteUpload} accept=".pdf,.jpg,.jpeg,.png" />
                   </div>
+                  {/* Contract */}
+                  {viewingRequest.contractUrl && (
+                    <div className="col-span-2">
+                      <a href={viewingRequest.contractUrl} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-2 rounded-lg bg-purple-50 border border-purple-200 text-purple-700 text-sm hover:bg-purple-100">
+                        <FileText className="w-4 h-4" />
+                        <span className="flex-1">{viewingRequest.contractName || "العقد"}</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  )}
+                  {/* Additional Attachments */}
+                  {viewingRequest.additionalAttachments && (() => {
+                    try {
+                      const atts: Array<{ url: string; name: string }> = JSON.parse(viewingRequest.additionalAttachments!);
+                      return atts.length > 0 ? (
+                        <div className="col-span-2 space-y-1">
+                          {atts.map((att, i) => (
+                            <a key={i} href={att.url} target="_blank" rel="noopener noreferrer"
+                              className="flex items-center gap-2 p-2 rounded-lg bg-orange-50 border border-orange-200 text-orange-700 text-sm hover:bg-orange-100">
+                              <FileText className="w-4 h-4" />
+                              <span className="flex-1">{att.name}</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          ))}
+                        </div>
+                      ) : null;
+                    } catch { return null; }
+                  })()}
                   {viewingRequest.financeEmailSentAt && (
                     <div className="col-span-2 flex items-center gap-2 p-2 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">
                       <Mail className="w-4 h-4" />
