@@ -76,7 +76,7 @@ const STATUS_BORDER: Record<RequestStatus, string> = {
 };
 
 // ── Main Component ─────────────────────────────────────────────────────────────
-export default function GeneralRequests() {
+export default function GeneralRequests({ embedded = false }: { embedded?: boolean }) {
   const [, navigate] = useLocation();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -357,10 +357,12 @@ export default function GeneralRequests() {
                 الأرشيف
               </button>
             </div>
-            <Button variant="outline" size="sm" onClick={() => navigate("/approval-settings")} className="gap-2 text-sm">
-              <Settings className="w-4 h-4" />
-              إعدادات الموافقة
-            </Button>
+            {!embedded && (
+              <Button variant="outline" size="sm" onClick={() => navigate("/approval-settings")} className="gap-2 text-sm">
+                <Settings className="w-4 h-4" />
+                إعدادات الموافقة
+              </Button>
+            )}
           </div>
         </div>
       </div>

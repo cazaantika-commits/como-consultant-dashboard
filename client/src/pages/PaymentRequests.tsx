@@ -56,7 +56,7 @@ function WorkflowStep({ label, status, active, done }: { label: string; status: 
   );
 }
 
-export default function PaymentRequests() {
+export default function PaymentRequests({ embedded = false }: { embedded?: boolean }) {
   const searchStr = useSearch();
   const [, navigate] = useLocation();
   const [showMonthlyReport, setShowMonthlyReport] = useState(false);
@@ -416,10 +416,12 @@ export default function PaymentRequests() {
               {showArchived ? <ArchiveRestore className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
               {showArchived ? "عرض النشطة" : "الأرشيف"}
             </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate("/approval-settings")} className="gap-2 text-sm">
-              <Settings className="w-4 h-4" />
-              إعدادات الموافقة
-            </Button>
+            {!embedded && (
+              <Button variant="outline" size="sm" onClick={() => navigate("/approval-settings")} className="gap-2 text-sm">
+                <Settings className="w-4 h-4" />
+                إعدادات الموافقة
+              </Button>
+            )}
           </div>
         </div>
       </div>

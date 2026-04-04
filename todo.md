@@ -595,3 +595,8 @@
 - [x] Add project/partner dropdowns and multi-file upload to Payment Requests form
 - [x] Add recommended company field for proposal approval type in General Requests
 - [x] Add archive tab to General Requests page
+
+## Command Center - Settings Removal
+- [x] Remove settings buttons/links from CommandCenterPage (إعدادات الموافقة, approval-settings, any admin settings)
+- [x] Hide settings button in PaymentRequests header when rendered inside CommandCenter
+- [x] Hide settings button in GeneralRequests header when rendered inside CommandCenter

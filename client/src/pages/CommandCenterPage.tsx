@@ -3857,7 +3857,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
               <ArrowLeft className="w-4 h-4 ml-1" /> العودة للرئيسية
             </Button>
           </div>
-          <PaymentRequestsPage />
+          <PaymentRequestsPage embedded={true} />
         </div>
         <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
       </div>
@@ -3875,7 +3875,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
               <ArrowLeft className="w-4 h-4 ml-1" /> العودة للرئيسية
             </Button>
           </div>
-          <GeneralRequestsPage />
+          <GeneralRequestsPage embedded={true} />
         </div>
         <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
       </div>
