@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
+import * as XLSX from "xlsx";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +12,7 @@ import {
   ClipboardList, Plus, Search, Eye, CheckCircle, XCircle, Clock,
   AlertCircle, Upload, FileText, Send, ChevronRight, RotateCcw,
   ExternalLink, Settings, Archive, ArchiveRestore, ArrowRight, Paperclip,
-  Users, Calendar, Video, HelpCircle, Gavel, FileCheck
+  Users, Calendar, Video, HelpCircle, Gavel, FileCheck, Download
 } from "lucide-react";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -357,6 +358,32 @@ export default function GeneralRequests() {
             ))}
           </SelectContent>
         </Select>
+        <Button
+          variant="outline"
+          onClick={() => {
+            const rows = filteredRequests.map((r: any) => ({
+              "رقم الطلب": r.requestNumber,
+              "التاريخ": r.createdAt ? new Date(r.createdAt).toLocaleDateString("ar-AE") : "",
+              "نوع الطلب": r.requestType,
+              "الموضوع": r.subject || "",
+              "المشروع": r.projectName || "",
+              "الجهة ذات الصلة": r.relatedParty || "",
+              "الوصف": r.description || "",
+              "التاريخ المقترح": r.proposedDate || "",
+              "الحالة": r.status,
+              "قرار وائل": r.waelDecision || "",
+              "قرار الشيخ عيسى": r.sheikhDecision || "",
+            }));
+            const ws = XLSX.utils.json_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "الطلبات والاستفسارات");
+            XLSX.writeFile(wb, `طلبات-واستفسارات-${new Date().toISOString().slice(0,10)}.xlsx`);
+          }}
+          className="bg-white border-violet-200 text-violet-700 hover:bg-violet-50"
+        >
+          <Download className="w-4 h-4 ml-2" />
+          تصدير Excel
+        </Button>
         <Button onClick={() => setShowCreate(true)} className="bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-700 hover:to-purple-800 text-white shadow-md">
           <Plus className="w-4 h-4 ml-2" />
           طلب جديد

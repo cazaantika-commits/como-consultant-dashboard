@@ -655,6 +655,36 @@ export const paymentRequestsRouter = router({
         console.error("[PaymentRequest] Failed to send sheikhReview notification:", notifErr);
       }
 
+      // Send rejection email to owner
+      if (input.decision === "rejected") {
+        try {
+          const cfg2 = await getApprovalConfig();
+          const [prRej] = await db.select().from(paymentRequests).where(eq(paymentRequests.id, input.id));
+          if (prRej) {
+            const rejBody = `
+<div style="font-family:Arial,sans-serif;direction:rtl;max-width:650px;margin:0 auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;">
+  <div style="background:#dc2626;color:white;padding:20px 30px;text-align:right;">
+    <h2 style="margin:0;font-size:20px;">❌ طلب صرف مرفوض</h2>
+    <p style="margin:5px 0 0;opacity:0.8;font-size:13px;">كومو للتطوير العقاري</p>
+  </div>
+  <div style="padding:25px 30px;background:#f9f9f9;text-align:right;">
+    <p style="color:#333;font-size:15px;">تم رفض طلب الصرف التالي من قبل الشيخ عيسى:</p>
+    <table style="width:100%;border-collapse:collapse;background:white;border-radius:6px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+      <tr style="background:#fef2f2;"><td style="padding:10px 14px;font-weight:bold;color:#555;">رقم الطلب</td><td style="padding:10px 14px;font-weight:bold;color:#dc2626;">${prRej.requestNumber}</td></tr>
+      <tr><td style="padding:10px 14px;font-weight:bold;color:#555;">المشروع</td><td style="padding:10px 14px;">${prRej.projectName || "—"}</td></tr>
+      <tr style="background:#fef2f2;"><td style="padding:10px 14px;font-weight:bold;color:#555;">المبلغ</td><td style="padding:10px 14px;font-weight:bold;">${Number(prRej.amount).toLocaleString("en-US",{minimumFractionDigits:2})} ${prRej.currency}</td></tr>
+      <tr><td style="padding:10px 14px;font-weight:bold;color:#555;">سبب الرفض</td><td style="padding:10px 14px;color:#dc2626;">${input.notes || "لم يُذكر سبب"}</td></tr>
+    </table>
+    <p style="margin-top:15px;color:#666;font-size:13px;">يمكنك مراجعة الطلب وإعادة تقديمه بعد التعديل.</p>
+  </div>
+</div>`;
+            await sendReply("a.zaqout@comodevelopments.com", `❌ طلب صرف مرفوض — ${prRej.requestNumber}`, rejBody, undefined, cfg2.waelEmail);
+          }
+        } catch (rejErr) {
+          console.error("[PaymentRequest] Failed to send rejection email to owner:", rejErr);
+        }
+      }
+
       return { success: true, newStatus };
     }),
 

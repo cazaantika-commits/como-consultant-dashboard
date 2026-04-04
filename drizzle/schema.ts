@@ -2212,6 +2212,11 @@ export const generalRequests = mysqlTable("general_requests", {
   // Attachment (e.g., proposal PDF, contract draft)
   attachmentUrl: text("attachment_url"),
   attachmentName: varchar("attachment_name", { length: 255 }),
+  // Contract document
+  contractUrl: text("contract_url"),
+  contractName: varchar("contract_name", { length: 255 }),
+  // Additional attachments (JSON array of {url, name})
+  additionalAttachments: text("additional_attachments"),
   // Proposed meeting date/time (for meeting requests)
   proposedDate: varchar("proposed_date", { length: 100 }),
   // Status: new → pending_wael → pending_sheikh → approved / rejected / needs_revision

@@ -171,6 +171,9 @@ export const generalRequestsRouter = router({
       proposedDate: z.string().optional(),
       attachmentUrl: z.string().optional(),
       attachmentName: z.string().optional(),
+      contractUrl: z.string().optional(),
+      contractName: z.string().optional(),
+      additionalAttachments: z.string().optional(), // JSON string
     }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
@@ -185,6 +188,9 @@ export const generalRequestsRouter = router({
         proposedDate: input.proposedDate,
         attachmentUrl: input.attachmentUrl,
         attachmentName: input.attachmentName,
+        contractUrl: input.contractUrl,
+        contractName: input.contractName,
+        additionalAttachments: input.additionalAttachments,
         status: "pending_wael",
         submittedBy: ctx.user.id,
       });
@@ -352,6 +358,28 @@ export const generalRequestsRouter = router({
         }
       }
 
+      // Notify submitter if rejected
+      if (input.decision === "rejected") {
+        try {
+          const rejectionBody = buildNotificationEmail({
+            recipientName: "عبدالرحمن",
+            requestNumber: req.requestNumber,
+            requestTypeLabel: typeLabel,
+            subject: req.subject,
+            description: req.description,
+            projectName: req.projectName,
+            relatedParty: req.relatedParty,
+            proposedDate: req.proposedDate,
+            submitterName: cfg.sheikhName,
+            actionRequired: `تم رفض هذا الطلب${input.notes ? ` — السبب: ${input.notes}` : ""}`,
+            accentColor: "#dc2626",
+          });
+          await sendReply(DEFAULT_SUBMITTER_EMAIL, `❌ ${typeLabel} مرفوض — ${req.requestNumber}`, rejectionBody, undefined, cfg.waelEmail);
+        } catch (err) {
+          console.error("[GeneralRequests] Failed to notify submitter of rejection:", err);
+        }
+      }
+
       return { success: true, newStatus };
     }),
 
@@ -366,6 +394,9 @@ export const generalRequestsRouter = router({
       proposedDate: z.string().optional(),
       attachmentUrl: z.string().optional(),
       attachmentName: z.string().optional(),
+      contractUrl: z.string().optional(),
+      contractName: z.string().optional(),
+      additionalAttachments: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();
