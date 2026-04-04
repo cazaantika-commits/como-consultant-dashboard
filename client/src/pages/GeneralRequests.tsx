@@ -253,6 +253,14 @@ export default function GeneralRequests() {
     return matchSearch && matchStatus && matchType;
   });
 
+  // ── Summary stats ────────────────────────────────────────────────────────────
+  const summaryStats = {
+    total: (requests as GeneralRequest[]).filter(r => !r.isArchived).length,
+    approved: (requests as GeneralRequest[]).filter(r => r.status === "approved" && !r.isArchived).length,
+    pending: (requests as GeneralRequest[]).filter(r => ["pending_wael", "pending_sheikh", "new"].includes(r.status) && !r.isArchived).length,
+    rejected: (requests as GeneralRequest[]).filter(r => r.status === "rejected" && !r.isArchived).length,
+  };
+
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-violet-50/30 p-6" dir="rtl">
@@ -288,6 +296,27 @@ export default function GeneralRequests() {
             </Button>
           </div>
         </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        {[
+          { label: "إجمالي الطلبات", value: summaryStats.total, color: "from-slate-600 to-gray-700", bg: "bg-slate-50", border: "border-slate-200", icon: ClipboardList },
+          { label: "الطلبات المعتمدة", value: summaryStats.approved, color: "from-green-600 to-emerald-700", bg: "bg-green-50", border: "border-green-200", icon: CheckCircle },
+          { label: "الطلبات المعلقة", value: summaryStats.pending, color: "from-blue-600 to-indigo-700", bg: "bg-blue-50", border: "border-blue-200", icon: Clock },
+          { label: "الطلبات المرفوضة", value: summaryStats.rejected, color: "from-red-600 to-rose-700", bg: "bg-red-50", border: "border-red-200", icon: XCircle },
+        ].map((stat, i) => (
+          <div key={i} className={`${stat.bg} border ${stat.border} rounded-2xl p-4 shadow-sm`}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-gray-500">{stat.label}</span>
+              <stat.icon className="w-4 h-4 text-gray-400" />
+            </div>
+            <div className={`text-3xl font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent`}>
+              {stat.value}
+            </div>
+            <div className="text-xs text-gray-400 mt-0.5">طلب</div>
+          </div>
+        ))}
       </div>
 
       {/* Status Stats */}
