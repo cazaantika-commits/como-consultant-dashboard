@@ -55,7 +55,7 @@ const CATEGORY_MAP: Record<string, { label: string; color: string }> = {
 // ═══════════════════════════════════════════════════
 
 export default function ContractsRegistryPage() {
-  const { user, loading, isAuthenticated } = useAuth();
+  const { user, loading, isAuthenticated, isReadOnly } = useAuth();
   const [, navigate] = useLocation();
   const utils = trpc.useUtils();
 
@@ -260,7 +260,7 @@ export default function ContractsRegistryPage() {
               </TabsTrigger>
             </TabsList>
 
-            {activeTab === "contracts" && (
+            {activeTab === "contracts" && !isReadOnly && (
               <Dialog open={showAddContract} onOpenChange={setShowAddContract}>
                 <DialogTrigger asChild>
                   <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700">
@@ -313,7 +313,7 @@ export default function ContractsRegistryPage() {
               </Dialog>
             )}
 
-            {activeTab === "types" && (
+            {activeTab === "types" && !isReadOnly && (
               <div className="flex gap-2">
                 {contractTypes.length === 0 && (
                   <Button

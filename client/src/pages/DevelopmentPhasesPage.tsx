@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/_core/hooks/useAuth";
 import ProjectLifecyclePage from "./ProjectLifecyclePage";
 import WorkSchedulePage from "./WorkSchedulePage";
 
@@ -36,6 +37,7 @@ interface Stage {
 }
 
 function StageSettingsView() {
+  const { isReadOnly } = useAuth();
   const { toast } = useToast();
   const utils = trpc.useUtils();
 
@@ -164,14 +166,14 @@ function StageSettingsView() {
             إدارة مراحل مسار الامتثال التنظيمي — الترتيب والأسماء والتفعيل
           </p>
         </div>
-        <Button
+        {!isReadOnly && <Button
           size="sm"
           onClick={() => setAddingNew(true)}
           className="gap-1.5 bg-amber-600 hover:bg-amber-700 text-white"
         >
           <Plus className="w-4 h-4" />
           إضافة مرحلة
-        </Button>
+        </Button>}
       </div>
 
       {addingNew && (

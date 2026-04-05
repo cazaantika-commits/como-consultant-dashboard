@@ -18,6 +18,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { useLocation } from "wouter";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 const COLOR_OPTIONS = [
   { label: "أخضر", value: "#10b981" },
@@ -31,6 +32,7 @@ const COLOR_OPTIONS = [
 ];
 
 export default function NewsTickerManagePage() {
+  const { isReadOnly } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [newTitle, setNewTitle] = useState("");
@@ -124,7 +126,7 @@ export default function NewsTickerManagePage() {
 
       <div className="max-w-4xl mx-auto px-6 py-6 space-y-6">
         {/* Add New News Item */}
-        <Card className="border-dashed border-2 border-amber-300 bg-amber-50/50">
+        {!isReadOnly && <Card className="border-dashed border-2 border-amber-300 bg-amber-50/50">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2 text-amber-800">
               <Plus className="w-5 h-5" />
@@ -175,7 +177,7 @@ export default function NewsTickerManagePage() {
               </Button>
             </div>
           </CardContent>
-        </Card>
+        </Card>}
 
         {/* Existing News Items */}
         <Card>
@@ -277,14 +279,14 @@ export default function NewsTickerManagePage() {
                         >
                           <ArrowDown className="w-4 h-4" />
                         </Button>
-                        <Button
+                        {!isReadOnly && <Button
                           size="icon"
                           variant="ghost"
                           className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
                           onClick={() => handleStartEdit(item)}
                         >
                           <Pencil className="w-4 h-4" />
-                        </Button>
+                        </Button>}
                         <Button
                           size="icon"
                           variant="ghost"
@@ -297,7 +299,7 @@ export default function NewsTickerManagePage() {
                             <EyeOff className="w-4 h-4 text-slate-400" />
                           )}
                         </Button>
-                        <Button
+                        {!isReadOnly && <Button
                           size="icon"
                           variant="ghost"
                           className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50"
@@ -308,7 +310,7 @@ export default function NewsTickerManagePage() {
                           }}
                         >
                           <Trash2 className="w-4 h-4" />
-                        </Button>
+                        </Button>}
                       </>
                     )}
                   </div>

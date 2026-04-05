@@ -21,8 +21,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, Trash2, Download, Upload, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function ConsultantsRegistry() {
+  const { isReadOnly } = useAuth();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -144,7 +146,7 @@ export default function ConsultantsRegistry() {
         </div>
 
         {/* Add Button */}
-        <div className="mb-6">
+        {!isReadOnly && <div className="mb-6">
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2">
@@ -243,7 +245,7 @@ export default function ConsultantsRegistry() {
               </div>
             </DialogContent>
           </Dialog>
-        </div>
+        </div>}
 
         {/* Consultants List */}
         {isLoading ? (
@@ -254,9 +256,9 @@ export default function ConsultantsRegistry() {
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground mb-4">No consultants found</p>
-              <Button onClick={() => setIsAddOpen(true)} variant="outline">
+              {!isReadOnly && <Button onClick={() => setIsAddOpen(true)} variant="outline">
                 Add your first consultant
-              </Button>
+              </Button>}
             </CardContent>
           </Card>
         ) : (
@@ -309,7 +311,7 @@ export default function ConsultantsRegistry() {
                       <p className="text-sm">{consultant.notes}</p>
                     </div>
                   )}
-                  <div className="flex gap-2 pt-4 border-t">
+                  {!isReadOnly && <div className="flex gap-2 pt-4 border-t">
                     <Button
                       variant="outline"
                       size="sm"
@@ -318,7 +320,7 @@ export default function ConsultantsRegistry() {
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
-                  </div>
+                  </div>}
                 </CardContent>
               </Card>
             ))}

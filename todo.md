@@ -606,3 +606,10 @@
 
 ## Command Center - Priority Cards Redesign
 - [x] Redesign bento grid to show payment requests and general requests as large hero priority cards at top
+
+## Command Center - Role-Based Permissions
+- [ ] Pass memberId/role through embedded components via prop
+- [ ] Payment Requests: hide create/edit buttons for wael/sheikh_issa, keep approve/reject/review
+- [ ] Read-only sections: hide mutating actions in Financial Reports, Milestones, Meeting Minutes, Reports, Work Schedule, Feasibility Study
+- [ ] Capital Portfolio: keep move + report actions for wael/sheikh_issa
+- [ ] General Requests + Evaluations: full access for all members

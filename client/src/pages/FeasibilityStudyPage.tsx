@@ -141,7 +141,7 @@ function JoellePlaceholder({ message, subMessage }: { message: string; subMessag
 // ═══════════════════════════════════════════
 
 export default function FeasibilityStudyPage({ embedded, initialProjectId }: { embedded?: boolean; initialProjectId?: number | null } = {}) {
-  const { user, loading, isAuthenticated } = useAuth();
+  const { user, loading, isAuthenticated, isReadOnly } = useAuth();
   const [, navigate] = useLocation();
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(initialProjectId ?? null);
   const [selectedStudyId, setSelectedStudyId] = useState<number | null>(null);
@@ -313,7 +313,7 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
                 حفظ التغييرات
               </Button>
             )}
-            {selectedStudyId && (
+            {selectedStudyId && !isReadOnly && (
               <Button
                 variant="outline"
                 size="icon"

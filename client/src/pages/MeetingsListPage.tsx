@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
+import { useAuth } from "@/_core/hooks/useAuth";
 import {
   Users, Plus, Calendar, MessageSquare, FileText, Clock,
   CheckCircle, XCircle, ArrowRight, Home, Trash2, PlayCircle, BarChart3
@@ -17,6 +18,7 @@ const statusMap: Record<string, { label: string; color: string; icon: any }> = {
 };
 
 export default function MeetingsListPage() {
+  const { isReadOnly } = useAuth();
   const [, setLocation] = useLocation();
   const [filter, setFilter] = useState<string>("all");
 
@@ -56,13 +58,13 @@ export default function MeetingsListPage() {
               <BarChart3 className="w-4 h-4 ml-2" />
               لوحة المتابعة
             </Button>
-            <Button
+            {!isReadOnly && <Button
               onClick={() => setLocation("/meetings/new")}
               className="bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white shadow-lg shadow-violet-200"
             >
               <Plus className="w-4 h-4 ml-2" />
               اجتماع جديد
-            </Button>
+            </Button>}
           </div>
         </div>
       </header>
@@ -108,13 +110,13 @@ export default function MeetingsListPage() {
               </div>
               <h3 className="text-lg font-bold text-stone-800 mb-2">لا توجد اجتماعات بعد</h3>
               <p className="text-stone-500 mb-6">ابدأ بإنشاء اجتماع جديد مع فريق الوكلاء لمناقشة مشاريعك</p>
-              <Button
+              {!isReadOnly && <Button
                 onClick={() => setLocation("/meetings/new")}
                 className="bg-gradient-to-r from-violet-500 to-purple-600 text-white"
               >
                 <Plus className="w-4 h-4 ml-2" />
                 إنشاء أول اجتماع
-              </Button>
+              </Button>}
             </CardContent>
           </Card>
         ) : (
@@ -200,7 +202,7 @@ export default function MeetingsListPage() {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <button
+                        {!isReadOnly && <button
                           onClick={(e) => {
                             e.stopPropagation();
                             if (confirm("هل تريد حذف هذا الاجتماع؟")) {
@@ -210,7 +212,7 @@ export default function MeetingsListPage() {
                           className="p-2 rounded-lg hover:bg-red-50 text-stone-400 hover:text-red-500 transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
-                        </button>
+                        </button>}
                         <ArrowRight className="w-5 h-5 text-stone-300 group-hover:text-violet-500 transition-colors rotate-180" />
                       </div>
                     </div>

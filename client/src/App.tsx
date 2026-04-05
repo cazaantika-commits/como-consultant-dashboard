@@ -72,6 +72,7 @@ import CapitalPortfolioPage from "./pages/CapitalPortfolioPage";
 import UserManagementPage from "./pages/UserManagementPage";
 import ApprovalSettings from "./pages/ApprovalSettings";
 import GeneralRequests from "./pages/GeneralRequests";
+import { ReadOnlyGuard } from "./components/ReadOnlyGuard";
 
 function Router() {
   return (
@@ -161,7 +162,9 @@ function App() {
           <Toaster />
           <CCAuthProvider>
             <OwnerProvider>
-              <Router />
+              <ReadOnlyGuard>
+                <Router />
+              </ReadOnlyGuard>
             </OwnerProvider>
           </CCAuthProvider>
         </TooltipProvider>

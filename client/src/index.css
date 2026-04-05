@@ -485,3 +485,12 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* ============================================================
+   READ-ONLY MODE
+   When body[data-readonly="true"], hide all elements marked
+   with data-hide-readonly attribute.
+   ============================================================ */
+body[data-readonly="true"] [data-hide-readonly] {
+  display: none !important;
+}

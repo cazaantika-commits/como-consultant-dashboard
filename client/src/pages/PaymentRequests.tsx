@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useSearch, useLocation } from "wouter";
+import { useAuth } from "@/_core/hooks/useAuth";
 import * as XLSX from "xlsx";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -57,6 +58,7 @@ function WorkflowStep({ label, status, active, done }: { label: string; status: 
 }
 
 export default function PaymentRequests({ embedded = false }: { embedded?: boolean }) {
+  const { isReadOnly } = useAuth();
   const searchStr = useSearch();
   const [, navigate] = useLocation();
   const [showMonthlyReport, setShowMonthlyReport] = useState(false);
@@ -488,7 +490,7 @@ export default function PaymentRequests({ embedded = false }: { embedded?: boole
             </SelectContent>
           </Select>
         )}
-        <Button
+        {!isReadOnly && <Button
           variant="outline"
           onClick={() => {
             const rows = filtered.map((r: any) => ({
@@ -513,11 +515,11 @@ export default function PaymentRequests({ embedded = false }: { embedded?: boole
         >
           <Download className="w-4 h-4 ml-2" />
           تصدير Excel
-        </Button>
-        <Button onClick={() => setShowCreate(true)} className="bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white shadow-md">
+        </Button>}
+        {!isReadOnly && <Button onClick={() => setShowCreate(true)} className="bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white shadow-md">
           <Plus className="w-4 h-4 ml-2" />
           طلب صرف جديد
-        </Button>
+        </Button>}
       </div>
       {/* Date Range Filter */}
       <div className="flex gap-3 mb-6 flex-wrap items-center">

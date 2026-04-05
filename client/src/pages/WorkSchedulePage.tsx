@@ -28,6 +28,7 @@ import {
   Columns2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 /* ── helpers ── */
 const DOW_EN = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
@@ -187,6 +188,7 @@ type RowData = {
 };
 
 export default function WorkSchedulePage({ initialProjectId, onProjectChange }: { initialProjectId?: number | null; onProjectChange?: (id: number | null) => void } = {}) {
+  const { isReadOnly } = useAuth();
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(initialProjectId ?? null);
   const handleSetProjectId = (id: number | null) => {
     setSelectedProjectId(id);
@@ -1027,7 +1029,7 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
                       </span>
                     )}
 
-                    {!isStage && (
+                    {!isStage && !isReadOnly && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1162,7 +1164,7 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
         </div>
 
         {/* Add Task Dialog */}
-        {addingToStage && (
+        {addingToStage && !isReadOnly && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setAddingToStage(null)}>
             <div className="bg-white rounded-lg shadow-xl p-5 w-80" dir="rtl" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-4">

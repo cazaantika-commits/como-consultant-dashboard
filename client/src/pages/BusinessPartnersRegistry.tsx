@@ -13,6 +13,7 @@ import { Building2, Plus, Search, Edit2, Trash2, Eye, Upload, FileText,
   ExternalLink, User, CreditCard,
 } from "lucide-react";
 import { useLocation } from "wouter";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 type Partner = {
   id: number;
@@ -144,6 +145,7 @@ const EMPTY_FORM: FormData = {
 };
 
 export default function BusinessPartnersRegistry() {
+  const { isReadOnly } = useAuth();
   const [, navigate] = useLocation();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -256,10 +258,10 @@ export default function BusinessPartnersRegistry() {
           <Input placeholder="بحث بالاسم أو الفئة أو المسؤول..." value={search}
             onChange={e => setSearch(e.target.value)} className="pr-10 bg-white" />
         </div>
-        <Button onClick={openCreate} className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white shadow-md">
+        {!isReadOnly && <Button onClick={openCreate} className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white shadow-md">
           <Plus className="w-4 h-4 ml-2" />
           إضافة شريك
-        </Button>
+        </Button>}
       </div>
 
       {/* Table */}
@@ -269,9 +271,9 @@ export default function BusinessPartnersRegistry() {
         <div className="text-center py-20">
           <Building2 className="w-16 h-16 text-gray-200 mx-auto mb-4" />
           <p className="text-gray-400 text-lg">لا توجد نتائج</p>
-          <Button onClick={openCreate} variant="outline" className="mt-4">
+          {!isReadOnly && <Button onClick={openCreate} variant="outline" className="mt-4">
             <Plus className="w-4 h-4 ml-2" /> إضافة أول شريك
-          </Button>
+          </Button>}
         </div>
       ) : (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -325,8 +327,8 @@ export default function BusinessPartnersRegistry() {
                       <td className="p-4">
                         <div className="flex items-center gap-1">
                           <Button variant="ghost" size="sm" onClick={() => setViewingPartner(p)} className="h-8 w-8 p-0 hover:bg-blue-100 hover:text-blue-600"><Eye className="w-4 h-4" /></Button>
-                          <Button variant="ghost" size="sm" onClick={() => openEdit(p)} className="h-8 w-8 p-0 hover:bg-amber-100 hover:text-amber-600"><Edit2 className="w-4 h-4" /></Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(p.id, p.companyName)} className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600"><Trash2 className="w-4 h-4" /></Button>
+                          {!isReadOnly && <Button variant="ghost" size="sm" onClick={() => openEdit(p)} className="h-8 w-8 p-0 hover:bg-amber-100 hover:text-amber-600"><Edit2 className="w-4 h-4" /></Button>}
+                          {!isReadOnly && <Button variant="ghost" size="sm" onClick={() => handleDelete(p.id, p.companyName)} className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600"><Trash2 className="w-4 h-4" /></Button>}
                         </div>
                       </td>
                     </tr>

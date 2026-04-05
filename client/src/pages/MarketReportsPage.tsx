@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +55,7 @@ const STATUS_MAP: Record<string, { label: string; color: string; icon: any }> = 
 };
 
 export default function MarketReportsPage() {
+  const { isReadOnly } = useAuth();
   const [activeTab, setActiveTab] = useState("browse");
   const [filterSource, setFilterSource] = useState<string>("");
   const [filterType, setFilterType] = useState<string>("");
@@ -88,10 +90,10 @@ export default function MarketReportsPage() {
                 <p className="text-sm text-muted-foreground">رفع وإدارة تقارير السوق العقاري من المصادر الرائدة</p>
               </div>
             </div>
-            <Button onClick={() => setShowUploadDialog(true)} className="gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white">
+            {!isReadOnly && <Button onClick={() => setShowUploadDialog(true)} className="gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white">
               <Upload className="w-4 h-4" />
               رفع تقرير جديد
-            </Button>
+            </Button>}
           </div>
         </div>
       </div>
@@ -358,11 +360,11 @@ function ReportCard({ report, onView, onRefresh }: { report: any; onView: () => 
                   إعادة معالجة
                 </Button>
               )}
-              <Button variant="ghost" size="sm" className="gap-1 text-destructive hover:text-destructive"
+              {!isReadOnly && <Button variant="ghost" size="sm" className="gap-1 text-destructive hover:text-destructive"
                 onClick={() => { if (confirm("هل تريد حذف هذا التقرير؟")) deleteMutation.mutate({ id: report.id }); }}
                 disabled={deleteMutation.isPending}>
                 <Trash2 className="w-3 h-3" />
-              </Button>
+              </Button>}
               <span className="text-xs text-muted-foreground mr-auto">
                 {report.fileSizeBytes ? `${(report.fileSizeBytes / 1024 / 1024).toFixed(1)} MB` : ""}
               </span>
