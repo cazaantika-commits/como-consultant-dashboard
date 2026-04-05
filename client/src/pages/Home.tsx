@@ -165,7 +165,7 @@ function SortableMainCard({ item, onNavigate }: { item: NavItem; onNavigate: (pa
       {...attributes}
       {...listeners}
       onClick={() => !isDragging && onNavigate(item.path)}
-      className={`group relative rounded-2xl border transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-[0.97] overflow-hidden cursor-grab active:cursor-grabbing select-none touch-none animate-card-stagger ${
+      className={`group relative rounded-2xl border transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-[0.97] overflow-hidden cursor-grab active:cursor-grabbing select-none touch-manipulation animate-card-stagger ${
         isCommandCenter
           ? 'border-border/60 py-8 px-6 hover:shadow-2xl hover:-translate-y-1.5 hover:border-border/80 before:absolute before:inset-0 before:bg-gradient-to-br before:from-purple-500/5 before:to-transparent before:opacity-0 before:group-hover:opacity-100 before:transition-opacity before:duration-300'
           : 'border-border/40 py-7 px-5'
@@ -222,7 +222,7 @@ function SortableToolCard({ item, onNavigate }: { item: NavItem; onNavigate: (pa
       {...attributes}
       {...listeners}
       onClick={() => !isDragging && onNavigate(item.path)}
-      className={`group relative bg-card hover:bg-card/90 rounded-xl border border-border/50 p-4 text-right transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] overflow-hidden cursor-grab active:cursor-grabbing select-none touch-none animate-card-stagger ${isDragging ? 'shadow-2xl scale-105 ring-2 ring-primary/30' : ''}`}
+      className={`group relative bg-card hover:bg-card/90 rounded-xl border border-border/50 p-4 text-right transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] overflow-hidden cursor-grab active:cursor-grabbing select-none touch-manipulation animate-card-stagger ${isDragging ? 'shadow-2xl scale-105 ring-2 ring-primary/30' : ''}`}
     >
       <div className="absolute top-0 left-0 right-0 h-[3px] rounded-t-xl" style={{ backgroundColor: item.borderColor }} />
       <div className="flex items-center gap-3 flex-row-reverse">
@@ -312,7 +312,7 @@ export default function Home() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 300, tolerance: 8 } }),
     useSensor(KeyboardSensor)
   );
   const { data: agentsList = [] } = trpc.agents.list.useQuery(undefined, {

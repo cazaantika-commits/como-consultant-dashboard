@@ -624,3 +624,7 @@
 - [x] Add التواصل الداخلي to sidebar navigation and Command Center bento grid
 - [x] Update الاعتمادات الرسمية card description in Command Center
 - [x] Add بانتظار توقيعي filter tab to الاعتمادات الرسمية page
+
+## Mobile Drag-and-Drop Fix
+- [x] Increase TouchSensor delay to 300ms + tolerance 8px in Home.tsx for long-press activation on mobile
+- [x] Replace touch-none with touch-manipulation on SortableMainCard and SortableToolCard to allow normal scrolling
