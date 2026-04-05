@@ -618,3 +618,9 @@
 - [ ] Add assignedTo field to general_requests table in drizzle schema
 - [ ] Update backend router: assignedTo in create/update, add getMembers query
 - [ ] Update frontend: replace fixed flow banner with recipient selector dropdown
+
+## Three New Improvements
+- [x] Create internal communication system (التواصل الداخلي): DB table, backend router, new page
+- [x] Add التواصل الداخلي to sidebar navigation and Command Center bento grid
+- [x] Update الاعتمادات الرسمية card description in Command Center
+- [x] Add بانتظار توقيعي filter tab to الاعتمادات الرسمية page

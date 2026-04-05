@@ -72,6 +72,7 @@ import CapitalPortfolioPage from "./pages/CapitalPortfolioPage";
 import UserManagementPage from "./pages/UserManagementPage";
 import ApprovalSettings from "./pages/ApprovalSettings";
 import GeneralRequests from "./pages/GeneralRequests";
+import InternalMessages from "./pages/InternalMessages";
 import { ReadOnlyGuard } from "./components/ReadOnlyGuard";
 
 function Router() {
@@ -146,6 +147,7 @@ function Router() {
       <Route path="/capital-portfolio" component={CapitalPortfolioPage} />
       <Route path="/user-management" component={UserManagementPage} />
       <Route path="/approval-settings" component={ApprovalSettings} />
+      <Route path="/internal-messages" component={InternalMessages} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

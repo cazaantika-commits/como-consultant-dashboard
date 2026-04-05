@@ -1,6 +1,5 @@
 import express from "express";
 import puppeteer from "puppeteer-core";
-import { db } from "./db";
 
 const router = express.Router();
 

@@ -465,6 +465,7 @@ export default function Home() {
     { label: "سجل الشركاء والمتعاملين", path: "/business-partners-registry" },
     { label: "طلبات الصرف", path: "/payment-requests" },
     { label: "الاعتمادات الرسمية", path: "/general-requests" },
+    { label: "التواصل الداخلي", path: "/internal-messages" },
   ];
 
   return (

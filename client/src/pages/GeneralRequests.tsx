@@ -299,7 +299,8 @@ export default function GeneralRequests({ embedded = false }: { embedded?: boole
       r.subject.toLowerCase().includes(search.toLowerCase()) ||
       (r.projectName || "").toLowerCase().includes(search.toLowerCase()) ||
       (r.relatedParty || "").toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === "all" || r.status === statusFilter;
+    const matchStatus = statusFilter === "all" || r.status === statusFilter ||
+      (statusFilter === "pending_my_signature" && (r.status === "pending_wael" || r.status === "pending_sheikh"));
     const matchType = typeFilter === "all" || r.requestType === typeFilter;
     const rDate = r.createdAt ? new Date(r.createdAt) : null;
     const matchDateFrom = !dateFrom || (rDate && rDate >= new Date(dateFrom));
@@ -389,19 +390,20 @@ export default function GeneralRequests({ embedded = false }: { embedded?: boole
       </div>
 
       {/* Status Stats */}
-      <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-6">
+      <div className="grid grid-cols-3 md:grid-cols-7 gap-3 mb-6">
         {[
-          { key: "all", label: "الكل", color: "from-gray-500 to-gray-600" },
-          { key: "pending_wael", label: "بانتظار وائل", color: "from-blue-500 to-indigo-600" },
-          { key: "pending_sheikh", label: "بانتظار الشيخ", color: "from-purple-500 to-violet-600" },
-          { key: "approved", label: "معتمد", color: "from-green-500 to-emerald-600" },
-          { key: "needs_revision", label: "مراجعة", color: "from-yellow-500 to-amber-600" },
-          { key: "rejected", label: "مرفوض", color: "from-red-500 to-rose-600" },
+          { key: "all", label: "الكل", color: "from-gray-500 to-gray-600", count: (counts as any).all ?? 0 },
+          { key: "pending_my_signature", label: "بانتظار توقيعي", color: "from-orange-500 to-amber-600", count: ((counts as any).pending_wael ?? 0) + ((counts as any).pending_sheikh ?? 0) },
+          { key: "pending_wael", label: "بانتظار وائل", color: "from-blue-500 to-indigo-600", count: (counts as any).pending_wael ?? 0 },
+          { key: "pending_sheikh", label: "بانتظار الشيخ", color: "from-purple-500 to-violet-600", count: (counts as any).pending_sheikh ?? 0 },
+          { key: "approved", label: "معتمد", color: "from-green-500 to-emerald-600", count: (counts as any).approved ?? 0 },
+          { key: "needs_revision", label: "مراجعة", color: "from-yellow-500 to-amber-600", count: (counts as any).needs_revision ?? 0 },
+          { key: "rejected", label: "مرفوض", color: "from-red-500 to-rose-600", count: (counts as any).rejected ?? 0 },
         ].map(s => (
           <button key={s.key} onClick={() => setStatusFilter(s.key)}
             className={`p-3 rounded-xl border-2 transition-all text-right ${statusFilter === s.key ? "border-violet-500 bg-white shadow-md" : "border-transparent bg-white/60 hover:bg-white"}`}>
             <div className={`text-2xl font-bold bg-gradient-to-r ${s.color} bg-clip-text text-transparent`}>
-              {(counts as any)[s.key] ?? 0}
+              {s.count}
             </div>
             <div className="text-xs text-gray-500 mt-0.5">{s.label}</div>
           </button>

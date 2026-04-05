@@ -110,6 +110,7 @@ import WorkSchedulePage from "./WorkSchedulePage";
 import CapitalPortfolioPage from "./CapitalPortfolioPage";
 import PaymentRequestsPage from "./PaymentRequests";
 import GeneralRequestsPage from "./GeneralRequests";
+import InternalMessagesPage from "./InternalMessages";
 // Old financial components removed - now using iframe embeds
 
 // --- Financial Reports View (read-only, embedded in Command Center) ---
@@ -388,6 +389,8 @@ const BUBBLES = [
   { type: "work_schedule" as const, label: "برنامج العمل", icon: CalendarDays, color: "from-teal-500 to-teal-700", bg: "bg-teal-50", border: "border-teal-200", text: "text-teal-700" },
   { type: "feasibility_study" as const, label: "دراسة الجدوى", icon: TrendingUp, color: "from-fuchsia-500 to-violet-700", bg: "bg-violet-50", border: "border-violet-200", text: "text-violet-700" },
   { type: "announcements" as const, label: "الإعلانات", icon: Megaphone, color: "from-red-500 to-rose-700", bg: "bg-rose-50", border: "border-rose-200", text: "text-rose-700" },
+  // ── PRIORITY 5: Internal Communication ──
+  { type: "internal_messages" as const, label: "التواصل الداخلي", icon: MessageSquare, color: "from-indigo-500 to-violet-700", bg: "bg-indigo-50", border: "border-indigo-200", text: "text-indigo-700" },
 ];
 
 const BUBBLE_LABELS: Record<string, string> = {
@@ -3787,6 +3790,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
   const [showCapitalPortfolio, setShowCapitalPortfolio] = useState(false);
   const [showPaymentRequests, setShowPaymentRequests] = useState(false);
   const [showGeneralRequests, setShowGeneralRequests] = useState(false);
+  const [showInternalMessages, setShowInternalMessages] = useState(false);
   const projectsList = trpc.projects.list.useQuery();
 
   const counts = trpc.commandCenter.getBubbleCounts.useQuery({ token });
@@ -3864,6 +3868,23 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
     );
   }
 
+  // If viewing internal messages
+  if (activeBubble === "internal_messages" && showInternalMessages) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white" dir="rtl">
+        <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
+        <div className="px-0 py-0">
+          <div className="flex items-center gap-2 px-4 pt-3 pb-1">
+            <Button variant="ghost" size="sm" onClick={() => { setActiveBubble(null); setShowInternalMessages(false); }} className="text-slate-500">
+              <ArrowLeft className="w-4 h-4 ml-1" /> العودة للرئيسية
+            </Button>
+          </div>
+          <InternalMessagesPage />
+        </div>
+        <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
+      </div>
+    );
+  }
   // If viewing general requests
   if (activeBubble === "general_requests" && showGeneralRequests) {
     return (
@@ -4092,6 +4113,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             else if (type === "capital_portfolio") { setActiveBubble("capital_portfolio"); setShowCapitalPortfolio(true); }
             else if (type === "payment_requests") { setActiveBubble("payment_requests"); setShowPaymentRequests(true); }
             else if (type === "requests") { setActiveBubble("general_requests"); setShowGeneralRequests(true); }
+            else if (type === "internal_messages") { setActiveBubble("internal_messages"); setShowInternalMessages(true); }
             else { setActiveBubble(type); }
           };
 
@@ -4137,7 +4159,8 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             evaluations: 'تقييم الاستشاريين الفنيين',
             milestones_kpis: 'متابعة المراحل ومؤشرات الأداء',
             reports: 'عرض وإدارة جميع التقارير المرفوعة',
-            requests: 'متابعة الاعتمادات الرسمية',
+            requests: 'إنشاء ومتابعة الاعتمادات والتوقيعات الرسمية',
+            internal_messages: 'التواصل المباشر بين أعضاء فريق القيادة',
             meeting_minutes: 'محاضر الاجتماعات والقرارات',
           };
 
@@ -4336,6 +4359,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                   <IconTile bubble={BUBBLES[7]} size="md" />
                   <IconTile bubble={BUBBLES[8]} size="sm" />
                   <IconTile bubble={BUBBLES[9]} size="sm" />
+                  <IconTile bubble={BUBBLES[10]} size="sm" />
                 </div>
               </div>
             </div>

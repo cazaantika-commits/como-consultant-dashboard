@@ -2251,3 +2251,34 @@ export const generalRequests = mysqlTable("general_requests", {
   createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
   updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
 });
+
+// ─── Internal Communication (التواصل الداخلي) ───────────────────────────────
+export const internalMessages = mysqlTable("internal_messages", {
+  id: int("id").autoincrement().notNull(),
+  messageNumber: varchar("message_number", { length: 50 }).notNull(), // MSG-2026-001
+  fromMember: mysqlEnum("from_member", ["abdulrahman", "wael", "sheikh_issa"]).notNull(),
+  toMember: mysqlEnum("to_member", ["abdulrahman", "wael", "sheikh_issa"]).notNull(),
+  subject: varchar("subject", { length: 500 }).notNull(),
+  body: text("body").notNull(),
+  priority: mysqlEnum("priority", ["normal", "important", "urgent"]).default("normal").notNull(),
+  messageType: mysqlEnum("message_type", [
+    "instruction",   // توجيه
+    "inquiry",       // استفسار
+    "info",          // إحاطة
+    "follow_up",     // متابعة
+    "other",         // أخرى
+  ]).default("other").notNull(),
+  // Attachments (JSON array of {name, url})
+  attachmentsJson: text("attachments_json"),
+  // Status
+  isRead: tinyint("is_read").default(0).notNull(),
+  readAt: timestamp("read_at", { mode: "string" }),
+  // Reply thread
+  parentMessageId: int("parent_message_id"),
+  // Archive
+  isArchived: tinyint("is_archived").default(0).notNull(),
+  archivedAt: timestamp("archived_at", { mode: "string" }),
+  // Audit
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+});
