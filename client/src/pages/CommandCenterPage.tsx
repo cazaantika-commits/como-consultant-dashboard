@@ -380,7 +380,7 @@ const BUBBLES = [
   { type: "milestones_kpis" as const, label: "المراحل والأداء", icon: Target, color: "from-cyan-500 to-sky-700", bg: "bg-cyan-50", border: "border-cyan-200", text: "text-cyan-700" },
 
   // ── PRIORITY 3: Communication & Requests ──
-  { type: "requests" as const, label: "الطلبات والاستفسارات", icon: Send, color: "from-orange-500 to-amber-700", bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700" },
+  { type: "requests" as const, label: "الاعتمادات الرسمية", icon: Send, color: "from-orange-500 to-amber-700", bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700" },
   { type: "reports" as const, label: "التقارير", icon: FileBarChart2, color: "from-blue-500 to-blue-700", bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700" },
   { type: "meeting_minutes" as const, label: "محاضر الاجتماعات", icon: BookText, color: "from-rose-500 to-pink-700", bg: "bg-rose-50", border: "border-rose-200", text: "text-rose-700" },
 
@@ -392,7 +392,7 @@ const BUBBLES = [
 
 const BUBBLE_LABELS: Record<string, string> = {
   reports: "التقارير",
-  requests: "الطلبات والاستفسارات",
+  requests: "الاعتمادات الرسمية",
   meeting_minutes: "محاضر الاجتماعات",
   evaluations: "تقييم الاستشاريين",
   milestones_kpis: "المراحل والأداء",
@@ -1168,7 +1168,7 @@ function RequestsAndInquiries({ token, memberId, memberNameAr, memberRole, onBac
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h2 className="text-xl font-bold text-slate-800">الطلبات والاستفسارات</h2>
+            <h2 className="text-xl font-bold text-slate-800">الاعتمادات الرسمية</h2>
             <p className="text-sm text-slate-500">تواصل تفاعلي بين أعضاء مركز القيادة</p>
           </div>
         </div>
@@ -4137,7 +4137,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             evaluations: 'تقييم الاستشاريين الفنيين',
             milestones_kpis: 'متابعة المراحل ومؤشرات الأداء',
             reports: 'عرض وإدارة جميع التقارير المرفوعة',
-            requests: 'متابعة الطلبات والاستفسارات',
+            requests: 'متابعة الاعتمادات الرسمية',
             meeting_minutes: 'محاضر الاجتماعات والقرارات',
           };
 
@@ -4229,7 +4229,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
 
           // BUBBLES index reference:
           // 0=محفظة رأس المال, 1=التقارير المالية, 2=طلبات الصرف, 3=تقييم الاستشاريين
-          // 4=المراحل والأداء, 5=الطلبات والاستفسارات, 6=التقارير, 7=محاضر الاجتماعات
+          // 4=المراحل والأداء, 5=الاعتمادات الرسمية, 6=التقارير, 7=محاضر الاجتماعات
           // 8=برنامج العمل, 9=دراسة الجدوى, 10=الإعلانات
 
           // Hero priority card — large horizontal card for payment/general requests

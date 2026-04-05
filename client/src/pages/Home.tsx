@@ -464,7 +464,7 @@ export default function Home() {
     { label: "سجل الاستشاريين", path: "/consultants-registry" },
     { label: "سجل الشركاء والمتعاملين", path: "/business-partners-registry" },
     { label: "طلبات الصرف", path: "/payment-requests" },
-    { label: "الطلبات والاستفسارات", path: "/general-requests" },
+    { label: "الاعتمادات الرسمية", path: "/general-requests" },
   ];
 
   return (

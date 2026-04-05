@@ -111,7 +111,7 @@ function buildReminderEmail(params: {
     </div>
   </div>
   <div style="padding: 15px 30px; background: #1a3c5e; color: rgba(255,255,255,0.7); font-size: 12px; text-align: center;">
-    Como Developments | نظام الطلبات والاستفسارات التلقائي
+    Como Developments | نظام الاعتمادات الرسمية التلقائي
   </div>
 </div>`;
 }

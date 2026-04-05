@@ -613,3 +613,8 @@
 - [ ] Read-only sections: hide mutating actions in Financial Reports, Milestones, Meeting Minutes, Reports, Work Schedule, Feasibility Study
 - [ ] Capital Portfolio: keep move + report actions for wael/sheikh_issa
 - [ ] General Requests + Evaluations: full access for all members
+
+## General Requests - Flexible Communication Channel
+- [ ] Add assignedTo field to general_requests table in drizzle schema
+- [ ] Update backend router: assignedTo in create/update, add getMembers query
+- [ ] Update frontend: replace fixed flow banner with recipient selector dropdown

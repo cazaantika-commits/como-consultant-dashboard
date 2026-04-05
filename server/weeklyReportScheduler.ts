@@ -162,7 +162,7 @@ function buildWeeklyReportEmail(params: {
         <td style="padding:28px 40px 0;">
           <p style="font-size:15px;color:#334155;line-height:1.8;margin:0;">
             السادة المحترمون،<br>
-            يُرفق طيّه التقرير الأسبوعي الشامل لحالة طلبات الصرف والطلبات والاستفسارات المقدّمة خلال الأسبوع الجاري.
+            يُرفق طيّه التقرير الأسبوعي الشامل لحالة طلبات الصرف والاعتمادات الرسمية المقدّمة خلال الأسبوع الجاري.
           </p>
         </td>
       </tr>
@@ -235,7 +235,7 @@ function buildWeeklyReportEmail(params: {
       <tr>
         <td style="padding:28px 40px 0;">
           <div style="font-size:18px;font-weight:700;color:#1e3a5f;border-right:4px solid #8b5cf6;padding-right:14px;margin-bottom:20px;">
-            📋 الطلبات والاستفسارات
+            📋 الاعتمادات الرسمية
           </div>
           <!-- Stats Grid -->
           <table width="100%" cellpadding="0" cellspacing="0">

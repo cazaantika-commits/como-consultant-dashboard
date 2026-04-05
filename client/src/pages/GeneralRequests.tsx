@@ -331,7 +331,7 @@ export default function GeneralRequests({ embedded = false }: { embedded?: boole
               <ClipboardList className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">الطلبات والاستفسارات</h1>
+              <h1 className="text-2xl font-bold text-gray-900">الاعتمادات الرسمية</h1>
               <p className="text-sm text-gray-500">إدارة الطلبات غير المالية مع سير الموافقة الكامل</p>
             </div>
           </div>
@@ -444,7 +444,7 @@ export default function GeneralRequests({ embedded = false }: { embedded?: boole
             }));
             const ws = XLSX.utils.json_to_sheet(rows);
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "الطلبات والاستفسارات");
+            XLSX.utils.book_append_sheet(wb, ws, "الاعتمادات الرسمية");
             XLSX.writeFile(wb, `طلبات-واستفسارات-${new Date().toISOString().slice(0,10)}.xlsx`);
           }}
           className="bg-white border-violet-200 text-violet-700 hover:bg-violet-50"
