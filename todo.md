@@ -628,3 +628,7 @@
 ## Mobile Drag-and-Drop Fix
 - [x] Increase TouchSensor delay to 300ms + tolerance 8px in Home.tsx for long-press activation on mobile
 - [x] Replace touch-none with touch-manipulation on SortableMainCard and SortableToolCard to allow normal scrolling
+
+## InternalMessages Identity Fix
+- [x] Fix InternalMessages to use CCAuth (ccMember.memberId) instead of guessing from Manus OAuth name
+- [x] Make internalMessages router procedures accept CCAuth (cc_token) sessions via publicProcedure + token verification

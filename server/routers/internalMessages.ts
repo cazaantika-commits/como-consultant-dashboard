@@ -1,8 +1,9 @@
 import { z } from "zod";
-import { router, protectedProcedure } from "../_core/trpc";
+import { router, publicProcedure } from "../_core/trpc";
 import { getDb } from "../db";
 import { TRPCError } from "@trpc/server";
-import { sql } from "drizzle-orm";
+import { sql, eq, and } from "drizzle-orm";
+import { commandCenterMembers } from "../../drizzle/schema";
 
 const MEMBER_NAMES: Record<string, string> = {
   abdulrahman: "عبدالرحمن زقوط",
@@ -17,19 +18,32 @@ function generateMessageNumber(): string {
   return `MSG-${year}-${rand}`;
 }
 
+// Verify cc_token and return memberId, or throw UNAUTHORIZED
+async function verifyCCToken(ccToken: string): Promise<string> {
+  const db = await getDb();
+  if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+  const [member] = await db
+    .select()
+    .from(commandCenterMembers)
+    .where(and(eq(commandCenterMembers.accessToken, ccToken), eq(commandCenterMembers.isActive, 1)));
+  if (!member) throw new TRPCError({ code: "UNAUTHORIZED", message: "رمز الدخول غير صحيح" });
+  return member.memberId;
+}
+
 export const internalMessagesRouter = router({
   // Get all messages for the current member (inbox + sent)
-  getAll: protectedProcedure
+  getAll: publicProcedure
     .input(
       z.object({
+        ccToken: z.string(),
         view: z.enum(["inbox", "sent", "all"]).default("inbox"),
-        currentMember: z.enum(["abdulrahman", "wael", "sheikh_issa"]),
         isArchived: z.boolean().default(false),
         priority: z.enum(["normal", "important", "urgent", "all"]).default("all"),
         messageType: z.enum(["instruction", "inquiry", "info", "follow_up", "other", "all"]).default("all"),
       })
     )
     .query(async ({ input }) => {
+      const currentMember = await verifyCCToken(input.ccToken);
       const db = await getDb();
       if (!db) return [];
       try {
@@ -40,12 +54,12 @@ export const internalMessagesRouter = router({
         let rows = (result[0] as unknown as any[]) || [];
 
         if (input.view === "inbox") {
-          rows = rows.filter((r: any) => r.to_member === input.currentMember);
+          rows = rows.filter((r: any) => r.to_member === currentMember);
         } else if (input.view === "sent") {
-          rows = rows.filter((r: any) => r.from_member === input.currentMember);
+          rows = rows.filter((r: any) => r.from_member === currentMember);
         } else {
           rows = rows.filter(
-            (r: any) => r.to_member === input.currentMember || r.from_member === input.currentMember
+            (r: any) => r.to_member === currentMember || r.from_member === currentMember
           );
         }
 
@@ -70,14 +84,15 @@ export const internalMessagesRouter = router({
     }),
 
   // Get unread count for a member
-  getUnreadCount: protectedProcedure
-    .input(z.object({ currentMember: z.enum(["abdulrahman", "wael", "sheikh_issa"]) }))
+  getUnreadCount: publicProcedure
+    .input(z.object({ ccToken: z.string() }))
     .query(async ({ input }) => {
+      const currentMember = await verifyCCToken(input.ccToken);
       const db = await getDb();
       if (!db) return { count: 0 };
       try {
         const result = await db.execute(
-          sql`SELECT COUNT(*) as count FROM internal_messages WHERE to_member = ${input.currentMember} AND is_read = 0 AND is_archived = 0`
+          sql`SELECT COUNT(*) as count FROM internal_messages WHERE to_member = ${currentMember} AND is_read = 0 AND is_archived = 0`
         );
         const rows = (result[0] as unknown as any[]) || [];
         return { count: Number(rows[0]?.count) || 0 };
@@ -87,9 +102,10 @@ export const internalMessagesRouter = router({
     }),
 
   // Get single message with replies
-  getById: protectedProcedure
-    .input(z.object({ id: z.number() }))
+  getById: publicProcedure
+    .input(z.object({ ccToken: z.string(), id: z.number() }))
     .query(async ({ input }) => {
+      await verifyCCToken(input.ccToken);
       const db = await getDb();
       if (!db) return [];
       try {
@@ -110,10 +126,10 @@ export const internalMessagesRouter = router({
     }),
 
   // Create new message
-  create: protectedProcedure
+  create: publicProcedure
     .input(
       z.object({
-        fromMember: z.enum(["abdulrahman", "wael", "sheikh_issa"]),
+        ccToken: z.string(),
         toMember: z.enum(["abdulrahman", "wael", "sheikh_issa"]),
         subject: z.string().min(1).max(500),
         body: z.string().min(1),
@@ -124,7 +140,8 @@ export const internalMessagesRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      if (input.fromMember === input.toMember) {
+      const fromMember = await verifyCCToken(input.ccToken);
+      if (fromMember === input.toMember) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن إرسال رسالة لنفسك" });
       }
       const db = await getDb();
@@ -138,7 +155,7 @@ export const internalMessagesRouter = router({
         const result = await db.execute(
           sql`INSERT INTO internal_messages 
             (message_number, from_member, to_member, subject, body, priority, message_type, attachments_json, parent_message_id)
-           VALUES (${messageNumber}, ${input.fromMember}, ${input.toMember}, ${input.subject}, ${input.body}, ${input.priority}, ${input.messageType}, ${attachmentsJson}, ${parentId})`
+           VALUES (${messageNumber}, ${fromMember}, ${input.toMember}, ${input.subject}, ${input.body}, ${input.priority}, ${input.messageType}, ${attachmentsJson}, ${parentId})`
         );
         const res = result[0] as any;
         return { id: res.insertId, messageNumber };
@@ -149,9 +166,10 @@ export const internalMessagesRouter = router({
     }),
 
   // Mark as read
-  markRead: protectedProcedure
-    .input(z.object({ id: z.number() }))
+  markRead: publicProcedure
+    .input(z.object({ ccToken: z.string(), id: z.number() }))
     .mutation(async ({ input }) => {
+      await verifyCCToken(input.ccToken);
       const db = await getDb();
       if (!db) return { success: false };
       try {
@@ -165,9 +183,10 @@ export const internalMessagesRouter = router({
     }),
 
   // Archive / unarchive
-  archive: protectedProcedure
-    .input(z.object({ id: z.number(), archive: z.boolean() }))
+  archive: publicProcedure
+    .input(z.object({ ccToken: z.string(), id: z.number(), archive: z.boolean() }))
     .mutation(async ({ input }) => {
+      await verifyCCToken(input.ccToken);
       const db = await getDb();
       if (!db) return { success: false };
       try {
@@ -187,9 +206,10 @@ export const internalMessagesRouter = router({
     }),
 
   // Delete message
-  delete: protectedProcedure
-    .input(z.object({ id: z.number() }))
+  delete: publicProcedure
+    .input(z.object({ ccToken: z.string(), id: z.number() }))
     .mutation(async ({ input }) => {
+      await verifyCCToken(input.ccToken);
       const db = await getDb();
       if (!db) return { success: false };
       try {

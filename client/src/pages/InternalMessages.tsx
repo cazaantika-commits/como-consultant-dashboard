@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useCCAuth } from "@/contexts/CCAuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -42,8 +43,8 @@ const TYPE_LABELS: Record<string, string> = {
   other: "أخرى",
 };
 
-// Detect current member from user context
-function detectCurrentMember(user: any): MemberKey {
+// Detect current member — prefer CCAuth (cc_token) over Manus OAuth guessing
+function detectCurrentMemberFromOAuth(user: any): MemberKey {
   if (!user) return "abdulrahman";
   const name = (user.name || "").toLowerCase();
   const email = (user.email || "").toLowerCase();
@@ -54,8 +55,14 @@ function detectCurrentMember(user: any): MemberKey {
 
 export default function InternalMessages() {
   const { user } = useAuth();
+  const { ccMember } = useCCAuth();
   const { toast } = useToast();
-  const currentMember = detectCurrentMember(user);
+  // Use CCAuth memberId if available (most reliable), otherwise fall back to OAuth name guessing
+  const currentMember: MemberKey = ccMember
+    ? (ccMember.memberId as MemberKey)
+    : detectCurrentMemberFromOAuth(user);
+  // ccToken for API calls — stored in localStorage as cc_token
+  const ccToken = localStorage.getItem("cc_token") || "";
 
   const [view, setView] = useState<"inbox" | "sent" | "all">("inbox");
   const [isArchived, setIsArchived] = useState(false);
@@ -74,18 +81,18 @@ export default function InternalMessages() {
   });
 
   const messagesQuery = trpc.internalMessages.getAll.useQuery({
+    ccToken,
     view,
-    currentMember,
     isArchived,
     priority: "all",
     messageType: "all",
-  });
+  }, { enabled: !!ccToken });
 
-  const unreadQuery = trpc.internalMessages.getUnreadCount.useQuery({ currentMember });
+  const unreadQuery = trpc.internalMessages.getUnreadCount.useQuery({ ccToken }, { enabled: !!ccToken });
 
   const threadQuery = trpc.internalMessages.getById.useQuery(
-    { id: selectedId! },
-    { enabled: !!selectedId }
+    { ccToken, id: selectedId! },
+    { enabled: !!selectedId && !!ccToken }
   );
 
   const utils = trpc.useUtils();
@@ -141,7 +148,7 @@ export default function InternalMessages() {
   function openMessage(msg: any) {
     setSelectedId(msg.id);
     if (!msg.is_read && msg.to_member === currentMember) {
-      markReadMutation.mutate({ id: msg.id });
+      markReadMutation.mutate({ ccToken, id: msg.id });
     }
   }
 
@@ -170,7 +177,7 @@ export default function InternalMessages() {
       return;
     }
     createMutation.mutate({
-      fromMember: currentMember,
+      ccToken,
       toMember: composeForm.toMember as MemberKey,
       subject: composeForm.subject,
       body: composeForm.body,
@@ -182,6 +189,26 @@ export default function InternalMessages() {
   }
 
   const otherMembers = (Object.keys(MEMBER_NAMES) as MemberKey[]).filter((k) => k !== currentMember);
+
+  // Guard: must be logged in via cc_token
+  if (!ccToken) {
+    return (
+      <div className="h-full flex items-center justify-center" dir="rtl">
+        <div className="text-center p-8 max-w-sm">
+          <div className="w-16 h-16 rounded-2xl bg-indigo-100 flex items-center justify-center mx-auto mb-4">
+            <MessageSquare className="w-8 h-8 text-indigo-600" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">التواصل الداخلي</h2>
+          <p className="text-gray-500 text-sm mb-4">
+            يجب تسجيل الدخول عبر لوحة التحكم (cc_token) للوصول لهذه القناة.
+          </p>
+          <p className="text-xs text-gray-400">
+            اضغط على "لوحة التحكم" في الصفحة الرئيسية وأدخل كلمة الدخول الخاصة بك.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col" dir="rtl">
@@ -374,7 +401,7 @@ export default function InternalMessages() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => archiveMutation.mutate({ id: selectedMessage.id, archive: !isArchived })}
+                      onClick={() => archiveMutation.mutate({ ccToken, id: selectedMessage.id, archive: !isArchived })}
                       className="gap-1"
                     >
                       <Archive className="w-3.5 h-3.5" />
@@ -386,7 +413,7 @@ export default function InternalMessages() {
                       className="gap-1 text-red-600 hover:bg-red-50"
                       onClick={() => {
                         if (confirm("هل تريد حذف هذه الرسالة؟")) {
-                          deleteMutation.mutate({ id: selectedMessage.id });
+                          deleteMutation.mutate({ ccToken, id: selectedMessage.id });
                         }
                       }}
                     >
