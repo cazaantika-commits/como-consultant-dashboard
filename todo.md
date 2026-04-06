@@ -632,3 +632,6 @@
 ## InternalMessages Identity Fix
 - [x] Fix InternalMessages to use CCAuth (ccMember.memberId) instead of guessing from Manus OAuth name
 - [x] Make internalMessages router procedures accept CCAuth (cc_token) sessions via publicProcedure + token verification
+
+## التواصل الداخلي داخل مركز القيادة
+- [x] Add التواصل الداخلي tile (BUBBLES[11]) to the bento grid in CommandCenterPage - now visible and clickable

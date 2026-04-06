@@ -4357,6 +4357,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                 <div className="grid grid-cols-4 gap-4">
                   <IconTile bubble={BUBBLES[6]} size="md" />
                   <IconTile bubble={BUBBLES[7]} size="md" />
+                  <IconTile bubble={BUBBLES[11]} size="md" />
                   <IconTile bubble={BUBBLES[8]} size="sm" />
                   <IconTile bubble={BUBBLES[9]} size="sm" />
                   <IconTile bubble={BUBBLES[10]} size="sm" />
