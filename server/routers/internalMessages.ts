@@ -6,7 +6,7 @@ import { sql, eq, and } from "drizzle-orm";
 import { commandCenterMembers } from "../../drizzle/schema";
 
 const MEMBER_NAMES: Record<string, string> = {
-  abdulrahman: "عبدالرحمن زقوط",
+  abdulrahman: "عبدالرحمن زقوت",
   wael: "وائل",
   sheikh_issa: "الشيخ عيسى",
 };

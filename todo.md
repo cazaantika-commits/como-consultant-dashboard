@@ -638,3 +638,6 @@
 
 ## InternalMessages Identity Fix (Command Center)
 - [x] Fix InternalMessages component to accept ccTokenProp and memberIdProp from CommandCenter so identity is always correct
+
+## Name Correction
+- [x] Replace all occurrences of "زقوط" with "زقوت" in all code files and database

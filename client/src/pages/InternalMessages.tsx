@@ -18,7 +18,7 @@ import {
 type MemberKey = "abdulrahman" | "wael" | "sheikh_issa";
 
 const MEMBER_NAMES: Record<MemberKey, string> = {
-  abdulrahman: "عبدالرحمن زقوط",
+  abdulrahman: "عبدالرحمن زقوت",
   wael: "وائل",
   sheikh_issa: "الشيخ عيسى",
 };
