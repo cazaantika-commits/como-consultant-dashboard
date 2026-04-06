@@ -53,16 +53,17 @@ function detectCurrentMemberFromOAuth(user: any): MemberKey {
   return "abdulrahman";
 }
 
-export default function InternalMessages() {
+export default function InternalMessages({ ccTokenProp, memberIdProp }: { ccTokenProp?: string; memberIdProp?: string } = {}) {
   const { user } = useAuth();
   const { ccMember } = useCCAuth();
   const { toast } = useToast();
-  // Use CCAuth memberId if available (most reliable), otherwise fall back to OAuth name guessing
-  const currentMember: MemberKey = ccMember
-    ? (ccMember.memberId as MemberKey)
-    : detectCurrentMemberFromOAuth(user);
-  // ccToken for API calls — stored in localStorage as cc_token
-  const ccToken = localStorage.getItem("cc_token") || "";
+  // Priority: prop from CommandCenter > CCAuthContext > localStorage > OAuth guess
+  const ccToken = ccTokenProp || localStorage.getItem("cc_token") || "";
+  const currentMember: MemberKey = (
+    memberIdProp ||
+    ccMember?.memberId ||
+    detectCurrentMemberFromOAuth(user)
+  ) as MemberKey;
 
   const [view, setView] = useState<"inbox" | "sent" | "all">("inbox");
   const [isArchived, setIsArchived] = useState(false);

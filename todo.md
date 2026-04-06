@@ -635,3 +635,6 @@
 
 ## التواصل الداخلي داخل مركز القيادة
 - [x] Add التواصل الداخلي tile (BUBBLES[11]) to the bento grid in CommandCenterPage - now visible and clickable
+
+## InternalMessages Identity Fix (Command Center)
+- [x] Fix InternalMessages component to accept ccTokenProp and memberIdProp from CommandCenter so identity is always correct

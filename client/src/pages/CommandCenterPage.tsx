@@ -3879,7 +3879,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
               <ArrowLeft className="w-4 h-4 ml-1" /> العودة للرئيسية
             </Button>
           </div>
-          <InternalMessagesPage />
+          <InternalMessagesPage ccTokenProp={token} memberIdProp={member?.memberId} />
         </div>
         <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
       </div>
