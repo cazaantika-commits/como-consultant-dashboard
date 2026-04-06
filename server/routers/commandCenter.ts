@@ -21,6 +21,7 @@ import {
   evaluationApprovals,
   paymentRequests,
   generalRequests,
+  internalMessages,
 } from "../../drizzle/schema";
 import { eq, desc, sql, and, inArray, gte } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -215,13 +216,13 @@ export const commandCenterRouter = router({
     .query(async ({ input }) => {
       const member = await verifyToken(input.token);
       const db = await getDb();
-      if (!db) return { reports: 0, requests: 0, meeting_minutes: 0, evaluations: 0, announcements: 0, milestones_kpis: 0, unread: 0, payment_requests_pending: 0, general_requests_pending: 0 };
+      if (!db) return { reports: 0, requests: 0, meeting_minutes: 0, evaluations: 0, announcements: 0, milestones_kpis: 0, unread: 0, payment_requests_pending: 0, general_requests_pending: 0, internal_messages: 0 };
 
       // 72-hour cutoff
       const cutoff72 = new Date(Date.now() - 72 * 60 * 60 * 1000);
       const cutoffStr = cutoff72.toISOString().slice(0, 19).replace('T', ' ');
 
-      const [allItems, notifications, milestones, kpis, allSessions, myEvals, pendingPayments, pendingGeneral] = await Promise.all([
+      const [allItems, notifications, milestones, kpis, allSessions, myEvals, pendingPayments, pendingGeneral, unreadMessages] = await Promise.all([
         db.select().from(commandCenterItems),
         db.select().from(commandCenterNotifications)
           .where(and(eq(commandCenterNotifications.memberId, member.memberId), eq(commandCenterNotifications.isRead, 0))),
@@ -244,6 +245,13 @@ export const commandCenterRouter = router({
           .where(and(
             eq(generalRequests.isArchived, 0),
             inArray(generalRequests.status, ["new", "pending_wael", "pending_sheikh", "needs_revision"])
+          )),
+        // Unread internal messages for current member
+        db.select({ id: internalMessages.id }).from(internalMessages)
+          .where(and(
+            eq(internalMessages.toMember, member.memberId as any),
+            eq(internalMessages.isRead, 0),
+            eq(internalMessages.isArchived, 0)
           )),
       ]);
 
@@ -274,6 +282,7 @@ export const commandCenterRouter = router({
         }).length,
         milestones_kpis: milestones.length + kpis.length,
         unread: notifications.length,
+        internal_messages: unreadMessages.length,
         // Personalized pending counts by role:
         // wael → only pending_wael (awaiting his approval)
         // sheikh_issa → only pending_sheikh (awaiting his approval)

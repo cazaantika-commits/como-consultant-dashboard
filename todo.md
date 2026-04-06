@@ -641,3 +641,16 @@
 
 ## Name Correction
 - [x] Replace all occurrences of "زقوط" with "زقوت" in all code files and database
+
+## التواصل الداخلي - تطويرات متقدمة
+- [x] Add project_id, deadline, is_converted_to_task, task_ref, attachment_url, attachment_name columns to internal_messages schema
+- [x] Add getProjects procedure to internalMessages router (returns project list + عامة option)
+- [x] Update create procedure to accept project_id, deadline, attachment_url, attachment_name
+- [x] Update getAll/getById to return project name and deadline
+- [x] Add convertToTask procedure in internalMessages router
+- [x] Update InternalMessages frontend: project dropdown with عامة option
+- [x] Update InternalMessages frontend: file upload (S3) + link attachment
+- [x] Update InternalMessages frontend: deadline date picker
+- [x] Update InternalMessages frontend: convert-to-task button on messages
+- [x] Update InternalMessages frontend: filter by project
+- [x] Add unread badge counter on التواصل الداخلي card in Command Center bento grid (via getBubbleCounts)

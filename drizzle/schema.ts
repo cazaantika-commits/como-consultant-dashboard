@@ -2270,6 +2270,17 @@ export const internalMessages = mysqlTable("internal_messages", {
   ]).default("other").notNull(),
   // Attachments (JSON array of {name, url})
   attachmentsJson: text("attachments_json"),
+  // Single file attachment
+  attachmentUrl: text("attachment_url"),
+  attachmentName: varchar("attachment_name", { length: 500 }),
+  // Project link (null = عامة)
+  projectId: int("project_id"),
+  projectName: varchar("project_name", { length: 500 }),
+  // Deadline
+  deadline: timestamp("deadline", { mode: "string" }),
+  // Convert to task
+  isConvertedToTask: tinyint("is_converted_to_task").default(0).notNull(),
+  taskRef: varchar("task_ref", { length: 200 }),
   // Status
   isRead: tinyint("is_read").default(0).notNull(),
   readAt: timestamp("read_at", { mode: "string" }),

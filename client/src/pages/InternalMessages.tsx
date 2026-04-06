@@ -1,18 +1,18 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/_core/hooks/useAuth";
 import { useCCAuth } from "@/contexts/CCAuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
   MessageSquare, Send, Inbox, Archive, Plus, Search,
-  AlertCircle, Info, ArrowRight, RefreshCw, Trash2,
-  ChevronRight, Clock, CheckCheck, Eye
+  AlertCircle, RefreshCw, Trash2, Reply, Paperclip,
+  Link2, CheckSquare, FolderOpen, X, Download, Calendar,
+  CheckCheck, ArchiveX, Clock
 } from "lucide-react";
 
 type MemberKey = "abdulrahman" | "wael" | "sheikh_issa";
@@ -21,12 +21,6 @@ const MEMBER_NAMES: Record<MemberKey, string> = {
   abdulrahman: "عبدالرحمن زقوت",
   wael: "وائل",
   sheikh_issa: "الشيخ عيسى",
-};
-
-const MEMBER_COLORS: Record<MemberKey, string> = {
-  abdulrahman: "bg-emerald-100 text-emerald-800",
-  wael: "bg-blue-100 text-blue-800",
-  sheikh_issa: "bg-purple-100 text-purple-800",
 };
 
 const PRIORITY_LABELS: Record<string, { label: string; color: string }> = {
@@ -38,32 +32,33 @@ const PRIORITY_LABELS: Record<string, { label: string; color: string }> = {
 const TYPE_LABELS: Record<string, string> = {
   instruction: "توجيه",
   inquiry: "استفسار",
-  info: "معلومة",
+  info: "إحاطة",
   follow_up: "متابعة",
   other: "أخرى",
 };
 
-// Detect current member — prefer CCAuth (cc_token) over Manus OAuth guessing
-function detectCurrentMemberFromOAuth(user: any): MemberKey {
-  if (!user) return "abdulrahman";
-  const name = (user.name || "").toLowerCase();
-  const email = (user.email || "").toLowerCase();
-  if (name.includes("wael") || email.includes("wael")) return "wael";
-  if (name.includes("issa") || name.includes("عيسى") || email.includes("issa")) return "sheikh_issa";
-  return "abdulrahman";
+function formatDate(d: string | null | undefined) {
+  if (!d) return "";
+  return new Date(d).toLocaleString("ar-AE", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function deadlineInfo(d: string | null | undefined) {
+  if (!d) return null;
+  const diff = new Date(d).getTime() - Date.now();
+  const days = Math.ceil(diff / 86400000);
+  const formatted = new Date(d).toLocaleDateString("ar-AE", { year: "numeric", month: "short", day: "numeric" });
+  if (days < 0) return { text: `متأخر ${Math.abs(days)} يوم`, color: "text-red-600", formatted };
+  if (days === 0) return { text: "اليوم", color: "text-orange-600", formatted };
+  if (days <= 3) return { text: `بعد ${days} أيام`, color: "text-amber-600", formatted };
+  return { text: `بعد ${days} يوم`, color: "text-green-600", formatted };
 }
 
 export default function InternalMessages({ ccTokenProp, memberIdProp }: { ccTokenProp?: string; memberIdProp?: string } = {}) {
-  const { user } = useAuth();
   const { ccMember } = useCCAuth();
   const { toast } = useToast();
-  // Priority: prop from CommandCenter > CCAuthContext > localStorage > OAuth guess
+
   const ccToken = ccTokenProp || localStorage.getItem("cc_token") || "";
-  const currentMember: MemberKey = (
-    memberIdProp ||
-    ccMember?.memberId ||
-    detectCurrentMemberFromOAuth(user)
-  ) as MemberKey;
+  const currentMember: MemberKey = (memberIdProp || ccMember?.memberId || "abdulrahman") as MemberKey;
 
   const [view, setView] = useState<"inbox" | "sent" | "all">("inbox");
   const [isArchived, setIsArchived] = useState(false);
@@ -71,39 +66,58 @@ export default function InternalMessages({ ccTokenProp, memberIdProp }: { ccToke
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showCompose, setShowCompose] = useState(false);
   const [replyTo, setReplyTo] = useState<any>(null);
+  const [projectFilter, setProjectFilter] = useState<number | null | undefined>(undefined);
 
-  // Compose form state
-  const [composeForm, setComposeForm] = useState({
+  const emptyCompose = {
     toMember: "" as MemberKey | "",
     subject: "",
     body: "",
     priority: "normal" as "normal" | "important" | "urgent",
     messageType: "other" as "instruction" | "inquiry" | "info" | "follow_up" | "other",
-  });
+    projectId: null as number | null,
+    projectName: null as string | null,
+    deadline: "",
+    attachmentUrl: "",
+    attachmentName: "",
+    attachmentMode: "none" as "none" | "file" | "link",
+  };
+  const [form, setForm] = useState(emptyCompose);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
 
-  const messagesQuery = trpc.internalMessages.getAll.useQuery({
-    ccToken,
-    view,
-    isArchived,
-    priority: "all",
-    messageType: "all",
-  }, { enabled: !!ccToken });
+  const utils = trpc.useUtils();
 
-  const unreadQuery = trpc.internalMessages.getUnreadCount.useQuery({ ccToken }, { enabled: !!ccToken });
+  const messagesQ = trpc.internalMessages.getAll.useQuery(
+    { ccToken, view, isArchived, priority: "all", messageType: "all", projectId: projectFilter },
+    { enabled: !!ccToken, refetchInterval: 30000 }
+  );
 
-  const threadQuery = trpc.internalMessages.getById.useQuery(
+  const unreadQ = trpc.internalMessages.getUnreadCount.useQuery(
+    { ccToken }, { enabled: !!ccToken, refetchInterval: 30000 }
+  );
+
+  const projectsQ = trpc.internalMessages.getProjects.useQuery(
+    { ccToken }, { enabled: !!ccToken }
+  );
+
+  const threadQ = trpc.internalMessages.getById.useQuery(
     { ccToken, id: selectedId! },
     { enabled: !!selectedId && !!ccToken }
   );
 
-  const utils = trpc.useUtils();
+  const uploadMutation = trpc.internalMessages.uploadAttachment.useMutation({
+    onSuccess: (data) => {
+      setForm(f => ({ ...f, attachmentUrl: data.url, attachmentName: data.name }));
+      setUploading(false);
+      toast({ title: "تم رفع الملف بنجاح" });
+    },
+    onError: (e) => { setUploading(false); toast({ title: "فشل رفع الملف", description: e.message, variant: "destructive" }); },
+  });
 
   const createMutation = trpc.internalMessages.create.useMutation({
     onSuccess: () => {
       toast({ title: "تم إرسال الرسالة بنجاح" });
-      setShowCompose(false);
-      setReplyTo(null);
-      setComposeForm({ toMember: "", subject: "", body: "", priority: "normal", messageType: "other" });
+      setShowCompose(false); setReplyTo(null); setForm(emptyCompose);
       utils.internalMessages.getAll.invalidate();
       utils.internalMessages.getUnreadCount.invalidate();
     },
@@ -111,87 +125,79 @@ export default function InternalMessages({ ccTokenProp, memberIdProp }: { ccToke
   });
 
   const markReadMutation = trpc.internalMessages.markRead.useMutation({
-    onSuccess: () => {
-      utils.internalMessages.getAll.invalidate();
-      utils.internalMessages.getUnreadCount.invalidate();
-    },
+    onSuccess: () => { utils.internalMessages.getAll.invalidate(); utils.internalMessages.getUnreadCount.invalidate(); },
   });
 
   const archiveMutation = trpc.internalMessages.archive.useMutation({
-    onSuccess: () => {
-      toast({ title: isArchived ? "تم إلغاء الأرشفة" : "تم الأرشفة" });
-      setSelectedId(null);
-      utils.internalMessages.getAll.invalidate();
-    },
+    onSuccess: () => { toast({ title: "تم" }); setSelectedId(null); utils.internalMessages.getAll.invalidate(); },
   });
 
   const deleteMutation = trpc.internalMessages.delete.useMutation({
-    onSuccess: () => {
-      toast({ title: "تم الحذف" });
-      setSelectedId(null);
-      utils.internalMessages.getAll.invalidate();
+    onSuccess: () => { toast({ title: "تم الحذف" }); setSelectedId(null); utils.internalMessages.getAll.invalidate(); },
+  });
+
+  const convertMutation = trpc.internalMessages.convertToTask.useMutation({
+    onSuccess: (data) => {
+      if (data.success) { toast({ title: `تم تحويلها لمهمة: ${data.taskRef}` }); utils.internalMessages.getAll.invalidate(); }
+      else toast({ title: "فشل التحويل", variant: "destructive" });
     },
   });
 
-  const messages = (messagesQuery.data || []).filter((m: any) => {
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 16 * 1024 * 1024) { toast({ title: "الملف أكبر من 16 ميجابايت", variant: "destructive" }); return; }
+    setUploading(true);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const base64 = (ev.target?.result as string).split(",")[1];
+      uploadMutation.mutate({ ccToken, fileName: file.name, fileBase64: base64, mimeType: file.type });
+    };
+    reader.readAsDataURL(file);
+  }, [ccToken, uploadMutation]);
+
+  const messages = (messagesQ.data || []).filter((m: any) => {
     if (!search) return true;
-    return (
-      m.subject?.includes(search) ||
-      m.body?.includes(search) ||
-      m.fromMemberName?.includes(search) ||
-      m.toMemberName?.includes(search)
-    );
+    const q = search.toLowerCase();
+    return m.subject?.toLowerCase().includes(q) || m.body?.toLowerCase().includes(q) ||
+      m.fromMemberName?.toLowerCase().includes(q) || m.projectName?.toLowerCase().includes(q);
   });
 
-  const selectedMessage = selectedId ? (threadQuery.data || [])[0] : null;
-  const threadReplies = selectedId ? (threadQuery.data || []).slice(1) : [];
+  const thread = threadQ.data || [];
+  const selectedMsg = thread[0] || null;
+  const replies = thread.slice(1);
 
   function openMessage(msg: any) {
     setSelectedId(msg.id);
-    if (!msg.is_read && msg.to_member === currentMember) {
-      markReadMutation.mutate({ ccToken, id: msg.id });
-    }
-  }
-
-  function handleCompose() {
-    setReplyTo(null);
-    setComposeForm({ toMember: "", subject: "", body: "", priority: "normal", messageType: "other" });
-    setShowCompose(true);
+    if (!msg.is_read && msg.to_member === currentMember) markReadMutation.mutate({ ccToken, id: msg.id });
   }
 
   function handleReply(msg: any) {
-    const replyToMember = msg.from_member === currentMember ? msg.to_member : msg.from_member;
+    const to = msg.from_member === currentMember ? msg.to_member : msg.from_member;
     setReplyTo(msg);
-    setComposeForm({
-      toMember: replyToMember as MemberKey,
-      subject: msg.subject.startsWith("رد: ") ? msg.subject : `رد: ${msg.subject}`,
-      body: "",
-      priority: "normal",
-      messageType: "follow_up",
-    });
+    setForm({ ...emptyCompose, toMember: to as MemberKey, subject: msg.subject.startsWith("رد: ") ? msg.subject : `رد: ${msg.subject}`, messageType: "follow_up" });
     setShowCompose(true);
   }
 
   function handleSend() {
-    if (!composeForm.toMember || !composeForm.subject || !composeForm.body) {
-      toast({ title: "يرجى ملء جميع الحقول المطلوبة", variant: "destructive" });
-      return;
+    if (!form.toMember || !form.subject || !form.body) {
+      toast({ title: "يرجى ملء الحقول المطلوبة", variant: "destructive" }); return;
     }
     createMutation.mutate({
-      ccToken,
-      toMember: composeForm.toMember as MemberKey,
-      subject: composeForm.subject,
-      body: composeForm.body,
-      priority: composeForm.priority,
-      messageType: composeForm.messageType,
-      attachments: [],
+      ccToken, toMember: form.toMember as MemberKey, subject: form.subject, body: form.body,
+      priority: form.priority, messageType: form.messageType, attachments: [],
       parentMessageId: replyTo?.id,
+      projectId: form.projectId, projectName: form.projectName,
+      deadline: form.deadline || null,
+      attachmentUrl: form.attachmentUrl || null,
+      attachmentName: form.attachmentName || null,
     });
   }
 
-  const otherMembers = (Object.keys(MEMBER_NAMES) as MemberKey[]).filter((k) => k !== currentMember);
+  const otherMembers = (Object.keys(MEMBER_NAMES) as MemberKey[]).filter(k => k !== currentMember);
+  const projects = projectsQ.data || [];
+  const unreadCount = unreadQ.data?.count || 0;
 
-  // Guard: must be logged in via cc_token
   if (!ccToken) {
     return (
       <div className="h-full flex items-center justify-center" dir="rtl">
@@ -199,13 +205,8 @@ export default function InternalMessages({ ccTokenProp, memberIdProp }: { ccToke
           <div className="w-16 h-16 rounded-2xl bg-indigo-100 flex items-center justify-center mx-auto mb-4">
             <MessageSquare className="w-8 h-8 text-indigo-600" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">التواصل الداخلي</h2>
-          <p className="text-gray-500 text-sm mb-4">
-            يجب تسجيل الدخول عبر لوحة التحكم (cc_token) للوصول لهذه القناة.
-          </p>
-          <p className="text-xs text-gray-400">
-            اضغط على "لوحة التحكم" في الصفحة الرئيسية وأدخل كلمة الدخول الخاصة بك.
-          </p>
+          <h2 className="text-xl font-bold mb-2">التواصل الداخلي</h2>
+          <p className="text-sm text-muted-foreground mb-2">يجب تسجيل الدخول عبر لوحة التحكم للوصول لهذه القناة.</p>
         </div>
       </div>
     );
@@ -214,316 +215,240 @@ export default function InternalMessages({ ccTokenProp, memberIdProp }: { ccToke
   return (
     <div className="h-full flex flex-col" dir="rtl">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b bg-white">
+      <div className="flex items-center justify-between p-4 border-b bg-card">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shrink-0">
             <MessageSquare className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">التواصل الداخلي</h1>
-            <p className="text-sm text-gray-500">قناة التواصل بين فريق القيادة</p>
+            <h1 className="text-lg font-bold text-foreground">التواصل الداخلي</h1>
+            <p className="text-xs text-muted-foreground">قناة التواصل بين فريق القيادة</p>
           </div>
-          {(unreadQuery.data?.count || 0) > 0 && (
-            <Badge className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-pulse">
-              {unreadQuery.data?.count} جديد
-            </Badge>
+          {unreadCount > 0 && (
+            <Badge className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full animate-pulse">{unreadCount} جديد</Badge>
           )}
         </div>
-        <Button onClick={handleCompose} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2">
-          <Plus className="w-4 h-4" />
-          رسالة جديدة
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => { messagesQ.refetch(); unreadQ.refetch(); }} className="gap-1">
+            <RefreshCw className="w-3.5 h-3.5" />
+          </Button>
+          <Button size="sm" onClick={() => { setReplyTo(null); setForm(emptyCompose); setShowCompose(true); }} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1">
+            <Plus className="w-4 h-4" />
+            رسالة جديدة
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
-        <div className="w-64 border-l bg-gray-50 flex flex-col">
-          {/* View tabs */}
+        <div className="w-56 border-l bg-muted/30 flex flex-col shrink-0">
           <div className="p-3 space-y-1">
-            {[
+            {([
               { key: "inbox", label: "الوارد", icon: Inbox },
               { key: "sent", label: "المُرسَل", icon: Send },
               { key: "all", label: "الكل", icon: MessageSquare },
-            ].map(({ key, label, icon: Icon }) => (
-              <button
-                key={key}
-                onClick={() => { setView(key as any); setIsArchived(false); setSelectedId(null); }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  view === key && !isArchived
-                    ? "bg-indigo-600 text-white"
-                    : "text-gray-600 hover:bg-gray-200"
-                }`}
+            ] as const).map(({ key, label, icon: Icon }) => (
+              <button key={key}
+                onClick={() => { setView(key); setIsArchived(false); setSelectedId(null); }}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${view === key && !isArchived ? "bg-indigo-600 text-white" : "text-foreground hover:bg-accent"}`}
               >
                 <Icon className="w-4 h-4" />
                 {label}
-                {key === "inbox" && (unreadQuery.data?.count || 0) > 0 && (
-                  <span className="mr-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {unreadQuery.data?.count}
-                  </span>
+                {key === "inbox" && unreadCount > 0 && (
+                  <span className="mr-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{unreadCount}</span>
                 )}
               </button>
             ))}
             <button
               onClick={() => { setIsArchived(true); setSelectedId(null); }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                isArchived ? "bg-indigo-600 text-white" : "text-gray-600 hover:bg-gray-200"
-              }`}
+              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isArchived ? "bg-indigo-600 text-white" : "text-foreground hover:bg-accent"}`}
             >
               <Archive className="w-4 h-4" />
               الأرشيف
             </button>
           </div>
 
-          {/* Member quick info */}
-          <div className="mt-auto p-3 border-t">
-            <div className="text-xs text-gray-500 mb-2">أنت تتصفح كـ</div>
-            <div className={`text-xs font-semibold px-2 py-1 rounded-lg ${MEMBER_COLORS[currentMember]}`}>
-              {MEMBER_NAMES[currentMember]}
-            </div>
+          {/* Project filter */}
+          <div className="px-3 pb-3">
+            <p className="text-xs text-muted-foreground mb-1 font-medium">فلتر المشروع</p>
+            <Select
+              value={projectFilter === undefined ? "all" : projectFilter === 0 ? "general" : String(projectFilter)}
+              onValueChange={(v) => {
+                if (v === "all") setProjectFilter(undefined);
+                else if (v === "general") setProjectFilter(0);
+                else setProjectFilter(Number(v));
+              }}
+            >
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue placeholder="كل المشاريع" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">كل المشاريع</SelectItem>
+                <SelectItem value="general">عامة</SelectItem>
+                {projects.map((p: any) => (
+                  <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        </div>
 
-        {/* Message List */}
-        <div className="w-80 border-l bg-white flex flex-col">
-          <div className="p-3 border-b">
+          {/* Search */}
+          <div className="px-3 pb-3">
             <div className="relative">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="بحث في الرسائل..."
-                className="pr-9 text-sm"
-              />
+              <Search className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input className="h-8 text-xs pr-7" placeholder="بحث..." value={search} onChange={e => setSearch(e.target.value)} />
             </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto">
-            {messagesQuery.isLoading ? (
-              <div className="flex items-center justify-center h-32 text-gray-400">
-                <RefreshCw className="w-5 h-5 animate-spin" />
-              </div>
-            ) : messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-32 text-gray-400 gap-2">
-                <MessageSquare className="w-8 h-8 opacity-30" />
-                <span className="text-sm">لا توجد رسائل</span>
-              </div>
-            ) : (
-              messages.map((msg: any) => {
-                const isUnread = !msg.is_read && msg.to_member === currentMember;
-                const priorityInfo = PRIORITY_LABELS[msg.priority] || PRIORITY_LABELS.normal;
-                return (
-                  <button
-                    key={msg.id}
-                    onClick={() => openMessage(msg)}
-                    className={`w-full text-right p-3 border-b hover:bg-gray-50 transition-colors ${
-                      selectedId === msg.id ? "bg-indigo-50 border-r-2 border-r-indigo-600" : ""
-                    } ${isUnread ? "bg-blue-50" : ""}`}
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${priorityInfo.color}`}>
-                        {priorityInfo.label}
-                      </span>
-                      <span className="text-xs text-gray-400">
-                        {new Date(msg.created_at).toLocaleDateString("ar-AE", { month: "short", day: "numeric" })}
-                      </span>
-                    </div>
-                    <p className={`text-sm mb-1 line-clamp-1 ${isUnread ? "font-bold text-gray-900" : "font-medium text-gray-700"}`}>
-                      {msg.subject}
-                    </p>
-                    <div className="flex items-center gap-1 text-xs text-gray-500">
-                      <span className={`px-1.5 py-0.5 rounded text-xs ${MEMBER_COLORS[msg.from_member as MemberKey] || "bg-gray-100"}`}>
-                        {msg.fromMemberName}
-                      </span>
-                      <ChevronRight className="w-3 h-3" />
-                      <span className={`px-1.5 py-0.5 rounded text-xs ${MEMBER_COLORS[msg.to_member as MemberKey] || "bg-gray-100"}`}>
-                        {msg.toMemberName}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })
-            )}
           </div>
         </div>
 
-        {/* Message Detail */}
-        <div className="flex-1 bg-white flex flex-col">
-          {!selectedId ? (
-            <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-3">
-              <MessageSquare className="w-16 h-16 opacity-20" />
-              <p className="text-lg">اختر رسالة للعرض</p>
-              <Button variant="outline" onClick={handleCompose} className="gap-2 mt-2">
-                <Plus className="w-4 h-4" />
-                إنشاء رسالة جديدة
-              </Button>
-            </div>
-          ) : threadQuery.isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <RefreshCw className="w-6 h-6 animate-spin text-indigo-600" />
-            </div>
-          ) : selectedMessage ? (
-            <div className="flex flex-col h-full">
-              {/* Message header */}
-              <div className="p-4 border-b">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <h2 className="text-lg font-bold text-gray-900 mb-2">{selectedMessage.subject}</h2>
-                    <div className="flex flex-wrap items-center gap-2 text-sm">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${MEMBER_COLORS[selectedMessage.from_member as MemberKey] || "bg-gray-100"}`}>
-                        من: {selectedMessage.fromMemberName}
-                      </span>
-                      <ArrowRight className="w-3 h-3 text-gray-400" />
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${MEMBER_COLORS[selectedMessage.to_member as MemberKey] || "bg-gray-100"}`}>
-                        إلى: {selectedMessage.toMemberName}
-                      </span>
-                      <span className={`px-2 py-0.5 rounded text-xs ${PRIORITY_LABELS[selectedMessage.priority]?.color}`}>
-                        {PRIORITY_LABELS[selectedMessage.priority]?.label}
-                      </span>
-                      <span className="text-xs text-gray-400 flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {new Date(selectedMessage.created_at).toLocaleString("ar-AE")}
-                      </span>
-                      {selectedMessage.is_read ? (
-                        <span className="text-xs text-green-600 flex items-center gap-1">
-                          <CheckCheck className="w-3 h-3" /> مقروءة
-                        </span>
-                      ) : (
-                        <span className="text-xs text-blue-600 flex items-center gap-1">
-                          <Eye className="w-3 h-3" /> غير مقروءة
-                        </span>
-                      )}
-                    </div>
+        {/* Messages list */}
+        <div className="w-72 border-l flex flex-col overflow-y-auto shrink-0">
+          {messagesQ.isLoading ? (
+            <div className="text-center text-muted-foreground py-8 text-sm">جاري التحميل...</div>
+          ) : messages.length === 0 ? (
+            <div className="text-center text-muted-foreground py-8 text-sm">لا توجد رسائل</div>
+          ) : (
+            messages.map((msg: any) => {
+              const isUnread = !msg.is_read && msg.to_member === currentMember;
+              const pr = PRIORITY_LABELS[msg.priority] || PRIORITY_LABELS.normal;
+              const dl = deadlineInfo(msg.deadline);
+              return (
+                <div key={msg.id}
+                  onClick={() => openMessage(msg)}
+                  className={`p-3 border-b cursor-pointer transition-colors ${selectedId === msg.id ? "bg-indigo-50 dark:bg-indigo-950/30 border-r-2 border-r-indigo-500" : isUnread ? "bg-blue-50/50 dark:bg-blue-950/10" : "hover:bg-accent/40"}`}
+                >
+                  <div className="flex items-start justify-between gap-1 mb-1">
+                    <span className={`text-xs font-semibold truncate flex-1 ${isUnread ? "text-indigo-700 dark:text-indigo-300" : "text-foreground"}`}>{msg.subject}</span>
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${pr.color}`}>{pr.label}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button size="sm" variant="outline" onClick={() => handleReply(selectedMessage)} className="gap-1">
-                      <Send className="w-3.5 h-3.5" />
-                      رد
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => archiveMutation.mutate({ ccToken, id: selectedMessage.id, archive: !isArchived })}
-                      className="gap-1"
-                    >
-                      <Archive className="w-3.5 h-3.5" />
-                      {isArchived ? "إلغاء الأرشفة" : "أرشفة"}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-1 text-red-600 hover:bg-red-50"
-                      onClick={() => {
-                        if (confirm("هل تريد حذف هذه الرسالة؟")) {
-                          deleteMutation.mutate({ ccToken, id: selectedMessage.id });
-                        }
-                      }}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
+                  <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                    {view === "sent" ? `إلى: ${msg.toMemberName}` : `من: ${msg.fromMemberName}`}
+                    {isUnread && <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />}
                   </div>
+                  <div className="flex flex-wrap gap-1">
+                    {msg.projectName ? (
+                      <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                        <FolderOpen className="w-2.5 h-2.5" />{msg.projectName}
+                      </span>
+                    ) : (
+                      <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">عامة</span>
+                    )}
+                    {dl && <span className={`text-xs ${dl.color} flex items-center gap-0.5`}><Calendar className="w-2.5 h-2.5" />{dl.text}</span>}
+                    {msg.isConvertedToTask && <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full flex items-center gap-0.5"><CheckSquare className="w-2.5 h-2.5" />مهمة</span>}
+                    {(msg.attachmentUrl || msg.attachment_url) && <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full flex items-center gap-0.5"><Paperclip className="w-2.5 h-2.5" />مرفق</span>}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">{formatDate(msg.created_at)}</div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Message detail */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {selectedMsg ? (
+            <>
+              <div className="p-4 border-b bg-card">
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <h3 className="font-bold text-base text-foreground flex-1">{selectedMsg.subject}</h3>
+                  <div className="flex gap-1 shrink-0">
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleReply(selectedMsg)} title="رد"><Reply className="w-3.5 h-3.5" /></Button>
+                    {!selectedMsg.isConvertedToTask && (
+                      <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600" onClick={() => convertMutation.mutate({ ccToken, id: selectedMsg.id })} title="تحويل لمهمة"><CheckSquare className="w-3.5 h-3.5" /></Button>
+                    )}
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => archiveMutation.mutate({ ccToken, id: selectedMsg.id, archive: !selectedMsg.is_archived })} title="أرشفة">
+                      {selectedMsg.is_archived ? <ArchiveX className="w-3.5 h-3.5" /> : <Archive className="w-3.5 h-3.5" />}
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-7 w-7 text-red-500" onClick={() => { if (confirm("هل أنت متأكد من الحذف؟")) deleteMutation.mutate({ ccToken, id: selectedMsg.id }); }} title="حذف"><Trash2 className="w-3.5 h-3.5" /></Button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground mb-2">
+                  <span>من: <strong className="text-foreground">{selectedMsg.fromMemberName}</strong></span>
+                  <span>إلى: <strong className="text-foreground">{selectedMsg.toMemberName}</strong></span>
+                  <span>{formatDate(selectedMsg.created_at)}</span>
+                  <span className={`px-1.5 py-0.5 rounded-full ${PRIORITY_LABELS[selectedMsg.priority]?.color}`}>{PRIORITY_LABELS[selectedMsg.priority]?.label}</span>
+                  <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">{TYPE_LABELS[selectedMsg.message_type]}</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {selectedMsg.projectName ? (
+                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full flex items-center gap-1"><FolderOpen className="w-3 h-3" />{selectedMsg.projectName}</span>
+                  ) : (
+                    <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-full">عامة</span>
+                  )}
+                  {selectedMsg.deadline && (() => { const dl = deadlineInfo(selectedMsg.deadline); return dl ? <span className={`text-xs ${dl.color} flex items-center gap-1`}><Calendar className="w-3 h-3" />موعد نهائي: {dl.formatted} ({dl.text})</span> : null; })()}
+                  {selectedMsg.isConvertedToTask && <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full flex items-center gap-1"><CheckCheck className="w-3 h-3" />مهمة: {selectedMsg.taskRef}</span>}
                 </div>
               </div>
 
-              {/* Message body + thread */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {/* Original message */}
-                <div className="bg-gray-50 rounded-xl p-4 border">
-                  <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">{selectedMessage.body}</p>
-                </div>
-
-                {/* Replies */}
-                {threadReplies.map((reply: any) => (
-                  <div
-                    key={reply.id}
-                    className={`rounded-xl p-4 border ${
-                      reply.from_member === currentMember
-                        ? "bg-indigo-50 border-indigo-200 mr-8"
-                        : "bg-white border-gray-200 ml-8"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-2 text-xs text-gray-500">
-                      <span className={`px-2 py-0.5 rounded-full font-medium ${MEMBER_COLORS[reply.from_member as MemberKey] || "bg-gray-100"}`}>
-                        {reply.fromMemberName}
-                      </span>
-                      <span>{new Date(reply.created_at).toLocaleString("ar-AE")}</span>
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {[selectedMsg, ...replies].map((msg: any, idx: number) => (
+                  <div key={msg.id || idx} className={`p-3 rounded-lg ${msg.from_member === currentMember ? "bg-indigo-50 dark:bg-indigo-950/20 mr-8" : "bg-muted ml-8"}`}>
+                    <div className="flex items-center gap-2 mb-1 text-xs text-muted-foreground">
+                      <strong className="text-foreground">{msg.fromMemberName}</strong>
+                      <span>{formatDate(msg.created_at)}</span>
                     </div>
-                    <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">{reply.body}</p>
+                    <p className="text-sm text-foreground whitespace-pre-wrap">{msg.body}</p>
+                    {(msg.attachmentUrl || msg.attachment_url) && (
+                      <a href={msg.attachmentUrl || msg.attachment_url} target="_blank" rel="noopener noreferrer"
+                        className="mt-2 flex items-center gap-1.5 text-xs text-blue-600 hover:underline">
+                        <Paperclip className="w-3 h-3" />
+                        {msg.attachmentName || msg.attachment_name || "مرفق"}
+                        <Download className="w-3 h-3" />
+                      </a>
+                    )}
                   </div>
                 ))}
               </div>
 
-              {/* Quick reply */}
-              <div className="p-3 border-t bg-gray-50">
-                <Button onClick={() => handleReply(selectedMessage)} className="w-full gap-2 bg-indigo-600 hover:bg-indigo-700">
-                  <Send className="w-4 h-4" />
-                  رد على هذه الرسالة
+              <div className="p-3 border-t bg-card">
+                <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => handleReply(selectedMsg)}>
+                  <Reply className="w-3.5 h-3.5" />رد على هذه الرسالة
                 </Button>
               </div>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
+              اختر رسالة لعرض تفاصيلها
             </div>
-          ) : null}
+          )}
         </div>
       </div>
 
       {/* Compose Dialog */}
-      <Dialog open={showCompose} onOpenChange={setShowCompose}>
-        <DialogContent className="max-w-2xl" dir="rtl">
+      <Dialog open={showCompose} onOpenChange={(open) => { if (!open) { setShowCompose(false); setReplyTo(null); } }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-indigo-600" />
-              {replyTo ? "رد على الرسالة" : "رسالة جديدة"}
-            </DialogTitle>
+            <DialogTitle>{replyTo ? `رد على: ${replyTo.subject}` : "رسالة جديدة"}</DialogTitle>
           </DialogHeader>
-
-          <div className="space-y-4">
-            {/* From */}
-            <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg text-sm">
-              <span className="text-gray-500">من:</span>
-              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${MEMBER_COLORS[currentMember]}`}>
-                {MEMBER_NAMES[currentMember]}
-              </span>
-            </div>
-
+          <div className="space-y-3">
             {/* To */}
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">إلى *</label>
-              <Select
-                value={composeForm.toMember}
-                onValueChange={(v) => setComposeForm((f) => ({ ...f, toMember: v as MemberKey }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر المستقبل" />
-                </SelectTrigger>
+              <label className="text-sm font-medium mb-1 block">إلى *</label>
+              <Select value={form.toMember} onValueChange={v => setForm(f => ({ ...f, toMember: v as MemberKey }))}>
+                <SelectTrigger><SelectValue placeholder="اختر المستلم" /></SelectTrigger>
                 <SelectContent>
-                  {otherMembers.map((m) => (
-                    <SelectItem key={m} value={m}>
-                      {MEMBER_NAMES[m]}
-                    </SelectItem>
-                  ))}
+                  {otherMembers.map(m => <SelectItem key={m} value={m}>{MEMBER_NAMES[m]}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
-
             {/* Subject */}
+            {!replyTo && (
+              <div>
+                <label className="text-sm font-medium mb-1 block">الموضوع *</label>
+                <Input value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))} placeholder="موضوع الرسالة" />
+              </div>
+            )}
+            {/* Body */}
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">الموضوع *</label>
-              <Input
-                value={composeForm.subject}
-                onChange={(e) => setComposeForm((f) => ({ ...f, subject: e.target.value }))}
-                placeholder="موضوع الرسالة..."
-              />
+              <label className="text-sm font-medium mb-1 block">نص الرسالة *</label>
+              <Textarea value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))} placeholder="اكتب رسالتك هنا..." rows={4} />
             </div>
-
             {/* Priority + Type */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">الأولوية</label>
-                <Select
-                  value={composeForm.priority}
-                  onValueChange={(v) => setComposeForm((f) => ({ ...f, priority: v as any }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                <label className="text-sm font-medium mb-1 block">الأولوية</label>
+                <Select value={form.priority} onValueChange={v => setForm(f => ({ ...f, priority: v as any }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="normal">عادي</SelectItem>
                     <SelectItem value="important">مهم</SelectItem>
@@ -532,51 +457,84 @@ export default function InternalMessages({ ccTokenProp, memberIdProp }: { ccToke
                 </Select>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">نوع الرسالة</label>
-                <Select
-                  value={composeForm.messageType}
-                  onValueChange={(v) => setComposeForm((f) => ({ ...f, messageType: v as any }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                <label className="text-sm font-medium mb-1 block">نوع الرسالة</label>
+                <Select value={form.messageType} onValueChange={v => setForm(f => ({ ...f, messageType: v as any }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="instruction">توجيه</SelectItem>
                     <SelectItem value="inquiry">استفسار</SelectItem>
-                    <SelectItem value="info">معلومة</SelectItem>
+                    <SelectItem value="info">إحاطة</SelectItem>
                     <SelectItem value="follow_up">متابعة</SelectItem>
                     <SelectItem value="other">أخرى</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
-
-            {/* Body */}
+            {/* Project */}
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1">نص الرسالة *</label>
-              <Textarea
-                value={composeForm.body}
-                onChange={(e) => setComposeForm((f) => ({ ...f, body: e.target.value }))}
-                placeholder="اكتب رسالتك هنا..."
-                rows={6}
-                className="resize-none"
-              />
-            </div>
-
-            <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowCompose(false)}>
-                إلغاء
-              </Button>
-              <Button
-                onClick={handleSend}
-                disabled={createMutation.isPending}
-                className="bg-indigo-600 hover:bg-indigo-700 gap-2"
+              <label className="text-sm font-medium mb-1 block flex items-center gap-1"><FolderOpen className="w-3.5 h-3.5" />المشروع</label>
+              <Select
+                value={form.projectId === null ? "general" : String(form.projectId)}
+                onValueChange={v => {
+                  if (v === "general") setForm(f => ({ ...f, projectId: null, projectName: null }));
+                  else { const p = projects.find((x: any) => String(x.id) === v); setForm(f => ({ ...f, projectId: Number(v), projectName: p?.name || null })); }
+                }}
               >
-                <Send className="w-4 h-4" />
-                {createMutation.isPending ? "جاري الإرسال..." : "إرسال"}
-              </Button>
+                <SelectTrigger><SelectValue placeholder="عامة (غير مرتبطة بمشروع)" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="general">عامة (غير مرتبطة بمشروع)</SelectItem>
+                  {projects.map((p: any) => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Deadline */}
+            <div>
+              <label className="text-sm font-medium mb-1 block flex items-center gap-1"><Calendar className="w-3.5 h-3.5" />الموعد النهائي (اختياري)</label>
+              <Input type="datetime-local" value={form.deadline} onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))} />
+            </div>
+            {/* Attachment */}
+            <div>
+              <label className="text-sm font-medium mb-1 block">المرفق (اختياري)</label>
+              <div className="flex gap-2 mb-2">
+                <Button type="button" size="sm" variant={form.attachmentMode === "file" ? "default" : "outline"} className="gap-1 text-xs"
+                  onClick={() => setForm(f => ({ ...f, attachmentMode: f.attachmentMode === "file" ? "none" : "file", attachmentUrl: "", attachmentName: "" }))}>
+                  <Paperclip className="w-3 h-3" />رفع ملف
+                </Button>
+                <Button type="button" size="sm" variant={form.attachmentMode === "link" ? "default" : "outline"} className="gap-1 text-xs"
+                  onClick={() => setForm(f => ({ ...f, attachmentMode: f.attachmentMode === "link" ? "none" : "link", attachmentUrl: "", attachmentName: "" }))}>
+                  <Link2 className="w-3 h-3" />إضافة رابط
+                </Button>
+              </div>
+              {form.attachmentMode === "file" && (
+                <div>
+                  <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileChange} accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.zip" />
+                  {form.attachmentUrl ? (
+                    <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-lg text-xs">
+                      <Paperclip className="w-3.5 h-3.5 text-green-600" />
+                      <span className="flex-1 text-green-700">{form.attachmentName}</span>
+                      <Button type="button" size="icon" variant="ghost" className="h-5 w-5" onClick={() => setForm(f => ({ ...f, attachmentUrl: "", attachmentName: "" }))}><X className="w-3 h-3" /></Button>
+                    </div>
+                  ) : (
+                    <Button type="button" variant="outline" size="sm" className="w-full gap-1 text-xs border-dashed" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+                      {uploading ? <><RefreshCw className="w-3 h-3 animate-spin" />جاري الرفع...</> : <><Paperclip className="w-3 h-3" />اختر ملفاً (PDF, Word, Excel, صورة)</>}
+                    </Button>
+                  )}
+                </div>
+              )}
+              {form.attachmentMode === "link" && (
+                <div className="space-y-2">
+                  <Input placeholder="اسم الرابط (مثال: تقرير المشروع)" value={form.attachmentName} onChange={e => setForm(f => ({ ...f, attachmentName: e.target.value }))} className="text-xs" />
+                  <Input placeholder="الرابط (https://...)" value={form.attachmentUrl} onChange={e => setForm(f => ({ ...f, attachmentUrl: e.target.value }))} className="text-xs" dir="ltr" />
+                </div>
+              )}
             </div>
           </div>
+          <DialogFooter className="flex gap-2 mt-4">
+            <Button variant="outline" onClick={() => { setShowCompose(false); setReplyTo(null); }}>إلغاء</Button>
+            <Button onClick={handleSend} disabled={createMutation.isPending || uploading} className="gap-1 bg-indigo-600 hover:bg-indigo-700 text-white">
+              {createMutation.isPending ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" />جاري الإرسال...</> : <><Send className="w-3.5 h-3.5" />إرسال</>}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
