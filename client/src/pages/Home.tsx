@@ -242,12 +242,19 @@ function SortableToolCard({ item, onNavigate }: { item: NavItem; onNavigate: (pa
 
 function NewsTicker({ navigate, isOwner }: { navigate: (path: string) => void; isOwner?: boolean }) {
   const { data: newsItems } = trpc.newsTicker.getActive.useQuery();
+  const { data: liveEvents } = trpc.newsTicker.getLiveEvents.useQuery(undefined, {
+    refetchInterval: 60_000, // refresh every 60 seconds
+  });
 
   const fallbackItems = [
-    { id: 0, title: "جاري تحميل الأخبار...", color: "#f59e0b" },
+    { id: "fallback-0", title: "جاري تحميل الأخبار...", color: "#f59e0b" },
   ];
 
-  const items = newsItems && newsItems.length > 0 ? newsItems : fallbackItems;
+  // Merge manual announcements (first) + live events from Command Center
+  const manualItems = (newsItems || []).map((n: any) => ({ id: `manual-${n.id}`, title: n.title, color: n.color || "#f59e0b" }));
+  const liveItems = (liveEvents || []).map((e: any) => ({ id: e.id, title: e.title, color: e.color }));
+  const allItems = [...manualItems, ...liveItems];
+  const items = allItems.length > 0 ? allItems : fallbackItems;
 
   return (
     <section className="pb-4">
