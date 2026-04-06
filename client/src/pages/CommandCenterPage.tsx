@@ -3195,7 +3195,19 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
               <summary className="p-4 text-sm font-medium text-slate-600 cursor-pointer hover:bg-slate-50 rounded-2xl">تفاصيل تقييم كل عضو على حدة</summary>
               <div className="p-4 pt-0 space-y-3">
                 {consultantsList?.map((consultant: any) => {
-                  let totalWeighted = 0;
+                  // Build per-evaluator weighted totals alongside the average
+                  const evalWeightedTotals: number[] = evalData.allEvaluatorData.map(() => 0);
+                  let totalWeightedAvg = 0;
+                  const criteriaRows = CRITERIA.map((crit) => {
+                    const scores: number[] = evalData.allEvaluatorData.map((ev: any) => {
+                      const s = ev.scores.find((s: any) => s.consultantId === consultant.id && s.criterionId === crit.id);
+                      return s?.score || 0;
+                    });
+                    const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+                    scores.forEach((sc, si) => { evalWeightedTotals[si] += (sc * crit.weight) / 100; });
+                    totalWeightedAvg += (avg * crit.weight) / 100;
+                    return { crit, scores, avg };
+                  });
                   return (
                     <div key={consultant.id} className="border border-slate-100 rounded-xl p-3">
                       <h5 className="text-sm font-bold text-slate-700 mb-2">{consultant.name}</h5>
@@ -3212,29 +3224,25 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
                             </tr>
                           </thead>
                           <tbody>
-                            {CRITERIA.map((crit) => {
-                              const scores = evalData.allEvaluatorData.map((ev: any) => {
-                                const s = ev.scores.find((s: any) => s.consultantId === consultant.id && s.criterionId === crit.id);
-                                return s?.score || 0;
-                              });
-                              const avg = scores.reduce((a: number, b: number) => a + b, 0) / scores.length;
-                              totalWeighted += (avg * crit.weight) / 100;
-                              return (
-                                <tr key={crit.id} className="border-b border-slate-50">
-                                  <td className="py-1 text-slate-600">{crit.name}</td>
-                                  <td className="text-center py-1 text-slate-400">{crit.weight}%</td>
-                                  {scores.map((s: number, si: number) => (
-                                    <td key={si} className="text-center py-1 font-medium text-slate-600">{s}</td>
-                                  ))}
-                                  <td className="text-center py-1 font-semibold text-slate-700">{avg.toFixed(1)}</td>
-                                </tr>
-                              );
-                            })}
+                            {criteriaRows.map(({ crit, scores, avg }) => (
+                              <tr key={crit.id} className="border-b border-slate-50">
+                                <td className="py-1 text-slate-600">{crit.name}</td>
+                                <td className="text-center py-1 text-slate-400">{crit.weight}%</td>
+                                {scores.map((s, si) => (
+                                  <td key={si} className="text-center py-1 font-medium text-slate-600">{s}</td>
+                                ))}
+                                <td className="text-center py-1 font-semibold text-slate-700">{avg.toFixed(1)}</td>
+                              </tr>
+                            ))}
                           </tbody>
                           <tfoot>
-                            <tr className="bg-slate-50">
-                              <td colSpan={2 + evalData.allEvaluatorData.length} className="py-1.5 font-semibold text-slate-600 text-right">المجموع المرجح</td>
-                              <td className="text-center py-1.5 font-bold text-slate-800">{totalWeighted.toFixed(2)}</td>
+                            <tr className="bg-indigo-50 border-t-2 border-indigo-200">
+                              <td className="py-2 pr-1 font-bold text-slate-700 text-right">المجموع المرجح</td>
+                              <td className="text-center py-2 text-slate-400 text-[10px]">100%</td>
+                              {evalWeightedTotals.map((wt, wi) => (
+                                <td key={wi} className="text-center py-2 font-bold text-indigo-700">{wt.toFixed(2)}</td>
+                              ))}
+                              <td className="text-center py-2 font-bold text-slate-800 bg-indigo-100">{totalWeightedAvg.toFixed(2)}</td>
                             </tr>
                           </tfoot>
                         </table>
