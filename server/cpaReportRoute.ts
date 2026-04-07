@@ -60,9 +60,9 @@ router.get("/:projectId", async (req, res) => {
     const totalCC = toNum(proj.bua_sqft) * toNum(proj.construction_cost_per_sqft);
     const durationMonths = toNum(proj.duration_months);
 
-    // ---- Mandatory scope items ----
-    // Only show add-on scope items (29-43) — items 1-28 are base design scope
-    // and are implicitly included in any proposal, not tracked as gaps
+    // ---- Mandatory scope items (for display) ----
+    // Only show add-on scope items (29-43) that are INCLUDED or GREEN
+    // Items 1-28 are base design scope and implicitly included
     const mandatoryItems = await qRows<any>(
       db,
       sql`SELECT si.id, si.item_number, si.code, si.label,
@@ -74,6 +74,24 @@ router.get("/:projectId", async (req, res) => {
             AND src.building_category_id = scm.building_category_id
           WHERE scm.building_category_id = ${proj.building_category_id}
             AND scm.status IN ('INCLUDED', 'GREEN')
+            AND si.item_number BETWEEN 29 AND 43
+          ORDER BY si.item_number`
+    );
+
+    // ---- All required scope items (for gap detection) ----
+    // Include items that are REQUIRED by the project settings (INCLUDED, GREEN, RED, CONTRACTOR)
+    // EXCLUDE items marked as NOT_REQUIRED — they should NOT be flagged as gaps
+    const allRequiredItems = await qRows<any>(
+      db,
+      sql`SELECT si.id, si.item_number, si.code, si.label,
+                 COALESCE(src.cost_aed, 0) as ref_cost, scm.status as requirement_status
+          FROM cpa_scope_category_matrix scm
+          JOIN cpa_scope_items si ON si.id = scm.scope_item_id
+          LEFT JOIN cpa_scope_reference_costs src
+            ON src.scope_item_id = scm.scope_item_id
+            AND src.building_category_id = scm.building_category_id
+          WHERE scm.building_category_id = ${proj.building_category_id}
+            AND scm.status != 'NOT_REQUIRED'
             AND si.item_number BETWEEN 29 AND 43
           ORDER BY si.item_number`
     );
@@ -306,16 +324,17 @@ router.get("/:projectId", async (req, res) => {
   <thead><tr><th>#</th><th>Scope Item</th><th>Status</th><th>Reference Cost (${proj.cat_label || ""})</th></tr></thead>
   <tbody>`;
 
-      for (const item of mandatoryItems) {
+      for (const item of allRequiredItems) {
         const coverage = coverageMap[item.id];
         const status = coverage?.status ?? "NOT_MENTIONED";
         const isIncluded = status === "INCLUDED";
         const refCost = toNum(item.ref_cost);
+        const isRequired = item.requirement_status !== "NOT_REQUIRED";
         html += `<tr>
       <td>${item.item_number}</td>
       <td>${item.label}</td>
-      <td class="${isIncluded ? "included" : "excluded"}">${isIncluded ? "✅ Included" : "❌ Excluded — Gap added"}</td>
-      <td class="${isIncluded ? "" : "gap-cost"}">${refCost > 0 ? fmtAED(refCost) : "—"}</td>
+      <td class="${isIncluded ? "included" : (isRequired ? "excluded" : "optional")}">${isIncluded ? "✅ Included" : (isRequired ? "❌ Excluded — Gap added" : "⊘ Not Required")}</td>
+      <td class="${isIncluded || !isRequired ? "" : "gap-cost"}">${(isIncluded || !isRequired) ? "—" : fmtAED(refCost)}</td>
     </tr>`;
       }
 
