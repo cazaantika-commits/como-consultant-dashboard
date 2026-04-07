@@ -64,7 +64,7 @@ async function runCalculationEngine(cpaProjectId: number) {
   // Use project's actual duration_months for fee adjustment calculations
   const durationMonths = toNum(proj.duration_months);
 
-  // Step 2: Mandatory scope items for this category
+  // Step 2: Mandatory scope items for this category (display only)
   const mandatoryItems = catId
     ? await qRows<any>(
         db,
@@ -77,6 +77,24 @@ async function runCalculationEngine(cpaProjectId: number) {
               AND src.building_category_id = scm.building_category_id
             WHERE scm.building_category_id = ${catId}
               AND scm.status IN ('INCLUDED', 'GREEN')
+              AND si.item_number NOT IN (10, 11, 12, 13, 44, 45, 46, 47)`
+      )
+    : [];
+
+  // Step 2B: All REQUIRED scope items for gap detection
+  // IMPORTANT: Exclude NOT_REQUIRED items — they should NOT be flagged as gaps
+  const allRequiredItems = catId
+    ? await qRows<any>(
+        db,
+        sql`SELECT si.id, si.code, si.label, scm.status,
+                   COALESCE(src.cost_aed, 0) as ref_cost
+            FROM cpa_scope_category_matrix scm
+            JOIN cpa_scope_items si ON si.id = scm.scope_item_id
+            LEFT JOIN cpa_scope_reference_costs src
+              ON src.scope_item_id = scm.scope_item_id
+              AND src.building_category_id = scm.building_category_id
+            WHERE scm.building_category_id = ${catId}
+              AND scm.status != 'NOT_REQUIRED'
               AND si.item_number NOT IN (10, 11, 12, 13, 44, 45, 46, 47)`
       )
     : [];
@@ -134,9 +152,11 @@ async function runCalculationEngine(cpaProjectId: number) {
     }
 
     let designScopeGapCost = 0;
-    for (const item of mandatoryItems) {
+    for (const item of allRequiredItems) {
       const status = coverageMap[item.id] ?? "NOT_MENTIONED";
       if (status === "INCLUDED") continue;
+      // Skip if item is NOT_REQUIRED — it's not a real gap
+      if (item.status === "NOT_REQUIRED") continue;
       const gap = toNum(item.ref_cost);
       designScopeGapCost += gap;
       if (gap > 0) {
