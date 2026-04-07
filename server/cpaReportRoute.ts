@@ -177,9 +177,33 @@ router.get("/:projectId", async (req, res) => {
       }
     }
 
+    // ---- Build live calculation map per consultant ----
+    // Recalculate design gap in real-time from allRequiredItems + current settings
+    // This ensures NOT_REQUIRED items are never counted as gaps regardless of stored values
+    const liveCalc: Record<number, { designGap: number; trueDesign: number; adjSup: number; totalTrueCost: number }> = {};
+    for (const r of results) {
+      const pcId = r.project_consultant_id;
+      const coverageMap = scopeCoverageAll[pcId] || {};
+      let designGap = 0;
+      for (const item of allRequiredItems) {
+        const cov = coverageMap[item.id];
+        const covStatus = cov?.status ?? "NOT_MENTIONED";
+        if (covStatus === "INCLUDED") continue;
+        if (item.requirement_status === "NOT_REQUIRED") continue;
+        designGap += toNum(item.ref_cost);
+      }
+      const quotedDesign = toNum(r.quoted_design_fee);
+      const trueDesign = quotedDesign + designGap;
+      const adjSup = toNum(r.adjusted_supervision_fee); // supervision stays as stored
+      const totalTrueCost = trueDesign + adjSup;
+      liveCalc[pcId] = { designGap, trueDesign, adjSup, totalTrueCost };
+    }
+
     const rankable = results.filter((r: any) => r.can_rank === 1);
     const unrankable = results.filter((r: any) => r.can_rank !== 1);
-    const lowestCost = rankable.length > 0 ? Math.min(...rankable.map((r: any) => toNum(r.total_true_cost))) : 0;
+    const lowestCost = rankable.length > 0
+      ? Math.min(...rankable.map((r: any) => liveCalc[r.project_consultant_id]?.totalTrueCost ?? toNum(r.total_true_cost)))
+      : 0;
 
     // ---- Helper: design method label ----
     function designMethodLabel(r: any): string {
@@ -310,8 +334,18 @@ router.get("/:projectId", async (req, res) => {
       const code = r.consultant_code;
 
       let quotedDesign = toNum(r.quoted_design_fee);
-      let scopeGap = toNum(r.design_scope_gap_cost);
-      let trueDesign = toNum(r.true_design_fee);
+
+      // Recalculate scopeGap in real-time from allRequiredItems
+      // This ensures NOT_REQUIRED items are never counted as gaps
+      let scopeGap = 0;
+      for (const item of allRequiredItems) {
+        const cov = coverageMap[item.id];
+        const covStatus = cov?.status ?? "NOT_MENTIONED";
+        if (covStatus === "INCLUDED") continue;
+        if (item.requirement_status === "NOT_REQUIRED") continue;
+        scopeGap += toNum(item.ref_cost);
+      }
+      let trueDesign = quotedDesign + scopeGap;
 
       html += `<div class="consultant-block">
 <div class="consultant-title">${name} <span>(${code})</span></div>
@@ -528,15 +562,19 @@ router.get("/:projectId", async (req, res) => {
   <tbody>`;
 
     for (const r of rankable) {
-      const diff = toNum(r.total_true_cost) - lowestCost;
+      const live = liveCalc[r.project_consultant_id];
+      const liveTotalCost = live?.totalTrueCost ?? toNum(r.total_true_cost);
+      const liveTrueDesign = live?.trueDesign ?? toNum(r.true_design_fee);
+      const liveAdjSup = live?.adjSup ?? toNum(r.adjusted_supervision_fee);
+      const diff = liveTotalCost - lowestCost;
       const rankClass = r.result_rank === 1 ? "rank-1" : r.result_rank === 2 ? "rank-2" : r.result_rank === 3 ? "rank-3" : "rank-n";
       html += `<tr class="${rankClass}">
       <td><span class="rank-badge">${r.result_rank}</span></td>
       <td><strong>${r.trade_name || r.legal_name}</strong><br/><span style="color:#888;font-size:8.5pt">${r.consultant_code}</span></td>
-      <td>${fmtAED(toNum(r.true_design_fee))}</td>
-      <td>${fmtAED(toNum(r.adjusted_supervision_fee))}</td>
-      <td><strong>${fmtAED(toNum(r.total_true_cost))}</strong></td>
-      <td>${r.result_rank === 1 ? "<strong style='color:#16a34a'>Lowest True Cost</strong>" : `<span style='color:#dc2626'>+ ${fmtAED(diff)}</span>`}</td>
+      <td>${fmtAED(liveTrueDesign)}</td>
+      <td>${fmtAED(liveAdjSup)}</td>
+      <td><strong>${fmtAED(liveTotalCost)}</strong></td>
+      <td>${diff === 0 ? "<strong style='color:#16a34a'>Lowest True Cost</strong>" : `<span style='color:#dc2626'>+ ${fmtAED(diff)}</span>`}</td>
     </tr>`;
     }
 
@@ -555,11 +593,14 @@ router.get("/:projectId", async (req, res) => {
   </thead>
   <tbody>`;
       for (const r of unrankable) {
+        const live = liveCalc[r.project_consultant_id];
+        const liveTrueDesign = live?.trueDesign ?? toNum(r.true_design_fee);
+        const liveDesignGap = live?.designGap ?? toNum(r.design_scope_gap_cost);
         html += `<tr>
       <td><strong>${r.trade_name || r.legal_name}</strong> <span style="color:#888">(${r.consultant_code})</span></td>
       <td>${fmtAED(toNum(r.quoted_design_fee))}</td>
-      <td>${fmtAED(toNum(r.true_design_fee))}</td>
-      <td class="gap-cost">${fmtAED(toNum(r.design_scope_gap_cost))}</td>
+      <td>${fmtAED(liveTrueDesign)}</td>
+      <td class="gap-cost">${fmtAED(liveDesignGap)}</td>
     </tr>`;
       }
       html += `</tbody></table>`;
