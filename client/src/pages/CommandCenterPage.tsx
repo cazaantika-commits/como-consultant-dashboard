@@ -3333,7 +3333,7 @@ function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token
 function ValueAnalysisView({ token, projectId, onBack }: { token: string; projectId: number; onBack: () => void }) {
   const report = trpc.commandCenter.getComprehensiveReport.useQuery({ token, projectId });
   const financialData = trpc.commandCenter.getProjectFinancialEvaluation.useQuery({ token, projectId });
-  const [technicalWeight, setTechnicalWeight] = useState(60);
+  const [technicalWeight, setTechnicalWeight] = useState(80);
   const financialWeight = 100 - technicalWeight;
 
   if (report.isLoading || financialData.isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-amber-500" /></div>;
