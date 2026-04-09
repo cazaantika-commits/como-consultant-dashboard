@@ -1609,7 +1609,7 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       const lowestFee = Math.min(...feesArr) || 1;
       results.forEach(r => {
         r.financialScore = r.totalFees > 0 ? Math.round((lowestFee / r.totalFees) * 100 * 100) / 100 : 0;
-        r.finalScore = Math.round((r.technicalScore * 0.2 + r.financialScore * 0.8) * 100) / 100;
+        r.finalScore = Math.round((r.technicalScore * 0.8 + r.financialScore * 0.2) * 100) / 100;
       });
       results.sort((a, b) => b.finalScore - a.finalScore);
       results.forEach((r, i) => { r.rank = i + 1; });
