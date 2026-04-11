@@ -654,3 +654,6 @@
 - [x] Update InternalMessages frontend: convert-to-task button on messages
 - [x] Update InternalMessages frontend: filter by project
 - [x] Add unread badge counter on التواصل الداخلي card in Command Center bento grid (via getBubbleCounts)
+
+- [ ] Refactor consultant fee analysis to compute all values live from settings (no stored pre-calculated values)
+- [ ] Verify: changing any setting immediately reflects in the analysis without pressing "Calculate"

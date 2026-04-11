@@ -1306,6 +1306,13 @@ export const cpaRouter = router({
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db) return [];
+        // Always re-run calculation engine so results reflect latest settings
+        try {
+          await runCalculationEngine(input.cpaProjectId);
+        } catch (e) {
+          // If engine fails (e.g. no consultants yet), fall through to return whatever is stored
+          console.warn('[getResults] calculation engine skipped:', e);
+        }
         const rows = await qRows<any>(
           db,
           sql`SELECT er.*, er.eval_rank as result_rank, pc.consultant_id, cm.legal_name, cm.trade_name, cm.code as consultant_code,
