@@ -387,8 +387,8 @@ export function SupervisionBaselineTable() {
   const commitEdit = (supervisionRoleId: number, buildingCategoryId: number) => {
     const val = editValue.trim();
     const pct = val === "" ? 0 : Number(val);
-    if (isNaN(pct) || pct < 0 || pct > 100) {
-      toast({ title: "أدخل نسبة بين 0 و 100", variant: "destructive" });
+    if (isNaN(pct) || pct < 0 || pct > 500) {
+      toast({ title: "أدخل نسبة بين 0 و 500", variant: "destructive" });
       return;
     }
     upsertBaselineMutation.mutate({
