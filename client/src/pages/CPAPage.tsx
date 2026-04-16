@@ -1605,6 +1605,15 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
   const [editingRole, setEditingRole] = useState<any>(null);
   const [roleForm, setRoleForm] = useState({ code: "", label: "", grade: "", teamType: "SITE", monthlyRateAed: "" });
 
+  const recalcAllMutation = trpc.cpa.evaluation.recalculateAll.useMutation({
+    onSuccess: (results) => {
+      const ok = results.filter((r: any) => r.ok).length;
+      const fail = results.filter((r: any) => !r.ok).length;
+      toast({ title: `تم إعادة حساب ${ok} مشروع${fail > 0 ? ` (${fail} فشل)` : ''}` });
+    },
+    onError: (e) => toast({ title: "خطأ في إعادة الحساب", description: e.message, variant: "destructive" }),
+  });
+
   const upsertScopeItemMutation = trpc.cpa.settings.upsertScopeItem.useMutation({
     onSuccess: () => { scopeItemsQuery.refetch(); setShowScopeItemDialog(false); toast({ title: "تم الحفظ" }); },
     onError: (e) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
@@ -1622,10 +1631,20 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
           رجوع
         </Button>
         <Separator orientation="vertical" className="h-5" />
-        <div>
+        <div className="flex-1">
           <h2 className="font-bold text-lg">إعدادات النظام</h2>
           <p className="text-sm text-muted-foreground">إدارة فئات المباني، أدوار الإشراف، والاستشاريين</p>
         </div>
+        <Button
+          size="sm"
+          variant="outline"
+          className="gap-1.5 border-amber-400 text-amber-700 hover:bg-amber-50"
+          onClick={() => recalcAllMutation.mutate()}
+          disabled={recalcAllMutation.isPending}
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${recalcAllMutation.isPending ? 'animate-spin' : ''}`} />
+          تحديث جميع التحليلات
+        </Button>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>

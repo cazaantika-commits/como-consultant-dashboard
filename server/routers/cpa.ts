@@ -1301,6 +1301,23 @@ export const cpaRouter = router({
         return runCalculationEngine(input.cpaProjectId);
       }),
 
+    recalculateAll: protectedProcedure
+      .mutation(async () => {
+        const db = await getDb();
+        if (!db) throw new Error("DB unavailable");
+        const projects = await qRows<any>(db, sql`SELECT id FROM cpa_projects`);
+        const results: { id: number; ok: boolean; error?: string }[] = [];
+        for (const p of projects) {
+          try {
+            await runCalculationEngine(p.id);
+            results.push({ id: p.id, ok: true });
+          } catch (e: any) {
+            results.push({ id: p.id, ok: false, error: e?.message });
+          }
+        }
+        return results;
+      }),
+
     getResults: protectedProcedure
       .input(z.object({ cpaProjectId: z.number() }))
       .query(async ({ input }) => {

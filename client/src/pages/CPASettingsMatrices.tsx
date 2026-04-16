@@ -458,7 +458,7 @@ export function SupervisionBaselineTable() {
                     autoFocus
                     type="number"
                     min={0}
-                    max={100}
+                    max={500}
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
                     onBlur={() => commitEdit(role.id, cat.id)}
