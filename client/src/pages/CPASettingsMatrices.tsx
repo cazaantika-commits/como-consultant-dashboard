@@ -56,10 +56,14 @@ const STATUS_COLORS: Record<MatrixStatus, string> = {
 export function ScopeMatrixTable() {
   const { toast } = useToast();
   const matrixQuery = trpc.cpa.settings.getFullScopeMatrix.useQuery();
+  const recalcMutation = trpc.cpa.evaluation.recalculateAll.useMutation();
   const upsertMutation = trpc.cpa.settings.upsertMatrixEntry.useMutation({
     onSuccess: () => {
       matrixQuery.refetch();
-      toast({ title: "تم الحفظ" });
+      toast({ title: "تم الحفظ — جاري تحديث التحليلات..." });
+      recalcMutation.mutate(undefined, {
+        onSuccess: () => toast({ title: "✓ تم تحديث جميع التحليلات" }),
+      });
     },
     onError: (e) =>
       toast({ title: "خطأ", description: e.message, variant: "destructive" }),
@@ -219,11 +223,15 @@ export function ScopeMatrixTable() {
 export function ReferenceCostsTable() {
   const { toast } = useToast();
   const costsQuery = trpc.cpa.settings.getFullReferenceCosts.useQuery();
+  const recalcMutation = trpc.cpa.evaluation.recalculateAll.useMutation();
   const upsertCostMutation = trpc.cpa.settings.upsertReferenceCost.useMutation(
     {
       onSuccess: () => {
         costsQuery.refetch();
-        toast({ title: "تم حفظ السعر" });
+        toast({ title: "تم حفظ السعر — جاري تحديث التحليلات..." });
+        recalcMutation.mutate(undefined, {
+          onSuccess: () => toast({ title: "✓ تم تحديث جميع التحليلات" }),
+        });
       },
       onError: (e) =>
         toast({ title: "خطأ", description: e.message, variant: "destructive" }),
@@ -366,11 +374,15 @@ export function SupervisionBaselineTable() {
   const { toast } = useToast();
   const baselineQuery =
     trpc.cpa.settings.getFullSupervisionBaseline.useQuery();
+  const recalcMutation = trpc.cpa.evaluation.recalculateAll.useMutation();
   const upsertBaselineMutation =
     trpc.cpa.settings.upsertBaselineEntry.useMutation({
       onSuccess: () => {
         baselineQuery.refetch();
-        toast({ title: "تم الحفظ" });
+        toast({ title: "تم الحفظ — جاري تحديث التحليلات..." });
+        recalcMutation.mutate(undefined, {
+          onSuccess: () => toast({ title: "✓ تم تحديث جميع التحليلات" }),
+        });
       },
       onError: (e) =>
         toast({ title: "خطأ", description: e.message, variant: "destructive" }),
