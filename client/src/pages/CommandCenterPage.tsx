@@ -2716,7 +2716,8 @@ function FinancialEvaluationView({ token, projectId, onBack }: { token: string; 
               <th className="text-left py-2 px-3 text-[11px] font-semibold text-slate-600 uppercase tracking-wider w-[40%]">Consultant</th>
               <th className="text-right py-2 px-3 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">Design</th>
               <th className="text-right py-2 px-3 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">Supervision</th>
-              <th className="text-right py-2 px-3 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">Total (AED)</th>
+              <th className="text-right py-2 px-3 text-[11px] font-semibold text-amber-600 uppercase tracking-wider">Gap</th>
+              <th className="text-right py-2 px-3 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">True Cost (AED)</th>
               <th className="text-center py-2 px-3 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">vs Avg</th>
               <th className="text-center py-2 px-3 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">Score</th>
             </tr>
@@ -2748,9 +2749,18 @@ function FinancialEvaluationView({ token, projectId, onBack }: { token: string; 
                   <p className="text-[13px] font-semibold text-slate-800">{c.supervisionAmount?.toLocaleString()}</p>
                   <p className="text-[10px] text-slate-400">{feeTypeLabel(c.supervisionType, c.supervisionValue)}</p>
                 </td>
-                {/* Total */}
+                {/* Gap */}
+                <td className="py-2 px-3 text-right">
+                  {(c as any).gapCost > 0 ? (
+                    <p className="text-[13px] font-semibold text-amber-600">+{(c as any).gapCost?.toLocaleString()}</p>
+                  ) : (
+                    <p className="text-[13px] text-slate-400">—</p>
+                  )}
+                </td>
+                {/* True Cost */}
                 <td className="py-2 px-3 text-right">
                   <p className="text-[13px] font-bold text-slate-900">{c.totalFees?.toLocaleString()}</p>
+                  {(c as any).gapCost > 0 && <p className="text-[10px] text-slate-400">مقتبس: {(c as any).quotedFees?.toLocaleString()}</p>}
                 </td>
                 {/* vs Avg */}
                 <td className="py-2 px-3 text-center">
@@ -2768,6 +2778,7 @@ function FinancialEvaluationView({ token, projectId, onBack }: { token: string; 
           <tfoot>
             <tr className="bg-slate-50">
               <td className="py-2 px-3 text-[11px] font-semibold text-slate-600">Average</td>
+              <td className="py-2 px-3" />
               <td className="py-2 px-3" />
               <td className="py-2 px-3" />
               <td className="py-2 px-3 text-right text-[13px] font-bold text-slate-700">{avgFees > 0 ? `${Math.round(avgFees).toLocaleString()}` : '—'}</td>
