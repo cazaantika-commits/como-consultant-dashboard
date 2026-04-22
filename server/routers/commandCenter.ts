@@ -22,9 +22,6 @@ import {
   paymentRequests,
   generalRequests,
   internalMessages,
-  cpaProjects,
-  cpaProjectConsultants,
-  cpaEvaluationResults,
 } from "../../drizzle/schema";
 import { eq, desc, sql, and, inArray, gte } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -1444,23 +1441,6 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       const fins = await db.select().from(financialData).where(eq(financialData.projectId, input.projectId));
       const consultantMap = Object.fromEntries(allConsultants.map(c => [c.id, c]));
       const constructionCost = (project.bua || 0) * (project.pricePerSqft || 0);
-      // Also fetch CPA gap costs for this project
-      const [cpaProject] = await db.select().from(cpaProjects).where(eq(cpaProjects.projectId, input.projectId)).limit(1);
-      let cpaGapMap: Record<number, number> = {};
-      if (cpaProject) {
-        const cpaPCs = await db.select().from(cpaProjectConsultants).where(eq(cpaProjectConsultants.cpaProjectId, cpaProject.id));
-        const cpapcIds = cpaPCs.map(pc => pc.id);
-        if (cpapcIds.length > 0) {
-          const cpaResults = await db.select().from(cpaEvaluationResults).where(inArray(cpaEvaluationResults.projectConsultantId, cpapcIds));
-          cpaPCs.forEach(pc => {
-            const result = cpaResults.find(r => r.projectConsultantId === pc.id);
-            if (result) {
-              cpaGapMap[pc.consultantId] = (Number(result.designScopeGapCost) || 0) + (Number(result.supervisionGapCost) || 0);
-            }
-          });
-        }
-      }
-
       const consultantData = pcs.map(pc => {
         const c = consultantMap[pc.consultantId];
         const fin = fins.find(f => f.consultantId === pc.consultantId);
@@ -1471,10 +1451,8 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
           designAmount = fin.designType === 'pct' ? constructionCost * (dVal / 100) : dVal;
           supervisionAmount = fin.supervisionType === 'pct' ? constructionCost * (sVal / 100) : sVal;
         }
-        const quotedFees = Number(designAmount) + Number(supervisionAmount);
-        const gapCost = cpaGapMap[pc.consultantId] || 0;
-        const totalFees = quotedFees + gapCost;
-        return { id: c?.id || pc.consultantId, name: c?.name || '\u063a\u064a\u0631 \u0645\u0639\u0631\u0648\u0641', designType: fin?.designType || 'pct', designValue: Number(fin?.designValue) || 0, supervisionType: fin?.supervisionType || 'pct', supervisionValue: Number(fin?.supervisionValue) || 0, designAmount: Number(designAmount), supervisionAmount: Number(supervisionAmount), quotedFees: Number(quotedFees), gapCost: Number(gapCost), totalFees: Number(totalFees), proposalLink: (fin as any)?.proposalLink || null, financialScore: 0 as number };
+        const totalFees = Number(designAmount) + Number(supervisionAmount);
+        return { id: c?.id || pc.consultantId, name: c?.name || '\u063a\u064a\u0631 \u0645\u0639\u0631\u0648\u0641', designType: fin?.designType || 'pct', designValue: Number(fin?.designValue) || 0, supervisionType: fin?.supervisionType || 'pct', supervisionValue: Number(fin?.supervisionValue) || 0, designAmount: Number(designAmount), supervisionAmount: Number(supervisionAmount), totalFees: Number(totalFees), proposalLink: (fin as any)?.proposalLink || null, financialScore: 0 as number };
       });
       const sortedByFees = [...consultantData].filter(c => c.totalFees > 0).sort((a, b) => a.totalFees - b.totalFees);
       const lowestFee = sortedByFees[0]?.totalFees || 1;

@@ -1570,33 +1570,12 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
   const rolesQuery = trpc.cpa.settings.getSupervisionRoles.useQuery();
   const masterQuery = trpc.cpa.settings.getConsultantsMaster.useQuery();
 
-  const recalcAllMutation = trpc.cpa.evaluation.recalculateAll.useMutation({
-    onSuccess: (results) => {
-      const ok = results.filter((r: any) => r.ok).length;
-      const fail = results.filter((r: any) => !r.ok).length;
-      toast({ title: `✓ تم تحديث ${ok} مشروع${fail > 0 ? ` (${fail} فشل)` : ''}` });
-    },
-    onError: (e) => toast({ title: "خطأ في إعادة الحساب", description: e.message, variant: "destructive" }),
-  });
-
   const upsertCategoryMutation = trpc.cpa.settings.upsertBuildingCategory.useMutation({
-    onSuccess: () => {
-      categoriesQuery.refetch();
-      toast({ title: "تم الحفظ — جاري تحديث التحليلات..." });
-      recalcAllMutation.mutate(undefined, {
-        onSuccess: () => toast({ title: "✓ تم تحديث جميع التحليلات" }),
-      });
-    },
+    onSuccess: () => { categoriesQuery.refetch(); toast({ title: "تم الحفظ" }); },
     onError: (e) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
   });
   const upsertRoleMutation = trpc.cpa.settings.upsertSupervisionRole.useMutation({
-    onSuccess: () => {
-      rolesQuery.refetch();
-      toast({ title: "تم الحفظ — جاري تحديث التحليلات..." });
-      recalcAllMutation.mutate(undefined, {
-        onSuccess: () => toast({ title: "✓ تم تحديث جميع التحليلات" }),
-      });
-    },
+    onSuccess: () => { rolesQuery.refetch(); toast({ title: "تم الحفظ" }); },
     onError: (e) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
   });
   const upsertConsultantMutation = trpc.cpa.settings.upsertConsultantMaster.useMutation({
@@ -1625,6 +1604,15 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
   const [showAddRole, setShowAddRole] = useState(false);
   const [editingRole, setEditingRole] = useState<any>(null);
   const [roleForm, setRoleForm] = useState({ code: "", label: "", grade: "", teamType: "SITE", monthlyRateAed: "" });
+
+  const recalcAllMutation = trpc.cpa.evaluation.recalculateAll.useMutation({
+    onSuccess: (results) => {
+      const ok = results.filter((r: any) => r.ok).length;
+      const fail = results.filter((r: any) => !r.ok).length;
+      toast({ title: `تم إعادة حساب ${ok} مشروع${fail > 0 ? ` (${fail} فشل)` : ''}` });
+    },
+    onError: (e) => toast({ title: "خطأ في إعادة الحساب", description: e.message, variant: "destructive" }),
+  });
 
   const upsertScopeItemMutation = trpc.cpa.settings.upsertScopeItem.useMutation({
     onSuccess: () => { scopeItemsQuery.refetch(); setShowScopeItemDialog(false); toast({ title: "تم الحفظ" }); },

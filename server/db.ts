@@ -1,6 +1,6 @@
 import { eq, and, inArray, or, like, desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, projects, InsertProject, consultants, InsertConsultant, projectConsultants, InsertProjectConsultant, financialData, InsertFinancialData, evaluationScores, InsertEvaluationScore, evaluatorScores, InsertEvaluatorScore, committeeDecisions, InsertCommitteeDecision, consultantDetails, InsertConsultantDetail, aiAdvisoryScores, InsertAiAdvisoryScore, cpaProjects, cpaProjectConsultants } from "../drizzle/schema";
+import { InsertUser, users, projects, InsertProject, consultants, InsertConsultant, projectConsultants, InsertProjectConsultant, financialData, InsertFinancialData, evaluationScores, InsertEvaluationScore, evaluatorScores, InsertEvaluatorScore, committeeDecisions, InsertCommitteeDecision, consultantDetails, InsertConsultantDetail, aiAdvisoryScores, InsertAiAdvisoryScore } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -230,56 +230,10 @@ export async function upsertFinancialData(projectId: number, consultantId: numbe
     .where(and(eq(financialData.projectId, projectId), eq(financialData.consultantId, consultantId)))
     .limit(1);
   if (existing.length > 0) {
-    await db.update(financialData).set(data)
+    return await db.update(financialData).set(data)
       .where(and(eq(financialData.projectId, projectId), eq(financialData.consultantId, consultantId)));
-  } else {
-    await db.insert(financialData).values({ projectId, consultantId, ...data });
   }
-
-  // Sync to CPA system: find the matching cpa_project and update cpa_project_consultants
-  try {
-    const [cpaProject] = await db.select().from(cpaProjects).where(eq(cpaProjects.projectId, projectId)).limit(1);
-    if (cpaProject) {
-      const [cpaPC] = await db.select().from(cpaProjectConsultants)
-        .where(and(eq(cpaProjectConsultants.cpaProjectId, cpaProject.id), eq(cpaProjectConsultants.consultantId, consultantId)))
-        .limit(1);
-      if (cpaPC) {
-        // Map old financialData types to CPA fee methods
-        const designMethod = data.designType === 'pct' ? 'PERCENTAGE' : 'LUMP_SUM';
-        const supervisionMethod = data.supervisionType === 'pct' ? 'PERCENTAGE' : 'LUMP_SUM';
-        const cpaUpdate: Record<string, any> = {};
-        if (data.designType !== undefined && data.designValue !== undefined) {
-          cpaUpdate.designFeeMethod = designMethod;
-          if (designMethod === 'PERCENTAGE') {
-            cpaUpdate.designFeePercentage = String(data.designValue);
-            cpaUpdate.designFeeAmount = null;
-          } else {
-            cpaUpdate.designFeeAmount = String(data.designValue);
-            cpaUpdate.designFeePercentage = null;
-          }
-        }
-        if (data.supervisionType !== undefined && data.supervisionValue !== undefined) {
-          cpaUpdate.supervisionFeeMethod = supervisionMethod;
-          if (supervisionMethod === 'PERCENTAGE') {
-            cpaUpdate.supervisionFeePercentage = String(data.supervisionValue);
-            cpaUpdate.supervisionFeeAmount = null;
-          } else {
-            cpaUpdate.supervisionFeeAmount = String(data.supervisionValue);
-            cpaUpdate.supervisionFeePercentage = null;
-          }
-        }
-        if (Object.keys(cpaUpdate).length > 0) {
-          await db.update(cpaProjectConsultants).set(cpaUpdate)
-            .where(eq(cpaProjectConsultants.id, cpaPC.id));
-        }
-      }
-    }
-  } catch (e) {
-    // CPA sync failure should not break the main save
-    console.warn('[CPA Sync] Failed to sync financial data to CPA:', e);
-  }
-
-  return { success: true };
+  return await db.insert(financialData).values({ projectId, consultantId, ...data });
 }
 
 // Evaluation scores
