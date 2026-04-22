@@ -224,41 +224,39 @@ export async function getProjectFinancialData(projectId: number) {
   // Get base financial data
   const baseData = await db.select().from(financialData).where(eq(financialData.projectId, projectId));
 
-  // Try to enrich with design_scope_gap_cost from CPA evaluation results
+  // Try to enrich with design_scope_gap_cost from CPA evaluation results using raw SQL
   try {
-    // Find the matching cpa_project
-    const cpaProject = await db.select({ id: cpaProjects.id })
-      .from(cpaProjects)
-      .where(eq(cpaProjects.projectId, projectId))
-      .limit(1);
+    const gapResults = await db.execute(sql`
+      SELECT 
+        cpc.consultant_id as consultantId,
+        cer.design_scope_gap_cost as designScopeGapCost,
+        cer.true_design_fee as trueDesignFee
+      FROM cpa_projects cp
+      JOIN cpa_project_consultants cpc ON cpc.cpa_project_id = cp.id
+      LEFT JOIN cpa_evaluation_results cer ON cer.project_consultant_id = cpc.id
+      WHERE cp.project_id = ${projectId}
+    `);
 
-    if (cpaProject.length > 0) {
-      const cpaProjectId = cpaProject[0].id;
-
-      // Get design_scope_gap_cost for each consultant from CPA
-      const gapResults = await db
-        .select({
-          consultantId: cpaProjectConsultants.consultantId,
-          designScopeGapCost: cpaEvaluationResults.designScopeGapCost,
-        })
-        .from(cpaEvaluationResults)
-        .innerJoin(cpaProjectConsultants, eq(cpaEvaluationResults.projectConsultantId, cpaProjectConsultants.id))
-        .where(eq(cpaProjectConsultants.cpaProjectId, cpaProjectId));
-
-      // Build a map: consultantId -> designScopeGapCost
-      const gapMap = new Map<number, number>();
-      for (const row of gapResults) {
-        gapMap.set(row.consultantId, Number(row.designScopeGapCost) || 0);
+    const rows = Array.isArray(gapResults) ? gapResults[0] : gapResults;
+    if (rows && (rows as any[]).length > 0) {
+      // Build a map: consultantId -> { designScopeGapCost, trueDesignFee }
+      const gapMap = new Map<number, { gap: number; trueFee: number }>();
+      for (const row of rows as any[]) {
+        gapMap.set(Number(row.consultantId), {
+          gap: Number(row.designScopeGapCost) || 0,
+          trueFee: Number(row.trueDesignFee) || 0,
+        });
       }
 
       // Attach designScopeGapCost to each financial record
       return baseData.map((fd) => ({
         ...fd,
-        designScopeGapCost: gapMap.get(fd.consultantId) || 0,
+        designScopeGapCost: gapMap.get(fd.consultantId)?.gap || 0,
+        trueDesignFee: gapMap.get(fd.consultantId)?.trueFee || 0,
       }));
     }
   } catch (e) {
-    // If CPA data not available, return base data without gap
+    console.error('[getProjectFinancialData] CPA gap fetch error:', e);
   }
 
   return baseData.map((fd) => ({ ...fd, designScopeGapCost: 0 }));
