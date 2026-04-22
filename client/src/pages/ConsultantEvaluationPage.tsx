@@ -15,6 +15,7 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
   constructionCost: number;
   updateFinancialMutation: any;
   onTotalChange: (consultantId: number, total: number) => void;
+  designScopeGapCost?: number;
 }) {
   const [designType, setDesignType] = useState(fin?.designType || 'pct');
   const [designValue, setDesignValue] = useState(fin ? String(parseFloat(String(fin.designValue)) || 0) : '0');
@@ -115,6 +116,12 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
         {supervisionType === 'pct' && constructionCost > 0 && (
           <p className="text-xs text-slate-500 mt-1 text-center">{supervisionAmount.toLocaleString()} AED</p>
         )}
+      </td>
+      <td className="border border-slate-200 p-3 text-center text-sm text-orange-600 font-semibold bg-orange-50">
+        {(fin?.designScopeGapCost || 0) > 0 ? `+${Number(fin?.designScopeGapCost || 0).toLocaleString()} AED` : '—'}
+      </td>
+      <td className="border border-slate-200 p-3 text-center font-bold text-sm bg-gradient-to-l from-blue-50 to-white text-blue-700">
+        {(designAmount + Number(fin?.designScopeGapCost || 0)).toLocaleString()} AED
       </td>
       <td className="border border-slate-200 p-4 text-center font-bold text-lg bg-gradient-to-l from-emerald-50 to-white text-emerald-700" style={{ minWidth: '160px' }}>
         {total.toLocaleString()} AED
@@ -542,6 +549,8 @@ export default function ConsultantEvaluationPage() {
                           <th className="border border-emerald-700 p-3 text-center text-xs font-bold" style={{ width: '12%' }}>قيمة التصميم</th>
                           <th className="border border-emerald-700 p-3 text-center text-xs font-bold" style={{ width: '8%' }}>نوع الإشراف</th>
                           <th className="border border-emerald-700 p-3 text-center text-xs font-bold" style={{ width: '12%' }}>قيمة الإشراف</th>
+                          <th className="border border-emerald-700 p-3 text-center text-xs font-bold" style={{ width: '10%' }}>فجوة النطاق</th>
+                          <th className="border border-emerald-700 p-3 text-center text-xs font-bold" style={{ width: '12%' }}>تكلفة التصميم الحقيقية</th>
                           <th className="border border-emerald-700 p-3 text-center text-sm font-bold" style={{ width: '13%' }}>المجموع</th>
                           <th className="border border-emerald-700 p-3 text-center text-xs font-bold" style={{ width: '14%' }}>رابط العرض</th>
                         </tr>
@@ -561,6 +570,7 @@ export default function ConsultantEvaluationPage() {
                                   constructionCost={buildingCost}
                                   updateFinancialMutation={updateFinancialMutation}
                                   onTotalChange={() => {}}
+                                  designScopeGapCost={fin?.designScopeGapCost || 0}
                                 />
                               </Fragment>
                             );

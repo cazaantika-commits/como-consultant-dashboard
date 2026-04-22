@@ -1,6 +1,6 @@
 import { eq, and, inArray, or, like, desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, projects, InsertProject, consultants, InsertConsultant, projectConsultants, InsertProjectConsultant, financialData, InsertFinancialData, evaluationScores, InsertEvaluationScore, evaluatorScores, InsertEvaluatorScore, committeeDecisions, InsertCommitteeDecision, consultantDetails, InsertConsultantDetail, aiAdvisoryScores, InsertAiAdvisoryScore } from "../drizzle/schema";
+import { InsertUser, users, projects, InsertProject, consultants, InsertConsultant, projectConsultants, InsertProjectConsultant, financialData, InsertFinancialData, evaluationScores, InsertEvaluationScore, evaluatorScores, InsertEvaluatorScore, committeeDecisions, InsertCommitteeDecision, consultantDetails, InsertConsultantDetail, aiAdvisoryScores, InsertAiAdvisoryScore, cpaProjects, cpaProjectConsultants, cpaEvaluationResults } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -220,7 +220,48 @@ export async function removeConsultantFromProject(projectId: number, consultantI
 export async function getProjectFinancialData(projectId: number) {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(financialData).where(eq(financialData.projectId, projectId));
+
+  // Get base financial data
+  const baseData = await db.select().from(financialData).where(eq(financialData.projectId, projectId));
+
+  // Try to enrich with design_scope_gap_cost from CPA evaluation results
+  try {
+    // Find the matching cpa_project
+    const cpaProject = await db.select({ id: cpaProjects.id })
+      .from(cpaProjects)
+      .where(eq(cpaProjects.projectId, projectId))
+      .limit(1);
+
+    if (cpaProject.length > 0) {
+      const cpaProjectId = cpaProject[0].id;
+
+      // Get design_scope_gap_cost for each consultant from CPA
+      const gapResults = await db
+        .select({
+          consultantId: cpaProjectConsultants.consultantId,
+          designScopeGapCost: cpaEvaluationResults.designScopeGapCost,
+        })
+        .from(cpaEvaluationResults)
+        .innerJoin(cpaProjectConsultants, eq(cpaEvaluationResults.projectConsultantId, cpaProjectConsultants.id))
+        .where(eq(cpaProjectConsultants.cpaProjectId, cpaProjectId));
+
+      // Build a map: consultantId -> designScopeGapCost
+      const gapMap = new Map<number, number>();
+      for (const row of gapResults) {
+        gapMap.set(row.consultantId, Number(row.designScopeGapCost) || 0);
+      }
+
+      // Attach designScopeGapCost to each financial record
+      return baseData.map((fd) => ({
+        ...fd,
+        designScopeGapCost: gapMap.get(fd.consultantId) || 0,
+      }));
+    }
+  } catch (e) {
+    // If CPA data not available, return base data without gap
+  }
+
+  return baseData.map((fd) => ({ ...fd, designScopeGapCost: 0 }));
 }
 
 export async function upsertFinancialData(projectId: number, consultantId: number, data: Partial<InsertFinancialData>) {
