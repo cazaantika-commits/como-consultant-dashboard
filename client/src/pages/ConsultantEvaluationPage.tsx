@@ -40,7 +40,8 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
   const sv = parseFloat(supervisionValue) || 0;
   const designAmount = designType === 'pct' ? constructionCost * (dv / 100) : dv;
   const supervisionAmount = supervisionType === 'pct' ? constructionCost * (sv / 100) : sv;
-  const total = designAmount + supervisionAmount;
+  const gapCost = Number(fin?.designScopeGapCost || 0);
+  const total = designAmount + gapCost + supervisionAmount;
 
   const totalRef = useRef(total);
   useEffect(() => {
@@ -125,6 +126,7 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
       </td>
       <td className="border border-slate-200 p-4 text-center font-bold text-lg bg-gradient-to-l from-emerald-50 to-white text-emerald-700" style={{ minWidth: '160px' }}>
         {total.toLocaleString()} AED
+        {gapCost > 0 && <p className="text-xs text-orange-500 font-normal mt-1">يشمل فجوة {gapCost.toLocaleString()}</p>}
       </td>
       <td className="border border-slate-200 p-2">
         <div className="flex items-center gap-1">
@@ -326,7 +328,8 @@ export default function ConsultantEvaluationPage() {
         const sv = parseFloat(String(fin.supervisionValue)) || 0;
         const designAmount = fin.designType === 'pct' ? buildingCost * (dv / 100) : dv;
         const supervisionAmount = fin.supervisionType === 'pct' ? buildingCost * (sv / 100) : sv;
-        totals[consultant.id] = designAmount + supervisionAmount;
+        const gapCost = Number(fin.designScopeGapCost || 0);
+        totals[consultant.id] = designAmount + gapCost + supervisionAmount;
       }
     });
 

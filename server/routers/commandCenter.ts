@@ -1441,6 +1441,27 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       const fins = await db.select().from(financialData).where(eq(financialData.projectId, input.projectId));
       const consultantMap = Object.fromEntries(allConsultants.map(c => [c.id, c]));
       const constructionCost = (project.bua || 0) * (project.pricePerSqft || 0);
+
+      // Fetch CPA gap costs via raw SQL (avoids Drizzle ORM bug with project_id column)
+      const cpaGapMap = new Map<number, number>();
+      try {
+        const gapRows = await db.execute(sql`
+          SELECT cpc.consultant_id as consultantId, cer.design_scope_gap_cost as gapCost
+          FROM cpa_projects cp
+          JOIN cpa_project_consultants cpc ON cpc.cpa_project_id = cp.id
+          LEFT JOIN cpa_evaluation_results cer ON cer.project_consultant_id = cpc.id
+          WHERE cp.project_id = ${input.projectId}
+        `);
+        const gapArr = Array.isArray(gapRows) ? gapRows[0] : gapRows;
+        if (gapArr && (gapArr as any[]).length > 0) {
+          for (const row of gapArr as any[]) {
+            cpaGapMap.set(Number(row.consultantId), Number(row.gapCost) || 0);
+          }
+        }
+      } catch (e) {
+        console.warn('[CommandCenter] CPA gap fetch error:', e);
+      }
+
       const consultantData = pcs.map(pc => {
         const c = consultantMap[pc.consultantId];
         const fin = fins.find(f => f.consultantId === pc.consultantId);
@@ -1451,8 +1472,9 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
           designAmount = fin.designType === 'pct' ? constructionCost * (dVal / 100) : dVal;
           supervisionAmount = fin.supervisionType === 'pct' ? constructionCost * (sVal / 100) : sVal;
         }
-        const totalFees = Number(designAmount) + Number(supervisionAmount);
-        return { id: c?.id || pc.consultantId, name: c?.name || '\u063a\u064a\u0631 \u0645\u0639\u0631\u0648\u0641', designType: fin?.designType || 'pct', designValue: Number(fin?.designValue) || 0, supervisionType: fin?.supervisionType || 'pct', supervisionValue: Number(fin?.supervisionValue) || 0, designAmount: Number(designAmount), supervisionAmount: Number(supervisionAmount), totalFees: Number(totalFees), proposalLink: (fin as any)?.proposalLink || null, financialScore: 0 as number };
+        const gapCost = cpaGapMap.get(pc.consultantId) || 0;
+        const totalFees = Number(designAmount) + Number(gapCost) + Number(supervisionAmount);
+        return { id: c?.id || pc.consultantId, name: c?.name || '\u063a\u064a\u0631 \u0645\u0639\u0631\u0648\u0641', designType: fin?.designType || 'pct', designValue: Number(fin?.designValue) || 0, supervisionType: fin?.supervisionType || 'pct', supervisionValue: Number(fin?.supervisionValue) || 0, designAmount: Number(designAmount), supervisionAmount: Number(supervisionAmount), designScopeGapCost: Number(gapCost), totalFees: Number(totalFees), proposalLink: (fin as any)?.proposalLink || null, financialScore: 0 as number };
       });
       const sortedByFees = [...consultantData].filter(c => c.totalFees > 0).sort((a, b) => a.totalFees - b.totalFees);
       const lowestFee = sortedByFees[0]?.totalFees || 1;
@@ -1581,6 +1603,27 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       });
       if (!allComplete) return { isReady: false, project: { id: project.id, name: project.name } };
       const constructionCost = (project.bua || 0) * (project.pricePerSqft || 0);
+
+      // Fetch CPA gap costs via raw SQL for comprehensive report
+      const comprehensiveGapMap = new Map<number, number>();
+      try {
+        const gapRows2 = await db.execute(sql`
+          SELECT cpc.consultant_id as consultantId, cer.design_scope_gap_cost as gapCost
+          FROM cpa_projects cp
+          JOIN cpa_project_consultants cpc ON cpc.cpa_project_id = cp.id
+          LEFT JOIN cpa_evaluation_results cer ON cer.project_consultant_id = cpc.id
+          WHERE cp.project_id = ${input.projectId}
+        `);
+        const gapArr2 = Array.isArray(gapRows2) ? gapRows2[0] : gapRows2;
+        if (gapArr2 && (gapArr2 as any[]).length > 0) {
+          for (const row of gapArr2 as any[]) {
+            comprehensiveGapMap.set(Number(row.consultantId), Number(row.gapCost) || 0);
+          }
+        }
+      } catch (e) {
+        console.warn('[CommandCenter] CPA gap fetch error (comprehensive):', e);
+      }
+
       const CRITERIA_WEIGHTS = [{ id: 0, weight: 14.6 }, { id: 1, weight: 14.6 }, { id: 3, weight: 13.6 }, { id: 4, weight: 10.7 }, { id: 5, weight: 9.7 }, { id: 6, weight: 9.7 }, { id: 7, weight: 9.7 }, { id: 8, weight: 9.2 }, { id: 9, weight: 8.2 }];
       const results = pcs.map(pc => {
         const c = consultantMap[pc.consultantId];
@@ -1592,7 +1635,8 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
           designAmount = fin.designType === 'pct' ? constructionCost * (dVal / 100) : dVal;
           supervisionAmount = fin.supervisionType === 'pct' ? constructionCost * (sVal / 100) : sVal;
         }
-        const totalFees = Number(designAmount) + Number(supervisionAmount);
+        const gapCostComp = comprehensiveGapMap.get(pc.consultantId) || 0;
+        const totalFees = Number(designAmount) + Number(gapCostComp) + Number(supervisionAmount);
         const consScores = allScores.filter(s => s.consultantId === pc.consultantId);
         let technicalWeighted = 0;
         CRITERIA_WEIGHTS.forEach(cw => {
