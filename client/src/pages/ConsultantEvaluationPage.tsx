@@ -169,7 +169,7 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
           <p className="text-[10px] text-purple-400 mt-1 text-center">CPA: {Number(fin.cpaSupervisionGap).toLocaleString()}</p>
         )}
       </td>
-      <td className="border border-slate-200 p-4 text-center font-bold text-lg bg-gradient-to-l from-emerald-50 to-white text-emerald-700" style={{ minWidth: '160px' }}>
+      <td className="border border-slate-200 p-2 text-center font-bold text-base bg-gradient-to-l from-emerald-50 to-white text-emerald-700">
         {total.toLocaleString()} AED
         {(designGapCost + supervisionGapCost) > 0 && <p className="text-xs text-orange-500 font-normal mt-1">يشمل فجوة {(designGapCost + supervisionGapCost).toLocaleString()}</p>}
       </td>
@@ -452,8 +452,8 @@ export default function ConsultantEvaluationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50 to-teal-50 p-6" dir="rtl">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50 to-teal-50 p-4" dir="rtl">
+      <div className="w-full max-w-none">
         {/* Hero Header */}
         <div className="relative overflow-hidden rounded-3xl mb-8 shadow-2xl">
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700" />
@@ -589,19 +589,19 @@ export default function ConsultantEvaluationPage() {
                     )}
                   </div>
 
-                  <div className="overflow-x-auto border-2 border-slate-200 rounded-2xl shadow-lg">
-                    <table className="border-collapse w-max min-w-full">
+                  <div className="overflow-x-auto border-2 border-slate-200 rounded-2xl shadow-lg w-full">
+                    <table className="border-collapse w-full" style={{tableLayout:'fixed'}}>
                       <thead>
                         <tr className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white">
-                          <th className="border border-emerald-700 p-3 text-right text-sm font-bold" style={{ width: '13%' }}>الاستشاري</th>
-                          <th className="border border-emerald-700 p-3 text-center text-xs font-bold" style={{ width: '8%' }}>نوع التصميم</th>
-                          <th className="border border-emerald-700 p-3 text-center text-xs font-bold" style={{ width: '12%' }}>قيمة التصميم</th>
-                          <th className="border border-emerald-700 p-3 text-center text-xs font-bold" style={{ width: '8%' }}>نوع الإشراف</th>
-                          <th className="border border-emerald-700 p-3 text-center text-xs font-bold" style={{ width: '12%' }}>قيمة الإشراف</th>
-                          <th className="border border-emerald-700 p-3 text-center text-xs font-bold" style={{ width: '9%' }}>فجوة التصميم</th>
-                          <th className="border border-emerald-700 p-3 text-center text-xs font-bold" style={{ width: '9%' }}>فجوة الإشراف</th>
-                          <th className="border border-emerald-700 p-3 text-center text-sm font-bold" style={{ width: '13%' }}>المجموع</th>
-                          <th className="border border-emerald-700 p-3 text-center text-xs font-bold" style={{ width: '14%' }}>رابط العرض</th>
+                          <th className="border border-emerald-700 p-3 text-right text-sm font-bold" style={{ width: '16%' }}>الاستشاري</th>
+                          <th className="border border-emerald-700 p-2 text-center text-xs font-bold" style={{ width: '7%' }}>نوع تصميم</th>
+                          <th className="border border-emerald-700 p-2 text-center text-xs font-bold" style={{ width: '10%' }}>قيمة التصميم</th>
+                          <th className="border border-emerald-700 p-2 text-center text-xs font-bold" style={{ width: '7%' }}>نوع إشراف</th>
+                          <th className="border border-emerald-700 p-2 text-center text-xs font-bold" style={{ width: '10%' }}>قيمة الإشراف</th>
+                          <th className="border border-emerald-700 p-2 text-center text-xs font-bold bg-orange-700" style={{ width: '10%' }}>فجوة تصميم</th>
+                          <th className="border border-emerald-700 p-2 text-center text-xs font-bold bg-purple-700" style={{ width: '10%' }}>فجوة إشراف</th>
+                          <th className="border border-emerald-700 p-2 text-center text-sm font-bold bg-emerald-800" style={{ width: '14%' }}>المجموع</th>
+                          <th className="border border-emerald-700 p-2 text-center text-xs font-bold" style={{ width: '16%' }}>رابط العرض</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white">
