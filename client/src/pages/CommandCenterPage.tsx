@@ -2444,7 +2444,7 @@ function NewsTicker({ token }: { token: string }) {
 function EvaluationView({ token, memberRole, memberId }: { token: string; memberRole: string; memberId: string }) {
   const projectsQuery = trpc.commandCenter.getProjectsForEvaluation.useQuery({ token });
   const [selectedProject, setSelectedProject] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'financial' | 'technical' | 'committee' | 'value' | null>(null);
+  const [activeTab, setActiveTab] = useState<'financial' | 'technical' | 'committee' | 'value' | 'scope' | null>(null);
   const [showCreateSession, setShowCreateSession] = useState(false);
   const [sessionTitle, setSessionTitle] = useState('');
   const [sessionConsultantId, setSessionConsultantId] = useState<number | null>(null);
@@ -2465,6 +2465,9 @@ function EvaluationView({ token, memberRole, memberId }: { token: string; member
   }
   if (selectedProject && activeTab === 'committee') {
     return <CommitteeDecisionView token={token} projectId={selectedProject} memberId={memberId} onBack={() => setActiveTab(null)} />;
+  }
+  if (selectedProject && activeTab === 'scope') {
+    return <DesignScopeReportView token={token} projectId={selectedProject} onBack={() => setActiveTab(null)} />;
   }
 
   if (selectedProject) {
@@ -2519,7 +2522,7 @@ function EvaluationView({ token, memberRole, memberId }: { token: string; member
             </div>
           </div>
         )}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           {/* التقييم المالي */}
           <button onClick={() => setActiveTab('financial')} className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 p-6 text-white shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] text-right">
             <div className="absolute top-3 left-3 opacity-20 group-hover:opacity-30 transition-opacity">
@@ -2594,6 +2597,20 @@ function EvaluationView({ token, memberRole, memberId }: { token: string; member
               <h3 className="text-lg font-bold mb-1">قرار اللجنة</h3>
               <p className="text-purple-100 text-sm">التقرير الشامل + التحليل الذكي</p>
               {project?.isDecisionConfirmed && <Badge className="mt-2 bg-white/20 text-white border-0">مؤكد ✅</Badge>}
+            </div>
+          </button>
+
+          {/* تقرير نطاق التصاميم */}
+          <button onClick={() => setActiveTab('scope')} className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-cyan-600 p-6 text-white shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] text-right">
+            <div className="absolute top-3 left-3 opacity-20 group-hover:opacity-30 transition-opacity">
+              <ClipboardList className="w-16 h-16" />
+            </div>
+            <div className="relative z-10">
+              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center mb-4">
+                <ClipboardList className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold mb-1">تقرير نطاق التصاميم</h3>
+              <p className="text-indigo-100 text-sm">مقارنة نطاق الاستشاريين</p>
             </div>
           </button>
         </div>
@@ -3516,6 +3533,106 @@ function ValueAnalysisView({ token, projectId, onBack }: { token: string; projec
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ═══ Design Scope Report View ═══
+function DesignScopeReportView({ token, projectId, onBack }: { token: string; projectId: number; onBack: () => void }) {
+  const { data, isLoading, error } = trpc.commandCenter.getDesignScopeReport.useQuery({ token, projectId });
+  const fmt = (n: number) => n > 0 ? n.toLocaleString('ar-AE', { maximumFractionDigits: 0 }) + ' د.إ' : '—';
+
+  if (isLoading) return (
+    <div className="flex items-center justify-center py-20">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
+    </div>
+  );
+  if (error) return <div className="p-6 text-center text-red-500">{error.message}</div>;
+
+  const scopeItems = data?.scopeItems || [];
+  const consultants = data?.consultants || [];
+  const coverage = data?.coverage || {};
+  const designFees = data?.designFees || {};
+  const designGaps = data?.designGaps || {};
+
+  return (
+    <div className="space-y-4" dir="rtl">
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500">
+          <ArrowLeft className="w-4 h-4 ml-1" /> العودة
+        </Button>
+        <h2 className="text-xl font-bold text-slate-800">تقرير نطاق التصاميم</h2>
+        {scopeItems.length > 0 && <span className="text-sm text-slate-500">({scopeItems.length} بند)</span>}
+      </div>
+
+      {consultants.length === 0 ? (
+        <div className="text-center py-16 text-slate-400">
+          <ClipboardList className="w-12 h-12 mx-auto mb-3 opacity-30" />
+          <p>لا يوجد استشاريون مرتبطون بهذا المشروع</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm" style={{ direction: 'rtl' }}>
+              <thead>
+                <tr className="bg-gradient-to-r from-indigo-600 to-cyan-600 text-white">
+                  <th className="px-4 py-3 text-right font-semibold sticky right-0 bg-indigo-600 z-10" style={{ minWidth: '220px' }}>نطاق التصاميم</th>
+                  {consultants.map((c: any) => (
+                    <th key={c.id} className="px-4 py-3 text-center font-semibold" style={{ minWidth: '140px' }}>{c.name}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {scopeItems.map((item: any, idx: number) => (
+                  <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'}>
+                    <td className="px-4 py-2.5 text-right font-medium text-slate-700 sticky right-0 bg-inherit border-l border-slate-100">
+                      <span className="text-slate-400 text-xs ml-2">{item.itemNumber}.</span>
+                      {item.label}
+                    </td>
+                    {consultants.map((c: any) => {
+                      const val = (coverage as any)[c.id]?.[item.id];
+                      const isIncluded = val === 'INCLUDED';
+                      const gapCost = typeof val === 'number' ? val : 0;
+                      return (
+                        <td key={c.id} className="px-4 py-2.5 text-center">
+                          {isIncluded ? (
+                            <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-emerald-100 text-emerald-600 font-bold">✓</span>
+                          ) : gapCost > 0 ? (
+                            <span className="text-red-500 font-medium text-xs">{gapCost.toLocaleString('ar-AE', { maximumFractionDigits: 0 })}</span>
+                          ) : (
+                            <span className="text-slate-300 text-xs">—</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+                <tr><td colSpan={consultants.length + 1} className="h-px bg-indigo-200" /></tr>
+                <tr className="bg-red-50">
+                  <td className="px-4 py-3 text-right font-bold text-red-700 sticky right-0 bg-red-50 border-l border-slate-100">فجوة النطاق</td>
+                  {consultants.map((c: any) => (
+                    <td key={c.id} className="px-4 py-3 text-center font-bold text-red-600">{fmt((designGaps as any)[c.id] || 0)}</td>
+                  ))}
+                </tr>
+                <tr className="bg-slate-50">
+                  <td className="px-4 py-3 text-right font-bold text-slate-700 sticky right-0 bg-slate-50 border-l border-slate-100">أتعاب التصميم</td>
+                  {consultants.map((c: any) => (
+                    <td key={c.id} className="px-4 py-3 text-center font-semibold text-slate-700">{fmt((designFees as any)[c.id] || 0)}</td>
+                  ))}
+                </tr>
+                <tr className="bg-amber-50">
+                  <td className="px-4 py-3 text-right font-bold text-amber-800 sticky right-0 bg-amber-50 border-l border-slate-100">المجموع الكلي</td>
+                  {consultants.map((c: any) => {
+                    const total = ((designFees as any)[c.id] || 0) + ((designGaps as any)[c.id] || 0);
+                    return <td key={c.id} className="px-4 py-3 text-center font-bold text-amber-700">{fmt(total)}</td>;
+                  })}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+      <p className="text-xs text-slate-400 text-center">✓ = مشمول في العرض • الأرقام = تكلفة الفجوة بالدرهم الإماراتي</p>
     </div>
   );
 }

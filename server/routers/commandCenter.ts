@@ -1804,4 +1804,128 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
 
       return { sent };
     }),
+
+  getDesignScopeReport: publicProcedure
+    .input(z.object({ token: z.string(), projectId: z.number() }))
+    .query(async ({ input }) => {
+      await verifyToken(input.token);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+
+      const cpaProjectRows = await db.execute(sql`SELECT id, building_category_id FROM cpa_projects WHERE project_id = ${input.projectId} LIMIT 1`);
+      const cpaProjectArr = Array.isArray(cpaProjectRows) ? (cpaProjectRows[0] as any[]) : (cpaProjectRows as any[]);
+      if (!cpaProjectArr || cpaProjectArr.length === 0) {
+        return { scopeItems: [], consultants: [], coverage: {}, designFees: {}, designGaps: {} };
+      }
+      const cpaProjectId = Number(cpaProjectArr[0].id);
+      const buildingCategoryId = cpaProjectArr[0].building_category_id;
+
+      const { runCalculationEngine } = await import('./cpa');
+      await runCalculationEngine(cpaProjectId).catch(() => {});
+
+      const scopeRows = await db.execute(sql`
+        SELECT si.id, si.code, si.label, si.sort_order, si.item_number,
+               COALESCE(src.cost_aed, 0) as reference_cost
+        FROM cpa_scope_items si
+        JOIN cpa_scope_category_matrix scm ON scm.scope_item_id = si.id AND scm.building_category_id = ${buildingCategoryId}
+        LEFT JOIN cpa_scope_reference_costs src ON src.scope_item_id = si.id AND src.building_category_id = ${buildingCategoryId}
+        WHERE si.is_active = 1 AND scm.status = 'INCLUDED'
+        ORDER BY si.sort_order ASC, si.item_number ASC
+      `);
+      const scopeArr = Array.isArray(scopeRows) ? (scopeRows[0] as any[]) : (scopeRows as any[]);
+
+      const consultantRows = await db.execute(sql`
+        SELECT pc.id as pc_id, pc.consultant_id, c.name as consultant_name, pc.design_fee_amount
+        FROM cpa_project_consultants pc
+        JOIN consultants c ON c.id = pc.consultant_id
+        WHERE pc.cpa_project_id = ${cpaProjectId}
+        ORDER BY c.name ASC
+      `);
+      const consultantArr = Array.isArray(consultantRows) ? (consultantRows[0] as any[]) : (consultantRows as any[]);
+
+      const coverageRows = await db.execute(sql`
+        SELECT csc.project_consultant_id, csc.scope_item_id, csc.coverage_status
+        FROM cpa_consultant_scope_coverage csc
+        JOIN cpa_project_consultants pc ON pc.id = csc.project_consultant_id
+        WHERE pc.cpa_project_id = ${cpaProjectId}
+      `);
+      const coverageArr = Array.isArray(coverageRows) ? (coverageRows[0] as any[]) : (coverageRows as any[]);
+
+      const financialRows = await db.execute(sql`
+        SELECT fd.consultant_id, fd.design_amount, fd.design_gap_override
+        FROM financial_data fd WHERE fd.project_id = ${input.projectId}
+      `);
+      const financialArr = Array.isArray(financialRows) ? (financialRows[0] as any[]) : (financialRows as any[]);
+
+      const evalRows = await db.execute(sql`
+        SELECT pc.consultant_id, er.design_scope_gap_cost
+        FROM cpa_evaluation_results er
+        JOIN cpa_project_consultants pc ON pc.id = er.project_consultant_id
+        WHERE pc.cpa_project_id = ${cpaProjectId}
+      `);
+      const evalArr = Array.isArray(evalRows) ? (evalRows[0] as any[]) : (evalRows as any[]);
+
+      const financialMap: Record<number, { designAmount: number; designGapOverride: number | null }> = {};
+      for (const row of (financialArr || [])) {
+        financialMap[Number(row.consultant_id)] = {
+          designAmount: Number(row.design_amount) || 0,
+          designGapOverride: row.design_gap_override != null ? Number(row.design_gap_override) : null,
+        };
+      }
+      const evalMap: Record<number, number> = {};
+      for (const row of (evalArr || [])) {
+        evalMap[Number(row.consultant_id)] = Number(row.design_scope_gap_cost) || 0;
+      }
+
+      const coverageMap: Record<number, Record<number, string>> = {};
+      for (const row of (coverageArr || [])) {
+        const pcId = Number(row.project_consultant_id);
+        const siId = Number(row.scope_item_id);
+        if (!coverageMap[pcId]) coverageMap[pcId] = {};
+        coverageMap[pcId][siId] = row.coverage_status;
+      }
+
+      const refCostMap: Record<number, number> = {};
+      for (const item of (scopeArr || [])) {
+        refCostMap[Number(item.id)] = Number(item.reference_cost) || 0;
+      }
+
+      const coverageResult: Record<number, Record<number, string | number>> = {};
+      const designFees: Record<number, number> = {};
+      const designGaps: Record<number, number> = {};
+
+      for (const c of (consultantArr || [])) {
+        const consultantId = Number(c.consultant_id);
+        const pcId = Number(c.pc_id);
+        coverageResult[consultantId] = {};
+        const pcCoverage = coverageMap[pcId] || {};
+        for (const item of (scopeArr || [])) {
+          const siId = Number(item.id);
+          const status = pcCoverage[siId] || 'NOT_MENTIONED';
+          coverageResult[consultantId][siId] = status === 'INCLUDED' ? 'INCLUDED' : (refCostMap[siId] || 0);
+        }
+        const fin = financialMap[consultantId];
+        designFees[consultantId] = fin ? fin.designAmount : (Number(c.design_fee_amount) || 0);
+        const gapOverride = fin?.designGapOverride;
+        designGaps[consultantId] = gapOverride != null ? gapOverride : (evalMap[consultantId] || 0);
+      }
+
+      return {
+        scopeItems: (scopeArr || []).map((item: any) => ({
+          id: Number(item.id),
+          code: item.code,
+          label: item.label,
+          itemNumber: Number(item.item_number),
+          referenceCost: Number(item.reference_cost) || 0,
+        })),
+        consultants: (consultantArr || []).map((c: any) => ({
+          id: Number(c.consultant_id),
+          pcId: Number(c.pc_id),
+          name: c.consultant_name,
+        })),
+        coverage: coverageResult,
+        designFees,
+        designGaps,
+      };
+    }),
 });
