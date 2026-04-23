@@ -1851,11 +1851,7 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       `);
       const coverageArr = Array.isArray(coverageRows) ? (coverageRows[0] as any[]) : (coverageRows as any[]);
 
-      const financialRows = await db.execute(sql`
-        SELECT fd.consultant_id, fd.design_amount, fd.design_gap_override
-        FROM financial_data fd WHERE fd.project_id = ${input.projectId}
-      `);
-      const financialArr = Array.isArray(financialRows) ? (financialRows[0] as any[]) : (financialRows as any[]);
+      const fins = await db.select().from(financialData).where(eq(financialData.projectId, input.projectId));
 
       const evalRows = await db.execute(sql`
         SELECT pc.consultant_id, er.design_scope_gap_cost
@@ -1865,11 +1861,16 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       `);
       const evalArr = Array.isArray(evalRows) ? (evalRows[0] as any[]) : (evalRows as any[]);
 
+      // Build financial map using Drizzle ORM result (correct column names)
+      const project2 = await db.select().from(projects).where(eq(projects.id, input.projectId)).then(r => r[0]);
+      const constructionCost2 = (Number(project2?.bua) || 0) * (Number(project2?.pricePerSqft) || 0);
       const financialMap: Record<number, { designAmount: number; designGapOverride: number | null }> = {};
-      for (const row of (financialArr || [])) {
-        financialMap[Number(row.consultant_id)] = {
-          designAmount: Number(row.design_amount) || 0,
-          designGapOverride: row.design_gap_override != null ? Number(row.design_gap_override) : null,
+      for (const fin of fins) {
+        const dVal = Number(fin.designValue) || 0;
+        const designAmount = fin.designType === 'pct' ? constructionCost2 * (dVal / 100) : dVal;
+        financialMap[Number(fin.consultantId)] = {
+          designAmount,
+          designGapOverride: fin.designGapOverride != null ? Number(fin.designGapOverride) : null,
         };
       }
       const evalMap: Record<number, number> = {};
