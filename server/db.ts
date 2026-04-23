@@ -238,6 +238,7 @@ export async function getProjectFinancialData(projectId: number) {
       SELECT 
         cpc.consultant_id as consultantId,
         cer.design_scope_gap_cost as designScopeGapCost,
+        cer.supervision_gap_cost as supervisionScopeGapCost,
         cer.true_design_fee as trueDesignFee
       FROM cpa_projects cp
       JOIN cpa_project_consultants cpc ON cpc.cpa_project_id = cp.id
@@ -247,19 +248,21 @@ export async function getProjectFinancialData(projectId: number) {
 
     const rows = Array.isArray(gapResults) ? gapResults[0] : gapResults;
     if (rows && (rows as any[]).length > 0) {
-      // Build a map: consultantId -> { designScopeGapCost, trueDesignFee }
-      const gapMap = new Map<number, { gap: number; trueFee: number }>();
+      // Build a map: consultantId -> { designScopeGapCost, supervisionScopeGapCost, trueDesignFee }
+      const gapMap = new Map<number, { gap: number; supervisionGap: number; trueFee: number }>();
       for (const row of rows as any[]) {
         gapMap.set(Number(row.consultantId), {
           gap: Number(row.designScopeGapCost) || 0,
+          supervisionGap: Number(row.supervisionScopeGapCost) || 0,
           trueFee: Number(row.trueDesignFee) || 0,
         });
       }
 
-      // Attach designScopeGapCost to each financial record
+      // Attach both gap costs to each financial record
       return baseData.map((fd) => ({
         ...fd,
         designScopeGapCost: gapMap.get(fd.consultantId)?.gap || 0,
+        supervisionScopeGapCost: gapMap.get(fd.consultantId)?.supervisionGap || 0,
         trueDesignFee: gapMap.get(fd.consultantId)?.trueFee || 0,
       }));
     }
@@ -267,7 +270,7 @@ export async function getProjectFinancialData(projectId: number) {
     console.error('[getProjectFinancialData] CPA gap fetch error:', e);
   }
 
-  return baseData.map((fd) => ({ ...fd, designScopeGapCost: 0 }));
+  return baseData.map((fd) => ({ ...fd, designScopeGapCost: 0, supervisionScopeGapCost: 0 }));
 }
 
 export async function upsertFinancialData(projectId: number, consultantId: number, data: Partial<InsertFinancialData>) {

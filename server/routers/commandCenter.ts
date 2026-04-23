@@ -1444,6 +1444,7 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
 
       // Fetch CPA gap costs via raw SQL (avoids Drizzle ORM bug with project_id column)
       const cpaGapMap = new Map<number, number>();
+      const cpaSupervisionGapMap = new Map<number, number>();
       try {
         // Auto-trigger recalculation so any settings change reflects immediately
         const cpaProjectRows = await db.execute(sql`SELECT id FROM cpa_projects WHERE project_id = ${input.projectId} LIMIT 1`);
@@ -1454,7 +1455,9 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
           await runCalculationEngine(cpaProjectId).catch(() => {});
         }
         const gapRows = await db.execute(sql`
-          SELECT cpc.consultant_id as consultantId, cer.design_scope_gap_cost as gapCost
+          SELECT cpc.consultant_id as consultantId,
+                 cer.design_scope_gap_cost as designGapCost,
+                 cer.supervision_gap_cost as supervisionGapCost
           FROM cpa_projects cp
           JOIN cpa_project_consultants cpc ON cpc.cpa_project_id = cp.id
           LEFT JOIN cpa_evaluation_results cer ON cer.project_consultant_id = cpc.id
@@ -1463,7 +1466,8 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
         const gapArr = Array.isArray(gapRows) ? gapRows[0] : gapRows;
         if (gapArr && (gapArr as any[]).length > 0) {
           for (const row of gapArr as any[]) {
-            cpaGapMap.set(Number(row.consultantId), Number(row.gapCost) || 0);
+            cpaGapMap.set(Number(row.consultantId), Number(row.designGapCost) || 0);
+            cpaSupervisionGapMap.set(Number(row.consultantId), Number(row.supervisionGapCost) || 0);
           }
         }
       } catch (e) {
@@ -1480,9 +1484,10 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
           designAmount = fin.designType === 'pct' ? constructionCost * (dVal / 100) : dVal;
           supervisionAmount = fin.supervisionType === 'pct' ? constructionCost * (sVal / 100) : sVal;
         }
-        const gapCost = cpaGapMap.get(pc.consultantId) || 0;
-        const totalFees = Number(designAmount) + Number(gapCost) + Number(supervisionAmount);
-        return { id: c?.id || pc.consultantId, name: c?.name || '\u063a\u064a\u0631 \u0645\u0639\u0631\u0648\u0641', designType: fin?.designType || 'pct', designValue: Number(fin?.designValue) || 0, supervisionType: fin?.supervisionType || 'pct', supervisionValue: Number(fin?.supervisionValue) || 0, designAmount: Number(designAmount), supervisionAmount: Number(supervisionAmount), designScopeGapCost: Number(gapCost), totalFees: Number(totalFees), proposalLink: (fin as any)?.proposalLink || null, financialScore: 0 as number };
+            const designGapCost = cpaGapMap.get(pc.consultantId) || 0;
+        const supervisionGapCost = cpaSupervisionGapMap.get(pc.consultantId) || 0;
+        const totalFees = Number(designAmount) + Number(designGapCost) + Number(supervisionAmount) + Number(supervisionGapCost);
+        return { id: c?.id || pc.consultantId, name: c?.name || 'غير معروف', designType: fin?.designType || 'pct', designValue: Number(fin?.designValue) || 0, supervisionType: fin?.supervisionType || 'pct', supervisionValue: Number(fin?.supervisionValue) || 0, designAmount: Number(designAmount), supervisionAmount: Number(supervisionAmount), designScopeGapCost: Number(designGapCost), supervisionScopeGapCost: Number(supervisionGapCost), totalFees: Number(totalFees), proposalLink: (fin as any)?.proposalLink || null, financialScore: 0 as number };
       });
       const sortedByFees = [...consultantData].filter(c => c.totalFees > 0).sort((a, b) => a.totalFees - b.totalFees);
       const lowestFee = sortedByFees[0]?.totalFees || 1;

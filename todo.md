@@ -657,3 +657,6 @@
 
 - [ ] Refactor consultant fee analysis to compute all values live from settings (no stored pre-calculated values)
 - [ ] Verify: changing any setting immediately reflects in the analysis without pressing "Calculate"
+- [ ] Add design gap column (فجوة التصميم) in مركز القيادة financial evaluation table
+- [ ] Add supervision gap column (فجوة الإشراف) in مركز القيادة financial evaluation table
+- [ ] Update backend getProjectFinancialEvaluation to return designScopeGapCost and supervisionScopeGapCost separately
