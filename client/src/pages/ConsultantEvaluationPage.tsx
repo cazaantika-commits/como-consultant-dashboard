@@ -102,12 +102,14 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
 
       {/* === DESIGN GROUP === */}
       {/* Design type */}
-      <td className="border border-slate-200 p-1 text-center bg-blue-50" style={{width:'4%'}}>
+      <td className="border border-slate-200 p-0 text-center bg-blue-50" style={{width:'5%'}}>
         <Select value={designType} onValueChange={(v: any) => {
           setDesignType(v);
           doSave({ designType: v });
         }}>
-          <SelectTrigger className="w-full bg-white border-blue-300 text-xs"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full h-8 bg-white border-blue-300 text-[11px] font-bold px-1 [&>svg]:hidden justify-center">
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="pct">%</SelectItem>
             <SelectItem value="lump">مبلغ</SelectItem>
@@ -149,12 +151,14 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
 
       {/* === SUPERVISION GROUP === */}
       {/* Supervision type */}
-      <td className="border border-slate-200 p-1 text-center bg-teal-50" style={{width:'4%'}}>
+      <td className="border border-slate-200 p-0 text-center bg-teal-50" style={{width:'5%'}}>
         <Select value={supervisionType} onValueChange={(v: any) => {
           setSupervisionType(v);
           doSave({ supervisionType: v });
         }}>
-          <SelectTrigger className="w-full bg-white border-teal-300 text-xs"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full h-8 bg-white border-teal-300 text-[11px] font-bold px-1 [&>svg]:hidden justify-center">
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="pct">%</SelectItem>
             <SelectItem value="lump">مبلغ</SelectItem>
@@ -629,11 +633,11 @@ export default function ConsultantEvaluationPage() {
                           <th className="border border-emerald-600 p-2" rowSpan={2} style={{ width: '9%' }}>رابط العرض</th>
                         </tr>
                         <tr className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white text-center text-xs font-bold">
-                          <th className="border border-emerald-700 p-1 bg-blue-600" style={{ width: '4%' }}>نوع</th>
+                          <th className="border border-emerald-700 p-1 bg-blue-600" style={{ width: '5%' }}>نوع</th>
                           <th className="border border-emerald-700 p-2 bg-blue-600" style={{ width: '10%' }}>أتعاب التصميم</th>
                           <th className="border border-emerald-700 p-2 bg-orange-600" style={{ width: '9%' }}>فجوة التصميم</th>
                           <th className="border border-emerald-700 p-2 bg-blue-800" style={{ width: '9%' }}>مجموع التصميم</th>
-                          <th className="border border-emerald-700 p-1 bg-teal-600" style={{ width: '4%' }}>نوع</th>
+                          <th className="border border-emerald-700 p-1 bg-teal-600" style={{ width: '5%' }}>نوع</th>
                           <th className="border border-emerald-700 p-2 bg-teal-600" style={{ width: '10%' }}>أتعاب الإشراف</th>
                           <th className="border border-emerald-700 p-2 bg-purple-600" style={{ width: '9%' }}>فجوة الإشراف</th>
                           <th className="border border-emerald-700 p-2 bg-teal-800" style={{ width: '9%' }}>مجموع الإشراف</th>
