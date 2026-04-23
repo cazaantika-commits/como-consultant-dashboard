@@ -2709,22 +2709,34 @@ function FinancialEvaluationView({ token, projectId, onBack }: { token: string; 
       )}
 
       {/* Table Layout */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <table className="w-full">
+      <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
+        <table className="w-full min-w-[900px]">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="text-left py-2 px-3 text-[11px] font-semibold text-slate-600 uppercase tracking-wider w-[40%]">Consultant</th>
-              <th className="text-right py-2 px-3 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">Design</th>
-              <th className="text-right py-2 px-3 text-[11px] font-semibold text-orange-500 uppercase tracking-wider">فجوة تصميم</th>
-              <th className="text-right py-2 px-3 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">Supervision</th>
-              <th className="text-right py-2 px-3 text-[11px] font-semibold text-purple-500 uppercase tracking-wider">فجوة إشراف</th>
-              <th className="text-right py-2 px-3 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">Total (AED)</th>
-              <th className="text-center py-2 px-3 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">vs Avg</th>
-              <th className="text-center py-2 px-3 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">Score</th>
+            {/* Group header row */}
+            <tr className="bg-slate-100 border-b border-slate-200 text-center text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+              <th className="py-2 px-3 text-left" rowSpan={2} style={{width:'22%'}}>CONSULTANT</th>
+              <th className="py-2 px-2 bg-blue-50 text-blue-700 border-x border-blue-200" colSpan={3}>DESIGN</th>
+              <th className="py-2 px-2 bg-teal-50 text-teal-700 border-x border-teal-200" colSpan={3}>SUPERVISION</th>
+              <th className="py-2 px-2 bg-emerald-50 text-emerald-700" rowSpan={2} style={{width:'10%'}}>TOTAL (AED)</th>
+              <th className="py-2 px-2" rowSpan={2} style={{width:'7%'}}>VS AVG</th>
+              <th className="py-2 px-2" rowSpan={2} style={{width:'7%'}}>SCORE</th>
+            </tr>
+            <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-semibold uppercase tracking-wider">
+              <th className="py-2 px-2 text-right text-blue-600 bg-blue-50" style={{width:'9%'}}>أتعاب</th>
+              <th className="py-2 px-2 text-right text-orange-500 bg-orange-50" style={{width:'9%'}}>فجوة</th>
+              <th className="py-2 px-2 text-right text-blue-800 bg-blue-100" style={{width:'9%'}}>مجموع</th>
+              <th className="py-2 px-2 text-right text-teal-600 bg-teal-50" style={{width:'9%'}}>أتعاب</th>
+              <th className="py-2 px-2 text-right text-purple-500 bg-purple-50" style={{width:'9%'}}>فجوة</th>
+              <th className="py-2 px-2 text-right text-teal-800 bg-teal-100" style={{width:'9%'}}>مجموع</th>
             </tr>
           </thead>
           <tbody>
-            {sorted.map((c, i) => (
+            {sorted.map((c, i) => {
+              const designGap = Number(c.designScopeGapCost) || 0;
+              const supervisionGap = Number(c.supervisionScopeGapCost) || 0;
+              const designTotal = (c.designAmount || 0) + designGap;
+              const supervisionTotal = (c.supervisionAmount || 0) + supervisionGap;
+              return (
               <tr key={c.id} className={`border-b border-slate-100 transition-colors ${
                 i === 0 ? 'bg-emerald-50/70' : 'hover:bg-slate-50/50'
               }`}>
@@ -2740,30 +2752,38 @@ function FinancialEvaluationView({ token, projectId, onBack }: { token: string; 
                     </div>
                   </div>
                 </td>
-                {/* Design */}
-                <td className="py-2 px-3 text-right">
-                  <p className="text-[13px] font-semibold text-slate-800">{c.designAmount?.toLocaleString()}</p>
+                {/* Design fees */}
+                <td className="py-2 px-2 text-right bg-blue-50/40">
+                  <p className="text-[12px] font-semibold text-slate-800">{c.designAmount?.toLocaleString()}</p>
                   <p className="text-[10px] text-slate-400">{feeTypeLabel(c.designType, c.designValue)}</p>
                 </td>
                 {/* Design Gap */}
-                <td className="py-2 px-3 text-right">
-                  {(c.designScopeGapCost || 0) > 0
-                    ? <p className="text-[12px] font-semibold text-orange-600">+{Number(c.designScopeGapCost).toLocaleString()}</p>
+                <td className="py-2 px-2 text-right bg-orange-50/40">
+                  {designGap > 0
+                    ? <p className="text-[12px] font-semibold text-orange-600">+{designGap.toLocaleString()}</p>
                     : <p className="text-[11px] text-slate-300">—</p>}
                 </td>
-                {/* Supervision */}
-                <td className="py-2 px-3 text-right">
-                  <p className="text-[13px] font-semibold text-slate-800">{c.supervisionAmount?.toLocaleString()}</p>
+                {/* Design Total */}
+                <td className="py-2 px-2 text-right bg-blue-100/60">
+                  <p className="text-[12px] font-bold text-blue-800">{designTotal.toLocaleString()}</p>
+                </td>
+                {/* Supervision fees */}
+                <td className="py-2 px-2 text-right bg-teal-50/40">
+                  <p className="text-[12px] font-semibold text-slate-800">{c.supervisionAmount?.toLocaleString()}</p>
                   <p className="text-[10px] text-slate-400">{feeTypeLabel(c.supervisionType, c.supervisionValue)}</p>
                 </td>
                 {/* Supervision Gap */}
-                <td className="py-2 px-3 text-right">
-                  {(c.supervisionScopeGapCost || 0) > 0
-                    ? <p className="text-[12px] font-semibold text-purple-600">+{Number(c.supervisionScopeGapCost).toLocaleString()}</p>
+                <td className="py-2 px-2 text-right bg-purple-50/40">
+                  {supervisionGap > 0
+                    ? <p className="text-[12px] font-semibold text-purple-600">+{supervisionGap.toLocaleString()}</p>
                     : <p className="text-[11px] text-slate-300">—</p>}
                 </td>
-                {/* Total */}
-                <td className="py-2 px-3 text-right">
+                {/* Supervision Total */}
+                <td className="py-2 px-2 text-right bg-teal-100/60">
+                  <p className="text-[12px] font-bold text-teal-800">{supervisionTotal.toLocaleString()}</p>
+                </td>
+                {/* Grand Total */}
+                <td className="py-2 px-3 text-right bg-emerald-50/60">
                   <p className="text-[13px] font-bold text-slate-900">{c.totalFees?.toLocaleString()}</p>
                 </td>
                 {/* vs Avg */}
@@ -2777,15 +2797,18 @@ function FinancialEvaluationView({ token, projectId, onBack }: { token: string; 
                   }`}>{c.financialScore}%</span>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
           <tfoot>
             <tr className="bg-slate-50">
               <td className="py-2 px-3 text-[11px] font-semibold text-slate-600">Average</td>
-              <td className="py-2 px-3" />
-              <td className="py-2 px-3" />
-              <td className="py-2 px-3" />
-              <td className="py-2 px-3" />
+              <td className="py-2 px-2" />
+              <td className="py-2 px-2" />
+              <td className="py-2 px-2" />
+              <td className="py-2 px-2" />
+              <td className="py-2 px-2" />
+              <td className="py-2 px-2" />
               <td className="py-2 px-3 text-right text-[13px] font-bold text-slate-700">{avgFees > 0 ? `${Math.round(avgFees).toLocaleString()}` : '—'}</td>
               <td className="py-2 px-3" />
               <td className="py-2 px-3" />

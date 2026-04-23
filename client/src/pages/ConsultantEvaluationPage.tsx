@@ -90,89 +90,117 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
     updateFinancialMutation.mutate(data);
   };
 
+  const designTotal = designAmount + designGapCost;
+  const supervisionTotal = supervisionAmount + supervisionGapCost;
+
   return (
     <tr className="border-b hover:bg-gradient-to-l hover:from-blue-50/30 hover:to-transparent transition-all duration-200">
+      {/* Consultant name */}
       <td className="border border-slate-200 p-3 font-semibold text-sm whitespace-normal leading-tight bg-gradient-to-l from-slate-50 to-white">
         {consultant.name}
       </td>
-      <td className="border border-slate-200 p-2 text-center">
+
+      {/* === DESIGN GROUP === */}
+      {/* Design type */}
+      <td className="border border-slate-200 p-2 text-center bg-blue-50">
         <Select value={designType} onValueChange={(v: any) => {
           setDesignType(v);
           doSave({ designType: v });
         }}>
-          <SelectTrigger className="w-full bg-white border-slate-300"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full bg-white border-blue-300 text-xs"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="pct">%</SelectItem>
             <SelectItem value="lump">مبلغ</SelectItem>
           </SelectContent>
         </Select>
       </td>
-      <td className="border border-slate-200 p-2">
+      {/* Design fees */}
+      <td className="border border-slate-200 p-2 bg-blue-50">
         <Input
           type="number"
           value={designValue}
           onChange={(e) => { editingRef.current = true; setDesignValue(e.target.value); }}
           onBlur={() => doSave()}
-          className="text-center bg-white border-slate-300"
+          className="text-center bg-white border-blue-300 text-xs"
         />
         {designType === 'pct' && constructionCost > 0 && (
-          <p className="text-xs text-slate-500 mt-1 text-center">{designAmount.toLocaleString()} AED</p>
+          <p className="text-[10px] text-blue-500 mt-1 text-center">{designAmount.toLocaleString()}</p>
         )}
       </td>
-      <td className="border border-slate-200 p-2 text-center">
-        <Select value={supervisionType} onValueChange={(v: any) => {
-          setSupervisionType(v);
-          doSave({ supervisionType: v });
-        }}>
-          <SelectTrigger className="w-full bg-white border-slate-300"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="pct">%</SelectItem>
-            <SelectItem value="lump">مبلغ</SelectItem>
-          </SelectContent>
-        </Select>
-      </td>
-      <td className="border border-slate-200 p-2">
-        <Input
-          type="number"
-          value={supervisionValue}
-          onChange={(e) => { editingRef.current = true; setSupervisionValue(e.target.value); }}
-          onBlur={() => doSave()}
-          className="text-center bg-white border-slate-300"
-        />
-        {supervisionType === 'pct' && constructionCost > 0 && (
-          <p className="text-xs text-slate-500 mt-1 text-center">{supervisionAmount.toLocaleString()} AED</p>
-        )}
-      </td>
+      {/* Design gap (editable) */}
       <td className="border border-slate-200 p-2 bg-orange-50">
         <Input
           type="number"
           value={designGapInput}
           onChange={(e) => { editingRef.current = true; setDesignGapInput(e.target.value); }}
           onBlur={() => doSave()}
-          className="text-center bg-orange-50 border-orange-300 text-orange-700 font-semibold"
+          className="text-center bg-orange-50 border-orange-300 text-orange-700 font-semibold text-xs"
           placeholder="0"
         />
         {fin?.cpaDesignGap > 0 && (
           <p className="text-[10px] text-orange-400 mt-1 text-center">CPA: {Number(fin.cpaDesignGap).toLocaleString()}</p>
         )}
       </td>
+      {/* Design total */}
+      <td className="border border-slate-200 p-2 text-center font-bold text-sm bg-blue-100 text-blue-800">
+        {designTotal.toLocaleString()}
+        <p className="text-[10px] font-normal text-blue-500">AED</p>
+      </td>
+
+      {/* === SUPERVISION GROUP === */}
+      {/* Supervision type */}
+      <td className="border border-slate-200 p-2 text-center bg-teal-50">
+        <Select value={supervisionType} onValueChange={(v: any) => {
+          setSupervisionType(v);
+          doSave({ supervisionType: v });
+        }}>
+          <SelectTrigger className="w-full bg-white border-teal-300 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="pct">%</SelectItem>
+            <SelectItem value="lump">مبلغ</SelectItem>
+          </SelectContent>
+        </Select>
+      </td>
+      {/* Supervision fees */}
+      <td className="border border-slate-200 p-2 bg-teal-50">
+        <Input
+          type="number"
+          value={supervisionValue}
+          onChange={(e) => { editingRef.current = true; setSupervisionValue(e.target.value); }}
+          onBlur={() => doSave()}
+          className="text-center bg-white border-teal-300 text-xs"
+        />
+        {supervisionType === 'pct' && constructionCost > 0 && (
+          <p className="text-[10px] text-teal-500 mt-1 text-center">{supervisionAmount.toLocaleString()}</p>
+        )}
+      </td>
+      {/* Supervision gap (editable) */}
       <td className="border border-slate-200 p-2 bg-purple-50">
         <Input
           type="number"
           value={supervisionGapInput}
           onChange={(e) => { editingRef.current = true; setSupervisionGapInput(e.target.value); }}
           onBlur={() => doSave()}
-          className="text-center bg-purple-50 border-purple-300 text-purple-700 font-semibold"
+          className="text-center bg-purple-50 border-purple-300 text-purple-700 font-semibold text-xs"
           placeholder="0"
         />
         {fin?.cpaSupervisionGap > 0 && (
           <p className="text-[10px] text-purple-400 mt-1 text-center">CPA: {Number(fin.cpaSupervisionGap).toLocaleString()}</p>
         )}
       </td>
-      <td className="border border-slate-200 p-2 text-center font-bold text-base bg-gradient-to-l from-emerald-50 to-white text-emerald-700">
-        {total.toLocaleString()} AED
-        {(designGapCost + supervisionGapCost) > 0 && <p className="text-xs text-orange-500 font-normal mt-1">يشمل فجوة {(designGapCost + supervisionGapCost).toLocaleString()}</p>}
+      {/* Supervision total */}
+      <td className="border border-slate-200 p-2 text-center font-bold text-sm bg-teal-100 text-teal-800">
+        {supervisionTotal.toLocaleString()}
+        <p className="text-[10px] font-normal text-teal-500">AED</p>
       </td>
+
+      {/* Grand Total */}
+      <td className="border border-slate-200 p-2 text-center font-bold text-sm bg-gradient-to-b from-emerald-100 to-emerald-50 text-emerald-800">
+        {total.toLocaleString()}
+        <p className="text-[10px] font-normal text-emerald-500">AED</p>
+      </td>
+
+      {/* Proposal Link */}
       <td className="border border-slate-200 p-2">
         <div className="flex items-center gap-1">
           <Input
@@ -180,7 +208,7 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
             onChange={(e) => { editingRef.current = true; setProposalLink(e.target.value); }}
             onBlur={() => doSave()}
             placeholder="رابط العرض"
-            className="text-sm bg-white border-slate-300"
+            className="text-xs bg-white border-slate-300"
           />
           {proposalLink && (
             <a
@@ -592,16 +620,23 @@ export default function ConsultantEvaluationPage() {
                   <div className="overflow-x-auto border-2 border-slate-200 rounded-2xl shadow-lg w-full">
                     <table className="border-collapse w-full" style={{tableLayout:'fixed'}}>
                       <thead>
-                        <tr className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white">
-                          <th className="border border-emerald-700 p-3 text-right text-sm font-bold" style={{ width: '16%' }}>الاستشاري</th>
-                          <th className="border border-emerald-700 p-2 text-center text-xs font-bold" style={{ width: '7%' }}>نوع تصميم</th>
-                          <th className="border border-emerald-700 p-2 text-center text-xs font-bold" style={{ width: '10%' }}>قيمة التصميم</th>
-                          <th className="border border-emerald-700 p-2 text-center text-xs font-bold" style={{ width: '7%' }}>نوع إشراف</th>
-                          <th className="border border-emerald-700 p-2 text-center text-xs font-bold" style={{ width: '10%' }}>قيمة الإشراف</th>
-                          <th className="border border-emerald-700 p-2 text-center text-xs font-bold bg-orange-700" style={{ width: '10%' }}>فجوة تصميم</th>
-                          <th className="border border-emerald-700 p-2 text-center text-xs font-bold bg-purple-700" style={{ width: '10%' }}>فجوة إشراف</th>
-                          <th className="border border-emerald-700 p-2 text-center text-sm font-bold bg-emerald-800" style={{ width: '14%' }}>المجموع</th>
-                          <th className="border border-emerald-700 p-2 text-center text-xs font-bold" style={{ width: '16%' }}>رابط العرض</th>
+                        {/* Two-level header: group header + column headers */}
+                        <tr className="bg-gradient-to-r from-emerald-700 via-teal-700 to-cyan-700 text-white text-center text-xs font-bold">
+                          <th className="border border-emerald-600 p-2" rowSpan={2} style={{ width: '14%' }}>الاستشاري</th>
+                          <th className="border border-emerald-600 p-2 bg-blue-700" colSpan={4}>التصميم</th>
+                          <th className="border border-emerald-600 p-2 bg-teal-700" colSpan={4}>الإشراف</th>
+                          <th className="border border-emerald-600 p-2 bg-emerald-800" rowSpan={2} style={{ width: '10%' }}>المجموع الكلي</th>
+                          <th className="border border-emerald-600 p-2" rowSpan={2} style={{ width: '10%' }}>رابط العرض</th>
+                        </tr>
+                        <tr className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white text-center text-xs font-bold">
+                          <th className="border border-emerald-700 p-2 bg-blue-600" style={{ width: '6%' }}>نوع</th>
+                          <th className="border border-emerald-700 p-2 bg-blue-600" style={{ width: '9%' }}>أتعاب التصميم</th>
+                          <th className="border border-emerald-700 p-2 bg-orange-600" style={{ width: '9%' }}>فجوة التصميم</th>
+                          <th className="border border-emerald-700 p-2 bg-blue-800" style={{ width: '9%' }}>مجموع التصميم</th>
+                          <th className="border border-emerald-700 p-2 bg-teal-600" style={{ width: '6%' }}>نوع</th>
+                          <th className="border border-emerald-700 p-2 bg-teal-600" style={{ width: '9%' }}>أتعاب الإشراف</th>
+                          <th className="border border-emerald-700 p-2 bg-purple-600" style={{ width: '9%' }}>فجوة الإشراف</th>
+                          <th className="border border-emerald-700 p-2 bg-teal-800" style={{ width: '9%' }}>مجموع الإشراف</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white">
