@@ -1445,6 +1445,14 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       // Fetch CPA gap costs via raw SQL (avoids Drizzle ORM bug with project_id column)
       const cpaGapMap = new Map<number, number>();
       try {
+        // Auto-trigger recalculation so any settings change reflects immediately
+        const cpaProjectRows = await db.execute(sql`SELECT id FROM cpa_projects WHERE project_id = ${input.projectId} LIMIT 1`);
+        const cpaProjectArr = Array.isArray(cpaProjectRows) ? (cpaProjectRows[0] as any[]) : (cpaProjectRows as any[]);
+        if (cpaProjectArr && cpaProjectArr.length > 0) {
+          const cpaProjectId = Number(cpaProjectArr[0].id);
+          const { runCalculationEngine } = await import('./cpa');
+          await runCalculationEngine(cpaProjectId).catch(() => {});
+        }
         const gapRows = await db.execute(sql`
           SELECT cpc.consultant_id as consultantId, cer.design_scope_gap_cost as gapCost
           FROM cpa_projects cp
@@ -1607,6 +1615,14 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       // Fetch CPA gap costs via raw SQL for comprehensive report
       const comprehensiveGapMap = new Map<number, number>();
       try {
+        // Auto-trigger recalculation so any settings change reflects immediately
+        const cpaProjectRowsComp = await db.execute(sql`SELECT id FROM cpa_projects WHERE project_id = ${input.projectId} LIMIT 1`);
+        const cpaProjectArrComp = Array.isArray(cpaProjectRowsComp) ? (cpaProjectRowsComp[0] as any[]) : (cpaProjectRowsComp as any[]);
+        if (cpaProjectArrComp && cpaProjectArrComp.length > 0) {
+          const cpaProjectIdComp = Number(cpaProjectArrComp[0].id);
+          const { runCalculationEngine } = await import('./cpa');
+          await runCalculationEngine(cpaProjectIdComp).catch(() => {});
+        }
         const gapRows2 = await db.execute(sql`
           SELECT cpc.consultant_id as consultantId, cer.design_scope_gap_cost as gapCost
           FROM cpa_projects cp

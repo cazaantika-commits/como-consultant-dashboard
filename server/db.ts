@@ -226,6 +226,14 @@ export async function getProjectFinancialData(projectId: number) {
 
   // Try to enrich with design_scope_gap_cost from CPA evaluation results using raw SQL
   try {
+    // Auto-trigger recalculation so any settings change reflects immediately in this page
+    const cpaProjectRows = await db.execute(sql`SELECT id FROM cpa_projects WHERE project_id = ${projectId} LIMIT 1`);
+    const cpaProjectArr = Array.isArray(cpaProjectRows) ? (cpaProjectRows[0] as any[]) : (cpaProjectRows as any[]);
+    if (cpaProjectArr && cpaProjectArr.length > 0) {
+      const cpaProjectId = Number(cpaProjectArr[0].id);
+      const { runCalculationEngine } = await import('./routers/cpa');
+      await runCalculationEngine(cpaProjectId).catch(() => {});
+    }
     const gapResults = await db.execute(sql`
       SELECT 
         cpc.consultant_id as consultantId,

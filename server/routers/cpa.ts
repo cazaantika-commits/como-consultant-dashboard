@@ -29,7 +29,7 @@ async function qRows<T = DbRow>(
 
 // ---- Calculation Engine ----------------------------------------------------
 
-async function runCalculationEngine(cpaProjectId: number) {
+export async function runCalculationEngine(cpaProjectId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -604,6 +604,18 @@ export const cpaRouter = router({
               VALUES (${input.supervisionRoleId}, ${input.buildingCategoryId}, ${input.requiredAllocationPct})
               ON DUPLICATE KEY UPDATE required_allocation_pct = VALUES(required_allocation_pct)`
         );
+        // Auto-recalculate all projects in this building category so financial pages stay current
+        try {
+          const affectedProjects = await qRows<any>(
+            db,
+            sql`SELECT id FROM cpa_projects WHERE building_category_id = ${input.buildingCategoryId}`
+          );
+          for (const p of affectedProjects) {
+            await runCalculationEngine(p.id).catch(() => {});
+          }
+        } catch (e) {
+          console.warn('[upsertBaselineEntry] auto-recalc failed:', e);
+        }
         return { ok: true };
       }),
 
@@ -761,6 +773,18 @@ export const cpaRouter = router({
                 VALUES (${input.scopeItemId}, ${input.buildingCategoryId}, ${input.costAed})
                 ON DUPLICATE KEY UPDATE cost_aed = VALUES(cost_aed)`
           );
+        }
+        // Auto-recalculate all projects in this building category so financial pages stay current
+        try {
+          const affectedProjects = await qRows<any>(
+            db,
+            sql`SELECT id FROM cpa_projects WHERE building_category_id = ${input.buildingCategoryId}`
+          );
+          for (const p of affectedProjects) {
+            await runCalculationEngine(p.id).catch(() => {});
+          }
+        } catch (e) {
+          console.warn('[upsertReferenceCost] auto-recalc failed:', e);
         }
         return { ok: true };
       }),
