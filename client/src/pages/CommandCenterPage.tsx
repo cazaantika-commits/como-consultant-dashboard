@@ -3565,7 +3565,8 @@ function DesignScopeReportView({ token, projectId, onBack }: { token: string; pr
 
   const scopeItems = data?.scopeItems || [];
   const consultants = data?.consultants || [];
-  const coverage = data?.coverage || {};
+  const itemGaps = data?.itemGaps || {};       // consultantId -> scopeItemId -> gapCost (null=included)
+  const coverageStatus = data?.coverageStatus || {}; // consultantId -> scopeItemId -> status
   const designFees = data?.designFees || {};
   const designGaps = data?.designGaps || {};
 
@@ -3610,9 +3611,10 @@ function DesignScopeReportView({ token, projectId, onBack }: { token: string; pr
                       {item.label}
                     </td>
                     {consultants.map((c: any) => {
-                      const val = (coverage as any)[c.id]?.[item.id];
-                      const isIncluded = val === 'INCLUDED';
-                      const gapCost = typeof val === 'number' ? val : 0;
+                      const gapVal = (itemGaps as any)[c.id]?.[item.id];
+                      const status = (coverageStatus as any)[c.id]?.[item.id] || 'NOT_MENTIONED';
+                      const isIncluded = gapVal === null || status === 'INCLUDED';
+                      const gapCost = typeof gapVal === 'number' ? gapVal : 0;
                       return (
                         <td key={c.id} className="px-1 py-1.5 text-center">
                           {isIncluded ? (
@@ -3620,7 +3622,7 @@ function DesignScopeReportView({ token, projectId, onBack }: { token: string; pr
                           ) : gapCost > 0 ? (
                             <span className="text-red-500 font-semibold">{fmtK(gapCost)}</span>
                           ) : (
-                            <span className="text-slate-300">—</span>
+                            <span className="text-slate-400 text-xs">0</span>
                           )}
                         </td>
                       );

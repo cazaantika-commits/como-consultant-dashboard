@@ -1812,37 +1812,46 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
+      // 1. Find CPA project
       const cpaProjectRows = await db.execute(sql`SELECT id, building_category_id FROM cpa_projects WHERE project_id = ${input.projectId} LIMIT 1`);
       const cpaProjectArr = Array.isArray(cpaProjectRows) ? (cpaProjectRows[0] as any[]) : (cpaProjectRows as any[]);
       if (!cpaProjectArr || cpaProjectArr.length === 0) {
-        return { scopeItems: [], consultants: [], coverage: {}, designFees: {}, designGaps: {} };
+        return { scopeItems: [], consultants: [], itemGaps: {}, designFees: {}, designGaps: {}, coverageStatus: {} };
       }
       const cpaProjectId = Number(cpaProjectArr[0].id);
       const buildingCategoryId = cpaProjectArr[0].building_category_id;
 
+      // 2. Re-run calculation engine so data is fresh
       const { runCalculationEngine } = await import('./cpa');
       await runCalculationEngine(cpaProjectId).catch(() => {});
 
+      // 3. All required scope items for this building category (NOT_REQUIRED excluded)
       const scopeRows = await db.execute(sql`
         SELECT si.id, si.code, si.label, si.sort_order, si.item_number,
-               COALESCE(src.cost_aed, 0) as reference_cost
+               COALESCE(src.cost_aed, 0) as reference_cost,
+               scm.status as matrix_status
         FROM cpa_scope_items si
         JOIN cpa_scope_category_matrix scm ON scm.scope_item_id = si.id AND scm.building_category_id = ${buildingCategoryId}
         LEFT JOIN cpa_scope_reference_costs src ON src.scope_item_id = si.id AND src.building_category_id = ${buildingCategoryId}
-        WHERE si.is_active = 1 AND scm.status = 'INCLUDED'
+        WHERE si.is_active = 1 AND scm.status != 'NOT_REQUIRED'
         ORDER BY si.sort_order ASC, si.item_number ASC
       `);
       const scopeArr = Array.isArray(scopeRows) ? (scopeRows[0] as any[]) : (scopeRows as any[]);
 
+      // 4. Consultants with their evaluation results (calculationNotes has per-item gap costs)
       const consultantRows = await db.execute(sql`
-        SELECT pc.id as pc_id, pc.consultant_id, c.name as consultant_name, pc.design_fee_amount
+        SELECT pc.id as pc_id, cm.id as consultant_id, cm.legal_name as consultant_name,
+               er.quoted_design_fee, er.design_scope_gap_cost, er.true_design_fee,
+               er.calculation_notes
         FROM cpa_project_consultants pc
-        JOIN consultants c ON c.id = pc.consultant_id
+        JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id
+        LEFT JOIN cpa_evaluation_results er ON er.project_consultant_id = pc.id
         WHERE pc.cpa_project_id = ${cpaProjectId}
-        ORDER BY c.name ASC
+        ORDER BY cm.legal_name ASC
       `);
       const consultantArr = Array.isArray(consultantRows) ? (consultantRows[0] as any[]) : (consultantRows as any[]);
 
+      // 5. Coverage status per consultant per item
       const coverageRows = await db.execute(sql`
         SELECT csc.project_consultant_id, csc.scope_item_id, csc.coverage_status
         FROM cpa_consultant_scope_coverage csc
@@ -1851,33 +1860,7 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       `);
       const coverageArr = Array.isArray(coverageRows) ? (coverageRows[0] as any[]) : (coverageRows as any[]);
 
-      const fins = await db.select().from(financialData).where(eq(financialData.projectId, input.projectId));
-
-      const evalRows = await db.execute(sql`
-        SELECT pc.consultant_id, er.design_scope_gap_cost
-        FROM cpa_evaluation_results er
-        JOIN cpa_project_consultants pc ON pc.id = er.project_consultant_id
-        WHERE pc.cpa_project_id = ${cpaProjectId}
-      `);
-      const evalArr = Array.isArray(evalRows) ? (evalRows[0] as any[]) : (evalRows as any[]);
-
-      // Build financial map using Drizzle ORM result (correct column names)
-      const project2 = await db.select().from(projects).where(eq(projects.id, input.projectId)).then(r => r[0]);
-      const constructionCost2 = (Number(project2?.bua) || 0) * (Number(project2?.pricePerSqft) || 0);
-      const financialMap: Record<number, { designAmount: number; designGapOverride: number | null }> = {};
-      for (const fin of fins) {
-        const dVal = Number(fin.designValue) || 0;
-        const designAmount = fin.designType === 'pct' ? constructionCost2 * (dVal / 100) : dVal;
-        financialMap[Number(fin.consultantId)] = {
-          designAmount,
-          designGapOverride: fin.designGapOverride != null ? Number(fin.designGapOverride) : null,
-        };
-      }
-      const evalMap: Record<number, number> = {};
-      for (const row of (evalArr || [])) {
-        evalMap[Number(row.consultant_id)] = Number(row.design_scope_gap_cost) || 0;
-      }
-
+      // Build coverage map: pcId -> scopeItemId -> status
       const coverageMap: Record<number, Record<number, string>> = {};
       for (const row of (coverageArr || [])) {
         const pcId = Number(row.project_consultant_id);
@@ -1886,29 +1869,57 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
         coverageMap[pcId][siId] = row.coverage_status;
       }
 
-      const refCostMap: Record<number, number> = {};
-      for (const item of (scopeArr || [])) {
-        refCostMap[Number(item.id)] = Number(item.reference_cost) || 0;
-      }
-
-      const coverageResult: Record<number, Record<number, string | number>> = {};
+      // Build per-item gap cost map from calculationNotes.scopeGaps
+      // itemGaps[consultantId][itemCode] = gapCost
+      const itemGapsByCode: Record<number, Record<string, number>> = {};
       const designFees: Record<number, number> = {};
       const designGaps: Record<number, number> = {};
+      const coverageStatus: Record<number, Record<number, string>> = {};
 
       for (const c of (consultantArr || [])) {
         const consultantId = Number(c.consultant_id);
         const pcId = Number(c.pc_id);
-        coverageResult[consultantId] = {};
+        designFees[consultantId] = Number(c.quoted_design_fee) || 0;
+        designGaps[consultantId] = Number(c.design_scope_gap_cost) || 0;
+        itemGapsByCode[consultantId] = {};
+        coverageStatus[consultantId] = {};
+
+        // Parse calculationNotes to get per-item gap costs
+        if (c.calculation_notes) {
+          try {
+            const notes = JSON.parse(c.calculation_notes);
+            for (const gap of (notes.scopeGaps || [])) {
+              itemGapsByCode[consultantId][gap.itemCode] = Number(gap.gapCost) || 0;
+            }
+          } catch {}
+        }
+
+        // Build coverage status for this consultant
         const pcCoverage = coverageMap[pcId] || {};
         for (const item of (scopeArr || [])) {
           const siId = Number(item.id);
-          const status = pcCoverage[siId] || 'NOT_MENTIONED';
-          coverageResult[consultantId][siId] = status === 'INCLUDED' ? 'INCLUDED' : (refCostMap[siId] || 0);
+          coverageStatus[consultantId][siId] = pcCoverage[siId] || 'NOT_MENTIONED';
         }
-        const fin = financialMap[consultantId];
-        designFees[consultantId] = fin ? fin.designAmount : (Number(c.design_fee_amount) || 0);
-        const gapOverride = fin?.designGapOverride;
-        designGaps[consultantId] = gapOverride != null ? gapOverride : (evalMap[consultantId] || 0);
+      }
+
+      // Build itemGaps[consultantId][scopeItemId] = gapCost
+      // Use calculationNotes gap cost if available, else reference_cost if not INCLUDED
+      const itemGaps: Record<number, Record<number, number | null>> = {};
+      for (const c of (consultantArr || [])) {
+        const consultantId = Number(c.consultant_id);
+        itemGaps[consultantId] = {};
+        for (const item of (scopeArr || [])) {
+          const siId = Number(item.id);
+          const status = coverageStatus[consultantId][siId];
+          if (status === 'INCLUDED') {
+            itemGaps[consultantId][siId] = null; // null = included (show ✓)
+          } else {
+            // Try to get gap cost from calculationNotes first, then reference_cost
+            const fromNotes = itemGapsByCode[consultantId][item.code];
+            const fromRef = Number(item.reference_cost) || 0;
+            itemGaps[consultantId][siId] = fromNotes !== undefined ? fromNotes : fromRef;
+          }
+        }
       }
 
       return {
@@ -1918,15 +1929,17 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
           label: item.label,
           itemNumber: Number(item.item_number),
           referenceCost: Number(item.reference_cost) || 0,
+          matrixStatus: item.matrix_status,
         })),
         consultants: (consultantArr || []).map((c: any) => ({
           id: Number(c.consultant_id),
           pcId: Number(c.pc_id),
           name: c.consultant_name,
         })),
-        coverage: coverageResult,
-        designFees,
-        designGaps,
+        itemGaps,       // consultantId -> scopeItemId -> gapCost (null=included)
+        coverageStatus, // consultantId -> scopeItemId -> INCLUDED/EXCLUDED/NOT_MENTIONED
+        designFees,     // consultantId -> quoted design fee
+        designGaps,     // consultantId -> total gap cost from engine
       };
     }),
 });
