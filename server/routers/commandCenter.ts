@@ -1484,8 +1484,15 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
           designAmount = fin.designType === 'pct' ? constructionCost * (dVal / 100) : dVal;
           supervisionAmount = fin.supervisionType === 'pct' ? constructionCost * (sVal / 100) : sVal;
         }
-            const designGapCost = cpaGapMap.get(pc.consultantId) || 0;
-        const supervisionGapCost = cpaSupervisionGapMap.get(pc.consultantId) || 0;
+            // Use manual override from financial_data if set, otherwise fall back to CPA auto-calculated value
+            const cpaDesignGap = cpaGapMap.get(pc.consultantId) || 0;
+            const cpaSupervisionGap = cpaSupervisionGapMap.get(pc.consultantId) || 0;
+            const designGapCost = (fin && fin.designGapOverride !== null && fin.designGapOverride !== undefined)
+              ? Number(fin.designGapOverride)
+              : cpaDesignGap;
+            const supervisionGapCost = (fin && fin.supervisionGapOverride !== null && fin.supervisionGapOverride !== undefined)
+              ? Number(fin.supervisionGapOverride)
+              : cpaSupervisionGap;
         const totalFees = Number(designAmount) + Number(designGapCost) + Number(supervisionAmount) + Number(supervisionGapCost);
         return { id: c?.id || pc.consultantId, name: c?.name || 'غير معروف', designType: fin?.designType || 'pct', designValue: Number(fin?.designValue) || 0, supervisionType: fin?.supervisionType || 'pct', supervisionValue: Number(fin?.supervisionValue) || 0, designAmount: Number(designAmount), supervisionAmount: Number(supervisionAmount), designScopeGapCost: Number(designGapCost), supervisionScopeGapCost: Number(supervisionGapCost), totalFees: Number(totalFees), proposalLink: (fin as any)?.proposalLink || null, financialScore: 0 as number };
       });
@@ -1617,8 +1624,9 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       if (!allComplete) return { isReady: false, project: { id: project.id, name: project.name } };
       const constructionCost = (project.bua || 0) * (project.pricePerSqft || 0);
 
-      // Fetch CPA gap costs via raw SQL for comprehensive report
-      const comprehensiveGapMap = new Map<number, number>();
+      // Fetch CPA gap costs via raw SQL for comprehensive report (for fallback only)
+      const comprehensiveDesignGapMap = new Map<number, number>();
+      const comprehensiveSupervisionGapMap = new Map<number, number>();
       try {
         // Auto-trigger recalculation so any settings change reflects immediately
         const cpaProjectRowsComp = await db.execute(sql`SELECT id FROM cpa_projects WHERE project_id = ${input.projectId} LIMIT 1`);
@@ -1629,7 +1637,9 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
           await runCalculationEngine(cpaProjectIdComp).catch(() => {});
         }
         const gapRows2 = await db.execute(sql`
-          SELECT cpc.consultant_id as consultantId, cer.design_scope_gap_cost as gapCost
+          SELECT cpc.consultant_id as consultantId,
+                 cer.design_scope_gap_cost as designGapCost,
+                 cer.supervision_gap_cost as supervisionGapCost
           FROM cpa_projects cp
           JOIN cpa_project_consultants cpc ON cpc.cpa_project_id = cp.id
           LEFT JOIN cpa_evaluation_results cer ON cer.project_consultant_id = cpc.id
@@ -1638,7 +1648,8 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
         const gapArr2 = Array.isArray(gapRows2) ? gapRows2[0] : gapRows2;
         if (gapArr2 && (gapArr2 as any[]).length > 0) {
           for (const row of gapArr2 as any[]) {
-            comprehensiveGapMap.set(Number(row.consultantId), Number(row.gapCost) || 0);
+            comprehensiveDesignGapMap.set(Number(row.consultantId), Number(row.designGapCost) || 0);
+            comprehensiveSupervisionGapMap.set(Number(row.consultantId), Number(row.supervisionGapCost) || 0);
           }
         }
       } catch (e) {
@@ -1656,8 +1667,16 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
           designAmount = fin.designType === 'pct' ? constructionCost * (dVal / 100) : dVal;
           supervisionAmount = fin.supervisionType === 'pct' ? constructionCost * (sVal / 100) : sVal;
         }
-        const gapCostComp = comprehensiveGapMap.get(pc.consultantId) || 0;
-        const totalFees = Number(designAmount) + Number(gapCostComp) + Number(supervisionAmount);
+        // Use manual override from financial_data if set, otherwise fall back to CPA auto-calculated value
+        const cpaDesignGapComp = comprehensiveDesignGapMap.get(pc.consultantId) || 0;
+        const cpaSupervisionGapComp = comprehensiveSupervisionGapMap.get(pc.consultantId) || 0;
+        const designGapComp = (fin && fin.designGapOverride !== null && fin.designGapOverride !== undefined)
+          ? Number(fin.designGapOverride)
+          : cpaDesignGapComp;
+        const supervisionGapComp = (fin && fin.supervisionGapOverride !== null && fin.supervisionGapOverride !== undefined)
+          ? Number(fin.supervisionGapOverride)
+          : cpaSupervisionGapComp;
+        const totalFees = Number(designAmount) + Number(designGapComp) + Number(supervisionAmount) + Number(supervisionGapComp);
         const consScores = allScores.filter(s => s.consultantId === pc.consultantId);
         let technicalWeighted = 0;
         CRITERIA_WEIGHTS.forEach(cw => {
