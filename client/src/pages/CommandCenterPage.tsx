@@ -2717,7 +2717,7 @@ function FinancialEvaluationView({ token, projectId, onBack }: { token: string; 
               <th className="py-2 px-3 text-left" rowSpan={2} style={{width:'22%'}}>CONSULTANT</th>
               <th className="py-2 px-2 bg-blue-50 text-blue-700 border-x border-blue-200" colSpan={3}>DESIGN</th>
               <th className="py-2 px-2 bg-teal-50 text-teal-700 border-x border-teal-200" colSpan={3}>SUPERVISION</th>
-              <th className="py-2 px-2 bg-emerald-50 text-emerald-700" rowSpan={2} style={{width:'10%'}}>TOTAL (AED)</th>
+              <th className="py-2 px-2 bg-amber-50 text-amber-700 border-x-2 border-amber-300" rowSpan={2} style={{width:'10%'}}>TOTAL (AED)</th>
               <th className="py-2 px-2" rowSpan={2} style={{width:'7%'}}>VS AVG</th>
               <th className="py-2 px-2" rowSpan={2} style={{width:'7%'}}>SCORE</th>
             </tr>
@@ -2783,8 +2783,8 @@ function FinancialEvaluationView({ token, projectId, onBack }: { token: string; 
                   <p className="text-[12px] font-bold text-teal-800">{supervisionTotal.toLocaleString()}</p>
                 </td>
                 {/* Grand Total */}
-                <td className="py-2 px-3 text-right bg-emerald-50/60">
-                  <p className="text-[13px] font-bold text-slate-900">{c.totalFees?.toLocaleString()}</p>
+                <td className="py-2 px-3 text-right bg-amber-50 border-x-2 border-amber-200">
+                  <p className="text-[13px] font-bold text-amber-900">{c.totalFees?.toLocaleString()}</p>
                 </td>
                 {/* vs Avg */}
                 <td className="py-2 px-3 text-center">

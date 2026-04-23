@@ -102,7 +102,7 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
 
       {/* === DESIGN GROUP === */}
       {/* Design type */}
-      <td className="border border-slate-200 p-2 text-center bg-blue-50">
+      <td className="border border-slate-200 p-1 text-center bg-blue-50" style={{width:'4%'}}>
         <Select value={designType} onValueChange={(v: any) => {
           setDesignType(v);
           doSave({ designType: v });
@@ -149,7 +149,7 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
 
       {/* === SUPERVISION GROUP === */}
       {/* Supervision type */}
-      <td className="border border-slate-200 p-2 text-center bg-teal-50">
+      <td className="border border-slate-200 p-1 text-center bg-teal-50" style={{width:'4%'}}>
         <Select value={supervisionType} onValueChange={(v: any) => {
           setSupervisionType(v);
           doSave({ supervisionType: v });
@@ -195,9 +195,9 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
       </td>
 
       {/* Grand Total */}
-      <td className="border border-slate-200 p-2 text-center font-bold text-sm bg-gradient-to-b from-emerald-100 to-emerald-50 text-emerald-800">
+      <td className="border border-slate-200 p-2 text-center font-bold text-sm bg-gradient-to-b from-amber-100 to-amber-50 text-amber-900 border-l-2 border-amber-400">
         {total.toLocaleString()}
-        <p className="text-[10px] font-normal text-emerald-500">AED</p>
+        <p className="text-[10px] font-normal text-amber-600">AED</p>
       </td>
 
       {/* Proposal Link */}
@@ -625,16 +625,16 @@ export default function ConsultantEvaluationPage() {
                           <th className="border border-emerald-600 p-2" rowSpan={2} style={{ width: '14%' }}>الاستشاري</th>
                           <th className="border border-emerald-600 p-2 bg-blue-700" colSpan={4}>التصميم</th>
                           <th className="border border-emerald-600 p-2 bg-teal-700" colSpan={4}>الإشراف</th>
-                          <th className="border border-emerald-600 p-2 bg-emerald-800" rowSpan={2} style={{ width: '10%' }}>المجموع الكلي</th>
-                          <th className="border border-emerald-600 p-2" rowSpan={2} style={{ width: '10%' }}>رابط العرض</th>
+                          <th className="border border-emerald-600 p-2 bg-amber-600" rowSpan={2} style={{ width: '11%' }}>المجموع الكلي</th>
+                          <th className="border border-emerald-600 p-2" rowSpan={2} style={{ width: '9%' }}>رابط العرض</th>
                         </tr>
                         <tr className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white text-center text-xs font-bold">
-                          <th className="border border-emerald-700 p-2 bg-blue-600" style={{ width: '6%' }}>نوع</th>
-                          <th className="border border-emerald-700 p-2 bg-blue-600" style={{ width: '9%' }}>أتعاب التصميم</th>
+                          <th className="border border-emerald-700 p-1 bg-blue-600" style={{ width: '4%' }}>نوع</th>
+                          <th className="border border-emerald-700 p-2 bg-blue-600" style={{ width: '10%' }}>أتعاب التصميم</th>
                           <th className="border border-emerald-700 p-2 bg-orange-600" style={{ width: '9%' }}>فجوة التصميم</th>
                           <th className="border border-emerald-700 p-2 bg-blue-800" style={{ width: '9%' }}>مجموع التصميم</th>
-                          <th className="border border-emerald-700 p-2 bg-teal-600" style={{ width: '6%' }}>نوع</th>
-                          <th className="border border-emerald-700 p-2 bg-teal-600" style={{ width: '9%' }}>أتعاب الإشراف</th>
+                          <th className="border border-emerald-700 p-1 bg-teal-600" style={{ width: '4%' }}>نوع</th>
+                          <th className="border border-emerald-700 p-2 bg-teal-600" style={{ width: '10%' }}>أتعاب الإشراف</th>
                           <th className="border border-emerald-700 p-2 bg-purple-600" style={{ width: '9%' }}>فجوة الإشراف</th>
                           <th className="border border-emerald-700 p-2 bg-teal-800" style={{ width: '9%' }}>مجموع الإشراف</th>
                         </tr>
