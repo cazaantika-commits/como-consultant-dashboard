@@ -747,6 +747,8 @@ export const financialData = mysqlTable("financialData", {
 	supervisionType: varchar({ length: 20 }).default('pct'),
 	supervisionValue: decimal({ precision: 15, scale: 2 }),
 	proposalLink: varchar({ length: 500 }),
+	designGapOverride: decimal({ precision: 15, scale: 2 }),
+	supervisionGapOverride: decimal({ precision: 15, scale: 2 }),
 	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });

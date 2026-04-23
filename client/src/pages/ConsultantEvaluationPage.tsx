@@ -22,6 +22,17 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
   const [supervisionType, setSupervisionType] = useState(fin?.supervisionType || 'pct');
   const [supervisionValue, setSupervisionValue] = useState(fin ? String(parseFloat(String(fin.supervisionValue)) || 0) : '0');
   const [proposalLink, setProposalLink] = useState((fin as any)?.proposalLink || '');
+  // Gap overrides: null means "use CPA auto value", number means manual override
+  const [designGapInput, setDesignGapInput] = useState(
+    fin?.designGapOverride !== null && fin?.designGapOverride !== undefined
+      ? String(Number(fin.designGapOverride))
+      : String(Number(fin?.designScopeGapCost || 0))
+  );
+  const [supervisionGapInput, setSupervisionGapInput] = useState(
+    fin?.supervisionGapOverride !== null && fin?.supervisionGapOverride !== undefined
+      ? String(Number(fin.supervisionGapOverride))
+      : String(Number(fin?.supervisionScopeGapCost || 0))
+  );
   const editingRef = useRef(false);
   const initRef = useRef(fin?.id);
 
@@ -33,6 +44,16 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
       setSupervisionType(fin.supervisionType || 'pct');
       setSupervisionValue(String(parseFloat(String(fin.supervisionValue)) || 0));
       setProposalLink((fin as any)?.proposalLink || '');
+      setDesignGapInput(
+        fin?.designGapOverride !== null && fin?.designGapOverride !== undefined
+          ? String(Number(fin.designGapOverride))
+          : String(Number(fin?.designScopeGapCost || 0))
+      );
+      setSupervisionGapInput(
+        fin?.supervisionGapOverride !== null && fin?.supervisionGapOverride !== undefined
+          ? String(Number(fin.supervisionGapOverride))
+          : String(Number(fin?.supervisionScopeGapCost || 0))
+      );
     }
   }, [fin?.id]);
 
@@ -40,8 +61,8 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
   const sv = parseFloat(supervisionValue) || 0;
   const designAmount = designType === 'pct' ? constructionCost * (dv / 100) : dv;
   const supervisionAmount = supervisionType === 'pct' ? constructionCost * (sv / 100) : sv;
-  const designGapCost = Number(fin?.designScopeGapCost || 0);
-  const supervisionGapCost = Number(fin?.supervisionScopeGapCost || 0);
+  const designGapCost = parseFloat(designGapInput) || 0;
+  const supervisionGapCost = parseFloat(supervisionGapInput) || 0;
   const total = designAmount + designGapCost + supervisionAmount + supervisionGapCost;
 
   const totalRef = useRef(total);
@@ -63,6 +84,8 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
       supervisionType: overrides.supervisionType ?? supervisionType,
       supervisionValue: overrides.supervisionValue !== undefined ? overrides.supervisionValue : (parseFloat(supervisionValue) || 0),
       proposalLink: overrides.proposalLink ?? proposalLink,
+      designGapOverride: overrides.designGapOverride !== undefined ? overrides.designGapOverride : (parseFloat(designGapInput) || 0),
+      supervisionGapOverride: overrides.supervisionGapOverride !== undefined ? overrides.supervisionGapOverride : (parseFloat(supervisionGapInput) || 0),
     };
     updateFinancialMutation.mutate(data);
   };
@@ -120,11 +143,31 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
           <p className="text-xs text-slate-500 mt-1 text-center">{supervisionAmount.toLocaleString()} AED</p>
         )}
       </td>
-      <td className="border border-slate-200 p-3 text-center text-sm text-orange-600 font-semibold bg-orange-50">
-        {designGapCost > 0 ? <span className="text-orange-600">+{designGapCost.toLocaleString()} AED</span> : <span className="text-slate-400">—</span>}
+      <td className="border border-slate-200 p-2 bg-orange-50">
+        <Input
+          type="number"
+          value={designGapInput}
+          onChange={(e) => { editingRef.current = true; setDesignGapInput(e.target.value); }}
+          onBlur={() => doSave()}
+          className="text-center bg-orange-50 border-orange-300 text-orange-700 font-semibold"
+          placeholder="0"
+        />
+        {fin?.cpaDesignGap > 0 && (
+          <p className="text-[10px] text-orange-400 mt-1 text-center">CPA: {Number(fin.cpaDesignGap).toLocaleString()}</p>
+        )}
       </td>
-      <td className="border border-slate-200 p-3 text-center text-sm text-purple-600 font-semibold bg-purple-50">
-        {supervisionGapCost > 0 ? <span className="text-purple-600">+{supervisionGapCost.toLocaleString()} AED</span> : <span className="text-slate-400">—</span>}
+      <td className="border border-slate-200 p-2 bg-purple-50">
+        <Input
+          type="number"
+          value={supervisionGapInput}
+          onChange={(e) => { editingRef.current = true; setSupervisionGapInput(e.target.value); }}
+          onBlur={() => doSave()}
+          className="text-center bg-purple-50 border-purple-300 text-purple-700 font-semibold"
+          placeholder="0"
+        />
+        {fin?.cpaSupervisionGap > 0 && (
+          <p className="text-[10px] text-purple-400 mt-1 text-center">CPA: {Number(fin.cpaSupervisionGap).toLocaleString()}</p>
+        )}
       </td>
       <td className="border border-slate-200 p-4 text-center font-bold text-lg bg-gradient-to-l from-emerald-50 to-white text-emerald-700" style={{ minWidth: '160px' }}>
         {total.toLocaleString()} AED

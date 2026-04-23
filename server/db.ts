@@ -259,12 +259,25 @@ export async function getProjectFinancialData(projectId: number) {
       }
 
       // Attach both gap costs to each financial record
-      return baseData.map((fd) => ({
-        ...fd,
-        designScopeGapCost: gapMap.get(fd.consultantId)?.gap || 0,
-        supervisionScopeGapCost: gapMap.get(fd.consultantId)?.supervisionGap || 0,
-        trueDesignFee: gapMap.get(fd.consultantId)?.trueFee || 0,
-      }));
+      // If user has set a manual override, use it; otherwise use CPA auto-calculated value
+      return baseData.map((fd) => {
+        const cpaGap = gapMap.get(fd.consultantId)?.gap || 0;
+        const cpaSupGap = gapMap.get(fd.consultantId)?.supervisionGap || 0;
+        const designGap = fd.designGapOverride !== null && fd.designGapOverride !== undefined
+          ? Number(fd.designGapOverride)
+          : cpaGap;
+        const supervisionGap = fd.supervisionGapOverride !== null && fd.supervisionGapOverride !== undefined
+          ? Number(fd.supervisionGapOverride)
+          : cpaSupGap;
+        return {
+          ...fd,
+          designScopeGapCost: designGap,
+          supervisionScopeGapCost: supervisionGap,
+          trueDesignFee: gapMap.get(fd.consultantId)?.trueFee || 0,
+          cpaDesignGap: cpaGap,
+          cpaSupervisionGap: cpaSupGap,
+        };
+      });
     }
   } catch (e) {
     console.error('[getProjectFinancialData] CPA gap fetch error:', e);
