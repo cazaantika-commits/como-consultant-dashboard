@@ -2709,8 +2709,8 @@ function FinancialEvaluationView({ token, projectId, onBack }: { token: string; 
       )}
 
       {/* Table Layout */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
-        <table className="w-full min-w-[900px]">
+      <div className="bg-white rounded-xl border border-slate-200 w-full">
+        <table className="w-full" style={{tableLayout:'fixed'}}>
           <thead>
             {/* Group header row */}
             <tr className="bg-slate-100 border-b border-slate-200 text-center text-[10px] font-bold text-slate-600 uppercase tracking-wider">
@@ -4059,7 +4059,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
     <div className="min-h-screen" dir="rtl" style={{background: 'linear-gradient(160deg, #f8f6ff 0%, #fff7ed 55%, #f0fdf4 100%)'}}>
       <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} onNavigateHome={() => navigate("/")} />
       <NewsTicker token={token} />
-      <div className="max-w-5xl mx-auto px-4 py-4">
+      <div className="w-full px-4 py-4">
         {/* Hero Card */}
         <div className="relative overflow-hidden rounded-3xl mb-4 shadow-lg"
           style={{background: 'linear-gradient(135deg, #ffffff 0%, #fafafa 60%, #f8f6ff 100%)', border: '1.5px solid #e5e7eb'}}>
