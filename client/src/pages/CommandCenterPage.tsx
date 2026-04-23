@@ -4012,7 +4012,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white" dir="rtl">
         <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
-        <div className="max-w-3xl mx-auto px-4 py-6">
+        <div className="w-full px-4 py-6">
           <EvaluationView
             token={token}
             memberRole={member.role}
