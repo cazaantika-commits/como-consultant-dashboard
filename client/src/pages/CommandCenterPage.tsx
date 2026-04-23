@@ -3540,7 +3540,21 @@ function ValueAnalysisView({ token, projectId, onBack }: { token: string; projec
 // ═══ Design Scope Report View ═══
 function DesignScopeReportView({ token, projectId, onBack }: { token: string; projectId: number; onBack: () => void }) {
   const { data, isLoading, error } = trpc.commandCenter.getDesignScopeReport.useQuery({ token, projectId });
-  const fmt = (n: number) => n > 0 ? n.toLocaleString('ar-AE', { maximumFractionDigits: 0 }) + ' د.إ' : '—';
+
+  // Format number compactly: 125,000 → 125K
+  const fmtK = (n: number) => {
+    if (n === 0) return '—';
+    if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+    if (n >= 1000) return Math.round(n / 1000) + 'K';
+    return String(Math.round(n));
+  };
+  const fmtFull = (n: number) => n > 0 ? n.toLocaleString('ar-AE', { maximumFractionDigits: 0 }) : '—';
+
+  // Shorten consultant name to first 2 words max
+  const shortName = (name: string) => {
+    const words = name.trim().split(/\s+/);
+    return words.slice(0, 2).join(' ');
+  };
 
   if (isLoading) return (
     <div className="flex items-center justify-center py-20">
@@ -3556,7 +3570,7 @@ function DesignScopeReportView({ token, projectId, onBack }: { token: string; pr
   const designGaps = data?.designGaps || {};
 
   return (
-    <div className="space-y-4" dir="rtl">
+    <div className="space-y-3" dir="rtl">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500">
           <ArrowLeft className="w-4 h-4 ml-1" /> العودة
@@ -3573,20 +3587,26 @@ function DesignScopeReportView({ token, projectId, onBack }: { token: string; pr
       ) : (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm" style={{ direction: 'rtl' }}>
+            <table className="text-xs" style={{ direction: 'rtl', width: '100%', tableLayout: 'fixed' }}>
+              <colgroup>
+                <col style={{ width: '200px' }} />
+                {consultants.map((c: any) => <col key={c.id} style={{ width: '90px' }} />)}
+              </colgroup>
               <thead>
                 <tr className="bg-gradient-to-r from-indigo-600 to-cyan-600 text-white">
-                  <th className="px-4 py-3 text-right font-semibold sticky right-0 bg-indigo-600 z-10" style={{ minWidth: '220px' }}>نطاق التصاميم</th>
+                  <th className="px-3 py-2 text-right font-semibold sticky right-0 bg-indigo-600 z-10">نطاق التصاميم</th>
                   {consultants.map((c: any) => (
-                    <th key={c.id} className="px-4 py-3 text-center font-semibold" style={{ minWidth: '140px' }}>{c.name}</th>
+                    <th key={c.id} className="px-1 py-2 text-center font-semibold leading-tight">
+                      <div className="truncate" title={c.name}>{shortName(c.name)}</div>
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {scopeItems.map((item: any, idx: number) => (
                   <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'}>
-                    <td className="px-4 py-2.5 text-right font-medium text-slate-700 sticky right-0 bg-inherit border-l border-slate-100">
-                      <span className="text-slate-400 text-xs ml-2">{item.itemNumber}.</span>
+                    <td className="px-3 py-1.5 text-right font-medium text-slate-700 sticky right-0 bg-inherit border-l border-slate-100 truncate" title={item.label}>
+                      <span className="text-slate-400 ml-1">{item.itemNumber}.</span>
                       {item.label}
                     </td>
                     {consultants.map((c: any) => {
@@ -3594,13 +3614,13 @@ function DesignScopeReportView({ token, projectId, onBack }: { token: string; pr
                       const isIncluded = val === 'INCLUDED';
                       const gapCost = typeof val === 'number' ? val : 0;
                       return (
-                        <td key={c.id} className="px-4 py-2.5 text-center">
+                        <td key={c.id} className="px-1 py-1.5 text-center">
                           {isIncluded ? (
-                            <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-emerald-100 text-emerald-600 font-bold">✓</span>
+                            <span className="text-emerald-600 font-bold text-sm">✓</span>
                           ) : gapCost > 0 ? (
-                            <span className="text-red-500 font-medium text-xs">{gapCost.toLocaleString('ar-AE', { maximumFractionDigits: 0 })}</span>
+                            <span className="text-red-500 font-semibold">{fmtK(gapCost)}</span>
                           ) : (
-                            <span className="text-slate-300 text-xs">—</span>
+                            <span className="text-slate-300">—</span>
                           )}
                         </td>
                       );
@@ -3608,23 +3628,23 @@ function DesignScopeReportView({ token, projectId, onBack }: { token: string; pr
                   </tr>
                 ))}
                 <tr><td colSpan={consultants.length + 1} className="h-px bg-indigo-200" /></tr>
-                <tr className="bg-red-50">
-                  <td className="px-4 py-3 text-right font-bold text-red-700 sticky right-0 bg-red-50 border-l border-slate-100">فجوة النطاق</td>
+                <tr className="bg-red-50 font-bold">
+                  <td className="px-3 py-2 text-right text-red-700 sticky right-0 bg-red-50 border-l border-slate-100">فجوة النطاق</td>
                   {consultants.map((c: any) => (
-                    <td key={c.id} className="px-4 py-3 text-center font-bold text-red-600">{fmt((designGaps as any)[c.id] || 0)}</td>
+                    <td key={c.id} className="px-1 py-2 text-center text-red-600">{fmtFull((designGaps as any)[c.id] || 0)}</td>
                   ))}
                 </tr>
-                <tr className="bg-slate-50">
-                  <td className="px-4 py-3 text-right font-bold text-slate-700 sticky right-0 bg-slate-50 border-l border-slate-100">أتعاب التصميم</td>
+                <tr className="bg-slate-50 font-bold">
+                  <td className="px-3 py-2 text-right text-slate-700 sticky right-0 bg-slate-50 border-l border-slate-100">أتعاب التصميم</td>
                   {consultants.map((c: any) => (
-                    <td key={c.id} className="px-4 py-3 text-center font-semibold text-slate-700">{fmt((designFees as any)[c.id] || 0)}</td>
+                    <td key={c.id} className="px-1 py-2 text-center text-slate-700">{fmtFull((designFees as any)[c.id] || 0)}</td>
                   ))}
                 </tr>
-                <tr className="bg-amber-50">
-                  <td className="px-4 py-3 text-right font-bold text-amber-800 sticky right-0 bg-amber-50 border-l border-slate-100">المجموع الكلي</td>
+                <tr className="bg-amber-50 font-bold">
+                  <td className="px-3 py-2 text-right text-amber-800 sticky right-0 bg-amber-50 border-l border-slate-100">المجموع الكلي</td>
                   {consultants.map((c: any) => {
                     const total = ((designFees as any)[c.id] || 0) + ((designGaps as any)[c.id] || 0);
-                    return <td key={c.id} className="px-4 py-3 text-center font-bold text-amber-700">{fmt(total)}</td>;
+                    return <td key={c.id} className="px-1 py-2 text-center text-amber-700">{fmtFull(total)}</td>;
                   })}
                 </tr>
               </tbody>
@@ -3632,7 +3652,7 @@ function DesignScopeReportView({ token, projectId, onBack }: { token: string; pr
           </div>
         </div>
       )}
-      <p className="text-xs text-slate-400 text-center">✓ = مشمول في العرض • الأرقام = تكلفة الفجوة بالدرهم الإماراتي</p>
+      <p className="text-xs text-slate-400 text-center">✓ = مشمول • الأرقام بالدرهم الإماراتي (K = ألف)</p>
     </div>
   );
 }
