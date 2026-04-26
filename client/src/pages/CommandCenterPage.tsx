@@ -3540,7 +3540,7 @@ function ValueAnalysisView({ token, projectId, onBack }: { token: string; projec
 // ═══ Design Scope Report View ═══
 function DesignScopeReportView({ token, projectId, onBack }: { token: string; projectId: number; onBack: () => void }) {
   const { data, isLoading, error } = trpc.commandCenter.getDesignScopeReport.useQuery({ token, projectId });
-  const [showGapsOnly, setShowGapsOnly] = React.useState(false);
+  const [showGapsOnly, setShowGapsOnly] = useState(false);
 
   // Format number compactly: 125,000 → 125K
   const fmtK = (n: number) => {
