@@ -82,6 +82,7 @@ import {
   Gauge,
   Map,
   Handshake,
+  HardHat,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -2444,7 +2445,7 @@ function NewsTicker({ token }: { token: string }) {
 function EvaluationView({ token, memberRole, memberId }: { token: string; memberRole: string; memberId: string }) {
   const projectsQuery = trpc.commandCenter.getProjectsForEvaluation.useQuery({ token });
   const [selectedProject, setSelectedProject] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'financial' | 'technical' | 'committee' | 'value' | 'scope' | null>(null);
+  const [activeTab, setActiveTab] = useState<'financial' | 'technical' | 'committee' | 'value' | 'scope' | 'supervision' | null>(null);
   const [showCreateSession, setShowCreateSession] = useState(false);
   const [sessionTitle, setSessionTitle] = useState('');
   const [sessionConsultantId, setSessionConsultantId] = useState<number | null>(null);
@@ -2468,6 +2469,9 @@ function EvaluationView({ token, memberRole, memberId }: { token: string; member
   }
   if (selectedProject && activeTab === 'scope') {
     return <DesignScopeReportView token={token} projectId={selectedProject} onBack={() => setActiveTab(null)} />;
+  }
+  if (selectedProject && activeTab === 'supervision') {
+    return <SupervisionScopeReportView token={token} projectId={selectedProject} onBack={() => setActiveTab(null)} />;
   }
 
   if (selectedProject) {
@@ -2611,6 +2615,20 @@ function EvaluationView({ token, memberRole, memberId }: { token: string; member
               </div>
               <h3 className="text-lg font-bold mb-1">تقرير نطاق التصاميم</h3>
               <p className="text-indigo-100 text-sm">مقارنة نطاق الاستشاريين</p>
+            </div>
+          </button>
+
+          {/* تقرير نطاق الإشراف */}
+          <button onClick={() => setActiveTab('supervision')} className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-rose-500 to-pink-700 p-6 text-white shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] text-right">
+            <div className="absolute top-3 left-3 opacity-20 group-hover:opacity-30 transition-opacity">
+              <HardHat className="w-16 h-16" />
+            </div>
+            <div className="relative z-10">
+              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center mb-4">
+                <HardHat className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold mb-1">تقرير نطاق الإشراف</h3>
+              <p className="text-rose-100 text-sm">مقارنة فريق الإشراف</p>
             </div>
           </button>
         </div>
@@ -3683,6 +3701,145 @@ function DesignScopeReportView({ token, projectId, onBack }: { token: string; pr
         </div>
       )}
       <p className="text-xs text-slate-400 text-center">✓ = مشمول • الأرقام بالدرهم الإماراتي (K = ألف)</p>
+    </div>
+  );
+}
+
+// ═══ Supervision Scope Report View ═══
+function SupervisionScopeReportView({ token, projectId, onBack }: { token: string; projectId: number; onBack: () => void }) {
+  const { data, isLoading, error } = trpc.commandCenter.getSupervisionScopeReport.useQuery({ token, projectId });
+  const [showGapsOnly, setShowGapsOnly] = useState(false);
+
+  const fmtK = (n: number) => {
+    if (n === 0) return '—';
+    if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+    if (n >= 1000) return Math.round(n / 1000) + 'K';
+    return String(Math.round(n));
+  };
+
+  const shortName = (name: string) => {
+    const cleaned = name.trim()
+      .replace(/\b(Architectural|Engineering|Consultants?|Consulting|&|and|of|the|for|LLC|Co\.|Ltd\.?)\b/gi, '')
+      .trim();
+    const words = cleaned.split(/\s+/).filter(Boolean);
+    if (words.length === 0) return name.slice(0, 6);
+    if (words.length === 1) return words[0].slice(0, 8);
+    if (words.length === 2) return words.map(w => w.slice(0, 5)).join(' ');
+    return words.map(w => w[0].toUpperCase()).join('');
+  };
+
+  if (isLoading) return (
+    <div className="flex items-center justify-center py-20">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-rose-600" />
+    </div>
+  );
+  if (error) return <div className="p-6 text-center text-red-500">{error.message}</div>;
+
+  const roles = data?.roles || [];
+  const consultants = data?.consultants || [];
+  const roleGaps = data?.roleGaps || {};
+  const supervisionFees = data?.supervisionFees || {};
+  const supervisionGaps = data?.supervisionGaps || {};
+
+  return (
+    <div className="space-y-3" dir="rtl">
+      <div className="flex items-center gap-3 flex-wrap">
+        <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500">
+          <ArrowLeft className="w-4 h-4 ml-1" /> العودة
+        </Button>
+        <h2 className="text-xl font-bold text-slate-800">تقرير نطاق الإشراف</h2>
+        {roles.length > 0 && <span className="text-sm text-slate-500">({roles.length} دور)</span>}
+        <div className="mr-auto">
+          <Button
+            size="sm"
+            variant={showGapsOnly ? 'default' : 'outline'}
+            onClick={() => setShowGapsOnly(v => !v)}
+            className={showGapsOnly ? 'bg-red-600 hover:bg-red-700 text-white border-0' : 'border-red-300 text-red-600 hover:bg-red-50'}
+          >
+            {showGapsOnly ? '⚠ الفجوات فقط' : '⚠ إظهار الفجوات فقط'}
+          </Button>
+        </div>
+      </div>
+
+      {consultants.length === 0 ? (
+        <div className="text-center py-16 text-slate-400">
+          <HardHat className="w-12 h-12 mx-auto mb-3 opacity-30" />
+          <p>لا يوجد استشاريون مرتبطون بهذا المشروع</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="text-xs border-collapse" style={{ direction: 'rtl', width: '100%', tableLayout: 'fixed' }}>
+              <colgroup>
+                <col style={{ width: '200px' }} />
+                {consultants.map((c: any) => <col key={c.id} style={{ width: '68px' }} />)}
+              </colgroup>
+              <thead>
+                <tr className="bg-gradient-to-r from-rose-600 to-pink-700 text-white">
+                  <th className="px-2 py-2 text-right font-semibold sticky right-0 bg-rose-600 z-10 border-l border-rose-400">دور الإشراف</th>
+                  {consultants.map((c: any) => (
+                    <th key={c.id} className="px-1 py-2 text-center font-bold leading-tight border-r border-rose-400" title={c.name}>
+                      <div className="truncate text-[10px]">{shortName(c.name)}</div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {roles.filter((role: any) => {
+                  if (!showGapsOnly) return true;
+                  return consultants.some((c: any) => {
+                    const gapVal = (roleGaps as any)[c.id]?.[role.code];
+                    return gapVal !== null && gapVal !== undefined && gapVal > 0;
+                  });
+                }).map((role: any, idx: number) => (
+                  <tr key={role.code} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
+                    <td className="px-2 py-1 text-right font-medium text-slate-700 sticky right-0 bg-inherit border-l border-slate-300 border-b border-b-slate-200 truncate" title={role.label}>
+                      {role.label}
+                    </td>
+                    {consultants.map((c: any) => {
+                      const gapVal = (roleGaps as any)[c.id]?.[role.code];
+                      const isIncluded = gapVal === null || gapVal === undefined;
+                      const gapCost = typeof gapVal === 'number' ? gapVal : 0;
+                      return (
+                        <td key={c.id} className="px-0.5 py-1 text-center border-r border-slate-300 border-b border-b-slate-200">
+                          {isIncluded ? (
+                            <span className="text-emerald-600 font-bold">✓</span>
+                          ) : gapCost > 0 ? (
+                            <span className="text-red-500 font-semibold">{fmtK(gapCost)}</span>
+                          ) : (
+                            <span className="text-slate-400">0</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+                <tr><td colSpan={consultants.length + 1} className="h-0.5 bg-rose-400" /></tr>
+                <tr className="bg-red-50 font-bold">
+                  <td className="px-2 py-1.5 text-right text-red-700 sticky right-0 bg-red-50 border-l border-slate-400 border-b border-b-slate-300">فجوة الإشراف</td>
+                  {consultants.map((c: any) => (
+                    <td key={c.id} className="px-0.5 py-1.5 text-center text-red-600 border-r border-slate-300 border-b border-b-slate-300 text-[10px]">{fmtK((supervisionGaps as any)[c.id] || 0)}</td>
+                  ))}
+                </tr>
+                <tr className="bg-slate-100 font-bold">
+                  <td className="px-2 py-1.5 text-right text-slate-700 sticky right-0 bg-slate-100 border-l border-slate-400 border-b border-b-slate-300">أتعاب الإشراف</td>
+                  {consultants.map((c: any) => (
+                    <td key={c.id} className="px-0.5 py-1.5 text-center text-slate-700 border-r border-slate-300 border-b border-b-slate-300 text-[10px]">{fmtK((supervisionFees as any)[c.id] || 0)}</td>
+                  ))}
+                </tr>
+                <tr className="bg-amber-50 font-bold">
+                  <td className="px-2 py-1.5 text-right text-amber-800 sticky right-0 bg-amber-50 border-l border-slate-400">المجموع الكلي</td>
+                  {consultants.map((c: any) => {
+                    const total = ((supervisionFees as any)[c.id] || 0) + ((supervisionGaps as any)[c.id] || 0);
+                    return <td key={c.id} className="px-0.5 py-1.5 text-center text-amber-700 border-r border-slate-300 text-[10px] font-bold">{fmtK(total)}</td>;
+                  })}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+      <p className="text-xs text-slate-400 text-center">✓ = مشمول بالكامل • الأرقام بالدرهم الإماراتي (K = ألف)</p>
     </div>
   );
 }
