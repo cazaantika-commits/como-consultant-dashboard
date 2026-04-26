@@ -1950,61 +1950,64 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       const { token, projectId } = input;
       await verifyToken(token);
       const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+
+      // Helper to normalize Drizzle execute result
+      const toRows = (r: any): any[] => Array.isArray(r) ? (Array.isArray(r[0]) ? r[0] : r) : [];
 
       // 1. Get CPA project for this platform project
-      const [cpaProj] = await db.execute(
+      const cpaProjRows = toRows(await db.execute(
         sql`SELECT id, building_category_id, duration_months FROM cpa_projects WHERE project_id = ${projectId} LIMIT 1`
-      ) as any[];
-      if (!cpaProj?.length) return { roles: [], consultants: [], roleGaps: {}, supervisionFees: {}, supervisionGaps: {} };
-      const cpaProjectId = cpaProj[0].id;
+      ));
+      if (!cpaProjRows.length) return { roles: [], consultants: [], roleGaps: {}, supervisionFees: {}, supervisionGaps: {} };
+      const cpaProjectId = Number(cpaProjRows[0].id);
+      const buildingCategoryId = cpaProjRows[0].building_category_id;
+
+      // Re-run calculation engine so data is fresh
+      const { runCalculationEngine } = await import('./cpa');
+      await runCalculationEngine(cpaProjectId).catch(() => {});
 
       // 2. Get all supervision roles required for this building category (via baseline)
-      const rolesArr = await db.execute(
+      const rolesArr = toRows(await db.execute(
         sql`SELECT sr.id, sr.code, sr.label, sr.monthly_rate_aed, sb.required_allocation_pct
             FROM cpa_supervision_roles sr
             JOIN cpa_supervision_baseline sb ON sb.supervision_role_id = sr.id
-            WHERE sb.building_category_id = ${cpaProj[0].building_category_id}
+            WHERE sb.building_category_id = ${buildingCategoryId}
               AND sr.is_active = 1
               AND sb.required_allocation_pct > 0
             ORDER BY sr.sort_order`
-      ) as any[];
+      ));
 
-      // 3. Get consultants for this CPA project
-      const consultantArr = await db.execute(
-        sql`SELECT pc.id as pc_id, pc.consultant_id, cm.legal_name as consultant_name,
-                   pc.supervision_fee_amount, pc.supervision_fee_method, pc.supervision_fee_percentage
+      // 3. Get consultants with evaluation results for this CPA project
+      const consultantArr = toRows(await db.execute(
+        sql`SELECT pc.id as pc_id, cm.id as consultant_id, cm.legal_name as consultant_name,
+                   er.quoted_supervision_fee, er.supervision_gap_cost, er.calculation_notes
             FROM cpa_project_consultants pc
             JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id
+            LEFT JOIN cpa_evaluation_results er ON er.project_consultant_id = pc.id
             WHERE pc.cpa_project_id = ${cpaProjectId}
-            ORDER BY cm.legal_name`
-      ) as any[];
+            ORDER BY cm.legal_name ASC`
+      ));
 
-      // 4. Get evaluation results (calculationNotes.supervisionGaps) for each consultant
-      const roleGaps: Record<number, Record<string, number | null>> = {}; // consultantId -> roleCode -> gapCost (null=no gap)
+      // 4. Build roleGaps map from calculationNotes.supervisionGaps
+      const roleGaps: Record<number, Record<string, number | null>> = {};
       const supervisionFees: Record<number, number> = {};
       const supervisionGaps: Record<number, number> = {};
 
-      for (const c of (consultantArr || [])) {
+      for (const c of consultantArr) {
         const cid = Number(c.consultant_id);
-        const [erRows] = await db.execute(
-          sql`SELECT quoted_supervision_fee, supervision_gap_cost, calculation_notes
-              FROM cpa_evaluation_results WHERE project_consultant_id = ${c.pc_id} LIMIT 1`
-        ) as any[];
-        const er = (erRows as any[])[0];
-        supervisionFees[cid] = er ? Number(er.quoted_supervision_fee) || 0 : 0;
-        supervisionGaps[cid] = er ? Number(er.supervision_gap_cost) || 0 : 0;
-
+        supervisionFees[cid] = Number(c.quoted_supervision_fee) || 0;
+        supervisionGaps[cid] = Number(c.supervision_gap_cost) || 0;
         roleGaps[cid] = {};
-        if (er?.calculation_notes) {
-          const cn = JSON.parse(er.calculation_notes);
+
+        if (c.calculation_notes) {
+          const cn = typeof c.calculation_notes === 'string' ? JSON.parse(c.calculation_notes) : c.calculation_notes;
           const gaps: any[] = cn.supervisionGaps || [];
-          // Map roleCode -> gapCost
           const gapMap: Record<string, number> = {};
           for (const g of gaps) {
             gapMap[g.roleCode] = (gapMap[g.roleCode] || 0) + (g.gapCost || 0);
           }
-          // For each required role: null = no gap (fully covered), number = gap cost
-          for (const role of (rolesArr || [])) {
+          for (const role of rolesArr) {
             const gapCost = gapMap[role.code];
             roleGaps[cid][role.code] = gapCost !== undefined ? gapCost : null;
           }
@@ -2012,21 +2015,21 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       }
 
       return {
-        roles: (rolesArr || []).map((r: any) => ({
+        roles: rolesArr.map((r: any) => ({
           id: r.id,
           code: r.code,
           label: r.label,
           monthlyRate: Number(r.monthly_rate_aed) || 0,
           requiredPct: Number(r.required_allocation_pct) || 0,
         })),
-        consultants: (consultantArr || []).map((c: any) => ({
+        consultants: consultantArr.map((c: any) => ({
           id: Number(c.consultant_id),
           pcId: Number(c.pc_id),
           name: c.consultant_name,
         })),
-        roleGaps,        // consultantId -> roleCode -> gapCost (null=fully covered)
-        supervisionFees, // consultantId -> quoted supervision fee
-        supervisionGaps, // consultantId -> total supervision gap from engine
+        roleGaps,
+        supervisionFees,
+        supervisionGaps,
       };
     }),
 });
