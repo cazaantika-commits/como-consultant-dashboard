@@ -3540,6 +3540,7 @@ function ValueAnalysisView({ token, projectId, onBack }: { token: string; projec
 // ═══ Design Scope Report View ═══
 function DesignScopeReportView({ token, projectId, onBack }: { token: string; projectId: number; onBack: () => void }) {
   const { data, isLoading, error } = trpc.commandCenter.getDesignScopeReport.useQuery({ token, projectId });
+  const [showGapsOnly, setShowGapsOnly] = React.useState(false);
 
   // Format number compactly: 125,000 → 125K
   const fmtK = (n: number) => {
@@ -3581,12 +3582,22 @@ function DesignScopeReportView({ token, projectId, onBack }: { token: string; pr
 
   return (
     <div className="space-y-3" dir="rtl">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500">
           <ArrowLeft className="w-4 h-4 ml-1" /> العودة
         </Button>
         <h2 className="text-xl font-bold text-slate-800">تقرير نطاق التصاميم</h2>
         {scopeItems.length > 0 && <span className="text-sm text-slate-500">({scopeItems.length} بند)</span>}
+        <div className="mr-auto">
+          <Button
+            size="sm"
+            variant={showGapsOnly ? 'default' : 'outline'}
+            onClick={() => setShowGapsOnly(v => !v)}
+            className={showGapsOnly ? 'bg-red-600 hover:bg-red-700 text-white border-0' : 'border-red-300 text-red-600 hover:bg-red-50'}
+          >
+            {showGapsOnly ? '⚠ الفجوات فقط' : '⚠ إظهار الفجوات فقط'}
+          </Button>
+        </div>
       </div>
 
       {consultants.length === 0 ? (
@@ -3613,7 +3624,15 @@ function DesignScopeReportView({ token, projectId, onBack }: { token: string; pr
                 </tr>
               </thead>
               <tbody>
-                {scopeItems.map((item: any, idx: number) => (
+                {scopeItems.filter((item: any) => {
+                  if (!showGapsOnly) return true;
+                  // Show item only if at least one consultant does NOT include it
+                  return consultants.some((c: any) => {
+                    const gapVal = (itemGaps as any)[c.id]?.[item.id];
+                    const status = (coverageStatus as any)[c.id]?.[item.id] || 'NOT_MENTIONED';
+                    return !(gapVal === null || status === 'INCLUDED');
+                  });
+                }).map((item: any, idx: number) => (
                   <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
                     <td className="px-2 py-1 text-right font-medium text-slate-700 sticky right-0 bg-inherit border-l border-slate-300 border-b border-b-slate-200 truncate" title={item.label}>
                       <span className="text-slate-400 ml-1 text-[10px]">{item.itemNumber}.</span>
