@@ -1949,6 +1949,7 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
     .query(async ({ input }) => {
       const { token, projectId } = input;
       await verifyToken(token);
+      const db = await getDb();
 
       // 1. Get CPA project for this platform project
       const [cpaProj] = await db.execute(
