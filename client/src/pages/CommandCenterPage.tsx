@@ -3550,10 +3550,19 @@ function DesignScopeReportView({ token, projectId, onBack }: { token: string; pr
   };
   const fmtFull = (n: number) => n > 0 ? n.toLocaleString('ar-AE', { maximumFractionDigits: 0 }) : '—';
 
-  // Shorten consultant name to first 2 words max
+  // Abbreviate consultant name: take first letter of each word, max 6 chars
   const shortName = (name: string) => {
-    const words = name.trim().split(/\s+/);
-    return words.slice(0, 2).join(' ');
+    const cleaned = name.trim()
+      .replace(/\b(Architectural|Engineering|Consultants?|Consulting|&|and|of|the|for|LLC|Co\.|Ltd\.?)\b/gi, '')
+      .trim();
+    const words = cleaned.split(/\s+/).filter(Boolean);
+    if (words.length === 0) return name.slice(0, 6);
+    // If single word, take first 6 chars
+    if (words.length === 1) return words[0].slice(0, 8);
+    // If 2 words, show both shortened
+    if (words.length === 2) return words.map(w => w.slice(0, 5)).join(' ');
+    // 3+ words: initials
+    return words.map(w => w[0].toUpperCase()).join('');
   };
 
   if (isLoading) return (
@@ -3588,26 +3597,26 @@ function DesignScopeReportView({ token, projectId, onBack }: { token: string; pr
       ) : (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="text-xs" style={{ direction: 'rtl', width: '100%', tableLayout: 'fixed' }}>
+            <table className="text-xs border-collapse" style={{ direction: 'rtl', width: '100%', tableLayout: 'fixed' }}>
               <colgroup>
-                <col style={{ width: '200px' }} />
-                {consultants.map((c: any) => <col key={c.id} style={{ width: '90px' }} />)}
+                <col style={{ width: '180px' }} />
+                {consultants.map((c: any) => <col key={c.id} style={{ width: '68px' }} />)}
               </colgroup>
               <thead>
                 <tr className="bg-gradient-to-r from-indigo-600 to-cyan-600 text-white">
-                  <th className="px-3 py-2 text-right font-semibold sticky right-0 bg-indigo-600 z-10">نطاق التصاميم</th>
+                  <th className="px-2 py-2 text-right font-semibold sticky right-0 bg-indigo-600 z-10 border-l border-indigo-400">نطاق التصاميم</th>
                   {consultants.map((c: any) => (
-                    <th key={c.id} className="px-1 py-2 text-center font-semibold leading-tight">
-                      <div className="truncate" title={c.name}>{shortName(c.name)}</div>
+                    <th key={c.id} className="px-1 py-2 text-center font-bold leading-tight border-r border-indigo-400" title={c.name}>
+                      <div className="truncate text-[10px]">{shortName(c.name)}</div>
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {scopeItems.map((item: any, idx: number) => (
-                  <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'}>
-                    <td className="px-3 py-1.5 text-right font-medium text-slate-700 sticky right-0 bg-inherit border-l border-slate-100 truncate" title={item.label}>
-                      <span className="text-slate-400 ml-1">{item.itemNumber}.</span>
+                  <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
+                    <td className="px-2 py-1 text-right font-medium text-slate-700 sticky right-0 bg-inherit border-l border-slate-300 border-b border-b-slate-200 truncate" title={item.label}>
+                      <span className="text-slate-400 ml-1 text-[10px]">{item.itemNumber}.</span>
                       {item.label}
                     </td>
                     {consultants.map((c: any) => {
@@ -3616,37 +3625,37 @@ function DesignScopeReportView({ token, projectId, onBack }: { token: string; pr
                       const isIncluded = gapVal === null || status === 'INCLUDED';
                       const gapCost = typeof gapVal === 'number' ? gapVal : 0;
                       return (
-                        <td key={c.id} className="px-1 py-1.5 text-center">
+                        <td key={c.id} className="px-0.5 py-1 text-center border-r border-slate-300 border-b border-b-slate-200">
                           {isIncluded ? (
-                            <span className="text-emerald-600 font-bold text-sm">✓</span>
+                            <span className="text-emerald-600 font-bold">✓</span>
                           ) : gapCost > 0 ? (
                             <span className="text-red-500 font-semibold">{fmtK(gapCost)}</span>
                           ) : (
-                            <span className="text-slate-400 text-xs">0</span>
+                            <span className="text-slate-400">0</span>
                           )}
                         </td>
                       );
                     })}
                   </tr>
                 ))}
-                <tr><td colSpan={consultants.length + 1} className="h-px bg-indigo-200" /></tr>
+                <tr><td colSpan={consultants.length + 1} className="h-0.5 bg-indigo-400" /></tr>
                 <tr className="bg-red-50 font-bold">
-                  <td className="px-3 py-2 text-right text-red-700 sticky right-0 bg-red-50 border-l border-slate-100">فجوة النطاق</td>
+                  <td className="px-2 py-1.5 text-right text-red-700 sticky right-0 bg-red-50 border-l border-slate-400 border-b border-b-slate-300">فجوة النطاق</td>
                   {consultants.map((c: any) => (
-                    <td key={c.id} className="px-1 py-2 text-center text-red-600">{fmtFull((designGaps as any)[c.id] || 0)}</td>
+                    <td key={c.id} className="px-0.5 py-1.5 text-center text-red-600 border-r border-slate-300 border-b border-b-slate-300 text-[10px]">{fmtK((designGaps as any)[c.id] || 0)}</td>
                   ))}
                 </tr>
-                <tr className="bg-slate-50 font-bold">
-                  <td className="px-3 py-2 text-right text-slate-700 sticky right-0 bg-slate-50 border-l border-slate-100">أتعاب التصميم</td>
+                <tr className="bg-slate-100 font-bold">
+                  <td className="px-2 py-1.5 text-right text-slate-700 sticky right-0 bg-slate-100 border-l border-slate-400 border-b border-b-slate-300">أتعاب التصميم</td>
                   {consultants.map((c: any) => (
-                    <td key={c.id} className="px-1 py-2 text-center text-slate-700">{fmtFull((designFees as any)[c.id] || 0)}</td>
+                    <td key={c.id} className="px-0.5 py-1.5 text-center text-slate-700 border-r border-slate-300 border-b border-b-slate-300 text-[10px]">{fmtK((designFees as any)[c.id] || 0)}</td>
                   ))}
                 </tr>
                 <tr className="bg-amber-50 font-bold">
-                  <td className="px-3 py-2 text-right text-amber-800 sticky right-0 bg-amber-50 border-l border-slate-100">المجموع الكلي</td>
+                  <td className="px-2 py-1.5 text-right text-amber-800 sticky right-0 bg-amber-50 border-l border-slate-400">المجموع الكلي</td>
                   {consultants.map((c: any) => {
                     const total = ((designFees as any)[c.id] || 0) + ((designGaps as any)[c.id] || 0);
-                    return <td key={c.id} className="px-1 py-2 text-center text-amber-700">{fmtFull(total)}</td>;
+                    return <td key={c.id} className="px-0.5 py-1.5 text-center text-amber-700 border-r border-slate-300 text-[10px] font-bold">{fmtK(total)}</td>;
                   })}
                 </tr>
               </tbody>
