@@ -233,39 +233,9 @@ export async function runCalculationEngine(cpaProjectId: number) {
         }
       }
 
-      // Supervision gap — applies to ALL fee methods (LUMP_SUM, PERCENTAGE, MONTHLY_RATE)
-      // For MONTHLY_RATE: use consultant's proposed rates for gap pricing
-      // For LUMP_SUM / PERCENTAGE: use reference rates from supervision_roles table
-      let supervisionGapCost = 0;
-      for (const baseline of supervisionBaseline) {
-        const roleId = Number(baseline.supervision_role_id);
-        const required = toNum(baseline.required_allocation_pct);
-        const teamEntry = teamMap[roleId];
-        // If allocation_pct is 0 but rate is provided, treat as covering the baseline required_pct
-        const rawProposed = toNum(teamEntry?.proposed_allocation_pct ?? 0);
-        const proposed = (rawProposed === 0 && teamEntry?.proposed_monthly_rate)
-          ? required  // consultant provided a rate but no explicit pct -> assume full coverage
-          : rawProposed;
-        if (proposed < required) {
-          const gapPct = required - proposed;
-          // For MONTHLY_RATE: use the consultant's own proposed rate for the gap role (if present), else reference rate
-          // For LUMP_SUM / PERCENTAGE: always use reference rate from baseline
-          const rateToUse =
-            consultant.supervision_fee_method === "MONTHLY_RATE" && teamEntry?.proposed_monthly_rate
-              ? toNum(teamEntry.proposed_monthly_rate)
-              : toNum(baseline.monthly_rate_aed);
-          const gapCost = rateToUse * durationMonths * (gapPct / 100);
-          supervisionGapCost += gapCost;
-          notes.supervisionGaps.push({
-            roleCode: baseline.code,
-            roleLabel: baseline.label,
-            required,
-            proposed,
-            gapPct,
-            gapCost,
-          });
-        }
-      }
+      // Supervision gap is disabled — supervision is entered manually by the user.
+      // The quoted supervision fee is accepted as-is with no gap penalty.
+      const supervisionGapCost = 0;
 
       const adjustedSupervisionFee = quotedSupervisionFee + supervisionGapCost;
       const trueDesignFee = quotedDesignFee + designScopeGapCost;

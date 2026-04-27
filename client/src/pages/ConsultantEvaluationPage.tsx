@@ -169,8 +169,8 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
   const designAmount = designType === 'pct' ? constructionCost * (dv / 100) : dv;
   const supervisionAmount = supervisionType === 'pct' ? constructionCost * (sv / 100) : supervisionType === 'monthly_rate' ? monthlyRateTotal : sv;
   const designGapCost = parseFloat(designGapInput) || 0;
-  const supervisionGapCost = parseFloat(supervisionGapInput) || 0;
-  const total = designAmount + designGapCost + supervisionAmount + supervisionGapCost;
+  const supervisionGapCost = 0; // supervision gap removed — manual input only
+  const total = designAmount + designGapCost + supervisionAmount;
 
   const totalRef = useRef(total);
   useEffect(() => {
@@ -198,7 +198,7 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
   };
 
   const designTotal = designAmount + designGapCost;
-  const supervisionTotal = supervisionAmount + supervisionGapCost;
+  const supervisionTotal = supervisionAmount;
 
   return (
     <>
@@ -306,24 +306,7 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
           </>
         )}
       </td>
-      {/* Supervision gap — hidden for monthly_rate mode */}
-      {supervisionType !== 'monthly_rate' ? (
-        <td className="border border-slate-200 p-2 bg-purple-50">
-          <Input
-            type="number"
-            value={supervisionGapInput}
-            onChange={(e) => { editingRef.current = true; setSupervisionGapInput(e.target.value); }}
-            onBlur={() => doSave()}
-            className="text-center bg-purple-50 border-purple-300 text-purple-700 font-semibold text-xs"
-            placeholder="0"
-          />
-          {fin?.cpaSupervisionGap > 0 && (
-            <p className="text-[10px] text-purple-400 mt-1 text-center">CPA: {Number(fin.cpaSupervisionGap).toLocaleString()}</p>
-          )}
-        </td>
-      ) : (
-        <td className="border border-slate-200 p-2 bg-purple-50 text-center text-slate-400 text-xs">—</td>
-      )}
+
       {/* Supervision total */}
       <td className="border border-slate-200 p-2 text-center font-bold text-sm bg-teal-100 text-teal-800">
         {supervisionTotal.toLocaleString()}
@@ -780,7 +763,7 @@ export default function ConsultantEvaluationPage() {
                           <th className="border border-emerald-700 p-2 bg-blue-800" style={{ width: '9%' }}>مجموع التصميم</th>
                           <th className="border border-emerald-700 p-1 bg-teal-600" style={{ width: '5%' }}>نوع</th>
                           <th className="border border-emerald-700 p-2 bg-teal-600" style={{ width: '10%' }}>أتعاب الإشراف</th>
-                          <th className="border border-emerald-700 p-2 bg-purple-600" style={{ width: '9%' }}>فجوة الإشراف</th>
+
                           <th className="border border-emerald-700 p-2 bg-teal-800" style={{ width: '9%' }}>مجموع الإشراف</th>
                         </tr>
                       </thead>

@@ -2762,16 +2762,15 @@ function FinancialEvaluationView({ token, projectId, onBack }: { token: string; 
               <th className="border border-emerald-700 p-2 bg-blue-800" style={{width:'9%'}}>مجموع التصميم</th>
               <th className="border border-emerald-700 p-1 bg-teal-600" style={{width:'5%'}}>نوع</th>
               <th className="border border-emerald-700 p-2 bg-teal-600" style={{width:'10%'}}>أتعاب الإشراف</th>
-              <th className="border border-emerald-700 p-2 bg-purple-600" style={{width:'9%'}}>فجوة الإشراف</th>
+
               <th className="border border-emerald-700 p-2 bg-teal-800" style={{width:'9%'}}>مجموع الإشراف</th>
             </tr>
           </thead>
           <tbody className="bg-white">
             {sorted.map((c, i) => {
               const designGap = Number(c.designScopeGapCost) || 0;
-              const supervisionGap = Number(c.supervisionScopeGapCost) || 0;
               const designTotal = (c.designAmount || 0) + designGap;
-              const supervisionTotal = (c.supervisionAmount || 0) + supervisionGap;
+              const supervisionTotal = (c.supervisionAmount || 0);
               const isLowest = i === 0;
               return (
               <tr key={c.id} className={`border-b hover:bg-gradient-to-l hover:from-blue-50/30 hover:to-transparent transition-all duration-200 ${
@@ -2816,12 +2815,7 @@ function FinancialEvaluationView({ token, projectId, onBack }: { token: string; 
                   <p className="text-xs font-semibold text-slate-800">{(c.supervisionAmount || 0).toLocaleString()}</p>
                   {c.supervisionType === 'pct' && <p className="text-[10px] text-teal-500">درهم</p>}
                 </td>
-                {/* Supervision gap */}
-                <td className="border border-slate-200 p-2 bg-purple-50 text-center">
-                  {supervisionGap > 0
-                    ? <><p className="text-xs font-semibold text-purple-600">+{supervisionGap.toLocaleString()}</p><p className="text-[10px] text-purple-400">درهم</p></>
-                    : <p className="text-xs text-slate-300">—</p>}
-                </td>
+
                 {/* Supervision total */}
                 <td className="border border-slate-200 p-2 text-center font-bold text-sm bg-teal-100 text-teal-800">
                   {supervisionTotal.toLocaleString()}
