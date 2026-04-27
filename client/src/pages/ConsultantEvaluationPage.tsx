@@ -1,14 +1,118 @@
-import { useState, useEffect, useRef, Fragment, useMemo } from "react";
+import { useState, useEffect, useRef, Fragment, useMemo, useCallback } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Trash2, DollarSign, Users, ExternalLink, TrendingUp, Target, CheckCircle2, Building, AlertTriangle, Shield } from "lucide-react";
+import { Loader2, Trash2, DollarSign, Users, ExternalLink, TrendingUp, Target, CheckCircle2, Building, AlertTriangle, Shield, Settings2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+// ===== Supervision Monthly Rate Dialog =====
+function SupervisionRateDialog({ open, onClose, fin, projectDurationMonths }: {
+  open: boolean;
+  onClose: (newTotal?: number) => void;
+  fin: any;
+  projectDurationMonths: number;
+}) {
+  const cpaProjectId = fin?.cpaProjectId || 0;
+  const projectConsultantId = fin?.projectConsultantId || 0;
+  const rolesQuery = trpc.financial.getProjectSupervisionRoles.useQuery(
+    { cpaProjectId, projectConsultantId },
+    { enabled: open && cpaProjectId > 0 && projectConsultantId > 0 }
+  );
+  const saveRateMutation = trpc.financial.saveSupervisionMonthlyRate.useMutation({
+    onSuccess: () => rolesQuery.refetch(),
+  });
+  const [rates, setRates] = useState<Record<number, string>>({});
+
+  useEffect(() => {
+    if (rolesQuery.data) {
+      const init: Record<number, string> = {};
+      rolesQuery.data.forEach((r: any) => {
+        init[r.id] = r.proposed_monthly_rate != null ? String(r.proposed_monthly_rate) : '';
+      });
+      setRates(init);
+    }
+  }, [rolesQuery.data]);
+
+  const handleBlur = (roleId: number) => {
+    const val = parseFloat(rates[roleId] || '0') || null;
+    saveRateMutation.mutate({ projectConsultantId, supervisionRoleId: roleId, proposedMonthlyRate: val });
+  };
+
+  const total = (rolesQuery.data || []).reduce((sum: number, r: any) => {
+    const rate = parseFloat(rates[r.id] || '0') || 0;
+    const alloc = Number(r.required_allocation_pct) / 100;
+    return sum + rate * alloc * projectDurationMonths;
+  }, 0);
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose(total)}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" dir="rtl">
+        <DialogHeader>
+          <DialogTitle className="text-right text-teal-800">تفاصيل أتعاب الإشراف — Monthly Rate</DialogTitle>
+        </DialogHeader>
+        {rolesQuery.isLoading ? (
+          <div className="flex justify-center p-8"><Loader2 className="animate-spin w-6 h-6" /></div>
+        ) : (
+          <>
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="bg-teal-700 text-white text-xs">
+                  <th className="border border-teal-600 p-2 text-right">الدور</th>
+                  <th className="border border-teal-600 p-2 text-center">نسبة الإشغال</th>
+                  <th className="border border-teal-600 p-2 text-center">المدة (شهر)</th>
+                  <th className="border border-teal-600 p-2 text-center">الراتب الشهري (AED)</th>
+                  <th className="border border-teal-600 p-2 text-center">الإجمالي</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(rolesQuery.data || []).map((role: any) => {
+                  const rate = parseFloat(rates[role.id] || '0') || 0;
+                  const alloc = Number(role.required_allocation_pct) / 100;
+                  const roleTotal = rate * alloc * projectDurationMonths;
+                  return (
+                    <tr key={role.id} className="border-b hover:bg-teal-50">
+                      <td className="border border-slate-200 p-2 font-medium text-slate-800">{role.label}</td>
+                      <td className="border border-slate-200 p-2 text-center text-slate-600">{Number(role.required_allocation_pct).toFixed(0)}%</td>
+                      <td className="border border-slate-200 p-2 text-center text-slate-600">{projectDurationMonths}</td>
+                      <td className="border border-slate-200 p-2">
+                        <Input
+                          type="number"
+                          value={rates[role.id] ?? ''}
+                          onChange={(e) => setRates(prev => ({ ...prev, [role.id]: e.target.value }))}
+                          onBlur={() => handleBlur(role.id)}
+                          placeholder={role.reference_rate ? `مرجع: ${Number(role.reference_rate).toLocaleString()}` : '0'}
+                          className="text-center text-xs border-teal-300"
+                        />
+                      </td>
+                      <td className="border border-slate-200 p-2 text-center font-bold text-teal-700">
+                        {roleTotal > 0 ? roleTotal.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="bg-teal-100 font-bold">
+                  <td colSpan={4} className="border border-teal-300 p-2 text-right text-teal-800">المجموع الكلي</td>
+                  <td className="border border-teal-300 p-2 text-center text-teal-900 text-base">{total.toLocaleString(undefined, { maximumFractionDigits: 0 })} AED</td>
+                </tr>
+              </tfoot>
+            </table>
+            {cpaProjectId === 0 && (
+              <p className="text-amber-600 text-xs mt-2 text-center">⚠ لم يتم ربط هذا المشروع بنظام CPA. أضف المشروع في إعدادات المكاتب الاستشارية أولاً.</p>
+            )}
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 // FinancialRow component with local state - saves ONLY on blur
-function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, updateFinancialMutation, onTotalChange }: {
+function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, updateFinancialMutation, onTotalChange, projectDurationMonths }: {
   consultant: any;
   fin: any;
   selectedProjectId: number;
@@ -16,6 +120,7 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
   updateFinancialMutation: any;
   onTotalChange: (consultantId: number, total: number) => void;
   designScopeGapCost?: number;
+  projectDurationMonths: number;
 }) {
   const [designType, setDesignType] = useState(fin?.designType || 'pct');
   const [designValue, setDesignValue] = useState(fin ? String(parseFloat(String(fin.designValue)) || 0) : '0');
@@ -33,6 +138,8 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
       ? String(Number(fin.supervisionGapOverride))
       : String(Number(fin?.supervisionScopeGapCost || 0))
   );
+  const [supervisionDialogOpen, setSupervisionDialogOpen] = useState(false);
+  const [monthlyRateTotal, setMonthlyRateTotal] = useState<number>(0);
   const editingRef = useRef(false);
   const initRef = useRef(fin?.id);
 
@@ -60,7 +167,7 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
   const dv = parseFloat(designValue) || 0;
   const sv = parseFloat(supervisionValue) || 0;
   const designAmount = designType === 'pct' ? constructionCost * (dv / 100) : dv;
-  const supervisionAmount = supervisionType === 'pct' ? constructionCost * (sv / 100) : sv;
+  const supervisionAmount = supervisionType === 'pct' ? constructionCost * (sv / 100) : supervisionType === 'monthly_rate' ? monthlyRateTotal : sv;
   const designGapCost = parseFloat(designGapInput) || 0;
   const supervisionGapCost = parseFloat(supervisionGapInput) || 0;
   const total = designAmount + designGapCost + supervisionAmount + supervisionGapCost;
@@ -94,6 +201,7 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
   const supervisionTotal = supervisionAmount + supervisionGapCost;
 
   return (
+    <>
     <tr className="border-b hover:bg-gradient-to-l hover:from-blue-50/30 hover:to-transparent transition-all duration-200">
       {/* Consultant name */}
       <td className="border border-slate-200 p-3 font-semibold text-sm whitespace-normal leading-tight bg-gradient-to-l from-slate-50 to-white">
@@ -162,42 +270,65 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
           <SelectContent>
             <SelectItem value="pct">%</SelectItem>
             <SelectItem value="lump">مبلغ</SelectItem>
+            <SelectItem value="monthly_rate">شهري</SelectItem>
           </SelectContent>
         </Select>
       </td>
       {/* Supervision fees */}
       <td className="border border-slate-200 p-2 bg-teal-50">
-        <Input
-          type="number"
-          value={supervisionValue}
-          onChange={(e) => { editingRef.current = true; setSupervisionValue(e.target.value); }}
-          onBlur={() => doSave()}
-          className="text-center bg-white border-teal-300 text-xs"
-        />
-        {supervisionType === 'pct' && constructionCost > 0 && (
-          <p className="text-[10px] text-teal-500 mt-1 text-center">{supervisionAmount.toLocaleString()}</p>
+        {supervisionType === 'monthly_rate' ? (
+          <div className="flex flex-col items-center gap-1">
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full h-8 text-xs border-teal-400 text-teal-700 hover:bg-teal-50 flex items-center gap-1"
+              onClick={() => setSupervisionDialogOpen(true)}
+            >
+              <Settings2 className="w-3 h-3" />
+              تفاصيل الرواتب
+            </Button>
+            {monthlyRateTotal > 0 && (
+              <p className="text-[10px] text-teal-600 font-semibold">{monthlyRateTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+            )}
+          </div>
+        ) : (
+          <>
+            <Input
+              type="number"
+              value={supervisionValue}
+              onChange={(e) => { editingRef.current = true; setSupervisionValue(e.target.value); }}
+              onBlur={() => doSave()}
+              className="text-center bg-white border-teal-300 text-xs"
+            />
+            {supervisionType === 'pct' && constructionCost > 0 && (
+              <p className="text-[10px] text-teal-500 mt-1 text-center">{supervisionAmount.toLocaleString()}</p>
+            )}
+          </>
         )}
       </td>
-      {/* Supervision gap (editable) */}
-      <td className="border border-slate-200 p-2 bg-purple-50">
-        <Input
-          type="number"
-          value={supervisionGapInput}
-          onChange={(e) => { editingRef.current = true; setSupervisionGapInput(e.target.value); }}
-          onBlur={() => doSave()}
-          className="text-center bg-purple-50 border-purple-300 text-purple-700 font-semibold text-xs"
-          placeholder="0"
-        />
-        {fin?.cpaSupervisionGap > 0 && (
-          <p className="text-[10px] text-purple-400 mt-1 text-center">CPA: {Number(fin.cpaSupervisionGap).toLocaleString()}</p>
-        )}
-      </td>
+      {/* Supervision gap — hidden for monthly_rate mode */}
+      {supervisionType !== 'monthly_rate' ? (
+        <td className="border border-slate-200 p-2 bg-purple-50">
+          <Input
+            type="number"
+            value={supervisionGapInput}
+            onChange={(e) => { editingRef.current = true; setSupervisionGapInput(e.target.value); }}
+            onBlur={() => doSave()}
+            className="text-center bg-purple-50 border-purple-300 text-purple-700 font-semibold text-xs"
+            placeholder="0"
+          />
+          {fin?.cpaSupervisionGap > 0 && (
+            <p className="text-[10px] text-purple-400 mt-1 text-center">CPA: {Number(fin.cpaSupervisionGap).toLocaleString()}</p>
+          )}
+        </td>
+      ) : (
+        <td className="border border-slate-200 p-2 bg-purple-50 text-center text-slate-400 text-xs">—</td>
+      )}
       {/* Supervision total */}
       <td className="border border-slate-200 p-2 text-center font-bold text-sm bg-teal-100 text-teal-800">
         {supervisionTotal.toLocaleString()}
         <p className="text-[10px] font-normal text-teal-500">AED</p>
       </td>
-
       {/* Grand Total */}
       <td className="border border-slate-200 p-2 text-center font-bold text-sm bg-gradient-to-b from-amber-100 to-amber-50 text-amber-900 border-l-2 border-amber-400">
         {total.toLocaleString()}
@@ -228,6 +359,16 @@ function FinancialRow({ consultant, fin, selectedProjectId, constructionCost, up
         </div>
       </td>
     </tr>
+    <SupervisionRateDialog
+      open={supervisionDialogOpen}
+      onClose={(newTotal) => {
+        setSupervisionDialogOpen(false);
+        if (newTotal !== undefined) setMonthlyRateTotal(newTotal);
+      }}
+      fin={fin}
+      projectDurationMonths={projectDurationMonths}
+    />
+    </>
   );
 }
 
@@ -659,6 +800,7 @@ export default function ConsultantEvaluationPage() {
                                   updateFinancialMutation={updateFinancialMutation}
                                   onTotalChange={() => {}}
                                   designScopeGapCost={fin?.designScopeGapCost || 0}
+                                  projectDurationMonths={selectedProject?.constructionDurationMonths || 24}
                                 />
                               </Fragment>
                             );

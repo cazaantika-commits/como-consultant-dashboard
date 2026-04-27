@@ -237,6 +237,8 @@ export async function getProjectFinancialData(projectId: number) {
     const gapResults = await db.execute(sql`
       SELECT 
         cpc.consultant_id as consultantId,
+        cpc.id as projectConsultantId,
+        cp.id as cpaProjectId,
         cer.design_scope_gap_cost as designScopeGapCost,
         cer.supervision_gap_cost as supervisionScopeGapCost,
         cer.true_design_fee as trueDesignFee
@@ -249,12 +251,14 @@ export async function getProjectFinancialData(projectId: number) {
     const rows = Array.isArray(gapResults) ? gapResults[0] : gapResults;
     if (rows && (rows as any[]).length > 0) {
       // Build a map: consultantId -> { designScopeGapCost, supervisionScopeGapCost, trueDesignFee }
-      const gapMap = new Map<number, { gap: number; supervisionGap: number; trueFee: number }>();
+      const gapMap = new Map<number, { gap: number; supervisionGap: number; trueFee: number; projectConsultantId: number; cpaProjectId: number }>();
       for (const row of rows as any[]) {
         gapMap.set(Number(row.consultantId), {
           gap: Number(row.designScopeGapCost) || 0,
           supervisionGap: Number(row.supervisionScopeGapCost) || 0,
           trueFee: Number(row.trueDesignFee) || 0,
+          projectConsultantId: Number(row.projectConsultantId) || 0,
+          cpaProjectId: Number(row.cpaProjectId) || 0,
         });
       }
 
@@ -276,6 +280,8 @@ export async function getProjectFinancialData(projectId: number) {
           trueDesignFee: gapMap.get(fd.consultantId)?.trueFee || 0,
           cpaDesignGap: cpaGap,
           cpaSupervisionGap: cpaSupGap,
+          projectConsultantId: gapMap.get(fd.consultantId)?.projectConsultantId || 0,
+          cpaProjectId: gapMap.get(fd.consultantId)?.cpaProjectId || 0,
         };
       });
     }
