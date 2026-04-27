@@ -2725,128 +2725,129 @@ function FinancialEvaluationView({ token, projectId, onBack }: { token: string; 
   };
 
   return (
-    <div dir="ltr" className="space-y-4">
+    <div dir="rtl" className="space-y-4">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500 hover:text-slate-700">
-          <ArrowLeft className="w-4 h-4 mr-1" /> Back
+          <ArrowRight className="w-4 h-4 ml-1" /> العودة
         </Button>
-        <h2 className="text-lg font-bold text-slate-900">Financial Evaluation</h2>
+        <h2 className="text-lg font-bold text-slate-900">الأتعاب المالية للاستشاريين</h2>
         <span className="text-sm text-slate-500">— {project?.name}</span>
       </div>
       
-      {/* Project Metrics - compact */}
+      {/* Project Metrics */}
       {project && (
         <div className="flex gap-6 px-1 text-sm">
-          <div><span className="text-slate-500">BUA:</span> <span className="font-semibold text-slate-800">{project.bua?.toLocaleString()} sqft</span></div>
-          <div><span className="text-slate-500">Price/sqft:</span> <span className="font-semibold text-slate-800">{project.pricePerSqft?.toLocaleString()} AED</span></div>
-          <div><span className="text-slate-500">Construction Cost:</span> <span className="font-semibold text-slate-800">{project.constructionCost?.toLocaleString()} AED</span></div>
+          <div><span className="text-slate-500">مساحة البناء:</span> <span className="font-semibold text-slate-800">{project.bua?.toLocaleString()} قدم²</span></div>
+          <div><span className="text-slate-500">سعر القدم:</span> <span className="font-semibold text-slate-800">{project.pricePerSqft?.toLocaleString()} درهم</span></div>
+          <div><span className="text-slate-500">تكلفة البناء:</span> <span className="font-semibold text-slate-800">{project.constructionCost?.toLocaleString()} درهم</span></div>
         </div>
       )}
 
-      {/* Table Layout */}
-      <div className="bg-white rounded-xl border border-slate-200 w-full">
-        <table className="w-full" style={{tableLayout:'fixed'}}>
+      {/* Table Layout - identical to ConsultantEvaluationPage */}
+      <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+        <table className="w-full border-collapse">
           <thead>
-            {/* Group header row */}
-            <tr className="bg-slate-100 border-b border-slate-200 text-center text-[10px] font-bold text-slate-600 uppercase tracking-wider">
-              <th className="py-2 px-3 text-left" rowSpan={2} style={{width:'22%'}}>CONSULTANT</th>
-              <th className="py-2 px-2 bg-blue-50 text-blue-700 border-x border-blue-200" colSpan={3}>DESIGN</th>
-              <th className="py-2 px-2 bg-teal-50 text-teal-700 border-x border-teal-200" colSpan={3}>SUPERVISION</th>
-              <th className="py-2 px-2 bg-amber-50 text-amber-700 border-x-2 border-amber-300" rowSpan={2} style={{width:'10%'}}>TOTAL (AED)</th>
-              <th className="py-2 px-2" rowSpan={2} style={{width:'7%'}}>VS AVG</th>
-              <th className="py-2 px-2" rowSpan={2} style={{width:'7%'}}>SCORE</th>
+            {/* Two-level header matching ConsultantEvaluationPage */}
+            <tr className="bg-gradient-to-r from-emerald-700 via-teal-700 to-cyan-700 text-white text-center text-xs font-bold">
+              <th className="border border-emerald-600 p-2" rowSpan={2} style={{width:'14%'}}>الاستشاري</th>
+              <th className="border border-emerald-600 p-2 bg-blue-700" colSpan={4}>التصميم</th>
+              <th className="border border-emerald-600 p-2 bg-teal-700" colSpan={4}>الإشراف</th>
+              <th className="border border-emerald-600 p-2 bg-amber-600" rowSpan={2} style={{width:'11%'}}>المجموع الكلي</th>
+              <th className="border border-emerald-600 p-2" rowSpan={2} style={{width:'8%'}}>مقابل المتوسط</th>
             </tr>
-            <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-semibold uppercase tracking-wider">
-              <th className="py-2 px-2 text-right text-blue-600 bg-blue-50" style={{width:'9%'}}>أتعاب</th>
-              <th className="py-2 px-2 text-right text-orange-500 bg-orange-50" style={{width:'9%'}}>فجوة</th>
-              <th className="py-2 px-2 text-right text-blue-800 bg-blue-100" style={{width:'9%'}}>مجموع</th>
-              <th className="py-2 px-2 text-right text-teal-600 bg-teal-50" style={{width:'9%'}}>أتعاب</th>
-              <th className="py-2 px-2 text-right text-purple-500 bg-purple-50" style={{width:'9%'}}>فجوة</th>
-              <th className="py-2 px-2 text-right text-teal-800 bg-teal-100" style={{width:'9%'}}>مجموع</th>
+            <tr className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white text-center text-xs font-bold">
+              <th className="border border-emerald-700 p-1 bg-blue-600" style={{width:'5%'}}>نوع</th>
+              <th className="border border-emerald-700 p-2 bg-blue-600" style={{width:'10%'}}>أتعاب التصميم</th>
+              <th className="border border-emerald-700 p-2 bg-orange-600" style={{width:'9%'}}>فجوة التصميم</th>
+              <th className="border border-emerald-700 p-2 bg-blue-800" style={{width:'9%'}}>مجموع التصميم</th>
+              <th className="border border-emerald-700 p-1 bg-teal-600" style={{width:'5%'}}>نوع</th>
+              <th className="border border-emerald-700 p-2 bg-teal-600" style={{width:'10%'}}>أتعاب الإشراف</th>
+              <th className="border border-emerald-700 p-2 bg-purple-600" style={{width:'9%'}}>فجوة الإشراف</th>
+              <th className="border border-emerald-700 p-2 bg-teal-800" style={{width:'9%'}}>مجموع الإشراف</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="bg-white">
             {sorted.map((c, i) => {
               const designGap = Number(c.designScopeGapCost) || 0;
               const supervisionGap = Number(c.supervisionScopeGapCost) || 0;
               const designTotal = (c.designAmount || 0) + designGap;
               const supervisionTotal = (c.supervisionAmount || 0) + supervisionGap;
+              const isLowest = i === 0;
               return (
-              <tr key={c.id} className={`border-b border-slate-100 transition-colors ${
-                i === 0 ? 'bg-emerald-50/70' : 'hover:bg-slate-50/50'
+              <tr key={c.id} className={`border-b hover:bg-gradient-to-l hover:from-blue-50/30 hover:to-transparent transition-all duration-200 ${
+                isLowest ? 'bg-emerald-50/40' : ''
               }`}>
-                {/* Rank + Name */}
-                <td className="py-2 px-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                      i === 0 ? 'bg-emerald-600 text-white' : i === 1 ? 'bg-slate-700 text-white' : i === 2 ? 'bg-amber-600 text-white' : 'bg-slate-200 text-slate-600'
+                {/* Consultant name + rank */}
+                <td className="border border-slate-200 p-3 font-semibold text-sm whitespace-normal leading-tight bg-gradient-to-l from-slate-50 to-white">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                      i === 0 ? 'bg-emerald-600 text-white' : i === 1 ? 'bg-slate-600 text-white' : i === 2 ? 'bg-amber-600 text-white' : 'bg-slate-200 text-slate-600'
                     }`}>{i + 1}</span>
-                    <div>
-                      <p className="font-semibold text-slate-900 text-[13px] leading-tight">{c.name}</p>
-                      {i === 0 && <p className="text-[10px] text-emerald-600 font-medium">Best Offer</p>}
-                    </div>
+                    <span>{c.name}</span>
                   </div>
+                  {isLowest && <p className="text-[10px] text-emerald-600 font-medium mt-0.5 mr-7">الأفضل سعراً</p>}
+                </td>
+                {/* Design type */}
+                <td className="border border-slate-200 p-2 text-center bg-blue-50 text-[11px] font-bold text-blue-700">
+                  {c.designType === 'pct' ? `${c.designValue}%` : 'مبلغ'}
                 </td>
                 {/* Design fees */}
-                <td className="py-2 px-2 text-right bg-blue-50/40">
-                  <p className="text-[12px] font-semibold text-slate-800">{c.designAmount?.toLocaleString()}</p>
-                  <p className="text-[10px] text-slate-400">{feeTypeLabel(c.designType, c.designValue)}</p>
+                <td className="border border-slate-200 p-2 bg-blue-50 text-center">
+                  <p className="text-xs font-semibold text-slate-800">{(c.designAmount || 0).toLocaleString()}</p>
+                  {c.designType === 'pct' && <p className="text-[10px] text-blue-500">درهم</p>}
                 </td>
-                {/* Design Gap */}
-                <td className="py-2 px-2 text-right bg-orange-50/40">
+                {/* Design gap */}
+                <td className="border border-slate-200 p-2 bg-orange-50 text-center">
                   {designGap > 0
-                    ? <p className="text-[12px] font-semibold text-orange-600">+{designGap.toLocaleString()}</p>
-                    : <p className="text-[11px] text-slate-300">—</p>}
+                    ? <><p className="text-xs font-semibold text-orange-600">+{designGap.toLocaleString()}</p><p className="text-[10px] text-orange-400">درهم</p></>
+                    : <p className="text-xs text-slate-300">—</p>}
                 </td>
-                {/* Design Total */}
-                <td className="py-2 px-2 text-right bg-blue-100/60">
-                  <p className="text-[12px] font-bold text-blue-800">{designTotal.toLocaleString()}</p>
+                {/* Design total */}
+                <td className="border border-slate-200 p-2 text-center font-bold text-sm bg-blue-100 text-blue-800">
+                  {designTotal.toLocaleString()}
+                  <p className="text-[10px] font-normal text-blue-500">درهم</p>
+                </td>
+                {/* Supervision type */}
+                <td className="border border-slate-200 p-2 text-center bg-teal-50 text-[11px] font-bold text-teal-700">
+                  {c.supervisionType === 'pct' ? `${c.supervisionValue}%` : 'مبلغ'}
                 </td>
                 {/* Supervision fees */}
-                <td className="py-2 px-2 text-right bg-teal-50/40">
-                  <p className="text-[12px] font-semibold text-slate-800">{c.supervisionAmount?.toLocaleString()}</p>
-                  <p className="text-[10px] text-slate-400">{feeTypeLabel(c.supervisionType, c.supervisionValue)}</p>
+                <td className="border border-slate-200 p-2 bg-teal-50 text-center">
+                  <p className="text-xs font-semibold text-slate-800">{(c.supervisionAmount || 0).toLocaleString()}</p>
+                  {c.supervisionType === 'pct' && <p className="text-[10px] text-teal-500">درهم</p>}
                 </td>
-                {/* Supervision Gap */}
-                <td className="py-2 px-2 text-right bg-purple-50/40">
+                {/* Supervision gap */}
+                <td className="border border-slate-200 p-2 bg-purple-50 text-center">
                   {supervisionGap > 0
-                    ? <p className="text-[12px] font-semibold text-purple-600">+{supervisionGap.toLocaleString()}</p>
-                    : <p className="text-[11px] text-slate-300">—</p>}
+                    ? <><p className="text-xs font-semibold text-purple-600">+{supervisionGap.toLocaleString()}</p><p className="text-[10px] text-purple-400">درهم</p></>
+                    : <p className="text-xs text-slate-300">—</p>}
                 </td>
-                {/* Supervision Total */}
-                <td className="py-2 px-2 text-right bg-teal-100/60">
-                  <p className="text-[12px] font-bold text-teal-800">{supervisionTotal.toLocaleString()}</p>
+                {/* Supervision total */}
+                <td className="border border-slate-200 p-2 text-center font-bold text-sm bg-teal-100 text-teal-800">
+                  {supervisionTotal.toLocaleString()}
+                  <p className="text-[10px] font-normal text-teal-500">درهم</p>
                 </td>
                 {/* Grand Total */}
-                <td className="py-2 px-3 text-right bg-amber-50 border-x-2 border-amber-200">
-                  <p className="text-[13px] font-bold text-amber-900">{c.totalFees?.toLocaleString()}</p>
+                <td className="border border-slate-200 p-2 text-center font-bold text-sm bg-gradient-to-b from-amber-100 to-amber-50 text-amber-900 border-l-2 border-amber-400">
+                  {(c.totalFees || 0).toLocaleString()}
+                  <p className="text-[10px] font-normal text-amber-600">درهم</p>
                 </td>
                 {/* vs Avg */}
-                <td className="py-2 px-3 text-center">
+                <td className="border border-slate-200 p-2 text-center">
                   <span className={`text-xs font-semibold ${getDevColor(c.totalFees)}`}>{getDevPct(c.totalFees)}</span>
-                </td>
-                {/* Score */}
-                <td className="py-2 px-3 text-center">
-                  <span className={`text-base font-black ${
-                    i === 0 ? 'text-emerald-600' : c.financialScore >= 80 ? 'text-slate-800' : c.financialScore >= 60 ? 'text-amber-600' : 'text-slate-400'
-                  }`}>{c.financialScore}%</span>
                 </td>
               </tr>
               );
             })}
           </tbody>
           <tfoot>
-            <tr className="bg-slate-50">
-              <td className="py-2 px-3 text-[11px] font-semibold text-slate-600">Average</td>
-              <td className="py-2 px-2" />
-              <td className="py-2 px-2" />
-              <td className="py-2 px-2" />
-              <td className="py-2 px-2" />
-              <td className="py-2 px-2" />
-              <td className="py-2 px-2" />
-              <td className="py-2 px-3 text-right text-[13px] font-bold text-slate-700">{avgFees > 0 ? `${Math.round(avgFees).toLocaleString()}` : '—'}</td>
-              <td className="py-2 px-3" />
-              <td className="py-2 px-3" />
+            <tr className="bg-gradient-to-r from-slate-100 to-slate-50 border-t-2 border-slate-300">
+              <td className="border border-slate-200 p-2 text-xs font-bold text-slate-700" colSpan={9}>المتوسط العام</td>
+              <td className="border border-slate-200 p-2 text-center font-bold text-sm text-amber-900 bg-amber-50">
+                {avgFees > 0 ? Math.round(avgFees).toLocaleString() : '—'}
+                {avgFees > 0 && <p className="text-[10px] font-normal text-amber-600">درهم</p>}
+              </td>
+              <td className="border border-slate-200 p-2" />
             </tr>
           </tfoot>
         </table>
