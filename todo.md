@@ -660,3 +660,10 @@
 - [ ] Add design gap column (فجوة التصميم) in مركز القيادة financial evaluation table
 - [ ] Add supervision gap column (فجوة الإشراف) in مركز القيادة financial evaluation table
 - [ ] Update backend getProjectFinancialEvaluation to return designScopeGapCost and supervisionScopeGapCost separately
+- [x] حذف أدوار HEAD_OFFICE (HO_STRUCTURAL, HO_ARCH, INTERIOR_DESIGNER, BIM_COORD) من baseline كل الفئات
+- [x] حذف ADMIN_OFFICER من baseline كل الفئات (جزء من Office Support)
+- [x] تحويل SENIOR_ARCH, SENIOR_ID, SENIOR_MECH, SENIOR_ELEC من HEAD_OFFICE إلى SITE
+- [x] إضافة دور HSE_OFFICER بنسبة 15% لفئة Large
+- [x] إضافة دور OFFICE_SUPPORT بنسبة 100% لكل الفئات
+- [x] تحديث monthly_rate_aed للأدوار (RE=50K, ARCH_INSP=24K, ELEC_INSP=24K, LANDSCAPE=42K, HSE=26.7K, DOC_CTRL=0)
+- [x] إضافة فلتر is_active=1 في استعلامات الـ baseline بمحرك الحساب

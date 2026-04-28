@@ -108,7 +108,8 @@ export async function runCalculationEngine(cpaProjectId: number) {
             FROM cpa_supervision_baseline sb
             JOIN cpa_supervision_roles sr ON sr.id = sb.supervision_role_id
             WHERE sb.building_category_id = ${catId}
-              AND sb.required_allocation_pct > 0`
+              AND sb.required_allocation_pct > 0
+              AND sr.is_active = 1`
       )
     : [];
 
@@ -553,6 +554,7 @@ export const cpaRouter = router({
               FROM cpa_supervision_baseline sb
               JOIN cpa_supervision_roles sr ON sr.id = sb.supervision_role_id
               WHERE sb.building_category_id = ${input.buildingCategoryId}
+                AND sr.is_active = 1
               ORDER BY sr.sort_order`
         );
       }),
