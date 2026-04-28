@@ -7,10 +7,13 @@ import {
   updateProposalAnalysis,
   createComparison,
   getComparisons,
-  getComparisonById
+  getComparisonById,
 } from "../db";
+import { getDb } from "../db";
 import { storagePut } from "../storage";
 import { invokeLLM } from "../_core/llm";
+import { consultantProposals } from "../../drizzle/schema";
+import { eq, and } from "drizzle-orm";
 
 // ═══════════════════════════════════════════════════
 // Stage 1: Pre-Processing Agent — تصفية الصفحات قبل التحليل
@@ -788,5 +791,27 @@ export const proposalsRouter = router({
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
       return await getComparisonById(input.id, ctx.user.id);
+    }),
+
+  // Update proposal metadata (title, consultantId, projectId)
+  updateMeta: protectedProcedure
+    .input(z.object({
+      proposalId: z.number(),
+      title: z.string().min(1).optional(),
+      consultantId: z.number().nullable().optional(),
+      projectId: z.number().nullable().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      const updateData: Record<string, any> = {};
+      if (input.title !== undefined) updateData.title = input.title;
+      if (input.consultantId !== undefined) updateData.consultantId = input.consultantId;
+      if (input.projectId !== undefined) updateData.projectId = input.projectId;
+      if (Object.keys(updateData).length === 0) return { success: true };
+      await db.update(consultantProposals)
+        .set(updateData)
+        .where(and(eq(consultantProposals.id, input.proposalId), eq(consultantProposals.userId, ctx.user.id)));
+      return { success: true };
     }),
 });

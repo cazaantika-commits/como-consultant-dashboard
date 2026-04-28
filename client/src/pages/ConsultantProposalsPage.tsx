@@ -369,6 +369,8 @@ export default function ConsultantProposalsPage() {
   const [reviewProposalId, setReviewProposalId] = useState<number | null>(null);
   const [editingFinancials, setEditingFinancials] = useState<any>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const [editProposalId, setEditProposalId] = useState<number | null>(null);
+  const [editProposalData, setEditProposalData] = useState<{ title: string; consultantId: string; projectId: string }>({ title: "", consultantId: "", projectId: "" });
 
   const utils = trpc.useUtils();
   const projectsQuery = trpc.projects.list.useQuery();
@@ -384,6 +386,7 @@ export default function ConsultantProposalsPage() {
   const preprocessMutation = trpc.proposals.preprocess.useMutation();
   const compareMutation = trpc.proposals.compare.useMutation();
   const updateFinancialsMutation = trpc.proposals.updateFinancials.useMutation();
+  const updateMetaMutation = trpc.proposals.updateMeta.useMutation();
 
   const projects = projectsQuery.data || [];
   const consultants = consultantsQuery.data || [];
@@ -603,6 +606,33 @@ export default function ConsultantProposalsPage() {
     if (!consultantId) return "غير محدد";
     const c = consultants.find((c) => c.id === consultantId);
     return c?.name || "غير معروف";
+  };
+
+  // Open edit proposal dialog
+  const openEditProposal = (proposal: any) => {
+    setEditProposalId(proposal.id);
+    setEditProposalData({
+      title: proposal.title || "",
+      consultantId: proposal.consultantId ? String(proposal.consultantId) : "",
+      projectId: proposal.projectId ? String(proposal.projectId) : "",
+    });
+  };
+
+  const handleSaveEditProposal = async () => {
+    if (!editProposalId || !editProposalData.title.trim()) return;
+    try {
+      await updateMetaMutation.mutateAsync({
+        proposalId: editProposalId,
+        title: editProposalData.title.trim(),
+        consultantId: editProposalData.consultantId ? parseInt(editProposalData.consultantId) : null,
+        projectId: editProposalData.projectId ? parseInt(editProposalData.projectId) : null,
+      });
+      toast.success("تم تحديث بيانات العرض بنجاح");
+      setEditProposalId(null);
+      utils.proposals.list.invalidate();
+    } catch (e) {
+      toast.error("فشل تحديث البيانات");
+    }
   };
 
   // Open review dialog for a proposal
@@ -898,12 +928,15 @@ export default function ConsultantProposalsPage() {
                                   className="data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
                                 />
                               )}
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => window.open(proposal.fileUrl, "_blank")}>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => window.open(proposal.fileUrl, "_blank")} title="عرض الملف">
                                 <Eye className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-orange-500 hover:text-orange-700 hover:bg-orange-50" onClick={() => openEditProposal(proposal)} title="تعديل بيانات العرض">
+                                <Pencil className="w-4 h-4" />
                               </Button>
                               {proposal.analysisStatus === "completed" && (
                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50" onClick={() => openReview(proposal)} title="مراجعة وتأكيد الأرقام">
-                                  <Pencil className="w-4 h-4" />
+                                  <Save className="w-4 h-4" />
                                 </Button>
                               )}
                               {(proposal.analysisStatus === "completed" || proposal.analysisStatus === "failed") && (
@@ -1445,6 +1478,78 @@ export default function ConsultantProposalsPage() {
                 <Fragment><Loader2 className="w-4 h-4 ml-2 animate-spin" />جاري الحفظ...</Fragment>
               ) : (
                 <Fragment><Save className="w-4 h-4 ml-2" />حفظ واعتماد</Fragment>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Proposal Metadata Dialog */}
+      <Dialog open={editProposalId !== null} onOpenChange={(open) => { if (!open) setEditProposalId(null); }}>
+        <DialogContent dir="rtl" className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="w-5 h-5 text-orange-500" />
+              تعديل بيانات العرض
+            </DialogTitle>
+            <DialogDescription>تعديل اسم العرض والاستشاري والمشروع المرتبط به</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1">
+              <Label className="text-sm font-medium">اسم العرض *</Label>
+              <Input
+                value={editProposalData.title}
+                onChange={(e) => setEditProposalData({ ...editProposalData, title: e.target.value })}
+                placeholder="أدخل اسم العرض"
+                dir="rtl"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-sm font-medium">الاستشاري</Label>
+              <Select
+                value={editProposalData.consultantId || "none"}
+                onValueChange={(v) => setEditProposalData({ ...editProposalData, consultantId: v === "none" ? "" : v })}
+              >
+                <SelectTrigger dir="rtl">
+                  <SelectValue placeholder="اختر الاستشاري" />
+                </SelectTrigger>
+                <SelectContent dir="rtl">
+                  <SelectItem value="none">بدون استشاري</SelectItem>
+                  {consultants.map((c: any) => (
+                    <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-sm font-medium">المشروع</Label>
+              <Select
+                value={editProposalData.projectId || "none"}
+                onValueChange={(v) => setEditProposalData({ ...editProposalData, projectId: v === "none" ? "" : v })}
+              >
+                <SelectTrigger dir="rtl">
+                  <SelectValue placeholder="اختر المشروع" />
+                </SelectTrigger>
+                <SelectContent dir="rtl">
+                  <SelectItem value="none">بدون مشروع</SelectItem>
+                  {projects.map((p: any) => (
+                    <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter className="flex-row-reverse gap-2">
+            <Button variant="outline" onClick={() => setEditProposalId(null)}>إلغاء</Button>
+            <Button
+              className="bg-orange-500 hover:bg-orange-600 text-white"
+              onClick={handleSaveEditProposal}
+              disabled={updateMetaMutation.isPending || !editProposalData.title.trim()}
+            >
+              {updateMetaMutation.isPending ? (
+                <><Loader2 className="w-4 h-4 ml-2 animate-spin" />جاري الحفظ...</>
+              ) : (
+                <><Save className="w-4 h-4 ml-2" />حفظ التعديلات</>
               )}
             </Button>
           </DialogFooter>
