@@ -2032,4 +2032,245 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
         supervisionGaps,
       };
     }),
+
+  // ═══ TRUE COST REPORT — EDITABLE ═══
+  getTrueCostReportData: publicProcedure
+    .input(z.object({ token: z.string(), projectId: z.number() }))
+    .query(async ({ input }) => {
+      const member = await verifyToken(input.token);
+      if (!member) throw new TRPCError({ code: 'UNAUTHORIZED' });
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
+
+      // Get CPA project
+      const [cpaProjects] = await db.execute(sql`SELECT * FROM cpa_projects WHERE project_id = ${input.projectId} LIMIT 1`) as any[];
+      if (!cpaProjects || cpaProjects.length === 0) return null;
+      const cpaProject = cpaProjects[0];
+      const cpaProjectId = Number(cpaProject.id);
+      const totalCC = Number(cpaProject.bua_sqft || 0) * Number(cpaProject.construction_cost_per_sqft || 0);
+      const durationMonths = Number(cpaProject.duration_months || 0);
+
+      // Get building category
+      const [catRows] = await db.execute(sql`SELECT code, label FROM cpa_building_categories WHERE id = ${cpaProject.building_category_id}`) as any[];
+      const cat = catRows?.[0] || {};
+
+      // Get evaluation results with consultant info
+      const [results] = await db.execute(sql`
+        SELECT er.*, er.eval_rank as result_rank,
+               pc.consultant_id, cm.legal_name, cm.trade_name, cm.code as consultant_code,
+               pc.design_fee_method, pc.design_fee_amount, pc.design_fee_percentage,
+               pc.supervision_fee_method, pc.supervision_fee_amount, pc.supervision_fee_percentage,
+               pc.supervision_stated_duration_months, pc.supervision_submitted,
+               pc.proposal_reference, pc.proposal_date, pc.id as pc_id
+        FROM cpa_evaluation_results er
+        JOIN cpa_project_consultants pc ON pc.id = er.project_consultant_id
+        JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id
+        WHERE pc.cpa_project_id = ${cpaProjectId}
+        ORDER BY COALESCE(er.eval_rank, 999), er.total_true_cost
+      `) as any[];
+
+      // Get overrides
+      const [overrides] = await db.execute(sql`
+        SELECT * FROM cpa_true_cost_report_overrides WHERE cpa_project_id = ${cpaProjectId}
+      `) as any[];
+      const overrideMap: Record<number, any> = {};
+      for (const o of (overrides || [])) {
+        overrideMap[Number(o.project_consultant_id)] = o;
+      }
+
+      // Get approval status
+      const [approvalRows] = await db.execute(sql`
+        SELECT * FROM cpa_true_cost_report_approval WHERE cpa_project_id = ${cpaProjectId} LIMIT 1
+      `) as any[];
+      const approval = approvalRows?.[0] || null;
+
+      // Get supervision baseline
+      const [baselineRows] = await db.execute(sql`
+        SELECT sb.supervision_role_id, sb.required_allocation_pct,
+               sr.code, sr.label, sr.monthly_rate_aed
+        FROM cpa_supervision_baseline sb
+        JOIN cpa_supervision_roles sr ON sr.id = sb.supervision_role_id
+        WHERE sb.building_category_id = ${cpaProject.building_category_id}
+          AND sb.required_allocation_pct > 0
+          AND sr.is_active = 1
+        ORDER BY sr.sort_order
+      `) as any[];
+
+      // Build consultant data
+      const consultants = (results || []).map((r: any) => {
+        const pcId = Number(r.pc_id);
+        const override = overrideMap[pcId];
+        return {
+          pcId,
+          consultantId: Number(r.consultant_id),
+          name: r.trade_name || r.legal_name,
+          code: r.consultant_code,
+          designMethod: r.design_fee_method,
+          designPct: Number(r.design_fee_percentage) || 0,
+          supervisionMethod: r.supervision_fee_method,
+          supervisionPct: Number(r.supervision_fee_percentage) || 0,
+          supervisionSubmitted: !!r.supervision_submitted,
+          statedDuration: r.supervision_stated_duration_months ? Number(r.supervision_stated_duration_months) : null,
+          canRank: r.can_rank === 1,
+          resultRank: r.result_rank,
+          // Calculated values
+          calc: {
+            quotedDesignFee: Number(r.quoted_design_fee) || 0,
+            designScopeGap: Number(r.design_scope_gap_cost) || 0,
+            trueDesignFee: Number(r.true_design_fee) || 0,
+            quotedSupervisionFee: Number(r.quoted_supervision_fee) || 0,
+            supervisionGap: Number(r.supervision_gap_cost) || 0,
+            adjustedSupervisionFee: Number(r.adjusted_supervision_fee) || 0,
+            totalTrueCost: Number(r.total_true_cost) || 0,
+          },
+          // Override values (null = use calculated)
+          override: override ? {
+            quotedDesignFee: override.quoted_design_fee_override != null ? Number(override.quoted_design_fee_override) : null,
+            designScopeGap: override.design_scope_gap_override != null ? Number(override.design_scope_gap_override) : null,
+            trueDesignFee: override.true_design_fee_override != null ? Number(override.true_design_fee_override) : null,
+            quotedSupervisionFee: override.quoted_supervision_fee_override != null ? Number(override.quoted_supervision_fee_override) : null,
+            supervisionGap: override.supervision_gap_override != null ? Number(override.supervision_gap_override) : null,
+            adjustedSupervisionFee: override.adjusted_supervision_fee_override != null ? Number(override.adjusted_supervision_fee_override) : null,
+            totalTrueCost: override.total_true_cost_override != null ? Number(override.total_true_cost_override) : null,
+            notes: override.notes || null,
+          } : null,
+        };
+      });
+
+      return {
+        cpaProjectId,
+        projectName: cpaProject.name,
+        bua: Number(cpaProject.bua_sqft) || 0,
+        constructionCost: totalCC,
+        durationMonths,
+        category: cat.label || cat.code || '',
+        consultants,
+        supervisionBaseline: (baselineRows || []).map((b: any) => ({
+          roleId: Number(b.supervision_role_id),
+          code: b.code,
+          label: b.label,
+          monthlyRate: Number(b.monthly_rate_aed) || 0,
+          requiredPct: Number(b.required_allocation_pct) || 0,
+        })),
+        approval: approval ? {
+          isApproved: !!approval.is_approved,
+          approvedBy: approval.approved_by,
+          approvedAt: approval.approved_at,
+          notes: approval.approval_notes,
+        } : null,
+      };
+    }),
+
+  saveTrueCostOverride: publicProcedure
+    .input(z.object({
+      token: z.string(),
+      cpaProjectId: z.number(),
+      projectConsultantId: z.number(),
+      field: z.enum(['quotedDesignFee', 'designScopeGap', 'trueDesignFee', 'quotedSupervisionFee', 'supervisionGap', 'adjustedSupervisionFee', 'totalTrueCost']),
+      value: z.number().nullable(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const member = await verifyToken(input.token);
+      if (!member) throw new TRPCError({ code: 'UNAUTHORIZED' });
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
+
+      // Check if report is already approved
+      const [approvalRows] = await db.execute(sql`
+        SELECT is_approved FROM cpa_true_cost_report_approval WHERE cpa_project_id = ${input.cpaProjectId} LIMIT 1
+      `) as any[];
+      if (approvalRows?.[0]?.is_approved) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'التقرير معتمد ولا يمكن تعديله' });
+      }
+
+      const fieldMap: Record<string, string> = {
+        quotedDesignFee: 'quoted_design_fee_override',
+        designScopeGap: 'design_scope_gap_override',
+        trueDesignFee: 'true_design_fee_override',
+        quotedSupervisionFee: 'quoted_supervision_fee_override',
+        supervisionGap: 'supervision_gap_override',
+        adjustedSupervisionFee: 'adjusted_supervision_fee_override',
+        totalTrueCost: 'total_true_cost_override',
+      };
+      const col = fieldMap[input.field];
+      if (!col) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid field' });
+
+      // Upsert override
+      const [existing] = await db.execute(sql`
+        SELECT id FROM cpa_true_cost_report_overrides
+        WHERE cpa_project_id = ${input.cpaProjectId} AND project_consultant_id = ${input.projectConsultantId}
+        LIMIT 1
+      `) as any[];
+
+      if (existing && existing.length > 0) {
+        // Dynamic column update using raw SQL with safe interpolation
+        await db.execute(sql`UPDATE cpa_true_cost_report_overrides SET ${sql.raw(col)} = ${input.value} WHERE id = ${existing[0].id}`);
+      } else {
+        await db.execute(sql`INSERT INTO cpa_true_cost_report_overrides (cpa_project_id, project_consultant_id, ${sql.raw(col)}) VALUES (${input.cpaProjectId}, ${input.projectConsultantId}, ${input.value})`);
+      }
+      return { success: true };
+    }),
+
+  approveTrueCostReport: publicProcedure
+    .input(z.object({
+      token: z.string(),
+      cpaProjectId: z.number(),
+      approvedBy: z.string(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const member = await verifyToken(input.token);
+      if (!member) throw new TRPCError({ code: 'UNAUTHORIZED' });
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
+
+      // Build snapshot of current report data
+      const [results] = await db.execute(sql`
+        SELECT er.*, pc.consultant_id, cm.trade_name, cm.legal_name, cm.code as consultant_code
+        FROM cpa_evaluation_results er
+        JOIN cpa_project_consultants pc ON pc.id = er.project_consultant_id
+        JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id
+        WHERE pc.cpa_project_id = ${input.cpaProjectId}
+        ORDER BY COALESCE(er.eval_rank, 999)
+      `) as any[];
+      const [overrides] = await db.execute(sql`
+        SELECT * FROM cpa_true_cost_report_overrides WHERE cpa_project_id = ${input.cpaProjectId}
+      `) as any[];
+
+      const snapshot = JSON.stringify({ results, overrides, approvedAt: new Date().toISOString() });
+
+      // Upsert approval
+      const [existing] = await db.execute(sql`
+        SELECT id FROM cpa_true_cost_report_approval WHERE cpa_project_id = ${input.cpaProjectId} LIMIT 1
+      `) as any[];
+
+      if (existing && existing.length > 0) {
+        await db.execute(sql`
+          UPDATE cpa_true_cost_report_approval
+          SET is_approved = 1, approved_by = ${input.approvedBy}, approved_at = NOW(),
+              approval_notes = ${input.notes || null}, report_snapshot = ${snapshot}
+          WHERE id = ${existing[0].id}
+        `);
+      } else {
+        await db.execute(sql`
+          INSERT INTO cpa_true_cost_report_approval (cpa_project_id, is_approved, approved_by, approved_at, approval_notes, report_snapshot)
+          VALUES (${input.cpaProjectId}, 1, ${input.approvedBy}, NOW(), ${input.notes || null}, ${snapshot})
+        `);
+      }
+      return { success: true };
+    }),
+
+  revokeTrueCostApproval: publicProcedure
+    .input(z.object({ token: z.string(), cpaProjectId: z.number() }))
+    .mutation(async ({ input }) => {
+      const member = await verifyToken(input.token);
+      if (!member) throw new TRPCError({ code: 'UNAUTHORIZED' });
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
+      await db.execute(sql`
+        UPDATE cpa_true_cost_report_approval SET is_approved = 0, approved_at = NULL WHERE cpa_project_id = ${input.cpaProjectId}
+      `);
+      return { success: true };
+    }),
 });

@@ -2295,3 +2295,50 @@ export const internalMessages = mysqlTable("internal_messages", {
   createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
   updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
 });
+
+
+// ═══════════════════════════════════════════
+// CPA True Cost Report Overrides — تعديلات التقرير اليدوية
+// Stores user edits on the True Cost Report. When approved,
+// these become the official source of truth for all financial data.
+// ═══════════════════════════════════════════
+export const cpaTrueCostReportOverrides = mysqlTable("cpa_true_cost_report_overrides", {
+  id: int().autoincrement().notNull().primaryKey(),
+  cpaProjectId: int("cpa_project_id").notNull(),
+  projectConsultantId: int("project_consultant_id").notNull(),
+  // Design overrides
+  quotedDesignFeeOverride: decimal("quoted_design_fee_override", { precision: 15, scale: 2 }),
+  designScopeGapOverride: decimal("design_scope_gap_override", { precision: 15, scale: 2 }),
+  trueDesignFeeOverride: decimal("true_design_fee_override", { precision: 15, scale: 2 }),
+  // Supervision overrides
+  quotedSupervisionFeeOverride: decimal("quoted_supervision_fee_override", { precision: 15, scale: 2 }),
+  supervisionGapOverride: decimal("supervision_gap_override", { precision: 15, scale: 2 }),
+  adjustedSupervisionFeeOverride: decimal("adjusted_supervision_fee_override", { precision: 15, scale: 2 }),
+  // Total override
+  totalTrueCostOverride: decimal("total_true_cost_override", { precision: 15, scale: 2 }),
+  // Notes
+  notes: text("notes"),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+},
+(table) => [
+  index("cpa_tcro_project").on(table.cpaProjectId),
+  index("cpa_tcro_pc").on(table.projectConsultantId),
+]);
+
+// CPA True Cost Report Approval — اعتماد التقرير
+export const cpaTrueCostReportApproval = mysqlTable("cpa_true_cost_report_approval", {
+  id: int().autoincrement().notNull().primaryKey(),
+  cpaProjectId: int("cpa_project_id").notNull(),
+  isApproved: tinyint("is_approved").default(0).notNull(),
+  approvedBy: varchar("approved_by", { length: 100 }),
+  approvedAt: timestamp("approved_at", { mode: "string" }),
+  approvalNotes: text("approval_notes"),
+  // Snapshot of the report data at time of approval (JSON)
+  reportSnapshot: longtext("report_snapshot"),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+  index("cpa_tcra_project").on(table.cpaProjectId),
+]);

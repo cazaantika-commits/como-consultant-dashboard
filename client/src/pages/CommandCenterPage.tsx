@@ -112,6 +112,7 @@ import CapitalPortfolioPage from "./CapitalPortfolioPage";
 import PaymentRequestsPage from "./PaymentRequests";
 import GeneralRequestsPage from "./GeneralRequests";
 import InternalMessagesPage from "./InternalMessages";
+import TrueCostReportView from "./TrueCostReportView";
 // Old financial components removed - now using iframe embeds
 
 // --- Financial Reports View (read-only, embedded in Command Center) ---
@@ -2445,7 +2446,7 @@ function NewsTicker({ token }: { token: string }) {
 function EvaluationView({ token, memberRole, memberId }: { token: string; memberRole: string; memberId: string }) {
   const projectsQuery = trpc.commandCenter.getProjectsForEvaluation.useQuery({ token });
   const [selectedProject, setSelectedProject] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'financial' | 'technical' | 'committee' | 'value' | 'scope' | 'supervision' | null>(null);
+  const [activeTab, setActiveTab] = useState<'financial' | 'technical' | 'committee' | 'value' | 'scope' | 'supervision' | 'truecost' | null>(null);
   const [showCreateSession, setShowCreateSession] = useState(false);
   const [sessionTitle, setSessionTitle] = useState('');
   const [sessionConsultantId, setSessionConsultantId] = useState<number | null>(null);
@@ -2472,6 +2473,9 @@ function EvaluationView({ token, memberRole, memberId }: { token: string; member
   }
   if (selectedProject && activeTab === 'supervision') {
     return <SupervisionScopeReportView token={token} projectId={selectedProject} onBack={() => setActiveTab(null)} />;
+  }
+  if (selectedProject && activeTab === 'truecost') {
+    return <TrueCostReportView token={token} projectId={selectedProject} onBack={() => setActiveTab(null)} />;
   }
 
   if (selectedProject) {
@@ -2526,7 +2530,7 @@ function EvaluationView({ token, memberRole, memberId }: { token: string; member
             </div>
           </div>
         )}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {/* التقييم المالي */}
           <button onClick={() => setActiveTab('financial')} className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 p-6 text-white shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] text-right">
             <div className="absolute top-3 left-3 opacity-20 group-hover:opacity-30 transition-opacity">
@@ -2629,6 +2633,19 @@ function EvaluationView({ token, memberRole, memberId }: { token: string; member
               </div>
               <h3 className="text-lg font-bold mb-1">تقرير نطاق الإشراف</h3>
               <p className="text-rose-100 text-sm">مقارنة فريق الإشراف</p>
+            </div>
+          </button>
+          {/* تقرير التكلفة الحقيقية */}
+          <button onClick={() => setActiveTab('truecost')} className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-800 p-6 text-white shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] text-right">
+            <div className="absolute top-3 left-3 opacity-20 group-hover:opacity-30 transition-opacity">
+              <FileBarChart2 className="w-16 h-16" />
+            </div>
+            <div className="relative z-10">
+              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center mb-4">
+                <FileBarChart2 className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold mb-1">التكلفة الحقيقية</h3>
+              <p className="text-violet-100 text-sm">تقرير قابل للتعديل والاعتماد</p>
             </div>
           </button>
         </div>
