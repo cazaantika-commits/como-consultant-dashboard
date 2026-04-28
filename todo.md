@@ -667,3 +667,6 @@
 - [x] إضافة دور OFFICE_SUPPORT بنسبة 100% لكل الفئات
 - [x] تحديث monthly_rate_aed للأدوار (RE=50K, ARCH_INSP=24K, ELEC_INSP=24K, LANDSCAPE=42K, HSE=26.7K, DOC_CTRL=0)
 - [x] إضافة فلتر is_active=1 في استعلامات الـ baseline بمحرك الحساب
+- [x] إعادة حساب التقييم (recalculateAll) لجميع المشاريع الحالية لتعكس الـ Baseline الجديد
+- [x] مراجعة baseline فئات Small و Medium والتأكد من نسب التخصيص المناسبة
+- [x] اختبار صفحة التحليل المالي في مركز القيادة - التأكد أن الأدوار المعطلة لا تظهر
