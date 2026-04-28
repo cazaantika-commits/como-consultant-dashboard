@@ -527,7 +527,14 @@ function ProjectDetailScreen({
     onError: (e) => toast({ title: "خطأ في الحذف", description: e.message, variant: "destructive" }),
   });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showAdd, setShowAdd] = useState(false);;
+  const [showAdd, setShowAdd] = useState(false);
+  const [showEditProject, setShowEditProject] = useState(false);
+  const [editForm, setEditForm] = useState({ buaSqft: '', constructionCostPerSqft: '', durationMonths: '', buildingCategoryId: '' });
+  const categoriesForEdit = trpc.cpa.settings.getBuildingCategories.useQuery();
+  const updateProjectMutation = trpc.cpa.projects.update.useMutation({
+    onSuccess: () => { projectQuery.refetch(); setShowEditProject(false); toast({ title: 'تم تحديث بيانات المشروع' }); },
+    onError: (e) => toast({ title: 'خطأ في التحديث', description: e.message, variant: 'destructive' }),
+  });
   const [selectedMasterId, setSelectedMasterId] = useState("");
 
   const project = projectQuery.data;
@@ -571,6 +578,23 @@ function ProjectDetailScreen({
         <Button
           variant="outline"
           size="sm"
+          onClick={() => {
+            setEditForm({
+              buaSqft: String(project.bua_sqft ?? ''),
+              constructionCostPerSqft: String(project.construction_cost_per_sqft ?? ''),
+              durationMonths: String(project.duration_months ?? ''),
+              buildingCategoryId: String(project.building_category_id ?? ''),
+            });
+            setShowEditProject(true);
+          }}
+          className="text-sky-600 border-sky-200 hover:bg-sky-50 gap-1"
+        >
+          <Pencil className="w-3.5 h-3.5" />
+          تعديل البيانات
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => setShowDeleteConfirm(true)}
           className="text-red-600 border-red-200 hover:bg-red-50 gap-1"
         >
@@ -601,6 +625,84 @@ function ProjectDetailScreen({
           </div>
         </DialogContent>
       </Dialog>
+      {/* Edit Project Dialog */}
+      <Dialog open={showEditProject} onOpenChange={setShowEditProject}>
+        <DialogContent className="max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="w-4 h-4 text-sky-600" />
+              تعديل بيانات المشروع
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>BUA (قدم مربع) *</Label>
+              <Input
+                type="number"
+                value={editForm.buaSqft}
+                onChange={(e) => setEditForm({ ...editForm, buaSqft: e.target.value })}
+                placeholder="مثال: 875300"
+              />
+            </div>
+            <div>
+              <Label>تكلفة الإنشاء / قدم² (AED) *</Label>
+              <Input
+                type="number"
+                value={editForm.constructionCostPerSqft}
+                onChange={(e) => setEditForm({ ...editForm, constructionCostPerSqft: e.target.value })}
+                placeholder="مثال: 345"
+              />
+            </div>
+            <div>
+              <Label>مدة الإشراف (شهر) *</Label>
+              <Input
+                type="number"
+                value={editForm.durationMonths}
+                onChange={(e) => setEditForm({ ...editForm, durationMonths: e.target.value })}
+                placeholder="مثال: 30"
+              />
+            </div>
+            <div>
+              <Label>فئة المبنى</Label>
+              <Select
+                value={editForm.buildingCategoryId}
+                onValueChange={(v) => setEditForm({ ...editForm, buildingCategoryId: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر فئة المبنى..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {(categoriesForEdit.data ?? []).map((cat: any) => (
+                    <SelectItem key={cat.id} value={String(cat.id)}>{cat.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2 justify-end pt-2">
+              <Button variant="outline" onClick={() => setShowEditProject(false)}>إلغاء</Button>
+              <Button
+                onClick={() => {
+                  if (!editForm.buaSqft || !editForm.constructionCostPerSqft || !editForm.durationMonths) {
+                    toast({ title: 'يرجى ملء جميع الحقول المطلوبة', variant: 'destructive' }); return;
+                  }
+                  updateProjectMutation.mutate({
+                    id: projectId,
+                    buaSqft: Number(editForm.buaSqft),
+                    constructionCostPerSqft: Number(editForm.constructionCostPerSqft),
+                    durationMonths: Number(editForm.durationMonths),
+                    buildingCategoryId: editForm.buildingCategoryId ? Number(editForm.buildingCategoryId) : null,
+                  });
+                }}
+                disabled={updateProjectMutation.isPending}
+                className="bg-sky-600 hover:bg-sky-700 text-white"
+              >
+                {updateProjectMutation.isPending ? 'جاري الحفظ...' : 'حفظ التعديلات'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Project Stats */}
       <div className="grid grid-cols-4 gap-3">
         {[
