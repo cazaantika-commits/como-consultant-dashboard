@@ -685,3 +685,7 @@
 - [x] Add "تقرير التكلفة الحقيقية" button in ProjectDetailScreen
 - [x] Fix project name display (join with projects table instead of showing project_id number)
 - [x] Widen True Cost Report table for better readability (expand columns, improve spacing, larger font)
+- [ ] Redesign True Cost Report as a full professional document-style report (not just a compressed table)
+- [ ] Report must show all data clearly like a board presentation document
+- [ ] All cells must be editable with clear edit affordance
+- [ ] After approval, results flow to Command Center for further evaluation processes
