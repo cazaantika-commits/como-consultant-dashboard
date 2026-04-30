@@ -326,13 +326,13 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
                 </th>
               </tr>
               {/* Sub Headers */}
-              <tr className="bg-slate-700 text-white/90">
-                <th className="px-2 py-2 text-center text-xs font-medium border-l border-slate-500">الأتعاب المقتبسة</th>
-                <th className="px-2 py-2 text-center text-xs font-medium border-l border-slate-500">فجوة النطاق</th>
-                <th className="px-2 py-2 text-center text-xs font-medium border-l border-slate-600">الأتعاب الحقيقية</th>
-                <th className="px-2 py-2 text-center text-xs font-medium border-l border-slate-500">الأتعاب المقتبسة</th>
-                <th className="px-2 py-2 text-center text-xs font-medium border-l border-slate-500">فجوة النطاق</th>
-                <th className="px-2 py-2 text-center text-xs font-medium border-l border-slate-600">الأتعاب المعدّلة</th>
+              <tr className="bg-slate-600 text-white text-[11px]">
+                <th className="px-2 py-2 text-center font-medium border-l border-slate-500 bg-blue-700/60">الأتعاب المقتبسة</th>
+                <th className="px-2 py-2 text-center font-medium border-l border-slate-500 bg-orange-700/60">فجوة النطاق</th>
+                <th className="px-2 py-2 text-center font-medium border-l border-slate-600 bg-blue-800/60">الأتعاب الحقيقية</th>
+                <th className="px-2 py-2 text-center font-medium border-l border-slate-500 bg-teal-700/60">الأتعاب المقتبسة</th>
+                <th className="px-2 py-2 text-center font-medium border-l border-slate-500 bg-orange-700/60">فجوة النطاق</th>
+                <th className="px-2 py-2 text-center font-medium border-l border-slate-600 bg-teal-800/60">الأتعاب المعدّلة</th>
               </tr>
             </thead>
             <tbody>
@@ -340,6 +340,7 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
                 const effectiveTotal = getEffectiveTotal(c);
                 const isLowest = effectiveTotal > 0 && effectiveTotal === lowestTotal;
                 const rank = effectiveTotal > 0 ? i + 1 : 0;
+                const score = effectiveTotal > 0 ? Math.round((lowestTotal / effectiveTotal) * 100 * 100) / 100 : 0;
 
                 return (
                   <tr
@@ -362,43 +363,45 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
                         <div>
                           <p className="font-bold text-sm text-slate-900 whitespace-nowrap">{c.name}</p>
                           <p className="text-[11px] text-slate-400 mt-0.5">
-                            {c.designMethod === 'PERCENTAGE' ? `${c.designPct}%` : 'مقطوع'}
-                            {' / '}
-                            {c.supervisionMethod === 'PERCENTAGE' ? `${c.supervisionPct}%` : c.supervisionMethod === 'MONTHLY_RATE' ? 'شهري' : c.supervisionSubmitted ? 'مقطوع' : 'غير مقدم'}
+                            {c.designMethod === 'PERCENTAGE' ? `تصميم: ${c.designPct}%` : 'تصميم: مبلغ مقطوع'}
+                            {' • '}
+                            {c.supervisionMethod === 'PERCENTAGE' ? `إشراف: ${c.supervisionPct}%` : c.supervisionMethod === 'MONTHLY_RATE' ? 'إشراف: سعر شهري' : c.supervisionSubmitted ? 'إشراف: مبلغ مقطوع' : 'إشراف: غير مقدم'}
                           </p>
+                          {isLowest && <p className="text-[10px] text-emerald-600 font-medium mt-0.5">الأفضل سعراً ✓</p>}
                         </div>
                       </div>
                     </td>
 
                     {/* Design: Quoted Fee */}
-                    <td className="px-1 py-3 text-center border-l border-slate-100">
+                    <td className="px-1 py-3 text-center border border-slate-200 bg-blue-50/50">
                       {renderCell(c, 'quotedDesignFee')}
                     </td>
                     {/* Design: Scope Gap */}
-                    <td className="px-1 py-3 text-center border-l border-slate-100">
+                    <td className="px-1 py-3 text-center border border-slate-200 bg-orange-50/50">
                       {renderCell(c, 'designScopeGap')}
                     </td>
                     {/* Design: True Fee */}
-                    <td className="px-1 py-3 text-center border-l border-slate-200 bg-blue-50/30">
+                    <td className="px-1 py-3 text-center border border-slate-200 bg-blue-100/50 font-bold">
                       {renderCell(c, 'trueDesignFee')}
                     </td>
 
                     {/* Supervision: Quoted Fee */}
-                    <td className="px-1 py-3 text-center border-l border-slate-100">
+                    <td className="px-1 py-3 text-center border border-slate-200 bg-teal-50/50">
                       {renderCell(c, 'quotedSupervisionFee')}
                     </td>
                     {/* Supervision: Scope Gap */}
-                    <td className="px-1 py-3 text-center border-l border-slate-100">
+                    <td className="px-1 py-3 text-center border border-slate-200 bg-orange-50/50">
                       {renderCell(c, 'supervisionGap')}
                     </td>
                     {/* Supervision: Adjusted Fee */}
-                    <td className="px-1 py-3 text-center border-l border-slate-200 bg-teal-50/30">
+                    <td className="px-1 py-3 text-center border border-slate-200 bg-teal-100/50 font-bold">
                       {renderCell(c, 'adjustedSupervisionFee')}
                     </td>
 
                     {/* Total True Cost */}
-                    <td className={`px-2 py-3 text-center border-l border-slate-200 ${isLowest ? 'bg-emerald-100/50' : 'bg-amber-50/30'}`}>
+                    <td className="px-2 py-3 text-center border border-slate-200 bg-gradient-to-b from-amber-100 to-amber-50 border-x-2 border-amber-300">
                       {renderCell(c, 'totalTrueCost')}
+                      {score > 0 && <p className="text-[9px] text-amber-600 mt-0.5">Score: {score}%</p>}
                     </td>
 
                     {/* Rank */}
