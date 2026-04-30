@@ -52,7 +52,9 @@ import {
   Loader2,
   Copy,
   MessageSquare,
+  FileBarChart2,
 } from "lucide-react";
+import TrueCostReportScreen from "./TrueCostReportScreen";
 
 // ---- Types ----------------------------------------------------------------
 
@@ -62,6 +64,7 @@ type Screen =
   | "import-json"
   | "scope-review"
   | "results"
+  | "truecost-report"
   | "settings";
 
 // ---- Helpers ---------------------------------------------------------------
@@ -491,12 +494,14 @@ function ProjectDetailScreen({
   onImportJson,
   onScopeReview,
   onResults,
+  onTrueCostReport,
 }: {
   projectId: number;
   onBack: () => void;
   onImportJson: (pcId: number, consultantName: string) => void;
   onScopeReview: (pcId: number, consultantName: string) => void;
   onResults: () => void;
+  onTrueCostReport: () => void;
 }) {
   const { toast } = useToast();
   const projectQuery = trpc.cpa.projects.getById.useQuery({ id: projectId });
@@ -932,10 +937,16 @@ Rules:
 
       {/* Results Button */}
       {consultants.some((c: any) => c.result_rank) && (
-        <Button className="w-full bg-sky-600 hover:bg-sky-500 text-white" onClick={onResults}>
-          <BarChart3 className="w-4 h-4 ml-2" />
-          عرض نتائج التقييم والترتيب
-        </Button>
+        <div className="flex flex-col gap-2">
+          <Button className="w-full bg-sky-600 hover:bg-sky-500 text-white" onClick={onResults}>
+            <BarChart3 className="w-4 h-4 ml-2" />
+            عرض نتائج التقييم والترتيب
+          </Button>
+          <Button className="w-full bg-indigo-600 hover:bg-indigo-500 text-white" onClick={onTrueCostReport}>
+            <FileBarChart2 className="w-4 h-4 ml-2" />
+            تقرير التكلفة الحقيقية
+          </Button>
+        </div>
       )}
 
       {/* Add Consultant Dialog */}
@@ -2135,6 +2146,7 @@ export default function CPAPage() {
   function goImportJson(pcId: number, name: string) { setSelectedPcId(pcId); setSelectedConsultantName(name); setScreen("import-json"); }
   function goScopeReview(pcId: number, name: string) { setSelectedPcId(pcId); setSelectedConsultantName(name); setScreen("scope-review"); }
   function goResults() { setScreen("results"); }
+  function goTrueCostReport() { setScreen("truecost-report"); }
   function goSettings() { setScreen("settings"); }
 
   return (
@@ -2152,7 +2164,7 @@ export default function CPAPage() {
               <span className="text-foreground font-medium">الإعدادات</span>
             </>
           )}
-          {(screen === "project-detail" || screen === "import-json" || screen === "scope-review" || screen === "results") && selectedProjectId && (
+          {(screen === "project-detail" || screen === "import-json" || screen === "scope-review" || screen === "results" || screen === "truecost-report") && selectedProjectId && (
             <>
               <span>/</span>
               <button onClick={() => { setScreen("project-detail"); }} className="hover:text-foreground transition-colors">
@@ -2178,6 +2190,12 @@ export default function CPAPage() {
               <span className="text-foreground font-medium">النتائج والترتيب</span>
             </>
           )}
+          {screen === "truecost-report" && (
+            <>
+              <span>/</span>
+              <span className="text-foreground font-medium">تقرير التكلفة الحقيقية</span>
+            </>
+          )}
         </div>
       </div>
 
@@ -2192,6 +2210,7 @@ export default function CPAPage() {
             onImportJson={goImportJson}
             onScopeReview={goScopeReview}
             onResults={goResults}
+            onTrueCostReport={goTrueCostReport}
           />
         )}
         {screen === "import-json" && selectedPcId && selectedProjectId && (
@@ -2211,6 +2230,12 @@ export default function CPAPage() {
         )}
         {screen === "results" && selectedProjectId && (
           <ResultsScreen
+            projectId={selectedProjectId}
+            onBack={() => setScreen("project-detail")}
+          />
+        )}
+        {screen === "truecost-report" && selectedProjectId && (
+          <TrueCostReportScreen
             projectId={selectedProjectId}
             onBack={() => setScreen("project-detail")}
           />

@@ -676,3 +676,11 @@
 - [x] بناء صفحة True Cost Report قابلة للتعديل داخل النظام
 - [x] إضافة آلية اعتماد التقرير ليصبح المصدر الرسمي
 - [x] ربط البيانات المعتمدة كمصدر رسمي للنظام
+- [x] Re-implement True Cost Report screen inside CPA page (after sandbox reset)
+- [x] Add getFullReport backend endpoint to cpa.evaluation router
+- [x] Add updateOverride backend endpoint to cpa.evaluation router
+- [x] Add approveReport backend endpoint to cpa.evaluation router
+- [x] Create TrueCostReportScreen.tsx component with full table, baseline, overrides, and approval
+- [x] Add truecost-report screen routing in CPAPage.tsx
+- [x] Add "تقرير التكلفة الحقيقية" button in ProjectDetailScreen
+- [x] Fix project name display (join with projects table instead of showing project_id number)

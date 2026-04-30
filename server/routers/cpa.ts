@@ -1344,6 +1344,220 @@ export const cpaRouter = router({
             : null,
         }));
       }),
+
+    // ---- True Cost Report ----
+    getFullReport: protectedProcedure
+      .input(z.object({ cpaProjectId: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB unavailable');
+
+        // Re-run calculation engine
+        try { await runCalculationEngine(input.cpaProjectId); } catch (e) { console.warn('[getFullReport] calc skipped:', e); }
+
+        // Get CPA project
+        const projects = await qRows<any>(db, sql`SELECT * FROM cpa_projects WHERE id = ${input.cpaProjectId}`);
+        if (!projects[0]) throw new Error('Project not found');
+        const proj = projects[0];
+        const totalCC = toNum(proj.bua_sqft) * toNum(proj.construction_cost_per_sqft);
+        const durationMonths = toNum(proj.duration_months);
+
+        // Get project name from main projects table
+        let projName = '';
+        if (proj.project_id) {
+          const pRows = await qRows<any>(db, sql`SELECT name FROM projects WHERE id = ${proj.project_id}`);
+          if (pRows[0]) projName = pRows[0].name;
+        }
+
+        // Get building category
+        const cats = await qRows<any>(db, sql`SELECT code, label FROM cpa_building_categories WHERE id = ${proj.building_category_id}`);
+        const cat = cats[0] || {};
+
+        // Get evaluation results with consultant info
+        const results = await qRows<any>(db, sql`
+          SELECT er.*, er.eval_rank as result_rank,
+                 pc.consultant_id, cm.legal_name, cm.trade_name, cm.code as consultant_code,
+                 pc.design_fee_method, pc.design_fee_amount, pc.design_fee_percentage,
+                 pc.supervision_fee_method, pc.supervision_fee_amount, pc.supervision_fee_percentage,
+                 pc.supervision_stated_duration_months, pc.supervision_submitted,
+                 pc.proposal_reference, pc.proposal_date, pc.id as pc_id
+          FROM cpa_evaluation_results er
+          JOIN cpa_project_consultants pc ON pc.id = er.project_consultant_id
+          JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id
+          WHERE pc.cpa_project_id = ${input.cpaProjectId}
+          ORDER BY COALESCE(er.eval_rank, 999), er.total_true_cost
+        `);
+
+        // Get overrides
+        const overrides = await qRows<any>(db, sql`SELECT * FROM cpa_true_cost_report_overrides WHERE cpa_project_id = ${input.cpaProjectId}`);
+        const overrideMap: Record<number, any> = {};
+        for (const o of overrides) { overrideMap[Number(o.project_consultant_id)] = o; }
+
+        // Get approval status
+        const approvalRows = await qRows<any>(db, sql`SELECT * FROM cpa_true_cost_report_approval WHERE cpa_project_id = ${input.cpaProjectId} LIMIT 1`);
+        const approval = approvalRows[0] || null;
+
+        // Get supervision baseline
+        const baselineRows = await qRows<any>(db, sql`
+          SELECT sb.supervision_role_id, sb.required_allocation_pct,
+                 sr.code, sr.label, sr.monthly_rate_aed
+          FROM cpa_supervision_baseline sb
+          JOIN cpa_supervision_roles sr ON sr.id = sb.supervision_role_id
+          WHERE sb.building_category_id = ${proj.building_category_id}
+            AND sb.required_allocation_pct > 0
+            AND sr.is_active = 1
+          ORDER BY sr.sort_order
+        `);
+
+        // Get scope gaps per consultant
+        const scopeGapsMap: Record<number, any[]> = {};
+        for (const r of results) {
+          const pcId = Number(r.pc_id);
+          try {
+            const notes = r.calculation_notes ? JSON.parse(r.calculation_notes) : {};
+            scopeGapsMap[pcId] = notes.scopeGaps || [];
+          } catch { scopeGapsMap[pcId] = []; }
+        }
+
+        // Build consultant data
+        const consultants = results.map((r: any) => {
+          const pcId = Number(r.pc_id);
+          const override = overrideMap[pcId];
+          return {
+            pcId,
+            consultantId: Number(r.consultant_id),
+            name: r.trade_name || r.legal_name,
+            code: r.consultant_code,
+            designMethod: r.design_fee_method,
+            designPct: Number(r.design_fee_percentage) || 0,
+            supervisionMethod: r.supervision_fee_method,
+            supervisionPct: Number(r.supervision_fee_percentage) || 0,
+            supervisionSubmitted: !!r.supervision_submitted,
+            statedDuration: r.supervision_stated_duration_months ? Number(r.supervision_stated_duration_months) : null,
+            canRank: r.can_rank === 1,
+            resultRank: r.result_rank,
+            scopeGaps: scopeGapsMap[pcId] || [],
+            calc: {
+              quotedDesignFee: Number(r.quoted_design_fee) || 0,
+              designScopeGap: Number(r.design_scope_gap_cost) || 0,
+              trueDesignFee: Number(r.true_design_fee) || 0,
+              quotedSupervisionFee: Number(r.quoted_supervision_fee) || 0,
+              supervisionGap: Number(r.supervision_gap_cost) || 0,
+              adjustedSupervisionFee: Number(r.adjusted_supervision_fee) || 0,
+              totalTrueCost: Number(r.total_true_cost) || 0,
+            },
+            override: override ? {
+              quotedDesignFee: override.quoted_design_fee_override != null ? Number(override.quoted_design_fee_override) : null,
+              designScopeGap: override.design_scope_gap_override != null ? Number(override.design_scope_gap_override) : null,
+              trueDesignFee: override.true_design_fee_override != null ? Number(override.true_design_fee_override) : null,
+              quotedSupervisionFee: override.quoted_supervision_fee_override != null ? Number(override.quoted_supervision_fee_override) : null,
+              supervisionGap: override.supervision_gap_override != null ? Number(override.supervision_gap_override) : null,
+              adjustedSupervisionFee: override.adjusted_supervision_fee_override != null ? Number(override.adjusted_supervision_fee_override) : null,
+              totalTrueCost: override.total_true_cost_override != null ? Number(override.total_true_cost_override) : null,
+              notes: override.notes || null,
+            } : null,
+          };
+        });
+
+        return {
+          cpaProjectId: input.cpaProjectId,
+          projectName: projName || proj.description || `مشروع ${input.cpaProjectId}`,
+          bua: toNum(proj.bua_sqft),
+          constructionCost: totalCC,
+          durationMonths,
+          category: cat.label || cat.code || '',
+          consultants,
+          supervisionBaseline: baselineRows.map((b: any) => ({
+            roleId: Number(b.supervision_role_id),
+            code: b.code,
+            label: b.label,
+            monthlyRate: Number(b.monthly_rate_aed) || 0,
+            requiredPct: Number(b.required_allocation_pct) || 0,
+          })),
+          approval: approval ? {
+            isApproved: !!approval.is_approved,
+            approvedBy: approval.approved_by,
+            approvedAt: approval.approved_at,
+            notes: approval.approval_notes,
+          } : null,
+        };
+      }),
+
+    saveOverride: protectedProcedure
+      .input(z.object({
+        cpaProjectId: z.number(),
+        projectConsultantId: z.number(),
+        field: z.enum(['quotedDesignFee', 'designScopeGap', 'trueDesignFee', 'quotedSupervisionFee', 'supervisionGap', 'adjustedSupervisionFee', 'totalTrueCost']),
+        value: z.number().nullable(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB unavailable');
+
+        // Check if report is already approved
+        const approvalRows = await qRows<any>(db, sql`SELECT is_approved FROM cpa_true_cost_report_approval WHERE cpa_project_id = ${input.cpaProjectId} LIMIT 1`);
+        if (approvalRows[0]?.is_approved) throw new Error('التقرير معتمد ولا يمكن تعديله');
+
+        const fieldMap: Record<string, string> = {
+          quotedDesignFee: 'quoted_design_fee_override',
+          designScopeGap: 'design_scope_gap_override',
+          trueDesignFee: 'true_design_fee_override',
+          quotedSupervisionFee: 'quoted_supervision_fee_override',
+          supervisionGap: 'supervision_gap_override',
+          adjustedSupervisionFee: 'adjusted_supervision_fee_override',
+          totalTrueCost: 'total_true_cost_override',
+        };
+        const col = fieldMap[input.field];
+        if (!col) throw new Error('Invalid field');
+
+        const existing = await qRows<any>(db, sql`SELECT id FROM cpa_true_cost_report_overrides WHERE cpa_project_id = ${input.cpaProjectId} AND project_consultant_id = ${input.projectConsultantId} LIMIT 1`);
+        if (existing.length > 0) {
+          await db.execute(sql`UPDATE cpa_true_cost_report_overrides SET ${sql.raw(col)} = ${input.value} WHERE id = ${existing[0].id}`);
+        } else {
+          await db.execute(sql`INSERT INTO cpa_true_cost_report_overrides (cpa_project_id, project_consultant_id, ${sql.raw(col)}) VALUES (${input.cpaProjectId}, ${input.projectConsultantId}, ${input.value})`);
+        }
+        return { success: true };
+      }),
+
+    approveReport: protectedProcedure
+      .input(z.object({
+        cpaProjectId: z.number(),
+        approvedBy: z.string(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB unavailable');
+
+        // Build snapshot
+        const results = await qRows<any>(db, sql`
+          SELECT er.*, pc.consultant_id, cm.trade_name, cm.legal_name, cm.code as consultant_code
+          FROM cpa_evaluation_results er
+          JOIN cpa_project_consultants pc ON pc.id = er.project_consultant_id
+          JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id
+          WHERE pc.cpa_project_id = ${input.cpaProjectId}
+          ORDER BY COALESCE(er.eval_rank, 999)
+        `);
+        const overrides = await qRows<any>(db, sql`SELECT * FROM cpa_true_cost_report_overrides WHERE cpa_project_id = ${input.cpaProjectId}`);
+        const snapshot = JSON.stringify({ results, overrides, approvedAt: new Date().toISOString() });
+
+        const existing = await qRows<any>(db, sql`SELECT id FROM cpa_true_cost_report_approval WHERE cpa_project_id = ${input.cpaProjectId} LIMIT 1`);
+        if (existing.length > 0) {
+          await db.execute(sql`UPDATE cpa_true_cost_report_approval SET is_approved = 1, approved_by = ${input.approvedBy}, approved_at = NOW(), approval_notes = ${input.notes || null}, report_snapshot = ${snapshot} WHERE id = ${existing[0].id}`);
+        } else {
+          await db.execute(sql`INSERT INTO cpa_true_cost_report_approval (cpa_project_id, is_approved, approved_by, approved_at, approval_notes, report_snapshot) VALUES (${input.cpaProjectId}, 1, ${input.approvedBy}, NOW(), ${input.notes || null}, ${snapshot})`);
+        }
+        return { success: true };
+      }),
+
+    revokeApproval: protectedProcedure
+      .input(z.object({ cpaProjectId: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB unavailable');
+        await db.execute(sql`UPDATE cpa_true_cost_report_approval SET is_approved = 0, approved_at = NULL WHERE cpa_project_id = ${input.cpaProjectId}`);
+        return { success: true };
+      }),
   }),
 
   // ---- Delete Project (legacy alias - delegates to projects.delete) ----
