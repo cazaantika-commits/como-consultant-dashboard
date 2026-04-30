@@ -689,3 +689,4 @@
 - [ ] Report must show all data clearly like a board presentation document
 - [ ] All cells must be editable with clear edit affordance
 - [ ] After approval, results flow to Command Center for further evaluation processes
+- [x] Rebuild True Cost Report as FULL DETAILED table with all individual cells editable (quoted fees, scope gap details, adjusted fees, total, rank) - not just summaries
