@@ -691,3 +691,6 @@
 - [x] After approval, results flow to Command Center for further evaluation processes
 - [x] Rebuild True Cost Report as FULL DETAILED table with all individual cells editable (quoted fees, scope gap details, adjusted fees, total, rank) - not just summaries
 - [x] Match True Cost Report with source report: colored sub-headers, cell backgrounds, Score %, "الأفضل سعراً" label, fee method descriptions
+- [x] Fix True Cost Report: make full-width (not narrow/cramped) - container uses max-w-[1600px] for truecost-report screen
+- [ ] Fix True Cost Report: match source report from command center EXACTLY - compare and fix all discrepancies
+- [x] Fix duplicate React key errors on /consultant-proposals page (added index to key, deduplicated getResults query)

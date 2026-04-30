@@ -1332,6 +1332,11 @@ export const cpaRouter = router({
                      pc.design_fee_method, pc.supervision_fee_method,
                      pc.supervision_stated_duration_months, pc.proposal_reference, pc.proposal_date
               FROM cpa_evaluation_results er
+              INNER JOIN (
+                SELECT project_consultant_id, MAX(id) as max_id
+                FROM cpa_evaluation_results
+                GROUP BY project_consultant_id
+              ) latest ON er.id = latest.max_id
               JOIN cpa_project_consultants pc ON pc.id = er.project_consultant_id
               JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id
               WHERE pc.cpa_project_id = ${input.cpaProjectId}

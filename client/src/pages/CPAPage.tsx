@@ -877,8 +877,8 @@ Rules:
             </div>
           ) : (
             <div className="space-y-3">
-              {consultants.map((c: any) => (
-                <div key={c.id} className="border border-border rounded-xl p-4 hover:border-sky-200 transition-colors">
+              {consultants.map((c: any, idx: number) => (
+                <div key={`consultant-${c.id}-${idx}`} className="border border-border rounded-xl p-4 hover:border-sky-200 transition-colors">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -2153,7 +2153,7 @@ export default function CPAPage() {
     <div className="min-h-screen bg-background" dir="rtl">
       {/* Breadcrumb */}
       <div className="border-b border-border bg-muted/30 px-4 py-2">
-        <div className="max-w-4xl mx-auto flex items-center gap-2 text-xs text-muted-foreground">
+        <div className={`mx-auto flex items-center gap-2 text-xs text-muted-foreground ${screen === 'truecost-report' ? 'max-w-[1600px]' : 'max-w-4xl'}`}>
           <button onClick={goHome} className="hover:text-foreground transition-colors flex items-center gap-1">
             <Home className="w-3 h-3" />
             التحليل المالي
@@ -2199,7 +2199,7 @@ export default function CPAPage() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className={`mx-auto px-4 py-6 ${screen === 'truecost-report' ? 'max-w-[1600px]' : 'max-w-4xl'}`}>
         {screen === "home" && (
           <ProjectListScreen onSelectProject={goProject} onSettings={goSettings} />
         )}
