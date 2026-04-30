@@ -92,8 +92,8 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
     setEditValue('');
   }, []);
 
-  if (reportQuery.isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>;
-  if (!reportQuery.data) return <div className="text-center py-12 text-slate-400">لا توجد بيانات لهذا المشروع</div>;
+  if (reportQuery.isLoading) return <div className="flex justify-center py-16"><Loader2 className="w-10 h-10 animate-spin text-slate-400" /></div>;
+  if (!reportQuery.data) return <div className="text-center py-16 text-slate-400 text-lg">لا توجد بيانات لهذا المشروع</div>;
 
   const report = reportQuery.data;
   const isApproved = report.approval?.isApproved;
@@ -137,39 +137,39 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
 
     if (isEditing) {
       return (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center justify-center gap-2">
           <Input
             type="text"
             value={editValue}
             onChange={(e) => setEditValue(e.target.value)}
-            className="h-7 text-xs w-24 text-center"
+            className="h-9 text-sm w-32 text-center font-medium"
             autoFocus
             onKeyDown={(e) => {
               if (e.key === 'Enter') saveEdit();
               if (e.key === 'Escape') cancelEdit();
             }}
           />
-          <button onClick={saveEdit} className="text-emerald-600 hover:text-emerald-800 p-0.5"><Check className="w-3.5 h-3.5" /></button>
-          <button onClick={cancelEdit} className="text-red-500 hover:text-red-700 p-0.5"><X className="w-3.5 h-3.5" /></button>
+          <button onClick={saveEdit} className="text-emerald-600 hover:text-emerald-800 p-1"><Check className="w-4 h-4" /></button>
+          <button onClick={cancelEdit} className="text-red-500 hover:text-red-700 p-1"><X className="w-4 h-4" /></button>
         </div>
       );
     }
 
     return (
-      <div className="group/cell relative flex items-center justify-center gap-1">
-        <span className={`text-xs font-semibold ${isOverridden ? 'text-purple-700' : 'text-slate-800'}`}>
+      <div className="group/cell relative flex items-center justify-center gap-1.5">
+        <span className={`text-sm font-semibold ${isOverridden ? 'text-purple-700' : 'text-slate-800'}`}>
           {formatNum(val)}
         </span>
         {isOverridden && (
-          <span className="text-[9px] text-purple-500 block" title={`القيمة الأصلية: ${formatNum((c.calc as any)[field])}`}>✎</span>
+          <span className="text-[10px] text-purple-500" title={`القيمة الأصلية: ${formatNum((c.calc as any)[field])}`}>✎</span>
         )}
         {!isApproved && (
           <button
             onClick={() => startEdit(c.pcId, field, val)}
-            className="opacity-0 group-hover/cell:opacity-100 transition-opacity text-slate-400 hover:text-blue-600 p-0.5"
+            className="opacity-0 group-hover/cell:opacity-100 transition-opacity text-slate-400 hover:text-blue-600 p-1"
             title="تعديل"
           >
-            <Pencil className="w-3 h-3" />
+            <Pencil className="w-3.5 h-3.5" />
           </button>
         )}
       </div>
@@ -177,28 +177,28 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
   };
 
   return (
-    <div dir="rtl" className="space-y-4">
+    <div dir="rtl" className="space-y-6 max-w-[1600px] mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500 hover:text-slate-700">
             <ArrowRight className="w-4 h-4 ml-1" /> العودة
           </Button>
-          <FileBarChart2 className="w-5 h-5 text-indigo-600" />
-          <h2 className="text-lg font-bold text-slate-900">تقرير التكلفة الحقيقية</h2>
-          <span className="text-sm text-slate-500">— {report.projectName}</span>
+          <FileBarChart2 className="w-6 h-6 text-indigo-600" />
+          <h2 className="text-xl font-bold text-slate-900">تقرير التكلفة الحقيقية</h2>
+          <span className="text-base text-slate-500">— {report.projectName}</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {isApproved ? (
             <>
-              <Badge className="bg-emerald-100 text-emerald-700 border-0 gap-1">
-                <ShieldCheck className="w-3.5 h-3.5" />
+              <Badge className="bg-emerald-100 text-emerald-700 border-0 gap-1.5 text-sm px-3 py-1.5">
+                <ShieldCheck className="w-4 h-4" />
                 معتمد بواسطة {report.approval?.approvedBy}
               </Badge>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="text-amber-600 border-amber-300 hover:bg-amber-50">
-                    <Unlock className="w-3.5 h-3.5 ml-1" /> إلغاء الاعتماد
+                  <Button variant="outline" size="default" className="text-amber-600 border-amber-300 hover:bg-amber-50">
+                    <Unlock className="w-4 h-4 ml-1" /> إلغاء الاعتماد
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent dir="rtl">
@@ -218,8 +218,8 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
           ) : (
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5" /> اعتماد التقرير
+                <Button size="default" className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 text-sm">
+                  <ShieldCheck className="w-4 h-4" /> اعتماد التقرير
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent dir="rtl">
@@ -255,44 +255,55 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
       </div>
 
       {/* Project Info Bar */}
-      <div className="flex flex-wrap gap-6 px-2 text-sm bg-gradient-to-r from-slate-50 to-white rounded-xl border border-slate-200 p-4">
-        <div><span className="text-slate-500">فئة المبنى:</span> <span className="font-semibold text-slate-800">{report.category}</span></div>
-        <div><span className="text-slate-500">المساحة:</span> <span className="font-semibold text-slate-800">{report.bua.toLocaleString()} قدم²</span></div>
-        <div><span className="text-slate-500">تكلفة البناء:</span> <span className="font-semibold text-slate-800">{report.constructionCost.toLocaleString()} درهم</span></div>
-        <div><span className="text-slate-500">مدة الإشراف:</span> <span className="font-semibold text-slate-800">{report.durationMonths} شهر</span></div>
+      <div className="flex flex-wrap gap-8 text-base bg-gradient-to-r from-slate-50 to-white rounded-xl border border-slate-200 px-6 py-5">
+        <div><span className="text-slate-500">فئة المبنى:</span> <span className="font-bold text-slate-800">{report.category}</span></div>
+        <div><span className="text-slate-500">المساحة:</span> <span className="font-bold text-slate-800">{report.bua.toLocaleString()} قدم²</span></div>
+        <div><span className="text-slate-500">تكلفة البناء:</span> <span className="font-bold text-slate-800">{report.constructionCost.toLocaleString()} درهم</span></div>
+        <div><span className="text-slate-500">مدة الإشراف:</span> <span className="font-bold text-slate-800">{report.durationMonths} شهر</span></div>
         {isApproved && (
-          <div className="mr-auto flex items-center gap-1 text-emerald-700">
-            <Lock className="w-3.5 h-3.5" />
-            <span className="font-medium text-xs">التقرير مقفل — معتمد</span>
+          <div className="mr-auto flex items-center gap-1.5 text-emerald-700">
+            <Lock className="w-4 h-4" />
+            <span className="font-medium text-sm">التقرير مقفل — معتمد</span>
           </div>
         )}
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 text-[10px] text-slate-500 px-2">
-        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-purple-200 inline-block" /> قيمة معدّلة يدوياً</span>
-        <span className="flex items-center gap-1"><Pencil className="w-2.5 h-2.5" /> مرّر على الخلية للتعديل</span>
+      <div className="flex items-center gap-6 text-xs text-slate-500 px-2">
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-purple-200 inline-block" /> قيمة معدّلة يدوياً</span>
+        <span className="flex items-center gap-1.5"><Pencil className="w-3 h-3" /> مرّر على الخلية للتعديل</span>
         {!isApproved && <span className="text-amber-600 font-medium">● التقرير مفتوح للتعديل</span>}
       </div>
 
       {/* Main Table */}
-      <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
-        <table className="w-full border-collapse text-sm">
+      <div className="rounded-xl border border-slate-200 shadow-sm">
+        <table className="w-full border-collapse table-fixed">
+          <colgroup>
+            <col style={{ width: '22%' }} />
+            <col style={{ width: '10%' }} />
+            <col style={{ width: '9%' }} />
+            <col style={{ width: '10%' }} />
+            <col style={{ width: '10%' }} />
+            <col style={{ width: '9%' }} />
+            <col style={{ width: '10%' }} />
+            <col style={{ width: '13%' }} />
+            <col style={{ width: '7%' }} />
+          </colgroup>
           <thead>
             <tr className="bg-gradient-to-r from-slate-700 to-slate-800 text-white">
-              <th className="border border-slate-600 p-3 text-right font-bold" rowSpan={2}>الاستشاري</th>
-              <th className="border border-slate-600 p-2 text-center font-bold" colSpan={3}>التصميم</th>
-              <th className="border border-slate-600 p-2 text-center font-bold" colSpan={3}>الإشراف</th>
-              <th className="border border-slate-600 p-2 text-center font-bold bg-amber-700" rowSpan={2}>التكلفة الحقيقية<br/><span className="text-[10px] font-normal">الإجمالية</span></th>
-              <th className="border border-slate-600 p-2 text-center font-bold" rowSpan={2}>الترتيب</th>
+              <th className="border border-slate-600 px-3 py-4 text-right font-bold text-sm" rowSpan={2}>الاستشاري</th>
+              <th className="border border-slate-600 px-2 py-3 text-center font-bold text-sm" colSpan={3}>التصميم</th>
+              <th className="border border-slate-600 px-2 py-3 text-center font-bold text-sm" colSpan={3}>الإشراف</th>
+              <th className="border border-slate-600 px-2 py-3 text-center font-bold text-sm bg-amber-700" rowSpan={2}>التكلفة الحقيقية<br/><span className="text-xs font-normal opacity-80">الإجمالية</span></th>
+              <th className="border border-slate-600 px-2 py-3 text-center font-bold text-sm" rowSpan={2}>الترتيب</th>
             </tr>
-            <tr className="bg-slate-600 text-white text-[11px]">
-              <th className="border border-slate-500 p-2 text-center bg-blue-700/60">الأتعاب المقتبسة</th>
-              <th className="border border-slate-500 p-2 text-center bg-orange-700/60">فجوة النطاق</th>
-              <th className="border border-slate-500 p-2 text-center bg-blue-800/60">الأتعاب الحقيقية</th>
-              <th className="border border-slate-500 p-2 text-center bg-teal-700/60">الأتعاب المقتبسة</th>
-              <th className="border border-slate-500 p-2 text-center bg-orange-700/60">فجوة النطاق</th>
-              <th className="border border-slate-500 p-2 text-center bg-teal-800/60">الأتعاب المعدّلة</th>
+            <tr className="bg-slate-600 text-white text-[13px]">
+              <th className="border border-slate-500 px-2 py-3 text-center bg-blue-700/60">الأتعاب<br/>المقتبسة</th>
+              <th className="border border-slate-500 px-2 py-3 text-center bg-orange-700/60">فجوة<br/>النطاق</th>
+              <th className="border border-slate-500 px-2 py-3 text-center bg-blue-800/60">الأتعاب<br/>الحقيقية</th>
+              <th className="border border-slate-500 px-2 py-3 text-center bg-teal-700/60">الأتعاب<br/>المقتبسة</th>
+              <th className="border border-slate-500 px-2 py-3 text-center bg-orange-700/60">فجوة<br/>النطاق</th>
+              <th className="border border-slate-500 px-2 py-3 text-center bg-teal-800/60">الأتعاب<br/>المعدّلة</th>
             </tr>
           </thead>
           <tbody>
@@ -305,55 +316,55 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
               return (
                 <tr key={c.pcId} className={`hover:bg-slate-50/80 transition-colors ${isLowest ? 'bg-emerald-50/40' : ''}`}>
                   {/* Consultant Name */}
-                  <td className="border border-slate-200 p-3 font-semibold text-sm whitespace-nowrap bg-gradient-to-l from-slate-50 to-white">
+                  <td className="border border-slate-200 px-3 py-4 bg-gradient-to-l from-slate-50 to-white">
                     <div className="flex items-center gap-2">
-                      <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                      <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
                         rank === 1 ? 'bg-emerald-600 text-white' : rank === 2 ? 'bg-slate-600 text-white' : rank === 3 ? 'bg-amber-600 text-white' : 'bg-slate-200 text-slate-600'
                       }`}>{rank}</span>
-                      <div>
-                        <span>{c.name}</span>
-                        <div className="text-[10px] text-slate-400 font-normal">
+                      <div className="min-w-0">
+                        <span className="font-bold text-[13px] text-slate-900 block truncate">{c.name}</span>
+                        <div className="text-[11px] text-slate-400 font-normal mt-0.5">
                           {c.designMethod === 'PERCENTAGE' ? `تصميم: ${c.designPct}%` : 'تصميم: مبلغ مقطوع'}
                           {' • '}
                           {c.supervisionMethod === 'PERCENTAGE' ? `إشراف: ${c.supervisionPct}%` : c.supervisionMethod === 'MONTHLY_RATE' ? 'إشراف: سعر شهري' : c.supervisionSubmitted ? 'إشراف: مبلغ مقطوع' : 'إشراف: غير مقدم'}
                         </div>
                       </div>
                     </div>
-                    {isLowest && <p className="text-[10px] text-emerald-600 font-medium mt-0.5 mr-8">الأفضل سعراً ✓</p>}
+                    {isLowest && <p className="text-[11px] text-emerald-600 font-medium mt-1 mr-9">الأفضل سعراً ✓</p>}
                   </td>
 
                   {/* Design Quoted */}
-                  <td className="border border-slate-200 p-2 bg-blue-50/50 text-center">
+                  <td className="border border-slate-200 px-2 py-4 bg-blue-50/50 text-center">
                     {renderCell(c, 'quotedDesignFee')}
                   </td>
                   {/* Design Gap */}
-                  <td className="border border-slate-200 p-2 bg-orange-50/50 text-center">
+                  <td className="border border-slate-200 px-2 py-4 bg-orange-50/50 text-center">
                     {renderCell(c, 'designScopeGap')}
                   </td>
                   {/* True Design Fee */}
-                  <td className="border border-slate-200 p-2 bg-blue-100/50 text-center font-bold">
+                  <td className="border border-slate-200 px-2 py-4 bg-blue-100/50 text-center">
                     {renderCell(c, 'trueDesignFee')}
                   </td>
                   {/* Supervision Quoted */}
-                  <td className="border border-slate-200 p-2 bg-teal-50/50 text-center">
+                  <td className="border border-slate-200 px-2 py-4 bg-teal-50/50 text-center">
                     {renderCell(c, 'quotedSupervisionFee')}
                   </td>
                   {/* Supervision Gap */}
-                  <td className="border border-slate-200 p-2 bg-orange-50/50 text-center">
+                  <td className="border border-slate-200 px-2 py-4 bg-orange-50/50 text-center">
                     {renderCell(c, 'supervisionGap')}
                   </td>
                   {/* Adjusted Supervision */}
-                  <td className="border border-slate-200 p-2 bg-teal-100/50 text-center font-bold">
+                  <td className="border border-slate-200 px-2 py-4 bg-teal-100/50 text-center">
                     {renderCell(c, 'adjustedSupervisionFee')}
                   </td>
                   {/* Total True Cost */}
-                  <td className="border border-slate-200 p-2 text-center font-bold bg-gradient-to-b from-amber-100 to-amber-50 border-x-2 border-amber-300">
+                  <td className="border border-slate-200 px-2 py-4 text-center bg-gradient-to-b from-amber-100 to-amber-50 border-x-2 border-amber-300">
                     {renderCell(c, 'totalTrueCost')}
-                    {score > 0 && <p className="text-[9px] text-amber-600 mt-0.5">Score: {score}%</p>}
+                    {score > 0 && <p className="text-[10px] text-amber-600 mt-1">Score: {score}%</p>}
                   </td>
                   {/* Rank */}
-                  <td className="border border-slate-200 p-2 text-center">
-                    <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm ${
+                  <td className="border border-slate-200 px-2 py-4 text-center">
+                    <span className={`inline-flex items-center justify-center w-9 h-9 rounded-full font-bold text-sm ${
                       rank === 1 ? 'bg-emerald-100 text-emerald-700' : rank === 2 ? 'bg-slate-100 text-slate-700' : rank === 3 ? 'bg-amber-100 text-amber-700' : 'bg-slate-50 text-slate-400'
                     }`}>{rank}</span>
                   </td>
@@ -366,20 +377,20 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
 
       {/* Supervision Baseline Reference */}
       {report.supervisionBaseline.length > 0 && (
-        <div className="mt-6">
-          <h3 className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
-            <FileBarChart2 className="w-4 h-4 text-indigo-500" />
+        <div className="mt-8">
+          <h3 className="text-base font-bold text-slate-700 mb-3 flex items-center gap-2">
+            <FileBarChart2 className="w-5 h-5 text-indigo-500" />
             مرجع الـ Baseline — فريق الإشراف ({report.category})
           </h3>
-          <div className="overflow-x-auto rounded-lg border border-slate-200">
-            <table className="w-full border-collapse text-xs">
+          <div className="rounded-xl border border-slate-200 shadow-sm">
+            <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-slate-100">
-                  <th className="border border-slate-200 p-2 text-right">الوظيفة</th>
-                  <th className="border border-slate-200 p-2 text-center">السعر الشهري (AED)</th>
-                  <th className="border border-slate-200 p-2 text-center">نسبة التخصيص</th>
-                  <th className="border border-slate-200 p-2 text-center">التكلفة الشهرية الفعلية</th>
-                  <th className="border border-slate-200 p-2 text-center">التكلفة لـ {report.durationMonths} شهر</th>
+                  <th className="border border-slate-200 px-4 py-3 text-right text-sm font-bold">الوظيفة</th>
+                  <th className="border border-slate-200 px-3 py-3 text-center text-sm font-bold">السعر الشهري (AED)</th>
+                  <th className="border border-slate-200 px-3 py-3 text-center text-sm font-bold">نسبة التخصيص</th>
+                  <th className="border border-slate-200 px-3 py-3 text-center text-sm font-bold">التكلفة الشهرية الفعلية</th>
+                  <th className="border border-slate-200 px-3 py-3 text-center text-sm font-bold">التكلفة لـ {report.durationMonths} شهر</th>
                 </tr>
               </thead>
               <tbody>
@@ -388,17 +399,17 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
                   const totalCost = effectiveMonthly * report.durationMonths;
                   return (
                     <tr key={b.roleId} className="hover:bg-slate-50">
-                      <td className="border border-slate-200 p-2 font-medium">{b.label}</td>
-                      <td className="border border-slate-200 p-2 text-center">{b.monthlyRate.toLocaleString()}</td>
-                      <td className="border border-slate-200 p-2 text-center">{b.requiredPct}%</td>
-                      <td className="border border-slate-200 p-2 text-center">{Math.round(effectiveMonthly).toLocaleString()}</td>
-                      <td className="border border-slate-200 p-2 text-center font-semibold">{Math.round(totalCost).toLocaleString()}</td>
+                      <td className="border border-slate-200 px-4 py-3 font-medium text-sm">{b.label}</td>
+                      <td className="border border-slate-200 px-3 py-3 text-center text-sm">{b.monthlyRate.toLocaleString()}</td>
+                      <td className="border border-slate-200 px-3 py-3 text-center text-sm">{b.requiredPct}%</td>
+                      <td className="border border-slate-200 px-3 py-3 text-center text-sm">{Math.round(effectiveMonthly).toLocaleString()}</td>
+                      <td className="border border-slate-200 px-3 py-3 text-center text-sm font-semibold">{Math.round(totalCost).toLocaleString()}</td>
                     </tr>
                   );
                 })}
                 <tr className="bg-slate-100 font-bold">
-                  <td className="border border-slate-200 p-2" colSpan={4}>المجموع</td>
-                  <td className="border border-slate-200 p-2 text-center">
+                  <td className="border border-slate-200 px-4 py-3 text-sm" colSpan={4}>المجموع</td>
+                  <td className="border border-slate-200 px-3 py-3 text-center text-sm">
                     {Math.round(report.supervisionBaseline.reduce((sum, b) => sum + (b.monthlyRate * (b.requiredPct / 100) * report.durationMonths), 0)).toLocaleString()}
                   </td>
                 </tr>

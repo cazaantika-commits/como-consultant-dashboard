@@ -684,3 +684,4 @@
 - [x] Add truecost-report screen routing in CPAPage.tsx
 - [x] Add "تقرير التكلفة الحقيقية" button in ProjectDetailScreen
 - [x] Fix project name display (join with projects table instead of showing project_id number)
+- [x] Widen True Cost Report table for better readability (expand columns, improve spacing, larger font)
