@@ -1378,7 +1378,7 @@ export const cpaRouter = router({
         const cats = await qRows<any>(db, sql`SELECT code, label FROM cpa_building_categories WHERE id = ${proj.building_category_id}`);
         const cat = cats[0] || {};
 
-        // Get evaluation results with consultant info
+        // Get evaluation results with consultant info (deduplicated - latest per consultant)
         const results = await qRows<any>(db, sql`
           SELECT er.*, er.eval_rank as result_rank,
                  pc.consultant_id, cm.legal_name, cm.trade_name, cm.code as consultant_code,
@@ -1387,6 +1387,11 @@ export const cpaRouter = router({
                  pc.supervision_stated_duration_months, pc.supervision_submitted,
                  pc.proposal_reference, pc.proposal_date, pc.id as pc_id
           FROM cpa_evaluation_results er
+          INNER JOIN (
+            SELECT project_consultant_id, MAX(id) as max_id
+            FROM cpa_evaluation_results
+            GROUP BY project_consultant_id
+          ) latest ON er.id = latest.max_id
           JOIN cpa_project_consultants pc ON pc.id = er.project_consultant_id
           JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id
           WHERE pc.cpa_project_id = ${input.cpaProjectId}

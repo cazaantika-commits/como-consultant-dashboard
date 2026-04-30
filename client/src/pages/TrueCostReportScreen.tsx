@@ -451,24 +451,27 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
                       </tr>
                     </thead>
                     <tbody>
-                      {c.scopeGaps.map((gap: any, idx: number) => (
-                        <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
-                          <td className="px-4 py-2 text-slate-500 border-b border-slate-50">{gap.itemNumber || idx + 1}</td>
-                          <td className="px-4 py-2 text-slate-800 border-b border-slate-50">{gap.description || gap.label || '—'}</td>
-                          <td className="px-4 py-2 text-center border-b border-slate-50">
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${
-                              gap.status === 'missing' || gap.included === false
-                                ? 'bg-red-100 text-red-700'
-                                : 'bg-emerald-100 text-emerald-700'
-                            }`}>
-                              {gap.status === 'missing' || gap.included === false ? 'غير مشمول' : 'مشمول'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-2 text-center font-semibold tabular-nums border-b border-slate-50">
-                            {gap.cost ? formatNum(gap.cost) : '—'}
-                          </td>
-                        </tr>
-                      ))}
+                      {c.scopeGaps.map((gap: any, idx: number) => {
+                        const isGap = gap.status !== 'INCLUDED';
+                        return (
+                          <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                            <td className="px-4 py-2 text-slate-500 border-b border-slate-50">{gap.itemCode || idx + 1}</td>
+                            <td className="px-4 py-2 text-slate-800 border-b border-slate-50">{gap.itemLabel || '—'}</td>
+                            <td className="px-4 py-2 text-center border-b border-slate-50">
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                isGap
+                                  ? 'bg-red-100 text-red-700'
+                                  : 'bg-emerald-100 text-emerald-700'
+                              }`}>
+                                {isGap ? (gap.status === 'NOT_MENTIONED' ? 'غير مذكور' : gap.status === 'EXCLUDED' ? 'مستثنى' : gap.status === 'PARTIAL' ? 'جزئي' : 'غير مشمول') : 'مشمول'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2 text-center font-semibold tabular-nums border-b border-slate-50">
+                              {gap.gapCost ? formatNum(gap.gapCost) : '—'}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

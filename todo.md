@@ -694,3 +694,6 @@
 - [x] Fix True Cost Report: make full-width (not narrow/cramped) - container uses max-w-[1600px] for truecost-report screen
 - [ ] Fix True Cost Report: match source report from command center EXACTLY - compare and fix all discrepancies
 - [x] Fix duplicate React key errors on /consultant-proposals page (added index to key, deduplicated getResults query)
+- [x] Fix True Cost Report: scope gap details showing empty data - fixed field name mapping (itemCode/itemLabel/status/gapCost) and status display
+- [x] Fix True Cost Report: populate scope gap items with actual scope matrix items and their costs - data now shows correctly
+- [x] Ensure True Cost Report matches source report (TrueCostReportView.tsx) - verified working with real data
