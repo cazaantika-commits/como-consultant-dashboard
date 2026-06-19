@@ -61,8 +61,10 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
   const [approverName, setApproverName] = useState('');
   
   // Dynamic variables for editing - initialize from report data
+  // Price per sqft should be independent - calculate from original data
+  const originalPricePerSqft = report.bua > 0 ? report.constructionCost / report.bua : 0;
   const [dynamicBUA, setDynamicBUA] = useState<number>(report.bua);
-  const [dynamicPricePerSqft, setDynamicPricePerSqft] = useState<number>(report.constructionCost / report.bua);
+  const [dynamicPricePerSqft, setDynamicPricePerSqft] = useState<number>(originalPricePerSqft);
   const [dynamicDuration, setDynamicDuration] = useState<number>(report.durationMonths);
   const [dynamicScopeGapMultiplier, setDynamicScopeGapMultiplier] = useState<number>(1);
   
@@ -336,13 +338,15 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
             </div>
             {/* Price per Sqft Input */}
             <div className="bg-white rounded-lg p-4 border border-indigo-200">
-              <label className="text-sm font-semibold text-slate-700 mb-2 block">سعر القدم (AED)</label>
+              <label className="text-sm font-semibold text-slate-700 mb-2 block">سعر القدم (AED/sqft)</label>
               <Input
                 type="number"
+                step="0.01"
                 value={dynamicPricePerSqft}
                 onChange={(e) => setDynamicPricePerSqft(parseFloat(e.target.value) || 0)}
                 className="text-lg font-bold text-center border-2 border-indigo-300"
               />
+              <p className="text-xs text-slate-500 mt-1">السعر الحالي: {originalPricePerSqft.toFixed(2)} AED</p>
             </div>
             {/* Duration Input */}
             <div className="bg-white rounded-lg p-4 border border-indigo-200">
