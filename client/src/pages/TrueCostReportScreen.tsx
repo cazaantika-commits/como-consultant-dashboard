@@ -50,13 +50,36 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
     onError: (err) => toast({ title: 'خطأ', description: err.message, variant: 'destructive' }),
   });
 
-  // All useState calls MUST come before any early returns (Rules of Hooks)
+  // All hooks MUST come before any early returns (Rules of Hooks)
   const [editingCell, setEditingCell] = useState<{ pcId: number; field: FieldKey } | null>(null);
   const [editValue, setEditValue] = useState('');
   const [approverName, setApproverName] = useState('');
   const [dynamicBUA, setDynamicBUA] = useState<number>(0);
   const [dynamicPricePerSqft, setDynamicPricePerSqft] = useState<number>(0);
   const [dynamicDuration, setDynamicDuration] = useState<number>(0);
+
+  // useCallback hooks also must come before early returns
+  const startEdit = useCallback((pcId: number, field: FieldKey, currentValue: number) => {
+    setEditingCell({ pcId, field });
+    setEditValue(currentValue ? String(Math.round(currentValue)) : '0');
+  }, []);
+
+  const saveEdit = useCallback(() => {
+    if (!editingCell || !reportQuery.data) return;
+    const val = parseFloat(editValue.replace(/,/g, ''));
+    saveMutation.mutate({
+      cpaProjectId: reportQuery.data.cpaProjectId,
+      projectConsultantId: editingCell.pcId,
+      field: editingCell.field,
+      value: isNaN(val) ? null : val,
+    });
+    setEditingCell(null);
+  }, [editingCell, editValue, reportQuery.data, saveMutation]);
+
+  const cancelEdit = useCallback(() => {
+    setEditingCell(null);
+    setEditValue('');
+  }, []);
 
   if (reportQuery.isLoading) return (
     <div className="flex flex-col items-center justify-center py-24 gap-4">
@@ -139,28 +162,6 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
   });
 
   const lowestTotal = sorted.find(c => getEffectiveTotal(c) > 0) ? getEffectiveTotal(sorted.find(c => getEffectiveTotal(c) > 0)!) : 1;
-
-  const startEdit = useCallback((pcId: number, field: FieldKey, currentValue: number) => {
-    setEditingCell({ pcId, field });
-    setEditValue(currentValue ? String(Math.round(currentValue)) : '0');
-  }, []);
-
-  const saveEdit = useCallback(() => {
-    if (!editingCell || !reportQuery.data) return;
-    const val = parseFloat(editValue.replace(/,/g, ''));
-    saveMutation.mutate({
-      cpaProjectId: reportQuery.data.cpaProjectId,
-      projectConsultantId: editingCell.pcId,
-      field: editingCell.field,
-      value: isNaN(val) ? null : val,
-    });
-    setEditingCell(null);
-  }, [editingCell, editValue, reportQuery.data, saveMutation]);
-
-  const cancelEdit = useCallback(() => {
-    setEditingCell(null);
-    setEditValue('');
-  }, []);
 
   return (
     <div className="space-y-6 p-6 bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
