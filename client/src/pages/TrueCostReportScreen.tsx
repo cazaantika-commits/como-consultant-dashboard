@@ -1,10 +1,10 @@
 /**
- * TrueCostReportScreen — تقرير التكلفة الحقيقية
- * Full detailed table report — every cell visible and editable.
- * Designed as a single comparison table (not cards) for board presentation.
+ * TrueCostReportScreen — تقرير التكلفة الحقيقية (Dynamic Version)
+ * Full detailed report matching PDF structure with dynamic calculations
+ * All numbers update automatically when BUA, price per sqft, or duration changes
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,23 +21,17 @@ import {
   Unlock,
   FileBarChart2,
 } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 
 type FieldKey = 'quotedDesignFee' | 'designScopeGap' | 'trueDesignFee' | 'quotedSupervisionFee' | 'supervisionGap' | 'adjustedSupervisionFee' | 'totalTrueCost';
 
 function formatNum(n: number | null | undefined): string {
   if (n == null || isNaN(n)) return '—';
   return Math.round(n).toLocaleString();
+}
+
+function formatCurrency(n: number | null | undefined): string {
+  if (n == null || isNaN(n)) return '—';
+  return `AED ${Math.round(n).toLocaleString()}`;
 }
 
 export default function TrueCostReportScreen({ projectId, onBack }: { projectId: number; onBack: () => void }) {
@@ -59,17 +53,82 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
   const [editingCell, setEditingCell] = useState<{ pcId: number; field: FieldKey } | null>(null);
   const [editValue, setEditValue] = useState('');
   const [approverName, setApproverName] = useState('');
-  
-  // Dynamic variables for editing - initialize from report data
-  // Price per sqft should be independent - calculate from original data
+
+  if (reportQuery.isLoading) return (
+    <div className="flex flex-col items-center justify-center py-24 gap-4">
+      <Loader2 className="w-12 h-12 animate-spin text-indigo-400" />
+      <p className="text-slate-500 text-lg">جاري تحميل التقرير...</p>
+    </div>
+  );
+  if (!reportQuery.data) return (
+    <div className="text-center py-24 text-slate-400 text-xl">لا توجد بيانات لهذا المشروع</div>
+  );
+
+  const report = reportQuery.data!;
+  const isApproved = report.approval?.isApproved;
+
+  // Dynamic variables for editing
   const originalPricePerSqft = report.bua > 0 ? report.constructionCost / report.bua : 0;
   const [dynamicBUA, setDynamicBUA] = useState<number>(report.bua);
   const [dynamicPricePerSqft, setDynamicPricePerSqft] = useState<number>(originalPricePerSqft);
   const [dynamicDuration, setDynamicDuration] = useState<number>(report.durationMonths);
-  const [dynamicScopeGapMultiplier, setDynamicScopeGapMultiplier] = useState<number>(1);
-  
+
   // Calculated values based on dynamic inputs
   const calculatedConstructionCost = dynamicBUA * dynamicPricePerSqft;
+
+  const getVal = (c: typeof report.consultants[0], field: FieldKey): number => {
+    const ov = c.override?.[field];
+    if (ov != null) return ov;
+
+    // Apply dynamic calculations for design fees based on percentage
+    if (field === 'quotedDesignFee' && c.designMethod === 'PERCENTAGE') {
+      return (calculatedConstructionCost * (c.designPct || 0)) / 100;
+    }
+    if (field === 'trueDesignFee' && c.designMethod === 'PERCENTAGE') {
+      const quoted = (calculatedConstructionCost * (c.designPct || 0)) / 100;
+      const gap = ((c.calc as any)['designScopeGap'] ?? 0);
+      return quoted + gap;
+    }
+
+    // Apply dynamic calculations for supervision fees
+    if (field === 'quotedSupervisionFee' && c.supervisionMethod === 'PERCENTAGE') {
+      return (calculatedConstructionCost * (c.supervisionPct || 0)) / 100;
+    }
+    if (field === 'quotedSupervisionFee' && c.supervisionMethod === 'MONTHLY_RATE') {
+      return (c.supervisionMonthlyRate || 0) * dynamicDuration;
+    }
+    if (field === 'adjustedSupervisionFee' && c.supervisionMethod === 'PERCENTAGE') {
+      const quoted = (calculatedConstructionCost * (c.supervisionPct || 0)) / 100;
+      const gap = ((c.calc as any)['supervisionGap'] ?? 0);
+      return quoted + gap;
+    }
+    if (field === 'adjustedSupervisionFee' && c.supervisionMethod === 'MONTHLY_RATE') {
+      const quoted = (c.supervisionMonthlyRate || 0) * dynamicDuration;
+      const gap = ((c.calc as any)['supervisionGap'] ?? 0);
+      return quoted + gap;
+    }
+
+    return (c.calc as any)[field] ?? 0;
+  };
+
+  const getEffectiveTotal = (c: typeof report.consultants[0]): number => {
+    const trueDesign = getVal(c, 'trueDesignFee');
+    const adjSupervision = getVal(c, 'adjustedSupervisionFee');
+    if (c.override?.totalTrueCost != null) return c.override.totalTrueCost;
+    const total = trueDesign + adjSupervision;
+    return total > 0 ? total : 0;
+  };
+
+  const sorted = [...report.consultants].sort((a, b) => {
+    const aTotal = getEffectiveTotal(a);
+    const bTotal = getEffectiveTotal(b);
+    if (aTotal === 0 && bTotal === 0) return 0;
+    if (aTotal === 0) return 1;
+    if (bTotal === 0) return -1;
+    return aTotal - bTotal;
+  });
+
+  const lowestTotal = sorted.find(c => getEffectiveTotal(c) > 0) ? getEffectiveTotal(sorted.find(c => getEffectiveTotal(c) > 0)!) : 1;
 
   const startEdit = useCallback((pcId: number, field: FieldKey, currentValue: number) => {
     setEditingCell({ pcId, field });
@@ -93,241 +152,37 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
     setEditValue('');
   }, []);
 
-  if (reportQuery.isLoading) return (
-    <div className="flex flex-col items-center justify-center py-24 gap-4">
-      <Loader2 className="w-12 h-12 animate-spin text-indigo-400" />
-      <p className="text-slate-500 text-lg">جاري تحميل التقرير...</p>
-    </div>
-  );
-  if (!reportQuery.data) return (
-    <div className="text-center py-24 text-slate-400 text-xl">لا توجد بيانات لهذا المشروع</div>
-  );
-
-  const report = reportQuery.data!;
-  const isApproved = report.approval?.isApproved;
-
-  const getVal = (c: typeof report.consultants[0], field: FieldKey): number => {
-    const ov = c.override?.[field];
-    if (ov != null) return ov;
-    
-    // Apply dynamic calculations for design fees based on percentage
-    if (field === 'quotedDesignFee' && c.designMethod === 'PERCENTAGE') {
-      return (calculatedConstructionCost * (c.designPct || 0)) / 100;
-    }
-    if (field === 'trueDesignFee' && c.designMethod === 'PERCENTAGE') {
-      const quoted = (calculatedConstructionCost * (c.designPct || 0)) / 100;
-      const gap = ((c.calc as any)['designScopeGap'] ?? 0) * dynamicScopeGapMultiplier;
-      return quoted + gap;
-    }
-    
-    // Apply dynamic calculations for supervision fees based on percentage or monthly rate
-    if (field === 'quotedSupervisionFee' && c.supervisionMethod === 'PERCENTAGE') {
-      return (calculatedConstructionCost * (c.supervisionPct || 0)) / 100;
-    }
-    if (field === 'quotedSupervisionFee' && c.supervisionMethod === 'MONTHLY_RATE') {
-      return (c.supervisionMonthlyRate || 0) * dynamicDuration;
-    }
-    if (field === 'adjustedSupervisionFee' && c.supervisionMethod === 'PERCENTAGE') {
-      const quoted = (calculatedConstructionCost * (c.supervisionPct || 0)) / 100;
-      const gap = ((c.calc as any)['supervisionGap'] ?? 0) * dynamicScopeGapMultiplier;
-      return quoted + gap;
-    }
-    if (field === 'adjustedSupervisionFee' && c.supervisionMethod === 'MONTHLY_RATE') {
-      const quoted = (c.supervisionMonthlyRate || 0) * dynamicDuration;
-      const gap = ((c.calc as any)['supervisionGap'] ?? 0) * dynamicScopeGapMultiplier;
-      return quoted + gap;
-    }
-    
-    // Apply dynamic scope gap multiplier
-    if ((field === 'designScopeGap' || field === 'supervisionGap')) {
-      return ((c.calc as any)[field] ?? 0) * dynamicScopeGapMultiplier;
-    }
-    
-    return (c.calc as any)[field] ?? 0;
-  };
-
-  const hasOverride = (c: typeof report.consultants[0], field: FieldKey): boolean => {
-    return c.override?.[field] != null;
-  };
-
-  const getEffectiveTotal = (c: typeof report.consultants[0]): number => {
-    const trueDesign = getVal(c, 'trueDesignFee');
-    const adjSupervision = getVal(c, 'adjustedSupervisionFee');
-    if (c.override?.totalTrueCost != null) return c.override.totalTrueCost;
-    const total = trueDesign + adjSupervision;
-    return total > 0 ? total : 0;
-  };
-
-  // Recalculate sorted list whenever dynamic variables change
-  const sorted = [...report.consultants].sort((a, b) => {
-    const aTotal = getEffectiveTotal(a);
-    const bTotal = getEffectiveTotal(b);
-    if (aTotal === 0 && bTotal === 0) return 0;
-    if (aTotal === 0) return 1;
-    if (bTotal === 0) return -1;
-    return aTotal - bTotal;
-  });
-
-  const lowestTotal = sorted.find(c => getEffectiveTotal(c) > 0) ? getEffectiveTotal(sorted.find(c => getEffectiveTotal(c) > 0)!) : 1;
-
-  // Render an editable cell
-  const renderCell = (c: typeof report.consultants[0], field: FieldKey) => {
-    const isEditing = editingCell?.pcId === c.pcId && editingCell?.field === field;
-    const val = getVal(c, field);
-    const isOverridden = hasOverride(c, field);
-
-    if (isEditing) {
-      return (
-        <div className="flex items-center gap-1 justify-center">
-          <Input
-            type="text"
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-            className="h-8 text-sm w-28 text-center font-semibold border-2 border-indigo-400"
-            autoFocus
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') saveEdit();
-              if (e.key === 'Escape') cancelEdit();
-            }}
-          />
-          <button onClick={saveEdit} className="text-emerald-600 hover:text-emerald-800 p-0.5"><Check className="w-4 h-4" /></button>
-          <button onClick={cancelEdit} className="text-red-500 hover:text-red-700 p-0.5"><X className="w-4 h-4" /></button>
-        </div>
-      );
-    }
-
-    return (
-      <div
-        className={`group/cell relative flex items-center justify-center gap-1 cursor-pointer rounded px-2 py-1.5 transition-all whitespace-nowrap ${
-          !isApproved ? 'hover:bg-indigo-50 hover:ring-1 hover:ring-indigo-200' : ''
-        }`}
-        onClick={() => !isApproved && startEdit(c.pcId, field, val)}
-        title={!isApproved ? 'انقر للتعديل' : ''}
-      >
-        <span className={`text-sm font-bold tabular-nums ${isOverridden ? 'text-purple-700' : 'text-slate-900'}`}>
-          {formatNum(val)}
-        </span>
-        {isOverridden && (
-          <span className="text-[10px] text-purple-500" title={`الأصلي: ${formatNum((c.calc as any)[field])}`}>✎</span>
-        )}
-        {!isApproved && (
-          <Pencil className="w-3 h-3 text-slate-300 opacity-0 group-hover/cell:opacity-100 transition-opacity shrink-0" />
-        )}
-      </div>
-    );
-  };
-
   return (
-    <div dir="rtl" className="space-y-8 pb-12">
-      {/* ═══════════════════════ REPORT HEADER ═══════════════════════ */}
-      <div className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 rounded-2xl p-8 text-white shadow-xl">
-        <div className="flex items-start justify-between flex-wrap gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-3">
-              <Button variant="ghost" size="sm" onClick={onBack} className="text-white/70 hover:text-white hover:bg-white/10">
-                <ArrowRight className="w-4 h-4 ml-1" /> العودة
-              </Button>
-            </div>
-            <h1 className="text-3xl font-bold mb-2">تقرير التكلفة الحقيقية</h1>
-            <p className="text-xl text-white/80">{report.projectName}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            {isApproved ? (
-              <>
-                <Badge className="bg-emerald-500/20 text-emerald-200 border border-emerald-400/30 gap-2 text-sm px-4 py-2">
-                  <ShieldCheck className="w-5 h-5" />
-                  معتمد بواسطة {report.approval?.approvedBy}
-                </Badge>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="outline" className="text-amber-200 border-amber-400/50 hover:bg-amber-500/20 bg-transparent">
-                      <Unlock className="w-4 h-4 ml-2" /> إلغاء الاعتماد
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent dir="rtl">
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>إلغاء اعتماد التقرير؟</AlertDialogTitle>
-                      <AlertDialogDescription>سيتم فتح التقرير للتعديل مرة أخرى. هل أنت متأكد؟</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter className="flex-row-reverse gap-2">
-                      <AlertDialogAction onClick={() => revokeMutation.mutate({ cpaProjectId: report.cpaProjectId })} className="bg-amber-600 hover:bg-amber-700">
-                        نعم، إلغاء الاعتماد
-                      </AlertDialogAction>
-                      <AlertDialogCancel>تراجع</AlertDialogCancel>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </>
-            ) : (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button className="bg-emerald-500 hover:bg-emerald-600 text-white gap-2 text-base px-6 py-3 h-auto shadow-lg">
-                    <ShieldCheck className="w-5 h-5" /> اعتماد التقرير
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent dir="rtl">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>اعتماد تقرير التكلفة الحقيقية</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      بعد الاعتماد سيُقفل التقرير ولن يمكن تعديله. سيصبح هذا التقرير المصدر الرسمي للبيانات المالية.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <div className="px-1">
-                    <label className="text-sm font-medium text-slate-700 mb-1 block">اسم المعتمد</label>
-                    <Input
-                      value={approverName}
-                      onChange={(e) => setApproverName(e.target.value)}
-                      placeholder="أدخل اسمك..."
-                      className="text-right text-base h-11"
-                    />
-                  </div>
-                  <AlertDialogFooter className="flex-row-reverse gap-2">
-                    <AlertDialogAction
-                      disabled={!approverName.trim()}
-                      onClick={() => approveMutation.mutate({ cpaProjectId: report.cpaProjectId, approvedBy: approverName.trim() })}
-                      className="bg-emerald-600 hover:bg-emerald-700"
-                    >
-                      اعتماد
-                    </AlertDialogAction>
-                    <AlertDialogCancel>تراجع</AlertDialogCancel>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
-          </div>
+    <div className="space-y-6 p-6 bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <Button variant="ghost" size="sm" onClick={onBack} className="gap-1">
+          <ArrowRight className="w-4 h-4" />
+          رجوع
+        </Button>
+        <div className="text-center flex-1">
+          <h1 className="text-3xl font-bold text-slate-900">تقرير التكلفة الحقيقية</h1>
+          <p className="text-slate-600 mt-1">{report.projectName}</p>
         </div>
-
-        {/* Project Info */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
-          <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
-            <p className="text-white/60 text-sm mb-1">فئة المبنى</p>
-            <p className="text-xl font-bold">{report.category}</p>
-          </div>
-          <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
-            <p className="text-white/60 text-sm mb-1">المساحة (قدم²)</p>
-            <p className="text-xl font-bold">{report.bua.toLocaleString()}</p>
-          </div>
-          <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
-            <p className="text-white/60 text-sm mb-1">تكلفة البناء (درهم)</p>
-            <p className="text-xl font-bold">{report.constructionCost.toLocaleString()}</p>
-          </div>
-          <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
-            <p className="text-white/60 text-sm mb-1">مدة الإشراف</p>
-            <p className="text-xl font-bold">{report.durationMonths} شهر</p>
-          </div>
+        <div className="flex gap-2">
+          {isApproved ? (
+            <Badge className="bg-emerald-100 text-emerald-800">معتمد</Badge>
+          ) : (
+            <Badge className="bg-amber-100 text-amber-800">قيد المراجعة</Badge>
+          )}
         </div>
       </div>
 
-      {/* ═══════════════════════ DYNAMIC INPUT VARIABLES ═══════════════════════ */}
+      {/* Dynamic Input Section */}
       {!isApproved && (
-        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-6 border border-indigo-200 shadow-md">
+        <div className="bg-white rounded-2xl p-6 border-2 border-indigo-200 shadow-lg">
           <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
             <span className="text-indigo-600">⚙️</span>
             متغيرات ديناميكية — عدّل القيم وسيتحدث التقرير تلقائياً
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* BUA Input */}
-            <div className="bg-white rounded-lg p-4 border border-indigo-200">
+            <div className="bg-slate-50 rounded-lg p-4 border border-indigo-200">
               <label className="text-sm font-semibold text-slate-700 mb-2 block">المساحة (قدم²)</label>
               <Input
                 type="number"
@@ -337,7 +192,7 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
               />
             </div>
             {/* Price per Sqft Input */}
-            <div className="bg-white rounded-lg p-4 border border-indigo-200">
+            <div className="bg-slate-50 rounded-lg p-4 border border-indigo-200">
               <label className="text-sm font-semibold text-slate-700 mb-2 block">سعر القدم (AED/sqft)</label>
               <Input
                 type="number"
@@ -346,10 +201,10 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
                 onChange={(e) => setDynamicPricePerSqft(parseFloat(e.target.value) || 0)}
                 className="text-lg font-bold text-center border-2 border-indigo-300"
               />
-              <p className="text-xs text-slate-500 mt-1">السعر الحالي: {originalPricePerSqft.toFixed(2)} AED</p>
+              <p className="text-xs text-slate-500 mt-1">الأصلي: {originalPricePerSqft.toFixed(2)} AED</p>
             </div>
             {/* Duration Input */}
-            <div className="bg-white rounded-lg p-4 border border-indigo-200">
+            <div className="bg-slate-50 rounded-lg p-4 border border-indigo-200">
               <label className="text-sm font-semibold text-slate-700 mb-2 block">مدة الإشراف (شهر)</label>
               <Input
                 type="number"
@@ -358,276 +213,206 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
                 className="text-lg font-bold text-center border-2 border-indigo-300"
               />
             </div>
-            {/* Scope Gap Multiplier */}
-            <div className="bg-white rounded-lg p-4 border border-indigo-200">
-              <label className="text-sm font-semibold text-slate-700 mb-2 block">معامل الفجوات</label>
-              <Input
-                type="number"
-                step="0.1"
-                value={dynamicScopeGapMultiplier}
-                onChange={(e) => setDynamicScopeGapMultiplier(parseFloat(e.target.value) || 1)}
-                className="text-lg font-bold text-center border-2 border-indigo-300"
-              />
+            {/* Calculated Cost Display */}
+            <div className="bg-emerald-50 rounded-lg p-4 border-2 border-emerald-300">
+              <p className="text-sm text-slate-600 mb-1">التكلفة المحسوبة:</p>
+              <p className="text-2xl font-bold text-emerald-600">{formatCurrency(calculatedConstructionCost)}</p>
             </div>
           </div>
-          {/* Calculated Cost Display */}
-          <div className="mt-4 bg-white rounded-lg p-4 border-2 border-emerald-300">
-            <p className="text-sm text-slate-600 mb-1">التكلفة المحسوبة:</p>
-            <p className="text-2xl font-bold text-emerald-600">{calculatedConstructionCost.toLocaleString('ar-AE', { style: 'currency', currency: 'AED' })}</p>
-          </div>
         </div>
       )}
 
-      {/* ═══════════════════════ STATUS BAR ═══════════════════════ */}
-      <div className="flex items-center justify-between px-2">
-        <div className="flex items-center gap-6 text-sm text-slate-500">
-          <span className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-purple-300 inline-block border border-purple-400" />
-            قيمة معدّلة يدوياً
-          </span>
-          <span className="flex items-center gap-2">
-            <Pencil className="w-3.5 h-3.5" />
-            انقر على أي رقم للتعديل
-          </span>
-        </div>
-        {isApproved ? (
-          <div className="flex items-center gap-2 text-emerald-700 bg-emerald-50 px-4 py-2 rounded-lg border border-emerald-200">
-            <Lock className="w-4 h-4" />
-            <span className="font-semibold text-sm">التقرير مقفل — معتمد</span>
+      {/* Project Info Card */}
+      <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-200">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <p className="text-sm text-slate-600 mb-1">المساحة (قدم²)</p>
+            <p className="text-2xl font-bold text-slate-900">{formatNum(dynamicBUA)}</p>
           </div>
-        ) : (
-          <div className="flex items-center gap-2 text-amber-700 bg-amber-50 px-4 py-2 rounded-lg border border-amber-200">
-            <Unlock className="w-4 h-4" />
-            <span className="font-semibold text-sm">التقرير مفتوح للتعديل</span>
+          <div>
+            <p className="text-sm text-slate-600 mb-1">تكلفة البناء</p>
+            <p className="text-2xl font-bold text-slate-900">{formatCurrency(calculatedConstructionCost)}</p>
           </div>
-        )}
-      </div>
-
-      {/* ═══════════════════════ MAIN COMPARISON TABLE ═══════════════════════ */}
-      <div className="rounded-2xl border border-slate-200 shadow-lg overflow-hidden bg-white">
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse" style={{ minWidth: '1100px' }}>
-            <thead>
-              {/* Group Headers */}
-              <tr className="bg-slate-800 text-white">
-                <th className="px-4 py-3 text-right text-sm font-bold border-l border-slate-600" rowSpan={2}>
-                  الاستشاري
-                </th>
-                <th className="px-2 py-2 text-center text-sm font-bold border-l border-slate-600" colSpan={3}>
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-blue-400" />
-                    التصميم
-                  </div>
-                </th>
-                <th className="px-2 py-2 text-center text-sm font-bold border-l border-slate-600" colSpan={3}>
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-teal-400" />
-                    الإشراف
-                  </div>
-                </th>
-                <th className="px-2 py-2 text-center text-sm font-bold border-l border-slate-600" rowSpan={2}>
-                  التكلفة الحقيقية<br/>الإجمالية
-                </th>
-                <th className="px-2 py-2 text-center text-sm font-bold" rowSpan={2}>
-                  الترتيب
-                </th>
-              </tr>
-              {/* Sub Headers */}
-              <tr className="bg-slate-600 text-white text-[11px]">
-                <th className="px-2 py-2 text-center font-medium border-l border-slate-500 bg-blue-700/60">الأتعاب المقتبسة</th>
-                <th className="px-2 py-2 text-center font-medium border-l border-slate-500 bg-orange-700/60">فجوة النطاق</th>
-                <th className="px-2 py-2 text-center font-medium border-l border-slate-600 bg-blue-800/60">الأتعاب الحقيقية</th>
-                <th className="px-2 py-2 text-center font-medium border-l border-slate-500 bg-teal-700/60">الأتعاب المقتبسة</th>
-                <th className="px-2 py-2 text-center font-medium border-l border-slate-500 bg-orange-700/60">فجوة النطاق</th>
-                <th className="px-2 py-2 text-center font-medium border-l border-slate-600 bg-teal-800/60">الأتعاب المعدّلة</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((c, i) => {
-                const effectiveTotal = getEffectiveTotal(c);
-                const isLowest = effectiveTotal > 0 && effectiveTotal === lowestTotal;
-                const rank = effectiveTotal > 0 ? i + 1 : 0;
-                const score = effectiveTotal > 0 ? Math.round((lowestTotal / effectiveTotal) * 100 * 100) / 100 : 0;
-
-                return (
-                  <tr
-                    key={c.pcId}
-                    className={`border-b border-slate-100 transition-colors ${
-                      isLowest
-                        ? 'bg-emerald-50/60 hover:bg-emerald-50'
-                        : i % 2 === 0 ? 'bg-white hover:bg-slate-50' : 'bg-slate-50/40 hover:bg-slate-50'
-                    }`}
-                  >
-                    {/* Consultant Name */}
-                    <td className="px-4 py-4 border-l border-slate-100">
-                      <div className="flex items-center gap-3">
-                        <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                          rank === 1 ? 'bg-emerald-600 text-white' :
-                          rank === 2 ? 'bg-slate-500 text-white' :
-                          rank === 3 ? 'bg-amber-500 text-white' :
-                          'bg-slate-200 text-slate-600'
-                        }`}>{rank || '—'}</span>
-                        <div>
-                          <p className="font-bold text-sm text-slate-900 whitespace-nowrap">{c.name}</p>
-                          <p className="text-[11px] text-slate-400 mt-0.5">
-                            {c.designMethod === 'PERCENTAGE' ? `تصميم: ${c.designPct}%` : 'تصميم: مبلغ مقطوع'}
-                            {' • '}
-                            {c.supervisionMethod === 'PERCENTAGE' ? `إشراف: ${c.supervisionPct}%` : c.supervisionMethod === 'MONTHLY_RATE' ? 'إشراف: سعر شهري' : c.supervisionSubmitted ? 'إشراف: مبلغ مقطوع' : 'إشراف: غير مقدم'}
-                          </p>
-                          {isLowest && <p className="text-[10px] text-emerald-600 font-medium mt-0.5">الأفضل سعراً ✓</p>}
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Design: Quoted Fee */}
-                    <td className="px-1 py-3 text-center border border-slate-200 bg-blue-50/50">
-                      {renderCell(c, 'quotedDesignFee')}
-                    </td>
-                    {/* Design: Scope Gap */}
-                    <td className="px-1 py-3 text-center border border-slate-200 bg-orange-50/50">
-                      {renderCell(c, 'designScopeGap')}
-                    </td>
-                    {/* Design: True Fee */}
-                    <td className="px-1 py-3 text-center border border-slate-200 bg-blue-100/50 font-bold">
-                      {renderCell(c, 'trueDesignFee')}
-                    </td>
-
-                    {/* Supervision: Quoted Fee */}
-                    <td className="px-1 py-3 text-center border border-slate-200 bg-teal-50/50">
-                      {renderCell(c, 'quotedSupervisionFee')}
-                    </td>
-                    {/* Supervision: Scope Gap */}
-                    <td className="px-1 py-3 text-center border border-slate-200 bg-orange-50/50">
-                      {renderCell(c, 'supervisionGap')}
-                    </td>
-                    {/* Supervision: Adjusted Fee */}
-                    <td className="px-1 py-3 text-center border border-slate-200 bg-teal-100/50 font-bold">
-                      {renderCell(c, 'adjustedSupervisionFee')}
-                    </td>
-
-                    {/* Total True Cost */}
-                    <td className="px-2 py-3 text-center border border-slate-200 bg-gradient-to-b from-amber-100 to-amber-50 border-x-2 border-amber-300">
-                      {renderCell(c, 'totalTrueCost')}
-                      {score > 0 && <p className="text-[9px] text-amber-600 mt-0.5">Score: {score}%</p>}
-                    </td>
-
-                    {/* Rank */}
-                    <td className="px-2 py-3 text-center">
-                      {rank > 0 ? (
-                        <Badge className={`text-sm px-3 py-1 ${
-                          rank === 1 ? 'bg-emerald-100 text-emerald-800 border-emerald-300' :
-                          rank === 2 ? 'bg-slate-100 text-slate-700 border-slate-300' :
-                          rank === 3 ? 'bg-amber-100 text-amber-800 border-amber-300' :
-                          'bg-slate-50 text-slate-500 border-slate-200'
-                        }`}>
-                          #{rank}
-                        </Badge>
-                      ) : (
-                        <span className="text-slate-300 text-sm">—</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div>
+            <p className="text-sm text-slate-600 mb-1">مدة الإشراف</p>
+            <p className="text-2xl font-bold text-slate-900">{formatNum(dynamicDuration)} شهر</p>
+          </div>
+          <div>
+            <p className="text-sm text-slate-600 mb-1">الفئة</p>
+            <p className="text-2xl font-bold text-slate-900">{report.category}</p>
+          </div>
         </div>
       </div>
 
-      {/* ═══════════════════════ SCOPE GAP DETAILS ═══════════════════════ */}
-      {sorted.some(c => c.scopeGaps && c.scopeGaps.length > 0) && (
-        <div className="mt-8">
-          <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-            <FileBarChart2 className="w-5 h-5 text-blue-600" />
-            تفاصيل فجوة النطاق لكل استشاري
-          </h2>
-          <div className="space-y-4">
-            {sorted.filter(c => c.scopeGaps && c.scopeGaps.length > 0).map(c => (
-              <div key={c.pcId} className="rounded-xl border border-slate-200 overflow-hidden">
-                <div className="bg-slate-50 px-5 py-3 border-b border-slate-200">
-                  <h3 className="font-bold text-sm text-slate-800">{c.name}</h3>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-slate-100/50">
-                        <th className="px-4 py-2 text-right font-medium text-slate-600 border-b border-slate-100">#</th>
-                        <th className="px-4 py-2 text-right font-medium text-slate-600 border-b border-slate-100">البند</th>
-                        <th className="px-4 py-2 text-center font-medium text-slate-600 border-b border-slate-100">الحالة</th>
-                        <th className="px-4 py-2 text-center font-medium text-slate-600 border-b border-slate-100">التكلفة (AED)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {c.scopeGaps.map((gap: any, idx: number) => {
-                        const isGap = gap.status !== 'INCLUDED';
-                        return (
-                          <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
-                            <td className="px-4 py-2 text-slate-500 border-b border-slate-50">{gap.itemCode || idx + 1}</td>
-                            <td className="px-4 py-2 text-slate-800 border-b border-slate-50">{gap.itemLabel || '—'}</td>
-                            <td className="px-4 py-2 text-center border-b border-slate-50">
-                              <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                isGap
-                                  ? 'bg-red-100 text-red-700'
-                                  : 'bg-emerald-100 text-emerald-700'
-                              }`}>
-                                {isGap ? (gap.status === 'NOT_MENTIONED' ? 'غير مذكور' : gap.status === 'EXCLUDED' ? 'مستثنى' : gap.status === 'PARTIAL' ? 'جزئي' : 'غير مشمول') : 'مشمول'}
-                              </span>
-                            </td>
-                            <td className="px-4 py-2 text-center font-semibold tabular-nums border-b border-slate-50">
-                              {gap.gapCost ? formatNum(gap.gapCost) : '—'}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+      {/* Design Fee Analysis Section */}
+      <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-200">
+        <h2 className="text-xl font-bold text-white bg-slate-900 -m-6 mb-6 p-4 rounded-t-2xl">تحليل أتعاب التصميم</h2>
+
+        {sorted.map((consultant, idx) => (
+          <div key={consultant.pcId} className="mb-8 pb-8 border-b border-slate-200 last:border-b-0">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-slate-900">{consultant.consultantName}</h3>
+              <Badge className="bg-blue-100 text-blue-800">#{idx + 1}</Badge>
+            </div>
+
+            {/* Design Pricing Method */}
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="bg-slate-50 p-3 rounded-lg">
+                <p className="text-sm text-slate-600">طريقة التسعير</p>
+                <p className="font-semibold text-slate-900">
+                  {consultant.designMethod === 'PERCENTAGE' ? `${consultant.designPct}% من التكلفة` : 'مبلغ مقطوع'}
+                </p>
+              </div>
+              <div className="bg-slate-50 p-3 rounded-lg">
+                <p className="text-sm text-slate-600">أتعاب التصميم المقتبسة</p>
+                <p className="font-semibold text-slate-900">{formatCurrency(getVal(consultant, 'quotedDesignFee'))}</p>
+              </div>
+            </div>
+
+            {/* Scope Gaps Table */}
+            {consultant.calc?.designScopeGap > 0 && (
+              <div className="mb-4">
+                <p className="text-sm font-semibold text-slate-700 mb-2">فجوات النطاق:</p>
+                <div className="bg-slate-50 p-3 rounded-lg">
+                  <p className="text-sm text-slate-600">إجمالي فجوات التصميم: {formatCurrency(consultant.calc.designScopeGap)}</p>
                 </div>
               </div>
-            ))}
+            )}
+
+            {/* True Design Fee */}
+            <div className="bg-indigo-50 p-4 rounded-lg border-2 border-indigo-300 mb-4">
+              <p className="text-sm text-slate-600 mb-1">أتعاب التصميم الحقيقية</p>
+              <p className="text-2xl font-bold text-indigo-600">{formatCurrency(getVal(consultant, 'trueDesignFee'))}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Supervision Fee Analysis Section */}
+      <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-200">
+        <h2 className="text-xl font-bold text-white bg-slate-900 -m-6 mb-6 p-4 rounded-t-2xl">تحليل أتعاب الإشراف</h2>
+
+        {sorted.map((consultant, idx) => (
+          <div key={consultant.pcId} className="mb-8 pb-8 border-b border-slate-200 last:border-b-0">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-slate-900">{consultant.consultantName}</h3>
+              <Badge className="bg-cyan-100 text-cyan-800">#{idx + 1}</Badge>
+            </div>
+
+            {/* Supervision Pricing Method */}
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="bg-slate-50 p-3 rounded-lg">
+                <p className="text-sm text-slate-600">طريقة الإشراف</p>
+                <p className="font-semibold text-slate-900">
+                  {consultant.supervisionMethod === 'PERCENTAGE' 
+                    ? `${consultant.supervisionPct}% من التكلفة` 
+                    : `${formatCurrency(consultant.supervisionMonthlyRate)} / شهر`}
+                </p>
+              </div>
+              <div className="bg-slate-50 p-3 rounded-lg">
+                <p className="text-sm text-slate-600">أتعاب الإشراف المقتبسة</p>
+                <p className="font-semibold text-slate-900">{formatCurrency(getVal(consultant, 'quotedSupervisionFee'))}</p>
+              </div>
+            </div>
+
+            {/* Adjusted Supervision Fee */}
+            <div className="bg-cyan-50 p-4 rounded-lg border-2 border-cyan-300">
+              <p className="text-sm text-slate-600 mb-1">أتعاب الإشراف المعدلة</p>
+              <p className="text-2xl font-bold text-cyan-600">{formatCurrency(getVal(consultant, 'adjustedSupervisionFee'))}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Summary Table */}
+      <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-200 overflow-x-auto">
+        <h2 className="text-xl font-bold text-white bg-slate-900 -m-6 mb-6 p-4 rounded-t-2xl">الملخص والترتيب</h2>
+
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-slate-100 border-b-2 border-slate-300">
+              <th className="p-3 text-right font-bold text-slate-900">الترتيب</th>
+              <th className="p-3 text-right font-bold text-slate-900">الاستشاري</th>
+              <th className="p-3 text-right font-bold text-slate-900">أتعاب التصميم</th>
+              <th className="p-3 text-right font-bold text-slate-900">أتعاب الإشراف</th>
+              <th className="p-3 text-right font-bold text-slate-900">الإجمالي</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((consultant, idx) => {
+              const total = getEffectiveTotal(consultant);
+              const percentage = lowestTotal > 0 ? ((total - lowestTotal) / lowestTotal * 100).toFixed(1) : '0';
+              return (
+                <tr key={consultant.pcId} className="border-b border-slate-200 hover:bg-slate-50">
+                  <td className="p-3 font-bold text-center text-slate-900">#{idx + 1}</td>
+                  <td className="p-3 font-semibold text-slate-900">{consultant.consultantName}</td>
+                  <td className="p-3 text-slate-900">{formatCurrency(getVal(consultant, 'trueDesignFee'))}</td>
+                  <td className="p-3 text-slate-900">{formatCurrency(getVal(consultant, 'adjustedSupervisionFee'))}</td>
+                  <td className="p-3 font-bold text-slate-900">
+                    {formatCurrency(total)}
+                    {idx > 0 && <span className="text-xs text-slate-500 block">+{percentage}%</span>}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Approval Section */}
+      {!isApproved && (
+        <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-200">
+          <h3 className="text-lg font-bold text-slate-900 mb-4">اعتماد التقرير</h3>
+          <div className="flex gap-3">
+            <input
+              type="text"
+              placeholder="اسم المعتمِد"
+              value={approverName}
+              onChange={(e) => setApproverName(e.target.value)}
+              className="flex-1 px-4 py-2 border border-slate-300 rounded-lg"
+            />
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              onClick={() => {
+                if (!approverName.trim()) {
+                  toast({ title: 'الرجاء إدخال اسم المعتمِد' });
+                  return;
+                }
+                approveMutation.mutate({
+                  cpaProjectId: report.cpaProjectId,
+                  approverName,
+                });
+              }}
+              disabled={approveMutation.isPending}
+            >
+              <ShieldCheck className="w-4 h-4 ml-2" />
+              اعتماد التقرير
+            </Button>
           </div>
         </div>
       )}
 
-      {/* ═══════════════════════ BASELINE TABLE ═══════════════════════ */}
-      {report.supervisionBaseline.length > 0 && (
-        <div className="mt-10">
-          <div className="flex items-center gap-3 mb-5">
-            <FileBarChart2 className="w-6 h-6 text-indigo-600" />
-            <h2 className="text-xl font-bold text-slate-800">مرجع الـ Baseline — فريق الإشراف ({report.category})</h2>
-          </div>
-          <div className="rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-slate-100">
-                  <th className="border-b border-slate-200 px-6 py-4 text-right text-sm font-bold text-slate-700">الوظيفة</th>
-                  <th className="border-b border-slate-200 px-4 py-4 text-center text-sm font-bold text-slate-700">السعر الشهري (AED)</th>
-                  <th className="border-b border-slate-200 px-4 py-4 text-center text-sm font-bold text-slate-700">نسبة التخصيص</th>
-                  <th className="border-b border-slate-200 px-4 py-4 text-center text-sm font-bold text-slate-700">التكلفة الشهرية الفعلية</th>
-                  <th className="border-b border-slate-200 px-4 py-4 text-center text-sm font-bold text-slate-700">التكلفة لـ {report.durationMonths} شهر</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.supervisionBaseline.map((b, idx) => {
-                  const effectiveMonthly = b.monthlyRate * (b.requiredPct / 100);
-                  const totalCost = effectiveMonthly * report.durationMonths;
-                  return (
-                    <tr key={b.roleId} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
-                      <td className="border-b border-slate-100 px-6 py-3 font-medium text-sm text-slate-800">{b.label}</td>
-                      <td className="border-b border-slate-100 px-4 py-3 text-center text-sm font-semibold tabular-nums">{b.monthlyRate.toLocaleString()}</td>
-                      <td className="border-b border-slate-100 px-4 py-3 text-center text-sm">{b.requiredPct}%</td>
-                      <td className="border-b border-slate-100 px-4 py-3 text-center text-sm tabular-nums">{Math.round(effectiveMonthly).toLocaleString()}</td>
-                      <td className="border-b border-slate-100 px-4 py-3 text-center text-sm font-bold tabular-nums">{Math.round(totalCost).toLocaleString()}</td>
-                    </tr>
-                  );
-                })}
-                <tr className="bg-slate-800 text-white">
-                  <td className="px-6 py-3 font-bold text-sm" colSpan={4}>المجموع</td>
-                  <td className="px-4 py-3 text-center text-base font-black tabular-nums">
-                    {Math.round(report.supervisionBaseline.reduce((sum, b) => sum + (b.monthlyRate * (b.requiredPct / 100) * report.durationMonths), 0)).toLocaleString()}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+      {isApproved && (
+        <div className="bg-emerald-50 rounded-2xl p-6 border-2 border-emerald-300">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-emerald-700 mb-1">معتمد من:</p>
+              <p className="text-lg font-bold text-emerald-900">{report.approval?.approverName}</p>
+              <p className="text-xs text-emerald-600 mt-1">
+                {new Date(report.approval?.approvedAt || '').toLocaleString('ar-AE')}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              className="border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+              onClick={() => {
+                revokeMutation.mutate({ cpaProjectId: report.cpaProjectId });
+              }}
+              disabled={revokeMutation.isPending}
+            >
+              <Unlock className="w-4 h-4 ml-2" />
+              إلغاء الاعتماد
+            </Button>
           </div>
         </div>
       )}
