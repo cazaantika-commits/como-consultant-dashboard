@@ -1490,6 +1490,14 @@ function ResultsScreen({
               </Button>
               <Button
                 size="sm"
+                className="bg-purple-600 hover:bg-purple-700 text-white gap-1"
+                onClick={() => window.location.href = `/true-cost-report-pdf/${projectId}`}
+              >
+                <FileBarChart2 className="w-3.5 h-3.5" />
+                التقرير الاحترافي
+              </Button>
+              <Button
+                size="sm"
                 className="bg-sky-700 hover:bg-sky-600 text-white gap-1"
                 onClick={() => window.open(`/api/cpa/report/${projectId}`, '_blank')}
               >
