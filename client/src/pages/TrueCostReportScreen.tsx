@@ -114,11 +114,27 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
   const isApproved = report.approval?.isApproved;
   const calculatedConstructionCost = dynamicBUA && dynamicPricePerSqft ? dynamicBUA * dynamicPricePerSqft : report.constructionCost;
 
-  // Helper: get effective value (override or calculated)
-  const getVal = (c: typeof report.consultants[0], field: FieldKey): number => {
+  // Helper: Calculate value based on method and dynamic construction cost
+  const calculateDynamicValue = (c: typeof report.consultants[0], field: FieldKey): number => {
+    // If there's an override, use it
     const ov = c.override?.[field];
     if (ov != null) return ov;
+
+    // For percentage-based fees, recalculate using dynamic construction cost
+    if (field === 'quotedDesignFee' && c.designMethod === 'PERCENTAGE') {
+      return (c.designPct / 100) * calculatedConstructionCost;
+    }
+    if (field === 'quotedSupervisionFee' && c.supervisionMethod === 'PERCENTAGE') {
+      return (c.supervisionPct / 100) * calculatedConstructionCost;
+    }
+
+    // For other fields, use calculated value from backend
     return c.calc[field];
+  };
+
+  // Helper: get effective value (override or calculated)
+  const getVal = (c: typeof report.consultants[0], field: FieldKey): number => {
+    return calculateDynamicValue(c, field);
   };
 
   // Check if a field has an override
