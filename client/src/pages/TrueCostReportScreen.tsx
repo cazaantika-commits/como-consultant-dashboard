@@ -50,9 +50,13 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
     onError: (err) => toast({ title: 'خطأ', description: err.message, variant: 'destructive' }),
   });
 
+  // All useState calls MUST come before any early returns (Rules of Hooks)
   const [editingCell, setEditingCell] = useState<{ pcId: number; field: FieldKey } | null>(null);
   const [editValue, setEditValue] = useState('');
   const [approverName, setApproverName] = useState('');
+  const [dynamicBUA, setDynamicBUA] = useState<number>(0);
+  const [dynamicPricePerSqft, setDynamicPricePerSqft] = useState<number>(0);
+  const [dynamicDuration, setDynamicDuration] = useState<number>(0);
 
   if (reportQuery.isLoading) return (
     <div className="flex flex-col items-center justify-center py-24 gap-4">
@@ -67,11 +71,17 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
   const report = reportQuery.data!;
   const isApproved = report.approval?.isApproved;
 
-  // Dynamic variables for editing
+  // Initialize dynamic variables from report data (only on first render)
+  if (dynamicBUA === 0 && report.bua > 0) {
+    setDynamicBUA(report.bua);
+  }
   const originalPricePerSqft = report.bua > 0 ? report.constructionCost / report.bua : 0;
-  const [dynamicBUA, setDynamicBUA] = useState<number>(report.bua);
-  const [dynamicPricePerSqft, setDynamicPricePerSqft] = useState<number>(originalPricePerSqft);
-  const [dynamicDuration, setDynamicDuration] = useState<number>(report.durationMonths);
+  if (dynamicPricePerSqft === 0 && originalPricePerSqft > 0) {
+    setDynamicPricePerSqft(originalPricePerSqft);
+  }
+  if (dynamicDuration === 0 && report.durationMonths > 0) {
+    setDynamicDuration(report.durationMonths);
+  }
 
   // Calculated values based on dynamic inputs
   const calculatedConstructionCost = dynamicBUA * dynamicPricePerSqft;
