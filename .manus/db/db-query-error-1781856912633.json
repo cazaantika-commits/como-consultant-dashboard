@@ -1,0 +1,8 @@
+{
+  "query": "SELECT cpc.id, c.name, cpc.designFeeAmount, cpc.designFeeMethod, cpc.designFeePercentage, cpc.status\nFROM cpa_project_consultants cpc\nLEFT JOIN consultants c ON cpc.consultantId = c.id\nWHERE cpc.cpaProjectId = 300001\nORDER BY cpc.id",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT cpc.id, c.name, cpc.designFeeAmount, cpc.designFeeMethod, cpc.designFeePercentage, cpc.status\nFROM cpa_project_consultants cpc\nLEFT JOIN consultants c ON cpc.consultantId = c.id\nWHERE cpc.cpaProjectId = 300001\nORDER BY cpc.id",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'cpc.consultantid' in 'on clause'"
+  ]
+}

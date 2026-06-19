@@ -1431,9 +1431,11 @@ function ScopeReviewScreen({
 function ResultsScreen({
   projectId,
   onBack,
+  onNavigateToTrueCostReport,
 }: {
   projectId: number;
   onBack: () => void;
+  onNavigateToTrueCostReport?: () => void;
 }) {
   const { toast } = useToast();
   const resultsQuery = trpc.cpa.evaluation.getResults.useQuery({ cpaProjectId: projectId });
@@ -1446,6 +1448,9 @@ function ResultsScreen({
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const results = resultsQuery.data ?? [];
   const project = projectQuery.data;
+  
+  // Note: Parent component should handle navigateToTrueCostReport event
+  // This is a placeholder - actual navigation will be handled by parent CPAPage
 
   const rankable = results.filter((r: any) => r.can_rank === 1);
   const unrankable = results.filter((r: any) => r.can_rank !== 1);
@@ -1453,35 +1458,47 @@ function ResultsScreen({
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <Button variant="ghost" size="sm" onClick={onBack} className="gap-1">
           <ArrowRight className="w-4 h-4" />
           رجوع
         </Button>
         <Separator orientation="vertical" className="h-5" />
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <h2 className="font-bold text-lg">نتائج التقييم والترتيب</h2>
-          <p className="text-sm text-muted-foreground">{project?.project_name}</p>
+          <p className="text-sm text-muted-foreground truncate">{project?.project_name}</p>
         </div>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => evalMutation.mutate({ cpaProjectId: projectId })}
-          disabled={evalMutation.isPending}
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ml-1 ${evalMutation.isPending ? "animate-spin" : ""}`} />
-          إعادة الحساب
-        </Button>
-        {results.length > 0 && (
+        <div className="flex items-center gap-2">
           <Button
             size="sm"
-            className="bg-sky-700 hover:bg-sky-600 text-white gap-1"
-            onClick={() => window.open(`/api/cpa/report/${projectId}`, '_blank')}
+            variant="outline"
+            onClick={() => evalMutation.mutate({ cpaProjectId: projectId })}
+            disabled={evalMutation.isPending}
           >
-            <Eye className="w-3.5 h-3.5" />
-            تصدير التقرير
+            <RefreshCw className={`w-3.5 h-3.5 ml-1 ${evalMutation.isPending ? "animate-spin" : ""}`} />
+            إعادة الحساب
           </Button>
-        )}
+          {results.length > 0 && (
+            <>
+              <Button
+                size="sm"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1"
+                onClick={onNavigateToTrueCostReport}
+              >
+                <FileBarChart2 className="w-3.5 h-3.5" />
+                تقرير التكلفة الحقيقية
+              </Button>
+              <Button
+                size="sm"
+                className="bg-sky-700 hover:bg-sky-600 text-white gap-1"
+                onClick={() => window.open(`/api/cpa/report/${projectId}`, '_blank')}
+              >
+                <Eye className="w-3.5 h-3.5" />
+                تصدير التقرير
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       {resultsQuery.isLoading ? (
@@ -2232,6 +2249,7 @@ export default function CPAPage() {
           <ResultsScreen
             projectId={selectedProjectId}
             onBack={() => setScreen("project-detail")}
+            onNavigateToTrueCostReport={() => setScreen("truecost-report")}
           />
         )}
         {screen === "truecost-report" && selectedProjectId && (

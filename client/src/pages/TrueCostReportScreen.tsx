@@ -42,7 +42,7 @@ function formatNum(n: number | null | undefined): string {
 
 export default function TrueCostReportScreen({ projectId, onBack }: { projectId: number; onBack: () => void }) {
   const { toast } = useToast();
-  const reportQuery = trpc.cpa.evaluation.getFullReport.useQuery({ cpaProjectId: projectId });
+  const reportQuery = trpc.cpa.evaluation.getFullReport.useQuery({ cpaProjectId: projectId }, { enabled: !!projectId });
   const saveMutation = trpc.cpa.evaluation.saveOverride.useMutation({
     onSuccess: () => { reportQuery.refetch(); toast({ title: 'تم حفظ التعديل ✔️' }); },
     onError: (err) => toast({ title: 'خطأ', description: err.message, variant: 'destructive' }),
@@ -59,6 +59,15 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
   const [editingCell, setEditingCell] = useState<{ pcId: number; field: FieldKey } | null>(null);
   const [editValue, setEditValue] = useState('');
   const [approverName, setApproverName] = useState('');
+  
+  // Dynamic variables for editing - initialize from report data
+  const [dynamicBUA, setDynamicBUA] = useState<number>(report.bua);
+  const [dynamicPricePerSqft, setDynamicPricePerSqft] = useState<number>(report.constructionCost / report.bua);
+  const [dynamicDuration, setDynamicDuration] = useState<number>(report.durationMonths);
+  const [dynamicScopeGapMultiplier, setDynamicScopeGapMultiplier] = useState<number>(1);
+  
+  // Calculated values based on dynamic inputs
+  const calculatedConstructionCost = dynamicBUA * dynamicPricePerSqft;
 
   const startEdit = useCallback((pcId: number, field: FieldKey, currentValue: number) => {
     setEditingCell({ pcId, field });
@@ -92,12 +101,46 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
     <div className="text-center py-24 text-slate-400 text-xl">لا توجد بيانات لهذا المشروع</div>
   );
 
-  const report = reportQuery.data;
+  const report = reportQuery.data!;
   const isApproved = report.approval?.isApproved;
 
   const getVal = (c: typeof report.consultants[0], field: FieldKey): number => {
     const ov = c.override?.[field];
     if (ov != null) return ov;
+    
+    // Apply dynamic calculations for design fees based on percentage
+    if (field === 'quotedDesignFee' && c.designMethod === 'PERCENTAGE') {
+      return (calculatedConstructionCost * (c.designPct || 0)) / 100;
+    }
+    if (field === 'trueDesignFee' && c.designMethod === 'PERCENTAGE') {
+      const quoted = (calculatedConstructionCost * (c.designPct || 0)) / 100;
+      const gap = ((c.calc as any)['designScopeGap'] ?? 0) * dynamicScopeGapMultiplier;
+      return quoted + gap;
+    }
+    
+    // Apply dynamic calculations for supervision fees based on percentage or monthly rate
+    if (field === 'quotedSupervisionFee' && c.supervisionMethod === 'PERCENTAGE') {
+      return (calculatedConstructionCost * (c.supervisionPct || 0)) / 100;
+    }
+    if (field === 'quotedSupervisionFee' && c.supervisionMethod === 'MONTHLY_RATE') {
+      return (c.supervisionMonthlyRate || 0) * dynamicDuration;
+    }
+    if (field === 'adjustedSupervisionFee' && c.supervisionMethod === 'PERCENTAGE') {
+      const quoted = (calculatedConstructionCost * (c.supervisionPct || 0)) / 100;
+      const gap = ((c.calc as any)['supervisionGap'] ?? 0) * dynamicScopeGapMultiplier;
+      return quoted + gap;
+    }
+    if (field === 'adjustedSupervisionFee' && c.supervisionMethod === 'MONTHLY_RATE') {
+      const quoted = (c.supervisionMonthlyRate || 0) * dynamicDuration;
+      const gap = ((c.calc as any)['supervisionGap'] ?? 0) * dynamicScopeGapMultiplier;
+      return quoted + gap;
+    }
+    
+    // Apply dynamic scope gap multiplier
+    if ((field === 'designScopeGap' || field === 'supervisionGap')) {
+      return ((c.calc as any)[field] ?? 0) * dynamicScopeGapMultiplier;
+    }
+    
     return (c.calc as any)[field] ?? 0;
   };
 
@@ -109,9 +152,11 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
     const trueDesign = getVal(c, 'trueDesignFee');
     const adjSupervision = getVal(c, 'adjustedSupervisionFee');
     if (c.override?.totalTrueCost != null) return c.override.totalTrueCost;
-    return trueDesign + adjSupervision;
+    const total = trueDesign + adjSupervision;
+    return total > 0 ? total : 0;
   };
 
+  // Recalculate sorted list whenever dynamic variables change
   const sorted = [...report.consultants].sort((a, b) => {
     const aTotal = getEffectiveTotal(a);
     const bTotal = getEffectiveTotal(b);
@@ -270,6 +315,64 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
           </div>
         </div>
       </div>
+
+      {/* ═══════════════════════ DYNAMIC INPUT VARIABLES ═══════════════════════ */}
+      {!isApproved && (
+        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-6 border border-indigo-200 shadow-md">
+          <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <span className="text-indigo-600">⚙️</span>
+            متغيرات ديناميكية — عدّل القيم وسيتحدث التقرير تلقائياً
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* BUA Input */}
+            <div className="bg-white rounded-lg p-4 border border-indigo-200">
+              <label className="text-sm font-semibold text-slate-700 mb-2 block">المساحة (قدم²)</label>
+              <Input
+                type="number"
+                value={dynamicBUA}
+                onChange={(e) => setDynamicBUA(parseFloat(e.target.value) || 0)}
+                className="text-lg font-bold text-center border-2 border-indigo-300"
+              />
+            </div>
+            {/* Price per Sqft Input */}
+            <div className="bg-white rounded-lg p-4 border border-indigo-200">
+              <label className="text-sm font-semibold text-slate-700 mb-2 block">سعر القدم (AED)</label>
+              <Input
+                type="number"
+                value={dynamicPricePerSqft}
+                onChange={(e) => setDynamicPricePerSqft(parseFloat(e.target.value) || 0)}
+                className="text-lg font-bold text-center border-2 border-indigo-300"
+              />
+            </div>
+            {/* Duration Input */}
+            <div className="bg-white rounded-lg p-4 border border-indigo-200">
+              <label className="text-sm font-semibold text-slate-700 mb-2 block">مدة الإشراف (شهر)</label>
+              <Input
+                type="number"
+                value={dynamicDuration}
+                onChange={(e) => setDynamicDuration(parseFloat(e.target.value) || 0)}
+                className="text-lg font-bold text-center border-2 border-indigo-300"
+              />
+            </div>
+            {/* Scope Gap Multiplier */}
+            <div className="bg-white rounded-lg p-4 border border-indigo-200">
+              <label className="text-sm font-semibold text-slate-700 mb-2 block">معامل الفجوات</label>
+              <Input
+                type="number"
+                step="0.1"
+                value={dynamicScopeGapMultiplier}
+                onChange={(e) => setDynamicScopeGapMultiplier(parseFloat(e.target.value) || 1)}
+                className="text-lg font-bold text-center border-2 border-indigo-300"
+              />
+            </div>
+          </div>
+          {/* Calculated Cost Display */}
+          <div className="mt-4 bg-white rounded-lg p-4 border-2 border-emerald-300">
+            <p className="text-sm text-slate-600 mb-1">التكلفة المحسوبة:</p>
+            <p className="text-2xl font-bold text-emerald-600">{calculatedConstructionCost.toLocaleString('ar-AE', { style: 'currency', currency: 'AED' })}</p>
+          </div>
+        </div>
+      )}
 
       {/* ═══════════════════════ STATUS BAR ═══════════════════════ */}
       <div className="flex items-center justify-between px-2">
