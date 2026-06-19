@@ -1,5 +1,6 @@
 'use client';
 import { useState, useCallback, useEffect } from 'react';
+import { useParams } from 'wouter';
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,8 +34,11 @@ function formatNum(n: number | null | undefined): string {
   return Math.round(n).toLocaleString();
 }
 
-export default function TrueCostReportPDF({ projectId, onBack }: { projectId: number; onBack: () => void }) {
-  const reportQuery = trpc.cpa.evaluation.getFullReport.useQuery({ cpaProjectId: projectId });
+export default function TrueCostReportPDF({ projectId: propProjectId, onBack }: { projectId?: number; onBack?: () => void }) {
+  const params = useParams<{ projectId: string }>();
+  const projectId = propProjectId || (params?.projectId ? parseInt(params.projectId, 10) : 0);
+  
+  const reportQuery = trpc.cpa.evaluation.getFullReport.useQuery({ cpaProjectId: projectId }, { enabled: projectId > 0 });
   
   const [editingCell, setEditingCell] = useState<{ pcId: number; field: FieldKey } | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -92,7 +96,9 @@ export default function TrueCostReportPDF({ projectId, onBack }: { projectId: nu
     }
   }, [reportQuery.data?.constructionCost, reportQuery.data?.bua]);
 
+  if (projectId <= 0) return <div className="text-center py-12 text-red-600">خطأ: معرّف المشروع غير صحيح</div>;
   if (reportQuery.isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>;
+  if (reportQuery.isError) return <div className="text-center py-12 text-red-600">خطأ في تحميل البيانات</div>;
   if (!reportQuery.data) return <div className="text-center py-12 text-slate-400">لا توجد بيانات لهذا المشروع</div>;
 
   const report = reportQuery.data;
@@ -184,7 +190,12 @@ export default function TrueCostReportPDF({ projectId, onBack }: { projectId: nu
     <div dir="rtl" className="min-h-screen bg-white">
       {/* Header Navigation */}
       <div className="flex items-center justify-between px-8 py-4 border-b border-slate-200">
-        <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-600 hover:text-slate-900">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={onBack ? onBack : () => window.history.back()} 
+          className="text-slate-600 hover:text-slate-900"
+        >
           <ArrowRight className="w-4 h-4 ml-1" /> العودة
         </Button>
         <div className="flex items-center gap-2">
