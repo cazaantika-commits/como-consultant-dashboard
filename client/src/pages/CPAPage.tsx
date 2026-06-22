@@ -942,7 +942,10 @@ Rules:
             <BarChart3 className="w-4 h-4 ml-2" />
             عرض نتائج التقييم والترتيب
           </Button>
-
+          <Button className="w-full bg-indigo-600 hover:bg-indigo-500 text-white" onClick={onTrueCostReport}>
+            <FileBarChart2 className="w-4 h-4 ml-2" />
+            تقرير التكلفة الحقيقية
+          </Button>
         </div>
       )}
 

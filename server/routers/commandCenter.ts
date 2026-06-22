@@ -1436,95 +1436,72 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       if (!db) return { consultants: [], project: null };
       const [project] = await db.select().from(projects).where(eq(projects.id, input.projectId));
       if (!project) return { consultants: [], project: null };
+      const pcs = await db.select().from(projectConsultants).where(eq(projectConsultants.projectId, input.projectId));
+      const allConsultants = await db.select().from(consultants);
+      const fins = await db.select().from(financialData).where(eq(financialData.projectId, input.projectId));
+      const consultantMap = Object.fromEntries(allConsultants.map(c => [c.id, c]));
+      const constructionCost = (project.bua || 0) * (project.pricePerSqft || 0);
 
-      // Fetch CPA project and evaluation results (the source of truth)
-      const cpaProjectRows = await db.execute(sql`SELECT id, bua_sqft, construction_cost_per_sqft FROM cpa_projects WHERE project_id = ${input.projectId} LIMIT 1`);
-      const cpaProjectArr = Array.isArray(cpaProjectRows) ? (cpaProjectRows[0] as any[]) : (cpaProjectRows as any[]);
-      if (!cpaProjectArr || cpaProjectArr.length === 0) return { consultants: [], project: null };
-      
-      const cpaProjectId = Number(cpaProjectArr[0].id);
-      const cpaBua = Number(cpaProjectArr[0].bua_sqft) || 0;
-      const cpaPrice = Number(cpaProjectArr[0].construction_cost_per_sqft) || 0;
-      const cpaCost = cpaBua * cpaPrice;
+      // Fetch CPA gap costs via raw SQL (avoids Drizzle ORM bug with project_id column)
+      const cpaGapMap = new Map<number, number>();
+      const cpaSupervisionGapMap = new Map<number, number>();
+      try {
+        // Auto-trigger recalculation so any settings change reflects immediately
+        const cpaProjectRows = await db.execute(sql`SELECT id FROM cpa_projects WHERE project_id = ${input.projectId} LIMIT 1`);
+        const cpaProjectArr = Array.isArray(cpaProjectRows) ? (cpaProjectRows[0] as any[]) : (cpaProjectRows as any[]);
+        if (cpaProjectArr && cpaProjectArr.length > 0) {
+          const cpaProjectId = Number(cpaProjectArr[0].id);
+          const { runCalculationEngine } = await import('./cpa');
+          await runCalculationEngine(cpaProjectId).catch(() => {});
+        }
+        const gapRows = await db.execute(sql`
+          SELECT cpc.consultant_id as consultantId,
+                 cer.design_scope_gap_cost as designGapCost,
+                 cer.supervision_gap_cost as supervisionGapCost
+          FROM cpa_projects cp
+          JOIN cpa_project_consultants cpc ON cpc.cpa_project_id = cp.id
+          LEFT JOIN cpa_evaluation_results cer ON cer.project_consultant_id = cpc.id
+          WHERE cp.project_id = ${input.projectId}
+        `);
+        const gapArr = Array.isArray(gapRows) ? gapRows[0] : gapRows;
+        if (gapArr && (gapArr as any[]).length > 0) {
+          for (const row of gapArr as any[]) {
+            cpaGapMap.set(Number(row.consultantId), Number(row.designGapCost) || 0);
+            cpaSupervisionGapMap.set(Number(row.consultantId), Number(row.supervisionGapCost) || 0);
+          }
+        }
+      } catch (e) {
+        console.warn('[CommandCenter] CPA gap fetch error:', e);
+      }
 
-      // Trigger recalculation to ensure latest data
-      const { runCalculationEngine } = await import('./cpa');
-      await runCalculationEngine(cpaProjectId).catch(() => {});
-
-      // Fetch CPA evaluation results (the source of truth)
-      const evalRows = await db.execute(sql`
-        SELECT 
-          cpc.consultant_id as consultantId,
-          c.trade_name,
-          c.legal_name,
-          cpc.design_method,
-          cpc.design_pct,
-          cpc.design_amount,
-          cpc.supervision_method,
-          cpc.supervision_pct,
-          cpc.supervision_amount,
-          cer.quoted_design_fee,
-          cer.design_scope_gap_cost,
-          cer.quoted_supervision_fee,
-          cer.supervision_gap_cost,
-          cer.total_true_cost,
-          cer.override_quoted_design_fee,
-          cer.override_design_scope_gap,
-          cer.override_quoted_supervision_fee,
-          cer.override_supervision_gap,
-          cer.override_total_true_cost
-        FROM cpa_project_consultants cpc
-        JOIN consultants c ON c.id = cpc.consultant_id
-        LEFT JOIN cpa_evaluation_results cer ON cer.project_consultant_id = cpc.id
-        WHERE cpc.cpa_project_id = ${cpaProjectId}
-      `);
-      
-      const evalArr = Array.isArray(evalRows) ? evalRows[0] : evalRows;
-      const consultantData = (evalArr as any[]).map((row: any) => {
-        const name = row.trade_name || row.legal_name || 'غير معروف';
-        
-        // Use overrides if set, otherwise use calculated values
-        const quotedDesignFee = row.override_quoted_design_fee !== null ? Number(row.override_quoted_design_fee) : Number(row.quoted_design_fee) || 0;
-        const designGap = row.override_design_scope_gap !== null ? Number(row.override_design_scope_gap) : Number(row.design_scope_gap_cost) || 0;
-        const quotedSupervisionFee = row.override_quoted_supervision_fee !== null ? Number(row.override_quoted_supervision_fee) : Number(row.quoted_supervision_fee) || 0;
-        const supervisionGap = row.override_supervision_gap !== null ? Number(row.override_supervision_gap) : Number(row.supervision_gap_cost) || 0;
-        const totalTrueCost = row.override_total_true_cost !== null ? Number(row.override_total_true_cost) : Number(row.total_true_cost) || 0;
-        
-        return {
-          id: row.consultantId,
-          name,
-          designMethod: row.design_method,
-          designPct: Number(row.design_pct) || 0,
-          designAmount: Number(row.design_amount) || 0,
-          supervisionMethod: row.supervision_method,
-          supervisionPct: Number(row.supervision_pct) || 0,
-          supervisionAmount: Number(row.supervision_amount) || 0,
-          quotedDesignFee,
-          designScopeGapCost: designGap,
-          quotedSupervisionFee,
-          supervisionScopeGapCost: supervisionGap,
-          totalFees: totalTrueCost,
-          financialScore: 0 as number
-        };
+      const consultantData = pcs.map(pc => {
+        const c = consultantMap[pc.consultantId];
+        const fin = fins.find(f => f.consultantId === pc.consultantId);
+        let designAmount = 0, supervisionAmount = 0;
+        if (fin) {
+          const dVal = Number(fin.designValue) || 0;
+          const sVal = Number(fin.supervisionValue) || 0;
+          designAmount = fin.designType === 'pct' ? constructionCost * (dVal / 100) : dVal;
+          supervisionAmount = fin.supervisionType === 'pct' ? constructionCost * (sVal / 100) : sVal;
+        }
+            // Use manual override from financial_data if set, otherwise fall back to CPA auto-calculated value
+            const cpaDesignGap = cpaGapMap.get(pc.consultantId) || 0;
+            const cpaSupervisionGap = cpaSupervisionGapMap.get(pc.consultantId) || 0;
+            const designGapCost = (fin && fin.designGapOverride !== null && fin.designGapOverride !== undefined)
+              ? Number(fin.designGapOverride)
+              : cpaDesignGap;
+            const supervisionGapCost = (fin && fin.supervisionGapOverride !== null && fin.supervisionGapOverride !== undefined)
+              ? Number(fin.supervisionGapOverride)
+              : cpaSupervisionGap;
+        const totalFees = Number(designAmount) + Number(designGapCost) + Number(supervisionAmount) + Number(supervisionGapCost);
+        return { id: c?.id || pc.consultantId, name: c?.name || 'غير معروف', designType: fin?.designType || 'pct', designValue: Number(fin?.designValue) || 0, supervisionType: fin?.supervisionType || 'pct', supervisionValue: Number(fin?.supervisionValue) || 0, designAmount: Number(designAmount), supervisionAmount: Number(supervisionAmount), designScopeGapCost: Number(designGapCost), supervisionScopeGapCost: Number(supervisionGapCost), totalFees: Number(totalFees), proposalLink: (fin as any)?.proposalLink || null, financialScore: 0 as number };
       });
-
-      // Calculate financial score
       const sortedByFees = [...consultantData].filter(c => c.totalFees > 0).sort((a, b) => a.totalFees - b.totalFees);
       const lowestFee = sortedByFees[0]?.totalFees || 1;
       consultantData.forEach(c => {
         c.financialScore = c.totalFees > 0 ? Math.round((lowestFee / c.totalFees) * 100 * 100) / 100 : 0;
       });
-
-      return { 
-        project: { 
-          id: project.id, 
-          name: project.name, 
-          bua: cpaBua, 
-          pricePerSqft: cpaPrice, 
-          constructionCost: cpaCost 
-        }, 
-        consultants: consultantData 
-      };
+      return { project: { id: project.id, name: project.name, bua: project.bua, pricePerSqft: project.pricePerSqft, constructionCost }, consultants: consultantData };
     }),
 
   getProjectTechnicalEvaluation: publicProcedure
