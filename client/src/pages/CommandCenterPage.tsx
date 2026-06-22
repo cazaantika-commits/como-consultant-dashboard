@@ -113,6 +113,7 @@ import PaymentRequestsPage from "./PaymentRequests";
 import GeneralRequestsPage from "./GeneralRequests";
 import InternalMessagesPage from "./InternalMessages";
 import TrueCostReportView from "./TrueCostReportView";
+import FinancialEvaluationScreen from "./FinancialEvaluationScreen";
 // Old financial components removed - now using iframe embeds
 
 // --- Financial Reports View (read-only, embedded in Command Center) ---
@@ -2457,7 +2458,7 @@ function EvaluationView({ token, memberRole, memberId }: { token: string; member
   const consultantsForProject = projectsQuery.data?.find((p: any) => p.id === selectedProject)?.consultants || [];
 
   if (selectedProject && activeTab === 'financial') {
-    return <FinancialEvaluationView token={token} projectId={selectedProject} onBack={() => setActiveTab(null)} />;
+    return <FinancialEvaluationScreen projectId={selectedProject} onBack={() => setActiveTab(null)} />;
   }
   if (selectedProject && activeTab === 'technical') {
     return <TechnicalEvaluationView token={token} projectId={selectedProject} memberId={memberId} onBack={() => setActiveTab(null)} />;
