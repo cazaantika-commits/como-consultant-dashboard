@@ -22,6 +22,7 @@ import {
   paymentRequests,
   generalRequests,
   internalMessages,
+  cpaProjects,
 } from "../../drizzle/schema";
 import { eq, desc, sql, and, inArray, gte } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -1399,6 +1400,7 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       const db = await getDb();
       if (!db) return [];
       const allProjects = await db.select().from(projects);
+      const allCpaProjects = await db.select().from(cpaProjects);
       const allPc = await db.select().from(projectConsultants);
       const allConsultants = await db.select().from(consultants);
       const allFinancial = await db.select().from(financialData);
@@ -1410,6 +1412,7 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
         const pConsultants = allPc.filter(pc => pc.projectId === p.id).map(pc => consultantMap[pc.consultantId]).filter(Boolean);
         const hasFinancial = allFinancial.some(f => f.projectId === p.id);
         const projectScores = allEvalScores.filter(s => s.projectId === p.id);
+        const cpaProject = allCpaProjects.find(cp => cp.projectId === p.id);
         const evaluatorNames = ['sheikh_issa', 'wael', 'abdulrahman'];
         const totalCriteria = 9;
         const totalNeeded = pConsultants.length * totalCriteria;
@@ -1424,7 +1427,7 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
         if (decision?.isConfirmed === 1) status = 'decided';
         else if (allEvaluatorsComplete) status = 'evaluation_complete';
         else if (anyEvaluatorStarted || hasFinancial) status = 'in_progress';
-        return { id: p.id, name: p.name, description: p.description, consultantCount: pConsultants.length, consultants: pConsultants.map(c => ({ id: c.id, name: c.name, nameAr: c.nameAr })), status, hasFinancial, evaluatorStatus, allEvaluatorsComplete, hasDecision: !!decision, isDecisionConfirmed: decision?.isConfirmed === 1 };
+        return { id: p.id, cpaProjectId: cpaProject?.id || null, name: p.name, description: p.description, consultantCount: pConsultants.length, consultants: pConsultants.map(c => ({ id: c.id, name: c.name, nameAr: c.nameAr })), status, hasFinancial, evaluatorStatus, allEvaluatorsComplete, hasDecision: !!decision, isDecisionConfirmed: decision?.isConfirmed === 1 };
       });
     }),
 
