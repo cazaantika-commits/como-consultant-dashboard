@@ -58,6 +58,7 @@ import {
   ShieldCheck,
   BookText,
   Paperclip,
+  CheckCircle,
   LinkIcon,
   Upload,
   ExternalLink,
@@ -2713,6 +2714,8 @@ function EvaluationView({ token, memberRole, memberId }: { token: string; member
 // ═══ Financial Evaluation View ═══
 function FinancialEvaluationView({ token, projectId, onBack }: { token: string; projectId: number; onBack: () => void }) {
   const data = trpc.commandCenter.getProjectFinancialEvaluation.useQuery({ token, projectId });
+  const [editMode, setEditMode] = useState(false);
+  const [editedData, setEditedData] = useState<Record<number, any>>({});
   
   if (data.isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>;
   
@@ -2741,14 +2744,45 @@ function FinancialEvaluationView({ token, projectId, onBack }: { token: string; 
     return `${dev > 0 ? '+' : ''}${dev.toFixed(1)}%`;
   };
 
+  const handleFieldChange = (consultantId: number, field: string, value: string) => {
+    setEditedData(prev => ({
+      ...prev,
+      [consultantId]: { ...prev[consultantId], [field]: value }
+    }));
+  };
+
+  const handleSaveChanges = async () => {
+    // TODO: Implement save to backend
+    console.log('تم حفظ التعديلات:', editedData);
+    setEditMode(false);
+  };
+
   return (
     <div dir="rtl" className="space-y-4">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500 hover:text-slate-700">
-          <ArrowRight className="w-4 h-4 ml-1" /> العودة
-        </Button>
-        <h2 className="text-lg font-bold text-slate-900">الأتعاب المالية للاستشاريين</h2>
-        <span className="text-sm text-slate-500">— {project?.name}</span>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500 hover:text-slate-700">
+            <ArrowRight className="w-4 h-4 ml-1" /> العودة
+          </Button>
+          <h2 className="text-lg font-bold text-slate-900">الأتعاب المالية للاستشاريين</h2>
+          <span className="text-sm text-slate-500">— {project?.name}</span>
+        </div>
+        <div className="flex gap-2">
+          {editMode ? (
+            <>
+              <Button size="sm" onClick={handleSaveChanges} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                <CheckCircle className="w-4 h-4 ml-1" /> حفظ التعديلات
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => { setEditMode(false); setEditedData({}); }}>
+                إلغاء
+              </Button>
+            </>
+          ) : (
+            <Button size="sm" onClick={() => setEditMode(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Pencil className="w-4 h-4 ml-1" /> تعديل
+            </Button>
+          )}
+        </div>
       </div>
       
       {/* Project Metrics */}
@@ -2809,14 +2843,34 @@ function FinancialEvaluationView({ token, projectId, onBack }: { token: string; 
                 </td>
                 {/* Design fees */}
                 <td className="border border-slate-200 p-2 bg-blue-50 text-center">
-                  <p className="text-xs font-semibold text-slate-800">{(c.designAmount || 0).toLocaleString()}</p>
-                  {c.designType === 'pct' && <p className="text-[10px] text-blue-500">درهم</p>}
+                  {editMode ? (
+                    <input
+                      type="number"
+                      value={editedData[c.id]?.designAmount ?? (c.designAmount || 0)}
+                      onChange={(e) => handleFieldChange(c.id, 'designAmount', e.target.value)}
+                      className="w-full px-2 py-1 text-xs border border-blue-300 rounded"
+                    />
+                  ) : (
+                    <>
+                      <p className="text-xs font-semibold text-slate-800">{(c.designAmount || 0).toLocaleString()}</p>
+                      {c.designType === 'pct' && <p className="text-[10px] text-blue-500">درهم</p>}
+                    </>
+                  )}
                 </td>
                 {/* Design gap */}
                 <td className="border border-slate-200 p-2 bg-orange-50 text-center">
-                  {designGap > 0
-                    ? <><p className="text-xs font-semibold text-orange-600">+{designGap.toLocaleString()}</p><p className="text-[10px] text-orange-400">درهم</p></>
-                    : <p className="text-xs text-slate-300">—</p>}
+                  {editMode ? (
+                    <input
+                      type="number"
+                      value={editedData[c.id]?.designGap ?? (designGap || 0)}
+                      onChange={(e) => handleFieldChange(c.id, 'designGap', e.target.value)}
+                      className="w-full px-2 py-1 text-xs border border-orange-300 rounded"
+                    />
+                  ) : (
+                    designGap > 0
+                      ? <><p className="text-xs font-semibold text-orange-600">+{designGap.toLocaleString()}</p><p className="text-[10px] text-orange-400">درهم</p></>
+                      : <p className="text-xs text-slate-300">—</p>
+                  )}
                 </td>
                 {/* Design total */}
                 <td className="border border-slate-200 p-2 text-center font-bold text-sm bg-blue-100 text-blue-800">
@@ -2829,8 +2883,19 @@ function FinancialEvaluationView({ token, projectId, onBack }: { token: string; 
                 </td>
                 {/* Supervision fees */}
                 <td className="border border-slate-200 p-2 bg-teal-50 text-center">
-                  <p className="text-xs font-semibold text-slate-800">{(c.supervisionAmount || 0).toLocaleString()}</p>
-                  {c.supervisionType === 'pct' && <p className="text-[10px] text-teal-500">درهم</p>}
+                  {editMode ? (
+                    <input
+                      type="number"
+                      value={editedData[c.id]?.supervisionAmount ?? (c.supervisionAmount || 0)}
+                      onChange={(e) => handleFieldChange(c.id, 'supervisionAmount', e.target.value)}
+                      className="w-full px-2 py-1 text-xs border border-teal-300 rounded"
+                    />
+                  ) : (
+                    <>
+                      <p className="text-xs font-semibold text-slate-800">{(c.supervisionAmount || 0).toLocaleString()}</p>
+                      {c.supervisionType === 'pct' && <p className="text-[10px] text-teal-500">درهم</p>}
+                    </>
+                  )}
                 </td>
 
                 {/* Supervision total */}
@@ -2840,8 +2905,19 @@ function FinancialEvaluationView({ token, projectId, onBack }: { token: string; 
                 </td>
                 {/* Grand Total */}
                 <td className="border border-slate-200 p-2 text-center font-bold text-sm bg-gradient-to-b from-amber-100 to-amber-50 text-amber-900 border-l-2 border-amber-400">
-                  {(c.totalFees || 0).toLocaleString()}
-                  <p className="text-[10px] font-normal text-amber-600">درهم</p>
+                  {editMode ? (
+                    <input
+                      type="number"
+                      value={editedData[c.id]?.totalFees ?? (c.totalFees || 0)}
+                      onChange={(e) => handleFieldChange(c.id, 'totalFees', e.target.value)}
+                      className="w-full px-2 py-1 text-xs border border-amber-300 rounded"
+                    />
+                  ) : (
+                    <>
+                      {(c.totalFees || 0).toLocaleString()}
+                      <p className="text-[10px] font-normal text-amber-600">درهم</p>
+                    </>
+                  )}
                 </td>
                 {/* vs Avg */}
                 <td className="border border-slate-200 p-2 text-center">
