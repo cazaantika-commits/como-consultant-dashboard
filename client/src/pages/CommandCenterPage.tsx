@@ -2458,10 +2458,7 @@ function EvaluationView({ token, memberRole, memberId }: { token: string; member
   const consultantsForProject = projectsQuery.data?.find((p: any) => p.id === selectedProject)?.consultants || [];
 
   if (selectedProject && activeTab === 'financial') {
-    const project = projectsQuery.data?.find((p: any) => p.id === selectedProject);
-    const cpaProjectId = project?.cpaProjectId;
-    if (!cpaProjectId) return <div className="text-center py-12 text-red-600">لا توجد بيانات CPA لهذا المشروع</div>;
-    return <FinancialEvaluationScreen projectId={cpaProjectId} onBack={() => setActiveTab(null)} />;
+    return <FinancialEvaluationScreen projectId={selectedProject} onBack={() => setActiveTab(null)} />;
   }
   if (selectedProject && activeTab === 'technical') {
     return <TechnicalEvaluationView token={token} projectId={selectedProject} memberId={memberId} onBack={() => setActiveTab(null)} />;
