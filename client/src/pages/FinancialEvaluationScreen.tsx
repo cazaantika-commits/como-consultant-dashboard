@@ -46,7 +46,13 @@ function formatNum(n: number | null | undefined): string {
   return Math.round(n).toLocaleString();
 }
 
-export default function FinancialEvaluationScreen({ projectId, onBack }: { projectId: number; onBack: () => void }) {
+export default function FinancialEvaluationScreen({ projectId, onBack }: { projectId?: number; onBack: () => void }) {
+  if (!projectId) return (
+    <div className="text-center py-12">
+      <div className="text-amber-600 font-semibold mb-4">لم يتم تحديد مشروع</div>
+      <Button onClick={onBack} variant="outline" size="sm">العودة</Button>
+    </div>
+  );
   const reportQuery = trpc.cpa.evaluation.getFullReport.useQuery({ cpaProjectId: projectId });
   
   // All hooks MUST come before any early returns
@@ -108,6 +114,13 @@ export default function FinancialEvaluationScreen({ projectId, onBack }: { proje
   }, [reportQuery.data?.constructionCost, reportQuery.data?.bua]);
 
   if (reportQuery.isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>;
+  if (reportQuery.isError) return (
+    <div className="text-center py-12">
+      <div className="text-red-600 font-semibold mb-4">خطأ في تحميل البيانات</div>
+      <div className="text-slate-500 text-sm mb-4">{reportQuery.error?.message || 'المشروع غير موجود'}</div>
+      <Button onClick={onBack} variant="outline" size="sm">العودة</Button>
+    </div>
+  );
   if (!reportQuery.data) return <div className="text-center py-12 text-slate-400">لا توجد بيانات لهذا المشروع</div>;
 
   const report = reportQuery.data;
