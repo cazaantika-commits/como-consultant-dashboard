@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO cpa_project_consultants (cpa_project_id, consultant_id, status, created_at, updated_at) VALUES (120001, 8, 'DRAFT', NOW(), NOW());",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute INSERT INTO cpa_project_consultants (cpa_project_id, consultant_id, status, created_at, updated_at) VALUES (120001, 8, 'DRAFT', NOW(), NOW());",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1566
+}

@@ -1,0 +1,682 @@
+{
+  "query": "DESCRIBE projects;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute DESCRIBE projects;",
+  "rows": [
+    {
+      "Field": "id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": "auto_increment"
+    },
+    {
+      "Field": "userId",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "name",
+      "Type": "varchar(255)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "description",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "bua",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "pricePerSqft",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "notes",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "createdAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": ""
+    },
+    {
+      "Field": "updatedAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": "DEFAULT_GENERATED on update CURRENT_TIMESTAMP"
+    },
+    {
+      "Field": "plotNumber",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "areaCode",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "driveFolderId",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "titleDeedNumber",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "ddaNumber",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "masterDevRef",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "plotAreaSqm",
+      "Type": "decimal(12,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "plotAreaSqft",
+      "Type": "decimal(12,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "gfaSqm",
+      "Type": "decimal(12,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "gfaSqft",
+      "Type": "decimal(12,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "permittedUse",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "ownershipType",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "subdivisionRestrictions",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "masterDevName",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "masterDevAddress",
+      "Type": "varchar(500)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "sellerName",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "sellerAddress",
+      "Type": "varchar(500)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "buyerName",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "buyerNationality",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "buyerPassport",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "buyerAddress",
+      "Type": "varchar(500)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "buyerPhone",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "buyerEmail",
+      "Type": "varchar(320)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "electricityAllocation",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "waterAllocation",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "sewageAllocation",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "tripAM",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "tripLT",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "tripPM",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "effectiveDate",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "constructionPeriod",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "constructionStartDate",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "completionDate",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "constructionConditions",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "saleRestrictions",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "resaleConditions",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "communityCharges",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "registrationAuthority",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "adminFee",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "clearanceFee",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "compensationAmount",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "governingLaw",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "disputeResolution",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "manualBuaSqft",
+      "Type": "decimal(14,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "soilTestFee",
+      "Type": "decimal(14,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "topographicSurveyFee",
+      "Type": "decimal(14,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "reraUnitRegFee",
+      "Type": "decimal(14,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "developerNocFee",
+      "Type": "decimal(14,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "escrowAccountFee",
+      "Type": "decimal(14,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "bankFees",
+      "Type": "decimal(14,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "communityFees",
+      "Type": "decimal(14,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "surveyorFees",
+      "Type": "decimal(14,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "reraAuditReportFee",
+      "Type": "decimal(14,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "reraInspectionReportFee",
+      "Type": "decimal(14,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "reraProjectRegFee",
+      "Type": "decimal(14,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "officialBodiesFees",
+      "Type": "decimal(14,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "landPrice",
+      "Type": "decimal(14,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "agentCommissionLandPct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "estimatedConstructionPricePerSqft",
+      "Type": "decimal(14,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "designFeePct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "supervisionFeePct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "separationFeePerM2",
+      "Type": "decimal(10,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "salesCommissionPct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "marketingPct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "developerFeePhase1Pct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "2",
+      "Extra": ""
+    },
+    {
+      "Field": "developerFeePhase2Pct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "3",
+      "Extra": ""
+    },
+    {
+      "Field": "gfaResidentialSqft",
+      "Type": "decimal(14,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "gfaRetailSqft",
+      "Type": "decimal(14,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "gfaOfficesSqft",
+      "Type": "decimal(14,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "developerFeePct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "5",
+      "Extra": ""
+    },
+    {
+      "Field": "preConMonths",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "6",
+      "Extra": ""
+    },
+    {
+      "Field": "constructionMonths",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "16",
+      "Extra": ""
+    },
+    {
+      "Field": "handoverMonths",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "2",
+      "Extra": ""
+    },
+    {
+      "Field": "startDate",
+      "Type": "varchar(20)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "financingScenario",
+      "Type": "varchar(50)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "offplan_escrow",
+      "Extra": ""
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nid\tint\tNO\tPRI\tNULL\tauto_increment\nuserId\tint\tNO\tMUL\tNULL\t\nname\tvarchar(255)\tNO\t\tNULL\t\ndescription\ttext\tYES\t\tNULL\t\nbua\tint\tYES\t\tNULL\t\npricePerSqft\tint\tYES\t\tNULL\t\nnotes\ttext\tYES\t\tNULL\t\ncreatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\t\nupdatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\tDEFAULT_GENERATED on update CURRENT_TIMESTAMP\nplotNumber\tvarchar(50)\tYES\t\tNULL\t\nareaCode\tvarchar(50)\tYES\t\tNULL\t\ndriveFolderId\tvarchar(100)\tYES\t\tNULL\t\ntitleDeedNumber\tvarchar(100)\tYES\t\tNULL\t\nddaNumber\tvarchar(100)\tYES\t\tNULL\t\nmasterDevRef\tvarchar(100)\tYES\t\tNULL\t\nplotAreaSqm\tdecimal(12,2)\tYES\t\tNULL\t\nplotAreaSqft\tdecimal(12,2)\tYES\t\tNULL\t\ngfaSqm\tdecimal(12,2)\tYES\t\tNULL\t\ngfaSqft\tdecimal(12,2)\tYES\t\tNULL\t\npermittedUse\tvarchar(255)\tYES\t\tNULL\t\nownershipType\tvarchar(255)\tYES\t\tNULL\t\nsubdivisionRestrictions\ttext\tYES\t\tNULL\t\nmasterDevName\tvarchar(255)\tYES\t\tNULL\t\nmasterDevAddress\tvarchar(500)\tYES\t\tNULL\t\nsellerName\tvarchar(255)\tYES\t\tNULL\t\nsellerAddress\tvarchar(500)\tYES\t\tNULL\t\nbuyerName\tvarchar(255)\tYES\t\tNULL\t\nbuyerNationality\tvarchar(100)\tYES\t\tNULL\t\nbuyerPassport\tvarchar(50)\tYES\t\tNULL\t\nbuyerAddress\tvarchar(500)\tYES\t\tNULL\t\nbuyerPhone\tvarchar(50)\tYES\t\tNULL\t\nbuyerEmail\tvarchar(320)\tYES\t\tNULL\t\nelectricityAllocation\tvarchar(100)\tYES\t\tNULL\t\nwaterAllocation\tvarchar(100)\tYES\t\tNULL\t\nsewageAllocation\tvarchar(100)\tYES\t\tNULL\t\ntripAM\tvarchar(50)\tYES\t\tNULL\t\ntripLT\tvarchar(50)\tYES\t\tNULL\t\ntripPM\tvarchar(50)\tYES\t\tNULL\t\neffectiveDate\tvarchar(50)\tYES\t\tNULL\t\nconstructionPeriod\tvarchar(255)\tYES\t\tNULL\t\nconstructionStartDate\tvarchar(255)\tYES\t\tNULL\t\ncompletionDate\tvarchar(255)\tYES\t\tNULL\t\nconstructionConditions\ttext\tYES\t\tNULL\t\nsaleRestrictions\ttext\tYES\t\tNULL\t\nresaleConditions\ttext\tYES\t\tNULL\t\ncommunityCharges\ttext\tYES\t\tNULL\t\nregistrationAuthority\tvarchar(255)\tYES\t\tNULL\t\nadminFee\tint\tYES\t\tNULL\t\nclearanceFee\tint\tYES\t\tNULL\t\ncompensationAmount\tint\tYES\t\tNULL\t\ngoverningLaw\ttext\tYES\t\tNULL\t\ndisputeResolution\ttext\tYES\t\tNULL\t\nmanualBuaSqft\tdecimal(14,2)\tYES\t\tNULL\t\nsoilTestFee\tdecimal(14,2)\tYES\t\tNULL\t\ntopographicSurveyFee\tdecimal(14,2)\tYES\t\tNULL\t\nreraUnitRegFee\tdecimal(14,2)\tYES\t\tNULL\t\ndeveloperNocFee\tdecimal(14,2)\tYES\t\tNULL\t\nescrowAccountFee\tdecimal(14,2)\tYES\t\tNULL\t\nbankFees\tdecimal(14,2)\tYES\t\tNULL\t\ncommunityFees\tdecimal(14,2)\tYES\t\tNULL\t\nsurveyorFees\tdecimal(14,2)\tYES\t\tNULL\t\nreraAuditReportFee\tdecimal(14,2)\tYES\t\tNULL\t\nreraInspectionReportFee\tdecimal(14,2)\tYES\t\tNULL\t\nreraProjectRegFee\tdecimal(14,2)\tYES\t\tNULL\t\nofficialBodiesFees\tdecimal(14,2)\tYES\t\tNULL\t\nlandPrice\tdecimal(14,2)\tYES\t\tNULL\t\nagentCommissionLandPct\tdecimal(5,2)\tYES\t\tNULL\t\nestimatedConstructionPricePerSqft\tdecimal(14,2)\tYES\t\tNULL\t\ndesignFeePct\tdecimal(5,2)\tYES\t\tNULL\t\nsupervisionFeePct\tdecimal(5,2)\tYES\t\tNULL\t\nseparationFeePerM2\tdecimal(10,2)\tYES\t\tNULL\t\nsalesCommissionPct\tdecimal(5,2)\tYES\t\tNULL\t\nmarketingPct\tdecimal(5,2)\tYES\t\tNULL\t\ndeveloperFeePhase1Pct\tdecimal(5,2)\tYES\t\t2\t\ndeveloperFeePhase2Pct\tdecimal(5,2)\tYES\t\t3\t\ngfaResidentialSqft\tdecimal(14,2)\tYES\t\tNULL\t\ngfaRetailSqft\tdecimal(14,2)\tYES\t\tNULL\t\ngfaOfficesSqft\tdecimal(14,2)\tYES\t\tNULL\t\ndeveloperFeePct\tdecimal(5,2)\tYES\t\t5\t\npreConMonths\tint\tYES\t\t6\t\nconstructionMonths\tint\tYES\t\t16\t\nhandoverMonths\tint\tYES\t\t2\t\nstartDate\tvarchar(20)\tYES\t\tNULL\t\nfinancingScenario\tvarchar(50)\tYES\t\toffplan_escrow\t\n",
+  "stderr": "",
+  "execution_time_ms": 1577
+}

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إعدادات التكاليف — السيناريوهات</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f5f5f5; padding: 20px; direction: rtl; }
+  h2 { text-align: center; margin-bottom: 16px; color: #1a1a2e; font-size: 18px; }
+  .project-name { text-align: center; margin-bottom: 12px; color: #6366f1; font-size: 14px; font-weight: 600; }
+  .loading { text-align: center; padding: 60px; color: #888; font-size: 14px; }
+  .error { text-align: center; padding: 40px; color: #dc2626; font-size: 14px; background: #fef2f2; border-radius: 8px; margin: 20px; }
+  table { border-collapse: collapse; width: 100%; background: #fff; }
+  th, td { border: 1px solid #ccc; padding: 6px 8px; font-size: 11px; text-align: center; }
+  th { font-weight: bold; }
+  .col-item { text-align: right; background: #f0f4ff; font-weight: 500; white-space: nowrap; }
+  .section-header { background: #e2e8f0; font-weight: bold; font-size: 12px; color: #334155; text-align: right; }
+  .h-main { background: #1a1a2e; color: #fff; font-size: 12px; }
+  .h-s1 { background: #7c3aed; color: #fff; }
+  .h-s2 { background: #1d4ed8; color: #fff; }
+  .h-s3 { background: #15803d; color: #fff; }
+  .h-fund { background: #b45309; color: #fff; }
+  .h-flow { background: #0f4c81; color: #fff; }
+  .investor { background: #fef3c7; color: #92400e; font-weight: bold; cursor: pointer; }
+  .escrow { background: #dbeafe; color: #1d4ed8; font-weight: bold; cursor: pointer; }
+  .paid { background: #e8f5e9; color: #1b5e20; font-weight: bold; }
+  .na { color: #ccc; }
+  .ok { color: green; font-weight: bold; font-size: 10px; }
+  .no { color: red; font-weight: bold; font-size: 14px; }
+  .total-row { background: #1a1a2e; color: #fbbf24; font-weight: bold; font-size: 12px; }
+  .total-row td { border-color: #333; }
+  .capital-row { background: #dc2626; color: #fff; font-weight: bold; font-size: 12px; }
+  .capital-row td { border-color: #991b1b; }
+  .escrow-total-row { background: #1d4ed8; color: #fff; font-weight: bold; font-size: 12px; }
+  .escrow-total-row td { border-color: #1e40af; }
+  .toggleable:hover { opacity: 0.7; }
+
+  .revenue-banner {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; border-radius: 10px; margin-bottom: 14px;
+    font-size: 11px; font-weight: 600; gap: 12px;
+  }
+  .revenue-banner.approved {
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5); border: 1px solid #6ee7b7; color: #065f46;
+  }
+  .revenue-banner.calculated {
+    background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fcd34d; color: #92400e;
+  }
+  .revenue-banner .info { display: flex; align-items: center; gap: 8px; }
+  .revenue-banner .info .icon { font-size: 16px; }
+  .revenue-banner .amounts { display: flex; gap: 16px; font-family: 'Courier New', monospace; font-size: 12px; }
+  .revenue-banner .amounts .label { font-size: 9px; opacity: 0.7; font-family: 'Segoe UI', Tahoma, sans-serif; }
+  .refresh-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 5px 12px; border-radius: 6px; border: 1px solid #d1d5db;
+    background: #fff; color: #374151; font-size: 10px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+  .refresh-btn:hover { background: #f3f4f6; border-color: #9ca3af; }
+  .refresh-btn:active { transform: scale(0.97); }
+  .refresh-btn .spin { display: inline-block; animation: spin 1s linear infinite; }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<h2>إعدادات التكاليف — مقارنة السيناريوهات الثلاثة</h2>
+<div id="project-name" class="project-name"></div>
+<div id="revenueBanner"></div>
+<div id="loading" class="loading">جاري تحميل البيانات...</div>
+<div id="error" class="error" style="display:none;"></div>
+<div id="table-container" style="display:none;"></div>
+
+<script>
+function toggleSource(cell) {
+  if (cell.classList.contains('investor')) {
+    cell.classList.remove('investor');
+    cell.classList.add('escrow');
+    cell.textContent = 'حساب الضمان';
+  } else if (cell.classList.contains('escrow')) {
+    cell.classList.remove('escrow');
+    cell.classList.add('investor');
+    cell.textContent = 'المستثمر';
+  }
+}
+
+function fmt(n) {
+  return Math.round(n).toLocaleString('en-US');
+}
+
+function renderCell(item, scenario) {
+  const data = item[scenario];
+  if (!data.active) return '<td class="no">X</td>';
+  return '<td class="ok">✓ ' + fmt(data.amount) + '</td>';
+}
+
+function renderSourceCell(item) {
+  if (item.fundingSource === 'investor') {
+    if (item.section === 'paid') {
+      return '<td class="paid">مدفوع</td>';
+    }
+    return '<td class="investor toggleable" onclick="toggleSource(this)">المستثمر</td>';
+  }
+  return '<td class="escrow toggleable" onclick="toggleSource(this)">حساب الضمان</td>';
+}
+
+async function loadData() {
+  const params = new URLSearchParams(window.location.search);
+  const projectId = params.get('projectId');
+  
+  if (!projectId) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display = 'block';
+    document.getElementById('error').textContent = 'لم يتم تحديد مشروع. اختر مشروعاً من القائمة أعلاه.';
+    return;
+  }
+
+  try {
+    const resp = await fetch('/api/trpc/cashFlowSettings.getCostSettingsComparison?input=' + encodeURIComponent(JSON.stringify({ json: { projectId: Number(projectId) } })));
+    const json = await resp.json();
+    
+    if (json.error) {
+      throw new Error(json.error.message || 'خطأ في تحميل البيانات');
+    }
+
+    const data = json.result.data.json;
+    document.getElementById('project-name').textContent = data.projectName;
+    buildRevenueBanner(data);
+    
+    // Build table
+    let html = '<table><thead><tr>';
+    html += '<th class="h-main col-item">البند</th>';
+    html += '<th class="h-s1">O1</th>';
+    html += '<th class="h-s2">O2</th>';
+    html += '<th class="h-fund">المصدر</th>';
+    html += '<th class="h-s3">O3</th>';
+    html += '<th class="h-flow">التدفقات النقدية</th>';
+    html += '</tr></thead><tbody>';
+
+    // Group items by section
+    const sectionMap = {};
+    for (const s of data.sections) {
+      sectionMap[s.id] = { label: s.label, items: [] };
+    }
+    for (const item of data.items) {
+      if (sectionMap[item.section]) {
+        sectionMap[item.section].items.push(item);
+      }
+    }
+
+    // Render each section
+    for (const s of data.sections) {
+      const sec = sectionMap[s.id];
+      if (sec.items.length === 0) continue;
+      
+      html += '<tr><td colspan="6" class="section-header">' + sec.label + '</td></tr>';
+      
+      for (const item of sec.items) {
+        html += '<tr>';
+        html += '<td class="col-item">' + item.nameAr + '</td>';
+        html += renderCell(item, 'o1');
+        html += renderCell(item, 'o2');
+        html += renderSourceCell(item);
+        html += renderCell(item, 'o3');
+        html += '<td></td>';
+        html += '</tr>';
+      }
+    }
+
+    // Capital row (investor total)
+    html += '<tr class="capital-row">';
+    html += '<td style="text-align:right;background:#dc2626;color:#fff;">رأس المال المطلوب (المستثمر)</td>';
+    html += '<td style="background:#dc2626;color:#fff;">' + fmt(data.totals.investorCapital.o1) + '</td>';
+    html += '<td style="background:#dc2626;color:#fff;">' + fmt(data.totals.investorCapital.o2) + '</td>';
+    html += '<td style="background:#dc2626;"></td>';
+    html += '<td style="background:#dc2626;color:#fff;">' + fmt(data.totals.investorCapital.o3) + '</td>';
+    html += '<td style="background:#dc2626;"></td>';
+    html += '</tr>';
+
+    // Escrow total row
+    html += '<tr class="escrow-total-row">';
+    html += '<td style="text-align:right;background:#1d4ed8;color:#fff;">إجمالي حساب الضمان</td>';
+    html += '<td style="background:#1d4ed8;color:#fff;">' + fmt(data.totals.escrowTotal.o1) + '</td>';
+    html += '<td style="background:#1d4ed8;color:#fff;">' + fmt(data.totals.escrowTotal.o2) + '</td>';
+    html += '<td style="background:#1d4ed8;"></td>';
+    html += '<td style="background:#1d4ed8;color:#fff;">' + (data.totals.escrowTotal.o3 > 0 ? fmt(data.totals.escrowTotal.o3) : '—') + '</td>';
+    html += '<td style="background:#1d4ed8;"></td>';
+    html += '</tr>';
+
+    // Grand total row
+    html += '<tr class="total-row">';
+    html += '<td class="col-item" style="background:#1a1a2e;color:#fbbf24;">الإجمالي الكلي</td>';
+    html += '<td style="background:#1a1a2e;color:#fbbf24;">' + fmt(data.totals.grandTotal.o1) + '</td>';
+    html += '<td style="background:#1a1a2e;color:#fbbf24;">' + fmt(data.totals.grandTotal.o2) + '</td>';
+    html += '<td style="background:#1a1a2e;"></td>';
+    html += '<td style="background:#1a1a2e;color:#fbbf24;">' + fmt(data.totals.grandTotal.o3) + '</td>';
+    html += '<td style="background:#1a1a2e;"></td>';
+    html += '</tr>';
+
+    html += '</tbody></table>';
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('table-container').style.display = 'block';
+    document.getElementById('table-container').innerHTML = html;
+
+  } catch (err) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display = 'block';
+    document.getElementById('error').textContent = 'خطأ: ' + (err.message || 'فشل تحميل البيانات');
+  }
+}
+
+function buildRevenueBanner(data) {
+  if (!data) return;
+  var el = document.getElementById('revenueBanner');
+  if (!el) return;
+  var isApproved = data.revenueSource === 'approved';
+  var cls = isApproved ? 'approved' : 'calculated';
+  var icon = isApproved ? '\u2705' : '\u26A0\uFE0F';
+  var msg = isApproved
+    ? '\u0627\u0644\u0625\u064A\u0631\u0627\u062F \u0627\u0644\u0645\u0639\u062A\u0645\u062F \u0645\u0633\u062A\u062E\u062F\u0645 \u2014 \u0627\u0644\u0633\u064A\u0646\u0627\u0631\u064A\u0648: ' + data.scenarioLabel
+    : '\u0625\u064A\u0631\u0627\u062F \u0645\u062D\u0633\u0648\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u2014 \u0644\u0645 \u064A\u062A\u0645 \u0627\u0639\u062A\u0645\u0627\u062F \u0633\u064A\u0646\u0627\u0631\u064A\u0648 \u0628\u0639\u062F';
+  var h = '<div class="revenue-banner ' + cls + '">';
+  h += '<div class="info"><span class="icon">' + icon + '</span><span>' + msg + '</span></div>';
+  h += '<div style="display:flex;align-items:center;gap:12px;">';
+  h += '<div class="amounts"><div><div class="label">\u0627\u0644\u0625\u064A\u0631\u0627\u062F</div>' + fmt(data.totalRevenue) + '</div></div>';
+  h += '<button class="refresh-btn" onclick="refreshData()" id="refreshBtn">\u21BB \u062A\u062D\u062F\u064A\u062B</button>';
+  h += '</div></div>';
+  el.innerHTML = h;
+}
+
+async function refreshData() {
+  var btn = document.getElementById('refreshBtn');
+  if (btn) btn.innerHTML = '<span class="spin">\u21BB</span> \u062C\u0627\u0631\u064A...';
+  await loadData();
+  if (btn) btn.innerHTML = '\u21BB \u062A\u062D\u062F\u064A\u062B';
+}
+
+loadData();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,31 @@
+{
+  "query": "SELECT id, name, saleable_residential_pct, saleable_retail_pct, saleable_offices_pct FROM projects LIMIT 3;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, name, saleable_residential_pct, saleable_retail_pct, saleable_offices_pct FROM projects LIMIT 3;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "مركز مجان التجاري (G+4)",
+      "saleable_residential_pct": "95.00",
+      "saleable_retail_pct": "97.00",
+      "saleable_offices_pct": "95.00"
+    },
+    {
+      "id": "2",
+      "name": "مجان متعدد الاستخدامات (G+4P+25)",
+      "saleable_residential_pct": "95.00",
+      "saleable_retail_pct": "97.00",
+      "saleable_offices_pct": "95.00"
+    },
+    {
+      "id": "3",
+      "name": "مبنى الجداف السكني (G+7)",
+      "saleable_residential_pct": "95.00",
+      "saleable_retail_pct": "97.00",
+      "saleable_offices_pct": "95.00"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tsaleable_residential_pct\tsaleable_retail_pct\tsaleable_offices_pct\n1\tمركز مجان التجاري (G+4)\t95.00\t97.00\t95.00\n2\tمجان متعدد الاستخدامات (G+4P+25)\t95.00\t97.00\t95.00\n3\tمبنى الجداف السكني (G+7)\t95.00\t97.00\t95.00\n",
+  "stderr": "",
+  "execution_time_ms": 1657
+}

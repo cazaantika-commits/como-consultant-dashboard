@@ -1,0 +1,55 @@
+{
+  "query": "SELECT p.id, p.name, GROUP_CONCAT(c.name) as consultants FROM projects p LEFT JOIN projectConsultants pc ON p.id = pc.projectId LEFT JOIN consultants c ON pc.consultantId = c.id GROUP BY p.id, p.name;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT p.id, p.name, GROUP_CONCAT(c.name) as consultants FROM projects p LEFT JOIN projectConsultants pc ON p.id = pc.projectId LEFT JOIN consultants c ON pc.consultantId = c.id GROUP BY p.id, p.name;",
+  "rows": [
+    {
+      "id": "4",
+      "name": "ند الشبا — قطعة 1 (6185392)",
+      "consultants": "Realistic Engineering,ARTEC Architectural & Engineering Consultants,DATUM Engineering Consultants,Safeer Engineering Consultants (SEC)"
+    },
+    {
+      "id": "2",
+      "name": "مجان متعدد الاستخدامات (G+4P+25)",
+      "consultants": "LACASA,ARTEC Architectural & Engineering Consultants,DATUM Engineering Consultants,XYZ Designers,Al Diwan Engineering Consultants"
+    },
+    {
+      "id": "60001",
+      "name": "مشروع آلات البيع في ميسيسوجا، أونتاريو",
+      "consultants": "NULL"
+    },
+    {
+      "id": "60002",
+      "name": "مشروع آلات البيع في ميسيسوجا، أونتاريو",
+      "consultants": "NULL"
+    },
+    {
+      "id": "5",
+      "name": "ند الشبا — قطعة 2 المدمجة (6182776)",
+      "consultants": "Realistic Engineering,ARTEC Architectural & Engineering Consultants,DATUM Engineering Consultants,Safeer Engineering Consultants (SEC),XYZ Designers"
+    },
+    {
+      "id": "6",
+      "name": "ند الشبا — قطعة 3 الفلل (6180578)",
+      "consultants": "Realistic Engineering,ARTEC Architectural & Engineering Consultants,DATUM Engineering Consultants,Safeer Engineering Consultants (SEC)"
+    },
+    {
+      "id": "1",
+      "name": "مركز مجان التجاري (G+4)",
+      "consultants": "LACASA,Arif & Bintoak Consulting Architects & Engineers,XYZ Designers,Al Diwan Engineering Consultants"
+    },
+    {
+      "id": "60003",
+      "name": "آلات البيع في كلية طب الأسنان",
+      "consultants": "NULL"
+    },
+    {
+      "id": "3",
+      "name": "مبنى الجداف السكني (G+7)",
+      "consultants": "Safeer Engineering Consultants (SEC),Osus International,Realistic Engineering,DATUM Engineering Consultants,ARTEC Architectural & Engineering Consultants,XYZ Designers"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tconsultants\n4\tند الشبا — قطعة 1 (6185392)\tRealistic Engineering,ARTEC Architectural & Engineering Consultants,DATUM Engineering Consultants,Safeer Engineering Consultants (SEC)\n2\tمجان متعدد الاستخدامات (G+4P+25)\tLACASA,ARTEC Architectural & Engineering Consultants,DATUM Engineering Consultants,XYZ Designers,Al Diwan Engineering Consultants\n60001\tمشروع آلات البيع في ميسيسوجا، أونتاريو\tNULL\n60002\tمشروع آلات البيع في ميسيسوجا، أونتاريو\tNULL\n5\tند الشبا — قطعة 2 المدمجة (6182776)\tRealistic Engineering,ARTEC Architectural & Engineering Consultants,DATUM Engineering Consultants,Safeer Engineering Consultants (SEC),XYZ Designers\n6\tند الشبا — قطعة 3 الفلل (6180578)\tRealistic Engineering,ARTEC Architectural & Engineering Consultants,DATUM Engineering Consultants,Safeer Engineering Consultants (SEC)\n1\tمركز مجان التجاري (G+4)\tLACASA,Arif & Bintoak Consulting Architects & Engineers,XYZ Designers,Al Diwan Engineering Consultants\n60003\tآلات البيع في كلية طب الأسنان\tNULL\n3\tمبنى الجداف السكني (G+7)\tSafeer Engineering Consultants (SEC),Osus International,Realistic Engineering,DATUM Engineering Consultants,ARTEC Architectural & Engineering Consultants,XYZ Designers\n",
+  "stderr": "",
+  "execution_time_ms": 1662
+}

@@ -1,0 +1,160 @@
+{
+  "query": "SELECT serviceCode, reqType, COUNT(*) as cnt FROM lifecycle_requirements GROUP BY serviceCode, reqType ORDER BY serviceCode LIMIT 30;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT serviceCode, reqType, COUNT(*) as cnt FROM lifecycle_requirements GROUP BY serviceCode, reqType ORDER BY serviceCode LIMIT 30;",
+  "rows": [
+    {
+      "serviceCode": "SRV-CLOSE-COMPLETION-CERT",
+      "reqType": "document",
+      "cnt": "5"
+    },
+    {
+      "serviceCode": "SRV-CLOSE-COMPLETION-CERT",
+      "reqType": "data",
+      "cnt": "1"
+    },
+    {
+      "serviceCode": "SRV-CLOSE-ESCROW-SETTLEMENT",
+      "reqType": "data",
+      "cnt": "3"
+    },
+    {
+      "serviceCode": "SRV-CLOSE-ESCROW-SETTLEMENT",
+      "reqType": "document",
+      "cnt": "5"
+    },
+    {
+      "serviceCode": "SRV-CLOSE-RERA-CLOSURE",
+      "reqType": "document",
+      "cnt": "5"
+    },
+    {
+      "serviceCode": "SRV-CLOSE-RERA-CLOSURE",
+      "reqType": "data",
+      "cnt": "2"
+    },
+    {
+      "serviceCode": "SRV-CLOSE-TITLE-DEED-ISSUE",
+      "reqType": "document",
+      "cnt": "5"
+    },
+    {
+      "serviceCode": "SRV-CLOSE-TITLE-DEED-ISSUE",
+      "reqType": "data",
+      "cnt": "2"
+    },
+    {
+      "serviceCode": "SRV-CLOSE-UNIT-HANDOVER",
+      "reqType": "document",
+      "cnt": "4"
+    },
+    {
+      "serviceCode": "SRV-CLOSE-UNIT-HANDOVER",
+      "reqType": "data",
+      "cnt": "2"
+    },
+    {
+      "serviceCode": "SRV-DES-BLDG-PERMIT",
+      "reqType": "document",
+      "cnt": "4"
+    },
+    {
+      "serviceCode": "SRV-DES-BLDG-PERMIT",
+      "reqType": "data",
+      "cnt": "1"
+    },
+    {
+      "serviceCode": "SRV-DES-CNSLT-APPT",
+      "reqType": "document",
+      "cnt": "6"
+    },
+    {
+      "serviceCode": "SRV-DES-CNSLT-APPT",
+      "reqType": "data",
+      "cnt": "3"
+    },
+    {
+      "serviceCode": "SRV-DES-CONCEPT-DEV",
+      "reqType": "document",
+      "cnt": "5"
+    },
+    {
+      "serviceCode": "SRV-DES-CONCEPT-DEV",
+      "reqType": "data",
+      "cnt": "2"
+    },
+    {
+      "serviceCode": "SRV-DES-FINAL-DESIGN",
+      "reqType": "data",
+      "cnt": "1"
+    },
+    {
+      "serviceCode": "SRV-DES-FINAL-DESIGN",
+      "reqType": "document",
+      "cnt": "5"
+    },
+    {
+      "serviceCode": "SRV-DES-PRELIM-DESIGN",
+      "reqType": "document",
+      "cnt": "6"
+    },
+    {
+      "serviceCode": "SRV-MKT-AD-PERMIT",
+      "reqType": "document",
+      "cnt": "6"
+    },
+    {
+      "serviceCode": "SRV-MKT-AD-PERMIT",
+      "reqType": "data",
+      "cnt": "3"
+    },
+    {
+      "serviceCode": "SRV-MKT-BROKERS-SETUP",
+      "reqType": "document",
+      "cnt": "4"
+    },
+    {
+      "serviceCode": "SRV-MKT-BROKERS-SETUP",
+      "reqType": "data",
+      "cnt": "2"
+    },
+    {
+      "serviceCode": "SRV-MKT-LAUNCH-SALES",
+      "reqType": "data",
+      "cnt": "4"
+    },
+    {
+      "serviceCode": "SRV-MKT-LAUNCH-SALES",
+      "reqType": "document",
+      "cnt": "3"
+    },
+    {
+      "serviceCode": "SRV-MKT-MATERIAL-PREP",
+      "reqType": "document",
+      "cnt": "6"
+    },
+    {
+      "serviceCode": "SRV-MKT-MATERIAL-PREP",
+      "reqType": "data",
+      "cnt": "2"
+    },
+    {
+      "serviceCode": "SRV-MON-BUYER-UPDATE",
+      "reqType": "data",
+      "cnt": "2"
+    },
+    {
+      "serviceCode": "SRV-MON-BUYER-UPDATE",
+      "reqType": "document",
+      "cnt": "2"
+    },
+    {
+      "serviceCode": "SRV-MON-PROGRESS-REPORT",
+      "reqType": "document",
+      "cnt": "3"
+    }
+  ],
+  "messages": [],
+  "stdout": "serviceCode\treqType\tcnt\nSRV-CLOSE-COMPLETION-CERT\tdocument\t5\nSRV-CLOSE-COMPLETION-CERT\tdata\t1\nSRV-CLOSE-ESCROW-SETTLEMENT\tdata\t3\nSRV-CLOSE-ESCROW-SETTLEMENT\tdocument\t5\nSRV-CLOSE-RERA-CLOSURE\tdocument\t5\nSRV-CLOSE-RERA-CLOSURE\tdata\t2\nSRV-CLOSE-TITLE-DEED-ISSUE\tdocument\t5\nSRV-CLOSE-TITLE-DEED-ISSUE\tdata\t2\nSRV-CLOSE-UNIT-HANDOVER\tdocument\t4\nSRV-CLOSE-UNIT-HANDOVER\tdata\t2\nSRV-DES-BLDG-PERMIT\tdocument\t4\nSRV-DES-BLDG-PERMIT\tdata\t1\nSRV-DES-CNSLT-APPT\tdocument\t6\nSRV-DES-CNSLT-APPT\tdata\t3\nSRV-DES-CONCEPT-DEV\tdocument\t5\nSRV-DES-CONCEPT-DEV\tdata\t2\nSRV-DES-FINAL-DESIGN\tdata\t1\nSRV-DES-FINAL-DESIGN\tdocument\t5\nSRV-DES-PRELIM-DESIGN\tdocument\t6\nSRV-MKT-AD-PERMIT\tdocument\t6\nSRV-MKT-AD-PERMIT\tdata\t3\nSRV-MKT-BROKERS-SETUP\tdocument\t4\nSRV-MKT-BROKERS-SETUP\tdata\t2\nSRV-MKT-LAUNCH-SALES\tdata\t4\nSRV-MKT-LAUNCH-SALES\tdocument\t3\nSRV-MKT-MATERIAL-PREP\tdocument\t6\nSRV-MKT-MATERIAL-PREP\tdata\t2\nSRV-MON-BUYER-UPDATE\tdata\t2\nSRV-MON-BUYER-UPDATE\tdocument\t2\nSRV-MON-PROGRESS-REPORT\tdocument\t3\n",
+  "stderr": "",
+  "execution_time_ms": 1516
+}

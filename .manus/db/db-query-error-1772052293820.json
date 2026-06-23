@@ -1,0 +1,8 @@
+{
+  "query": "SELECT agent, model, response_time_ms, success, is_fallback, created_at FROM model_usage ORDER BY created_at DESC LIMIT 20",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT agent, model, response_time_ms, success, is_fallback, created_at FROM model_usage ORDER BY created_at DESC LIMIT 20",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1146 (42S02) at line 1: Table 'q366eayg4q7iam8vuammfx.model_usage' doesn't exist"
+  ]
+}

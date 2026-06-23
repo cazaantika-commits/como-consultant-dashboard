@@ -1,0 +1,145 @@
+{
+  "query": "SELECT id, projectId, consultantId, designType, designValue, supervisionType, supervisionValue FROM financialData LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, projectId, consultantId, designType, designValue, supervisionType, supervisionValue FROM financialData LIMIT 20;",
+  "rows": [
+    {
+      "id": "1",
+      "projectId": "3",
+      "consultantId": "1",
+      "designType": "lumpsum",
+      "designValue": "400000",
+      "supervisionType": "lumpsum",
+      "supervisionValue": "35000"
+    },
+    {
+      "id": "2",
+      "projectId": "3",
+      "consultantId": "2",
+      "designType": "pct",
+      "designValue": "150",
+      "supervisionType": "pct",
+      "supervisionValue": "150"
+    },
+    {
+      "id": "3",
+      "projectId": "4",
+      "consultantId": "2",
+      "designType": "pct",
+      "designValue": "150",
+      "supervisionType": "pct",
+      "supervisionValue": "150"
+    },
+    {
+      "id": "4",
+      "projectId": "5",
+      "consultantId": "2",
+      "designType": "pct",
+      "designValue": "150",
+      "supervisionType": "pct",
+      "supervisionValue": "150"
+    },
+    {
+      "id": "5",
+      "projectId": "6",
+      "consultantId": "2",
+      "designType": "pct",
+      "designValue": "150",
+      "supervisionType": "pct",
+      "supervisionValue": "200"
+    },
+    {
+      "id": "6",
+      "projectId": "3",
+      "consultantId": "3",
+      "designType": "lumpsum",
+      "designValue": "850000",
+      "supervisionType": "lumpsum",
+      "supervisionValue": "850000"
+    },
+    {
+      "id": "7",
+      "projectId": "2",
+      "consultantId": "3",
+      "designType": "lumpsum",
+      "designValue": "5350000",
+      "supervisionType": "lumpsum",
+      "supervisionValue": "5350000"
+    },
+    {
+      "id": "8",
+      "projectId": "4",
+      "consultantId": "3",
+      "designType": "lumpsum",
+      "designValue": "865000",
+      "supervisionType": "lumpsum",
+      "supervisionValue": "865000"
+    },
+    {
+      "id": "9",
+      "projectId": "5",
+      "consultantId": "3",
+      "designType": "lumpsum",
+      "designValue": "1550000",
+      "supervisionType": "lumpsum",
+      "supervisionValue": "1550000"
+    },
+    {
+      "id": "10",
+      "projectId": "6",
+      "consultantId": "3",
+      "designType": "lumpsum",
+      "designValue": "272000",
+      "supervisionType": "lumpsum",
+      "supervisionValue": "272000"
+    },
+    {
+      "id": "11",
+      "projectId": "5",
+      "consultantId": "4",
+      "designType": "pct",
+      "designValue": "200",
+      "supervisionType": "pct",
+      "supervisionValue": "200"
+    },
+    {
+      "id": "12",
+      "projectId": "3",
+      "consultantId": "4",
+      "designType": "pct",
+      "designValue": "200",
+      "supervisionType": "pct",
+      "supervisionValue": "200"
+    },
+    {
+      "id": "13",
+      "projectId": "6",
+      "consultantId": "4",
+      "designType": "pct",
+      "designValue": "250",
+      "supervisionType": "pct",
+      "supervisionValue": "200"
+    },
+    {
+      "id": "14",
+      "projectId": "4",
+      "consultantId": "4",
+      "designType": "pct",
+      "designValue": "200",
+      "supervisionType": "pct",
+      "supervisionValue": "200"
+    },
+    {
+      "id": "15",
+      "projectId": "2",
+      "consultantId": "4",
+      "designType": "pct",
+      "designValue": "180",
+      "supervisionType": "pct",
+      "supervisionValue": "200"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tprojectId\tconsultantId\tdesignType\tdesignValue\tsupervisionType\tsupervisionValue\n1\t3\t1\tlumpsum\t400000\tlumpsum\t35000\n2\t3\t2\tpct\t150\tpct\t150\n3\t4\t2\tpct\t150\tpct\t150\n4\t5\t2\tpct\t150\tpct\t150\n5\t6\t2\tpct\t150\tpct\t200\n6\t3\t3\tlumpsum\t850000\tlumpsum\t850000\n7\t2\t3\tlumpsum\t5350000\tlumpsum\t5350000\n8\t4\t3\tlumpsum\t865000\tlumpsum\t865000\n9\t5\t3\tlumpsum\t1550000\tlumpsum\t1550000\n10\t6\t3\tlumpsum\t272000\tlumpsum\t272000\n11\t5\t4\tpct\t200\tpct\t200\n12\t3\t4\tpct\t200\tpct\t200\n13\t6\t4\tpct\t250\tpct\t200\n14\t4\t4\tpct\t200\tpct\t200\n15\t2\t4\tpct\t180\tpct\t200\n",
+  "stderr": "",
+  "execution_time_ms": 1645
+}

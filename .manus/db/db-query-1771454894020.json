@@ -1,0 +1,145 @@
+{
+  "query": "SELECT id, consultantId, designType, designValue, supervisionType, supervisionValue, proposalLink FROM financialData LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, consultantId, designType, designValue, supervisionType, supervisionValue, proposalLink FROM financialData LIMIT 20;",
+  "rows": [
+    {
+      "id": "1",
+      "consultantId": "1",
+      "designType": "lumpsum",
+      "designValue": "400000",
+      "supervisionType": "lumpsum",
+      "supervisionValue": "35000",
+      "proposalLink": "https://drive.google.com/file/d/13iHIObmTE8epvB4oW1IxVGcOs5kF4wx9/view"
+    },
+    {
+      "id": "2",
+      "consultantId": "2",
+      "designType": "pct",
+      "designValue": "150",
+      "supervisionType": "pct",
+      "supervisionValue": "150",
+      "proposalLink": "https://drive.google.com/file/d/1yJf0AaNnzRUXkFlN3D-yE8XReXqIKLBk/view"
+    },
+    {
+      "id": "3",
+      "consultantId": "2",
+      "designType": "pct",
+      "designValue": "155",
+      "supervisionType": "pct",
+      "supervisionValue": "150",
+      "proposalLink": "https://drive.google.com/file/d/146LlG-pNAG6oYdXVOelXm-zJ4Zn7DcdD/view"
+    },
+    {
+      "id": "4",
+      "consultantId": "2",
+      "designType": "pct",
+      "designValue": "150",
+      "supervisionType": "pct",
+      "supervisionValue": "150",
+      "proposalLink": "https://drive.google.com/file/d/1lizn3-vU8O5RGHTiGjwqdw9yncdaimvf/view"
+    },
+    {
+      "id": "5",
+      "consultantId": "2",
+      "designType": "pct",
+      "designValue": "150",
+      "supervisionType": "pct",
+      "supervisionValue": "200",
+      "proposalLink": "https://drive.google.com/file/d/1enw1J8RSHDT6vbCyxEhcaffTHpNDnBXX/view"
+    },
+    {
+      "id": "6",
+      "consultantId": "3",
+      "designType": "lumpsum",
+      "designValue": "850000",
+      "supervisionType": "lumpsum",
+      "supervisionValue": "850000",
+      "proposalLink": "https://drive.google.com/file/d/15II8e1viJ3cTs5eZS73M8oHqih72abti/view"
+    },
+    {
+      "id": "7",
+      "consultantId": "3",
+      "designType": "lumpsum",
+      "designValue": "5350000",
+      "supervisionType": "lumpsum",
+      "supervisionValue": "5350000",
+      "proposalLink": "https://drive.google.com/file/d/1mRSctF9KBkBuwMA0H5juOxR11EsnqKHp/view"
+    },
+    {
+      "id": "8",
+      "consultantId": "3",
+      "designType": "lumpsum",
+      "designValue": "865000",
+      "supervisionType": "lumpsum",
+      "supervisionValue": "865000",
+      "proposalLink": "https://drive.google.com/file/d/1Q-GPEHK04QsSQlg9jBld9wQhem4w7-Rk/view"
+    },
+    {
+      "id": "9",
+      "consultantId": "3",
+      "designType": "lumpsum",
+      "designValue": "1550000",
+      "supervisionType": "lumpsum",
+      "supervisionValue": "1550000",
+      "proposalLink": "https://drive.google.com/file/d/1QE1zZ9RSIjmCmOuwvbO_gpA08rHbzPVA/view"
+    },
+    {
+      "id": "10",
+      "consultantId": "3",
+      "designType": "lumpsum",
+      "designValue": "272000",
+      "supervisionType": "lumpsum",
+      "supervisionValue": "272000",
+      "proposalLink": "https://drive.google.com/file/d/1kiRXKF_-zgtsW3Vxo2voYJEL1Uu6YtX9/view"
+    },
+    {
+      "id": "11",
+      "consultantId": "4",
+      "designType": "pct",
+      "designValue": "200",
+      "supervisionType": "pct",
+      "supervisionValue": "200",
+      "proposalLink": "https://drive.google.com/file/d/1P3xXM8yJE5W3D4CN_nUxqaDymW4pwKEj/view"
+    },
+    {
+      "id": "12",
+      "consultantId": "4",
+      "designType": "pct",
+      "designValue": "200",
+      "supervisionType": "pct",
+      "supervisionValue": "200",
+      "proposalLink": "https://drive.google.com/file/d/1P3xXM8yJE5W3D4CN_nUxqaDymW4pwKEj/view"
+    },
+    {
+      "id": "13",
+      "consultantId": "4",
+      "designType": "pct",
+      "designValue": "250",
+      "supervisionType": "pct",
+      "supervisionValue": "200",
+      "proposalLink": "https://drive.google.com/file/d/1P3xXM8yJE5W3D4CN_nUxqaDymW4pwKEj/view"
+    },
+    {
+      "id": "14",
+      "consultantId": "4",
+      "designType": "pct",
+      "designValue": "200",
+      "supervisionType": "pct",
+      "supervisionValue": "200",
+      "proposalLink": "https://drive.google.com/file/d/1P3xXM8yJE5W3D4CN_nUxqaDymW4pwKEj/view"
+    },
+    {
+      "id": "15",
+      "consultantId": "4",
+      "designType": "pct",
+      "designValue": "180",
+      "supervisionType": "pct",
+      "supervisionValue": "200",
+      "proposalLink": "https://drive.google.com/file/d/1P3xXM8yJE5W3D4CN_nUxqaDymW4pwKEj/view"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tconsultantId\tdesignType\tdesignValue\tsupervisionType\tsupervisionValue\tproposalLink\n1\t1\tlumpsum\t400000\tlumpsum\t35000\thttps://drive.google.com/file/d/13iHIObmTE8epvB4oW1IxVGcOs5kF4wx9/view\n2\t2\tpct\t150\tpct\t150\thttps://drive.google.com/file/d/1yJf0AaNnzRUXkFlN3D-yE8XReXqIKLBk/view\n3\t2\tpct\t155\tpct\t150\thttps://drive.google.com/file/d/146LlG-pNAG6oYdXVOelXm-zJ4Zn7DcdD/view\n4\t2\tpct\t150\tpct\t150\thttps://drive.google.com/file/d/1lizn3-vU8O5RGHTiGjwqdw9yncdaimvf/view\n5\t2\tpct\t150\tpct\t200\thttps://drive.google.com/file/d/1enw1J8RSHDT6vbCyxEhcaffTHpNDnBXX/view\n6\t3\tlumpsum\t850000\tlumpsum\t850000\thttps://drive.google.com/file/d/15II8e1viJ3cTs5eZS73M8oHqih72abti/view\n7\t3\tlumpsum\t5350000\tlumpsum\t5350000\thttps://drive.google.com/file/d/1mRSctF9KBkBuwMA0H5juOxR11EsnqKHp/view\n8\t3\tlumpsum\t865000\tlumpsum\t865000\thttps://drive.google.com/file/d/1Q-GPEHK04QsSQlg9jBld9wQhem4w7-Rk/view\n9\t3\tlumpsum\t1550000\tlumpsum\t1550000\thttps://drive.google.com/file/d/1QE1zZ9RSIjmCmOuwvbO_gpA08rHbzPVA/view\n10\t3\tlumpsum\t272000\tlumpsum\t272000\thttps://drive.google.com/file/d/1kiRXKF_-zgtsW3Vxo2voYJEL1Uu6YtX9/view\n11\t4\tpct\t200\tpct\t200\thttps://drive.google.com/file/d/1P3xXM8yJE5W3D4CN_nUxqaDymW4pwKEj/view\n12\t4\tpct\t200\tpct\t200\thttps://drive.google.com/file/d/1P3xXM8yJE5W3D4CN_nUxqaDymW4pwKEj/view\n13\t4\tpct\t250\tpct\t200\thttps://drive.google.com/file/d/1P3xXM8yJE5W3D4CN_nUxqaDymW4pwKEj/view\n14\t4\tpct\t200\tpct\t200\thttps://drive.google.com/file/d/1P3xXM8yJE5W3D4CN_nUxqaDymW4pwKEj/view\n15\t4\tpct\t180\tpct\t200\thttps://drive.google.com/file/d/1P3xXM8yJE5W3D4CN_nUxqaDymW4pwKEj/view\n",
+  "stderr": "",
+  "execution_time_ms": 1575
+}

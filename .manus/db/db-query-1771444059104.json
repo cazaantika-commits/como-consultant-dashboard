@@ -1,0 +1,175 @@
+{
+  "query": "SELECT fd.id, fd.projectId, fd.consultantId, fd.designType, fd.designValue, fd.supervisionType, fd.supervisionValue, p.name as project, c.name as consultant FROM financialData fd JOIN projects p ON p.id=fd.projectId JOIN consultants c ON c.id=fd.consultantId ORDER BY fd.projectId, fd.consultantId LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT fd.id, fd.projectId, fd.consultantId, fd.designType, fd.designValue, fd.supervisionType, fd.supervisionValue, p.name as project, c.name as consultant FROM financialData fd JOIN projects p ON p.id=fd.projectId JOIN consultants c ON c.id=fd.consultantId ORDER BY fd.projectId, fd.consultantId LIMIT 20;",
+  "rows": [
+    {
+      "id": "7",
+      "projectId": "2",
+      "consultantId": "3",
+      "designType": "lumpsum",
+      "designValue": "5350000",
+      "supervisionType": "lumpsum",
+      "supervisionValue": "5350000",
+      "project": "مجان متعدد الاستخدامات (G+4P+25)",
+      "consultant": "DATUM Engineering Consultants"
+    },
+    {
+      "id": "15",
+      "projectId": "2",
+      "consultantId": "4",
+      "designType": "pct",
+      "designValue": "180",
+      "supervisionType": "pct",
+      "supervisionValue": "200",
+      "project": "مجان متعدد الاستخدامات (G+4P+25)",
+      "consultant": "ARTEC Architectural & Engineering Consultants"
+    },
+    {
+      "id": "1",
+      "projectId": "3",
+      "consultantId": "1",
+      "designType": "lumpsum",
+      "designValue": "400000",
+      "supervisionType": "lumpsum",
+      "supervisionValue": "35000",
+      "project": "مبنى الجداف السكني (G+7)",
+      "consultant": "Osus International"
+    },
+    {
+      "id": "2",
+      "projectId": "3",
+      "consultantId": "2",
+      "designType": "pct",
+      "designValue": "150",
+      "supervisionType": "pct",
+      "supervisionValue": "150",
+      "project": "مبنى الجداف السكني (G+7)",
+      "consultant": "Realistic Engineering"
+    },
+    {
+      "id": "6",
+      "projectId": "3",
+      "consultantId": "3",
+      "designType": "lumpsum",
+      "designValue": "850000",
+      "supervisionType": "lumpsum",
+      "supervisionValue": "850000",
+      "project": "مبنى الجداف السكني (G+7)",
+      "consultant": "DATUM Engineering Consultants"
+    },
+    {
+      "id": "12",
+      "projectId": "3",
+      "consultantId": "4",
+      "designType": "pct",
+      "designValue": "200",
+      "supervisionType": "pct",
+      "supervisionValue": "200",
+      "project": "مبنى الجداف السكني (G+7)",
+      "consultant": "ARTEC Architectural & Engineering Consultants"
+    },
+    {
+      "id": "3",
+      "projectId": "4",
+      "consultantId": "2",
+      "designType": "pct",
+      "designValue": "150",
+      "supervisionType": "pct",
+      "supervisionValue": "150",
+      "project": "ند الشبا — قطعة 1 (6185392)",
+      "consultant": "Realistic Engineering"
+    },
+    {
+      "id": "8",
+      "projectId": "4",
+      "consultantId": "3",
+      "designType": "lumpsum",
+      "designValue": "865000",
+      "supervisionType": "lumpsum",
+      "supervisionValue": "865000",
+      "project": "ند الشبا — قطعة 1 (6185392)",
+      "consultant": "DATUM Engineering Consultants"
+    },
+    {
+      "id": "14",
+      "projectId": "4",
+      "consultantId": "4",
+      "designType": "pct",
+      "designValue": "200",
+      "supervisionType": "pct",
+      "supervisionValue": "200",
+      "project": "ند الشبا — قطعة 1 (6185392)",
+      "consultant": "ARTEC Architectural & Engineering Consultants"
+    },
+    {
+      "id": "4",
+      "projectId": "5",
+      "consultantId": "2",
+      "designType": "pct",
+      "designValue": "150",
+      "supervisionType": "pct",
+      "supervisionValue": "150",
+      "project": "ند الشبا — قطعة 2 المدمجة (6182776)",
+      "consultant": "Realistic Engineering"
+    },
+    {
+      "id": "9",
+      "projectId": "5",
+      "consultantId": "3",
+      "designType": "lumpsum",
+      "designValue": "1550000",
+      "supervisionType": "lumpsum",
+      "supervisionValue": "1550000",
+      "project": "ند الشبا — قطعة 2 المدمجة (6182776)",
+      "consultant": "DATUM Engineering Consultants"
+    },
+    {
+      "id": "11",
+      "projectId": "5",
+      "consultantId": "4",
+      "designType": "pct",
+      "designValue": "200",
+      "supervisionType": "pct",
+      "supervisionValue": "200",
+      "project": "ند الشبا — قطعة 2 المدمجة (6182776)",
+      "consultant": "ARTEC Architectural & Engineering Consultants"
+    },
+    {
+      "id": "5",
+      "projectId": "6",
+      "consultantId": "2",
+      "designType": "pct",
+      "designValue": "150",
+      "supervisionType": "pct",
+      "supervisionValue": "200",
+      "project": "ند الشبا — قطعة 3 الفلل (6180578)",
+      "consultant": "Realistic Engineering"
+    },
+    {
+      "id": "10",
+      "projectId": "6",
+      "consultantId": "3",
+      "designType": "lumpsum",
+      "designValue": "272000",
+      "supervisionType": "lumpsum",
+      "supervisionValue": "272000",
+      "project": "ند الشبا — قطعة 3 الفلل (6180578)",
+      "consultant": "DATUM Engineering Consultants"
+    },
+    {
+      "id": "13",
+      "projectId": "6",
+      "consultantId": "4",
+      "designType": "pct",
+      "designValue": "250",
+      "supervisionType": "pct",
+      "supervisionValue": "200",
+      "project": "ند الشبا — قطعة 3 الفلل (6180578)",
+      "consultant": "ARTEC Architectural & Engineering Consultants"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tprojectId\tconsultantId\tdesignType\tdesignValue\tsupervisionType\tsupervisionValue\tproject\tconsultant\n7\t2\t3\tlumpsum\t5350000\tlumpsum\t5350000\tمجان متعدد الاستخدامات (G+4P+25)\tDATUM Engineering Consultants\n15\t2\t4\tpct\t180\tpct\t200\tمجان متعدد الاستخدامات (G+4P+25)\tARTEC Architectural & Engineering Consultants\n1\t3\t1\tlumpsum\t400000\tlumpsum\t35000\tمبنى الجداف السكني (G+7)\tOsus International\n2\t3\t2\tpct\t150\tpct\t150\tمبنى الجداف السكني (G+7)\tRealistic Engineering\n6\t3\t3\tlumpsum\t850000\tlumpsum\t850000\tمبنى الجداف السكني (G+7)\tDATUM Engineering Consultants\n12\t3\t4\tpct\t200\tpct\t200\tمبنى الجداف السكني (G+7)\tARTEC Architectural & Engineering Consultants\n3\t4\t2\tpct\t150\tpct\t150\tند الشبا — قطعة 1 (6185392)\tRealistic Engineering\n8\t4\t3\tlumpsum\t865000\tlumpsum\t865000\tند الشبا — قطعة 1 (6185392)\tDATUM Engineering Consultants\n14\t4\t4\tpct\t200\tpct\t200\tند الشبا — قطعة 1 (6185392)\tARTEC Architectural & Engineering Consultants\n4\t5\t2\tpct\t150\tpct\t150\tند الشبا — قطعة 2 المدمجة (6182776)\tRealistic Engineering\n9\t5\t3\tlumpsum\t1550000\tlumpsum\t1550000\tند الشبا — قطعة 2 المدمجة (6182776)\tDATUM Engineering Consultants\n11\t5\t4\tpct\t200\tpct\t200\tند الشبا — قطعة 2 المدمجة (6182776)\tARTEC Architectural & Engineering Consultants\n5\t6\t2\tpct\t150\tpct\t200\tند الشبا — قطعة 3 الفلل (6180578)\tRealistic Engineering\n10\t6\t3\tlumpsum\t272000\tlumpsum\t272000\tند الشبا — قطعة 3 الفلل (6180578)\tDATUM Engineering Consultants\n13\t6\t4\tpct\t250\tpct\t200\tند الشبا — قطعة 3 الفلل (6180578)\tARTEC Architectural & Engineering Consultants\n",
+  "stderr": "",
+  "execution_time_ms": 1535
+}

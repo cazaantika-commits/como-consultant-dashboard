@@ -1,0 +1,94 @@
+{
+  "query": "SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'cf_projects' ORDER BY ORDINAL_POSITION;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'cf_projects' ORDER BY ORDINAL_POSITION;",
+  "rows": [
+    {
+      "COLUMN_NAME": "id",
+      "DATA_TYPE": "int"
+    },
+    {
+      "COLUMN_NAME": "projectId",
+      "DATA_TYPE": "int"
+    },
+    {
+      "COLUMN_NAME": "userId",
+      "DATA_TYPE": "int"
+    },
+    {
+      "COLUMN_NAME": "name",
+      "DATA_TYPE": "varchar"
+    },
+    {
+      "COLUMN_NAME": "startDate",
+      "DATA_TYPE": "varchar"
+    },
+    {
+      "COLUMN_NAME": "designApprovalMonths",
+      "DATA_TYPE": "int"
+    },
+    {
+      "COLUMN_NAME": "reraSetupMonths",
+      "DATA_TYPE": "int"
+    },
+    {
+      "COLUMN_NAME": "constructionMonths",
+      "DATA_TYPE": "int"
+    },
+    {
+      "COLUMN_NAME": "handoverMonths",
+      "DATA_TYPE": "int"
+    },
+    {
+      "COLUMN_NAME": "salesEnabled",
+      "DATA_TYPE": "tinyint"
+    },
+    {
+      "COLUMN_NAME": "salesStartMonth",
+      "DATA_TYPE": "int"
+    },
+    {
+      "COLUMN_NAME": "salesVelocityUnits",
+      "DATA_TYPE": "int"
+    },
+    {
+      "COLUMN_NAME": "salesVelocityAed",
+      "DATA_TYPE": "bigint"
+    },
+    {
+      "COLUMN_NAME": "salesVelocityType",
+      "DATA_TYPE": "enum"
+    },
+    {
+      "COLUMN_NAME": "totalSalesRevenue",
+      "DATA_TYPE": "bigint"
+    },
+    {
+      "COLUMN_NAME": "buyerPlanBookingPct",
+      "DATA_TYPE": "decimal"
+    },
+    {
+      "COLUMN_NAME": "buyerPlanConstructionPct",
+      "DATA_TYPE": "decimal"
+    },
+    {
+      "COLUMN_NAME": "buyerPlanHandoverPct",
+      "DATA_TYPE": "decimal"
+    },
+    {
+      "COLUMN_NAME": "notes",
+      "DATA_TYPE": "text"
+    },
+    {
+      "COLUMN_NAME": "createdAt",
+      "DATA_TYPE": "timestamp"
+    },
+    {
+      "COLUMN_NAME": "updatedAt",
+      "DATA_TYPE": "timestamp"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\tDATA_TYPE\nid\tint\nprojectId\tint\nuserId\tint\nname\tvarchar\nstartDate\tvarchar\ndesignApprovalMonths\tint\nreraSetupMonths\tint\nconstructionMonths\tint\nhandoverMonths\tint\nsalesEnabled\ttinyint\nsalesStartMonth\tint\nsalesVelocityUnits\tint\nsalesVelocityAed\tbigint\nsalesVelocityType\tenum\ntotalSalesRevenue\tbigint\nbuyerPlanBookingPct\tdecimal\nbuyerPlanConstructionPct\tdecimal\nbuyerPlanHandoverPct\tdecimal\nnotes\ttext\ncreatedAt\ttimestamp\nupdatedAt\ttimestamp\n",
+  "stderr": "",
+  "execution_time_ms": 1693
+}

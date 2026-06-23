@@ -1,0 +1,8 @@
+{
+  "query": "\nSELECT p.id, p.name, p.preConMonths, p.constructionMonths, p.financingScenario,\n  s.itemKey, s.section, s.distributionMethod, s.startMonth, s.endMonth, s.lumpSumMonth, s.fundingSource\nFROM projects p\nLEFT JOIN project_cash_flow_settings s ON s.projectId = p.id AND s.scenario = COALESCE(p.financingScenario, 'offplan_escrow') AND s.isActive = 1 AND s.section = 'construction'\nORDER BY p.id, s.sortOrder\nLIMIT 60\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute \nSELECT p.id, p.name, p.preConMonths, p.constructionMonths, p.financingScenario,\n  s.itemKey, s.section, s.distributionMethod, s.startMonth, s.endMonth, s.lumpSumMonth, s.fundingSource\nFROM projects p\nLEFT JOIN project_cash_flow_settings s ON s.projectId = p.id AND s.scenario = COALESCE(p.financingScenario, 'offplan_escrow') AND s.isActive = 1 AND s.section = 'construction'\nORDER BY p.id, s.sortOrder\nLIMIT 60\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 2: Unknown column 's.projectid' in 'on clause'"
+  ]
+}

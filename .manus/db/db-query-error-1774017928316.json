@@ -1,0 +1,8 @@
+{
+  "query": "SELECT pp.*, p.name as project_name FROM projectPhases pp JOIN projects p ON pp.project_id = p.id WHERE p.id = 4 OR p.name LIKE '%ند%' OR p.name LIKE '%Nad%' ORDER BY pp.id LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT pp.*, p.name as project_name FROM projectPhases pp JOIN projects p ON pp.project_id = p.id WHERE p.id = 4 OR p.name LIKE '%ند%' OR p.name LIKE '%Nad%' ORDER BY pp.id LIMIT 20;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'pp.project_id' in 'on clause'"
+  ]
+}

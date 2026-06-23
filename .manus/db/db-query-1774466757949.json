@@ -1,0 +1,23 @@
+{
+  "query": "SELECT projectId, LEFT(aiRecommendationsJson, 300) as recs_preview FROM competition_pricing WHERE projectId = 4;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT projectId, LEFT(aiRecommendationsJson, 300) as recs_preview FROM competition_pricing WHERE projectId = 4;",
+  "rows": [
+    {
+      "projectId": "4",
+      "recs_preview": "{"
+    }
+  ],
+  "messages": [
+    "  \"scenarios\": {",
+    "    \"optimistic\": {",
+    "      \"residential\": { \"studio\": 1605, \"oneBr\": 1488, \"twoBr\": 1370, \"threeBr\": 1263 },",
+    "      \"retail\": { \"small\": 2065, \"medium\": 2065, \"large\": 2065 },",
+    "      \"offices\": { \"small\": 2065, \"medium\": 2065, \"large\": 2065 }",
+    "    },",
+    "    \"base\": {",
+    "      \"residential\":"
+  ],
+  "stdout": "projectId\trecs_preview\n4\t{\n  \"scenarios\": {\n    \"optimistic\": {\n      \"residential\": { \"studio\": 1605, \"oneBr\": 1488, \"twoBr\": 1370, \"threeBr\": 1263 },\n      \"retail\": { \"small\": 2065, \"medium\": 2065, \"large\": 2065 },\n      \"offices\": { \"small\": 2065, \"medium\": 2065, \"large\": 2065 }\n    },\n    \"base\": {\n      \"residential\":\n",
+  "stderr": "",
+  "execution_time_ms": 1641
+}

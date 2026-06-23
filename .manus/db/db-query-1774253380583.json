@@ -1,0 +1,25 @@
+{
+  "query": "SELECT item_key, funding_source, section FROM project_cash_flow_settings WHERE project_id = 4 AND scenario = 'offplan_escrow' AND item_key IN ('community_fee_escrow', 'developer_fee_construction', 'marketing_construction');",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT item_key, funding_source, section FROM project_cash_flow_settings WHERE project_id = 4 AND scenario = 'offplan_escrow' AND item_key IN ('community_fee_escrow', 'developer_fee_construction', 'marketing_construction');",
+  "rows": [
+    {
+      "item_key": "community_fee_escrow",
+      "funding_source": "investor",
+      "section": "escrow"
+    },
+    {
+      "item_key": "developer_fee_construction",
+      "funding_source": "investor",
+      "section": "escrow"
+    },
+    {
+      "item_key": "marketing_construction",
+      "funding_source": "investor",
+      "section": "escrow"
+    }
+  ],
+  "messages": [],
+  "stdout": "item_key\tfunding_source\tsection\ncommunity_fee_escrow\tinvestor\tescrow\ndeveloper_fee_construction\tinvestor\tescrow\nmarketing_construction\tinvestor\tescrow\n",
+  "stderr": "",
+  "execution_time_ms": 1575
+}

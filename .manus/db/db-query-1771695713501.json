@@ -1,0 +1,22 @@
+{
+  "query": "SELECT id, title, meetingStatus, extractedTasksJson FROM meetings ORDER BY id DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, title, meetingStatus, extractedTasksJson FROM meetings ORDER BY id DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "30002",
+      "title": "اتعاب الاستشاريين",
+      "meetingStatus": "completed",
+      "extractedTasksJson": "[{\"task\":\"التركيز على تسجيل الاستشاريين غير المسجلين في المشاريع المناسبة.\",\"assignee\":\"سلوى\",\"deadline\":\"غير محدد\",\"priority\":\"عالية\"},{\"task\":\"البحث في تحديث المنصة بأسعار الاستشاريين الجديدة والسابقة.\",\"assignee\":\"سلوى\",\"deadline\":\"غير محدد\",\"priority\":\"عالية\"},{\"task\":\"مراجعة ملفات جوجل درايف لاستخراج عروض أسعار الاستشاريين.\",\"assignee\":\"خازن\",\"deadline\":\"غير محدد\",\"priority\":\"عالية\"},{\"task\":\"تنظيم معلومات عروض الأسعار بدقة لتسجيل الاستشاريين غير المسجلين.\",\"assignee\":\"خازن\",\"deadline\":\"غير محدد\",\"priority\":\"عالية\"},{\"task\":\"مراجعة ملفات جوجل درايف لاستخراج عروض أسعار الاستشاريين وتحليلها للتركيز على العروض التي تشمل عدة مشاريع.\",\"assignee\":\"ألينا\",\"deadline\":\"غير محدد\",\"priority\":\"عالية\"},{\"task\":\"رفع العروض المناسبة إلى المنصة لضمان تسجيل الاستشاريين غير المسجلين في المشاريع المناسبة.\",\"assignee\":\"ألينا\",\"deadline\":\"غير محدد\",\"priority\":\"عالية\"}]"
+    },
+    {
+      "id": "2",
+      "title": "مناقشة دراسات الجدوى للمشاريع",
+      "meetingStatus": "completed",
+      "extractedTasksJson": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitle\tmeetingStatus\textractedTasksJson\n30002\tاتعاب الاستشاريين\tcompleted\t[{\"task\":\"التركيز على تسجيل الاستشاريين غير المسجلين في المشاريع المناسبة.\",\"assignee\":\"سلوى\",\"deadline\":\"غير محدد\",\"priority\":\"عالية\"},{\"task\":\"البحث في تحديث المنصة بأسعار الاستشاريين الجديدة والسابقة.\",\"assignee\":\"سلوى\",\"deadline\":\"غير محدد\",\"priority\":\"عالية\"},{\"task\":\"مراجعة ملفات جوجل درايف لاستخراج عروض أسعار الاستشاريين.\",\"assignee\":\"خازن\",\"deadline\":\"غير محدد\",\"priority\":\"عالية\"},{\"task\":\"تنظيم معلومات عروض الأسعار بدقة لتسجيل الاستشاريين غير المسجلين.\",\"assignee\":\"خازن\",\"deadline\":\"غير محدد\",\"priority\":\"عالية\"},{\"task\":\"مراجعة ملفات جوجل درايف لاستخراج عروض أسعار الاستشاريين وتحليلها للتركيز على العروض التي تشمل عدة مشاريع.\",\"assignee\":\"ألينا\",\"deadline\":\"غير محدد\",\"priority\":\"عالية\"},{\"task\":\"رفع العروض المناسبة إلى المنصة لضمان تسجيل الاستشاريين غير المسجلين في المشاريع المناسبة.\",\"assignee\":\"ألينا\",\"deadline\":\"غير محدد\",\"priority\":\"عالية\"}]\n2\tمناقشة دراسات الجدوى للمشاريع\tcompleted\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1501
+}

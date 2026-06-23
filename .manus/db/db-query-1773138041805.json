@@ -1,0 +1,24 @@
+{
+  "query": "SELECT id, projectId, projectName, gfaResidential, gfaRetail, gfaOffices, estimatedBua, residentialSalePrice, retailSalePrice, officesSalePrice, numberOfUnits, saleableResidentialPct FROM feasibilityStudies WHERE projectId = 4 LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, projectId, projectName, gfaResidential, gfaRetail, gfaOffices, estimatedBua, residentialSalePrice, retailSalePrice, officesSalePrice, numberOfUnits, saleableResidentialPct FROM feasibilityStudies WHERE projectId = 4 LIMIT 1;",
+  "rows": [
+    {
+      "id": "30002",
+      "projectId": "4",
+      "projectName": "ند الشبا — قطعة 1 (6185392)",
+      "gfaResidential": "NULL",
+      "gfaRetail": "NULL",
+      "gfaOffices": "NULL",
+      "estimatedBua": "NULL",
+      "residentialSalePrice": "NULL",
+      "retailSalePrice": "NULL",
+      "officesSalePrice": "NULL",
+      "numberOfUnits": "NULL",
+      "saleableResidentialPct": "90"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tprojectId\tprojectName\tgfaResidential\tgfaRetail\tgfaOffices\testimatedBua\tresidentialSalePrice\tretailSalePrice\tofficesSalePrice\tnumberOfUnits\tsaleableResidentialPct\n30002\t4\tند الشبا — قطعة 1 (6185392)\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\t90\n",
+  "stderr": "",
+  "execution_time_ms": 1480
+}

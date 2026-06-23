@@ -1,0 +1,259 @@
+{
+  "query": "SHOW TABLES;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SHOW TABLES;",
+  "rows": [
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "__drizzle_migrations"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "actual_outcomes"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "agentActivityLog"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "agentAssignments"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "agents"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "aiAdvisoryScores"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "cf_cost_items"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "cf_files"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "cf_projects"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "cf_scenarios"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "chatHistory"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "commandCenterChat"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "commandCenterEvaluations"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "commandCenterItems"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "commandCenterMembers"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "commandCenterNotifications"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "commandCenterResponses"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "committeeDecisions"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "competition_pricing"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "competitor_projects"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "consultantDetails"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "consultantNotes"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "consultantPortfolio"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "consultantProfiles"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "consultantProposals"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "consultants"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "contractTypes"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "costs_cash_flow"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "dashboardData"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "data_collection_log"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "demographics"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "designsAndPermits"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "documentIndex"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "emailCheckLog"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "emailLog"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "email_notifications"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "evaluationApprovals"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "evaluationResults"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "evaluationScores"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "evaluationSessionMembers"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "evaluationSessions"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "evaluatorScores"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "feasibilityStudies"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "financialData"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "geographic_features"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "joelle_analysis_stages"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "joelle_learning"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "joelle_reports"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "knowledgeBase"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "legalSetupRecords"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "marketOverview"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "market_listings"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "market_reports"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "market_reports_kb"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "market_transactions"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "meetingFiles"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "meetingMessages"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "meetingParticipants"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "meetings"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "modelUsageLog"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "model_accuracy_log"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "oauthTokens"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "phaseActivities"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "phaseCostLinks"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "prediction_records"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "projectCapitalSettings"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "projectConsultants"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "projectContracts"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "projectKpis"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "projectMilestones"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "projectPhases"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "project_risk_scores"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "projects"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "proposalComparisons"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "sent_emails"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "specialistKnowledge"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "stage_documents"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "stage_items"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "taskCategories"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "taskExecutionLogs"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "taskProjects"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "tasks"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX": "users"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_Q366eAYG4Q7iaM8VuAmmFX\n__drizzle_migrations\nactual_outcomes\nagentActivityLog\nagentAssignments\nagents\naiAdvisoryScores\ncf_cost_items\ncf_files\ncf_projects\ncf_scenarios\nchatHistory\ncommandCenterChat\ncommandCenterEvaluations\ncommandCenterItems\ncommandCenterMembers\ncommandCenterNotifications\ncommandCenterResponses\ncommitteeDecisions\ncompetition_pricing\ncompetitor_projects\nconsultantDetails\nconsultantNotes\nconsultantPortfolio\nconsultantProfiles\nconsultantProposals\nconsultants\ncontractTypes\ncosts_cash_flow\ndashboardData\ndata_collection_log\ndemographics\ndesignsAndPermits\ndocumentIndex\nemailCheckLog\nemailLog\nemail_notifications\nevaluationApprovals\nevaluationResults\nevaluationScores\nevaluationSessionMembers\nevaluationSessions\nevaluatorScores\nfeasibilityStudies\nfinancialData\ngeographic_features\njoelle_analysis_stages\njoelle_learning\njoelle_reports\nknowledgeBase\nlegalSetupRecords\nmarketOverview\nmarket_listings\nmarket_reports\nmarket_reports_kb\nmarket_transactions\nmeetingFiles\nmeetingMessages\nmeetingParticipants\nmeetings\nmodelUsageLog\nmodel_accuracy_log\noauthTokens\nphaseActivities\nphaseCostLinks\nprediction_records\nprojectCapitalSettings\nprojectConsultants\nprojectContracts\nprojectKpis\nprojectMilestones\nprojectPhases\nproject_risk_scores\nprojects\nproposalComparisons\nsent_emails\nspecialistKnowledge\nstage_documents\nstage_items\ntaskCategories\ntaskExecutionLogs\ntaskProjects\ntasks\nusers\n",
+  "stderr": "",
+  "execution_time_ms": 1623
+}

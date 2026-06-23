@@ -1,0 +1,24 @@
+{
+  "query": "SELECT id, name, plotNumber, areaCode, titleDeedNumber, ddaNumber, plotAreaSqm, plotAreaSqft, gfaSqm, gfaSqft, permittedUse, ownershipType FROM projects WHERE id = 4;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, name, plotNumber, areaCode, titleDeedNumber, ddaNumber, plotAreaSqm, plotAreaSqft, gfaSqm, gfaSqft, permittedUse, ownershipType FROM projects WHERE id = 4;",
+  "rows": [
+    {
+      "id": "4",
+      "name": "ند الشبا — قطعة 1 (6185392)",
+      "plotNumber": "6185392",
+      "areaCode": "NASGNA19-022",
+      "titleDeedNumber": "2153",
+      "ddaNumber": "618-5392",
+      "plotAreaSqm": "1573.97",
+      "plotAreaSqft": "16942.07",
+      "gfaSqm": "4722.58",
+      "gfaSqft": "50826.11",
+      "permittedUse": "Residential Apartments, Commercial Retail",
+      "ownershipType": "Single Ownership Property"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tplotNumber\tareaCode\ttitleDeedNumber\tddaNumber\tplotAreaSqm\tplotAreaSqft\tgfaSqm\tgfaSqft\tpermittedUse\townershipType\n4\tند الشبا — قطعة 1 (6185392)\t6185392\tNASGNA19-022\t2153\t618-5392\t1573.97\t16942.07\t4722.58\t50826.11\tResidential Apartments, Commercial Retail\tSingle Ownership Property\n",
+  "stderr": "",
+  "execution_time_ms": 1575
+}

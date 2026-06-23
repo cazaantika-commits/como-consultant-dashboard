@@ -1,0 +1,18 @@
+{
+  "query": "SELECT id, name FROM projects WHERE name LIKE '%مجان%' OR name LIKE '%Majan%' OR name LIKE '%G+4P+25%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, name FROM projects WHERE name LIKE '%مجان%' OR name LIKE '%Majan%' OR name LIKE '%G+4P+25%';",
+  "rows": [
+    {
+      "id": "1",
+      "name": "مركز مجان التجاري (G+4)"
+    },
+    {
+      "id": "2",
+      "name": "مجان متعدد الاستخدامات (G+4P+25)"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\n1\tمركز مجان التجاري (G+4)\n2\tمجان متعدد الاستخدامات (G+4P+25)\n",
+  "stderr": "",
+  "execution_time_ms": 1555
+}

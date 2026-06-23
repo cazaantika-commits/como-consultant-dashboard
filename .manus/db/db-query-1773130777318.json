@@ -1,0 +1,22 @@
+{
+  "query": "\nSELECT p.id, p.name, p.plotAreaSqft, p.gfaResidentialSqft, p.gfaRetailSqft, p.gfaSqft, p.bua, p.manualBuaSqft, p.estimatedConstructionPricePerSqft, p.landPrice FROM projects p WHERE p.name LIKE '%جداف%' OR p.name LIKE '%Jaddaf%' LIMIT 3;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute \nSELECT p.id, p.name, p.plotAreaSqft, p.gfaResidentialSqft, p.gfaRetailSqft, p.gfaSqft, p.bua, p.manualBuaSqft, p.estimatedConstructionPricePerSqft, p.landPrice FROM projects p WHERE p.name LIKE '%جداف%' OR p.name LIKE '%Jaddaf%' LIMIT 3;\n",
+  "rows": [
+    {
+      "id": "3",
+      "name": "مبنى الجداف السكني (G+7)",
+      "plotAreaSqft": "12228.34",
+      "gfaResidentialSqft": "50570.04",
+      "gfaRetailSqft": "0.00",
+      "gfaSqft": "50570.04",
+      "bua": "105000",
+      "manualBuaSqft": "110000.00",
+      "estimatedConstructionPricePerSqft": "350.00",
+      "landPrice": "15500000.00"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tplotAreaSqft\tgfaResidentialSqft\tgfaRetailSqft\tgfaSqft\tbua\tmanualBuaSqft\testimatedConstructionPricePerSqft\tlandPrice\n3\tمبنى الجداف السكني (G+7)\t12228.34\t50570.04\t0.00\t50570.04\t105000\t110000.00\t350.00\t15500000.00\n",
+  "stderr": "",
+  "execution_time_ms": 1495
+}

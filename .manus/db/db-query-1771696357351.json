@@ -1,0 +1,55 @@
+{
+  "query": "SELECT id, speakerId, speakerType, LEFT(messageText, 100) as msg, createdAt FROM meetingMessages WHERE meetingId = 30002 ORDER BY id DESC LIMIT 20",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, speakerId, speakerType, LEFT(messageText, 100) as msg, createdAt FROM meetingMessages WHERE meetingId = 30002 ORDER BY id DESC LIMIT 20",
+  "rows": [
+    {
+      "id": "30018",
+      "speakerId": "system",
+      "speakerType": "agent",
+      "msg": "⚠️ لم يتم توليد المخرجات تلقائياً. يمكنك توليدها يدوياً لاحقاً.",
+      "createdAt": "2026-02-21 17:30:41"
+    },
+    {
+      "id": "30017",
+      "speakerId": "system",
+      "speakerType": "agent",
+      "msg": "🔴 تم إنهاء الاجتماع. جاري توليد المخرجات...",
+      "createdAt": "2026-02-21 17:30:34"
+    },
+    {
+      "id": "30016",
+      "speakerId": "alina",
+      "speakerType": "agent",
+      "msg": "بالتأكيد، سأقوم بالتركيز على تحديث المنصة بأسعار الاستشاريين الجديدة والسابقة. سأبدأ بمراجعة ملفات ج",
+      "createdAt": "2026-02-21 17:30:00"
+    },
+    {
+      "id": "30015",
+      "speakerId": "khazen",
+      "speakerType": "agent",
+      "msg": "مرحباً، تمام المدير! سأبدأ بمراجعة ملفات جوجل درايف لاستخراج عروض أسعار الاستشاريين. سأركز على العرو",
+      "createdAt": "2026-02-21 17:29:57"
+    },
+    {
+      "id": "30013",
+      "speakerId": "user",
+      "speakerType": "user",
+      "msg": "مرحبا مطلوب تنفيذ المهمة كما هو مكتوب في العموان والتفاصيل",
+      "createdAt": "2026-02-21 17:29:52"
+    },
+    {
+      "id": "30012",
+      "speakerId": "system",
+      "speakerType": "agent",
+      "msg": "🟢 تم بدء الاجتماع. يمكنكم الآن النقاش.",
+      "createdAt": "2026-02-21 17:29:24"
+    }
+  ],
+  "messages": [
+    "30014\tsalwa\tagent\tمرحباً مديرنا العزيز! 😊",
+    "سأقوم بالتركيز على تسجيل الاستشاريين غير المسجلين في المشاريع المناسبة بناء\t2026-02-21 17:29:55"
+  ],
+  "stdout": "id\tspeakerId\tspeakerType\tmsg\tcreatedAt\n30018\tsystem\tagent\t⚠️ لم يتم توليد المخرجات تلقائياً. يمكنك توليدها يدوياً لاحقاً.\t2026-02-21 17:30:41\n30017\tsystem\tagent\t🔴 تم إنهاء الاجتماع. جاري توليد المخرجات...\t2026-02-21 17:30:34\n30016\talina\tagent\tبالتأكيد، سأقوم بالتركيز على تحديث المنصة بأسعار الاستشاريين الجديدة والسابقة. سأبدأ بمراجعة ملفات ج\t2026-02-21 17:30:00\n30015\tkhazen\tagent\tمرحباً، تمام المدير! سأبدأ بمراجعة ملفات جوجل درايف لاستخراج عروض أسعار الاستشاريين. سأركز على العرو\t2026-02-21 17:29:57\n30014\tsalwa\tagent\tمرحباً مديرنا العزيز! 😊\n\nسأقوم بالتركيز على تسجيل الاستشاريين غير المسجلين في المشاريع المناسبة بناء\t2026-02-21 17:29:55\n30013\tuser\tuser\tمرحبا مطلوب تنفيذ المهمة كما هو مكتوب في العموان والتفاصيل\t2026-02-21 17:29:52\n30012\tsystem\tagent\t🟢 تم بدء الاجتماع. يمكنكم الآن النقاش.\t2026-02-21 17:29:24\n",
+  "stderr": "",
+  "execution_time_ms": 1533
+}

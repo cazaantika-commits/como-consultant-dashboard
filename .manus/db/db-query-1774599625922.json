@@ -1,0 +1,9 @@
+{
+  "query": "\nUPDATE lifecycle_services ls\nJOIN (\n  SELECT id, ROW_NUMBER() OVER (PARTITION BY stageCode ORDER BY sortOrder, id) * 10 AS new_sort\n  FROM lifecycle_services\n) ranked ON ls.id = ranked.id\nSET ls.sortOrder = ranked.new_sort;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute \nUPDATE lifecycle_services ls\nJOIN (\n  SELECT id, ROW_NUMBER() OVER (PARTITION BY stageCode ORDER BY sortOrder, id) * 10 AS new_sort\n  FROM lifecycle_services\n) ranked ON ls.id = ranked.id\nSET ls.sortOrder = ranked.new_sort;\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1604
+}

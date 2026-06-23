@@ -1,0 +1,178 @@
+{
+  "query": "SELECT stageCode, nameAr, isActive, sortOrder FROM lifecycle_stages ORDER BY sortOrder",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT stageCode, nameAr, isActive, sortOrder FROM lifecycle_stages ORDER BY sortOrder",
+  "rows": [
+    {
+      "stageCode": "STG-01",
+      "nameAr": "تأسيس المطوّر وتسجيله",
+      "isActive": "1",
+      "sortOrder": "1"
+    },
+    {
+      "stageCode": "STG-02",
+      "nameAr": "تسجيل المشروع وفتح الضمان",
+      "isActive": "1",
+      "sortOrder": "2"
+    },
+    {
+      "stageCode": "STG-10",
+      "nameAr": "مرحلة التصميم ورخصة البناء",
+      "isActive": "1",
+      "sortOrder": "3"
+    },
+    {
+      "stageCode": "STG-04",
+      "nameAr": "الرقابة المالية والإنشائية",
+      "isActive": "1",
+      "sortOrder": "4"
+    },
+    {
+      "stageCode": "STG-20",
+      "nameAr": "مرحلة الدعاية والتسويق والمبيعات",
+      "isActive": "1",
+      "sortOrder": "5"
+    },
+    {
+      "stageCode": "STG-03",
+      "nameAr": "المبيعات على الخارطة وأوكود",
+      "isActive": "1",
+      "sortOrder": "6"
+    },
+    {
+      "stageCode": "STG-05",
+      "nameAr": "إغلاق المشروع",
+      "isActive": "1",
+      "sortOrder": "7"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773223257702",
+      "nameAr": "مرحلة اختبارية",
+      "isActive": "1",
+      "sortOrder": "8"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773223258580",
+      "nameAr": "مرحلة معدّلة",
+      "isActive": "0",
+      "sortOrder": "9"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773223259889",
+      "nameAr": "مرحلة للإيقاف",
+      "isActive": "0",
+      "sortOrder": "10"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773252771940",
+      "nameAr": "مرحلة اختبارية",
+      "isActive": "0",
+      "sortOrder": "11"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773252772847",
+      "nameAr": "مرحلة معدّلة",
+      "isActive": "0",
+      "sortOrder": "12"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773252774168",
+      "nameAr": "مرحلة للإيقاف",
+      "isActive": "0",
+      "sortOrder": "13"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773391282157",
+      "nameAr": "مرحلة اختبارية",
+      "isActive": "0",
+      "sortOrder": "14"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773391283031",
+      "nameAr": "مرحلة معدّلة",
+      "isActive": "0",
+      "sortOrder": "15"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773391284332",
+      "nameAr": "مرحلة للإيقاف",
+      "isActive": "0",
+      "sortOrder": "16"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773410484616",
+      "nameAr": "مرحلة اختبارية",
+      "isActive": "0",
+      "sortOrder": "17"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773410485548",
+      "nameAr": "مرحلة معدّلة",
+      "isActive": "0",
+      "sortOrder": "18"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773410486928",
+      "nameAr": "مرحلة للإيقاف",
+      "isActive": "0",
+      "sortOrder": "19"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773411864624",
+      "nameAr": "مرحلة اختبارية",
+      "isActive": "0",
+      "sortOrder": "20"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773411865562",
+      "nameAr": "مرحلة معدّلة",
+      "isActive": "0",
+      "sortOrder": "21"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773411866940",
+      "nameAr": "مرحلة للإيقاف",
+      "isActive": "0",
+      "sortOrder": "22"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773413477522",
+      "nameAr": "مرحلة اختبارية",
+      "isActive": "0",
+      "sortOrder": "23"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773413478413",
+      "nameAr": "مرحلة معدّلة",
+      "isActive": "0",
+      "sortOrder": "24"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773413479747",
+      "nameAr": "مرحلة للإيقاف",
+      "isActive": "0",
+      "sortOrder": "25"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773413634879",
+      "nameAr": "مرحلة اختبارية",
+      "isActive": "0",
+      "sortOrder": "26"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773413635743",
+      "nameAr": "مرحلة معدّلة",
+      "isActive": "0",
+      "sortOrder": "27"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773413637038",
+      "nameAr": "مرحلة للإيقاف",
+      "isActive": "1",
+      "sortOrder": "28"
+    }
+  ],
+  "messages": [],
+  "stdout": "stageCode\tnameAr\tisActive\tsortOrder\nSTG-01\tتأسيس المطوّر وتسجيله\t1\t1\nSTG-02\tتسجيل المشروع وفتح الضمان\t1\t2\nSTG-10\tمرحلة التصميم ورخصة البناء\t1\t3\nSTG-04\tالرقابة المالية والإنشائية\t1\t4\nSTG-20\tمرحلة الدعاية والتسويق والمبيعات\t1\t5\nSTG-03\tالمبيعات على الخارطة وأوكود\t1\t6\nSTG-05\tإغلاق المشروع\t1\t7\nSTG-CUSTOM-1773223257702\tمرحلة اختبارية\t1\t8\nSTG-CUSTOM-1773223258580\tمرحلة معدّلة\t0\t9\nSTG-CUSTOM-1773223259889\tمرحلة للإيقاف\t0\t10\nSTG-CUSTOM-1773252771940\tمرحلة اختبارية\t0\t11\nSTG-CUSTOM-1773252772847\tمرحلة معدّلة\t0\t12\nSTG-CUSTOM-1773252774168\tمرحلة للإيقاف\t0\t13\nSTG-CUSTOM-1773391282157\tمرحلة اختبارية\t0\t14\nSTG-CUSTOM-1773391283031\tمرحلة معدّلة\t0\t15\nSTG-CUSTOM-1773391284332\tمرحلة للإيقاف\t0\t16\nSTG-CUSTOM-1773410484616\tمرحلة اختبارية\t0\t17\nSTG-CUSTOM-1773410485548\tمرحلة معدّلة\t0\t18\nSTG-CUSTOM-1773410486928\tمرحلة للإيقاف\t0\t19\nSTG-CUSTOM-1773411864624\tمرحلة اختبارية\t0\t20\nSTG-CUSTOM-1773411865562\tمرحلة معدّلة\t0\t21\nSTG-CUSTOM-1773411866940\tمرحلة للإيقاف\t0\t22\nSTG-CUSTOM-1773413477522\tمرحلة اختبارية\t0\t23\nSTG-CUSTOM-1773413478413\tمرحلة معدّلة\t0\t24\nSTG-CUSTOM-1773413479747\tمرحلة للإيقاف\t0\t25\nSTG-CUSTOM-1773413634879\tمرحلة اختبارية\t0\t26\nSTG-CUSTOM-1773413635743\tمرحلة معدّلة\t0\t27\nSTG-CUSTOM-1773413637038\tمرحلة للإيقاف\t1\t28\n",
+  "stderr": "",
+  "execution_time_ms": 1493
+}

@@ -1,0 +1,64 @@
+{
+  "query": "SELECT id, name, plotNumber, landPrice FROM projects ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, name, plotNumber, landPrice FROM projects ORDER BY id;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "مركز مجان التجاري (G+4)",
+      "plotNumber": "6457956",
+      "landPrice": "62000000.00"
+    },
+    {
+      "id": "2",
+      "name": "مجان متعدد الاستخدامات (G+4P+25)",
+      "plotNumber": "6457879",
+      "landPrice": "NULL"
+    },
+    {
+      "id": "3",
+      "name": "مبنى الجداف السكني (G+7)",
+      "plotNumber": "3260885",
+      "landPrice": "15500000.00"
+    },
+    {
+      "id": "4",
+      "name": "ند الشبا — قطعة 1 (6185392)",
+      "plotNumber": "6185392",
+      "landPrice": "18000000.00"
+    },
+    {
+      "id": "5",
+      "name": "ند الشبا — قطعة 2 المدمجة (6182776)",
+      "plotNumber": "6182776",
+      "landPrice": "NULL"
+    },
+    {
+      "id": "6",
+      "name": "ند الشبا — قطعة 3 الفلل (6180578)",
+      "plotNumber": "6180578",
+      "landPrice": "6222000.00"
+    },
+    {
+      "id": "60001",
+      "name": "مشروع آلات البيع في ميسيسوجا، أونتاريو",
+      "plotNumber": "NULL",
+      "landPrice": "NULL"
+    },
+    {
+      "id": "60002",
+      "name": "مشروع آلات البيع في ميسيسوجا، أونتاريو",
+      "plotNumber": "NULL",
+      "landPrice": "NULL"
+    },
+    {
+      "id": "60003",
+      "name": "آلات البيع في كلية طب الأسنان",
+      "plotNumber": "NULL",
+      "landPrice": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tplotNumber\tlandPrice\n1\tمركز مجان التجاري (G+4)\t6457956\t62000000.00\n2\tمجان متعدد الاستخدامات (G+4P+25)\t6457879\tNULL\n3\tمبنى الجداف السكني (G+7)\t3260885\t15500000.00\n4\tند الشبا — قطعة 1 (6185392)\t6185392\t18000000.00\n5\tند الشبا — قطعة 2 المدمجة (6182776)\t6182776\tNULL\n6\tند الشبا — قطعة 3 الفلل (6180578)\t6180578\t6222000.00\n60001\tمشروع آلات البيع في ميسيسوجا، أونتاريو\tNULL\tNULL\n60002\tمشروع آلات البيع في ميسيسوجا، أونتاريو\tNULL\tNULL\n60003\tآلات البيع في كلية طب الأسنان\tNULL\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1562
+}

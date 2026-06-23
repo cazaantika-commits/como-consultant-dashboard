@@ -1,0 +1,13 @@
+{
+  "query": "DESCRIBE dashboardData; SELECT id, LEFT(dataJson, 300) as preview FROM dashboardData LIMIT 3;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute DESCRIBE dashboardData; SELECT id, LEFT(dataJson, 300) as preview FROM dashboardData LIMIT 3;",
+  "returncode": 1,
+  "logs": [
+    "Field\tType\tNull\tKey\tDefault\tExtra",
+    "id\tint\tNO\tPRI\tNULL\tauto_increment",
+    "dataKey\tvarchar(255)\tNO\tUNI\tNULL\t",
+    "dataValue\tlongtext\tYES\t\tNULL\t",
+    "updatedAt\ttimestamp\tYES\t\tCURRENT_TIMESTAMP\tDEFAULT_GENERATED on update CURRENT_TIMESTAMP",
+    "ERROR 1054 (42S22) at line 1: Unknown column 'datajson' in 'field list'"
+  ]
+}

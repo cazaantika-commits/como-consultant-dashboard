@@ -1,0 +1,22 @@
+{
+  "query": "SHOW TABLES LIKE '%phase%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SHOW TABLES LIKE '%phase%';",
+  "rows": [
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%phase%)": "phaseActivities"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%phase%)": "phaseCostLinks"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%phase%)": "projectPhases"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%phase%)": "project_phase_delays"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%phase%)\nphaseActivities\nphaseCostLinks\nprojectPhases\nproject_phase_delays\n",
+  "stderr": "",
+  "execution_time_ms": 1537
+}

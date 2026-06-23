@@ -1,0 +1,45 @@
+{
+  "query": "SELECT item_key, name_ar, funding_source, amount_override, distribution_method FROM project_cash_flow_settings WHERE project_id = 4 AND scenario = 'offplan_construction' LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT item_key, name_ar, funding_source, amount_override, distribution_method FROM project_cash_flow_settings WHERE project_id = 4 AND scenario = 'offplan_construction' LIMIT 5;",
+  "rows": [
+    {
+      "item_key": "land_cost",
+      "name_ar": "سعر الأرض",
+      "funding_source": "investor",
+      "amount_override": "NULL",
+      "distribution_method": "lump_sum"
+    },
+    {
+      "item_key": "land_broker",
+      "name_ar": "عمولة وسيط الأرض",
+      "funding_source": "investor",
+      "amount_override": "NULL",
+      "distribution_method": "lump_sum"
+    },
+    {
+      "item_key": "land_registration",
+      "name_ar": "رسوم تسجيل الأرض (4%)",
+      "funding_source": "investor",
+      "amount_override": "NULL",
+      "distribution_method": "lump_sum"
+    },
+    {
+      "item_key": "government_fees_investor",
+      "name_ar": "رسوم الجهات الحكومية (10%)",
+      "funding_source": "investor",
+      "amount_override": "NULL",
+      "distribution_method": "lump_sum"
+    },
+    {
+      "item_key": "soil_test",
+      "name_ar": "فحص التربة",
+      "funding_source": "investor",
+      "amount_override": "NULL",
+      "distribution_method": "lump_sum"
+    }
+  ],
+  "messages": [],
+  "stdout": "item_key\tname_ar\tfunding_source\tamount_override\tdistribution_method\nland_cost\tسعر الأرض\tinvestor\tNULL\tlump_sum\nland_broker\tعمولة وسيط الأرض\tinvestor\tNULL\tlump_sum\nland_registration\tرسوم تسجيل الأرض (4%)\tinvestor\tNULL\tlump_sum\ngovernment_fees_investor\tرسوم الجهات الحكومية (10%)\tinvestor\tNULL\tlump_sum\nsoil_test\tفحص التربة\tinvestor\tNULL\tlump_sum\n",
+  "stderr": "",
+  "execution_time_ms": 1560
+}

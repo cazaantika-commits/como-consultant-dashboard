@@ -1,0 +1,46 @@
+{
+  "query": "SELECT requirementCode, nameAr, reqType, isMandatory FROM lifecycle_requirements WHERE serviceCode = (SELECT serviceCode FROM lifecycle_services LIMIT 1) LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT requirementCode, nameAr, reqType, isMandatory FROM lifecycle_requirements WHERE serviceCode = (SELECT serviceCode FROM lifecycle_services LIMIT 1) LIMIT 10;",
+  "rows": [
+    {
+      "requirementCode": "REQ-COMP-DOC-01",
+      "nameAr": "طلب شهادة إتمام البناء",
+      "reqType": "document",
+      "isMandatory": "1"
+    },
+    {
+      "requirementCode": "REQ-COMP-DOC-02",
+      "nameAr": "شهادة المهندس الاستشاري بإتمام الأعمال",
+      "reqType": "document",
+      "isMandatory": "1"
+    },
+    {
+      "requirementCode": "REQ-COMP-DOC-03",
+      "nameAr": "شهادة مطابقة الدفاع المدني",
+      "reqType": "document",
+      "isMandatory": "1"
+    },
+    {
+      "requirementCode": "REQ-COMP-DOC-04",
+      "nameAr": "شهادة اتصال الكهرباء والماء",
+      "reqType": "document",
+      "isMandatory": "1"
+    },
+    {
+      "requirementCode": "REQ-COMP-DOC-05",
+      "nameAr": "شهادة إتمام البناء",
+      "reqType": "document",
+      "isMandatory": "1"
+    },
+    {
+      "requirementCode": "REQ-COMP-DATA-01",
+      "nameAr": "تاريخ الإتمام الفعلي",
+      "reqType": "data",
+      "isMandatory": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "requirementCode\tnameAr\treqType\tisMandatory\nREQ-COMP-DOC-01\tطلب شهادة إتمام البناء\tdocument\t1\nREQ-COMP-DOC-02\tشهادة المهندس الاستشاري بإتمام الأعمال\tdocument\t1\nREQ-COMP-DOC-03\tشهادة مطابقة الدفاع المدني\tdocument\t1\nREQ-COMP-DOC-04\tشهادة اتصال الكهرباء والماء\tdocument\t1\nREQ-COMP-DOC-05\tشهادة إتمام البناء\tdocument\t1\nREQ-COMP-DATA-01\tتاريخ الإتمام الفعلي\tdata\t1\n",
+  "stderr": "",
+  "execution_time_ms": 1525
+}

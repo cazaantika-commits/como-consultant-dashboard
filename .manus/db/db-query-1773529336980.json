@@ -1,0 +1,34 @@
+{
+  "query": "SELECT id, project_id, plot_number, building_category_id, duration_months, status FROM cpa_projects ORDER BY id; SELECT id, cpa_project_id, consultant_id, status FROM cpa_project_consultants ORDER BY id; SELECT id, code, legal_name FROM cpa_consultants_master ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, project_id, plot_number, building_category_id, duration_months, status FROM cpa_projects ORDER BY id; SELECT id, cpa_project_id, consultant_id, status FROM cpa_project_consultants ORDER BY id; SELECT id, code, legal_name FROM cpa_consultants_master ORDER BY id;",
+  "rows": [
+    {
+      "id": "90001",
+      "project_id": "2",
+      "plot_number": "6457879",
+      "building_category_id": "30010",
+      "duration_months": "36",
+      "status": "ACTIVE"
+    }
+  ],
+  "messages": [
+    "id\tcpa_project_id\tconsultant_id\tstatus",
+    "120001\t90001\t7\tDRAFT",
+    "120002\t90001\t3\tDRAFT",
+    "120003\t90001\t3\tDRAFT",
+    "id\tcode\tlegal_name",
+    "1\tOSUS\tOsus International",
+    "2\tREALISTI\tRealistic Engineering",
+    "3\tDEC\tDATUM Engineering Consultants",
+    "4\tAAEC\tARTEC Architectural & Engineering Consultants",
+    "5\tABCAE\tArif & Bintoak Consulting Architects & Engineers",
+    "6\tALDEC\tAl Diwan Engineering Consultants",
+    "7\tLACASA\tLACASA",
+    "8\tXYZ\tXYZ Designers",
+    "9\tKIEFERLE\tKieferle & Partner",
+    "10\tSEC(\tSafeer Engineering Consultants (SEC)"
+  ],
+  "stdout": "id\tproject_id\tplot_number\tbuilding_category_id\tduration_months\tstatus\n90001\t2\t6457879\t30010\t36\tACTIVE\nid\tcpa_project_id\tconsultant_id\tstatus\n120001\t90001\t7\tDRAFT\n120002\t90001\t3\tDRAFT\n120003\t90001\t3\tDRAFT\nid\tcode\tlegal_name\n1\tOSUS\tOsus International\n2\tREALISTI\tRealistic Engineering\n3\tDEC\tDATUM Engineering Consultants\n4\tAAEC\tARTEC Architectural & Engineering Consultants\n5\tABCAE\tArif & Bintoak Consulting Architects & Engineers\n6\tALDEC\tAl Diwan Engineering Consultants\n7\tLACASA\tLACASA\n8\tXYZ\tXYZ Designers\n9\tKIEFERLE\tKieferle & Partner\n10\tSEC(\tSafeer Engineering Consultants (SEC)\n",
+  "stderr": "",
+  "execution_time_ms": 2032
+}

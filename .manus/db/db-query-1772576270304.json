@@ -1,0 +1,40 @@
+{
+  "query": "SELECT id, title, status, category FROM tasks ORDER BY id DESC LIMIT 5",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, title, status, category FROM tasks ORDER BY id DESC LIMIT 5",
+  "rows": [
+    {
+      "id": "150001",
+      "title": "⚡ متابعة: فتح حساب بنكي للشركة",
+      "status": "progress",
+      "category": "قانوني"
+    },
+    {
+      "id": "120002",
+      "title": "متابعة رد إيميل: RE: Request for Fee Proposals – Multiple Development Projects",
+      "status": "new",
+      "category": "متابعة إيميل"
+    },
+    {
+      "id": "120001",
+      "title": "متابعة رد إيميل: glass quotation",
+      "status": "new",
+      "category": "متابعة إيميل"
+    },
+    {
+      "id": "90019",
+      "title": "تحليل الملف الجديد 'vending-mississauga-final_2 (1).html' لتقييم الفكرة من منظور دراسات الجدوى والسوق، مع التركيز على حجم السوق المحتمل، تحليل المنافسين، هيكل التكاليف، ومصادر الإيرادات وهوامش الربح.",
+      "status": "done",
+      "category": "meeting-task"
+    },
+    {
+      "id": "90018",
+      "title": "تحليل الملف المرفق 'vending-mississauga-final_2 (1).html' من ناحية قانونية ومالية.",
+      "status": "done",
+      "category": "meeting-task"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitle\tstatus\tcategory\n150001\t⚡ متابعة: فتح حساب بنكي للشركة\tprogress\tقانوني\n120002\tمتابعة رد إيميل: RE: Request for Fee Proposals – Multiple Development Projects\tnew\tمتابعة إيميل\n120001\tمتابعة رد إيميل: glass quotation\tnew\tمتابعة إيميل\n90019\tتحليل الملف الجديد 'vending-mississauga-final_2 (1).html' لتقييم الفكرة من منظور دراسات الجدوى والسوق، مع التركيز على حجم السوق المحتمل، تحليل المنافسين، هيكل التكاليف، ومصادر الإيرادات وهوامش الربح.\tdone\tmeeting-task\n90018\tتحليل الملف المرفق 'vending-mississauga-final_2 (1).html' من ناحية قانونية ومالية.\tdone\tmeeting-task\n",
+  "stderr": "",
+  "execution_time_ms": 1567
+}

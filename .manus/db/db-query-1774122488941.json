@@ -1,0 +1,14 @@
+{
+  "query": "SELECT scenario, COUNT(*) as cnt FROM project_cash_flow_settings WHERE project_id = 4 GROUP BY scenario;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT scenario, COUNT(*) as cnt FROM project_cash_flow_settings WHERE project_id = 4 GROUP BY scenario;",
+  "rows": [
+    {
+      "scenario": "offplan_escrow",
+      "cnt": "29"
+    }
+  ],
+  "messages": [],
+  "stdout": "scenario\tcnt\noffplan_escrow\t29\n",
+  "stderr": "",
+  "execution_time_ms": 1524
+}

@@ -1,0 +1,55 @@
+{
+  "query": "SELECT s.stageCode, s.nameAr, (SELECT COUNT(*) FROM lifecycle_services ls WHERE ls.stageCode = s.stageCode) as serviceCount FROM lifecycle_stages s WHERE s.isActive = 1 ORDER BY s.sortOrder",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT s.stageCode, s.nameAr, (SELECT COUNT(*) FROM lifecycle_services ls WHERE ls.stageCode = s.stageCode) as serviceCount FROM lifecycle_stages s WHERE s.isActive = 1 ORDER BY s.sortOrder",
+  "rows": [
+    {
+      "stageCode": "STG-01",
+      "nameAr": "تأسيس المطوّر وتسجيله",
+      "serviceCount": "5"
+    },
+    {
+      "stageCode": "STG-02",
+      "nameAr": "تسجيل المشروع وفتح الضمان",
+      "serviceCount": "4"
+    },
+    {
+      "stageCode": "STG-10",
+      "nameAr": "مرحلة التصميم ورخصة البناء",
+      "serviceCount": "5"
+    },
+    {
+      "stageCode": "STG-04",
+      "nameAr": "الرقابة المالية والإنشائية",
+      "serviceCount": "4"
+    },
+    {
+      "stageCode": "STG-20",
+      "nameAr": "مرحلة الدعاية والتسويق والمبيعات",
+      "serviceCount": "4"
+    },
+    {
+      "stageCode": "STG-03",
+      "nameAr": "المبيعات على الخارطة وأوكود",
+      "serviceCount": "4"
+    },
+    {
+      "stageCode": "STG-05",
+      "nameAr": "إغلاق المشروع",
+      "serviceCount": "5"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773223257702",
+      "nameAr": "مرحلة اختبارية",
+      "serviceCount": "0"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773413637038",
+      "nameAr": "مرحلة للإيقاف",
+      "serviceCount": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "stageCode\tnameAr\tserviceCount\nSTG-01\tتأسيس المطوّر وتسجيله\t5\nSTG-02\tتسجيل المشروع وفتح الضمان\t4\nSTG-10\tمرحلة التصميم ورخصة البناء\t5\nSTG-04\tالرقابة المالية والإنشائية\t4\nSTG-20\tمرحلة الدعاية والتسويق والمبيعات\t4\nSTG-03\tالمبيعات على الخارطة وأوكود\t4\nSTG-05\tإغلاق المشروع\t5\nSTG-CUSTOM-1773223257702\tمرحلة اختبارية\t0\nSTG-CUSTOM-1773413637038\tمرحلة للإيقاف\t0\n",
+  "stderr": "",
+  "execution_time_ms": 1587
+}

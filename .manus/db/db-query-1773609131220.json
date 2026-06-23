@@ -1,0 +1,60 @@
+{
+  "query": "SELECT si.item_number, si.code, LEFT(si.label, 40) as label\nFROM cpa_scope_category_matrix scm\nJOIN cpa_scope_items si ON si.id = scm.scope_item_id\nJOIN cpa_building_categories bc ON bc.id = scm.building_category_id\nWHERE bc.code = 'MEGA'\n  AND scm.status IN ('INCLUDED','GREEN')\nORDER BY si.item_number\nLIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT si.item_number, si.code, LEFT(si.label, 40) as label\nFROM cpa_scope_category_matrix scm\nJOIN cpa_scope_items si ON si.id = scm.scope_item_id\nJOIN cpa_building_categories bc ON bc.id = scm.building_category_id\nWHERE bc.code = 'MEGA'\n  AND scm.status IN ('INCLUDED','GREEN')\nORDER BY si.item_number\nLIMIT 10;",
+  "rows": [
+    {
+      "item_number": "1",
+      "code": "CONCEPT_DESIGN",
+      "label": "Concept Design"
+    },
+    {
+      "item_number": "2",
+      "code": "SCHEMATIC_DESIGN",
+      "label": "Schematic Design"
+    },
+    {
+      "item_number": "3",
+      "code": "DETAILED_DESIGN",
+      "label": "Detailed Design"
+    },
+    {
+      "item_number": "4",
+      "code": "ARCH_DESIGN",
+      "label": "Architectural Design"
+    },
+    {
+      "item_number": "5",
+      "code": "STRUCTURAL_CIVIL",
+      "label": "Structural / Civil Engineering"
+    },
+    {
+      "item_number": "6",
+      "code": "MEP_ENGINEERING",
+      "label": "MEP Engineering"
+    },
+    {
+      "item_number": "7",
+      "code": "FLS",
+      "label": "Fire Protection & Life Safety (FLS)"
+    },
+    {
+      "item_number": "8",
+      "code": "BIM",
+      "label": "BIM Modeling"
+    },
+    {
+      "item_number": "9",
+      "code": "QS_BOQ",
+      "label": "Quantity Survey (QS) — BOQ"
+    },
+    {
+      "item_number": "10",
+      "code": "PARKING_STRATEGY",
+      "label": "Parking Strategy"
+    }
+  ],
+  "messages": [],
+  "stdout": "item_number\tcode\tlabel\n1\tCONCEPT_DESIGN\tConcept Design\n2\tSCHEMATIC_DESIGN\tSchematic Design\n3\tDETAILED_DESIGN\tDetailed Design\n4\tARCH_DESIGN\tArchitectural Design\n5\tSTRUCTURAL_CIVIL\tStructural / Civil Engineering\n6\tMEP_ENGINEERING\tMEP Engineering\n7\tFLS\tFire Protection & Life Safety (FLS)\n8\tBIM\tBIM Modeling\n9\tQS_BOQ\tQuantity Survey (QS) — BOQ\n10\tPARKING_STRATEGY\tParking Strategy\n",
+  "stderr": "",
+  "execution_time_ms": 1497
+}

@@ -1,0 +1,26 @@
+{
+  "query": "SELECT id, title, meetingStatus, minutesSummary, startedAt, endedAt FROM meetings ORDER BY id DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, title, meetingStatus, minutesSummary, startedAt, endedAt FROM meetings ORDER BY id DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "30002",
+      "title": "اتعاب الاستشاريين",
+      "meetingStatus": "completed",
+      "minutesSummary": "عُقد اجتماع لمناقشة تحديث المنصة بأسعار الاستشاريين الجديدة والسابقة، وتسجيل الاستشاريين غير المسجلين في المشاريع المناسبة. تم توزيع المهام على المشاركين، حيث ستقوم سلوى وخازن وألينا بالعمل على استخراج عروض الأسعار من جوجل درايف وتحديث المنصة. تم التأكيد على التركيز على العروض التي تشمل عدة مشاريع.",
+      "startedAt": "2026-02-21 17:29:25",
+      "endedAt": "2026-02-21 17:30:35"
+    },
+    {
+      "id": "2",
+      "title": "مناقشة دراسات الجدوى للمشاريع",
+      "meetingStatus": "completed",
+      "minutesSummary": "NULL",
+      "startedAt": "2026-02-21 15:50:31",
+      "endedAt": "2026-02-21 16:02:13"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitle\tmeetingStatus\tminutesSummary\tstartedAt\tendedAt\n30002\tاتعاب الاستشاريين\tcompleted\tعُقد اجتماع لمناقشة تحديث المنصة بأسعار الاستشاريين الجديدة والسابقة، وتسجيل الاستشاريين غير المسجلين في المشاريع المناسبة. تم توزيع المهام على المشاركين، حيث ستقوم سلوى وخازن وألينا بالعمل على استخراج عروض الأسعار من جوجل درايف وتحديث المنصة. تم التأكيد على التركيز على العروض التي تشمل عدة مشاريع.\t2026-02-21 17:29:25\t2026-02-21 17:30:35\n2\tمناقشة دراسات الجدوى للمشاريع\tcompleted\tNULL\t2026-02-21 15:50:31\t2026-02-21 16:02:13\n",
+  "stderr": "",
+  "execution_time_ms": 1615
+}

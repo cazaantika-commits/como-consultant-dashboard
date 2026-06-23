@@ -1,0 +1,22 @@
+{
+  "query": "SELECT item_key, funding_source FROM project_cash_flow_settings WHERE project_id = 4 AND scenario = 'offplan_escrow' AND item_key IN ('developer_fee_offplan','fraz_fee','rera_registration') LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT item_key, funding_source FROM project_cash_flow_settings WHERE project_id = 4 AND scenario = 'offplan_escrow' AND item_key IN ('developer_fee_offplan','fraz_fee','rera_registration') LIMIT 5;",
+  "rows": [
+    {
+      "item_key": "developer_fee_offplan",
+      "funding_source": "escrow"
+    },
+    {
+      "item_key": "fraz_fee",
+      "funding_source": "escrow"
+    },
+    {
+      "item_key": "rera_registration",
+      "funding_source": "escrow"
+    }
+  ],
+  "messages": [],
+  "stdout": "item_key\tfunding_source\ndeveloper_fee_offplan\tescrow\nfraz_fee\tescrow\nrera_registration\tescrow\n",
+  "stderr": "",
+  "execution_time_ms": 1561
+}

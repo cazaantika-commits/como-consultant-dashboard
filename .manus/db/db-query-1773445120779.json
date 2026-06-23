@@ -1,0 +1,22 @@
+{
+  "query": "SELECT id, name FROM projects WHERE name LIKE '%5392%' OR name LIKE '%ند الشبا%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, name FROM projects WHERE name LIKE '%5392%' OR name LIKE '%ند الشبا%';",
+  "rows": [
+    {
+      "id": "4",
+      "name": "ند الشبا — قطعة 1 (6185392)"
+    },
+    {
+      "id": "5",
+      "name": "ند الشبا — قطعة 2 المدمجة (6182776)"
+    },
+    {
+      "id": "6",
+      "name": "ند الشبا — قطعة 3 الفلل (6180578)"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\n4\tند الشبا — قطعة 1 (6185392)\n5\tند الشبا — قطعة 2 المدمجة (6182776)\n6\tند الشبا — قطعة 3 الفلل (6180578)\n",
+  "stderr": "",
+  "execution_time_ms": 1513
+}

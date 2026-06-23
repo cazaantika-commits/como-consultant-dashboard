@@ -1,0 +1,19 @@
+{
+  "query": "SELECT id, projectId, serviceCode, stageCode, plannedStartDate, plannedDueDate, operationalStatus FROM project_service_instances;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, projectId, serviceCode, stageCode, plannedStartDate, plannedDueDate, operationalStatus FROM project_service_instances;",
+  "rows": [
+    {
+      "id": "1",
+      "projectId": "4",
+      "serviceCode": "SRV-RERA-PROJ-REG",
+      "stageCode": "STG-02",
+      "plannedStartDate": "04-05-2026",
+      "plannedDueDate": "15-06-2026",
+      "operationalStatus": "not_started"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tprojectId\tserviceCode\tstageCode\tplannedStartDate\tplannedDueDate\toperationalStatus\n1\t4\tSRV-RERA-PROJ-REG\tSTG-02\t04-05-2026\t15-06-2026\tnot_started\n",
+  "stderr": "",
+  "execution_time_ms": 1561
+}

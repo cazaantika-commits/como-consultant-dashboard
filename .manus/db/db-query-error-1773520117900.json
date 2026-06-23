@@ -1,0 +1,8 @@
+{
+  "query": "\n-- First check current state of item 39\nSELECT scm.id, scm.item_id, scm.category_id, scm.status, bc.name as category_name, si.item_number, si.name as item_name\nFROM cpa_scope_category_matrix scm\nJOIN cpa_building_categories bc ON scm.category_id = bc.id\nJOIN cpa_scope_items si ON scm.item_id = si.id\nWHERE si.item_number = 39;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute \n-- First check current state of item 39\nSELECT scm.id, scm.item_id, scm.category_id, scm.status, bc.name as category_name, si.item_number, si.name as item_name\nFROM cpa_scope_category_matrix scm\nJOIN cpa_building_categories bc ON scm.category_id = bc.id\nJOIN cpa_scope_items si ON scm.item_id = si.id\nWHERE si.item_number = 39;\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 3: Unknown column 'scm.category_id' in 'on clause'"
+  ]
+}

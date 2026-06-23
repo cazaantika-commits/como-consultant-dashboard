@@ -1,0 +1,91 @@
+{
+  "query": "SELECT item_key, name_ar, section, distribution_method, lump_sum_month, start_month, end_month FROM project_cash_flow_settings WHERE project_id = '4' AND scenario = 'offplan_escrow' AND section = 'offplan' ORDER BY sort_order;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT item_key, name_ar, section, distribution_method, lump_sum_month, start_month, end_month FROM project_cash_flow_settings WHERE project_id = '4' AND scenario = 'offplan_escrow' AND section = 'offplan' ORDER BY sort_order;",
+  "rows": [
+    {
+      "item_key": "developer_fee_offplan",
+      "name_ar": "أتعاب المطور — أوف بلان (1%)",
+      "section": "offplan",
+      "distribution_method": "equal_spread",
+      "lump_sum_month": "NULL",
+      "start_month": "3",
+      "end_month": "4"
+    },
+    {
+      "item_key": "fraz_fee",
+      "name_ar": "رسوم الفرز (40 د/قدم²)",
+      "section": "offplan",
+      "distribution_method": "lump_sum",
+      "lump_sum_month": "7",
+      "start_month": "7",
+      "end_month": "7"
+    },
+    {
+      "item_key": "rera_registration",
+      "name_ar": "تسجيل بيع على الخارطة - ريرا",
+      "section": "offplan",
+      "distribution_method": "lump_sum",
+      "lump_sum_month": "7",
+      "start_month": "7",
+      "end_month": "7"
+    },
+    {
+      "item_key": "rera_units",
+      "name_ar": "تسجيل الوحدات - ريرا",
+      "section": "offplan",
+      "distribution_method": "lump_sum",
+      "lump_sum_month": "7",
+      "start_month": "7",
+      "end_month": "7"
+    },
+    {
+      "item_key": "noc_fee",
+      "name_ar": "رسوم NOC للبيع",
+      "section": "offplan",
+      "distribution_method": "lump_sum",
+      "lump_sum_month": "7",
+      "start_month": "7",
+      "end_month": "7"
+    },
+    {
+      "item_key": "escrow_fee",
+      "name_ar": "رسوم حساب الضمان",
+      "section": "offplan",
+      "distribution_method": "lump_sum",
+      "lump_sum_month": "7",
+      "start_month": "7",
+      "end_month": "7"
+    },
+    {
+      "item_key": "community_fee",
+      "name_ar": "رسوم المجتمع",
+      "section": "offplan",
+      "distribution_method": "lump_sum",
+      "lump_sum_month": "7",
+      "start_month": "7",
+      "end_month": "7"
+    },
+    {
+      "item_key": "marketing_offplan",
+      "name_ar": "التسويق والإعلان — أوف بلان (25%)",
+      "section": "offplan",
+      "distribution_method": "equal_spread",
+      "lump_sum_month": "NULL",
+      "start_month": "3",
+      "end_month": "4"
+    },
+    {
+      "item_key": "escrow_deposit",
+      "name_ar": "إيداع حساب الضمان (20%)",
+      "section": "offplan",
+      "distribution_method": "lump_sum",
+      "lump_sum_month": "7",
+      "start_month": "7",
+      "end_month": "7"
+    }
+  ],
+  "messages": [],
+  "stdout": "item_key\tname_ar\tsection\tdistribution_method\tlump_sum_month\tstart_month\tend_month\ndeveloper_fee_offplan\tأتعاب المطور — أوف بلان (1%)\toffplan\tequal_spread\tNULL\t3\t4\nfraz_fee\tرسوم الفرز (40 د/قدم²)\toffplan\tlump_sum\t7\t7\t7\nrera_registration\tتسجيل بيع على الخارطة - ريرا\toffplan\tlump_sum\t7\t7\t7\nrera_units\tتسجيل الوحدات - ريرا\toffplan\tlump_sum\t7\t7\t7\nnoc_fee\tرسوم NOC للبيع\toffplan\tlump_sum\t7\t7\t7\nescrow_fee\tرسوم حساب الضمان\toffplan\tlump_sum\t7\t7\t7\ncommunity_fee\tرسوم المجتمع\toffplan\tlump_sum\t7\t7\t7\nmarketing_offplan\tالتسويق والإعلان — أوف بلان (25%)\toffplan\tequal_spread\tNULL\t3\t4\nescrow_deposit\tإيداع حساب الضمان (20%)\toffplan\tlump_sum\t7\t7\t7\n",
+  "stderr": "",
+  "execution_time_ms": 1545
+}

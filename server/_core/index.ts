@@ -5,8 +5,21 @@ import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
+import dashboardDataRoute from "../dashboardDataRoute";
+import agentApiRoute from "../agentApi";
+import fileUploadRoute from "../fileUploadRoute";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { initTelegramBot, registerCallbackHandler, getBotInfo } from "../telegramBot";
+import { startEmailNotificationService } from "../emailNotificationService";
+import { startLifecycleDeadlineScheduler } from "../lifecycleDeadlineScheduler";
+import { startPaymentReminderScheduler } from "../paymentReminderScheduler";
+import { startGeneralRequestReminderScheduler } from "../generalRequestReminderScheduler";
+import { startWeeklyReportScheduler } from "../weeklyReportScheduler";
+import complianceReportRoute from "../complianceReport";
+import lifecycleApiRoute from "../lifecycleApiRoute";
+import cpaReportRoute from "../cpaReportRoute";
+import portfolioPdfRoute from "../portfolioPdfRoute";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -35,6 +48,32 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+  // Google OAuth callback for Drive integration
+  app.get("/api/google/oauth/callback", async (req, res) => {
+    const code = req.query.code as string;
+    if (!code) {
+      res.status(400).send("Missing code");
+      return;
+    }
+    // Redirect to frontend with the code so it can exchange via tRPC
+    res.redirect(302, `/google-connect?code=${encodeURIComponent(code)}`);
+  });
+
+  // Dashboard data API (for original HTML page)
+  app.use("/api/dashboard-data", dashboardDataRoute);
+  // Agent API (for Qasim, Salwa, and other agents)
+  app.use("/api/agent", agentApiRoute);
+  // File upload API (for command center items)
+  app.use("/api/upload", fileUploadRoute);
+  // Compliance report HTML/PDF for DLD/RERA lifecycle
+  app.use("/api/lifecycle", complianceReportRoute);
+  // Lifecycle AI API (structured JSON for agents)
+  app.use("/api/lifecycle", lifecycleApiRoute);
+  // CPA True Cost Report (printable HTML)
+  app.use("/api/cpa/report", cpaReportRoute);
+  // Capital Portfolio PDF export
+  app.use("/api/portfolio/pdf", portfolioPdfRoute);
+
   // tRPC API
   app.use(
     "/api/trpc",
@@ -60,6 +99,34 @@ async function startServer() {
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
   });
+
+  // Initialize Telegram bot (Salwa)
+  try {
+    const telegramBot = await initTelegramBot();
+    if (telegramBot) {
+      registerCallbackHandler(telegramBot);
+      const info = await getBotInfo();
+      if (info) {
+        console.log(`[TelegramBot] \u2705 @${info.username} (${info.firstName}) is running`);
+      }
+    }
+  } catch (error) {
+    console.warn("[TelegramBot] Failed to start:", error);
+  }
+
+  // Start email notification background service
+  startEmailNotificationService();
+
+  // Start lifecycle deadline checker (daily at 8 AM Dubai time)
+  startLifecycleDeadlineScheduler();
+
+  // Start payment request reminder (every 36 hours for pending requests)
+  startPaymentReminderScheduler();
+
+  // Start general request reminder (every 36 hours for pending non-financial requests)
+  startGeneralRequestReminderScheduler();
+  // Start weekly summary report (every Monday at 9:00 AM Dubai time)
+  startWeeklyReportScheduler();
 }
 
 startServer().catch(console.error);

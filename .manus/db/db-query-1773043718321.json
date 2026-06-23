@@ -1,0 +1,46 @@
+{
+  "query": "SELECT id, projectId, stageNumber, stageName, stageStatus, errorMessage, SUBSTRING(stageOutput, 1, 100) as preview FROM joelle_analysis_stages WHERE stageNumber IN (6, 10);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, projectId, stageNumber, stageName, stageStatus, errorMessage, SUBSTRING(stageOutput, 1, 100) as preview FROM joelle_analysis_stages WHERE stageNumber IN (6, 10);",
+  "rows": [
+    {
+      "id": "7",
+      "projectId": "4",
+      "stageNumber": "6",
+      "stageName": "استراتيجية المنتج",
+      "stageStatus": "completed",
+      "errorMessage": "NULL",
+      "preview": "مرحباً، أنا جويل، محللة السوق العقاري في Como Developments. بناءً على البيانات المقدمة والتاريخ الحا"
+    },
+    {
+      "id": "11",
+      "projectId": "4",
+      "stageNumber": "10",
+      "stageName": "مصالحة البيانات",
+      "stageStatus": "error",
+      "errorMessage": "LLM invoke failed: 500 Internal Server Error – {\"code\":13,\"message\":\"received bad response from upstream\"}",
+      "preview": ""
+    },
+    {
+      "id": "30006",
+      "projectId": "5",
+      "stageNumber": "6",
+      "stageName": "استراتيجية المنتج",
+      "stageStatus": "completed",
+      "errorMessage": "NULL",
+      "preview": "أهلاً بكِ في Como Developments! بصفتي جويل، محللة السوق العقاري، سأقوم بتصميم استراتيجية المنتج لمشر"
+    },
+    {
+      "id": "30010",
+      "projectId": "5",
+      "stageNumber": "10",
+      "stageName": "مصالحة البيانات",
+      "stageStatus": "completed",
+      "errorMessage": "NULL",
+      "preview": "أهلاً بكِ، أنا جويل، بتاريخ 9/3/2026، وسأقوم بمصالحة البيانات لمشروع \"ند الشبا — قطعة 2 المدمجة (618"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tprojectId\tstageNumber\tstageName\tstageStatus\terrorMessage\tpreview\n7\t4\t6\tاستراتيجية المنتج\tcompleted\tNULL\tمرحباً، أنا جويل، محللة السوق العقاري في Como Developments. بناءً على البيانات المقدمة والتاريخ الحا\n11\t4\t10\tمصالحة البيانات\terror\tLLM invoke failed: 500 Internal Server Error – {\"code\":13,\"message\":\"received bad response from upstream\"}\t\n30006\t5\t6\tاستراتيجية المنتج\tcompleted\tNULL\tأهلاً بكِ في Como Developments! بصفتي جويل، محللة السوق العقاري، سأقوم بتصميم استراتيجية المنتج لمشر\n30010\t5\t10\tمصالحة البيانات\tcompleted\tNULL\tأهلاً بكِ، أنا جويل، بتاريخ 9/3/2026، وسأقوم بمصالحة البيانات لمشروع \"ند الشبا — قطعة 2 المدمجة (618\n",
+  "stderr": "",
+  "execution_time_ms": 1591
+}

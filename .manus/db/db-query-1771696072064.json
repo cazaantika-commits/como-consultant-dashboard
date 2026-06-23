@@ -1,0 +1,61 @@
+{
+  "query": "SELECT id, meetingId, speakerId, speakerType, LEFT(messageText, 200) as msg_preview FROM meetingMessages WHERE meetingId = 30002 ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, meetingId, speakerId, speakerType, LEFT(messageText, 200) as msg_preview FROM meetingMessages WHERE meetingId = 30002 ORDER BY id;",
+  "rows": [
+    {
+      "id": "30012",
+      "meetingId": "30002",
+      "speakerId": "system",
+      "speakerType": "agent",
+      "msg_preview": "🟢 تم بدء الاجتماع. يمكنكم الآن النقاش."
+    },
+    {
+      "id": "30013",
+      "meetingId": "30002",
+      "speakerId": "user",
+      "speakerType": "user",
+      "msg_preview": "مرحبا مطلوب تنفيذ المهمة كما هو مكتوب في العموان والتفاصيل"
+    },
+    {
+      "id": "30014",
+      "meetingId": "30002",
+      "speakerId": "salwa",
+      "speakerType": "agent",
+      "msg_preview": "مرحباً مديرنا العزيز! 😊"
+    },
+    {
+      "id": "30015",
+      "meetingId": "30002",
+      "speakerId": "khazen",
+      "speakerType": "agent",
+      "msg_preview": "مرحباً، تمام المدير! سأبدأ بمراجعة ملفات جوجل درايف لاستخراج عروض أسعار الاستشاريين. سأركز على العروض التي تشمل عدة مشاريع لتحديث المنصة بأسعار الاستشاريين الجديدة والسابقة. سأقوم بتنظيم هذه المعلومات"
+    },
+    {
+      "id": "30016",
+      "meetingId": "30002",
+      "speakerId": "alina",
+      "speakerType": "agent",
+      "msg_preview": "بالتأكيد، سأقوم بالتركيز على تحديث المنصة بأسعار الاستشاريين الجديدة والسابقة. سأبدأ بمراجعة ملفات جوجل درايف لاستخراج عروض أسعار الاستشاريين، وأقوم بتحليلها لتركيز على العروض التي تشمل عدة مشاريع. سأ"
+    },
+    {
+      "id": "30017",
+      "meetingId": "30002",
+      "speakerId": "system",
+      "speakerType": "agent",
+      "msg_preview": "🔴 تم إنهاء الاجتماع. جاري توليد المخرجات..."
+    },
+    {
+      "id": "30018",
+      "meetingId": "30002",
+      "speakerId": "system",
+      "speakerType": "agent",
+      "msg_preview": "⚠️ لم يتم توليد المخرجات تلقائياً. يمكنك توليدها يدوياً لاحقاً."
+    }
+  ],
+  "messages": [
+    "سأقوم بالتركيز على تسجيل الاستشاريين غير المسجلين في المشاريع المناسبة بناءً على توجيهاتك. سأبحث أيضاً في تحديث المنصة بأسعار الاستشاريين الجديدة والسابقة. إذا احتجت لأي مساعد"
+  ],
+  "stdout": "id\tmeetingId\tspeakerId\tspeakerType\tmsg_preview\n30012\t30002\tsystem\tagent\t🟢 تم بدء الاجتماع. يمكنكم الآن النقاش.\n30013\t30002\tuser\tuser\tمرحبا مطلوب تنفيذ المهمة كما هو مكتوب في العموان والتفاصيل\n30014\t30002\tsalwa\tagent\tمرحباً مديرنا العزيز! 😊\n\nسأقوم بالتركيز على تسجيل الاستشاريين غير المسجلين في المشاريع المناسبة بناءً على توجيهاتك. سأبحث أيضاً في تحديث المنصة بأسعار الاستشاريين الجديدة والسابقة. إذا احتجت لأي مساعد\n30015\t30002\tkhazen\tagent\tمرحباً، تمام المدير! سأبدأ بمراجعة ملفات جوجل درايف لاستخراج عروض أسعار الاستشاريين. سأركز على العروض التي تشمل عدة مشاريع لتحديث المنصة بأسعار الاستشاريين الجديدة والسابقة. سأقوم بتنظيم هذه المعلومات\n30016\t30002\talina\tagent\tبالتأكيد، سأقوم بالتركيز على تحديث المنصة بأسعار الاستشاريين الجديدة والسابقة. سأبدأ بمراجعة ملفات جوجل درايف لاستخراج عروض أسعار الاستشاريين، وأقوم بتحليلها لتركيز على العروض التي تشمل عدة مشاريع. سأ\n30017\t30002\tsystem\tagent\t🔴 تم إنهاء الاجتماع. جاري توليد المخرجات...\n30018\t30002\tsystem\tagent\t⚠️ لم يتم توليد المخرجات تلقائياً. يمكنك توليدها يدوياً لاحقاً.\n",
+  "stderr": "",
+  "execution_time_ms": 1533
+}

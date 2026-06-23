@@ -2342,8 +2342,3 @@ export const cpaTrueCostReportApproval = mysqlTable("cpa_true_cost_report_approv
 (table) => [
   index("cpa_tcra_project").on(table.cpaProjectId),
 ]);
-
-
-// Type exports for use in server code
-export type User = typeof users.$inferSelect;
-export type InsertUser = typeof users.$inferInsert;

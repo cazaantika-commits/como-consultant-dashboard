@@ -1,0 +1,35 @@
+{
+  "query": "SELECT COUNT(*) as total, source, primary_phase FROM cost_distribution_rules GROUP BY source, primary_phase ORDER BY primary_phase, source;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT COUNT(*) as total, source, primary_phase FROM cost_distribution_rules GROUP BY source, primary_phase ORDER BY primary_phase, source;",
+  "rows": [
+    {
+      "total": "3",
+      "source": "investor",
+      "primary_phase": "land"
+    },
+    {
+      "total": "6",
+      "source": "investor",
+      "primary_phase": "design"
+    },
+    {
+      "total": "9",
+      "source": "investor",
+      "primary_phase": "offplan"
+    },
+    {
+      "total": "2",
+      "source": "investor",
+      "primary_phase": "construction"
+    },
+    {
+      "total": "6",
+      "source": "escrow",
+      "primary_phase": "construction"
+    }
+  ],
+  "messages": [],
+  "stdout": "total\tsource\tprimary_phase\n3\tinvestor\tland\n6\tinvestor\tdesign\n9\tinvestor\toffplan\n2\tinvestor\tconstruction\n6\tescrow\tconstruction\n",
+  "stderr": "",
+  "execution_time_ms": 1573
+}

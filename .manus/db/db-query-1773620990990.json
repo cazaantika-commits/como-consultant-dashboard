@@ -1,0 +1,61 @@
+{
+  "query": "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'cpa_project_consultants' ORDER BY ORDINAL_POSITION;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'cpa_project_consultants' ORDER BY ORDINAL_POSITION;",
+  "rows": [
+    {
+      "COLUMN_NAME": "id"
+    },
+    {
+      "COLUMN_NAME": "cpa_project_id"
+    },
+    {
+      "COLUMN_NAME": "consultant_id"
+    },
+    {
+      "COLUMN_NAME": "proposal_date"
+    },
+    {
+      "COLUMN_NAME": "proposal_reference"
+    },
+    {
+      "COLUMN_NAME": "design_fee_amount"
+    },
+    {
+      "COLUMN_NAME": "design_fee_method"
+    },
+    {
+      "COLUMN_NAME": "design_fee_percentage"
+    },
+    {
+      "COLUMN_NAME": "supervision_fee_amount"
+    },
+    {
+      "COLUMN_NAME": "supervision_fee_method"
+    },
+    {
+      "COLUMN_NAME": "supervision_fee_percentage"
+    },
+    {
+      "COLUMN_NAME": "supervision_stated_duration_months"
+    },
+    {
+      "COLUMN_NAME": "supervision_submitted"
+    },
+    {
+      "COLUMN_NAME": "import_json"
+    },
+    {
+      "COLUMN_NAME": "status"
+    },
+    {
+      "COLUMN_NAME": "created_at"
+    },
+    {
+      "COLUMN_NAME": "updated_at"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\nid\ncpa_project_id\nconsultant_id\nproposal_date\nproposal_reference\ndesign_fee_amount\ndesign_fee_method\ndesign_fee_percentage\nsupervision_fee_amount\nsupervision_fee_method\nsupervision_fee_percentage\nsupervision_stated_duration_months\nsupervision_submitted\nimport_json\nstatus\ncreated_at\nupdated_at\n",
+  "stderr": "",
+  "execution_time_ms": 1535
+}

@@ -1,0 +1,20 @@
+{
+  "query": "SELECT item_key, name_ar, section, funding_source, sort_order, is_active, distribution_method, lump_sum_month FROM project_cash_flow_settings WHERE project_id = 4 AND scenario = 'offplan_escrow' AND item_key = 'escrow_deposit'",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT item_key, name_ar, section, funding_source, sort_order, is_active, distribution_method, lump_sum_month FROM project_cash_flow_settings WHERE project_id = 4 AND scenario = 'offplan_escrow' AND item_key = 'escrow_deposit'",
+  "rows": [
+    {
+      "item_key": "escrow_deposit",
+      "name_ar": "إيداع حساب الضمان (20%)",
+      "section": "offplan",
+      "funding_source": "investor",
+      "sort_order": "27",
+      "is_active": "1",
+      "distribution_method": "lump_sum",
+      "lump_sum_month": "4"
+    }
+  ],
+  "messages": [],
+  "stdout": "item_key\tname_ar\tsection\tfunding_source\tsort_order\tis_active\tdistribution_method\tlump_sum_month\nescrow_deposit\tإيداع حساب الضمان (20%)\toffplan\tinvestor\t27\t1\tlump_sum\t4\n",
+  "stderr": "",
+  "execution_time_ms": 1655
+}

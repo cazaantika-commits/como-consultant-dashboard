@@ -1,0 +1,22 @@
+{
+  "query": "SELECT item_key, funding_source, section, scenario FROM project_cash_flow_settings WHERE project_id = 4 AND item_key IN ('escrow_deposit', 'surveyor_fee') LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT item_key, funding_source, section, scenario FROM project_cash_flow_settings WHERE project_id = 4 AND item_key IN ('escrow_deposit', 'surveyor_fee') LIMIT 10;",
+  "rows": [
+    {
+      "item_key": "escrow_deposit",
+      "funding_source": "investor",
+      "section": "offplan",
+      "scenario": "offplan_escrow"
+    },
+    {
+      "item_key": "surveyor_fee",
+      "funding_source": "escrow",
+      "section": "escrow",
+      "scenario": "offplan_escrow"
+    }
+  ],
+  "messages": [],
+  "stdout": "item_key\tfunding_source\tsection\tscenario\nescrow_deposit\tinvestor\toffplan\toffplan_escrow\nsurveyor_fee\tescrow\tescrow\toffplan_escrow\n",
+  "stderr": "",
+  "execution_time_ms": 1638
+}

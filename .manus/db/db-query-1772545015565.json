@@ -1,0 +1,346 @@
+{
+  "query": "DESCRIBE costs_cash_flow;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute DESCRIBE costs_cash_flow;",
+  "rows": [
+    {
+      "Field": "id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": "auto_increment"
+    },
+    {
+      "Field": "userId",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "projectId",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "aiSmartReport",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "aiRecommendationsJson",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "aiReportGeneratedAt",
+      "Type": "timestamp",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "landPrice",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "agentCommissionLandPct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "1",
+      "Extra": ""
+    },
+    {
+      "Field": "landRegistrationPct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "4",
+      "Extra": ""
+    },
+    {
+      "Field": "soilInvestigation",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "topographySurvey",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "designFeePct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "2",
+      "Extra": ""
+    },
+    {
+      "Field": "supervisionFeePct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "2",
+      "Extra": ""
+    },
+    {
+      "Field": "authoritiesFee",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "separationFeePerM2",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "40",
+      "Extra": ""
+    },
+    {
+      "Field": "constructionCostPerSqft",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "communityFee",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "contingenciesPct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "2",
+      "Extra": ""
+    },
+    {
+      "Field": "developerFeePct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "5",
+      "Extra": ""
+    },
+    {
+      "Field": "agentCommissionSalePct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "5",
+      "Extra": ""
+    },
+    {
+      "Field": "marketingPct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "2",
+      "Extra": ""
+    },
+    {
+      "Field": "reraOffplanFee",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "150000",
+      "Extra": ""
+    },
+    {
+      "Field": "reraUnitFee",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "850",
+      "Extra": ""
+    },
+    {
+      "Field": "nocFee",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "10000",
+      "Extra": ""
+    },
+    {
+      "Field": "escrowFee",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "140000",
+      "Extra": ""
+    },
+    {
+      "Field": "bankCharges",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "20000",
+      "Extra": ""
+    },
+    {
+      "Field": "surveyorFees",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "12000",
+      "Extra": ""
+    },
+    {
+      "Field": "reraAuditFees",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "18000",
+      "Extra": ""
+    },
+    {
+      "Field": "reraInspectionFees",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "70000",
+      "Extra": ""
+    },
+    {
+      "Field": "comoProfitSharePct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "15",
+      "Extra": ""
+    },
+    {
+      "Field": "projectDurationMonths",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "36",
+      "Extra": ""
+    },
+    {
+      "Field": "constructionStartMonth",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "6",
+      "Extra": ""
+    },
+    {
+      "Field": "constructionDurationMonths",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "24",
+      "Extra": ""
+    },
+    {
+      "Field": "salesStartMonth",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "1",
+      "Extra": ""
+    },
+    {
+      "Field": "salesDurationMonths",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "30",
+      "Extra": ""
+    },
+    {
+      "Field": "salesPhase1Pct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "30",
+      "Extra": ""
+    },
+    {
+      "Field": "salesPhase2Pct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "40",
+      "Extra": ""
+    },
+    {
+      "Field": "salesPhase3Pct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "30",
+      "Extra": ""
+    },
+    {
+      "Field": "isApproved",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "approvedAt",
+      "Type": "timestamp",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "createdAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": ""
+    },
+    {
+      "Field": "updatedAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": "DEFAULT_GENERATED on update CURRENT_TIMESTAMP"
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nid\tint\tNO\tPRI\tNULL\tauto_increment\nuserId\tint\tNO\tMUL\tNULL\t\nprojectId\tint\tNO\tMUL\tNULL\t\naiSmartReport\ttext\tYES\t\tNULL\t\naiRecommendationsJson\ttext\tYES\t\tNULL\t\naiReportGeneratedAt\ttimestamp\tYES\t\tNULL\t\nlandPrice\tint\tYES\t\t0\t\nagentCommissionLandPct\tdecimal(5,2)\tYES\t\t1\t\nlandRegistrationPct\tdecimal(5,2)\tYES\t\t4\t\nsoilInvestigation\tint\tYES\t\t0\t\ntopographySurvey\tint\tYES\t\t0\t\ndesignFeePct\tdecimal(5,2)\tYES\t\t2\t\nsupervisionFeePct\tdecimal(5,2)\tYES\t\t2\t\nauthoritiesFee\tint\tYES\t\t0\t\nseparationFeePerM2\tint\tYES\t\t40\t\nconstructionCostPerSqft\tint\tYES\t\t0\t\ncommunityFee\tint\tYES\t\t0\t\ncontingenciesPct\tdecimal(5,2)\tYES\t\t2\t\ndeveloperFeePct\tdecimal(5,2)\tYES\t\t5\t\nagentCommissionSalePct\tdecimal(5,2)\tYES\t\t5\t\nmarketingPct\tdecimal(5,2)\tYES\t\t2\t\nreraOffplanFee\tint\tYES\t\t150000\t\nreraUnitFee\tint\tYES\t\t850\t\nnocFee\tint\tYES\t\t10000\t\nescrowFee\tint\tYES\t\t140000\t\nbankCharges\tint\tYES\t\t20000\t\nsurveyorFees\tint\tYES\t\t12000\t\nreraAuditFees\tint\tYES\t\t18000\t\nreraInspectionFees\tint\tYES\t\t70000\t\ncomoProfitSharePct\tdecimal(5,2)\tYES\t\t15\t\nprojectDurationMonths\tint\tYES\t\t36\t\nconstructionStartMonth\tint\tYES\t\t6\t\nconstructionDurationMonths\tint\tYES\t\t24\t\nsalesStartMonth\tint\tYES\t\t1\t\nsalesDurationMonths\tint\tYES\t\t30\t\nsalesPhase1Pct\tdecimal(5,2)\tYES\t\t30\t\nsalesPhase2Pct\tdecimal(5,2)\tYES\t\t40\t\nsalesPhase3Pct\tdecimal(5,2)\tYES\t\t30\t\nisApproved\tint\tNO\t\t0\t\napprovedAt\ttimestamp\tYES\t\tNULL\t\ncreatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\t\nupdatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\tDEFAULT_GENERATED on update CURRENT_TIMESTAMP\n",
+  "stderr": "",
+  "execution_time_ms": 1687
+}

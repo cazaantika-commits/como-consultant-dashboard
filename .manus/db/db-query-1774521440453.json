@@ -1,0 +1,88 @@
+{
+  "query": "SELECT item_key, lump_sum_month, start_month, end_month FROM project_cash_flow_settings WHERE project_id = '4' AND section = 'offplan' AND distribution_method = 'lump_sum';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT item_key, lump_sum_month, start_month, end_month FROM project_cash_flow_settings WHERE project_id = '4' AND section = 'offplan' AND distribution_method = 'lump_sum';",
+  "rows": [
+    {
+      "item_key": "fraz_fee",
+      "lump_sum_month": "3",
+      "start_month": "3",
+      "end_month": "3"
+    },
+    {
+      "item_key": "rera_registration",
+      "lump_sum_month": "3",
+      "start_month": "3",
+      "end_month": "3"
+    },
+    {
+      "item_key": "rera_units",
+      "lump_sum_month": "3",
+      "start_month": "3",
+      "end_month": "3"
+    },
+    {
+      "item_key": "noc_fee",
+      "lump_sum_month": "3",
+      "start_month": "3",
+      "end_month": "3"
+    },
+    {
+      "item_key": "escrow_fee",
+      "lump_sum_month": "3",
+      "start_month": "3",
+      "end_month": "3"
+    },
+    {
+      "item_key": "community_fee",
+      "lump_sum_month": "3",
+      "start_month": "3",
+      "end_month": "3"
+    },
+    {
+      "item_key": "fraz_fee",
+      "lump_sum_month": "3",
+      "start_month": "3",
+      "end_month": "3"
+    },
+    {
+      "item_key": "rera_registration",
+      "lump_sum_month": "3",
+      "start_month": "3",
+      "end_month": "3"
+    },
+    {
+      "item_key": "rera_units",
+      "lump_sum_month": "3",
+      "start_month": "3",
+      "end_month": "3"
+    },
+    {
+      "item_key": "noc_fee",
+      "lump_sum_month": "3",
+      "start_month": "3",
+      "end_month": "3"
+    },
+    {
+      "item_key": "escrow_fee",
+      "lump_sum_month": "3",
+      "start_month": "3",
+      "end_month": "3"
+    },
+    {
+      "item_key": "community_fee",
+      "lump_sum_month": "3",
+      "start_month": "3",
+      "end_month": "3"
+    },
+    {
+      "item_key": "escrow_deposit",
+      "lump_sum_month": "3",
+      "start_month": "3",
+      "end_month": "3"
+    }
+  ],
+  "messages": [],
+  "stdout": "item_key\tlump_sum_month\tstart_month\tend_month\nfraz_fee\t3\t3\t3\nrera_registration\t3\t3\t3\nrera_units\t3\t3\t3\nnoc_fee\t3\t3\t3\nescrow_fee\t3\t3\t3\ncommunity_fee\t3\t3\t3\nfraz_fee\t3\t3\t3\nrera_registration\t3\t3\t3\nrera_units\t3\t3\t3\nnoc_fee\t3\t3\t3\nescrow_fee\t3\t3\t3\ncommunity_fee\t3\t3\t3\nescrow_deposit\t3\t3\t3\n",
+  "stderr": "",
+  "execution_time_ms": 1553
+}

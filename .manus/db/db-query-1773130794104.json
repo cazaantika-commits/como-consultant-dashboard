@@ -1,0 +1,46 @@
+{
+  "query": "SHOW TABLES LIKE '%feasib%'; SHOW TABLES LIKE '%compet%'; SHOW TABLES LIKE '%market%'; SHOW TABLES LIKE '%costs%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SHOW TABLES LIKE '%feasib%'; SHOW TABLES LIKE '%compet%'; SHOW TABLES LIKE '%market%'; SHOW TABLES LIKE '%costs%';",
+  "rows": [
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%feasib%)": "feasibilityStudies"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%feasib%)": "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%compet%)"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%feasib%)": "competition_pricing"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%feasib%)": "competitor_projects"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%feasib%)": "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%market%)"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%feasib%)": "marketOverview"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%feasib%)": "market_listings"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%feasib%)": "market_reports"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%feasib%)": "market_reports_kb"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%feasib%)": "market_transactions"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%feasib%)": "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%costs%)"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%feasib%)": "costs_cash_flow"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%feasib%)\nfeasibilityStudies\nTables_in_Q366eAYG4Q7iaM8VuAmmFX (%compet%)\ncompetition_pricing\ncompetitor_projects\nTables_in_Q366eAYG4Q7iaM8VuAmmFX (%market%)\nmarketOverview\nmarket_listings\nmarket_reports\nmarket_reports_kb\nmarket_transactions\nTables_in_Q366eAYG4Q7iaM8VuAmmFX (%costs%)\ncosts_cash_flow\n",
+  "stderr": "",
+  "execution_time_ms": 2210
+}

@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE projects ADD COLUMN developerFeePct decimal(5,2) DEFAULT '5'; UPDATE projects SET developerFeePct = COALESCE(developerFeePhase1Pct, 2) + COALESCE(developerFeePhase2Pct, 3) WHERE developerFeePhase1Pct IS NOT NULL OR developerFeePhase2Pct IS NOT NULL;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute ALTER TABLE projects ADD COLUMN developerFeePct decimal(5,2) DEFAULT '5'; UPDATE projects SET developerFeePct = COALESCE(developerFeePhase1Pct, 2) + COALESCE(developerFeePhase2Pct, 3) WHERE developerFeePhase1Pct IS NOT NULL OR developerFeePhase2Pct IS NOT NULL;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 2055
+}

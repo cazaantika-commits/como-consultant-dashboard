@@ -1,0 +1,42 @@
+{
+  "query": "SELECT stageNumber, stageName, stageStatus, errorMessage, LEFT(stageOutput, 200) as outputPreview FROM joelle_analysis_stages WHERE stageNumber IN (6, 10) ORDER BY id DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT stageNumber, stageName, stageStatus, errorMessage, LEFT(stageOutput, 200) as outputPreview FROM joelle_analysis_stages WHERE stageNumber IN (6, 10) ORDER BY id DESC LIMIT 10;",
+  "rows": [
+    {
+      "stageNumber": "10",
+      "stageName": "مصالحة البيانات",
+      "stageStatus": "completed",
+      "errorMessage": "NULL",
+      "outputPreview": "أهلاً بكِ، أنا جويل، بتاريخ 9/3/2026، وسأقوم بمصالحة البيانات لمشروع \"ند الشبا — قطعة 2 المدمجة (6182776) — Nas-R\"."
+    },
+    {
+      "stageNumber": "6",
+      "stageName": "استراتيجية المنتج",
+      "stageStatus": "completed",
+      "errorMessage": "NULL",
+      "outputPreview": "أهلاً بكِ في Como Developments! بصفتي جويل، محللة السوق العقاري، سأقوم بتصميم استراتيجية المنتج لمشروع \"ند الشبا — قطعة 2 المدمجة (6182776)\" بناءً على البيانات المتوفرة والتاريخ الحالي 9/3/2026."
+    },
+    {
+      "stageNumber": "10",
+      "stageName": "مصالحة البيانات",
+      "stageStatus": "error",
+      "errorMessage": "LLM invoke failed: 500 Internal Server Error – {\"code\":13,\"message\":\"received bad response from upstream\"}",
+      "outputPreview": ""
+    },
+    {
+      "stageNumber": "6",
+      "stageName": "استراتيجية المنتج",
+      "stageStatus": "completed",
+      "errorMessage": "NULL",
+      "outputPreview": "مرحباً، أنا جويل، محللة السوق العقاري في Como Developments. بناءً على البيانات المقدمة والتاريخ الحالي 9/3/2026، يسعدني تقديم استراتيجية المنتج المقترحة لمشروع \"ند الشبا — قطعة 1 (6185392)\"."
+    }
+  ],
+  "messages": [
+    "بناءً على البيانات المتاحة، والملاحظة الهامة بأن جميع الأسعار حالياً مبنية على تقدي",
+    "---",
+    "**تحليل "
+  ],
+  "stdout": "stageNumber\tstageName\tstageStatus\terrorMessage\toutputPreview\n10\tمصالحة البيانات\tcompleted\tNULL\tأهلاً بكِ، أنا جويل، بتاريخ 9/3/2026، وسأقوم بمصالحة البيانات لمشروع \"ند الشبا — قطعة 2 المدمجة (6182776) — Nas-R\".\n\nبناءً على البيانات المتاحة، والملاحظة الهامة بأن جميع الأسعار حالياً مبنية على تقدي\n6\tاستراتيجية المنتج\tcompleted\tNULL\tأهلاً بكِ في Como Developments! بصفتي جويل، محللة السوق العقاري، سأقوم بتصميم استراتيجية المنتج لمشروع \"ند الشبا — قطعة 2 المدمجة (6182776)\" بناءً على البيانات المتوفرة والتاريخ الحالي 9/3/2026.\n\n---\n\n10\tمصالحة البيانات\terror\tLLM invoke failed: 500 Internal Server Error – {\"code\":13,\"message\":\"received bad response from upstream\"}\t\n6\tاستراتيجية المنتج\tcompleted\tNULL\tمرحباً، أنا جويل، محللة السوق العقاري في Como Developments. بناءً على البيانات المقدمة والتاريخ الحالي 9/3/2026، يسعدني تقديم استراتيجية المنتج المقترحة لمشروع \"ند الشبا — قطعة 1 (6185392)\".\n\n**تحليل \n",
+  "stderr": "",
+  "execution_time_ms": 1634
+}

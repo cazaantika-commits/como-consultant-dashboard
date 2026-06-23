@@ -1,0 +1,60 @@
+{
+  "query": "SELECT * FROM consultants LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT * FROM consultants LIMIT 5;",
+  "rows": [
+    {
+      "id": "1",
+      "userId": "1",
+      "name": "Osus International",
+      "email": "NULL",
+      "phone": "NULL",
+      "specialization": "NULL",
+      "createdAt": "2026-02-18 10:06:30",
+      "updatedAt": "2026-02-18 10:06:30"
+    },
+    {
+      "id": "2",
+      "userId": "1",
+      "name": "Realistic Engineering",
+      "email": "NULL",
+      "phone": "NULL",
+      "specialization": "NULL",
+      "createdAt": "2026-02-18 10:06:30",
+      "updatedAt": "2026-02-18 10:06:30"
+    },
+    {
+      "id": "3",
+      "userId": "1",
+      "name": "DATUM Engineering Consultants",
+      "email": "NULL",
+      "phone": "NULL",
+      "specialization": "NULL",
+      "createdAt": "2026-02-18 10:06:30",
+      "updatedAt": "2026-02-18 10:06:30"
+    },
+    {
+      "id": "4",
+      "userId": "1",
+      "name": "ARTEC Architectural & Engineering Consultants",
+      "email": "NULL",
+      "phone": "NULL",
+      "specialization": "NULL",
+      "createdAt": "2026-02-18 10:06:31",
+      "updatedAt": "2026-02-18 10:06:31"
+    },
+    {
+      "id": "5",
+      "userId": "1",
+      "name": "Arif & Bintoak Consulting Architects & Engineers",
+      "email": "NULL",
+      "phone": "NULL",
+      "specialization": "NULL",
+      "createdAt": "2026-02-18 10:06:31",
+      "updatedAt": "2026-02-18 10:06:31"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId\tname\temail\tphone\tspecialization\tcreatedAt\tupdatedAt\n1\t1\tOsus International\tNULL\tNULL\tNULL\t2026-02-18 10:06:30\t2026-02-18 10:06:30\n2\t1\tRealistic Engineering\tNULL\tNULL\tNULL\t2026-02-18 10:06:30\t2026-02-18 10:06:30\n3\t1\tDATUM Engineering Consultants\tNULL\tNULL\tNULL\t2026-02-18 10:06:30\t2026-02-18 10:06:30\n4\t1\tARTEC Architectural & Engineering Consultants\tNULL\tNULL\tNULL\t2026-02-18 10:06:31\t2026-02-18 10:06:31\n5\t1\tArif & Bintoak Consulting Architects & Engineers\tNULL\tNULL\tNULL\t2026-02-18 10:06:31\t2026-02-18 10:06:31\n",
+  "stderr": "",
+  "execution_time_ms": 1533
+}

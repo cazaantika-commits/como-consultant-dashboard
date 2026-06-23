@@ -1,0 +1,47 @@
+{
+  "query": "SELECT id, speakerId, LEFT(messageText, 100) as msg FROM meetingMessages WHERE meetingId = 30002 ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, speakerId, LEFT(messageText, 100) as msg FROM meetingMessages WHERE meetingId = 30002 ORDER BY id;",
+  "rows": [
+    {
+      "id": "30012",
+      "speakerId": "system",
+      "msg": "🟢 تم بدء الاجتماع. يمكنكم الآن النقاش."
+    },
+    {
+      "id": "30013",
+      "speakerId": "user",
+      "msg": "مرحبا مطلوب تنفيذ المهمة كما هو مكتوب في العموان والتفاصيل"
+    },
+    {
+      "id": "30014",
+      "speakerId": "salwa",
+      "msg": "مرحباً مديرنا العزيز! 😊"
+    },
+    {
+      "id": "30015",
+      "speakerId": "khazen",
+      "msg": "مرحباً، تمام المدير! سأبدأ بمراجعة ملفات جوجل درايف لاستخراج عروض أسعار الاستشاريين. سأركز على العرو"
+    },
+    {
+      "id": "30016",
+      "speakerId": "alina",
+      "msg": "بالتأكيد، سأقوم بالتركيز على تحديث المنصة بأسعار الاستشاريين الجديدة والسابقة. سأبدأ بمراجعة ملفات ج"
+    },
+    {
+      "id": "30017",
+      "speakerId": "system",
+      "msg": "🔴 تم إنهاء الاجتماع. جاري توليد المخرجات..."
+    },
+    {
+      "id": "30018",
+      "speakerId": "system",
+      "msg": "⚠️ لم يتم توليد المخرجات تلقائياً. يمكنك توليدها يدوياً لاحقاً."
+    }
+  ],
+  "messages": [
+    "سأقوم بالتركيز على تسجيل الاستشاريين غير المسجلين في المشاريع المناسبة بناء"
+  ],
+  "stdout": "id\tspeakerId\tmsg\n30012\tsystem\t🟢 تم بدء الاجتماع. يمكنكم الآن النقاش.\n30013\tuser\tمرحبا مطلوب تنفيذ المهمة كما هو مكتوب في العموان والتفاصيل\n30014\tsalwa\tمرحباً مديرنا العزيز! 😊\n\nسأقوم بالتركيز على تسجيل الاستشاريين غير المسجلين في المشاريع المناسبة بناء\n30015\tkhazen\tمرحباً، تمام المدير! سأبدأ بمراجعة ملفات جوجل درايف لاستخراج عروض أسعار الاستشاريين. سأركز على العرو\n30016\talina\tبالتأكيد، سأقوم بالتركيز على تحديث المنصة بأسعار الاستشاريين الجديدة والسابقة. سأبدأ بمراجعة ملفات ج\n30017\tsystem\t🔴 تم إنهاء الاجتماع. جاري توليد المخرجات...\n30018\tsystem\t⚠️ لم يتم توليد المخرجات تلقائياً. يمكنك توليدها يدوياً لاحقاً.\n",
+  "stderr": "",
+  "execution_time_ms": 1570
+}

@@ -1,0 +1,55 @@
+{
+  "query": "SELECT stageCode, nameAr, isActive FROM lifecycle_stages WHERE isActive = 1 ORDER BY sortOrder",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT stageCode, nameAr, isActive FROM lifecycle_stages WHERE isActive = 1 ORDER BY sortOrder",
+  "rows": [
+    {
+      "stageCode": "STG-01",
+      "nameAr": "تأسيس المطوّر وتسجيله",
+      "isActive": "1"
+    },
+    {
+      "stageCode": "STG-02",
+      "nameAr": "تسجيل المشروع وفتح الضمان",
+      "isActive": "1"
+    },
+    {
+      "stageCode": "STG-10",
+      "nameAr": "مرحلة التصميم ورخصة البناء",
+      "isActive": "1"
+    },
+    {
+      "stageCode": "STG-04",
+      "nameAr": "الرقابة المالية والإنشائية",
+      "isActive": "1"
+    },
+    {
+      "stageCode": "STG-20",
+      "nameAr": "مرحلة الدعاية والتسويق والمبيعات",
+      "isActive": "1"
+    },
+    {
+      "stageCode": "STG-03",
+      "nameAr": "المبيعات على الخارطة وأوكود",
+      "isActive": "1"
+    },
+    {
+      "stageCode": "STG-05",
+      "nameAr": "إغلاق المشروع",
+      "isActive": "1"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773223257702",
+      "nameAr": "مرحلة اختبارية",
+      "isActive": "1"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773413637038",
+      "nameAr": "مرحلة للإيقاف",
+      "isActive": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "stageCode\tnameAr\tisActive\nSTG-01\tتأسيس المطوّر وتسجيله\t1\nSTG-02\tتسجيل المشروع وفتح الضمان\t1\nSTG-10\tمرحلة التصميم ورخصة البناء\t1\nSTG-04\tالرقابة المالية والإنشائية\t1\nSTG-20\tمرحلة الدعاية والتسويق والمبيعات\t1\nSTG-03\tالمبيعات على الخارطة وأوكود\t1\nSTG-05\tإغلاق المشروع\t1\nSTG-CUSTOM-1773223257702\tمرحلة اختبارية\t1\nSTG-CUSTOM-1773413637038\tمرحلة للإيقاف\t1\n",
+  "stderr": "",
+  "execution_time_ms": 1530
+}

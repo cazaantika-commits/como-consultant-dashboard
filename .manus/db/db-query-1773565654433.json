@@ -1,0 +1,14 @@
+{
+  "query": "SELECT id, LEFT(import_json, 500) as import_json_preview FROM cpa_project_consultants WHERE id = 150004",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, LEFT(import_json, 500) as import_json_preview FROM cpa_project_consultants WHERE id = 150004",
+  "rows": [
+    {
+      "id": "150004",
+      "import_json_preview": "{\"project_id\":\"6457879\",\"consultant_code\":\"KIEFERLE\",\"proposal_date\":\"2026-02-06\",\"proposal_reference\":\"KP Proposal Feb 2026\",\"design_fee\":{\"method\":\"LUMP_SUM\",\"amount\":7856068,\"percentage\":null},\"supervision_fee\":{\"submitted\":true,\"method\":\"MONTHLY_RATE\",\"amount\":null,\"stated_duration_months\":30,\"team\":[{\"role_code\":\"RE\",\"proposed_monthly_rate\":69938,\"proposed_allocation_pct\":100},{\"role_code\":\"HO_ARCH\",\"proposed_monthly_rate\":43197,\"proposed_allocation_pct\":40},{\"role_code\":\"HO_STRUCTURAL\",\"pr"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\timport_json_preview\n150004\t{\"project_id\":\"6457879\",\"consultant_code\":\"KIEFERLE\",\"proposal_date\":\"2026-02-06\",\"proposal_reference\":\"KP Proposal Feb 2026\",\"design_fee\":{\"method\":\"LUMP_SUM\",\"amount\":7856068,\"percentage\":null},\"supervision_fee\":{\"submitted\":true,\"method\":\"MONTHLY_RATE\",\"amount\":null,\"stated_duration_months\":30,\"team\":[{\"role_code\":\"RE\",\"proposed_monthly_rate\":69938,\"proposed_allocation_pct\":100},{\"role_code\":\"HO_ARCH\",\"proposed_monthly_rate\":43197,\"proposed_allocation_pct\":40},{\"role_code\":\"HO_STRUCTURAL\",\"pr\n",
+  "stderr": "",
+  "execution_time_ms": 1527
+}

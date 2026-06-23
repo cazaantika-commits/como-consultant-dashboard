@@ -1,0 +1,9 @@
+{
+  "query": "UPDATE projects SET\n  plotAreaSqm = 2790.00,\n  plotAreaSqft = 30020.40,\n  gfaSqm = 8370.00,\n  gfaSqft = 90061.20,\n  permittedUse = 'Residential Apartments (G+2P+6)',\n  gfaResidentialSqft = 90061.20,\n  gfaRetailSqft = 0,\n  gfaOfficesSqft = 0\nWHERE id = 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute UPDATE projects SET\n  plotAreaSqm = 2790.00,\n  plotAreaSqft = 30020.40,\n  gfaSqm = 8370.00,\n  gfaSqft = 90061.20,\n  permittedUse = 'Residential Apartments (G+2P+6)',\n  gfaResidentialSqft = 90061.20,\n  gfaRetailSqft = 0,\n  gfaOfficesSqft = 0\nWHERE id = 5;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1535
+}

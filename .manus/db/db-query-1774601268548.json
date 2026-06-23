@@ -1,0 +1,110 @@
+{
+  "query": "SELECT stageCode, nameAr, sortOrder FROM lifecycle_stages ORDER BY sortOrder LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT stageCode, nameAr, sortOrder FROM lifecycle_stages ORDER BY sortOrder LIMIT 20;",
+  "rows": [
+    {
+      "stageCode": "STG-10",
+      "nameAr": "مرحلة تعيين الاستشاري والتصاميم والتندر",
+      "sortOrder": "10"
+    },
+    {
+      "stageCode": "STG-01",
+      "nameAr": "تأسيس المطوّر وتسجيله",
+      "sortOrder": "20"
+    },
+    {
+      "stageCode": "STG-02",
+      "nameAr": "مرحلة التسجيل وريرا والرخص",
+      "sortOrder": "30"
+    },
+    {
+      "stageCode": "STG-EXEC",
+      "nameAr": "مرحلة التنفيذ والبناء",
+      "sortOrder": "40"
+    },
+    {
+      "stageCode": "STG-04",
+      "nameAr": "الرقابة المالية والإنشائية",
+      "sortOrder": "50"
+    },
+    {
+      "stageCode": "STG-03",
+      "nameAr": "المبيعات على الخارطة وعقود",
+      "sortOrder": "60"
+    },
+    {
+      "stageCode": "STG-20",
+      "nameAr": "مرحلة الدعاية والتسويق والمبيعات",
+      "sortOrder": "70"
+    },
+    {
+      "stageCode": "STG-05",
+      "nameAr": "إغلاق المشروع",
+      "sortOrder": "80"
+    },
+    {
+      "stageCode": "STG-CLOSE",
+      "nameAr": "مرحلة الإقفال والتسليم والصيانة",
+      "sortOrder": "90"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773919340574",
+      "nameAr": "مرحلة اختبارية",
+      "sortOrder": "100"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773919341481",
+      "nameAr": "مرحلة معدّلة",
+      "sortOrder": "110"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773919342830",
+      "nameAr": "مرحلة للإيقاف",
+      "sortOrder": "120"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773923186575",
+      "nameAr": "مرحلة اختبارية",
+      "sortOrder": "130"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773923187466",
+      "nameAr": "مرحلة معدّلة",
+      "sortOrder": "140"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1773923188802",
+      "nameAr": "مرحلة للإيقاف",
+      "sortOrder": "150"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1774353243394",
+      "nameAr": "مرحلة اختبارية",
+      "sortOrder": "151"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1774353244349",
+      "nameAr": "مرحلة معدّلة",
+      "sortOrder": "152"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1774353245745",
+      "nameAr": "مرحلة للإيقاف",
+      "sortOrder": "153"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1774462345932",
+      "nameAr": "مرحلة اختبارية",
+      "sortOrder": "154"
+    },
+    {
+      "stageCode": "STG-CUSTOM-1774462346847",
+      "nameAr": "مرحلة معدّلة",
+      "sortOrder": "155"
+    }
+  ],
+  "messages": [],
+  "stdout": "stageCode\tnameAr\tsortOrder\nSTG-10\tمرحلة تعيين الاستشاري والتصاميم والتندر\t10\nSTG-01\tتأسيس المطوّر وتسجيله\t20\nSTG-02\tمرحلة التسجيل وريرا والرخص\t30\nSTG-EXEC\tمرحلة التنفيذ والبناء\t40\nSTG-04\tالرقابة المالية والإنشائية\t50\nSTG-03\tالمبيعات على الخارطة وعقود\t60\nSTG-20\tمرحلة الدعاية والتسويق والمبيعات\t70\nSTG-05\tإغلاق المشروع\t80\nSTG-CLOSE\tمرحلة الإقفال والتسليم والصيانة\t90\nSTG-CUSTOM-1773919340574\tمرحلة اختبارية\t100\nSTG-CUSTOM-1773919341481\tمرحلة معدّلة\t110\nSTG-CUSTOM-1773919342830\tمرحلة للإيقاف\t120\nSTG-CUSTOM-1773923186575\tمرحلة اختبارية\t130\nSTG-CUSTOM-1773923187466\tمرحلة معدّلة\t140\nSTG-CUSTOM-1773923188802\tمرحلة للإيقاف\t150\nSTG-CUSTOM-1774353243394\tمرحلة اختبارية\t151\nSTG-CUSTOM-1774353244349\tمرحلة معدّلة\t152\nSTG-CUSTOM-1774353245745\tمرحلة للإيقاف\t153\nSTG-CUSTOM-1774462345932\tمرحلة اختبارية\t154\nSTG-CUSTOM-1774462346847\tمرحلة معدّلة\t155\n",
+  "stderr": "",
+  "execution_time_ms": 1637
+}

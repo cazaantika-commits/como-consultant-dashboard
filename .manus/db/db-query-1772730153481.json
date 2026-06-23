@@ -1,0 +1,18 @@
+{
+  "query": "SELECT id, projectId, CAST(residential3brPct AS CHAR) as pct3br, residential3brAvgArea as avg3br, residential1brAvgArea as avg1br, residential2brAvgArea as avg2br FROM marketOverview;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, projectId, CAST(residential3brPct AS CHAR) as pct3br, residential3brAvgArea as avg3br, residential1brAvgArea as avg1br, residential2brAvgArea as avg2br FROM marketOverview;",
+  "rows": [
+    {
+      "id": "1",
+      "projectId": "4",
+      "pct3br": "10.00",
+      "avg3br": "1400",
+      "avg1br": "700",
+      "avg2br": "1000"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tprojectId\tpct3br\tavg3br\tavg1br\tavg2br\n1\t4\t10.00\t1400\t700\t1000\n",
+  "stderr": "",
+  "execution_time_ms": 1567
+}

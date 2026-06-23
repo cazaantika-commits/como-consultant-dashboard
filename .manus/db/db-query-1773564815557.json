@@ -1,0 +1,80 @@
+{
+  "query": "SELECT er.id, er.project_consultant_id, er.total_true_cost, er.eval_rank, cm.trade_name\nFROM cpa_evaluation_results er\nJOIN cpa_project_consultants pc ON pc.id = er.project_consultant_id\nJOIN cpa_consultants_master cm ON cm.id = pc.consultant_id\nORDER BY er.project_consultant_id, er.id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT er.id, er.project_consultant_id, er.total_true_cost, er.eval_rank, cm.trade_name\nFROM cpa_evaluation_results er\nJOIN cpa_project_consultants pc ON pc.id = er.project_consultant_id\nJOIN cpa_consultants_master cm ON cm.id = pc.consultant_id\nORDER BY er.project_consultant_id, er.id;",
+  "rows": [
+    {
+      "id": "180006",
+      "project_consultant_id": "150001",
+      "total_true_cost": "13967701.00",
+      "eval_rank": "1",
+      "trade_name": "ARTEC Architectural & Engineering Consultants"
+    },
+    {
+      "id": "180011",
+      "project_consultant_id": "150001",
+      "total_true_cost": "13967701.00",
+      "eval_rank": "1",
+      "trade_name": "ARTEC Architectural & Engineering Consultants"
+    },
+    {
+      "id": "180007",
+      "project_consultant_id": "150002",
+      "total_true_cost": "15713995.45",
+      "eval_rank": "2",
+      "trade_name": "DATUM Engineering Consultants"
+    },
+    {
+      "id": "180012",
+      "project_consultant_id": "150002",
+      "total_true_cost": "15713995.45",
+      "eval_rank": "2",
+      "trade_name": "DATUM Engineering Consultants"
+    },
+    {
+      "id": "180008",
+      "project_consultant_id": "150003",
+      "total_true_cost": "NULL",
+      "eval_rank": "NULL",
+      "trade_name": "LACASA"
+    },
+    {
+      "id": "180013",
+      "project_consultant_id": "150003",
+      "total_true_cost": "NULL",
+      "eval_rank": "NULL",
+      "trade_name": "LACASA"
+    },
+    {
+      "id": "180009",
+      "project_consultant_id": "150004",
+      "total_true_cost": "NULL",
+      "eval_rank": "NULL",
+      "trade_name": "Kieferle & Partner"
+    },
+    {
+      "id": "180014",
+      "project_consultant_id": "150004",
+      "total_true_cost": "16905368.00",
+      "eval_rank": "3",
+      "trade_name": "Kieferle & Partner"
+    },
+    {
+      "id": "180010",
+      "project_consultant_id": "150005",
+      "total_true_cost": "NULL",
+      "eval_rank": "NULL",
+      "trade_name": "XYZ Designers"
+    },
+    {
+      "id": "180015",
+      "project_consultant_id": "150005",
+      "total_true_cost": "NULL",
+      "eval_rank": "NULL",
+      "trade_name": "XYZ Designers"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tproject_consultant_id\ttotal_true_cost\teval_rank\ttrade_name\n180006\t150001\t13967701.00\t1\tARTEC Architectural & Engineering Consultants\n180011\t150001\t13967701.00\t1\tARTEC Architectural & Engineering Consultants\n180007\t150002\t15713995.45\t2\tDATUM Engineering Consultants\n180012\t150002\t15713995.45\t2\tDATUM Engineering Consultants\n180008\t150003\tNULL\tNULL\tLACASA\n180013\t150003\tNULL\tNULL\tLACASA\n180009\t150004\tNULL\tNULL\tKieferle & Partner\n180014\t150004\t16905368.00\t3\tKieferle & Partner\n180010\t150005\tNULL\tNULL\tXYZ Designers\n180015\t150005\tNULL\tNULL\tXYZ Designers\n",
+  "stderr": "",
+  "execution_time_ms": 1514
+}

@@ -1,0 +1,20 @@
+{
+  "query": "\nSELECT cp.baseStudioPrice, cp.base1brPrice, cp.base2brPrice, cp.base3brPrice, cp.activeScenario FROM competition_pricing cp WHERE cp.projectId = 3 LIMIT 1;\nSELECT mo.residentialStudioPct, mo.residentialStudioAvgArea, mo.residential1brPct, mo.residential1brAvgArea, mo.residential2brPct, mo.residential2brAvgArea, mo.residential3brPct, mo.residential3brAvgArea FROM marketOverview mo WHERE mo.projectId = 3 LIMIT 1;\nSELECT ccf.landPrice, ccf.constructionCostPerSqft, ccf.developerFeePct, ccf.comoProfitSharePct, ccf.escrowFee FROM costs_cash_flow ccf WHERE ccf.projectId = 3 LIMIT 1;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute \nSELECT cp.baseStudioPrice, cp.base1brPrice, cp.base2brPrice, cp.base3brPrice, cp.activeScenario FROM competition_pricing cp WHERE cp.projectId = 3 LIMIT 1;\nSELECT mo.residentialStudioPct, mo.residentialStudioAvgArea, mo.residential1brPct, mo.residential1brAvgArea, mo.residential2brPct, mo.residential2brAvgArea, mo.residential3brPct, mo.residential3brAvgArea FROM marketOverview mo WHERE mo.projectId = 3 LIMIT 1;\nSELECT ccf.landPrice, ccf.constructionCostPerSqft, ccf.developerFeePct, ccf.comoProfitSharePct, ccf.escrowFee FROM costs_cash_flow ccf WHERE ccf.projectId = 3 LIMIT 1;\n",
+  "rows": [
+    {
+      "baseStudioPrice": "1280",
+      "base1brPrice": "1200",
+      "base2brPrice": "1150",
+      "base3brPrice": "1100",
+      "activeScenario": "base"
+    }
+  ],
+  "messages": [
+    "residentialStudioPct\tresidentialStudioAvgArea\tresidential1brPct\tresidential1brAvgArea\tresidential2brPct\tresidential2brAvgArea\tresidential3brPct\tresidential3brAvgArea",
+    "20.00\t400\t50.00\t750\t30.00\t1350\t0.00\t0"
+  ],
+  "stdout": "baseStudioPrice\tbase1brPrice\tbase2brPrice\tbase3brPrice\tactiveScenario\n1280\t1200\t1150\t1100\tbase\nresidentialStudioPct\tresidentialStudioAvgArea\tresidential1brPct\tresidential1brAvgArea\tresidential2brPct\tresidential2brAvgArea\tresidential3brPct\tresidential3brAvgArea\n20.00\t400\t50.00\t750\t30.00\t1350\t0.00\t0\n",
+  "stderr": "",
+  "execution_time_ms": 1974
+}

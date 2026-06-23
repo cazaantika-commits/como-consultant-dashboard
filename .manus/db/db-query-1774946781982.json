@@ -1,0 +1,130 @@
+{
+  "query": "SELECT id, stageCode, nameAr, sortOrder FROM lifecycle_stages ORDER BY sortOrder ASC LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, stageCode, nameAr, sortOrder FROM lifecycle_stages ORDER BY sortOrder ASC LIMIT 20;",
+  "rows": [
+    {
+      "id": "6",
+      "stageCode": "STG-10",
+      "nameAr": "مرحلة تعيين الاستشاري والتصاميم والتندر",
+      "sortOrder": "10"
+    },
+    {
+      "id": "1",
+      "stageCode": "STG-01",
+      "nameAr": "تأسيس المطوّر وتسجيله",
+      "sortOrder": "20"
+    },
+    {
+      "id": "2",
+      "stageCode": "STG-02",
+      "nameAr": "مرحلة التسجيل وريرا والرخص",
+      "sortOrder": "30"
+    },
+    {
+      "id": "210001",
+      "stageCode": "STG-EXEC",
+      "nameAr": "مرحلة التنفيذ والبناء",
+      "sortOrder": "40"
+    },
+    {
+      "id": "4",
+      "stageCode": "STG-04",
+      "nameAr": "الرقابة المالية والإنشائية",
+      "sortOrder": "50"
+    },
+    {
+      "id": "3",
+      "stageCode": "STG-03",
+      "nameAr": "المبيعات على الخارطة وعقود",
+      "sortOrder": "60"
+    },
+    {
+      "id": "8",
+      "stageCode": "STG-20",
+      "nameAr": "مرحلة الدعاية والتسويق والمبيعات",
+      "sortOrder": "70"
+    },
+    {
+      "id": "5",
+      "stageCode": "STG-05",
+      "nameAr": "إغلاق المشروع",
+      "sortOrder": "80"
+    },
+    {
+      "id": "210002",
+      "stageCode": "STG-CLOSE",
+      "nameAr": "مرحلة الإقفال والتسليم والصيانة",
+      "sortOrder": "90"
+    },
+    {
+      "id": "240001",
+      "stageCode": "STG-CUSTOM-1773919340574",
+      "nameAr": "مرحلة اختبارية",
+      "sortOrder": "100"
+    },
+    {
+      "id": "240002",
+      "stageCode": "STG-CUSTOM-1773919341481",
+      "nameAr": "مرحلة معدّلة",
+      "sortOrder": "110"
+    },
+    {
+      "id": "240003",
+      "stageCode": "STG-CUSTOM-1773919342830",
+      "nameAr": "مرحلة للإيقاف",
+      "sortOrder": "120"
+    },
+    {
+      "id": "240004",
+      "stageCode": "STG-CUSTOM-1773923186575",
+      "nameAr": "مرحلة اختبارية",
+      "sortOrder": "130"
+    },
+    {
+      "id": "240005",
+      "stageCode": "STG-CUSTOM-1773923187466",
+      "nameAr": "مرحلة معدّلة",
+      "sortOrder": "140"
+    },
+    {
+      "id": "240006",
+      "stageCode": "STG-CUSTOM-1773923188802",
+      "nameAr": "مرحلة للإيقاف",
+      "sortOrder": "150"
+    },
+    {
+      "id": "270001",
+      "stageCode": "STG-CUSTOM-1774353243394",
+      "nameAr": "مرحلة اختبارية",
+      "sortOrder": "151"
+    },
+    {
+      "id": "270002",
+      "stageCode": "STG-CUSTOM-1774353244349",
+      "nameAr": "مرحلة معدّلة",
+      "sortOrder": "152"
+    },
+    {
+      "id": "270003",
+      "stageCode": "STG-CUSTOM-1774353245745",
+      "nameAr": "مرحلة للإيقاف",
+      "sortOrder": "153"
+    },
+    {
+      "id": "300001",
+      "stageCode": "STG-CUSTOM-1774462345932",
+      "nameAr": "مرحلة اختبارية",
+      "sortOrder": "154"
+    },
+    {
+      "id": "300002",
+      "stageCode": "STG-CUSTOM-1774462346847",
+      "nameAr": "مرحلة معدّلة",
+      "sortOrder": "155"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tstageCode\tnameAr\tsortOrder\n6\tSTG-10\tمرحلة تعيين الاستشاري والتصاميم والتندر\t10\n1\tSTG-01\tتأسيس المطوّر وتسجيله\t20\n2\tSTG-02\tمرحلة التسجيل وريرا والرخص\t30\n210001\tSTG-EXEC\tمرحلة التنفيذ والبناء\t40\n4\tSTG-04\tالرقابة المالية والإنشائية\t50\n3\tSTG-03\tالمبيعات على الخارطة وعقود\t60\n8\tSTG-20\tمرحلة الدعاية والتسويق والمبيعات\t70\n5\tSTG-05\tإغلاق المشروع\t80\n210002\tSTG-CLOSE\tمرحلة الإقفال والتسليم والصيانة\t90\n240001\tSTG-CUSTOM-1773919340574\tمرحلة اختبارية\t100\n240002\tSTG-CUSTOM-1773919341481\tمرحلة معدّلة\t110\n240003\tSTG-CUSTOM-1773919342830\tمرحلة للإيقاف\t120\n240004\tSTG-CUSTOM-1773923186575\tمرحلة اختبارية\t130\n240005\tSTG-CUSTOM-1773923187466\tمرحلة معدّلة\t140\n240006\tSTG-CUSTOM-1773923188802\tمرحلة للإيقاف\t150\n270001\tSTG-CUSTOM-1774353243394\tمرحلة اختبارية\t151\n270002\tSTG-CUSTOM-1774353244349\tمرحلة معدّلة\t152\n270003\tSTG-CUSTOM-1774353245745\tمرحلة للإيقاف\t153\n300001\tSTG-CUSTOM-1774462345932\tمرحلة اختبارية\t154\n300002\tSTG-CUSTOM-1774462346847\tمرحلة معدّلة\t155\n",
+  "stderr": "",
+  "execution_time_ms": 1578
+}

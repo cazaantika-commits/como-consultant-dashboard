@@ -1,0 +1,58 @@
+{
+  "query": "SHOW COLUMNS FROM projects LIKE '%saleable%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SHOW COLUMNS FROM projects LIKE '%saleable%';",
+  "rows": [
+    {
+      "Field": "saleableResidentialPct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "95",
+      "Extra": ""
+    },
+    {
+      "Field": "saleableRetailPct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "97",
+      "Extra": ""
+    },
+    {
+      "Field": "saleableOfficesPct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "95",
+      "Extra": ""
+    },
+    {
+      "Field": "saleable_residential_pct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "95",
+      "Extra": ""
+    },
+    {
+      "Field": "saleable_retail_pct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "97",
+      "Extra": ""
+    },
+    {
+      "Field": "saleable_offices_pct",
+      "Type": "decimal(5,2)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "95",
+      "Extra": ""
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nsaleableResidentialPct\tdecimal(5,2)\tYES\t\t95\t\nsaleableRetailPct\tdecimal(5,2)\tYES\t\t97\t\nsaleableOfficesPct\tdecimal(5,2)\tYES\t\t95\t\nsaleable_residential_pct\tdecimal(5,2)\tYES\t\t95\t\nsaleable_retail_pct\tdecimal(5,2)\tYES\t\t97\t\nsaleable_offices_pct\tdecimal(5,2)\tYES\t\t95\t\n",
+  "stderr": "",
+  "execution_time_ms": 1692
+}

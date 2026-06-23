@@ -1,0 +1,8 @@
+{
+  "query": "ALTER TABLE joelle_reports MODIFY COLUMN report_type ENUM('market_intelligence', 'competitive_landscape', 'product_strategy', 'pricing_strategy', 'executive_summary', 'competitive_analysis', 'demand_forecast', 'risk_analysis') NOT NULL;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute ALTER TABLE joelle_reports MODIFY COLUMN report_type ENUM('market_intelligence', 'competitive_landscape', 'product_strategy', 'pricing_strategy', 'executive_summary', 'competitive_analysis', 'demand_forecast', 'risk_analysis') NOT NULL;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'report_type' in 'joelle_reports'"
+  ]
+}

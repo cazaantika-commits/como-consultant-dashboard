@@ -1,0 +1,9 @@
+{
+  "query": "SELECT pc.id, cm.code as consultant_code, pc.supervision_fee_method, pc.supervision_submitted FROM cpa_project_consultants pc JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id WHERE pc.cpa_project_id = 2",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT pc.id, cm.code as consultant_code, pc.supervision_fee_method, pc.supervision_submitted FROM cpa_project_consultants pc JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id WHERE pc.cpa_project_id = 2",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1580
+}

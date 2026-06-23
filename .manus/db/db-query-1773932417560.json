@@ -1,0 +1,52 @@
+{
+  "query": "SELECT COUNT(*) as total_roles FROM cpa_supervision_roles WHERE is_active = 1;\nSELECT COUNT(*) as total_baseline FROM cpa_supervision_baseline;\nSELECT sr.code, sr.label, sr.monthly_rate_aed FROM cpa_supervision_roles sr ORDER BY sr.sort_order LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT COUNT(*) as total_roles FROM cpa_supervision_roles WHERE is_active = 1;\nSELECT COUNT(*) as total_baseline FROM cpa_supervision_baseline;\nSELECT sr.code, sr.label, sr.monthly_rate_aed FROM cpa_supervision_roles sr ORDER BY sr.sort_order LIMIT 10;",
+  "rows": [
+    {
+      "total_roles": "34"
+    },
+    {
+      "total_roles": "total_baseline"
+    },
+    {
+      "total_roles": "170"
+    },
+    {
+      "total_roles": "code\tlabel\tmonthly_rate_aed"
+    },
+    {
+      "total_roles": "PD\tProject Director\t65000.00"
+    },
+    {
+      "total_roles": "SENIOR_RE\tSenior Resident Engineer\t50000.00"
+    },
+    {
+      "total_roles": "RE\tResident Engineer\t45000.00"
+    },
+    {
+      "total_roles": "DEPUTY_RE\tAssistant Resident Engineer\t35000.00"
+    },
+    {
+      "total_roles": "HO_STRUCTURAL\tStructural Engineer\t40000.00"
+    },
+    {
+      "total_roles": "PROJECT_COORD\tProject Coordinator\t40000.00"
+    },
+    {
+      "total_roles": "CIVIL_INSPECTOR\tCivil Inspector\t18000.00"
+    },
+    {
+      "total_roles": "SENIOR_ARCH\tSenior Architect\t40000.00"
+    },
+    {
+      "total_roles": "HO_ARCH\tArchitect\t25000.00"
+    },
+    {
+      "total_roles": "ARCH_INSPECTOR\tArchitectural inspector\t18000.00"
+    }
+  ],
+  "messages": [],
+  "stdout": "total_roles\n34\ntotal_baseline\n170\ncode\tlabel\tmonthly_rate_aed\nPD\tProject Director\t65000.00\nSENIOR_RE\tSenior Resident Engineer\t50000.00\nRE\tResident Engineer\t45000.00\nDEPUTY_RE\tAssistant Resident Engineer\t35000.00\nHO_STRUCTURAL\tStructural Engineer\t40000.00\nPROJECT_COORD\tProject Coordinator\t40000.00\nCIVIL_INSPECTOR\tCivil Inspector\t18000.00\nSENIOR_ARCH\tSenior Architect\t40000.00\nHO_ARCH\tArchitect\t25000.00\nARCH_INSPECTOR\tArchitectural inspector\t18000.00\n",
+  "stderr": "",
+  "execution_time_ms": 1952
+}

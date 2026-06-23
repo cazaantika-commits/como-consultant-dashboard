@@ -51,6 +51,8 @@ export function useAuth(options?: UseAuthOptions) {
       loading: meQuery.isLoading || logoutMutation.isPending,
       error: meQuery.error ?? logoutMutation.error ?? null,
       isAuthenticated: Boolean(meQuery.data),
+      isOwner: meQuery.data?.role === 'admin',
+      isReadOnly: meQuery.data ? meQuery.data.role !== 'admin' : false,
     };
   }, [
     meQuery.data,

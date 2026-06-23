@@ -1,0 +1,20 @@
+{
+  "query": "SELECT cp.id, cp.project_id, cp.plot_number, cp.building_category_id, cp.duration_months, cp.bua_sqft, cp.status, p.name as project_name FROM cpa_projects cp LEFT JOIN projects p ON p.id = cp.project_id ORDER BY cp.id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT cp.id, cp.project_id, cp.plot_number, cp.building_category_id, cp.duration_months, cp.bua_sqft, cp.status, p.name as project_name FROM cpa_projects cp LEFT JOIN projects p ON p.id = cp.project_id ORDER BY cp.id;",
+  "rows": [
+    {
+      "id": "90001",
+      "project_id": "2",
+      "plot_number": "6457879",
+      "building_category_id": "30010",
+      "duration_months": "36",
+      "bua_sqft": "875300.00",
+      "status": "ACTIVE",
+      "project_name": "مجان متعدد الاستخدامات (G+4P+25)"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tproject_id\tplot_number\tbuilding_category_id\tduration_months\tbua_sqft\tstatus\tproject_name\n90001\t2\t6457879\t30010\t36\t875300.00\tACTIVE\tمجان متعدد الاستخدامات (G+4P+25)\n",
+  "stderr": "",
+  "execution_time_ms": 1512
+}

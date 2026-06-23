@@ -1,0 +1,32 @@
+{
+  "query": "SELECT id, cfProjectId, name, totalAmount, category, paymentType, fundingSource, phaseTag, escrowEligible FROM cf_cost_items ORDER BY cfProjectId;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, cfProjectId, name, totalAmount, category, paymentType, fundingSource, phaseTag, escrowEligible FROM cf_cost_items ORDER BY cfProjectId;",
+  "rows": [
+    {
+      "id": "1",
+      "cfProjectId": "1",
+      "name": "سعر الأرض",
+      "totalAmount": "50000000",
+      "category": "land",
+      "paymentType": "lump_sum",
+      "fundingSource": "developer",
+      "phaseTag": "pre_dev",
+      "escrowEligible": "0"
+    },
+    {
+      "id": "30001",
+      "cfProjectId": "30001",
+      "name": "رسوم تنظيمية (ريرا وأخرى)",
+      "totalAmount": "420000",
+      "category": "authority_fees",
+      "paymentType": "lump_sum",
+      "fundingSource": "developer",
+      "phaseTag": "pre_dev",
+      "escrowEligible": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcfProjectId\tname\ttotalAmount\tcategory\tpaymentType\tfundingSource\tphaseTag\tescrowEligible\n1\t1\tسعر الأرض\t50000000\tland\tlump_sum\tdeveloper\tpre_dev\t0\n30001\t30001\tرسوم تنظيمية (ريرا وأخرى)\t420000\tauthority_fees\tlump_sum\tdeveloper\tpre_dev\t0\n",
+  "stderr": "",
+  "execution_time_ms": 1601
+}

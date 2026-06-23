@@ -1,0 +1,20 @@
+{
+  "query": "SELECT item_key, funding_source, section FROM project_cash_flow_settings WHERE item_key = 'developer_fee_offplan' LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT item_key, funding_source, section FROM project_cash_flow_settings WHERE item_key = 'developer_fee_offplan' LIMIT 10;",
+  "rows": [
+    {
+      "item_key": "developer_fee_offplan",
+      "funding_source": "escrow",
+      "section": "offplan"
+    },
+    {
+      "item_key": "developer_fee_offplan",
+      "funding_source": "investor",
+      "section": "offplan"
+    }
+  ],
+  "messages": [],
+  "stdout": "item_key\tfunding_source\tsection\ndeveloper_fee_offplan\tescrow\toffplan\ndeveloper_fee_offplan\tinvestor\toffplan\n",
+  "stderr": "",
+  "execution_time_ms": 1691
+}

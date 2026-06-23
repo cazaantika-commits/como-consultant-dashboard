@@ -1,0 +1,9 @@
+{
+  "query": "\n-- Get the cpa_project id for project 6457879\nSELECT id FROM cpa_projects WHERE project_id = 6457879 LIMIT 1;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute \n-- Get the cpa_project id for project 6457879\nSELECT id FROM cpa_projects WHERE project_id = 6457879 LIMIT 1;\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1583
+}

@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>خطة رأس مال المشروع</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f5f5f5; padding: 20px; direction: rtl; color: #1a1a2e; }
+  .container { max-width: 95%; margin: 0 auto; }
+
+  .header { text-align: center; margin-bottom: 16px; }
+  .header h2 { font-size: 18px; color: #1a1a2e; margin-bottom: 4px; }
+  .header p { font-size: 11px; color: #64748b; }
+
+  .tabs { display: flex; justify-content: center; gap: 0; margin-bottom: 16px; }
+  .tab-btn {
+    padding: 8px 20px; font-size: 11px; font-weight: bold; cursor: pointer;
+    border: 1px solid #e2e8f0; background: #fff; color: #94a3b8; transition: all 0.2s;
+  }
+  .tab-btn:first-child { border-radius: 0 8px 8px 0; }
+  .tab-btn:last-child { border-radius: 8px 0 0 8px; }
+  .tab-btn:not(:first-child):not(:last-child) { border-left: none; border-right: none; }
+  .tab-btn.active-o1 { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+  .tab-btn.active-o2 { background: #1d4ed8; color: #fff; border-color: #1d4ed8; }
+  .tab-btn.active-o3 { background: #16a34a; color: #fff; border-color: #16a34a; }
+
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+  .kpi-card { border-radius: 12px; border: 1px solid; padding: 12px; text-align: center; }
+  .kpi-label { font-size: 10px; font-weight: 500; margin-bottom: 4px; opacity: 0.7; }
+  .kpi-value { font-size: 15px; font-weight: bold; font-family: 'Courier New', monospace; }
+  .kpi-sub { font-size: 9px; margin-top: 2px; opacity: 0.5; }
+  .kpi-rose { background: #fff1f2; border-color: #fecdd3; color: #be123c; }
+  .kpi-amber { background: #fffbeb; border-color: #fde68a; color: #b45309; }
+  .kpi-emerald { background: #ecfdf5; border-color: #a7f3d0; color: #047857; }
+  .kpi-blue { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+
+  .table-card { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 16px; }
+  .table-title { padding: 10px 16px; font-size: 13px; font-weight: bold; border-bottom: 1px solid #f1f5f9; }
+  .table-title-amber { background: #fffbeb; color: #b45309; }
+
+  .scroll-wrapper { overflow-x: auto; }
+  table { border-collapse: collapse; min-width: 100%; }
+  th { text-align: center; padding: 6px 8px; font-size: 9px; color: #64748b; font-weight: 600; background: #fafafa; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+  th.col-item { text-align: right; min-width: 180px; position: sticky; right: 0; background: #fafafa; z-index: 2; }
+  th.col-total { min-width: 90px; background: #f0f4ff; }
+  td { padding: 5px 8px; font-size: 10px; color: #334155; border-bottom: 1px solid #f8fafc; text-align: center; white-space: nowrap; font-family: 'Courier New', monospace; }
+  td.item-name { text-align: right; font-family: 'Segoe UI', Tahoma, sans-serif; font-weight: 500; position: sticky; right: 0; background: #fff; z-index: 1; min-width: 180px; }
+  td.total-col { background: #f0f4ff; font-weight: bold; }
+  td.zero { color: #d4d4d4; }
+
+  .section-header td { background: #f1f5f9; font-weight: bold; font-size: 11px; color: #334155; font-family: 'Segoe UI', Tahoma, sans-serif; text-align: right; }
+  .total-row td { background: #1a1a2e; color: #fbbf24; font-weight: bold; font-size: 11px; border-color: #333; }
+  .subtotal-row td { background: #f8fafc; font-weight: bold; color: #1e40af; font-size: 10px; border-top: 2px solid #e2e8f0; }
+  .remaining-row td { background: #f59e0b; color: #fff; font-weight: bold; font-size: 11px; }
+
+  .phase-header { text-align: center; font-size: 9px; font-weight: bold; padding: 4px; }
+  .phase-design { background: #fef3c7; color: #92400e; }
+  .phase-construction { background: #d1fae5; color: #065f46; }
+
+  .note { text-align: center; font-size: 10px; color: #94a3b8; margin-top: 12px; }
+  .loading { text-align: center; padding: 60px; font-size: 14px; color: #94a3b8; }
+
+  .revenue-banner {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; border-radius: 10px; margin-bottom: 14px;
+    font-size: 11px; font-weight: 600; gap: 12px;
+  }
+  .revenue-banner.approved {
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5); border: 1px solid #6ee7b7; color: #065f46;
+  }
+  .revenue-banner.calculated {
+    background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fcd34d; color: #92400e;
+  }
+  .revenue-banner .info { display: flex; align-items: center; gap: 8px; }
+  .revenue-banner .info .icon { font-size: 16px; }
+  .revenue-banner .amounts { display: flex; gap: 16px; font-family: 'Courier New', monospace; font-size: 12px; }
+  .revenue-banner .amounts .label { font-size: 9px; opacity: 0.7; font-family: 'Segoe UI', Tahoma, sans-serif; }
+  .refresh-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 5px 12px; border-radius: 6px; border: 1px solid #d1d5db;
+    background: #fff; color: #374151; font-size: 10px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+  .refresh-btn:hover { background: #f3f4f6; border-color: #9ca3af; }
+  .refresh-btn:active { transform: scale(0.97); }
+  .refresh-btn .spin { display: inline-block; animation: spin 1s linear infinite; }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h2>خطة رأس مال المشروع</h2>
+    <p id="headerSub">جاري التحميل...</p>
+  </div>
+
+  <div id="revenueBanner"></div>
+
+  <div class="tabs">
+    <button class="tab-btn active-o1" id="tabO1" onclick="switchTab('o1')">O1 — إيداع ضمان</button>
+    <button class="tab-btn" id="tabO2" onclick="switchTab('o2')">O2 — دفعة إنجاز</button>
+    <button class="tab-btn" id="tabO3" onclick="switchTab('o3')">O3 — بدون أوف بلان</button>
+  </div>
+
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <div class="table-card">
+    <div class="table-title table-title-amber">رأس مال المستثمر — التوزيع الشهري</div>
+    <div class="scroll-wrapper">
+      <table id="investorTable"></table>
+    </div>
+  </div>
+
+  <p class="note">المبالغ بالدرهم الإماراتي | المصدر: إعدادات التدفق</p>
+</div>
+
+<script>
+var DATA = null;
+var currentTab = 'o1';
+
+function fmt(n) {
+  if (n === 0) return '—';
+  return Math.round(n).toLocaleString('en-US');
+}
+
+async function loadData() {
+  var params = new URLSearchParams(window.location.search);
+  var projectId = params.get('projectId');
+  if (!projectId) { document.getElementById('kpiGrid').innerHTML = '<div class="loading">خطأ: لم يتم تحديد المشروع</div>'; return; }
+
+  try {
+    var resp = await fetch('/api/trpc/cashFlowSettings.getCostSettingsComparison?input=' + encodeURIComponent(JSON.stringify({ json: { projectId: Number(projectId) } })));
+    var json = await resp.json();
+    DATA = json.result.data.json;
+    var DM = DATA.phaseInfo.design.duration;
+    var CM = DATA.phaseInfo.construction.duration;
+    document.getElementById('headerSub').textContent = DATA.projectName + ' | التصاميم: ' + DM + ' أشهر | التنفيذ: ' + CM + ' شهر';
+    buildRevenueBanner();
+    render();
+  } catch (e) {
+    document.getElementById('kpiGrid').innerHTML = '<div class="loading">خطأ في تحميل البيانات: ' + e.message + '</div>';
+  }
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('tabO1').className = 'tab-btn' + (tab === 'o1' ? ' active-o1' : '');
+  document.getElementById('tabO2').className = 'tab-btn' + (tab === 'o2' ? ' active-o2' : '');
+  document.getElementById('tabO3').className = 'tab-btn' + (tab === 'o3' ? ' active-o3' : '');
+  render();
+}
+
+function render() {
+  if (!DATA) return;
+
+  var DM = DATA.phaseInfo.design.duration;
+  var CM = DATA.phaseInfo.construction.duration;
+  var designStart = DATA.phaseInfo.design.start - 1; // 0-indexed
+  var constructionStart = DATA.phaseInfo.construction.start - 1;
+  var totalMonths = DATA.totalMonths;
+  var scKey = currentTab;
+
+  // Separate items by section and funding source
+  var paidItems = [];
+  var designItems = [];
+  var constructionItems = [];
+  var escrowItems = [];
+
+  DATA.items.forEach(function(item) {
+    var sc = item[scKey];
+    if (!sc || !sc.active) return;
+    var obj = { name: item.nameAr, amount: sc.amount, monthly: sc.monthlyAmounts, section: item.section, fundingSource: item.fundingSource };
+    // O3 = no sales, no escrow — ALL items are investor-funded
+    var effectiveSource = (currentTab === 'o3') ? 'investor' : item.fundingSource;
+    if (item.section === 'paid') {
+      paidItems.push(obj);
+    } else if (effectiveSource === 'escrow') {
+      escrowItems.push(obj);
+    } else if (item.section === 'design' || item.section === 'offplan') {
+      designItems.push(obj);
+    } else {
+      constructionItems.push(obj);
+    }
+  });
+
+  var paidTotal = paidItems.reduce(function(s, x) { return s + x.amount; }, 0);
+  var designTotal = designItems.reduce(function(s, x) { return s + x.amount; }, 0);
+  var constructionTotal = constructionItems.reduce(function(s, x) { return s + x.amount; }, 0);
+  var escrowTotal = escrowItems.reduce(function(s, x) { return s + x.amount; }, 0);
+  var investorTotal = paidTotal + designTotal + constructionTotal;
+  var remaining = investorTotal - paidTotal;
+
+  // KPI
+  var kpiHtml = '';
+  kpiHtml += '<div class="kpi-card kpi-rose"><div class="kpi-label">إجمالي التكلفة</div><div class="kpi-value">' + fmt(investorTotal + escrowTotal) + '</div><div class="kpi-sub">AED</div></div>';
+  kpiHtml += '<div class="kpi-card kpi-amber"><div class="kpi-label">رأس المال المطلوب</div><div class="kpi-value">' + fmt(investorTotal) + '</div><div class="kpi-sub">AED</div></div>';
+  kpiHtml += '<div class="kpi-card kpi-emerald"><div class="kpi-label">تم سداده</div><div class="kpi-value">' + fmt(paidTotal) + '</div><div class="kpi-sub">AED</div></div>';
+  kpiHtml += '<div class="kpi-card kpi-blue"><div class="kpi-label">المتبقي للسداد</div><div class="kpi-value">' + fmt(remaining) + '</div><div class="kpi-sub">AED</div></div>';
+  document.getElementById('kpiGrid').innerHTML = kpiHtml;
+
+  // ═══ Investor Table ═══
+  var html = '';
+  html += '<thead>';
+  html += '<tr>';
+  html += '<th class="col-item" rowspan="2">البند</th>';
+  html += '<th class="col-total" rowspan="2">الإجمالي</th>';
+  html += '<th colspan="' + DM + '" class="phase-header phase-design">مرحلة التصاميم (' + DM + ' أشهر)</th>';
+  html += '<th colspan="' + CM + '" class="phase-header phase-construction">مرحلة التنفيذ (' + CM + ' شهر)</th>';
+  html += '</tr>';
+  html += '<tr>';
+  for (var i = 1; i <= DM; i++) html += '<th style="background:#fef3c7;">ش' + i + '</th>';
+  for (var i = 1; i <= CM; i++) html += '<th style="background:#d1fae5;">ش' + i + '</th>';
+  html += '</tr>';
+  html += '</thead><tbody>';
+
+  // Helper: extract design months and construction months from monthlyAmounts
+  function getDesignMonths(monthly) {
+    var arr = [];
+    for (var i = designStart; i < designStart + DM; i++) arr.push(monthly[i] || 0);
+    return arr;
+  }
+  function getConstructionMonths(monthly) {
+    var arr = [];
+    for (var i = constructionStart; i < constructionStart + CM; i++) arr.push(monthly[i] || 0);
+    return arr;
+  }
+
+  // ── Paid section ──
+  html += '<tr class="section-header"><td colspan="' + (2 + DM + CM) + '">المبالغ المدفوعة (الأرض)</td></tr>';
+  paidItems.forEach(function(item) {
+    html += '<tr>';
+    html += '<td class="item-name">' + item.name + '</td>';
+    html += '<td class="total-col">' + fmt(item.amount) + '</td>';
+    for (var i = 0; i < DM + CM; i++) html += '<td class="zero">—</td>';
+    html += '</tr>';
+  });
+  html += '<tr class="subtotal-row">';
+  html += '<td class="item-name" style="background:#f8fafc;">مجموع المدفوع</td>';
+  html += '<td class="total-col">' + fmt(paidTotal) + '</td>';
+  for (var i = 0; i < DM + CM; i++) html += '<td class="zero">—</td>';
+  html += '</tr>';
+
+  // ── Design section ──
+  html += '<tr class="section-header"><td colspan="' + (2 + DM + CM) + '">مرحلة التصاميم — رأس مال المستثمر</td></tr>';
+  var designMonthlyTotals = new Array(DM + CM).fill(0);
+  designItems.forEach(function(item) {
+    var dm = getDesignMonths(item.monthly);
+    var cm = getConstructionMonths(item.monthly);
+    html += '<tr>';
+    html += '<td class="item-name">' + item.name + '</td>';
+    html += '<td class="total-col">' + fmt(item.amount) + '</td>';
+    for (var i = 0; i < DM; i++) {
+      designMonthlyTotals[i] += dm[i];
+      html += '<td' + (dm[i] === 0 ? ' class="zero"' : '') + '>' + fmt(dm[i]) + '</td>';
+    }
+    for (var i = 0; i < CM; i++) {
+      designMonthlyTotals[DM + i] += cm[i];
+      html += '<td' + (cm[i] === 0 ? ' class="zero"' : '') + '>' + fmt(cm[i]) + '</td>';
+    }
+    html += '</tr>';
+  });
+  html += '<tr class="subtotal-row">';
+  html += '<td class="item-name" style="background:#f8fafc;">مجموع التصاميم</td>';
+  html += '<td class="total-col">' + fmt(designTotal) + '</td>';
+  for (var i = 0; i < DM + CM; i++) html += '<td>' + fmt(designMonthlyTotals[i]) + '</td>';
+  html += '</tr>';
+
+  // ── Construction section ──
+  html += '<tr class="section-header"><td colspan="' + (2 + DM + CM) + '">مرحلة التنفيذ — رأس مال المستثمر</td></tr>';
+  var constructionMonthlyTotals = new Array(DM + CM).fill(0);
+  constructionItems.forEach(function(item) {
+    var dm = getDesignMonths(item.monthly);
+    var cm = getConstructionMonths(item.monthly);
+    html += '<tr>';
+    html += '<td class="item-name">' + item.name + '</td>';
+    html += '<td class="total-col">' + fmt(item.amount) + '</td>';
+    for (var i = 0; i < DM; i++) {
+      constructionMonthlyTotals[i] += dm[i];
+      html += '<td' + (dm[i] === 0 ? ' class="zero"' : '') + '>' + fmt(dm[i]) + '</td>';
+    }
+    for (var i = 0; i < CM; i++) {
+      constructionMonthlyTotals[DM + i] += cm[i];
+      html += '<td' + (cm[i] === 0 ? ' class="zero"' : '') + '>' + fmt(cm[i]) + '</td>';
+    }
+    html += '</tr>';
+  });
+  html += '<tr class="subtotal-row">';
+  html += '<td class="item-name" style="background:#f8fafc;">مجموع التنفيذ</td>';
+  html += '<td class="total-col">' + fmt(constructionTotal) + '</td>';
+  for (var i = 0; i < DM + CM; i++) html += '<td>' + fmt(constructionMonthlyTotals[i]) + '</td>';
+  html += '</tr>';
+
+  // ── Grand total row ──
+  var grandMonthly = new Array(DM + CM).fill(0);
+  for (var i = 0; i < DM + CM; i++) grandMonthly[i] = designMonthlyTotals[i] + constructionMonthlyTotals[i];
+  html += '<tr class="total-row">';
+  html += '<td class="item-name" style="background:#1a1a2e;color:#fbbf24;">إجمالي رأس المال المطلوب</td>';
+  html += '<td class="total-col" style="background:#1a1a2e;color:#fbbf24;">' + fmt(investorTotal) + '</td>';
+  for (var i = 0; i < DM + CM; i++) html += '<td>' + fmt(grandMonthly[i]) + '</td>';
+  html += '</tr>';
+
+  // ── Remaining row ──
+  html += '<tr class="remaining-row">';
+  html += '<td class="item-name" style="background:#f59e0b;color:#fff;">المتبقي للسداد (بعد خصم المدفوع)</td>';
+  html += '<td class="total-col" style="background:#f59e0b;color:#fff;">' + fmt(remaining) + '</td>';
+  for (var i = 0; i < DM + CM; i++) html += '<td>' + fmt(grandMonthly[i]) + '</td>';
+  html += '</tr>';
+
+  // ── Cumulative row ──
+  var cumulative = 0;
+  html += '<tr style="background:#fef3c7;">';
+  html += '<td class="item-name" style="background:#fef3c7;color:#92400e;font-weight:bold;">التراكمي الشهري</td>';
+  html += '<td class="total-col" style="background:#fef3c7;color:#92400e;">—</td>';
+  for (var i = 0; i < DM + CM; i++) {
+    cumulative += grandMonthly[i];
+    html += '<td style="color:#92400e;font-weight:bold;font-size:9px;">' + fmt(cumulative) + '</td>';
+  }
+  html += '</tr>';
+
+  html += '</tbody>';
+  document.getElementById('investorTable').innerHTML = html;
+}
+
+function buildRevenueBanner() {
+  if (!DATA) return;
+  var el = document.getElementById('revenueBanner');
+  if (!el) return;
+  var isApproved = DATA.revenueSource === 'approved';
+  var cls = isApproved ? 'approved' : 'calculated';
+  var icon = isApproved ? '\u2705' : '\u26A0\uFE0F';
+  var msg = isApproved
+    ? '\u0627\u0644\u0625\u064A\u0631\u0627\u062F \u0627\u0644\u0645\u0639\u062A\u0645\u062F \u0645\u0633\u062A\u062E\u062F\u0645 \u2014 \u0627\u0644\u0633\u064A\u0646\u0627\u0631\u064A\u0648: ' + DATA.scenarioLabel
+    : '\u0625\u064A\u0631\u0627\u062F \u0645\u062D\u0633\u0648\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u2014 \u0644\u0645 \u064A\u062A\u0645 \u0627\u0639\u062A\u0645\u0627\u062F \u0633\u064A\u0646\u0627\u0631\u064A\u0648 \u0628\u0639\u062F';
+  var h = '<div class="revenue-banner ' + cls + '">';
+  h += '<div class="info"><span class="icon">' + icon + '</span><span>' + msg + '</span></div>';
+  h += '<div style="display:flex;align-items:center;gap:12px;">';
+  h += '<div class="amounts"><div><div class="label">\u0627\u0644\u0625\u064A\u0631\u0627\u062F</div>' + fmt(DATA.totalRevenue) + '</div></div>';
+  h += '<button class="refresh-btn" onclick="refreshData()" id="refreshBtn">\u21BB \u062A\u062D\u062F\u064A\u062B</button>';
+  h += '</div></div>';
+  el.innerHTML = h;
+}
+
+async function refreshData() {
+  var btn = document.getElementById('refreshBtn');
+  if (btn) btn.innerHTML = '<span class="spin">\u21BB</span> \u062C\u0627\u0631\u064A...';
+  await loadData();
+  if (btn) btn.innerHTML = '\u21BB \u062A\u062D\u062F\u064A\u062B';
+}
+
+loadData();
+</script>
+</body>
+</html>

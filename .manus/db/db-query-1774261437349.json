@@ -1,0 +1,13 @@
+{
+  "query": "SELECT id FROM cf_projects WHERE projectId = 4",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id FROM cf_projects WHERE projectId = 4",
+  "rows": [
+    {
+      "id": "30012"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\n30012\n",
+  "stderr": "",
+  "execution_time_ms": 1611
+}

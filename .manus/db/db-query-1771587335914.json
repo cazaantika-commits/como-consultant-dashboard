@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `consultantPortfolio` (\n  `id` int AUTO_INCREMENT NOT NULL,\n  `consultantId` int NOT NULL,\n  `title` varchar(255) NOT NULL,\n  `description` text,\n  `imageUrl` varchar(500),\n  `projectType` varchar(100),\n  `location` varchar(255),\n  `year` varchar(10),\n  `area` varchar(100),\n  `sortOrder` int DEFAULT 0,\n  `createdAt` timestamp NOT NULL DEFAULT (now()),\n  `updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n  CONSTRAINT `consultantPortfolio_id` PRIMARY KEY(`id`),\n  CONSTRAINT `consultantPortfolio_consultantId_fk` FOREIGN KEY (`consultantId`) REFERENCES `consultants`(`id`) ON DELETE CASCADE\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute CREATE TABLE IF NOT EXISTS `consultantPortfolio` (\n  `id` int AUTO_INCREMENT NOT NULL,\n  `consultantId` int NOT NULL,\n  `title` varchar(255) NOT NULL,\n  `description` text,\n  `imageUrl` varchar(500),\n  `projectType` varchar(100),\n  `location` varchar(255),\n  `year` varchar(10),\n  `area` varchar(100),\n  `sortOrder` int DEFAULT 0,\n  `createdAt` timestamp NOT NULL DEFAULT (now()),\n  `updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n  CONSTRAINT `consultantPortfolio_id` PRIMARY KEY(`id`),\n  CONSTRAINT `consultantPortfolio_consultantId_fk` FOREIGN KEY (`consultantId`) REFERENCES `consultants`(`id`) ON DELETE CASCADE\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1832
+}

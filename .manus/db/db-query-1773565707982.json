@@ -1,0 +1,17 @@
+{
+  "query": "SELECT id, supervision_fee_method, supervision_submitted, CHAR_LENGTH(import_json) as json_len, LEFT(import_json, 1000) as json_start FROM cpa_project_consultants WHERE id = 150004",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, supervision_fee_method, supervision_submitted, CHAR_LENGTH(import_json) as json_len, LEFT(import_json, 1000) as json_start FROM cpa_project_consultants WHERE id = 150004",
+  "rows": [
+    {
+      "id": "150004",
+      "supervision_fee_method": "MONTHLY_RATE",
+      "supervision_submitted": "1",
+      "json_len": "1788",
+      "json_start": "{\"project_id\":\"6457879\",\"consultant_code\":\"KIEFERLE\",\"proposal_date\":\"2026-02-06\",\"proposal_reference\":\"KP Proposal Feb 2026\",\"design_fee\":{\"method\":\"LUMP_SUM\",\"amount\":7856068,\"percentage\":null},\"supervision_fee\":{\"submitted\":true,\"method\":\"MONTHLY_RATE\",\"amount\":null,\"stated_duration_months\":30,\"team\":[{\"role_code\":\"RE\",\"proposed_monthly_rate\":69938,\"proposed_allocation_pct\":100},{\"role_code\":\"HO_ARCH\",\"proposed_monthly_rate\":43197,\"proposed_allocation_pct\":40},{\"role_code\":\"HO_STRUCTURAL\",\"proposed_monthly_rate\":46282.5,\"proposed_allocation_pct\":40},{\"role_code\":\"CIVIL_INSPECTOR\",\"proposed_monthly_rate\":22627,\"proposed_allocation_pct\":100},{\"role_code\":\"HO_MECHANICAL\",\"proposed_monthly_rate\":43197,\"proposed_allocation_pct\":40},{\"role_code\":\"MEP_INSPECTOR\",\"proposed_monthly_rate\":22627,\"proposed_allocation_pct\":100},{\"role_code\":\"HO_ELECTRICAL\",\"proposed_monthly_rate\":43197,\"proposed_allocation_pct\":40},{\"role_code\":\"HSE_OFFICER\",\"proposed_monthly_rate\":26741,\"proposed_allocation_pct"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tsupervision_fee_method\tsupervision_submitted\tjson_len\tjson_start\n150004\tMONTHLY_RATE\t1\t1788\t{\"project_id\":\"6457879\",\"consultant_code\":\"KIEFERLE\",\"proposal_date\":\"2026-02-06\",\"proposal_reference\":\"KP Proposal Feb 2026\",\"design_fee\":{\"method\":\"LUMP_SUM\",\"amount\":7856068,\"percentage\":null},\"supervision_fee\":{\"submitted\":true,\"method\":\"MONTHLY_RATE\",\"amount\":null,\"stated_duration_months\":30,\"team\":[{\"role_code\":\"RE\",\"proposed_monthly_rate\":69938,\"proposed_allocation_pct\":100},{\"role_code\":\"HO_ARCH\",\"proposed_monthly_rate\":43197,\"proposed_allocation_pct\":40},{\"role_code\":\"HO_STRUCTURAL\",\"proposed_monthly_rate\":46282.5,\"proposed_allocation_pct\":40},{\"role_code\":\"CIVIL_INSPECTOR\",\"proposed_monthly_rate\":22627,\"proposed_allocation_pct\":100},{\"role_code\":\"HO_MECHANICAL\",\"proposed_monthly_rate\":43197,\"proposed_allocation_pct\":40},{\"role_code\":\"MEP_INSPECTOR\",\"proposed_monthly_rate\":22627,\"proposed_allocation_pct\":100},{\"role_code\":\"HO_ELECTRICAL\",\"proposed_monthly_rate\":43197,\"proposed_allocation_pct\":40},{\"role_code\":\"HSE_OFFICER\",\"proposed_monthly_rate\":26741,\"proposed_allocation_pct\n",
+  "stderr": "",
+  "execution_time_ms": 1575
+}

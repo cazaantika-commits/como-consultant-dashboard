@@ -1,0 +1,60 @@
+{
+  "query": "SELECT id, code, legal_name FROM cpa_consultants_master ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, code, legal_name FROM cpa_consultants_master ORDER BY id;",
+  "rows": [
+    {
+      "id": "1",
+      "code": "OSUS",
+      "legal_name": "Osus International"
+    },
+    {
+      "id": "2",
+      "code": "REALISTI",
+      "legal_name": "Realistic Engineering"
+    },
+    {
+      "id": "3",
+      "code": "DEC",
+      "legal_name": "DATUM Engineering Consultants"
+    },
+    {
+      "id": "4",
+      "code": "AAEC",
+      "legal_name": "ARTEC Architectural & Engineering Consultants"
+    },
+    {
+      "id": "5",
+      "code": "ABCAE",
+      "legal_name": "Arif & Bintoak Consulting Architects & Engineers"
+    },
+    {
+      "id": "6",
+      "code": "ALDEC",
+      "legal_name": "Al Diwan Engineering Consultants"
+    },
+    {
+      "id": "7",
+      "code": "LACASA",
+      "legal_name": "LACASA"
+    },
+    {
+      "id": "8",
+      "code": "XYZ",
+      "legal_name": "XYZ Designers"
+    },
+    {
+      "id": "9",
+      "code": "KIEFERLE",
+      "legal_name": "Kieferle & Partner"
+    },
+    {
+      "id": "10",
+      "code": "SEC(",
+      "legal_name": "Safeer Engineering Consultants (SEC)"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcode\tlegal_name\n1\tOSUS\tOsus International\n2\tREALISTI\tRealistic Engineering\n3\tDEC\tDATUM Engineering Consultants\n4\tAAEC\tARTEC Architectural & Engineering Consultants\n5\tABCAE\tArif & Bintoak Consulting Architects & Engineers\n6\tALDEC\tAl Diwan Engineering Consultants\n7\tLACASA\tLACASA\n8\tXYZ\tXYZ Designers\n9\tKIEFERLE\tKieferle & Partner\n10\tSEC(\tSafeer Engineering Consultants (SEC)\n",
+  "stderr": "",
+  "execution_time_ms": 1519
+}

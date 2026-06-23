@@ -1,0 +1,24 @@
+{
+  "query": "SELECT gfaResidential, gfaRetail, gfaOffices, saleableResidentialPct, saleableRetailPct, saleableOfficesPct, residentialSalePrice, retailSalePrice, officesSalePrice, developerFeePct, agentCommissionSalePct, marketingPct FROM feasibilityStudies WHERE projectId = 4;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT gfaResidential, gfaRetail, gfaOffices, saleableResidentialPct, saleableRetailPct, saleableOfficesPct, residentialSalePrice, retailSalePrice, officesSalePrice, developerFeePct, agentCommissionSalePct, marketingPct FROM feasibilityStudies WHERE projectId = 4;",
+  "rows": [
+    {
+      "gfaResidential": "NULL",
+      "gfaRetail": "NULL",
+      "gfaOffices": "NULL",
+      "saleableResidentialPct": "90",
+      "saleableRetailPct": "99",
+      "saleableOfficesPct": "90",
+      "residentialSalePrice": "NULL",
+      "retailSalePrice": "NULL",
+      "officesSalePrice": "NULL",
+      "developerFeePct": "5",
+      "agentCommissionSalePct": "5",
+      "marketingPct": "2"
+    }
+  ],
+  "messages": [],
+  "stdout": "gfaResidential\tgfaRetail\tgfaOffices\tsaleableResidentialPct\tsaleableRetailPct\tsaleableOfficesPct\tresidentialSalePrice\tretailSalePrice\tofficesSalePrice\tdeveloperFeePct\tagentCommissionSalePct\tmarketingPct\nNULL\tNULL\tNULL\t90\t99\t90\tNULL\tNULL\tNULL\t5\t5\t2\n",
+  "stderr": "",
+  "execution_time_ms": 1602
+}

@@ -1,0 +1,28 @@
+{
+  "query": "SHOW TABLES LIKE '%command%'",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SHOW TABLES LIKE '%command%'",
+  "rows": [
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%command%)": "commandCenterChat"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%command%)": "commandCenterEvaluations"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%command%)": "commandCenterItems"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%command%)": "commandCenterMembers"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%command%)": "commandCenterNotifications"
+    },
+    {
+      "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%command%)": "commandCenterResponses"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_Q366eAYG4Q7iaM8VuAmmFX (%command%)\ncommandCenterChat\ncommandCenterEvaluations\ncommandCenterItems\ncommandCenterMembers\ncommandCenterNotifications\ncommandCenterResponses\n",
+  "stderr": "",
+  "execution_time_ms": 1644
+}

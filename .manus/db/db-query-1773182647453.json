@@ -1,0 +1,52 @@
+{
+  "query": "SELECT COUNT(*) as field_defs FROM stage_field_definitions;\nSELECT COUNT(*) as requirements FROM lifecycle_requirements;\nSELECT serviceCode, COUNT(*) as cnt FROM lifecycle_requirements GROUP BY serviceCode LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT COUNT(*) as field_defs FROM stage_field_definitions;\nSELECT COUNT(*) as requirements FROM lifecycle_requirements;\nSELECT serviceCode, COUNT(*) as cnt FROM lifecycle_requirements GROUP BY serviceCode LIMIT 10;",
+  "rows": [
+    {
+      "field_defs": "32"
+    },
+    {
+      "field_defs": "requirements"
+    },
+    {
+      "field_defs": "190"
+    },
+    {
+      "field_defs": "serviceCode\tcnt"
+    },
+    {
+      "field_defs": "SRV-CLOSE-COMPLETION-CERT\t6"
+    },
+    {
+      "field_defs": "SRV-CLOSE-ESCROW-SETTLEMENT\t8"
+    },
+    {
+      "field_defs": "SRV-CLOSE-RERA-CLOSURE\t7"
+    },
+    {
+      "field_defs": "SRV-CLOSE-TITLE-DEED-ISSUE\t7"
+    },
+    {
+      "field_defs": "SRV-CLOSE-UNIT-HANDOVER\t6"
+    },
+    {
+      "field_defs": "SRV-DES-BLDG-PERMIT\t5"
+    },
+    {
+      "field_defs": "SRV-DES-CNSLT-APPT\t9"
+    },
+    {
+      "field_defs": "SRV-DES-CONCEPT-DEV\t7"
+    },
+    {
+      "field_defs": "SRV-DES-FINAL-DESIGN\t6"
+    },
+    {
+      "field_defs": "SRV-DES-PRELIM-DESIGN\t6"
+    }
+  ],
+  "messages": [],
+  "stdout": "field_defs\n32\nrequirements\n190\nserviceCode\tcnt\nSRV-CLOSE-COMPLETION-CERT\t6\nSRV-CLOSE-ESCROW-SETTLEMENT\t8\nSRV-CLOSE-RERA-CLOSURE\t7\nSRV-CLOSE-TITLE-DEED-ISSUE\t7\nSRV-CLOSE-UNIT-HANDOVER\t6\nSRV-DES-BLDG-PERMIT\t5\nSRV-DES-CNSLT-APPT\t9\nSRV-DES-CONCEPT-DEV\t7\nSRV-DES-FINAL-DESIGN\t6\nSRV-DES-PRELIM-DESIGN\t6\n",
+  "stderr": "",
+  "execution_time_ms": 1933
+}

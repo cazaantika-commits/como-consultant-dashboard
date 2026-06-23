@@ -1,0 +1,54 @@
+{
+  "query": "SELECT id, item_key, name_ar, section, distribution_method, start_month, end_month, lump_sum_month, scenario FROM project_cash_flow_settings WHERE project_id = 4 AND section = 'design' AND distribution_method = 'equal_spread' LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, item_key, name_ar, section, distribution_method, start_month, end_month, lump_sum_month, scenario FROM project_cash_flow_settings WHERE project_id = 4 AND section = 'design' AND distribution_method = 'equal_spread' LIMIT 10;",
+  "rows": [
+    {
+      "id": "180007",
+      "item_key": "design_fee",
+      "name_ar": "أتعاب التصميم (2%)",
+      "section": "design",
+      "distribution_method": "equal_spread",
+      "start_month": "1",
+      "end_month": "5",
+      "lump_sum_month": "NULL",
+      "scenario": "offplan_escrow"
+    },
+    {
+      "id": "180008",
+      "item_key": "developer_fee_design",
+      "name_ar": "أتعاب المطور — التصاميم (1%)",
+      "section": "design",
+      "distribution_method": "equal_spread",
+      "start_month": "1",
+      "end_month": "5",
+      "lump_sum_month": "NULL",
+      "scenario": "offplan_escrow"
+    },
+    {
+      "id": "150216",
+      "item_key": "design_fee",
+      "name_ar": "أتعاب التصميم (2%)",
+      "section": "design",
+      "distribution_method": "equal_spread",
+      "start_month": "1",
+      "end_month": "4",
+      "lump_sum_month": "NULL",
+      "scenario": "offplan_construction"
+    },
+    {
+      "id": "150217",
+      "item_key": "developer_fee_design",
+      "name_ar": "أتعاب المطور — التصاميم (1%)",
+      "section": "design",
+      "distribution_method": "equal_spread",
+      "start_month": "1",
+      "end_month": "4",
+      "lump_sum_month": "NULL",
+      "scenario": "offplan_construction"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\titem_key\tname_ar\tsection\tdistribution_method\tstart_month\tend_month\tlump_sum_month\tscenario\n180007\tdesign_fee\tأتعاب التصميم (2%)\tdesign\tequal_spread\t1\t5\tNULL\toffplan_escrow\n180008\tdeveloper_fee_design\tأتعاب المطور — التصاميم (1%)\tdesign\tequal_spread\t1\t5\tNULL\toffplan_escrow\n150216\tdesign_fee\tأتعاب التصميم (2%)\tdesign\tequal_spread\t1\t4\tNULL\toffplan_construction\n150217\tdeveloper_fee_design\tأتعاب المطور — التصاميم (1%)\tdesign\tequal_spread\t1\t4\tNULL\toffplan_construction\n",
+  "stderr": "",
+  "execution_time_ms": 1590
+}

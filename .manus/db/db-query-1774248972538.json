@@ -1,0 +1,46 @@
+{
+  "query": "SELECT item_key, amount_override, funding_source, section FROM project_cash_flow_settings WHERE project_id = 4 AND scenario = 'offplan_escrow' AND (item_key LIKE '%community%' OR item_key LIKE '%contractor%' OR item_key LIKE '%government%')",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT item_key, amount_override, funding_source, section FROM project_cash_flow_settings WHERE project_id = 4 AND scenario = 'offplan_escrow' AND (item_key LIKE '%community%' OR item_key LIKE '%contractor%' OR item_key LIKE '%government%')",
+  "rows": [
+    {
+      "item_key": "government_fees_investor",
+      "amount_override": "NULL",
+      "funding_source": "investor",
+      "section": "design"
+    },
+    {
+      "item_key": "community_fee",
+      "amount_override": "NULL",
+      "funding_source": "investor",
+      "section": "offplan"
+    },
+    {
+      "item_key": "contractor_advance",
+      "amount_override": "NULL",
+      "funding_source": "investor",
+      "section": "construction"
+    },
+    {
+      "item_key": "government_fees_escrow",
+      "amount_override": "NULL",
+      "funding_source": "escrow",
+      "section": "escrow"
+    },
+    {
+      "item_key": "contractor_payments",
+      "amount_override": "NULL",
+      "funding_source": "escrow",
+      "section": "escrow"
+    },
+    {
+      "item_key": "community_fee_escrow",
+      "amount_override": "NULL",
+      "funding_source": "investor",
+      "section": "escrow"
+    }
+  ],
+  "messages": [],
+  "stdout": "item_key\tamount_override\tfunding_source\tsection\ngovernment_fees_investor\tNULL\tinvestor\tdesign\ncommunity_fee\tNULL\tinvestor\toffplan\ncontractor_advance\tNULL\tinvestor\tconstruction\ngovernment_fees_escrow\tNULL\tescrow\tescrow\ncontractor_payments\tNULL\tescrow\tescrow\ncommunity_fee_escrow\tNULL\tinvestor\tescrow\n",
+  "stderr": "",
+  "execution_time_ms": 1517
+}

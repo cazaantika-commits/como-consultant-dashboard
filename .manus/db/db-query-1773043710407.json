@@ -1,0 +1,34 @@
+{
+  "query": "SELECT stageNumber, stageName, stageStatus, errorMessage FROM joelle_analysis_stages WHERE stageNumber IN (6, 10) ORDER BY stageNumber;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT stageNumber, stageName, stageStatus, errorMessage FROM joelle_analysis_stages WHERE stageNumber IN (6, 10) ORDER BY stageNumber;",
+  "rows": [
+    {
+      "stageNumber": "6",
+      "stageName": "استراتيجية المنتج",
+      "stageStatus": "completed",
+      "errorMessage": "NULL"
+    },
+    {
+      "stageNumber": "6",
+      "stageName": "استراتيجية المنتج",
+      "stageStatus": "completed",
+      "errorMessage": "NULL"
+    },
+    {
+      "stageNumber": "10",
+      "stageName": "مصالحة البيانات",
+      "stageStatus": "error",
+      "errorMessage": "LLM invoke failed: 500 Internal Server Error – {\"code\":13,\"message\":\"received bad response from upstream\"}"
+    },
+    {
+      "stageNumber": "10",
+      "stageName": "مصالحة البيانات",
+      "stageStatus": "completed",
+      "errorMessage": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "stageNumber\tstageName\tstageStatus\terrorMessage\n6\tاستراتيجية المنتج\tcompleted\tNULL\n6\tاستراتيجية المنتج\tcompleted\tNULL\n10\tمصالحة البيانات\terror\tLLM invoke failed: 500 Internal Server Error – {\"code\":13,\"message\":\"received bad response from upstream\"}\n10\tمصالحة البيانات\tcompleted\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1495
+}

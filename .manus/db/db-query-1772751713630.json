@@ -1,0 +1,18 @@
+{
+  "query": "SELECT id, name, plotNumber, landPrice, plotAreaSqm, gfaSqft FROM projects WHERE id = 2;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, name, plotNumber, landPrice, plotAreaSqm, gfaSqft FROM projects WHERE id = 2;",
+  "rows": [
+    {
+      "id": "2",
+      "name": "مجان متعدد الاستخدامات (G+4P+25)",
+      "plotNumber": "6457879",
+      "landPrice": "64206344.00",
+      "plotAreaSqm": "6213.28",
+      "gfaSqft": "468154.32"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tplotNumber\tlandPrice\tplotAreaSqm\tgfaSqft\n2\tمجان متعدد الاستخدامات (G+4P+25)\t6457879\t64206344.00\t6213.28\t468154.32\n",
+  "stderr": "",
+  "execution_time_ms": 1517
+}

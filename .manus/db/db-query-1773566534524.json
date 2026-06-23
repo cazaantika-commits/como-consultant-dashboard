@@ -1,0 +1,22 @@
+{
+  "query": "SELECT pc.id, pc.design_fee_amount, pc.design_fee_method, pc.design_fee_percentage, pc.supervision_fee_method, pc.supervision_fee_amount, pc.supervision_submitted, pc.status, cm.code, cm.legal_name FROM cpa_project_consultants pc JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id WHERE pc.cpa_project_id = 120001 AND cm.code = 'XYZ'",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT pc.id, pc.design_fee_amount, pc.design_fee_method, pc.design_fee_percentage, pc.supervision_fee_method, pc.supervision_fee_amount, pc.supervision_submitted, pc.status, cm.code, cm.legal_name FROM cpa_project_consultants pc JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id WHERE pc.cpa_project_id = 120001 AND cm.code = 'XYZ'",
+  "rows": [
+    {
+      "id": "150005",
+      "design_fee_amount": "NULL",
+      "design_fee_method": "NULL",
+      "design_fee_percentage": "NULL",
+      "supervision_fee_method": "NULL",
+      "supervision_fee_amount": "NULL",
+      "supervision_submitted": "0",
+      "status": "EVALUATED",
+      "code": "XYZ",
+      "legal_name": "XYZ Designers"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tdesign_fee_amount\tdesign_fee_method\tdesign_fee_percentage\tsupervision_fee_method\tsupervision_fee_amount\tsupervision_submitted\tstatus\tcode\tlegal_name\n150005\tNULL\tNULL\tNULL\tNULL\tNULL\t0\tEVALUATED\tXYZ\tXYZ Designers\n",
+  "stderr": "",
+  "execution_time_ms": 1627
+}

@@ -1,0 +1,16 @@
+{
+  "query": "SELECT id, openId, name, role FROM users LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, openId, name, role FROM users LIMIT 5;",
+  "rows": [
+    {
+      "id": "1",
+      "openId": "5ayJotR3SdmQrbRBtwWMjz",
+      "name": "Abdalrahman Zaqout",
+      "role": "admin"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\topenId\tname\trole\n1\t5ayJotR3SdmQrbRBtwWMjz\tAbdalrahman Zaqout\tadmin\n",
+  "stderr": "",
+  "execution_time_ms": 1542
+}

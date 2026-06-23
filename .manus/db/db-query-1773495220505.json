@@ -1,0 +1,75 @@
+{
+  "query": "SELECT pc.id, pc.cpa_project_id, pc.status, pc.design_fee_method, pc.design_fee_amount, pc.design_fee_percentage, pc.supervision_fee_method, pc.supervision_fee_amount, pc.supervision_submitted, cm.trade_name, cm.legal_name FROM cpa_project_consultants pc JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id ORDER BY pc.cpa_project_id, pc.id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT pc.id, pc.cpa_project_id, pc.status, pc.design_fee_method, pc.design_fee_amount, pc.design_fee_percentage, pc.supervision_fee_method, pc.supervision_fee_amount, pc.supervision_submitted, cm.trade_name, cm.legal_name FROM cpa_project_consultants pc JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id ORDER BY pc.cpa_project_id, pc.id;",
+  "rows": [
+    {
+      "id": "60016",
+      "cpa_project_id": "30004",
+      "status": "EVALUATED",
+      "design_fee_method": "NULL",
+      "design_fee_amount": "NULL",
+      "design_fee_percentage": "NULL",
+      "supervision_fee_method": "NULL",
+      "supervision_fee_amount": "NULL",
+      "supervision_submitted": "0",
+      "trade_name": "LACASA",
+      "legal_name": "LACASA"
+    },
+    {
+      "id": "60017",
+      "cpa_project_id": "30004",
+      "status": "EVALUATED",
+      "design_fee_method": "NULL",
+      "design_fee_amount": "NULL",
+      "design_fee_percentage": "NULL",
+      "supervision_fee_method": "NULL",
+      "supervision_fee_amount": "NULL",
+      "supervision_submitted": "0",
+      "trade_name": "DATUM Engineering Consultants",
+      "legal_name": "DATUM Engineering Consultants"
+    },
+    {
+      "id": "60018",
+      "cpa_project_id": "30004",
+      "status": "EVALUATED",
+      "design_fee_method": "NULL",
+      "design_fee_amount": "NULL",
+      "design_fee_percentage": "NULL",
+      "supervision_fee_method": "NULL",
+      "supervision_fee_amount": "NULL",
+      "supervision_submitted": "0",
+      "trade_name": "ARTEC Architectural & Engineering Consultants",
+      "legal_name": "ARTEC Architectural & Engineering Consultants"
+    },
+    {
+      "id": "60019",
+      "cpa_project_id": "30004",
+      "status": "EVALUATED",
+      "design_fee_method": "NULL",
+      "design_fee_amount": "NULL",
+      "design_fee_percentage": "NULL",
+      "supervision_fee_method": "NULL",
+      "supervision_fee_amount": "NULL",
+      "supervision_submitted": "0",
+      "trade_name": "XYZ Designers",
+      "legal_name": "XYZ Designers"
+    },
+    {
+      "id": "60020",
+      "cpa_project_id": "30004",
+      "status": "EVALUATED",
+      "design_fee_method": "NULL",
+      "design_fee_amount": "NULL",
+      "design_fee_percentage": "NULL",
+      "supervision_fee_method": "NULL",
+      "supervision_fee_amount": "NULL",
+      "supervision_submitted": "0",
+      "trade_name": "Kieferle & Partner",
+      "legal_name": "Kieferle & Partner"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcpa_project_id\tstatus\tdesign_fee_method\tdesign_fee_amount\tdesign_fee_percentage\tsupervision_fee_method\tsupervision_fee_amount\tsupervision_submitted\ttrade_name\tlegal_name\n60016\t30004\tEVALUATED\tNULL\tNULL\tNULL\tNULL\tNULL\t0\tLACASA\tLACASA\n60017\t30004\tEVALUATED\tNULL\tNULL\tNULL\tNULL\tNULL\t0\tDATUM Engineering Consultants\tDATUM Engineering Consultants\n60018\t30004\tEVALUATED\tNULL\tNULL\tNULL\tNULL\tNULL\t0\tARTEC Architectural & Engineering Consultants\tARTEC Architectural & Engineering Consultants\n60019\t30004\tEVALUATED\tNULL\tNULL\tNULL\tNULL\tNULL\t0\tXYZ Designers\tXYZ Designers\n60020\t30004\tEVALUATED\tNULL\tNULL\tNULL\tNULL\tNULL\t0\tKieferle & Partner\tKieferle & Partner\n",
+  "stderr": "",
+  "execution_time_ms": 1540
+}

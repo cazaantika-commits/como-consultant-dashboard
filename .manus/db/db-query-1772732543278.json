@@ -1,0 +1,26 @@
+{
+  "query": "SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'projects' AND COLUMN_NAME LIKE 'developer%' ORDER BY COLUMN_NAME;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'projects' AND COLUMN_NAME LIKE 'developer%' ORDER BY COLUMN_NAME;",
+  "rows": [
+    {
+      "COLUMN_NAME": "developerFeePct",
+      "DATA_TYPE": "decimal"
+    },
+    {
+      "COLUMN_NAME": "developerFeePhase1Pct",
+      "DATA_TYPE": "decimal"
+    },
+    {
+      "COLUMN_NAME": "developerFeePhase2Pct",
+      "DATA_TYPE": "decimal"
+    },
+    {
+      "COLUMN_NAME": "developerNocFee",
+      "DATA_TYPE": "decimal"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\tDATA_TYPE\ndeveloperFeePct\tdecimal\ndeveloperFeePhase1Pct\tdecimal\ndeveloperFeePhase2Pct\tdecimal\ndeveloperNocFee\tdecimal\n",
+  "stderr": "",
+  "execution_time_ms": 1585
+}

@@ -1,0 +1,21 @@
+{
+  "query": "SELECT * FROM tasks ORDER BY id DESC LIMIT 3",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT * FROM tasks ORDER BY id DESC LIMIT 3",
+  "rows": [],
+  "messages": [
+    "150001\t⚡ متابعة: فتح حساب بنكي للشركة\tتم بدء العمل على \"فتح حساب بنكي للشركة\" في تأسيس الشركة (الإعداد القانوني والتسجيل).",
+    "المطلوب من فاروق:",
+    "- متابعة تنفيذ هذه المهمة",
+    "- التأكد من استيفاء جميع المتطلبات",
+    "- الإبلاغ عن أي عوائق أو تأخيرات\tمركز مجان التجاري (G+4)\tقانوني\tفاروق\thigh\tprogress\t10\tNULL\tNULL\tagent\tسلوى\t2026-03-03 22:16:18\t2026-03-03 22:16:18",
+    "120002\tمتابعة رد إيميل: RE: Request for Fee Proposals – Multiple Development Projects\tتم إرسال رد إلى CORNELIA KIEFERLE-NICKLAS (kieferle@kieferle-partner.de) بخصوص: RE: Request for Fee Proposals – Multiple Development Projects",
+    "المطلوب: متابعة الرد والتأكد من استلام الرسالة.",
+    "رقم سجل الإيميل: #3\tإدارة المراسلات\tمتابعة إيميل\tAbdalrahman Zaqout\tmedium\tnew\t0\t2026-02-28\tNULL\tagent\tsalwa\t2026-02-25 17:17:18\t2026-02-25 17:17:18",
+    "120001\tمتابعة رد إيميل: glass quotation\tتم إرسال رد إلى kamil moussa (kamil.mou@gmail.com) بخصوص: glass quotation",
+    "المطلوب: متابعة الرد والتأكد من استلام الرسالة.",
+    "رقم سجل الإيميل: #2\tإدارة المراسلات\tمتابعة إيميل\tAbdalrahman Zaqout\tmedium\tnew\t0\t2026-02-28\tNULL\tagent\tsalwa\t2026-02-25 17:14:37\t2026-02-25 17:14:37"
+  ],
+  "stdout": "id\ttitle\tdescription\tproject\tcategory\towner\tpriority\tstatus\tprogress\tdueDate\tattachment\tsource\tsourceAgent\tcreatedAt\tupdatedAt\n150001\t⚡ متابعة: فتح حساب بنكي للشركة\tتم بدء العمل على \"فتح حساب بنكي للشركة\" في تأسيس الشركة (الإعداد القانوني والتسجيل).\n\nالمطلوب من فاروق:\n- متابعة تنفيذ هذه المهمة\n- التأكد من استيفاء جميع المتطلبات\n- الإبلاغ عن أي عوائق أو تأخيرات\tمركز مجان التجاري (G+4)\tقانوني\tفاروق\thigh\tprogress\t10\tNULL\tNULL\tagent\tسلوى\t2026-03-03 22:16:18\t2026-03-03 22:16:18\n120002\tمتابعة رد إيميل: RE: Request for Fee Proposals – Multiple Development Projects\tتم إرسال رد إلى CORNELIA KIEFERLE-NICKLAS (kieferle@kieferle-partner.de) بخصوص: RE: Request for Fee Proposals – Multiple Development Projects\n\nالمطلوب: متابعة الرد والتأكد من استلام الرسالة.\nرقم سجل الإيميل: #3\tإدارة المراسلات\tمتابعة إيميل\tAbdalrahman Zaqout\tmedium\tnew\t0\t2026-02-28\tNULL\tagent\tsalwa\t2026-02-25 17:17:18\t2026-02-25 17:17:18\n120001\tمتابعة رد إيميل: glass quotation\tتم إرسال رد إلى kamil moussa (kamil.mou@gmail.com) بخصوص: glass quotation\n\nالمطلوب: متابعة الرد والتأكد من استلام الرسالة.\nرقم سجل الإيميل: #2\tإدارة المراسلات\tمتابعة إيميل\tAbdalrahman Zaqout\tmedium\tnew\t0\t2026-02-28\tNULL\tagent\tsalwa\t2026-02-25 17:14:37\t2026-02-25 17:14:37\n",
+  "stderr": "",
+  "execution_time_ms": 1572
+}

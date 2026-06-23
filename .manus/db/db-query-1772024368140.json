@@ -1,0 +1,13 @@
+{
+  "query": "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ('documentIndex', 'agentActivityLog', 'specialistKnowledge')",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ('documentIndex', 'agentActivityLog', 'specialistKnowledge')",
+  "rows": [
+    {
+      "TABLE_NAME": "agentActivityLog"
+    }
+  ],
+  "messages": [],
+  "stdout": "TABLE_NAME\nagentActivityLog\n",
+  "stderr": "",
+  "execution_time_ms": 1532
+}

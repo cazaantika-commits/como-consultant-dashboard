@@ -1,0 +1,100 @@
+{
+  "query": "SELECT cf.id, cf.projectId, cf.name, cf.startDate, cf.preDevMonths, cf.constructionMonths, cf.handoverMonths, p.name as project_name FROM cf_projects cf LEFT JOIN projects p ON cf.projectId = p.id ORDER BY cf.id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT cf.id, cf.projectId, cf.name, cf.startDate, cf.preDevMonths, cf.constructionMonths, cf.handoverMonths, p.name as project_name FROM cf_projects cf LEFT JOIN projects p ON cf.projectId = p.id ORDER BY cf.id;",
+  "rows": [
+    {
+      "id": "30012",
+      "projectId": "4",
+      "name": "ند الشبا — قطعة 1 (6185392)",
+      "startDate": "2026-04",
+      "preDevMonths": "6",
+      "constructionMonths": "16",
+      "handoverMonths": "2",
+      "project_name": "ند الشبا — قطعة 1 (6185392)"
+    },
+    {
+      "id": "90001",
+      "projectId": "1",
+      "name": "مركز مجان التجاري (G+4)",
+      "startDate": "2025-09",
+      "preDevMonths": "9",
+      "constructionMonths": "24",
+      "handoverMonths": "3",
+      "project_name": "مركز مجان التجاري (G+4)"
+    },
+    {
+      "id": "90002",
+      "projectId": "2",
+      "name": "مجان متعدد الاستخدامات (G+4P+25)",
+      "startDate": "2025-06",
+      "preDevMonths": "9",
+      "constructionMonths": "24",
+      "handoverMonths": "3",
+      "project_name": "مجان متعدد الاستخدامات (G+4P+25)"
+    },
+    {
+      "id": "90003",
+      "projectId": "3",
+      "name": "مبنى الجداف السكني (G+7)",
+      "startDate": "2026-04",
+      "preDevMonths": "6",
+      "constructionMonths": "16",
+      "handoverMonths": "2",
+      "project_name": "مبنى الجداف السكني (G+7)"
+    },
+    {
+      "id": "330001",
+      "projectId": "NULL",
+      "name": "Test CF Project for Phases",
+      "startDate": "2026-01",
+      "preDevMonths": "6",
+      "constructionMonths": "24",
+      "handoverMonths": "3",
+      "project_name": "NULL"
+    },
+    {
+      "id": "360001",
+      "projectId": "NULL",
+      "name": "Test CF Project for Phases",
+      "startDate": "2026-01",
+      "preDevMonths": "6",
+      "constructionMonths": "24",
+      "handoverMonths": "3",
+      "project_name": "NULL"
+    },
+    {
+      "id": "360002",
+      "projectId": "NULL",
+      "name": "Test CF Project for Phases",
+      "startDate": "2026-01",
+      "preDevMonths": "6",
+      "constructionMonths": "24",
+      "handoverMonths": "3",
+      "project_name": "NULL"
+    },
+    {
+      "id": "360003",
+      "projectId": "NULL",
+      "name": "Test CF Project for Phases",
+      "startDate": "2026-01",
+      "preDevMonths": "6",
+      "constructionMonths": "24",
+      "handoverMonths": "3",
+      "project_name": "NULL"
+    },
+    {
+      "id": "360004",
+      "projectId": "NULL",
+      "name": "Test CF Project for Phases",
+      "startDate": "2026-01",
+      "preDevMonths": "6",
+      "constructionMonths": "24",
+      "handoverMonths": "3",
+      "project_name": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tprojectId\tname\tstartDate\tpreDevMonths\tconstructionMonths\thandoverMonths\tproject_name\n30012\t4\tند الشبا — قطعة 1 (6185392)\t2026-04\t6\t16\t2\tند الشبا — قطعة 1 (6185392)\n90001\t1\tمركز مجان التجاري (G+4)\t2025-09\t9\t24\t3\tمركز مجان التجاري (G+4)\n90002\t2\tمجان متعدد الاستخدامات (G+4P+25)\t2025-06\t9\t24\t3\tمجان متعدد الاستخدامات (G+4P+25)\n90003\t3\tمبنى الجداف السكني (G+7)\t2026-04\t6\t16\t2\tمبنى الجداف السكني (G+7)\n330001\tNULL\tTest CF Project for Phases\t2026-01\t6\t24\t3\tNULL\n360001\tNULL\tTest CF Project for Phases\t2026-01\t6\t24\t3\tNULL\n360002\tNULL\tTest CF Project for Phases\t2026-01\t6\t24\t3\tNULL\n360003\tNULL\tTest CF Project for Phases\t2026-01\t6\t24\t3\tNULL\n360004\tNULL\tTest CF Project for Phases\t2026-01\t6\t24\t3\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1614
+}

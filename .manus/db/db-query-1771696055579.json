@@ -1,0 +1,30 @@
+{
+  "query": "SELECT id, title, meetingStatus, LEFT(minutesSummary, 200) as summary_preview, LEFT(decisionsJson, 200) as decisions_preview, LEFT(extractedTasksJson, 200) as tasks_preview, startedAt, endedAt FROM meetings ORDER BY id DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, title, meetingStatus, LEFT(minutesSummary, 200) as summary_preview, LEFT(decisionsJson, 200) as decisions_preview, LEFT(extractedTasksJson, 200) as tasks_preview, startedAt, endedAt FROM meetings ORDER BY id DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "30002",
+      "title": "اتعاب الاستشاريين",
+      "meetingStatus": "completed",
+      "summary_preview": "عُقد اجتماع لمناقشة تحديث المنصة بأسعار الاستشاريين الجديدة والسابقة، وتسجيل الاستشاريين غير المسجلين في المشاريع المناسبة. تم توزيع المهام على المشاركين، حيث ستقوم سلوى وخازن وألينا بالعمل على استخرا",
+      "decisions_preview": "[{\"decision\":\"تحديث المنصة بأسعار الاستشاريين الجديدة والسابقة.\",\"responsible\":\"المدير، سلوى، خازن، ألينا\"},{\"decision\":\"تسجيل الاستشاريين غير المسجلين في المشاريع المناسبة.\",\"responsible\":\"المدير، سل",
+      "tasks_preview": "[{\"task\":\"التركيز على تسجيل الاستشاريين غير المسجلين في المشاريع المناسبة.\",\"assignee\":\"سلوى\",\"deadline\":\"غير محدد\",\"priority\":\"عالية\"},{\"task\":\"البحث في تحديث المنصة بأسعار الاستشاريين الجديدة والساب",
+      "startedAt": "2026-02-21 17:29:25",
+      "endedAt": "2026-02-21 17:30:35"
+    },
+    {
+      "id": "2",
+      "title": "مناقشة دراسات الجدوى للمشاريع",
+      "meetingStatus": "completed",
+      "summary_preview": "NULL",
+      "decisions_preview": "NULL",
+      "tasks_preview": "NULL",
+      "startedAt": "2026-02-21 15:50:31",
+      "endedAt": "2026-02-21 16:02:13"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitle\tmeetingStatus\tsummary_preview\tdecisions_preview\ttasks_preview\tstartedAt\tendedAt\n30002\tاتعاب الاستشاريين\tcompleted\tعُقد اجتماع لمناقشة تحديث المنصة بأسعار الاستشاريين الجديدة والسابقة، وتسجيل الاستشاريين غير المسجلين في المشاريع المناسبة. تم توزيع المهام على المشاركين، حيث ستقوم سلوى وخازن وألينا بالعمل على استخرا\t[{\"decision\":\"تحديث المنصة بأسعار الاستشاريين الجديدة والسابقة.\",\"responsible\":\"المدير، سلوى، خازن، ألينا\"},{\"decision\":\"تسجيل الاستشاريين غير المسجلين في المشاريع المناسبة.\",\"responsible\":\"المدير، سل\t[{\"task\":\"التركيز على تسجيل الاستشاريين غير المسجلين في المشاريع المناسبة.\",\"assignee\":\"سلوى\",\"deadline\":\"غير محدد\",\"priority\":\"عالية\"},{\"task\":\"البحث في تحديث المنصة بأسعار الاستشاريين الجديدة والساب\t2026-02-21 17:29:25\t2026-02-21 17:30:35\n2\tمناقشة دراسات الجدوى للمشاريع\tcompleted\tNULL\tNULL\tNULL\t2026-02-21 15:50:31\t2026-02-21 16:02:13\n",
+  "stderr": "",
+  "execution_time_ms": 1587
+}

@@ -1,0 +1,136 @@
+{
+  "query": "SELECT project_id, scenario, item_key, funding_source, section FROM project_cash_flow_settings WHERE section = 'offplan' AND funding_source = 'investor';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT project_id, scenario, item_key, funding_source, section FROM project_cash_flow_settings WHERE section = 'offplan' AND funding_source = 'investor';",
+  "rows": [
+    {
+      "project_id": "4",
+      "scenario": "offplan_construction",
+      "item_key": "developer_fee_offplan",
+      "funding_source": "investor",
+      "section": "offplan"
+    },
+    {
+      "project_id": "4",
+      "scenario": "offplan_construction",
+      "item_key": "fraz_fee",
+      "funding_source": "investor",
+      "section": "offplan"
+    },
+    {
+      "project_id": "4",
+      "scenario": "offplan_construction",
+      "item_key": "rera_registration",
+      "funding_source": "investor",
+      "section": "offplan"
+    },
+    {
+      "project_id": "4",
+      "scenario": "offplan_construction",
+      "item_key": "rera_units",
+      "funding_source": "investor",
+      "section": "offplan"
+    },
+    {
+      "project_id": "4",
+      "scenario": "offplan_construction",
+      "item_key": "noc_fee",
+      "funding_source": "investor",
+      "section": "offplan"
+    },
+    {
+      "project_id": "4",
+      "scenario": "offplan_construction",
+      "item_key": "escrow_fee",
+      "funding_source": "investor",
+      "section": "offplan"
+    },
+    {
+      "project_id": "4",
+      "scenario": "offplan_construction",
+      "item_key": "community_fee",
+      "funding_source": "investor",
+      "section": "offplan"
+    },
+    {
+      "project_id": "4",
+      "scenario": "offplan_construction",
+      "item_key": "marketing_offplan",
+      "funding_source": "investor",
+      "section": "offplan"
+    },
+    {
+      "project_id": "4",
+      "scenario": "offplan_construction",
+      "item_key": "escrow_deposit",
+      "funding_source": "investor",
+      "section": "offplan"
+    },
+    {
+      "project_id": "4",
+      "scenario": "offplan_escrow",
+      "item_key": "developer_fee_offplan",
+      "funding_source": "investor",
+      "section": "offplan"
+    },
+    {
+      "project_id": "4",
+      "scenario": "offplan_escrow",
+      "item_key": "fraz_fee",
+      "funding_source": "investor",
+      "section": "offplan"
+    },
+    {
+      "project_id": "4",
+      "scenario": "offplan_escrow",
+      "item_key": "rera_registration",
+      "funding_source": "investor",
+      "section": "offplan"
+    },
+    {
+      "project_id": "4",
+      "scenario": "offplan_escrow",
+      "item_key": "rera_units",
+      "funding_source": "investor",
+      "section": "offplan"
+    },
+    {
+      "project_id": "4",
+      "scenario": "offplan_escrow",
+      "item_key": "noc_fee",
+      "funding_source": "investor",
+      "section": "offplan"
+    },
+    {
+      "project_id": "4",
+      "scenario": "offplan_escrow",
+      "item_key": "escrow_fee",
+      "funding_source": "investor",
+      "section": "offplan"
+    },
+    {
+      "project_id": "4",
+      "scenario": "offplan_escrow",
+      "item_key": "community_fee",
+      "funding_source": "investor",
+      "section": "offplan"
+    },
+    {
+      "project_id": "4",
+      "scenario": "offplan_escrow",
+      "item_key": "marketing_offplan",
+      "funding_source": "investor",
+      "section": "offplan"
+    },
+    {
+      "project_id": "4",
+      "scenario": "offplan_escrow",
+      "item_key": "escrow_deposit",
+      "funding_source": "investor",
+      "section": "offplan"
+    }
+  ],
+  "messages": [],
+  "stdout": "project_id\tscenario\titem_key\tfunding_source\tsection\n4\toffplan_construction\tdeveloper_fee_offplan\tinvestor\toffplan\n4\toffplan_construction\tfraz_fee\tinvestor\toffplan\n4\toffplan_construction\trera_registration\tinvestor\toffplan\n4\toffplan_construction\trera_units\tinvestor\toffplan\n4\toffplan_construction\tnoc_fee\tinvestor\toffplan\n4\toffplan_construction\tescrow_fee\tinvestor\toffplan\n4\toffplan_construction\tcommunity_fee\tinvestor\toffplan\n4\toffplan_construction\tmarketing_offplan\tinvestor\toffplan\n4\toffplan_construction\tescrow_deposit\tinvestor\toffplan\n4\toffplan_escrow\tdeveloper_fee_offplan\tinvestor\toffplan\n4\toffplan_escrow\tfraz_fee\tinvestor\toffplan\n4\toffplan_escrow\trera_registration\tinvestor\toffplan\n4\toffplan_escrow\trera_units\tinvestor\toffplan\n4\toffplan_escrow\tnoc_fee\tinvestor\toffplan\n4\toffplan_escrow\tescrow_fee\tinvestor\toffplan\n4\toffplan_escrow\tcommunity_fee\tinvestor\toffplan\n4\toffplan_escrow\tmarketing_offplan\tinvestor\toffplan\n4\toffplan_escrow\tescrow_deposit\tinvestor\toffplan\n",
+  "stderr": "",
+  "execution_time_ms": 1609
+}

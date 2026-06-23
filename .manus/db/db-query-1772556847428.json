@@ -1,0 +1,28 @@
+{
+  "query": "SELECT id, projectId, residentialStudioPct, residential1brPct, residential2brPct, residential3brPct, residentialStudioAvgArea, residential1brAvgArea, residential2brAvgArea, residential3brAvgArea, retailSmallPct, retailMediumPct, retailLargePct, retailSmallAvgArea, retailMediumAvgArea, retailLargeAvgArea FROM marketOverview LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, projectId, residentialStudioPct, residential1brPct, residential2brPct, residential3brPct, residentialStudioAvgArea, residential1brAvgArea, residential2brAvgArea, residential3brAvgArea, retailSmallPct, retailMediumPct, retailLargePct, retailSmallAvgArea, retailMediumAvgArea, retailLargeAvgArea FROM marketOverview LIMIT 5;",
+  "rows": [
+    {
+      "id": "1",
+      "projectId": "4",
+      "residentialStudioPct": "25.00",
+      "residential1brPct": "40.00",
+      "residential2brPct": "35.00",
+      "residential3brPct": "0.00",
+      "residentialStudioAvgArea": "450",
+      "residential1brAvgArea": "750",
+      "residential2brAvgArea": "1100",
+      "residential3brAvgArea": "0",
+      "retailSmallPct": "60.00",
+      "retailMediumPct": "40.00",
+      "retailLargePct": "0.00",
+      "retailSmallAvgArea": "500",
+      "retailMediumAvgArea": "1200",
+      "retailLargeAvgArea": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tprojectId\tresidentialStudioPct\tresidential1brPct\tresidential2brPct\tresidential3brPct\tresidentialStudioAvgArea\tresidential1brAvgArea\tresidential2brAvgArea\tresidential3brAvgArea\tretailSmallPct\tretailMediumPct\tretailLargePct\tretailSmallAvgArea\tretailMediumAvgArea\tretailLargeAvgArea\n1\t4\t25.00\t40.00\t35.00\t0.00\t450\t750\t1100\t0\t60.00\t40.00\t0.00\t500\t1200\t0\n",
+  "stderr": "",
+  "execution_time_ms": 1617
+}

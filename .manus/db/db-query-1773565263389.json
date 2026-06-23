@@ -1,0 +1,65 @@
+{
+  "query": "SELECT id, code, label FROM cpa_supervision_roles ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, code, label FROM cpa_supervision_roles ORDER BY id;",
+  "rows": [
+    {
+      "id": "30012",
+      "code": "RE",
+      "label": "Resident Engineer"
+    },
+    {
+      "id": "30013",
+      "code": "DEPUTY_RE",
+      "label": "Deputy Resident Engineer"
+    },
+    {
+      "id": "30014",
+      "code": "CIVIL_INSPECTOR",
+      "label": "Civil Inspector"
+    },
+    {
+      "id": "30015",
+      "code": "MEP_INSPECTOR",
+      "label": "MEP Inspector"
+    },
+    {
+      "id": "30016",
+      "code": "HSE_OFFICER",
+      "label": "HSE Officer"
+    },
+    {
+      "id": "30017",
+      "code": "DOC_CONTROLLER",
+      "label": "Document Controller"
+    },
+    {
+      "id": "30018",
+      "code": "QA_QC",
+      "label": "QA/QC Engineer"
+    },
+    {
+      "id": "30019",
+      "code": "HO_STRUCTURAL",
+      "label": "Structural Engineer (H/O)"
+    },
+    {
+      "id": "30020",
+      "code": "HO_ARCH",
+      "label": "Architectural Engineer (H/O)"
+    },
+    {
+      "id": "30021",
+      "code": "HO_MECHANICAL",
+      "label": "Mechanical Engineer (H/O)"
+    },
+    {
+      "id": "30022",
+      "code": "HO_ELECTRICAL",
+      "label": "Electrical Engineer (H/O)"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcode\tlabel\n30012\tRE\tResident Engineer\n30013\tDEPUTY_RE\tDeputy Resident Engineer\n30014\tCIVIL_INSPECTOR\tCivil Inspector\n30015\tMEP_INSPECTOR\tMEP Inspector\n30016\tHSE_OFFICER\tHSE Officer\n30017\tDOC_CONTROLLER\tDocument Controller\n30018\tQA_QC\tQA/QC Engineer\n30019\tHO_STRUCTURAL\tStructural Engineer (H/O)\n30020\tHO_ARCH\tArchitectural Engineer (H/O)\n30021\tHO_MECHANICAL\tMechanical Engineer (H/O)\n30022\tHO_ELECTRICAL\tElectrical Engineer (H/O)\n",
+  "stderr": "",
+  "execution_time_ms": 1583
+}

@@ -1,0 +1,24 @@
+{
+  "query": "SELECT id, title, meetingStatus, LEFT(extractedTasksJson, 500) as tasks, LEFT(minutesSummary, 200) as summary FROM meetings ORDER BY id DESC LIMIT 2;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, title, meetingStatus, LEFT(extractedTasksJson, 500) as tasks, LEFT(minutesSummary, 200) as summary FROM meetings ORDER BY id DESC LIMIT 2;",
+  "rows": [
+    {
+      "id": "30002",
+      "title": "اتعاب الاستشاريين",
+      "meetingStatus": "completed",
+      "tasks": "[{\"task\":\"التركيز على تسجيل الاستشاريين غير المسجلين في المشاريع المناسبة.\",\"assignee\":\"سلوى\",\"deadline\":\"غير محدد\",\"priority\":\"عالية\"},{\"task\":\"البحث في تحديث المنصة بأسعار الاستشاريين الجديدة والسابقة.\",\"assignee\":\"سلوى\",\"deadline\":\"غير محدد\",\"priority\":\"عالية\"},{\"task\":\"مراجعة ملفات جوجل درايف لاستخراج عروض أسعار الاستشاريين.\",\"assignee\":\"خازن\",\"deadline\":\"غير محدد\",\"priority\":\"عالية\"},{\"task\":\"تنظيم معلومات عروض الأسعار بدقة لتسجيل الاستشاريين غير المسجلين.\",\"assignee\":\"خازن\",\"deadline\":\"غير",
+      "summary": "عُقد اجتماع لمناقشة تحديث المنصة بأسعار الاستشاريين الجديدة والسابقة، وتسجيل الاستشاريين غير المسجلين في المشاريع المناسبة. تم توزيع المهام على المشاركين، حيث ستقوم سلوى وخازن وألينا بالعمل على استخرا"
+    },
+    {
+      "id": "2",
+      "title": "مناقشة دراسات الجدوى للمشاريع",
+      "meetingStatus": "completed",
+      "tasks": "NULL",
+      "summary": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitle\tmeetingStatus\ttasks\tsummary\n30002\tاتعاب الاستشاريين\tcompleted\t[{\"task\":\"التركيز على تسجيل الاستشاريين غير المسجلين في المشاريع المناسبة.\",\"assignee\":\"سلوى\",\"deadline\":\"غير محدد\",\"priority\":\"عالية\"},{\"task\":\"البحث في تحديث المنصة بأسعار الاستشاريين الجديدة والسابقة.\",\"assignee\":\"سلوى\",\"deadline\":\"غير محدد\",\"priority\":\"عالية\"},{\"task\":\"مراجعة ملفات جوجل درايف لاستخراج عروض أسعار الاستشاريين.\",\"assignee\":\"خازن\",\"deadline\":\"غير محدد\",\"priority\":\"عالية\"},{\"task\":\"تنظيم معلومات عروض الأسعار بدقة لتسجيل الاستشاريين غير المسجلين.\",\"assignee\":\"خازن\",\"deadline\":\"غير\tعُقد اجتماع لمناقشة تحديث المنصة بأسعار الاستشاريين الجديدة والسابقة، وتسجيل الاستشاريين غير المسجلين في المشاريع المناسبة. تم توزيع المهام على المشاركين، حيث ستقوم سلوى وخازن وألينا بالعمل على استخرا\n2\tمناقشة دراسات الجدوى للمشاريع\tcompleted\tNULL\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1538
+}

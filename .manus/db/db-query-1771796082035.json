@@ -1,0 +1,65 @@
+{
+  "query": "SELECT * FROM projects LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT * FROM projects LIMIT 5;",
+  "rows": [
+    {
+      "id": "1",
+      "userId": "1",
+      "name": "مركز مجان التجاري (G+4)",
+      "description": "NULL",
+      "bua": "0",
+      "pricePerSqft": "0",
+      "notes": "NULL",
+      "createdAt": "2026-02-18 10:06:34",
+      "updatedAt": "2026-02-19 00:12:45"
+    },
+    {
+      "id": "2",
+      "userId": "1",
+      "name": "مجان متعدد الاستخدامات (G+4P+25)",
+      "description": "NULL",
+      "bua": "0",
+      "pricePerSqft": "0",
+      "notes": "NULL",
+      "createdAt": "2026-02-18 10:06:35",
+      "updatedAt": "2026-02-19 00:12:45"
+    },
+    {
+      "id": "3",
+      "userId": "1",
+      "name": "مبنى الجداف السكني (G+7)",
+      "description": "NULL",
+      "bua": "105000",
+      "pricePerSqft": "350",
+      "notes": "NULL",
+      "createdAt": "2026-02-18 10:06:37",
+      "updatedAt": "2026-02-19 00:13:23"
+    },
+    {
+      "id": "4",
+      "userId": "1",
+      "name": "ند الشبا — قطعة 1 (6185392)",
+      "description": "NULL",
+      "bua": "115000",
+      "pricePerSqft": "350",
+      "notes": "NULL",
+      "createdAt": "2026-02-18 10:06:38",
+      "updatedAt": "2026-02-19 10:50:27"
+    },
+    {
+      "id": "5",
+      "userId": "1",
+      "name": "ند الشبا — قطعة 2 المدمجة (6182776)",
+      "description": "NULL",
+      "bua": "205000",
+      "pricePerSqft": "350",
+      "notes": "NULL",
+      "createdAt": "2026-02-18 10:06:39",
+      "updatedAt": "2026-02-20 00:54:11"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId\tname\tdescription\tbua\tpricePerSqft\tnotes\tcreatedAt\tupdatedAt\n1\t1\tمركز مجان التجاري (G+4)\tNULL\t0\t0\tNULL\t2026-02-18 10:06:34\t2026-02-19 00:12:45\n2\t1\tمجان متعدد الاستخدامات (G+4P+25)\tNULL\t0\t0\tNULL\t2026-02-18 10:06:35\t2026-02-19 00:12:45\n3\t1\tمبنى الجداف السكني (G+7)\tNULL\t105000\t350\tNULL\t2026-02-18 10:06:37\t2026-02-19 00:13:23\n4\t1\tند الشبا — قطعة 1 (6185392)\tNULL\t115000\t350\tNULL\t2026-02-18 10:06:38\t2026-02-19 10:50:27\n5\t1\tند الشبا — قطعة 2 المدمجة (6182776)\tNULL\t205000\t350\tNULL\t2026-02-18 10:06:39\t2026-02-20 00:54:11\n",
+  "stderr": "",
+  "execution_time_ms": 1523
+}

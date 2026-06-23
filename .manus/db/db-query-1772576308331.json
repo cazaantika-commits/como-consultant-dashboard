@@ -1,0 +1,17 @@
+{
+  "query": "SELECT id, title, status, sectionKey, linkedTaskId FROM stage_items WHERE linkedTaskId IS NOT NULL LIMIT 5",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT id, title, status, sectionKey, linkedTaskId FROM stage_items WHERE linkedTaskId IS NOT NULL LIMIT 5",
+  "rows": [
+    {
+      "id": "2",
+      "title": "فتح حساب بنكي للشركة",
+      "status": "in_progress",
+      "sectionKey": "2.1",
+      "linkedTaskId": "150001"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitle\tstatus\tsectionKey\tlinkedTaskId\n2\tفتح حساب بنكي للشركة\tin_progress\t2.1\t150001\n",
+  "stderr": "",
+  "execution_time_ms": 1542
+}

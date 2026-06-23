@@ -1,0 +1,8 @@
+{
+  "query": "\nSELECT id, project_id, gfa_residential_sqft, gfa_retail_sqft, gfa_office_sqft, bua_sqft, residential_sale_price, retail_sale_price, office_sale_price, updated_at\nFROM feasibilityStudies WHERE project_id = 4;\n\nSELECT id, project_id, unit_type, price_per_sqft, num_units, avg_area_sqft, payment_plan_type\nFROM competition_pricing WHERE project_id = 4;\n\nSELECT id, project_id, studio_pct, one_br_pct, two_br_pct, three_br_pct, studio_avg_area, one_br_avg_area, two_br_avg_area, three_br_avg_area\nFROM marketOverview WHERE project_id = 4;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute \nSELECT id, project_id, gfa_residential_sqft, gfa_retail_sqft, gfa_office_sqft, bua_sqft, residential_sale_price, retail_sale_price, office_sale_price, updated_at\nFROM feasibilityStudies WHERE project_id = 4;\n\nSELECT id, project_id, unit_type, price_per_sqft, num_units, avg_area_sqft, payment_plan_type\nFROM competition_pricing WHERE project_id = 4;\n\nSELECT id, project_id, studio_pct, one_br_pct, two_br_pct, three_br_pct, studio_avg_area, one_br_avg_area, two_br_avg_area, three_br_avg_area\nFROM marketOverview WHERE project_id = 4;\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 2: Unknown column 'project_id' in 'where clause'"
+  ]
+}

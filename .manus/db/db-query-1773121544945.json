@@ -1,0 +1,170 @@
+{
+  "query": "SELECT fd.projectId, c.name as consultant, fd.designType, fd.designValue, fd.supervisionType, fd.supervisionValue FROM financialData fd JOIN consultants c ON fd.consultantId = c.id LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT fd.projectId, c.name as consultant, fd.designType, fd.designValue, fd.supervisionType, fd.supervisionValue FROM financialData fd JOIN consultants c ON fd.consultantId = c.id LIMIT 20;",
+  "rows": [
+    {
+      "projectId": "1",
+      "consultant": "Osus International",
+      "designType": "pct",
+      "designValue": "2.50",
+      "supervisionType": "pct",
+      "supervisionValue": "1.50"
+    },
+    {
+      "projectId": "1",
+      "consultant": "Realistic Engineering",
+      "designType": "pct",
+      "designValue": "0.00",
+      "supervisionType": "pct",
+      "supervisionValue": "0.00"
+    },
+    {
+      "projectId": "1",
+      "consultant": "ARTEC Architectural & Engineering Consultants",
+      "designType": "pct",
+      "designValue": "0.00",
+      "supervisionType": "pct",
+      "supervisionValue": "0.00"
+    },
+    {
+      "projectId": "1",
+      "consultant": "DATUM Engineering Consultants",
+      "designType": "pct",
+      "designValue": "0.00",
+      "supervisionType": "pct",
+      "supervisionValue": "0.00"
+    },
+    {
+      "projectId": "2",
+      "consultant": "LACASA",
+      "designType": "lump",
+      "designValue": "8279700.00",
+      "supervisionType": "pct",
+      "supervisionValue": "2.00"
+    },
+    {
+      "projectId": "2",
+      "consultant": "ARTEC Architectural & Engineering Consultants",
+      "designType": "pct",
+      "designValue": "1.80",
+      "supervisionType": "pct",
+      "supervisionValue": "2.00"
+    },
+    {
+      "projectId": "2",
+      "consultant": "DATUM Engineering Consultants",
+      "designType": "lump",
+      "designValue": "5350000.00",
+      "supervisionType": "lump",
+      "supervisionValue": "5350000.00"
+    },
+    {
+      "projectId": "3",
+      "consultant": "Osus International",
+      "designType": "lump",
+      "designValue": "400000.00",
+      "supervisionType": "lump",
+      "supervisionValue": "630000.00"
+    },
+    {
+      "projectId": "3",
+      "consultant": "Realistic Engineering",
+      "designType": "pct",
+      "designValue": "1.50",
+      "supervisionType": "pct",
+      "supervisionValue": "1.50"
+    },
+    {
+      "projectId": "3",
+      "consultant": "ARTEC Architectural & Engineering Consultants",
+      "designType": "pct",
+      "designValue": "2.00",
+      "supervisionType": "pct",
+      "supervisionValue": "2.00"
+    },
+    {
+      "projectId": "3",
+      "consultant": "DATUM Engineering Consultants",
+      "designType": "lumpsum",
+      "designValue": "850000.00",
+      "supervisionType": "lumpsum",
+      "supervisionValue": "850000.00"
+    },
+    {
+      "projectId": "4",
+      "consultant": "Realistic Engineering",
+      "designType": "pct",
+      "designValue": "1.50",
+      "supervisionType": "pct",
+      "supervisionValue": "1.50"
+    },
+    {
+      "projectId": "4",
+      "consultant": "ARTEC Architectural & Engineering Consultants",
+      "designType": "pct",
+      "designValue": "2.00",
+      "supervisionType": "pct",
+      "supervisionValue": "2.00"
+    },
+    {
+      "projectId": "4",
+      "consultant": "DATUM Engineering Consultants",
+      "designType": "lumpsum",
+      "designValue": "865000.00",
+      "supervisionType": "lumpsum",
+      "supervisionValue": "865000.00"
+    },
+    {
+      "projectId": "4",
+      "consultant": "Safeer Engineering Consultants (SEC)",
+      "designType": "pct",
+      "designValue": "1.50",
+      "supervisionType": "pct",
+      "supervisionValue": "1.50"
+    },
+    {
+      "projectId": "5",
+      "consultant": "Realistic Engineering",
+      "designType": "pct",
+      "designValue": "1.50",
+      "supervisionType": "pct",
+      "supervisionValue": "1.50"
+    },
+    {
+      "projectId": "5",
+      "consultant": "ARTEC Architectural & Engineering Consultants",
+      "designType": "pct",
+      "designValue": "2.00",
+      "supervisionType": "pct",
+      "supervisionValue": "2.00"
+    },
+    {
+      "projectId": "5",
+      "consultant": "DATUM Engineering Consultants",
+      "designType": "lumpsum",
+      "designValue": "1550000.00",
+      "supervisionType": "lumpsum",
+      "supervisionValue": "1550000.00"
+    },
+    {
+      "projectId": "5",
+      "consultant": "Safeer Engineering Consultants (SEC)",
+      "designType": "pct",
+      "designValue": "1.50",
+      "supervisionType": "pct",
+      "supervisionValue": "1.50"
+    },
+    {
+      "projectId": "6",
+      "consultant": "Realistic Engineering",
+      "designType": "pct",
+      "designValue": "1.50",
+      "supervisionType": "pct",
+      "supervisionValue": "2.00"
+    }
+  ],
+  "messages": [],
+  "stdout": "projectId\tconsultant\tdesignType\tdesignValue\tsupervisionType\tsupervisionValue\n1\tOsus International\tpct\t2.50\tpct\t1.50\n1\tRealistic Engineering\tpct\t0.00\tpct\t0.00\n1\tARTEC Architectural & Engineering Consultants\tpct\t0.00\tpct\t0.00\n1\tDATUM Engineering Consultants\tpct\t0.00\tpct\t0.00\n2\tLACASA\tlump\t8279700.00\tpct\t2.00\n2\tARTEC Architectural & Engineering Consultants\tpct\t1.80\tpct\t2.00\n2\tDATUM Engineering Consultants\tlump\t5350000.00\tlump\t5350000.00\n3\tOsus International\tlump\t400000.00\tlump\t630000.00\n3\tRealistic Engineering\tpct\t1.50\tpct\t1.50\n3\tARTEC Architectural & Engineering Consultants\tpct\t2.00\tpct\t2.00\n3\tDATUM Engineering Consultants\tlumpsum\t850000.00\tlumpsum\t850000.00\n4\tRealistic Engineering\tpct\t1.50\tpct\t1.50\n4\tARTEC Architectural & Engineering Consultants\tpct\t2.00\tpct\t2.00\n4\tDATUM Engineering Consultants\tlumpsum\t865000.00\tlumpsum\t865000.00\n4\tSafeer Engineering Consultants (SEC)\tpct\t1.50\tpct\t1.50\n5\tRealistic Engineering\tpct\t1.50\tpct\t1.50\n5\tARTEC Architectural & Engineering Consultants\tpct\t2.00\tpct\t2.00\n5\tDATUM Engineering Consultants\tlumpsum\t1550000.00\tlumpsum\t1550000.00\n5\tSafeer Engineering Consultants (SEC)\tpct\t1.50\tpct\t1.50\n6\tRealistic Engineering\tpct\t1.50\tpct\t2.00\n",
+  "stderr": "",
+  "execution_time_ms": 1520
+}

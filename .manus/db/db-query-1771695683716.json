@@ -1,0 +1,22 @@
+{
+  "query": "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE '%meeting%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 4E8R6wFgxnBhGVF.1a403e654cd7 --database Q366eAYG4Q7iaM8VuAmmFX --execute SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE '%meeting%';",
+  "rows": [
+    {
+      "TABLE_NAME": "meetings"
+    },
+    {
+      "TABLE_NAME": "meetingParticipants"
+    },
+    {
+      "TABLE_NAME": "meetingFiles"
+    },
+    {
+      "TABLE_NAME": "meetingMessages"
+    }
+  ],
+  "messages": [],
+  "stdout": "TABLE_NAME\nmeetings\nmeetingParticipants\nmeetingFiles\nmeetingMessages\n",
+  "stderr": "",
+  "execution_time_ms": 1524
+}
