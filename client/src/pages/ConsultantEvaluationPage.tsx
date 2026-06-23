@@ -461,7 +461,7 @@ function FeeDeviationBadge({ deviation, zone, flag }: { deviation: number; zone:
 }
 
 export default function ConsultantEvaluationPage() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth({ redirectOnUnauthenticated: true });
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [newConsultantName, setNewConsultantName] = useState("");
 
@@ -594,7 +594,7 @@ export default function ConsultantEvaluationPage() {
   const selectedProject = projects.find((p: any) => p.id === selectedProjectId);
   const projectConsultants = projectDetailsQuery.data?.consultants || [];
 
-  if (!isAuthenticated) {
+  if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
         <Card className="w-96 shadow-2xl border-0">
@@ -606,6 +606,7 @@ export default function ConsultantEvaluationPage() {
       </div>
     );
   }
+  if (!isAuthenticated) return null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50 to-teal-50 p-4" dir="rtl">
