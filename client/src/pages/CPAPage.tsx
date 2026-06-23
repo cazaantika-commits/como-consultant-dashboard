@@ -542,6 +542,9 @@ function ProjectDetailScreen({
   });
   const [selectedMasterId, setSelectedMasterId] = useState("");
 
+  // Supervision fee dialog state
+  const [supervisionDialog, setSupervisionDialog] = useState<{ open: boolean; pcId: number; consultantName: string } | null>(null);
+
   const project = projectQuery.data;
   const consultants = consultantsQuery.data ?? [];
   const masterList = masterQuery.data ?? [];
@@ -899,6 +902,15 @@ Rules:
                       </Button>
                       <Button
                         size="sm"
+                        variant="outline"
+                        className="gap-1 border-violet-200 text-violet-700 hover:bg-violet-50"
+                        onClick={() => setSupervisionDialog({ open: true, pcId: c.id, consultantName: c.trade_name || c.legal_name })}
+                      >
+                        <Shield className="w-3.5 h-3.5" />
+                        الإشراف
+                      </Button>
+                      <Button
+                        size="sm"
                         variant="ghost"
                         className="text-red-500 hover:text-red-600 hover:bg-red-50"
                         onClick={() => {
@@ -984,7 +996,238 @@ Rules:
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Supervision Fee Dialog */}
+      {supervisionDialog && project && (
+        <SupervisionFeeDialog
+          open={supervisionDialog.open}
+          pcId={supervisionDialog.pcId}
+          consultantName={supervisionDialog.consultantName}
+          projectDurationMonths={project.duration_months ?? 0}
+          buildingCategoryId={project.building_category_id ?? null}
+          onClose={() => setSupervisionDialog(null)}
+          onSaved={() => {
+            setSupervisionDialog(null);
+            consultantsQuery.refetch();
+            evalMutation.mutate({ cpaProjectId: projectId });
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+// ---- SupervisionFeeDialog ------------------------------------------------
+
+function SupervisionFeeDialog({
+  open,
+  pcId,
+  consultantName,
+  projectDurationMonths,
+  buildingCategoryId,
+  onClose,
+  onSaved,
+}: {
+  open: boolean;
+  pcId: number;
+  consultantName: string;
+  projectDurationMonths: number;
+  buildingCategoryId: number | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { toast } = useToast();
+
+  // Fetch baseline roles for this building category
+  const baselineQuery = trpc.cpa.settings.getSupervisionBaseline.useQuery(
+    { buildingCategoryId: buildingCategoryId ?? 0 },
+    { enabled: open && buildingCategoryId != null && buildingCategoryId > 0 }
+  );
+
+  // Fetch existing supervision team entries for this consultant
+  const teamQuery = trpc.cpa.consultants.getSupervisionTeam.useQuery(
+    { projectConsultantId: pcId },
+    { enabled: open }
+  );
+
+  const updateTeamMutation = trpc.cpa.consultants.updateSupervisionTeam.useMutation();
+  const updateFeesMutation = trpc.cpa.consultants.updateFees.useMutation({
+    onSuccess: () => {
+      toast({ title: "تم حفظ أتعاب الإشراف بنجاح" });
+      onSaved();
+    },
+    onError: (e) => toast({ title: "خطأ في الحفظ", description: e.message, variant: "destructive" }),
+  });
+
+  // Local state: map from supervision_role_id -> monthly rate string
+  const [rates, setRates] = useState<Record<number, string>>({});
+  const [initialized, setInitialized] = useState(false);
+
+  // Initialize rates from existing team data
+  useEffect(() => {
+    if (teamQuery.data && !initialized) {
+      const initial: Record<number, string> = {};
+      for (const row of teamQuery.data as any[]) {
+        if (row.proposed_monthly_rate != null) {
+          initial[Number(row.supervision_role_id)] = String(row.proposed_monthly_rate);
+        }
+      }
+      setRates(initial);
+      setInitialized(true);
+    }
+  }, [teamQuery.data, initialized]);
+
+  // Reset when dialog closes/reopens
+  useEffect(() => {
+    if (!open) {
+      setRates({});
+      setInitialized(false);
+    }
+  }, [open]);
+
+  const baseline = (baselineQuery.data ?? []) as any[];
+  const isLoading = baselineQuery.isLoading || teamQuery.isLoading;
+  const isSaving = updateTeamMutation.isPending || updateFeesMutation.isPending;
+
+  // Calculate total supervision fee
+  const totalFee = baseline.reduce((sum: number, row: any) => {
+    const rate = parseFloat(rates[Number(row.supervision_role_id)] ?? "0") || 0;
+    const alloc = parseFloat(row.required_allocation_pct) || 100;
+    return sum + rate * (alloc / 100) * projectDurationMonths;
+  }, 0);
+
+  const handleSave = async () => {
+    if (baseline.length === 0) {
+      toast({ title: "لا توجد أدوار إشراف لهذه الفئة", variant: "destructive" });
+      return;
+    }
+    try {
+      // Save each role's monthly rate
+      for (const row of baseline) {
+        const roleId = Number(row.supervision_role_id);
+        const rate = parseFloat(rates[roleId] ?? "0") || 0;
+        await updateTeamMutation.mutateAsync({
+          projectConsultantId: pcId,
+          supervisionRoleId: roleId,
+          proposedAllocationPct: parseFloat(row.required_allocation_pct) || 100,
+          proposedMonthlyRate: rate > 0 ? rate : null,
+        });
+      }
+      // Save the fee method and total
+      await updateFeesMutation.mutateAsync({
+        id: pcId,
+        supervisionFeeMethod: "MONTHLY_RATE",
+        supervisionFeeAmount: totalFee,
+        supervisionStatedDurationMonths: projectDurationMonths,
+        supervisionSubmitted: 1,
+      });
+    } catch (_e) {
+      // errors handled by mutation callbacks
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-2xl" dir="rtl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Shield className="w-4 h-4 text-violet-600" />
+            أتعاب الإشراف — {consultantName}
+          </DialogTitle>
+        </DialogHeader>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-10 gap-2 text-muted-foreground">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            جاري التحميل...
+          </div>
+        ) : buildingCategoryId == null ? (
+          <div className="py-6 text-center text-amber-600 text-sm">
+            ⚠️ يرجى تحديد فئة المبنى للمشروع أولاً لعرض أدوار الإشراف.
+          </div>
+        ) : baseline.length === 0 ? (
+          <div className="py-6 text-center text-muted-foreground text-sm">
+            لا توجد أدوار إشراف محددة لهذه الفئة. يمكنك إضافتها من الإعدادات.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              مدة المشروع: <strong>{projectDurationMonths} شهر</strong> — أدخل المعدل الشهري لكل دور.
+              الإجمالي = المعدل × نسبة التخصيص × مدة المشروع.
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-muted-foreground text-xs">
+                    <th className="text-right py-2 pr-1 font-medium">الدور</th>
+                    <th className="text-center py-2 font-medium">نسبة التخصيص</th>
+                    <th className="text-center py-2 font-medium">المعدل الشهري (AED)</th>
+                    <th className="text-left py-2 pl-1 font-medium">الإجمالي</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50">
+                  {baseline.map((row: any) => {
+                    const roleId = Number(row.supervision_role_id);
+                    const rate = parseFloat(rates[roleId] ?? "0") || 0;
+                    const alloc = parseFloat(row.required_allocation_pct) || 100;
+                    const rowTotal = rate * (alloc / 100) * projectDurationMonths;
+                    return (
+                      <tr key={roleId} className="hover:bg-muted/30">
+                        <td className="py-2 pr-1">
+                          <div className="font-medium">{row.role_label}</div>
+                          <div className="text-xs text-muted-foreground">{row.role_code}</div>
+                        </td>
+                        <td className="text-center py-2">
+                          <span className="text-sm font-semibold text-violet-700">{alloc}%</span>
+                        </td>
+                        <td className="text-center py-2">
+                          <Input
+                            type="number"
+                            min="0"
+                            step="500"
+                            className="w-32 text-center mx-auto h-8 text-sm"
+                            placeholder="0"
+                            value={rates[roleId] ?? ""}
+                            onChange={(e) => setRates((prev) => ({ ...prev, [roleId]: e.target.value }))}
+                          />
+                        </td>
+                        <td className="text-left py-2 pl-1">
+                          <span className="font-semibold text-sky-700">
+                            {rowTotal > 0 ? rowTotal.toLocaleString("en-US", { maximumFractionDigits: 0 }) + " AED" : "—"}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-border">
+                    <td colSpan={3} className="py-3 pr-1 font-bold text-sm">إجمالي أتعاب الإشراف</td>
+                    <td className="py-3 pl-1 font-bold text-sky-700 text-sm">
+                      {totalFee > 0 ? totalFee.toLocaleString("en-US", { maximumFractionDigits: 0 }) + " AED" : "—"}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <div className="flex gap-2 justify-end pt-2">
+              <Button variant="outline" onClick={onClose} disabled={isSaving}>إلغاء</Button>
+              <Button
+                onClick={handleSave}
+                disabled={isSaving || totalFee === 0}
+                className="bg-violet-600 hover:bg-violet-700 text-white"
+              >
+                {isSaving ? (
+                  <><Loader2 className="w-3.5 h-3.5 ml-1 animate-spin" />جاري الحفظ...</>
+                ) : (
+                  <><Shield className="w-3.5 h-3.5 ml-1" />حفظ وإعادة الحساب</>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
