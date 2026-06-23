@@ -1,0 +1,1 @@
+ALTER TABLE `project_cash_flow_settings` ADD `section` enum('paid','design','offplan','construction','escrow') DEFAULT 'construction';
