@@ -1,5 +1,4 @@
 import { useAuth } from "@/_core/hooks/useAuth";
-import { useCCAuth } from "@/contexts/CCAuthContext";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -48,18 +47,16 @@ export default function DashboardLayout({
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
   });
   const { loading, user } = useAuth();
-  const { ccMember, ccLoading } = useCCAuth();
-  const effectiveUser = user ?? (ccMember ? { name: ccMember.nameAr } : null);
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
   }, [sidebarWidth]);
 
-  if (loading || ccLoading) {
+  if (loading) {
     return <DashboardLayoutSkeleton />
   }
 
-  if (!effectiveUser) {
+  if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">

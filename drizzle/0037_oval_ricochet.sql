@@ -1,1 +1,0 @@
-ALTER TABLE `stage_items` ADD `dueDate` timestamp;

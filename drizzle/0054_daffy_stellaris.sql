@@ -1,1 +1,0 @@
-ALTER TABLE `payment_requests` MODIFY COLUMN `sheikh_decision` enum('approved','rejected','needs_revision');
