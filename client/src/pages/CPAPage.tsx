@@ -12,6 +12,7 @@
  */
 
 import { useState, useMemo, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { ScopeMatrixTable, ReferenceCostsTable, SupervisionBaselineTable } from "./CPASettingsMatrices";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
@@ -1126,111 +1127,241 @@ function SupervisionFeeDialog({
     }
   };
 
+  // Animation variants
+  const overlayVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { duration: 0.2 } },
+    exit: { opacity: 0, transition: { duration: 0.18 } },
+  };
+
+  const contentVariants = {
+    hidden: { opacity: 0, scale: 0.95, y: 24 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      y: 0,
+      transition: { type: "spring", stiffness: 340, damping: 28, mass: 0.8 },
+    },
+    exit: {
+      opacity: 0,
+      scale: 0.96,
+      y: 16,
+      transition: { duration: 0.16, ease: "easeIn" },
+    },
+  };
+
+  const rowVariants = {
+    hidden: { opacity: 0, x: 12 },
+    visible: (i: number) => ({
+      opacity: 1,
+      x: 0,
+      transition: { delay: i * 0.06, duration: 0.25, ease: "easeOut" },
+    }),
+  };
+
+  const totalVariants = {
+    hidden: { opacity: 0, y: 8 },
+    visible: { opacity: 1, y: 0, transition: { delay: 0.1, duration: 0.3 } },
+  };
+
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-2xl flex flex-col max-h-[90vh]" dir="rtl">
-        <DialogHeader className="shrink-0">
-          <DialogTitle className="flex items-center gap-2">
-            <Shield className="w-4 h-4 text-violet-600" />
-            أتعاب الإشراف — {consultantName}
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="flex-1 overflow-y-auto pr-1">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-10 gap-2 text-muted-foreground">
-            <Loader2 className="w-5 h-5 animate-spin" />
-            جاري التحميل...
-          </div>
-        ) : buildingCategoryId == null ? (
-          <div className="py-6 text-center text-amber-600 text-sm">
-            ⚠️ يرجى تحديد فئة المبنى للمشروع أولاً لعرض أدوار الإشراف.
-          </div>
-        ) : baseline.length === 0 ? (
-          <div className="py-6 text-center text-muted-foreground text-sm">
-            لا توجد أدوار إشراف محددة لهذه الفئة. يمكنك إضافتها من الإعدادات.
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <p className="text-xs text-muted-foreground">
-              مدة المشروع: <strong>{projectDurationMonths} شهر</strong> — أدخل المعدل الشهري لكل دور.
-              الإجمالي = المعدل × نسبة التخصيص × مدة المشروع.
-            </p>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-muted-foreground text-xs">
-                    <th className="text-right py-2 pr-1 font-medium">الدور</th>
-                    <th className="text-center py-2 font-medium">نسبة التخصيص</th>
-                    <th className="text-center py-2 font-medium">المعدل الشهري (AED)</th>
-                    <th className="text-left py-2 pl-1 font-medium">الإجمالي</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/50">
-                  {baseline.map((row: any) => {
-                    const roleId = Number(row.supervision_role_id);
-                    const rate = parseFloat(rates[roleId] ?? "0") || 0;
-                    const alloc = parseFloat(row.required_allocation_pct) || 100;
-                    const rowTotal = rate * (alloc / 100) * projectDurationMonths;
-                    return (
-                      <tr key={roleId} className="hover:bg-muted/30">
-                        <td className="py-2 pr-1">
-                          <div className="font-medium">{row.role_label}</div>
-                          <div className="text-xs text-muted-foreground">{row.role_code}</div>
-                        </td>
-                        <td className="text-center py-2">
-                          <span className="text-sm font-semibold text-violet-700">{alloc}%</span>
-                        </td>
-                        <td className="text-center py-2">
-                          <Input
-                            type="number"
-                            min="0"
-                            step="500"
-                            className="w-32 text-center mx-auto h-8 text-sm"
-                            placeholder="0"
-                            value={rates[roleId] ?? ""}
-                            onChange={(e) => setRates((prev) => ({ ...prev, [roleId]: e.target.value }))}
-                          />
-                        </td>
-                        <td className="text-left py-2 pl-1">
-                          <span className="font-semibold text-sky-700">
-                            {rowTotal > 0 ? rowTotal.toLocaleString("en-US", { maximumFractionDigits: 0 }) + " AED" : "—"}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t-2 border-border">
-                    <td colSpan={3} className="py-3 pr-1 font-bold text-sm">إجمالي أتعاب الإشراف</td>
-                    <td className="py-3 pl-1 font-bold text-sky-700 text-sm">
-                      {totalFee > 0 ? totalFee.toLocaleString("en-US", { maximumFractionDigits: 0 }) + " AED" : "—"}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </div>
-        )}
-        </div>
-
-        {/* Fixed footer with action buttons */}
-        <div className="shrink-0 flex gap-2 justify-end pt-3 border-t border-border mt-2">
-          <Button variant="outline" onClick={onClose} disabled={isSaving}>إلغاء</Button>
-          <Button
-            onClick={handleSave}
-            disabled={isSaving || totalFee === 0}
-            className="bg-violet-600 hover:bg-violet-700 text-white"
+      <AnimatePresence>
+        {open && (
+          <DialogContent
+            className="max-w-2xl flex flex-col max-h-[90vh] overflow-hidden"
+            dir="rtl"
+            forceMount
+            asChild
           >
-            {isSaving ? (
-              <><Loader2 className="w-3.5 h-3.5 ml-1 animate-spin" />جاري الحفظ...</>
-            ) : (
-              <><Shield className="w-3.5 h-3.5 ml-1" />حفظ وإعادة الحساب</>
-            )}
-          </Button>
-        </div>
-      </DialogContent>
+            <motion.div
+              variants={contentVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+            >
+              <DialogHeader className="shrink-0">
+                <DialogTitle className="flex items-center gap-2">
+                  <motion.span
+                    initial={{ rotate: -20, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    transition={{ delay: 0.15, type: "spring", stiffness: 300 }}
+                  >
+                    <Shield className="w-4 h-4 text-violet-600" />
+                  </motion.span>
+                  <motion.span
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.18, duration: 0.25 }}
+                  >
+                    أتعاب الإشراف — {consultantName}
+                  </motion.span>
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="flex-1 overflow-y-auto pr-1">
+                {isLoading ? (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex items-center justify-center py-10 gap-2 text-muted-foreground"
+                  >
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    جاري التحميل...
+                  </motion.div>
+                ) : buildingCategoryId == null ? (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="py-6 text-center text-amber-600 text-sm"
+                  >
+                    ⚠️ يرجى تحديد فئة المبنى للمشروع أولاً لعرض أدوار الإشراف.
+                  </motion.div>
+                ) : baseline.length === 0 ? (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="py-6 text-center text-muted-foreground text-sm"
+                  >
+                    لا توجد أدوار إشراف محددة لهذه الفئة. يمكنك إضافتها من الإعدادات.
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    className="space-y-4"
+                    initial="hidden"
+                    animate="visible"
+                  >
+                    <motion.p
+                      className="text-xs text-muted-foreground"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.2 }}
+                    >
+                      مدة المشروع: <strong>{projectDurationMonths} شهر</strong> — أدخل المعدل الشهري لكل دور.
+                      الإجمالي = المعدل × نسبة التخصيص × مدة المشروع.
+                    </motion.p>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <motion.tr
+                            className="border-b border-border text-muted-foreground text-xs"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.22 }}
+                          >
+                            <th className="text-right py-2 pr-1 font-medium">الدور</th>
+                            <th className="text-center py-2 font-medium">نسبة التخصيص</th>
+                            <th className="text-center py-2 font-medium">المعدل الشهري (AED)</th>
+                            <th className="text-left py-2 pl-1 font-medium">الإجمالي</th>
+                          </motion.tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/50">
+                          {baseline.map((row: any, i: number) => {
+                            const roleId = Number(row.supervision_role_id);
+                            const rate = parseFloat(rates[roleId] ?? "0") || 0;
+                            const alloc = parseFloat(row.required_allocation_pct) || 100;
+                            const rowTotal = rate * (alloc / 100) * projectDurationMonths;
+                            return (
+                              <motion.tr
+                                key={roleId}
+                                custom={i}
+                                variants={rowVariants}
+                                initial="hidden"
+                                animate="visible"
+                                className="hover:bg-muted/30 transition-colors"
+                              >
+                                <td className="py-2 pr-1">
+                                  <div className="font-medium">{row.role_label}</div>
+                                  <div className="text-xs text-muted-foreground">{row.role_code}</div>
+                                </td>
+                                <td className="text-center py-2">
+                                  <span className="text-sm font-semibold text-violet-700">{alloc}%</span>
+                                </td>
+                                <td className="text-center py-2">
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    step="500"
+                                    className="w-32 text-center mx-auto h-8 text-sm"
+                                    placeholder="0"
+                                    value={rates[roleId] ?? ""}
+                                    onChange={(e) => setRates((prev) => ({ ...prev, [roleId]: e.target.value }))}
+                                  />
+                                </td>
+                                <td className="text-left py-2 pl-1">
+                                  <AnimatePresence mode="wait">
+                                    <motion.span
+                                      key={rowTotal}
+                                      initial={{ opacity: 0, scale: 0.85 }}
+                                      animate={{ opacity: 1, scale: 1 }}
+                                      exit={{ opacity: 0, scale: 0.85 }}
+                                      transition={{ duration: 0.18 }}
+                                      className="font-semibold text-sky-700 inline-block"
+                                    >
+                                      {rowTotal > 0 ? rowTotal.toLocaleString("en-US", { maximumFractionDigits: 0 }) + " AED" : "—"}
+                                    </motion.span>
+                                  </AnimatePresence>
+                                </td>
+                              </motion.tr>
+                            );
+                          })}
+                        </tbody>
+                        <tfoot>
+                          <motion.tr
+                            className="border-t-2 border-border"
+                            variants={totalVariants}
+                            initial="hidden"
+                            animate="visible"
+                          >
+                            <td colSpan={3} className="py-3 pr-1 font-bold text-sm">إجمالي أتعاب الإشراف</td>
+                            <td className="py-3 pl-1 font-bold text-sky-700 text-sm">
+                              <AnimatePresence mode="wait">
+                                <motion.span
+                                  key={totalFee}
+                                  initial={{ opacity: 0, y: -6 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  exit={{ opacity: 0, y: 6 }}
+                                  transition={{ duration: 0.2 }}
+                                  className="inline-block"
+                                >
+                                  {totalFee > 0 ? totalFee.toLocaleString("en-US", { maximumFractionDigits: 0 }) + " AED" : "—"}
+                                </motion.span>
+                              </AnimatePresence>
+                            </td>
+                          </motion.tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Fixed footer with action buttons */}
+              <motion.div
+                className="shrink-0 flex gap-2 justify-end pt-3 border-t border-border mt-2"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.25 }}
+              >
+                <Button variant="outline" onClick={onClose} disabled={isSaving}>إلغاء</Button>
+                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                  <Button
+                    onClick={handleSave}
+                    disabled={isSaving || totalFee === 0}
+                    className="bg-violet-600 hover:bg-violet-700 text-white"
+                  >
+                    {isSaving ? (
+                      <><Loader2 className="w-3.5 h-3.5 ml-1 animate-spin" />جاري الحفظ...</>
+                    ) : (
+                      <><Shield className="w-3.5 h-3.5 ml-1" />حفظ وإعادة الحساب</>
+                    )}
+                  </Button>
+                </motion.div>
+              </motion.div>
+            </motion.div>
+          </DialogContent>
+        )}
+      </AnimatePresence>
     </Dialog>
   );
 }
