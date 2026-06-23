@@ -1128,14 +1128,15 @@ function SupervisionFeeDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-2xl" dir="rtl">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl flex flex-col max-h-[90vh]" dir="rtl">
+        <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Shield className="w-4 h-4 text-violet-600" />
             أتعاب الإشراف — {consultantName}
           </DialogTitle>
         </DialogHeader>
 
+        <div className="flex-1 overflow-y-auto pr-1">
         {isLoading ? (
           <div className="flex items-center justify-center py-10 gap-2 text-muted-foreground">
             <Loader2 className="w-5 h-5 animate-spin" />
@@ -1210,22 +1211,25 @@ function SupervisionFeeDialog({
                 </tfoot>
               </table>
             </div>
-            <div className="flex gap-2 justify-end pt-2">
-              <Button variant="outline" onClick={onClose} disabled={isSaving}>إلغاء</Button>
-              <Button
-                onClick={handleSave}
-                disabled={isSaving || totalFee === 0}
-                className="bg-violet-600 hover:bg-violet-700 text-white"
-              >
-                {isSaving ? (
-                  <><Loader2 className="w-3.5 h-3.5 ml-1 animate-spin" />جاري الحفظ...</>
-                ) : (
-                  <><Shield className="w-3.5 h-3.5 ml-1" />حفظ وإعادة الحساب</>
-                )}
-              </Button>
-            </div>
           </div>
         )}
+        </div>
+
+        {/* Fixed footer with action buttons */}
+        <div className="shrink-0 flex gap-2 justify-end pt-3 border-t border-border mt-2">
+          <Button variant="outline" onClick={onClose} disabled={isSaving}>إلغاء</Button>
+          <Button
+            onClick={handleSave}
+            disabled={isSaving || totalFee === 0}
+            className="bg-violet-600 hover:bg-violet-700 text-white"
+          >
+            {isSaving ? (
+              <><Loader2 className="w-3.5 h-3.5 ml-1 animate-spin" />جاري الحفظ...</>
+            ) : (
+              <><Shield className="w-3.5 h-3.5 ml-1" />حفظ وإعادة الحساب</>
+            )}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
