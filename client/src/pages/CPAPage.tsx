@@ -1166,15 +1166,14 @@ function SupervisionFeeDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <AnimatePresence>
-        {open && (
-          <DialogContent
-            className="max-w-2xl flex flex-col max-h-[90vh] overflow-hidden"
-            dir="rtl"
-            forceMount
-            asChild
-          >
+      <DialogContent
+        className="max-w-2xl flex flex-col max-h-[90vh] overflow-hidden p-0"
+        dir="rtl"
+      >
+        <AnimatePresence>
+          {open && (
             <motion.div
+              className="flex flex-col flex-1 overflow-hidden p-6 gap-4"
               variants={contentVariants}
               initial="hidden"
               animate="visible"
@@ -1359,9 +1358,9 @@ function SupervisionFeeDialog({
                 </motion.div>
               </motion.div>
             </motion.div>
-          </DialogContent>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>
+      </DialogContent>
     </Dialog>
   );
 }
