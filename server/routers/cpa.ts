@@ -1329,7 +1329,7 @@ export const cpaRouter = router({
         const rows = await qRows<any>(
           db,
           sql`SELECT er.*, er.eval_rank as result_rank, pc.consultant_id, cm.legal_name, cm.trade_name, cm.code as consultant_code,
-                     pc.design_fee_method, pc.supervision_fee_method,
+                     pc.design_fee_method, pc.supervision_fee_method, pc.supervision_fee_percentage,
                      pc.supervision_stated_duration_months, pc.proposal_reference, pc.proposal_date
               FROM cpa_evaluation_results er
               INNER JOIN (
@@ -1342,8 +1342,31 @@ export const cpaRouter = router({
               WHERE pc.cpa_project_id = ${input.cpaProjectId}
               ORDER BY COALESCE(er.eval_rank, 999), er.total_true_cost`
         );
+        // Fetch supervision team per consultant
+        const supTeamByPc: Record<number, any[]> = {};
+        for (const r of rows) {
+          const pcId = Number(r.project_consultant_id);
+          const teamRows = await qRows<any>(
+            db,
+            sql`SELECT cst.supervision_role_id, cst.proposed_allocation_pct, cst.proposed_monthly_rate,
+                       sr.code, sr.label, sr.monthly_rate_aed
+                FROM cpa_consultant_supervision_team cst
+                JOIN cpa_supervision_roles sr ON sr.id = cst.supervision_role_id
+                WHERE cst.project_consultant_id = ${pcId}
+                ORDER BY sr.sort_order`
+          );
+          supTeamByPc[pcId] = teamRows.map((t: any) => ({
+            roleId: Number(t.supervision_role_id),
+            code: t.code,
+            label: t.label,
+            proposedAllocationPct: t.proposed_allocation_pct !== null ? Number(t.proposed_allocation_pct) : null,
+            proposedMonthlyRate: t.proposed_monthly_rate !== null ? Number(t.proposed_monthly_rate) : null,
+            refMonthlyRate: Number(t.monthly_rate_aed) || 0,
+          }));
+        }
         return rows.map((r: any) => ({
           ...r,
+          supervisionTeam: supTeamByPc[Number(r.project_consultant_id)] || [],
           calculationNotes: r.calculation_notes
             ? (() => { try { return JSON.parse(r.calculation_notes); } catch { return null; } })()
             : null,
@@ -1429,6 +1452,28 @@ export const cpaRouter = router({
           } catch { scopeGapsMap[pcId] = []; }
         }
 
+        // Get supervision team per consultant
+        const supTeamMap: Record<number, any[]> = {};
+        for (const r of results) {
+          const pcId = Number(r.pc_id);
+          const teamRows = await qRows<any>(
+            db,
+            sql`SELECT cst.supervision_role_id, cst.proposed_allocation_pct, cst.proposed_monthly_rate,
+                       sr.code, sr.label, sr.monthly_rate_aed
+                FROM cpa_consultant_supervision_team cst
+                JOIN cpa_supervision_roles sr ON sr.id = cst.supervision_role_id
+                WHERE cst.project_consultant_id = ${pcId}
+                ORDER BY sr.sort_order`
+          );
+          supTeamMap[pcId] = teamRows.map((t: any) => ({
+            roleId: Number(t.supervision_role_id),
+            code: t.code,
+            label: t.label,
+            proposedAllocationPct: t.proposed_allocation_pct !== null ? Number(t.proposed_allocation_pct) : null,
+            proposedMonthlyRate: t.proposed_monthly_rate !== null ? Number(t.proposed_monthly_rate) : null,
+            refMonthlyRate: Number(t.monthly_rate_aed) || 0,
+          }));
+        }
         // Build consultant data
         const consultants = results.map((r: any) => {
           const pcId = Number(r.pc_id);
@@ -1447,6 +1492,7 @@ export const cpaRouter = router({
             canRank: r.can_rank === 1,
             resultRank: r.result_rank,
             scopeGaps: scopeGapsMap[pcId] || [],
+            supervisionTeam: supTeamMap[pcId] || [],
             calc: {
               quotedDesignFee: Number(r.quoted_design_fee) || 0,
               designScopeGap: Number(r.design_scope_gap_cost) || 0,

@@ -1945,15 +1945,42 @@ function ResultsScreen({
                             </div>
                           </div>
                           <Separator />
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div>
-                              <span className="text-muted-foreground">أتعاب الإشراف</span>
-                              <div className="font-semibold">{fmtAED(r.quoted_supervision_fee)}</div>
+                          {/* Supervision Section */}
+                          <div className="space-y-2">
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div>
+                                <span className="text-muted-foreground">أتعاب الإشراف المقدمة</span>
+                                <div className="font-semibold">{fmtAED(r.quoted_supervision_fee)}</div>
+                                {r.supervision_fee_method && (
+                                  <div className="text-[10px] text-muted-foreground mt-0.5">
+                                    {r.supervision_fee_method === 'LUMP_SUM' ? 'مبلغ ثابت' :
+                                     r.supervision_fee_method === 'PERCENTAGE' ? `نسبة ${Number(r.supervision_fee_percentage || 0).toFixed(1)}%` :
+                                     r.supervision_fee_method === 'MONTHLY_RATE' ? 'معدل شهري' : r.supervision_fee_method}
+                                  </div>
+                                )}
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">الإشراف الحقيقي</span>
+                                <div className="font-semibold text-sky-600">{fmtAED(r.adjusted_supervision_fee ?? r.quoted_supervision_fee)}</div>
+                              </div>
                             </div>
-                            <div>
-                              <span className="text-muted-foreground">الإشراف الحقيقي</span>
-                              <div className="font-semibold text-sky-600">{fmtAED(r.quoted_supervision_fee)}</div>
-                            </div>
+                            {/* Supervision team breakdown for MONTHLY_RATE */}
+                            {r.supervision_fee_method === 'MONTHLY_RATE' && r.supervisionTeam && r.supervisionTeam.length > 0 && (
+                              <div className="bg-sky-50 dark:bg-sky-950/30 rounded-md p-2 space-y-1 border border-sky-100 dark:border-sky-900">
+                                <p className="text-[10px] font-semibold text-sky-700 dark:text-sky-400 mb-1">تفاصيل فريق الإشراف:</p>
+                                {r.supervisionTeam.filter((t: any) => t.proposedMonthlyRate).map((t: any, i: number) => {
+                                  const dur = Number(project?.duration_months || 0);
+                                  const alloc = t.proposedAllocationPct !== null ? t.proposedAllocationPct : 100;
+                                  const total = t.proposedMonthlyRate * dur * (alloc / 100);
+                                  return (
+                                    <div key={i} className="flex justify-between text-[10px]">
+                                      <span className="text-muted-foreground">{t.code} — {t.label}</span>
+                                      <span className="font-medium text-sky-700 dark:text-sky-400">{fmtAED(total)}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
                         </div>
 

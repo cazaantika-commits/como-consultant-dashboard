@@ -494,15 +494,17 @@ router.get("/:projectId", async (req, res) => {
 </div>`;
       }
 
-      // Team gap table
+      // Team gap table — includes consultant's own rate/total and reference rate
       html += `<table>
   <thead>
     <tr>
       <th>Role</th>
-      <th>Baseline %</th>
+      <th>Required %</th>
       <th>Proposed %</th>
-      <th>Gap %</th>
+      <th>Consultant Rate/Month</th>
+      <th>Consultant Total (AED)</th>
       <th>Ref Rate/Month</th>
+      <th>Gap %</th>
       <th>Gap Cost (AED)</th>
     </tr>
   </thead>
@@ -515,29 +517,40 @@ router.get("/:projectId", async (req, res) => {
         const rawProposed = toNum(teamEntry?.proposed_allocation_pct ?? 0);
         const proposed = (rawProposed === 0 && teamEntry?.proposed_monthly_rate) ? required : rawProposed;
         const gapPct = Math.max(0, required - proposed);
+        const consultantRate = teamEntry?.proposed_monthly_rate ? toNum(teamEntry.proposed_monthly_rate) : null;
+        const effectiveAlloc = (rawProposed === 0 && teamEntry?.proposed_monthly_rate) ? required : proposed;
+        const consultantTotal = consultantRate !== null ? consultantRate * durationMonths * (effectiveAlloc / 100) : null;
         const rateToUse = r.supervision_fee_method === "MONTHLY_RATE" && teamEntry?.proposed_monthly_rate
           ? toNum(teamEntry.proposed_monthly_rate)
           : toNum(baseline.monthly_rate_aed);
         const gapCost = rateToUse * durationMonths * (gapPct / 100);
 
-        const proposedLabel = teamEntry ? fmtPct(proposed) : `<span style="color:#999">Not mentioned</span>`;
+        const proposedLabel = teamEntry ? fmtPct(proposed) : `<span style="color:#999">Not stated</span>`;
+        const consultantRateLabel = consultantRate !== null ? fmtAED(consultantRate) : `<span style="color:#999">—</span>`;
+        const consultantTotalLabel = consultantTotal !== null
+          ? `<strong style="color:#0369a1">${fmtAED(consultantTotal)}</strong>`
+          : `<span style="color:#999">—</span>`;
 
         html += `<tr>
-      <td><strong>${baseline.code}</strong></td>
+      <td><strong>${baseline.code}</strong><br/><span style="font-size:8pt;color:#666">${baseline.label || ''}</span></td>
       <td>${fmtPct(required)}</td>
       <td>${proposedLabel}</td>
+      <td>${consultantRateLabel}</td>
+      <td>${consultantTotalLabel}</td>
+      <td style="color:#6b7280">${fmtAED(toNum(baseline.monthly_rate_aed))}</td>
       <td class="${gapPct > 0 ? "gap-cost" : "included"}">${gapPct > 0 ? fmtPct(gapPct) : "—"}</td>
-      <td>${fmtAED(toNum(baseline.monthly_rate_aed))}</td>
       <td class="${gapCost > 0 ? "gap-cost" : ""}">${gapCost > 0 ? fmtAED(gapCost) : "—"}</td>
     </tr>`;
       }
 
       html += `<tr class="subtotal-row">
-      <td colspan="5"><strong>Total Team Gap Cost</strong></td>
+      <td colspan="4"><strong>Quoted Supervision Fee (Consultant Total)</strong></td>
+      <td><strong style="color:#0369a1">${fmtAED(quotedSup)}</strong></td>
+      <td colspan="2"><strong>Total Team Gap Cost</strong></td>
       <td><strong>${fmtAED(supGap)}</strong></td>
     </tr>
     <tr class="total-row">
-      <td colspan="5" class="amount"><strong>ADJUSTED SUPERVISION FEE</strong></td>
+      <td colspan="7" class="amount"><strong>ADJUSTED SUPERVISION FEE (Quoted + Gap)</strong></td>
       <td class="amount"><strong>${fmtAED(adjSup)}</strong></td>
     </tr>
   </tbody>
