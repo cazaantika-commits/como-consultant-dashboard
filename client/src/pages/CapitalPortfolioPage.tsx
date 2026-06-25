@@ -996,7 +996,8 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
     return cumulative;
   }, [groupedRows]);
 
-  const isLoading = portfolioQuery.isLoading;
+  // Wait for auth to complete before declaring data empty
+  const isLoading = authLoading || portfolioQuery.isLoading || (!portfolioQuery.isFetched && (isAuthenticated || isCCAuth));
 
   if (isLoading) {
     return (
