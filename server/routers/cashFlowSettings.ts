@@ -18,8 +18,10 @@ import {
   projects,
   marketOverview,
   competitionPricing,
+  users,
 } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
+import { ENV } from "../_core/env";
 import {
   calculateProjectCosts,
   calculatePhases,
@@ -1775,13 +1777,18 @@ export const cashFlowSettingsRouter = router({
    * getPortfolioAllScenarios — aggregates getCostSettingsComparison data
    * for ALL projects across ALL 3 scenarios.
    */
-  getPortfolioAllScenarios: publicProcedure.query(async ({ ctx }) => {
-    if (!ctx.user) return [];
+    getPortfolioAllScenarios: publicProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) return [];
-
+    // Support CC Auth: if no Manus session, fall back to owner user by OWNER_OPEN_ID
+    let userId: number | null = ctx.user?.id ?? null;
+    if (!userId && ENV.ownerOpenId) {
+      const ownerRows = await db.select().from(users).where(eq(users.openId, ENV.ownerOpenId)).limit(1);
+      if (ownerRows.length > 0) userId = ownerRows[0].id;
+    }
+    if (!userId) return [];
     const allProjects = await db.select().from(projects)
-      .where(eq(projects.userId, ctx.user.id));
+      .where(eq(projects.userId, userId));
     if (allProjects.length === 0) return [];
 
     const scenarioList: Scenario[] = ["offplan_escrow", "offplan_construction", "no_offplan"];
