@@ -1780,12 +1780,14 @@ export const cashFlowSettingsRouter = router({
     getPortfolioAllScenarios: publicProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) return [];
-    // Support CC Auth: if no Manus session, fall back to owner user by OWNER_OPEN_ID
-    let userId: number | null = ctx.user?.id ?? null;
-    if (!userId && ENV.ownerOpenId) {
+    // Always show owner's portfolio — this page is a shared dashboard for the owner's projects
+    let userId: number | null = null;
+    if (ENV.ownerOpenId) {
       const ownerRows = await db.select().from(users).where(eq(users.openId, ENV.ownerOpenId)).limit(1);
       if (ownerRows.length > 0) userId = ownerRows[0].id;
     }
+    // Fallback to current user if owner lookup fails
+    if (!userId) userId = ctx.user?.id ?? null;
     if (!userId) return [];
     const allProjects = await db.select().from(projects)
       .where(eq(projects.userId, userId));
