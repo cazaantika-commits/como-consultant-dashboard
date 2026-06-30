@@ -128,14 +128,14 @@
 - [x] Gantt chart: add filter for tasks without dates assigned
 - [x] Gantt chart: add filter UI buttons/toggles in the header area
 - [x] Gantt chart: add filter for in-progress and not-started tasks with counts
-- [ ] Bug fix: Gantt bars not appearing on timeline when dates are entered/saved
-- [ ] Bug fix: Completion % should be auto-calculated from service statuses (not manual input)
-- [ ] Stage completion = count of completed services / total services in stage
+- [x] Bug fix: Gantt bars not appearing on timeline when dates are entered/saved - added placeholder gray bar for undated services
+- [x] Bug fix: Completion % should be auto-calculated from service statuses (not manual input) - already computed from reqPct/statusPct
+- [x] Stage completion = count of completed services / total services in stage - already computed
 - [x] Bug fix: cycleStatus wipes dates when cycling status (doesn't include existing dates in mutation)
 - [x] Bug fix: saveEditing should be more robust with DOM fallback for date values
 - [x] Bug fix: server-side upsertServiceInstance overwrites dates with NULL when only status is sent
 - [x] Unit tests for upsertServiceInstance data builder (5 tests passing)
-- [ ] Improve: Auto-calculate progress % based on requirements completion and status
+- [x] Improve: Auto-calculate progress % based on requirements completion and status - already implemented
 - [x] Bug fix: Gantt timeline header stuck on March/April - cannot scroll horizontally to see other months
 - [x] Bug fix: Horizontal scroll moves rows but not the timeline date header - they should be synchronized
 - [x] Improve: Timeline should show the full date range of the project and be easily navigable
@@ -610,8 +610,8 @@
 ## Command Center - Role-Based Permissions
 - [x] Pass memberId/role through embedded components via prop
 - [x] Payment Requests: hide create/edit buttons for wael/sheikh_issa, keep approve/reject/review
-- [ ] Read-only sections: hide mutating actions in Financial Reports, Milestones, Meeting Minutes, Reports, Work Schedule, Feasibility Study
-- [ ] Capital Portfolio: keep move + report actions for wael/sheikh_issa
+- [x] Read-only sections: hide mutating actions in Milestones, Meeting Minutes, Reports, Work Schedule for wael/sheikh_issa
+- [x] Capital Portfolio: keep move + report actions for wael/sheikh_issa (no create/delete in capital portfolio)
 - [x] General Requests + Evaluations: full access for all members
 
 ## General Requests - Flexible Communication Channel
@@ -655,8 +655,8 @@
 - [x] Update InternalMessages frontend: filter by project
 - [x] Add unread badge counter on التواصل الداخلي card in Command Center bento grid (via getBubbleCounts)
 
-- [ ] Refactor consultant fee analysis to compute all values live from settings (no stored pre-calculated values)
-- [ ] Verify: changing any setting immediately reflects in the analysis without pressing "Calculate"
+- [x] Refactor consultant fee analysis to compute all values live from settings (no stored pre-calculated values) - already computed live from bua*pricePerSqft
+- [x] Verify: changing any setting immediately reflects in the analysis without pressing "Calculate" - confirmed: useMemo reacts to projectDetailsQuery.data changes
 - [x] Add design gap column (فجوة التصميم) in مركز القيادة financial evaluation table
 - [x] Add supervision gap column (فجوة الإشراف) in مركز القيادة financial evaluation table
 - [x] Update backend getProjectFinancialEvaluation to return designScopeGapCost and supervisionScopeGapCost separately (already returned)

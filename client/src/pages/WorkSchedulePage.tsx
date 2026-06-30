@@ -1376,6 +1376,26 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
                 const isDragging = dragInfo?.serviceCode === row.serviceCode;
 
                 if (!barStyle) {
+                  // Show placeholder bar for services without dates (centered at today)
+                  if (!isStage && row.type === 'service') {
+                    const placeholderWidth = 60; // 60px placeholder
+                    const placeholderRight = todayRightPos;
+                    return (
+                      <div
+                        key={`bar-${row.wbs}`}
+                        className="relative border-b border-gray-100"
+                        style={{ height: ROW_H }}
+                      >
+                        <div
+                          className="absolute flex items-center"
+                          style={{ top: ROW_H / 2 - 5, right: placeholderRight, width: placeholderWidth, height: 10 }}
+                          title="لم تُحدد تواريخ بعد"
+                        >
+                          <div className="w-full h-full rounded-sm bg-gray-200 border border-dashed border-gray-400 opacity-60" />
+                        </div>
+                      </div>
+                    );
+                  }
                   return (
                     <div
                       key={`bar-${row.wbs}`}

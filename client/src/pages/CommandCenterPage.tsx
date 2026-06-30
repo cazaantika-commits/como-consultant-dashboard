@@ -1434,8 +1434,9 @@ function BubbleDetail({ token, bubbleType, onBack, memberRole }: { token: string
   const deleteItem = trpc.commandCenter.deleteItem.useMutation();
   const utils = trpc.useUtils();
 
-  const canCreate = ["announcements", "meeting_minutes", "reports", "requests"].includes(bubbleType);
-  const canDelete = ["announcements", "meeting_minutes", "reports", "requests"].includes(bubbleType);
+  const isReadOnlyMember = memberRole === 'wael' || memberRole === 'sheikh_issa';
+  const canCreate = ["announcements", "meeting_minutes", "reports", "requests"].includes(bubbleType) && !isReadOnlyMember;
+  const canDelete = ["announcements", "meeting_minutes", "reports", "requests"].includes(bubbleType) && !isReadOnlyMember;
   const hasFileUpload = ["meeting_minutes", "reports", "requests"].includes(bubbleType);
   const hasLinkField = ["meeting_minutes", "reports", "requests"].includes(bubbleType);
 
@@ -1758,7 +1759,8 @@ function ItemCard({ item, token, onDelete, bubbleType }: { item: any; token: str
 // ═══════════════════════════════════════════════════════
 // MILESTONES & KPIs VIEW
 // ═══════════════════════════════════════════════════════
-function MilestonesKpisView({ token, onBack }: { token: string; onBack: () => void }) {
+function MilestonesKpisView({ token, onBack, memberRole = '' }: { token: string; onBack: () => void; memberRole?: string }) {
+  const isReadOnly = memberRole === 'wael' || memberRole === 'sheikh_issa';
   const [activeTab, setActiveTab] = useState<'milestones' | 'kpis'>('milestones');
   const [selectedProject, setSelectedProject] = useState<number | undefined>(undefined);
   const [showAddMilestone, setShowAddMilestone] = useState(false);
@@ -1884,7 +1886,7 @@ function MilestonesKpisView({ token, onBack }: { token: string; onBack: () => vo
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
         </select>
-        {activeTab === 'milestones' ? (
+        {!isReadOnly && (activeTab === 'milestones' ? (
           <Button
             size="sm"
             onClick={() => { setEditingMilestone(null); setShowAddMilestone(true); }}
@@ -1900,7 +1902,7 @@ function MilestonesKpisView({ token, onBack }: { token: string; onBack: () => vo
           >
             <Plus className="w-3.5 h-3.5 ml-1" /> إضافة مؤشر
           </Button>
-        )}
+        ))}
       </div>
 
       {/* Milestones Tab */}
@@ -1977,6 +1979,7 @@ function MilestonesKpisView({ token, onBack }: { token: string; onBack: () => vo
                         </div>
                       )}
                     </div>
+                    {!isReadOnly && (
                     <div className="flex flex-col gap-1">
                       <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-slate-400 hover:text-cyan-600" onClick={() => { setEditingMilestone(m); setShowAddMilestone(true); }}>
                         <Pencil className="w-3.5 h-3.5" />
@@ -1985,6 +1988,7 @@ function MilestonesKpisView({ token, onBack }: { token: string; onBack: () => vo
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
+                    )}
                   </div>
                 </Card>
               );
@@ -2082,6 +2086,7 @@ function MilestonesKpisView({ token, onBack }: { token: string; onBack: () => vo
                         <p className="text-[10px] text-slate-400 mt-2">آخر تحديث: {k.lastUpdatedBy}</p>
                       )}
                     </div>
+                    {!isReadOnly && (
                     <div className="flex flex-col gap-1">
                       <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-slate-400 hover:text-teal-600" onClick={() => { setEditingKpi(k); setShowAddKpi(true); }}>
                         <Pencil className="w-3.5 h-3.5" />
@@ -2090,6 +2095,7 @@ function MilestonesKpisView({ token, onBack }: { token: string; onBack: () => vo
                         <Trash2 className="w-3.5 h-3.5" />
                       </Button>
                     </div>
+                    )}
                   </div>
                 </Card>
               );
@@ -4367,6 +4373,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           <MilestonesKpisView
             token={token}
             onBack={() => { setActiveBubble(null); setShowMilestonesKpis(false); }}
+            memberRole={member?.role || ''}
           />
         </div>
         <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
