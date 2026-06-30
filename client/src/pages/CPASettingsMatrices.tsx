@@ -264,16 +264,16 @@ export function ReferenceCostsTable() {
         اضغط على أي خلية لتعديل السعر المرجعي. اتركها فارغة = لا يُضاف للمقارنة.
       </p>
       <div className="overflow-x-auto rounded-lg border">
-        <table className="min-w-max text-xs border-collapse">
+        <table className="w-full text-xs border-collapse table-fixed">
           <thead>
             <tr className="bg-muted/60 border-b">
-              <th className="sticky right-0 bg-muted/60 z-10 text-right px-3 py-2.5 font-semibold min-w-[220px] border-l">
+              <th className="sticky right-0 bg-muted/60 z-10 text-right px-3 py-2.5 font-semibold w-[200px] border-l">
                 بند النطاق
               </th>
               {categories.map((cat: any) => (
                 <th
                   key={cat.id}
-                  className="px-3 py-2.5 font-semibold text-center min-w-[150px] border-l last:border-l-0 whitespace-nowrap"
+                  className="px-2 py-2.5 font-semibold text-center border-l last:border-l-0 whitespace-nowrap text-[11px]"
                 >
                   {cat.label}
                 </th>
