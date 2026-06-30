@@ -702,3 +702,5 @@
 - [x] إدراج 14 صف baseline للـ Shopping Center بناءً على مدد عارف وبن طوق (T4121) - نسب التخصيص = المدة ÷ 30 شهر
 - [x] إضافة أدوار المفتشين الثانيين: CIVIL_INSPECTOR_2 (70%)، MECH_INSPECTOR_2 (60%)، ELEC_INSPECTOR_2 (60%) وربطها بـ baseline الـ Shopping Center
 - [x] تحديث الأسعار المرجعية: BIM_COORD = 42,000 AED/شهر، DOC_CONTROLLER = 12,000 AED/شهر
+- [x] إضافة 3 بنود نطاق جديدة: CFD_MODELLING، CONSTRUCTION_SUPERVISION، DLP_SERVICES
+- [x] ربط 28 بند نطاق بفئة Shopping Center في cpa_scope_category_matrix بناءً على رسالة دعوة Artec
