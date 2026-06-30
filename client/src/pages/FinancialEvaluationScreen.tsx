@@ -464,7 +464,9 @@ export default function FinancialEvaluationScreen({ projectId, onBack }: { proje
                   </td>
                   {/* Total True Cost */}
                   <td className="border border-slate-200 p-2 text-center font-bold bg-gradient-to-b from-amber-100 to-amber-50 border-x-2 border-amber-300">
-                    {renderCell(c, 'totalTrueCost')}
+                    <div className="flex items-center justify-center gap-1">
+                      <span className="text-xs font-semibold text-slate-800">{formatNum(getEffectiveTotal(c))}</span>
+                    </div>
                     {score > 0 && <p className="text-[9px] text-amber-600 mt-0.5">Score: {score}%</p>}
                   </td>
                   {/* Rank */}
