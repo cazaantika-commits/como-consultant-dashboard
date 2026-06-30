@@ -92,7 +92,6 @@ router.get("/:projectId", async (req, res) => {
             AND src.building_category_id = scm.building_category_id
           WHERE scm.building_category_id = ${proj.building_category_id}
             AND scm.status != 'NOT_REQUIRED'
-            AND si.item_number BETWEEN 29 AND 43
           ORDER BY si.item_number`
     );
 
