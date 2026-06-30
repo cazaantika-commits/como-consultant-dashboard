@@ -7,7 +7,7 @@
 - [x] Build True Cost Report generation endpoint (HTML/PDF matching TrueCost_6457879 format)
 - [x] Add Export Report button to CPA results page
 - [x] Capital scheduling: page wired to /capital-scheduling route in App.tsx
-- [ ] Import corrected KIEFERLE JSON and recalculate
+- [ ] Import corrected KIEFERLE JSON and recalculate — PENDING: requires JSON file from user
 - [x] Fix report: scope gap table now shows only items 29-43 (add-on items), not 1-28 (base scope)
 - [x] Add contractual risk warnings section (items 1-28) to report with notes from JSON
 - [x] Capital scheduling: no paid amounts when shifting columns (only required amounts)
@@ -35,7 +35,7 @@
 - [x] 4-phase color coding: gray (land/paid), purple (design), light blue (offplan), amber (construction)
 - [x] Independent delay controls per project: 3 delay buttons (design, offplan, construction)
 - [x] Delay badge shows active delays (e.g., "تصاميم +3ش · أوف +3ش")
-- [ ] Import corrected KIEFERLE JSON and recalculate (pending)
+- [ ] Import corrected KIEFERLE JSON and recalculate (pending) — PENDING: requires JSON file from user
 - [x] Update capital scheduling phase colors to match provided color palette (green, orange, pink, cyan, yellow)
 - [x] Bug: Design and offplan phases not showing for مجان متعدد الاستخدامات in capital scheduling — FIXED: geometric range as single source of truth
 - [x] Change construction phase color to green (#4AD8A4) instead of orange
