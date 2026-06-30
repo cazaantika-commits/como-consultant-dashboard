@@ -346,6 +346,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
         saleableResidentialPct: p.saleableResidentialPct ? String(p.saleableResidentialPct) : "95",
         saleableRetailPct: p.saleableRetailPct ? String(p.saleableRetailPct) : "97",
         saleableOfficesPct: p.saleableOfficesPct ? String(p.saleableOfficesPct) : "95",
+        financingScenario: (p as any).financingScenario || "offplan_escrow",
         notes: p.notes || "",
       });
       setHasChanges(false);
@@ -365,6 +366,8 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
       if (numericIntFields.includes(key)) { payload[key] = value ? Number(value) : undefined; }
       else { payload[key] = (value !== null && value !== undefined && String(value).trim() !== "") ? value : undefined; }
     }
+    // Always include financingScenario (even if default value)
+    if (formData.financingScenario) payload.financingScenario = formData.financingScenario;
     updateProject.mutate(payload as any);
   };
 
@@ -640,6 +643,27 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
                 <div className="bg-stone-50 border border-stone-200 rounded px-2 py-1 mt-1.5 flex items-center justify-between">
                   <span className="text-[10px] text-stone-600">إجمالي</span>
                   <span className="text-xs font-bold text-stone-800 font-mono" dir="ltr">{(n("preConMonths", 6) + 3 + n("constructionMonths", 18))} شهر</span>
+                </div>
+              </Section>
+
+              {/* Financing Scenario */}
+              <Section title="سيناريو التمويل" icon={Landmark} color="purple">
+                <div className="space-y-0.5">
+                  <label className="text-[10px] font-medium text-muted-foreground">سيناريو البيع والتمويل</label>
+                  <Select
+                    value={formData.financingScenario || "offplan_escrow"}
+                    onValueChange={v => { updateField("financingScenario", v); }}
+                  >
+                    <SelectTrigger className="text-[11px] h-7 border-stone-200 focus:border-purple-400 bg-white/50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="offplan_escrow" className="text-xs">سيناريو 1 — أوف بلان + حساب ضمان (O1)</SelectItem>
+                      <SelectItem value="offplan_construction" className="text-xs">سيناريو 2 — أوف بلان بعد 20% إنشاء (O2)</SelectItem>
+                      <SelectItem value="no_offplan" className="text-xs">سيناريو 3 — بدون أوف بلان (O3)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="text-[9px] text-purple-600 mt-0.5">يؤثر على الجدول الشامل وخطط التدفق المالي</div>
                 </div>
               </Section>
 

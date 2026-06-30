@@ -759,7 +759,12 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
         //   construction → shifts by designDelay + constructionDelay (follows design directly)
         //   escrow → same as construction
         const constructionEffectiveDelay = delay.designDelay + delay.constructionDelay;
-        const offplanEffectiveDelay = delay.designDelay + delay.offplanDelay;
+        // O1 (offplan_escrow): offplan starts at month 3 of design → delay = designDelay + offplanDelay
+        // O2 (offplan_construction): offplan starts at constructionStart → delay = constructionEffectiveDelay + offplanDelay
+        // O3: no offplan
+        const offplanEffectiveDelay = scenario === "offplan_construction"
+          ? constructionEffectiveDelay + delay.offplanDelay
+          : delay.designDelay + delay.offplanDelay;
         const sectionDelayMap: Record<string, number> = {
           paid: 0,
           design: delay.designDelay,

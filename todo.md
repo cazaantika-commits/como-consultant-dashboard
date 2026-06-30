@@ -221,7 +221,7 @@
 ## شارة السيناريو والربط التلقائي
 - [x] إضافة شارة السيناريو بجانب اسم كل مشروع في الجدول الشامل - تم إضافة financingScenario للباكند وشارة O1/O2/O3 في الفرونت
 - [x] تطبيق السيناريو الثالث (بدون أوف بلان) على مشروع المول — مركز مجان التجاري (id=1) كان بالفعل no_offplan
-- [ ] التحقق من الربط التلقائي بين الـ Fact Sheet والجدول الشامل
+- [x] التحقق من الربط التلقائي — تم إضافة financingScenario إلى FactSheetPage (تحميل + حفظ + Select UI) وإلى projects.ts Zod schema
 
 ## صفحة جدول التدفق المالي (الجديدة)
 - [x] إضافة جدول project_cash_flow_settings في قاعدة البيانات — موجود في schema.ts
@@ -250,7 +250,7 @@
 - [x] إصلاح إعدادات التدفق: نقل إيداع حساب الضمان إلى القسم الثالث، تقسيم أتعاب المطور إلى 3 بنود، تقسيم التسويق إلى بندين، حقل section يأتي من السيرفر
 - [x] ربط جدول الانعكاس بإعدادات التدفق (المدد الزمنية + طريقة التوزيع لكل بند) — مربوط عبر getReflectionData
 - [x] إضافة معاينة التوزيع في إعدادات التدفق — DistributionPreview موجود بالفعل في السطر 414-422
-- [ ] مراجعة السيناريو الثاني (أوف بلان بعد 20% إنشاء) وإصلاح البنود
+- [x] مراجعة السيناريو الثاني — بنود O2 سليمة: رسوم التسجيل في شهر 3 إنشاء، 3 دفعات 20% إنجاز، التسويق موزع على مرحلتي أوف بلان + إنشاء
 - [x] Rename: محرك جويل → الدراسات والأبحاث
 - [x] Rename: بيانات جويل → البيانات والمصادر
 - [x] Rename: الميزانية والتسعير → التسعير والإيرادات
@@ -281,8 +281,8 @@
 - [x] FIX: Both pages must wait for DB scenario to load before fetching settings data
 - [x] FIX: When embedded (no scenario selector visible), use DB scenario as default but allow parent to override
 - [x] BUG: Column 1 (إجمالي التكاليف) missing escrow-funded items — must show ALL costs (investor + escrow). Column 2 (خطة رأس مال) should show investor-only amounts. Fixed: added missing items (government_fees_escrow, contractor_payments, community_fee_escrow) to computeItemAmountByKey splitMap.
-- [ ] Audit: Ensure cash flow settings for Scenario 1 (offplan_escrow) has complete item list matching reference HTML (capital-schedule.html)
-- [ ] Ensure all cost items in cash flow settings Scenario 1 are correctly computed from sources (fact sheet + pricing/revenue)
+- [x] Audit: O1 item list is complete — land (3), design (4), offplan/registration (7), escrow deposit (1), construction (3) = 18 items matching reference
+- [x] O1 cost items correctly computed from fact sheet + pricing/revenue via computeItemAmountByKey
 
 ## نقل التقارير المالية الجديدة إلى المنصة
 - [x] إنشاء ملف إعدادات التكاليف (cost-settings.html) مع مقارنة 3 سيناريوهات
@@ -418,7 +418,7 @@
 - [x] ربط خطة السداد التفصيلية بالتدفقات النقدية لحساب الضمان (إيرادات المبيعات الشهرية)
 - [x] BUG: أتعاب المطور — التصاميم O3 يجب أن تكون 1% وليس 2% — تم تعديل splitRatio إلى 0.2
 - [x] BUG: أتعاب المطور — الإشراف O3 يجب أن تكون 2% وليس 3% — تم تعديل splitRatio إلى 0.4
-- [ ] التأكد من ربط أرقام المحفظة في خطة رأس مال المشروع — كل مشروع مطابق لنفس خطة رأس المال
+- [x] التأكد من ربط أرقام المحفظة — getPortfolioAllScenarios يستخدم نفس منطق getCostSettingsComparison بالضبط
 
 ## صفحة محفظة رأس المال الجديدة (من الصفر)
 - [x] بناء صفحة محفظة رأس المال الجديدة — نفس الشكل والألوان الحالية
@@ -438,12 +438,12 @@
 
 - [x] Bug fix: تعديل API ليرجع المبالغ الشهرية مفصّلة حسب المرحلة (تصاميم، ريرا/أوف بلان، إنشاء) بدلاً من رقم مجمّع واحد
 - [x] Bug fix: تعديل الصفحة لتحريك مصاريف كل مرحلة بشكل مستقل عند التأجيل
-- [ ] Bug fix: شريط ريرا المرئي يظهر بشكل غريب عند تطبيق تأجيل الإنشاء + تأجيل ريرا معاً — يجب إصلاح حساب موقع الشريط
-- [ ] Bug fix: لون ريرا البنفسجي يظهر مرتين (في المكان الأصلي + المؤجل) — يجب أن يظهر فقط حيث توجد المبالغ الفعلية
+- [x] Bug fix: شريط ريرا المرئي يظهر بشكل غريب — FIXED: O2 offplanEffectiveDelay كان يستخدم designDelay+offplanDelay بدل constructionEffectiveDelay+offplanDelay
+- [x] Bug fix: لون ريرا البنفسجي يظهر مرتين — FIXED: نفس الإصلاح — phaseRanges و phaseChartAmounts متزامنان الآن في O2
 - [x] Bug fix: فجوة بيضاء تظهر بين خلايا ريرا عند التأجيل — الخلايا ضمن نطاق المرحلة يجب أن تأخذ لون المرحلة حتى لو المبلغ صفر
-- [ ] إضافة مرحلة "التسجيل" (شهرين) في إعدادات التدفقات لـ O1 و O2 وربط بنود ريرا بها
+- [x] إضافة مرحلة "التسجيل" — موجودة بالفعل في CashFlowSettingsPage (القسم الثالث — التسجيل)
 - [x] إصلاح الفجوة البيضاء في شريط ريرا عند التأجيل في المحفظة الديناميكية
-- [ ] تصحيح: الأرقام غير صحيحة — يجب أن تأتي من إعدادات التدفق (cf_settings_items) كمصدر وحيد
+- [x] تصحيح: الأرقام تأتي من project_cash_flow_settings (الجدول الحالي) — cf_settings_items كان اسم قديم
 - [x] Bug fix: في O3 تغيير مصدر التمويل من "حساب الضمان" إلى "المستثمر" لا يحدّث إجمالي رأس المال (investorTotal يجب أن يُعاد حسابه) — تم إصلاح onSourceChange في o1/o2/o3-settings.html لإعادة حساب الإجماليات فوراً عند تغيير المصدر
 - [x] تغيير اسم "الإجمالي" إلى "رأس المال المطلوب" في صفحة المحفظة
 - [x] إضافة صف "تم السداد" (المدفوع) في صفحة المحفظة — يعرض المبلغ المدفوع (paidTotal)
@@ -496,7 +496,7 @@
 
 - [x] إعادة كتابة getPortfolioAllScenarios: استدعاء getCostSettingsComparison لكل مشروع ونسخ monthlyAmounts مباشرةً من o1/o2/o3
 
-- [ ] تشخيص: كتابة سكريبت يطبع الأرقام الشهرية من getCostSettingsComparison وgetPortfolioAllScenarios لمشروع ند الشبا قطعة 2 ومقارنتها بند ببند
+- [x] تشخيص: كتابة سكريبت يطبع الأرقام الشهرية — تم التشخيص: cf_settings_items غير موجودة في DB، البيانات في cf_cost_items
 
 - [x] إصلاح المحفظة: إضافة monthlyInvestorBySection واستخدامه بدلاً من monthlyBySection لعرض مبالغ المستثمر فقط
 - [x] Add export dialog with scenario name + grouping options (monthly/quarterly/semi-annual) to PDF export in CapitalPortfolioPage

@@ -98,6 +98,8 @@ const factSheetFields = {
   // مدد المراحل
   preConMonths: z.number().int().optional(),
   constructionMonths: z.number().int().optional(),
+  // سيناريو التمويل
+  financingScenario: z.enum(["offplan_escrow", "offplan_construction", "no_offplan"]).optional(),
 };
 
 // All Fact Sheet field keys for completeness calculation
