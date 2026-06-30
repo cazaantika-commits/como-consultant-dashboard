@@ -115,20 +115,41 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
   const calculatedConstructionCost = dynamicBUA && dynamicPricePerSqft ? dynamicBUA * dynamicPricePerSqft : report.constructionCost;
 
   // Helper: Calculate value based on method and dynamic construction cost
+  // RULE: For PERCENTAGE-based consultants, ALL fee fields are recomputed from
+  //       calculatedConstructionCost. Overrides are completely ignored for these fields.
   const calculateDynamicValue = (c: typeof report.consultants[0], field: FieldKey): number => {
-    // If there's an override, use it
+    const isDesignPct = c.designMethod === 'PERCENTAGE';
+    const isSupPct = c.supervisionMethod === 'PERCENTAGE';
+
+    // Recompute percentage fees from current dynamic construction cost
+    const pctDesignFee = isDesignPct ? (c.designPct / 100) * calculatedConstructionCost : null;
+    const pctSupFee = isSupPct ? (c.supervisionPct / 100) * calculatedConstructionCost : null;
+    const designGap = c.calc.designScopeGap;   // scope gap is fixed (AED amount, not price-dependent)
+    const supGap = c.calc.supervisionGap;       // supervision gap is fixed
+
+    if (field === 'quotedDesignFee') {
+      return pctDesignFee !== null ? pctDesignFee : (c.override?.quotedDesignFee ?? c.calc.quotedDesignFee);
+    }
+    if (field === 'designScopeGap') {
+      return c.override?.designScopeGap ?? c.calc.designScopeGap;
+    }
+    if (field === 'trueDesignFee') {
+      if (pctDesignFee !== null) return pctDesignFee + designGap;
+      return c.override?.trueDesignFee ?? c.calc.trueDesignFee;
+    }
+    if (field === 'quotedSupervisionFee') {
+      return pctSupFee !== null ? pctSupFee : (c.override?.quotedSupervisionFee ?? c.calc.quotedSupervisionFee);
+    }
+    if (field === 'supervisionGap') {
+      return c.override?.supervisionGap ?? c.calc.supervisionGap;
+    }
+    if (field === 'adjustedSupervisionFee') {
+      if (pctSupFee !== null) return pctSupFee + supGap;
+      return c.override?.adjustedSupervisionFee ?? c.calc.adjustedSupervisionFee;
+    }
+    // For all other fields, respect overrides first
     const ov = c.override?.[field];
     if (ov != null) return ov;
-
-    // For percentage-based fees, recalculate using dynamic construction cost
-    if (field === 'quotedDesignFee' && c.designMethod === 'PERCENTAGE') {
-      return (c.designPct / 100) * calculatedConstructionCost;
-    }
-    if (field === 'quotedSupervisionFee' && c.supervisionMethod === 'PERCENTAGE') {
-      return (c.supervisionPct / 100) * calculatedConstructionCost;
-    }
-
-    // For other fields, use calculated value from backend
     return c.calc[field];
   };
 
@@ -146,6 +167,9 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
   const getEffectiveTotal = (c: typeof report.consultants[0]): number => {
     const trueDesign = getVal(c, 'trueDesignFee');
     const adjSupervision = getVal(c, 'adjustedSupervisionFee');
+    // For PERCENTAGE-based consultants: ALWAYS recompute total from dynamic values
+    const hasPercentageFee = c.designMethod === 'PERCENTAGE' || c.supervisionMethod === 'PERCENTAGE';
+    if (hasPercentageFee) return trueDesign + adjSupervision;
     if (c.override?.totalTrueCost != null) return c.override.totalTrueCost;
     return trueDesign + adjSupervision;
   };
@@ -426,7 +450,9 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
                   </td>
                   {/* Total True Cost */}
                   <td className="border border-slate-200 p-2 text-center font-bold bg-gradient-to-b from-amber-100 to-amber-50 border-x-2 border-amber-300">
-                    {renderCell(c, 'totalTrueCost')}
+                    <div className="flex items-center justify-center gap-1">
+                      <span className="text-xs font-semibold text-slate-800">{formatNum(getEffectiveTotal(c))}</span>
+                    </div>
                     {score > 0 && <p className="text-[9px] text-amber-600 mt-0.5">Score: {score}%</p>}
                   </td>
                   {/* Rank */}

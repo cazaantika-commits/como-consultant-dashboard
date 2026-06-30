@@ -106,16 +106,35 @@ export default function TrueCostReportPDF({ projectId: propProjectId, onBack }: 
   const calculatedConstructionCost = dynamicBUA && dynamicPricePerSqft ? dynamicBUA * dynamicPricePerSqft : report.constructionCost;
 
   const calculateDynamicValue = (c: typeof report.consultants[0], field: FieldKey): number => {
+    const isDesignPct = c.designMethod === 'PERCENTAGE';
+    const isSupPct = c.supervisionMethod === 'PERCENTAGE';
+    const pctDesignFee = isDesignPct ? (c.designPct / 100) * calculatedConstructionCost : null;
+    const pctSupFee = isSupPct ? (c.supervisionPct / 100) * calculatedConstructionCost : null;
+    const designGap = c.calc.designScopeGap;
+    const supGap = c.calc.supervisionGap;
+
+    if (field === 'quotedDesignFee') {
+      return pctDesignFee !== null ? pctDesignFee : (c.override?.quotedDesignFee ?? c.calc.quotedDesignFee);
+    }
+    if (field === 'designScopeGap') {
+      return c.override?.designScopeGap ?? c.calc.designScopeGap;
+    }
+    if (field === 'trueDesignFee') {
+      if (pctDesignFee !== null) return pctDesignFee + designGap;
+      return c.override?.trueDesignFee ?? c.calc.trueDesignFee;
+    }
+    if (field === 'quotedSupervisionFee') {
+      return pctSupFee !== null ? pctSupFee : (c.override?.quotedSupervisionFee ?? c.calc.quotedSupervisionFee);
+    }
+    if (field === 'supervisionGap') {
+      return c.override?.supervisionGap ?? c.calc.supervisionGap;
+    }
+    if (field === 'adjustedSupervisionFee') {
+      if (pctSupFee !== null) return pctSupFee + supGap;
+      return c.override?.adjustedSupervisionFee ?? c.calc.adjustedSupervisionFee;
+    }
     const ov = c.override?.[field];
     if (ov != null) return ov;
-
-    if (field === 'quotedDesignFee' && c.designMethod === 'PERCENTAGE') {
-      return (c.designPct / 100) * calculatedConstructionCost;
-    }
-    if (field === 'quotedSupervisionFee' && c.supervisionMethod === 'PERCENTAGE') {
-      return (c.supervisionPct / 100) * calculatedConstructionCost;
-    }
-
     return c.calc[field];
   };
 
@@ -130,6 +149,8 @@ export default function TrueCostReportPDF({ projectId: propProjectId, onBack }: 
   const getEffectiveTotal = (c: typeof report.consultants[0]): number => {
     const trueDesign = getVal(c, 'trueDesignFee');
     const adjSupervision = getVal(c, 'adjustedSupervisionFee');
+    const hasPercentageFee = c.designMethod === 'PERCENTAGE' || c.supervisionMethod === 'PERCENTAGE';
+    if (hasPercentageFee) return trueDesign + adjSupervision;
     if (c.override?.totalTrueCost != null) return c.override.totalTrueCost;
     return trueDesign + adjSupervision;
   };
@@ -440,7 +461,7 @@ export default function TrueCostReportPDF({ projectId: propProjectId, onBack }: 
                 {/* Total */}
                 <div className="bg-amber-50 border border-amber-200 rounded p-4 text-right">
                   <p className="text-xs font-semibold text-amber-700 mb-1">TOTAL TRUE COST</p>
-                  <p className="text-2xl font-bold text-amber-900">{renderEditableCell(c, 'totalTrueCost')}</p>
+                  <p className="text-2xl font-bold text-amber-900">{formatNum(getEffectiveTotal(c))}</p>
                 </div>
               </div>
             );
