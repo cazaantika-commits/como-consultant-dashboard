@@ -133,12 +133,30 @@ export default function FinancialEvaluationScreen({ projectId, onBack }: { proje
     const ov = c.override?.[field];
     if (ov != null) return ov;
 
-    // For percentage-based fees, recalculate using dynamic construction cost
-    if (field === 'quotedDesignFee' && c.designMethod === 'PERCENTAGE') {
-      return (c.designPct / 100) * calculatedConstructionCost;
+    // Recalculate percentage-based quoted fees using dynamic construction cost
+    const dynamicQuotedDesign = c.designMethod === 'PERCENTAGE'
+      ? (c.designPct / 100) * calculatedConstructionCost
+      : c.calc.quotedDesignFee;
+    const dynamicQuotedSupervision = c.supervisionMethod === 'PERCENTAGE'
+      ? (c.supervisionPct / 100) * calculatedConstructionCost
+      : c.calc.quotedSupervisionFee;
+
+    if (field === 'quotedDesignFee') return dynamicQuotedDesign;
+    if (field === 'quotedSupervisionFee') return dynamicQuotedSupervision;
+
+    // trueDesignFee = dynamicQuotedDesign + scope gap (gap doesn't change with price)
+    if (field === 'trueDesignFee') {
+      const gap = c.override?.designScopeGap ?? c.calc.designScopeGap;
+      return dynamicQuotedDesign + gap;
     }
-    if (field === 'quotedSupervisionFee' && c.supervisionMethod === 'PERCENTAGE') {
-      return (c.supervisionPct / 100) * calculatedConstructionCost;
+
+    // adjustedSupervisionFee: for PERCENTAGE method, it equals quotedSupervisionFee (no gap)
+    // for LUMP_SUM, the backend already adjusted for duration — but if price changes, LUMP_SUM stays fixed
+    if (field === 'adjustedSupervisionFee') {
+      if (c.supervisionMethod === 'PERCENTAGE') {
+        return dynamicQuotedSupervision;
+      }
+      return c.calc.adjustedSupervisionFee;
     }
 
     // For other fields, use calculated value from backend
