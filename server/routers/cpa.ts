@@ -111,6 +111,17 @@ export async function runCalculationEngine(cpaProjectId: number) {
       )
     : [];
 
+  // Step 3B: Role aliases — maps non-standard role codes to canonical roles
+  const roleAliases = await qRows<any>(
+    db,
+    sql`SELECT a.alias_code, a.canonical_role_id
+        FROM cpa_supervision_role_aliases a`
+  );
+  const aliasMap: Record<string, number> = {};
+  for (const a of roleAliases) {
+    aliasMap[String(a.alias_code)] = Number(a.canonical_role_id);
+  }
+
   // Step 4: All consultants (including DRAFT)
   const consultants = await qRows<any>(
     db,
@@ -196,8 +207,10 @@ export async function runCalculationEngine(cpaProjectId: number) {
     } else {
       const supTeam = await qRows<any>(
         db,
-        sql`SELECT cst.supervision_role_id, cst.proposed_allocation_pct, cst.proposed_monthly_rate
+        sql`SELECT cst.supervision_role_id, cst.proposed_allocation_pct, cst.proposed_monthly_rate,
+                   sr.code as role_code
             FROM cpa_consultant_supervision_team cst
+            JOIN cpa_supervision_roles sr ON sr.id = cst.supervision_role_id
             WHERE cst.project_consultant_id = ${pcId}`
       );
       const teamMap: Record<number, any> = {};
@@ -219,8 +232,11 @@ export async function runCalculationEngine(cpaProjectId: number) {
         for (const row of supTeam) {
           if (row.proposed_monthly_rate) {
             // If allocation_pct is 0 but rate is provided, use the baseline required_pct for this role
+            // Resolve alias: if role code has an alias mapping, use canonical role for baseline lookup
             const roleId = Number(row.supervision_role_id);
-            const baselineEntry = supervisionBaseline.find((b: any) => Number(b.supervision_role_id) === roleId);
+            const roleCode = String(row.role_code ?? "");
+            const canonicalRoleId = aliasMap[roleCode] !== undefined ? aliasMap[roleCode] : roleId;
+            const baselineEntry = supervisionBaseline.find((b: any) => Number(b.supervision_role_id) === canonicalRoleId);
             const effectiveAlloc = toNum(row.proposed_allocation_pct) > 0
               ? toNum(row.proposed_allocation_pct)
               : (baselineEntry ? toNum(baselineEntry.required_allocation_pct) : 100);
@@ -1168,12 +1184,26 @@ export const cpaRouter = router({
         );
         if (supervisionTeamMembers.length) {
           for (const member of supervisionTeamMembers) {
-            const roleRows = await qRows<any>(
+            let roleRows = await qRows<any>(
               db,
               sql`SELECT id FROM cpa_supervision_roles WHERE code = ${member.role_code}`
             );
+            // If role not found directly, check aliases table
             if (!roleRows[0]) {
-              console.warn(`[CPA importJson] Supervision role not found: ${member.role_code}`);
+              const aliasRows = await qRows<any>(
+                db,
+                sql`SELECT a.canonical_role_id FROM cpa_supervision_role_aliases a WHERE a.alias_code = ${member.role_code}`
+              );
+              if (aliasRows[0]) {
+                roleRows = await qRows<any>(
+                  db,
+                  sql`SELECT id FROM cpa_supervision_roles WHERE id = ${aliasRows[0].canonical_role_id}`
+                );
+                console.log(`[CPA importJson] Mapped alias ${member.role_code} -> role id ${aliasRows[0].canonical_role_id}`);
+              }
+            }
+            if (!roleRows[0]) {
+              console.warn(`[CPA importJson] Supervision role not found (and no alias): ${member.role_code}`);
               continue;
             }
             supervisionRolesImported++;
