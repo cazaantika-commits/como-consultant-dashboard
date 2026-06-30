@@ -112,6 +112,7 @@ export default function GeneralRequests({ embedded = false }: { embedded?: boole
     relatedParty: "",
     proposedDate: "",
     recommendedCompanyId: "",
+    assignedTo: "" as "abdulrahman" | "wael" | "sheikh_issa" | "",
   });
 
   const utils = trpc.useUtils();
@@ -126,7 +127,7 @@ export default function GeneralRequests({ embedded = false }: { embedded?: boole
       utils.generalRequests.list.invalidate();
       utils.generalRequests.counts.invalidate();
       setShowCreate(false);
-      setCreateForm({ requestType: "", subject: "", description: "", projectId: "", projectName: "", partnerId: "", relatedParty: "", proposedDate: "", recommendedCompanyId: "" });
+      setCreateForm({ requestType: "", subject: "", description: "", projectId: "", projectName: "", partnerId: "", relatedParty: "", proposedDate: "", recommendedCompanyId: "", assignedTo: "" });
       setAttachFiles([]);
       setPendingFileName("");
       toast.success(`تم إنشاء الطلب ${data.requestNumber}`);
@@ -259,6 +260,7 @@ export default function GeneralRequests({ embedded = false }: { embedded?: boole
       attachmentsJson,
       recommendedCompanyId: selectedRecommendedCompany ? Number(createForm.recommendedCompanyId) : undefined,
       recommendedCompanyName: selectedRecommendedCompany?.companyName || undefined,
+      assignedTo: (createForm.assignedTo as any) || undefined,
     });
   };
 
@@ -678,6 +680,21 @@ export default function GeneralRequests({ embedded = false }: { embedded?: boole
               <span>بعد الإنشاء، سيمر الطلب على: وائل ← الشيخ عيسى ← إشعار فريق المالية تلقائياً</span>
             </div>
 
+            {/* Assigned To */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">موجه إلى <span className="text-xs text-gray-400">(اختياري)</span></label>
+              <Select value={createForm.assignedTo} onValueChange={v => setCreateForm(p => ({ ...p, assignedTo: v as any }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر المستلم" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="abdulrahman">عبدالرحمن</SelectItem>
+                  <SelectItem value="wael">وائل</SelectItem>
+                  <SelectItem value="sheikh_issa">الشيخ عيسى</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Request Type */}
             <div>
               <label className="text-sm font-medium text-gray-700 mb-1 block">نوع الطلب *</label>
@@ -876,6 +893,14 @@ export default function GeneralRequests({ embedded = false }: { embedded?: boole
                       <div>
                         <div className="text-xs text-gray-400 mb-0.5">الجهة المعنية</div>
                         <div className="text-sm font-medium">{viewingRequest.relatedParty}</div>
+                      </div>
+                    )}
+                    {(viewingRequest as any).assignedTo && (
+                      <div>
+                        <div className="text-xs text-gray-400 mb-0.5">موجه إلى</div>
+                        <div className="text-sm font-semibold text-violet-700">
+                          {(viewingRequest as any).assignedTo === 'abdulrahman' ? 'عبدالرحمن' : (viewingRequest as any).assignedTo === 'wael' ? 'وائل' : 'الشيخ عيسى'}
+                        </div>
                       </div>
                     )}
                     {viewingRequest.recommendedCompanyName && (

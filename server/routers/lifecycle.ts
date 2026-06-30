@@ -73,8 +73,15 @@ async function computeServiceStatus(
   let timeStatus = "";
   if (instance?.plannedDueDate) {
     const today = new Date();
-    const [day, month, year] = instance.plannedDueDate.split("-").map(Number);
-    const dueDate = new Date(year, month - 1, day);
+    // Handle both YYYY-MM-DD (ISO) and DD-MM-YYYY formats
+    let dueDate: Date;
+    const isoMatch = instance.plannedDueDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+      dueDate = new Date(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]));
+    } else {
+      const [day, month, year] = instance.plannedDueDate.split("-").map(Number);
+      dueDate = new Date(year, month - 1, day);
+    }
     const diffDays = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     if (diffDays < 0) {
       timeStatus = `متأخرة ${Math.abs(diffDays)} يوم`;

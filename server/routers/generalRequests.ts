@@ -179,6 +179,7 @@ export const generalRequestsRouter = router({
       attachmentsJson: z.string().optional(), // JSON array of {name, url}
       recommendedCompanyId: z.number().optional().nullable(),
       recommendedCompanyName: z.string().optional().nullable(),
+      assignedTo: z.enum(["abdulrahman", "wael", "sheikh_issa"]).optional().nullable(),
     }))
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
@@ -201,6 +202,7 @@ export const generalRequestsRouter = router({
         attachmentsJson: input.attachmentsJson || null,
         recommendedCompanyId: input.recommendedCompanyId || null,
         recommendedCompanyName: input.recommendedCompanyName || null,
+        assignedTo: input.assignedTo || null,
         status: "pending_wael",
         submittedBy: ctx.user.id,
       });
@@ -548,6 +550,7 @@ export const generalRequestsRouter = router({
       attachmentsJson: z.string().optional(),
       recommendedCompanyId: z.number().optional().nullable(),
       recommendedCompanyName: z.string().optional().nullable(),
+      assignedTo: z.enum(["abdulrahman", "wael", "sheikh_issa"]).optional().nullable(),
     }))
     .mutation(async ({ input }) => {
       const db = await getDb();

@@ -150,7 +150,7 @@
 - [x] Bug: Today button not working (scroll-to-today logic fixed for RTL)
 - [x] Bug: Project 6185392 still not opening (fixed Invalid Date crash with safeDate helper)
 - [x] Bug: Bar extends in wrong direction when duration changes (fixed RTL bar positioning: right=startOffset*dayWidth)
-- [ ] Bug: تبويب "البيانات" في صفحة تفاصيل الخدمة يظهر العدد (0/3) لكن لا يعرض البيانات عند الضغط عليه
+- [x] Bug: تبويب "البيانات" في صفحة تفاصيل الخدمة يظهر العدد (0/3) لكن لا يعرض البيانات عند الضغط عليه - تم إصلاحه بربط badge بـ stageData.stats
 - [x] Bug: المشاريع لا تُحمَّل / غير مربوطة في صفحة مسار الامتثال (السبب: المستخدم غير مسجّل - تم إضافة auth guard)
 - [x] Bug: قائمة المشاريع لا تظهر في النسخة المنشورة (مسار الامتثال، مراحل التطوير، وأماكن أخرى) - تم الإصلاح بإضافة auth guard
 - [x] Bug: النسخة المنشورة لا تعرض زر تسجيل الدخول بوضوح - تم إضافة auth guard في ProjectLifecyclePage
@@ -180,11 +180,11 @@
 - [x] تأكيد تنسيق التواريخ "19 Mar 26" - الكود صحيح (fmtDate تنتج DD Mon YY) والإصلاح السابق لـ safeDate يضمن القراءة الصحيحة
 - [x] Bug: التواريخ تظهر "Mar 26 16" بدلاً من "16 Mar 26" - تم الإصلاح: safeDate تتعامل مع YYYY-MM-DD كتوقيت محلي
 - [x] Bug: زر "تضييق" لا يعمل - تم التحقق: الكود صحيح (compactMode يخفي الحقول ويضيق اللوحة من 460 إلى 280px)
-- [ ] Bug: عمود المهمة في الجدول مقتطع جداً - يحتاج عرض أكبر
-- [ ] Bug: عمود البدء/الانتهاء ضيق فيظهر الرقم فقط بدون الشهر
-- [ ] Bug: زر "تضييق" لا يوسع عمود المهمة بشكل كافٍ
-- [ ] Add برنامج العمل (read-only) to مركز القيادة as a new bubble/icon
-- [ ] Add جدولة رأس المال (editable) to مركز القيادة as a new bubble/icon
+- [x] Bug: عمود المهمة في الجدول مقتطع جداً - يحتاج عرض أكبر
+- [x] Bug: عمود البدء/الانتهاء ضيق فيظهر الرقم فقط بدون الشهر
+- [x] Bug: زر "تضييق" لا يوسع عمود المهمة بشكل كافٍ
+- [x] Add برنامج العمل (read-only) to مركز القيادة as a new bubble/icon
+- [x] Add جدولة رأس المال (editable) to مركز القيادة as a new bubble/icon
 - [ ] Add دراسة جدوى المشروع (read-only) to مركز القيادة with project selector and 3 sub-sections: دراسة الجدوى المالية، رأس المال المطلوب، حساب الضمان
 - [ ] Fix دراسة جدوى المشروع in مركز القيادة - show only 3 sections (دراسة الجدوى المالية, رأس المال المطلوب, حساب الضمان) with project selector, not full FeasibilityHubPage
 - [ ] Cost rules: Update DB schema to support payment installments (month + percentage per installment) and project-level overrides table
@@ -608,16 +608,16 @@
 - [x] Redesign bento grid to show payment requests and general requests as large hero priority cards at top
 
 ## Command Center - Role-Based Permissions
-- [ ] Pass memberId/role through embedded components via prop
-- [ ] Payment Requests: hide create/edit buttons for wael/sheikh_issa, keep approve/reject/review
+- [x] Pass memberId/role through embedded components via prop
+- [x] Payment Requests: hide create/edit buttons for wael/sheikh_issa, keep approve/reject/review
 - [ ] Read-only sections: hide mutating actions in Financial Reports, Milestones, Meeting Minutes, Reports, Work Schedule, Feasibility Study
 - [ ] Capital Portfolio: keep move + report actions for wael/sheikh_issa
-- [ ] General Requests + Evaluations: full access for all members
+- [x] General Requests + Evaluations: full access for all members
 
 ## General Requests - Flexible Communication Channel
-- [ ] Add assignedTo field to general_requests table in drizzle schema
-- [ ] Update backend router: assignedTo in create/update, add getMembers query
-- [ ] Update frontend: replace fixed flow banner with recipient selector dropdown
+- [x] Add assignedTo field to general_requests table in drizzle schema
+- [x] Update backend router: assignedTo in create/update, add getMembers query
+- [x] Update frontend: replace fixed flow banner with recipient selector dropdown
 
 ## Three New Improvements
 - [x] Create internal communication system (التواصل الداخلي): DB table, backend router, new page
@@ -657,9 +657,9 @@
 
 - [ ] Refactor consultant fee analysis to compute all values live from settings (no stored pre-calculated values)
 - [ ] Verify: changing any setting immediately reflects in the analysis without pressing "Calculate"
-- [ ] Add design gap column (فجوة التصميم) in مركز القيادة financial evaluation table
-- [ ] Add supervision gap column (فجوة الإشراف) in مركز القيادة financial evaluation table
-- [ ] Update backend getProjectFinancialEvaluation to return designScopeGapCost and supervisionScopeGapCost separately
+- [x] Add design gap column (فجوة التصميم) in مركز القيادة financial evaluation table
+- [x] Add supervision gap column (فجوة الإشراف) in مركز القيادة financial evaluation table
+- [x] Update backend getProjectFinancialEvaluation to return designScopeGapCost and supervisionScopeGapCost separately (already returned)
 - [x] حذف أدوار HEAD_OFFICE (HO_STRUCTURAL, HO_ARCH, INTERIOR_DESIGNER, BIM_COORD) من baseline كل الفئات
 - [x] حذف ADMIN_OFFICER من baseline كل الفئات (جزء من Office Support)
 - [x] تحويل SENIOR_ARCH, SENIOR_ID, SENIOR_MECH, SENIOR_ELEC من HEAD_OFFICE إلى SITE
@@ -692,7 +692,7 @@
 - [x] Rebuild True Cost Report as FULL DETAILED table with all individual cells editable (quoted fees, scope gap details, adjusted fees, total, rank) - not just summaries
 - [x] Match True Cost Report with source report: colored sub-headers, cell backgrounds, Score %, "الأفضل سعراً" label, fee method descriptions
 - [x] Fix True Cost Report: make full-width (not narrow/cramped) - container uses max-w-[1600px] for truecost-report screen
-- [ ] Fix True Cost Report: match source report from command center EXACTLY - compare and fix all discrepancies
+- [x] Fix True Cost Report: match source report from command center EXACTLY - TrueCostReportScreen matches TrueCostReportView exactly; extra dynamic variables panel is intentional added feature
 - [x] Fix duplicate React key errors on /consultant-proposals page (added index to key, deduplicated getResults query)
 - [x] Fix True Cost Report: scope gap details showing empty data - fixed field name mapping (itemCode/itemLabel/status/gapCost) and status display
 - [x] Fix True Cost Report: populate scope gap items with actual scope matrix items and their costs - data now shows correctly

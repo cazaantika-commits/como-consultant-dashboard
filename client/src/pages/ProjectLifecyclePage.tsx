@@ -596,6 +596,14 @@ function ServiceDetailPanel({
   );
   const hasStageFieldDefs = (fieldDefsQuery.data?.length ?? 0) > 0;
 
+  // When using StageDataTab (rich field defs), fetch stageData stats for the badge
+  const stageRecordQuery = trpc.stageData.getStageRecord.useQuery(
+    { projectId, serviceCode: service.serviceCode },
+    { enabled: hasStageFieldDefs }
+  );
+  const stageDataFilled = stageRecordQuery.data?.stats?.filled ?? 0;
+  const stageDataTotal = stageRecordQuery.data?.stats?.total ?? (fieldDefsQuery.data?.length ?? 0);
+
   const submitMutation = trpc.lifecycle.submitService.useMutation({
     onSuccess: () => {
       utils.lifecycle.getStageServices.invalidate();
@@ -625,10 +633,10 @@ function ServiceDetailPanel({
 
   const tabs = [
     { key: "documents" as const, label: "المستندات", count: completedDocs, total: docReqs.length, icon: <FileText className="w-4 h-4" />, color: "blue" },
-    { key: "data" as const, label: "البيانات", count: completedData, total: dataReqs.length, icon: <Database className="w-4 h-4" />, color: "purple" },
+    { key: "data" as const, label: "البيانات", count: hasStageFieldDefs ? stageDataFilled : completedData, total: hasStageFieldDefs ? stageDataTotal : dataReqs.length, icon: <Database className="w-4 h-4" />, color: "purple" },
     { key: "approval" as const, label: "الموافقات", count: completedApproval, total: approvalReqs.length, icon: <CheckCircle2 className="w-4 h-4" />, color: "green" },
     { key: "action" as const, label: "الإجراءات", count: completedAction, total: actionReqs.length, icon: <AlertCircle className="w-4 h-4" />, color: "orange" },
-  ].filter((t) => t.total > 0);
+  ].filter((t) => t.total > 0 || (t.key === "data" && hasStageFieldDefs));
 
   const activeReqs = activeTab === "documents" ? docReqs : activeTab === "data" ? dataReqs : activeTab === "approval" ? approvalReqs : actionReqs;
 

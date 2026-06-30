@@ -57,7 +57,8 @@ function WorkflowStep({ label, status, active, done }: { label: string; status: 
   );
 }
 
-export default function PaymentRequests({ embedded = false }: { embedded?: boolean }) {
+export default function PaymentRequests({ embedded = false, memberRole = '' }: { embedded?: boolean; memberRole?: string }) {
+  const isReadOnlyMember = memberRole === 'wael' || memberRole === 'sheikh_issa';
   const { isReadOnly } = useAuth();
   const searchStr = useSearch();
   const [, navigate] = useLocation();
@@ -516,7 +517,7 @@ export default function PaymentRequests({ embedded = false }: { embedded?: boole
           <Download className="w-4 h-4 ml-2" />
           تصدير Excel
         </Button>}
-        {!isReadOnly && <Button onClick={() => setShowCreate(true)} className="bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white shadow-md">
+        {!isReadOnly && !isReadOnlyMember && <Button onClick={() => setShowCreate(true)} className="bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white shadow-md">
           <Plus className="w-4 h-4 ml-2" />
           طلب صرف جديد
         </Button>}
@@ -567,9 +568,9 @@ export default function PaymentRequests({ embedded = false }: { embedded?: boole
         <div className="text-center py-20">
           <CreditCard className="w-16 h-16 text-gray-200 mx-auto mb-4" />
           <p className="text-gray-400 text-lg">لا توجد طلبات صرف</p>
-          <Button onClick={() => setShowCreate(true)} variant="outline" className="mt-4">
+          {!isReadOnlyMember && <Button onClick={() => setShowCreate(true)} variant="outline" className="mt-4">
             <Plus className="w-4 h-4 ml-2" /> إنشاء أول طلب
-          </Button>
+          </Button>}
         </div>
       ) : (
         <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm">

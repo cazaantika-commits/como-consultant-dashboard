@@ -114,6 +114,7 @@ import GeneralRequestsPage from "./GeneralRequests";
 import InternalMessagesPage from "./InternalMessages";
 import TrueCostReportView from "./TrueCostReportView";
 import FinancialEvaluationScreen from "./FinancialEvaluationScreen";
+import CapitalScheduleTablePage from "./CapitalScheduleTablePage";
 // Old financial components removed - now using iframe embeds
 
 // --- Financial Reports View (read-only, embedded in Command Center) ---
@@ -390,6 +391,7 @@ const BUBBLES = [
 
   // ── PRIORITY 4: Planning & Studies ──
   { type: "work_schedule" as const, label: "برنامج العمل", icon: CalendarDays, color: "from-teal-500 to-teal-700", bg: "bg-teal-50", border: "border-teal-200", text: "text-teal-700" },
+  { type: "capital_schedule" as const, label: "جدولة رأس المال", icon: BarChart2, color: "from-sky-500 to-blue-700", bg: "bg-sky-50", border: "border-sky-200", text: "text-sky-700" },
   { type: "feasibility_study" as const, label: "دراسة الجدوى", icon: TrendingUp, color: "from-fuchsia-500 to-violet-700", bg: "bg-violet-50", border: "border-violet-200", text: "text-violet-700" },
   { type: "announcements" as const, label: "الإعلانات", icon: Megaphone, color: "from-red-500 to-rose-700", bg: "bg-rose-50", border: "border-rose-200", text: "text-rose-700" },
   // ── PRIORITY 5: Internal Communication ──
@@ -2772,7 +2774,7 @@ function FinancialEvaluationView({ token, projectId, onBack }: { token: string; 
             <tr className="bg-gradient-to-r from-emerald-700 via-teal-700 to-cyan-700 text-white text-center text-xs font-bold">
               <th className="border border-emerald-600 p-2" rowSpan={2} style={{width:'14%'}}>الاستشاري</th>
               <th className="border border-emerald-600 p-2 bg-blue-700" colSpan={4}>التصميم</th>
-              <th className="border border-emerald-600 p-2 bg-teal-700" colSpan={4}>الإشراف</th>
+              <th className="border border-emerald-600 p-2 bg-teal-700" colSpan={5}>الإشراف</th>
               <th className="border border-emerald-600 p-2 bg-amber-600" rowSpan={2} style={{width:'11%'}}>المجموع الكلي</th>
               <th className="border border-emerald-600 p-2" rowSpan={2} style={{width:'8%'}}>مقابل المتوسط</th>
             </tr>
@@ -2783,15 +2785,16 @@ function FinancialEvaluationView({ token, projectId, onBack }: { token: string; 
               <th className="border border-emerald-700 p-2 bg-blue-800" style={{width:'9%'}}>مجموع التصميم</th>
               <th className="border border-emerald-700 p-1 bg-teal-600" style={{width:'5%'}}>نوع</th>
               <th className="border border-emerald-700 p-2 bg-teal-600" style={{width:'10%'}}>أتعاب الإشراف</th>
-
+              <th className="border border-emerald-700 p-2 bg-orange-600" style={{width:'9%'}}>فجوة الإشراف</th>
               <th className="border border-emerald-700 p-2 bg-teal-800" style={{width:'9%'}}>مجموع الإشراف</th>
             </tr>
           </thead>
           <tbody className="bg-white">
             {sorted.map((c, i) => {
               const designGap = Number(c.designScopeGapCost) || 0;
+              const supervisionGap = Number(c.supervisionScopeGapCost) || 0;
               const designTotal = (c.designAmount || 0) + designGap;
-              const supervisionTotal = (c.supervisionAmount || 0);
+              const supervisionTotal = (c.supervisionAmount || 0) + supervisionGap;
               const isLowest = i === 0;
               return (
               <tr key={c.id} className={`border-b hover:bg-gradient-to-l hover:from-blue-50/30 hover:to-transparent transition-all duration-200 ${
@@ -2836,7 +2839,12 @@ function FinancialEvaluationView({ token, projectId, onBack }: { token: string; 
                   <p className="text-xs font-semibold text-slate-800">{(c.supervisionAmount || 0).toLocaleString()}</p>
                   {c.supervisionType === 'pct' && <p className="text-[10px] text-teal-500">درهم</p>}
                 </td>
-
+                {/* Supervision gap */}
+                <td className="border border-slate-200 p-2 bg-orange-50 text-center">
+                  {supervisionGap > 0
+                    ? <><p className="text-xs font-semibold text-orange-600">+{supervisionGap.toLocaleString()}</p><p className="text-[10px] text-orange-400">درهم</p></>
+                    : <p className="text-xs text-slate-300">—</p>}
+                </td>
                 {/* Supervision total */}
                 <td className="border border-slate-200 p-2 text-center font-bold text-sm bg-teal-100 text-teal-800">
                   {supervisionTotal.toLocaleString()}
@@ -2857,7 +2865,7 @@ function FinancialEvaluationView({ token, projectId, onBack }: { token: string; 
           </tbody>
           <tfoot>
             <tr className="bg-gradient-to-r from-slate-100 to-slate-50 border-t-2 border-slate-300">
-              <td className="border border-slate-200 p-2 text-xs font-bold text-slate-700" colSpan={9}>المتوسط العام</td>
+              <td className="border border-slate-200 p-2 text-xs font-bold text-slate-700" colSpan={10}>المتوسط العام</td>
               <td className="border border-slate-200 p-2 text-center font-bold text-sm text-amber-900 bg-amber-50">
                 {avgFees > 0 ? Math.round(avgFees).toLocaleString() : '—'}
                 {avgFees > 0 && <p className="text-[10px] font-normal text-amber-600">درهم</p>}
@@ -4178,6 +4186,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
   const [showPaymentRequests, setShowPaymentRequests] = useState(false);
   const [showGeneralRequests, setShowGeneralRequests] = useState(false);
   const [showInternalMessages, setShowInternalMessages] = useState(false);
+  const [showCapitalSchedule, setShowCapitalSchedule] = useState(false);
   const projectsList = trpc.projects.list.useQuery();
 
   const counts = trpc.commandCenter.getBubbleCounts.useQuery({ token });
@@ -4248,7 +4257,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
               <ArrowLeft className="w-4 h-4 ml-1" /> العودة للرئيسية
             </Button>
           </div>
-          <PaymentRequestsPage embedded={true} />
+          <PaymentRequestsPage embedded={true} memberRole={member?.role || ''} />
         </div>
         <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
       </div>
@@ -4284,6 +4293,24 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             </Button>
           </div>
           <GeneralRequestsPage embedded={true} />
+        </div>
+        <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
+      </div>
+    );
+  }
+
+  // If viewing capital schedule (editable)
+  if (activeBubble === "capital_schedule" && showCapitalSchedule) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white" dir="rtl">
+        <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
+        <div className="px-2 py-4">
+          <div className="flex items-center gap-2 mb-4 px-4">
+            <Button variant="ghost" size="sm" onClick={() => { setActiveBubble(null); setShowCapitalSchedule(false); }} className="text-slate-500">
+              <ArrowLeft className="w-4 h-4 ml-1" /> العودة للرئيسية
+            </Button>
+          </div>
+          <CapitalScheduleTablePage embedded={true} />
         </div>
         <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
       </div>
@@ -4501,6 +4528,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             else if (type === "payment_requests") { setActiveBubble("payment_requests"); setShowPaymentRequests(true); }
             else if (type === "requests") { setActiveBubble("general_requests"); setShowGeneralRequests(true); }
             else if (type === "internal_messages") { setActiveBubble("internal_messages"); setShowInternalMessages(true); }
+            else if (type === "capital_schedule") { setActiveBubble("capital_schedule"); setShowCapitalSchedule(true); }
             else { setActiveBubble(type); }
           };
 
@@ -4744,10 +4772,11 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                 <div className="grid grid-cols-4 gap-4">
                   <IconTile bubble={BUBBLES[6]} size="md" />
                   <IconTile bubble={BUBBLES[7]} size="md" />
-                  <IconTile bubble={BUBBLES[11]} size="md" />
+                  <IconTile bubble={BUBBLES[12]} size="md" />
                   <IconTile bubble={BUBBLES[8]} size="sm" />
                   <IconTile bubble={BUBBLES[9]} size="sm" />
                   <IconTile bubble={BUBBLES[10]} size="sm" />
+                  <IconTile bubble={BUBBLES[11]} size="sm" />
                 </div>
               </div>
             </div>

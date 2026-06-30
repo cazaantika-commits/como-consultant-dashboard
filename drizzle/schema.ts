@@ -2244,6 +2244,8 @@ export const generalRequests = mysqlTable("general_requests", {
   sheikhNotes: text("sheikh_notes"),
   // Finance Email (sent after approval)
   financeEmailSentAt: timestamp("finance_email_sent_at", { mode: "string" }),
+  // Assigned To (recipient member)
+  assignedTo: mysqlEnum("assigned_to", ["abdulrahman", "wael", "sheikh_issa"]),
   // Submitter
   submittedBy: int("submitted_by").references(() => users.id),
   // Archive
