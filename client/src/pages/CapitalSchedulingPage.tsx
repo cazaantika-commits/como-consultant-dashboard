@@ -438,47 +438,28 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
 
   // Determine the BASE phase for a given chart index (design, construction, handover)
   // Off-plan is treated as an overlay, not a base phase
+  // Geometric ranges are the SINGLE SOURCE OF TRUTH for base phase.
   function getBasePhaseAtIndex(col: typeof effectiveColumns[0], chartIdx: number): PhaseType | null {
-    // Check base phases (everything except offplan) for actual amounts
-    const basePhases: PhaseType[] = ["design", "construction", "handover"];
-    const phasesWithAmounts: { phase: PhaseType; amount: number }[] = [];
-    for (const phase of basePhases) {
-      const amt = col.phaseChartAmounts[phase]?.[chartIdx] || 0;
-      if (amt > 0) phasesWithAmounts.push({ phase, amount: amt });
-    }
-    if (phasesWithAmounts.length > 0) {
-      phasesWithAmounts.sort((a, b) => b.amount - a.amount);
-      return phasesWithAmounts[0].phase;
-    }
-    // If only offplan has amounts here, determine underlying base phase from geometric ranges
-    const offplanAmt = col.phaseChartAmounts.offplan?.[chartIdx] || 0;
-    if (offplanAmt > 0) {
-      // Off-plan overlaps: determine which base phase is underneath
-      const { phaseRanges } = col;
-      if (chartIdx >= phaseRanges.design.start && chartIdx <= phaseRanges.design.end) return "design";
-      if (chartIdx >= phaseRanges.construction.start && chartIdx <= phaseRanges.construction.end) return "construction";
-      // Between design and construction
-      if (chartIdx > phaseRanges.design.end && chartIdx < phaseRanges.construction.start) return "offplan";
-      return "offplan"; // standalone offplan
-    }
-    // Fallback: geometric ranges for light-colored background cells
     const { phaseRanges } = col;
-    if (chartIdx >= phaseRanges.design.start && chartIdx <= phaseRanges.design.end) return "design";
-    if (chartIdx >= phaseRanges.construction.start && chartIdx <= phaseRanges.construction.end) return "construction";
-    if (chartIdx >= phaseRanges.handover.start && chartIdx <= phaseRanges.handover.end) return "handover";
-    // Check if in offplan-only zone (between design and construction)
-    if (chartIdx >= phaseRanges.offplan.start && chartIdx <= phaseRanges.offplan.end && col.offplanMonths > 0) return "offplan";
+    // Geometric ranges take priority — ensures design/construction always show even when amounts are zero
+    const inDesign = chartIdx >= phaseRanges.design.start && chartIdx <= phaseRanges.design.end;
+    const inConstruction = chartIdx >= phaseRanges.construction.start && chartIdx <= phaseRanges.construction.end;
+    const inOffplan = col.offplanMonths > 0 && chartIdx >= phaseRanges.offplan.start && chartIdx <= phaseRanges.offplan.end;
+    const inHandover = chartIdx >= phaseRanges.handover.start && chartIdx <= phaseRanges.handover.end;
+    if (inDesign) return "design";
+    if (inConstruction) return "construction";
+    if (inHandover) return "handover";
+    // Offplan is base phase ONLY when it's alone (not overlapping design/construction)
+    if (inOffplan) return "offplan";
     return null;
   }
 
   // Check if off-plan overlay exists at this chart index
+  // Use ONLY geometric range for overlay position — amounts may be at different positions
   function hasOffplanAtIndex(col: typeof effectiveColumns[0], chartIdx: number): boolean {
-    // Check actual amounts
-    const offplanAmt = col.phaseChartAmounts.offplan?.[chartIdx] || 0;
-    if (offplanAmt > 0) return true;
-    // Check geometric range
+    if (col.offplanMonths <= 0) return false;
     const { phaseRanges } = col;
-    return chartIdx >= phaseRanges.offplan.start && chartIdx <= phaseRanges.offplan.end && col.offplanMonths > 0;
+    return chartIdx >= phaseRanges.offplan.start && chartIdx <= phaseRanges.offplan.end;
   }
 
   // Legacy wrapper for backward compatibility
@@ -523,7 +504,14 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
         const nextHasOffplan = endIdx < TOTAL_MONTHS - 1 ? hasOffplanAtIndex(col, endIdx + 1) : false;
         const isOffplanFirst = offplanOverlay && !prevHasOffplan;
         const isOffplanLast = offplanOverlay && !nextHasOffplan;
-        return { colId: col.projectId, amount, phase, isFirst, isLast, offplanOverlay, isOffplanFirst, isOffplanLast };
+        // Check if ANY month in this group is within a geometric phase range (prevents white gaps when groupBy>1)
+        // Offplan is excluded to avoid empty offplan rectangles
+        const inGeometricRange = Array.from({ length: endIdx - startIdx + 1 }, (_, i) => startIdx + i).some(idx =>
+          (idx >= col.phaseRanges.design.start && idx <= col.phaseRanges.design.end) ||
+          (idx >= col.phaseRanges.construction.start && idx <= col.phaseRanges.construction.end) ||
+          (idx >= col.phaseRanges.handover.start && idx <= col.phaseRanges.handover.end)
+        );
+        return { colId: col.projectId, amount, phase, isFirst, isLast, offplanOverlay, isOffplanFirst, isOffplanLast, inGeometricRange };
       });
       return { gi, startIdx, endIdx, label, total, colData };
     });
@@ -1299,7 +1287,17 @@ border: "1px solid #fdba74",
                     let tl = 0, tr = 0, br = 0, bl = 0;
 
                     const phase = cd.phase as PhaseType | null;
-                    if (phase && PHASE_COLORS[phase]) {
+                    if (phase && PHASE_COLORS[phase] && phase !== "handover") {
+                      const colors = PHASE_COLORS[phase];
+                      // Use solid color when there are amounts OR when inside a geometric phase range
+                      // This prevents white gaps when amounts shift due to delay adjustments
+                      const useSolid = cd.amount > 0 || cd.inGeometricRange;
+                      bg        = useSolid ? colors.solid : colors.light;
+                      textColor = useSolid ? "#1a1a2e" : colors.text;
+                      fontW     = cd.amount > 0 ? 800 : 500;
+                      if (cd.isFirst) { tl = CURVE; tr = CURVE; }
+                      if (cd.isLast) { bl = CURVE; br = CURVE; }
+                    } else if (phase === "handover" && PHASE_COLORS[phase]) {
                       const colors = PHASE_COLORS[phase];
                       bg        = cd.amount > 0 ? colors.solid : colors.light;
                       textColor = cd.amount > 0 ? "#1a1a2e" : colors.text;

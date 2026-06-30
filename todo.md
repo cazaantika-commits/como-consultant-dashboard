@@ -37,7 +37,7 @@
 - [x] Delay badge shows active delays (e.g., "تصاميم +3ش · أوف +3ش")
 - [ ] Import corrected KIEFERLE JSON and recalculate (pending)
 - [x] Update capital scheduling phase colors to match provided color palette (green, orange, pink, cyan, yellow)
-- [ ] Bug: Design and offplan phases not showing for مجان متعدد الاستخدامات in capital scheduling
+- [x] Bug: Design and offplan phases not showing for مجان متعدد الاستخدامات in capital scheduling — FIXED: geometric range as single source of truth
 - [x] Change construction phase color to green (#4AD8A4) instead of orange
 - [x] Add project settings panel to CapitalSchedulingPage for editing startDate and durations directly
 - [x] Add startDate and handoverMonths fields to projects table schema
@@ -220,16 +220,16 @@
 
 ## شارة السيناريو والربط التلقائي
 - [x] إضافة شارة السيناريو بجانب اسم كل مشروع في الجدول الشامل - تم إضافة financingScenario للباكند وشارة O1/O2/O3 في الفرونت
-- [ ] تطبيق السيناريو الثالث (بدون أوف بلان) على مشروع المول في قاعدة البيانات
+- [x] تطبيق السيناريو الثالث (بدون أوف بلان) على مشروع المول — مركز مجان التجاري (id=1) كان بالفعل no_offplan
 - [ ] التحقق من الربط التلقائي بين الـ Fact Sheet والجدول الشامل
 
 ## صفحة جدول التدفق المالي (الجديدة)
-- [ ] إضافة جدول project_cash_flow_settings في قاعدة البيانات
-- [ ] إضافة tRPC procedures: getCashFlowSettings و saveCashFlowSettings
-- [ ] بناء CashFlowDistributionPage — جدول الإعدادات (سيناريو + توزيع زمني)
-- [ ] بناء CashFlowDistributionPage — جدول الانعكاس (أفقي شهري)
-- [ ] تسجيل المسار في App.tsx وإضافة الأيقونة في FeasibilityHubPage
-- [ ] تحديث ExcelCashFlowPage ليسحب من الإعدادات بدل الكود الثابت
+- [x] إضافة جدول project_cash_flow_settings في قاعدة البيانات — موجود في schema.ts
+- [x] إضافة tRPC procedures: getCashFlowSettings و saveCashFlowSettings — موجودة كـ getSettings/saveSettings
+- [x] بناء CashFlowDistributionPage — جدول الإعدادات (سيناريو + توزيع زمني) — CashFlowSettingsPage موجودة
+- [x] بناء CashFlowDistributionPage — جدول الانعكاس (أفقي شهري) — TimeDistributionTab موجودة
+- [x] تسجيل المسار في App.tsx وإضافة الأيقونة في FeasibilityHubPage — مسجل
+- [x] تحديث ExcelCashFlowPage ليسحب من الإعدادات بدل الكود الثابت — يسحب من getReflectionData
 
 - [x] Create project_cash_flow_settings database table with full schema (itemKey, distributionMethod, lumpSumMonth, startMonth, endMonth, customJson, fundingSource, etc.)
 - [x] Build cashFlowSettings tRPC router: getSettings, saveSettings, resetSettings, getReflectionData procedures
@@ -248,7 +248,7 @@
 - [x] إصلاح إعدادات التدفق: تقسيم أتعاب المطور — موجود بالفعل: developer_fee_design (1%), developer_fee_offplan (1%), developer_fee_construction (3%)
 - [x] إصلاح إعدادات التدفق: تقسيم عمولة المبيعات — sales_commission (5%) في section="escrow" بالفعل
 - [x] إصلاح إعدادات التدفق: نقل إيداع حساب الضمان إلى القسم الثالث، تقسيم أتعاب المطور إلى 3 بنود، تقسيم التسويق إلى بندين، حقل section يأتي من السيرفر
-- [ ] ربط جدول الانعكاس بإعدادات التدفق (المدد الزمنية + طريقة التوزيع لكل بند)
+- [x] ربط جدول الانعكاس بإعدادات التدفق (المدد الزمنية + طريقة التوزيع لكل بند) — مربوط عبر getReflectionData
 - [x] إضافة معاينة التوزيع في إعدادات التدفق — DistributionPreview موجود بالفعل في السطر 414-422
 - [ ] مراجعة السيناريو الثاني (أوف بلان بعد 20% إنشاء) وإصلاح البنود
 - [x] Rename: محرك جويل → الدراسات والأبحاث
@@ -260,11 +260,11 @@
 - [x] Rename: حساب الضمان → التدفقات النقدية وحساب الضمان
 - [x] Rename: جدول الانعكاس → التكاليف الكلية للمشروع والجدول الزمني
 
-- [ ] Restructure project-management into 4 main sections with icons
-- [ ] Section 1: بطاقة المشروع (standalone, no sub-tabs)
-- [ ] Section 2: المعرفة والتحليل (project selector + 5 tabs: الدراسات والأبحاث, تقارير السوق, البيانات والمصادر, لوحة المخاطر, التسعير والإيرادات)
-- [ ] Section 3: التخطيط المالي (project selector + 5 tabs: إعدادات التدفق, ملخص الجدوى المالية, التكاليف الكلية للمشروع والجدول الزمني, خطة رأس مال المشروع, التدفقات النقدية وحساب الضمان)
-- [ ] Section 4: محفظة رأس المال للمشاريع (no project selector, shows all projects)
+- [x] Restructure project-management into 4 main sections with icons — already done in ProjectManagementPage.tsx
+- [x] Section 1: بطاقة المشروع (standalone, no sub-tabs) — FactSheetPage embedded
+- [x] Section 2: المعرفة والتحليل (project selector + 5 tabs) — KnowledgeHubPage.tsx
+- [x] Section 3: التخطيط المالي (project selector + 5 tabs) — FinancialPlanningHubPage.tsx
+- [x] Section 4: محفظة رأس المال للمشاريع — CapitalPortfolioPage embedded
 - [x] Restructure project-management page into 4 main sections: بطاقة المشروع, المعرفة والتحليل (5 tabs), التخطيط المالي (5 tabs), محفظة رأس المال للمشاريع
 - [x] Create KnowledgeHubPage.tsx with 5 tabs: الدراسات والأبحاث, تقارير السوق, البيانات والمصادر, لوحة المخاطر, التسعير والإيرادات
 - [x] Create FinancialPlanningHubPage.tsx with 5 tabs: إعدادات التدفق, ملخص الجدوى المالية, التكاليف الكلية, خطة رأس المال, التدفقات النقدية
