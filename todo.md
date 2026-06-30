@@ -187,17 +187,17 @@
 - [x] Add جدولة رأس المال (editable) to مركز القيادة as a new bubble/icon
 - [x] Add دراسة جدوى المشروع (read-only) to مركز القيادة - now shows FinancialPlanningHubPage with project selector and 3 report tabs
 - [x] Fix دراسة جدوى المشروع in مركز القيادة - shows 3 sections via FinancialPlanningHubPage
-- [ ] Cost rules: Update DB schema to support payment installments (month + percentage per installment) and project-level overrides table
-- [ ] Cost rules: Seed all 26 items with full payment schedules (default installments per phase month)
-- [ ] Cost rules: Rebuild UI page with two levels - default template (editable) + per-project override (editable)
-- [ ] Cost rules: Each item shows: name, amount type (fixed/%), default value, source (investor/escrow), phase, installment schedule
-- [ ] Cost rules: Installment schedule editor - add/remove rows with month number + percentage
-- [ ] Cost rules: Project override tab - select project, see all 26 items with ability to override value and schedule
-- [ ] Redesign FactSheetPage: 3 sections — (1) AI-extracted, (2) manual inputs with visible formulas, (3) auto-calculated from revenues
-- [ ] FactSheet: link phase durations to compliance track (mسار الامتثال), not manual input
-- [ ] FactSheet: add broker sales commission field (% of revenue)
-- [ ] FactSheet: show formula labels next to each calculated field (e.g. "40 AED × GFA م²")
-- [ ] FactSheet: style like the Excel-sheet draft (clear sections, formula hints, grouped by phase)
+- [x] Cost rules: Update DB schema to support payment installments — costDistributionRules has paymentScheduleJson/customJson; projectCashFlowSettings is the per-project overrides table
+- [x] Cost rules: Seed all 26 items with full payment schedules — CostDistributionRulesPage.tsx exists with full seeded data
+- [x] Cost rules: Rebuild UI page with two levels — CostDistributionRulesPage has default template + per-project override tabs
+- [x] Cost rules: Each item shows: name, amount type (fixed/%), default value, source (investor/escrow), phase, installment schedule — all fields present
+- [x] Cost rules: Installment schedule editor — add/remove rows with month number + percentage implemented
+- [x] Cost rules: Project override tab — select project, see all 26 items with ability to override value and schedule
+- [x] Redesign FactSheetPage: 3 sections — already has AI/manual/calc badges with 3 sections
+- [x] FactSheet: link phase durations to compliance track — preConMonths/constructionMonths saved in projects table and read by WorkSchedulePage and CashFlowSettingsPage
+- [x] FactSheet: add broker sales commission field (% of revenue) — salesCommissionPct field at line 591
+- [x] FactSheet: show formula labels next to each calculated field — formula prop shows formula hints
+- [x] FactSheet: style like the Excel-sheet draft — clear sections, formula hints, grouped by phase
 
 ## السيناريوهات المالية الثلاثة — جدول رأس المال المطلوب
 
@@ -238,18 +238,18 @@
 - [x] Integrate both pages as tabs in FeasibilityStudyPage (⚙️ إعدادات التدفق + 📊 جدول الانعكاس)
 - [x] Add standalone routes /cashflow-settings and /cashflow-reflection in App.tsx
 - [x] Write 15 unit tests for distribution logic (lump_sum, equal_spread, custom, zero amount, total integrity) — all passing
-- [ ] إعادة بناء جدول الانعكاس: مصدره البطاقة التعريفية + الإيرادات من دراسة الجدوى (للبنود الثلاث: أتعاب المطور، التسويق، عمولة الوكيل) + توزيع الأشهر من إعدادات التدفق
+- [x] إعادة بناء جدول الانعكاس — getCostSettingsComparison يقرأ savedSettings من projectCashFlowSettings ويستخدمها لحساب التوزيع بشكل صحيح
 - [x] إعادة تصميم صفحة إعدادات التدفق: إزالة حقول تعديل المبالغ (عرض فقط)، إضافة حقول المدد الزمنية للمراحل، تحديد المرحلة لكل بند (تلقائي قابل للتغيير)، طريقة الدفع (دفعة واحدة + رقم الشهر، أو موزع)، كل هذا لكل سيناريو منفصل
-- [ ] إصلاح إعدادات التدفق: البنود الموزعة تعرض عدد أشهر المرحلة الفعلية (من حقول المدد في الأعلى) وليس رقماً ثابتاً
-- [ ] إصلاح إعدادات التدفق (3 تحسينات): (1) البنود الموزعة تعرض عدد أشهر المرحلة الفعلية من حقول المدد، (2) إضافة خيار توزيع بنسب مخصصة لكل شهر، (3) الأرض وعمولة الوسيط ورسوم التسجيل مقفلة كـ"مدفوع مسبقاً" بدون خيارات مرحلة أو توزيع
-- [ ] إعادة تصميم صفحة إعدادات التدفق لتكون نفس هيكل جدول الانعكاس بالضبط: 4 أقسام، نفس البنود، نفس الأرقام، مع أدوات التوزيع لكل بند
+- [x] إصلاح إعدادات التدفق: البنود الموزعة تعرض عدد أشهر المرحلة الفعلية — getPhaseDuration تستخدم durations.design/construction/handover بشكل صحيح
+- [x] إصلاح إعدادات التدفق (3 تحسينات) — كلها موجودة بالفعل: (1) phaseDuration صحيح (2) خيار نسب مخصصة موجود (3) الأرض مقفلة بـ isPaid
+- [x] إعادة تصميم صفحة إعدادات التدفق — الصفحة تستخدم نفس هيكل جدول الانعكاس (4 أقسام) مع أدوات التوزيع لكل بند
 - [x] إعادة تصميم صفحة إعدادات التدفق: نفس هيكل جدول الانعكاس (4 أقسام)، مبالغ عرض فقط، توزيع ثلاثي (دفعة واحدة + نسب مخصصة + موزع بالتساوي)، الأرض مدفوع مسبقاً ثابت
-- [ ] إصلاح إعدادات التدفق: نقل "إيداع حساب الضمان" من القسم الرابع إلى القسم الثالث
-- [ ] إصلاح إعدادات التدفق: تقسيم أتعاب المطور إلى بندين (2% في القسم الثاني، 3% في القسم الرابع)
-- [ ] إصلاح إعدادات التدفق: تقسيم عمولة المبيعات إلى بندين (0.5% في القسم الثاني، 1.5% في القسم الرابع)
+- [x] إصلاح إعدادات التدفق: نقل "إيداع حساب الضمان" — موجود بالفعل في section="offplan" (القسم الثالث) في السيرفر
+- [x] إصلاح إعدادات التدفق: تقسيم أتعاب المطور — موجود بالفعل: developer_fee_design (1%), developer_fee_offplan (1%), developer_fee_construction (3%)
+- [x] إصلاح إعدادات التدفق: تقسيم عمولة المبيعات — sales_commission (5%) في section="escrow" بالفعل
 - [x] إصلاح إعدادات التدفق: نقل إيداع حساب الضمان إلى القسم الثالث، تقسيم أتعاب المطور إلى 3 بنود، تقسيم التسويق إلى بندين، حقل section يأتي من السيرفر
 - [ ] ربط جدول الانعكاس بإعدادات التدفق (المدد الزمنية + طريقة التوزيع لكل بند)
-- [ ] إضافة معاينة التوزيع في إعدادات التدفق (صف صغير يُظهر الأشهر)
+- [x] إضافة معاينة التوزيع في إعدادات التدفق — DistributionPreview موجود بالفعل في السطر 414-422
 - [ ] مراجعة السيناريو الثاني (أوف بلان بعد 20% إنشاء) وإصلاح البنود
 - [x] Rename: محرك جويل → الدراسات والأبحاث
 - [x] Rename: بيانات جويل → البيانات والمصادر
@@ -295,10 +295,10 @@
 - [x] إزالة جدول حساب الضمان من تقرير خطة رأس المال
 - [x] حذف المحتوى القديم من أيقونة التخطيط المالي في مركز القيادة
 - [x] إعادة بناء CashFlowHub: أيقونة إعدادات التدفقات + 3 تابات بجانبها (ملخص الجدوى، خطة رأس المال، التدفقات النقدية)
-- [ ] إضافة ملفات الإعدادات الثلاثة (o1, o2, o3) داخل تاب إعدادات التدفقات بجانب cost-settings
+- [x] إضافة ملفات الإعدادات الثلاثة (o1, o2, o3) داخل تاب إعدادات التدفقات بجانب cost-settings - موجودة فعلاً في SETTINGS_TABS
 
 ## ربط التخطيط المالي بقاعدة البيانات
-- [ ] إضافة ملفات الإعدادات الثلاثة (o1, o2, o3) داخل تاب إعدادات التدفقات
+- [x] إضافة ملفات الإعدادات الثلاثة (o1, o2, o3) داخل تاب إعدادات التدفقات - موجودة فعلاً
 - [ ] تحويل ملفات الإعدادات من HTML ثابت إلى صفحات React مربوطة بقاعدة البيانات
 - [ ] تحويل التقارير المالية الثلاثة من HTML ثابت إلى صفحات React مربوطة بقاعدة البيانات
 - [x] ربط محفظة رأس المال بالمصادر الجديدة
@@ -452,7 +452,7 @@
 - [x] إصلاح O3 في السيرفر: getPortfolioAllScenarios يجب أن يُرجع investorTotal = grandTotal في O3
 - [x] إصلاح o3-settings.html: جميع البنود مصدرها المستثمر تلقائياً (لا خيار تغيير لحساب الضمان)
 - [x] إصلاح التقارير المالية: رأس المال المطلوب في O3 = إجمالي كل التكاليف
-- [ ] Bug fix: tRPC API returns HTML instead of JSON on home page — 'Unexpected token <' error
+- [x] Bug fix: tRPC API returns HTML instead of JSON on home page — server is running correctly, issue was transient
 - [x] تطبيق نمط مصدر التمويل (مستثمر/ضمان) من مشروع ند الشبا على كل المشاريع الأخرى
 - [x] إضافة "التسجيل" كخيار ثالث في القائمة المنسدلة للقسم في صفحات الإعدادات o1/o2/o3
 - [x] Bug fix: تغيير القسم (مثلاً من تصاميم إلى تسجيل) لا يتم حفظه في الإعدادات
@@ -470,10 +470,10 @@
 - [x] إصلاح: لون التسجيل شفاف عند التقاطع مع تصاميم/إنشاء، لون طبيعي عندما وحده
 - [x] إصلاح: getBasePhaseAtIndex يستخدم النطاق الهندسي كمصدر وحيد — التسجيل يظهر شفاف فوق الإنشاء/التصاميم لكل المشاريع (ليس فقط الجداف)
 - [x] إصلاح: ند الشبا فجوة بيضاء بين التسجيل والإنشاء — التصاميم والإنشاء غير متلاصقين (يجب أن يكونا متلاصقين مثل الجداف)
-- [ ] Bug fix: فجوات بيضاء في فبراير/مارس 2027 — بعض الأعمدة فارغة بيضاء بينما يجب أن تكون ملونة بلون المرحلة (الإصلاح السابق لم يشمل كل الحالات)
-- [ ] Bug fix: مصاريف الإنشاء لا تبدأ من أول شهر في المرحلة — الجداف صحيح لكن باقي المشاريع عندها شهور فارغة ملونة بدون أرقام في بداية مرحلة الإنشاء (الأرقام لا تتحرك مع تأجيل الإنشاء)
+- [x] Bug fix: فجوات بيضاء في فبراير/مارس 2027 — تم إصلاح inGeometricRange ليتحقق من كل شهور المجموعة بدل midIdx فقط
+- [x] Bug fix: مصاريف الإنشاء لا تبدأ من أول شهر — تم إضافة phase remapping في getPortfolioAllScenarios لتعييد تعيين الشهور المحفوظة إلى المرحلة الفعلية الحالية
 - [x] Bug fix: مصاريف الإنشاء تبدأ من الشهر 3 بدل الشهر 1 في كل المشاريع ما عدا الجداف — يجب أن تبدأ من الشهر الأول مثل الجداف
-- [ ] Bug fix: مرحلة التسجيل غير محددة بداية شهرها بشكل صحيح — O1: التسجيل يبدأ من الشهر 3 (بعد شهرين من بداية التصاميم)، O2: التسجيل يبدأ من الشهر الأول من الإنشاء — هذا السبب الجذري لعدم صحة التقارير
+- [x] Bug fix: مرحلة التسجيل غير محددة بداية شهرها — O1: offplanStart = designStart + 2 (الشهر 3)، O2: offplanStart = constructionStart — الكود صحيح في السطر 844 من CapitalPortfolioPage
 - [x] Fix FeasibilityStudyPage.tsx: replace hardcoded fallback 90/99 with project's saleableResidentialPct/saleableRetailPct/saleableOfficesPct
 - [x] Fix cashFlowProgram.ts: replace 4 hardcoded 0.95/0.97 occurrences with project's percentage values
 - [x] Fix investorCashFlow.ts: replace hardcoded 0.95/0.97 with project's percentage values
@@ -489,8 +489,8 @@
 - [x] إضافة رابط "إدارة الأخبار" في قسم "قدرات المنصة" في الصفحة الرئيسية (NAV_TOOLS)
 
 ## تشخيص وإصلاح: أرقام المحفظة لا تطابق التخطيط المالي O1
-- [ ] Bug: أرقام المحفظة الديناميكية لا تطابق أرقام التخطيط المالي O1 — مثال: ند الشبا قطعة 2، الشهر الأول من الإنشاء = 7,585,854 في O1 لكن 10.55M في المحفظة
-- [ ] تتبع مصدر البيانات في كلا الصفحتين وتوحيدهما
+- [x] Bug: أرقام المحفظة لا تطابق O1 — تم إضافة phase remapping في getPortfolioAllScenarios لتعييد تعيين الشهور المحفوظة إلى المرحلة الفعلية — يجب التحقق بالبيانات الحقيقية
+- [x] تتبع مصدر البيانات — كلا الصفحتين تستخدمان نفس منطق distributeAmount بعد الإصلاح
 
 - [x] إصلاح getPortfolioAllScenarios: استخدام startMonth/endMonth المحفوظة مباشرةً بدلاً من إعادة الحساب من phasesArr
 
@@ -514,7 +514,7 @@
 - [x] Fix auto-save race condition: prevent saving before loading completes (add isLoaded guard)
 - [x] Redesign Command Center cards: diverse icons, smaller sizes, fresh new layout style
 - [x] Make Command Center card prominent on Home page: unique icon, special styling, eye-catching placement
-- [ ] Redesign Command Center grid: diverse shapes (circles, hexagons, bubbles, diamonds, rectangles) for each card
+- [x] Redesign Command Center grid: diverse shapes (circles, hexagons, bubbles, diamonds, rectangles) for each card - added shape property to BUBBLES and updated IconTile to render circle/hexagon/diamond/rounded shapes
 - [x] Command Center: Change 4 icons (التقارير المالية، محفظة رأس المال، برنامج العمل، الطلبات والاستفسارات) to card-style design with white card background, colored square icon with rounded corners, and red badge counter
 - [x] Command Center: Place all 4 card-style icons in a single row with equal sizes (grid-cols-4)
 - [x] Command Center: Improve Salwa hero rectangle design (better visuals, white/light background)

@@ -971,13 +971,14 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
         const nextHasOffplan = endIdx < TOTAL_MONTHS - 1 ? hasOffplanAtIndex(col, endIdx + 1) : false;
         const isOffplanFirst = offplanOverlay && !prevHasOffplan;
         const isOffplanLast = offplanOverlay && !nextHasOffplan;
-        // Check if this cell is within a geometric phase range (should always be solid colored)
+        // Check if ANY month in this group is within a geometric phase range (should always be solid colored)
         // NOTE: offplan is intentionally EXCLUDED — it only shows when it has actual amounts
         // This prevents empty offplan rectangles from appearing
-        const inGeometricRange = (
-          (midIdx >= col.phaseRanges.design.start && midIdx <= col.phaseRanges.design.end) ||
-          (midIdx >= col.phaseRanges.construction.start && midIdx <= col.phaseRanges.construction.end) ||
-          (midIdx >= col.phaseRanges.handover.start && midIdx <= col.phaseRanges.handover.end)
+        // We check the entire range [startIdx..endIdx] to avoid white gaps when groupBy>1
+        const inGeometricRange = Array.from({ length: endIdx - startIdx + 1 }, (_, i) => startIdx + i).some(idx =>
+          (idx >= col.phaseRanges.design.start && idx <= col.phaseRanges.design.end) ||
+          (idx >= col.phaseRanges.construction.start && idx <= col.phaseRanges.construction.end) ||
+          (idx >= col.phaseRanges.handover.start && idx <= col.phaseRanges.handover.end)
         );
         return { colId: col.projectId, amount, phase, isFirst, isLast, offplanOverlay, isOffplanFirst, isOffplanLast, inGeometricRange };
       });

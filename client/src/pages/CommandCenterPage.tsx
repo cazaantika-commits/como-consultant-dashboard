@@ -377,26 +377,26 @@ const CRITERIA = [
 // --- Bubble Config ---
 const BUBBLES = [
   // ── PRIORITY 1: Financial Core (Hero cards) ──
-  { type: "capital_portfolio" as const, label: "محفظة رأس المال", icon: Wallet, color: "from-indigo-600 to-indigo-800", bg: "bg-indigo-50", border: "border-indigo-200", text: "text-indigo-700" },
-  { type: "financial_reports" as const, label: "التقارير المالية", icon: BarChart2, color: "from-emerald-500 to-teal-700", bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700" },
-  { type: "payment_requests" as const, label: "طلبات الصرف", icon: CreditCard, color: "from-amber-500 to-orange-700", bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700" },
+  { type: "capital_portfolio" as const, label: "محفظة رأس المال", icon: Wallet, color: "from-indigo-600 to-indigo-800", bg: "bg-indigo-50", border: "border-indigo-200", text: "text-indigo-700", shape: "hexagon" },
+  { type: "financial_reports" as const, label: "التقارير المالية", icon: BarChart2, color: "from-emerald-500 to-teal-700", bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700", shape: "diamond" },
+  { type: "payment_requests" as const, label: "طلبات الصرف", icon: CreditCard, color: "from-amber-500 to-orange-700", bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700", shape: "circle" },
 
   // ── PRIORITY 2: Operations & Evaluation ──
-  { type: "evaluations" as const, label: "تقييم الاستشاريين", icon: Star, color: "from-violet-600 to-purple-800", bg: "bg-purple-50", border: "border-purple-200", text: "text-purple-700" },
-  { type: "milestones_kpis" as const, label: "المراحل والأداء", icon: Target, color: "from-cyan-500 to-sky-700", bg: "bg-cyan-50", border: "border-cyan-200", text: "text-cyan-700" },
+  { type: "evaluations" as const, label: "تقييم الاستشاريين", icon: Star, color: "from-violet-600 to-purple-800", bg: "bg-purple-50", border: "border-purple-200", text: "text-purple-700", shape: "circle" },
+  { type: "milestones_kpis" as const, label: "المراحل والأداء", icon: Target, color: "from-cyan-500 to-sky-700", bg: "bg-cyan-50", border: "border-cyan-200", text: "text-cyan-700", shape: "hexagon" },
 
   // ── PRIORITY 3: Communication & Requests ──
-  { type: "requests" as const, label: "الاعتمادات الرسمية", icon: Send, color: "from-orange-500 to-amber-700", bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700" },
-  { type: "reports" as const, label: "التقارير", icon: FileBarChart2, color: "from-blue-500 to-blue-700", bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700" },
-  { type: "meeting_minutes" as const, label: "محاضر الاجتماعات", icon: BookText, color: "from-rose-500 to-pink-700", bg: "bg-rose-50", border: "border-rose-200", text: "text-rose-700" },
+  { type: "requests" as const, label: "الاعتمادات الرسمية", icon: Send, color: "from-orange-500 to-amber-700", bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700", shape: "circle" },
+  { type: "reports" as const, label: "التقارير", icon: FileBarChart2, color: "from-blue-500 to-blue-700", bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700", shape: "rounded" },
+  { type: "meeting_minutes" as const, label: "محاضر الاجتماعات", icon: BookText, color: "from-rose-500 to-pink-700", bg: "bg-rose-50", border: "border-rose-200", text: "text-rose-700", shape: "diamond" },
 
   // ── PRIORITY 4: Planning & Studies ──
-  { type: "work_schedule" as const, label: "برنامج العمل", icon: CalendarDays, color: "from-teal-500 to-teal-700", bg: "bg-teal-50", border: "border-teal-200", text: "text-teal-700" },
-  { type: "capital_schedule" as const, label: "جدولة رأس المال", icon: BarChart2, color: "from-sky-500 to-blue-700", bg: "bg-sky-50", border: "border-sky-200", text: "text-sky-700" },
-  { type: "feasibility_study" as const, label: "دراسة الجدوى", icon: TrendingUp, color: "from-fuchsia-500 to-violet-700", bg: "bg-violet-50", border: "border-violet-200", text: "text-violet-700" },
-  { type: "announcements" as const, label: "الإعلانات", icon: Megaphone, color: "from-red-500 to-rose-700", bg: "bg-rose-50", border: "border-rose-200", text: "text-rose-700" },
+  { type: "work_schedule" as const, label: "برنامج العمل", icon: CalendarDays, color: "from-teal-500 to-teal-700", bg: "bg-teal-50", border: "border-teal-200", text: "text-teal-700", shape: "rounded" },
+  { type: "capital_schedule" as const, label: "جدولة رأس المال", icon: BarChart2, color: "from-sky-500 to-blue-700", bg: "bg-sky-50", border: "border-sky-200", text: "text-sky-700", shape: "hexagon" },
+  { type: "feasibility_study" as const, label: "دراسة الجدوى", icon: TrendingUp, color: "from-fuchsia-500 to-violet-700", bg: "bg-violet-50", border: "border-violet-200", text: "text-violet-700", shape: "diamond" },
+  { type: "announcements" as const, label: "الإعلانات", icon: Megaphone, color: "from-red-500 to-rose-700", bg: "bg-rose-50", border: "border-rose-200", text: "text-rose-700", shape: "circle" },
   // ── PRIORITY 5: Internal Communication ──
-  { type: "internal_messages" as const, label: "التواصل الداخلي", icon: MessageSquare, color: "from-indigo-500 to-violet-700", bg: "bg-indigo-50", border: "border-indigo-200", text: "text-indigo-700" },
+  { type: "internal_messages" as const, label: "التواصل الداخلي", icon: MessageSquare, color: "from-indigo-500 to-violet-700", bg: "bg-indigo-50", border: "border-indigo-200", text: "text-indigo-700", shape: "rounded" },
 ];
 
 const BUBBLE_LABELS: Record<string, string> = {
@@ -4622,7 +4622,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             );
           };
 
-          // Clean icon-tile card — large icon + label below
+          // Clean icon-tile card — large icon + label below, with diverse shapes
           const IconTile = ({ bubble, size = 'md' }: { bubble: typeof BUBBLES[0]; size?: 'lg' | 'md' | 'sm' }) => {
             const count = counts.data?.[bubble.type as keyof typeof counts.data] || 0;
             const hasCount = typeof count === "number" && count > 0;
@@ -4630,6 +4630,18 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             const tileSize = size === 'lg' ? 80 : size === 'md' ? 64 : 52;
             const iconSize = size === 'lg' ? 32 : size === 'md' ? 26 : 22;
             const fontSize = size === 'lg' ? '0.82rem' : size === 'md' ? '0.72rem' : '0.65rem';
+            const shape = (bubble as any).shape || 'rounded';
+
+            // Shape-specific styles
+            const shapeStyle: React.CSSProperties = shape === 'circle'
+              ? { borderRadius: '50%' }
+              : shape === 'hexagon'
+              ? { borderRadius: '30% 70% 70% 30% / 30% 30% 70% 70%' }
+              : shape === 'diamond'
+              ? { borderRadius: '0', transform: 'rotate(45deg)', width: tileSize * 0.85, height: tileSize * 0.85 }
+              : { borderRadius: size === 'lg' ? '22px' : '18px' }; // rounded
+
+            const iconTransform = shape === 'diamond' ? { transform: 'rotate(-45deg)' } : {};
 
             return (
               <button
@@ -4643,15 +4655,15 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                     width: tileSize, height: tileSize,
                     background: sc.solid,
                     boxShadow: `0 4px 16px ${sc.shadow}`,
-                    borderRadius: size === 'lg' ? '22px' : '18px',
+                    ...shapeStyle,
                   }}
                 >
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
                     style={{background:'linear-gradient(135deg,rgba(255,255,255,0.28) 0%,transparent 60%)', borderRadius: 'inherit'}} />
-                  <bubble.icon style={{width:iconSize, height:iconSize, color:'white', filter:'drop-shadow(0 1px 3px rgba(0,0,0,0.25))'}} />
+                  <bubble.icon style={{width:iconSize, height:iconSize, color:'white', filter:'drop-shadow(0 1px 3px rgba(0,0,0,0.25))', ...iconTransform}} />
                   {hasCount && (
                     <div className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center text-[9px] font-black"
-                      style={{background:'#ef4444', color:'white', boxShadow:'0 2px 6px rgba(239,68,68,0.5)'}}>
+                      style={{background:'#ef4444', color:'white', boxShadow:'0 2px 6px rgba(239,68,68,0.5)', transform: shape === 'diamond' ? 'rotate(-45deg)' : 'none'}}>
                       {count}
                     </div>
                   )}
