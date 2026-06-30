@@ -128,37 +128,36 @@ export default function FinancialEvaluationScreen({ projectId, onBack }: { proje
   const calculatedConstructionCost = dynamicBUA && dynamicPricePerSqft ? dynamicBUA * dynamicPricePerSqft : report.constructionCost;
 
   // Helper: Calculate value based on method and dynamic construction cost
-  // RULE: For PERCENTAGE-based fees, ALWAYS recompute from calculatedConstructionCost.
-  //       Overrides are NEVER used for percentage fields — they reflect a fixed price snapshot.
+  // RULE: For PERCENTAGE-based consultants, ALL fee fields are recomputed from
+  //       calculatedConstructionCost. Overrides are completely ignored for these fields.
   const calculateDynamicValue = (c: typeof report.consultants[0], field: FieldKey): number => {
-    // Compute percentage-based quoted fees from current dynamic construction cost
-    const pctDesignFee = c.designMethod === 'PERCENTAGE'
-      ? (c.designPct / 100) * calculatedConstructionCost
-      : undefined;
-    const pctSupFee = c.supervisionMethod === 'PERCENTAGE'
-      ? (c.supervisionPct / 100) * calculatedConstructionCost
-      : undefined;
+    const isDesignPct = c.designMethod === 'PERCENTAGE';
+    const isSupPct = c.supervisionMethod === 'PERCENTAGE';
+
+    // Recompute percentage fees from current dynamic construction cost
+    const pctDesignFee = isDesignPct ? (c.designPct / 100) * calculatedConstructionCost : null;
+    const pctSupFee = isSupPct ? (c.supervisionPct / 100) * calculatedConstructionCost : null;
+    const designGap = c.calc.designScopeGap;   // scope gap is fixed (AED amount, not price-dependent)
+    const supGap = c.calc.supervisionGap;       // supervision gap is fixed
 
     if (field === 'quotedDesignFee') {
-      return pctDesignFee !== undefined ? pctDesignFee : (c.override?.quotedDesignFee ?? c.calc.quotedDesignFee);
+      return pctDesignFee !== null ? pctDesignFee : (c.override?.quotedDesignFee ?? c.calc.quotedDesignFee);
     }
-    if (field === 'quotedSupervisionFee') {
-      return pctSupFee !== undefined ? pctSupFee : (c.override?.quotedSupervisionFee ?? c.calc.quotedSupervisionFee);
+    if (field === 'designScopeGap') {
+      return c.override?.designScopeGap ?? c.calc.designScopeGap;
     }
     if (field === 'trueDesignFee') {
-      if (pctDesignFee !== undefined) {
-        // Always recompute: quoted (dynamic) + scope gap
-        const gap = c.calc.designScopeGap; // gap is fixed, not price-dependent
-        return pctDesignFee + gap;
-      }
+      if (pctDesignFee !== null) return pctDesignFee + designGap;
       return c.override?.trueDesignFee ?? c.calc.trueDesignFee;
     }
+    if (field === 'quotedSupervisionFee') {
+      return pctSupFee !== null ? pctSupFee : (c.override?.quotedSupervisionFee ?? c.calc.quotedSupervisionFee);
+    }
+    if (field === 'supervisionGap') {
+      return c.override?.supervisionGap ?? c.calc.supervisionGap;
+    }
     if (field === 'adjustedSupervisionFee') {
-      if (pctSupFee !== undefined) {
-        // Always recompute: quoted (dynamic) + supervision gap
-        const gap = c.calc.supervisionGap;
-        return pctSupFee + gap;
-      }
+      if (pctSupFee !== null) return pctSupFee + supGap;
       return c.override?.adjustedSupervisionFee ?? c.calc.adjustedSupervisionFee;
     }
     // For all other fields, respect overrides first
