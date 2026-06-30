@@ -65,35 +65,39 @@ export async function runCalculationEngine(cpaProjectId: number) {
   const durationMonths = toNum(proj.duration_months);
 
   // Step 2: Mandatory scope items for this category (display only)
+  // Use GROUP BY + MAX to prevent duplicates from multiple reference cost rows
   const mandatoryItems = catId
     ? await qRows<any>(
         db,
         sql`SELECT si.id, si.code, si.label, scm.status,
-                   COALESCE(src.cost_aed, 0) as ref_cost
+                   COALESCE(MAX(src.cost_aed), 0) as ref_cost
             FROM cpa_scope_category_matrix scm
             JOIN cpa_scope_items si ON si.id = scm.scope_item_id
             LEFT JOIN cpa_scope_reference_costs src
               ON src.scope_item_id = scm.scope_item_id
               AND src.building_category_id = scm.building_category_id
             WHERE scm.building_category_id = ${catId}
-              AND scm.status IN ('INCLUDED', 'GREEN')`
+              AND scm.status IN ('INCLUDED', 'GREEN')
+            GROUP BY si.id, si.code, si.label, scm.status`
       )
     : [];
 
   // Step 2B: All REQUIRED scope items for gap detection
   // IMPORTANT: Exclude NOT_REQUIRED items — they should NOT be flagged as gaps
+  // Use GROUP BY + MAX to prevent duplicates if multiple reference cost rows exist
   const allRequiredItems = catId
     ? await qRows<any>(
         db,
         sql`SELECT si.id, si.code, si.label, scm.status,
-                   COALESCE(src.cost_aed, 0) as ref_cost
+                   COALESCE(MAX(src.cost_aed), 0) as ref_cost
             FROM cpa_scope_category_matrix scm
             JOIN cpa_scope_items si ON si.id = scm.scope_item_id
             LEFT JOIN cpa_scope_reference_costs src
               ON src.scope_item_id = scm.scope_item_id
               AND src.building_category_id = scm.building_category_id
             WHERE scm.building_category_id = ${catId}
-              AND scm.status != 'NOT_REQUIRED'`
+              AND scm.status != 'NOT_REQUIRED'
+            GROUP BY si.id, si.code, si.label, scm.status`
       )
     : [];
 
@@ -305,13 +309,8 @@ export async function runCalculationEngine(cpaProjectId: number) {
     r.resultRank = null;
   });
 
-  // Persist results — delete old results first to avoid duplicates
-  const allPcIds = results.map((r) => r.pcId);
-  if (allPcIds.length > 0) {
-    for (const pcId of allPcIds) {
-      await db.execute(sql`DELETE FROM cpa_evaluation_results WHERE project_consultant_id = ${pcId}`);
-    }
-  }
+  // Persist results — use ON DUPLICATE KEY UPDATE (unique key on project_consultant_id prevents duplicates)
+  // No need to DELETE first since the UNIQUE constraint + ON DUPLICATE KEY handles idempotency
   for (const r of results) {
     const notesJson = JSON.stringify(r.notes);
     await db.execute(

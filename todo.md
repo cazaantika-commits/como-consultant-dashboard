@@ -708,3 +708,17 @@
 - [x] إدراج 20 سعراً مرجعياً لفئة Shopping Center من عرض Arif & Bintoak (T4121/13545)
 - [x] إزالة فلتر item_number من منطق حساب فجوة النطاق ليشمل بنود Shopping Center (Parking, Waste, Signage, Landscape, Water Features, ID)
 - [x] ربط مشروع مجان Shopping Centre (6457956) بفئة Shopping Center في قاعدة البيانات
+
+- [x] إضافة جدول cpa_supervision_role_aliases لربط الأكواد البديلة بالأدوار الأصلية (HO_MECHANICAL→SENIOR_MECH، MEP_INSPECTOR→MECH_INSPECTOR، HO_ELECTRICAL→SENIOR_ELEC)
+- [x] استيراد KIEFERLE_6457956.json: رسوم تصميم=8,707,596 AED، 47 بند نطاق، 9 أدوار إشراف
+- [x] تحديث محرك الحساب (runCalculationEngine) لتحميل الأسماء البديلة واستخدامها عند البحث في baseline
+- [x] تحديث إجراء الاستيراد (importJson) لاستخدام جدول الأسماء البديلة عند إدراج فريق الإشراف
+- [x] التحقق من حساب KIEFERLE: رسوم الإشراف = 7,948,248 AED، الإجمالي = 16,655,844 AED
+- [x] Fix True Cost Report: delete duplicate rows in cpa_scope_reference_costs (kept highest cost per item/category)
+- [x] Fix True Cost Report: add UNIQUE constraint on cpa_scope_reference_costs(scope_item_id, building_category_id) to prevent future duplicates
+- [x] Fix True Cost Report: fix allRequiredItems and mandatoryItems queries to use GROUP BY + MAX(cost_aed) to prevent duplicate scope rows
+- [x] Fix True Cost Report: delete stale duplicate evaluation results (kept latest per project_consultant_id)
+- [x] Fix True Cost Report: add UNIQUE constraint on cpa_evaluation_results(project_consultant_id) to prevent future duplicates
+- [x] Fix True Cost Report: replace DELETE+INSERT pattern with pure ON DUPLICATE KEY UPDATE in calculation engine
+- [x] Fix True Cost Report: fix print CSS blank page issue (section breaks)
+- [x] Recalculate all 6 CPA projects after fixes: 180001(5), 210001(5), 240001(4), 240002(6), 270001(3), 300001(4) — all OK

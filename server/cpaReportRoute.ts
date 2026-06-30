@@ -66,7 +66,7 @@ router.get("/:projectId", async (req, res) => {
     const mandatoryItems = await qRows<any>(
       db,
       sql`SELECT si.id, si.item_number, si.code, si.label,
-                 COALESCE(src.cost_aed, 0) as ref_cost
+                 COALESCE(MAX(src.cost_aed), 0) as ref_cost
           FROM cpa_scope_category_matrix scm
           JOIN cpa_scope_items si ON si.id = scm.scope_item_id
           LEFT JOIN cpa_scope_reference_costs src
@@ -75,16 +75,18 @@ router.get("/:projectId", async (req, res) => {
           WHERE scm.building_category_id = ${proj.building_category_id}
             AND scm.status IN ('INCLUDED', 'GREEN')
             AND si.item_number BETWEEN 29 AND 43
+          GROUP BY si.id, si.item_number, si.code, si.label
           ORDER BY si.item_number`
     );
 
     // ---- All required scope items (for gap detection) ----
     // Include items that are REQUIRED by the project settings (INCLUDED, GREEN, RED, CONTRACTOR)
     // EXCLUDE items marked as NOT_REQUIRED — they should NOT be flagged as gaps
+    // Use GROUP BY to prevent duplicates if multiple reference cost rows exist per item
     const allRequiredItems = await qRows<any>(
       db,
       sql`SELECT si.id, si.item_number, si.code, si.label,
-                 COALESCE(src.cost_aed, 0) as ref_cost, scm.status as requirement_status
+                 COALESCE(MAX(src.cost_aed), 0) as ref_cost, scm.status as requirement_status
           FROM cpa_scope_category_matrix scm
           JOIN cpa_scope_items si ON si.id = scm.scope_item_id
           LEFT JOIN cpa_scope_reference_costs src
@@ -92,6 +94,7 @@ router.get("/:projectId", async (req, res) => {
             AND src.building_category_id = scm.building_category_id
           WHERE scm.building_category_id = ${proj.building_category_id}
             AND scm.status != 'NOT_REQUIRED'
+          GROUP BY si.id, si.item_number, si.code, si.label, scm.status
           ORDER BY si.item_number`
     );
 
@@ -235,7 +238,7 @@ router.get("/:projectId", async (req, res) => {
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>True Cost Report — ${proj.name || "Project " + projectId}</title>
+<title>True Cost Report — ${proj.project_id || "Project " + projectId} — ${proj.location || ""}</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11pt; color: #1a1a1a; background: #fff; }
@@ -293,7 +296,8 @@ router.get("/:projectId", async (req, res) => {
 
   @media print {
     .page { padding: 16px 24px; }
-    .section-title { break-before: page; }
+    .section-title { break-before: avoid; }
+    .section-break { break-before: page; display: block; height: 0; }
     .consultant-block { break-inside: avoid; }
     @page { margin: 1cm; }
   }
@@ -310,7 +314,7 @@ router.get("/:projectId", async (req, res) => {
 <div class="report-header">
   <div class="company">COMO REAL ESTATE DEVELOPMENT</div>
   <div class="title">Engineering Consultancy Evaluation — True Cost Report</div>
-  <div class="subtitle">${proj.name || "Project " + projectId} | ${now} | Confidential</div>
+  <div class="subtitle">${proj.project_id || "Project " + projectId}${proj.location ? " — " + proj.location : ""} | ${now} | Confidential</div>
   <table class="meta-table">
     <tr>
       <td><div class="label">BUA</div><div class="value">${new Intl.NumberFormat("en-AE").format(toNum(proj.bua_sqft))} sqft</div></td>
@@ -385,7 +389,7 @@ router.get("/:projectId", async (req, res) => {
     }
 
     // SECTION 1B: CONTRACTUAL RISK WARNINGS (items 1-28)
-    html += `<div class="section-title" style="background:#7c2d12">SECTION 1B — CONTRACTUAL &amp; LEGAL RISK ANALYSIS</div>`;
+    html += `<div class="section-break"></div><div class="section-title" style="background:#7c2d12">SECTION 1B — CONTRACTUAL &amp; LEGAL RISK ANALYSIS</div>`;
     html += `<p style="font-size:9.5pt;color:#555;margin-bottom:16px">The following table documents the status of contractual, legal, and delivery scope items (items 1–28) per consultant. These items carry <strong>no direct financial gap cost</strong>, but exclusions or omissions represent <strong>contractual and legal risks</strong> that must be addressed during contract negotiation.</p>`;
 
     for (const r of results) {
@@ -428,7 +432,7 @@ router.get("/:projectId", async (req, res) => {
     }
 
     // SECTION 2: SUPERVISION FEE ANALYSIS
-    html += `<div class="section-title">SECTION 2 — SUPERVISION FEE ANALYSIS</div>`;
+    html += `<div class="section-break"></div><div class="section-title">SECTION 2 — SUPERVISION FEE ANALYSIS</div>`;
 
     for (const r of results) {
       const pcId = r.project_consultant_id;
@@ -558,7 +562,8 @@ router.get("/:projectId", async (req, res) => {
     }
 
     // SECTION 3: FINAL RANKING
-    html += `<div class="section-title">SECTION 3 — TOTAL TRUE COST — FINAL RANKING</div>`;
+    html += `<div class="section-break"></div><div class="section-title">SECTION 3 — TOTAL TRUE COST — FINAL RANKING</div>`;
+
 
     html += `<table class="rank-table">
   <thead>
@@ -620,7 +625,7 @@ router.get("/:projectId", async (req, res) => {
 
     html += `
 <div class="report-footer">
-  COMO Real Estate Development | True Cost Evaluation Report | ${proj.name || "Project " + projectId} | ${now} | Confidential
+  COMO Real Estate Development | True Cost Evaluation Report | ${proj.project_id || "Project " + projectId}${proj.location ? " — " + proj.location : ""} | ${now} | Confidential
 </div>
 </div>
 </body>
