@@ -695,9 +695,11 @@ export const cpaRouter = router({
 
       const items = await qRows<any>(
         db,
-        sql`SELECT si.id, si.item_number, si.code, si.label, si.default_type
+        sql`SELECT DISTINCT si.id, si.item_number, si.code, si.label, si.default_type
             FROM cpa_scope_items si
+            LEFT JOIN cpa_scope_reference_costs src ON src.scope_item_id = si.id
             WHERE si.is_active = 1
+              AND (si.default_type IN ('GREEN', 'RED') OR src.scope_item_id IS NOT NULL)
             ORDER BY si.item_number`
       );
 
