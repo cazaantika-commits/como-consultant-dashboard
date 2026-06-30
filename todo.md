@@ -704,3 +704,7 @@
 - [x] تحديث الأسعار المرجعية: BIM_COORD = 42,000 AED/شهر، DOC_CONTROLLER = 12,000 AED/شهر
 - [x] إضافة 3 بنود نطاق جديدة: CFD_MODELLING، CONSTRUCTION_SUPERVISION، DLP_SERVICES
 - [x] ربط 28 بند نطاق بفئة Shopping Center في cpa_scope_category_matrix بناءً على رسالة دعوة Artec
+- [x] تصحيح سعر LACASA من 8,279,700 إلى 9,384,500 AED (ملف MAJ_6457956_PRO-ENG_260206_LACASA_V00)
+- [x] إدراج 20 سعراً مرجعياً لفئة Shopping Center من عرض Arif & Bintoak (T4121/13545)
+- [x] إزالة فلتر item_number من منطق حساب فجوة النطاق ليشمل بنود Shopping Center (Parking, Waste, Signage, Landscape, Water Features, ID)
+- [x] ربط مشروع مجان Shopping Centre (6457956) بفئة Shopping Center في قاعدة البيانات

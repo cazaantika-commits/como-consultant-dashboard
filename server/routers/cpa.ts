@@ -76,8 +76,7 @@ export async function runCalculationEngine(cpaProjectId: number) {
               ON src.scope_item_id = scm.scope_item_id
               AND src.building_category_id = scm.building_category_id
             WHERE scm.building_category_id = ${catId}
-              AND scm.status IN ('INCLUDED', 'GREEN')
-              AND si.item_number NOT IN (10, 11, 12, 13, 44, 45, 46, 47)`
+              AND scm.status IN ('INCLUDED', 'GREEN')`
       )
     : [];
 
@@ -94,8 +93,7 @@ export async function runCalculationEngine(cpaProjectId: number) {
               ON src.scope_item_id = scm.scope_item_id
               AND src.building_category_id = scm.building_category_id
             WHERE scm.building_category_id = ${catId}
-              AND scm.status != 'NOT_REQUIRED'
-              AND si.item_number NOT IN (10, 11, 12, 13, 44, 45, 46, 47)`
+              AND scm.status != 'NOT_REQUIRED'`
       )
     : [];
 
