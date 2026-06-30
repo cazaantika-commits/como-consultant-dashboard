@@ -697,7 +697,7 @@ export const cpaRouter = router({
         db,
         sql`SELECT si.id, si.item_number, si.code, si.label, si.default_type
             FROM cpa_scope_items si
-            WHERE si.is_active = 1 AND si.default_type IN ('GREEN', 'RED')
+            WHERE si.is_active = 1
             ORDER BY si.item_number`
       );
 

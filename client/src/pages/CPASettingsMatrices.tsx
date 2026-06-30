@@ -273,7 +273,7 @@ export function ReferenceCostsTable() {
               {categories.map((cat: any) => (
                 <th
                   key={cat.id}
-                  className="px-3 py-2.5 font-semibold text-center min-w-[120px] border-l last:border-l-0"
+                  className="px-3 py-2.5 font-semibold text-center min-w-[150px] border-l last:border-l-0 whitespace-nowrap"
                 >
                   {cat.label}
                 </th>
