@@ -374,7 +374,16 @@ function OverviewTab({
                 const pRoi = s.grandTotal > 0 ? ((p.totalRevenue - s.grandTotal) / s.grandTotal) * 100 : 0;
                 return (
                   <tr key={p.projectId} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                    <td style={{ padding: "10px 12px", fontWeight: 600, color: "#0f172a", whiteSpace: "nowrap" }}>{p.name}</td>
+                    <td style={{ padding: "10px 12px", fontWeight: 600, color: "#0f172a", whiteSpace: "nowrap" }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                        <span>{p.name}</span>
+                        {p.financingScenario && (
+                          <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 4, background: SCENARIO_COLORS[p.financingScenario as ScenarioKey] || "#64748b", color: "#fff", display: "inline-block", width: "fit-content" }}>
+                            {p.financingScenario === "offplan_escrow" ? "O1" : p.financingScenario === "offplan_construction" ? "O2" : "O3"}
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td style={{ padding: "10px 12px", textAlign: "center", fontFamily: "monospace", color: "#2563eb" }}>{fmtFull(s.investorTotal)}</td>
                     <td style={{ padding: "10px 12px", textAlign: "center", fontFamily: "monospace", color: "#7c3aed" }}>{fmtFull(s.escrowTotal)}</td>
                     <td style={{ padding: "10px 12px", textAlign: "center", fontFamily: "monospace", color: "#0f172a" }}>{fmtFull(s.grandTotal)}</td>
@@ -605,7 +614,16 @@ function ComparisonTab({
           <tbody>
             {projects.map((p: any) => (
               <tr key={p.projectId} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                <td style={{ padding: "8px 6px", fontWeight: 600, color: "#0f172a", whiteSpace: "nowrap", fontSize: 10 }}>{p.name}</td>
+                <td style={{ padding: "8px 6px", fontWeight: 600, color: "#0f172a", whiteSpace: "nowrap", fontSize: 10 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    <span>{p.name}</span>
+                    {p.financingScenario && (
+                      <span style={{ fontSize: 8, fontWeight: 700, padding: "1px 4px", borderRadius: 3, background: SCENARIO_COLORS[p.financingScenario as ScenarioKey] || "#64748b", color: "#fff", display: "inline-block", width: "fit-content" }}>
+                        {p.financingScenario === "offplan_escrow" ? "O1" : p.financingScenario === "offplan_construction" ? "O2" : "O3"}
+                      </span>
+                    )}
+                  </div>
+                </td>
                 {scenarios.map((sc) => {
                   const s = p.scenarios?.[sc];
                   if (!s) return (

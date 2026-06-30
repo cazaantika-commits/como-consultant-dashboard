@@ -1995,6 +1995,7 @@ export const cashFlowSettingsRouter = router({
         revenueSource: costs.revenueSource || "calculated",
         activeScenario: costs.activeScenario || "base",
         scenarioLabel: costs.scenarioLabel || "أساسي",
+        financingScenario: (project.financingScenario || "offplan_escrow") as Scenario,
         phaseInfo,
         durations: {
           design: durations.design,

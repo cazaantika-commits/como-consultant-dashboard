@@ -191,7 +191,7 @@ export default function CapitalScheduleTablePage({
   // CRITICAL: Only fetch AFTER scenario is loaded from DB to prevent reading wrong scenario
   const settingsQuery = trpc.cashFlowSettings.getSettings.useQuery(
     { projectId: selectedProjectId || 0, scenario: scenario as any },
-    { enabled: !!selectedProjectId && scenarioReady, staleTime: 0, refetchOnWindowFocus: true }
+    { enabled: !!selectedProjectId && scenarioReady, staleTime: 0, refetchOnWindowFocus: true, gcTime: 0 }
   );
 
   const settingsData = settingsQuery.data;
@@ -397,7 +397,7 @@ export default function CapitalScheduleTablePage({
       </div>
 
       {/* Scenario selector — always visible, even when embedded */}
-        <div style={{ marginBottom: 12, display: "flex", gap: 8, alignItems: "center" }}>
+        <div style={{ marginBottom: 12, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" as const }}>
           <span style={{ fontSize: 11, color: "#555", fontWeight: "bold" }}>السيناريو:</span>
           {(Object.entries(SCENARIO_LABELS) as [FinancingScenario, string][]).map(([key, label]) => (
             <button
@@ -421,6 +421,12 @@ export default function CapitalScheduleTablePage({
               {label}
             </button>
           ))}
+          <button
+            onClick={() => settingsQuery.refetch()}
+            style={{ fontSize: 10, padding: "4px 10px", borderRadius: 6, border: "1px solid #d1d5db", background: "#f9fafb", cursor: "pointer", color: "#374151", marginRight: "auto" }}
+          >
+            🔄 تحديث
+          </button>
          </div>
 
       <div style={{ overflowX: "auto" }}>

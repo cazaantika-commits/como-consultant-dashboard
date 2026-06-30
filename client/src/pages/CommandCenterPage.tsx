@@ -115,6 +115,7 @@ import InternalMessagesPage from "./InternalMessages";
 import TrueCostReportView from "./TrueCostReportView";
 import FinancialEvaluationScreen from "./FinancialEvaluationScreen";
 import CapitalScheduleTablePage from "./CapitalScheduleTablePage";
+import FinancialPlanningHubPage from "./FinancialPlanningHubPage";
 // Old financial components removed - now using iframe embeds
 
 // --- Financial Reports View (read-only, embedded in Command Center) ---
@@ -4349,16 +4350,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white" dir="rtl">
         <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
-        <div className="px-2 py-4">
-          <div className="flex items-center gap-2 mb-4 px-4">
-            <Button variant="ghost" size="sm" onClick={() => { setActiveBubble(null); setShowFeasibilityStudy(false); }} className="text-slate-500">
-              <ArrowLeft className="w-4 h-4 ml-1" /> العودة للرئيسية
-            </Button>
-          </div>
-          <div className="flex items-center justify-center h-64">
-            <p className="text-slate-400 text-lg">صفحة فارغة — جاهزة للمحتوى الجديد</p>
-          </div>
-        </div>
+        <FinancialPlanningHubPage onBack={() => { setActiveBubble(null); setShowFeasibilityStudy(false); }} />
         <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
       </div>
     );

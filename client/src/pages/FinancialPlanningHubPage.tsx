@@ -5,6 +5,8 @@ import { trpc } from "@/lib/trpc";
 
 type ActiveView = "main" | "settings" | "reports";
 
+const LAST_FP_PROJECT_KEY = "como_last_fp_project_id";
+
 const SETTINGS_TABS = [
   { id: "cost", label: "إعدادات التكاليف", src: "/cost-settings.html" },
   { id: "o1", label: "السيناريو الأول O1", src: "/o1-settings.html" },
@@ -25,10 +27,22 @@ export default function FinancialPlanningHubPage({ onBack }: { onBack: () => voi
   const [activeView, setActiveView] = useState<ActiveView>("main");
   const [activeSettingsTab, setActiveSettingsTab] = useState<SettingsTab>("cost");
   const [activeReportsTab, setActiveReportsTab] = useState<ReportsTab>("feasibility");
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(() => {
+    const saved = localStorage.getItem(LAST_FP_PROJECT_KEY);
+    return saved ? Number(saved) : null;
+  });
 
   // Fetch projects list
   const { data: projectsList } = trpc.projects.list.useQuery();
+
+  // Auto-select first project if none saved
+  useEffect(() => {
+    if (projectsList && projectsList.length > 0 && !selectedProjectId) {
+      const first = projectsList[0].id;
+      setSelectedProjectId(first);
+      localStorage.setItem(LAST_FP_PROJECT_KEY, String(first));
+    }
+  }, [projectsList, selectedProjectId]);
 
   const viewTitle =
     activeView === "settings"
@@ -71,7 +85,11 @@ export default function FinancialPlanningHubPage({ onBack }: { onBack: () => voi
           <div className="mr-auto flex items-center gap-2">
             <select
               value={selectedProjectId ?? ""}
-              onChange={(e) => setSelectedProjectId(e.target.value ? Number(e.target.value) : null)}
+              onChange={(e) => {
+                const id = e.target.value ? Number(e.target.value) : null;
+                setSelectedProjectId(id);
+                if (id) localStorage.setItem(LAST_FP_PROJECT_KEY, String(id));
+              }}
               className="text-xs h-8 px-2 rounded-md border border-border bg-background text-foreground focus:ring-1 focus:ring-primary"
             >
               <option value="">اختر المشروع...</option>

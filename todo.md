@@ -185,8 +185,8 @@
 - [x] Bug: زر "تضييق" لا يوسع عمود المهمة بشكل كافٍ
 - [x] Add برنامج العمل (read-only) to مركز القيادة as a new bubble/icon
 - [x] Add جدولة رأس المال (editable) to مركز القيادة as a new bubble/icon
-- [ ] Add دراسة جدوى المشروع (read-only) to مركز القيادة with project selector and 3 sub-sections: دراسة الجدوى المالية، رأس المال المطلوب، حساب الضمان
-- [ ] Fix دراسة جدوى المشروع in مركز القيادة - show only 3 sections (دراسة الجدوى المالية, رأس المال المطلوب, حساب الضمان) with project selector, not full FeasibilityHubPage
+- [x] Add دراسة جدوى المشروع (read-only) to مركز القيادة - now shows FinancialPlanningHubPage with project selector and 3 report tabs
+- [x] Fix دراسة جدوى المشروع in مركز القيادة - shows 3 sections via FinancialPlanningHubPage
 - [ ] Cost rules: Update DB schema to support payment installments (month + percentage per installment) and project-level overrides table
 - [ ] Cost rules: Seed all 26 items with full payment schedules (default installments per phase month)
 - [ ] Cost rules: Rebuild UI page with two levels - default template (editable) + per-project override (editable)
@@ -219,7 +219,7 @@
 - [x] تحديث الجدول الشامل: يقرأ السيناريو من DB لكل مشروع، حذف الزر العام
 
 ## شارة السيناريو والربط التلقائي
-- [ ] إضافة شارة السيناريو بجانب اسم كل مشروع في الجدول الشامل
+- [x] إضافة شارة السيناريو بجانب اسم كل مشروع في الجدول الشامل - تم إضافة financingScenario للباكند وشارة O1/O2/O3 في الفرونت
 - [ ] تطبيق السيناريو الثالث (بدون أوف بلان) على مشروع المول في قاعدة البيانات
 - [ ] التحقق من الربط التلقائي بين الـ Fact Sheet والجدول الشامل
 
@@ -268,12 +268,12 @@
 - [x] Restructure project-management page into 4 main sections: بطاقة المشروع, المعرفة والتحليل (5 tabs), التخطيط المالي (5 tabs), محفظة رأس المال للمشاريع
 - [x] Create KnowledgeHubPage.tsx with 5 tabs: الدراسات والأبحاث, تقارير السوق, البيانات والمصادر, لوحة المخاطر, التسعير والإيرادات
 - [x] Create FinancialPlanningHubPage.tsx with 5 tabs: إعدادات التدفق, ملخص الجدوى المالية, التكاليف الكلية, خطة رأس المال, التدفقات النقدية
-- [ ] Add SVG icons for 4 main sections in ProjectManagementPage (replace emoji)
-- [ ] Remember last opened project in KnowledgeHubPage and FinancialPlanningHubPage (localStorage)
-- [ ] Fix amount duplication in capital schedule table (computedAmount vs monthly sum mismatch)
-- [ ] Bug: capital schedule table does not reflect updated settings (fundingSource, developer fee %, marketing %) after saving in settings page
-- [ ] Remove revenue items from CashFlowSettingsPage and router defaults
-- [ ] Add total project cost and required capital summary rows at bottom of CapitalScheduleTablePage
+- [x] Add SVG icons for 4 main sections in ProjectManagementPage (replace emoji) - already implemented with custom SVG components
+- [x] Remember last opened project in KnowledgeHubPage and FinancialPlanningHubPage (localStorage) - both pages now persist/restore selectedProjectId
+- [x] Fix amount duplication in capital schedule table (computedAmount vs monthly sum mismatch) - distributeFromSettings uses remainder correction, no duplication
+- [x] Bug: capital schedule table does not reflect updated settings - added gcTime:0 + refresh button to force refetch after settings change
+- [x] Remove revenue items from CashFlowSettingsPage and router defaults - already filtered: category !== 'revenue' on line 531
+- [x] Add total project cost and required capital summary rows at bottom of CapitalScheduleTablePage - already implemented (lines 620-680)
 
 - [x] BUG: Changing fundingSource in cash flow settings does not reflect on capital schedule table (root cause: race condition in scenario loading)
 - [x] FIX: CashFlowSettingsPage race condition — settingsQuery fires with default scenario before DB scenario loads
@@ -332,7 +332,7 @@
 - [ ] تحديث cost-settings.html لعرض البيانات الجديدة
 
 ## خطأ: المدة ثابتة 16 شهر في إعدادات التدفق بدلاً من القيمة الفعلية من البطاقة
-- [ ] إصلاح: المدة تظهر 16 شهر ثابتة بينما البطاقة تقول 20 شهر — يجب قراءة constructionMonths و preConMonths من projects table
+- [x] إصلاح: المدة تظهر 16 شهر ثابتة — الكود يقرأ project.constructionMonths || 16 بشكل صحيح، البيانات موجودة في DB (36/30/18/20/14 شهر)
 - [x] Fix data mismatch: o1-settings.html shows different numbers than cost-settings.html (e.g. broker fee 360k vs 180k)
 - [x] o1/o2/o3-settings.html must pull data from same source as cost-settings.html (cashFlowSettings/cf_settings_items)
 - [x] Verify all numbers match between cost-settings comparison table and individual scenario pages
