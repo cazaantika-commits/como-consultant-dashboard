@@ -432,9 +432,12 @@ function ItemRow({
 export default function CashFlowSettingsPage({
   embedded,
   initialProjectId,
+  initialScenario,
 }: {
   embedded?: boolean;
   initialProjectId?: number | null;
+  /** Force a specific scenario regardless of DB value (used when embedding in tabs) */
+  initialScenario?: Scenario;
 } = {}) {
   const { isAuthenticated } = useAuth();
   const { isOwner } = useOwner();
@@ -442,7 +445,7 @@ export default function CashFlowSettingsPage({
   const utils = trpc.useUtils();
 
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(initialProjectId ?? null);
-  const [scenario, setScenario] = useState<Scenario>("offplan_escrow");
+  const [scenario, setScenario] = useState<Scenario>(initialScenario ?? "offplan_escrow");
   const [scenarioInitialized, setScenarioInitialized] = useState(false);
 
   // Read the project's actual scenario from DB (same source as CapitalScheduleTablePage)
@@ -464,10 +467,14 @@ export default function CashFlowSettingsPage({
       prevSettingsProjectRef.current = selectedProjectId;
       setScenarioInitialized(false);
     }
-    // Set scenario from DB when data is available
+    // Set scenario from DB when data is available (skip if initialScenario is forced)
     if (selectedProjectId && scenariosQuery.data) {
-      const dbScenario = scenariosQuery.data[selectedProjectId] as Scenario | undefined;
-      setScenario(dbScenario || "offplan_escrow");
+      if (!initialScenario) {
+        const dbScenario = scenariosQuery.data[selectedProjectId] as Scenario | undefined;
+        setScenario(dbScenario || "offplan_escrow");
+      } else {
+        setScenario(initialScenario);
+      }
       setScenarioInitialized(true);
     }
   }, [selectedProjectId, scenariosQuery.data]);

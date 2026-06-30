@@ -1,27 +1,49 @@
-import { useState } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Settings2, FileBarChart2 } from "lucide-react";
+import { ArrowRight, Settings2, FileBarChart2, Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
+// Lazy-load heavy pages to keep initial bundle small
+const CashFlowSettingsPage = lazy(() => import("./CashFlowSettingsPage"));
+const FeasibilityStudyPage = lazy(() => import("./FeasibilityStudyPage"));
+const CapitalScheduleTablePage = lazy(() => import("./CapitalScheduleTablePage"));
+const EscrowCashFlowPage = lazy(() => import("./EscrowCashFlowPage"));
+
 type ActiveView = "main" | "settings" | "reports";
+type SettingsTab = "cost" | "o1" | "o2" | "o3";
+type ReportsTab = "feasibility" | "capital" | "escrow";
+type Scenario = "offplan_escrow" | "offplan_construction" | "no_offplan";
 
 const LAST_FP_PROJECT_KEY = "como_last_fp_project_id";
 
-const SETTINGS_TABS = [
-  { id: "cost", label: "إعدادات التكاليف", src: "/cost-settings.html" },
-  { id: "o1", label: "السيناريو الأول O1", src: "/o1-settings.html" },
-  { id: "o2", label: "السيناريو الثاني O2", src: "/o2-settings.html" },
-  { id: "o3", label: "السيناريو الثالث O3", src: "/o3-settings.html" },
-] as const;
+const SETTINGS_TABS: { id: SettingsTab; label: string }[] = [
+  { id: "cost", label: "إعدادات التكاليف" },
+  { id: "o1", label: "السيناريو الأول O1" },
+  { id: "o2", label: "السيناريو الثاني O2" },
+  { id: "o3", label: "السيناريو الثالث O3" },
+];
 
-const REPORTS_TABS = [
-  { id: "feasibility", label: "ملخص الجدوى المالية", src: "/feasibility-summary.html" },
-  { id: "capital", label: "خطة رأس مال المشروع", src: "/capital-plan.html" },
-  { id: "escrow", label: "التدفقات النقدية وحساب الضمان", src: "/escrow-cashflow.html" },
-] as const;
+const REPORTS_TABS: { id: ReportsTab; label: string }[] = [
+  { id: "feasibility", label: "ملخص الجدوى المالية" },
+  { id: "capital", label: "خطة رأس مال المشروع" },
+  { id: "escrow", label: "التدفقات النقدية وحساب الضمان" },
+];
 
-type SettingsTab = (typeof SETTINGS_TABS)[number]["id"];
-type ReportsTab = (typeof REPORTS_TABS)[number]["id"];
+function PageLoader() {
+  return (
+    <div className="flex-1 flex items-center justify-center py-20">
+      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+    </div>
+  );
+}
+
+/** Map settings tab → forced scenario (undefined = use DB scenario) */
+function scenarioForTab(tab: SettingsTab): Scenario | undefined {
+  if (tab === "o1") return "offplan_escrow";
+  if (tab === "o2") return "offplan_construction";
+  if (tab === "o3") return "no_offplan";
+  return undefined; // "cost" tab uses DB scenario
+}
 
 export default function FinancialPlanningHubPage({ onBack }: { onBack: () => void }) {
   const [activeView, setActiveView] = useState<ActiveView>("main");
@@ -32,13 +54,11 @@ export default function FinancialPlanningHubPage({ onBack }: { onBack: () => voi
     return saved ? Number(saved) : null;
   });
 
-  // Fetch projects list
   const { data: projectsList } = trpc.projects.list.useQuery();
 
-  // Auto-select first project if none saved
   useEffect(() => {
     if (projectsList && projectsList.length > 0 && !selectedProjectId) {
-      const first = projectsList[0].id;
+      const first = (projectsList[0] as any).id;
       setSelectedProjectId(first);
       localStorage.setItem(LAST_FP_PROJECT_KEY, String(first));
     }
@@ -53,13 +73,8 @@ export default function FinancialPlanningHubPage({ onBack }: { onBack: () => voi
 
   const activeTabs = activeView === "settings" ? SETTINGS_TABS : activeView === "reports" ? REPORTS_TABS : [];
   const activeTabId = activeView === "settings" ? activeSettingsTab : activeReportsTab;
-  const baseTabSrc = activeTabs.find((t) => t.id === activeTabId)?.src;
-  // Append projectId as query parameter
-  const currentSrc = baseTabSrc && selectedProjectId
-    ? `${baseTabSrc}?projectId=${selectedProjectId}`
-    : baseTabSrc;
 
-  const selectedProject = projectsList?.find((p: any) => p.id === selectedProjectId);
+  const selectedProject = (projectsList as any[])?.find((p: any) => p.id === selectedProjectId);
 
   return (
     <div className="min-h-screen bg-background flex flex-col" dir="rtl">
@@ -81,7 +96,7 @@ export default function FinancialPlanningHubPage({ onBack }: { onBack: () => voi
           <div className="h-5 w-px bg-border" />
           <h1 className="text-sm font-bold text-foreground">{viewTitle}</h1>
 
-          {/* Project selector - always visible */}
+          {/* Project selector */}
           <div className="mr-auto flex items-center gap-2">
             <select
               value={selectedProjectId ?? ""}
@@ -93,7 +108,7 @@ export default function FinancialPlanningHubPage({ onBack }: { onBack: () => voi
               className="text-xs h-8 px-2 rounded-md border border-border bg-background text-foreground focus:ring-1 focus:ring-primary"
             >
               <option value="">اختر المشروع...</option>
-              {projectsList?.map((p: any) => (
+              {(projectsList as any[])?.map((p: any) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
@@ -137,7 +152,6 @@ export default function FinancialPlanningHubPage({ onBack }: { onBack: () => voi
             </div>
           )}
           <div className="flex flex-wrap gap-6 justify-center">
-            {/* Settings icon */}
             <button
               onClick={() => selectedProjectId && setActiveView("settings")}
               className={`group flex flex-col items-center gap-3 p-8 rounded-2xl border-2 border-dashed transition-all w-56 ${
@@ -150,10 +164,9 @@ export default function FinancialPlanningHubPage({ onBack }: { onBack: () => voi
                 <Settings2 className="w-8 h-8 text-white" />
               </div>
               <span className="text-sm font-bold text-foreground">إعدادات التدفق</span>
-              <span className="text-xs text-muted-foreground">4 ملفات إعدادات</span>
+              <span className="text-xs text-muted-foreground">4 سيناريوهات</span>
             </button>
 
-            {/* Reports icon */}
             <button
               onClick={() => selectedProjectId && setActiveView("reports")}
               className={`group flex flex-col items-center gap-3 p-8 rounded-2xl border-2 border-dashed transition-all w-56 ${
@@ -172,17 +185,6 @@ export default function FinancialPlanningHubPage({ onBack }: { onBack: () => voi
         </main>
       )}
 
-      {/* Iframe content */}
-      {activeView !== "main" && currentSrc && (
-        <iframe
-          key={currentSrc}
-          src={currentSrc}
-          className="flex-1 w-full border-0"
-          style={{ minHeight: "calc(100vh - 7rem)" }}
-          title={viewTitle}
-        />
-      )}
-
       {/* No project selected warning in sub-views */}
       {activeView !== "main" && !selectedProjectId && (
         <div className="flex-1 flex items-center justify-center">
@@ -190,6 +192,47 @@ export default function FinancialPlanningHubPage({ onBack }: { onBack: () => voi
             <p className="text-amber-800 text-sm font-medium">اختر مشروعاً من القائمة أعلاه أولاً</p>
           </div>
         </div>
+      )}
+
+      {/* React page content — Settings */}
+      {activeView === "settings" && selectedProjectId && (
+        <Suspense fallback={<PageLoader />}>
+          <CashFlowSettingsPage
+            key={`settings-${activeSettingsTab}-${selectedProjectId}`}
+            embedded
+            initialProjectId={selectedProjectId}
+            initialScenario={scenarioForTab(activeSettingsTab)}
+          />
+        </Suspense>
+      )}
+
+      {/* React page content — Reports */}
+      {activeView === "reports" && selectedProjectId && activeReportsTab === "feasibility" && (
+        <Suspense fallback={<PageLoader />}>
+          <FeasibilityStudyPage
+            key={`feasibility-${selectedProjectId}`}
+            embedded
+            initialProjectId={selectedProjectId}
+          />
+        </Suspense>
+      )}
+      {activeView === "reports" && selectedProjectId && activeReportsTab === "capital" && (
+        <Suspense fallback={<PageLoader />}>
+          <CapitalScheduleTablePage
+            key={`capital-${selectedProjectId}`}
+            embedded
+            initialProjectId={selectedProjectId}
+          />
+        </Suspense>
+      )}
+      {activeView === "reports" && selectedProjectId && activeReportsTab === "escrow" && (
+        <Suspense fallback={<PageLoader />}>
+          <EscrowCashFlowPage
+            key={`escrow-${selectedProjectId}`}
+            embedded
+            initialProjectId={selectedProjectId}
+          />
+        </Suspense>
       )}
     </div>
   );

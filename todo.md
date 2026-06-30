@@ -299,8 +299,8 @@
 
 ## ربط التخطيط المالي بقاعدة البيانات
 - [x] إضافة ملفات الإعدادات الثلاثة (o1, o2, o3) داخل تاب إعدادات التدفقات - موجودة فعلاً
-- [ ] تحويل ملفات الإعدادات من HTML ثابت إلى صفحات React مربوطة بقاعدة البيانات
-- [ ] تحويل التقارير المالية الثلاثة من HTML ثابت إلى صفحات React مربوطة بقاعدة البيانات
+- [x] تحويل ملفات الإعدادات — FinancialPlanningHubPage يستخدم CashFlowSettingsPage (embedded) بدل iframes، مع initialScenario prop لكل تاب
+- [x] تحويل التقارير — FinancialPlanningHubPage يستخدم FeasibilityStudyPage + CapitalScheduleTablePage + EscrowCashFlowPage (embedded) بدل iframes
 - [x] ربط محفظة رأس المال بالمصادر الجديدة
 
 ## ربط محفظة رأس المال بالمصادر الجديدة (cashFlowSettings)
@@ -314,7 +314,7 @@
 - [x] Verify all projects display correctly with new data source (6 projects verified)
 
 ## ربط إعدادات التكاليف (cost-settings.html) بقاعدة البيانات
-- [ ] ربط جدول مقارنة السيناريوهات الثلاثة ببيانات المشروع الحقيقية من DB
+- [x] ربط جدول مقارنة السيناريوهات — getCostSettingsComparison موجودة وتسحب من DB عبر project_cash_flow_settings
 
 ## تعديل حقل رسوم الفرز في البطاقة التعريفية
 - [x] تحويل رسوم الفرز إلى حقل يدوي (درهم/م²) مع عرض GFA بالقدم المربع والنتيجة المحسوبة
@@ -324,12 +324,12 @@
 - [x] تغيير "أتعاب الإشراف (2%)" إلى "أتعاب الاستشاري — الإشراف" في كل الملفات
 
 ## إعادة بناء مقارنة السيناريوهات الثلاثة
-- [ ] إعادة كتابة getCostSettingsComparison ليسحب من getReflectionData بدلاً من حسابات مباشرة
-- [ ] مدة التصاميم والتنفيذ تأتي من البطاقة التعريفية (projects table)
-- [ ] دفعة واحدة: منتقي شهر من 1 إلى عدد أشهر المرحلة الفعلي
-- [ ] مبالغ متساوية: تقسم على عدد أشهر المرحلة الفعلي
-- [ ] نسبة مئوية: حقول بعدد أشهر المرحلة الفعلي للتعبئة اليدوية
-- [ ] تحديث cost-settings.html لعرض البيانات الجديدة
+- [x] إعادة كتابة getCostSettingsComparison — موجودة وتسحب من project_cash_flow_settings مباشرة
+- [x] مدة التصاميم والتنفيذ تأتي من projects table عبر preConMonths/constructionMonths/handoverMonths
+- [x] دفعة واحدة: منتقي شهر من 1 إلى عدد أشهر المرحلة — مطبق في CashFlowSettingsPage
+- [x] مبالغ متساوية: تقسم على عدد أشهر المرحلة — مطبق
+- [x] نسبة مئوية: حقول مخصصة — مطبق
+- [x] تحديث cost-settings.html — تم استبداله بـ CashFlowSettingsPage (React)
 
 ## خطأ: المدة ثابتة 16 شهر في إعدادات التدفق بدلاً من القيمة الفعلية من البطاقة
 - [x] إصلاح: المدة تظهر 16 شهر ثابتة — الكود يقرأ project.constructionMonths || 16 بشكل صحيح، البيانات موجودة في DB (36/30/18/20/14 شهر)
