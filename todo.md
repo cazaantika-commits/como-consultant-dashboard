@@ -697,3 +697,8 @@
 - [x] Fix True Cost Report: scope gap details showing empty data - fixed field name mapping (itemCode/itemLabel/status/gapCost) and status display
 - [x] Fix True Cost Report: populate scope gap items with actual scope matrix items and their costs - data now shows correctly
 - [x] Ensure True Cost Report matches source report (TrueCostReportView.tsx) - verified working with real data
+
+- [x] إضافة فئة Shopping Center (id=60001, code=SHOPPING_CENTER, supervision_duration_months=30) إلى قاعدة البيانات
+- [x] إدراج 14 صف baseline للـ Shopping Center بناءً على مدد عارف وبن طوق (T4121) - نسب التخصيص = المدة ÷ 30 شهر
+- [x] إضافة أدوار المفتشين الثانيين: CIVIL_INSPECTOR_2 (70%)، MECH_INSPECTOR_2 (60%)، ELEC_INSPECTOR_2 (60%) وربطها بـ baseline الـ Shopping Center
+- [x] تحديث الأسعار المرجعية: BIM_COORD = 42,000 AED/شهر، DOC_CONTROLLER = 12,000 AED/شهر
