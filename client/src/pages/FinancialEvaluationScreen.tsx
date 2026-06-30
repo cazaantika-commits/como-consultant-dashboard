@@ -127,49 +127,41 @@ export default function FinancialEvaluationScreen({ projectId, onBack }: { proje
   const isApproved = report.approval?.isApproved;
   const calculatedConstructionCost = dynamicBUA && dynamicPricePerSqft ? dynamicBUA * dynamicPricePerSqft : report.constructionCost;
 
-  // Detect if the user changed dynamic variables from the original values
-  const originalPricePerSqft = report.bua > 0 ? report.constructionCost / report.bua : 0;
-  const dynamicChanged = (dynamicBUA > 0 && dynamicBUA !== report.bua) ||
-    (dynamicPricePerSqft > 0 && Math.abs(dynamicPricePerSqft - originalPricePerSqft) > 0.5);
-
   // Helper: Calculate value based on method and dynamic construction cost
+  // RULE: For PERCENTAGE-based fees, ALWAYS recompute from calculatedConstructionCost.
+  //       Overrides are NEVER used for percentage fields — they reflect a fixed price snapshot.
   const calculateDynamicValue = (c: typeof report.consultants[0], field: FieldKey): number => {
-    // Always recalculate percentage-based fees from dynamic construction cost
-    // (ignore overrides for these fields when dynamic variables have changed)
-    const dynamicQuotedDesign = c.designMethod === 'PERCENTAGE'
+    // Compute percentage-based quoted fees from current dynamic construction cost
+    const pctDesignFee = c.designMethod === 'PERCENTAGE'
       ? (c.designPct / 100) * calculatedConstructionCost
-      : null; // null means use stored value
-    const dynamicQuotedSupervision = c.supervisionMethod === 'PERCENTAGE'
+      : undefined;
+    const pctSupFee = c.supervisionMethod === 'PERCENTAGE'
       ? (c.supervisionPct / 100) * calculatedConstructionCost
-      : null;
+      : undefined;
 
-    // For percentage-based quoted fees: always use dynamic calculation
     if (field === 'quotedDesignFee') {
-      return dynamicQuotedDesign !== null ? dynamicQuotedDesign : (c.override?.quotedDesignFee ?? c.calc.quotedDesignFee);
+      return pctDesignFee !== undefined ? pctDesignFee : (c.override?.quotedDesignFee ?? c.calc.quotedDesignFee);
     }
     if (field === 'quotedSupervisionFee') {
-      return dynamicQuotedSupervision !== null ? dynamicQuotedSupervision : (c.override?.quotedSupervisionFee ?? c.calc.quotedSupervisionFee);
+      return pctSupFee !== undefined ? pctSupFee : (c.override?.quotedSupervisionFee ?? c.calc.quotedSupervisionFee);
     }
-
-    // trueDesignFee: if design is PERCENTAGE, always recalculate (ignore override when dynamic changed)
     if (field === 'trueDesignFee') {
-      if (dynamicQuotedDesign !== null && dynamicChanged) {
-        const gap = c.override?.designScopeGap ?? c.calc.designScopeGap;
-        return dynamicQuotedDesign + gap;
+      if (pctDesignFee !== undefined) {
+        // Always recompute: quoted (dynamic) + scope gap
+        const gap = c.calc.designScopeGap; // gap is fixed, not price-dependent
+        return pctDesignFee + gap;
       }
       return c.override?.trueDesignFee ?? c.calc.trueDesignFee;
     }
-
-    // adjustedSupervisionFee: if supervision is PERCENTAGE, always recalculate (ignore override when dynamic changed)
     if (field === 'adjustedSupervisionFee') {
-      if (dynamicQuotedSupervision !== null && dynamicChanged) {
-        const gap = c.override?.supervisionGap ?? c.calc.supervisionGap;
-        return dynamicQuotedSupervision + gap;
+      if (pctSupFee !== undefined) {
+        // Always recompute: quoted (dynamic) + supervision gap
+        const gap = c.calc.supervisionGap;
+        return pctSupFee + gap;
       }
       return c.override?.adjustedSupervisionFee ?? c.calc.adjustedSupervisionFee;
     }
-
-    // For all other fields, respect overrides
+    // For all other fields, respect overrides first
     const ov = c.override?.[field];
     if (ov != null) return ov;
     return c.calc[field];
@@ -189,10 +181,11 @@ export default function FinancialEvaluationScreen({ projectId, onBack }: { proje
   const getEffectiveTotal = (c: typeof report.consultants[0]): number => {
     const trueDesign = getVal(c, 'trueDesignFee');
     const adjSupervision = getVal(c, 'adjustedSupervisionFee');
-    // If dynamic variables changed and consultant has percentage-based fees,
-    // ignore the stored totalTrueCost override and recompute from dynamic values
+    // For PERCENTAGE-based consultants: ALWAYS recompute total from dynamic values
+    // Never use stored totalTrueCost override because it reflects an old price
     const hasPercentageFee = c.designMethod === 'PERCENTAGE' || c.supervisionMethod === 'PERCENTAGE';
-    if (c.override?.totalTrueCost != null && !(dynamicChanged && hasPercentageFee)) return c.override.totalTrueCost;
+    if (hasPercentageFee) return trueDesign + adjSupervision;
+    if (c.override?.totalTrueCost != null) return c.override.totalTrueCost;
     return trueDesign + adjSupervision;
   };
 
