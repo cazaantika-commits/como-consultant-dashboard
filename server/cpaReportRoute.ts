@@ -61,8 +61,8 @@ router.get("/:projectId", async (req, res) => {
     const durationMonths = toNum(proj.duration_months);
 
     // ---- Mandatory scope items (for display) ----
-    // Only show add-on scope items (29-43) that are INCLUDED or GREEN
-    // Items 1-28 are base design scope and implicitly included
+    // Only show specialist scope items (12-30) that are INCLUDED or GREEN
+    // Items 1-11 are core services and implicitly included
     const mandatoryItems = await qRows<any>(
       db,
       sql`SELECT si.id, si.item_number, si.code, si.label,
@@ -72,9 +72,11 @@ router.get("/:projectId", async (req, res) => {
           LEFT JOIN cpa_scope_reference_costs src
             ON src.scope_item_id = scm.scope_item_id
             AND src.building_category_id = scm.building_category_id
+          LEFT JOIN cpa_scope_sections ss ON ss.id = si.section_id
           WHERE scm.building_category_id = ${proj.building_category_id}
             AND scm.status IN ('INCLUDED', 'GREEN')
-            AND si.item_number BETWEEN 29 AND 43
+            AND si.item_number >= 12
+            AND (ss.code IS NULL OR ss.code != 'CONTRACT')
           GROUP BY si.id, si.item_number, si.code, si.label
           ORDER BY si.item_number`
     );
@@ -153,15 +155,15 @@ router.get("/:projectId", async (req, res) => {
       }
     }
 
-    // ---- Contractual / non-financial scope items (1-28) ----
+    // ---- Contractual / non-financial scope items (section_code = 'CONTRACT') ----
     const contractualItems = await qRows<any>(
       db,
       sql`SELECT si.id, si.item_number, si.code, si.label
           FROM cpa_scope_items si
-          WHERE si.item_number BETWEEN 1 AND 28
-            AND si.item_number NOT IN (10, 11, 12, 13)
+          JOIN cpa_scope_sections ss ON ss.id = si.section_id
+          WHERE ss.code = 'CONTRACT'
             AND si.is_active = 1
-          ORDER BY si.item_number`
+          ORDER BY si.sort_order, si.item_number`
     );
 
     // ---- Build supervision team maps per consultant ----
@@ -390,7 +392,7 @@ router.get("/:projectId", async (req, res) => {
 
     // SECTION 1B: CONTRACTUAL RISK WARNINGS (items 1-28)
     html += `<div class="section-break"></div><div class="section-title" style="background:#7c2d12">SECTION 1B — CONTRACTUAL &amp; LEGAL RISK ANALYSIS</div>`;
-    html += `<p style="font-size:9.5pt;color:#555;margin-bottom:16px">The following table documents the status of contractual, legal, and delivery scope items (items 1–28) per consultant. These items carry <strong>no direct financial gap cost</strong>, but exclusions or omissions represent <strong>contractual and legal risks</strong> that must be addressed during contract negotiation.</p>`;
+    html += `<p style="font-size:9.5pt;color:#555;margin-bottom:16px">The following table documents the status of contractual, legal, and delivery scope items (items in the Contractual & Legal section) per consultant. These items carry <strong>no direct financial gap cost</strong>, but exclusions or omissions represent <strong>contractual and legal risks</strong> that must be addressed during contract negotiation.</p>`;
 
     for (const r of results) {
       const pcId = r.project_consultant_id;

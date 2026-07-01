@@ -458,6 +458,44 @@ export default function TrueCostReportPDF({ projectId: propProjectId, onBack }: 
                   </div>
                 </div>
 
+                {/* Contractual & Legal Coverage */}
+                {c.contractualCoverage && c.contractualCoverage.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold bg-orange-700 text-white px-3 py-2 rounded">CONTRACTUAL &amp; LEGAL TERMS</h4>
+                    <div className="border border-orange-200 rounded overflow-hidden text-xs">
+                      <table className="w-full">
+                        <thead className="bg-orange-50">
+                          <tr>
+                            <th className="border-r border-orange-200 p-2 text-right font-semibold text-orange-800">البند</th>
+                            <th className="p-2 text-center font-semibold text-orange-800">الحالة</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {c.contractualCoverage.map((item: any, i: number) => (
+                            <tr key={i} className={`${
+                              i % 2 === 0 ? 'bg-white' : 'bg-orange-50/40'
+                            } ${
+                              item.status !== 'INCLUDED' ? 'bg-red-50' : ''
+                            }`}>
+                              <td className="border-r border-orange-200 p-2 font-medium">{item.itemLabel}</td>
+                              <td className="p-2 text-center">
+                                {item.status === 'INCLUDED' && <span className="text-emerald-600 font-semibold">✓ مشمول</span>}
+                                {item.status === 'EXCLUDED' && <span className="text-red-600 font-semibold">✗ مستثنى</span>}
+                                {item.status === 'NOT_MENTIONED' && <span className="text-amber-600 font-semibold">⚠ غير مذكور</span>}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {c.contractualCoverage.filter((item: any) => item.status !== 'INCLUDED').length > 0 && (
+                      <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+                        ⚠️ {c.contractualCoverage.filter((item: any) => item.status !== 'INCLUDED').length} بند/بنود تعاقدية تحتاج إلى توضيح أو تفاوض قبل توقيع العقد
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {/* Total */}
                 <div className="bg-amber-50 border border-amber-200 rounded p-4 text-right">
                   <p className="text-xs font-semibold text-amber-700 mb-1">TOTAL TRUE COST</p>

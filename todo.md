@@ -722,3 +722,9 @@
 - [x] Fix True Cost Report: replace DELETE+INSERT pattern with pure ON DUPLICATE KEY UPDATE in calculation engine
 - [x] Fix True Cost Report: fix print CSS blank page issue (section breaks)
 - [x] Recalculate all 6 CPA projects after fixes: 180001(5), 210001(5), 240001(4), 240002(6), 270001(3), 300001(4) — all OK
+
+## Three New Improvements (Session 3)
+- [x] إضافة قسم البنود التعاقدية (19-28) في صفحة تفاصيل المستشار (منفصل عن النطاق الهندسي)
+- [x] إعادة هيكلة قائمة النطاق: ترقيم متسلسل من 1 إلى 30 (أساسي 1-11 ثم متخصص 12-30) بدون GREEN/RED
+- [x] إعادة ترقيم بنود التعاقد بشكل متسلسل منفصل (1-10)
+- [x] تحديث الأسعار المرجعية للبنود المتخصصة (Shopping Center: Signage=200000, Waste=120000, Parking=75000)

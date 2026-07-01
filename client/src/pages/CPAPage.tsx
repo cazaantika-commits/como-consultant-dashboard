@@ -1707,15 +1707,19 @@ function ScopeReviewScreen({
     return "غير مذكور";
   };
 
+  // Separate contractual items (section_code = 'CONTRACT') from financial scope items
+  const financialItems = useMemo(() => coverage.filter((c: any) => c.section_code !== 'CONTRACT'), [coverage]);
+  const contractualItems = useMemo(() => coverage.filter((c: any) => c.section_code === 'CONTRACT'), [coverage]);
+
   const grouped = useMemo(() => {
     const groups: Record<string, any[]> = {};
-    for (const item of coverage) {
+    for (const item of financialItems) {
       const key = item.section_label ?? "عام";
       if (!groups[key]) groups[key] = [];
       groups[key].push(item);
     }
     return groups;
-  }, [coverage]);
+  }, [financialItems]);
 
   const stats = useMemo(() => ({
     included: coverage.filter((c: any) => c.coverage_status === "INCLUDED").length,
@@ -1760,6 +1764,7 @@ function ScopeReviewScreen({
         </div>
       ) : (
         <div className="space-y-4">
+          {/* Financial scope sections */}
           {Object.entries(grouped).map(([section, items]) => (
             <Card key={section}>
               <CardHeader className="pb-2">
@@ -1797,6 +1802,64 @@ function ScopeReviewScreen({
               </CardContent>
             </Card>
           ))}
+
+          {/* Contractual & Legal items section */}
+          {contractualItems.length > 0 && (
+            <Card className="border-orange-200 dark:border-orange-900">
+              <CardHeader className="pb-2 bg-orange-50/50 dark:bg-orange-950/20 rounded-t-xl">
+                <CardTitle className="text-sm flex items-center gap-2 text-orange-800 dark:text-orange-300">
+                  <Shield className="w-4 h-4" />
+                  البنود التعاقدية والقانونية
+                  <span className="text-xs font-normal text-orange-600 dark:text-orange-400">
+                    (لا تحمل تكلفة مالية مباشرة — تمثل مخاطر تعاقدية)
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-2 space-y-2">
+                {contractualItems.map((item: any) => {
+                  const isRisk = item.coverage_status !== "INCLUDED";
+                  return (
+                    <div key={item.id} className={`flex items-center justify-between gap-3 py-2 border-b border-border/50 last:border-0 ${
+                      isRisk ? "bg-red-50/30 dark:bg-red-950/10 rounded-lg px-2" : ""
+                    }`}>
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        {statusIcon(item.coverage_status)}
+                        <div className="min-w-0">
+                          <span className="text-sm font-medium">{item.item_label}</span>
+                          {isRisk && (
+                            <span className="block text-xs text-red-600 dark:text-red-400">
+                              {item.coverage_status === "EXCLUDED" ? "⚠️ مستثنى صراحةً — يتطلب تفاوضاً" : "⚠️ غير مذكور — يجب توضيحه في العقد"}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <Select
+                        value={item.coverage_status}
+                        onValueChange={(v) =>
+                          updateMutation.mutate({
+                            projectConsultantId,
+                            scopeItemId: item.scope_item_id,
+                            coverageStatus: v as any,
+                          })
+                        }
+                      >
+                        <SelectTrigger className={`w-32 h-7 text-xs ${
+                          isRisk ? "border-red-300 dark:border-red-700" : ""
+                        }`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="INCLUDED">مشمول</SelectItem>
+                          <SelectItem value="EXCLUDED">مستثنى</SelectItem>
+                          <SelectItem value="NOT_MENTIONED">غير مذكور</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
     </div>
@@ -2188,7 +2251,7 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
         <TabsContent value="scope-matrix" className="mt-4">
           <div className="space-y-3">
             <div>
-              <h3 className="font-semibold text-sm">مصفوفة النطاق (47 بند × 5 فئات)</h3>
+              <h3 className="font-semibold text-sm">مصفوفة النطاق (30 بند)</h3>
               <p className="text-xs text-muted-foreground mt-0.5">اضغط على أي خلية لتغيير حالة البند في تلك الفئة. التغييرات تُحفظ فوراً.</p>
             </div>
             <ScopeMatrixTable />
@@ -2478,12 +2541,10 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
                     variant="outline"
                     className={
                       item.default_type === "CORE" ? "border-sky-300 text-sky-700" :
-                      item.default_type === "GREEN" ? "border-emerald-300 text-emerald-700" :
-                      item.default_type === "RED" ? "border-red-300 text-red-700" :
-                      "border-gray-300 text-gray-700"
+                      "border-emerald-300 text-emerald-700"
                     }
                   >
-                    {item.default_type}
+                    {item.default_type === "CORE" ? "أساسي" : "متخصص"}
                   </Badge>
                   <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => {
                     setEditingScopeItem(item);
@@ -2529,10 +2590,8 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
                     <Select value={scopeItemForm.defaultType} onValueChange={(v) => setScopeItemForm({ ...scopeItemForm, defaultType: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="CORE">أساسي (CORE)</SelectItem>
-                        <SelectItem value="GREEN">أخضر (GREEN)</SelectItem>
-                        <SelectItem value="RED">أحمر (RED)</SelectItem>
-                        <SelectItem value="CONTRACTOR">مقاول (CONTRACTOR)</SelectItem>
+                        <SelectItem value="CORE">أساسي (Core)</SelectItem>
+                        <SelectItem value="GREEN">متخصص (Specialist)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

@@ -2,9 +2,9 @@
  * CPA Settings — Editable Matrix Tables
  * جداول الإعدادات القابلة للتعديل
  *
- * 1. ScopeMatrixTable  — 47 scope items × 5 building categories (status per cell)
- * 2. ReferenceCostsTable — GREEN/RED items × 5 categories (AED cost per cell)
- * 3. SupervisionBaselineTable — 11 supervision roles × 5 categories (% allocation per cell)
+ * 1. ScopeMatrixTable  — 30 scope items × building categories (status per cell)
+ * 2. ReferenceCostsTable — Specialist items (12-30) × categories (AED cost per cell)
+ * 3. SupervisionBaselineTable — 11 supervision roles × categories (% allocation per cell)
  */
 
 import React, { useState, useCallback } from "react";
@@ -32,21 +32,22 @@ const STATUS_OPTIONS = [
 type MatrixStatus = (typeof STATUS_OPTIONS)[number];
 
 const STATUS_LABELS: Record<MatrixStatus, string> = {
-  INCLUDED: "مشمول",
-  GREEN: "أخضر",
-  RED: "أحمر",
-  CONTRACTOR: "مقاول",
+  INCLUDED: "مطلوب",
+  GREEN: "مطلوب",
+  RED: "مطلوب",
+  CONTRACTOR: "مطلوب",
   NOT_REQUIRED: "غير مطلوب",
 };
 
 const STATUS_COLORS: Record<MatrixStatus, string> = {
   INCLUDED:
-    "bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-900/40 dark:text-sky-300",
+    "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/40 dark:text-emerald-300",
   GREEN:
     "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/40 dark:text-emerald-300",
-  RED: "bg-red-100 text-red-800 border-red-300 dark:bg-red-900/40 dark:text-red-300",
+  RED:
+    "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/40 dark:text-emerald-300",
   CONTRACTOR:
-    "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/40 dark:text-amber-300",
+    "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/40 dark:text-emerald-300",
   NOT_REQUIRED:
     "bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-800/40 dark:text-gray-500",
 };
@@ -185,11 +186,8 @@ export function ScopeMatrixTable() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              {STATUS_OPTIONS.map((s) => (
-                                <SelectItem key={s} value={s}>
-                                  {STATUS_LABELS[s]}
-                                </SelectItem>
-                              ))}
+                              <SelectItem value="INCLUDED">مطلوب</SelectItem>
+                              <SelectItem value="NOT_REQUIRED">غير مطلوب</SelectItem>
                             </SelectContent>
                           </Select>
                         ) : (
@@ -293,16 +291,6 @@ export function ReferenceCostsTable() {
                     </span>
                     <div>
                       <span className="font-medium">{item.label}</span>
-                      <Badge
-                        variant="outline"
-                        className={`mr-1 text-[10px] ${
-                          item.default_type === "GREEN"
-                            ? "border-emerald-300 text-emerald-700"
-                            : "border-red-300 text-red-700"
-                        }`}
-                      >
-                        {item.default_type}
-                      </Badge>
                     </div>
                   </div>
                 </td>

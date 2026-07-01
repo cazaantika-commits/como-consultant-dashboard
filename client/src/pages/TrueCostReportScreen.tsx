@@ -468,6 +468,79 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
         </table>
       </div>
 
+      {/* Contractual Coverage Summary */}
+      {sorted.some((c) => c.contractualCoverage && c.contractualCoverage.length > 0) && (
+        <div className="mt-6">
+          <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+            <span className="w-5 h-5 rounded bg-orange-600 text-white text-[10px] flex items-center justify-center font-bold">⚖</span>
+            البنود التعاقدية والقانونية — مقارنة بين الاستشاريين
+            <span className="text-xs font-normal text-slate-500">لا تحمل تكلفة مالية مباشرة — تمثل مخاطر تعاقدية</span>
+          </h3>
+          {(() => {
+            // Collect all unique contractual items across all consultants
+            const allItems = new Map<string, string>();
+            for (const c of sorted) {
+              if (c.contractualCoverage) {
+                for (const item of c.contractualCoverage) {
+                  allItems.set(item.itemCode, item.itemLabel);
+                }
+              }
+            }
+            const itemList = Array.from(allItems.entries());
+            if (itemList.length === 0) return null;
+            return (
+              <div className="overflow-x-auto rounded-xl border border-orange-200 shadow-sm">
+                <table className="w-full border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-orange-700 text-white">
+                      <th className="border border-orange-600 p-2 text-right font-bold">البند التعاقدي</th>
+                      {sorted.map((c) => (
+                        <th key={c.pcId} className="border border-orange-600 p-2 text-center font-bold">{c.name}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {itemList.map(([code, label], i) => (
+                      <tr key={code} className={i % 2 === 0 ? 'bg-white' : 'bg-orange-50/30'}>
+                        <td className="border border-orange-200 p-2 font-medium text-slate-800">{label}</td>
+                        {sorted.map((c) => {
+                          const item = c.contractualCoverage?.find((x: any) => x.itemCode === code);
+                          const status = item?.status;
+                          return (
+                            <td key={c.pcId} className={`border border-orange-200 p-2 text-center ${
+                              status === 'EXCLUDED' ? 'bg-red-50' : status === 'NOT_MENTIONED' ? 'bg-amber-50' : ''
+                            }`}>
+                              {status === 'INCLUDED' && <span className="text-emerald-600 font-bold">✓</span>}
+                              {status === 'EXCLUDED' && <span className="text-red-600 font-bold">✗</span>}
+                              {status === 'NOT_MENTIONED' && <span className="text-amber-500 font-bold">⚠</span>}
+                              {!status && <span className="text-slate-300">—</span>}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                    {/* Risk summary row */}
+                    <tr className="bg-slate-100 font-bold">
+                      <td className="border border-orange-200 p-2 text-slate-700">عدد البنود غير المشمولة</td>
+                      {sorted.map((c) => {
+                        const riskCount = c.contractualCoverage?.filter((x: any) => x.status !== 'INCLUDED').length ?? 0;
+                        return (
+                          <td key={c.pcId} className={`border border-orange-200 p-2 text-center ${
+                            riskCount > 0 ? 'text-red-600' : 'text-emerald-600'
+                          }`}>
+                            {riskCount > 0 ? `⚠️ ${riskCount} بند` : '✓ مكتمل'}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
       {/* Supervision Baseline Reference */}
       {report.supervisionBaseline.length > 0 && (
         <div className="mt-6">

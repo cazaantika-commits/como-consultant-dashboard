@@ -84,6 +84,7 @@ export async function runCalculationEngine(cpaProjectId: number) {
 
   // Step 2B: All REQUIRED scope items for gap detection
   // IMPORTANT: Exclude NOT_REQUIRED items — they should NOT be flagged as gaps
+  // Exclude CONTRACT items — they are tracked separately
   // Use GROUP BY + MAX to prevent duplicates if multiple reference cost rows exist
   const allRequiredItems = catId
     ? await qRows<any>(
@@ -95,8 +96,10 @@ export async function runCalculationEngine(cpaProjectId: number) {
             LEFT JOIN cpa_scope_reference_costs src
               ON src.scope_item_id = scm.scope_item_id
               AND src.building_category_id = scm.building_category_id
+            LEFT JOIN cpa_scope_sections ss ON ss.id = si.section_id
             WHERE scm.building_category_id = ${catId}
               AND scm.status != 'NOT_REQUIRED'
+              AND (ss.code IS NULL OR ss.code != 'CONTRACT')
             GROUP BY si.id, si.code, si.label, scm.status`
       )
     : [];
@@ -717,7 +720,7 @@ export const cpaRouter = router({
             LEFT JOIN cpa_scope_sections ss ON ss.id = si.section_id
             WHERE si.is_active = 1
               AND (ss.code IS NULL OR ss.code != 'CONTRACT')
-              AND (si.default_type IN ('GREEN', 'RED') OR src.scope_item_id IS NOT NULL)
+              AND si.item_number >= 12
             ORDER BY si.item_number`
       );
 
@@ -1247,7 +1250,7 @@ export const cpaRouter = router({
         return qRows(
           db,
           sql`SELECT csc.*, si.code as item_code, si.label as item_label, si.item_number,
-                     si.default_type, ss.label as section_label
+                     si.default_type, ss.label as section_label, ss.code as section_code
               FROM cpa_consultant_scope_coverage csc
               JOIN cpa_scope_items si ON si.id = csc.scope_item_id
               LEFT JOIN cpa_scope_sections ss ON ss.id = si.section_id
@@ -1484,6 +1487,30 @@ export const cpaRouter = router({
           } catch { scopeGapsMap[pcId] = []; }
         }
 
+        // Get contractual coverage per consultant (section_code = 'CONTRACT')
+        const contractualCoverageMap: Record<number, any[]> = {};
+        for (const r of results) {
+          const pcId = Number(r.pc_id);
+          const contractRows = await qRows<any>(
+            db,
+            sql`SELECT csc.scope_item_id, csc.coverage_status, csc.notes,
+                       si.code as item_code, si.label as item_label, si.item_number
+                FROM cpa_consultant_scope_coverage csc
+                JOIN cpa_scope_items si ON si.id = csc.scope_item_id
+                JOIN cpa_scope_sections ss ON ss.id = si.section_id
+                WHERE csc.project_consultant_id = ${pcId}
+                  AND ss.code = 'CONTRACT'
+                ORDER BY si.sort_order, si.item_number`
+          );
+          contractualCoverageMap[pcId] = contractRows.map((c: any) => ({
+            itemCode: c.item_code,
+            itemLabel: c.item_label,
+            itemNumber: Number(c.item_number),
+            status: c.coverage_status,
+            notes: c.notes || null,
+          }));
+        }
+
         // Get supervision team per consultant
         const supTeamMap: Record<number, any[]> = {};
         for (const r of results) {
@@ -1524,6 +1551,7 @@ export const cpaRouter = router({
             canRank: r.can_rank === 1,
             resultRank: r.result_rank,
             scopeGaps: scopeGapsMap[pcId] || [],
+            contractualCoverage: contractualCoverageMap[pcId] || [],
             supervisionTeam: supTeamMap[pcId] || [],
             calc: {
               quotedDesignFee: Number(r.quoted_design_fee) || 0,
