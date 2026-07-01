@@ -743,3 +743,4 @@
 - [x] Bug fix: Exported HTML report (cpaReportRoute) not respecting overrides — showed live calc (638,500) while in-page report showed override (120,000). Fixed by: 1) deleting stale override, 2) adding override support to exported report for consistency
 - [x] Display full numbers (not abbreviated K/M) in Design Scope and Supervision Scope reports in Command Center
 - [x] Color redesign: differentiate Design (blue) from Supervision (purple) in True Cost Report and Command Center tables
+- [x] Fix scope items ordering: sort by item_number ASC, exclude CONTRACT section items from design scope report

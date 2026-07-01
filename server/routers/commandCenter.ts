@@ -1836,8 +1836,10 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
         FROM cpa_scope_items si
         JOIN cpa_scope_category_matrix scm ON scm.scope_item_id = si.id AND scm.building_category_id = ${buildingCategoryId}
         LEFT JOIN cpa_scope_reference_costs src ON src.scope_item_id = si.id AND src.building_category_id = ${buildingCategoryId}
+        LEFT JOIN cpa_scope_sections ss ON ss.id = si.section_id
         WHERE si.is_active = 1 AND scm.status != 'NOT_REQUIRED'
-        ORDER BY si.sort_order ASC, si.item_number ASC
+          AND (ss.code IS NULL OR ss.code != 'CONTRACT')
+        ORDER BY si.item_number ASC, si.sort_order ASC
       `);
       const scopeArr = Array.isArray(scopeRows) ? (scopeRows[0] as any[]) : (scopeRows as any[]);
 
