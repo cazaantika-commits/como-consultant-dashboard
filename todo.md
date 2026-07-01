@@ -734,3 +734,7 @@
 - [x] Bug: scope_coverage مرتبطة بـ IDs قديمة — إعادة ربط بالبنود الجديدة
 - [x] Bug: True Cost Report still shows old scope items (e.g. Tender Evaluation Report #18) instead of new specialist items (12-30) — report generation not updated to match new scope structure
 - [x] Bug: LACASA coverage in project 180001 (Majan G+25) had only 1 record instead of 29 — re-imported from PDF proposal, now shows only 1 gap (GREEN_BUILDING)
+- [x] Feature: Supervision team management UI - show required roles table with consultant rates per role, allow inline editing
+- [x] Feature: Supervision team edits trigger recalculation and reflect in True Cost Report
+- [x] Bug: Kieferle missing SENIOR_ID, LANDSCAPE_ENG, OFFICE_SUPPORT in supervision team - add with reference rates
+- [x] Bug: DATUM supervision fee was 5,836,364 (double-adjusted) — corrected to 5,350,000 (original from PDF)

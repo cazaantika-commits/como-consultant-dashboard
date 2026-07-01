@@ -64,6 +64,7 @@ type Screen =
   | "project-detail"
   | "import-json"
   | "scope-review"
+  | "supervision-review"
   | "results"
   | "truecost-report"
   | "settings";
@@ -494,6 +495,7 @@ function ProjectDetailScreen({
   onBack,
   onImportJson,
   onScopeReview,
+  onSupervisionReview,
   onResults,
   onTrueCostReport,
 }: {
@@ -501,6 +503,7 @@ function ProjectDetailScreen({
   onBack: () => void;
   onImportJson: (pcId: number, consultantName: string) => void;
   onScopeReview: (pcId: number, consultantName: string) => void;
+  onSupervisionReview: (pcId: number, consultantName: string) => void;
   onResults: () => void;
   onTrueCostReport: () => void;
 }) {
@@ -542,9 +545,6 @@ function ProjectDetailScreen({
     onError: (e) => toast({ title: 'خطأ في التحديث', description: e.message, variant: 'destructive' }),
   });
   const [selectedMasterId, setSelectedMasterId] = useState("");
-
-  // Supervision fee dialog state
-  const [supervisionDialog, setSupervisionDialog] = useState<{ open: boolean; pcId: number; consultantName: string } | null>(null);
 
   const project = projectQuery.data;
   const consultants = consultantsQuery.data ?? [];
@@ -905,7 +905,7 @@ Rules:
                         size="sm"
                         variant="outline"
                         className="gap-1 border-violet-200 text-violet-700 hover:bg-violet-50"
-                        onClick={() => setSupervisionDialog({ open: true, pcId: c.id, consultantName: c.trade_name || c.legal_name })}
+                        onClick={() => onSupervisionReview(c.id, c.trade_name || c.legal_name)}
                       >
                         <Shield className="w-3.5 h-3.5" />
                         الإشراف
@@ -998,22 +998,6 @@ Rules:
         </DialogContent>
       </Dialog>
 
-      {/* Supervision Fee Dialog */}
-      {supervisionDialog && project && (
-        <SupervisionFeeDialog
-          open={supervisionDialog.open}
-          pcId={supervisionDialog.pcId}
-          consultantName={supervisionDialog.consultantName}
-          projectDurationMonths={project.duration_months ?? 0}
-          buildingCategoryId={project.building_category_id ?? null}
-          onClose={() => setSupervisionDialog(null)}
-          onSaved={() => {
-            setSupervisionDialog(null);
-            consultantsQuery.refetch();
-            evalMutation.mutate({ cpaProjectId: projectId });
-          }}
-        />
-      )}
     </div>
   );
 }
@@ -1894,6 +1878,268 @@ function ScopeReviewScreen({
   );
 }
 
+// ---- Screen 4b: Supervision Team Review -----------------------------------
+
+function SupervisionReviewScreen({
+  projectConsultantId,
+  consultantName,
+  projectId,
+  onBack,
+}: {
+  projectConsultantId: number;
+  consultantName: string;
+  projectId: number;
+  onBack: () => void;
+}) {
+  const { toast } = useToast();
+
+  // Fetch project to get duration and building category
+  const projectQuery = trpc.cpa.projects.getById.useQuery({ id: projectId });
+  const project = projectQuery.data;
+  const buildingCategoryId = project?.building_category_id ?? null;
+  const projectDurationMonths = project?.duration_months ?? 24;
+
+  // Fetch baseline roles for this building category
+  const baselineQuery = trpc.cpa.settings.getSupervisionBaseline.useQuery(
+    { buildingCategoryId: buildingCategoryId ?? 0 },
+    { enabled: buildingCategoryId != null && buildingCategoryId > 0 }
+  );
+
+  // Fetch existing supervision team entries for this consultant
+  const teamQuery = trpc.cpa.consultants.getSupervisionTeam.useQuery(
+    { projectConsultantId }
+  );
+
+  const updateTeamMutation = trpc.cpa.consultants.updateSupervisionTeam.useMutation();
+  const updateFeesMutation = trpc.cpa.consultants.updateFees.useMutation({
+    onSuccess: () => {
+      toast({ title: "تم حفظ أتعاب الإشراف وإعادة الحساب" });
+      teamQuery.refetch();
+    },
+    onError: (e) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
+  });
+  const evalMutation = trpc.cpa.evaluation.runEvaluation.useMutation({
+    onSuccess: () => toast({ title: "تم إعادة الحساب بنجاح" }),
+  });
+
+  // Local state: map from supervision_role_id -> monthly rate string
+  const [rates, setRates] = useState<Record<number, string>>({});
+  const [initialized, setInitialized] = useState(false);
+
+  // Initialize rates from existing team data
+  useEffect(() => {
+    if (teamQuery.data && !initialized) {
+      const initial: Record<number, string> = {};
+      for (const row of teamQuery.data as any[]) {
+        if (row.proposed_monthly_rate != null) {
+          initial[Number(row.supervision_role_id)] = String(row.proposed_monthly_rate);
+        }
+      }
+      setRates(initial);
+      setInitialized(true);
+    }
+  }, [teamQuery.data, initialized]);
+
+  const baseline = (baselineQuery.data ?? []) as any[];
+  const isLoading = projectQuery.isLoading || baselineQuery.isLoading || teamQuery.isLoading;
+  const isSaving = updateTeamMutation.isPending || updateFeesMutation.isPending || evalMutation.isPending;
+
+  // Calculate total supervision fee
+  const totalFee = baseline.reduce((sum: number, row: any) => {
+    const rate = parseFloat(rates[Number(row.supervision_role_id)] ?? "0") || 0;
+    const alloc = parseFloat(row.required_allocation_pct) || 100;
+    return sum + rate * (alloc / 100) * projectDurationMonths;
+  }, 0);
+
+  // Calculate reference total
+  const refTotal = baseline.reduce((sum: number, row: any) => {
+    const refRate = parseFloat(row.monthly_rate_aed) || 0;
+    const alloc = parseFloat(row.required_allocation_pct) || 100;
+    return sum + refRate * (alloc / 100) * projectDurationMonths;
+  }, 0);
+
+  const handleSave = async () => {
+    if (baseline.length === 0) {
+      toast({ title: "لا توجد أدوار إشراف لهذه الفئة", variant: "destructive" });
+      return;
+    }
+    try {
+      // Save each role's monthly rate
+      for (const row of baseline) {
+        const roleId = Number(row.supervision_role_id);
+        const rate = parseFloat(rates[roleId] ?? "0") || 0;
+        await updateTeamMutation.mutateAsync({
+          projectConsultantId,
+          supervisionRoleId: roleId,
+          proposedAllocationPct: parseFloat(row.required_allocation_pct) || 100,
+          proposedMonthlyRate: rate > 0 ? rate : null,
+        });
+      }
+      // Save the fee method and total
+      await updateFeesMutation.mutateAsync({
+        id: projectConsultantId,
+        supervisionFeeMethod: "MONTHLY_RATE",
+        supervisionFeeAmount: totalFee,
+        supervisionStatedDurationMonths: projectDurationMonths,
+        supervisionSubmitted: 1,
+      });
+      // Recalculate
+      await evalMutation.mutateAsync({ cpaProjectId: projectId });
+    } catch (_e) {
+      // errors handled by mutation callbacks
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="sm" onClick={onBack} className="gap-1">
+          <ArrowRight className="w-4 h-4" />
+          رجوع
+        </Button>
+        <Separator orientation="vertical" className="h-5" />
+        <div>
+          <h2 className="font-bold text-lg">فريق الإشراف</h2>
+          <p className="text-sm text-muted-foreground">{consultantName}</p>
+        </div>
+      </div>
+
+      {/* Summary cards */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="rounded-xl p-3 text-center border bg-violet-50 border-violet-200">
+          <div className="text-2xl font-bold text-violet-600">{projectDurationMonths}</div>
+          <div className="text-xs text-muted-foreground mt-0.5">مدة الإشراف (شهر)</div>
+        </div>
+        <div className="rounded-xl p-3 text-center border bg-sky-50 border-sky-200">
+          <div className="text-lg font-bold text-sky-600">{totalFee > 0 ? (totalFee / 1000000).toFixed(2) + "M" : "—"}</div>
+          <div className="text-xs text-muted-foreground mt-0.5">إجمالي المستشار (AED)</div>
+        </div>
+        <div className="rounded-xl p-3 text-center border bg-emerald-50 border-emerald-200">
+          <div className="text-lg font-bold text-emerald-600">{refTotal > 0 ? (refTotal / 1000000).toFixed(2) + "M" : "—"}</div>
+          <div className="text-xs text-muted-foreground mt-0.5">المرجعي (AED)</div>
+        </div>
+      </div>
+
+      {/* Main table */}
+      {isLoading ? (
+        <div className="text-center py-8 text-muted-foreground flex items-center justify-center gap-2">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          جاري التحميل...
+        </div>
+      ) : buildingCategoryId == null ? (
+        <div className="py-6 text-center text-amber-600 text-sm">
+          ⚠️ يرجى تحديد فئة المبنى للمشروع أولاً لعرض أدوار الإشراف.
+        </div>
+      ) : baseline.length === 0 ? (
+        <div className="py-6 text-center text-muted-foreground text-sm border-2 border-dashed rounded-xl">
+          <Layers className="w-10 h-10 mx-auto mb-2 opacity-30" />
+          لا توجد أدوار إشراف محددة لهذه الفئة. يمكنك إضافتها من الإعدادات.
+        </div>
+      ) : (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Shield className="w-4 h-4 text-violet-600" />
+              جدول أدوار الإشراف
+              <span className="text-xs font-normal text-muted-foreground mr-2">
+                الإجمالي = المعدل الشهري × نسبة التخصيص × {projectDurationMonths} شهر
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-muted-foreground text-xs">
+                    <th className="text-right py-2 pr-1 font-medium">الدور</th>
+                    <th className="text-center py-2 font-medium">نسبة التخصيص</th>
+                    <th className="text-center py-2 font-medium">المرجعي/شهر</th>
+                    <th className="text-center py-2 font-medium">المستشار/شهر (AED)</th>
+                    <th className="text-center py-2 font-medium">إجمالي المستشار</th>
+                    <th className="text-center py-2 font-medium">إجمالي المرجعي</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50">
+                  {baseline.map((row: any) => {
+                    const roleId = Number(row.supervision_role_id);
+                    const rate = parseFloat(rates[roleId] ?? "0") || 0;
+                    const alloc = parseFloat(row.required_allocation_pct) || 100;
+                    const rowTotal = rate * (alloc / 100) * projectDurationMonths;
+                    const refRate = parseFloat(row.monthly_rate_aed) || 0;
+                    const refRowTotal = refRate * (alloc / 100) * projectDurationMonths;
+                    return (
+                      <tr key={roleId} className="hover:bg-muted/30 transition-colors">
+                        <td className="py-2.5 pr-1">
+                          <div className="font-medium text-sm">{row.role_label}</div>
+                          <div className="text-xs text-muted-foreground">{row.role_code}</div>
+                        </td>
+                        <td className="text-center py-2.5">
+                          <span className="text-sm font-semibold text-violet-700">{alloc}%</span>
+                        </td>
+                        <td className="text-center py-2.5">
+                          <span className="text-xs text-muted-foreground">{refRate > 0 ? refRate.toLocaleString() : "—"}</span>
+                        </td>
+                        <td className="text-center py-2.5">
+                          <Input
+                            type="number"
+                            min="0"
+                            step="500"
+                            className="w-28 text-center mx-auto h-8 text-sm"
+                            placeholder="0"
+                            value={rates[roleId] ?? ""}
+                            onChange={(e) => setRates((prev) => ({ ...prev, [roleId]: e.target.value }))}
+                          />
+                        </td>
+                        <td className="text-center py-2.5">
+                          <span className={`font-semibold text-sm ${rowTotal > 0 ? 'text-sky-700' : 'text-muted-foreground'}`}>
+                            {rowTotal > 0 ? rowTotal.toLocaleString("en-US", { maximumFractionDigits: 0 }) : "—"}
+                          </span>
+                        </td>
+                        <td className="text-center py-2.5">
+                          <span className="text-sm text-emerald-700">
+                            {refRowTotal > 0 ? refRowTotal.toLocaleString("en-US", { maximumFractionDigits: 0 }) : "—"}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-border bg-muted/30">
+                    <td colSpan={4} className="py-3 pr-1 font-bold text-sm">إجمالي أتعاب الإشراف</td>
+                    <td className="py-3 text-center font-bold text-sky-700 text-sm">
+                      {totalFee > 0 ? totalFee.toLocaleString("en-US", { maximumFractionDigits: 0 }) + " AED" : "—"}
+                    </td>
+                    <td className="py-3 text-center font-bold text-emerald-700 text-sm">
+                      {refTotal > 0 ? refTotal.toLocaleString("en-US", { maximumFractionDigits: 0 }) + " AED" : "—"}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            {/* Save button */}
+            <div className="flex justify-end mt-4 pt-3 border-t border-border">
+              <Button
+                onClick={handleSave}
+                disabled={isSaving || totalFee === 0}
+                className="bg-violet-600 hover:bg-violet-700 text-white gap-1"
+              >
+                {isSaving ? (
+                  <><Loader2 className="w-3.5 h-3.5 ml-1 animate-spin" />جاري الحفظ...</>
+                ) : (
+                  <><Shield className="w-3.5 h-3.5 ml-1" />حفظ وإعادة الحساب</>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 // ---- Screen 5: Evaluation Results -----------------------------------------
 
 function ResultsScreen({
@@ -2661,6 +2907,7 @@ export default function CPAPage() {
   function goProject(id: number) { setSelectedProjectId(id); setScreen("project-detail"); }
   function goImportJson(pcId: number, name: string) { setSelectedPcId(pcId); setSelectedConsultantName(name); setScreen("import-json"); }
   function goScopeReview(pcId: number, name: string) { setSelectedPcId(pcId); setSelectedConsultantName(name); setScreen("scope-review"); }
+  function goSupervisionReview(pcId: number, name: string) { setSelectedPcId(pcId); setSelectedConsultantName(name); setScreen("supervision-review"); }
   function goResults() { setScreen("results"); }
   function goTrueCostReport() { setScreen("truecost-report"); }
   function goSettings() { setScreen("settings"); }
@@ -2680,7 +2927,7 @@ export default function CPAPage() {
               <span className="text-foreground font-medium">الإعدادات</span>
             </>
           )}
-          {(screen === "project-detail" || screen === "import-json" || screen === "scope-review" || screen === "results" || screen === "truecost-report") && selectedProjectId && (
+          {(screen === "project-detail" || screen === "import-json" || screen === "scope-review" || screen === "supervision-review" || screen === "results" || screen === "truecost-report") && selectedProjectId && (
             <>
               <span>/</span>
               <button onClick={() => { setScreen("project-detail"); }} className="hover:text-foreground transition-colors">
@@ -2698,6 +2945,12 @@ export default function CPAPage() {
             <>
               <span>/</span>
               <span className="text-foreground font-medium">مراجعة النطاق</span>
+            </>
+          )}
+          {screen === "supervision-review" && (
+            <>
+              <span>/</span>
+              <span className="text-foreground font-medium">فريق الإشراف</span>
             </>
           )}
           {screen === "results" && (
@@ -2725,6 +2978,7 @@ export default function CPAPage() {
             onBack={goHome}
             onImportJson={goImportJson}
             onScopeReview={goScopeReview}
+            onSupervisionReview={goSupervisionReview}
             onResults={goResults}
             onTrueCostReport={goTrueCostReport}
           />
@@ -2741,6 +2995,14 @@ export default function CPAPage() {
           <ScopeReviewScreen
             projectConsultantId={selectedPcId}
             consultantName={selectedConsultantName}
+            onBack={() => setScreen("project-detail")}
+          />
+        )}
+        {screen === "supervision-review" && selectedPcId && selectedProjectId && (
+          <SupervisionReviewScreen
+            projectConsultantId={selectedPcId}
+            consultantName={selectedConsultantName}
+            projectId={selectedProjectId}
             onBack={() => setScreen("project-detail")}
           />
         )}
