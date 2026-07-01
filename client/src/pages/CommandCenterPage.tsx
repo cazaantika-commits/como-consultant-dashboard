@@ -3591,14 +3591,12 @@ function DesignScopeReportView({ token, projectId, onBack }: { token: string; pr
   const { data, isLoading, error } = trpc.commandCenter.getDesignScopeReport.useQuery({ token, projectId });
   const [showGapsOnly, setShowGapsOnly] = useState(false);
 
-  // Format number compactly: 125,000 → 125K
+  // Format number fully: 125,000 → 125,000
   const fmtK = (n: number) => {
     if (n === 0) return '—';
-    if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
-    if (n >= 1000) return Math.round(n / 1000) + 'K';
-    return String(Math.round(n));
+    return n.toLocaleString('en-US', { maximumFractionDigits: 0 });
   };
-  const fmtFull = (n: number) => n > 0 ? n.toLocaleString('ar-AE', { maximumFractionDigits: 0 }) : '—';
+  const fmtFull = (n: number) => n > 0 ? n.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—';
 
   // Abbreviate consultant name: take first letter of each word, max 6 chars
   const shortName = (name: string) => {
@@ -3660,7 +3658,7 @@ function DesignScopeReportView({ token, projectId, onBack }: { token: string; pr
             <table className="text-xs border-collapse" style={{ direction: 'rtl', width: '100%', tableLayout: 'fixed' }}>
               <colgroup>
                 <col style={{ width: '180px' }} />
-                {consultants.map((c: any) => <col key={c.id} style={{ width: '68px' }} />)}
+                {consultants.map((c: any) => <col key={c.id} style={{ width: '100px' }} />)}
               </colgroup>
               <thead>
                 <tr className="bg-gradient-to-r from-indigo-600 to-cyan-600 text-white">
@@ -3710,20 +3708,20 @@ function DesignScopeReportView({ token, projectId, onBack }: { token: string; pr
                 <tr className="bg-red-50 font-bold">
                   <td className="px-2 py-1.5 text-right text-red-700 sticky right-0 bg-red-50 border-l border-slate-400 border-b border-b-slate-300">فجوة النطاق</td>
                   {consultants.map((c: any) => (
-                    <td key={c.id} className="px-0.5 py-1.5 text-center text-red-600 border-r border-slate-300 border-b border-b-slate-300 text-[10px]">{fmtK((designGaps as any)[c.id] || 0)}</td>
+                    <td key={c.id} className="px-1 py-1.5 text-center text-red-600 border-r border-slate-300 border-b border-b-slate-300 text-[11px]">{fmtK((designGaps as any)[c.id] || 0)}</td>
                   ))}
                 </tr>
                 <tr className="bg-slate-100 font-bold">
                   <td className="px-2 py-1.5 text-right text-slate-700 sticky right-0 bg-slate-100 border-l border-slate-400 border-b border-b-slate-300">أتعاب التصميم</td>
                   {consultants.map((c: any) => (
-                    <td key={c.id} className="px-0.5 py-1.5 text-center text-slate-700 border-r border-slate-300 border-b border-b-slate-300 text-[10px]">{fmtK((designFees as any)[c.id] || 0)}</td>
+                    <td key={c.id} className="px-1 py-1.5 text-center text-slate-700 border-r border-slate-300 border-b border-b-slate-300 text-[11px]">{fmtK((designFees as any)[c.id] || 0)}</td>
                   ))}
                 </tr>
                 <tr className="bg-amber-50 font-bold">
                   <td className="px-2 py-1.5 text-right text-amber-800 sticky right-0 bg-amber-50 border-l border-slate-400">المجموع الكلي</td>
                   {consultants.map((c: any) => {
                     const total = ((designFees as any)[c.id] || 0) + ((designGaps as any)[c.id] || 0);
-                    return <td key={c.id} className="px-0.5 py-1.5 text-center text-amber-700 border-r border-slate-300 text-[10px] font-bold">{fmtK(total)}</td>;
+                    return <td key={c.id} className="px-1 py-1.5 text-center text-amber-700 border-r border-slate-300 text-[11px] font-bold">{fmtK(total)}</td>;
                   })}
                 </tr>
               </tbody>
@@ -3731,7 +3729,7 @@ function DesignScopeReportView({ token, projectId, onBack }: { token: string; pr
           </div>
         </div>
       )}
-      <p className="text-xs text-slate-400 text-center">✓ = مشمول • الأرقام بالدرهم الإماراتي (K = ألف)</p>
+      <p className="text-xs text-slate-400 text-center">✓ = مشمول • الأرقام بالدرهم الإماراتي</p>
     </div>
   );
 }
@@ -3743,9 +3741,7 @@ function SupervisionScopeReportView({ token, projectId, onBack }: { token: strin
 
   const fmtK = (n: number) => {
     if (n === 0) return '—';
-    if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
-    if (n >= 1000) return Math.round(n / 1000) + 'K';
-    return String(Math.round(n));
+    return n.toLocaleString('en-US', { maximumFractionDigits: 0 });
   };
 
   const shortName = (name: string) => {
@@ -3803,7 +3799,7 @@ function SupervisionScopeReportView({ token, projectId, onBack }: { token: strin
             <table className="text-xs border-collapse" style={{ direction: 'rtl', width: '100%', tableLayout: 'fixed' }}>
               <colgroup>
                 <col style={{ width: '200px' }} />
-                {consultants.map((c: any) => <col key={c.id} style={{ width: '68px' }} />)}
+                {consultants.map((c: any) => <col key={c.id} style={{ width: '100px' }} />)}
               </colgroup>
               <thead>
                 <tr className="bg-gradient-to-r from-rose-600 to-pink-700 text-white">
@@ -3849,20 +3845,20 @@ function SupervisionScopeReportView({ token, projectId, onBack }: { token: strin
                 <tr className="bg-red-50 font-bold">
                   <td className="px-2 py-1.5 text-right text-red-700 sticky right-0 bg-red-50 border-l border-slate-400 border-b border-b-slate-300">فجوة الإشراف</td>
                   {consultants.map((c: any) => (
-                    <td key={c.id} className="px-0.5 py-1.5 text-center text-red-600 border-r border-slate-300 border-b border-b-slate-300 text-[10px]">{fmtK((supervisionGaps as any)[c.id] || 0)}</td>
+                    <td key={c.id} className="px-1 py-1.5 text-center text-red-600 border-r border-slate-300 border-b border-b-slate-300 text-[11px]">{fmtK((supervisionGaps as any)[c.id] || 0)}</td>
                   ))}
                 </tr>
                 <tr className="bg-slate-100 font-bold">
                   <td className="px-2 py-1.5 text-right text-slate-700 sticky right-0 bg-slate-100 border-l border-slate-400 border-b border-b-slate-300">أتعاب الإشراف</td>
                   {consultants.map((c: any) => (
-                    <td key={c.id} className="px-0.5 py-1.5 text-center text-slate-700 border-r border-slate-300 border-b border-b-slate-300 text-[10px]">{fmtK((supervisionFees as any)[c.id] || 0)}</td>
+                    <td key={c.id} className="px-1 py-1.5 text-center text-slate-700 border-r border-slate-300 border-b border-b-slate-300 text-[11px]">{fmtK((supervisionFees as any)[c.id] || 0)}</td>
                   ))}
                 </tr>
                 <tr className="bg-amber-50 font-bold">
                   <td className="px-2 py-1.5 text-right text-amber-800 sticky right-0 bg-amber-50 border-l border-slate-400">المجموع الكلي</td>
                   {consultants.map((c: any) => {
                     const total = ((supervisionFees as any)[c.id] || 0) + ((supervisionGaps as any)[c.id] || 0);
-                    return <td key={c.id} className="px-0.5 py-1.5 text-center text-amber-700 border-r border-slate-300 text-[10px] font-bold">{fmtK(total)}</td>;
+                    return <td key={c.id} className="px-1 py-1.5 text-center text-amber-700 border-r border-slate-300 text-[11px] font-bold">{fmtK(total)}</td>;
                   })}
                 </tr>
               </tbody>
@@ -3870,7 +3866,7 @@ function SupervisionScopeReportView({ token, projectId, onBack }: { token: strin
           </div>
         </div>
       )}
-      <p className="text-xs text-slate-400 text-center">✓ = مشمول بالكامل • الأرقام بالدرهم الإماراتي (K = ألف)</p>
+      <p className="text-xs text-slate-400 text-center">✓ = مشمول بالكامل • الأرقام بالدرهم الإماراتي</p>
     </div>
   );
 }
