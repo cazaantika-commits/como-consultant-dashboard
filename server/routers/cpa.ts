@@ -407,10 +407,10 @@ export const cpaRouter = router({
       if (!db) return [];
       return qRows(
         db,
-        sql`SELECT si.*, ss.label as section_label
+        sql`SELECT si.*, ss.label as section_label, ss.code as section_code
             FROM cpa_scope_items si
             LEFT JOIN cpa_scope_sections ss ON ss.id = si.section_id
-            WHERE si.is_active = 1
+            WHERE si.is_active = 1 AND (ss.code IS NULL OR ss.code != 'CONTRACT')
             ORDER BY si.sort_order, si.item_number`
       );
     }),
@@ -677,7 +677,7 @@ export const cpaRouter = router({
                    ss.label as section_label, ss.code as section_code
             FROM cpa_scope_items si
             LEFT JOIN cpa_scope_sections ss ON ss.id = si.section_id
-            WHERE si.is_active = 1
+            WHERE si.is_active = 1 AND (ss.code IS NULL OR ss.code != 'CONTRACT')
             ORDER BY si.item_number`
       );
 
@@ -691,7 +691,8 @@ export const cpaRouter = router({
         sql`SELECT scm.scope_item_id, scm.building_category_id, scm.status
             FROM cpa_scope_category_matrix scm
             JOIN cpa_scope_items si ON si.id = scm.scope_item_id
-            WHERE si.is_active = 1`
+            LEFT JOIN cpa_scope_sections ss ON ss.id = si.section_id
+            WHERE si.is_active = 1 AND (ss.code IS NULL OR ss.code != 'CONTRACT')`
       );
 
       // Build matrix map: { itemId_catId: status }
@@ -713,7 +714,9 @@ export const cpaRouter = router({
         sql`SELECT DISTINCT si.id, si.item_number, si.code, si.label, si.default_type
             FROM cpa_scope_items si
             LEFT JOIN cpa_scope_reference_costs src ON src.scope_item_id = si.id
+            LEFT JOIN cpa_scope_sections ss ON ss.id = si.section_id
             WHERE si.is_active = 1
+              AND (ss.code IS NULL OR ss.code != 'CONTRACT')
               AND (si.default_type IN ('GREEN', 'RED') OR src.scope_item_id IS NOT NULL)
             ORDER BY si.item_number`
       );
