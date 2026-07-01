@@ -85,12 +85,14 @@ export async function runCalculationEngine(cpaProjectId: number) {
   // Step 2B: All REQUIRED scope items for gap detection
   // IMPORTANT: Exclude NOT_REQUIRED items — they should NOT be flagged as gaps
   // Exclude CONTRACT items — they are tracked separately
+  // Exclude CORE items (1-11) — they are always included implicitly in any consultant's scope
   // Use GROUP BY + MAX to prevent duplicates if multiple reference cost rows exist
   const allRequiredItems = catId
     ? await qRows<any>(
         db,
-        sql`SELECT si.id, si.code, si.label, scm.status,
-                   COALESCE(MAX(src.cost_aed), 0) as ref_cost
+        sql`SELECT si.id, si.code, si.label, si.item_number, scm.status,
+                   COALESCE(MAX(src.cost_aed), 0) as ref_cost,
+                   ss.code as section_code
             FROM cpa_scope_category_matrix scm
             JOIN cpa_scope_items si ON si.id = scm.scope_item_id
             LEFT JOIN cpa_scope_reference_costs src
@@ -100,7 +102,8 @@ export async function runCalculationEngine(cpaProjectId: number) {
             WHERE scm.building_category_id = ${catId}
               AND scm.status != 'NOT_REQUIRED'
               AND (ss.code IS NULL OR ss.code != 'CONTRACT')
-            GROUP BY si.id, si.code, si.label, scm.status`
+              AND si.item_number > 11
+            GROUP BY si.id, si.code, si.label, si.item_number, scm.status, ss.code`
       )
     : [];
 
@@ -174,6 +177,9 @@ export async function runCalculationEngine(cpaProjectId: number) {
       if (status === "INCLUDED") continue;
       // Skip if item is NOT_REQUIRED — it's not a real gap
       if (item.status === "NOT_REQUIRED") continue;
+      // Core items (1-11) are always included implicitly — never a gap
+      // (Already filtered in SQL, but double-check here)
+      if (item.item_number && item.item_number <= 11) continue;
       const gap = toNum(item.ref_cost);
       designScopeGapCost += gap;
       if (gap > 0) {

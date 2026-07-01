@@ -1708,18 +1708,21 @@ function ScopeReviewScreen({
   };
 
   // Separate contractual items (section_code = 'CONTRACT') from financial scope items
+  // Core items (item_number 1-11) are always included implicitly
   const financialItems = useMemo(() => coverage.filter((c: any) => c.section_code !== 'CONTRACT'), [coverage]);
+  const coreItems = useMemo(() => financialItems.filter((c: any) => c.item_number && c.item_number <= 11), [financialItems]);
+  const specialistItems = useMemo(() => financialItems.filter((c: any) => !c.item_number || c.item_number > 11), [financialItems]);
   const contractualItems = useMemo(() => coverage.filter((c: any) => c.section_code === 'CONTRACT'), [coverage]);
 
   const grouped = useMemo(() => {
     const groups: Record<string, any[]> = {};
-    for (const item of financialItems) {
+    for (const item of specialistItems) {
       const key = item.section_label ?? "عام";
       if (!groups[key]) groups[key] = [];
       groups[key].push(item);
     }
     return groups;
-  }, [financialItems]);
+  }, [specialistItems]);
 
   const stats = useMemo(() => ({
     included: coverage.filter((c: any) => c.coverage_status === "INCLUDED").length,
@@ -1764,7 +1767,32 @@ function ScopeReviewScreen({
         </div>
       ) : (
         <div className="space-y-4">
-          {/* Financial scope sections */}
+          {/* Core items (1-11) - always included, no dropdown */}
+          {coreItems.length > 0 && (
+            <Card className="border-emerald-200 dark:border-emerald-900">
+              <CardHeader className="pb-2 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-t-xl">
+                <CardTitle className="text-sm flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
+                  <CheckCircle className="w-4 h-4" />
+                  الخدمات الأساسية
+                  <span className="text-xs font-normal text-emerald-600 dark:text-emerald-400">
+                    (مشمولة تلقائياً ضمن أي عرض تصميم)
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-2 space-y-1">
+                {coreItems.map((item: any) => (
+                  <div key={item.id} className="flex items-center gap-2 py-1.5 border-b border-border/30 last:border-0">
+                    <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span className="text-sm font-medium">{item.item_label}</span>
+                    <span className="text-xs text-muted-foreground">({item.item_code})</span>
+                    <span className="mr-auto text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">مشمول دائماً</span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Specialist scope sections (12-30) - editable */}
           {Object.entries(grouped).map(([section, items]) => (
             <Card key={section}>
               <CardHeader className="pb-2">

@@ -84,6 +84,7 @@ router.get("/:projectId", async (req, res) => {
     // ---- All required scope items (for gap detection) ----
     // Include items that are REQUIRED by the project settings (INCLUDED, GREEN, RED, CONTRACTOR)
     // EXCLUDE items marked as NOT_REQUIRED — they should NOT be flagged as gaps
+    // EXCLUDE core items (1-11) — they are always included implicitly in any consultant's scope
     // Use GROUP BY to prevent duplicates if multiple reference cost rows exist per item
     const allRequiredItems = await qRows<any>(
       db,
@@ -96,6 +97,7 @@ router.get("/:projectId", async (req, res) => {
             AND src.building_category_id = scm.building_category_id
           WHERE scm.building_category_id = ${proj.building_category_id}
             AND scm.status != 'NOT_REQUIRED'
+            AND si.item_number > 11
           GROUP BY si.id, si.item_number, si.code, si.label, scm.status
           ORDER BY si.item_number`
     );
@@ -341,6 +343,7 @@ router.get("/:projectId", async (req, res) => {
       let quotedDesign = toNum(r.quoted_design_fee);
 
       // Recalculate scopeGap in real-time from allRequiredItems
+      // Core items (1-11) already excluded from query — they are always included implicitly
       // This ensures NOT_REQUIRED items are never counted as gaps
       let scopeGap = 0;
       for (const item of allRequiredItems) {
