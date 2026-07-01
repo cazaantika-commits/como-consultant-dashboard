@@ -520,6 +520,9 @@ router.get("/:projectId", async (req, res) => {
   </thead>
   <tbody>`;
 
+      let totalRefCostSum = 0;
+      let totalGapCostSum = 0;
+      let totalConsultantSum = 0;
       for (const baseline of supervisionBaseline) {
         const roleId = Number(baseline.supervision_role_id);
         const required = toNum(baseline.required_allocation_pct);
@@ -534,6 +537,10 @@ router.get("/:projectId", async (req, res) => {
           ? toNum(teamEntry.proposed_monthly_rate)
           : toNum(baseline.monthly_rate_aed);
         const gapCost = rateToUse * durationMonths * (gapPct / 100);
+        const refTotal = toNum(baseline.monthly_rate_aed) * durationMonths * (required / 100);
+        totalRefCostSum += refTotal;
+        totalGapCostSum += gapCost;
+        if (consultantTotal !== null) totalConsultantSum += consultantTotal;
 
         const proposedLabel = teamEntry ? fmtPct(proposed) : `<span style="color:#999">Not stated</span>`;
         const consultantRateLabel = consultantRate !== null ? fmtAED(consultantRate) : `<span style="color:#999">—</span>`;
@@ -553,7 +560,14 @@ router.get("/:projectId", async (req, res) => {
     </tr>`;
       }
 
-      html += `<tr class="subtotal-row">
+      html += `<tr style="background:#f0f9ff;font-weight:600">
+      <td colspan="4" style="text-align:right"><strong>Reference Total (All Roles)</strong></td>
+      <td></td>
+      <td><strong>${fmtAED(totalRefCostSum)}</strong></td>
+      <td></td>
+      <td><strong style="color:#dc2626">${fmtAED(totalGapCostSum)}</strong></td>
+    </tr>
+    <tr class="subtotal-row">
       <td colspan="4"><strong>Quoted Supervision Fee (Consultant Total)</strong></td>
       <td><strong style="color:#0369a1">${fmtAED(quotedSup)}</strong></td>
       <td colspan="2"><strong>Total Team Gap Cost</strong></td>
