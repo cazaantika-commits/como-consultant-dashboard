@@ -744,3 +744,4 @@
 - [x] Display full numbers (not abbreviated K/M) in Design Scope and Supervision Scope reports in Command Center
 - [x] Color redesign: differentiate Design (blue) from Supervision (purple) in True Cost Report and Command Center tables
 - [x] Fix scope items ordering: sort by item_number ASC, exclude CONTRACT section items from design scope report
+- [x] Import ARTEC data for Al Jaddaf project (2% design, 2% supervision, 12 included scope items, 5 excluded, supervision team)
