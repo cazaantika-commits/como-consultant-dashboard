@@ -383,18 +383,18 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
           <thead>
             <tr className="bg-gradient-to-r from-slate-700 to-slate-800 text-white">
               <th className="border border-slate-600 p-3 text-right font-bold" rowSpan={2}>الاستشاري</th>
-              <th className="border border-slate-600 p-2 text-center font-bold" colSpan={3}>التصميم</th>
-              <th className="border border-slate-600 p-2 text-center font-bold" colSpan={3}>الإشراف</th>
+              <th className="border border-blue-500 p-2 text-center font-bold bg-blue-800" colSpan={3}>التصميم</th>
+              <th className="border border-purple-500 p-2 text-center font-bold bg-purple-800" colSpan={3}>الإشراف</th>
               <th className="border border-slate-600 p-2 text-center font-bold bg-amber-700" rowSpan={2}>التكلفة الحقيقية<br/><span className="text-[10px] font-normal">الإجمالية</span></th>
               <th className="border border-slate-600 p-2 text-center font-bold" rowSpan={2}>الترتيب</th>
             </tr>
             <tr className="bg-slate-600 text-white text-[11px]">
-              <th className="border border-slate-500 p-2 text-center bg-blue-700/60">الأتعاب المقتبسة</th>
-              <th className="border border-slate-500 p-2 text-center bg-orange-700/60">فجوة النطاق</th>
-              <th className="border border-slate-500 p-2 text-center bg-blue-800/60">الأتعاب الحقيقية</th>
-              <th className="border border-slate-500 p-2 text-center bg-teal-700/60">الأتعاب المقتبسة</th>
-              <th className="border border-slate-500 p-2 text-center bg-orange-700/60">فجوة النطاق</th>
-              <th className="border border-slate-500 p-2 text-center bg-teal-800/60">الأتعاب المعدّلة</th>
+              <th className="border border-blue-400 p-2 text-center bg-blue-700">الأتعاب المقتبسة</th>
+              <th className="border border-blue-400 p-2 text-center bg-red-700/70">فجوة النطاق</th>
+              <th className="border border-blue-400 p-2 text-center bg-blue-900">الأتعاب الحقيقية</th>
+              <th className="border border-purple-400 p-2 text-center bg-purple-700">الأتعاب المقتبسة</th>
+              <th className="border border-purple-400 p-2 text-center bg-red-700/70">فجوة النطاق</th>
+              <th className="border border-purple-400 p-2 text-center bg-purple-900">الأتعاب المعدّلة</th>
             </tr>
           </thead>
           <tbody>
@@ -425,27 +425,27 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
                   </td>
 
                   {/* Design Quoted */}
-                  <td className="border border-slate-200 p-2 bg-blue-50/50 text-center">
+                  <td className="border border-slate-200 p-2 bg-blue-50/60 text-center">
                     {renderCell(c, 'quotedDesignFee')}
                   </td>
                   {/* Design Gap */}
-                  <td className="border border-slate-200 p-2 bg-orange-50/50 text-center">
+                  <td className="border border-slate-200 p-2 bg-red-50/50 text-center">
                     {renderCell(c, 'designScopeGap')}
                   </td>
                   {/* True Design Fee */}
-                  <td className="border border-slate-200 p-2 bg-blue-100/50 text-center font-bold">
+                  <td className="border border-slate-200 p-2 bg-blue-100/60 text-center font-bold">
                     {renderCell(c, 'trueDesignFee')}
                   </td>
                   {/* Supervision Quoted */}
-                  <td className="border border-slate-200 p-2 bg-teal-50/50 text-center">
+                  <td className="border border-slate-200 p-2 bg-purple-50/60 text-center">
                     {renderCell(c, 'quotedSupervisionFee')}
                   </td>
                   {/* Supervision Gap */}
-                  <td className="border border-slate-200 p-2 bg-orange-50/50 text-center">
+                  <td className="border border-slate-200 p-2 bg-red-50/50 text-center">
                     {renderCell(c, 'supervisionGap')}
                   </td>
                   {/* Adjusted Supervision */}
-                  <td className="border border-slate-200 p-2 bg-teal-100/50 text-center font-bold">
+                  <td className="border border-slate-200 p-2 bg-purple-100/60 text-center font-bold">
                     {renderCell(c, 'adjustedSupervisionFee')}
                   </td>
                   {/* Total True Cost */}

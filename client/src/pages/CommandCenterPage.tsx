@@ -2781,7 +2781,7 @@ function FinancialEvaluationView({ token, projectId, onBack }: { token: string; 
             <tr className="bg-gradient-to-r from-emerald-700 via-teal-700 to-cyan-700 text-white text-center text-xs font-bold">
               <th className="border border-emerald-600 p-2" rowSpan={2} style={{width:'14%'}}>الاستشاري</th>
               <th className="border border-emerald-600 p-2 bg-blue-700" colSpan={4}>التصميم</th>
-              <th className="border border-emerald-600 p-2 bg-teal-700" colSpan={5}>الإشراف</th>
+              <th className="border border-emerald-600 p-2 bg-purple-700" colSpan={5}>الإشراف</th>
               <th className="border border-emerald-600 p-2 bg-amber-600" rowSpan={2} style={{width:'11%'}}>المجموع الكلي</th>
               <th className="border border-emerald-600 p-2" rowSpan={2} style={{width:'8%'}}>مقابل المتوسط</th>
             </tr>
@@ -2790,10 +2790,10 @@ function FinancialEvaluationView({ token, projectId, onBack }: { token: string; 
               <th className="border border-emerald-700 p-2 bg-blue-600" style={{width:'10%'}}>أتعاب التصميم</th>
               <th className="border border-emerald-700 p-2 bg-orange-600" style={{width:'9%'}}>فجوة التصميم</th>
               <th className="border border-emerald-700 p-2 bg-blue-800" style={{width:'9%'}}>مجموع التصميم</th>
-              <th className="border border-emerald-700 p-1 bg-teal-600" style={{width:'5%'}}>نوع</th>
-              <th className="border border-emerald-700 p-2 bg-teal-600" style={{width:'10%'}}>أتعاب الإشراف</th>
-              <th className="border border-emerald-700 p-2 bg-orange-600" style={{width:'9%'}}>فجوة الإشراف</th>
-              <th className="border border-emerald-700 p-2 bg-teal-800" style={{width:'9%'}}>مجموع الإشراف</th>
+              <th className="border border-emerald-700 p-1 bg-purple-600" style={{width:'5%'}}>نوع</th>
+              <th className="border border-emerald-700 p-2 bg-purple-600" style={{width:'10%'}}>أتعاب الإشراف</th>
+              <th className="border border-emerald-700 p-2 bg-red-600" style={{width:'9%'}}>فجوة الإشراف</th>
+              <th className="border border-emerald-700 p-2 bg-purple-800" style={{width:'9%'}}>مجموع الإشراف</th>
             </tr>
           </thead>
           <tbody className="bg-white">
@@ -2838,24 +2838,24 @@ function FinancialEvaluationView({ token, projectId, onBack }: { token: string; 
                   <p className="text-[10px] font-normal text-blue-500">درهم</p>
                 </td>
                 {/* Supervision type */}
-                <td className="border border-slate-200 p-2 text-center bg-teal-50 text-[11px] font-bold text-teal-700">
+                <td className="border border-slate-200 p-2 text-center bg-purple-50 text-[11px] font-bold text-purple-700">
                   {c.supervisionType === 'pct' ? `${c.supervisionValue}%` : 'مبلغ'}
                 </td>
                 {/* Supervision fees */}
-                <td className="border border-slate-200 p-2 bg-teal-50 text-center">
+                <td className="border border-slate-200 p-2 bg-purple-50 text-center">
                   <p className="text-xs font-semibold text-slate-800">{(c.supervisionAmount || 0).toLocaleString()}</p>
-                  {c.supervisionType === 'pct' && <p className="text-[10px] text-teal-500">درهم</p>}
+                  {c.supervisionType === 'pct' && <p className="text-[10px] text-purple-500">درهم</p>}
                 </td>
                 {/* Supervision gap */}
-                <td className="border border-slate-200 p-2 bg-orange-50 text-center">
+                <td className="border border-slate-200 p-2 bg-red-50 text-center">
                   {supervisionGap > 0
-                    ? <><p className="text-xs font-semibold text-orange-600">+{supervisionGap.toLocaleString()}</p><p className="text-[10px] text-orange-400">درهم</p></>
+                    ? <><p className="text-xs font-semibold text-red-600">+{supervisionGap.toLocaleString()}</p><p className="text-[10px] text-red-400">درهم</p></>
                     : <p className="text-xs text-slate-300">—</p>}
                 </td>
                 {/* Supervision total */}
-                <td className="border border-slate-200 p-2 text-center font-bold text-sm bg-teal-100 text-teal-800">
+                <td className="border border-slate-200 p-2 text-center font-bold text-sm bg-purple-100 text-purple-800">
                   {supervisionTotal.toLocaleString()}
-                  <p className="text-[10px] font-normal text-teal-500">درهم</p>
+                  <p className="text-[10px] font-normal text-purple-500">درهم</p>
                 </td>
                 {/* Grand Total */}
                 <td className="border border-slate-200 p-2 text-center font-bold text-sm bg-gradient-to-b from-amber-100 to-amber-50 text-amber-900 border-l-2 border-amber-400">
