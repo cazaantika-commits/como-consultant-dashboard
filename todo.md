@@ -740,3 +740,4 @@
 - [x] Bug: DATUM supervision fee was 5,836,364 (double-adjusted) — corrected to 5,350,000 (original from PDF)
 - [x] Remove: حذف زر "التقرير الاحترافي" بالكامل
 - [x] Bug: تقرير التكلفة الحقيقية (في الصفحة) يعرض بيانات مختلفة عن "تصدير التقرير" — تم إعادة حساب جميع المشاريع لتوحيد البيانات
+- [x] Bug fix: Exported HTML report (cpaReportRoute) not respecting overrides — showed live calc (638,500) while in-page report showed override (120,000). Fixed by: 1) deleting stale override, 2) adding override support to exported report for consistency

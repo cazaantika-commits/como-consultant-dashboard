@@ -185,6 +185,11 @@ router.get("/:projectId", async (req, res) => {
       }
     }
 
+    // ---- Load overrides ----
+    const overrideRows = await qRows<any>(db, sql`SELECT * FROM cpa_true_cost_report_overrides WHERE cpa_project_id = ${projectId}`);
+    const overrideMap: Record<number, any> = {};
+    for (const o of overrideRows) { overrideMap[Number(o.project_consultant_id)] = o; }
+
     // ---- Build live calculation map per consultant ----
     // Recalculate design gap in real-time from allRequiredItems + current settings
     // This ensures NOT_REQUIRED items are never counted as gaps regardless of stored values
@@ -200,11 +205,14 @@ router.get("/:projectId", async (req, res) => {
         if (item.requirement_status === "NOT_REQUIRED") continue;
         designGap += toNum(item.ref_cost);
       }
-      const quotedDesign = toNum(r.quoted_design_fee);
-      const trueDesign = quotedDesign + designGap;
-      const adjSup = toNum(r.adjusted_supervision_fee); // supervision stays as stored
-      const totalTrueCost = trueDesign + adjSup;
-      liveCalc[pcId] = { designGap, trueDesign, adjSup, totalTrueCost };
+      const override = overrideMap[pcId];
+      // Apply overrides if they exist (same logic as in-page report)
+      const effectiveDesignGap = override?.design_scope_gap_override != null ? toNum(override.design_scope_gap_override) : designGap;
+      const quotedDesign = override?.quoted_design_fee_override != null ? toNum(override.quoted_design_fee_override) : toNum(r.quoted_design_fee);
+      const trueDesign = override?.true_design_fee_override != null ? toNum(override.true_design_fee_override) : (quotedDesign + effectiveDesignGap);
+      const adjSup = override?.adjusted_supervision_fee_override != null ? toNum(override.adjusted_supervision_fee_override) : toNum(r.adjusted_supervision_fee);
+      const totalTrueCost = override?.total_true_cost_override != null ? toNum(override.total_true_cost_override) : (trueDesign + adjSup);
+      liveCalc[pcId] = { designGap: effectiveDesignGap, trueDesign, adjSup, totalTrueCost };
     }
 
     const rankable = results.filter((r: any) => r.can_rank === 1);
@@ -342,7 +350,8 @@ router.get("/:projectId", async (req, res) => {
       const name = r.trade_name || r.legal_name;
       const code = r.consultant_code;
 
-      let quotedDesign = toNum(r.quoted_design_fee);
+      const pcOverride = overrideMap[pcId];
+      let quotedDesign = pcOverride?.quoted_design_fee_override != null ? toNum(pcOverride.quoted_design_fee_override) : toNum(r.quoted_design_fee);
 
       // Recalculate scopeGap in real-time from allRequiredItems
       // Core items (1-11) already excluded from query — they are always included implicitly
@@ -355,7 +364,9 @@ router.get("/:projectId", async (req, res) => {
         if (item.requirement_status === "NOT_REQUIRED") continue;
         scopeGap += toNum(item.ref_cost);
       }
-      let trueDesign = quotedDesign + scopeGap;
+      // Apply override for design scope gap if set
+      if (pcOverride?.design_scope_gap_override != null) scopeGap = toNum(pcOverride.design_scope_gap_override);
+      let trueDesign = pcOverride?.true_design_fee_override != null ? toNum(pcOverride.true_design_fee_override) : (quotedDesign + scopeGap);
 
       html += `<div class="consultant-block">
 <div class="consultant-title">${name} <span>(${code})</span></div>
@@ -469,9 +480,10 @@ router.get("/:projectId", async (req, res) => {
         }
       }
 
-      const quotedSup = toNum(r.quoted_supervision_fee);
-      const supGap = toNum(r.supervision_gap_cost);
-      const adjSup = toNum(r.adjusted_supervision_fee);
+      const supOverride = overrideMap[pcId];
+      const quotedSup = supOverride?.quoted_supervision_fee_override != null ? toNum(supOverride.quoted_supervision_fee_override) : toNum(r.quoted_supervision_fee);
+      const supGap = supOverride?.supervision_gap_override != null ? toNum(supOverride.supervision_gap_override) : toNum(r.supervision_gap_cost);
+      const adjSup = supOverride?.adjusted_supervision_fee_override != null ? toNum(supOverride.adjusted_supervision_fee_override) : toNum(r.adjusted_supervision_fee);
       const statedDuration = r.supervision_stated_duration_months ? toNum(r.supervision_stated_duration_months) : null;
       const adjFactor = statedDuration && statedDuration < durationMonths ? durationMonths / statedDuration : 1;
 
