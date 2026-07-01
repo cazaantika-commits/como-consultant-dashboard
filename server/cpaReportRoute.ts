@@ -76,6 +76,7 @@ router.get("/:projectId", async (req, res) => {
           WHERE scm.building_category_id = ${proj.building_category_id}
             AND scm.status IN ('INCLUDED', 'GREEN')
             AND si.item_number >= 12
+            AND si.is_active = 1
             AND (ss.code IS NULL OR ss.code != 'CONTRACT')
           GROUP BY si.id, si.item_number, si.code, si.label
           ORDER BY si.item_number`
@@ -98,6 +99,7 @@ router.get("/:projectId", async (req, res) => {
           WHERE scm.building_category_id = ${proj.building_category_id}
             AND scm.status != 'NOT_REQUIRED'
             AND si.item_number > 11
+            AND si.is_active = 1
           GROUP BY si.id, si.item_number, si.code, si.label, scm.status
           ORDER BY si.item_number`
     );

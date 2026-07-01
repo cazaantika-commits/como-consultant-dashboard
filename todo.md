@@ -732,3 +732,4 @@
 - [x] Bug: تكرار بند Water Features (قديم + جديد مدمج) — حذف القديم وربط coverage بالجديد
 - [x] Bug: Parking Strategy سعر مرجعي 79000 بدلاً من 75000
 - [x] Bug: scope_coverage مرتبطة بـ IDs قديمة — إعادة ربط بالبنود الجديدة
+- [x] Bug: True Cost Report still shows old scope items (e.g. Tender Evaluation Report #18) instead of new specialist items (12-30) — report generation not updated to match new scope structure

@@ -78,6 +78,7 @@ export async function runCalculationEngine(cpaProjectId: number) {
               AND src.building_category_id = scm.building_category_id
             WHERE scm.building_category_id = ${catId}
               AND scm.status IN ('INCLUDED', 'GREEN')
+              AND si.is_active = 1
             GROUP BY si.id, si.code, si.label, scm.status`
       )
     : [];
@@ -103,6 +104,7 @@ export async function runCalculationEngine(cpaProjectId: number) {
               AND scm.status != 'NOT_REQUIRED'
               AND (ss.code IS NULL OR ss.code != 'CONTRACT')
               AND si.item_number > 11
+              AND si.is_active = 1
             GROUP BY si.id, si.code, si.label, si.item_number, scm.status, ss.code`
       )
     : [];
