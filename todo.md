@@ -738,3 +738,5 @@
 - [x] Feature: Supervision team edits trigger recalculation and reflect in True Cost Report
 - [x] Bug: Kieferle missing SENIOR_ID, LANDSCAPE_ENG, OFFICE_SUPPORT in supervision team - add with reference rates
 - [x] Bug: DATUM supervision fee was 5,836,364 (double-adjusted) — corrected to 5,350,000 (original from PDF)
+- [x] Remove: حذف زر "التقرير الاحترافي" بالكامل
+- [x] Bug: تقرير التكلفة الحقيقية (في الصفحة) يعرض بيانات مختلفة عن "تصدير التقرير" — تم إعادة حساب جميع المشاريع لتوحيد البيانات
