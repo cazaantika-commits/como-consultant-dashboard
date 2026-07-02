@@ -747,3 +747,9 @@
 - [x] Import ARTEC data for Al Jaddaf project (2% design, 2% supervision, 12 included scope items, 5 excluded, supervision team)
 - [x] Import XYZ Designers data for Al Jaddaf project (LUMP_SUM 3,080,000 design, no supervision, 16/17 scope items covered)
 - [x] Import Datum, Safeer, Realistic, OSUS data for Al Jaddaf project and run calculation engine
+- [x] Update Shopping Centre supervision baseline to match Aref Bin Touq structure (BIM 26.67%, ID 30%, Electrical 80%, HSE 0%)
+- [x] Compare Kieferle vs Aref monthly rates on same role structure (Kieferle is -16.9% cheaper on matched roles)
+- [x] Fix Arif Bin Touq supervision team data - add monthly rates (75K/55K/22K/12K) for all 17 roles in project 270001
+- [x] Change Arif supervision method from LUMP_SUM to MONTHLY_RATE for proper calculation
+- [x] Fix Kieferle QS-BOQ scope item from Excluded to Included in Shopping Center project (270001)
+- [x] Recalculate Shopping Center project (270001) with corrected data
