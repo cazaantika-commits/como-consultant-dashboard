@@ -406,49 +406,6 @@ router.get("/:projectId", async (req, res) => {
 </div>`;
     }
 
-    // SECTION 1B: CONTRACTUAL RISK WARNINGS (items 1-28)
-    html += `<div class="section-break"></div><div class="section-title" style="background:#7c2d12">SECTION 1B — CONTRACTUAL &amp; LEGAL RISK ANALYSIS</div>`;
-    html += `<p style="font-size:9.5pt;color:#555;margin-bottom:16px">The following table documents the status of contractual, legal, and delivery scope items (items in the Contractual & Legal section) per consultant. These items carry <strong>no direct financial gap cost</strong>, but exclusions or omissions represent <strong>contractual and legal risks</strong> that must be addressed during contract negotiation.</p>`;
-
-    for (const r of results) {
-      const pcId = r.project_consultant_id;
-      const coverageMap = scopeCoverageAll[pcId] || {};
-      const name = r.trade_name || r.legal_name;
-      const code = r.consultant_code;
-
-      // Find items that are EXCLUDED or NOT_MENTIONED
-      const riskItems = contractualItems.filter((item: any) => {
-        const cov = coverageMap[item.id];
-        const st = cov?.status ?? "NOT_MENTIONED";
-        return st !== "INCLUDED";
-      });
-
-      html += `<div class="consultant-block">
-<div class="consultant-title">${name} <span>(${code})</span></div>`;
-
-      if (riskItems.length === 0) {
-        html += `<div style="color:#16a34a;font-size:9.5pt;padding:8px 0">✅ All contractual and legal scope items are confirmed as included.</div>`;
-      } else {
-        html += `<table>
-  <thead><tr><th>#</th><th>Scope Item</th><th>Status</th><th>Note / Risk</th></tr></thead>
-  <tbody>`;
-        for (const item of riskItems) {
-          const cov = coverageMap[item.id];
-          const st = cov?.status ?? "NOT_MENTIONED";
-          const note = cov?.notes ?? "";
-          const isExcluded = st === "EXCLUDED";
-          html += `<tr>
-      <td>${item.item_number}</td>
-      <td>${item.label}</td>
-      <td class="${isExcluded ? "excluded" : ""}"><strong>${isExcluded ? "❌ Excluded" : "⚠ Not Mentioned"}</strong></td>
-      <td style="color:${isExcluded ? "#dc2626" : "#92400e"};font-size:9pt">${note || (isExcluded ? "Explicitly excluded by consultant" : "Not addressed in proposal")}</td>
-    </tr>`;
-        }
-        html += `</tbody></table>`;
-      }
-      html += `</div>`;
-    }
-
     // SECTION 2: SUPERVISION FEE ANALYSIS
     html += `<div class="section-break"></div><div class="section-title">SECTION 2 — SUPERVISION FEE ANALYSIS</div>`;
 
@@ -592,6 +549,49 @@ router.get("/:projectId", async (req, res) => {
   </tbody>
 </table>
 </div>`;
+    }
+
+    // SECTION 2B: CONTRACTUAL RISK WARNINGS (after supervision)
+    html += `<div class="section-break"></div><div class="section-title" style="background:#7c2d12">SECTION 2B — CONTRACTUAL &amp; LEGAL RISK ANALYSIS</div>`;
+    html += `<p style="font-size:9.5pt;color:#555;margin-bottom:16px">The following table documents the status of contractual, legal, and delivery scope items (items in the Contractual & Legal section) per consultant. These items carry <strong>no direct financial gap cost</strong>, but exclusions or omissions represent <strong>contractual and legal risks</strong> that must be addressed during contract negotiation.</p>`;
+
+    for (const r of results) {
+      const pcId = r.project_consultant_id;
+      const coverageMap = scopeCoverageAll[pcId] || {};
+      const name = r.trade_name || r.legal_name;
+      const code = r.consultant_code;
+
+      // Find items that are EXCLUDED or NOT_MENTIONED
+      const riskItems = contractualItems.filter((item: any) => {
+        const cov = coverageMap[item.id];
+        const st = cov?.status ?? "NOT_MENTIONED";
+        return st !== "INCLUDED";
+      });
+
+      html += `<div class="consultant-block">
+<div class="consultant-title">${name} <span>(${code})</span></div>`;
+
+      if (riskItems.length === 0) {
+        html += `<div style="color:#16a34a;font-size:9.5pt;padding:8px 0">✅ All contractual and legal scope items are confirmed as included.</div>`;
+      } else {
+        html += `<table>
+  <thead><tr><th>#</th><th>Scope Item</th><th>Status</th><th>Note / Risk</th></tr></thead>
+  <tbody>`;
+        for (const item of riskItems) {
+          const cov = coverageMap[item.id];
+          const st = cov?.status ?? "NOT_MENTIONED";
+          const note = cov?.notes ?? "";
+          const isExcluded = st === "EXCLUDED";
+          html += `<tr>
+      <td>${item.item_number}</td>
+      <td>${item.label}</td>
+      <td class="${isExcluded ? "excluded" : ""}"><strong>${isExcluded ? "❌ Excluded" : "⚠ Not Mentioned"}</strong></td>
+      <td style="color:${isExcluded ? "#dc2626" : "#92400e"};font-size:9pt">${note || (isExcluded ? "Explicitly excluded by consultant" : "Not addressed in proposal")}</td>
+    </tr>`;
+        }
+        html += `</tbody></table>`;
+      }
+      html += `</div>`;
     }
 
     // SECTION 3: FINAL RANKING

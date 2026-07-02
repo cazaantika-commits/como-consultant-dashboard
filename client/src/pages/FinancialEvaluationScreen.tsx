@@ -483,48 +483,7 @@ export default function FinancialEvaluationScreen({ projectId, onBack }: { proje
       </div>
 
       {/* Supervision Baseline Reference */}
-      {report.supervisionBaseline.length > 0 && (
-        <div className="mt-6">
-          <h3 className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
-            <FileBarChart2 className="w-4 h-4 text-indigo-500" />
-            مرجع الـ Baseline — فريق الإشراف ({report.category})
-          </h3>
-          <div className="overflow-x-auto rounded-lg border border-slate-200">
-            <table className="w-full border-collapse text-xs">
-              <thead>
-                <tr className="bg-slate-100">
-                  <th className="border border-slate-200 p-2 text-right">الوظيفة</th>
-                  <th className="border border-slate-200 p-2 text-center">السعر الشهري (AED)</th>
-                  <th className="border border-slate-200 p-2 text-center">نسبة التخصيص</th>
-                  <th className="border border-slate-200 p-2 text-center">التكلفة الشهرية الفعلية</th>
-                  <th className="border border-slate-200 p-2 text-center">التكلفة لـ {report.durationMonths} شهر</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.supervisionBaseline.map((b) => {
-                  const effectiveMonthly = b.monthlyRate * (b.requiredPct / 100);
-                  const totalCost = effectiveMonthly * report.durationMonths;
-                  return (
-                    <tr key={b.roleId} className="hover:bg-slate-50">
-                      <td className="border border-slate-200 p-2 font-medium">{b.label}</td>
-                      <td className="border border-slate-200 p-2 text-center">{b.monthlyRate.toLocaleString()}</td>
-                      <td className="border border-slate-200 p-2 text-center">{b.requiredPct}%</td>
-                      <td className="border border-slate-200 p-2 text-center">{Math.round(effectiveMonthly).toLocaleString()}</td>
-                      <td className="border border-slate-200 p-2 text-center font-semibold">{Math.round(totalCost).toLocaleString()}</td>
-                    </tr>
-                  );
-                })}
-                <tr className="bg-slate-100 font-bold">
-                  <td className="border border-slate-200 p-2" colSpan={4}>المجموع</td>
-                  <td className="border border-slate-200 p-2 text-center">
-                    {Math.round(report.supervisionBaseline.reduce((sum, b) => sum + (b.monthlyRate * (b.requiredPct / 100) * report.durationMonths), 0)).toLocaleString()}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {/* Supervision Baseline Reference - hidden */}
     </div>
   );
 }

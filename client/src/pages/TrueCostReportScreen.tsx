@@ -237,14 +237,14 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500 hover:text-slate-700">
+          <Button variant="ghost" size="sm" onClick={onBack} data-hide-print className="text-slate-500 hover:text-slate-700">
             <ArrowRight className="w-4 h-4 ml-1" /> العودة
           </Button>
           <FileBarChart2 className="w-5 h-5 text-indigo-600" />
           <h2 className="text-lg font-bold text-slate-900">تقرير التكلفة الحقيقية</h2>
           <span className="text-sm text-slate-500">— {report.projectName}</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div data-hide-print className="flex items-center gap-2">
           {isApproved ? (
             <>
               <Badge className="bg-emerald-100 text-emerald-700 border-0 gap-1">
@@ -312,7 +312,7 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
 
       {/* Dynamic Variables Section */}
       {!isApproved && (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 p-4">
+        <div data-hide-print className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 p-4">
           <div className="flex items-center gap-2 mb-3">
             <Save className="w-4 h-4 text-blue-600" />
             <h3 className="text-sm font-semibold text-blue-900">متغيرات ديناميكية — عدّل القيم وستتحدث الأرقام تلقائياً</h3>
@@ -371,7 +371,7 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 text-[10px] text-slate-500 px-2">
+      <div data-hide-print className="flex items-center gap-4 text-[10px] text-slate-500 px-2">
         <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-purple-200 inline-block" /> قيمة معدّلة يدوياً</span>
         <span className="flex items-center gap-1"><Pencil className="w-2.5 h-2.5" /> مرّر على الخلية للتعديل</span>
         {!isApproved && <span className="text-amber-600 font-medium">● التقرير مفتوح للتعديل</span>}
@@ -541,49 +541,7 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
         </div>
       )}
 
-      {/* Supervision Baseline Reference */}
-      {report.supervisionBaseline.length > 0 && (
-        <div className="mt-6">
-          <h3 className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
-            <FileBarChart2 className="w-4 h-4 text-indigo-500" />
-            مرجع الـ Baseline — فريق الإشراف ({report.category})
-          </h3>
-          <div className="overflow-x-auto rounded-lg border border-slate-200">
-            <table className="w-full border-collapse text-xs">
-              <thead>
-                <tr className="bg-slate-100">
-                  <th className="border border-slate-200 p-2 text-right">الوظيفة</th>
-                  <th className="border border-slate-200 p-2 text-center">السعر الشهري (AED)</th>
-                  <th className="border border-slate-200 p-2 text-center">نسبة التخصيص</th>
-                  <th className="border border-slate-200 p-2 text-center">التكلفة الشهرية الفعلية</th>
-                  <th className="border border-slate-200 p-2 text-center">التكلفة لـ {report.durationMonths} شهر</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.supervisionBaseline.map((b) => {
-                  const effectiveMonthly = b.monthlyRate * (b.requiredPct / 100);
-                  const totalCost = effectiveMonthly * report.durationMonths;
-                  return (
-                    <tr key={b.roleId} className="hover:bg-slate-50">
-                      <td className="border border-slate-200 p-2 font-medium">{b.label}</td>
-                      <td className="border border-slate-200 p-2 text-center">{b.monthlyRate.toLocaleString()}</td>
-                      <td className="border border-slate-200 p-2 text-center">{b.requiredPct}%</td>
-                      <td className="border border-slate-200 p-2 text-center">{Math.round(effectiveMonthly).toLocaleString()}</td>
-                      <td className="border border-slate-200 p-2 text-center font-semibold">{Math.round(totalCost).toLocaleString()}</td>
-                    </tr>
-                  );
-                })}
-                <tr className="bg-slate-100 font-bold">
-                  <td className="border border-slate-200 p-2" colSpan={4}>المجموع</td>
-                  <td className="border border-slate-200 p-2 text-center">
-                    {Math.round(report.supervisionBaseline.reduce((sum, b) => sum + (b.monthlyRate * (b.requiredPct / 100) * report.durationMonths), 0)).toLocaleString()}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {/* Supervision Baseline Reference - hidden from print/display */}
     </div>
   );
 }

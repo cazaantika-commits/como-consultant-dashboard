@@ -507,39 +507,7 @@ export default function TrueCostReportPDF({ projectId: propProjectId, onBack }: 
         </div>
 
         {/* Baseline Reference */}
-        {report.supervisionBaseline.length > 0 && (
-          <div className="space-y-3 mt-12 pt-8 border-t border-slate-300">
-            <h3 className="text-xs font-bold text-slate-700 bg-slate-800 text-white px-3 py-2 rounded">SUPERVISION BASELINE — {report.category}</h3>
-            <div className="border border-slate-300 rounded overflow-hidden text-xs">
-              <table className="w-full">
-                <thead className="bg-slate-100">
-                  <tr>
-                    <th className="border-r border-slate-300 p-2 text-right font-semibold text-slate-700">Role</th>
-                    <th className="border-r border-slate-300 p-2 text-center font-semibold text-slate-700">Monthly Rate</th>
-                    <th className="border-r border-slate-300 p-2 text-center font-semibold text-slate-700">Allocation %</th>
-                    <th className="border-r border-slate-300 p-2 text-center font-semibold text-slate-700">Effective Monthly</th>
-                    <th className="p-2 text-right font-semibold text-slate-700">Total Cost</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {report.supervisionBaseline.map((b, i) => {
-                    const effectiveMonthly = b.monthlyRate * (b.requiredPct / 100);
-                    const totalCost = effectiveMonthly * (dynamicDuration || report.durationMonths);
-                    return (
-                      <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                        <td className="border-r border-slate-300 p-2">{b.label}</td>
-                        <td className="border-r border-slate-300 p-2 text-center">AED {formatNum(b.monthlyRate)}</td>
-                        <td className="border-r border-slate-300 p-2 text-center">{b.requiredPct}%</td>
-                        <td className="border-r border-slate-300 p-2 text-center">AED {formatNum(effectiveMonthly)}</td>
-                        <td className="p-2 text-right font-semibold">AED {formatNum(totalCost)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+        {/* Supervision Baseline - hidden */}
       </div>
     </div>
   );

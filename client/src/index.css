@@ -494,3 +494,52 @@
 body[data-readonly="true"] [data-hide-readonly] {
   display: none !important;
 }
+
+/* ============================================================
+   PRINT STYLES — True Cost Report
+   Clean printable layout: hide nav, buttons, controls
+   ============================================================ */
+@media print {
+  /* Hide navigation, sidebar, header controls */
+  nav, header, aside,
+  [data-hide-print],
+  button:not([data-show-print]),
+  .no-print {
+    display: none !important;
+  }
+
+  /* Remove shadows and borders for cleaner print */
+  * {
+    box-shadow: none !important;
+  }
+
+  /* Full width layout */
+  body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Keep table backgrounds for readability */
+  table th, table td {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Avoid page breaks inside table rows */
+  tr {
+    page-break-inside: avoid;
+  }
+
+  /* Remove padding from main container */
+  main, .container {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /* Page setup */
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+}
