@@ -16,6 +16,7 @@ import {
   Unlock,
   FileBarChart2,
   Save,
+  Printer,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -243,6 +244,9 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
           <FileBarChart2 className="w-5 h-5 text-indigo-600" />
           <h2 className="text-lg font-bold text-slate-900">تقرير التكلفة الحقيقية</h2>
           <span className="text-sm text-slate-500">— {report.projectName}</span>
+          <Button variant="outline" size="sm" data-hide-print onClick={() => window.print()} className="mr-auto text-slate-600 hover:text-slate-800 gap-1">
+            <Printer className="w-3.5 h-3.5" /> طباعة
+          </Button>
         </div>
         <div data-hide-print className="flex items-center gap-2">
           {isApproved ? (

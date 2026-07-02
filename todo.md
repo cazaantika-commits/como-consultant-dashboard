@@ -753,3 +753,7 @@
 - [x] Change Arif supervision method from LUMP_SUM to MONTHLY_RATE for proper calculation
 - [x] Fix Kieferle QS-BOQ scope item from Excluded to Included in Shopping Center project (270001)
 - [x] Recalculate Shopping Center project (270001) with corrected data
+- [x] Hide Baseline table from all True Cost Report views (TrueCostReportScreen, TrueCostReportView, TrueCostReportPDF, FinancialEvaluationScreen)
+- [x] Add print button (طباعة) to True Cost Report and Financial Evaluation pages
+- [x] Add @media print styles: A4 landscape, hide controls/buttons/nav, preserve table colors
+- [x] Move contractual section after supervision in exported PDF report

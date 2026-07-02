@@ -15,6 +15,7 @@ import {
   Unlock,
   FileBarChart2,
   Save,
+  Printer,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -177,14 +178,17 @@ export default function TrueCostReportView({ token, projectId, onBack }: { token
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500 hover:text-slate-700">
+          <Button variant="ghost" size="sm" onClick={onBack} data-hide-print className="text-slate-500 hover:text-slate-700">
             <ArrowRight className="w-4 h-4 ml-1" /> العودة
           </Button>
           <FileBarChart2 className="w-5 h-5 text-indigo-600" />
           <h2 className="text-lg font-bold text-slate-900">تقرير التكلفة الحقيقية</h2>
           <span className="text-sm text-slate-500">— {report.projectName}</span>
+          <Button variant="outline" size="sm" data-hide-print onClick={() => window.print()} className="mr-auto text-slate-600 hover:text-slate-800 gap-1">
+            <Printer className="w-3.5 h-3.5" /> طباعة
+          </Button>
         </div>
-        <div className="flex items-center gap-2">
+        <div data-hide-print className="flex items-center gap-2">
           {isApproved ? (
             <>
               <Badge className="bg-emerald-100 text-emerald-700 border-0 gap-1">
