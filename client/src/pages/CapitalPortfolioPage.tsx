@@ -532,9 +532,10 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
   const canEdit = isAuthenticated || isCCOwner; // only Manus-auth or CC owner can edit
 
   // Fetch ALL projects with ALL 3 scenarios
+  // getPortfolioAllScenarios is a publicProcedure that uses OWNER_OPEN_ID internally — no auth required
   const portfolioQuery = trpc.cashFlowSettings.getPortfolioAllScenarios.useQuery(
     undefined,
-    { enabled: isAuthenticated || isCCAuth, staleTime: 60000 }
+    { staleTime: 60000 }
   );
 
   const rawProjects = useMemo(() => portfolioQuery.data || [], [portfolioQuery.data]);
@@ -1002,8 +1003,8 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
     return cumulative;
   }, [groupedRows]);
 
-  // Wait for auth to complete before declaring data empty
-  const isLoading = authLoading || portfolioQuery.isLoading || (!portfolioQuery.isFetched && (isAuthenticated || isCCAuth));
+  // Wait for portfolio query to complete (no auth required — publicProcedure)
+  const isLoading = portfolioQuery.isLoading;
 
   if (isLoading) {
     return (
