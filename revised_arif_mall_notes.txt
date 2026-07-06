@@ -1,0 +1,115 @@
+Source: /home/ubuntu/upload/T4121-13634CSP(Rev.1.0)MajanRetailCenterJul2026.pdf
+Date on proposal: 03 Jul 2026
+Reference: T4121/13634
+Subject: Proposed Shopping Complex at Majan, Dubai, UAE – Design and Construction Supervision Services – Consultancy Services Proposal (Rev. 1.0)
+
+Key revision statements from page 1:
+- Concept Design Stage Services for Architectural and Interior Design shall be performed by other consultants appointed by the Employer.
+- Related fee for concept design has been omitted from Arif & Bintoak proposal.
+- Pre-Concept Design Stage is not merged with Concept Design.
+- All sub-consultants are treated as Provisional Sums; A&B will obtain competitive quotations and present for Employer approval.
+- Approved agency shall be nominated by Employer under A&B lead consultancy services.
+
+Financial proposal summary from pages 4-5:
+- Stage 1 Upon Appointment: AED 1,051,563
+- Stage 2 Concept Design: AED 2,039,063, but concept design for Architecture and Interior Design marked as by others / omitted in detailed breakdown.
+- Stage 3 Schematic Design: AED 3,152,250
+- Stage 4 Detailed Design: AED 3,798,000
+- Stage 5 Tender Documentation / Tender Process: AED 237,375
+- Stage 6 Contract & Construction (IFC) Documentation: AED 237,375
+- Sub Total Design: AED 10,515,625
+- Stage 7 Construction and Site Supervision: AED 10,110,000
+- Stage 8 Services during DLP: Included above
+- Total Fee: AED 20,625,625 excluding VAT
+
+Design detailed breakdown from page 5:
+Base consultancy grand totals:
+- Lead Consultancy / Architect of Record: 525,000
+- Architecture: 1,378,125 (concept design by others)
+- Structural Design: 1,312,500
+- MEP: 1,575,000
+- Infrastructure & Utilities within plot boundary: Included above in MEP
+- Sustainability: Included above in MEP
+- Interior Design (Common Areas): 750,000 (concept design by others)
+- BIM (Arch + ID + MEP + Str): 625,000
+Specialist consultants / provisional sums:
+- Landscape & Water Features: 750,000
+- Fire, Life Safety: 200,000
+- CFD Modelling (Atriums & Car Parking): 200,000
+- Telecom, ICT, AV, IT: 300,000
+- Specialist Lighting: 250,000
+- Third-party structural peer review: 150,000
+- Vertical Transport: 250,000
+- Acoustics: 150,000
+- Façade, BMU Access & Maintenance Specialist: 750,000
+- Traffic Impact Study: 675,000
+- Safety & Security: 200,000
+- Waste Management: 150,000
+- Signage & Wayfinding: 250,000
+- Parking & Vehicular Circulation Review: 75,000
+Design exclusions shown on page 5:
+- Cost Management & Quantity Surveying Services (Excluded by Employer)
+- Physical Model (Excluded by Employer)
+- Lease Outline Drawings / LODs / Tenant Manuals (Excluded by Employer)
+- Sales & Marketing Material (Excluded by Employer)
+- Environmental Impact Assessment (Excluded by Employer)
+- Topographic Survey (Excluded by Employer)
+- Geotechnical Survey & Report (Excluded by Employer)
+- Third-Party Area Measurement & Surveyor (Excluded by Employer)
+- PI Insurance if required (Excluded by Employer)
+- Marine Engineering Services (Excluded N/A)
+- Aeronautical Survey Services (Excluded N/A)
+- Wind Tunnel Services (Excluded N/A)
+- Stack Effect & Pressurization Studies (Excluded N/A)
+
+Supervision summary from page 6:
+- Supervision schedule title: Construction Supervision Phase (4+12+24 = 40 Months)
+- Resource totals / rates shown:
+  - Project Manager: 25.50 months @ 70,000 = 1,785,000
+  - Structural Engineer: 9.00 months @ 50,000 = 450,000
+  - BIM Coordinator: By Contractor
+  - Architect: 15.00 months @ 50,000 = 750,000
+  - ID Architect: 9.00 months @ 50,000 = 450,000
+  - Electrical Engineer: 24.00 months @ 50,000 = 1,200,000
+  - Mechanical Engineer: 24.00 months @ 50,000 = 1,200,000
+  - Civil / Architectural Inspector 1: 30.00 months @ 21,000 = 630,000
+  - Civil / Architectural Inspector 2: 21.00 months @ 21,000 = 441,000
+  - ID Architectural Inspector: 18.00 months @ 21,000 = 378,000
+  - Mechanical Inspector 2: 23.00 months @ 21,000 = 483,000
+  - Electrical Inspector 2: 23.00 months @ 21,000 = 483,000
+  - Safety Engineer: By Contractor
+  - Secretary / Document Controller: 30.00 months @ 12,000 = 360,000
+  - Quantity Surveyor: Head Office Support
+  - Planning Engineer: Head Office Support
+- Grand total supervision fee shown on page 6 main table: AED 8,610,000
+- Additional specialists / provisional sums on page 6:
+  - Façade & BMU: 500,000
+  - Landscape: 500,000
+  - Contingencies: 500,000
+- Added provisional sums total: AED 1,500,000
+- Therefore supervision subtotal = AED 10,110,000
+
+Contract / commercial notes from pages 7-9:
+- Design fee basis: LUMP SUM
+- Supervision fee basis: RE-MEASURED on time charge basis
+- Supervision rates valid until 31 Dec 2027, then subject to mutual negotiation based on market conditions
+- Single shift basis: 48 hours/week, 8 hours/day
+- Fee for management/admin/liaison/coordination of employer-nominated specialist subconsultants: 10% of actual approved specialist fees/costs
+- A&B will not assume design liability for services performed by nominated sub-consultants
+- Direct expenses by employer include authority fees/NOCs, overtime outside normal hours, travel/boarding/lodging, per diem, extra tender documents over 6 sets, marketing/sales manuals/model/animations/models, translation fees, project-specific insurance above proposal limits
+- Additional design services payable on man-month / hourly rates; rates valid until 31 Dec 2027
+- Payment terms: design by stages, supervision monthly in equal instalments
+- Invoices payable within 30 days
+- Performance bond: NOT allowed for in fee proposal
+- Retention: NOT allowed for in fee proposal
+- Delay penalty: NOT allowed for in fee proposal
+- Liability limited to PI insurance coverage only
+- PI Insurance: AED 12,000,000
+- Other insurances noted: Workman’s Compensation as per UAE law, Employer’s Liability AED 2,000,000, Public Liability AED 2,000,000
+- Employer to provide fully serviced site office, PPE/security/maintenance, IT infrastructure, telephone/fax lines, office equipment/plotters/printers/consumables, and site vehicles.
+
+Important interpretation for update comparison:
+- Revised proposal is explicitly based on employer appointing a global/other concept consultant for architecture and interior concept design.
+- Design subtotal is reduced/reshaped accordingly.
+- Supervision changed from previous monthly staffing-based structure to a hybrid: re-measured/time charge basis with a quoted subtotal and added specialist provisional sums.
+- Specialist consultants now treated as employer-approved provisional sums rather than fully integrated consultant scope.
