@@ -75,7 +75,7 @@ export default function PortfolioAllScenariosPage({ onBack }: Props) {
 
   const portfolioQuery = trpc.cashFlowSettings.getPortfolioAllScenarios.useQuery(
     undefined,
-    { enabled: isAuthenticated, staleTime: 60000 }
+    { staleTime: 60000 }
   );
 
   const projects = useMemo(() => portfolioQuery.data || [], [portfolioQuery.data]);

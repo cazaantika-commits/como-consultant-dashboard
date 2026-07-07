@@ -174,7 +174,7 @@ export default function CapitalSchedulingPage({ onBack }: Props) {
   const { isAuthenticated } = useAuth();
   const scheduleQuery = trpc.cashFlowSettings.getPortfolioCapitalData.useQuery(
     undefined,
-    { enabled: isAuthenticated, staleTime: 60000 }
+    { staleTime: 60000 }
   );
 
   const rawData = useMemo(() => scheduleQuery.data || [], [scheduleQuery.data]);
