@@ -1175,13 +1175,22 @@ export const cashFlowSettingsRouter = router({
    *   - phase durations & startDate
    */
   getPortfolioCapitalData: publicProcedure.query(async ({ ctx }) => {
-    if (!ctx.user) return [];
     const db = await getDb();
     if (!db) return [];
 
-    // Fetch all user projects
-    const allProjects = await db.select().from(projects)
-      .where(eq(projects.userId, ctx.user.id));
+    // Single-owner dashboard: resolve userId from OWNER_OPEN_ID or ctx.user, fallback to ALL projects
+    let allProjects;
+    let userId: number | null = null;
+    if (ENV.ownerOpenId) {
+      const ownerRows = await db.select().from(users).where(eq(users.openId, ENV.ownerOpenId)).limit(1);
+      if (ownerRows.length > 0) userId = ownerRows[0].id;
+    }
+    if (!userId && ctx.user?.id) userId = ctx.user.id;
+    if (userId) {
+      allProjects = await db.select().from(projects).where(eq(projects.userId, userId));
+    } else {
+      allProjects = await db.select().from(projects);
+    }
     if (allProjects.length === 0) return [];
 
     const today = new Date();
