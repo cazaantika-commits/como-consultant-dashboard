@@ -1178,19 +1178,8 @@ export const cashFlowSettingsRouter = router({
     const db = await getDb();
     if (!db) return [];
 
-    // Single-owner dashboard: resolve userId from OWNER_OPEN_ID or ctx.user, fallback to ALL projects
-    let allProjects;
-    let userId: number | null = null;
-    if (ENV.ownerOpenId) {
-      const ownerRows = await db.select().from(users).where(eq(users.openId, ENV.ownerOpenId)).limit(1);
-      if (ownerRows.length > 0) userId = ownerRows[0].id;
-    }
-    if (!userId && ctx.user?.id) userId = ctx.user.id;
-    if (userId) {
-      allProjects = await db.select().from(projects).where(eq(projects.userId, userId));
-    } else {
-      allProjects = await db.select().from(projects);
-    }
+    // Single-owner dashboard: ALWAYS fetch ALL projects without any userId filter.
+    const allProjects = await db.select().from(projects);
     if (allProjects.length === 0) return [];
 
     const today = new Date();
@@ -1789,23 +1778,8 @@ export const cashFlowSettingsRouter = router({
     getPortfolioAllScenarios: publicProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) return [];
-    // Always show ALL projects — this is a single-owner dashboard.
-    // We do NOT filter by userId to avoid production env var mismatch issues.
-    // If OWNER_OPEN_ID is set and resolves to a user, use that userId as a filter.
-    // Otherwise, fall back to fetching ALL projects (safe for single-owner setup).
-    let allProjects;
-    let userId: number | null = null;
-    if (ENV.ownerOpenId) {
-      const ownerRows = await db.select().from(users).where(eq(users.openId, ENV.ownerOpenId)).limit(1);
-      if (ownerRows.length > 0) userId = ownerRows[0].id;
-    }
-    if (!userId && ctx.user?.id) userId = ctx.user.id;
-    if (userId) {
-      allProjects = await db.select().from(projects).where(eq(projects.userId, userId));
-    } else {
-      // Fallback: fetch all projects (single-owner dashboard, no multi-tenant risk)
-      allProjects = await db.select().from(projects);
-    }
+    // Single-owner dashboard: ALWAYS fetch ALL projects without any userId filter.
+    const allProjects = await db.select().from(projects);
     if (allProjects.length === 0) return [];
 
     const scenarioList: Scenario[] = ["offplan_escrow", "offplan_construction", "no_offplan"];

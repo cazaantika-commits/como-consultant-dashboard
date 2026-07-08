@@ -12,10 +12,10 @@
   "experiments": null,
   "git_remote": {
     "repo_url": "s3://vida-prod-gitrepo/webdev-git/310519663200809965/Q366eAYG4Q7iaM8VuAmmFX",
-    "access_key_id": "ASIAZV3A2ECZFGX2PBLV",
-    "secret_access_key": "XAk53Ej1fMAH3Cd+LE+pvRNPGKnaBQhNc9nzJTms",
-    "session_token": "IQoJb3JpZ2luX2VjEIz//////////wEaCXVzLWVhc3QtMSJHMEUCIBkGo1FE/bbX2n8R+t1d/5DDeSfhE6BposS7AK+ZhW48AiEA/8/HOOgBNSFTq6MaxW9g/boLzH3QPs3bw+5P4b9btbUq9gMIVRAEGgw2NjUzODYwOTg4NjYiDF20sN7duVRbkOk7DyrTA4+cqu5FGGdvNknUPAPPbtYAX4AZ516IOn0BLsHt1yX+xyYxbxQcUxo344DwtmRiY/lT/XArsIETH1FZTIhAq+QdZH6Vmzc0RNYTDjPPcA8nveSbMWzpHXD88n6dKy5Twve6o0vbgCY+9uhfzWGYEgmjQJwwD9H11L4QPBLAppnjuDclQXs2XWFcsvy/xcHpciT/lOy8rONEOSurBEWVf27ceYK4gt1HUdsNBWmqqoxRPuEqyC2oZNNtLt8jO2SB33KMpQYfBiCW5XMCoEZ5Vl7uoofQd5+cFC4s5rxS9cI8UC0YwqFiueQKKmLkxpjeRZOdK4RXpciAS3Ehi1MLdv8hXHwVTRH28/huaqRjE1Yz71jzVpQDBW4x1Fbjw6ybQDAXS8klM+4mJWDUMG/QlDWs8RX41zFzap69QY8H/WvGD61T4loZlEmFrbyCDmUfyQe00+ipBp3drdr4IMgOw/qEEPTXFuKBETrNIW8izlIyTbKe32t4tjLQkQl8/fxA2SVyhE7o0ZHBXo5evOKNX9AKX/MYyF2cT6yrmW3MhqAXXVSWaGyBC0lkVTORNfWx6mB/JvTdJy7Oa1bwvj3MdyT+63KLrL7MUuh1qwPzz+K2lVaDMKmhrtIGOp0BOqbImUcEz+x+AtjF4dVyLTpYqIz5pNoxUx6NtajzqDdT08xZ7AmkwgKeVGhg3rojnsnJL12BQyP00x52ghYEHc4ZCe3dkNxwV8pkaPyva9yURYFccBjPwrx0DWmbptjExrB/YAiP/+8IcHR1DqU9gaOj3fRTBdEeuwJ8Uv4oJilq59j+XRnHJhZozcARpneUOg0/5NiWcMIn+IdrLg==",
-    "expiration": "2026-07-06T23:25:29.000Z",
+    "access_key_id": "ASIAZV3A2ECZCGQB43UZ",
+    "secret_access_key": "1997CYILPJS9HtcNFwlxYeUvQrl2Nwhl3ipqPFdH",
+    "session_token": "IQoJb3JpZ2luX2VjELf//////////wEaCXVzLWVhc3QtMSJGMEQCICJNr4PSpM65O2qTGqp0WXp2AtAP5rNoDzSipgkOnSyoAiAbgXMlgUdCeDEGHPFrizn1TZdT0AefblFf7/8CsF0yZSr/AwiA//////////8BEAQaDDY2NTM4NjA5ODg2NiIMkNaaAH5d1x0MwaeqKtMDNRWvqqDHG+IlOvV/eQMpYfXuH+v5eyYT7rayZVOm6wrlTvRmyY4Ly87T+sWGcxlWJw+0iyJGoqm60QDAdK+CZDF3RSNkLGJ1bnTR4BNZ3eoZQZ/NBLflPtxoja7QzapMBu4nK+Vd2B36S5Om2kS7TVlPb6IdLsc8Lk95TQbGIcwZ3eQmBnW5fKa+eR2Htatm+sQsDLOOyQX1K/we47b0hUbz4gOL8q70pjDW0dfei7sbW1nnte+uFw94CDQATnEwccF+xRvz7NqgrP2SC2lUnwPmmOiR+w8nminvKRdZsgvMmaRmztEeNv0zvoAcmPQUq+LStT8QKzuyGP1OmSF0sG5cgkz2RXiRhyQvz7KK+vplQunEwOcqYEl7AFQEoWKe7pegAgrotGJksPZaJZI0XqvmiWsWxjzTeeJyUtvrW6rsZNBPOS3PidjJ3E7+knQHSMmKjVpWTvqkoMDYsyvuXZfXzGAepY1HZcWIJ+swemyzDL5K+J16eAf1k+E/9LzcC/PfN53LroyMVS3tBjCKrbFWOkPG98EeITWtSEyNrJoNbZeWtciUntg7tv38JCp6gKJstAwsNeV/KYZhkWVzSjd/8I9Y+x6ZcgNVp0rkj16vPJ4wsOu30gY6ngFpmaOj9hSYpl1sx6hANoU9dP46fvXBp2dyELmhpmkxu/FG7Xlc0WebXD44UWh/phRbxkSNu3/U3jHgmEnfV2ZB692SyazD9tgo6lwPo49cBisR3HyN/aPyarntYvYp9jjqM+h6ipJqJiaB2O+QRBscsiBbFK4pWKVYVlaZNp9xMHyjMj+cQEyAv7oY76Cidzjv5KhvlECM3BolIuwxfA==",
+    "expiration": "2026-07-08T19:01:04.000Z",
     "backend": "GIT_BACKEND_S3"
   },
   "name": "como-consultant-dashboard",
