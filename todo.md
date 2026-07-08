@@ -764,3 +764,11 @@
 - [x] التحقق أن التخطيط المالي والمحفظة الديناميكية يعرضان نفس الأرقام لمشروع مجان
 - [x] Fix 'خطة رأس مال المشروع' page: getSettings now uses amountOverride + CapitalScheduleTablePage filters inactive items
 - [x] Ensure all 3 Financial Planning sub-pages show consistent data for Majan Mall (all use project_cash_flow_settings)
+
+## إصلاح المحفظة الديناميكية — تجميع صحيح من تقارير التخطيط المالي
+- [x] Remove remapping from getPortfolioCapitalData — use raw DB months (same as getSettings/client)
+- [x] Remove remapping from getPortfolioAllScenarios — use raw DB months
+- [x] Remove remapping from getProjectMonthlyReport — use raw DB months
+- [x] Fix client-side distributeFromSettings to handle format 1 (simple percentage array)
+- [x] Verify server and client produce identical amounts (verified with test scripts)
+- [x] Portfolio monthly amounts now exactly match each project's Financial Planning report

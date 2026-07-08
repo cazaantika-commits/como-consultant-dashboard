@@ -68,20 +68,39 @@ function distributeFromSettings(
       const dist: Record<number, number> = {};
       // Support both { month: pct } and [{ month, pct }] formats
       if (Array.isArray(parsed)) {
-        let allocated = 0;
-        const entries = parsed as Array<{ month: number; amount?: number; pct?: number }>;
-        for (let i = 0; i < entries.length; i++) {
-          const entry = entries[i];
-          const isLast = i === entries.length - 1;
-          const val = entry.amount !== undefined
-            ? entry.amount
-            : (entry.pct !== undefined ? amount * entry.pct / 100 : 0);
-          if (isLast) {
-            // Assign remainder to last entry to avoid rounding drift
-            dist[entry.month] = (dist[entry.month] || 0) + (amount - allocated);
-          } else {
-            dist[entry.month] = (dist[entry.month] || 0) + val;
-            allocated += val;
+        // Detect format: if first element is a plain number, it's format 1 (percentage array)
+        if (parsed.length > 0 && (typeof parsed[0] === "number" || (typeof parsed[0] === "string" && !isNaN(Number(parsed[0]))))) {
+          // Format 1: simple percentage array — distribute relative to startMonth
+          const baseMonth = item.startMonth || 1;
+          let allocated = 0;
+          for (let i = 0; i < parsed.length; i++) {
+            const pct = parseFloat(String(parsed[i])) || 0;
+            const m = baseMonth + i;
+            const isLast = i === parsed.length - 1;
+            if (isLast) {
+              dist[m] = (dist[m] || 0) + (amount - allocated);
+            } else {
+              const val = amount * pct / 100;
+              dist[m] = (dist[m] || 0) + val;
+              allocated += val;
+            }
+          }
+        } else {
+          // Format 2: object array [{month, pct/amount}]
+          let allocated = 0;
+          const entries = parsed as Array<{ month: number; amount?: number; pct?: number }>;
+          for (let i = 0; i < entries.length; i++) {
+            const entry = entries[i];
+            const isLast = i === entries.length - 1;
+            const val = entry.amount !== undefined
+              ? entry.amount
+              : (entry.pct !== undefined ? amount * entry.pct / 100 : 0);
+            if (isLast) {
+              dist[entry.month] = (dist[entry.month] || 0) + (amount - allocated);
+            } else {
+              dist[entry.month] = (dist[entry.month] || 0) + val;
+              allocated += val;
+            }
           }
         }
       } else {

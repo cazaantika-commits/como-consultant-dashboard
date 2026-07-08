@@ -1272,41 +1272,15 @@ export const cashFlowSettingsRouter = router({
           const defForKey = getDefaultItemDefs(scenario).find(d => d.itemKey === s.itemKey);
           const itemSection = (s.section || defForKey?.section || "construction") as PortfolioItem["section"];
 
-          // CRITICAL FIX: Remap start/end months to actual phase ranges.
-          // The DB may have stale month values from an older phase calculation.
-          // We recalculate based on the item's section → phase mapping.
-          const phaseType = sectionToPhaseType(itemSection);
-          const phaseRange = getPhaseRange(phaseType, phases);
-
-          let effectiveStartMonth = s.startMonth;
-          let effectiveEndMonth = s.endMonth;
-          let effectiveLumpSumMonth = s.lumpSumMonth;
-
-          if (phaseType !== "land") {
-            // For non-land items, remap months relative to the actual phase
-            if (s.distributionMethod === "lump_sum" && s.lumpSumMonth != null) {
-              // Lump sum: place at the relative position within the phase
-              // If saved lumpSumMonth was at the start of the old phase, put it at start of new phase
-              const savedPhaseStart = s.startMonth || s.lumpSumMonth;
-              const relativeOffset = s.lumpSumMonth - savedPhaseStart;
-              effectiveLumpSumMonth = phaseRange.start + relativeOffset;
-            } else if (s.distributionMethod === "equal_spread") {
-              // Equal spread: use the full phase range
-              effectiveStartMonth = phaseRange.start;
-              effectiveEndMonth = phaseRange.end;
-            } else if (s.distributionMethod === "custom" && s.customJson) {
-              // Custom: remap the base start month to the phase start
-              effectiveStartMonth = phaseRange.start;
-              effectiveEndMonth = phaseRange.end;
-            }
-          }
-
+          // Use RAW DB months — no remapping.
+          // The user saves months in settings → those exact months appear in reports.
+          // This ensures portfolio matches the Financial Planning view exactly.
           const monthly = distributeAmount(
             amount,
             s.distributionMethod as DistributionMethod,
-            effectiveLumpSumMonth,
-            effectiveStartMonth,
-            effectiveEndMonth,
+            s.lumpSumMonth,
+            s.startMonth,
+            s.endMonth,
             s.customJson,
             totalMonths,
           );
@@ -1886,27 +1860,9 @@ export const cashFlowSettingsRouter = router({
             const amount = s.amountOverride ? parseFloat(s.amountOverride) : computeItemAmountByKey(s.itemKey, costs, sc);
             const defForKey = getDefaultItemDefs(sc).find(d => d.itemKey === s.itemKey);
             const section = s.section || defForKey?.section || "construction";
-            // CRITICAL FIX: Remap saved months to actual phase ranges (same as getPortfolioCapitalData)
-            // This ensures construction amounts start at month 1 of construction phase, not stale saved month
-            const phaseType = sectionToPhaseTypeLocal(section);
-            const phaseRange = getPhaseRange(phaseType, phases);
-            let effectiveLumpSumMonth = s.lumpSumMonth;
-            let effectiveStartMonth = s.startMonth;
-            let effectiveEndMonth = s.endMonth;
-            if (phaseType !== "land") {
-              if (s.distributionMethod === "lump_sum" && s.lumpSumMonth != null) {
-                const savedPhaseStart = s.startMonth || s.lumpSumMonth;
-                const relativeOffset = s.lumpSumMonth - savedPhaseStart;
-                effectiveLumpSumMonth = phaseRange.start + relativeOffset;
-              } else if (s.distributionMethod === "equal_spread") {
-                effectiveStartMonth = phaseRange.start;
-                effectiveEndMonth = phaseRange.end;
-              } else if (s.distributionMethod === "custom" && s.customJson) {
-                effectiveStartMonth = phaseRange.start;
-                effectiveEndMonth = phaseRange.end;
-              }
-            }
-            const monthly = distributeAmount(amount, s.distributionMethod as DistributionMethod, effectiveLumpSumMonth, effectiveStartMonth, effectiveEndMonth, s.customJson, totalMonths);
+            // Use RAW DB months — no remapping.
+            // The user saves months in settings → those exact months appear in reports.
+            const monthly = distributeAmount(amount, s.distributionMethod as DistributionMethod, s.lumpSumMonth, s.startMonth, s.endMonth, s.customJson, totalMonths);
             itemsMap.set(s.itemKey, { amount, fundingSource: s.fundingSource, section, monthlyAmounts: monthly });
           }
           // Missing defaults (same as getCostSettingsComparison)
@@ -2112,33 +2068,15 @@ export const cashFlowSettingsRouter = router({
           const defForKey = getDefaultItemDefs(scenario).find(d => d.itemKey === s.itemKey);
           const itemSection = s.section || defForKey?.section || "construction";
 
-          // Remap months to actual phase ranges
-          const phaseType = sectionToPhaseType(itemSection);
-          const phaseRange = getPhaseRange(phaseType, phases);
-          let effectiveStartMonth = s.startMonth;
-          let effectiveEndMonth = s.endMonth;
-          let effectiveLumpSumMonth = s.lumpSumMonth;
-
-          if (phaseType !== "land") {
-            if (s.distributionMethod === "lump_sum" && s.lumpSumMonth != null) {
-              const savedPhaseStart = s.startMonth || s.lumpSumMonth;
-              const relativeOffset = s.lumpSumMonth - savedPhaseStart;
-              effectiveLumpSumMonth = phaseRange.start + relativeOffset;
-            } else if (s.distributionMethod === "equal_spread") {
-              effectiveStartMonth = phaseRange.start;
-              effectiveEndMonth = phaseRange.end;
-            } else if (s.distributionMethod === "custom" && s.customJson) {
-              effectiveStartMonth = phaseRange.start;
-              effectiveEndMonth = phaseRange.end;
-            }
-          }
-
+                    // Use RAW DB months — no remapping.
+          // The user saves months in settings → those exact months appear in reports.
+          // This ensures all views (Financial Planning, Portfolio, Monthly Report) show identical numbers.
           const monthly = distributeAmount(
             s.isActive ? amount : 0,
             s.distributionMethod as DistributionMethod,
-            effectiveLumpSumMonth,
-            effectiveStartMonth,
-            effectiveEndMonth,
+            s.lumpSumMonth,
+            s.startMonth,
+            s.endMonth,
             s.customJson,
             totalMonths,
           );
