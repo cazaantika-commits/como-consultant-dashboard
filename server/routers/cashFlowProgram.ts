@@ -1070,7 +1070,7 @@ export const cashFlowProgramRouter = router({
       const officialBodiesFees = ccf ? (ccf.authoritiesFee || 0) : pf(proj.officialBodiesFees);
       const designFeePct = ccf ? pf(ccf.designFeePct) || 2 : pf(proj.designFeePct) || 2;
       const supervisionFeePct = ccf ? pf(ccf.supervisionFeePct) || 2 : pf(proj.supervisionFeePct) || 2;
-      const separationFeePerSqft = ccf ? (ccf.separationFeePerM2 || 40) : pf(proj.separationFeePerM2) || 40;
+      const separationFeePerSqft = ccf ? (ccf.separationFeePerM2 || 40) : pf(proj.separationFeePerSqft) || 40;
       const totalGfaSqft = gfaResSqft + gfaRetSqft + gfaOffSqft;
       const salesCommissionPct = ccf ? pf(ccf.agentCommissionSalePct) || 5 : pf(proj.salesCommissionPct) || 5;
       const marketingPct = ccf ? pf(ccf.marketingPct) || 2 : pf(proj.marketingPct) || 2;
@@ -1640,7 +1640,7 @@ export const cashFlowProgramRouter = router({
         });
       }
       // Separation fee
-      const sepFeePerSqft = ccf ? (ccf.separationFeePerM2 || 40) : pf(proj.separationFeePerM2) || 40;
+      const sepFeePerSqft = ccf ? (ccf.separationFeePerM2 || 40) : pf(proj.separationFeePerSqft) || 40;
       const totalGfaSqftB = pf(proj.gfaResidentialSqft) + pf(proj.gfaRetailSqft) + pf(proj.gfaOfficesSqft);
       const separationFee = totalGfaSqftB * sepFeePerSqft;
       if (separationFee > 0) {
@@ -2001,7 +2001,7 @@ export const cashFlowProgramRouter = router({
       const agentCommissionLandPct = pf(proj.agentCommissionLandPct);
       const designFeePct = pf(proj.designFeePct) || 2;
       const supervisionFeePct = pf(proj.supervisionFeePct) || 2;
-      const separationFeePerSqft2 = pf(proj.separationFeePerM2) || 40;
+      const separationFeePerSqft2 = pf(proj.separationFeePerSqft) || 40;
       const totalGfaSqftC = gfaResSqft + gfaRetSqft + gfaOffSqft;
       const salesCommissionPct = pf(proj.salesCommissionPct) || 5;
       const marketingPct = pf(proj.marketingPct) || 2;
@@ -2552,7 +2552,7 @@ export const cashFlowProgramRouter = router({
           });
         }
         // Separation fee
-        const sepFeePerM2D = ccf ? (ccf.separationFeePerM2 || 40) : pf(proj.separationFeePerM2) || 40;
+        const sepFeePerM2D = ccf ? (ccf.separationFeePerM2 || 40) : pf(proj.separationFeePerSqft) || 40;
         const totalGfaSqftD = pf(proj.gfaResidentialSqft) + pf(proj.gfaRetailSqft) + pf(proj.gfaOfficesSqft);
         const separationFee = totalGfaSqftD * sepFeePerM2D;
         if (separationFee > 0) {

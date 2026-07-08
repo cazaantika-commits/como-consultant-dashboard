@@ -121,7 +121,7 @@ export async function updateProject(projectId: number, userId: number, data: Par
   // Convert percentage and numeric fields from string to number
   const percentageFields = [
     'agentCommissionLandPct', 'designFeePct', 'supervisionFeePct', 
-    'separationFeePerM2', 'salesCommissionPct', 'marketingPct',
+    'separationFeePerSqft', 'salesCommissionPct', 'marketingPct',
     'developerFeePhase1Pct', 'developerFeePhase2Pct',
     'saleableResidentialPct', 'saleableRetailPct', 'saleableOfficesPct'
   ];

@@ -95,7 +95,7 @@ describe('calculateProjectCosts', () => {
     reraInspectionReportFee: '1000',
     designFeePct: '2',
     supervisionFeePct: '2',
-    separationFeePerM2: '40',
+    separationFeePerSqft: '40',
     salesCommissionPct: '5',
     marketingPct: '2',
     developerFeePct: '5',

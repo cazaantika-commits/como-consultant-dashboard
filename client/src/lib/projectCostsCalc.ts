@@ -51,7 +51,7 @@ export function calculateProjectCosts(
   const reraInspectionReportFee = parseFloat(p.reraInspectionReportFee || "0");
   const designFeePct = parseFloat(p.designFeePct ?? "2");
   const supervisionFeePct = parseFloat(p.supervisionFeePct ?? "2");
-  const separationFeePerM2 = parseFloat(p.separationFeePerM2 ?? "40");
+  const separationFeePerM2 = parseFloat(p.separationFeePerSqft ?? "40");
   const salesCommissionPct = parseFloat(p.salesCommissionPct ?? "5");
   const marketingPct = parseFloat(p.marketingPct ?? "2");
   const developerFeePct = parseFloat(p.developerFeePct ?? "5");

@@ -195,7 +195,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
     "governingLaw", "disputeResolution",
     "landPrice", "agentCommissionLandPct",
     "estimatedConstructionPricePerSqft", "manualBuaSqft",
-    "designFeePct", "supervisionFeePct", "separationFeePerM2",
+    "designFeePct", "supervisionFeePct", "separationFeePerSqft",
     "salesCommissionPct", "marketingPct", "developerFeePct",
     "soilTestFee", "topographicSurveyFee", "officialBodiesFees",
     "reraUnitRegFee", "reraProjectRegFee", "developerNocFee", "escrowAccountFee",
@@ -226,7 +226,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
     landPrice: "سعر الأرض", agentCommissionLandPct: "عمولة وسيط الأرض",
     estimatedConstructionPricePerSqft: "سعر القدم² التقديري", manualBuaSqft: "مساحة البناء (إدخال يدوي)",
     designFeePct: "أتعاب الاستشاري — التصاميم%", supervisionFeePct: "أتعاب الاستشاري — الإشراف%",
-    separationFeePerM2: "رسوم الفرز/قدم²", salesCommissionPct: "عمولة وسيط البيع%",
+    separationFeePerSqft: "رسوم الفرز/قدم²", salesCommissionPct: "عمولة وسيط البيع%",
     marketingPct: "التسويق%", developerFeePct: "أتعاب المطور%",
     soilTestFee: "فحص التربة", topographicSurveyFee: "الرفع المساحي",
     officialBodiesFees: "رسوم الجهات", reraUnitRegFee: "تسجيل ريرا وحدات",
@@ -337,7 +337,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
         surveyorFees: p.surveyorFees || "", reraAuditReportFee: p.reraAuditReportFee || "", reraInspectionReportFee: p.reraInspectionReportFee || "",
         designFeePct: p.designFeePct ? String(p.designFeePct) : "2",
         supervisionFeePct: p.supervisionFeePct ? String(p.supervisionFeePct) : "2",
-        separationFeePerM2: p.separationFeePerM2 ? String(p.separationFeePerM2) : "40",
+        separationFeePerSqft: p.separationFeePerSqft ? String(p.separationFeePerSqft) : "40",
         salesCommissionPct: p.salesCommissionPct ? String(p.salesCommissionPct) : "5",
         marketingPct: p.marketingPct ? String(p.marketingPct) : "2",
         developerFeePct: p.developerFeePct ? String(p.developerFeePct) : "5",
@@ -380,13 +380,13 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
   const constructionPricePerSqft = n("estimatedConstructionPricePerSqft", 350);
   const designFeePct = n("designFeePct", 2);
   const supervisionFeePct = n("supervisionFeePct", 2);
-  const separationFeePerM2 = n("separationFeePerM2", 40);
+  const separationFeePerSqft = n("separationFeePerSqft", 40);
 
   const agentCommLand = landPrice * (agentCommLandPct / 100);
   const constructionCost = manualBuaSqft * constructionPricePerSqft;
   const designFee = constructionCost * (designFeePct / 100);
   const supervisionFee = constructionCost * (supervisionFeePct / 100);
-  const separationFee = gfaSqft * separationFeePerM2;
+  const separationFee = gfaSqft * separationFeePerSqft;
   const fixedFees =
     n("soilTestFee") + n("topographicSurveyFee") + n("officialBodiesFees") +
     n("reraUnitRegFee") + n("reraProjectRegFee") + n("developerNocFee") +
@@ -584,7 +584,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
                 <div className="grid grid-cols-3 gap-1.5">
                   <Field label="تصميم%" value={formData.designFeePct} onChange={v => updateField("designFeePct", v)} type="number" suffix="%" source="manual" />
                   <Field label="إشراف%" value={formData.supervisionFeePct} onChange={v => updateField("supervisionFeePct", v)} type="number" suffix="%" source="manual" />
-                  <Field label="فرز/قدم²" value={formData.separationFeePerM2} onChange={v => updateField("separationFeePerM2", v)} type="number" suffix="AED" source="manual" />
+                  <Field label="فرز/قدم²" value={formData.separationFeePerSqft} onChange={v => updateField("separationFeePerSqft", v)} type="number" suffix="AED" source="manual" />
                 </div>
               </Section>
 
@@ -844,7 +844,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
                   <CalcRow label="تكلفة البناء" formula={`${manualBuaSqft.toLocaleString("en-US")} × ${constructionPricePerSqft}`} value={constructionCost} />
                   <CalcRow label="تصميم" formula={`${designFeePct}% × بناء`} value={designFee} />
                   <CalcRow label="إشراف" formula={`${supervisionFeePct}% × بناء`} value={supervisionFee} />
-                  <CalcRow label="فرز" formula={`${separationFeePerM2} × ${gfaSqft.toLocaleString("en-US")}`} value={separationFee} />
+                  <CalcRow label="فرز" formula={`${separationFeePerSqft} × ${gfaSqft.toLocaleString("en-US")}`} value={separationFee} />
                   <CalcRow label="رسوم ثابتة" formula="مجموع الرسوم" value={fixedFees} />
                   <Separator className="my-0.5" />
                   <CalcRow label="إجمالي التكاليف المعروفة" formula="أرض+بناء+تصميم+إشراف+فرز+رسوم" value={totalKnownCosts} highlight />

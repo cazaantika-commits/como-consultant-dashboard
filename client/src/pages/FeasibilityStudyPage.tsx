@@ -177,7 +177,7 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
         createMutation.mutate({
           projectName: project.name,
           projectId: selectedProjectId,
-          separationFeePerM2: project.separationFeePerM2 ? parseFloat(project.separationFeePerM2) : 40,
+          separationFeePerM2: project.separationFeePerSqft ? parseFloat(project.separationFeePerSqft) : 40,
           landPrice: project.landPrice ? parseFloat(project.landPrice) : null,
           agentCommissionLandPct: project.agentCommissionLandPct ? parseFloat(project.agentCommissionLandPct) : null,
           estimatedBua: project.manualBuaSqft ? parseFloat(project.manualBuaSqft) : null,

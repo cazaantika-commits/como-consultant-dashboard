@@ -29,7 +29,7 @@ function calculateCosts(project: Record<string, any>, feasForm: Record<string, a
   const reraInspectionReportFee = parseFloat(project.reraInspectionReportFee || "0");
   const designFeePct = parseFloat(project.designFeePct || "0");
   const supervisionFeePct = parseFloat(project.supervisionFeePct || "0");
-  const separationFeePerM2 = parseFloat(project.separationFeePerM2 || "0");
+  const separationFeePerM2 = parseFloat(project.separationFeePerSqft || "0");
   const salesCommissionPct = parseFloat(project.salesCommissionPct || "0");
   const marketingPct = parseFloat(project.marketingPct || "0");
   const developerFeePct = parseFloat(project.developerFeePct || "0");
@@ -91,7 +91,7 @@ describe("CostsCashFlowTab Read-Only Calculations", () => {
     officialBodiesFees: "50000",
     designFeePct: "3",
     supervisionFeePct: "2",
-    separationFeePerM2: "40",
+    separationFeePerSqft: "40",
     salesCommissionPct: "5",
     marketingPct: "2",
     developerFeePct: "5",
