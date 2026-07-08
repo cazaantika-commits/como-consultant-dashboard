@@ -762,3 +762,5 @@
 - [x] إضافة procedure جديد getProjectMonthlyReport يقرأ من project_cash_flow_settings (نفس مصدر المحفظة)
 - [x] تعديل EscrowCashFlowPage لاستخدام getProjectMonthlyReport بدلاً من الحساب المحلي
 - [x] التحقق أن التخطيط المالي والمحفظة الديناميكية يعرضان نفس الأرقام لمشروع مجان
+- [x] Fix 'خطة رأس مال المشروع' page: getSettings now uses amountOverride + CapitalScheduleTablePage filters inactive items
+- [x] Ensure all 3 Financial Planning sub-pages show consistent data for Majan Mall (all use project_cash_flow_settings)

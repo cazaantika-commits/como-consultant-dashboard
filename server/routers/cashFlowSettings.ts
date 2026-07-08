@@ -526,7 +526,9 @@ export const cashFlowSettingsRouter = router({
               // Fall back to default only if DB has no value.
               fundingSource: (s.fundingSource ?? defaultFundingSourceByKey[s.itemKey]) as "investor" | "escrow",
               sortOrder: defaultSortOrderByKey[s.itemKey] ?? s.sortOrder,
-              computedAmount: costs ? computeItemAmountByKey(s.itemKey, costs, input.scenario) : 0,
+              computedAmount: s.amountOverride
+                ? parseFloat(s.amountOverride)
+                : (costs ? computeItemAmountByKey(s.itemKey, costs, input.scenario) : 0),
             })),
           ...missingDefaults,
         ].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
