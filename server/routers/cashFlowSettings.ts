@@ -2028,6 +2028,219 @@ export const cashFlowSettingsRouter = router({
 
     return results;
   }),
+
+  /**
+   * getProjectMonthlyReport — returns the monthly cash flow report for a single project.
+   * This is the SINGLE SOURCE OF TRUTH used by both:
+   *   - تقارير التخطيط المالي (EscrowCashFlowPage)
+   *   - المحفظة الديناميكية (getPortfolioCapitalData)
+   *
+   * Reads from project_cash_flow_settings if available, otherwise uses defaults.
+   * Respects the project's financingScenario to exclude irrelevant items.
+   */
+  getProjectMonthlyReport: publicProcedure
+    .input(z.object({ projectId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      const projectRows = await db.select().from(projects).where(eq(projects.id, input.projectId));
+      const project = projectRows[0];
+      if (!project) throw new Error("Project not found");
+
+      const moRows = await db.select().from(marketOverview).where(eq(marketOverview.projectId, input.projectId));
+      const cpRows = await db.select().from(competitionPricing).where(eq(competitionPricing.projectId, input.projectId));
+      const mo = moRows[0] || null;
+      const cp = cpRows[0] || null;
+
+      const costs = calculateProjectCosts(project, mo, cp);
+      if (!costs) throw new Error("Cannot calculate project costs");
+
+      const scenario = (project.financingScenario || "offplan_escrow") as Scenario;
+
+      // Phase timeline
+      const legacyDurations = {
+        preCon: project.preConMonths || 6,
+        construction: project.constructionMonths || 16,
+        handover: project.handoverMonths || 2,
+      };
+      const durations = legacyToNewDurations(legacyDurations);
+      const phases = calculatePhases(durations, 0, scenario);
+      const totalMonths = getTotalMonths(durations);
+      const startDateStr = project.startDate || "2026-04";
+      const monthLabels = generateMonthLabels(startDateStr, totalMonths);
+
+      // Get saved settings or use defaults
+      const savedSettings = await db.select().from(projectCashFlowSettings).where(
+        and(
+          eq(projectCashFlowSettings.projectId, project.id),
+          eq(projectCashFlowSettings.scenario, scenario),
+        )
+      );
+
+      // Build items with monthly distributions
+      interface ReportItem {
+        itemKey: string;
+        nameAr: string;
+        section: string;
+        fundingSource: string;
+        totalAmount: number;
+        monthlyAmounts: number[];
+        isActive: boolean;
+      }
+      const items: ReportItem[] = [];
+
+      const sectionToPhaseType = (section: string): "land" | "design" | "offplan" | "construction" | "handover" => {
+        switch (section) {
+          case "paid": return "land";
+          case "design": return "design";
+          case "offplan": return "offplan";
+          case "construction": return "construction";
+          case "escrow": return "construction";
+          default: return "construction";
+        }
+      };
+
+      if (savedSettings.length > 0) {
+        for (const s of savedSettings) {
+          const amount = s.amountOverride
+            ? parseFloat(s.amountOverride)
+            : computeItemAmountByKey(s.itemKey, costs, scenario);
+          const defForKey = getDefaultItemDefs(scenario).find(d => d.itemKey === s.itemKey);
+          const itemSection = s.section || defForKey?.section || "construction";
+
+          // Remap months to actual phase ranges
+          const phaseType = sectionToPhaseType(itemSection);
+          const phaseRange = getPhaseRange(phaseType, phases);
+          let effectiveStartMonth = s.startMonth;
+          let effectiveEndMonth = s.endMonth;
+          let effectiveLumpSumMonth = s.lumpSumMonth;
+
+          if (phaseType !== "land") {
+            if (s.distributionMethod === "lump_sum" && s.lumpSumMonth != null) {
+              const savedPhaseStart = s.startMonth || s.lumpSumMonth;
+              const relativeOffset = s.lumpSumMonth - savedPhaseStart;
+              effectiveLumpSumMonth = phaseRange.start + relativeOffset;
+            } else if (s.distributionMethod === "equal_spread") {
+              effectiveStartMonth = phaseRange.start;
+              effectiveEndMonth = phaseRange.end;
+            } else if (s.distributionMethod === "custom" && s.customJson) {
+              effectiveStartMonth = phaseRange.start;
+              effectiveEndMonth = phaseRange.end;
+            }
+          }
+
+          const monthly = distributeAmount(
+            s.isActive ? amount : 0,
+            s.distributionMethod as DistributionMethod,
+            effectiveLumpSumMonth,
+            effectiveStartMonth,
+            effectiveEndMonth,
+            s.customJson,
+            totalMonths,
+          );
+
+          items.push({
+            itemKey: s.itemKey,
+            nameAr: defForKey?.nameAr ?? s.nameAr,
+            section: itemSection,
+            fundingSource: s.fundingSource || defForKey?.fundingSource || "investor",
+            totalAmount: s.isActive ? amount : 0,
+            monthlyAmounts: monthly,
+            isActive: s.isActive ?? true,
+          });
+        }
+      } else {
+        // No saved settings — use defaults
+        const defs = getDefaultItemDefs(scenario);
+        for (const def of defs) {
+          const amount = computeItemAmount(def, costs);
+          let lumpSumMonth: number | null = null;
+          let startMonth: number | null = null;
+          let endMonth: number | null = null;
+
+          if (def.distributionMethod === "lump_sum" && def.phase) {
+            lumpSumMonth = phaseRelativeToAbsolute(def.phase, def.phaseRelativeMonth || 1, phases);
+          } else if (def.distributionMethod === "equal_spread") {
+            if (def.distributeAcrossPhases && def.distributeAcrossPhases.length > 0) {
+              const firstPhase = def.distributeAcrossPhases[0];
+              const lastPhase = def.distributeAcrossPhases[def.distributeAcrossPhases.length - 1];
+              startMonth = getPhaseRange(firstPhase, phases).start;
+              endMonth = getPhaseRange(lastPhase, phases).end;
+            } else if (def.phase) {
+              const range = getPhaseRange(def.phase, phases);
+              startMonth = range.start;
+              endMonth = range.end;
+            }
+          }
+
+          const monthly = distributeAmount(
+            amount,
+            def.distributionMethod,
+            lumpSumMonth,
+            startMonth,
+            endMonth,
+            null,
+            totalMonths,
+          );
+
+          items.push({
+            itemKey: def.itemKey,
+            nameAr: def.nameAr,
+            section: def.section || "construction",
+            fundingSource: def.fundingSource,
+            totalAmount: amount,
+            monthlyAmounts: monthly,
+            isActive: true,
+          });
+        }
+      }
+
+      // Build phase info for the frontend
+      const phaseInfo = phases.map(p => ({
+        type: p.type,
+        startMonth: p.startMonth,
+        duration: p.duration,
+        endMonth: p.startMonth + p.duration - 1,
+      }));
+
+      // Compute totals per month (all active items)
+      const activeItems = items.filter(i => i.isActive);
+      const totalPerMonth = new Array(totalMonths).fill(0);
+      for (const item of activeItems) {
+        for (let m = 0; m < totalMonths; m++) {
+          totalPerMonth[m] += item.monthlyAmounts[m] || 0;
+        }
+      }
+      const grandTotal = totalPerMonth.reduce((s, v) => s + v, 0);
+
+      return {
+        projectId: project.id,
+        projectName: project.name,
+        scenario,
+        startDate: startDateStr,
+        totalMonths,
+        monthLabels,
+        phases: phaseInfo,
+        durations: {
+          design: durations.design,
+          offplan: durations.offplan,
+          construction: durations.construction,
+          handover: durations.handover,
+        },
+        items: activeItems.map(i => ({
+          itemKey: i.itemKey,
+          nameAr: i.nameAr,
+          section: i.section,
+          fundingSource: i.fundingSource,
+          totalAmount: i.totalAmount,
+          monthlyAmounts: i.monthlyAmounts,
+        })),
+        totalPerMonth,
+        grandTotal,
+      };
+    }),
 });
 
 // ─── Helper: compute amount by item key ──────────────────────────────────────

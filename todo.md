@@ -757,3 +757,8 @@
 - [x] Add print button (طباعة) to True Cost Report and Financial Evaluation pages
 - [x] Add @media print styles: A4 landscape, hide controls/buttons/nav, preserve table colors
 - [x] Move contractual section after supervision in exported PDF report
+
+## توحيد مصدر البيانات: التخطيط المالي والمحفظة الديناميكية
+- [x] إضافة procedure جديد getProjectMonthlyReport يقرأ من project_cash_flow_settings (نفس مصدر المحفظة)
+- [x] تعديل EscrowCashFlowPage لاستخدام getProjectMonthlyReport بدلاً من الحساب المحلي
+- [x] التحقق أن التخطيط المالي والمحفظة الديناميكية يعرضان نفس الأرقام لمشروع مجان
