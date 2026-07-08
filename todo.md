@@ -772,3 +772,5 @@
 - [x] Fix client-side distributeFromSettings to handle format 1 (simple percentage array)
 - [x] Verify server and client produce identical amounts (verified with test scripts)
 - [x] Portfolio monthly amounts now exactly match each project's Financial Planning report
+- [x] ROOT FIX: Add server-side monthlyAmounts to getSettings response — client now uses server distribution instead of its own calculation
+- [x] Both pages now use the SAME distributeAmount function on the server — guaranteed identical numbers

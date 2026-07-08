@@ -484,6 +484,16 @@ export const cashFlowSettingsRouter = router({
                 defaultEndMonth = range.end;
               }
             }
+            // Compute monthly distribution server-side (same logic as portfolio)
+            const monthlyAmounts = distributeAmount(
+              amount,
+              def.distributionMethod,
+              defaultLumpSumMonth,
+              defaultStartMonth,
+              defaultEndMonth,
+              null,
+              totalMonths,
+            );
             return {
               id: undefined as number | undefined,
               projectId: input.projectId,
@@ -503,6 +513,7 @@ export const cashFlowSettingsRouter = router({
               fundingSource: def.fundingSource,
               notes: null,
               computedAmount: amount,
+              monthlyAmounts,
             };
           });
         // Build a lookup of default fundingSource by itemKey to auto-correct stale DB values
@@ -518,18 +529,30 @@ export const cashFlowSettingsRouter = router({
         const mergedSettings = [
           ...existing
             .filter(s => s.category !== "revenue")
-            .map(s => ({
-              ...s,
-              nameAr: defaultNameArByKey[s.itemKey] ?? s.nameAr,
-              section: s.section || defaultSectionByKey[s.itemKey] || "construction",
-              // Use DB fundingSource (respects user changes from UI).
-              // Fall back to default only if DB has no value.
-              fundingSource: (s.fundingSource ?? defaultFundingSourceByKey[s.itemKey]) as "investor" | "escrow",
-              sortOrder: defaultSortOrderByKey[s.itemKey] ?? s.sortOrder,
-              computedAmount: s.amountOverride
+            .map(s => {
+              const computedAmount = s.amountOverride
                 ? parseFloat(s.amountOverride)
-                : (costs ? computeItemAmountByKey(s.itemKey, costs, input.scenario) : 0),
-            })),
+                : (costs ? computeItemAmountByKey(s.itemKey, costs, input.scenario) : 0);
+              // Compute monthly distribution server-side (same logic as portfolio)
+              const monthlyAmounts = distributeAmount(
+                computedAmount,
+                s.distributionMethod as DistributionMethod,
+                s.lumpSumMonth,
+                s.startMonth,
+                s.endMonth,
+                s.customJson,
+                totalMonths,
+              );
+              return {
+                ...s,
+                nameAr: defaultNameArByKey[s.itemKey] ?? s.nameAr,
+                section: s.section || defaultSectionByKey[s.itemKey] || "construction",
+                fundingSource: (s.fundingSource ?? defaultFundingSourceByKey[s.itemKey]) as "investor" | "escrow",
+                sortOrder: defaultSortOrderByKey[s.itemKey] ?? s.sortOrder,
+                computedAmount,
+                monthlyAmounts,
+              };
+            }),
           ...missingDefaults,
         ].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
         return {
@@ -577,6 +600,16 @@ export const cashFlowSettingsRouter = router({
           }
         }
 
+        // Compute monthly distribution server-side (same logic as portfolio)
+        const monthlyAmounts = distributeAmount(
+          amount,
+          def.distributionMethod,
+          defaultLumpSumMonth,
+          defaultStartMonth,
+          defaultEndMonth,
+          null,
+          totalMonths,
+        );
         return {
           id: undefined as number | undefined,
           projectId: input.projectId,
@@ -596,6 +629,7 @@ export const cashFlowSettingsRouter = router({
           fundingSource: def.fundingSource,
           notes: null,
           computedAmount: amount,
+          monthlyAmounts,
         };
       });
 

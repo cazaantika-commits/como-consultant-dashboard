@@ -278,13 +278,23 @@ export default function CapitalScheduleTablePage({
   // escrowItems = items in the dedicated escrow section (section === "escrow")
   const escrowItems = useMemo(() => allItems.filter((s: any) => s.section === "escrow"), [allItems]);
 
-  // Compute monthly distributions for each item
+  // Use server-side monthlyAmounts (0-based array) → convert to 1-based Record
+  // This guarantees identical numbers with the portfolio report.
   const itemMonthly = useMemo(() => {
     const result: Record<string, Record<number, number>> = {};
     for (const item of allItems) {
       if (item.section === "paid") {
         result[item.itemKey] = {}; // paid items have no monthly distribution
+      } else if ((item as any).monthlyAmounts && Array.isArray((item as any).monthlyAmounts)) {
+        // Server provides 0-based array; convert to 1-based month keys
+        const dist: Record<number, number> = {};
+        const arr = (item as any).monthlyAmounts as number[];
+        for (let i = 0; i < arr.length; i++) {
+          if (arr[i] > 0) dist[i + 1] = arr[i];
+        }
+        result[item.itemKey] = dist;
       } else {
+        // Fallback to client-side distribution (should not happen with updated server)
         result[item.itemKey] = distributeFromSettings(item, phases);
       }
     }
