@@ -32,9 +32,7 @@ export const consultantsRegistryRouter = router({
         const db = await getDb();
         if (!db) return [];
 
-        let query = db.query.consultantsRegistry.findMany({
-          where: eq(consultantsRegistry.userId, ctx.user.id),
-        });
+        let query = db.query.consultantsRegistry.findMany();
 
         const consultants = await query;
 
@@ -73,9 +71,7 @@ export const consultantsRegistryRouter = router({
 
         const consultant = await db.query.consultantsRegistry.findFirst({
           where: and(
-            eq(consultantsRegistry.id, input.id),
-            eq(consultantsRegistry.userId, ctx.user.id)
-          ),
+            eq(consultantsRegistry.id, input.id)),
         });
 
         if (!consultant) return null;
@@ -150,9 +146,7 @@ export const consultantsRegistryRouter = router({
           .set(updateData)
           .where(
             and(
-              eq(consultantsRegistry.id, id),
-              eq(consultantsRegistry.userId, ctx.user.id)
-            )
+              eq(consultantsRegistry.id, id))
           );
 
         return { success: true };
@@ -174,9 +168,7 @@ export const consultantsRegistryRouter = router({
           .delete(consultantsRegistry)
           .where(
             and(
-              eq(consultantsRegistry.id, input.id),
-              eq(consultantsRegistry.userId, ctx.user.id)
-            )
+              eq(consultantsRegistry.id, input.id))
           );
 
         return { success: true };
@@ -197,9 +189,7 @@ export const consultantsRegistryRouter = router({
         // Verify ownership
         const consultant = await db.query.consultantsRegistry.findFirst({
           where: and(
-            eq(consultantsRegistry.id, input.consultantId),
-            eq(consultantsRegistry.userId, ctx.user.id)
-          ),
+            eq(consultantsRegistry.id, input.consultantId)),
         });
 
         if (!consultant) return [];
@@ -231,9 +221,7 @@ export const consultantsRegistryRouter = router({
         // Verify ownership
         const consultant = await db.query.consultantsRegistry.findFirst({
           where: and(
-            eq(consultantsRegistry.id, input.consultantId),
-            eq(consultantsRegistry.userId, ctx.user.id)
-          ),
+            eq(consultantsRegistry.id, input.consultantId)),
         });
 
         if (!consultant) {
@@ -273,9 +261,7 @@ export const consultantsRegistryRouter = router({
         // Verify ownership
         const consultant = await db.query.consultantsRegistry.findFirst({
           where: and(
-            eq(consultantsRegistry.id, input.consultantId),
-            eq(consultantsRegistry.userId, ctx.user.id)
-          ),
+            eq(consultantsRegistry.id, input.consultantId)),
         });
 
         if (!consultant) {
@@ -300,8 +286,7 @@ export const consultantsRegistryRouter = router({
       if (!db) return DEFAULT_CATEGORIES;
 
       const customCategories = await db.query.consultantsCategories.findMany({
-        where: eq(consultantsCategories.userId, ctx.user.id),
-      });
+        });
 
       const customNames = customCategories.map((c) => c.categoryName);
       return [...DEFAULT_CATEGORIES, ...customNames];
@@ -322,7 +307,6 @@ export const consultantsRegistryRouter = router({
         // Check if already exists
         const existing = await db.query.consultantsCategories.findFirst({
           where: and(
-            eq(consultantsCategories.userId, ctx.user.id),
             eq(consultantsCategories.categoryName, input.categoryName)
           ),
         });

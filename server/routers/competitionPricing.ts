@@ -64,21 +64,17 @@ export const competitionPricingRouter = router({
       const db = await getDb();
       if (!db) return null;
       const results = await db.select().from(competitionPricing)
-        .where(and(
-          eq(competitionPricing.projectId, input),
-          eq(competitionPricing.userId, ctx.user.id)
-        ));
+        .where(eq(competitionPricing.projectId, input));
       return results[0] || null;
     }),
 
-  // Get all competition pricing for the current user (all projects)
+  // Get all competition pricing (shared across all users in the portal)
   getAllByUser: publicProcedure
     .query(async ({ ctx }) => {
       if (!ctx.user) return [];
       const db = await getDb();
       if (!db) return [];
-      const results = await db.select().from(competitionPricing)
-        .where(eq(competitionPricing.userId, ctx.user.id));
+      const results = await db.select().from(competitionPricing);
       return results;
     }),
 
@@ -91,10 +87,7 @@ export const competitionPricingRouter = router({
       if (!db) throw new Error("Database not available");
 
       const existing = await db.select().from(competitionPricing)
-        .where(and(
-          eq(competitionPricing.projectId, input.projectId),
-          eq(competitionPricing.userId, ctx.user.id)
-        ));
+        .where(eq(competitionPricing.projectId, input.projectId));
 
       const data: any = {
         // السيناريو المتفائل
@@ -169,10 +162,7 @@ export const competitionPricingRouter = router({
       if (!db) throw new Error("Database not available");
 
       const existing = await db.select().from(competitionPricing)
-        .where(and(
-          eq(competitionPricing.projectId, input.projectId),
-          eq(competitionPricing.userId, ctx.user.id)
-        ));
+        .where(eq(competitionPricing.projectId, input.projectId));
 
       if (existing[0]) {
         await db.update(competitionPricing)
@@ -193,25 +183,25 @@ export const competitionPricingRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      // Get project data
+      // Get project data (shared portal - no userId filter)
       const projectResults = await db.select().from(projects)
-        .where(and(eq(projects.id, projectId), eq(projects.userId, ctx.user.id)));
+        .where(eq(projects.id, projectId));
       if (!projectResults[0]) throw new Error("Project not found");
       const project = projectResults[0];
 
       // Get feasibility study data
       const feasResults = await db.select().from(feasibilityStudies)
-        .where(and(eq(feasibilityStudies.projectId, projectId), eq(feasibilityStudies.userId, ctx.user.id)));
+        .where(eq(feasibilityStudies.projectId, projectId));
       const feasStudy = feasResults[0] || null;
 
       // Get market overview data (Tab 1)
       const moResults = await db.select().from(marketOverview)
-        .where(and(eq(marketOverview.projectId, projectId), eq(marketOverview.userId, ctx.user.id)));
+        .where(eq(marketOverview.projectId, projectId));
       const mo = moResults[0] || null;
 
       // Get existing competition pricing data (this tab)
       const cpResults = await db.select().from(competitionPricing)
-        .where(and(eq(competitionPricing.projectId, projectId), eq(competitionPricing.userId, ctx.user.id)));
+        .where(eq(competitionPricing.projectId, projectId));
       const cp = cpResults[0] || null;
 
       // ═══════════════════════════════════════════════════════════
@@ -418,10 +408,7 @@ ${unitTypes.length > 0 ? `أنواع الوحدات المعتمدة: ${unitType
 
         // Save to DB
         const existing = await db.select().from(competitionPricing)
-          .where(and(
-            eq(competitionPricing.projectId, projectId),
-            eq(competitionPricing.userId, ctx.user.id)
-          ));
+          .where(eq(competitionPricing.projectId, projectId));
 
         if (existing[0]) {
           await db.update(competitionPricing)

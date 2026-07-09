@@ -63,7 +63,7 @@ export const contractsRouter = router({
   listTypes: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     const types = await db.select().from(contractTypes)
-      .where(eq(contractTypes.userId, ctx.user.id))
+      
       .orderBy(contractTypes.sortOrder, contractTypes.name);
     return types;
   }),
@@ -71,8 +71,7 @@ export const contractsRouter = router({
   seedDefaultTypes: protectedProcedure.mutation(async ({ ctx }) => {
     const db = await getDb();
     // Check if user already has types
-    const existing = await db.select().from(contractTypes)
-      .where(eq(contractTypes.userId, ctx.user.id));
+    const existing = await db.select().from(contractTypes);
     
     if (existing.length > 0) {
       return { seeded: false, count: existing.length, message: "أنواع العقود موجودة مسبقاً" };
@@ -137,7 +136,7 @@ export const contractsRouter = router({
       
       await db.update(contractTypes)
         .set(updates)
-        .where(and(eq(contractTypes.id, input.id), eq(contractTypes.userId, ctx.user.id)));
+        .where(and(eq(contractTypes.id, input.id)));
       return { success: true };
     }),
 
@@ -154,7 +153,7 @@ export const contractsRouter = router({
       }
 
       await db.delete(contractTypes)
-        .where(and(eq(contractTypes.id, input.id), eq(contractTypes.userId, ctx.user.id)));
+        .where(and(eq(contractTypes.id, input.id)));
       return { success: true };
     }),
 
@@ -170,7 +169,7 @@ export const contractsRouter = router({
     }).optional())
     .query(async ({ ctx, input }) => {
       const db = await getDb();
-      const conditions = [eq(projectContracts.userId, ctx.user.id)];
+      const conditions = [];
       
       if (input?.projectId) conditions.push(eq(projectContracts.projectId, input.projectId));
       if (input?.contractTypeId) conditions.push(eq(projectContracts.contractTypeId, input.contractTypeId));
@@ -185,11 +184,11 @@ export const contractsRouter = router({
       const projectIds = [...new Set(contracts.map(c => c.projectId))];
 
       const types = typeIds.length > 0
-        ? await db.select().from(contractTypes).where(eq(contractTypes.userId, ctx.user.id))
+        ? await db.select().from(contractTypes)
         : [];
       
       const projectsList = projectIds.length > 0
-        ? await db.select().from(projects).where(eq(projects.userId, ctx.user.id))
+        ? await db.select().from(projects)
         : [];
 
       return contracts.map(c => ({
@@ -204,7 +203,7 @@ export const contractsRouter = router({
     .query(async ({ ctx, input }) => {
       const db = await getDb();
       const [contract] = await db.select().from(projectContracts)
-        .where(and(eq(projectContracts.id, input.id), eq(projectContracts.userId, ctx.user.id)));
+        .where(and(eq(projectContracts.id, input.id)));
       
       if (!contract) throw new Error("العقد غير موجود");
 
@@ -291,7 +290,7 @@ export const contractsRouter = router({
       
       await db.update(projectContracts)
         .set(cleanUpdates)
-        .where(and(eq(projectContracts.id, id), eq(projectContracts.userId, ctx.user.id)));
+        .where(and(eq(projectContracts.id, id)));
       return { success: true };
     }),
 
@@ -300,7 +299,7 @@ export const contractsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       await db.delete(projectContracts)
-        .where(and(eq(projectContracts.id, input.id), eq(projectContracts.userId, ctx.user.id)));
+        .where(and(eq(projectContracts.id, input.id)));
       return { success: true };
     }),
 
@@ -325,7 +324,7 @@ export const contractsRouter = router({
       
       await db.update(projectContracts)
         .set({ fileUrl: url, fileKey, fileName: input.fileName })
-        .where(and(eq(projectContracts.id, input.contractId), eq(projectContracts.userId, ctx.user.id)));
+        .where(and(eq(projectContracts.id, input.contractId)));
       
       return { url, fileKey, success: true };
     }),
@@ -341,7 +340,7 @@ export const contractsRouter = router({
       
       // Get contract
       const [contract] = await db.select().from(projectContracts)
-        .where(and(eq(projectContracts.id, input.contractId), eq(projectContracts.userId, ctx.user.id)));
+        .where(and(eq(projectContracts.id, input.contractId)));
       
       if (!contract) throw new Error("العقد غير موجود");
       if (!contract.fileUrl && !contract.driveFileId) {
@@ -457,7 +456,7 @@ ${contract.contractValue ? `قيمة العقد: ${contract.contractValue} ${con
       
       // Get contract with project info
       const [contract] = await db.select().from(projectContracts)
-        .where(and(eq(projectContracts.id, input.contractId), eq(projectContracts.userId, ctx.user.id)));
+        .where(and(eq(projectContracts.id, input.contractId)));
       
       if (!contract) throw new Error("العقد غير موجود");
       if (!contract.fileUrl) throw new Error("لا يوجد ملف مرفق بالعقد");
@@ -524,8 +523,7 @@ ${contract.contractValue ? `قيمة العقد: ${contract.contractValue} ${con
   // Stats for dashboard
   stats: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
-    const allContracts = await db.select().from(projectContracts)
-      .where(eq(projectContracts.userId, ctx.user.id));
+    const allContracts = await db.select().from(projectContracts);
     
     const total = allContracts.length;
     const active = allContracts.filter(c => c.status === "active").length;

@@ -55,7 +55,7 @@ export const meetingsRouter = router({
       const db = await getDb();
       if (!db) return [];
 
-      const conditions = [eq(meetings.userId, ctx.user.id)];
+      const conditions = [];
       if (input?.status) {
         conditions.push(eq(meetings.status, input.status));
       }
@@ -109,7 +109,7 @@ export const meetingsRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
       const [meeting] = await db.select().from(meetings)
-        .where(and(eq(meetings.id, meetingId), eq(meetings.userId, ctx.user.id)));
+        .where(and(eq(meetings.id, meetingId)));
 
       if (!meeting) throw new TRPCError({ code: "NOT_FOUND", message: "الاجتماع غير موجود" });
 
@@ -156,7 +156,7 @@ export const meetingsRouter = router({
       await db.update(meetings).set({
         status: "in_progress",
         startedAt: new Date(),
-      }).where(and(eq(meetings.id, meetingId), eq(meetings.userId, ctx.user.id)));
+      }).where(and(eq(meetings.id, meetingId)));
 
       // Add system message
       await db.insert(meetingMessages).values({
@@ -179,7 +179,7 @@ export const meetingsRouter = router({
       await db.update(meetings).set({
         status: "completed",
         endedAt: new Date(),
-      }).where(and(eq(meetings.id, meetingId), eq(meetings.userId, ctx.user.id)));
+      }).where(and(eq(meetings.id, meetingId)));
 
       // Add system message
       await db.insert(meetingMessages).values({
@@ -474,7 +474,7 @@ export const meetingsRouter = router({
 
       // Get meeting with existing outputs
       const [meeting] = await db.select().from(meetings)
-        .where(and(eq(meetings.id, meetingId), eq(meetings.userId, ctx.user.id)));
+        .where(and(eq(meetings.id, meetingId)));
       if (!meeting) throw new TRPCError({ code: "NOT_FOUND", message: "الاجتماع غير موجود" });
 
       // Parse existing tasks from meeting outputs
@@ -1049,7 +1049,7 @@ ${transcript}`
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
       await db.delete(meetings)
-        .where(and(eq(meetings.id, meetingId), eq(meetings.userId, ctx.user.id)));
+        .where(and(eq(meetings.id, meetingId)));
 
       return { success: true };
     }),

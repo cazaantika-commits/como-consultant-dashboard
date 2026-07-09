@@ -52,7 +52,7 @@ export const selfLearningRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
-      const conditions = [eq(predictionRecords.userId, ctx.user.id)];
+      const conditions = [];
       if (input.projectId) conditions.push(eq(predictionRecords.projectId, input.projectId));
       if (input.predictionType) conditions.push(eq(predictionRecords.predictionType, input.predictionType as any));
 
@@ -143,7 +143,7 @@ export const selfLearningRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
-      const conditions = [eq(actualOutcomes.userId, ctx.user.id)];
+      const conditions = [];
       if (input.projectId) conditions.push(eq(actualOutcomes.projectId, input.projectId));
       if (input.outcomeType) conditions.push(eq(actualOutcomes.outcomeType, input.outcomeType as any));
 
@@ -203,7 +203,6 @@ export const selfLearningRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
       const predConditions = [
-        eq(predictionRecords.userId, ctx.user.id),
         eq(predictionRecords.projectId, input.projectId),
       ];
       if (input.predictionType) {
@@ -216,7 +215,6 @@ export const selfLearningRouter = router({
         .orderBy(desc(predictionRecords.createdAt));
 
       const outConditions = [
-        eq(actualOutcomes.userId, ctx.user.id),
         eq(actualOutcomes.projectId, input.projectId),
       ];
       if (input.predictionType) {
@@ -266,7 +264,7 @@ export const selfLearningRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
-      const conditions = [eq(modelAccuracyLog.userId, ctx.user.id)];
+      const conditions = [];
       if (input.projectId) conditions.push(eq(modelAccuracyLog.projectId, input.projectId));
       if (input.predictionType) conditions.push(eq(modelAccuracyLog.predictionType, input.predictionType as any));
 
@@ -286,12 +284,10 @@ export const selfLearningRouter = router({
 
       // Get total predictions and outcomes
       const totalPredictions = await db.select({ count: sql<number>`count(*)` })
-        .from(predictionRecords)
-        .where(eq(predictionRecords.userId, ctx.user.id));
+        .from(predictionRecords);
 
       const totalOutcomes = await db.select({ count: sql<number>`count(*)` })
-        .from(actualOutcomes)
-        .where(eq(actualOutcomes.userId, ctx.user.id));
+        .from(actualOutcomes);
 
       // Get accuracy by type
       const accuracyByType = await db.select({
@@ -301,7 +297,7 @@ export const selfLearningRouter = router({
         latestBias: modelAccuracyLog.biasDirection,
       })
         .from(modelAccuracyLog)
-        .where(eq(modelAccuracyLog.userId, ctx.user.id))
+        
         .groupBy(modelAccuracyLog.predictionType);
 
       // Get predictions by project
@@ -312,7 +308,7 @@ export const selfLearningRouter = router({
       })
         .from(predictionRecords)
         .innerJoin(projects, eq(predictionRecords.projectId, projects.id))
-        .where(eq(predictionRecords.userId, ctx.user.id))
+        
         .groupBy(predictionRecords.projectId, projects.name);
 
       return {

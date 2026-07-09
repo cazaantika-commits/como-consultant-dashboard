@@ -59,7 +59,6 @@ export const feasibilityRouter = router({
     const db = await getDb();
     if (!db) return [];
     return db.select().from(feasibilityStudies)
-      .where(eq(feasibilityStudies.userId, ctx.user.id))
       .orderBy(desc(feasibilityStudies.updatedAt));
   }),
 
@@ -70,10 +69,7 @@ export const feasibilityRouter = router({
       const db = await getDb();
       if (!db) return [];
       return db.select().from(feasibilityStudies)
-        .where(and(
-          eq(feasibilityStudies.userId, ctx.user.id),
-          eq(feasibilityStudies.projectId, input)
-        ))
+        .where(eq(feasibilityStudies.projectId, input))
         .orderBy(desc(feasibilityStudies.updatedAt));
     }),
 
@@ -82,7 +78,7 @@ export const feasibilityRouter = router({
     const db = await getDb();
     if (!db) return null;
     const results = await db.select().from(feasibilityStudies).where(
-      and(eq(feasibilityStudies.id, input), eq(feasibilityStudies.userId, ctx.user.id))
+      eq(feasibilityStudies.id, input)
     );
     return results[0] || null;
   }),
@@ -109,7 +105,7 @@ export const feasibilityRouter = router({
       const { id, ...data } = input;
       await db.update(feasibilityStudies)
         .set(data)
-        .where(and(eq(feasibilityStudies.id, id), eq(feasibilityStudies.userId, ctx.user.id)));
+        .where(eq(feasibilityStudies.id, id));
       return { success: true };
     }),
 
@@ -120,7 +116,7 @@ export const feasibilityRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
       await db.delete(feasibilityStudies)
-        .where(and(eq(feasibilityStudies.id, input), eq(feasibilityStudies.userId, ctx.user.id)));
+        .where(eq(feasibilityStudies.id, input));
       return { success: true };
     }),
 
@@ -133,7 +129,7 @@ export const feasibilityRouter = router({
       if (!db) throw new Error("Database not available");
       
       const results = await db.select().from(feasibilityStudies).where(
-        and(eq(feasibilityStudies.id, input), eq(feasibilityStudies.userId, ctx.user.id))
+        eq(feasibilityStudies.id, input)
       );
       if (!results[0]) throw new Error("Study not found");
       const study = results[0];
@@ -341,7 +337,7 @@ export const feasibilityRouter = router({
       if (!db) throw new Error("Database not available");
       
       const results = await db.select().from(feasibilityStudies).where(
-        and(eq(feasibilityStudies.id, input.studyId), eq(feasibilityStudies.userId, ctx.user.id))
+        eq(feasibilityStudies.id, input.studyId)
       );
       if (!results[0]) throw new Error("Study not found");
       
@@ -366,7 +362,7 @@ export const feasibilityRouter = router({
       if (!db) throw new Error("Database not available");
       
             const results = await db.select().from(feasibilityStudies).where(
-        and(eq(feasibilityStudies.id, input.id), eq(feasibilityStudies.userId, ctx.user.id))
+        eq(feasibilityStudies.id, input.id)
       );
       if (!results[0]) throw new Error("Study not found");
       const study = results[0];
@@ -378,12 +374,12 @@ export const feasibilityRouter = router({
 
       // Get market overview data
       const moResults = await db.select().from(marketOverview)
-        .where(and(eq(marketOverview.projectId, study.projectId), eq(marketOverview.userId, ctx.user.id)));
+        .where(eq(marketOverview.projectId, study.projectId));
       const mo = moResults[0] || null;
 
       // Get competition pricing data
       const cpResults = await db.select().from(competitionPricing)
-        .where(and(eq(competitionPricing.projectId, study.projectId), eq(competitionPricing.userId, ctx.user.id)));
+        .where(eq(competitionPricing.projectId, study.projectId));
       const cp = cpResults[0] || null;
 
       const currentDate2 = new Date();
@@ -482,7 +478,7 @@ ${mo ? `
       if (!db) throw new Error("Database not available");
       
       const results = await db.select().from(feasibilityStudies).where(
-        and(eq(feasibilityStudies.id, input.id), eq(feasibilityStudies.userId, ctx.user.id))
+        eq(feasibilityStudies.id, input.id)
       );
       if (!results[0]) throw new Error("Study not found");
       const study = results[0];
@@ -555,7 +551,7 @@ ${mo ? `
       if (!db) throw new Error("Database not available");
       
       const results = await db.select().from(feasibilityStudies).where(
-        and(eq(feasibilityStudies.id, input), eq(feasibilityStudies.userId, ctx.user.id))
+        eq(feasibilityStudies.id, input)
       );
       if (!results[0]) throw new Error("Study not found");
       const study = results[0];

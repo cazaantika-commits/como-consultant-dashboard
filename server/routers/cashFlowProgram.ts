@@ -382,7 +382,6 @@ export const cashFlowProgramRouter = router({
     const db = await getDb();
     if (!db) return [];
     const projects = await db.select().from(cfProjects)
-      .where(eq(cfProjects.userId, ctx.user.id))
       .orderBy(desc(cfProjects.updatedAt));
     
     // Enrich with cost item count and total cost
@@ -403,7 +402,7 @@ export const cashFlowProgramRouter = router({
       const db = await getDb();
       if (!db) return null;
       const results = await db.select().from(cfProjects)
-        .where(and(eq(cfProjects.id, input.id), eq(cfProjects.userId, ctx.user.id)));
+        .where(and(eq(cfProjects.id, input.id)));
       return results[0] || null;
     }),
 
@@ -497,11 +496,11 @@ export const cashFlowProgramRouter = router({
       if (Object.keys(updateData).length > 0) {
         await db.update(cfProjects)
           .set(updateData)
-          .where(and(eq(cfProjects.id, input.id), eq(cfProjects.userId, ctx.user.id)));
+          .where(and(eq(cfProjects.id, input.id)));
 
         // Sync schedule-related fields back to projects table (single source of truth)
         const [cfProj] = await db.select().from(cfProjects)
-          .where(and(eq(cfProjects.id, input.id), eq(cfProjects.userId, ctx.user.id)));
+          .where(and(eq(cfProjects.id, input.id)));
         if (cfProj?.projectId) {
           const projSync: Record<string, any> = {};
           if (input.startDate !== undefined) projSync.startDate = input.startDate;
@@ -525,7 +524,7 @@ export const cashFlowProgramRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
       await db.delete(cfProjects)
-        .where(and(eq(cfProjects.id, input.id), eq(cfProjects.userId, ctx.user.id)));
+        .where(and(eq(cfProjects.id, input.id)));
       return { success: true };
     }),
 
@@ -662,7 +661,7 @@ export const cashFlowProgramRouter = router({
 
       // Get project
       const projectResults = await db.select().from(cfProjects)
-        .where(and(eq(cfProjects.id, input.cfProjectId), eq(cfProjects.userId, ctx.user.id)));
+        .where(and(eq(cfProjects.id, input.cfProjectId)));
       const project = projectResults[0];
       if (!project) return null;
 
@@ -775,14 +774,12 @@ export const cashFlowProgramRouter = router({
     const db = await getDb();
     if (!db) return null;
 
-    const allCfProjects = await db.select().from(cfProjects)
-      .where(eq(cfProjects.userId, ctx.user.id));
+    const allCfProjects = await db.select().from(cfProjects);
 
     if (allCfProjects.length === 0) return null;
 
     // Read from projects table (single source of truth) to override startDate/durations
-    const allMainProjects = await db.select().from(projects)
-      .where(eq(projects.userId, ctx.user.id));
+    const allMainProjects = await db.select().from(projects);
     const mainProjectMap = new Map<number, typeof allMainProjects[0]>();
     for (const mp of allMainProjects) mainProjectMap.set(mp.id, mp);
 
@@ -981,7 +978,7 @@ export const cashFlowProgramRouter = router({
 
       // Get costsCashFlow overrides (if user edited costs in the feasibility tab)
       const ccfResults = await db.select().from(costsCashFlow)
-        .where(and(eq(costsCashFlow.projectId, input.projectId), eq(costsCashFlow.userId, ctx.user.id)));
+        .where(and(eq(costsCashFlow.projectId, input.projectId)));
       const ccf = ccfResults[0] || null;
 
       // Get competition pricing & market overview
@@ -1442,7 +1439,7 @@ export const cashFlowProgramRouter = router({
       if (!proj) return null;
       // Get costsCashFlow overrides
       const ccfResults = await db.select().from(costsCashFlow)
-        .where(and(eq(costsCashFlow.projectId, input.projectId), eq(costsCashFlow.userId, ctx.user.id)));
+        .where(and(eq(costsCashFlow.projectId, input.projectId)));
       const ccf = ccfResults[0] || null;
       // Get MO+CP data
       const moResults = await db.select().from(marketOverview).where(eq(marketOverview.projectId, input.projectId));
@@ -1678,7 +1675,7 @@ export const cashFlowProgramRouter = router({
       if (!db) return [];
       
       const projectResults = await db.select().from(cfProjects)
-        .where(and(eq(cfProjects.id, cfProjectId), eq(cfProjects.userId, ctx.user.id)));
+        .where(and(eq(cfProjects.id, cfProjectId)));
       if (!projectResults[0]) return [];
       
       const phases = await db.select().from(projectPhases)
@@ -1702,7 +1699,7 @@ export const cashFlowProgramRouter = router({
       
       // Verify project ownership
       const projectResults = await db.select().from(cfProjects)
-        .where(and(eq(cfProjects.id, input.cfProjectId), eq(cfProjects.userId, ctx.user.id)));
+        .where(and(eq(cfProjects.id, input.cfProjectId)));
       if (!projectResults[0]) throw new Error("Project not found");
       
       // Get max phase number
@@ -1756,7 +1753,7 @@ export const cashFlowProgramRouter = router({
       
       // Verify project ownership
       const projectResults = await db.select().from(cfProjects)
-        .where(and(eq(cfProjects.id, phase.projectId), eq(cfProjects.userId, ctx.user.id)));
+        .where(and(eq(cfProjects.id, phase.projectId)));
       if (!projectResults[0]) throw new Error("Unauthorized");
       
       const startDate = input.startDate || phase.startDate;
@@ -1799,7 +1796,7 @@ export const cashFlowProgramRouter = router({
       
       // Verify project ownership
       const projectResults = await db.select().from(cfProjects)
-        .where(and(eq(cfProjects.id, phase.projectId), eq(cfProjects.userId, ctx.user.id)));
+        .where(and(eq(cfProjects.id, phase.projectId)));
       if (!projectResults[0]) throw new Error("Unauthorized");
       
       await db.delete(projectPhases).where(eq(projectPhases.id, phaseId));
@@ -1815,7 +1812,7 @@ export const cashFlowProgramRouter = router({
       if (!db) throw new Error("Database not available");
 
       const projectResults = await db.select().from(cfProjects)
-        .where(and(eq(cfProjects.id, input.cfProjectId), eq(cfProjects.userId, ctx.user.id)));
+        .where(and(eq(cfProjects.id, input.cfProjectId)));
       const project = projectResults[0];
       if (!project) throw new Error("Project not found");
 
@@ -1920,7 +1917,7 @@ export const cashFlowProgramRouter = router({
 
       // Find the CF project linked to this project
       const cfProjResults = await db.select().from(cfProjects)
-        .where(and(eq(cfProjects.projectId, input.projectId), eq(cfProjects.userId, ctx.user.id)))
+        .where(and(eq(cfProjects.projectId, input.projectId)))
         .orderBy(desc(cfProjects.id));
       const cfProj = cfProjResults[0];
       if (!cfProj) throw new Error("لا يوجد مشروع تدفقات نقدية مرتبط. أنشئ واحداً أولاً من صفحة التدفقات النقدية.");
@@ -1932,7 +1929,7 @@ export const cashFlowProgramRouter = router({
 
       // Get costsCashFlow overrides
       const ccfResults = await db.select().from(costsCashFlow)
-        .where(and(eq(costsCashFlow.projectId, input.projectId), eq(costsCashFlow.userId, ctx.user.id)));
+        .where(and(eq(costsCashFlow.projectId, input.projectId)));
       const ccf = ccfResults[0] || null;
 
       // Get competition pricing & market overview
@@ -2100,14 +2097,12 @@ export const cashFlowProgramRouter = router({
       const db = await getDb();
       if (!db) return null;
 
-      const allCfProjects = await db.select().from(cfProjects)
-        .where(eq(cfProjects.userId, ctx.user.id));
+      const allCfProjects = await db.select().from(cfProjects);
 
       if (allCfProjects.length === 0) return null;
 
       // Read from projects table (single source of truth) to override startDate/durations
-      const allMainProjects = await db.select().from(projects)
-        .where(eq(projects.userId, ctx.user.id));
+      const allMainProjects = await db.select().from(projects);
       const mainProjectMap = new Map<number, typeof allMainProjects[0]>();
       for (const mp of allMainProjects) mainProjectMap.set(mp.id, mp);
 
@@ -2369,11 +2364,9 @@ export const cashFlowProgramRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
       // Get all projects for this user
-      const allProjects = await db.select().from(projects)
-        .where(eq(projects.userId, ctx.user.id));
+      const allProjects = await db.select().from(projects);
       // Get existing CF projects for this user
-      const existingCf = await db.select().from(cfProjects)
-        .where(eq(cfProjects.userId, ctx.user.id));
+      const existingCf = await db.select().from(cfProjects);
       const existingProjectIds = new Set(existingCf.map(p => p.projectId));
       let imported = 0;
       const results: Array<{ projectName: string; status: string }> = [];
@@ -2388,7 +2381,7 @@ export const cashFlowProgramRouter = router({
         const startDate = settings[0]?.startDate || '2025-06';
         // Get costsCashFlow overrides
         const ccfResults = await db.select().from(costsCashFlow)
-          .where(and(eq(costsCashFlow.projectId, proj.id), eq(costsCashFlow.userId, ctx.user.id)));
+          .where(and(eq(costsCashFlow.projectId, proj.id)));
         const ccf = ccfResults[0] || null;
         // Get competition pricing
         const cpResults = await db.select().from(competitionPricing)
@@ -2600,12 +2593,10 @@ export const cashFlowProgramRouter = router({
     const db = await getDb();
     if (!db) return [];
     // Source projects from the projects table (البطاقة) directly
-    const allProjects = await db.select().from(projects)
-      .where(eq(projects.userId, ctx.user.id));
+    const allProjects = await db.select().from(projects);
     if (allProjects.length === 0) return [];
     // Also get cfProjects for startDate / durations lookup
-    const allCfProjs = await db.select().from(cfProjects)
-      .where(eq(cfProjects.userId, ctx.user.id));
+    const allCfProjs = await db.select().from(cfProjects);
     // Build a map: projectId -> cfProject (for startDate/durations)
     const cfByProjectId = new Map<number, typeof allCfProjs[0]>();
     for (const cf of allCfProjs) {
@@ -2655,8 +2646,7 @@ export const cashFlowProgramRouter = router({
           handoverMonths,
         },
         today,
-        projectScenario,
-      );
+        projectScenario);
       if (!data) continue;
       results.push({
         cfProjectId: cfProj?.id ?? null,
@@ -2686,8 +2676,7 @@ export const cashFlowProgramRouter = router({
     const db = await getDb();
     if (!db) return [];
 
-    const allProjs = await db.select().from(cfProjects)
-      .where(eq(cfProjects.userId, ctx.user.id));
+    const allProjs = await db.select().from(cfProjects);
     if (allProjs.length === 0) return [];
 
     const today = new Date();
@@ -2797,11 +2786,11 @@ export const cashFlowProgramRouter = router({
         // Update projects table (single source of truth)
         await db.update(projects)
           .set(updateData)
-          .where(and(eq(projects.id, input.projectId), eq(projects.userId, ctx.user.id)));
+          .where(and(eq(projects.id, input.projectId)));
 
         // Also sync to cf_projects if a linked record exists
         const [cfProj] = await db.select().from(cfProjects)
-          .where(and(eq(cfProjects.projectId, input.projectId), eq(cfProjects.userId, ctx.user.id)));
+          .where(and(eq(cfProjects.projectId, input.projectId)));
         if (cfProj) {
           const cfUpdate: Record<string, any> = {};
           if (input.startDate !== undefined) cfUpdate.startDate = input.startDate;
@@ -2821,8 +2810,7 @@ export const cashFlowProgramRouter = router({
     if (!ctx.user) return {};
     const db = await getDb();
     if (!db) return {};
-    const rows = await db.select().from(projectPhaseDelays)
-      .where(eq(projectPhaseDelays.userId, ctx.user.id));
+    const rows = await db.select().from(projectPhaseDelays);
     const result: Record<number, { designDelay: number; offplanDelay: number; constructionDelay: number }> = {};
     for (const row of rows) {
       result[row.projectId] = {
@@ -2848,9 +2836,7 @@ export const cashFlowProgramRouter = router({
       // Upsert: check if row exists
       const [existing] = await db.select().from(projectPhaseDelays)
         .where(and(
-          eq(projectPhaseDelays.userId, ctx.user.id),
-          eq(projectPhaseDelays.projectId, input.projectId),
-        ));
+          eq(projectPhaseDelays.projectId, input.projectId)));
       if (existing) {
         await db.update(projectPhaseDelays)
           .set({
@@ -2883,7 +2869,7 @@ export const cashFlowProgramRouter = router({
       if (!db) throw new Error("Database not available");
       await db.update(projects)
         .set({ financingScenario: input.scenario })
-        .where(and(eq(projects.id, input.projectId), eq(projects.userId, ctx.user.id)));
+        .where(and(eq(projects.id, input.projectId)));
       return { success: true };
     }),
 
@@ -2892,8 +2878,7 @@ export const cashFlowProgramRouter = router({
     const db = await getDb();
     if (!db) return {};
     const rows = await db.select({ id: projects.id, financingScenario: projects.financingScenario })
-      .from(projects)
-      .where(eq(projects.userId, ctx.user.id));
+      .from(projects);
     const result: Record<number, string> = {};
     for (const row of rows) {
       result[row.id] = row.financingScenario ?? 'offplan_escrow';

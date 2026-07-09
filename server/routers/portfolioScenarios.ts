@@ -12,7 +12,7 @@ export const portfolioScenariosRouter = router({
     return db
       .select()
       .from(portfolioScenarios)
-      .where(eq(portfolioScenarios.userId, ctx.user.id))
+      
       .orderBy(portfolioScenarios.updatedAt);
   }),
 
@@ -35,7 +35,6 @@ export const portfolioScenariosRouter = router({
         .from(portfolioScenarios)
         .where(
           and(
-            eq(portfolioScenarios.userId, ctx.user.id),
             eq(portfolioScenarios.name, input.name)
           )
         )
@@ -74,9 +73,7 @@ export const portfolioScenariosRouter = router({
         .from(portfolioScenarios)
         .where(
           and(
-            eq(portfolioScenarios.id, input.id),
-            eq(portfolioScenarios.userId, ctx.user.id)
-          )
+            eq(portfolioScenarios.id, input.id))
         )
         .limit(1);
       return rows[0] ?? null;
@@ -91,17 +88,14 @@ export const portfolioScenariosRouter = router({
       // Clear all defaults for this user
       await db
         .update(portfolioScenarios)
-        .set({ isDefault: 0 })
-        .where(eq(portfolioScenarios.userId, ctx.user.id));
+        .set({ isDefault: 0 });
       // Set the new default
       await db
         .update(portfolioScenarios)
         .set({ isDefault: 1 })
         .where(
           and(
-            eq(portfolioScenarios.id, input.id),
-            eq(portfolioScenarios.userId, ctx.user.id)
-          )
+            eq(portfolioScenarios.id, input.id))
         );
       return { success: true };
     }),
@@ -116,9 +110,7 @@ export const portfolioScenariosRouter = router({
         .delete(portfolioScenarios)
         .where(
           and(
-            eq(portfolioScenarios.id, input.id),
-            eq(portfolioScenarios.userId, ctx.user.id)
-          )
+            eq(portfolioScenarios.id, input.id))
         );
       return { success: true };
     }),
@@ -132,7 +124,6 @@ export const portfolioScenariosRouter = router({
       .from(portfolioScenarios)
       .where(
         and(
-          eq(portfolioScenarios.userId, ctx.user.id),
           eq(portfolioScenarios.isDefault, 1)
         )
       )

@@ -19,8 +19,7 @@ export const riskDashboardRouter = router({
         community: projects.community,
         projectType: projects.projectType,
       })
-        .from(projects)
-        .where(eq(projects.userId, ctx.user.id));
+        .from(projects);
 
       const projectIds = userProjects.map(p => p.id);
       if (projectIds.length === 0) return { projects: [], summary: null };
@@ -29,7 +28,6 @@ export const riskDashboardRouter = router({
       const riskScores = await db.select()
         .from(projectRiskScores)
         .where(and(
-          eq(projectRiskScores.userId, ctx.user.id),
           inArray(projectRiskScores.projectId, projectIds)
         ))
         .orderBy(desc(projectRiskScores.createdAt));
@@ -83,7 +81,7 @@ export const riskDashboardRouter = router({
 
       // Get project info
       const project = await db.select().from(projects)
-        .where(and(eq(projects.id, input.projectId), eq(projects.userId, ctx.user.id)))
+        .where(and(eq(projects.id, input.projectId)))
         .limit(1);
 
       if (!project[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Project not found" });
@@ -92,7 +90,6 @@ export const riskDashboardRouter = router({
       const scores = await db.select()
         .from(projectRiskScores)
         .where(and(
-          eq(projectRiskScores.userId, ctx.user.id),
           eq(projectRiskScores.projectId, input.projectId)
         ))
         .orderBy(desc(projectRiskScores.createdAt));
@@ -101,7 +98,6 @@ export const riskDashboardRouter = router({
       const engine9 = await db.select()
         .from(joelleAnalysisStages)
         .where(and(
-          eq(joelleAnalysisStages.userId, ctx.user.id),
           eq(joelleAnalysisStages.projectId, input.projectId),
           eq(joelleAnalysisStages.stageNumber, 9)
         ))
@@ -176,13 +172,12 @@ export const riskDashboardRouter = router({
       for (const projectId of input.projectIds) {
         const project = await db.select({ id: projects.id, name: projects.name })
           .from(projects)
-          .where(and(eq(projects.id, projectId), eq(projects.userId, ctx.user.id)))
+          .where(and(eq(projects.id, projectId)))
           .limit(1);
 
         const score = await db.select()
           .from(projectRiskScores)
           .where(and(
-            eq(projectRiskScores.userId, ctx.user.id),
             eq(projectRiskScores.projectId, projectId)
           ))
           .orderBy(desc(projectRiskScores.createdAt))
@@ -221,7 +216,6 @@ export const riskDashboardRouter = router({
         .from(projectRiskScores)
         .innerJoin(projects, eq(projectRiskScores.projectId, projects.id))
         .where(and(
-          eq(projectRiskScores.userId, ctx.user.id),
           sql`${projectRiskScores.riskLevel} IN ('high', 'critical')`
         ))
         .orderBy(desc(projectRiskScores.pmriScore))

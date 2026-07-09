@@ -49,10 +49,7 @@ export const costsCashFlowRouter = router({
       const db = await getDb();
       if (!db) return null;
       const results = await db.select().from(costsCashFlow)
-        .where(and(
-          eq(costsCashFlow.projectId, input),
-          eq(costsCashFlow.userId, ctx.user.id)
-        ));
+        .where(eq(costsCashFlow.projectId, input));
       return results[0] || null;
     }),
 
@@ -64,10 +61,7 @@ export const costsCashFlowRouter = router({
       if (!db) throw new Error("Database not available");
 
       const existing = await db.select().from(costsCashFlow)
-        .where(and(
-          eq(costsCashFlow.projectId, input.projectId),
-          eq(costsCashFlow.userId, ctx.user.id)
-        ));
+        .where(eq(costsCashFlow.projectId, input.projectId));
 
       const data: any = {
         landPrice: input.landPrice ?? 0,
@@ -127,10 +121,7 @@ export const costsCashFlowRouter = router({
       if (!db) throw new Error("Database not available");
 
       const existing = await db.select().from(costsCashFlow)
-        .where(and(
-          eq(costsCashFlow.projectId, input.projectId),
-          eq(costsCashFlow.userId, ctx.user.id)
-        ));
+        .where(eq(costsCashFlow.projectId, input.projectId));
 
       if (existing[0]) {
         await db.update(costsCashFlow)
@@ -151,16 +142,16 @@ export const costsCashFlowRouter = router({
       if (!db) throw new Error("Database not available");
 
       const projectResults = await db.select().from(projects)
-        .where(and(eq(projects.id, input.projectId), eq(projects.userId, ctx.user.id)));
+        .where(eq(projects.id, input.projectId));
       if (!projectResults[0]) throw new Error("Project not found");
       const project = projectResults[0];
 
       const feasResults = await db.select().from(feasibilityStudies)
-        .where(and(eq(feasibilityStudies.projectId, input.projectId), eq(feasibilityStudies.userId, ctx.user.id)));
+        .where(eq(feasibilityStudies.projectId, input.projectId));
       const feasStudy = feasResults[0] || null;
 
       const moResults = await db.select().from(marketOverview)
-        .where(and(eq(marketOverview.projectId, input.projectId), eq(marketOverview.userId, ctx.user.id)));
+        .where(eq(marketOverview.projectId, input.projectId));
       const mo = moResults[0] || null;
 
       const plotArea = feasStudy?.plotArea || parseFloat(String(project.plotAreaSqft || '0')) || 0;
@@ -244,10 +235,7 @@ BUA: ${bua > 0 ? bua.toLocaleString() : 'غير محدد'} قدم²
         const cleanJson = recsRaw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
         const existing = await db.select().from(costsCashFlow)
-          .where(and(
-            eq(costsCashFlow.projectId, input.projectId),
-            eq(costsCashFlow.userId, ctx.user.id)
-          ));
+          .where(eq(costsCashFlow.projectId, input.projectId));
 
         if (existing[0]) {
           await db.update(costsCashFlow)
@@ -280,25 +268,25 @@ BUA: ${bua > 0 ? bua.toLocaleString() : 'غير محدد'} قدم²
       // Get feasibility study updatedAt
       const feasRows = await db.select({ updatedAt: feasibilityStudies.updatedAt })
         .from(feasibilityStudies)
-        .where(and(eq(feasibilityStudies.projectId, projectId), eq(feasibilityStudies.userId, ctx.user.id)));
+        .where(eq(feasibilityStudies.projectId, projectId));
       const feasUpdatedAt = feasRows[0]?.updatedAt ? new Date(feasRows[0].updatedAt) : null;
 
       // Get competition pricing updatedAt (Joel's prices applied here)
       const cpRows = await db.select({ updatedAt: competitionPricing.updatedAt })
         .from(competitionPricing)
-        .where(and(eq(competitionPricing.projectId, projectId), eq(competitionPricing.userId, ctx.user.id)));
+        .where(eq(competitionPricing.projectId, projectId));
       const cpUpdatedAt = cpRows[0]?.updatedAt ? new Date(cpRows[0].updatedAt) : null;
 
       // Get market overview updatedAt (Joel's unit mix applied here)
       const moRows = await db.select({ updatedAt: marketOverview.updatedAt })
         .from(marketOverview)
-        .where(and(eq(marketOverview.projectId, projectId), eq(marketOverview.userId, ctx.user.id)));
+        .where(eq(marketOverview.projectId, projectId));
       const moUpdatedAt = moRows[0]?.updatedAt ? new Date(moRows[0].updatedAt) : null;
 
       // Get costs cash flow updatedAt
       const costsRows = await db.select({ updatedAt: costsCashFlow.updatedAt })
         .from(costsCashFlow)
-        .where(and(eq(costsCashFlow.projectId, projectId), eq(costsCashFlow.userId, ctx.user.id)));
+        .where(eq(costsCashFlow.projectId, projectId));
       const costsUpdatedAt = costsRows[0]?.updatedAt ? new Date(costsRows[0].updatedAt) : null;
 
       // Get Joel's last completed Engine 11 run
@@ -306,7 +294,7 @@ BUA: ${bua > 0 ? bua.toLocaleString() : 'غير محدد'} قدم²
         .from(joelleAnalysisStages)
         .where(and(
           eq(joelleAnalysisStages.projectId, projectId),
-          eq(joelleAnalysisStages.userId, ctx.user.id),
+          
           eq(joelleAnalysisStages.stageNumber, 11),
           eq(joelleAnalysisStages.stageStatus, 'completed')
         ));

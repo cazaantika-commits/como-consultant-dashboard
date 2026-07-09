@@ -88,26 +88,27 @@ const STAGES = [
 
 // Helper: get project fact sheet
 async function getProjectFactSheet(db: any, projectId: number, userId: number) {
+  // Shared portal - no userId filter on reads
   const projectResults = await db.select().from(projects)
-    .where(and(eq(projects.id, projectId), eq(projects.userId, userId)));
+    .where(eq(projects.id, projectId));
   if (!projectResults[0]) throw new Error("Project not found");
   const project = projectResults[0];
 
   const feasResults = await db.select().from(feasibilityStudies)
-    .where(and(eq(feasibilityStudies.projectId, projectId), eq(feasibilityStudies.userId, userId)));
+    .where(eq(feasibilityStudies.projectId, projectId));
   const feasStudy = feasResults[0] || null;
 
   const moResults = await db.select().from(marketOverview)
-    .where(and(eq(marketOverview.projectId, projectId), eq(marketOverview.userId, userId)));
+    .where(eq(marketOverview.projectId, projectId));
   const mo = moResults[0] || null;
 
   const cpResults = await db.select().from(competitionPricing)
-    .where(and(eq(competitionPricing.projectId, projectId), eq(competitionPricing.userId, userId)));
+    .where(eq(competitionPricing.projectId, projectId));
   const cp = cpResults[0] || null;
 
   // Get cost & cashflow data
   const ccfResults = await db.select().from(costsCashFlow)
-    .where(and(eq(costsCashFlow.projectId, projectId), eq(costsCashFlow.userId, userId)));
+    .where(eq(costsCashFlow.projectId, projectId));
   const ccf = ccfResults[0] || null;
 
   // Merge data — project card (projects table) is the SINGLE SOURCE OF TRUTH
@@ -263,7 +264,6 @@ async function saveStageResult(
 ) {
   const existing = await db.select().from(joelleAnalysisStages)
     .where(and(
-      eq(joelleAnalysisStages.userId, userId),
       eq(joelleAnalysisStages.projectId, projectId),
       eq(joelleAnalysisStages.stageNumber, stageNumber),
     ));
@@ -308,7 +308,6 @@ async function saveReport(
 ) {
   const existing = await db.select().from(joelleReports)
     .where(and(
-      eq(joelleReports.userId, userId),
       eq(joelleReports.projectId, projectId),
       eq(joelleReports.reportType, reportType as any),
     ));
@@ -355,10 +354,7 @@ export const joelleEngineRouter = router({
       const db = await getDb();
       if (!db) return [];
       const results = await db.select().from(joelleAnalysisStages)
-        .where(and(
-          eq(joelleAnalysisStages.userId, ctx.user.id),
-          eq(joelleAnalysisStages.projectId, projectId),
-        ))
+        .where(eq(joelleAnalysisStages.projectId, projectId))
         .orderBy(joelleAnalysisStages.stageNumber);
       return results;
     }),
@@ -371,10 +367,7 @@ export const joelleEngineRouter = router({
       const db = await getDb();
       if (!db) return [];
       const results = await db.select().from(joelleReports)
-        .where(and(
-          eq(joelleReports.userId, ctx.user.id),
-          eq(joelleReports.projectId, projectId),
-        ));
+        .where(eq(joelleReports.projectId, projectId));
       return results;
     }),
 
@@ -387,7 +380,6 @@ export const joelleEngineRouter = router({
       if (!db) return null;
       const results = await db.select().from(joelleAnalysisStages)
         .where(and(
-          eq(joelleAnalysisStages.userId, ctx.user.id),
           eq(joelleAnalysisStages.projectId, input.projectId),
           eq(joelleAnalysisStages.stageNumber, input.stageNumber),
         ));
@@ -403,7 +395,6 @@ export const joelleEngineRouter = router({
       if (!db) return null;
       const results = await db.select().from(joelleReports)
         .where(and(
-          eq(joelleReports.userId, ctx.user.id),
           eq(joelleReports.projectId, input.projectId),
           eq(joelleReports.reportType, input.reportType as any),
         ));
@@ -621,13 +612,13 @@ ${placesContext}
         // Get previous stage data
         const stage1 = await db.select().from(joelleAnalysisStages)
           .where(and(
-            eq(joelleAnalysisStages.userId, ctx.user.id),
+            
             eq(joelleAnalysisStages.projectId, projectId),
             eq(joelleAnalysisStages.stageNumber, 1),
           ));
         const stage2 = await db.select().from(joelleAnalysisStages)
           .where(and(
-            eq(joelleAnalysisStages.userId, ctx.user.id),
+            
             eq(joelleAnalysisStages.projectId, projectId),
             eq(joelleAnalysisStages.stageNumber, 2),
           ));
@@ -971,7 +962,7 @@ ${liveOffPlanData}
         // Get previous stages data
         const prevStages = await db.select().from(joelleAnalysisStages)
           .where(and(
-            eq(joelleAnalysisStages.userId, ctx.user.id),
+            
             eq(joelleAnalysisStages.projectId, projectId),
           ))
           .orderBy(joelleAnalysisStages.stageNumber);
@@ -1081,7 +1072,7 @@ ${stage4Data ? `بيانات المنافسين (المحرك 4): ${stage4Data.s
 
         const prevStages = await db.select().from(joelleAnalysisStages)
           .where(and(
-            eq(joelleAnalysisStages.userId, ctx.user.id),
+            
             eq(joelleAnalysisStages.projectId, projectId),
           ))
           .orderBy(joelleAnalysisStages.stageNumber);
@@ -1194,7 +1185,7 @@ JSON:
 
         const prevStages = await db.select().from(joelleAnalysisStages)
           .where(and(
-            eq(joelleAnalysisStages.userId, ctx.user.id),
+            
             eq(joelleAnalysisStages.projectId, projectId),
           ))
           .orderBy(joelleAnalysisStages.stageNumber);
@@ -1367,7 +1358,7 @@ JSON:
 
         const prevStages = await db.select().from(joelleAnalysisStages)
           .where(and(
-            eq(joelleAnalysisStages.userId, ctx.user.id),
+            
             eq(joelleAnalysisStages.projectId, projectId),
           ))
           .orderBy(joelleAnalysisStages.stageNumber);
@@ -1448,7 +1439,7 @@ JSON:
 
         const prevStages = await db.select().from(joelleAnalysisStages)
           .where(and(
-            eq(joelleAnalysisStages.userId, ctx.user.id),
+            
             eq(joelleAnalysisStages.projectId, projectId),
           ))
           .orderBy(joelleAnalysisStages.stageNumber);
@@ -1552,7 +1543,7 @@ JSON:
 
         const prevStages = await db.select().from(joelleAnalysisStages)
           .where(and(
-            eq(joelleAnalysisStages.userId, ctx.user.id),
+            
             eq(joelleAnalysisStages.projectId, projectId),
           ))
           .orderBy(joelleAnalysisStages.stageNumber);
@@ -1663,7 +1654,7 @@ JSON:
         // Collect all stage data
         const prevStages = await db.select().from(joelleAnalysisStages)
           .where(and(
-            eq(joelleAnalysisStages.userId, ctx.user.id),
+            
             eq(joelleAnalysisStages.projectId, projectId),
           ))
           .orderBy(joelleAnalysisStages.stageNumber);
@@ -1843,7 +1834,7 @@ JSON:
         try {
           const allStages = await db.select().from(joelleAnalysisStages)
             .where(and(
-              eq(joelleAnalysisStages.userId, ctx.user.id),
+              
               eq(joelleAnalysisStages.projectId, projectId),
             ))
             .orderBy(joelleAnalysisStages.stageNumber);
@@ -1973,7 +1964,7 @@ JSON:
         // Collect ALL stage outputs
         const prevStages = await db.select().from(joelleAnalysisStages)
           .where(and(
-            eq(joelleAnalysisStages.userId, ctx.user.id),
+            
             eq(joelleAnalysisStages.projectId, projectId),
           ))
           .orderBy(joelleAnalysisStages.stageNumber);
@@ -2119,7 +2110,7 @@ ${results.map(r => `- ${r.success ? '✅' : '❌'} ${r.title}`).join('\n')}
       // Fetch completed stages for this project
       const stages = await db.select().from(joelleAnalysisStages)
         .where(and(
-          eq(joelleAnalysisStages.userId, ctx.user.id),
+          
           eq(joelleAnalysisStages.projectId, projectId),
         ))
         .orderBy(joelleAnalysisStages.stageNumber);
@@ -2350,7 +2341,7 @@ ${results.map(r => `- ${r.success ? '✅' : '❌'} ${r.title}`).join('\n')}
 
       const stages = await db.select().from(joelleAnalysisStages)
         .where(and(
-          eq(joelleAnalysisStages.userId, ctx.user.id),
+          
           eq(joelleAnalysisStages.projectId, projectId),
         ))
         .orderBy(joelleAnalysisStages.stageNumber);

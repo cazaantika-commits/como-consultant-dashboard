@@ -24,7 +24,7 @@ export const marketReportsRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
-      const conditions = [eq(marketReports.userId, ctx.user.id)];
+      const conditions = [];
 
       if (input?.source) {
         conditions.push(eq(marketReports.source, input.source as any));
@@ -67,7 +67,7 @@ export const marketReportsRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
       const report = await db.select().from(marketReports)
-        .where(and(eq(marketReports.id, input.id), eq(marketReports.userId, ctx.user.id)))
+        .where(and(eq(marketReports.id, input.id)))
         .limit(1);
 
       if (!report[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Report not found" });
@@ -142,7 +142,7 @@ export const marketReportsRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
       const report = await db.select().from(marketReports)
-        .where(and(eq(marketReports.id, input.id), eq(marketReports.userId, ctx.user.id)))
+        .where(and(eq(marketReports.id, input.id)))
         .limit(1);
 
       if (!report[0]) throw new TRPCError({ code: "NOT_FOUND", message: "Report not found" });
@@ -166,7 +166,7 @@ export const marketReportsRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
       await db.delete(marketReports)
-        .where(and(eq(marketReports.id, input.id), eq(marketReports.userId, ctx.user.id)));
+        .where(and(eq(marketReports.id, input.id)));
 
       return { success: true };
     }),
@@ -178,15 +178,14 @@ export const marketReportsRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
       const total = await db.select({ count: sql<number>`count(*)` })
-        .from(marketReports)
-        .where(eq(marketReports.userId, ctx.user.id));
+        .from(marketReports);
 
       const bySource = await db.select({
         source: marketReports.source,
         count: sql<number>`count(*)`,
       })
         .from(marketReports)
-        .where(eq(marketReports.userId, ctx.user.id))
+        
         .groupBy(marketReports.source);
 
       const byType = await db.select({
@@ -194,13 +193,12 @@ export const marketReportsRouter = router({
         count: sql<number>`count(*)`,
       })
         .from(marketReports)
-        .where(eq(marketReports.userId, ctx.user.id))
+        
         .groupBy(marketReports.reportType);
 
       const ready = await db.select({ count: sql<number>`count(*)` })
         .from(marketReports)
         .where(and(
-          eq(marketReports.userId, ctx.user.id),
           eq(marketReports.processingStatus, "ready")
         ));
 
@@ -224,7 +222,6 @@ export const marketReportsRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
       const conditions = [
-        eq(marketReports.userId, ctx.user.id),
         eq(marketReports.processingStatus, "ready"),
       ];
 

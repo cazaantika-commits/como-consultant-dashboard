@@ -35,7 +35,7 @@ export const legalSetupRouter = router({
     const db = await getDb();
     if (!db) return [];
     return db.select().from(legalSetupRecords)
-      .where(eq(legalSetupRecords.userId, ctx.user.id))
+      
       .orderBy(desc(legalSetupRecords.updatedAt));
   }),
 
@@ -47,7 +47,6 @@ export const legalSetupRouter = router({
       if (!db) return [];
       return db.select().from(legalSetupRecords)
         .where(and(
-          eq(legalSetupRecords.userId, ctx.user.id),
           eq(legalSetupRecords.projectId, input)
         ))
         .orderBy(desc(legalSetupRecords.updatedAt));
@@ -58,7 +57,7 @@ export const legalSetupRouter = router({
     const db = await getDb();
     if (!db) return null;
     const results = await db.select().from(legalSetupRecords).where(
-      and(eq(legalSetupRecords.id, input), eq(legalSetupRecords.userId, ctx.user.id))
+      and(eq(legalSetupRecords.id, input))
     );
     return results[0] || null;
   }),
@@ -85,7 +84,7 @@ export const legalSetupRouter = router({
       const { id, ...data } = input;
       await db.update(legalSetupRecords)
         .set(data)
-        .where(and(eq(legalSetupRecords.id, id), eq(legalSetupRecords.userId, ctx.user.id)));
+        .where(and(eq(legalSetupRecords.id, id)));
       return { id };
     }),
 
@@ -96,7 +95,7 @@ export const legalSetupRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
       await db.delete(legalSetupRecords)
-        .where(and(eq(legalSetupRecords.id, input), eq(legalSetupRecords.userId, ctx.user.id)));
+        .where(and(eq(legalSetupRecords.id, input)));
       return { success: true };
     }),
 });
@@ -139,7 +138,7 @@ export const designsAndPermitsRouter = router({
     const db = await getDb();
     if (!db) return [];
     return db.select().from(designsAndPermits)
-      .where(eq(designsAndPermits.userId, ctx.user.id))
+      
       .orderBy(desc(designsAndPermits.updatedAt));
   }),
 
@@ -151,7 +150,6 @@ export const designsAndPermitsRouter = router({
       if (!db) return [];
       return db.select().from(designsAndPermits)
         .where(and(
-          eq(designsAndPermits.userId, ctx.user.id),
           eq(designsAndPermits.projectId, input)
         ))
         .orderBy(desc(designsAndPermits.updatedAt));
@@ -162,7 +160,7 @@ export const designsAndPermitsRouter = router({
     const db = await getDb();
     if (!db) return null;
     const results = await db.select().from(designsAndPermits).where(
-      and(eq(designsAndPermits.id, input), eq(designsAndPermits.userId, ctx.user.id))
+      and(eq(designsAndPermits.id, input))
     );
     return results[0] || null;
   }),
@@ -189,7 +187,7 @@ export const designsAndPermitsRouter = router({
       const { id, ...data } = input;
       await db.update(designsAndPermits)
         .set(data)
-        .where(and(eq(designsAndPermits.id, id), eq(designsAndPermits.userId, ctx.user.id)));
+        .where(and(eq(designsAndPermits.id, id)));
       return { id };
     }),
 
@@ -200,7 +198,7 @@ export const designsAndPermitsRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
       await db.delete(designsAndPermits)
-        .where(and(eq(designsAndPermits.id, input), eq(designsAndPermits.userId, ctx.user.id)));
+        .where(and(eq(designsAndPermits.id, input)));
       return { success: true };
     }),
 });

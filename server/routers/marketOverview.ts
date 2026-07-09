@@ -45,7 +45,7 @@ const marketOverviewInput = z.object({
 });
 
 export const marketOverviewRouter = router({
-  // Get market overview for a project
+  // Get market overview for a project (shared across all users in the portal)
   getByProject: publicProcedure
     .input(z.number())
     .query(async ({ ctx, input }) => {
@@ -53,21 +53,17 @@ export const marketOverviewRouter = router({
       const db = await getDb();
       if (!db) return null;
       const results = await db.select().from(marketOverview)
-        .where(and(
-          eq(marketOverview.projectId, input),
-          eq(marketOverview.userId, ctx.user.id)
-        ));
+        .where(eq(marketOverview.projectId, input));
       return results[0] || null;
     }),
 
-  // Get all market overviews for the current user (all projects)
+  // Get all market overviews (shared across all users in the portal)
   getAllByUser: publicProcedure
     .query(async ({ ctx }) => {
       if (!ctx.user) return [];
       const db = await getDb();
       if (!db) return [];
-      const results = await db.select().from(marketOverview)
-        .where(eq(marketOverview.userId, ctx.user.id));
+      const results = await db.select().from(marketOverview);
       return results;
     }),
 
@@ -80,10 +76,7 @@ export const marketOverviewRouter = router({
       if (!db) throw new Error("Database not available");
 
       const existing = await db.select().from(marketOverview)
-        .where(and(
-          eq(marketOverview.projectId, input.projectId),
-          eq(marketOverview.userId, ctx.user.id)
-        ));
+        .where(eq(marketOverview.projectId, input.projectId));
 
       const data: any = {
         residentialStudioPct: input.residentialStudioPct?.toString() ?? '0',
@@ -143,10 +136,7 @@ export const marketOverviewRouter = router({
       if (!db) throw new Error("Database not available");
 
       const existing = await db.select().from(marketOverview)
-        .where(and(
-          eq(marketOverview.projectId, input.projectId),
-          eq(marketOverview.userId, ctx.user.id)
-        ));
+        .where(eq(marketOverview.projectId, input.projectId));
 
       if (existing[0]) {
         await db.update(marketOverview)
@@ -167,20 +157,20 @@ export const marketOverviewRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      // Get project data
+      // Get project data (shared portal - no userId filter)
       const projectResults = await db.select().from(projects)
-        .where(and(eq(projects.id, projectId), eq(projects.userId, ctx.user.id)));
+        .where(eq(projects.id, projectId));
       if (!projectResults[0]) throw new Error("Project not found");
       const project = projectResults[0];
 
       // Get feasibility study data if exists
       const feasResults = await db.select().from(feasibilityStudies)
-        .where(and(eq(feasibilityStudies.projectId, projectId), eq(feasibilityStudies.userId, ctx.user.id)));
+        .where(eq(feasibilityStudies.projectId, projectId));
       const feasStudy = feasResults[0] || null;
 
       // Get competition pricing data if exists
       const compResults = await db.select().from(competitionPricing)
-        .where(and(eq(competitionPricing.projectId, projectId), eq(competitionPricing.userId, ctx.user.id)));
+        .where(eq(competitionPricing.projectId, projectId));
       const compPricing = compResults[0] || null;
 
       // ═══════════════════════════════════════════════════════════
@@ -363,10 +353,7 @@ BUA: ${buaFromFactSheet > 0 ? buaFromFactSheet.toLocaleString() : 'غير محد
 
         // Ensure existing record or create one
         const existing = await db.select().from(marketOverview)
-          .where(and(
-            eq(marketOverview.projectId, projectId),
-            eq(marketOverview.userId, ctx.user.id)
-          ));
+          .where(eq(marketOverview.projectId, projectId));
 
         if (existing[0]) {
           await db.update(marketOverview)
@@ -446,10 +433,7 @@ BUA: ${buaFromFactSheet > 0 ? buaFromFactSheet.toLocaleString() : 'غير محد
         }
 
         const existing = await db.select().from(marketOverview)
-          .where(and(
-            eq(marketOverview.projectId, input.projectId),
-            eq(marketOverview.userId, ctx.user.id)
-          ));
+          .where(eq(marketOverview.projectId, input.projectId));
 
         if (existing[0]) {
           await db.update(marketOverview)

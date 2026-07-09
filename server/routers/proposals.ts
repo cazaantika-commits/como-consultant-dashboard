@@ -632,9 +632,7 @@ export const proposalsRouter = router({
       
       await db.delete(consultantProposals)
         .where(and(
-          eq(consultantProposals.id, input.proposalId),
-          eq(consultantProposals.userId, ctx.user.id)
-        ));
+          eq(consultantProposals.id, input.proposalId)));
       
       return { success: true };
     }),
@@ -811,7 +809,7 @@ export const proposalsRouter = router({
       if (Object.keys(updateData).length === 0) return { success: true };
       await db.update(consultantProposals)
         .set(updateData)
-        .where(and(eq(consultantProposals.id, input.proposalId), eq(consultantProposals.userId, ctx.user.id)));
+        .where(and(eq(consultantProposals.id, input.proposalId)));
       return { success: true };
     }),
 });
