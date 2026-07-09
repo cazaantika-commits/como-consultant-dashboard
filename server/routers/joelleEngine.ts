@@ -2140,21 +2140,84 @@ ${results.map(r => `- ${r.success ? '✅' : '❌'} ${r.title}`).join('\n')}
           const unitMix = data.unitMix || {};
           const retailMix = data.retailMix || {};
 
+          // Fetch project GFA to compute unit counts
+          const [proj] = await db.select({
+            gfaRes: projects.gfaResidentialSqft,
+            gfaRet: projects.gfaRetailSqft,
+            gfaOff: projects.gfaOfficesSqft,
+            saleableResPct: projects.saleableResidentialPct,
+            saleableRetPct: projects.saleableRetailPct,
+            saleableOffPct: projects.saleableOfficesPct,
+          }).from(projects).where(eq(projects.id, projectId));
+
+          const gfaRes = parseFloat(proj?.gfaRes || '0');
+          const gfaRet = parseFloat(proj?.gfaRet || '0');
+          const gfaOff = parseFloat(proj?.gfaOff || '0');
+          const sellableRes = gfaRes * (parseFloat(proj?.saleableResPct || '95') / 100);
+          const sellableRet = gfaRet * (parseFloat(proj?.saleableRetPct || '97') / 100);
+          const sellableOff = gfaOff * (parseFloat(proj?.saleableOffPct || '95') / 100);
+
+          // Helper: compute unit count = floor(sellable * pct/100 / avgSize), min 1 if pct > 0
+          function computeCount(sellable: number, pct: number, avgSize: number): number {
+            if (pct <= 0 || avgSize <= 0 || sellable <= 0) return 0;
+            const raw = (sellable * pct / 100) / avgSize;
+            return raw >= 0.5 ? Math.round(raw) : (pct > 0 ? 1 : 0);
+          }
+
+          const studioPct = unitMix.studio?.pct ?? 0;
+          const studioAvg = Math.round(unitMix.studio?.avgSize ?? 0);
+          const oneBrPct = unitMix.oneBr?.pct ?? 0;
+          const oneBrAvg = Math.round(unitMix.oneBr?.avgSize ?? 0);
+          const twoBrPct = unitMix.twoBr?.pct ?? 0;
+          const twoBrAvg = Math.round(unitMix.twoBr?.avgSize ?? 0);
+          const threeBrPct = unitMix.threeBr?.pct ?? 0;
+          const threeBrAvg = Math.round(unitMix.threeBr?.avgSize ?? 0);
+          const retSmallPct = retailMix.small?.pct ?? 0;
+          const retSmallAvg = Math.round(retailMix.small?.avgSize ?? 0);
+          const retMedPct = retailMix.medium?.pct ?? 0;
+          const retMedAvg = Math.round(retailMix.medium?.avgSize ?? 0);
+          const retLargePct = retailMix.large?.pct ?? 0;
+          const retLargeAvg = Math.round(retailMix.large?.avgSize ?? 0);
+
+          const officeMix = data.officeMix || {};
+          const offSmallPct = officeMix.small?.pct ?? 0;
+          const offSmallAvg = Math.round(officeMix.small?.avgSize ?? 0);
+          const offMedPct = officeMix.medium?.pct ?? 0;
+          const offMedAvg = Math.round(officeMix.medium?.avgSize ?? 0);
+          const offLargePct = officeMix.large?.pct ?? 0;
+          const offLargeAvg = Math.round(officeMix.large?.avgSize ?? 0);
+
           const moData: any = {
-            residentialStudioPct: String(unitMix.studio?.pct ?? 0),
-            residentialStudioAvgArea: Math.round(unitMix.studio?.avgSize ?? 0),
-            residential1brPct: String(unitMix.oneBr?.pct ?? 0),
-            residential1brAvgArea: Math.round(unitMix.oneBr?.avgSize ?? 0),
-            residential2brPct: String(unitMix.twoBr?.pct ?? 0),
-            residential2brAvgArea: Math.round(unitMix.twoBr?.avgSize ?? 0),
-            residential3brPct: String(unitMix.threeBr?.pct ?? 0),
-            residential3brAvgArea: Math.round(unitMix.threeBr?.avgSize ?? 0),
-            retailSmallPct: String(retailMix.small?.pct ?? 0),
-            retailSmallAvgArea: Math.round(retailMix.small?.avgSize ?? 0),
-            retailMediumPct: String(retailMix.medium?.pct ?? 0),
-            retailMediumAvgArea: Math.round(retailMix.medium?.avgSize ?? 0),
-            retailLargePct: String(retailMix.large?.pct ?? 0),
-            retailLargeAvgArea: Math.round(retailMix.large?.avgSize ?? 0),
+            residentialStudioPct: String(studioPct),
+            residentialStudioAvgArea: studioAvg,
+            residentialStudioCount: computeCount(sellableRes, studioPct, studioAvg),
+            residential1brPct: String(oneBrPct),
+            residential1brAvgArea: oneBrAvg,
+            residential1brCount: computeCount(sellableRes, oneBrPct, oneBrAvg),
+            residential2brPct: String(twoBrPct),
+            residential2brAvgArea: twoBrAvg,
+            residential2brCount: computeCount(sellableRes, twoBrPct, twoBrAvg),
+            residential3brPct: String(threeBrPct),
+            residential3brAvgArea: threeBrAvg,
+            residential3brCount: computeCount(sellableRes, threeBrPct, threeBrAvg),
+            retailSmallPct: String(retSmallPct),
+            retailSmallAvgArea: retSmallAvg,
+            retailSmallCount: computeCount(sellableRet, retSmallPct, retSmallAvg),
+            retailMediumPct: String(retMedPct),
+            retailMediumAvgArea: retMedAvg,
+            retailMediumCount: computeCount(sellableRet, retMedPct, retMedAvg),
+            retailLargePct: String(retLargePct),
+            retailLargeAvgArea: retLargeAvg,
+            retailLargeCount: computeCount(sellableRet, retLargePct, retLargeAvg),
+            officeSmallPct: String(offSmallPct),
+            officeSmallAvgArea: offSmallAvg,
+            officeSmallCount: computeCount(sellableOff, offSmallPct, offSmallAvg),
+            officeMediumPct: String(offMedPct),
+            officeMediumAvgArea: offMedAvg,
+            officeMediumCount: computeCount(sellableOff, offMedPct, offMedAvg),
+            officeLargePct: String(offLargePct),
+            officeLargeAvgArea: offLargeAvg,
+            officeLargeCount: computeCount(sellableOff, offLargePct, offLargeAvg),
             finishingQuality: data.finishingQuality || 'ممتاز',
             aiRecommendationsJson: stage6.stageDataJson,
             aiReportGeneratedAt: new Date(),
