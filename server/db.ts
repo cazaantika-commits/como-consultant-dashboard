@@ -96,13 +96,13 @@ export async function getUserProjects(userId: number) {
   return await db.select().from(projects).where(eq(projects.userId, userId));
 }
 
-export async function getProjectById(projectId: number, userId: number) {
+export async function getProjectById(projectId: number, userId?: number) {
   const db = await getDb();
   if (!db) return null;
   const result = await db.select().from(projects)
     .where(eq(projects.id, projectId))
     .limit(1);
-  return result.length > 0 && result[0].userId === userId ? result[0] : null;
+  return result.length > 0 ? result[0] : null;
 }
 
 export async function createProject(userId: number, data: Omit<InsertProject, 'userId'>) {

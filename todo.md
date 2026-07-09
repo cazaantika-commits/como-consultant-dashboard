@@ -782,3 +782,4 @@
 - [x] Fix getProjectFactSheet in joelleEngine.ts: project card now has absolute priority over feasibilityStudies table for plotArea, GFA, BUA, community, plotNumber
 - [x] Audit confirmed: calculateProjectCosts reads from project card (single source of truth) ✅
 - [x] Audit confirmed: CostsCashFlowTab frontend reads from trpc.projects.getById (project card) ✅
+- [x] Fix getProjectById: removed userId filter so all users can access all projects (shared dashboard)
