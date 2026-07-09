@@ -774,3 +774,11 @@
 - [x] Portfolio monthly amounts now exactly match each project's Financial Planning report
 - [x] ROOT FIX: Add server-side monthlyAmounts to getSettings response — client now uses server distribution instead of its own calculation
 - [x] Both pages now use the SAME distributeAmount function on the server — guaranteed identical numbers
+- [x] Re-index 43 documents from Google Drive for all 6 projects (Khazan document archive)
+- [x] Populate project fact sheets (P1, P3, P4, P6) from archived fact sheet documents (plotArea, GFA, title deed, DDA, parties, utilities, timeline)
+- [x] Populate project fact sheets (P2, P5) from uploaded PDFs (Affection Plans, Title Deeds, Plot Development Guidelines)
+- [x] Fix P5 landPrice: corrected from 11M to 13.85M based on Title Deed
+- [x] Fix P5 GFA: corrected from 50,826 (copy of P4) to 90,093.93 based on Affection Plan
+- [x] Fix getProjectFactSheet in joelleEngine.ts: project card now has absolute priority over feasibilityStudies table for plotArea, GFA, BUA, community, plotNumber
+- [x] Audit confirmed: calculateProjectCosts reads from project card (single source of truth) ✅
+- [x] Audit confirmed: CostsCashFlowTab frontend reads from trpc.projects.getById (project card) ✅

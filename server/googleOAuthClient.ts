@@ -30,7 +30,7 @@ export async function getOAuthClientForUser(userId: number) {
   oauth2Client.setCredentials({
     access_token: tokenRecord.accessToken,
     refresh_token: tokenRecord.refreshToken || undefined,
-    expiry_date: tokenRecord.expiresAt?.getTime(),
+    expiry_date: tokenRecord.expiresAt ? new Date(tokenRecord.expiresAt).getTime() : undefined,
     scope: tokenRecord.scope || undefined,
   });
 

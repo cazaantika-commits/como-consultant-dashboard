@@ -110,18 +110,17 @@ async function getProjectFactSheet(db: any, projectId: number, userId: number) {
     .where(and(eq(costsCashFlow.projectId, projectId), eq(costsCashFlow.userId, userId)));
   const ccf = ccfResults[0] || null;
 
-  // Merge data
-  const plotArea = feasStudy?.plotArea || parseFloat(String(project.plotAreaSqft || '0')) || 0;
-  const gfaRes = feasStudy?.gfaResidential || parseFloat(String(project.gfaResidentialSqft || '0')) || 0;
-  const gfaRet = feasStudy?.gfaRetail || parseFloat(String(project.gfaRetailSqft || '0')) || 0;
-  const gfaOff = feasStudy?.gfaOffices || parseFloat(String(project.gfaOfficesSqft || '0')) || 0;
-  const totalGFA = feasStudy
-    ? (gfaRes + gfaRet + gfaOff)
-    : parseFloat(String(project.gfaSqft || '0')) || 0;
-  const bua = project.bua || feasStudy?.estimatedBua || 0;
+  // Merge data — project card (projects table) is the SINGLE SOURCE OF TRUTH
+  // If a field exists in the card, it takes absolute priority over feasibilityStudies
+  const plotArea = parseFloat(String(project.plotAreaSqft || '0')) || feasStudy?.plotArea || 0;
+  const gfaRes = parseFloat(String(project.gfaResidentialSqft || '0')) || feasStudy?.gfaResidential || 0;
+  const gfaRet = parseFloat(String(project.gfaRetailSqft || '0')) || feasStudy?.gfaRetail || 0;
+  const gfaOff = parseFloat(String(project.gfaOfficesSqft || '0')) || feasStudy?.gfaOffices || 0;
+  const totalGFA = parseFloat(String(project.gfaSqft || '0')) || (gfaRes + gfaRet + gfaOff) || 0;
+  const bua = parseFloat(String(project.manualBuaSqft || '0')) || project.bua || feasStudy?.estimatedBua || 0;
   const permittedUse = project.permittedUse || feasStudy?.landUse || 'غير محدد';
-  const community = feasStudy?.community || project.areaCode || 'غير محدد';
-  const plotNumber = feasStudy?.plotNumber || project.plotNumber || 'غير محدد';
+  const community = project.areaCode || feasStudy?.community || 'غير محدد';
+  const plotNumber = project.plotNumber || feasStudy?.plotNumber || 'غير محدد';
 
   const projectType: string[] = [];
   if (gfaRes > 0) projectType.push('سكني');
