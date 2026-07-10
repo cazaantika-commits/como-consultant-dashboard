@@ -1829,13 +1829,28 @@ export const cashFlowSettingsRouter = router({
 
     const results: PortfolioProject[] = [];
 
+    // ─── BATCH: Fetch all supporting data in parallel to avoid N+1 queries ───
+    const [allMo, allCp, allSettings] = await Promise.all([
+      db.select().from(marketOverview),
+      db.select().from(competitionPricing),
+      db.select().from(projectCashFlowSettings),
+    ]);
+    // Index by projectId for O(1) lookup
+    const moByProject = new Map<number, typeof allMo[0]>();
+    for (const row of allMo) moByProject.set(row.projectId!, row);
+    const cpByProject = new Map<number, typeof allCp[0]>();
+    for (const row of allCp) cpByProject.set(row.projectId!, row);
+    // Settings indexed by projectId+scenario
+    const settingsByKey = new Map<string, typeof allSettings>();
+    for (const row of allSettings) {
+      const key = `${row.projectId}_${row.scenario}`;
+      if (!settingsByKey.has(key)) settingsByKey.set(key, []);
+      settingsByKey.get(key)!.push(row);
+    }
+
     for (const project of allProjects) {
-      const moRows = await db.select().from(marketOverview)
-        .where(eq(marketOverview.projectId, project.id));
-      const cpRows = await db.select().from(competitionPricing)
-        .where(eq(competitionPricing.projectId, project.id));
-      const mo = moRows[0] || null;
-      const cp = cpRows[0] || null;
+      const mo = moByProject.get(project.id) || null;
+      const cp = cpByProject.get(project.id) || null;
       const costs = calculateProjectCosts(project, mo, cp);
       if (!costs) continue;
 
@@ -1862,12 +1877,8 @@ export const cashFlowSettingsRouter = router({
 
       for (const sc of scenarioList) {
         const phases = calculatePhases(durations, 0, sc);
-        const savedSettings = await db.select().from(projectCashFlowSettings).where(
-          and(
-            eq(projectCashFlowSettings.projectId, project.id),
-            eq(projectCashFlowSettings.scenario, sc),
-          )
-        );
+        // Use pre-fetched batch data instead of per-scenario DB query
+        const savedSettings = settingsByKey.get(`${project.id}_${sc}`) || [];
 
         // Build items map exactly as getCostSettingsComparison does
         interface ItemData { amount: number; fundingSource: string; section: string; monthlyAmounts: number[] }

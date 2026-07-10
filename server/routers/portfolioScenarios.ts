@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc";
+import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { portfolioScenarios } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
@@ -12,11 +12,11 @@ export const portfolioScenariosRouter = router({
     return db
       .select()
       .from(portfolioScenarios)
-      
+      .where(eq(portfolioScenarios.userId, ctx.user.id))
       .orderBy(portfolioScenarios.updatedAt);
   }),
 
-  // Save or update a scenario (upsert by name)
+  // Save or update a scenario (upsert by name + userId)
   save: protectedProcedure
     .input(
       z.object({
@@ -29,12 +29,13 @@ export const portfolioScenariosRouter = router({
       const db = await getDb();
       if (!db) throw new Error("DB not available");
 
-      // Check if scenario with this name already exists for this user
+      // Check if scenario with this name already exists for THIS user
       const existing = await db
         .select()
         .from(portfolioScenarios)
         .where(
           and(
+            eq(portfolioScenarios.userId, ctx.user.id),
             eq(portfolioScenarios.name, input.name)
           )
         )
@@ -62,7 +63,7 @@ export const portfolioScenariosRouter = router({
       }
     }),
 
-  // Load a specific scenario by id
+  // Load a specific scenario by id (scoped to user)
   load: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
@@ -73,7 +74,9 @@ export const portfolioScenariosRouter = router({
         .from(portfolioScenarios)
         .where(
           and(
-            eq(portfolioScenarios.id, input.id))
+            eq(portfolioScenarios.id, input.id),
+            eq(portfolioScenarios.userId, ctx.user.id)
+          )
         )
         .limit(1);
       return rows[0] ?? null;
@@ -85,22 +88,25 @@ export const portfolioScenariosRouter = router({
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new Error("DB not available");
-      // Clear all defaults for this user
+      // Clear all defaults for THIS user only
       await db
         .update(portfolioScenarios)
-        .set({ isDefault: 0 });
+        .set({ isDefault: 0 })
+        .where(eq(portfolioScenarios.userId, ctx.user.id));
       // Set the new default
       await db
         .update(portfolioScenarios)
         .set({ isDefault: 1 })
         .where(
           and(
-            eq(portfolioScenarios.id, input.id))
+            eq(portfolioScenarios.id, input.id),
+            eq(portfolioScenarios.userId, ctx.user.id)
+          )
         );
       return { success: true };
     }),
 
-  // Delete a scenario
+  // Delete a scenario (scoped to user)
   delete: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
@@ -110,12 +116,14 @@ export const portfolioScenariosRouter = router({
         .delete(portfolioScenarios)
         .where(
           and(
-            eq(portfolioScenarios.id, input.id))
+            eq(portfolioScenarios.id, input.id),
+            eq(portfolioScenarios.userId, ctx.user.id)
+          )
         );
       return { success: true };
     }),
 
-  // Get the default scenario for auto-load
+  // Get the default scenario for auto-load (scoped to current user)
   getDefault: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) return null;
@@ -124,6 +132,7 @@ export const portfolioScenariosRouter = router({
       .from(portfolioScenarios)
       .where(
         and(
+          eq(portfolioScenarios.userId, ctx.user.id),
           eq(portfolioScenarios.isDefault, 1)
         )
       )
