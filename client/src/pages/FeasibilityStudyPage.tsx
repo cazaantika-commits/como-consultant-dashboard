@@ -383,6 +383,52 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
               )}
             </div>
 
+            {/* ═══ ملخص الأرباح — ظاهر دائماً ═══ */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div className="relative overflow-hidden rounded-xl border border-rose-200/60 bg-gradient-to-br from-rose-50 to-white p-4 shadow-sm">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center">
+                    <DollarSign className="w-4 h-4 text-rose-600" />
+                  </div>
+                  <span className="text-[11px] font-bold text-rose-700">إجمالي التكاليف</span>
+                </div>
+                <p className="text-lg font-black text-rose-800 font-mono" dir="ltr">{fmt(computed.totalCosts)}</p>
+                <span className="text-[10px] text-rose-500">درهم</span>
+              </div>
+              <div className="relative overflow-hidden rounded-xl border border-emerald-200/60 bg-gradient-to-br from-emerald-50 to-white p-4 shadow-sm">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+                    <TrendingUp className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  <span className="text-[11px] font-bold text-emerald-700">إجمالي الإيرادات</span>
+                </div>
+                <p className="text-lg font-black text-emerald-800 font-mono" dir="ltr">{fmt(computed.totalRevenue)}</p>
+                <span className="text-[10px] text-emerald-500">درهم</span>
+              </div>
+              <div className={`relative overflow-hidden rounded-xl border p-4 shadow-sm ${(computed.profit || 0) >= 0 ? 'border-blue-200/60 bg-gradient-to-br from-blue-50 to-white' : 'border-red-200/60 bg-gradient-to-br from-red-50 to-white'}`}>
+                <div className="flex items-center gap-2 mb-1">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${(computed.profit || 0) >= 0 ? 'bg-blue-100' : 'bg-red-100'}`}>
+                    <BarChart3 className={`w-4 h-4 ${(computed.profit || 0) >= 0 ? 'text-blue-600' : 'text-red-600'}`} />
+                  </div>
+                  <span className={`text-[11px] font-bold ${(computed.profit || 0) >= 0 ? 'text-blue-700' : 'text-red-700'}`}>صافي الربح</span>
+                </div>
+                <p className={`text-lg font-black font-mono ${(computed.profit || 0) >= 0 ? 'text-blue-800' : 'text-red-800'}`} dir="ltr">{fmt(computed.profit)}</p>
+                <span className={`text-[10px] ${(computed.profit || 0) >= 0 ? 'text-blue-500' : 'text-red-500'}`}>
+                  {computed.totalRevenue > 0 ? `${((computed.profit / computed.totalRevenue) * 100).toFixed(1)}% هامش ربح` : 'درهم'}
+                </span>
+              </div>
+              <div className="relative overflow-hidden rounded-xl border border-violet-200/60 bg-gradient-to-br from-violet-50 to-white p-4 shadow-sm">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center">
+                    <Percent className="w-4 h-4 text-violet-600" />
+                  </div>
+                  <span className="text-[11px] font-bold text-violet-700">العائد على الاستثمار</span>
+                </div>
+                <p className="text-lg font-black text-violet-800 font-mono" dir="ltr">{computed.roi ? `${computed.roi.toFixed(1)}%` : '—'}</p>
+                <span className="text-[10px] text-violet-500">ربح المستثمر ÷ رأس المال</span>
+              </div>
+            </div>
+
             {/* ═══════════════════════════════════════════ */}
             {/* 3 TABS - الهيكل الجديد المبسط */}
             {/* ═══════════════════════════════════════════ */}

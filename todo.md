@@ -787,3 +787,4 @@
 - [x] Add HTML print report for individual project cash flow (same quality as portfolio report) — export button in EscrowCashFlowPage opens a new window with professional styled report including print/save buttons
 - [x] Fix Dynamic Portfolio page: user-scoping bug in portfolioScenarios router (getDefault/save/list/load/delete now filter by ctx.user.id)
 - [x] Fix Dynamic Portfolio page: API performance optimization (batch DB queries instead of N+1 sequential queries — reduced from ~7s to ~0.7s)
+- [x] Add clear profit summary (التكاليف / الإيرادات / الأرباح) directly visible in the main feasibility study page — not hidden in a sub-section
