@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { exportProjectCashFlowHTML } from "@/lib/projectCashFlowReport";
 
 const PHASE_COLORS: Record<string, { bg: string; header: string; text: string }> = {
   design: { bg: "bg-purple-50", header: "bg-purple-700 text-white", text: "text-purple-900" },
@@ -150,16 +151,25 @@ export default function EscrowCashFlowPage({ embedded, initialProjectId }: { emb
         </div>
       ) : (
         <div>
-          {/* Title */}
-          <div className="mb-3">
-            <h1 className="text-base font-bold text-gray-900">
-              {selectedProject?.name || report.projectName} — التدفقات النقدية
-            </h1>
-            <p className="text-xs text-gray-500 mt-0.5">
-              السيناريو: {report.scenario === "no_offplan" ? "تطوير بدون بيع على الخارطة" : report.scenario === "offplan_escrow" ? "أوف بلان مع حساب ضمان" : report.scenario === "offplan_20pct" ? "أوف بلان بعد إنجاز 20%" : report.scenario}
-              {" | "}المدة: {report.totalMonths} شهر
-              {" | "}البداية: {report.monthLabels[0]}
-            </p>
+          {/* Title + Print Button */}
+          <div className="mb-3 flex items-start justify-between">
+            <div>
+              <h1 className="text-base font-bold text-gray-900">
+                {selectedProject?.name || report.projectName} — التدفقات النقدية
+              </h1>
+              <p className="text-xs text-gray-500 mt-0.5">
+                السيناريو: {report.scenario === "no_offplan" ? "تطوير بدون بيع على الخارطة" : report.scenario === "offplan_escrow" ? "أوف بلان مع حساب ضمان" : report.scenario === "offplan_20pct" ? "أوف بلان بعد إنجاز 20%" : report.scenario}
+                {" | "}المدة: {report.totalMonths} شهر
+                {" | "}البداية: {report.monthLabels[0]}
+              </p>
+            </div>
+            <button
+              onClick={() => exportProjectCashFlowHTML(report as any)}
+              className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow transition-all hover:shadow-md"
+            >
+              <span>🖨️</span>
+              <span>تصدير HTML</span>
+            </button>
           </div>
 
           {/* Summary Cards */}
