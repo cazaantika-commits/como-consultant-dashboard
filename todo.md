@@ -783,3 +783,4 @@
 - [x] Audit confirmed: calculateProjectCosts reads from project card (single source of truth) ✅
 - [x] Audit confirmed: CostsCashFlowTab frontend reads from trpc.projects.getById (project card) ✅
 - [x] Fix getProjectById: removed userId filter so all users can access all projects (shared dashboard)
+- [x] Change construction cost distribution from equal/linear to S-Curve (Beta distribution α=2.5, β=4.0) for all 6 projects across all scenarios — updated 26 rows (contractor_payments + contractor_payments_20), 5 inactive rows skipped (offplan_escrow contractor_payments_20 with is_active=0)
