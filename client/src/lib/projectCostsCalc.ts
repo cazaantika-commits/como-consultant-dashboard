@@ -91,27 +91,65 @@ export function calculateProjectCosts(
   };
   const prices = getPrices();
 
-  const calcTypeRevenue = (pct: number, avgArea: number, pricePerSqft: number, saleable: number) => {
-    const allocated = saleable * (pct / 100);
-    const units = avgArea > 0 ? Math.floor(allocated / avgArea) : 0;
-    return avgArea * pricePerSqft * units;
-  };
+  // Revenue calculation — mirrors CostsCashFlowTab logic:
+  // 1. Use saved counts if available, otherwise compute from pct
+  // 2. Absorb surplus into the largest unit type (2BR for residential) via effectiveAvg
+  const UNIT_DEFS = [
+    { cat: "residential", pctKey: "residentialStudioPct", avgKey: "residentialStudioAvgArea", countKey: "residentialStudioCount", priceField: "studioPrice" as const, is2br: false },
+    { cat: "residential", pctKey: "residential1brPct", avgKey: "residential1brAvgArea", countKey: "residential1brCount", priceField: "oneBrPrice" as const, is2br: false },
+    { cat: "residential", pctKey: "residential2brPct", avgKey: "residential2brAvgArea", countKey: "residential2brCount", priceField: "twoBrPrice" as const, is2br: true },
+    { cat: "residential", pctKey: "residential3brPct", avgKey: "residential3brAvgArea", countKey: "residential3brCount", priceField: "threeBrPrice" as const, is2br: false },
+    { cat: "retail", pctKey: "retailSmallPct", avgKey: "retailSmallAvgArea", countKey: "retailSmallCount", priceField: "retailSmallPrice" as const, is2br: false },
+    { cat: "retail", pctKey: "retailMediumPct", avgKey: "retailMediumAvgArea", countKey: "retailMediumCount", priceField: "retailMediumPrice" as const, is2br: false },
+    { cat: "retail", pctKey: "retailLargePct", avgKey: "retailLargeAvgArea", countKey: "retailLargeCount", priceField: "retailLargePrice" as const, is2br: true },
+    { cat: "offices", pctKey: "officeSmallPct", avgKey: "officeSmallAvgArea", countKey: "officeSmallCount", priceField: "officeSmallPrice" as const, is2br: false },
+    { cat: "offices", pctKey: "officeMediumPct", avgKey: "officeMediumAvgArea", countKey: "officeMediumCount", priceField: "officeMediumPrice" as const, is2br: false },
+    { cat: "offices", pctKey: "officeLargePct", avgKey: "officeLargeAvgArea", countKey: "officeLargeCount", priceField: "officeLargePrice" as const, is2br: true },
+  ];
 
+  const getSellable = (cat: string) => cat === "residential" ? saleableRes : cat === "retail" ? saleableRet : saleableOff;
+
+  // Step 1: compute count and avg for each unit type
+  const unitData = UNIT_DEFS.map(def => {
+    const avgArea = mo ? getAvg(def.pctKey, (mo as any)[def.avgKey]) : 0;
+    const savedCount = mo ? (mo as any)[def.countKey] : null;
+    let count = 0;
+    if (savedCount != null && savedCount > 0) {
+      count = savedCount;
+    } else if (mo) {
+      const pct = parseFloat((mo as any)[def.pctKey] || "0");
+      const sellable = getSellable(def.cat);
+      if (pct > 0 && avgArea > 0 && sellable > 0) {
+        count = Math.floor((sellable * pct / 100) / avgArea);
+      }
+    }
+    const price = (prices as any)[def.priceField] || 0;
+    return { ...def, count, avgArea, price, totalArea: count * avgArea };
+  });
+
+  // Step 2: absorb surplus into the is2br unit type per category (same as CostsCashFlowTab)
+  const categories = ["residential", "retail", "offices"];
   let revenueRes = 0, revenueRet = 0, revenueOff = 0;
 
-  if (mo) {
-    revenueRes += calcTypeRevenue(parseFloat(mo.residentialStudioPct || "0"), getAvg("residentialStudioPct", mo.residentialStudioAvgArea), prices.studioPrice, saleableRes);
-    revenueRes += calcTypeRevenue(parseFloat(mo.residential1brPct || "0"), getAvg("residential1brPct", mo.residential1brAvgArea), prices.oneBrPrice, saleableRes);
-    revenueRes += calcTypeRevenue(parseFloat(mo.residential2brPct || "0"), getAvg("residential2brPct", mo.residential2brAvgArea), prices.twoBrPrice, saleableRes);
-    revenueRes += calcTypeRevenue(parseFloat(mo.residential3brPct || "0"), getAvg("residential3brPct", mo.residential3brAvgArea), prices.threeBrPrice, saleableRes);
+  for (const cat of categories) {
+    const catUnits = unitData.filter(u => u.cat === cat);
+    const sellable = getSellable(cat);
+    const catTotalArea = catUnits.reduce((s, u) => s + u.totalArea, 0);
+    const surplus = sellable - catTotalArea;
 
-    revenueRet += calcTypeRevenue(parseFloat(mo.retailSmallPct || "0"), getAvg("retailSmallPct", mo.retailSmallAvgArea), prices.retailSmallPrice, saleableRet);
-    revenueRet += calcTypeRevenue(parseFloat(mo.retailMediumPct || "0"), getAvg("retailMediumPct", mo.retailMediumAvgArea), prices.retailMediumPrice, saleableRet);
-    revenueRet += calcTypeRevenue(parseFloat(mo.retailLargePct || "0"), getAvg("retailLargePct", mo.retailLargeAvgArea), prices.retailLargePrice, saleableRet);
+    let catRevenue = 0;
+    for (const u of catUnits) {
+      let effectiveAvg = u.avgArea;
+      // Absorb surplus into the designated absorber (is2br)
+      if (u.is2br && surplus > 0 && u.count > 0) {
+        effectiveAvg = u.avgArea + (surplus / u.count);
+      }
+      catRevenue += u.count * effectiveAvg * u.price;
+    }
 
-    revenueOff += calcTypeRevenue(parseFloat(mo.officeSmallPct || "0"), getAvg("officeSmallPct", mo.officeSmallAvgArea), prices.officeSmallPrice, saleableOff);
-    revenueOff += calcTypeRevenue(parseFloat(mo.officeMediumPct || "0"), getAvg("officeMediumPct", mo.officeMediumAvgArea), prices.officeMediumPrice, saleableOff);
-    revenueOff += calcTypeRevenue(parseFloat(mo.officeLargePct || "0"), getAvg("officeLargePct", mo.officeLargeAvgArea), prices.officeLargePrice, saleableOff);
+    if (cat === "residential") revenueRes = catRevenue;
+    else if (cat === "retail") revenueRet = catRevenue;
+    else revenueOff = catRevenue;
   }
 
   const totalRevenue = revenueRes + revenueRet + revenueOff;

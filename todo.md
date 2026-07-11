@@ -788,3 +788,5 @@
 - [x] Fix Dynamic Portfolio page: user-scoping bug in portfolioScenarios router (getDefault/save/list/load/delete now filter by ctx.user.id)
 - [x] Fix Dynamic Portfolio page: API performance optimization (batch DB queries instead of N+1 sequential queries — reduced from ~7s to ~0.7s)
 - [x] Add clear profit summary (التكاليف / الإيرادات / الأرباح) directly visible in the main feasibility study page — not hidden in a sub-section
+- [x] Fix large surplus in unit allocation — distribute remainder to largest unit type instead of leaving 24% unallocated
+- [x] Fix revenue mismatch between profit summary cards and the results table (FinancialFeasibilityTab) — both must use same calculation source

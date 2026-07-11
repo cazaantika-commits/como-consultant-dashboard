@@ -272,8 +272,8 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
     const effectiveTotalArea = rows.reduce((s, r) => s + r.effectiveTotalArea, 0);
     const totalParking = rows.reduce((s, r) => s + r.parking, 0);
     const totalRevenue = rows.reduce((s, r) => s + r.revenue, 0);
-    const surplus = sellable - rawTotalArea;
-    const usedPct = sellable > 0 ? (rawTotalArea / sellable) * 100 : 0;
+    const surplus = sellable - effectiveTotalArea;
+    const usedPct = sellable > 0 ? (effectiveTotalArea / sellable) * 100 : 0;
     return { totalUnits, rawTotalArea, effectiveTotalArea, totalParking, totalRevenue, surplus, usedPct, sellable };
   }, [rowResults, getSellable]);
 
