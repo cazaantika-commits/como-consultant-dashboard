@@ -6,7 +6,8 @@ import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { calculateProjectCosts } from "@/lib/projectCostsCalc";
-import { ChevronDown, TrendingUp, TrendingDown, DollarSign, BarChart2, Target } from "lucide-react";
+import { ChevronDown, TrendingUp, TrendingDown, DollarSign, BarChart2, Target, CheckCircle2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 const fmt = (n: number) =>
   n === 0 ? "—" : new Intl.NumberFormat("ar-AE", { maximumFractionDigits: 0 }).format(Math.round(n));
@@ -70,6 +71,19 @@ export default function FinancialFeasibilityTab({ initialProjectId }: { initialP
   const selectedProject = (projectsQuery.data || []).find((p: any) => p.id === selectedProjectId);
   const moQuery = trpc.marketOverview.getByProject.useQuery(selectedProjectId || 0, { enabled: !!selectedProjectId });
   const cpQuery = trpc.competitionPricing.getByProject.useQuery(selectedProjectId || 0, { enabled: !!selectedProjectId });
+
+  // Approve revenue mutation
+  const utils = trpc.useUtils();
+  const approveMutation = trpc.competitionPricing.save.useMutation({
+    onSuccess: () => {
+      toast.success("تم اعتماد الإيرادات بنجاح — ستنعكس على التقارير الأخرى");
+      utils.competitionPricing.getByProject.invalidate(selectedProjectId || 0);
+    },
+    onError: () => toast.error("فشل الاعتماد"),
+  });
+
+  const isApproved = !!(cpQuery.data as any)?.approvedRevenue && (cpQuery.data as any)?.approvedRevenue > 0;
+  const approvedRevenue = (cpQuery.data as any)?.approvedRevenue || 0;
 
   const costs = useMemo(() => {
     if (!selectedProject) return null;
@@ -389,6 +403,62 @@ export default function FinancialFeasibilityTab({ initialProjectId }: { initialP
           </div>
 
           </div>{/* end two-column grid */}
+
+          {/* ═══ Approve Button ═══ */}
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-gray-800 text-sm">اعتماد الإيرادات</h3>
+                <p className="text-xs text-gray-500 mt-1">عند الاعتماد، ستُستخدم هذه الإيرادات في تقارير التدفقات النقدية وخطة رأس المال</p>
+                {isApproved && (
+                  <div className="flex items-center gap-1.5 mt-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span className="text-xs font-medium text-emerald-700">معتمد: {fmt(approvedRevenue)} درهم</span>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  if (!selectedProjectId || !cpQuery.data) return;
+                  const cp = cpQuery.data as any;
+                  approveMutation.mutate({
+                    projectId: selectedProjectId,
+                    activeScenario: cp.activeScenario || "base",
+                    approvedRevenue: Math.round(totalRevenue),
+                    // pass existing data to not lose it
+                    baseStudioPrice: cp.baseStudioPrice || 0,
+                    base1brPrice: cp.base1brPrice || 0,
+                    base2brPrice: cp.base2brPrice || 0,
+                    base3brPrice: cp.base3brPrice || 0,
+                    baseRetailSmallPrice: cp.baseRetailSmallPrice || 0,
+                    baseRetailMediumPrice: cp.baseRetailMediumPrice || 0,
+                    baseRetailLargePrice: cp.baseRetailLargePrice || 0,
+                    baseOfficeSmallPrice: cp.baseOfficeSmallPrice || 0,
+                    baseOfficeMediumPrice: cp.baseOfficeMediumPrice || 0,
+                    baseOfficeLargePrice: cp.baseOfficeLargePrice || 0,
+                  });
+                }}
+                disabled={approveMutation.isPending || totalRevenue === 0}
+                className={`px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all ${
+                  isApproved
+                    ? "bg-emerald-100 text-emerald-700 border border-emerald-300 hover:bg-emerald-200"
+                    : "bg-gradient-to-l from-violet-600 to-indigo-600 text-white hover:from-violet-700 hover:to-indigo-700 shadow-md"
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {approveMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="w-4 h-4" />
+                )}
+                {isApproved ? "تحديث الاعتماد" : "اعتماد الإيرادات"}
+              </button>
+            </div>
+            {totalRevenue === 0 && (
+              <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                <span className="text-xs text-amber-700">⚠️ لا يمكن الاعتماد — الإيرادات = 0. أدخل بيانات التسعير والتوزيع أولاً.</span>
+              </div>
+            )}
+          </div>
         </>
       )}
     </div>

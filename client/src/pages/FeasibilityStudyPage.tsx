@@ -395,57 +395,78 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
               )}
             </div>
 
-            {/* ═══ ملخص الأرباح — ظاهر دائماً ═══ */}
+            {/* ═══ ملخص الأرباح — مقارنة السيناريوهات الثلاثة ═══ */}
             {(() => {
-              const rc = realCosts;
-              const totalCostsVal = rc?.totalCosts || 0;
-              const totalRevenueVal = rc?.totalRevenue || 0;
-              const profitVal = totalRevenueVal - totalCostsVal;
-              const profitPctVal = totalRevenueVal > 0 ? (profitVal / totalRevenueVal) * 100 : 0;
-              const roiVal = totalCostsVal > 0 ? (profitVal / totalCostsVal) * 100 : 0;
+              const scenarioCalc = (sc: "optimistic" | "base" | "conservative") => {
+                const costs = calculateProjectCosts(selectedProject, moQuery.data, cpQuery.data, sc);
+                const totalCostsVal = costs?.totalCosts || 0;
+                const totalRevenueVal = costs?.totalRevenue || 0;
+                const profitVal = totalRevenueVal - totalCostsVal;
+                const profitPctVal = totalRevenueVal > 0 ? (profitVal / totalRevenueVal) * 100 : 0;
+                const roiVal = totalCostsVal > 0 ? (profitVal / totalCostsVal) * 100 : 0;
+                return { totalCostsVal, totalRevenueVal, profitVal, profitPctVal, roiVal };
+              };
+              const opt = scenarioCalc("optimistic");
+              const base = scenarioCalc("base");
+              const cons = scenarioCalc("conservative");
+              const scenarios = [
+                { key: "optimistic", label: "متفائل +10%", data: opt, color: "emerald", icon: TrendingUp },
+                { key: "base", label: "أساسي", data: base, color: "blue", icon: BarChart3 },
+                { key: "conservative", label: "متحفظ -10%", data: cons, color: "amber", icon: AlertTriangle },
+              ];
               return (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <div className="relative overflow-hidden rounded-xl border border-rose-200/60 bg-gradient-to-br from-rose-50 to-white p-4 shadow-sm">
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center">
-                        <DollarSign className="w-4 h-4 text-rose-600" />
+                <div className="space-y-3">
+                  {/* التكاليف الثابتة */}
+                  <div className="relative overflow-hidden rounded-xl border border-rose-200/60 bg-gradient-to-br from-rose-50 to-white p-3 shadow-sm">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <div className="w-7 h-7 rounded-lg bg-rose-100 flex items-center justify-center">
+                        <DollarSign className="w-3.5 h-3.5 text-rose-600" />
                       </div>
-                      <span className="text-[11px] font-bold text-rose-700">إجمالي التكاليف</span>
+                      <span className="text-[11px] font-bold text-rose-700">إجمالي التكاليف (ثابتة)</span>
                     </div>
-                    <p className="text-lg font-black text-rose-800 font-mono" dir="ltr">{fmt(totalCostsVal)}</p>
+                    <p className="text-xl font-black text-rose-800 font-mono" dir="ltr">{fmt(base.totalCostsVal)}</p>
                     <span className="text-[10px] text-rose-500">درهم</span>
                   </div>
-                  <div className="relative overflow-hidden rounded-xl border border-emerald-200/60 bg-gradient-to-br from-emerald-50 to-white p-4 shadow-sm">
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
-                        <TrendingUp className="w-4 h-4 text-emerald-600" />
-                      </div>
-                      <span className="text-[11px] font-bold text-emerald-700">إجمالي الإيرادات</span>
-                    </div>
-                    <p className="text-lg font-black text-emerald-800 font-mono" dir="ltr">{fmt(totalRevenueVal)}</p>
-                    <span className="text-[10px] text-emerald-500">{totalRevenueVal === 0 ? '⚠️ أدخل التسعير والتوزيع' : 'درهم'}</span>
-                  </div>
-                  <div className={`relative overflow-hidden rounded-xl border p-4 shadow-sm ${profitVal >= 0 ? 'border-blue-200/60 bg-gradient-to-br from-blue-50 to-white' : 'border-red-200/60 bg-gradient-to-br from-red-50 to-white'}`}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${profitVal >= 0 ? 'bg-blue-100' : 'bg-red-100'}`}>
-                        <BarChart3 className={`w-4 h-4 ${profitVal >= 0 ? 'text-blue-600' : 'text-red-600'}`} />
-                      </div>
-                      <span className={`text-[11px] font-bold ${profitVal >= 0 ? 'text-blue-700' : 'text-red-700'}`}>صافي الربح</span>
-                    </div>
-                    <p className={`text-lg font-black font-mono ${profitVal >= 0 ? 'text-blue-800' : 'text-red-800'}`} dir="ltr">{fmt(profitVal)}</p>
-                    <span className={`text-[10px] ${profitVal >= 0 ? 'text-blue-500' : 'text-red-500'}`}>
-                      {totalRevenueVal > 0 ? `${profitPctVal.toFixed(1)}% هامش ربح` : 'درهم'}
-                    </span>
-                  </div>
-                  <div className="relative overflow-hidden rounded-xl border border-violet-200/60 bg-gradient-to-br from-violet-50 to-white p-4 shadow-sm">
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center">
-                        <Percent className="w-4 h-4 text-violet-600" />
-                      </div>
-                      <span className="text-[11px] font-bold text-violet-700">العائد على الاستثمار</span>
-                    </div>
-                    <p className="text-lg font-black text-violet-800 font-mono" dir="ltr">{roiVal !== 0 ? `${roiVal.toFixed(1)}%` : '—'}</p>
-                    <span className="text-[10px] text-violet-500">ربح ÷ إجمالي التكاليف</span>
+                  {/* مقارنة السيناريوهات */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {scenarios.map(sc => {
+                      const Icon = sc.icon;
+                      const isActive = (cpQuery.data as any)?.activeScenario === sc.key;
+                      return (
+                        <div key={sc.key} className={`relative overflow-hidden rounded-xl border p-3 shadow-sm transition-all ${
+                          isActive ? `border-${sc.color}-400 ring-2 ring-${sc.color}-200 bg-gradient-to-br from-${sc.color}-50 to-white` : `border-gray-200 bg-white hover:border-${sc.color}-200`
+                        }`}>
+                          {isActive && <div className={`absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded text-[8px] font-bold bg-${sc.color}-100 text-${sc.color}-700`}>المعتمد</div>}
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <div className={`w-6 h-6 rounded-md bg-${sc.color}-100 flex items-center justify-center`}>
+                              <Icon className={`w-3 h-3 text-${sc.color}-600`} />
+                            </div>
+                            <span className={`text-[10px] font-bold text-${sc.color}-700`}>{sc.label}</span>
+                          </div>
+                          <div className="space-y-1.5">
+                            <div>
+                              <span className="text-[9px] text-gray-500">الإيرادات</span>
+                              <p className="text-sm font-bold font-mono text-gray-800" dir="ltr">{fmt(sc.data.totalRevenueVal)}</p>
+                            </div>
+                            <div>
+                              <span className="text-[9px] text-gray-500">صافي الربح</span>
+                              <p className={`text-sm font-bold font-mono ${sc.data.profitVal >= 0 ? 'text-emerald-700' : 'text-red-700'}`} dir="ltr">{fmt(sc.data.profitVal)}</p>
+                            </div>
+                            <div className="flex items-center justify-between pt-1 border-t border-gray-100">
+                              <div>
+                                <span className="text-[9px] text-gray-500">هامش الربح</span>
+                                <p className="text-xs font-bold font-mono text-gray-700">{sc.data.profitPctVal.toFixed(1)}%</p>
+                              </div>
+                              <div>
+                                <span className="text-[9px] text-gray-500">ROI</span>
+                                <p className="text-xs font-bold font-mono text-gray-700">{sc.data.roiVal.toFixed(1)}%</p>
+                              </div>
+                            </div>
+                          </div>
+                          {sc.data.totalRevenueVal === 0 && <span className="text-[9px] text-amber-600 mt-1 block">⚠️ أدخل التسعير</span>}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               );

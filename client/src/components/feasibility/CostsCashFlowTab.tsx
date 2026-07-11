@@ -358,14 +358,21 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
     const isNeg = surplus < 0;
     const isZero = Math.abs(surplus) < 1;
     return (
-      <div className="flex items-center gap-1.5 py-0.5">
-        <span className={`text-[10px] font-bold ${isZero ? "text-emerald-600" : isNeg ? "text-red-600" : "text-amber-600"}`}>
-          {isZero ? "✓ صفر" : `${isNeg ? "عجز" : "فائض"}: ${fmt(Math.abs(surplus))} sqft (${Math.abs(pct).toFixed(1)}%)`}
-        </span>
-        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-          <div className={`h-full rounded-full ${isZero ? "bg-emerald-400" : isNeg ? "bg-red-400" : "bg-amber-400"}`}
-            style={{ width: `${isZero ? 100 : Math.max(5, 100 - Math.min(100, Math.abs(pct)))}%` }} />
+      <div className="flex flex-col gap-0.5 py-0.5">
+        <div className="flex items-center gap-1.5">
+          <span className={`text-[10px] font-bold ${isZero ? "text-emerald-600" : isNeg ? "text-red-600" : "text-amber-600"}`}>
+            {isZero ? "✓ متوازن" : `${isNeg ? "⚠️ عجز" : "✓ فائض ممتص"}: ${fmt(Math.abs(surplus))} sqft (${Math.abs(pct).toFixed(1)}%)`}
+          </span>
+          <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div className={`h-full rounded-full ${isZero ? "bg-emerald-400" : isNeg ? "bg-red-400" : "bg-emerald-400"}`}
+              style={{ width: `${isZero ? 100 : Math.max(5, 100 - Math.min(100, Math.abs(pct)))}%` }} />
+          </div>
         </div>
+        {isNeg && (
+          <div className="bg-red-50 border border-red-200 rounded px-2 py-1 mt-0.5">
+            <span className="text-[9px] text-red-700 font-medium">⚠️ تحذير: عدد الوحدات المدخل يتجاوز المساحة القابلة للبيع بـ {fmt(Math.abs(surplus))} sqft — يرجى تقليل العدد أو زيادة متوسط المساحة</span>
+          </div>
+        )}
       </div>
     );
   };

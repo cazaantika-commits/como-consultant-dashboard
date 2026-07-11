@@ -790,3 +790,6 @@
 - [x] Add clear profit summary (التكاليف / الإيرادات / الأرباح) directly visible in the main feasibility study page — not hidden in a sub-section
 - [x] Fix large surplus in unit allocation — distribute remainder to largest unit type instead of leaving 24% unallocated
 - [x] Fix revenue mismatch between profit summary cards and the results table (FinancialFeasibilityTab) — both must use same calculation source
+- [x] Add deficit warning in CostsCashFlowTab when unit count exceeds sellable area (negative surplus = عجز)
+- [x] Add three-scenario comparison (optimistic/base/conservative) in the profit summary cards at top of feasibility page
+- [x] Add approve button in financial feasibility that saves approved revenue and links to other reports
