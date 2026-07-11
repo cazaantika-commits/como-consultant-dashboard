@@ -796,3 +796,9 @@
 - [x] Fix revenue mismatch between summary cards (801M) and results table (788M) for مجان G+4P+25 — must be identical
 - [x] Research real off-plan market prices for Majan/Arjan area and update competition pricing data
 - [x] Verify and fix portfolio dynamic link to use approved revenue from feasibility study (already linked correctly)
+- [x] Redesign FeasibilityStudyPage with professional investor-ready layout
+- [x] Add AllProjectsComparison table with cross-project ROI on invested capital
+- [x] Use approvedRevenue when available in comparison calculations
+- [x] Add KPI cards (costs, revenue, profit, invested capital, ROI on capital, margin)
+- [x] Add 3-scenario comparison strip (optimistic/base/conservative)
+- [x] Investigate Project 4 loss (confirmed: land+construction costs exceed revenue at current pricing)
