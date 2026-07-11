@@ -113,44 +113,77 @@ export function calculateProjectCosts(
   const saleableRet = gfaRetSqft * (saleableRetPct / 100);
   const saleableOff = gfaOffSqft * (saleableOffPct / 100);
 
-  const getPrices = () => {
-    if (!cp) return { studioPrice: 0, oneBrPrice: 0, twoBrPrice: 0, threeBrPrice: 0, retailSmallPrice: 0, retailMediumPrice: 0, retailLargePrice: 0, officeSmallPrice: 0, officeMediumPrice: 0, officeLargePrice: 0 };
-    if (activeScenario === "optimistic") return {
-      studioPrice: cp.optStudioPrice || 0, oneBrPrice: cp.opt1brPrice || 0, twoBrPrice: cp.opt2brPrice || 0, threeBrPrice: cp.opt3brPrice || 0,
-      retailSmallPrice: cp.optRetailSmallPrice || 0, retailMediumPrice: cp.optRetailMediumPrice || 0, retailLargePrice: cp.optRetailLargePrice || 0,
-      officeSmallPrice: cp.optOfficeSmallPrice || 0, officeMediumPrice: cp.optOfficeMediumPrice || 0, officeLargePrice: cp.optOfficeLargePrice || 0,
-    };
-    if (activeScenario === "conservative") return {
-      studioPrice: cp.consStudioPrice || 0, oneBrPrice: cp.cons1brPrice || 0, twoBrPrice: cp.cons2brPrice || 0, threeBrPrice: cp.cons3brPrice || 0,
-      retailSmallPrice: cp.consRetailSmallPrice || 0, retailMediumPrice: cp.consRetailMediumPrice || 0, retailLargePrice: cp.consRetailLargePrice || 0,
-      officeSmallPrice: cp.consOfficeSmallPrice || 0, officeMediumPrice: cp.consOfficeMediumPrice || 0, officeLargePrice: cp.consOfficeLargePrice || 0,
-    };
-    return {
-      studioPrice: cp.baseStudioPrice || 0, oneBrPrice: cp.base1brPrice || 0, twoBrPrice: cp.base2brPrice || 0, threeBrPrice: cp.base3brPrice || 0,
-      retailSmallPrice: cp.baseRetailSmallPrice || 0, retailMediumPrice: cp.baseRetailMediumPrice || 0, retailLargePrice: cp.baseRetailLargePrice || 0,
-      officeSmallPrice: cp.baseOfficeSmallPrice || 0, officeMediumPrice: cp.baseOfficeMediumPrice || 0, officeLargePrice: cp.baseOfficeLargePrice || 0,
-    };
+  // ─── UNIFIED REVENUE CALCULATION (matches client-side projectCostsCalc.ts) ───
+  // Use base prices × multiplier for scenarios (same as CostsCashFlowTab)
+  const scenarioMultiplier = activeScenario === "optimistic" ? 1.10 : activeScenario === "conservative" ? 0.90 : 1.0;
+  const basePrices = {
+    studioPrice: cp?.baseStudioPrice || 0,
+    oneBrPrice: cp?.base1brPrice || 0,
+    twoBrPrice: cp?.base2brPrice || 0,
+    threeBrPrice: cp?.base3brPrice || 0,
+    retailSmallPrice: cp?.baseRetailSmallPrice || 0,
+    retailMediumPrice: cp?.baseRetailMediumPrice || 0,
+    retailLargePrice: cp?.baseRetailLargePrice || 0,
+    officeSmallPrice: cp?.baseOfficeSmallPrice || 0,
+    officeMediumPrice: cp?.baseOfficeMediumPrice || 0,
+    officeLargePrice: cp?.baseOfficeLargePrice || 0,
   };
-  const prices = getPrices();
+  const prices = Object.fromEntries(
+    Object.entries(basePrices).map(([k, v]) => [k, v * scenarioMultiplier])
+  ) as typeof basePrices;
 
-  const calcTypeRevenue = (pct: number, avgArea: number, pricePerSqft: number, saleable: number) => {
-    const allocated = saleable * (pct / 100);
-    const units = avgArea > 0 ? Math.floor(allocated / avgArea) : 0;
-    return avgArea * pricePerSqft * units;
-  };
+  // Unit definitions matching client-side UNIT_DEFS
+  const UNIT_DEFS = [
+    { cat: "residential", pctKey: "residentialStudioPct", avgKey: "residentialStudioAvgArea", countKey: "residentialStudioCount", priceField: "studioPrice" as const, is2br: false },
+    { cat: "residential", pctKey: "residential1brPct", avgKey: "residential1brAvgArea", countKey: "residential1brCount", priceField: "oneBrPrice" as const, is2br: false },
+    { cat: "residential", pctKey: "residential2brPct", avgKey: "residential2brAvgArea", countKey: "residential2brCount", priceField: "twoBrPrice" as const, is2br: true },
+    { cat: "residential", pctKey: "residential3brPct", avgKey: "residential3brAvgArea", countKey: "residential3brCount", priceField: "threeBrPrice" as const, is2br: false },
+    { cat: "retail", pctKey: "retailSmallPct", avgKey: "retailSmallAvgArea", countKey: "retailSmallCount", priceField: "retailSmallPrice" as const, is2br: false },
+    { cat: "retail", pctKey: "retailMediumPct", avgKey: "retailMediumAvgArea", countKey: "retailMediumCount", priceField: "retailMediumPrice" as const, is2br: false },
+    { cat: "retail", pctKey: "retailLargePct", avgKey: "retailLargeAvgArea", countKey: "retailLargeCount", priceField: "retailLargePrice" as const, is2br: true },
+    { cat: "offices", pctKey: "officeSmallPct", avgKey: "officeSmallAvgArea", countKey: "officeSmallCount", priceField: "officeSmallPrice" as const, is2br: false },
+    { cat: "offices", pctKey: "officeMediumPct", avgKey: "officeMediumAvgArea", countKey: "officeMediumCount", priceField: "officeMediumPrice" as const, is2br: false },
+    { cat: "offices", pctKey: "officeLargePct", avgKey: "officeLargeAvgArea", countKey: "officeLargeCount", priceField: "officeLargePrice" as const, is2br: true },
+  ];
+  const getSellable = (cat: string) => cat === "residential" ? saleableRes : cat === "retail" ? saleableRet : saleableOff;
 
+  // Step 1: compute count and avg for each unit type (use saved counts if available)
+  const unitData = UNIT_DEFS.map(def => {
+    const avgArea = mo ? getAvg(def.pctKey, (mo as any)[def.avgKey]) : 0;
+    const savedCount = mo ? Number((mo as any)[def.countKey]) || 0 : 0;
+    let count = 0;
+    if (savedCount > 0) {
+      count = savedCount;
+    } else if (mo) {
+      const pct = parseFloat((mo as any)[def.pctKey] || "0");
+      const sellable = getSellable(def.cat);
+      if (pct > 0 && avgArea > 0 && sellable > 0) {
+        count = Math.floor((sellable * pct / 100) / avgArea);
+      }
+    }
+    const price = (prices as any)[def.priceField] || 0;
+    return { ...def, count, avgArea, price, totalArea: count * avgArea };
+  });
+
+  // Step 2: absorb surplus into the is2br unit type per category (same as client)
+  const categories = ["residential", "retail", "offices"];
   let revenueRes = 0, revenueRet = 0, revenueOff = 0;
-  if (mo) {
-    revenueRes += calcTypeRevenue(parseFloat(mo.residentialStudioPct || "0"), getAvg("residentialStudioPct", mo.residentialStudioAvgArea), prices.studioPrice, saleableRes);
-    revenueRes += calcTypeRevenue(parseFloat(mo.residential1brPct || "0"), getAvg("residential1brPct", mo.residential1brAvgArea), prices.oneBrPrice, saleableRes);
-    revenueRes += calcTypeRevenue(parseFloat(mo.residential2brPct || "0"), getAvg("residential2brPct", mo.residential2brAvgArea), prices.twoBrPrice, saleableRes);
-    revenueRes += calcTypeRevenue(parseFloat(mo.residential3brPct || "0"), getAvg("residential3brPct", mo.residential3brAvgArea), prices.threeBrPrice, saleableRes);
-    revenueRet += calcTypeRevenue(parseFloat(mo.retailSmallPct || "0"), getAvg("retailSmallPct", mo.retailSmallAvgArea), prices.retailSmallPrice, saleableRet);
-    revenueRet += calcTypeRevenue(parseFloat(mo.retailMediumPct || "0"), getAvg("retailMediumPct", mo.retailMediumAvgArea), prices.retailMediumPrice, saleableRet);
-    revenueRet += calcTypeRevenue(parseFloat(mo.retailLargePct || "0"), getAvg("retailLargePct", mo.retailLargeAvgArea), prices.retailLargePrice, saleableRet);
-    revenueOff += calcTypeRevenue(parseFloat(mo.officeSmallPct || "0"), getAvg("officeSmallPct", mo.officeSmallAvgArea), prices.officeSmallPrice, saleableOff);
-    revenueOff += calcTypeRevenue(parseFloat(mo.officeMediumPct || "0"), getAvg("officeMediumPct", mo.officeMediumAvgArea), prices.officeMediumPrice, saleableOff);
-    revenueOff += calcTypeRevenue(parseFloat(mo.officeLargePct || "0"), getAvg("officeLargePct", mo.officeLargeAvgArea), prices.officeLargePrice, saleableOff);
+  for (const cat of categories) {
+    const catUnits = unitData.filter(u => u.cat === cat);
+    const sellable = getSellable(cat);
+    const catTotalArea = catUnits.reduce((s, u) => s + u.totalArea, 0);
+    const surplus = sellable - catTotalArea;
+    let catRevenue = 0;
+    for (const u of catUnits) {
+      let effectiveAvg = u.avgArea;
+      if (u.is2br && surplus > 0 && u.count > 0) {
+        effectiveAvg = u.avgArea + (surplus / u.count);
+      }
+      catRevenue += u.count * effectiveAvg * u.price;
+    }
+    if (cat === "residential") revenueRes = catRevenue;
+    else if (cat === "retail") revenueRet = catRevenue;
+    else revenueOff = catRevenue;
   }
   const calculatedRevenue = revenueRes + revenueRet + revenueOff;
   // Use approvedRevenue if the user has explicitly approved a scenario, otherwise use calculated

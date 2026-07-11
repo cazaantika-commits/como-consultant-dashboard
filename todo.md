@@ -793,3 +793,6 @@
 - [x] Add deficit warning in CostsCashFlowTab when unit count exceeds sellable area (negative surplus = عجز)
 - [x] Add three-scenario comparison (optimistic/base/conservative) in the profit summary cards at top of feasibility page
 - [x] Add approve button in financial feasibility that saves approved revenue and links to other reports
+- [x] Fix revenue mismatch between summary cards (801M) and results table (788M) for مجان G+4P+25 — must be identical
+- [x] Research real off-plan market prices for Majan/Arjan area and update competition pricing data
+- [x] Verify and fix portfolio dynamic link to use approved revenue from feasibility study (already linked correctly)

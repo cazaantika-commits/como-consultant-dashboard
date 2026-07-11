@@ -70,26 +70,21 @@ export function calculateProjectCosts(
   const saleableRet = gfaRetSqft * saleableRetPct;
   const saleableOff = gfaOffSqft * saleableOffPct;
 
-  // Get prices for the specific scenario
-  const getPrices = () => {
-    if (!cp) return { studioPrice: 0, oneBrPrice: 0, twoBrPrice: 0, threeBrPrice: 0, retailSmallPrice: 0, retailMediumPrice: 0, retailLargePrice: 0, officeSmallPrice: 0, officeMediumPrice: 0, officeLargePrice: 0 };
-    if (activeScenario === "optimistic") return {
-      studioPrice: cp.optStudioPrice || 0, oneBrPrice: cp.opt1brPrice || 0, twoBrPrice: cp.opt2brPrice || 0, threeBrPrice: cp.opt3brPrice || 0,
-      retailSmallPrice: cp.optRetailSmallPrice || 0, retailMediumPrice: cp.optRetailMediumPrice || 0, retailLargePrice: cp.optRetailLargePrice || 0,
-      officeSmallPrice: cp.optOfficeSmallPrice || 0, officeMediumPrice: cp.optOfficeMediumPrice || 0, officeLargePrice: cp.optOfficeLargePrice || 0,
-    };
-    if (activeScenario === "conservative") return {
-      studioPrice: cp.consStudioPrice || 0, oneBrPrice: cp.cons1brPrice || 0, twoBrPrice: cp.cons2brPrice || 0, threeBrPrice: cp.cons3brPrice || 0,
-      retailSmallPrice: cp.consRetailSmallPrice || 0, retailMediumPrice: cp.consRetailMediumPrice || 0, retailLargePrice: cp.consRetailLargePrice || 0,
-      officeSmallPrice: cp.consOfficeSmallPrice || 0, officeMediumPrice: cp.consOfficeMediumPrice || 0, officeLargePrice: cp.consOfficeLargePrice || 0,
-    };
-    return {
-      studioPrice: cp.baseStudioPrice || 0, oneBrPrice: cp.base1brPrice || 0, twoBrPrice: cp.base2brPrice || 0, threeBrPrice: cp.base3brPrice || 0,
-      retailSmallPrice: cp.baseRetailSmallPrice || 0, retailMediumPrice: cp.baseRetailMediumPrice || 0, retailLargePrice: cp.baseRetailLargePrice || 0,
-      officeSmallPrice: cp.baseOfficeSmallPrice || 0, officeMediumPrice: cp.baseOfficeMediumPrice || 0, officeLargePrice: cp.baseOfficeLargePrice || 0,
-    };
+  // Get base prices and apply scenario multiplier (same logic as CostsCashFlowTab)
+  const scenarioMultiplier = activeScenario === "optimistic" ? 1.10 : activeScenario === "conservative" ? 0.90 : 1.00;
+  const basePrices = {
+    studioPrice: (cp?.baseStudioPrice || 0) * scenarioMultiplier,
+    oneBrPrice: (cp?.base1brPrice || 0) * scenarioMultiplier,
+    twoBrPrice: (cp?.base2brPrice || 0) * scenarioMultiplier,
+    threeBrPrice: (cp?.base3brPrice || 0) * scenarioMultiplier,
+    retailSmallPrice: (cp?.baseRetailSmallPrice || 0) * scenarioMultiplier,
+    retailMediumPrice: (cp?.baseRetailMediumPrice || 0) * scenarioMultiplier,
+    retailLargePrice: (cp?.baseRetailLargePrice || 0) * scenarioMultiplier,
+    officeSmallPrice: (cp?.baseOfficeSmallPrice || 0) * scenarioMultiplier,
+    officeMediumPrice: (cp?.baseOfficeMediumPrice || 0) * scenarioMultiplier,
+    officeLargePrice: (cp?.baseOfficeLargePrice || 0) * scenarioMultiplier,
   };
-  const prices = getPrices();
+  const prices = basePrices;
 
   // Revenue calculation — mirrors CostsCashFlowTab logic:
   // 1. Use saved counts if available, otherwise compute from pct
@@ -123,7 +118,7 @@ export function calculateProjectCosts(
         count = Math.floor((sellable * pct / 100) / avgArea);
       }
     }
-    const price = (prices as any)[def.priceField] || 0;
+    const price = prices[def.priceField] || 0;
     return { ...def, count, avgArea, price, totalArea: count * avgArea };
   });
 
