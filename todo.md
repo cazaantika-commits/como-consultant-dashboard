@@ -832,3 +832,4 @@
 - [x] Add HTML export button for feasibility summary report
 - [x] Add new portfolio summary report page (separate from existing capital portfolio) with: details column (revenue, costs, profit, margins, investor required, escrow required, investor paid, investor remaining), project columns, total column, then monthly distribution from August 2026
 - [x] Add "تكلفة الإنشاء" (BUA × construction cost per sqft) as a visible line item in the feasibility summary costs section
+- [x] Customize portfolio summary report: mall (مركز مجان التجاري) is non-sale project — show costs/investor amounts but hide revenue/profit/margins, show "—" instead

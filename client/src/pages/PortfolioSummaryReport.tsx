@@ -49,6 +49,7 @@ export default function PortfolioSummaryReport() {
     if (!data || data.length === 0) return null;
 
     // For each project, use its financingScenario
+    // Non-sale projects (e.g. mall) don't have revenue/profit — detect by name containing "مركز" or "تجاري" without residential
     const projects = data.map((p: any) => {
       const scKey = p.financingScenario || "offplan_escrow";
       const sc = p.scenarios[scKey];
@@ -62,6 +63,10 @@ export default function PortfolioSummaryReport() {
       const profitMarginRevenue = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
       const profitMarginCost = totalCosts > 0 ? (profit / totalCosts) * 100 : 0;
       const profitMarginCapital = investorTotal > 0 ? (profit / investorTotal) * 100 : 0;
+
+      // Detect non-sale project (mall/commercial center not for sale)
+      const nameLC = (p.name || "").toLowerCase();
+      const isNonSale = (nameLC.includes("مركز") && nameLC.includes("تجاري")) || nameLC.includes("mall");
 
       // Monthly investor amounts aligned to global timeline
       const monthlyInvestor: number[] = sc.monthlyInvestor || [];
@@ -82,14 +87,16 @@ export default function PortfolioSummaryReport() {
         paid,
         remaining,
         monthlyInvestor,
+        isNonSale,
       };
     });
 
-    // Calculate totals
+    // Calculate totals (revenue/profit only from sale projects, costs/investor from all)
+    const saleProjects = projects.filter((p: any) => !p.isNonSale);
     const totals = {
-      totalRevenue: projects.reduce((s: number, p: any) => s + p.totalRevenue, 0),
+      totalRevenue: saleProjects.reduce((s: number, p: any) => s + p.totalRevenue, 0),
       totalCosts: projects.reduce((s: number, p: any) => s + p.totalCosts, 0),
-      profit: projects.reduce((s: number, p: any) => s + p.profit, 0),
+      profit: saleProjects.reduce((s: number, p: any) => s + p.profit, 0),
       investorTotal: projects.reduce((s: number, p: any) => s + p.investorTotal, 0),
       escrowTotal: projects.reduce((s: number, p: any) => s + p.escrowTotal, 0),
       paid: projects.reduce((s: number, p: any) => s + p.paid, 0),
@@ -97,6 +104,7 @@ export default function PortfolioSummaryReport() {
       profitMarginRevenue: 0,
       profitMarginCost: 0,
       profitMarginCapital: 0,
+      isNonSale: false,
     };
     totals.profitMarginRevenue = totals.totalRevenue > 0 ? (totals.profit / totals.totalRevenue) * 100 : 0;
     totals.profitMarginCost = totals.totalCosts > 0 ? (totals.profit / totals.totalCosts) * 100 : 0;
@@ -160,17 +168,18 @@ export default function PortfolioSummaryReport() {
   const { projects, totals, monthlyRows } = reportData;
 
   // Summary rows definition
+  // hideForNonSale: true means show "—" for non-sale projects (mall)
   const summaryRows = [
-    { label: "الإيرادات", key: "totalRevenue", format: "number" as const, color: "bg-emerald-50" },
-    { label: "تكلفة المشروع", key: "totalCosts", format: "number" as const, color: "bg-red-50" },
-    { label: "الربح", key: "profit", format: "number" as const, color: "bg-blue-50 font-bold" },
-    { label: "نسبة الربح من الإيرادات", key: "profitMarginRevenue", format: "pct" as const, color: "" },
-    { label: "نسبة الربح من التكلفة", key: "profitMarginCost", format: "pct" as const, color: "" },
-    { label: "نسبة الربح من رأس المال", key: "profitMarginCapital", format: "pct" as const, color: "" },
-    { label: "المبلغ المطلوب من المستثمر", key: "investorTotal", format: "number" as const, color: "bg-amber-50" },
-    { label: "المبلغ المطلوب من حساب الضمان", key: "escrowTotal", format: "number" as const, color: "bg-purple-50" },
-    { label: "المبلغ المدفوع من المستثمر", key: "paid", format: "number" as const, color: "bg-green-50" },
-    { label: "المبلغ المتبقي على المستثمر", key: "remaining", format: "number" as const, color: "bg-orange-100 font-bold" },
+    { label: "الإيرادات", key: "totalRevenue", format: "number" as const, color: "bg-emerald-50", hideForNonSale: true },
+    { label: "تكلفة المشروع", key: "totalCosts", format: "number" as const, color: "bg-red-50", hideForNonSale: false },
+    { label: "الربح", key: "profit", format: "number" as const, color: "bg-blue-50 font-bold", hideForNonSale: true },
+    { label: "نسبة الربح من الإيرادات", key: "profitMarginRevenue", format: "pct" as const, color: "", hideForNonSale: true },
+    { label: "نسبة الربح من التكلفة", key: "profitMarginCost", format: "pct" as const, color: "", hideForNonSale: true },
+    { label: "نسبة الربح من رأس المال", key: "profitMarginCapital", format: "pct" as const, color: "", hideForNonSale: true },
+    { label: "المبلغ المطلوب من المستثمر", key: "investorTotal", format: "number" as const, color: "bg-amber-50", hideForNonSale: false },
+    { label: "المبلغ المطلوب من حساب الضمان", key: "escrowTotal", format: "number" as const, color: "bg-purple-50", hideForNonSale: true },
+    { label: "المبلغ المدفوع من المستثمر", key: "paid", format: "number" as const, color: "bg-green-50", hideForNonSale: false },
+    { label: "المبلغ المتبقي على المستثمر", key: "remaining", format: "number" as const, color: "bg-orange-100 font-bold", hideForNonSale: false },
   ];
 
   const handlePrint = () => {
@@ -216,9 +225,11 @@ export default function PortfolioSummaryReport() {
                 </td>
                 {projects.map((p: any) => (
                   <td key={p.id} className="px-2 py-1 text-center text-gray-700 border-l border-gray-100 tabular-nums">
-                    {row.format === "pct"
-                      ? `${(p as any)[row.key].toFixed(1)}%`
-                      : formatAED((p as any)[row.key])}
+                    {p.isNonSale && row.hideForNonSale
+                      ? <span className="text-gray-300">—</span>
+                      : row.format === "pct"
+                        ? `${(p as any)[row.key].toFixed(1)}%`
+                        : formatAED((p as any)[row.key])}
                   </td>
                 ))}
                 <td className="px-2 py-1 text-center font-bold text-gray-900 bg-gray-50 tabular-nums">
