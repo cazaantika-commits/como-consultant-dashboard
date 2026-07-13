@@ -816,3 +816,4 @@
 - [x] Add revenue breakdown (residential/retail/offices) in summary
 - [x] Use soft colored backgrounds, large icons in circles, clean typography
 - [x] Fix profit inconsistency: summary shows 86.4M profit but scenario comparison shows 96.4M — unify cost source
+- [x] Fix revenue in summary: must match pricing tab exactly — if pricing tab shows 0, summary shows 0 (no auto-calc from percentages)

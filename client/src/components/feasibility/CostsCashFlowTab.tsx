@@ -138,19 +138,10 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
       const defaultArea = DEFAULT_AVG_AREAS[row.pctKey]?.defaultArea || 0;
       const effectiveAvg = avg > 0 ? avg : defaultArea;
       newAvg[row.key] = effectiveAvg;
-      // Prefer saved count directly; fall back to computing from pct for legacy records
+      // ONLY use saved counts from DB — no fallback to pct-based auto-calculation
+      // This ensures pricing tab shows 0 revenue when user hasn't entered counts
       const savedCount = (d as any)[row.countKey];
-      if (savedCount != null && savedCount > 0) {
-        newCounts[row.key] = savedCount;
-      } else {
-        const pct = parseFloat((d as any)[row.pctKey] || "0");
-        const sellable = getSellableFromProject(row.cat);
-        if (pct > 0 && effectiveAvg > 0 && sellable > 0) {
-          newCounts[row.key] = Math.floor((sellable * pct / 100) / effectiveAvg);
-        } else {
-          newCounts[row.key] = 0;
-        }
-      }
+      newCounts[row.key] = (savedCount != null && savedCount > 0) ? savedCount : 0;
     });
     setAvgAreas(newAvg);
     // Always load from DB on first initialization; after that, only update if not dirty
