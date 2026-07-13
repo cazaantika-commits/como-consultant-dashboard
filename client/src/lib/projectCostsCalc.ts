@@ -189,6 +189,9 @@ export function calculateProjectCosts(
     surveyorFees,
     reraAuditReportFee,
     reraInspectionReportFee,
+    revenueRes,
+    revenueRet,
+    revenueOff,
     totalRevenue,
     totalCosts,
   };

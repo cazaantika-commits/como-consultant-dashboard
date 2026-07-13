@@ -484,6 +484,9 @@ export interface ProjectCosts {
   surveyorFees: number;
   reraAuditReportFee: number;
   reraInspectionReportFee: number;
+  revenueRes?: number;
+  revenueRet?: number;
+  revenueOff?: number;
   totalRevenue: number;
   totalCosts?: number;
 }

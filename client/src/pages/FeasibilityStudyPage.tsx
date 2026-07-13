@@ -657,184 +657,287 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
               const sellableOff = gfaOffSqft * offPct;
               const totalSellable = sellableRes + sellableRet + sellableOff;
 
+              // COMO fee and investor profit
+              const comoFeePct = 0.15;
+              const comoFee = profitVal > 0 ? profitVal * comoFeePct : 0;
+              const investorProfit = profitVal - comoFee;
+              const investorROI = investedCapital > 0 ? (investorProfit / investedCapital) * 100 : 0;
+
+              // Revenue breakdown
+              const revRes = realCosts.revenueRes || 0;
+              const revRet = realCosts.revenueRet || 0;
+              const revOff = realCosts.revenueOff || 0;
+
               return (
-                <div className="space-y-5">
+                <div className="space-y-6">
 
-                  {/* ══════ SECTION 1: REVENUE HERO ══════ */}
-                  <div className="rounded-2xl bg-gradient-to-l from-blue-700 to-blue-900 px-7 py-5 shadow-lg relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_rgba(255,255,255,0.08)_0%,transparent_60%)]" />
-                    <div className="relative flex items-center justify-between">
-                      <div>
-                        <div className="text-[11px] text-blue-200 font-medium mb-1.5 flex items-center gap-2">
-                          <TrendingUp className="w-3.5 h-3.5" />
-                          إجمالي الإيرادات المتوقعة
-                        </div>
-                        <div className="text-3xl font-black text-white tabular-nums tracking-tight" dir="ltr">
-                          {fmtFull(totalRevenueVal)} <span className="text-sm font-normal text-blue-300">AED</span>
-                        </div>
-                        {totalRevenueVal === 0 && (
-                          <div className="mt-2 flex items-center gap-1.5 bg-amber-500/20 border border-amber-400/30 rounded-lg px-3 py-1">
-                            <AlertTriangle className="w-3 h-3 text-amber-300" />
-                            <span className="text-[10px] text-amber-200 font-medium">لم يتم إدخال التسعير بعد</span>
+                  {/* ══════ SECTION 1: PROJECT INFO HEADER ══════ */}
+                  <div className="rounded-2xl bg-gradient-to-l from-gray-900 via-slate-800 to-slate-900 px-8 py-6 shadow-xl relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_rgba(255,255,255,0.04)_0%,transparent_60%)]" />
+                    <div className="absolute bottom-0 right-0 w-40 h-40 bg-gradient-to-tl from-amber-500/10 to-transparent rounded-full blur-2xl" />
+                    <div className="relative">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/20">
+                              <Building2 className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                              <h2 className="text-xl font-black text-white">{selectedProject?.name || 'المشروع'}</h2>
+                              <p className="text-xs text-slate-400 mt-0.5">{selectedProject?.community || selectedProject?.description || ''}</p>
+                            </div>
                           </div>
-                        )}
-                      </div>
-                      <div className="text-6xl opacity-10 text-white">💰</div>
-                    </div>
-                  </div>
-
-                  {/* ══════ SECTION 2: COSTS & CAPITAL SIDE BY SIDE ══════ */}
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Total Costs */}
-                    <div className="rounded-2xl bg-gradient-to-l from-slate-800 to-slate-900 px-6 py-4 shadow-md relative overflow-hidden">
-                      <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_bottom_left,_rgba(255,255,255,0.05)_0%,transparent_60%)]" />
-                      <div className="relative">
-                        <div className="text-[10px] text-slate-400 font-medium mb-1 flex items-center gap-1.5">
-                          <DollarSign className="w-3 h-3" />
-                          التكلفة الكلية للمشروع
+                          {selectedProject?.description && selectedProject?.community && (
+                            <p className="text-[11px] text-slate-500 leading-relaxed max-w-lg mt-2">{selectedProject.description}</p>
+                          )}
                         </div>
-                        <div className="text-2xl font-black text-white tabular-nums" dir="ltr">
-                          {fmtFull(totalCostsVal)} <span className="text-[10px] font-normal text-slate-400">AED</span>
+                        <div className="flex items-center gap-2">
+                          {selectedProject?.plotNumber && (
+                            <span className="bg-slate-700/60 border border-slate-600/50 text-slate-300 text-[10px] font-bold px-3 py-1.5 rounded-lg">قطعة {selectedProject.plotNumber}</span>
+                          )}
                         </div>
-                        <div className="text-[9px] text-slate-500 mt-1">يشمل جميع التكاليف (مستثمر + ضمان)</div>
-                      </div>
-                    </div>
-
-                    {/* Invested Capital */}
-                    <div className="rounded-2xl bg-gradient-to-l from-indigo-700 to-indigo-800 px-6 py-4 shadow-md relative overflow-hidden">
-                      <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_bottom_left,_rgba(255,255,255,0.05)_0%,transparent_60%)]" />
-                      <div className="relative">
-                        <div className="text-[10px] text-indigo-200 font-medium mb-1 flex items-center gap-1.5">
-                          <Briefcase className="w-3 h-3" />
-                          رأس المال المطلوب من المستثمر
-                        </div>
-                        <div className="text-2xl font-black text-white tabular-nums" dir="ltr">
-                          {fmtFull(investedCapital)} <span className="text-[10px] font-normal text-indigo-300">AED</span>
-                        </div>
-                        <div className="text-[9px] text-indigo-300 mt-1">مدفوع + مطلوب سداده (بدون الضمان)</div>
                       </div>
                     </div>
                   </div>
 
-                  {/* ══════ SECTION 3: PROFIT & RATIOS ══════ */}
-                  <div className="grid grid-cols-3 gap-4">
-                    {/* Profit */}
-                    <div className="group relative bg-white hover:bg-emerald-50/30 rounded-2xl p-5 border border-emerald-200/60 shadow-sm hover:shadow-lg transition-all duration-300">
-                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                      <div className="relative">
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${profitVal >= 0 ? 'from-emerald-500 to-emerald-600 shadow-emerald-200' : 'from-red-500 to-red-600 shadow-red-200'} flex items-center justify-center shadow-md`}>
-                            <BarChart2 className="w-4 h-4 text-white" />
-                          </div>
-                          <span className="text-[11px] text-slate-600 font-semibold">صافي الربح</span>
+                  {/* ══════ SECTION 2: REVENUE ══════ */}
+                  <div className="rounded-2xl bg-white border border-emerald-200/60 shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 bg-gradient-to-l from-emerald-50 to-teal-50/40 border-b border-emerald-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-200/50">
+                          <TrendingUp className="w-5 h-5 text-white" />
                         </div>
-                        <div className={`text-xl font-black tabular-nums ${profitVal >= 0 ? 'text-emerald-700' : 'text-red-700'}`} dir="ltr">{fmtFull(profitVal)}</div>
-                        <div className="text-[10px] text-slate-500 mt-1">الإيرادات − التكلفة الكلية</div>
+                        <div>
+                          <h3 className="text-sm font-bold text-emerald-900">إجمالي الإيرادات المتوقعة</h3>
+                          <p className="text-[10px] text-emerald-600">من بيع الوحدات السكنية والتجارية والمكتبية</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-6">
+                      <div className="text-3xl font-black text-emerald-800 tabular-nums mb-4" dir="ltr">
+                        {fmtFull(totalRevenueVal)} <span className="text-sm font-normal text-emerald-500">AED</span>
+                      </div>
+                      {totalRevenueVal === 0 && (
+                        <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 mb-4">
+                          <AlertTriangle className="w-4 h-4 text-amber-500" />
+                          <span className="text-xs text-amber-700 font-medium">لم يتم إدخال التسعير بعد</span>
+                        </div>
+                      )}
+                      {/* Revenue breakdown */}
+                      {totalRevenueVal > 0 && (
+                        <div className="grid grid-cols-3 gap-3">
+                          {[
+                            { label: "سكني", val: revRes, color: "bg-sky-50 border-sky-200 text-sky-700", icon: <Building2 className="w-3.5 h-3.5" /> },
+                            { label: "تجاري", val: revRet, color: "bg-orange-50 border-orange-200 text-orange-700", icon: <ShoppingBag className="w-3.5 h-3.5" /> },
+                            { label: "مكاتب", val: revOff, color: "bg-violet-50 border-violet-200 text-violet-700", icon: <Briefcase className="w-3.5 h-3.5" /> },
+                          ].filter(r => r.val > 0).map(r => (
+                            <div key={r.label} className={`rounded-xl border p-3 ${r.color}`}>
+                              <div className="flex items-center gap-1.5 mb-1.5">{r.icon}<span className="text-[10px] font-bold">{r.label}</span></div>
+                              <div className="text-sm font-black tabular-nums" dir="ltr">{fmtFull(r.val)}</div>
+                              <div className="text-[9px] opacity-70 mt-0.5">{totalRevenueVal > 0 ? ((r.val / totalRevenueVal) * 100).toFixed(1) : 0}%</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* ══════ SECTION 3: COSTS & CAPITAL ══════ */}
+                  <div className="grid grid-cols-2 gap-5">
+                    {/* Total Costs Card */}
+                    <div className="rounded-2xl bg-white border border-red-200/60 shadow-sm overflow-hidden">
+                      <div className="px-5 py-3.5 bg-gradient-to-l from-red-50 to-rose-50/40 border-b border-red-100">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow-md shadow-red-200/50">
+                            <DollarSign className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="text-xs font-bold text-red-900">التكلفة الكلية للمشروع</h3>
+                            <p className="text-[9px] text-red-500">يشمل جميع التكاليف (مستثمر + ضمان)</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-5">
+                        <div className="text-2xl font-black text-red-800 tabular-nums" dir="ltr">
+                          {fmtFull(totalCostsVal)} <span className="text-[10px] font-normal text-red-400">AED</span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Profit on Cost */}
-                    <div className="group relative bg-white hover:bg-violet-50/30 rounded-2xl p-5 border border-violet-200/60 shadow-sm hover:shadow-lg transition-all duration-300">
-                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                      <div className="relative">
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center shadow-md shadow-violet-200">
+                    {/* Invested Capital Card */}
+                    <div className="rounded-2xl bg-white border border-indigo-200/60 shadow-sm overflow-hidden">
+                      <div className="px-5 py-3.5 bg-gradient-to-l from-indigo-50 to-blue-50/40 border-b border-indigo-100">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-md shadow-indigo-200/50">
+                            <Briefcase className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="text-xs font-bold text-indigo-900">رأس المال المطلوب</h3>
+                            <p className="text-[9px] text-indigo-500">مدفوع + مطلوب سداده (بدون الضمان)</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-5">
+                        <div className="text-2xl font-black text-indigo-800 tabular-nums" dir="ltr">
+                          {fmtFull(investedCapital)} <span className="text-[10px] font-normal text-indigo-400">AED</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ══════ SECTION 4: PROFIT & RATIOS ══════ */}
+                  <div className="rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 bg-gradient-to-l from-emerald-50/60 to-white border-b border-gray-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-md shadow-emerald-200/50">
+                          <BarChart3 className="w-5 h-5 text-white" />
+                        </div>
+                        <h3 className="text-sm font-bold text-gray-800">الربح والعوائد</h3>
+                      </div>
+                    </div>
+                    <div className="p-6">
+                      {/* Main profit */}
+                      <div className="flex items-center justify-between mb-5 pb-5 border-b border-gray-100">
+                        <div>
+                          <span className="text-xs text-gray-500 block mb-1">صافي الربح (الإيرادات − التكلفة)</span>
+                          <div className={`text-2xl font-black tabular-nums ${profitVal >= 0 ? 'text-emerald-700' : 'text-red-700'}`} dir="ltr">{fmtFull(profitVal)} <span className="text-[10px] font-normal text-gray-400">AED</span></div>
+                        </div>
+                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${profitVal >= 0 ? 'bg-emerald-100' : 'bg-red-100'}`}>
+                          <BarChart2 className={`w-7 h-7 ${profitVal >= 0 ? 'text-emerald-600' : 'text-red-600'}`} />
+                        </div>
+                      </div>
+
+                      {/* Ratios grid */}
+                      <div className="grid grid-cols-3 gap-4 mb-5">
+                        <div className="bg-violet-50/80 border border-violet-200/60 rounded-xl p-4 text-center">
+                          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-md shadow-violet-200/50 mx-auto mb-2">
                             <Percent className="w-4 h-4 text-white" />
                           </div>
-                          <span className="text-[11px] text-slate-600 font-semibold">نسبة الربح من التكلفة</span>
+                          <div className="text-[10px] text-violet-600 font-medium mb-1">نسبة الربح من التكلفة</div>
+                          <div className={`text-lg font-black tabular-nums ${profitOnCost >= 0 ? 'text-violet-700' : 'text-red-700'}`}>{fmtPct(profitOnCost)}</div>
                         </div>
-                        <div className={`text-xl font-black tabular-nums ${profitOnCost >= 0 ? 'text-violet-700' : 'text-red-700'}`}>{fmtPct(profitOnCost)}</div>
-                        <div className="text-[10px] text-slate-500 mt-1">الربح ÷ التكلفة الكلية</div>
-                      </div>
-                    </div>
-
-                    {/* ROI on Capital */}
-                    <div className="group relative bg-white hover:bg-blue-50/30 rounded-2xl p-5 border border-blue-200/60 shadow-sm hover:shadow-lg transition-all duration-300">
-                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                      <div className="relative">
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md shadow-blue-200">
+                        <div className="bg-blue-50/80 border border-blue-200/60 rounded-xl p-4 text-center">
+                          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-200/50 mx-auto mb-2">
                             <Target className="w-4 h-4 text-white" />
                           </div>
-                          <span className="text-[11px] text-slate-600 font-semibold">نسبة الربح من رأس المال</span>
+                          <div className="text-[10px] text-blue-600 font-medium mb-1">نسبة الربح من رأس المال</div>
+                          <div className={`text-lg font-black tabular-nums ${roiOnCapital >= 0 ? 'text-blue-700' : 'text-red-700'}`}>{fmtPct(roiOnCapital)}</div>
                         </div>
-                        <div className={`text-xl font-black tabular-nums ${roiOnCapital >= 0 ? 'text-blue-700' : 'text-red-700'}`}>{fmtPct(roiOnCapital)}</div>
-                        <div className="text-[10px] text-slate-500 mt-1">الربح ÷ رأس المال المستثمر</div>
+                        <div className="bg-amber-50/80 border border-amber-200/60 rounded-xl p-4 text-center">
+                          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-md shadow-amber-200/50 mx-auto mb-2">
+                            <Sparkles className="w-4 h-4 text-white" />
+                          </div>
+                          <div className="text-[10px] text-amber-600 font-medium mb-1">ROI المستثمر</div>
+                          <div className={`text-lg font-black tabular-nums ${investorROI >= 0 ? 'text-amber-700' : 'text-red-700'}`}>{fmtPct(investorROI)}</div>
+                        </div>
+                      </div>
+
+                      {/* COMO fee & Investor profit */}
+                      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
+                        <div className="bg-orange-50/60 border border-orange-200/50 rounded-xl p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center">
+                              <Sparkles className="w-3.5 h-3.5 text-white" />
+                            </div>
+                            <span className="text-[11px] font-bold text-orange-800">رسوم كومو (15%)</span>
+                          </div>
+                          <div className="text-base font-black text-orange-800 tabular-nums" dir="ltr">{fmtFull(comoFee)} <span className="text-[9px] font-normal text-orange-500">AED</span></div>
+                        </div>
+                        <div className="bg-emerald-50/60 border border-emerald-200/50 rounded-xl p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center">
+                              <Users className="w-3.5 h-3.5 text-white" />
+                            </div>
+                            <span className="text-[11px] font-bold text-emerald-800">ربح المستثمر</span>
+                          </div>
+                          <div className="text-base font-black text-emerald-800 tabular-nums" dir="ltr">{fmtFull(investorProfit)} <span className="text-[9px] font-normal text-emerald-500">AED</span></div>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* ══════ SECTION 4: CAPITAL BREAKDOWN ══════ */}
-                  <div className="bg-gradient-to-l from-slate-50 to-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-sm">
-                        <Landmark className="w-3.5 h-3.5 text-white" />
-                      </div>
-                      <span className="text-sm font-bold text-slate-700">تفاصيل رأس المال</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      {/* Paid */}
-                      <div className="bg-emerald-50/80 border border-emerald-200/60 rounded-xl p-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                          <span className="text-[11px] font-semibold text-emerald-700">مدفوع</span>
+                  {/* ══════ SECTION 5: CAPITAL BREAKDOWN ══════ */}
+                  <div className="rounded-2xl bg-white border border-amber-200/60 shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 bg-gradient-to-l from-amber-50 to-orange-50/40 border-b border-amber-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-md shadow-amber-200/50">
+                          <Landmark className="w-5 h-5 text-white" />
                         </div>
-                        <div className="text-lg font-black text-emerald-800 tabular-nums" dir="ltr">{fmtFull(paidT)} <span className="text-[9px] font-normal text-emerald-600">AED</span></div>
-                        <div className="text-[9px] text-emerald-600 mt-1">{investedCapital > 0 ? ((paidT / investedCapital) * 100).toFixed(1) : 0}% من رأس المال</div>
-                      </div>
-                      {/* Unpaid */}
-                      <div className="bg-amber-50/80 border border-amber-200/60 rounded-xl p-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <ArrowDownCircle className="w-4 h-4 text-amber-600" />
-                          <span className="text-[11px] font-semibold text-amber-700">مطلوب سداده</span>
+                        <div>
+                          <h3 className="text-sm font-bold text-amber-900">تفاصيل رأس المال</h3>
+                          <p className="text-[9px] text-amber-600">تقسيم رأس المال بين المدفوع والمطلوب</p>
                         </div>
-                        <div className="text-lg font-black text-amber-800 tabular-nums" dir="ltr">{fmtFull(unpaidInvestor)} <span className="text-[9px] font-normal text-amber-600">AED</span></div>
-                        <div className="text-[9px] text-amber-600 mt-1">{investedCapital > 0 ? ((unpaidInvestor / investedCapital) * 100).toFixed(1) : 0}% من رأس المال</div>
                       </div>
                     </div>
-                    {/* Progress bar */}
-                    <div className="h-4 bg-slate-100 rounded-full overflow-hidden shadow-inner">
-                      <div
-                        className="h-full bg-gradient-to-l from-emerald-400 via-emerald-500 to-teal-600 rounded-full transition-all duration-700 ease-out relative"
-                        style={{ width: `${investedCapital > 0 ? Math.min(100, (paidT / investedCapital) * 100) : 0}%` }}
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-b from-white/30 to-transparent rounded-full" />
+                    <div className="p-6">
+                      <div className="grid grid-cols-2 gap-5 mb-5">
+                        {/* Paid */}
+                        <div className="bg-emerald-50 border border-emerald-200/70 rounded-xl p-5">
+                          <div className="flex items-center gap-2.5 mb-3">
+                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center shadow-sm">
+                              <CheckCircle2 className="w-4.5 h-4.5 text-white" />
+                            </div>
+                            <span className="text-xs font-bold text-emerald-800">مدفوع</span>
+                          </div>
+                          <div className="text-xl font-black text-emerald-800 tabular-nums" dir="ltr">{fmtFull(paidT)} <span className="text-[9px] font-normal text-emerald-500">AED</span></div>
+                          <div className="text-[10px] text-emerald-600 mt-1.5 font-medium">{investedCapital > 0 ? ((paidT / investedCapital) * 100).toFixed(1) : 0}% من رأس المال</div>
+                        </div>
+                        {/* Unpaid */}
+                        <div className="bg-amber-50 border border-amber-200/70 rounded-xl p-5">
+                          <div className="flex items-center gap-2.5 mb-3">
+                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-sm">
+                              <ArrowDownCircle className="w-4.5 h-4.5 text-white" />
+                            </div>
+                            <span className="text-xs font-bold text-amber-800">مطلوب سداده</span>
+                          </div>
+                          <div className="text-xl font-black text-amber-800 tabular-nums" dir="ltr">{fmtFull(unpaidInvestor)} <span className="text-[9px] font-normal text-amber-500">AED</span></div>
+                          <div className="text-[10px] text-amber-600 mt-1.5 font-medium">{investedCapital > 0 ? ((unpaidInvestor / investedCapital) * 100).toFixed(1) : 0}% من رأس المال</div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center justify-between mt-2 text-[10px]">
-                      <span className="text-emerald-700 font-medium">المدفوع: {fmtFull(paidT)} درهم</span>
-                      <span className="text-amber-700 font-medium">المتبقي: {fmtFull(unpaidInvestor)} درهم</span>
+                      {/* Progress bar */}
+                      <div className="relative">
+                        <div className="h-5 bg-gray-100 rounded-full overflow-hidden shadow-inner">
+                          <div
+                            className="h-full bg-gradient-to-l from-emerald-400 via-emerald-500 to-teal-600 rounded-full transition-all duration-700 ease-out relative"
+                            style={{ width: `${investedCapital > 0 ? Math.min(100, (paidT / investedCapital) * 100) : 0}%` }}
+                          >
+                            <div className="absolute inset-0 bg-gradient-to-b from-white/30 to-transparent rounded-full" />
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between mt-2.5 text-[10px]">
+                          <span className="text-emerald-700 font-semibold">المدفوع: {fmtFull(paidT)} درهم</span>
+                          <span className="text-amber-700 font-semibold">المتبقي: {fmtFull(unpaidInvestor)} درهم</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  {/* ══════ SECTION 5: PROJECT DETAILS ══════ */}
-                  <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                    <div className="px-5 py-3 border-b border-gray-100 bg-gradient-to-l from-slate-50 to-blue-50/40">
-                      <h4 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                        <LandPlot className="w-4 h-4 text-blue-600" />
-                        بيانات المشروع والمساحات
-                      </h4>
-                    </div>
-
-                    {/* Project Description */}
-                    {selectedProject?.description && (
-                      <div className="px-5 py-3 border-b border-gray-100 bg-blue-50/20">
-                        <p className="text-xs text-gray-600 leading-relaxed">{selectedProject.description}</p>
+                  {/* ══════ SECTION 6: AREAS & PROJECT DETAILS ══════ */}
+                  <div className="rounded-2xl bg-white border border-sky-200/60 shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 bg-gradient-to-l from-sky-50 to-blue-50/40 border-b border-sky-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center shadow-md shadow-sky-200/50">
+                          <LandPlot className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold text-sky-900">بيانات المشروع والمساحات</h3>
+                          <p className="text-[9px] text-sky-600">تفاصيل المساحات والكفاءات</p>
+                        </div>
                       </div>
-                    )}
+                    </div>
 
                     {/* Area KPIs */}
                     <div className="grid grid-cols-4 gap-0 divide-x divide-gray-100" dir="rtl">
                       {[
-                        { label: "مساحة الأرض", val: `${fmtFull(plotAreaSqft)}`, sub: `${fmtFull(plotAreaSqm)} م²`, icon: <LandPlot className="w-3.5 h-3.5 text-sky-600" />, color: "bg-sky-50/50" },
-                        { label: "مساحة البناء (BUA)", val: `${fmtFull(buaSqft)}`, sub: "sqft", icon: <Warehouse className="w-3.5 h-3.5 text-amber-600" />, color: "bg-amber-50/50" },
-                        { label: "GFA الإجمالي", val: `${fmtFull(gfaTotalSqft)}`, sub: "sqft", icon: <SquareStack className="w-3.5 h-3.5 text-emerald-600" />, color: "bg-emerald-50/50" },
-                        { label: "المساحة القابلة للبيع", val: `${fmtFull(totalSellable)}`, sub: "sqft", icon: <ShoppingBag className="w-3.5 h-3.5 text-violet-600" />, color: "bg-violet-50/50" },
+                        { label: "مساحة الأرض", val: `${fmtFull(plotAreaSqft)}`, sub: `${fmtFull(plotAreaSqm)} م²`, icon: <LandPlot className="w-4 h-4 text-sky-600" />, color: "bg-sky-50/60" },
+                        { label: "مساحة البناء (BUA)", val: `${fmtFull(buaSqft)}`, sub: "sqft", icon: <Warehouse className="w-4 h-4 text-amber-600" />, color: "bg-amber-50/60" },
+                        { label: "GFA الإجمالي", val: `${fmtFull(gfaTotalSqft)}`, sub: "sqft", icon: <SquareStack className="w-4 h-4 text-emerald-600" />, color: "bg-emerald-50/60" },
+                        { label: "القابلة للبيع", val: `${fmtFull(totalSellable)}`, sub: "sqft", icon: <ShoppingBag className="w-4 h-4 text-violet-600" />, color: "bg-violet-50/60" },
                       ].map(item => (
-                        <div key={item.label} className={`px-4 py-3 ${item.color}`}>
-                          <div className="flex items-center gap-1.5 mb-1">{item.icon}<span className="text-[9px] font-bold text-gray-500 uppercase">{item.label}</span></div>
-                          <div className="text-base font-black font-mono text-gray-800" dir="ltr">{item.val}</div>
-                          <div className="text-[9px] text-gray-400 font-mono" dir="ltr">{item.sub}</div>
+                        <div key={item.label} className={`px-5 py-4 ${item.color}`}>
+                          <div className="flex items-center gap-2 mb-2">{item.icon}<span className="text-[10px] font-bold text-gray-600">{item.label}</span></div>
+                          <div className="text-lg font-black font-mono text-gray-800" dir="ltr">{item.val}</div>
+                          <div className="text-[10px] text-gray-400 font-mono mt-0.5" dir="ltr">{item.sub}</div>
                         </div>
                       ))}
                     </div>
@@ -842,33 +945,33 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
                     {/* GFA Breakdown Table */}
                     {(gfaResSqft > 0 || gfaRetSqft > 0 || gfaOffSqft > 0) && (
                       <div className="border-t border-gray-100">
-                        <table className="w-full text-[11px]">
+                        <table className="w-full text-xs">
                           <thead>
-                            <tr className="bg-gray-50/60 border-b border-gray-100">
-                              <th className="text-right py-2 pr-4 font-bold text-gray-500 text-[10px]">الفئة</th>
-                              <th className="text-center py-2 font-bold text-gray-500 text-[10px]">GFA (sqft)</th>
-                              <th className="text-center py-2 font-bold text-gray-500 text-[10px]">الكفاءة</th>
-                              <th className="text-center py-2 font-bold text-gray-500 text-[10px]">قابل للبيع (sqft)</th>
+                            <tr className="bg-gray-50/80 border-b border-gray-100">
+                              <th className="text-right py-2.5 pr-5 font-bold text-gray-500 text-[10px]">الفئة</th>
+                              <th className="text-center py-2.5 font-bold text-gray-500 text-[10px]">GFA (sqft)</th>
+                              <th className="text-center py-2.5 font-bold text-gray-500 text-[10px]">الكفاءة</th>
+                              <th className="text-center py-2.5 font-bold text-gray-500 text-[10px]">قابل للبيع (sqft)</th>
                             </tr>
                           </thead>
                           <tbody>
                             {[
                               { label: "سكني", gfa: gfaResSqft, eff: Math.round(resPct * 100), sell: sellableRes, dot: "bg-sky-500" },
-                              { label: "تجزئة", gfa: gfaRetSqft, eff: Math.round(retPct * 100), sell: sellableRet, dot: "bg-amber-500" },
+                              { label: "تجزئة", gfa: gfaRetSqft, eff: Math.round(retPct * 100), sell: sellableRet, dot: "bg-orange-500" },
                               { label: "مكاتب", gfa: gfaOffSqft, eff: Math.round(offPct * 100), sell: sellableOff, dot: "bg-violet-500" },
                             ].filter(r => r.gfa > 0).map(r => (
-                              <tr key={r.label} className="border-b border-gray-50 hover:bg-gray-50/40">
-                                <td className="py-2 pr-4 flex items-center gap-1.5"><span className={`w-2 h-2 rounded-full ${r.dot}`} />{r.label}</td>
-                                <td className="py-2 text-center font-mono text-gray-700" dir="ltr">{fmtFull(r.gfa)}</td>
-                                <td className="py-2 text-center"><span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{r.eff}%</span></td>
-                                <td className="py-2 text-center font-mono font-semibold text-gray-800" dir="ltr">{fmtFull(r.sell)}</td>
+                              <tr key={r.label} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                                <td className="py-2.5 pr-5 flex items-center gap-2"><span className={`w-2.5 h-2.5 rounded-full ${r.dot}`} /><span className="font-medium">{r.label}</span></td>
+                                <td className="py-2.5 text-center font-mono text-gray-700" dir="ltr">{fmtFull(r.gfa)}</td>
+                                <td className="py-2.5 text-center"><span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{r.eff}%</span></td>
+                                <td className="py-2.5 text-center font-mono font-semibold text-gray-800" dir="ltr">{fmtFull(r.sell)}</td>
                               </tr>
                             ))}
                             <tr className="bg-gray-50/80 font-bold">
-                              <td className="py-2 pr-4 text-gray-700">الإجمالي</td>
-                              <td className="py-2 text-center font-mono text-gray-800" dir="ltr">{fmtFull(gfaTotalSqft)}</td>
-                              <td className="py-2 text-center">—</td>
-                              <td className="py-2 text-center font-mono text-gray-900" dir="ltr">{fmtFull(totalSellable)}</td>
+                              <td className="py-2.5 pr-5 text-gray-700">الإجمالي</td>
+                              <td className="py-2.5 text-center font-mono text-gray-800" dir="ltr">{fmtFull(gfaTotalSqft)}</td>
+                              <td className="py-2.5 text-center">—</td>
+                              <td className="py-2.5 text-center font-mono text-gray-900" dir="ltr">{fmtFull(totalSellable)}</td>
                             </tr>
                           </tbody>
                         </table>
@@ -876,34 +979,36 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
                     )}
                   </div>
 
-                  {/* ══════ SECTION 6: SCENARIO COMPARISON ══════ */}
-                  <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                    <div className="px-5 py-3 border-b border-gray-100 bg-gray-50/50">
-                      <h4 className="text-xs font-bold text-gray-600 flex items-center gap-2">
-                        <Scale className="w-3.5 h-3.5" />
-                        مقارنة السيناريوهات
-                      </h4>
+                  {/* ══════ SECTION 7: SCENARIO COMPARISON ══════ */}
+                  <div className="rounded-2xl bg-white border border-purple-200/60 shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 bg-gradient-to-l from-purple-50 to-fuchsia-50/40 border-b border-purple-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-fuchsia-600 flex items-center justify-center shadow-md shadow-purple-200/50">
+                          <Scale className="w-5 h-5 text-white" />
+                        </div>
+                        <h3 className="text-sm font-bold text-purple-900">مقارنة السيناريوهات</h3>
+                      </div>
                     </div>
                     <div className="grid grid-cols-3 divide-x divide-gray-100" dir="ltr">
                       {[
-                        { label: "متحفظ -10%", data: cons, color: "text-amber-600" },
-                        { label: "أساسي", data: base, color: "text-blue-600" },
-                        { label: "متفائل +10%", data: opt, color: "text-emerald-600" },
+                        { label: "متحفظ -10%", data: cons, color: "text-amber-600", bg: "bg-amber-50/40" },
+                        { label: "أساسي", data: base, color: "text-blue-600", bg: "bg-blue-50/40" },
+                        { label: "متفائل +10%", data: opt, color: "text-emerald-600", bg: "bg-emerald-50/40" },
                       ].map(sc => (
-                        <div key={sc.label} className="p-4 text-center" dir="rtl">
-                          <p className={`text-[10px] font-bold ${sc.color} mb-2`}>{sc.label}</p>
-                          <div className="space-y-1.5">
+                        <div key={sc.label} className={`p-5 text-center ${sc.bg}`} dir="rtl">
+                          <p className={`text-xs font-bold ${sc.color} mb-3`}>{sc.label}</p>
+                          <div className="space-y-2.5">
                             <div>
-                              <span className="text-[9px] text-gray-500 block">الإيرادات</span>
+                              <span className="text-[10px] text-gray-500 block">الإيرادات</span>
                               <span className="text-sm font-bold font-mono text-gray-800" dir="ltr">{fmt(sc.data.revenue)}</span>
                             </div>
                             <div>
-                              <span className="text-[9px] text-gray-500 block">الربح</span>
+                              <span className="text-[10px] text-gray-500 block">الربح</span>
                               <span className={`text-sm font-bold font-mono ${sc.data.profit >= 0 ? 'text-emerald-700' : 'text-red-700'}`} dir="ltr">{fmt(sc.data.profit)}</span>
                             </div>
                             <div>
-                              <span className="text-[9px] text-gray-500 block">الهامش</span>
-                              <span className="text-xs font-bold font-mono text-gray-700">{fmtPct(sc.data.margin)}</span>
+                              <span className="text-[10px] text-gray-500 block">الهامش</span>
+                              <span className="text-sm font-bold font-mono text-gray-700">{fmtPct(sc.data.margin)}</span>
                             </div>
                           </div>
                         </div>

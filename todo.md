@@ -810,3 +810,8 @@
 - [x] Add paid vs unpaid capital breakdown with progress bar in feasibility summary
 - [x] Add project areas section (plot area, BUA, GFA, sellable) with GFA breakdown table
 - [x] Add profit-on-cost ratio and profit-on-capital ratio as separate metrics
+- [x] Redesign feasibility summary tab with professional colorful layout (inspired by reference image)
+- [x] Add colored cards with icons for each section (project info, areas, financials, profit)
+- [x] Add COMO fee (15% of profit), investor profit, and ROI on investor capital
+- [x] Add revenue breakdown (residential/retail/offices) in summary
+- [x] Use soft colored backgrounds, large icons in circles, clean typography
