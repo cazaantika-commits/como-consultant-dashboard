@@ -848,3 +848,6 @@
 - [x] Make absorption schedule editable from settings
 - [x] Apply RERA 5% retention on total deposited amount
 - [x] Show settlement: 95% at handover + 5% after 12 months
+- [x] Upgrade Portfolio Summary Report style to match Capital Portfolio Export (dark header, summary cards, phase colors, legend, footer)
+- [x] Update financial engine specification with user corrections (RERA unit fees, community fees, inspection fees, developer fees by scenario, progress payments, milestones)
+- [x] Ensure every number remains editable and auto-propagates to all reports (verified: all numbers editable from بطاقة المشروع or إعدادات التدفق النقدي, changes auto-propagate via tRPC queries)
