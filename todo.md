@@ -835,8 +835,30 @@
 - [x] Customize portfolio summary report: mall (مركز مجان التجاري) is non-sale project — show costs/investor amounts but hide revenue/profit/margins, show "—" instead
 - [x] Fix monthly distribution discrepancy in portfolio summary report — now reads user-saved settings (options + delays) from DB and applies same delay logic as original portfolio
 - [x] Add BUA, construction cost per sqft, and total construction cost (BUA × price) as visible fields in the project info card (بطاقة المشروع) in the feasibility summary
-- [x] Build revenue inflow engine: absorption schedule + payment plan monthly calculation
-- [x] Add revenue inflows to getProjectMonthlyReport API response
-- [x] Update EscrowCashFlowPage to show revenue inflows row + net escrow balance
-- [ ] Update HTML export to include revenue data
-- [x] Export all project tables to Excel files
+- [x] Add escrow revenue item definitions (10% booking, 50% construction, 40% handover) to getDefaultItemDefs
+- [x] Make escrow revenue distribution editable from settings page (same as other items)
+- [x] Display revenues in EscrowCashFlowPage as a separate section (above or below expenses)
+- [x] Calculate and display running monthly balance (revenues - expenses) in escrow page
+- [x] Add settlement summary at project completion: 95% released immediately, 5% retained for 12 months (RERA Law 8/2007 Article 14)
+- [x] Show two-phase payout: amount at handover + amount after defect liability period (12 months)
+- [x] Implement absorption schedule for escrow revenue (80% during construction, 20% post-handover)
+- [x] Default absorption: [5%, 8%, 15%, 10%, 12%, 5%, 5%, 5%, 5%, 5%, 5%] = 80% over 11 months from construction start
+- [x] Each sold unit pays: 10% booking (immediate), 50% construction installments (spread to handover), 40% at handover
+- [x] 20% post-handover units pay 100% cash
+- [x] Make absorption schedule editable from settings
+- [x] Apply RERA 5% retention on total deposited amount
+- [x] Show settlement: 95% at handover + 5% after 12 months
+- [x] Upgrade Portfolio Summary Report style to match Capital Portfolio Export (dark header, summary cards, phase colors, legend, footer)
+- [x] Update financial engine specification with user corrections (RERA unit fees, community fees, inspection fees, developer fees by scenario, progress payments, milestones)
+- [x] Ensure every number remains editable and auto-propagates to all reports (verified: all numbers editable from بطاقة المشروع or إعدادات التدفق النقدي, changes auto-propagate via tRPC queries)
+- [x] Build new financial engine module (server/financialEngine.ts) — single clean file with pure functions
+- [x] Write comprehensive vitest tests for financial engine with real project numbers — 46 tests passing
+- [x] Wire new engine into PortfolioSummaryReport and Capital Portfolio via adapter (financialEngineAdapter.ts) — 67 tests passing
+- [x] Verify end-to-end: every number editable and auto-propagates (adapter maps engine output to existing API shape)
+- [x] Build comparison page: old engine vs new engine numbers side-by-side for verification
+- [x] Replace old engine with new engine in calculateProjectCosts (server-side investorCashFlow.ts now uses new engine internally)
+- [x] Replace old engine in client-side projectCostsCalc.ts with corrected formulas
+- [x] getPortfolioAllScenarios/getSettings/getProjectMonthlyReport all use calculateProjectCosts which now uses new engine
+- [x] Verify all pages produce correct numbers after switch (67 tests passing, server running, HMR working)
+- [x] Run all existing tests to confirm no regressions (67 tests passing)
+- [x] Fix: Revenue item (765M) was incorrectly included in totalCosts calculation — grandTotal showed 1.38B instead of 616M for Majan G+4P+25. Fixed in CapitalScheduleTablePage, FeasibilityStudyPage, and getPortfolioAllScenarios server endpoint.

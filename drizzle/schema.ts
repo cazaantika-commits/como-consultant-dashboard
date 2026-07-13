@@ -2039,7 +2039,7 @@ export const projectCashFlowSettings = mysqlTable("project_cash_flow_settings", 
     "admin", "developer_fee", "revenue", "other"
   ]).notNull().default("other"),
   // Display section in جدول الانعكاس (overrides category-based mapping)
-  section: mysqlEnum("section", ["paid", "design", "offplan", "construction", "escrow"]).default("construction"),
+  section: mysqlEnum("section", ["paid", "design", "offplan", "construction", "escrow", "revenue"]).default("construction"),
   // Whether this item is visible/active for the current scenario
   isActive: tinyint("is_active").notNull().default(1),
   // Sort order for display

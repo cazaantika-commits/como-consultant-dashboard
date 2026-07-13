@@ -194,7 +194,8 @@ function AllProjectsComparison({ projects, onSelectProject }: {
       let totalCosts = costs.totalCosts || 0;
       let investorTotal = 0;
       if (settingsData?.settings) {
-        const items = settingsData.settings.filter((s: any) => s.isActive !== 0 && s.isActive !== false);
+        // Exclude revenue items — they are income, not costs
+        const items = settingsData.settings.filter((s: any) => s.isActive !== 0 && s.isActive !== false && s.section !== "revenue" && s.category !== "revenue");
         const paidT = items.filter((s: any) => s.section === "paid").reduce((sum: number, s: any) => sum + (s.computedAmount || 0), 0);
         const investorT = items.filter((s: any) => s.fundingSource === "investor" && s.section !== "paid").reduce((sum: number, s: any) => sum + (s.computedAmount || 0), 0);
         const escrowT = items.filter((s: any) => s.fundingSource === "escrow").reduce((sum: number, s: any) => sum + (s.computedAmount || 0), 0);
@@ -595,7 +596,8 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
               let totalCostsVal = realCosts.totalCosts || 0;
               let investedCapital = calcInvestedCapital(realCosts);
               if (singleSettingsQuery.data?.settings) {
-                const items = singleSettingsQuery.data.settings.filter((s: any) => s.isActive !== 0 && s.isActive !== false);
+                // Exclude revenue items — they are income, not costs
+                const items = singleSettingsQuery.data.settings.filter((s: any) => s.isActive !== 0 && s.isActive !== false && s.section !== "revenue" && s.category !== "revenue");
                 const paidT = items.filter((s: any) => s.section === "paid").reduce((sum: number, s: any) => sum + (s.computedAmount || 0), 0);
                 const investorT = items.filter((s: any) => s.fundingSource === "investor" && s.section !== "paid").reduce((sum: number, s: any) => sum + (s.computedAmount || 0), 0);
                 const escrowT = items.filter((s: any) => s.fundingSource === "escrow").reduce((sum: number, s: any) => sum + (s.computedAmount || 0), 0);

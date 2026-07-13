@@ -35,7 +35,7 @@ interface SettingItem {
   itemKey: string;
   nameAr: string;
   /** Which section this belongs to (matches capital-schedule.html sections) */
-  section: "paid" | "design" | "offplan" | "construction" | "escrow";
+  section: "paid" | "design" | "offplan" | "construction" | "escrow" | "revenue";
   /** Category from server (needed to pass back on save) */
   category?: string;
   isActive: boolean;
@@ -106,9 +106,15 @@ const SECTION_META = {
     headerText: "text-blue-900",
     badge: "bg-blue-100 text-blue-800",
   },
+  revenue: {
+    label: "الإيرادات (المبالغ المودعة في حساب الضمان)",
+    headerBg: "bg-emerald-50 border-emerald-200",
+    headerText: "text-emerald-900",
+    badge: "bg-emerald-100 text-emerald-800",
+  },
 } as const;
 
-const SECTION_ORDER: Array<keyof typeof SECTION_META> = ["paid", "design", "offplan", "construction", "escrow"];
+const SECTION_ORDER: Array<keyof typeof SECTION_META> = ["paid", "design", "offplan", "construction", "escrow", "revenue"];
 
 /** Map old category keys → new section keys */
 const CAT_TO_SECTION: Record<string, keyof typeof SECTION_META> = {
@@ -119,6 +125,7 @@ const CAT_TO_SECTION: Record<string, keyof typeof SECTION_META> = {
   marketing_sales: "offplan",
   developer_fee: "design",
   admin: "construction",
+  revenue: "revenue",
   other: "construction",
 };
 
@@ -131,6 +138,7 @@ const CAT_TO_PHASE: Record<string, SettingItem["assignedPhase"]> = {
   marketing_sales: "offplan",
   developer_fee: "design",
   admin: "construction",
+  revenue: "construction",
   other: "construction",
 };
 
@@ -535,7 +543,7 @@ export default function CashFlowSettingsPage({
       }
 
       if (data.settings) {
-        setItems(data.settings.filter((s: any) => s.category !== "revenue").map((s: any) => {
+        setItems(data.settings.map((s: any) => {
           // Use section from server (always authoritative — set per item in server defaults)
           const section = (s.section as keyof typeof SECTION_META) || CAT_TO_SECTION[s.category] || "construction";
           // Determine assignedPhase from section (more accurate than category)
@@ -544,6 +552,7 @@ export default function CashFlowSettingsPage({
             section === "offplan" ? "offplan" :
             section === "construction" ? "construction" :
             section === "escrow" ? "construction" :
+            section === "revenue" ? "construction" :
             CAT_TO_PHASE[s.category] || "construction";
           const assignedPhase = assignedPhaseFromSection;
 
@@ -860,6 +869,164 @@ export default function CashFlowSettingsPage({
               if (!sectionItems || sectionItems.length === 0) return null;
               const meta = SECTION_META[section];
               const sectionTotal = sectionItems.reduce((s, i) => s + (i.computedAmount || 0), 0);
+
+              // Special rendering for revenue section: show absorption schedule editor
+              if (section === "revenue") {
+                const revenueItem = sectionItems[0]; // revenue_total item
+                // Parse current absorption from customPercentages or use defaults
+                const DEFAULT_ABSORPTION = [5, 8, 15, 10, 12, 5, 5, 5, 5, 5, 5];
+                let currentAbsorption = DEFAULT_ABSORPTION;
+                let currentPostHandover = 20;
+                if (revenueItem?.customPercentages && revenueItem.customPercentages.length > 0) {
+                  // Try to parse from customJson format
+                  try {
+                    // customPercentages might hold the absorption array directly
+                    // or it might be in the format {absorption: [...], postHandoverPct: N}
+                    currentAbsorption = revenueItem.customPercentages.slice(0, 20).filter(v => v > 0).length > 0
+                      ? revenueItem.customPercentages.slice(0, 20)
+                      : DEFAULT_ABSORPTION;
+                  } catch { /* use defaults */ }
+                }
+                const totalAbsorption = currentAbsorption.reduce((s, v) => s + v, 0);
+
+                return (
+                  <div key={section} className="bg-white rounded-xl border border-emerald-200 shadow-sm overflow-hidden">
+                    <div className={`px-4 py-3 flex items-center gap-3 border-b ${meta.headerBg}`}>
+                      <span className={`font-bold text-sm ${meta.headerText}`}>{meta.label}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${meta.badge}`}>
+                        جدول الامتصاص
+                      </span>
+                      <span className="mr-auto text-xs font-semibold text-emerald-700">
+                        {fmt(sectionTotal)} د.إ
+                      </span>
+                    </div>
+
+                    <div className="p-4 space-y-4">
+                      {/* Explanation */}
+                      <div className="bg-emerald-50 rounded-lg p-3 text-xs text-emerald-800">
+                        <p className="font-bold mb-1">📊 جدول امتصاص المبيعات</p>
+                        <p>يحدد نسبة الوحدات المباعة كل شهر من بداية الإنشاء. كل وحدة مباعة يدفع مشتريها:</p>
+                        <p className="mt-1">• 10% حجز فوري | 50% أقساط إنشاء | 40% عند التسليم</p>
+                        <p className="mt-1">• الوحدات المباعة بعد التسليم: 100% كاش</p>
+                      </div>
+
+                      {/* Absorption Schedule Table */}
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs border-collapse">
+                          <thead>
+                            <tr className="bg-gray-50">
+                              <th className="px-2 py-1.5 text-right border border-gray-200 font-medium text-gray-600">الشهر</th>
+                              {currentAbsorption.map((_, i) => (
+                                <th key={i} className="px-2 py-1.5 text-center border border-gray-200 font-medium text-gray-600 min-w-[50px]">
+                                  {i + 1}
+                                </th>
+                              ))}
+                              <th className="px-2 py-1.5 text-center border border-gray-200 font-medium text-emerald-700 bg-emerald-50">المجموع</th>
+                              <th className="px-2 py-1.5 text-center border border-gray-200 font-medium text-amber-700 bg-amber-50">بعد التسليم</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td className="px-2 py-1.5 text-right border border-gray-200 font-medium text-gray-700">نسبة البيع %</td>
+                              {currentAbsorption.map((pct, i) => (
+                                <td key={i} className="px-1 py-1 text-center border border-gray-200">
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={100}
+                                    value={pct}
+                                    onChange={(e) => {
+                                      const newAbsorption = [...currentAbsorption];
+                                      newAbsorption[i] = Math.max(0, Math.min(100, Number(e.target.value) || 0));
+                                      // Update the item's customPercentages
+                                      updateItem(revenueItem.itemKey, {
+                                        distributionMethod: "custom",
+                                        customPercentages: newAbsorption,
+                                      });
+                                    }}
+                                    className="w-full h-7 text-center text-xs border border-gray-200 rounded bg-white focus:border-emerald-400 focus:ring-1 focus:ring-emerald-200"
+                                  />
+                                </td>
+                              ))}
+                              <td className={`px-2 py-1.5 text-center border border-gray-200 font-bold ${totalAbsorption === 80 ? 'text-emerald-700 bg-emerald-50' : 'text-red-600 bg-red-50'}`}>
+                                {totalAbsorption}%
+                              </td>
+                              <td className="px-2 py-1.5 text-center border border-gray-200 font-bold text-amber-700 bg-amber-50">
+                                {100 - totalAbsorption}%
+                              </td>
+                            </tr>
+                            <tr className="bg-gray-50">
+                              <td className="px-2 py-1.5 text-right border border-gray-200 font-medium text-gray-600">التراكمي %</td>
+                              {currentAbsorption.map((_, i) => {
+                                const cumulative = currentAbsorption.slice(0, i + 1).reduce((s, v) => s + v, 0);
+                                return (
+                                  <td key={i} className="px-2 py-1.5 text-center border border-gray-200 text-gray-600">
+                                    {cumulative}%
+                                  </td>
+                                );
+                              })}
+                              <td className="px-2 py-1.5 text-center border border-gray-200">—</td>
+                              <td className="px-2 py-1.5 text-center border border-gray-200">100%</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Add/Remove month buttons */}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            const newAbsorption = [...currentAbsorption, 5];
+                            updateItem(revenueItem.itemKey, {
+                              distributionMethod: "custom",
+                              customPercentages: newAbsorption,
+                            });
+                          }}
+                          className="text-xs px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors"
+                        >
+                          + إضافة شهر
+                        </button>
+                        {currentAbsorption.length > 1 && (
+                          <button
+                            onClick={() => {
+                              const newAbsorption = currentAbsorption.slice(0, -1);
+                              updateItem(revenueItem.itemKey, {
+                                distributionMethod: "custom",
+                                customPercentages: newAbsorption,
+                              });
+                            }}
+                            className="text-xs px-3 py-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+                          >
+                            - حذف آخر شهر
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Payment terms info */}
+                      <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div>
+                          <span className="font-medium">حجز:</span> 10%
+                        </div>
+                        <div>
+                          <span className="font-medium">أقساط إنشاء:</span> 50%
+                        </div>
+                        <div>
+                          <span className="font-medium">عند التسليم:</span> 40%
+                        </div>
+                        <div>
+                          <span className="font-medium">بعد التسليم:</span> {100 - totalAbsorption}% كاش
+                        </div>
+                      </div>
+
+                      {totalAbsorption !== 80 && (
+                        <div className="text-xs text-amber-600 bg-amber-50 rounded-lg p-2">
+                          ⚠️ المجموع الحالي {totalAbsorption}% — القيمة الافتراضية 80% (والباقي {100 - totalAbsorption}% يُباع بعد التسليم كاش)
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              }
 
               return (
                 <div key={section} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
