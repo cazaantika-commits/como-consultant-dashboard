@@ -65,6 +65,7 @@ export default function EscrowCashFlowPage({ embedded, initialProjectId }: { emb
   const totalExpenses = report ? report.grandTotal : 0;
   const totalRevenue = report?.totalRevenueInflow || 0;
   const escrowExpenseTotal = report?.escrowExpensePerMonth?.reduce((s: number, v: number) => s + v, 0) || 0;
+  const escrowOpeningBalance = report?.escrowOpeningBalance || 0;
 
   // Escrow balance at end
   const finalEscrowBalance = report?.escrowBalancePerMonth?.[report.escrowBalancePerMonth.length - 1] || 0;
@@ -148,7 +149,13 @@ export default function EscrowCashFlowPage({ embedded, initialProjectId }: { emb
           </div>
 
           {/* Summary Cards */}
-          <div className={`grid ${isOffplan ? "grid-cols-4" : "grid-cols-2"} gap-3 mb-4`}>
+          <div className={`grid ${isOffplan ? "grid-cols-5" : "grid-cols-2"} gap-3 mb-4`}>
+            {isOffplan && escrowOpeningBalance > 0 && (
+              <div className="bg-white rounded-lg border-2 border-purple-200 px-3 py-2 shadow-sm">
+                <div className="text-[10px] text-purple-600">الرصيد الافتتاحي (إيداع 20%)</div>
+                <div className="text-sm font-bold text-purple-700">{fmt(escrowOpeningBalance)} <span className="text-[10px] font-normal text-gray-400">درهم</span></div>
+              </div>
+            )}
             <div className="bg-white rounded-lg border-2 border-red-200 px-3 py-2 shadow-sm">
               <div className="text-[10px] text-red-600">إجمالي مصاريف الضمان</div>
               <div className="text-sm font-bold text-red-700">{fmt(escrowExpenseTotal)} <span className="text-[10px] font-normal text-gray-400">درهم</span></div>
@@ -156,12 +163,12 @@ export default function EscrowCashFlowPage({ embedded, initialProjectId }: { emb
             {isOffplan && (
               <>
                 <div className="bg-white rounded-lg border-2 border-emerald-200 px-3 py-2 shadow-sm">
-                  <div className="text-[10px] text-emerald-600">إجمالي الإيرادات (حساب الضمان)</div>
+                  <div className="text-[10px] text-emerald-600">إجمالي الإيرادات (من المبيعات)</div>
                   <div className="text-sm font-bold text-emerald-700">{fmt(totalRevenue)} <span className="text-[10px] font-normal text-gray-400">درهم</span></div>
                 </div>
-                <div className="bg-white rounded-lg border-2 border-blue-200 px-3 py-2 shadow-sm">
-                  <div className="text-[10px] text-blue-600">مصاريف الضمان</div>
-                  <div className="text-sm font-bold text-blue-700">{fmt(escrowExpenseTotal)} <span className="text-[10px] font-normal text-gray-400">درهم</span></div>
+                <div className="bg-white rounded-lg border-2 border-amber-200 px-3 py-2 shadow-sm">
+                  <div className="text-[10px] text-amber-600">إجمالي الداخل (إيداع + إيرادات)</div>
+                  <div className="text-sm font-bold text-amber-700">{fmt(escrowOpeningBalance + totalRevenue)} <span className="text-[10px] font-normal text-gray-400">درهم</span></div>
                 </div>
                 <div className={`bg-white rounded-lg border-2 px-3 py-2 shadow-sm ${finalEscrowBalance >= 0 ? "border-emerald-300" : "border-red-300"}`}>
                   <div className="text-[10px] text-gray-600">رصيد الضمان النهائي</div>
@@ -290,9 +297,25 @@ export default function EscrowCashFlowPage({ embedded, initialProjectId }: { emb
                   <>
                     <tr className="bg-blue-100 border-t-2 border-blue-300">
                       <td colSpan={2 + report.totalMonths} className="px-2 py-1.5 text-right font-bold text-blue-800 text-[11px]">
-                        حساب الضمان — الرصيد (إيرادات - مصاريف الضمان)
+                        حساب الضمان — الرصيد (إيداع 20% + إيرادات - مصاريف)
                       </td>
                     </tr>
+                    {/* Opening balance row */}
+                    {escrowOpeningBalance > 0 && (
+                      <tr className="bg-purple-50">
+                        <td className="px-1 py-1 text-right border-l border-purple-100 text-purple-700 text-[10px] sticky right-0 z-10 bg-purple-50 font-bold">
+                          الرصيد الافتتاحي (إيداع المستثمر 20% من تكلفة الإنشاء)
+                        </td>
+                        <td className="px-1 py-1 text-center border-l border-purple-100 text-purple-700 tabular-nums text-[10px] font-bold">
+                          {fmt(escrowOpeningBalance)}
+                        </td>
+                        {report.escrowBalancePerMonth.map((_: number, mi: number) => (
+                          <td key={mi} className="px-1 py-1 text-center border-l border-purple-100 tabular-nums text-purple-400 text-[10px]">
+                            {mi === 0 ? fmt(escrowOpeningBalance) : "-"}
+                          </td>
+                        ))}
+                      </tr>
+                    )}
                     {/* Escrow expenses only */}
                     <tr className="bg-blue-50/50">
                       <td className="px-1 py-1 text-right border-l border-blue-100 text-blue-700 text-[10px] sticky right-0 z-10 bg-blue-50/50 font-medium">

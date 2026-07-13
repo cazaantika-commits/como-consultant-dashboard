@@ -2275,9 +2275,14 @@ export const cashFlowSettingsRouter = router({
         }
       }
 
-      // Cumulative escrow balance
+      // Opening balance: for offplan_escrow scenario, 20% of construction cost is deposited by investor
+      const escrowOpeningBalance = (scenario === "offplan_escrow")
+        ? (costs.constructionCost || 0) * 0.20
+        : 0;
+
+      // Cumulative escrow balance (starts with opening balance)
       const escrowBalancePerMonth = new Array(totalMonths).fill(0);
-      let cumulativeBalance = 0;
+      let cumulativeBalance = escrowOpeningBalance;
       for (let m = 0; m < totalMonths; m++) {
         cumulativeBalance += revenuePerMonth[m] - escrowExpensePerMonth[m];
         escrowBalancePerMonth[m] = cumulativeBalance;
@@ -2313,6 +2318,7 @@ export const cashFlowSettingsRouter = router({
         totalRevenueInflow,
         escrowExpensePerMonth,
         escrowBalancePerMonth,
+        escrowOpeningBalance,
         // Payment plan info
         paymentPlan: {
           bookingPct: bookingPct * 100,
