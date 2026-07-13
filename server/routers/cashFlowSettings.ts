@@ -11,7 +11,7 @@
  * cashFlowSettings router - see file header above
  */
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import {
   projectCashFlowSettings,
@@ -2393,8 +2393,7 @@ export const cashFlowSettingsRouter = router({
    * getEngineComparison — مقارنة المحرك القديم مع الجديد
    * يعرض لكل مشروع: المجاميع من المحرك القديم vs الجديد مع نسبة الفرق
    */
-  getEngineComparison: publicProcedure.query(async ({ ctx }) => {
-    if (!ctx.user) throw new Error("Unauthorized");
+  getEngineComparison: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) return [];
 
@@ -2474,17 +2473,75 @@ export const cashFlowSettingsRouter = router({
           investorTotal: oldInvestorTotal,
           escrowTotal: oldEscrowTotal,
           grandTotal: oldInvestorTotal + oldEscrowTotal,
+          totalCosts: oldCosts.totalCosts,
           sectionTotals: oldSectionTotals,
           items: oldItems,
           totalRevenue: oldCosts.totalRevenue,
+          costBreakdown: {
+            landPrice: oldCosts.landPrice,
+            agentCommissionLand: oldCosts.agentCommissionLand,
+            landRegistration: oldCosts.landRegistration,
+            soilTestFee: oldCosts.soilTestFee,
+            topographicSurveyFee: oldCosts.topographicSurveyFee,
+            officialBodiesFees: oldCosts.officialBodiesFees,
+            designFee: oldCosts.designFee,
+            supervisionFee: oldCosts.supervisionFee,
+            separationFee: oldCosts.separationFee,
+            constructionCost: oldCosts.constructionCost,
+            communityFees: oldCosts.communityFees,
+            contingencies: oldCosts.contingencies,
+            developerFee: oldCosts.developerFee,
+            salesCommission: oldCosts.salesCommission,
+            marketingCost: oldCosts.marketingCost,
+            reraUnitRegFee: oldCosts.reraUnitRegFee,
+            reraProjectRegFee: oldCosts.reraProjectRegFee,
+            developerNocFee: oldCosts.developerNocFee,
+            escrowAccountFee: oldCosts.escrowAccountFee,
+            bankFees: oldCosts.bankFees,
+            surveyorFees: oldCosts.surveyorFees,
+            reraAuditReportFee: oldCosts.reraAuditReportFee,
+            reraInspectionReportFee: oldCosts.reraInspectionReportFee,
+            totalCosts: oldCosts.totalCosts,
+            totalRevenue: oldCosts.totalRevenue,
+            grossProfit: oldCosts.totalRevenue - oldCosts.totalCosts,
+          },
         },
         new: {
           investorTotal: adapted.investorTotal,
           escrowTotal: adapted.escrowTotal,
           grandTotal: adapted.grandTotal,
+          totalCosts: newResult.costs.totalCosts,
           sectionTotals: adapted.sectionTotals,
           items: newItems,
           totalRevenue: newResult.costs.totalRevenue,
+          costBreakdown: {
+            landPrice: newResult.costs.landPrice,
+            agentCommissionLand: newResult.costs.agentCommissionLand,
+            landRegistration: newResult.costs.landRegistration,
+            soilTestFee: newResult.costs.soilTestFee,
+            topographicSurveyFee: newResult.costs.topographicSurveyFee,
+            officialBodiesFees: newResult.costs.officialBodiesFees,
+            designFee: newResult.costs.designFee,
+            supervisionFee: newResult.costs.supervisionFee,
+            separationFee: newResult.costs.separationFee,
+            constructionCost: newResult.costs.constructionCost,
+            communityFees: newResult.costs.communityFees,
+            contingencies: newResult.costs.contingencies,
+            developerFee: newResult.costs.developerFee,
+            salesCommission: newResult.costs.salesCommission,
+            marketingCost: newResult.costs.marketingCost,
+            reraUnitRegFee: newResult.costs.reraUnitRegFee,
+            reraProjectRegFee: newResult.costs.reraProjectRegFee,
+            developerNocFee: newResult.costs.developerNocFee,
+            escrowAccountFee: newResult.costs.escrowAccountFee,
+            bankFees: newResult.costs.bankFees,
+            surveyorFees: newResult.costs.surveyorFees,
+            reraAuditReportFee: newResult.costs.reraAuditReportFee,
+            reraInspectionReportFee: newResult.costs.reraInspectionReportFee,
+            totalCosts: newResult.costs.totalCosts,
+            totalRevenue: newResult.costs.totalRevenue,
+            grossProfit: newResult.costs.grossProfit,
+          },
         },
       });
     }

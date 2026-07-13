@@ -18,6 +18,8 @@
  *  - Contractor advance: month 1 of construction (NOT end of preCon)
  */
 
+import { calculateCosts as calculateCostsEngine } from "./financialEngine";
+
 // ─── DEFAULT AREA FALLBACKS (from shared/feasibilityUtils) ───────────────────
 const DEFAULT_AVG_AREAS: Record<string, { defaultArea: number }> = {
   residentialStudioPct: { defaultArea: 450 },
@@ -195,30 +197,91 @@ export function calculateProjectCosts(
   const approvedRev = cp?.approvedRevenue ? Number(cp.approvedRevenue) : 0;
   const totalRevenue = (approvedRev > 0) ? approvedRev : calculatedRevenue;
 
-  const agentCommissionLand = landPrice * (agentCommissionLandPct / 100);
-  const landRegistration = landPrice * 0.04;
-  const constructionCost = bua * estimatedConstructionPricePerSqft;
-  const designFee = constructionCost * (designFeePct / 100);
-  const supervisionFee = constructionCost * (supervisionFeePct / 100);
+  // ─── NEW ENGINE: compute costs using corrected formulas ───────────────────
+  // Compute totalUnits from unit data
+  const totalUnits = unitData.reduce((s, u) => s + u.count, 0);
   const totalGfaSqft = gfaResSqft + gfaRetSqft + gfaOffSqft;
-  const separationFee = totalGfaSqft * separationFeePerM2;
-  const contingencies = constructionCost * 0.02;
-  const developerFee = totalRevenue * (developerFeePct / 100);
-  const salesCommission = totalRevenue * (salesCommissionPct / 100);
-  const marketingCost = totalRevenue * (marketingPct / 100);
-  const totalRegulatory = reraUnitRegFee + reraProjectRegFee + developerNocFee + escrowAccountFee + bankFees + surveyorFees + reraAuditReportFee + reraInspectionReportFee;
-  const totalCosts = landPrice + agentCommissionLand + landRegistration + soilTestFee + topographicSurveyFee + officialBodiesFees + designFee + supervisionFee + separationFee + constructionCost + communityFees + contingencies + developerFee + salesCommission + marketingCost + totalRegulatory;
 
+  // Use new engine's calculateCosts for corrected formulas
+  const engineCosts = calculateCostsEngine({
+    landPrice,
+    agentCommissionLandPct,
+    buaSqft: bua,
+    constructionPricePerSqft: estimatedConstructionPricePerSqft,
+    gfaResidentialSqft: gfaResSqft,
+    gfaRetailSqft: gfaRetSqft,
+    gfaOfficesSqft: gfaOffSqft,
+    saleableResidentialPct: saleableResPct,
+    saleableRetailPct: saleableRetPct,
+    saleableOfficesPct: saleableOffPct,
+    soilTestFee,
+    topographicSurveyFee,
+    officialBodiesFees,
+    reraProjectRegFee,
+    developerNocFee,
+    escrowAccountFee,
+    bankFees,
+    surveyorFees,
+    reraAuditReportFee,
+    reraUnitFeePerUnit: 800,
+    totalUnits,
+    communityFeeRate: totalGfaSqft > 0 ? communityFees / totalGfaSqft || 1 : 1,
+    reraInspectionFeePerVisit: 15000,
+    designFeePct,
+    supervisionFeePct,
+    separationFeePerSqft: separationFeePerM2,
+    salesCommissionPct,
+    marketingPct,
+    developerFeePct,
+    designFeeMethod: "percentage",
+    supervisionFeeMethod: "percentage",
+    designMonths: parseInt(p.preConMonths || "6"),
+    offplanMonths: 2,
+    constructionMonths: parseInt(p.constructionMonths || "16"),
+    handoverMonths: parseInt(p.handoverMonths || "2"),
+    financingScenario: (p.financingScenario || "offplan_escrow") as any,
+    pricingScenario: activeScenario as any,
+    approvedRevenue: approvedRev > 0 ? approvedRev : undefined,
+    calculatedRevenue,
+    startDate: p.startDate || "2026-04",
+  });
+
+  // Use engine costs but preserve user-entered fixed fees when they differ from formula
+  // (reraUnitRegFee, communityFees, reraInspectionReportFee are now formula-driven)
   const revenueSource: "approved" | "calculated" = (approvedRev > 0) ? "approved" : "calculated";
   const scenarioLabel = activeScenario === "optimistic" ? "متفائل" : activeScenario === "conservative" ? "متحفظ" : "أساسي";
 
   return {
-    landPrice, agentCommissionLand, landRegistration, soilTestFee, topographicSurveyFee,
-    officialBodiesFees, designFee, supervisionFee, separationFee, constructionCost,
-    communityFees, contingencies, developerFee, salesCommission, marketingCost,
-    reraUnitRegFee, reraProjectRegFee, developerNocFee, escrowAccountFee, bankFees,
-    surveyorFees, reraAuditReportFee, reraInspectionReportFee, totalRevenue, totalCosts,
-    revenueSource, activeScenario, scenarioLabel, calculatedRevenue, approvedRevenue: approvedRev,
+    landPrice: engineCosts.landPrice,
+    agentCommissionLand: engineCosts.agentCommissionLand,
+    landRegistration: engineCosts.landRegistration,
+    soilTestFee: engineCosts.soilTestFee,
+    topographicSurveyFee: engineCosts.topographicSurveyFee,
+    officialBodiesFees: engineCosts.officialBodiesFees,
+    designFee: engineCosts.designFee,
+    supervisionFee: engineCosts.supervisionFee,
+    separationFee: engineCosts.separationFee,
+    constructionCost: engineCosts.constructionCost,
+    communityFees: engineCosts.communityFees,
+    contingencies: engineCosts.contingencies,
+    developerFee: engineCosts.developerFee,
+    salesCommission: engineCosts.salesCommission,
+    marketingCost: engineCosts.marketingCost,
+    reraUnitRegFee: engineCosts.reraUnitRegFee,
+    reraProjectRegFee: engineCosts.reraProjectRegFee,
+    developerNocFee: engineCosts.developerNocFee,
+    escrowAccountFee: engineCosts.escrowAccountFee,
+    bankFees: engineCosts.bankFees,
+    surveyorFees: engineCosts.surveyorFees,
+    reraAuditReportFee: engineCosts.reraAuditReportFee,
+    reraInspectionReportFee: engineCosts.reraInspectionReportFee,
+    totalRevenue: engineCosts.totalRevenue,
+    totalCosts: engineCosts.totalCosts,
+    revenueSource,
+    activeScenario,
+    scenarioLabel,
+    calculatedRevenue,
+    approvedRevenue: approvedRev,
   };
 }
 

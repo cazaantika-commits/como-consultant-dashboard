@@ -855,4 +855,9 @@
 - [x] Write comprehensive vitest tests for financial engine with real project numbers — 46 tests passing
 - [x] Wire new engine into PortfolioSummaryReport and Capital Portfolio via adapter (financialEngineAdapter.ts) — 67 tests passing
 - [x] Verify end-to-end: every number editable and auto-propagates (adapter maps engine output to existing API shape)
-- [ ] Build comparison page: old engine vs new engine numbers side-by-side for verification
+- [x] Build comparison page: old engine vs new engine numbers side-by-side for verification
+- [x] Replace old engine with new engine in calculateProjectCosts (server-side investorCashFlow.ts now uses new engine internally)
+- [x] Replace old engine in client-side projectCostsCalc.ts with corrected formulas
+- [x] getPortfolioAllScenarios/getSettings/getProjectMonthlyReport all use calculateProjectCosts which now uses new engine
+- [x] Verify all pages produce correct numbers after switch (67 tests passing, server running, HMR working)
+- [x] Run all existing tests to confirm no regressions (67 tests passing)

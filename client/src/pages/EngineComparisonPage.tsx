@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,19 +41,40 @@ function DiffBadge({ oldVal, newVal }: { oldVal: number; newVal: number }) {
   );
 }
 
-const SECTION_LABELS: Record<string, string> = {
-  paid: "مدفوع (الأرض)",
-  design: "التصاميم",
-  offplan: "أوف بلان",
-  construction: "الإنشاء",
-  escrow: "حساب الضمان",
-  revenue: "الإيرادات",
-};
-
 const SCENARIO_LABELS: Record<string, string> = {
   offplan_escrow: "O1 — أوف بلان (ضمان)",
   offplan_construction: "O2 — أوف بلان (إنجاز)",
   no_offplan: "O3 — بدون أوف بلان",
+};
+
+// Cost item labels for comparison
+const COST_ITEM_LABELS: Record<string, string> = {
+  landPrice: "سعر الأرض",
+  agentCommissionLand: "عمولة الوسيط (الأرض)",
+  landRegistration: "رسوم تسجيل الأرض",
+  soilTestFee: "فحص التربة",
+  topographicSurveyFee: "المسح الطبوغرافي",
+  officialBodiesFees: "رسوم الجهات الرسمية",
+  designFee: "أتعاب التصاميم",
+  supervisionFee: "أتعاب الإشراف",
+  separationFee: "رسوم الفرز",
+  constructionCost: "تكلفة البناء",
+  communityFees: "رسوم المجتمع",
+  contingencies: "الاحتياطي",
+  developerFee: "أتعاب المطور",
+  salesCommission: "عمولة المبيعات",
+  marketingCost: "تكاليف التسويق",
+  reraUnitRegFee: "رسوم تسجيل الوحدات (ريرا)",
+  reraProjectRegFee: "رسوم تسجيل المشروع (ريرا)",
+  developerNocFee: "شهادة عدم ممانعة المطور",
+  escrowAccountFee: "رسوم حساب الضمان",
+  bankFees: "رسوم بنكية",
+  surveyorFees: "رسوم المساح",
+  reraAuditReportFee: "رسوم تقرير تدقيق ريرا",
+  reraInspectionReportFee: "رسوم تقرير فحص ريرا",
+  totalRevenue: "إجمالي الإيرادات",
+  totalCosts: "إجمالي التكاليف",
+  grossProfit: "الربح الإجمالي",
 };
 
 export default function EngineComparisonPage() {
@@ -61,10 +82,13 @@ export default function EngineComparisonPage() {
   const { data, isLoading, error } = trpc.cashFlowSettings.getEngineComparison.useQuery();
   const [expandedProject, setExpandedProject] = useState<number | null>(null);
 
+  const matchCount = data?.filter(p => getDiffPct(p.old.totalCosts, p.new.totalCosts) < 1).length || 0;
+  const reviewCount = data?.filter(p => getDiffPct(p.old.totalCosts, p.new.totalCosts) >= 5).length || 0;
+
   return (
     <div className="min-h-screen bg-gray-50 p-6" dir="rtl">
-      {/* Header */}
       <div className="max-w-7xl mx-auto">
+        {/* Header */}
         <div className="flex items-center gap-4 mb-6">
           <Button variant="outline" size="sm" onClick={() => navigate("/")}>
             <ArrowLeft className="w-4 h-4 ml-2" />
@@ -72,7 +96,7 @@ export default function EngineComparisonPage() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">مقارنة المحرك المالي</h1>
-            <p className="text-sm text-gray-500">المحرك القديم vs المحرك الجديد — تحقق من صحة الأرقام</p>
+            <p className="text-sm text-gray-500">المحرك القديم vs المحرك الجديد — مقارنة إجمالي التكاليف وكل بند على حدة</p>
           </div>
         </div>
 
@@ -125,17 +149,13 @@ export default function EngineComparisonPage() {
               <Card>
                 <CardContent className="p-4 text-center">
                   <p className="text-sm text-gray-500">متطابق (&lt;1%)</p>
-                  <p className="text-3xl font-bold text-green-600">
-                    {data.filter(p => getDiffPct(p.old.grandTotal, p.new.grandTotal) < 1).length}
-                  </p>
+                  <p className="text-3xl font-bold text-green-600">{matchCount}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4 text-center">
                   <p className="text-sm text-gray-500">يحتاج مراجعة (&gt;5%)</p>
-                  <p className="text-3xl font-bold text-red-600">
-                    {data.filter(p => getDiffPct(p.old.grandTotal, p.new.grandTotal) >= 5).length}
-                  </p>
+                  <p className="text-3xl font-bold text-red-600">{reviewCount}</p>
                 </CardContent>
               </Card>
             </div>
@@ -143,7 +163,7 @@ export default function EngineComparisonPage() {
             {/* Projects Table */}
             <Card>
               <CardHeader>
-                <CardTitle>المشاريع</CardTitle>
+                <CardTitle>المشاريع — مقارنة إجمالي التكاليف</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
@@ -152,22 +172,22 @@ export default function EngineComparisonPage() {
                       <tr>
                         <th className="text-right p-3 font-medium">المشروع</th>
                         <th className="text-right p-3 font-medium">السيناريو</th>
-                        <th className="text-right p-3 font-medium">المحرك القديم</th>
-                        <th className="text-right p-3 font-medium">المحرك الجديد</th>
+                        <th className="text-right p-3 font-medium">التكاليف (قديم)</th>
+                        <th className="text-right p-3 font-medium">التكاليف (جديد)</th>
                         <th className="text-center p-3 font-medium">الفرق</th>
                         <th className="text-center p-3 font-medium">تفاصيل</th>
                       </tr>
                     </thead>
                     <tbody>
                       {data.map((project) => (
-                        <>
-                          <tr key={project.projectId} className="border-b hover:bg-gray-50">
+                        <React.Fragment key={project.projectId}>
+                          <tr className="border-b hover:bg-gray-50">
                             <td className="p-3 font-medium">{project.name}</td>
                             <td className="p-3 text-gray-600">{SCENARIO_LABELS[project.scenario] || project.scenario}</td>
-                            <td className="p-3 font-mono">{formatNumber(project.old.grandTotal)}</td>
-                            <td className="p-3 font-mono">{formatNumber(project.new.grandTotal)}</td>
+                            <td className="p-3 font-mono">{formatNumber(project.old.totalCosts)}</td>
+                            <td className="p-3 font-mono">{formatNumber(project.new.totalCosts)}</td>
                             <td className="p-3 text-center">
-                              <DiffBadge oldVal={project.old.grandTotal} newVal={project.new.grandTotal} />
+                              <DiffBadge oldVal={project.old.totalCosts} newVal={project.new.totalCosts} />
                             </td>
                             <td className="p-3 text-center">
                               <Button
@@ -192,7 +212,7 @@ export default function EngineComparisonPage() {
                               </td>
                             </tr>
                           )}
-                        </>
+                        </React.Fragment>
                       ))}
                     </tbody>
                   </table>
@@ -207,109 +227,97 @@ export default function EngineComparisonPage() {
 }
 
 function ProjectDetail({ project }: { project: any }) {
+  // Compare individual cost items
+  const costItems = [
+    "landPrice", "agentCommissionLand", "landRegistration",
+    "soilTestFee", "topographicSurveyFee", "officialBodiesFees",
+    "designFee", "supervisionFee", "separationFee",
+    "constructionCost", "communityFees", "contingencies",
+    "developerFee", "salesCommission", "marketingCost",
+    "reraUnitRegFee", "reraProjectRegFee", "developerNocFee",
+    "escrowAccountFee", "bankFees", "surveyorFees",
+    "reraAuditReportFee", "reraInspectionReportFee",
+  ];
+
+  const summaryItems = ["totalCosts", "totalRevenue", "grossProfit"];
+
   return (
     <div className="bg-blue-50/50 p-4 border-t">
-      {/* Section Totals Comparison */}
-      <h4 className="font-bold text-sm mb-3">مقارنة الأقسام</h4>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        {/* Investor vs Escrow */}
-        <div className="bg-white rounded-lg p-3 border">
-          <h5 className="text-xs font-medium text-gray-500 mb-2">تمويل المستثمر</h5>
-          <div className="flex justify-between items-center">
-            <span className="text-sm">القديم: <span className="font-mono">{formatNumber(project.old.investorTotal)}</span></span>
-            <span className="text-sm">الجديد: <span className="font-mono">{formatNumber(project.new.investorTotal)}</span></span>
-            <DiffBadge oldVal={project.old.investorTotal} newVal={project.new.investorTotal} />
-          </div>
-        </div>
-        <div className="bg-white rounded-lg p-3 border">
-          <h5 className="text-xs font-medium text-gray-500 mb-2">حساب الضمان</h5>
-          <div className="flex justify-between items-center">
-            <span className="text-sm">القديم: <span className="font-mono">{formatNumber(project.old.escrowTotal)}</span></span>
-            <span className="text-sm">الجديد: <span className="font-mono">{formatNumber(project.new.escrowTotal)}</span></span>
-            <DiffBadge oldVal={project.old.escrowTotal} newVal={project.new.escrowTotal} />
-          </div>
-        </div>
+      {/* Summary comparison */}
+      <h4 className="font-bold text-sm mb-3">الملخص</h4>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+        {summaryItems.map(key => {
+          const oldVal = project.old.costBreakdown?.[key] || 0;
+          const newVal = project.new.costBreakdown?.[key] || 0;
+          return (
+            <div key={key} className="bg-white rounded-lg p-3 border">
+              <h5 className="text-xs font-medium text-gray-500 mb-1">{COST_ITEM_LABELS[key] || key}</h5>
+              <div className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">القديم:</span>
+                  <span className="font-mono">{formatNumber(oldVal)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">الجديد:</span>
+                  <span className="font-mono">{formatNumber(newVal)}</span>
+                </div>
+                <div className="flex justify-end">
+                  <DiffBadge oldVal={oldVal} newVal={newVal} />
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Section-by-section */}
-      <h4 className="font-bold text-sm mb-3">مقارنة حسب القسم</h4>
-      <table className="w-full text-xs bg-white rounded-lg border">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="text-right p-2">القسم</th>
-            <th className="text-right p-2">القديم</th>
-            <th className="text-right p-2">الجديد</th>
-            <th className="text-center p-2">الفرق</th>
-          </tr>
-        </thead>
-        <tbody>
-          {Object.keys(SECTION_LABELS).filter(s => s !== "revenue").map(section => {
-            const oldVal = project.old.sectionTotals[section] || 0;
-            const newVal = project.new.sectionTotals[section] || 0;
-            if (oldVal === 0 && newVal === 0) return null;
-            return (
-              <tr key={section} className="border-t">
-                <td className="p-2 font-medium">{SECTION_LABELS[section]}</td>
-                <td className="p-2 font-mono">{formatNumber(oldVal)}</td>
-                <td className="p-2 font-mono">{formatNumber(newVal)}</td>
-                <td className="p-2 text-center"><DiffBadge oldVal={oldVal} newVal={newVal} /></td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-
-      {/* Item-level comparison */}
-      <h4 className="font-bold text-sm mt-4 mb-3">مقارنة البنود (المحرك القديم)</h4>
-      <table className="w-full text-xs bg-white rounded-lg border">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="text-right p-2">البند</th>
-            <th className="text-right p-2">المبلغ</th>
-            <th className="text-right p-2">المصدر</th>
-            <th className="text-right p-2">القسم</th>
-          </tr>
-        </thead>
-        <tbody>
-          {project.old.items.map((item: any, idx: number) => (
-            <tr key={idx} className="border-t">
-              <td className="p-2">{item.name}</td>
-              <td className="p-2 font-mono">{formatNumber(item.amount)}</td>
-              <td className="p-2">{item.source === "investor" ? "مستثمر" : "ضمان"}</td>
-              <td className="p-2">{SECTION_LABELS[item.section] || item.section}</td>
+      {/* Item-by-item comparison table */}
+      <h4 className="font-bold text-sm mb-3">مقارنة البنود تفصيلياً</h4>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs bg-white rounded-lg border">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="text-right p-2 font-medium">البند</th>
+              <th className="text-right p-2 font-medium">القديم</th>
+              <th className="text-right p-2 font-medium">الجديد</th>
+              <th className="text-center p-2 font-medium">الفرق</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <h4 className="font-bold text-sm mt-4 mb-3">مقارنة البنود (المحرك الجديد)</h4>
-      <table className="w-full text-xs bg-white rounded-lg border">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="text-right p-2">البند</th>
-            <th className="text-right p-2">المبلغ</th>
-            <th className="text-right p-2">المصدر</th>
-          </tr>
-        </thead>
-        <tbody>
-          {project.new.items.map((item: any, idx: number) => (
-            <tr key={idx} className="border-t">
-              <td className="p-2">{item.name}</td>
-              <td className="p-2 font-mono">{formatNumber(item.amount)}</td>
-              <td className="p-2">{item.source === "investor" ? "مستثمر" : "ضمان"}</td>
+          </thead>
+          <tbody>
+            {costItems.map(key => {
+              const oldVal = project.old.costBreakdown?.[key] || 0;
+              const newVal = project.new.costBreakdown?.[key] || 0;
+              if (oldVal === 0 && newVal === 0) return null;
+              const pct = getDiffPct(oldVal, newVal);
+              return (
+                <tr key={key} className={`border-t ${pct >= 5 ? "bg-red-50" : pct >= 1 ? "bg-yellow-50" : ""}`}>
+                  <td className="p-2 font-medium">{COST_ITEM_LABELS[key] || key}</td>
+                  <td className="p-2 font-mono">{formatNumber(oldVal)}</td>
+                  <td className="p-2 font-mono">{formatNumber(newVal)}</td>
+                  <td className="p-2 text-center"><DiffBadge oldVal={oldVal} newVal={newVal} /></td>
+                </tr>
+              );
+            })}
+            {/* Total row */}
+            <tr className="border-t-2 border-gray-300 bg-gray-100 font-bold">
+              <td className="p-2">إجمالي التكاليف</td>
+              <td className="p-2 font-mono">{formatNumber(project.old.totalCosts)}</td>
+              <td className="p-2 font-mono">{formatNumber(project.new.totalCosts)}</td>
+              <td className="p-2 text-center"><DiffBadge oldVal={project.old.totalCosts} newVal={project.new.totalCosts} /></td>
             </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {/* Revenue comparison */}
-      <div className="mt-4 bg-white rounded-lg p-3 border">
-        <h5 className="text-xs font-medium text-gray-500 mb-2">الإيرادات</h5>
-        <div className="flex justify-between items-center">
-          <span className="text-sm">القديم: <span className="font-mono">{formatNumber(project.old.totalRevenue)}</span></span>
-          <span className="text-sm">الجديد: <span className="font-mono">{formatNumber(project.new.totalRevenue)}</span></span>
-          <DiffBadge oldVal={project.old.totalRevenue} newVal={project.new.totalRevenue} />
-        </div>
+            <tr className="border-t bg-green-50 font-bold">
+              <td className="p-2">إجمالي الإيرادات</td>
+              <td className="p-2 font-mono">{formatNumber(project.old.costBreakdown?.totalRevenue || 0)}</td>
+              <td className="p-2 font-mono">{formatNumber(project.new.costBreakdown?.totalRevenue || 0)}</td>
+              <td className="p-2 text-center"><DiffBadge oldVal={project.old.costBreakdown?.totalRevenue || 0} newVal={project.new.costBreakdown?.totalRevenue || 0} /></td>
+            </tr>
+            <tr className="border-t bg-blue-50 font-bold">
+              <td className="p-2">الربح الإجمالي</td>
+              <td className="p-2 font-mono">{formatNumber(project.old.costBreakdown?.grossProfit || 0)}</td>
+              <td className="p-2 font-mono">{formatNumber(project.new.costBreakdown?.grossProfit || 0)}</td>
+              <td className="p-2 text-center"><DiffBadge oldVal={project.old.costBreakdown?.grossProfit || 0} newVal={project.new.costBreakdown?.grossProfit || 0} /></td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   );
