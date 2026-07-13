@@ -2200,6 +2200,89 @@ export const cashFlowSettingsRouter = router({
       }
       const grandTotal = totalPerMonth.reduce((s, v) => s + v, 0);
 
+      // ─── Revenue Inflow Calculation ───────────────────────────────────────
+      // Revenue enters the escrow account based on:
+      // 1. Absorption schedule: when units are sold (linear over offplan+construction)
+      // 2. Payment plan: how buyers pay (booking%, construction installments%, handover%)
+      const totalRevenue = costs.totalRevenue || 0;
+      const isOffplanScenario = scenario === "offplan_escrow" || scenario === "offplan_construction";
+
+      // Payment plan percentages from competition_pricing
+      const bookingPct = cp?.paymentBookingPct ? parseFloat(String(cp.paymentBookingPct)) / 100 : 0.10;
+      const constructionPct = cp?.paymentConstructionPct ? parseFloat(String(cp.paymentConstructionPct)) / 100 : 0.60;
+      const handoverPct = cp?.paymentHandoverPct ? parseFloat(String(cp.paymentHandoverPct)) / 100 : 0.30;
+
+      // Phase boundaries (0-indexed months)
+      const offplanPhase = phases.find(p => p.type === "offplan");
+      const constructionPhase = phases.find(p => p.type === "construction");
+      const handoverPhase = phases.find(p => p.type === "handover");
+
+      // Sales period: units are sold during offplan + first half of construction
+      const salesStartMonth = offplanPhase ? offplanPhase.startMonth : (constructionPhase ? constructionPhase.startMonth : 0);
+      const salesEndMonth = constructionPhase
+        ? constructionPhase.startMonth + Math.floor(constructionPhase.duration * 0.8) - 1
+        : totalMonths - 1;
+      const salesMonths = Math.max(1, salesEndMonth - salesStartMonth + 1);
+
+      // Construction installment period: from sale month to end of construction
+      const constructionEndMonth = constructionPhase
+        ? constructionPhase.startMonth + constructionPhase.duration - 1
+        : totalMonths - 3;
+
+      // Handover month
+      const handoverStartMonth = handoverPhase ? handoverPhase.startMonth : totalMonths - 2;
+
+      // Revenue per month array
+      const revenuePerMonth = new Array(totalMonths).fill(0);
+
+      if (isOffplanScenario && totalRevenue > 0) {
+        // Revenue per unit sold each month (linear absorption)
+        const revenuePerSaleMonth = totalRevenue / salesMonths;
+
+        for (let saleMonth = salesStartMonth; saleMonth <= salesEndMonth && saleMonth < totalMonths; saleMonth++) {
+          const unitRevenue = revenuePerSaleMonth;
+
+          // 1. Booking payment: received at sale month
+          const bookingAmount = unitRevenue * bookingPct;
+          revenuePerMonth[saleMonth] += bookingAmount;
+
+          // 2. Construction installments: spread equally from sale month+1 to construction end
+          const installmentStart = saleMonth + 1;
+          const installmentEnd = Math.min(constructionEndMonth, totalMonths - 1);
+          const installmentMonths = Math.max(1, installmentEnd - installmentStart + 1);
+          const totalConstructionPayment = unitRevenue * constructionPct;
+          const monthlyInstallment = totalConstructionPayment / installmentMonths;
+          for (let m = installmentStart; m <= installmentEnd && m < totalMonths; m++) {
+            revenuePerMonth[m] += monthlyInstallment;
+          }
+
+          // 3. Handover payment: received at handover start
+          const handoverAmount = unitRevenue * handoverPct;
+          const hMonth = Math.min(handoverStartMonth, totalMonths - 1);
+          revenuePerMonth[hMonth] += handoverAmount;
+        }
+      }
+
+      const totalRevenueInflow = revenuePerMonth.reduce((s, v) => s + v, 0);
+
+      // Net escrow balance per month (revenue - expenses for escrow-funded items)
+      const escrowExpensePerMonth = new Array(totalMonths).fill(0);
+      for (const item of activeItems) {
+        if (item.fundingSource === "escrow") {
+          for (let m = 0; m < totalMonths; m++) {
+            escrowExpensePerMonth[m] += item.monthlyAmounts[m] || 0;
+          }
+        }
+      }
+
+      // Cumulative escrow balance
+      const escrowBalancePerMonth = new Array(totalMonths).fill(0);
+      let cumulativeBalance = 0;
+      for (let m = 0; m < totalMonths; m++) {
+        cumulativeBalance += revenuePerMonth[m] - escrowExpensePerMonth[m];
+        escrowBalancePerMonth[m] = cumulativeBalance;
+      }
+
       return {
         projectId: project.id,
         projectName: project.name,
@@ -2224,6 +2307,24 @@ export const cashFlowSettingsRouter = router({
         })),
         totalPerMonth,
         grandTotal,
+        // Revenue inflows
+        totalRevenue,
+        revenuePerMonth,
+        totalRevenueInflow,
+        escrowExpensePerMonth,
+        escrowBalancePerMonth,
+        // Payment plan info
+        paymentPlan: {
+          bookingPct: bookingPct * 100,
+          constructionPct: constructionPct * 100,
+          handoverPct: handoverPct * 100,
+        },
+        // Absorption info
+        absorption: {
+          salesStartMonth,
+          salesEndMonth,
+          salesMonths,
+        },
       };
     }),
 });

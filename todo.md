@@ -835,3 +835,8 @@
 - [x] Customize portfolio summary report: mall (مركز مجان التجاري) is non-sale project — show costs/investor amounts but hide revenue/profit/margins, show "—" instead
 - [x] Fix monthly distribution discrepancy in portfolio summary report — now reads user-saved settings (options + delays) from DB and applies same delay logic as original portfolio
 - [x] Add BUA, construction cost per sqft, and total construction cost (BUA × price) as visible fields in the project info card (بطاقة المشروع) in the feasibility summary
+- [x] Build revenue inflow engine: absorption schedule + payment plan monthly calculation
+- [x] Add revenue inflows to getProjectMonthlyReport API response
+- [x] Update EscrowCashFlowPage to show revenue inflows row + net escrow balance
+- [ ] Update HTML export to include revenue data
+- [x] Export all project tables to Excel files
