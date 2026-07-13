@@ -820,3 +820,4 @@
 - [x] Verify revenue consistency between pricing tab and summary for all projects
 - [x] Add GFA warning banner in summary when GFA data is missing from project card
 - [x] Ensure price editing works correctly from pricing tab and reflects in summary (query invalidation added)
+- [x] Fix revenue discrepancy: projectCostsCalc.ts incorrectly absorbed surplus area into retail-large and office-large rows (is2br: true). Only residential 2BR should absorb surplus. Fixed by setting is2br: false on retail/office rows. Revenue now matches pricing tab exactly (682,616,702 AED for project 2).
