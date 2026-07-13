@@ -911,8 +911,18 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
                         </div>
                       </div>
                     </div>
+                                    </div>
+                  {/* Construction Cost line */}
+                  <div className="rounded-lg bg-orange-50/60 border border-orange-200/60 px-3 py-2 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Hammer className="w-4 h-4 text-orange-600" />
+                      <span className="text-xs font-bold text-orange-900">تكلفة الإنشاء</span>
+                      <span className="text-[9px] text-orange-500">(BUA × سعر القدم)</span>
+                    </div>
+                    <div className="text-lg font-black text-orange-800 tabular-nums" dir="ltr">
+                      {fmtFull(realCosts?.constructionCost || 0)} <span className="text-[9px] font-normal text-orange-400">AED</span>
+                    </div>
                   </div>
-
                   {/* ══════ SECTION 4: PROFIT & RATIOS ══════ */}
                   <div className="rounded-xl bg-white border border-gray-200 shadow-sm overflow-hidden">
                     <div className="px-4 py-2 bg-gradient-to-l from-emerald-50/60 to-white border-b border-gray-100 flex items-center gap-2">
