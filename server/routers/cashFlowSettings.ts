@@ -29,6 +29,8 @@ import {
   getTotalMonths,
   type FinancingScenario,
 } from "../investorCashFlow";
+import { computeFullFinancials, projectToInputs } from "../financialEngine";
+import { adaptToPortfolioShape } from "../financialEngineAdapter";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -2386,6 +2388,108 @@ export const cashFlowSettingsRouter = router({
         },
       };
     }),
+
+  /**
+   * getEngineComparison — مقارنة المحرك القديم مع الجديد
+   * يعرض لكل مشروع: المجاميع من المحرك القديم vs الجديد مع نسبة الفرق
+   */
+  getEngineComparison: publicProcedure.query(async ({ ctx }) => {
+    if (!ctx.user) throw new Error("Unauthorized");
+    const db = await getDb();
+    if (!db) return [];
+
+    const allProjects = await db.select().from(projects);
+    const [allMo, allCp] = await Promise.all([
+      db.select().from(marketOverview),
+      db.select().from(competitionPricing),
+    ]);
+    const moByProject = new Map<number, any>();
+    const cpByProject = new Map<number, any>();
+    for (const row of allMo) moByProject.set(row.projectId!, row);
+    for (const row of allCp) cpByProject.set(row.projectId!, row);
+
+    const results = [];
+    for (const project of allProjects) {
+      const mo = moByProject.get(project.id) || null;
+      const cp = cpByProject.get(project.id) || null;
+
+      // OLD ENGINE
+      const oldCosts = calculateProjectCosts(project, mo, cp);
+      if (!oldCosts) continue;
+      const legacyDurations = {
+        preCon: project.preConMonths || 6,
+        construction: project.constructionMonths || 16,
+        handover: project.handoverMonths || 2,
+      };
+      const durations = legacyToNewDurations(legacyDurations);
+      const totalMonths = getTotalMonths(durations);
+      const scenario = (project.financingScenario || "offplan_escrow") as Scenario;
+      let oldInvestorTotal = 0, oldEscrowTotal = 0;
+      const oldSectionTotals: Record<string, number> = {};
+      const oldItems: Array<{ key: string; name: string; amount: number; source: string; section: string }> = [];
+      const defs = getDefaultItemDefs(scenario);
+      for (const def of defs) {
+        const amount = computeItemAmount(def, oldCosts);
+        const effectiveSource = scenario === "no_offplan" ? "investor" : def.fundingSource;
+        if (effectiveSource === "investor") oldInvestorTotal += amount;
+        else oldEscrowTotal += amount;
+        oldSectionTotals[def.section] = (oldSectionTotals[def.section] || 0) + amount;
+        oldItems.push({ key: def.itemKey, name: def.nameAr, amount, source: effectiveSource, section: def.section });
+      }
+
+      // NEW ENGINE
+      // Count total units from marketOverview
+      const moData = mo as any;
+      let totalUnits = 0;
+      if (moData) {
+        const countFields = [
+          "residentialStudioCount", "residential1brCount", "residential2brCount", "residential3brCount",
+          "retailSmallCount", "retailMediumCount", "retailLargeCount",
+          "officeSmallCount", "officeMediumCount", "officeLargeCount",
+        ];
+        for (const f of countFields) totalUnits += Number(moData[f]) || 0;
+      }
+      const inputs = projectToInputs(
+        project,
+        { approvedRevenue: moData?.approvedRevenue },
+        totalUnits,
+        oldCosts.totalRevenue
+      );
+      const newResult = computeFullFinancials(inputs);
+      const adapted = adaptToPortfolioShape(newResult, inputs);
+
+      // Build new items list
+      const newItems = [...newResult.investorCashFlow, ...newResult.escrowCashFlow].map(item => ({
+        key: item.id,
+        name: item.name,
+        amount: item.total,
+        source: item.table,
+      }));
+
+      results.push({
+        projectId: project.id,
+        name: project.name || "مشروع بدون اسم",
+        scenario,
+        old: {
+          investorTotal: oldInvestorTotal,
+          escrowTotal: oldEscrowTotal,
+          grandTotal: oldInvestorTotal + oldEscrowTotal,
+          sectionTotals: oldSectionTotals,
+          items: oldItems,
+          totalRevenue: oldCosts.totalRevenue,
+        },
+        new: {
+          investorTotal: adapted.investorTotal,
+          escrowTotal: adapted.escrowTotal,
+          grandTotal: adapted.grandTotal,
+          sectionTotals: adapted.sectionTotals,
+          items: newItems,
+          totalRevenue: newResult.costs.totalRevenue,
+        },
+      });
+    }
+    return results;
+  }),
 });
 
 // ─── Helper: compute amount by item key ──────────────────────────────────────

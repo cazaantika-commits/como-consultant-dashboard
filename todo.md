@@ -855,3 +855,4 @@
 - [x] Write comprehensive vitest tests for financial engine with real project numbers — 46 tests passing
 - [x] Wire new engine into PortfolioSummaryReport and Capital Portfolio via adapter (financialEngineAdapter.ts) — 67 tests passing
 - [x] Verify end-to-end: every number editable and auto-propagates (adapter maps engine output to existing API shape)
+- [ ] Build comparison page: old engine vs new engine numbers side-by-side for verification
