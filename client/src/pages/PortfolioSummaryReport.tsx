@@ -9,10 +9,25 @@ const CHART_START_YEAR = 2026;
 const CHART_START_MONTH = 4; // April 2026
 const REPORT_START_YEAR = 2026;
 const REPORT_START_MONTH = 8; // August 2026 as requested
+const TOTAL_MONTHS = 48;
 const ARABIC_MONTHS = [
   "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
   "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر",
 ];
+
+type OptionKey = "o1" | "o2" | "o3";
+type ScenarioKey = "offplan_escrow" | "offplan_construction" | "no_offplan";
+const OPTION_TO_SCENARIO: Record<OptionKey, ScenarioKey> = {
+  o1: "offplan_escrow",
+  o2: "offplan_construction",
+  o3: "no_offplan",
+};
+
+interface DelayState {
+  designDelay: number;
+  offplanDelay: number;
+  constructionDelay: number;
+}
 
 // ═══════════════════════════════════════════════════════════════
 // HELPERS
@@ -43,19 +58,51 @@ function getMonthLabel(chartIdx: number): string {
 // ═══════════════════════════════════════════════════════════════
 export default function PortfolioSummaryReport() {
   const portfolioQuery = trpc.cashFlowSettings.getPortfolioAllScenarios.useQuery();
+  const savedSettingsQuery = trpc.portfolioScenarios.getDefault.useQuery();
   const data = portfolioQuery.data;
+
+  // Parse saved settings (same as original CapitalPortfolioPage)
+  const { projectOptions, delays } = useMemo(() => {
+    let projectOptions: Record<number, OptionKey> = {};
+    let delays: Record<number, DelayState> = {};
+    if (savedSettingsQuery.data?.settings) {
+      try {
+        const parsed = JSON.parse(savedSettingsQuery.data.settings);
+        if (parsed.projectOptions) projectOptions = parsed.projectOptions;
+        if (parsed.delays) delays = parsed.delays;
+      } catch (e) {
+        console.error("Failed to parse saved settings:", e);
+      }
+    }
+    return { projectOptions, delays };
+  }, [savedSettingsQuery.data]);
+
+  function getProjectOption(projectId: number): OptionKey {
+    return projectOptions[projectId] || "o1";
+  }
+
+  function getDelay(projectId: number): DelayState {
+    return delays[projectId] || { designDelay: 0, offplanDelay: 0, constructionDelay: 0 };
+  }
 
   const reportData = useMemo(() => {
     if (!data || data.length === 0) return null;
 
-    // For each project, use its financingScenario
-    // Non-sale projects (e.g. mall) don't have revenue/profit — detect by name containing "مركز" or "تجاري" without residential
     const projects = data.map((p: any) => {
-      const scKey = p.financingScenario || "offplan_escrow";
-      const sc = p.scenarios[scKey];
-      const paid = sc.sectionTotals?.paid || 0;
-      const investorTotal = sc.investorTotal || 0;
-      const escrowTotal = sc.escrowTotal || 0;
+      // Use user's selected option (same as original portfolio)
+      const option = getProjectOption(p.projectId);
+      const scenario = OPTION_TO_SCENARIO[option];
+      const sc = p.scenarios[scenario];
+      if (!sc) {
+        // Fallback to financingScenario if selected scenario doesn't exist
+        const fallbackSc = p.scenarios[p.financingScenario || "offplan_escrow"];
+        if (!fallbackSc) return null;
+      }
+      const scenarioData = sc || p.scenarios[p.financingScenario || "offplan_escrow"];
+      
+      const paid = scenarioData.sectionTotals?.paid || 0;
+      const investorTotal = scenarioData.investorTotal || 0;
+      const escrowTotal = scenarioData.escrowTotal || 0;
       const remaining = investorTotal - paid;
       const totalRevenue = p.totalRevenue || 0;
       const totalCosts = p.totalCosts || 0;
@@ -68,12 +115,44 @@ export default function PortfolioSummaryReport() {
       const nameLC = (p.name || "").toLowerCase();
       const isNonSale = (nameLC.includes("مركز") && nameLC.includes("تجاري")) || nameLC.includes("mall");
 
-      // Monthly investor amounts aligned to global timeline
-      const monthlyInvestor: number[] = sc.monthlyInvestor || [];
+      // Apply delays (same logic as original CapitalPortfolioPage)
+      const delay = getDelay(p.projectId);
+      const monthlyBySection: Record<string, number[]> = scenarioData.monthlyInvestorBySection || scenarioData.monthlyBySection || {};
+      const totalMonths = p.totalMonths || (scenarioData.monthlyInvestor?.length || 24);
+
+      // Calculate section delays (exact copy from original portfolio)
+      const constructionEffectiveDelay = delay.designDelay + delay.constructionDelay;
+      const offplanEffectiveDelay = scenario === "offplan_construction"
+        ? constructionEffectiveDelay + delay.offplanDelay
+        : delay.designDelay + delay.offplanDelay;
+      const sectionDelayMap: Record<string, number> = {
+        paid: 0,
+        design: delay.designDelay,
+        offplan: offplanEffectiveDelay,
+        construction: constructionEffectiveDelay,
+        escrow: constructionEffectiveDelay,
+      };
+
+      // Build chartAmounts with delays applied (same as original portfolio)
+      const chartAmounts: Record<number, number> = {};
+      for (const [section, monthlyArr] of Object.entries(monthlyBySection)) {
+        if (!monthlyArr || !Array.isArray(monthlyArr)) continue;
+        if (section === "paid") continue; // Exclude paid — already tracked separately
+        const delayMonths = sectionDelayMap[section] ?? 0;
+        for (let m = 0; m < totalMonths; m++) {
+          const val = monthlyArr[m] || 0;
+          if (val <= 0) continue;
+          const chartIdx = projectMonthToChartIndex(p.startDate, m) + delayMonths;
+          if (chartIdx >= 0 && chartIdx < TOTAL_MONTHS) {
+            chartAmounts[chartIdx] = (chartAmounts[chartIdx] || 0) + val;
+          }
+        }
+      }
       
       return {
         id: p.projectId,
         name: p.name,
+        option,
         startDate: p.startDate,
         totalMonths: p.totalMonths,
         totalRevenue,
@@ -86,10 +165,10 @@ export default function PortfolioSummaryReport() {
         escrowTotal,
         paid,
         remaining,
-        monthlyInvestor,
+        chartAmounts,
         isNonSale,
       };
-    });
+    }).filter(Boolean);
 
     // Calculate totals (revenue/profit only from sale projects, costs/investor from all)
     const saleProjects = projects.filter((p: any) => !p.isNonSale);
@@ -111,42 +190,35 @@ export default function PortfolioSummaryReport() {
     totals.profitMarginCapital = totals.investorTotal > 0 ? (totals.profit / totals.investorTotal) * 100 : 0;
 
     // Build monthly distribution starting from August 2026
-    // Report start index relative to chart start (April 2026)
     const reportStartIdx = (REPORT_START_YEAR - CHART_START_YEAR) * 12 + (REPORT_START_MONTH - CHART_START_MONTH); // = 4 (Aug is 4 months after April)
     
-    // Find the latest month across all projects
+    // Find the latest month across all projects using chartAmounts
     let maxChartIdx = 0;
-    for (const p of data) {
-      const lastIdx = projectMonthToChartIndex(p.startDate, p.totalMonths - 1);
-      if (lastIdx > maxChartIdx) maxChartIdx = lastIdx;
+    for (const p of projects) {
+      for (const idx of Object.keys((p as any).chartAmounts).map(Number)) {
+        if (idx > maxChartIdx) maxChartIdx = idx;
+      }
     }
     
-    // Build monthly rows from reportStartIdx to maxChartIdx
+    // Build monthly rows from reportStartIdx to maxChartIdx using chartAmounts (same as original portfolio)
     const monthlyRows: { chartIdx: number; label: string; amounts: number[]; total: number }[] = [];
     for (let ci = reportStartIdx; ci <= maxChartIdx; ci++) {
       const amounts: number[] = [];
       let total = 0;
-      for (const p of data) {
-        const scKey = (p as any).financingScenario || "offplan_escrow";
-        const sc = (p as any).scenarios[scKey];
-        const monthly: number[] = sc.monthlyInvestor || [];
-        // Convert chartIdx to project-relative month
-        const projStartIdx = projectMonthToChartIndex(p.startDate, 0);
-        const relMonth = ci - projStartIdx;
-        const val = (relMonth >= 0 && relMonth < monthly.length) ? monthly[relMonth] : 0;
+      for (const p of projects) {
+        const val = (p as any).chartAmounts[ci] || 0;
         amounts.push(val);
         total += val;
       }
-      // Only include months that have some activity
       if (total > 0 || ci <= maxChartIdx) {
         monthlyRows.push({ chartIdx: ci, label: getMonthLabel(ci), amounts, total });
       }
     }
 
     return { projects, totals, monthlyRows };
-  }, [data]);
+  }, [data, projectOptions, delays]);
 
-  if (portfolioQuery.isLoading) {
+  if (portfolioQuery.isLoading || savedSettingsQuery.isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
