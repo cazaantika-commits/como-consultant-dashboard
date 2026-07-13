@@ -14,13 +14,14 @@ import {
   Sparkles, Copy, Brain, Globe, FolderOpen, ShieldCheck, Users,
   Landmark, Percent, ChevronDown, BookOpen, Scale, AlertTriangle,
   BarChart2, Target, Briefcase, Layers, CheckCircle2, ArrowDownCircle,
-  SquareStack, LandPlot, Warehouse, ShoppingBag, Clock, Calendar, Hammer, Info,
+  SquareStack, LandPlot, Warehouse, ShoppingBag, Clock, Calendar, Hammer, Info, Printer, Download,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import CostsCashFlowTab from "@/components/feasibility/CostsCashFlowTab";
 import CashFlowSettingsPage from "@/pages/CashFlowSettingsPage";
 import CapitalScheduleTablePage from "@/pages/CapitalScheduleTablePage";
 import { calculateProjectCosts } from "@/lib/projectCostsCalc";
+import { exportFeasibilityReport, type FeasibilityReportData } from "@/lib/feasibilityReportExport";
 
 // ═══════════════════════════════════════════
 // FORMATTING HELPERS
@@ -691,9 +692,58 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
                           <p className="text-[10px] text-slate-400">{selectedProject?.community || selectedProject?.description || ''}</p>
                         </div>
                       </div>
-                      {selectedProject?.plotNumber && (
-                        <span className="bg-slate-700/60 border border-slate-600/50 text-slate-300 text-[9px] font-bold px-2 py-1 rounded-md">قطعة {selectedProject.plotNumber}</span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {selectedProject?.plotNumber && (
+                          <span className="bg-slate-700/60 border border-slate-600/50 text-slate-300 text-[9px] font-bold px-2 py-1 rounded-md">قطعة {selectedProject.plotNumber}</span>
+                        )}
+                        <button
+                          onClick={() => {
+                            const reportData: FeasibilityReportData = {
+                              projectName: selectedProject?.name || 'المشروع',
+                              community: selectedProject?.community || '',
+                              plotNumber: selectedProject?.plotNumber || '',
+                              permittedUse: selectedProject?.permittedUse || '',
+                              masterDevName: selectedProject?.masterDevName || '',
+                              ownershipType: selectedProject?.ownershipType || '',
+                              titleDeedNumber: selectedProject?.titleDeedNumber || '',
+                              areaCode: selectedProject?.areaCode || '',
+                              landPrice: parseFloat(selectedProject?.landPrice || '0'),
+                              constructionPricePerSqft: parseFloat(selectedProject?.constructionPricePerSqft || '0'),
+                              preConMonths: parseInt(selectedProject?.preConstructionMonths || '0'),
+                              constructionMonths: parseInt(selectedProject?.constructionMonths || '0'),
+                              handoverMonths: parseInt(selectedProject?.postConstructionMonths || '0'),
+                              developerFeePct: parseFloat(selectedProject?.developerFeePct || '5'),
+                              salesCommissionPct: parseFloat(selectedProject?.salesCommissionPct || '5'),
+                              marketingPct: parseFloat(selectedProject?.marketingPct || '2'),
+                              designFeePct: parseFloat(selectedProject?.designFeePct || '0'),
+                              financingScenario: selectedProject?.financingScenario || '',
+                              plotAreaSqft, plotAreaSqm, buaSqft, gfaTotalSqft,
+                              gfaResSqft, gfaRetSqft, gfaOffSqft,
+                              sellableRes, sellableRet, sellableOff, totalSellable,
+                              resPct, retPct, offPct,
+                              totalRevenue: totalRevenueVal,
+                              revenueRes: revRes, revenueRet: revRet, revenueOff: revOff,
+                              totalCosts: totalCostsVal,
+                              investedCapital,
+                              profit: profitVal,
+                              margin: marginVal,
+                              profitOnCost,
+                              roiOnCapital,
+                              comoFee,
+                              investorProfit,
+                              investorROI,
+                              paidCapital: paidT,
+                              unpaidInvestor,
+                              scenarios: { optimistic: opt, base, conservative: cons },
+                            };
+                            exportFeasibilityReport(reportData);
+                          }}
+                          className="flex items-center gap-1 bg-emerald-600/80 hover:bg-emerald-500 text-white text-[9px] font-bold px-2 py-1 rounded-md transition-colors"
+                        >
+                          <Printer className="w-3 h-3" />
+                          تصدير التقرير
+                        </button>
+                      </div>
                     </div>
                   </div>
 

@@ -826,3 +826,6 @@
 - [x] Add project info card (بطاقة المشروع) to feasibility summary showing: permitted use, master dev, ownership, title deed, area code, land price, construction cost/sqft, durations, developer fee%, sales commission%, marketing%, design fee%, financing scenario
 - [x] Restore large number sizes for revenue/costs/profit while keeping spacing compact
 - [x] Remove remaining Joule/Joelle comment references from code
+- [x] Remove Joelle banner and suggestions table from CostsCashFlowTab (pricing tab)
+- [x] Add PDF export button for feasibility summary report (professional layout)
+- [x] Add HTML export button for feasibility summary report

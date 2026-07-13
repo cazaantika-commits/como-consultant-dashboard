@@ -6,11 +6,11 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import {
   Loader2, Sparkles, DollarSign,
-  TrendingUp, TrendingDown, BarChart3, Save, Zap, CheckCircle2,
+  TrendingUp, TrendingDown, BarChart3, Save,
   Car, AlertTriangle, CheckCircle
 } from "lucide-react";
 
-const JOEL_AVATAR = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/mCOkEovAXTtxsABs.png";
+
 
 /* ═══ Parking Standards — Dubai (sqft) ═══ */
 const PARKING = {
@@ -86,18 +86,7 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
   const project = projectQuery.data;
   const moQuery = trpc.marketOverview.getByProject.useQuery(projectId || 0, { enabled: !!projectId, staleTime: 0, refetchOnMount: true });
   const cpQuery = trpc.competitionPricing.getByProject.useQuery(projectId || 0, { enabled: !!projectId, staleTime: 0, refetchOnMount: true, refetchOnWindowFocus: true });
-  const joelleStatusQuery = trpc.joelleEngine.getAutoPopulateStatus.useQuery(projectId || 0, { enabled: !!projectId, staleTime: 10000 });
 
-  const applyJoelleMutation = trpc.joelleEngine.applyJoelleOutputs.useMutation({
-    onSuccess: (data) => {
-      moQuery.refetch(); cpQuery.refetch(); joelleStatusQuery.refetch();
-      if (data.marketOverview && data.competitionPricing) toast.success("تم تطبيق مخرجات جويل بنجاح");
-      else if (data.marketOverview) toast.success("تم تطبيق توزيع الوحدات");
-      else if (data.competitionPricing) toast.success("تم تطبيق التسعير");
-      else toast.info("لا توجد مخرجات جاهزة — شغّل المحركات أولاً");
-    },
-    onError: (err) => toast.error(err.message || "فشل في تطبيق مخرجات جويل"),
-  });
 
   const [unitCounts, setUnitCounts] = useState<Record<string, number>>({});
   const [avgAreas, setAvgAreas] = useState<Record<string, number>>({});
@@ -105,8 +94,7 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
   const [activeScenario, setActiveScenario] = useState<ScenarioKey>("base");
   const [dirty, setDirty] = useState(false);
   const [approvedScenario, setApprovedScenario] = useState<ScenarioKey | null>(null);
-  const [moJoelleSource, setMoJoelleSource] = useState(false);
-  const [cpJoelleSource, setCpJoelleSource] = useState(false);
+
   // Track if we have initialized from DB — ensures first load always wins over empty state
   const moInitialized = useRef(false);
   const cpInitialized = useRef(false);
@@ -161,7 +149,6 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
     } else if (!dirty) {
       setUnitCounts(newCounts);
     }
-    if (d.aiRecommendationsJson) setMoJoelleSource(true);
   }, [moQuery.data]);
 
   useEffect(() => {
@@ -178,7 +165,6 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
         setApprovedScenario(d.activeScenario as ScenarioKey);
       }
     }
-    if (d.aiRecommendationsJson) setCpJoelleSource(true);
   }, [cpQuery.data]);
 
   function getSellableFromProject(cat: string): number {
@@ -294,14 +280,7 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
     return { optimistic: calc(1.10), base: calc(1.00), conservative: calc(0.90) };
   }, [rowResults]);
 
-  const joelSuggestions = useMemo(() => {
-    try {
-      const moData = moQuery.data;
-      const cpData = cpQuery.data;
-      if (!moData?.aiRecommendationsJson && !cpData?.aiRecommendationsJson) return null;
-      return { mo: moData?.aiRecommendationsJson ? JSON.parse(moData.aiRecommendationsJson) : {}, cp: cpData?.aiRecommendationsJson ? JSON.parse(cpData.aiRecommendationsJson) : {} };
-    } catch { return null; }
-  }, [moQuery.data, cpQuery.data]);
+
 
   const updateCount = useCallback((key: string, val: number) => { setUnitCounts(prev => ({ ...prev, [key]: Math.max(0, Math.round(val)) })); setDirty(true); }, []);
   const updateAvg = useCallback((key: string, val: number) => { setAvgAreas(prev => ({ ...prev, [key]: val })); setDirty(true); }, []);
@@ -342,9 +321,7 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
     setDirty(false);
   };
 
-  const joelleStatus = joelleStatusQuery.data;
-  const hasAnyJoelleData = joelleStatus?.engine6Ready || joelleStatus?.engine7Ready;
-  const alreadyApplied = joelleStatus?.moHasJoelleData && joelleStatus?.cpHasJoelleData;
+
 
   const scenarioConfig: Record<ScenarioKey, { label: string; color: string; bgBadge: string; icon: any }> = {
     optimistic: { label: "متفائل +10%", color: "text-emerald-700", bgBadge: "bg-emerald-500", icon: TrendingUp },
@@ -393,28 +370,7 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
   return (
     <div className="max-w-5xl mx-auto space-y-3" dir="rtl">
 
-      {/* ═══ JOELLE BANNER ═══ */}
-      {hasAnyJoelleData && (
-        <div className="flex items-center justify-between bg-gradient-to-l from-purple-50 to-pink-50 border border-purple-200/60 rounded-lg px-3 py-2">
-          <div className="flex items-center gap-2">
-            <img src={JOEL_AVATAR} className="w-7 h-7 rounded-full border border-purple-200" alt="جويل" />
-            <span className="text-[11px] font-semibold text-purple-800">مخرجات جويل جاهزة</span>
-            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${joelleStatus?.engine6Ready ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
-              {joelleStatus?.engine6Ready ? "✓" : "○"} محرك 6
-            </span>
-            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${joelleStatus?.engine7Ready ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
-              {joelleStatus?.engine7Ready ? "✓" : "○"} محرك 7
-            </span>
-          </div>
-          <Button size="sm" variant="ghost"
-            onClick={() => { if (projectId) applyJoelleMutation.mutate(projectId); }}
-            disabled={applyJoelleMutation.isPending}
-            className={`gap-1 h-7 text-[11px] ${alreadyApplied ? "text-emerald-700" : "text-purple-700 hover:bg-purple-100"}`}>
-            {applyJoelleMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : alreadyApplied ? <CheckCircle2 className="w-3 h-3" /> : <Zap className="w-3 h-3" />}
-            {alreadyApplied ? "إعادة تطبيق" : "تعبئة من جويل"}
-          </Button>
-        </div>
-      )}
+
 
       {/* ═══ SECTION 1: تفاصيل الأرض و GFA ═══ */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
@@ -463,53 +419,7 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
         </div>
       </div>
 
-      {/* ═══ SECTION 2: Joel's Suggestions ═══ */}
-      {joelSuggestions && (
-        <div className="bg-white rounded-xl border border-purple-200/60 overflow-hidden shadow-sm">
-          <div className="px-4 py-2 border-b border-purple-100 bg-gradient-to-l from-purple-50 to-pink-50/40 flex items-center gap-2">
-            <img src={JOEL_AVATAR} className="w-5 h-5 rounded-full" alt="" />
-            <h3 className="text-xs font-bold text-purple-800">اقتراحات جويل</h3>
-            <span className="text-[9px] text-purple-500 font-medium">(للقراءة فقط)</span>
-          </div>
-          <table className="w-full text-[11px]">
-            <thead>
-              <tr className="border-b-2 border-purple-100 bg-purple-50/20">
-                <th className="text-right py-1.5 pr-3 font-bold text-purple-600">النوع</th>
-                <th className="text-center py-1.5 font-bold text-purple-600">النسبة</th>
-                <th className="text-center py-1.5 font-bold text-purple-600">المساحة (sqft)</th>
-                <th className="text-center py-1.5 font-bold text-purple-600">السعر/قدم²</th>
-              </tr>
-            </thead>
-            <tbody>
-              {UNIT_ROWS.map(row => {
-                const moRec = joelSuggestions.mo;
-                const cpRec = joelSuggestions.cp;
-                // Read from nested JSON structure: moRec.{cat}.{joelMoKey}.pct / .avgArea
-                const moCategory = moRec?.[row.cat];
-                const moUnit = moCategory?.[row.joelMoKey || ""];
-                const pct = moUnit?.pct || 0;
-                const avg = moUnit?.avgArea || 0;
-                // Read from nested JSON: cpRec.scenarios.base.{cat}.{joelCpKey}
-                const cpScenarios = cpRec?.scenarios;
-                const cpBase = cpScenarios?.base;
-                const price = cpBase?.[row.cat]?.[row.joelCpKey || ""] || 0;
-                if (!pct && !avg && !price) return null;
-                return (
-                  <tr key={row.key} className={`border-b ${row.divider ? "border-t-[3px] border-t-purple-200" : "border-purple-50"} hover:bg-purple-50/20`}>
-                    <td className="py-1 pr-3 text-gray-700">
-                      {row.catLabel && <span className="text-[9px] font-bold text-purple-400 ml-1">{row.catLabel} /</span>}
-                      {row.label}
-                    </td>
-                    <td className="py-1 text-center">{pct > 0 ? <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{typeof pct === "number" ? pct.toFixed(1) : pct}%</span> : "—"}</td>
-                    <td className="py-1 text-center font-mono text-gray-600" dir="ltr">{avg > 0 ? fmt(avg) : "—"}</td>
-                    <td className="py-1 text-center font-mono text-gray-600" dir="ltr">{price > 0 ? fmt(price) : "—"}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+
 
       {/* ═══ SECTION 3: التوزيع التفاعلي والتسعير ═══ */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
