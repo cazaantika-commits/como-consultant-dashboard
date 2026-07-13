@@ -13,7 +13,8 @@ import {
   FileText, MapPin, Ruler, TrendingUp, PieChart, Loader2,
   Sparkles, Copy, Brain, Globe, FolderOpen, ShieldCheck, Users,
   Landmark, Percent, ChevronDown, BookOpen, Scale, AlertTriangle,
-  BarChart2, Target, Briefcase, Layers,
+  BarChart2, Target, Briefcase, Layers, CheckCircle2, ArrowDownCircle,
+  SquareStack, LandPlot, Warehouse, ShoppingBag,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import CostsCashFlowTab from "@/components/feasibility/CostsCashFlowTab";
@@ -197,7 +198,7 @@ function AllProjectsComparison({ projects, onSelectProject }: {
       const cp = allCpQueries[i]?.data;
       const settingsData = allSettingsQueries[i]?.data;
       const costs = calculateProjectCosts(p, mo, cp);
-      if (!costs) return { project: p, totalCosts: 0, totalRevenue: 0, profit: 0, margin: 0, roi: 0, investedCapital: 0, roiOnCapital: 0, hasApproved: false };
+      if (!costs) return { project: p, totalCosts: 0, totalRevenue: 0, profit: 0, margin: 0, roi: 0, investedCapital: 0, roiOnCapital: 0 };
 
       // Use grandTotal from cashFlowSettings (same source as Capital Schedule Table)
       // Fall back to calculateProjectCosts if settings not loaded yet
@@ -212,10 +213,8 @@ function AllProjectsComparison({ projects, onSelectProject }: {
         investorTotal = paidT + investorT;
       }
 
-      // Use approved revenue if available, otherwise calculated
-      const approvedRev = (cp as any)?.approvedRevenue;
-      const totalRevenue = (approvedRev && approvedRev > 0) ? approvedRev : (costs.totalRevenue || 0);
-      const hasApproved = !!(approvedRev && approvedRev > 0);
+      // Revenue always from pricing page calculation (dynamic, based on current prices × areas)
+      const totalRevenue = costs.totalRevenue || 0;
       const profit = totalRevenue - totalCosts;
       const margin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
       const roi = totalCosts > 0 ? (profit / totalCosts) * 100 : 0;
@@ -223,7 +222,7 @@ function AllProjectsComparison({ projects, onSelectProject }: {
       const investedCapital = investorTotal > 0 ? investorTotal : calcInvestedCapital(costs);
       const roiOnCapital = investedCapital > 0 ? (profit / investedCapital) * 100 : 0;
 
-      return { project: p, totalCosts, totalRevenue, profit, margin, roi, investedCapital, roiOnCapital, hasApproved };
+      return { project: p, totalCosts, totalRevenue, profit, margin, roi, investedCapital, roiOnCapital };
     });
   }, [projects, allMoQueries.map(q => q.data), allCpQueries.map(q => q.data), allSettingsQueries.map(q => q.data), scenariosQuery.data]);
 
@@ -300,7 +299,7 @@ function AllProjectsComparison({ projects, onSelectProject }: {
                     <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-bold shrink-0">{i + 1}</span>
                     <span className="truncate max-w-[160px]">{d.project.name}</span>
                   </div>
-                  {d.hasApproved && <span className="text-[9px] text-emerald-600 mr-7 block mt-0.5">✓ إيرادات معتمدة</span>}
+
                   {d.profit < 0 && <span className="text-[9px] text-red-600 mr-7 block mt-0.5">⚠️ خسارة</span>}
                 </td>
                 <td className="py-3 px-2 font-mono text-rose-700 font-semibold" dir="ltr">{fmt(d.totalCosts)}</td>
@@ -614,10 +613,8 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
                 totalCostsVal = paidT + investorT + escrowT;
                 investedCapital = paidT + investorT;
               }
-              // Use approved revenue if available
-              const approvedRev = (cpQuery.data as any)?.approvedRevenue;
-              const totalRevenueVal = (approvedRev && approvedRev > 0) ? approvedRev : (realCosts.totalRevenue || 0);
-              const hasApproved = !!(approvedRev && approvedRev > 0);
+              // Revenue always from pricing page calculation (dynamic, based on current prices × areas)
+              const totalRevenueVal = realCosts.totalRevenue || 0;
               const profitVal = totalRevenueVal - totalCostsVal;
               const marginVal = totalRevenueVal > 0 ? (profitVal / totalRevenueVal) * 100 : 0;
 
@@ -628,7 +625,7 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
               const scenarioCalc = (sc: "optimistic" | "base" | "conservative") => {
                 const c = calculateProjectCosts(selectedProject, moQuery.data, cpQuery.data, sc);
                 if (!c) return { revenue: 0, profit: 0, margin: 0 };
-                const rev = (hasApproved && sc === "base") ? totalRevenueVal : (c.totalRevenue || 0);
+                const rev = c.totalRevenue || 0;
                 const cost = c.totalCosts || 0;
                 const p = rev - cost;
                 return { revenue: rev, profit: p, margin: rev > 0 ? (p / rev) * 100 : 0 };
@@ -637,41 +634,249 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
               const base = scenarioCalc("base");
               const cons = scenarioCalc("conservative");
 
+              // Additional computed values for the redesign
+              const profitOnCost = totalCostsVal > 0 ? (profitVal / totalCostsVal) * 100 : 0;
+              const paidT = singleSettingsQuery.data?.settings
+                ? singleSettingsQuery.data.settings.filter((s: any) => s.isActive !== 0 && s.isActive !== false && s.section === "paid").reduce((sum: number, s: any) => sum + (s.computedAmount || 0), 0)
+                : 0;
+              const unpaidInvestor = investedCapital - paidT;
+
+              // Area data from project
+              const plotAreaSqft = parseFloat(selectedProject?.plotAreaSqft || "0");
+              const plotAreaSqm = parseFloat(selectedProject?.plotAreaSqm || "0");
+              const buaSqft = parseFloat(selectedProject?.manualBuaSqft || "0");
+              const gfaTotalSqft = parseFloat(selectedProject?.gfaSqft || "0");
+              const gfaResSqft = parseFloat(selectedProject?.gfaResidentialSqft || "0");
+              const gfaRetSqft = parseFloat(selectedProject?.gfaRetailSqft || "0");
+              const gfaOffSqft = parseFloat(selectedProject?.gfaOfficesSqft || "0");
+              const resPct = parseFloat(selectedProject?.saleableResidentialPct ?? "95") / 100;
+              const retPct = parseFloat(selectedProject?.saleableRetailPct ?? "97") / 100;
+              const offPct = parseFloat(selectedProject?.saleableOfficesPct ?? "95") / 100;
+              const sellableRes = gfaResSqft * resPct;
+              const sellableRet = gfaRetSqft * retPct;
+              const sellableOff = gfaOffSqft * offPct;
+              const totalSellable = sellableRes + sellableRet + sellableOff;
+
               return (
-                <div className="space-y-4">
-                  {/* Project Title Bar */}
-                  <div className="flex items-center justify-between bg-white rounded-2xl border border-gray-200 shadow-sm px-5 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md">
-                        <Building2 className="w-5 h-5 text-white" />
-                      </div>
+                <div className="space-y-5">
+
+                  {/* ══════ SECTION 1: REVENUE HERO ══════ */}
+                  <div className="rounded-2xl bg-gradient-to-l from-blue-700 to-blue-900 px-7 py-5 shadow-lg relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_rgba(255,255,255,0.08)_0%,transparent_60%)]" />
+                    <div className="relative flex items-center justify-between">
                       <div>
-                        <h2 className="font-bold text-gray-800 text-base">{form.projectName || selectedProject?.name || "—"}</h2>
-                        <p className="text-[11px] text-gray-500">
-                          {selectedProject?.community || ""}
-                          {hasApproved && <span className="mr-2 bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-[10px]">✓ إيرادات معتمدة</span>}
-                        </p>
+                        <div className="text-[11px] text-blue-200 font-medium mb-1.5 flex items-center gap-2">
+                          <TrendingUp className="w-3.5 h-3.5" />
+                          إجمالي الإيرادات المتوقعة
+                        </div>
+                        <div className="text-3xl font-black text-white tabular-nums tracking-tight" dir="ltr">
+                          {fmtFull(totalRevenueVal)} <span className="text-sm font-normal text-blue-300">AED</span>
+                        </div>
+                        {totalRevenueVal === 0 && (
+                          <div className="mt-2 flex items-center gap-1.5 bg-amber-500/20 border border-amber-400/30 rounded-lg px-3 py-1">
+                            <AlertTriangle className="w-3 h-3 text-amber-300" />
+                            <span className="text-[10px] text-amber-200 font-medium">لم يتم إدخال التسعير بعد</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-6xl opacity-10 text-white">💰</div>
+                    </div>
+                  </div>
+
+                  {/* ══════ SECTION 2: COSTS & CAPITAL SIDE BY SIDE ══════ */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Total Costs */}
+                    <div className="rounded-2xl bg-gradient-to-l from-slate-800 to-slate-900 px-6 py-4 shadow-md relative overflow-hidden">
+                      <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_bottom_left,_rgba(255,255,255,0.05)_0%,transparent_60%)]" />
+                      <div className="relative">
+                        <div className="text-[10px] text-slate-400 font-medium mb-1 flex items-center gap-1.5">
+                          <DollarSign className="w-3 h-3" />
+                          التكلفة الكلية للمشروع
+                        </div>
+                        <div className="text-2xl font-black text-white tabular-nums" dir="ltr">
+                          {fmtFull(totalCostsVal)} <span className="text-[10px] font-normal text-slate-400">AED</span>
+                        </div>
+                        <div className="text-[9px] text-slate-500 mt-1">يشمل جميع التكاليف (مستثمر + ضمان)</div>
                       </div>
                     </div>
-                    {totalRevenueVal === 0 && (
-                      <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
-                        <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-                        <span className="text-[10px] text-amber-700 font-medium">لم يتم إدخال التسعير بعد</span>
+
+                    {/* Invested Capital */}
+                    <div className="rounded-2xl bg-gradient-to-l from-indigo-700 to-indigo-800 px-6 py-4 shadow-md relative overflow-hidden">
+                      <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_bottom_left,_rgba(255,255,255,0.05)_0%,transparent_60%)]" />
+                      <div className="relative">
+                        <div className="text-[10px] text-indigo-200 font-medium mb-1 flex items-center gap-1.5">
+                          <Briefcase className="w-3 h-3" />
+                          رأس المال المطلوب من المستثمر
+                        </div>
+                        <div className="text-2xl font-black text-white tabular-nums" dir="ltr">
+                          {fmtFull(investedCapital)} <span className="text-[10px] font-normal text-indigo-300">AED</span>
+                        </div>
+                        <div className="text-[9px] text-indigo-300 mt-1">مدفوع + مطلوب سداده (بدون الضمان)</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ══════ SECTION 3: PROFIT & RATIOS ══════ */}
+                  <div className="grid grid-cols-3 gap-4">
+                    {/* Profit */}
+                    <div className="group relative bg-white hover:bg-emerald-50/30 rounded-2xl p-5 border border-emerald-200/60 shadow-sm hover:shadow-lg transition-all duration-300">
+                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="relative">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${profitVal >= 0 ? 'from-emerald-500 to-emerald-600 shadow-emerald-200' : 'from-red-500 to-red-600 shadow-red-200'} flex items-center justify-center shadow-md`}>
+                            <BarChart2 className="w-4 h-4 text-white" />
+                          </div>
+                          <span className="text-[11px] text-slate-600 font-semibold">صافي الربح</span>
+                        </div>
+                        <div className={`text-xl font-black tabular-nums ${profitVal >= 0 ? 'text-emerald-700' : 'text-red-700'}`} dir="ltr">{fmtFull(profitVal)}</div>
+                        <div className="text-[10px] text-slate-500 mt-1">الإيرادات − التكلفة الكلية</div>
+                      </div>
+                    </div>
+
+                    {/* Profit on Cost */}
+                    <div className="group relative bg-white hover:bg-violet-50/30 rounded-2xl p-5 border border-violet-200/60 shadow-sm hover:shadow-lg transition-all duration-300">
+                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="relative">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center shadow-md shadow-violet-200">
+                            <Percent className="w-4 h-4 text-white" />
+                          </div>
+                          <span className="text-[11px] text-slate-600 font-semibold">نسبة الربح من التكلفة</span>
+                        </div>
+                        <div className={`text-xl font-black tabular-nums ${profitOnCost >= 0 ? 'text-violet-700' : 'text-red-700'}`}>{fmtPct(profitOnCost)}</div>
+                        <div className="text-[10px] text-slate-500 mt-1">الربح ÷ التكلفة الكلية</div>
+                      </div>
+                    </div>
+
+                    {/* ROI on Capital */}
+                    <div className="group relative bg-white hover:bg-blue-50/30 rounded-2xl p-5 border border-blue-200/60 shadow-sm hover:shadow-lg transition-all duration-300">
+                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="relative">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md shadow-blue-200">
+                            <Target className="w-4 h-4 text-white" />
+                          </div>
+                          <span className="text-[11px] text-slate-600 font-semibold">نسبة الربح من رأس المال</span>
+                        </div>
+                        <div className={`text-xl font-black tabular-nums ${roiOnCapital >= 0 ? 'text-blue-700' : 'text-red-700'}`}>{fmtPct(roiOnCapital)}</div>
+                        <div className="text-[10px] text-slate-500 mt-1">الربح ÷ رأس المال المستثمر</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ══════ SECTION 4: CAPITAL BREAKDOWN ══════ */}
+                  <div className="bg-gradient-to-l from-slate-50 to-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-sm">
+                        <Landmark className="w-3.5 h-3.5 text-white" />
+                      </div>
+                      <span className="text-sm font-bold text-slate-700">تفاصيل رأس المال</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      {/* Paid */}
+                      <div className="bg-emerald-50/80 border border-emerald-200/60 rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                          <span className="text-[11px] font-semibold text-emerald-700">مدفوع</span>
+                        </div>
+                        <div className="text-lg font-black text-emerald-800 tabular-nums" dir="ltr">{fmtFull(paidT)} <span className="text-[9px] font-normal text-emerald-600">AED</span></div>
+                        <div className="text-[9px] text-emerald-600 mt-1">{investedCapital > 0 ? ((paidT / investedCapital) * 100).toFixed(1) : 0}% من رأس المال</div>
+                      </div>
+                      {/* Unpaid */}
+                      <div className="bg-amber-50/80 border border-amber-200/60 rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <ArrowDownCircle className="w-4 h-4 text-amber-600" />
+                          <span className="text-[11px] font-semibold text-amber-700">مطلوب سداده</span>
+                        </div>
+                        <div className="text-lg font-black text-amber-800 tabular-nums" dir="ltr">{fmtFull(unpaidInvestor)} <span className="text-[9px] font-normal text-amber-600">AED</span></div>
+                        <div className="text-[9px] text-amber-600 mt-1">{investedCapital > 0 ? ((unpaidInvestor / investedCapital) * 100).toFixed(1) : 0}% من رأس المال</div>
+                      </div>
+                    </div>
+                    {/* Progress bar */}
+                    <div className="h-4 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                      <div
+                        className="h-full bg-gradient-to-l from-emerald-400 via-emerald-500 to-teal-600 rounded-full transition-all duration-700 ease-out relative"
+                        style={{ width: `${investedCapital > 0 ? Math.min(100, (paidT / investedCapital) * 100) : 0}%` }}
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-b from-white/30 to-transparent rounded-full" />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between mt-2 text-[10px]">
+                      <span className="text-emerald-700 font-medium">المدفوع: {fmtFull(paidT)} درهم</span>
+                      <span className="text-amber-700 font-medium">المتبقي: {fmtFull(unpaidInvestor)} درهم</span>
+                    </div>
+                  </div>
+
+                  {/* ══════ SECTION 5: PROJECT DETAILS ══════ */}
+                  <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                    <div className="px-5 py-3 border-b border-gray-100 bg-gradient-to-l from-slate-50 to-blue-50/40">
+                      <h4 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                        <LandPlot className="w-4 h-4 text-blue-600" />
+                        بيانات المشروع والمساحات
+                      </h4>
+                    </div>
+
+                    {/* Project Description */}
+                    {selectedProject?.description && (
+                      <div className="px-5 py-3 border-b border-gray-100 bg-blue-50/20">
+                        <p className="text-xs text-gray-600 leading-relaxed">{selectedProject.description}</p>
+                      </div>
+                    )}
+
+                    {/* Area KPIs */}
+                    <div className="grid grid-cols-4 gap-0 divide-x divide-gray-100" dir="rtl">
+                      {[
+                        { label: "مساحة الأرض", val: `${fmtFull(plotAreaSqft)}`, sub: `${fmtFull(plotAreaSqm)} م²`, icon: <LandPlot className="w-3.5 h-3.5 text-sky-600" />, color: "bg-sky-50/50" },
+                        { label: "مساحة البناء (BUA)", val: `${fmtFull(buaSqft)}`, sub: "sqft", icon: <Warehouse className="w-3.5 h-3.5 text-amber-600" />, color: "bg-amber-50/50" },
+                        { label: "GFA الإجمالي", val: `${fmtFull(gfaTotalSqft)}`, sub: "sqft", icon: <SquareStack className="w-3.5 h-3.5 text-emerald-600" />, color: "bg-emerald-50/50" },
+                        { label: "المساحة القابلة للبيع", val: `${fmtFull(totalSellable)}`, sub: "sqft", icon: <ShoppingBag className="w-3.5 h-3.5 text-violet-600" />, color: "bg-violet-50/50" },
+                      ].map(item => (
+                        <div key={item.label} className={`px-4 py-3 ${item.color}`}>
+                          <div className="flex items-center gap-1.5 mb-1">{item.icon}<span className="text-[9px] font-bold text-gray-500 uppercase">{item.label}</span></div>
+                          <div className="text-base font-black font-mono text-gray-800" dir="ltr">{item.val}</div>
+                          <div className="text-[9px] text-gray-400 font-mono" dir="ltr">{item.sub}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* GFA Breakdown Table */}
+                    {(gfaResSqft > 0 || gfaRetSqft > 0 || gfaOffSqft > 0) && (
+                      <div className="border-t border-gray-100">
+                        <table className="w-full text-[11px]">
+                          <thead>
+                            <tr className="bg-gray-50/60 border-b border-gray-100">
+                              <th className="text-right py-2 pr-4 font-bold text-gray-500 text-[10px]">الفئة</th>
+                              <th className="text-center py-2 font-bold text-gray-500 text-[10px]">GFA (sqft)</th>
+                              <th className="text-center py-2 font-bold text-gray-500 text-[10px]">الكفاءة</th>
+                              <th className="text-center py-2 font-bold text-gray-500 text-[10px]">قابل للبيع (sqft)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {[
+                              { label: "سكني", gfa: gfaResSqft, eff: Math.round(resPct * 100), sell: sellableRes, dot: "bg-sky-500" },
+                              { label: "تجزئة", gfa: gfaRetSqft, eff: Math.round(retPct * 100), sell: sellableRet, dot: "bg-amber-500" },
+                              { label: "مكاتب", gfa: gfaOffSqft, eff: Math.round(offPct * 100), sell: sellableOff, dot: "bg-violet-500" },
+                            ].filter(r => r.gfa > 0).map(r => (
+                              <tr key={r.label} className="border-b border-gray-50 hover:bg-gray-50/40">
+                                <td className="py-2 pr-4 flex items-center gap-1.5"><span className={`w-2 h-2 rounded-full ${r.dot}`} />{r.label}</td>
+                                <td className="py-2 text-center font-mono text-gray-700" dir="ltr">{fmtFull(r.gfa)}</td>
+                                <td className="py-2 text-center"><span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{r.eff}%</span></td>
+                                <td className="py-2 text-center font-mono font-semibold text-gray-800" dir="ltr">{fmtFull(r.sell)}</td>
+                              </tr>
+                            ))}
+                            <tr className="bg-gray-50/80 font-bold">
+                              <td className="py-2 pr-4 text-gray-700">الإجمالي</td>
+                              <td className="py-2 text-center font-mono text-gray-800" dir="ltr">{fmtFull(gfaTotalSqft)}</td>
+                              <td className="py-2 text-center">—</td>
+                              <td className="py-2 text-center font-mono text-gray-900" dir="ltr">{fmtFull(totalSellable)}</td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     )}
                   </div>
 
-                  {/* KPI Cards — 6 metrics */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                    <KpiCard label="إجمالي التكاليف" value={fmt(totalCostsVal)} sub="درهم" color="rose" icon={<DollarSign className="w-4 h-4" />} />
-                    <KpiCard label="إجمالي الإيرادات" value={fmt(totalRevenueVal)} sub="درهم" color="emerald" icon={<TrendingUp className="w-4 h-4" />} />
-                    <KpiCard label="صافي الربح" value={fmt(profitVal)} sub={`${fmtPct(marginVal)} هامش ربح`} color={profitVal >= 0 ? "blue" : "red"} icon={<BarChart2 className="w-4 h-4" />} />
-                    <KpiCard label="رأس المال المستثمر" value={fmt(investedCapital)} sub="أرض + مصاريف + 30% مقاول" color="amber" icon={<Briefcase className="w-4 h-4" />} />
-                    <KpiCard label="العائد على رأس المال" value={fmtPct(roiOnCapital)} sub="ربح ÷ رأس المال المستثمر" color={roiOnCapital >= 0 ? "violet" : "red"} icon={<Target className="w-4 h-4" />} />
-                    <KpiCard label="هامش الربح" value={fmtPct(marginVal)} sub="ربح ÷ الإيرادات" color={marginVal >= 15 ? "teal" : marginVal >= 0 ? "gray" : "red"} icon={<Percent className="w-4 h-4" />} />
-                  </div>
-
-                  {/* Scenario Comparison Strip */}
+                  {/* ══════ SECTION 6: SCENARIO COMPARISON ══════ */}
                   <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                     <div className="px-5 py-3 border-b border-gray-100 bg-gray-50/50">
                       <h4 className="text-xs font-bold text-gray-600 flex items-center gap-2">

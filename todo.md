@@ -805,3 +805,8 @@
 - [x] Add "غير مدفوع" (unpaid) column to CapitalScheduleTablePage
 - [x] Sync FeasibilityStudyPage costs with cashFlowSettings (same source as Capital Schedule Table)
 - [x] Fix CostsCashFlowTab missing key prop error
+- [x] Redesign single-project view with 6-section professional layout (Revenue Hero, Costs & Capital, Profit & Ratios, Capital Breakdown, Project Details/Areas, Scenario Comparison)
+- [x] Fix CostsCashFlowTab.tsx parse error (React.Fragment closing tag) — confirmed resolved, file parses correctly
+- [x] Add paid vs unpaid capital breakdown with progress bar in feasibility summary
+- [x] Add project areas section (plot area, BUA, GFA, sellable) with GFA breakdown table
+- [x] Add profit-on-cost ratio and profit-on-capital ratio as separate metrics
