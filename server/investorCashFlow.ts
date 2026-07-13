@@ -66,6 +66,11 @@ export interface ProjectCosts {
   reraInspectionReportFee: number;
   totalRevenue: number;
   totalCosts: number;
+  revenueSource: "approved" | "calculated";
+  activeScenario: string;
+  scenarioLabel: string;
+  calculatedRevenue: number;
+  approvedRevenue: number;
 }
 
 export function calculateProjectCosts(

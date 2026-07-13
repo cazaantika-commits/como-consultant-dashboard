@@ -47,6 +47,14 @@ export default function EscrowCashFlowPage({ embedded, initialProjectId }: { emb
 
   const report = reportQuery.data;
 
+  // Separate expense items from revenue items
+  const { expenseItems, revenueItems } = useMemo(() => {
+    if (!report) return { expenseItems: [], revenueItems: [] };
+    const expenses = report.items.filter((i: any) => i.category !== "revenue");
+    const revenues = report.items.filter((i: any) => i.category === "revenue");
+    return { expenseItems: expenses, revenueItems: revenues };
+  }, [report]);
+
   // Build phase spans for the table header
   const phaseSpans = useMemo(() => {
     if (!report) return [];
@@ -64,6 +72,39 @@ export default function EscrowCashFlowPage({ embedded, initialProjectId }: { emb
 
   // Compute totals
   const totalExpenses = report ? report.grandTotal : 0;
+  const totalRevenue = report ? (report as any).grandRevenue || 0 : 0;
+  const settlement = report ? (report as any).settlement : null;
+
+  // Revenue per month and expense per month
+  const revenuePerMonth = useMemo(() => {
+    if (!report) return [];
+    return (report as any).revenuePerMonth || [];
+  }, [report]);
+
+  const expensePerMonth = useMemo(() => {
+    if (!report) return [];
+    return (report as any).expensePerMonth || report.totalPerMonth || [];
+  }, [report]);
+
+  // Running balance: revenue - expenses (cumulative)
+  const runningBalance = useMemo(() => {
+    if (!report) return [];
+    const balances: number[] = [];
+    let cumulative = 0;
+    for (let m = 0; m < report.totalMonths; m++) {
+      const rev = revenuePerMonth[m] || 0;
+      const exp = expensePerMonth[m] || 0;
+      cumulative += rev - exp;
+      balances.push(cumulative);
+    }
+    return balances;
+  }, [report, revenuePerMonth, expensePerMonth]);
+
+  // Net monthly (revenue - expense per month)
+  const netPerMonth = useMemo(() => {
+    if (!report) return [];
+    return Array.from({ length: report.totalMonths }, (_, m) => (revenuePerMonth[m] || 0) - (expensePerMonth[m] || 0));
+  }, [report, revenuePerMonth, expensePerMonth]);
 
   // Next 3 months forecast
   const next3MonthsInfo = useMemo(() => {
@@ -77,26 +118,14 @@ export default function EscrowCashFlowPage({ embedded, initialProjectId }: { emb
       monthDate.setMonth(monthDate.getMonth() + m);
       const diffMonths = (monthDate.getFullYear() - now.getFullYear()) * 12 + (monthDate.getMonth() - now.getMonth());
       if (diffMonths >= 0 && diffMonths < 3) {
-        total += report.totalPerMonth[m] || 0;
+        total += expensePerMonth[m] || 0;
       }
     }
     const e = new Date(now);
     e.setMonth(e.getMonth() + 2);
     const label = `${months[now.getMonth()]} - ${months[e.getMonth()]} ${e.getFullYear()}`;
     return { total, label };
-  }, [report]);
-
-  // Running balance (cumulative expenses as negative)
-  const runningBalance = useMemo(() => {
-    if (!report) return [];
-    const balances: number[] = [];
-    let cumulative = 0;
-    for (let m = 0; m < report.totalMonths; m++) {
-      cumulative -= report.totalPerMonth[m] || 0;
-      balances.push(cumulative);
-    }
-    return balances;
-  }, [report]);
+  }, [report, expensePerMonth]);
 
   // Determine current month index
   const currentMonthIndex = useMemo(() => {
@@ -135,7 +164,7 @@ export default function EscrowCashFlowPage({ embedded, initialProjectId }: { emb
       {!selectedProjectId ? (
         <div className="text-center py-20">
           <div className="text-5xl mb-4 opacity-30">🏦</div>
-          <h2 className="text-xl font-bold text-gray-400 mb-2">اختر مشروع لعرض التدفقات النقدية</h2>
+          <h2 className="text-xl font-bold text-gray-400 mb-2">اختر مشروع لعرض حساب الضمان</h2>
           <p className="text-sm text-gray-400">اختر مشروع من القائمة أعلاه</p>
         </div>
       ) : reportQuery.isLoading ? (
@@ -147,18 +176,18 @@ export default function EscrowCashFlowPage({ embedded, initialProjectId }: { emb
         <div className="text-center py-20">
           <div className="text-5xl mb-4 opacity-30">⚠️</div>
           <h2 className="text-xl font-bold text-gray-400 mb-2">لا توجد بيانات</h2>
-          <p className="text-sm text-gray-400">لم يتم العثور على إعدادات التدفق النقدي لهذا المشروع. يرجى إعداد خطة رأس المال أولاً.</p>
+          <p className="text-sm text-gray-400">لم يتم العثور على إعدادات التدفق النقدي لهذا المشروع.</p>
         </div>
       ) : (
         <div>
-          {/* Title + Print Button */}
+          {/* Title + Export Button */}
           <div className="mb-3 flex items-start justify-between">
             <div>
               <h1 className="text-base font-bold text-gray-900">
-                {selectedProject?.name || report.projectName} — التدفقات النقدية
+                {selectedProject?.name || report.projectName} — حساب الضمان (Escrow Account)
               </h1>
               <p className="text-xs text-gray-500 mt-0.5">
-                السيناريو: {report.scenario === "no_offplan" ? "تطوير بدون بيع على الخارطة" : report.scenario === "offplan_escrow" ? "أوف بلان مع حساب ضمان" : report.scenario === "offplan_20pct" ? "أوف بلان بعد إنجاز 20%" : report.scenario}
+                السيناريو: {report.scenario === "no_offplan" ? "تطوير بدون بيع على الخارطة" : report.scenario === "offplan_escrow" ? "أوف بلان مع حساب ضمان" : report.scenario === "offplan_construction" ? "أوف بلان بعد إنجاز 20%" : report.scenario}
                 {" | "}المدة: {report.totalMonths} شهر
                 {" | "}البداية: {report.monthLabels[0]}
               </p>
@@ -173,15 +202,19 @@ export default function EscrowCashFlowPage({ embedded, initialProjectId }: { emb
           </div>
 
           {/* Summary Cards */}
-          <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <div className="bg-white rounded-lg border-2 border-emerald-200 px-3 py-2 shadow-sm">
+              <div className="text-[10px] text-emerald-600 font-medium">إجمالي الإيرادات المودعة</div>
+              <div className="text-sm font-bold text-emerald-700">{fmt(totalRevenue)} <span className="text-[10px] font-normal text-gray-400">درهم</span></div>
+            </div>
             <div className="bg-white rounded-lg border-2 border-red-200 px-3 py-2 shadow-sm">
-              <div className="text-[10px] text-red-600">إجمالي المصاريف</div>
+              <div className="text-[10px] text-red-600 font-medium">إجمالي المصروفات</div>
               <div className="text-sm font-bold text-red-700">{fmt(totalExpenses)} <span className="text-[10px] font-normal text-gray-400">درهم</span></div>
             </div>
-            <div className={`bg-white rounded-lg border px-3 py-2 shadow-sm ${(runningBalance[runningBalance.length - 1] || 0) >= 0 ? "border-emerald-300" : "border-red-300"}`}>
-              <div className="text-[10px] text-gray-600">الرصيد النهائي</div>
-              <div className={`text-sm font-bold ${(runningBalance[runningBalance.length - 1] || 0) >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-                {fmtSigned(runningBalance[runningBalance.length - 1] || 0)} <span className="text-[10px] font-normal text-gray-400">درهم</span>
+            <div className={`bg-white rounded-lg border-2 px-3 py-2 shadow-sm ${(totalRevenue - totalExpenses) >= 0 ? "border-emerald-300" : "border-red-300"}`}>
+              <div className="text-[10px] text-gray-600 font-medium">الفائض الصافي</div>
+              <div className={`text-sm font-bold ${(totalRevenue - totalExpenses) >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                {fmtSigned(totalRevenue - totalExpenses)} <span className="text-[10px] font-normal text-gray-400">درهم</span>
               </div>
             </div>
             <div className="bg-white rounded-lg border-2 border-orange-300 px-3 py-2 shadow-sm">
@@ -190,6 +223,37 @@ export default function EscrowCashFlowPage({ embedded, initialProjectId }: { emb
               <div className="text-sm font-bold text-orange-700">{fmt(next3MonthsInfo.total)} <span className="text-[10px] font-normal text-gray-400">درهم</span></div>
             </div>
           </div>
+
+          {/* Settlement Summary (RERA Law 8/2007) */}
+          {settlement && settlement.netSurplus > 0 && (
+            <div className="mb-4 bg-gradient-to-l from-emerald-50 to-teal-50 rounded-lg border border-emerald-200 shadow-sm p-4">
+              <h3 className="text-sm font-bold text-emerald-900 mb-3 flex items-center gap-2">
+                <span>🏛️</span>
+                <span>التسوية عند التسليم (قانون رقم 8 لسنة 2007 — المادة 14)</span>
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-white/80 rounded-lg px-3 py-2">
+                  <div className="text-[10px] text-gray-500">إجمالي المودع في الضمان</div>
+                  <div className="text-sm font-bold text-gray-800">{fmt(settlement.totalDeposited)}</div>
+                </div>
+                <div className="bg-white/80 rounded-lg px-3 py-2">
+                  <div className="text-[10px] text-gray-500">إجمالي المصروفات</div>
+                  <div className="text-sm font-bold text-red-700">{fmt(settlement.totalExpenses)}</div>
+                </div>
+                <div className="bg-white/80 rounded-lg px-3 py-2 border-2 border-emerald-300">
+                  <div className="text-[10px] text-emerald-600 font-medium">المستلم عند التسليم (95%)</div>
+                  <div className="text-sm font-bold text-emerald-800">{fmt(settlement.releasedAtHandover)}</div>
+                </div>
+                <div className="bg-white/80 rounded-lg px-3 py-2 border border-amber-300">
+                  <div className="text-[10px] text-amber-600 font-medium">محجوز 5% — يُفرج بعد 12 شهر</div>
+                  <div className="text-sm font-bold text-amber-800">{fmt(settlement.releasedAfter12Months)}</div>
+                </div>
+              </div>
+              <div className="mt-2 text-[9px] text-gray-500">
+                * الحجز 5% من إجمالي المبالغ المودعة في حساب الضمان — يُفرج بعد 12 شهراً من تسجيل الوحدات (فترة ضمان العيوب)
+              </div>
+            </div>
+          )}
 
           {/* TABLE */}
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-auto">
@@ -210,7 +274,7 @@ export default function EscrowCashFlowPage({ embedded, initialProjectId }: { emb
                 <tr className="bg-gray-100">
                   <th className="bg-gray-100 px-1 py-1 text-right text-gray-500 border-l border-gray-200 text-[9px] sticky right-0 z-10">الفترة</th>
                   <th className="bg-gray-100 px-1 py-1 text-center text-gray-500 border-l border-gray-200 text-[9px]">(درهم)</th>
-                  {report.monthLabels.map((label, mi) => (
+                  {report.monthLabels.map((label: string, mi: number) => (
                     <th key={mi} className={`px-1 py-1 text-center border-l border-gray-200 text-[9px] ${
                       mi === currentMonthIndex ? "bg-yellow-100 font-bold text-yellow-800" : "bg-gray-100 text-gray-600"
                     }`}>
@@ -221,8 +285,53 @@ export default function EscrowCashFlowPage({ embedded, initialProjectId }: { emb
                 </tr>
               </thead>
               <tbody>
-                {/* Expense rows */}
-                {report.items.map((item, idx) => (
+                {/* ═══ Revenue Section ═══ */}
+                {revenueItems.length > 0 && (
+                  <>
+                    <tr className="bg-emerald-50/70">
+                      <td colSpan={2 + report.totalMonths} className="px-2 py-1.5 text-right font-bold text-emerald-800 text-[10px] border-b border-emerald-200">
+                        📥 الإيرادات (المبالغ المودعة في حساب الضمان)
+                      </td>
+                    </tr>
+                    {revenueItems.map((item: any, idx: number) => (
+                      <tr key={item.itemKey} className={`${idx % 2 === 0 ? "bg-emerald-50/30" : "bg-white"} hover:bg-emerald-50/50 transition-colors`}>
+                        <td className="px-1 py-1 text-right border-l border-gray-100 font-medium text-emerald-800 text-[10px] sticky right-0 z-10 bg-inherit">
+                          {item.nameAr}
+                        </td>
+                        <td className="px-1 py-1 text-center border-l border-gray-100 font-bold text-emerald-700 tabular-nums text-[10px]">
+                          {fmt(item.totalAmount)}
+                        </td>
+                        {item.monthlyAmounts.map((val: number, mi: number) => (
+                          <td key={mi} className={`px-1 py-1 text-center border-l border-gray-100 tabular-nums text-[10px] ${
+                            mi === currentMonthIndex ? "bg-yellow-50" : ""
+                          } ${val > 0 ? "text-emerald-700" : "text-gray-300"}`}>
+                            {val > 0 ? fmt(val) : "-"}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                    {/* Revenue Total Row */}
+                    <tr className="bg-emerald-100 border-t border-emerald-200 font-bold">
+                      <td className="px-1 py-1.5 text-right border-l border-emerald-200 text-emerald-800 text-[10px] sticky right-0 z-10 bg-emerald-100">إجمالي الإيرادات</td>
+                      <td className="px-1 py-1.5 text-center border-l border-emerald-200 text-emerald-800 tabular-nums text-[10px]">{fmt(totalRevenue)}</td>
+                      {revenuePerMonth.map((val: number, mi: number) => (
+                        <td key={mi} className={`px-1 py-1.5 text-center border-l border-emerald-200 tabular-nums text-emerald-700 text-[10px] ${
+                          mi === currentMonthIndex ? "bg-yellow-50" : ""
+                        }`}>
+                          {val > 0 ? fmt(val) : "-"}
+                        </td>
+                      ))}
+                    </tr>
+                  </>
+                )}
+
+                {/* ═══ Expense Section ═══ */}
+                <tr className="bg-red-50/70">
+                  <td colSpan={2 + report.totalMonths} className="px-2 py-1.5 text-right font-bold text-red-800 text-[10px] border-b border-red-200">
+                    📤 المصروفات (المبالغ المصروفة من حساب الضمان)
+                  </td>
+                </tr>
+                {expenseItems.map((item: any, idx: number) => (
                   <tr key={item.itemKey} className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"} hover:bg-blue-50/30 transition-colors`}>
                     <td className="px-1 py-1 text-right border-l border-gray-100 font-medium text-gray-800 text-[10px] sticky right-0 z-10 bg-inherit">
                       {item.nameAr}
@@ -230,7 +339,7 @@ export default function EscrowCashFlowPage({ embedded, initialProjectId }: { emb
                     <td className="px-1 py-1 text-center border-l border-gray-100 font-bold text-gray-900 tabular-nums text-[10px]">
                       {fmt(item.totalAmount)}
                     </td>
-                    {item.monthlyAmounts.map((val, mi) => (
+                    {item.monthlyAmounts.map((val: number, mi: number) => (
                       <td key={mi} className={`px-1 py-1 text-center border-l border-gray-100 tabular-nums text-[10px] ${
                         mi === currentMonthIndex ? "bg-yellow-50" : ""
                       } ${val > 0 ? "text-gray-700" : "text-gray-300"}`}>
@@ -241,10 +350,10 @@ export default function EscrowCashFlowPage({ embedded, initialProjectId }: { emb
                 ))}
 
                 {/* Total Expenses Row */}
-                <tr className="bg-red-50 border-t-2 border-red-200 font-bold">
-                  <td className="px-1 py-1.5 text-right border-l border-red-200 text-red-800 text-[10px] sticky right-0 z-10 bg-red-50">إجمالي المصاريف</td>
+                <tr className="bg-red-100 border-t-2 border-red-200 font-bold">
+                  <td className="px-1 py-1.5 text-right border-l border-red-200 text-red-800 text-[10px] sticky right-0 z-10 bg-red-100">إجمالي المصروفات</td>
                   <td className="px-1 py-1.5 text-center border-l border-red-200 text-red-800 tabular-nums text-[10px]">{fmt(totalExpenses)}</td>
-                  {report.totalPerMonth.map((val, mi) => (
+                  {expensePerMonth.map((val: number, mi: number) => (
                     <td key={mi} className={`px-1 py-1.5 text-center border-l border-red-200 tabular-nums text-red-700 text-[10px] ${
                       mi === currentMonthIndex ? "bg-yellow-50" : ""
                     }`}>
@@ -253,11 +362,24 @@ export default function EscrowCashFlowPage({ embedded, initialProjectId }: { emb
                   ))}
                 </tr>
 
+                {/* ═══ Net Monthly (Revenue - Expenses) ═══ */}
+                <tr className="bg-blue-50 border-t-2 border-blue-200 font-bold">
+                  <td className="px-1 py-1.5 text-right border-l border-blue-200 text-blue-800 text-[10px] sticky right-0 z-10 bg-blue-50">الصافي الشهري</td>
+                  <td className="px-1 py-1.5 text-center border-l border-blue-200 text-blue-800 tabular-nums text-[10px]">{fmtSigned(totalRevenue - totalExpenses)}</td>
+                  {netPerMonth.map((val: number, mi: number) => (
+                    <td key={mi} className={`px-1 py-1.5 text-center border-l border-blue-200 tabular-nums text-[10px] ${
+                      mi === currentMonthIndex ? "bg-yellow-50" : ""
+                    } ${val > 0 ? "text-emerald-700" : val < 0 ? "text-red-600" : "text-gray-400"}`}>
+                      {val !== 0 ? fmtSigned(val) : "-"}
+                    </td>
+                  ))}
+                </tr>
+
                 {/* Running Balance (Cumulative) */}
                 <tr className="bg-gray-800 text-white font-bold border-t-2 border-gray-600">
                   <td className="px-2 py-2 text-right border-l border-gray-600 text-xs sticky right-0 z-10 bg-gray-800">الرصيد التراكمي</td>
                   <td className="px-2 py-2 text-center border-l border-gray-600 tabular-nums text-xs">-</td>
-                  {runningBalance.map((val, mi) => (
+                  {runningBalance.map((val: number, mi: number) => (
                     <td key={mi} className={`px-2 py-2 text-center border-l border-gray-600 tabular-nums text-xs ${
                       val < 0 ? "text-red-300" : "text-emerald-300"
                     }`}>
@@ -280,10 +402,19 @@ export default function EscrowCashFlowPage({ embedded, initialProjectId }: { emb
             <div className="flex items-center gap-1">
               <span className="w-3 h-3 bg-yellow-100 rounded-sm border border-yellow-300 inline-block"></span> الفترة الحالية
             </div>
+            <div className="flex items-center gap-1">
+              <span className="w-3 h-3 bg-emerald-100 rounded-sm border border-emerald-300 inline-block"></span> إيرادات
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="w-3 h-3 bg-red-100 rounded-sm border border-red-300 inline-block"></span> مصروفات
+            </div>
           </div>
 
           <div className="mt-2 text-[9px] text-gray-400">
-            📊 المصدر: إعدادات التدفق النقدي المحفوظة (project_cash_flow_settings) — نفس المصدر المستخدم في المحفظة الديناميكية
+            📊 المصدر: جدول الامتصاص — 80% خلال الإنشاء (11 شهر) + 20% بعد التسليم | جدول الدفع: 10% حجز + 50% أقساط إنشاء + 40% تسليم (قابل للتعديل)
+          </div>
+          <div className="mt-1 text-[9px] text-gray-400">
+            🏛️ حجز 5% من إجمالي المودع وفقاً لقانون رقم 8 لسنة 2007 (المادة 14) — يُفرج بعد 12 شهراً من تسجيل الوحدات
           </div>
         </div>
       )}

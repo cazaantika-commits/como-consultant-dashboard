@@ -56,7 +56,7 @@ interface DefaultItemDef {
   nameAr: string;
   category: Category;
   /** Which display section this belongs to in جدول الانعكاس */
-  section: "paid" | "design" | "offplan" | "construction" | "escrow";
+  section: "paid" | "design" | "offplan" | "construction" | "escrow" | "revenue";
   sortOrder: number;
   fundingSource: FundingSource;
   distributionMethod: DistributionMethod;
@@ -80,7 +80,7 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
   const offplanScenarios: Scenario[] = ["offplan_escrow", "offplan_construction"];
   const isOffplan = scenario === "offplan_escrow" || scenario === "offplan_construction";
 
-  return [
+  return ([
     // ═══ الأرض ═══
     {
       itemKey: "land_cost", nameAr: "سعر الأرض", category: "land", section: "paid", sortOrder: 1,
@@ -308,8 +308,16 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
       scenarios: offplanScenarios, amountKey: "salesCommission",
     },
 
-    // الإيرادات أُزيلت — لا علاقة لها بصفحة التكاليف
-  ].filter(item => item.scenarios.includes(scenario));
+    // ═══ الإيرادات (تُودع في حساب الضمان) — بند واحد يُحسب بجدول الامتصاص ═══
+    // Revenue is now computed dynamically via absorption schedule in getProjectMonthlyReport.
+    // We keep a single placeholder item so the settings page can show/configure it.
+    {
+      itemKey: "revenue_total", nameAr: "إيرادات المبيعات (جدول الامتصاص)", category: "revenue", section: "revenue", sortOrder: 70,
+      fundingSource: "escrow", distributionMethod: "custom",
+      scenarios: offplanScenarios,
+      amountFraction: { of: "constructionCost", ratio: 1.0 },
+    },
+  ] as DefaultItemDef[]).filter(item => item.scenarios.includes(scenario));
 }
 
 // ─── Helper: compute amount for an item ──────────────────────────────────────
@@ -330,10 +338,8 @@ function computeItemAmount(
   }
   if (def.amountFraction) {
     if (def.amountFraction.of === "constructionCost") {
-      // Special case for revenue items
-      if (def.itemKey === "revenue_booking") return costs.totalRevenue * 0.20;
-      if (def.itemKey === "revenue_construction") return costs.totalRevenue * 0.30;
-      if (def.itemKey === "revenue_handover") return costs.totalRevenue * 0.50;
+      // Revenue total = full totalRevenue (absorption schedule distributes it monthly)
+      if (def.itemKey === "revenue_total") return costs.totalRevenue;
       return costs.constructionCost * def.amountFraction.ratio;
     }
   }
@@ -391,7 +397,7 @@ const settingItemSchema = z.object({
   itemKey: z.string(),
   nameAr: z.string(),
   category: z.enum(CATEGORIES),
-  section: z.enum(["paid", "design", "offplan", "construction", "escrow"]).optional(),
+  section: z.enum(["paid", "design", "offplan", "construction", "escrow", "revenue"]).optional(),
   isActive: z.boolean().default(true),
   sortOrder: z.number().default(0),
   amountOverride: z.number().nullable().optional(),
@@ -464,7 +470,7 @@ export const cashFlowSettingsRouter = router({
         // Find default items not yet saved in DB (new items added to defaults after initial save)
         const existingKeys = new Set(existing.map(s => s.itemKey));
         const missingDefaults = defaultDefs
-          .filter(def => !existingKeys.has(def.itemKey) && def.category !== "revenue")
+          .filter(def => !existingKeys.has(def.itemKey))
           .map(def => {
             const amount = costs ? computeItemAmount(def, costs) : 0;
             let defaultStartMonth: number | null = null;
@@ -525,10 +531,9 @@ export const cashFlowSettingsRouter = router({
           defaultSortOrderByKey[def.itemKey] = def.sortOrder;
           defaultNameArByKey[def.itemKey] = def.nameAr;
         }
-        // Return existing settings merged with missing defaults, filtered to remove revenue items
+        // Return existing settings merged with missing defaults (including revenue items)
         const mergedSettings = [
           ...existing
-            .filter(s => s.category !== "revenue")
             .map(s => {
               const computedAmount = s.amountOverride
                 ? parseFloat(s.amountOverride)
@@ -1798,12 +1803,14 @@ export const cashFlowSettingsRouter = router({
       investorTotal: number;
       escrowTotal: number;
       grandTotal: number;
+      totalProjectCost?: number;
       monthlyInvestor: number[];
       monthlyEscrow: number[];
       monthlyTotal: number[];
       sectionTotals: Record<string, number>;
       /** Monthly amounts broken down by section (paid/design/offplan/construction/escrow) */
       monthlyBySection: Record<string, number[]>;
+      monthlyInvestorBySection?: Record<string, number[]>;
     }
 
     interface PortfolioProject {
@@ -1811,7 +1818,12 @@ export const cashFlowSettingsRouter = router({
       name: string;
       startDate: string;
       totalMonths: number;
+      totalCosts?: number;
       totalRevenue: number;
+      revenueSource?: string;
+      activeScenario?: string;
+      scenarioLabel?: string;
+      financingScenario?: string;
       phaseInfo: {
         design: { duration: number; start: number };
         offplan: { duration: number; start: number };
@@ -1972,7 +1984,7 @@ export const cashFlowSettingsRouter = router({
           escrow: new Array(totalMonths).fill(0),
         };
 
-        for (const [, item] of itemsMap) {
+        for (const [, item] of Array.from(itemsMap)) {
           const effectiveSource = sc === "no_offplan" ? "investor" : item.fundingSource;
           sectionTotals[item.section] = (sectionTotals[item.section] || 0) + item.amount;
           if (!monthlyBySection[item.section]) monthlyBySection[item.section] = new Array(totalMonths).fill(0);
@@ -2082,11 +2094,106 @@ export const cashFlowSettingsRouter = router({
         )
       );
 
+      // ═══ Absorption Schedule Revenue Computation ═══
+      // Default absorption: 80% sold during construction (11 months), 20% post-handover (cash)
+      const DEFAULT_ABSORPTION = [5, 8, 15, 10, 12, 5, 5, 5, 5, 5, 5]; // = 80%
+      const POST_HANDOVER_PCT = 20; // % sold after handover (100% cash)
+      const BOOKING_PCT = 10; // % of unit price paid at booking
+      const CONSTRUCTION_PCT = 50; // % paid in installments during construction
+      const HANDOVER_PCT = 40; // % paid at handover
+
+      // Check if there's a saved absorption schedule in settings (customJson of revenue_total item)
+      let absorptionSchedule = DEFAULT_ABSORPTION;
+      let postHandoverPct = POST_HANDOVER_PCT;
+      const savedRevenueItem = savedSettings.find(s => s.itemKey === "revenue_total");
+      if (savedRevenueItem?.customJson) {
+        try {
+          const parsed = JSON.parse(savedRevenueItem.customJson);
+          if (parsed.absorption && Array.isArray(parsed.absorption)) {
+            absorptionSchedule = parsed.absorption;
+          }
+          if (parsed.postHandoverPct !== undefined) {
+            postHandoverPct = parsed.postHandoverPct;
+          }
+        } catch { /* use defaults */ }
+      }
+
+      // Compute revenue monthly amounts using absorption schedule
+      function computeAbsorptionRevenue(): number[] {
+        const revenueMonthly = new Array(totalMonths).fill(0);
+        const totalRevenue = costs?.totalRevenue || 0;
+        if (totalRevenue <= 0 || scenario === "no_offplan") return revenueMonthly;
+
+        const constructionPhase = phases.find(p => p.type === "construction");
+        const handoverPhase = phases.find(p => p.type === "handover");
+        if (!constructionPhase) return revenueMonthly;
+
+        const constStart = constructionPhase.startMonth; // 1-based
+        const handoverMonth = handoverPhase ? handoverPhase.startMonth : constStart + constructionPhase.duration;
+
+        // For each month in absorption schedule, compute revenue from units sold that month
+        for (let i = 0; i < absorptionSchedule.length; i++) {
+          const salesPct = absorptionSchedule[i] / 100; // e.g., 0.05 for 5%
+          if (salesPct <= 0) continue;
+
+          const unitRevenue = totalRevenue * salesPct; // Revenue from units sold this month
+          const saleMonth = constStart + i; // Absolute month (1-based)
+          if (saleMonth > totalMonths) continue;
+
+          // 1) Booking payment (10%) — immediate at sale month
+          const bookingAmount = unitRevenue * (BOOKING_PCT / 100);
+          const bookingIdx = saleMonth - 1; // 0-based
+          if (bookingIdx >= 0 && bookingIdx < totalMonths) {
+            revenueMonthly[bookingIdx] += bookingAmount;
+          }
+
+          // 2) Construction installments (50%) — spread from sale month+1 to handover-1
+          const constructionAmount = unitRevenue * (CONSTRUCTION_PCT / 100);
+          const installStart = saleMonth + 1;
+          const installEnd = handoverMonth - 1;
+          const installMonths = installEnd - installStart + 1;
+          if (installMonths > 0) {
+            const perMonth = constructionAmount / installMonths;
+            for (let m = installStart; m <= installEnd && m <= totalMonths; m++) {
+              revenueMonthly[m - 1] += perMonth; // 0-based index
+            }
+          } else {
+            // If sale is close to handover, add to handover
+            const hIdx = handoverMonth - 1;
+            if (hIdx >= 0 && hIdx < totalMonths) {
+              revenueMonthly[hIdx] += constructionAmount;
+            }
+          }
+
+          // 3) Handover payment (40%) — at handover month
+          const handoverAmount = unitRevenue * (HANDOVER_PCT / 100);
+          const hIdx = handoverMonth - 1;
+          if (hIdx >= 0 && hIdx < totalMonths) {
+            revenueMonthly[hIdx] += handoverAmount;
+          }
+        }
+
+        // 4) Post-handover sales (20%) — 100% cash at handover+1 month
+        const postHandoverRevenue = totalRevenue * (postHandoverPct / 100);
+        const postHandoverIdx = handoverMonth; // month after handover (0-based = handoverMonth)
+        if (postHandoverIdx >= 0 && postHandoverIdx < totalMonths) {
+          revenueMonthly[postHandoverIdx] += postHandoverRevenue;
+        } else if (totalMonths > 0) {
+          // If beyond timeline, add to last month
+          revenueMonthly[totalMonths - 1] += postHandoverRevenue;
+        }
+
+        return revenueMonthly;
+      }
+
+      const absorptionRevenueMonthly = computeAbsorptionRevenue();
+
       // Build items with monthly distributions
       interface ReportItem {
         itemKey: string;
         nameAr: string;
         section: string;
+        category: string;
         fundingSource: string;
         totalAmount: number;
         monthlyAmounts: number[];
@@ -2130,10 +2237,11 @@ export const cashFlowSettingsRouter = router({
             itemKey: s.itemKey,
             nameAr: defForKey?.nameAr ?? s.nameAr,
             section: itemSection,
+            category: s.category || defForKey?.category || "other",
             fundingSource: s.fundingSource || defForKey?.fundingSource || "investor",
             totalAmount: s.isActive ? amount : 0,
             monthlyAmounts: monthly,
-            isActive: s.isActive ?? true,
+            isActive: !!s.isActive,
           });
         }
       } else {
@@ -2174,11 +2282,20 @@ export const cashFlowSettingsRouter = router({
             itemKey: def.itemKey,
             nameAr: def.nameAr,
             section: def.section || "construction",
+            category: def.category || "other",
             fundingSource: def.fundingSource,
             totalAmount: amount,
             monthlyAmounts: monthly,
             isActive: true,
           });
+        }
+      }
+
+      // Override revenue items with absorption-based monthly distribution
+      for (const item of items) {
+        if (item.itemKey === "revenue_total" && item.category === "revenue") {
+          item.monthlyAmounts = absorptionRevenueMonthly;
+          item.totalAmount = absorptionRevenueMonthly.reduce((s, v) => s + v, 0);
         }
       }
 
@@ -2192,13 +2309,33 @@ export const cashFlowSettingsRouter = router({
 
       // Compute totals per month (all active items)
       const activeItems = items.filter(i => i.isActive);
+      const expenseItems = activeItems.filter(i => i.category !== "revenue");
+      const revenueItems = activeItems.filter(i => i.category === "revenue");
+
+      const expensePerMonth = new Array(totalMonths).fill(0);
+      const revenuePerMonth = new Array(totalMonths).fill(0);
       const totalPerMonth = new Array(totalMonths).fill(0);
-      for (const item of activeItems) {
+
+      for (const item of expenseItems) {
         for (let m = 0; m < totalMonths; m++) {
+          expensePerMonth[m] += item.monthlyAmounts[m] || 0;
           totalPerMonth[m] += item.monthlyAmounts[m] || 0;
         }
       }
-      const grandTotal = totalPerMonth.reduce((s, v) => s + v, 0);
+      for (const item of revenueItems) {
+        for (let m = 0; m < totalMonths; m++) {
+          revenuePerMonth[m] += item.monthlyAmounts[m] || 0;
+        }
+      }
+      const grandTotal = expensePerMonth.reduce((s, v) => s + v, 0);
+      const grandRevenue = revenuePerMonth.reduce((s, v) => s + v, 0);
+
+      // RERA 5% retention calculation
+      const totalDeposited = grandRevenue; // Total deposited in escrow
+      const retentionAmount = totalDeposited * 0.05; // 5% of total deposited (Article 14, Law 8/2007)
+      const netSurplus = grandRevenue - grandTotal; // Revenue - Expenses
+      const releasedAtHandover = netSurplus - retentionAmount; // 95% released at handover
+      const releasedAfter12Months = retentionAmount; // 5% released after defect liability period
 
       return {
         projectId: project.id,
@@ -2218,12 +2355,35 @@ export const cashFlowSettingsRouter = router({
           itemKey: i.itemKey,
           nameAr: i.nameAr,
           section: i.section,
+          category: i.category,
           fundingSource: i.fundingSource,
           totalAmount: i.totalAmount,
           monthlyAmounts: i.monthlyAmounts,
         })),
         totalPerMonth,
+        expensePerMonth,
+        revenuePerMonth,
         grandTotal,
+        grandRevenue,
+        // Settlement at project completion (RERA Law 8/2007)
+        settlement: {
+          totalDeposited,
+          totalExpenses: grandTotal,
+          netSurplus,
+          retentionAmount,
+          retentionPct: 0.05,
+          releasedAtHandover: Math.max(0, releasedAtHandover),
+          releasedAfter12Months,
+        },
+        // Absorption schedule info for frontend display
+        absorptionInfo: {
+          schedule: absorptionSchedule,
+          postHandoverPct,
+          bookingPct: BOOKING_PCT,
+          constructionPct: CONSTRUCTION_PCT,
+          handoverPct: HANDOVER_PCT,
+          totalSoldDuringConstruction: absorptionSchedule.reduce((s, v) => s + v, 0),
+        },
       };
     }),
 });
@@ -2284,9 +2444,7 @@ function computeItemAmountByKey(
     surveyor_fee: costs.surveyorFees,
     rera_audit: costs.reraAuditReportFee,
     rera_inspection: costs.reraInspectionReportFee,
-    revenue_booking: costs.totalRevenue * 0.20,
-    revenue_construction: costs.totalRevenue * 0.30,
-    revenue_handover: costs.totalRevenue * 0.50,
+    revenue_total: costs.totalRevenue,
   };
   return keyMap[itemKey] || 0;
 }

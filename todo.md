@@ -835,3 +835,16 @@
 - [x] Customize portfolio summary report: mall (مركز مجان التجاري) is non-sale project — show costs/investor amounts but hide revenue/profit/margins, show "—" instead
 - [x] Fix monthly distribution discrepancy in portfolio summary report — now reads user-saved settings (options + delays) from DB and applies same delay logic as original portfolio
 - [x] Add BUA, construction cost per sqft, and total construction cost (BUA × price) as visible fields in the project info card (بطاقة المشروع) in the feasibility summary
+- [x] Add escrow revenue item definitions (10% booking, 50% construction, 40% handover) to getDefaultItemDefs
+- [x] Make escrow revenue distribution editable from settings page (same as other items)
+- [x] Display revenues in EscrowCashFlowPage as a separate section (above or below expenses)
+- [x] Calculate and display running monthly balance (revenues - expenses) in escrow page
+- [x] Add settlement summary at project completion: 95% released immediately, 5% retained for 12 months (RERA Law 8/2007 Article 14)
+- [x] Show two-phase payout: amount at handover + amount after defect liability period (12 months)
+- [x] Implement absorption schedule for escrow revenue (80% during construction, 20% post-handover)
+- [x] Default absorption: [5%, 8%, 15%, 10%, 12%, 5%, 5%, 5%, 5%, 5%, 5%] = 80% over 11 months from construction start
+- [x] Each sold unit pays: 10% booking (immediate), 50% construction installments (spread to handover), 40% at handover
+- [x] 20% post-handover units pay 100% cash
+- [x] Make absorption schedule editable from settings
+- [x] Apply RERA 5% retention on total deposited amount
+- [x] Show settlement: 95% at handover + 5% after 12 months
