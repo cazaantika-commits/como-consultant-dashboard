@@ -793,10 +793,22 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
                             <span className="font-bold text-gray-800" dir="ltr">{fmtFull(parseFloat(selectedProject.landPrice))} AED</span>
                           </div>
                         )}
+                        {selectedProject?.manualBuaSqft && parseFloat(selectedProject.manualBuaSqft) > 0 && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-gray-400 font-medium">BUA:</span>
+                            <span className="font-bold text-gray-800" dir="ltr">{fmtFull(parseFloat(selectedProject.manualBuaSqft))} sqft</span>
+                          </div>
+                        )}
                         {selectedProject?.estimatedConstructionPricePerSqft && parseFloat(selectedProject.estimatedConstructionPricePerSqft) > 0 && (
                           <div className="flex items-center gap-1.5">
-                            <span className="text-gray-400 font-medium">تكلفة البناء/قدم:</span>
-                            <span className="font-bold text-gray-800" dir="ltr">{parseFloat(selectedProject.estimatedConstructionPricePerSqft).toFixed(0)} AED</span>
+                            <span className="text-gray-400 font-medium">سعر القدم:</span>
+                            <span className="font-bold text-gray-800" dir="ltr">{parseFloat(selectedProject.estimatedConstructionPricePerSqft).toFixed(0)} AED/sqft</span>
+                          </div>
+                        )}
+                        {realCosts && realCosts.constructionCost > 0 && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-gray-400 font-medium">تكلفة الإنشاء:</span>
+                            <span className="font-bold text-orange-700" dir="ltr">{fmtFull(realCosts.constructionCost)} AED</span>
                           </div>
                         )}
                         {(selectedProject?.preConMonths || selectedProject?.constructionMonths) && (

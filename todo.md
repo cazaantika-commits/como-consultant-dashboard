@@ -834,3 +834,4 @@
 - [x] Add "تكلفة الإنشاء" (BUA × construction cost per sqft) as a visible line item in the feasibility summary costs section
 - [x] Customize portfolio summary report: mall (مركز مجان التجاري) is non-sale project — show costs/investor amounts but hide revenue/profit/margins, show "—" instead
 - [x] Fix monthly distribution discrepancy in portfolio summary report — now reads user-saved settings (options + delays) from DB and applies same delay logic as original portfolio
+- [x] Add BUA, construction cost per sqft, and total construction cost (BUA × price) as visible fields in the project info card (بطاقة المشروع) in the feasibility summary
