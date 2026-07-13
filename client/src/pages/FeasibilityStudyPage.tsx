@@ -14,11 +14,10 @@ import {
   Sparkles, Copy, Brain, Globe, FolderOpen, ShieldCheck, Users,
   Landmark, Percent, ChevronDown, BookOpen, Scale, AlertTriangle,
   BarChart2, Target, Briefcase, Layers, CheckCircle2, ArrowDownCircle,
-  SquareStack, LandPlot, Warehouse, ShoppingBag,
+  SquareStack, LandPlot, Warehouse, ShoppingBag, Clock, Calendar, Hammer, Info,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import CostsCashFlowTab from "@/components/feasibility/CostsCashFlowTab";
-// Joelle tabs removed per user request
 import CashFlowSettingsPage from "@/pages/CashFlowSettingsPage";
 import CapitalScheduleTablePage from "@/pages/CapitalScheduleTablePage";
 import { calculateProjectCosts } from "@/lib/projectCostsCalc";
@@ -698,6 +697,100 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
                     </div>
                   </div>
 
+                  {/* ══════ SECTION 1B: PROJECT INFO CARD ══════ */}
+                  <div className="rounded-xl bg-white border border-gray-200 shadow-sm overflow-hidden">
+                    <div className="px-4 py-1.5 bg-gradient-to-l from-gray-50 to-slate-50/40 border-b border-gray-100 flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-gray-600 to-slate-700 flex items-center justify-center">
+                        <Info className="w-3 h-3 text-white" />
+                      </div>
+                      <h3 className="text-xs font-bold text-gray-800">بطاقة المشروع</h3>
+                    </div>
+                    <div className="px-3 py-2">
+                      <div className="grid grid-cols-3 gap-x-4 gap-y-1.5 text-[11px]" dir="rtl">
+                        {selectedProject?.permittedUse && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-gray-400 font-medium">الاستخدام:</span>
+                            <span className="font-bold text-gray-800">{selectedProject.permittedUse}</span>
+                          </div>
+                        )}
+                        {selectedProject?.masterDevName && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-gray-400 font-medium">المطور الرئيسي:</span>
+                            <span className="font-bold text-gray-800">{selectedProject.masterDevName}</span>
+                          </div>
+                        )}
+                        {selectedProject?.ownershipType && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-gray-400 font-medium">الملكية:</span>
+                            <span className="font-bold text-gray-800">{selectedProject.ownershipType}</span>
+                          </div>
+                        )}
+                        {selectedProject?.titleDeedNumber && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-gray-400 font-medium">سند الملكية:</span>
+                            <span className="font-bold text-gray-800">{selectedProject.titleDeedNumber}</span>
+                          </div>
+                        )}
+                        {selectedProject?.areaCode && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-gray-400 font-medium">المنطقة:</span>
+                            <span className="font-bold text-gray-800">{selectedProject.areaCode}</span>
+                          </div>
+                        )}
+                        {selectedProject?.landPrice && parseFloat(selectedProject.landPrice) > 0 && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-gray-400 font-medium">سعر الأرض:</span>
+                            <span className="font-bold text-gray-800" dir="ltr">{fmtFull(parseFloat(selectedProject.landPrice))} AED</span>
+                          </div>
+                        )}
+                        {selectedProject?.estimatedConstructionPricePerSqft && parseFloat(selectedProject.estimatedConstructionPricePerSqft) > 0 && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-gray-400 font-medium">تكلفة البناء/قدم:</span>
+                            <span className="font-bold text-gray-800" dir="ltr">{parseFloat(selectedProject.estimatedConstructionPricePerSqft).toFixed(0)} AED</span>
+                          </div>
+                        )}
+                        {(selectedProject?.preConMonths || selectedProject?.constructionMonths) && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-gray-400 font-medium">المدة:</span>
+                            <span className="font-bold text-gray-800">
+                              {selectedProject.preConMonths || 0} + {selectedProject.constructionMonths || 0} + {selectedProject.handoverMonths || 0} شهر
+                            </span>
+                          </div>
+                        )}
+                        {selectedProject?.developerFeePct && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-gray-400 font-medium">أتعاب المطور:</span>
+                            <span className="font-bold text-gray-800">{selectedProject.developerFeePct}%</span>
+                          </div>
+                        )}
+                        {selectedProject?.salesCommissionPct && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-gray-400 font-medium">عمولة المبيعات:</span>
+                            <span className="font-bold text-gray-800">{selectedProject.salesCommissionPct}%</span>
+                          </div>
+                        )}
+                        {selectedProject?.marketingPct && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-gray-400 font-medium">التسويق:</span>
+                            <span className="font-bold text-gray-800">{selectedProject.marketingPct}%</span>
+                          </div>
+                        )}
+                        {selectedProject?.designFeePct && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-gray-400 font-medium">رسوم التصميم:</span>
+                            <span className="font-bold text-gray-800">{selectedProject.designFeePct}%</span>
+                          </div>
+                        )}
+                        {selectedProject?.financingScenario && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-gray-400 font-medium">سيناريو التمويل:</span>
+                            <span className="font-bold text-gray-800">{selectedProject.financingScenario === 'offplan_escrow' ? 'أوف بلان + ضمان' : selectedProject.financingScenario === 'construction_loan' ? 'قرض بناء' : selectedProject.financingScenario}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                   {/* ══════ SECTION 2: REVENUE ══════ */}
                   <div className="rounded-xl bg-white border border-emerald-200/60 shadow-sm overflow-hidden">
                     <div className="px-4 py-2 bg-gradient-to-l from-emerald-50 to-teal-50/40 border-b border-emerald-100 flex items-center gap-2">
@@ -707,8 +800,8 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
                       <h3 className="text-xs font-bold text-emerald-900">إجمالي الإيرادات المتوقعة</h3>
                     </div>
                     <div className="px-4 py-3">
-                      <div className="text-2xl font-black text-emerald-800 tabular-nums mb-2" dir="ltr">
-                        {fmtFull(totalRevenueVal)} <span className="text-xs font-normal text-emerald-500">AED</span>
+                      <div className="text-3xl font-black text-emerald-800 tabular-nums mb-2" dir="ltr">
+                        {fmtFull(totalRevenueVal)} <span className="text-sm font-normal text-emerald-500">AED</span>
                       </div>
                       {totalRevenueVal === 0 && (
                         <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 mb-2">
@@ -725,7 +818,7 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
                           ].filter(r => r.val > 0).map(r => (
                             <div key={r.label} className={`rounded-lg border px-2 py-1.5 ${r.color}`}>
                               <div className="flex items-center gap-1 mb-0.5">{r.icon}<span className="text-[9px] font-bold">{r.label}</span></div>
-                              <div className="text-xs font-black tabular-nums" dir="ltr">{fmtFull(r.val)}</div>
+                              <div className="text-sm font-black tabular-nums" dir="ltr">{fmtFull(r.val)}</div>
                               <div className="text-[8px] opacity-70">{totalRevenueVal > 0 ? ((r.val / totalRevenueVal) * 100).toFixed(1) : 0}%</div>
                             </div>
                           ))}
@@ -747,8 +840,8 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
                         </div>
                       </div>
                       <div className="px-3 py-2">
-                        <div className="text-lg font-black text-red-800 tabular-nums" dir="ltr">
-                          {fmtFull(totalCostsVal)} <span className="text-[9px] font-normal text-red-400">AED</span>
+                        <div className="text-2xl font-black text-red-800 tabular-nums" dir="ltr">
+                          {fmtFull(totalCostsVal)} <span className="text-[10px] font-normal text-red-400">AED</span>
                         </div>
                       </div>
                     </div>
@@ -763,8 +856,8 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
                         </div>
                       </div>
                       <div className="px-3 py-2">
-                        <div className="text-lg font-black text-indigo-800 tabular-nums" dir="ltr">
-                          {fmtFull(investedCapital)} <span className="text-[9px] font-normal text-indigo-400">AED</span>
+                        <div className="text-2xl font-black text-indigo-800 tabular-nums" dir="ltr">
+                          {fmtFull(investedCapital)} <span className="text-[10px] font-normal text-indigo-400">AED</span>
                         </div>
                       </div>
                     </div>
@@ -783,7 +876,7 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
                       <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-100">
                         <div>
                           <span className="text-[10px] text-gray-500 block">صافي الربح</span>
-                          <div className={`text-xl font-black tabular-nums ${profitVal >= 0 ? 'text-emerald-700' : 'text-red-700'}`} dir="ltr">{fmtFull(profitVal)} <span className="text-[9px] font-normal text-gray-400">AED</span></div>
+                          <div className={`text-2xl font-black tabular-nums ${profitVal >= 0 ? 'text-emerald-700' : 'text-red-700'}`} dir="ltr">{fmtFull(profitVal)} <span className="text-[10px] font-normal text-gray-400">AED</span></div>
                         </div>
                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${profitVal >= 0 ? 'bg-emerald-100' : 'bg-red-100'}`}>
                           <BarChart2 className={`w-5 h-5 ${profitVal >= 0 ? 'text-emerald-600' : 'text-red-600'}`} />
@@ -794,15 +887,15 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
                       <div className="grid grid-cols-3 gap-2 mb-3">
                         <div className="bg-violet-50/80 border border-violet-200/60 rounded-lg p-2 text-center">
                           <div className="text-[9px] text-violet-600 font-medium mb-0.5">ربح/تكلفة</div>
-                          <div className={`text-base font-black tabular-nums ${profitOnCost >= 0 ? 'text-violet-700' : 'text-red-700'}`}>{fmtPct(profitOnCost)}</div>
+                          <div className={`text-lg font-black tabular-nums ${profitOnCost >= 0 ? 'text-violet-700' : 'text-red-700'}`}>{fmtPct(profitOnCost)}</div>
                         </div>
                         <div className="bg-blue-50/80 border border-blue-200/60 rounded-lg p-2 text-center">
                           <div className="text-[9px] text-blue-600 font-medium mb-0.5">ربح/رأس المال</div>
-                          <div className={`text-base font-black tabular-nums ${roiOnCapital >= 0 ? 'text-blue-700' : 'text-red-700'}`}>{fmtPct(roiOnCapital)}</div>
+                          <div className={`text-lg font-black tabular-nums ${roiOnCapital >= 0 ? 'text-blue-700' : 'text-red-700'}`}>{fmtPct(roiOnCapital)}</div>
                         </div>
                         <div className="bg-amber-50/80 border border-amber-200/60 rounded-lg p-2 text-center">
                           <div className="text-[9px] text-amber-600 font-medium mb-0.5">ROI المستثمر</div>
-                          <div className={`text-base font-black tabular-nums ${investorROI >= 0 ? 'text-amber-700' : 'text-red-700'}`}>{fmtPct(investorROI)}</div>
+                          <div className={`text-lg font-black tabular-nums ${investorROI >= 0 ? 'text-amber-700' : 'text-red-700'}`}>{fmtPct(investorROI)}</div>
                         </div>
                       </div>
 
@@ -813,14 +906,14 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
                             <Sparkles className="w-3 h-3 text-orange-500" />
                             <span className="text-[10px] font-bold text-orange-800">كومو (15%)</span>
                           </div>
-                          <div className="text-sm font-black text-orange-800 tabular-nums" dir="ltr">{fmtFull(comoFee)} <span className="text-[8px] font-normal text-orange-500">AED</span></div>
+                          <div className="text-base font-black text-orange-800 tabular-nums" dir="ltr">{fmtFull(comoFee)} <span className="text-[9px] font-normal text-orange-500">AED</span></div>
                         </div>
                         <div className="bg-emerald-50/60 border border-emerald-200/50 rounded-lg px-3 py-2">
                           <div className="flex items-center gap-1.5 mb-1">
                             <Users className="w-3 h-3 text-emerald-500" />
                             <span className="text-[10px] font-bold text-emerald-800">ربح المستثمر</span>
                           </div>
-                          <div className="text-sm font-black text-emerald-800 tabular-nums" dir="ltr">{fmtFull(investorProfit)} <span className="text-[8px] font-normal text-emerald-500">AED</span></div>
+                          <div className="text-base font-black text-emerald-800 tabular-nums" dir="ltr">{fmtFull(investorProfit)} <span className="text-[9px] font-normal text-emerald-500">AED</span></div>
                         </div>
                       </div>
                     </div>

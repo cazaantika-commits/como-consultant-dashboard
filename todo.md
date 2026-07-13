@@ -823,3 +823,6 @@
 - [x] Fix revenue discrepancy: projectCostsCalc.ts incorrectly absorbed surplus area into retail-large and office-large rows (is2br: true). Only residential 2BR should absorb surplus. Fixed by setting is2br: false on retail/office rows. Revenue now matches pricing tab exactly (682,616,702 AED for project 2).
 - [x] Remove Joule recommendations section from feasibility summary page
 - [x] Reduce row heights and spacing in feasibility summary to show all info at first glance (compact layout)
+- [x] Add project info card (بطاقة المشروع) to feasibility summary showing: permitted use, master dev, ownership, title deed, area code, land price, construction cost/sqft, durations, developer fee%, sales commission%, marketing%, design fee%, financing scenario
+- [x] Restore large number sizes for revenue/costs/profit while keeping spacing compact
+- [x] Remove remaining Joule/Joelle comment references from code

@@ -105,7 +105,7 @@ export function calculateProjectCosts(
   const getSellable = (cat: string) => cat === "residential" ? saleableRes : cat === "retail" ? saleableRet : saleableOff;
 
   // Step 1: compute count and avg for each unit type
-  // Use saved counts if available, otherwise compute from pct (Joule's recommendations)
+  // Use saved counts if available, otherwise compute from pct
   const unitData = UNIT_DEFS.map(def => {
     const avgArea = mo ? getAvg(def.pctKey, (mo as any)[def.avgKey]) : 0;
     const savedCount = mo ? (mo as any)[def.countKey] : null;
