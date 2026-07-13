@@ -265,7 +265,8 @@ export default function CapitalScheduleTablePage({
   }, [designMonths, offplanMonthsAll, constructionMonths, handoverMonths]);
 
   // Separate items by section and funding source
-  const allItems = useMemo(() => (settingsData?.settings || []).filter((s: any) => s.isActive !== 0 && s.isActive !== false), [settingsData]);
+  // EXCLUDE revenue items — they are income, not costs, and should not appear in the capital schedule
+  const allItems = useMemo(() => (settingsData?.settings || []).filter((s: any) => s.isActive !== 0 && s.isActive !== false && s.section !== "revenue" && s.category !== "revenue"), [settingsData]);
 
   const paidItems = useMemo(() => allItems.filter((s: any) => s.section === "paid"), [allItems]);
   // Show ALL items per section regardless of fundingSource — fundingSource only affects totals and labels

@@ -1986,7 +1986,9 @@ export const cashFlowSettingsRouter = router({
           escrow: new Array(totalMonths).fill(0),
         };
 
-        for (const [, item] of Array.from(itemsMap)) {
+        for (const [key, item] of Array.from(itemsMap)) {
+          // Skip revenue items — they are income, not costs
+          if (item.section === "revenue" || key === "revenue_total") continue;
           const effectiveSource = sc === "no_offplan" ? "investor" : item.fundingSource;
           sectionTotals[item.section] = (sectionTotals[item.section] || 0) + item.amount;
           if (!monthlyBySection[item.section]) monthlyBySection[item.section] = new Array(totalMonths).fill(0);
