@@ -851,3 +851,7 @@
 - [x] Upgrade Portfolio Summary Report style to match Capital Portfolio Export (dark header, summary cards, phase colors, legend, footer)
 - [x] Update financial engine specification with user corrections (RERA unit fees, community fees, inspection fees, developer fees by scenario, progress payments, milestones)
 - [x] Ensure every number remains editable and auto-propagates to all reports (verified: all numbers editable from بطاقة المشروع or إعدادات التدفق النقدي, changes auto-propagate via tRPC queries)
+- [x] Build new financial engine module (server/financialEngine.ts) — single clean file with pure functions
+- [x] Write comprehensive vitest tests for financial engine with real project numbers — 46 tests passing
+- [x] Wire new engine into PortfolioSummaryReport and Capital Portfolio via adapter (financialEngineAdapter.ts) — 67 tests passing
+- [x] Verify end-to-end: every number editable and auto-propagates (adapter maps engine output to existing API shape)
