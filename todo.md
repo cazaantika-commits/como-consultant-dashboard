@@ -815,3 +815,4 @@
 - [x] Add COMO fee (15% of profit), investor profit, and ROI on investor capital
 - [x] Add revenue breakdown (residential/retail/offices) in summary
 - [x] Use soft colored backgrounds, large icons in circles, clean typography
+- [x] Fix profit inconsistency: summary shows 86.4M profit but scenario comparison shows 96.4M — unify cost source

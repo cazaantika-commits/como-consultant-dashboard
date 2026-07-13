@@ -621,13 +621,12 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
               // Investor's actual capital outlay (from settings = paid + investor items)
               const roiOnCapital = investedCapital > 0 ? (profitVal / investedCapital) * 100 : 0;
 
-              // 3-scenario comparison
+              // 3-scenario comparison — uses same totalCostsVal from cashFlowSettings
+              // Only revenue changes per scenario (±10%), costs stay the same
               const scenarioCalc = (sc: "optimistic" | "base" | "conservative") => {
-                const c = calculateProjectCosts(selectedProject, moQuery.data, cpQuery.data, sc);
-                if (!c) return { revenue: 0, profit: 0, margin: 0 };
-                const rev = c.totalRevenue || 0;
-                const cost = c.totalCosts || 0;
-                const p = rev - cost;
+                const factor = sc === "optimistic" ? 1.1 : sc === "conservative" ? 0.9 : 1.0;
+                const rev = totalRevenueVal * factor;
+                const p = rev - totalCostsVal;
                 return { revenue: rev, profit: p, margin: rev > 0 ? (p / rev) * 100 : 0 };
               };
               const opt = scenarioCalc("optimistic");
