@@ -667,8 +667,34 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
               const revRet = realCosts.revenueRet || 0;
               const revOff = realCosts.revenueOff || 0;
 
+              const hasNoGFA = gfaResSqft === 0 && gfaRetSqft === 0 && gfaOffSqft === 0;
+              const hasNoRevenue = totalRevenueVal === 0;
               return (
                 <div className="space-y-6">
+
+                  {/* ══════ WARNING BANNERS ══════ */}
+                  {hasNoGFA && (
+                    <div className="rounded-xl border-2 border-amber-300 bg-amber-50 px-5 py-4 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                        <AlertTriangle className="w-5 h-5 text-amber-600" />
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-amber-800">بيانات المساحات غير مكتملة</p>
+                        <p className="text-xs text-amber-600 mt-0.5">يرجى إدخال بيانات GFA (سكني / تجاري / مكاتب) في بطاقة المشروع لحساب الإيرادات والمساحات القابلة للبيع</p>
+                      </div>
+                    </div>
+                  )}
+                  {!hasNoGFA && hasNoRevenue && (
+                    <div className="rounded-xl border-2 border-blue-300 bg-blue-50 px-5 py-4 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                        <AlertTriangle className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-blue-800">الإيرادات = صفر</p>
+                        <p className="text-xs text-blue-600 mt-0.5">يرجى إدخال عدد الوحدات أو نسب التوزيع في تبويب التسعير لحساب الإيرادات</p>
+                      </div>
+                    </div>
+                  )}
 
                   {/* ══════ SECTION 1: PROJECT INFO HEADER ══════ */}
                   <div className="rounded-2xl bg-gradient-to-l from-gray-900 via-slate-800 to-slate-900 px-8 py-6 shadow-xl relative overflow-hidden">

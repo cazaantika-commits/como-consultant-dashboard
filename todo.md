@@ -817,3 +817,6 @@
 - [x] Use soft colored backgrounds, large icons in circles, clean typography
 - [x] Fix profit inconsistency: summary shows 86.4M profit but scenario comparison shows 96.4M — unify cost source
 - [x] Fix revenue in summary: must match pricing tab exactly — if pricing tab shows 0, summary shows 0 (no auto-calc from percentages)
+- [x] Verify revenue consistency between pricing tab and summary for all projects
+- [x] Add GFA warning banner in summary when GFA data is missing from project card
+- [x] Ensure price editing works correctly from pricing tab and reflects in summary (query invalidation added)

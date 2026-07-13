@@ -118,12 +118,13 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
     setDirty(false);
   }, [projectId]);
 
+  const utils = trpc.useUtils();
   const moSaveMutation = trpc.marketOverview.save.useMutation({
-    onSuccess: () => { moInitialized.current = false; moQuery.refetch(); },
+    onSuccess: () => { moInitialized.current = false; moQuery.refetch(); utils.marketOverview.getByProject.invalidate(projectId || 0); },
     onError: () => toast.error("خطأ في الحفظ"),
   });
   const cpSaveMutation = trpc.competitionPricing.save.useMutation({
-    onSuccess: () => { cpInitialized.current = false; cpQuery.refetch(); toast.success("تم الحفظ بنجاح"); },
+    onSuccess: () => { cpInitialized.current = false; cpQuery.refetch(); utils.competitionPricing.getByProject.invalidate(projectId || 0); toast.success("تم الحفظ بنجاح"); },
     onError: () => toast.error("خطأ في الحفظ"),
   });
 
