@@ -1115,6 +1115,19 @@ export default function CapitalPortfolioPage({ onBack }: Props) {
             <Download style={{ width: 14, height: 14 }} /> {isExporting ? "جاري التوليد..." : "تصدير PDF"}
           </button>
 
+          <button
+            onClick={() => window.open('/portfolio-summary-report', '_blank')}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              background: "#1e293b", color: "#fff",
+              border: "1px solid #334155",
+              borderRadius: 10, padding: "6px 14px", cursor: "pointer",
+              fontSize: 12, fontWeight: 700, transition: "all 0.2s",
+            }}
+          >
+            تقرير الملخص
+          </button>
+
           {/* Export Dialog */}
           {showExportDialog && createPortal(
             <div style={{

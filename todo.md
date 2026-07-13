@@ -830,3 +830,4 @@
 - [x] Remove Joelle banner and suggestions table from CostsCashFlowTab (pricing tab)
 - [x] Add PDF export button for feasibility summary report (professional layout)
 - [x] Add HTML export button for feasibility summary report
+- [x] Add new portfolio summary report page (separate from existing capital portfolio) with: details column (revenue, costs, profit, margins, investor required, escrow required, investor paid, investor remaining), project columns, total column, then monthly distribution from August 2026

@@ -69,6 +69,7 @@ import CashFlowReflectionPage from "./pages/CashFlowReflectionPage";
 import CashFlowComparisonPage from "./pages/CashFlowComparisonPage";
 import PortfolioAllScenariosPage from "./pages/PortfolioAllScenariosPage";
 import CapitalPortfolioPage from "./pages/CapitalPortfolioPage";
+import PortfolioSummaryReport from "./pages/PortfolioSummaryReport";
 import UserManagementPage from "./pages/UserManagementPage";
 import ApprovalSettings from "./pages/ApprovalSettings";
 import GeneralRequests from "./pages/GeneralRequests";
@@ -145,6 +146,7 @@ function Router() {
       <Route path="/cashflow-comparison" component={CashFlowComparisonPage} />
       <Route path="/portfolio-scenarios" component={PortfolioAllScenariosPage} />
       <Route path="/capital-portfolio" component={CapitalPortfolioPage} />
+      <Route path="/portfolio-summary-report" component={PortfolioSummaryReport} />
       <Route path="/user-management" component={UserManagementPage} />
       <Route path="/approval-settings" component={ApprovalSettings} />
       <Route path="/internal-messages" component={InternalMessages} />
