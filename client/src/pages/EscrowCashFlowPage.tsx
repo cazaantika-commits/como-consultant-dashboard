@@ -46,11 +46,14 @@ export default function EscrowCashFlowPage({ embedded, initialProjectId }: { emb
 
   const report = reportQuery.data;
 
-  // Build phase spans for the table header
+  // Build phase spans for the table header (only design + construction)
   const phaseSpans = useMemo(() => {
     if (!report) return [];
     const spans: { phase: string; label: string; startCol: number; count: number }[] = [];
     for (const p of report.phases) {
+      // Only show design and construction as timeline phases
+      if (p.type === "offplan" || p.type === "handover" || p.type === "land") continue;
+      if (p.duration <= 0) continue;
       spans.push({
         phase: p.type,
         label: PHASE_LABELS[p.type] || p.type,

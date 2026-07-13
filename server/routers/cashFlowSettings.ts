@@ -223,7 +223,7 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
     {
       itemKey: "bank_fees", nameAr: "رسوم بنكية", category: "admin", section: "construction", sortOrder: 41,
       fundingSource: "investor", distributionMethod: "equal_spread",
-      distributeAcrossPhases: ["construction", "handover"],
+      distributeAcrossPhases: ["construction"],
       scenarios: allScenarios, amountKey: "bankFees",
     },
 
@@ -277,7 +277,7 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
     {
       itemKey: "surveyor_fee", nameAr: "رسوم المساح", category: "construction", section: "escrow", sortOrder: 61,
       fundingSource: "escrow", distributionMethod: "equal_spread",
-      distributeAcrossPhases: ["construction", "handover"],
+      distributeAcrossPhases: ["construction"],
       scenarios: allScenarios, amountKey: "surveyorFees",
     },
     {
@@ -560,9 +560,9 @@ export const cashFlowSettingsRouter = router({
           totalMonths,
           phases: {
             design: { start: phases.find(p => p.type === "design")?.startMonth || 1, duration: durations.design },
-            offplan: { start: phases.find(p => p.type === "offplan")?.startMonth || 3, duration: durations.offplan },
-            construction: { start: phases.find(p => p.type === "construction")?.startMonth || 7, duration: durations.construction },
-            handover: { start: phases.find(p => p.type === "handover")?.startMonth || 23, duration: durations.handover },
+            offplan: { start: phases.find(p => p.type === "offplan")?.startMonth || (durations.design - 1), duration: durations.offplan },
+            construction: { start: phases.find(p => p.type === "construction")?.startMonth || (durations.design + 1), duration: durations.construction },
+            handover: { start: phases.find(p => p.type === "construction")?.startMonth ? (phases.find(p => p.type === "construction")!.startMonth + durations.construction - 1) : (durations.design + durations.construction), duration: 0 },
           },
           startDate: project.startDate || "2026-01",
           projectName: project.name,
@@ -638,9 +638,9 @@ export const cashFlowSettingsRouter = router({
         totalMonths,
         phases: {
           design: { start: phases.find(p => p.type === "design")?.startMonth || 1, duration: durations.design },
-          offplan: { start: phases.find(p => p.type === "offplan")?.startMonth || 3, duration: durations.offplan },
-          construction: { start: phases.find(p => p.type === "construction")?.startMonth || 7, duration: durations.construction },
-          handover: { start: phases.find(p => p.type === "handover")?.startMonth || 23, duration: durations.handover },
+          offplan: { start: phases.find(p => p.type === "offplan")?.startMonth || (durations.design - 1), duration: durations.offplan },
+          construction: { start: phases.find(p => p.type === "construction")?.startMonth || (durations.design + 1), duration: durations.construction },
+          handover: { start: phases.find(p => p.type === "construction")?.startMonth ? (phases.find(p => p.type === "construction")!.startMonth + durations.construction - 1) : (durations.design + durations.construction), duration: 0 },
         },
         startDate: project.startDate || "2026-01",
         projectName: project.name,
@@ -1513,9 +1513,9 @@ export const cashFlowSettingsRouter = router({
       // Phase info for display
       const phaseInfo = {
         design: { duration: durations.design, start: phasesForDisplay.find(p => p.type === "design")?.startMonth || 1 },
-        offplan: { duration: durations.offplan, start: phasesForDisplay.find(p => p.type === "offplan")?.startMonth || 3 },
-        construction: { duration: durations.construction, start: phasesForDisplay.find(p => p.type === "construction")?.startMonth || 7 },
-        handover: { duration: durations.handover, start: phasesForDisplay.find(p => p.type === "handover")?.startMonth || 23 },
+        offplan: { duration: durations.offplan, start: phasesForDisplay.find(p => p.type === "offplan")?.startMonth || (durations.design - 1) },
+        construction: { duration: durations.construction, start: phasesForDisplay.find(p => p.type === "construction")?.startMonth || (durations.design + 1) },
+        handover: { duration: 0, start: phasesForDisplay.find(p => p.type === "construction")?.startMonth ? (phasesForDisplay.find(p => p.type === "construction")!.startMonth + durations.construction - 1) : (durations.design + durations.construction) },
       };
 
       // Build items for each scenario using the same logic as getReflectionData
@@ -1865,9 +1865,9 @@ export const cashFlowSettingsRouter = router({
 
       const phaseInfo = {
         design: { duration: durations.design, start: phasesArrForDisplay.find(p => p.type === "design")?.startMonth || 1 },
-        offplan: { duration: durations.offplan, start: phasesArrForDisplay.find(p => p.type === "offplan")?.startMonth || 3 },
-        construction: { duration: durations.construction, start: phasesArrForDisplay.find(p => p.type === "construction")?.startMonth || 7 },
-        handover: { duration: durations.handover, start: phasesArrForDisplay.find(p => p.type === "handover")?.startMonth || 23 },
+        offplan: { duration: durations.offplan, start: phasesArrForDisplay.find(p => p.type === "offplan")?.startMonth || (durations.design - 1) },
+        construction: { duration: durations.construction, start: phasesArrForDisplay.find(p => p.type === "construction")?.startMonth || (durations.design + 1) },
+        handover: { duration: 0, start: phasesArrForDisplay.find(p => p.type === "construction")?.startMonth ? (phasesArrForDisplay.find(p => p.type === "construction")!.startMonth + durations.construction - 1) : (durations.design + durations.construction) },
       };
 
       // ─── Build scenario data by reusing the EXACT same logic as getCostSettingsComparison ───

@@ -341,49 +341,33 @@ export function calculatePhases(
   offplanDelay = 0,
   scenario: "offplan_escrow" | "offplan_construction" | "no_offplan" = "offplan_escrow"
 ): PhaseConfig[] {
+  // Only 2 real timeline phases: design + construction
+  // Offplan is NOT a separate phase - it's a sales activity ("train") that starts
+  // in last 2 months of design and continues through construction.
+  // Handover happens at end of construction (no separate timeline phase).
   const designStart = 1;
   const designEnd = designStart + d.design - 1;
-
-  let offplanStart: number;
-  let offplanEnd: number;
-  let constructionStart: number;
-
-  if (scenario === "offplan_escrow") {
-    // O1: offplan starts at month 3 (overlaps with design), construction starts after design ends
-    offplanStart = 3 + offplanDelay;
-    offplanEnd = offplanStart + d.offplan - 1;
-    constructionStart = designEnd + 1; // construction starts right after design
-  } else if (scenario === "offplan_construction") {
-    // O2: construction starts after design, offplan starts at month 1 of construction
-    constructionStart = designEnd + 1;
-    offplanStart = constructionStart + offplanDelay;
-    offplanEnd = offplanStart + d.offplan - 1;
-  } else {
-    // O3: no offplan, construction starts after design
-    offplanStart = designEnd + 1;
-    offplanEnd = offplanStart + d.offplan - 1;
-    constructionStart = designEnd + 1;
-  }
-
+  const constructionStart = designEnd + 1; // construction starts right after design
   const constructionEnd = constructionStart + d.construction - 1;
-  const handoverStart = constructionEnd + 1;
+
+  // Offplan activity starts in last 2 months of design (not a timeline phase)
+  const offplanStart = Math.max(1, designEnd - 1); // last 2 months of design
 
   return [
     { type: "land", duration: 0, startMonth: 0 },
     { type: "design", duration: d.design, startMonth: designStart },
-    { type: "offplan", duration: d.offplan, startMonth: offplanStart },
+    { type: "offplan", duration: d.offplan, startMonth: offplanStart }, // kept for backward compat but NOT a timeline phase
     { type: "construction", duration: d.construction, startMonth: constructionStart },
-    { type: "handover", duration: d.handover, startMonth: handoverStart },
+    { type: "handover", duration: 0, startMonth: constructionEnd }, // no separate handover phase
   ];
 }
 
 /**
  * Calculate total months for the project.
- * Since offplan can overlap with design, total = design + construction + handover
- * (offplan doesn't extend the timeline in normal flow)
+ * Only design + construction (no separate offplan or handover phases)
  */
 export function getTotalMonths(d: PhaseDurations): number {
-  return d.design + d.offplan + d.construction + d.handover;
+  return d.design + d.construction;
 }
 
 export function getPhaseMonthRange(phases: PhaseConfig[], phaseType: PhaseType): { start: number; end: number } {
