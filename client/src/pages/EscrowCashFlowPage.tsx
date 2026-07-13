@@ -148,10 +148,10 @@ export default function EscrowCashFlowPage({ embedded, initialProjectId }: { emb
           </div>
 
           {/* Summary Cards */}
-          <div className={`grid ${isOffplan ? "grid-cols-5" : "grid-cols-3"} gap-3 mb-4`}>
+          <div className={`grid ${isOffplan ? "grid-cols-4" : "grid-cols-2"} gap-3 mb-4`}>
             <div className="bg-white rounded-lg border-2 border-red-200 px-3 py-2 shadow-sm">
-              <div className="text-[10px] text-red-600">إجمالي المصاريف</div>
-              <div className="text-sm font-bold text-red-700">{fmt(totalExpenses)} <span className="text-[10px] font-normal text-gray-400">درهم</span></div>
+              <div className="text-[10px] text-red-600">إجمالي مصاريف الضمان</div>
+              <div className="text-sm font-bold text-red-700">{fmt(escrowExpenseTotal)} <span className="text-[10px] font-normal text-gray-400">درهم</span></div>
             </div>
             {isOffplan && (
               <>
@@ -171,10 +171,12 @@ export default function EscrowCashFlowPage({ embedded, initialProjectId }: { emb
                 </div>
               </>
             )}
-            <div className="bg-white rounded-lg border-2 border-orange-300 px-3 py-2 shadow-sm">
-              <div className="text-[10px] text-orange-600 font-medium">إجمالي الإيرادات المعتمدة</div>
-              <div className="text-sm font-bold text-orange-700">{fmt(report.totalRevenue || 0)} <span className="text-[10px] font-normal text-gray-400">درهم</span></div>
-            </div>
+            {!isOffplan && (
+              <div className="bg-white rounded-lg border-2 border-orange-300 px-3 py-2 shadow-sm">
+                <div className="text-[10px] text-orange-600 font-medium">إجمالي الإيرادات المعتمدة</div>
+                <div className="text-sm font-bold text-orange-700">{fmt(report.totalRevenue || 0)} <span className="text-[10px] font-normal text-gray-400">درهم</span></div>
+              </div>
+            )}
           </div>
 
           {/* Absorption Info */}
@@ -245,18 +247,17 @@ export default function EscrowCashFlowPage({ embedded, initialProjectId }: { emb
                   </>
                 )}
 
-                {/* ═══ EXPENSE SECTION ═══ */}
+                {/* ═══ ESCROW EXPENSE SECTION (only escrow-funded items) ═══ */}
                 <tr className="bg-red-100 border-t-2 border-red-300">
                   <td colSpan={2 + report.totalMonths} className="px-2 py-1.5 text-right font-bold text-red-800 text-[11px]">
-                    المصاريف — {isOffplan ? "حساب الضمان + المستثمر" : "إجمالي المصاريف"}
+                    المصاريف — حساب الضمان فقط
                   </td>
                 </tr>
-                {report.items.map((item: any, idx: number) => (
+                {report.items.filter((item: any) => item.fundingSource === "escrow").map((item: any, idx: number) => (
                   <tr key={item.itemKey} className={`${idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"} hover:bg-blue-50/30 transition-colors`}>
                     <td className="px-1 py-1 text-right border-l border-gray-100 font-medium text-gray-800 text-[10px] sticky right-0 z-10 bg-inherit">
-                      <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1 ${item.fundingSource === "escrow" ? "bg-blue-500" : "bg-amber-500"}`}></span>
+                      <span className="inline-block w-1.5 h-1.5 rounded-full mr-1 bg-blue-500"></span>
                       {item.nameAr}
-                      <span className="text-[8px] text-gray-400 mr-1">({item.fundingSource === "escrow" ? "ضمان" : "مستثمر"})</span>
                     </td>
                     <td className="px-1 py-1 text-center border-l border-gray-100 font-bold text-gray-900 tabular-nums text-[10px]">
                       {fmt(item.totalAmount)}
@@ -271,11 +272,11 @@ export default function EscrowCashFlowPage({ embedded, initialProjectId }: { emb
                   </tr>
                 ))}
 
-                {/* Total Expenses Row */}
+                {/* Total Escrow Expenses Row */}
                 <tr className="bg-red-50 border-t-2 border-red-200 font-bold">
-                  <td className="px-1 py-1.5 text-right border-l border-red-200 text-red-800 text-[10px] sticky right-0 z-10 bg-red-50">إجمالي المصاريف</td>
-                  <td className="px-1 py-1.5 text-center border-l border-red-200 text-red-800 tabular-nums text-[10px]">{fmt(totalExpenses)}</td>
-                  {report.totalPerMonth.map((val: number, mi: number) => (
+                  <td className="px-1 py-1.5 text-right border-l border-red-200 text-red-800 text-[10px] sticky right-0 z-10 bg-red-50">إجمالي مصاريف الضمان</td>
+                  <td className="px-1 py-1.5 text-center border-l border-red-200 text-red-800 tabular-nums text-[10px]">{fmt(escrowExpenseTotal)}</td>
+                  {(report.escrowExpensePerMonth || report.totalPerMonth).map((val: number, mi: number) => (
                     <td key={mi} className={`px-1 py-1.5 text-center border-l border-red-200 tabular-nums text-red-700 text-[10px] ${
                       mi === currentMonthIndex ? "bg-yellow-50" : ""
                     }`}>

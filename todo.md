@@ -862,3 +862,4 @@
 - [x] Verify all pages produce correct numbers after switch (67 tests passing, server running, HMR working)
 - [x] Run all existing tests to confirm no regressions (67 tests passing)
 - [x] Fix: Revenue item (765M) was incorrectly included in totalCosts calculation — grandTotal showed 1.38B instead of 616M for Majan G+4P+25. Fixed in CapitalScheduleTablePage, FeasibilityStudyPage, and getPortfolioAllScenarios server endpoint.
+- [x] Fix EscrowCashFlowPage: show ONLY escrow-funded expenses (remove investor-funded items from escrow view)
