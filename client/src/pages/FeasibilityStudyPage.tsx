@@ -180,15 +180,38 @@ function AllProjectsComparison({ projects, onSelectProject }: {
   const allCpQueries = projects.map(p =>
     trpc.competitionPricing.getByProject.useQuery(p.id, { enabled: true })
   );
+  // Load scenarios to get each project's active scenario
+  const scenariosQuery = trpc.cashFlowProgram.getProjectScenarios.useQuery(undefined, { staleTime: 5000 });
+  // Load cashFlowSettings for each project (source of truth for costs)
+  const allSettingsQueries = projects.map(p => {
+    const dbScenario = (scenariosQuery.data as any)?.[p.id] || "offplan_escrow";
+    return trpc.cashFlowSettings.getSettings.useQuery(
+      { projectId: p.id, scenario: dbScenario },
+      { enabled: !!scenariosQuery.data, staleTime: 5000 }
+    );
+  });
 
   const projectData = useMemo(() => {
     return projects.map((p, i) => {
       const mo = allMoQueries[i]?.data;
       const cp = allCpQueries[i]?.data;
+      const settingsData = allSettingsQueries[i]?.data;
       const costs = calculateProjectCosts(p, mo, cp);
       if (!costs) return { project: p, totalCosts: 0, totalRevenue: 0, profit: 0, margin: 0, roi: 0, investedCapital: 0, roiOnCapital: 0, hasApproved: false };
 
-      const totalCosts = costs.totalCosts || 0;
+      // Use grandTotal from cashFlowSettings (same source as Capital Schedule Table)
+      // Fall back to calculateProjectCosts if settings not loaded yet
+      let totalCosts = costs.totalCosts || 0;
+      let investorTotal = 0;
+      if (settingsData?.settings) {
+        const items = settingsData.settings.filter((s: any) => s.isActive !== 0 && s.isActive !== false);
+        const paidT = items.filter((s: any) => s.section === "paid").reduce((sum: number, s: any) => sum + (s.computedAmount || 0), 0);
+        const investorT = items.filter((s: any) => s.fundingSource === "investor" && s.section !== "paid").reduce((sum: number, s: any) => sum + (s.computedAmount || 0), 0);
+        const escrowT = items.filter((s: any) => s.fundingSource === "escrow").reduce((sum: number, s: any) => sum + (s.computedAmount || 0), 0);
+        totalCosts = paidT + investorT + escrowT;
+        investorTotal = paidT + investorT;
+      }
+
       // Use approved revenue if available, otherwise calculated
       const approvedRev = (cp as any)?.approvedRevenue;
       const totalRevenue = (approvedRev && approvedRev > 0) ? approvedRev : (costs.totalRevenue || 0);
@@ -196,12 +219,13 @@ function AllProjectsComparison({ projects, onSelectProject }: {
       const profit = totalRevenue - totalCosts;
       const margin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
       const roi = totalCosts > 0 ? (profit / totalCosts) * 100 : 0;
-      const investedCapital = calcInvestedCapital(costs);
+      // Use investorTotal from settings as invested capital (what investor actually pays)
+      const investedCapital = investorTotal > 0 ? investorTotal : calcInvestedCapital(costs);
       const roiOnCapital = investedCapital > 0 ? (profit / investedCapital) * 100 : 0;
 
       return { project: p, totalCosts, totalRevenue, profit, margin, roi, investedCapital, roiOnCapital, hasApproved };
     });
-  }, [projects, allMoQueries.map(q => q.data), allCpQueries.map(q => q.data)]);
+  }, [projects, allMoQueries.map(q => q.data), allCpQueries.map(q => q.data), allSettingsQueries.map(q => q.data), scenariosQuery.data]);
 
   const totals = useMemo(() => {
     return projectData.reduce((acc, d) => ({
@@ -339,6 +363,17 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
   const selectedProject = (projectsQuery.data || []).find((p: any) => p.id === selectedProjectId);
   const moQuery = trpc.marketOverview.getByProject.useQuery(selectedProjectId || 0, { enabled: !!selectedProjectId });
   const cpQuery = trpc.competitionPricing.getByProject.useQuery(selectedProjectId || 0, { enabled: !!selectedProjectId });
+
+  // Load scenario + cashFlowSettings for the selected project (source of truth for costs)
+  const singleScenarioQuery = trpc.cashFlowProgram.getProjectScenarios.useQuery(undefined, { enabled: isAuthenticated, staleTime: 5000 });
+  const activeScenario = useMemo(() => {
+    if (!selectedProjectId || !singleScenarioQuery.data) return "offplan_escrow";
+    return (singleScenarioQuery.data as any)[selectedProjectId] || "offplan_escrow";
+  }, [selectedProjectId, singleScenarioQuery.data]);
+  const singleSettingsQuery = trpc.cashFlowSettings.getSettings.useQuery(
+    { projectId: selectedProjectId || 0, scenario: activeScenario as any },
+    { enabled: !!selectedProjectId && !!singleScenarioQuery.data, staleTime: 5000 }
+  );
 
   // Real costs/revenue from dynamic data (Market Overview + Competition Pricing)
   const realCosts = useMemo(() => {
@@ -568,7 +603,17 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
             {/* ═══ INVESTOR-GRADE FINANCIAL SUMMARY ═══ */}
             {(() => {
               if (!realCosts) return null;
-              const totalCostsVal = realCosts.totalCosts || 0;
+              // Use cashFlowSettings as source of truth for costs (same as Capital Schedule Table)
+              let totalCostsVal = realCosts.totalCosts || 0;
+              let investedCapital = calcInvestedCapital(realCosts);
+              if (singleSettingsQuery.data?.settings) {
+                const items = singleSettingsQuery.data.settings.filter((s: any) => s.isActive !== 0 && s.isActive !== false);
+                const paidT = items.filter((s: any) => s.section === "paid").reduce((sum: number, s: any) => sum + (s.computedAmount || 0), 0);
+                const investorT = items.filter((s: any) => s.fundingSource === "investor" && s.section !== "paid").reduce((sum: number, s: any) => sum + (s.computedAmount || 0), 0);
+                const escrowT = items.filter((s: any) => s.fundingSource === "escrow").reduce((sum: number, s: any) => sum + (s.computedAmount || 0), 0);
+                totalCostsVal = paidT + investorT + escrowT;
+                investedCapital = paidT + investorT;
+              }
               // Use approved revenue if available
               const approvedRev = (cpQuery.data as any)?.approvedRevenue;
               const totalRevenueVal = (approvedRev && approvedRev > 0) ? approvedRev : (realCosts.totalRevenue || 0);
@@ -576,8 +621,7 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
               const profitVal = totalRevenueVal - totalCostsVal;
               const marginVal = totalRevenueVal > 0 ? (profitVal / totalRevenueVal) * 100 : 0;
 
-              // Investor's actual capital outlay
-              const investedCapital = calcInvestedCapital(realCosts);
+              // Investor's actual capital outlay (from settings = paid + investor items)
               const roiOnCapital = investedCapital > 0 ? (profitVal / investedCapital) * 100 : 0;
 
               // 3-scenario comparison

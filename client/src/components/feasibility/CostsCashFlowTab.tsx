@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, Fragment } from "react";
 import { trpc } from "@/lib/trpc";
 import { DEFAULT_AVG_AREAS } from "@shared/feasibilityUtils";
 import { Button } from "@/components/ui/button";
@@ -546,7 +546,7 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
               </thead>
               <tbody>
                 {catData.map(cat => (
-                  <>
+                  <Fragment key={cat.key}>
                     {cat.rows.map((row) => {
                       const count = unitCounts[row.key] || 0;
                       const avg = avgAreas[row.key] || DEFAULT_AVG_AREAS[row.pctKey]?.defaultArea || 0;
@@ -575,7 +575,7 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
                         <SurplusInline surplus={cat.summary.surplus} sellable={cat.sellable} />
                       </td>
                     </tr>
-                  </>
+                  </Fragment>
                 ))}
               </tbody>
             </table>
@@ -602,7 +602,7 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
                 {catData.map(cat => {
                   const catRows = rowResults.filter(r => r.cat === cat.key && (r.count > 0 || r.price > 0));
                   return (
-                    <>
+                    <Fragment key={cat.key}>
                       {catRows.map((r, i) => (
                         <tr key={r.key} className={`border-b ${r.divider ? "border-t-[3px] border-t-gray-300" : "border-gray-100"} hover:bg-gray-50/40`}>
                           <td className="py-1 pr-2 text-gray-800 text-[10px]">
@@ -635,7 +635,7 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
                         <td className="py-1 text-center text-[10px] text-gray-400">—</td>
                         <td className={`py-1 text-center font-mono text-[10px] font-bold ${scenarioConfig[activeScenario].color}`} dir="ltr">{fmt(cat.summary.totalRevenue)}</td>
                       </tr>
-                    </>
+                    </Fragment>
                   );
                 })}
               </tbody>

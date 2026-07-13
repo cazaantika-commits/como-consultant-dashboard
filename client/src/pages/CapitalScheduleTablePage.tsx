@@ -137,6 +137,7 @@ const S = {
   colTotal: { minWidth: 90, background: "#fff8e1", fontWeight: "bold", color: "#b45309", padding: "4px 6px", border: "1px solid #ccc", whiteSpace: "nowrap" as const, textAlign: "center" as const, fontFamily: "monospace", fontSize: 10 },
   colInvestor: { minWidth: 90, background: "#fef3c7", fontWeight: "bold", color: "#92400e", padding: "4px 6px", border: "1px solid #ccc", whiteSpace: "nowrap" as const, textAlign: "center" as const, fontFamily: "monospace", fontSize: 10 },
   colPaid: { minWidth: 90, background: "#e8f5e9", color: "#1b5e20", fontWeight: "bold", padding: "4px 6px", border: "1px solid #ccc", whiteSpace: "nowrap" as const, textAlign: "center" as const, fontFamily: "monospace", fontSize: 10 },
+  colUnpaid: { minWidth: 90, background: "#fef2f2", color: "#991b1b", fontWeight: "bold", padding: "4px 6px", border: "1px solid #ccc", whiteSpace: "nowrap" as const, textAlign: "center" as const, fontFamily: "monospace", fontSize: 10 },
   phDesignH: { background: "#7c3aed", color: "#fff", padding: "4px 6px", border: "1px solid #ccc", whiteSpace: "nowrap" as const, textAlign: "center" as const, fontWeight: "bold", fontSize: 11 },
   phOffplanH: { background: "#1d4ed8", color: "#fff", padding: "4px 6px", border: "1px solid #ccc", whiteSpace: "nowrap" as const, textAlign: "center" as const, fontWeight: "bold", fontSize: 11 },
   phConstructionH: { background: "#15803d", color: "#fff", padding: "4px 6px", border: "1px solid #ccc", whiteSpace: "nowrap" as const, textAlign: "center" as const, fontWeight: "bold", fontSize: 11 },
@@ -465,8 +466,9 @@ export default function CapitalScheduleTablePage({
             <tr>
               <th style={{ ...S.hPhase, ...S.colDesc }}>البند</th>
               <th style={S.hPhase}>إجمالي التكاليف</th>
-              <th style={S.hPhase}>خطة رأس مال المشروع</th>
+              <th style={S.hPhase}>إجمالي المستثمر</th>
               <th style={S.hPhase}>مدفوع</th>
+              <th style={S.hPhase}>غير مدفوع</th>
               {designMonths.length > 0 && (
                 <th style={S.phDesignH} colSpan={designMonths.length}>
                   المرحلة 2 — التصاميم ({phases.design.duration} أشهر)
@@ -495,6 +497,7 @@ export default function CapitalScheduleTablePage({
               <th style={{ ...S.hMonth, background: "#fff8e1", color: "#92400e" }}>الإجمالي</th>
               <th style={{ ...S.hMonth, background: "#fef3c7", color: "#92400e" }}>من المستثمر</th>
               <th style={{ ...S.hMonth, background: "#e8f5e9", color: "#1b5e20" }}>مدفوع</th>
+              <th style={{ ...S.hMonth, background: "#fef2f2", color: "#991b1b" }}>غير مدفوع</th>
               {allMonths.map(m => (
                 <th key={m} style={monthHeaderStyle(m)}>
                   {arabicMonth(
@@ -511,7 +514,7 @@ export default function CapitalScheduleTablePage({
           <tbody>
             {/* ── SECTION 1: PAID (Land) ── */}
             <tr>
-              <td colSpan={4 + allMonths.length} style={S.sectionHeader}>القسم الأول — المبالغ المدفوعة (الأرض)</td>
+              <td colSpan={5 + allMonths.length} style={S.sectionHeader}>القسم الأول — المبالغ المدفوعة (الأرض)</td>
             </tr>
             {paidItems.map((item: any) => (
               <tr key={item.itemKey}>
@@ -519,6 +522,7 @@ export default function CapitalScheduleTablePage({
                 <td style={S.colTotal}>{fmt(item.computedAmount)}</td>
                 <td style={S.colInvestor}>{fmt(item.computedAmount)}</td>
                 <td style={S.colPaid}>{fmt(item.computedAmount)}</td>
+                <td style={S.colUnpaid}>—</td>
                 {allMonths.map(m => (
                   <td key={m} style={{ ...cellStyle(m), color: "#ccc" }}>—</td>
                 ))}
@@ -527,7 +531,7 @@ export default function CapitalScheduleTablePage({
 
             {/* ── SECTION 2: DESIGN ── */}
             <tr>
-              <td colSpan={4 + allMonths.length} style={S.sectionHeader}>القسم الثاني — التصاميم ورخصة البناء</td>
+              <td colSpan={5 + allMonths.length} style={S.sectionHeader}>القسم الثاني — التصاميم ورخصة البناء</td>
             </tr>
             {designItems.map((item: any) => (
               <tr key={item.itemKey}>
@@ -535,6 +539,7 @@ export default function CapitalScheduleTablePage({
                 <td style={S.colTotal}>{fmt(item.computedAmount)}</td>
                 <td style={S.colInvestor}>{fmt(item.computedAmount)}</td>
                 <td style={S.colPaid}>—</td>
+                <td style={S.colUnpaid}>{fmt(item.computedAmount)}</td>
                 {allMonths.map(m => {
                   const val = getVal(item.itemKey, m);
                   return <td key={m} style={numStyle(m, val)}>{fmt(val)}</td>;
@@ -546,7 +551,7 @@ export default function CapitalScheduleTablePage({
             {offplanItems.length > 0 && (
               <>
                 <tr>
-                  <td colSpan={4 + allMonths.length} style={S.sectionHeader}>القسم الثالث — ريرا والبيع أوف بلان</td>
+                  <td colSpan={5 + allMonths.length} style={S.sectionHeader}>القسم الثالث — ريرا والبيع أوف بلان</td>
                 </tr>
                 {offplanItems.map((item: any) => (
                   <tr key={item.itemKey}>
@@ -556,6 +561,7 @@ export default function CapitalScheduleTablePage({
                       {item.fundingSource === "escrow" ? "من الضمان" : fmt(item.computedAmount)}
                     </td>
                     <td style={S.colPaid}>—</td>
+                    <td style={S.colUnpaid}>{item.fundingSource === "escrow" ? "—" : fmt(item.computedAmount)}</td>
                     {allMonths.map(m => {
                       const val = getVal(item.itemKey, m);
                       return <td key={m} style={numStyle(m, val)}>{fmt(val)}</td>;
@@ -569,7 +575,7 @@ export default function CapitalScheduleTablePage({
             {constructionItems.length > 0 && (
               <>
                 <tr>
-                  <td colSpan={4 + allMonths.length} style={S.sectionHeader}>القسم الرابع — الإنشاء (حصة المستثمر فقط)</td>
+                  <td colSpan={5 + allMonths.length} style={S.sectionHeader}>القسم الرابع — الإنشاء (حصة المستثمر فقط)</td>
                 </tr>
                 {constructionItems.map((item: any) => (
                   <tr key={item.itemKey}>
@@ -579,6 +585,7 @@ export default function CapitalScheduleTablePage({
                       {item.fundingSource === "escrow" ? "من الضمان" : fmt(item.computedAmount)}
                     </td>
                     <td style={S.colPaid}>—</td>
+                    <td style={S.colUnpaid}>{item.fundingSource === "escrow" ? "—" : fmt(item.computedAmount)}</td>
                     {allMonths.map(m => {
                       const val = getVal(item.itemKey, m);
                       return <td key={m} style={numStyle(m, val)}>{fmt(val)}</td>;
@@ -592,7 +599,7 @@ export default function CapitalScheduleTablePage({
             {escrowItems.length > 0 && (
               <>
                 <tr>
-                  <td colSpan={4 + allMonths.length} style={S.sectionHeader}>من حساب الضمان (تُدفع من إيرادات المشترين)</td>
+                  <td colSpan={5 + allMonths.length} style={S.sectionHeader}>من حساب الضمان (تُدفع من إيرادات المشترين)</td>
                 </tr>
                 {escrowItems.map((item: any) => (
                   <tr key={item.itemKey}>
@@ -600,6 +607,7 @@ export default function CapitalScheduleTablePage({
                     <td style={S.colTotal}>{fmt(item.computedAmount)}</td>
                     <td style={{ ...S.colInvestor, color: "#1d4ed8" }}>من الضمان</td>
                     <td style={S.colPaid}>—</td>
+                    <td style={S.colUnpaid}>—</td>
                     {allMonths.map(m => {
                       const val = getVal(item.itemKey, m);
                       return <td key={m} style={numStyle(m, val, true)}>{fmt(val)}</td>;
@@ -611,10 +619,11 @@ export default function CapitalScheduleTablePage({
 
             {/* ── TOTAL ROW ── */}
             <tr>
-              <td style={S.totalRowDesc}>إجمالي الشهر</td>
+              <td style={S.totalRowDesc}>إجمالي</td>
               <td style={S.totalRow}>{fmt(grandTotal)}</td>
-              <td style={S.totalRow}>{fmt(investorTotal)}</td>
+              <td style={S.totalRow}>{fmt(investorTotal + paidTotal)}</td>
               <td style={S.totalRow}>{fmt(paidTotal)}</td>
+              <td style={{ ...S.totalRow, color: "#fca5a5" }}>{fmt(investorTotal)}</td>
               {allMonths.map(m => (
                 <td key={m} style={S.totalRowNum}>{fmt(monthAllTotals[m] || 0)}</td>
               ))}
@@ -623,7 +632,7 @@ export default function CapitalScheduleTablePage({
             {/* ── CUMULATIVE ROW ── */}
             <tr>
               <td style={S.cumRowDesc}>إجمالي تراكمي (مستثمر)</td>
-              <td colSpan={2} style={S.cumRow}></td>
+              <td colSpan={3} style={S.cumRow}></td>
               <td style={S.cumRow}>{fmt(cumulativeInvestor.landTotal)}</td>
               {allMonths.map((m, i) => {
                 const val = cumulativeInvestor.monthly[m] || 0;
@@ -642,10 +651,11 @@ export default function CapitalScheduleTablePage({
       {/* Notes */}
       <div style={{ marginTop: 16, fontSize: 10, color: "#666", lineHeight: 1.8 }}>
         <strong>ملاحظات:</strong><br />
-        • الخلايا البيضاء = من المستثمر | الخلايا الزرقاء الفاتحة = من حساب الضمان (إيرادات المشترين)<br />
-        • صف "إجمالي الشهر" يجمع المستثمر + الضمان معاً<br />
-        • صف "إجمالي تراكمي" يتتبع رأس المال المطلوب من المستثمر فقط<br />
-        • المبالغ المدفوعة = الأرض وما سبق (لا تاريخ محدد)<br />
+        • العمود الأول (إجمالي التكاليف) = كل التكاليف (مستثمر + ضمان)<br />
+        • العمود الثاني (إجمالي المستثمر) = كل ما يدفعه المستثمر (مدفوع + غير مدفوع)<br />
+        • العمود الثالث (مدفوع) = ما دفعه المستثمر فعلاً (الأرض)<br />
+        • العمود الرابع (غير مدفوع) = المتبقي على المستثمر (يوزع على الأشهر)<br />
+        • الأعمدة الشهرية = توزيع المبالغ غير المدفوعة من المستثمر فقط<br />
         • التوزيع الشهري يعتمد على إعدادات التدفق المحفوظة — عدّل التوزيع من تبويب "إعدادات التدفق"<br />
         {offplanMonthsAll.length > 0 && offplanMonths.length === 0 && (
           <span style={{ color: "#1d4ed8" }}>• مرحلة الأوف بلان (شهر {offplanMonthsAll[0]}–{offplanMonthsAll[offplanMonthsAll.length-1]}) تتداخل كلياً مع مرحلة التصاميم وتُعرض ضمنها في الجدول</span>

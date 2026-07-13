@@ -802,3 +802,6 @@
 - [x] Add KPI cards (costs, revenue, profit, invested capital, ROI on capital, margin)
 - [x] Add 3-scenario comparison strip (optimistic/base/conservative)
 - [x] Investigate Project 4 loss (confirmed: land+construction costs exceed revenue at current pricing)
+- [x] Add "غير مدفوع" (unpaid) column to CapitalScheduleTablePage
+- [x] Sync FeasibilityStudyPage costs with cashFlowSettings (same source as Capital Schedule Table)
+- [x] Fix CostsCashFlowTab missing key prop error
