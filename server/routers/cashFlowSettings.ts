@@ -2217,9 +2217,10 @@ export const cashFlowSettingsRouter = router({
       const constructionPhase = phases.find(p => p.type === "construction");
       const handoverPhase = phases.find(p => p.type === "handover");
 
-      // Sales (offplan) starts 2 months before end of design phase (last 2 months of design)
+      // Offplan phase = last 2 months of design. Sales start there and continue through construction.
       const designPhase = phases.find(p => p.type === "design");
       const designEndMonth = designPhase ? designPhase.startMonth + designPhase.duration - 1 : 0;
+      // Sales start at (designEnd - 1), i.e. last 2 months of design
       const salesStartMonth = designPhase ? Math.max(0, designEndMonth - 1) : (constructionPhase ? constructionPhase.startMonth : 0);
       const salesEndMonth = constructionPhase
         ? constructionPhase.startMonth + Math.floor(constructionPhase.duration * 0.8) - 1
