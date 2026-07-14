@@ -890,3 +890,6 @@
 - [x] All projects start Aug 2026 (design phase)
 - [x] Escrow surplus transferred as investor revenue: 95% after 3 months post-completion, 5% after 12 months
 - [x] Scenario 4 for مركز مجان التجاري: construction costs only, no revenue/sale
+- [x] Add save/load for unit distribution in PricingPage (counts, areas, prices persist per project)
+- [x] Remove studio from PricingPage unit types
+- [x] Pre-fill default unit distributions for all 6 projects (no studio)

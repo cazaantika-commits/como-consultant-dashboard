@@ -1,9 +1,9 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Building2, Car, Ruler, Calculator, AlertTriangle, CheckCircle,
-  Home, Store, Briefcase, Info, DollarSign, TrendingUp,
+  Home, Store, Briefcase, Info, DollarSign, TrendingUp, Save, Loader2,
 } from "lucide-react";
 import { ProjectSelector } from "@/components/ProjectSelector";
 import { trpc } from "@/lib/trpc";
@@ -16,6 +16,7 @@ import {
   type ProjectInputs,
   type ProjectRates,
 } from "@/lib/projectData";
+import { useToast } from "@/hooks/use-toast";
 
 // ═══════════════════════════════════════════
 // قاعدة المواقف
@@ -39,7 +40,6 @@ interface UnitType {
 }
 
 const UNIT_TYPES: UnitType[] = [
-  { key: "studio", label: "استوديو", category: "residential", defaultArea: 400, defaultPrice: 1600 },
   { key: "onebed", label: "غرفة وصالة", category: "residential", defaultArea: 750, defaultPrice: 1550 },
   { key: "twobed", label: "غرفتين وصالة", category: "residential", defaultArea: 1300, defaultPrice: 1500 },
   { key: "threebed", label: "ثلاث غرف وصالة", category: "residential", defaultArea: 1650, defaultPrice: 1450 },
@@ -52,13 +52,13 @@ const UNIT_TYPES: UnitType[] = [
 ];
 
 const DEFAULT_AREAS: Record<string, number> = {
-  studio: 400, onebed: 750, twobed: 1300, threebed: 1650,
+  onebed: 750, twobed: 1300, threebed: 1650,
   retail_small: 850, retail_medium: 1200, retail_large: 1800,
   office_small: 1200, office_medium: 2000, office_large: 3500,
 };
 
 const DEFAULT_PRICES: Record<string, number> = {
-  studio: 1600, onebed: 1550, twobed: 1500, threebed: 1450,
+  onebed: 1550, twobed: 1500, threebed: 1450,
   retail_small: 3000, retail_medium: 2500, retail_large: 2000,
   office_small: 1900, office_medium: 1800, office_large: 1700,
 };
@@ -71,12 +71,62 @@ function fmtN(n: number): string {
 }
 
 // ═══════════════════════════════════════════
+// MAPPING: PricingPage keys → DB fields
+// ═══════════════════════════════════════════
+const COUNT_MAP: Record<string, string> = {
+  onebed: 'residential1brCount',
+  twobed: 'residential2brCount',
+  threebed: 'residential3brCount',
+  retail_small: 'retailSmallCount',
+  retail_medium: 'retailMediumCount',
+  retail_large: 'retailLargeCount',
+  office_small: 'officeSmallCount',
+  office_medium: 'officeMediumCount',
+  office_large: 'officeLargeCount',
+};
+
+const AREA_MAP: Record<string, string> = {
+  onebed: 'residential1brAvgArea',
+  twobed: 'residential2brAvgArea',
+  threebed: 'residential3brAvgArea',
+  retail_small: 'retailSmallAvgArea',
+  retail_medium: 'retailMediumAvgArea',
+  retail_large: 'retailLargeAvgArea',
+  office_small: 'officeSmallAvgArea',
+  office_medium: 'officeMediumAvgArea',
+  office_large: 'officeLargeAvgArea',
+};
+
+const PRICE_MAP: Record<string, string> = {
+  onebed: 'base1brPrice',
+  twobed: 'base2brPrice',
+  threebed: 'base3brPrice',
+  retail_small: 'baseRetailSmallPrice',
+  retail_medium: 'baseRetailMediumPrice',
+  retail_large: 'baseRetailLargePrice',
+  office_small: 'baseOfficeSmallPrice',
+  office_medium: 'baseOfficeMediumPrice',
+  office_large: 'baseOfficeLargePrice',
+};
+
+// ═══════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════
 export default function PricingPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
+
+  // Load saved data from DB
+  const marketOverviewQuery = trpc.marketOverview.getByProject.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
+  const competitionPricingQuery = trpc.competitionPricing.getByProject.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
+
+  // Save mutations
+  const saveMarketOverview = trpc.marketOverview.save.useMutation();
+  const saveCompetitionPricing = trpc.competitionPricing.save.useMutation();
+  const [isSaving, setIsSaving] = useState(false);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Dynamic project data
   const projectData = useMemo(() => {
@@ -100,7 +150,7 @@ export default function PricingPage() {
   const GFA_TOTAL = i.gfaResidential + i.gfaRetail + i.gfaOffice;
 
   const [counts, setCounts] = useState<Record<string, number>>({
-    studio: 0, onebed: 0, twobed: 0, threebed: 0,
+    onebed: 0, twobed: 0, threebed: 0,
     retail_small: 0, retail_medium: 0, retail_large: 0,
     office_small: 0, office_medium: 0, office_large: 0,
   });
@@ -108,17 +158,128 @@ export default function PricingPage() {
   const [areas, setAreas] = useState<Record<string, number>>({ ...DEFAULT_AREAS });
   const [prices, setPrices] = useState<Record<string, number>>({ ...DEFAULT_PRICES });
 
+  // Load saved data when project data arrives
+  useEffect(() => {
+    if (!selectedProjectId) return;
+    const mo = marketOverviewQuery.data;
+    const cp = competitionPricingQuery.data;
+    if (mo || cp) {
+      const newCounts: Record<string, number> = { onebed: 0, twobed: 0, threebed: 0, retail_small: 0, retail_medium: 0, retail_large: 0, office_small: 0, office_medium: 0, office_large: 0 };
+      const newAreas: Record<string, number> = { ...DEFAULT_AREAS };
+      const newPrices: Record<string, number> = { ...DEFAULT_PRICES };
+
+      if (mo) {
+        Object.entries(COUNT_MAP).forEach(([key, dbField]) => {
+          const val = (mo as any)[dbField];
+          if (val != null && Number(val) > 0) newCounts[key] = Number(val);
+        });
+        Object.entries(AREA_MAP).forEach(([key, dbField]) => {
+          const val = (mo as any)[dbField];
+          if (val != null && Number(val) > 0) newAreas[key] = Number(val);
+        });
+      }
+
+      if (cp) {
+        Object.entries(PRICE_MAP).forEach(([key, dbField]) => {
+          const val = (cp as any)[dbField];
+          if (val != null && Number(val) > 0) newPrices[key] = Number(val);
+        });
+      }
+
+      setCounts(newCounts);
+      setAreas(newAreas);
+      setPrices(newPrices);
+    } else {
+      setCounts({ onebed: 0, twobed: 0, threebed: 0, retail_small: 0, retail_medium: 0, retail_large: 0, office_small: 0, office_medium: 0, office_large: 0 });
+      setAreas({ ...DEFAULT_AREAS });
+      setPrices({ ...DEFAULT_PRICES });
+    }
+  }, [selectedProjectId, marketOverviewQuery.data, competitionPricingQuery.data]);
+
+  // Save function
+  const doSave = useCallback(async (currentCounts: Record<string, number>, currentAreas: Record<string, number>, currentPrices: Record<string, number>) => {
+    if (!selectedProjectId || !user) return;
+    setIsSaving(true);
+    try {
+      const moData: any = { projectId: selectedProjectId };
+      Object.entries(COUNT_MAP).forEach(([key, dbField]) => {
+        moData[dbField] = currentCounts[key] || 0;
+      });
+      Object.entries(AREA_MAP).forEach(([key, dbField]) => {
+        moData[dbField] = currentAreas[key] || 0;
+      });
+      moData.residentialStudioCount = 0;
+      moData.residentialStudioAvgArea = 0;
+      moData.residentialStudioPct = 0;
+      await saveMarketOverview.mutateAsync(moData);
+
+      const cpData: any = { projectId: selectedProjectId };
+      Object.entries(PRICE_MAP).forEach(([key, dbField]) => {
+        cpData[dbField] = currentPrices[key] || 0;
+      });
+      cpData.opt1brPrice = currentPrices.onebed || 0;
+      cpData.opt2brPrice = currentPrices.twobed || 0;
+      cpData.opt3brPrice = currentPrices.threebed || 0;
+      cpData.optRetailSmallPrice = currentPrices.retail_small || 0;
+      cpData.optRetailMediumPrice = currentPrices.retail_medium || 0;
+      cpData.optRetailLargePrice = currentPrices.retail_large || 0;
+      cpData.optOfficeSmallPrice = currentPrices.office_small || 0;
+      cpData.optOfficeMediumPrice = currentPrices.office_medium || 0;
+      cpData.optOfficeLargePrice = currentPrices.office_large || 0;
+      cpData.cons1brPrice = currentPrices.onebed || 0;
+      cpData.cons2brPrice = currentPrices.twobed || 0;
+      cpData.cons3brPrice = currentPrices.threebed || 0;
+      cpData.consRetailSmallPrice = currentPrices.retail_small || 0;
+      cpData.consRetailMediumPrice = currentPrices.retail_medium || 0;
+      cpData.consRetailLargePrice = currentPrices.retail_large || 0;
+      cpData.consOfficeSmallPrice = currentPrices.office_small || 0;
+      cpData.consOfficeMediumPrice = currentPrices.office_medium || 0;
+      cpData.consOfficeLargePrice = currentPrices.office_large || 0;
+      cpData.baseStudioPrice = 0;
+      cpData.optStudioPrice = 0;
+      cpData.consStudioPrice = 0;
+      await saveCompetitionPricing.mutateAsync(cpData);
+
+      toast({ title: "تم الحفظ ✓", description: "تم حفظ بيانات التسعير" });
+    } catch (err) {
+      toast({ title: "خطأ", description: "فشل حفظ البيانات", variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [selectedProjectId, user, saveMarketOverview, saveCompetitionPricing, toast]);
+
+  // Debounced auto-save
+  const triggerSave = useCallback((newCounts: Record<string, number>, newAreas: Record<string, number>, newPrices: Record<string, number>) => {
+    if (!selectedProjectId || !user) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      doSave(newCounts, newAreas, newPrices);
+    }, 2000);
+  }, [selectedProjectId, user, doSave]);
+
   const updateCount = useCallback((key: string, val: number) => {
-    setCounts(prev => ({ ...prev, [key]: Math.max(0, val) }));
-  }, []);
+    setCounts(prev => {
+      const next = { ...prev, [key]: Math.max(0, val) };
+      triggerSave(next, areas, prices);
+      return next;
+    });
+  }, [triggerSave, areas, prices]);
 
   const updateArea = useCallback((key: string, val: number) => {
-    setAreas(prev => ({ ...prev, [key]: Math.max(0, val) }));
-  }, []);
+    setAreas(prev => {
+      const next = { ...prev, [key]: Math.max(0, val) };
+      triggerSave(counts, next, prices);
+      return next;
+    });
+  }, [triggerSave, counts, prices]);
 
   const updatePrice = useCallback((key: string, val: number) => {
-    setPrices(prev => ({ ...prev, [key]: Math.max(0, val) }));
-  }, []);
+    setPrices(prev => {
+      const next = { ...prev, [key]: Math.max(0, val) };
+      triggerSave(counts, areas, next);
+      return next;
+    });
+  }, [triggerSave, counts, areas]);
 
   // ═══════════════════════════════════════════
   // CALCULATIONS
@@ -218,6 +379,12 @@ export default function PricingPage() {
             <h1 className="text-2xl font-bold text-white">التسعير وتوزيع الوحدات</h1>
             <p className="text-slate-400 text-sm">{i.name}</p>
           </div>
+          {isSaving && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40">
+              <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />
+              <span className="text-xs text-amber-300">جاري الحفظ...</span>
+            </div>
+          )}
         </div>
         <div className="mt-4 mb-4">
           <ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} className="" />
