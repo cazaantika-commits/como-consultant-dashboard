@@ -314,6 +314,8 @@ export default function InvestorCashFlowSchedulePage() {
     });
 
     // ─── رسوم NOC ───
+    const nocDesign = emptyDesign();
+    nocDesign[penultimateDesign] = PROJECT_INPUTS.nocSale;
     rows.push({
       label: "رسوم NOC المطور",
       totalCost: PROJECT_INPUTS.nocSale,
@@ -322,11 +324,13 @@ export default function InvestorCashFlowSchedulePage() {
       unpaid: PROJECT_INPUTS.nocSale,
       funder: "investor",
       section: "الرسوم الحكومية والتنظيمية",
-      designMonths: emptyDesign(),
+      designMonths: nocDesign,
       constructionMonths: emptyConstruction(),
     });
 
     // ─── تسجيل المشروع — ريرا ───
+    const reraRegDesign = emptyDesign();
+    reraRegDesign[penultimateDesign] = PROJECT_INPUTS.reraProjectReg;
     rows.push({
       label: "تسجيل المشروع — ريرا",
       totalCost: PROJECT_INPUTS.reraProjectReg,
@@ -335,11 +339,13 @@ export default function InvestorCashFlowSchedulePage() {
       unpaid: PROJECT_INPUTS.reraProjectReg,
       funder: "investor",
       section: "ريرا (التنظيم العقاري)",
-      designMonths: emptyDesign(),
+      designMonths: reraRegDesign,
       constructionMonths: emptyConstruction(),
     });
 
     // ─── تسجيل الوحدات — ريرا ───
+    const reraUnitsDesign = emptyDesign();
+    reraUnitsDesign[penultimateDesign] = costs.reraUnits;
     rows.push({
       label: "تسجيل الوحدات — ريرا",
       totalCost: costs.reraUnits,
@@ -348,7 +354,7 @@ export default function InvestorCashFlowSchedulePage() {
       unpaid: costs.reraUnits,
       funder: "investor",
       section: "ريرا (التنظيم العقاري)",
-      designMonths: emptyDesign(),
+      designMonths: reraUnitsDesign,
       constructionMonths: emptyConstruction(),
     });
 

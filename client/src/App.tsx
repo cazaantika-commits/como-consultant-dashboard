@@ -76,6 +76,7 @@ import ProjectCardPostCompletionPage from "./pages/ProjectCardPostCompletionPage
 import PricingPage from "./pages/PricingPage";
 import InvestorCapitalPlanPage from "./pages/InvestorCapitalPlanPage";
 import InvestorCashFlowSchedulePage from "./pages/InvestorCashFlowSchedulePage";
+import EscrowCashFlowSchedulePage2 from "./pages/EscrowCashFlowSchedulePage2";
 import UserManagementPage from "./pages/UserManagementPage";
 import ApprovalSettings from "./pages/ApprovalSettings";
 import GeneralRequests from "./pages/GeneralRequests";
@@ -159,6 +160,7 @@ function Router() {
       <Route path="/pricing" component={PricingPage} />
       <Route path="/investor-capital-plan" component={InvestorCapitalPlanPage} />
       <Route path="/investor-cashflow-schedule" component={InvestorCashFlowSchedulePage} />
+      <Route path="/escrow-cashflow-schedule" component={EscrowCashFlowSchedulePage2} />
       <Route path="/user-management" component={UserManagementPage} />
       <Route path="/approval-settings" component={ApprovalSettings} />
       <Route path="/internal-messages" component={InternalMessages} />

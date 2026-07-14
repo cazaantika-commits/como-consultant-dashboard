@@ -874,3 +874,4 @@
 - [x] Refactor ProjectCardOffplanPage to import from projectData.ts instead of local INPUTS
 - [ ] Update InvestorCashFlowSchedulePage to match exact same items as the card
 - [ ] Verify both pages show identical totals
+- [ ] Build Escrow Cash Flow Schedule page (Scenario 1) with escrow items + revenues
