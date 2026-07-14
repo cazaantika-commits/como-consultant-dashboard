@@ -877,3 +877,4 @@
 - [ ] Build Escrow Cash Flow Schedule page (Scenario 1) with escrow items + revenues
 - [x] Rewrite EscrowCashFlowSchedulePage2 with full monthly distribution: S-Curve for construction/revenue, equal for supervision, penultimate for surveyor, periodic for RERA, first 12 months for sales commission, 5% completion/retention post-construction
 - [x] Build Scenario 2 (أوف بلان بعد إنجاز 20%): no deposit, 20% paid to contractor in months 2-4 of construction equally, revenue starts month 5, commission starts month 5, 5 RERA/escrow items in month 3, marketing from month 1 over 12 months
+- [ ] Build Scenario 3 (تطوير بدون بيع على الخارطة): no escrow, no opening balance, revenue over 3 post-construction months, commission 2% + marketing 1% + sorting + RERA units + NOC all over 3 post-construction months, construction S-Curve + supervision + surveyor + gov fees during construction only, no RERA auditor/inspection/offplan registration/escrow fee/contractor 20%
