@@ -1,15 +1,17 @@
 // ═══════════════════════════════════════════════════════════════════
 // PROJECT DATA — SINGLE SOURCE OF TRUTH (مثل الإكسل)
 // ═══════════════════════════════════════════════════════════════════
-// كل الصفحات تقرأ من هنا مباشرة. غيّر رقم هنا → يتغير في كل مكان.
+// البطاقة هي المصدر. كل الصفحات تقرأ من هنا.
+// غيّر رقم هنا → يتغير في البطاقة + التدفقات + التسعير تلقائياً.
 // ═══════════════════════════════════════════════════════════════════
 
 // ─────────────────────────────────────────
 // القسم 1: إدخالات بطاقة المشروع (INPUTS)
 // ─────────────────────────────────────────
 export const PROJECT_INPUTS = {
+  // البيانات الأساسية
   name: "مجان متعدد الاستخدامات (G+4P+25)",
-  landArea: 66879, // مساحة الأرض (قدم²)
+  landArea: 66879.19, // مساحة الأرض (قدم²)
   bua: 875300, // مساحة البناء BUA (قدم²)
   constructionCostPerSqft: 400, // تكلفة الإنشاء (درهم/قدم)
   landPricePerSqft: 262, // سعر القدم أرض (درهم)
@@ -18,16 +20,16 @@ export const PROJECT_INPUTS = {
   startDate: "2026-08", // تاريخ البدء
 
   // GFA لكل فئة
-  gfaResidential: 93631.06,
-  gfaRetail: 74904.88,
+  gfaResidential: 93631,
+  gfaRetail: 74904.84,
   gfaOffice: 299618.38,
 
   // نسب الكفاءة (المساحة القابلة للبيع)
   efficiencyResidential: 0.95,
   efficiencyRetail: 0.80,
-  efficiencyOffice: 0.89,
+  efficiencyOffice: 0.90,
 
-  // رسوم ثابتة
+  // رسوم ثابتة (مبالغ مقطوعة)
   soilTest: 45000,
   topography: 12000,
   surveyorFee: 35000,
@@ -37,33 +39,41 @@ export const PROJECT_INPUTS = {
   communityFee: 80000,
   reraProjectReg: 150000,
   reraAuditorReport: 24000,
-  reraInspection: 165000,
-  govFeesTotal: 3500000, // رسوم الجهات الحكومية الإجمالية (ثابت)
+  reraInspection: 150000,
+  govFeesTotal: 7000000, // رسوم الجهات الحكومية الإجمالية (ثابت)
 };
 
 // ─────────────────────────────────────────
 // القسم 2: النسب والمعدلات (RATES)
+// نفس النسب الموجودة في البطاقة بالضبط
 // ─────────────────────────────────────────
 export const RATES = {
-  landRegistration: 0.04, // رسوم تسجيل الأرض
-  landBroker: 0.01, // عمولة وسيط الأرض
-  designFee: 0.018, // أتعاب الاستشاري — التصاميم
-  supervisionFee: 0.02, // أتعاب الاستشاري — الإشراف
-  sortingFeePerSqft: 40, // رسوم الفرز (درهم/قدم²)
+  // الأرض
+  landRegistration: 0.04, // رسوم تسجيل الأرض (4%)
+  landBroker: 0.01, // عمولة وسيط الأرض (1%)
+
+  // التصاميم والإشراف (من تكلفة الإنشاء)
+  designFee: 0.018, // أتعاب التصاميم (1.8%)
+  supervisionFee: 0.02, // أتعاب الإشراف (2%)
+
+  // رسوم الفرز وريرا
+  sortingFeePerSqft: 40, // رسوم الفرز (40 درهم/قدم²)
   reraUnitFee: 520, // رسوم تسجيل الوحدة — ريرا
 
-  // أتعاب المطور (من الإيرادات)
+  // أتعاب المطور (5% من الإيرادات — إجمالي)
+  developerFeeRate: 0.05, // 5% إجمالي
+  // تقسيم أتعاب المطور على المراحل (للتدفقات الشهرية)
   developerFeeDesign: 0.01, // 1% تصاميم
   developerFeeOffplan: 0.01, // 1% أوف بلان
   developerFeeSupervision: 0.03, // 3% إشراف
 
-  // التسويق (من الإيرادات)
-  marketingTotal: 0.02, // 2% إجمالي
-  marketingOffplanShare: 0.25, // 25% من التسويق في مرحلة أوف بلان
-  marketingConstructionShare: 0.75, // 75% من التسويق في مرحلة الإنشاء
+  // التسويق (2% من الإيرادات)
+  marketingRate: 0.02, // 2% إجمالي
+  marketingOffplanShare: 0.25, // 25% في مرحلة أوف بلان
+  marketingConstructionShare: 0.75, // 75% في مرحلة الإنشاء
 
-  // عمولة المبيعات
-  salesCommission: 0.05, // 5% أوف بلان
+  // عمولة المبيعات (5% من الإيرادات)
+  salesCommission: 0.05,
   salesCommissionPostCompletion: 0.02, // 2% بيع بعد الإنجاز
 
   // تقسيم الإنشاء (مستثمر / ضمان)
@@ -74,7 +84,7 @@ export const RATES = {
   govFeesInvestorShare: 0.10, // 10% مستثمر
   govFeesEscrowShare: 0.90, // 90% ضمان
 
-  // الإنشاء
+  // الإنشاء — نسب إضافية للتدفقات
   advancePayment: 0.10, // 10% دفعة مقدمة
   escrowDeposit: 0.20, // 20% إيداع ضمان
   contingency: 0.02, // 2% احتياطي
@@ -114,6 +124,8 @@ export const PRICING_DEFAULTS: UnitType[] = [
 // ─────────────────────────────────────────
 // القسم 4: الفورمولات المحسوبة (FORMULAS)
 // ─────────────────────────────────────────
+
+// فورمولات المشروع الأساسية
 export function calculateProjectFormulas(inputs = PROJECT_INPUTS, rates = RATES) {
   const gfaTotal = inputs.gfaResidential + inputs.gfaRetail + inputs.gfaOffice;
   const sellableResidential = inputs.gfaResidential * inputs.efficiencyResidential;
@@ -139,7 +151,7 @@ export function calculateProjectFormulas(inputs = PROJECT_INPUTS, rates = RATES)
   };
 }
 
-// حساب التسعير — يأخذ الوحدات الفعلية (قد تكون معدّلة من المستخدم)
+// فورمولات التسعير — تحسب الإيرادات وعدد الوحدات
 export interface PricingUnit {
   name: string;
   category: "residential" | "retail" | "office";
@@ -185,59 +197,64 @@ export function calculatePricingFormulas(units: PricingUnit[]) {
   };
 }
 
-// حساب خطة رأس مال المستثمر
-export function calculateInvestorCapitalPlan(
+// ─────────────────────────────────────────
+// القسم 5: حساب التكاليف (نفس بنود البطاقة بالضبط)
+// ─────────────────────────────────────────
+export function calculateCosts(
   projectFormulas: ReturnType<typeof calculateProjectFormulas>,
   pricingFormulas: ReturnType<typeof calculatePricingFormulas>,
   inputs = PROJECT_INPUTS,
   rates = RATES
 ) {
-  const { landPrice, landRegistration, landBroker, constructionCost } = projectFormulas;
+  const { landPrice, landRegistration, landBroker, constructionCost, gfaTotal } = projectFormulas;
   const { totalRevenue, totalUnits } = pricingFormulas;
 
+  // ─── بنود التكاليف (نفس ترتيب البطاقة) ───
+  const designFee = constructionCost * rates.designFee;
+  const supervisionFee = constructionCost * rates.supervisionFee;
+  const sortingFee = gfaTotal * rates.sortingFeePerSqft;
+  const reraUnits = totalUnits * rates.reraUnitFee;
+  const salesCommission = totalRevenue * rates.salesCommission;
+  const marketing = totalRevenue * rates.marketingRate;
+  const developerFee = totalRevenue * rates.developerFeeRate;
+  const constructionInvestor = constructionCost * rates.constructionInvestorShare;
+  const constructionEscrow = constructionCost * rates.constructionEscrowShare;
+  const govFeesInvestor = inputs.govFeesTotal * rates.govFeesInvestorShare;
+  const govFeesEscrow = inputs.govFeesTotal * rates.govFeesEscrowShare;
+
+  // ─── إجمالي المستثمر (نفس معادلة البطاقة بالضبط) ───
+  const totalInvestor = landPrice + landRegistration + landBroker + designFee +
+    inputs.soilTest + inputs.topography + inputs.communityFee + govFeesInvestor +
+    sortingFee + inputs.nocSale + inputs.reraProjectReg + reraUnits +
+    inputs.escrowAccountFee + inputs.bankFees + marketing + developerFee + inputs.surveyorFee +
+    constructionInvestor;
+
+  // ─── إجمالي الضمان (نفس معادلة البطاقة بالضبط) ───
+  const totalEscrow = supervisionFee + govFeesEscrow + salesCommission +
+    inputs.reraAuditorReport + inputs.reraInspection + constructionEscrow;
+
+  const totalCosts = totalInvestor + totalEscrow;
+  const profit = totalRevenue - totalCosts;
+  const margin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
+
   return {
-    // القسم 1: الأرض
-    land: {
-      landPrice,
-      landBroker,
-      landRegistration,
-      subtotal: landPrice + landBroker + landRegistration,
-    },
-    // القسم 2: التصاميم
-    design: {
-      govFees: inputs.govFeesTotal * rates.govFeesInvestorShare,
-      soilTest: inputs.soilTest,
-      topography: inputs.topography,
-      designFee: constructionCost * rates.designFee,
-      developerFeeDesign: totalRevenue * rates.developerFeeDesign,
-    },
-    // القسم 3: ريرا وأوف بلان
-    offplan: {
-      developerFeeOffplan: totalRevenue * rates.developerFeeOffplan,
-      sortingFee: projectFormulas.gfaTotal * rates.sortingFeePerSqft,
-      reraProjectReg: inputs.reraProjectReg,
-      reraUnits: totalUnits * rates.reraUnitFee,
-      nocSale: inputs.nocSale,
-      escrowAccountFee: inputs.escrowAccountFee,
-      communityFee: inputs.communityFee * rates.communityOffplanShare,
-      marketingOffplan: totalRevenue * rates.marketingTotal * rates.marketingOffplanShare,
-      escrowDeposit: constructionCost * rates.escrowDeposit,
-    },
-    // القسم 4: الإنشاء
-    construction: {
-      advancePayment: constructionCost * rates.advancePayment,
-      contingency: constructionCost * rates.contingency,
-      bankFees: inputs.bankFees,
-      govFeesEscrow: inputs.govFeesTotal * rates.govFeesEscrowShare,
-      contractorPaymentsEscrow: constructionCost * rates.constructionEscrowShare,
-      communityFee: inputs.communityFee * rates.communityConstructionShare,
-      developerFeeSupervision: totalRevenue * rates.developerFeeSupervision,
-      supervisionFeeEscrow: constructionCost * rates.supervisionFee,
-      surveyorFeeEscrow: inputs.surveyorFee,
-      reraAuditorEscrow: inputs.reraAuditorReport,
-      reraInspectionEscrow: inputs.reraInspection,
-      marketingConstruction: totalRevenue * rates.marketingTotal * rates.marketingConstructionShare,
-      salesCommissionEscrow: totalRevenue * rates.salesCommission,
-    },
+    // بنود فردية
+    designFee,
+    supervisionFee,
+    sortingFee,
+    reraUnits,
+    salesCommission,
+    marketing,
+    developerFee,
+    constructionInvestor,
+    constructionEscrow,
+    govFeesInvestor,
+    govFeesEscrow,
+    // الإجماليات
+    totalInvestor,
+    totalEscrow,
+    totalCosts,
+    profit,
+    margin,
   };
 }

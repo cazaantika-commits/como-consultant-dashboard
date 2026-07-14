@@ -8,7 +8,6 @@ import {
   PRICING_DEFAULTS,
   calculateProjectFormulas,
   calculatePricingFormulas,
-  calculateInvestorCapitalPlan,
 } from "@/lib/projectData";
 
 // ═══════════════════════════════════════════
@@ -46,7 +45,6 @@ export default function InvestorCapitalPlanPage() {
       count: u.defaultCount,
     }));
     const pricingFormulas = calculatePricingFormulas(pricingUnits);
-    const plan = calculateInvestorCapitalPlan(projectFormulas, pricingFormulas);
 
     const { landPrice, landRegistration, landBroker, constructionCost, gfaTotal } = projectFormulas;
     const { totalRevenue, totalUnits } = pricingFormulas;
@@ -73,7 +71,7 @@ export default function InvestorCapitalPlanPage() {
       { label: "رسوم NOC للبيع", totalCost: PROJECT_INPUTS.nocSale, investorAmount: PROJECT_INPUTS.nocSale, funder: "investor", phase: "offplan" },
       { label: "رسوم حساب الضمان", totalCost: PROJECT_INPUTS.escrowAccountFee, investorAmount: PROJECT_INPUTS.escrowAccountFee, funder: "investor", phase: "offplan" },
       { label: "رسوم المجتمع (25%)", totalCost: PROJECT_INPUTS.communityFee, investorAmount: PROJECT_INPUTS.communityFee * RATES.communityOffplanShare, funder: "investor", phase: "offplan" },
-      { label: "التسويق والإعلان — أوف بلان (25%)", totalCost: totalRevenue * RATES.marketingTotal * RATES.marketingOffplanShare, investorAmount: totalRevenue * RATES.marketingTotal * RATES.marketingOffplanShare, funder: "investor", phase: "offplan" },
+      { label: "التسويق والإعلان — أوف بلان (25%)", totalCost: totalRevenue * RATES.marketingRate * RATES.marketingOffplanShare, investorAmount: totalRevenue * RATES.marketingRate * RATES.marketingOffplanShare, funder: "investor", phase: "offplan" },
       { label: "إيداع حساب الضمان (20%)", totalCost: constructionCost * RATES.escrowDeposit, investorAmount: constructionCost * RATES.escrowDeposit, funder: "investor", phase: "offplan" },
 
       // === SECTION 4: CONSTRUCTION (Investor share only) ===
@@ -88,7 +86,7 @@ export default function InvestorCapitalPlanPage() {
       { label: "رسوم المساح", totalCost: PROJECT_INPUTS.surveyorFee, investorAmount: 0, funder: "escrow", phase: "construction" },
       { label: "تقرير مدقق ريرا", totalCost: PROJECT_INPUTS.reraAuditorReport, investorAmount: 0, funder: "escrow", phase: "construction" },
       { label: "تقرير فحص ريرا", totalCost: PROJECT_INPUTS.reraInspection, investorAmount: 0, funder: "escrow", phase: "construction" },
-      { label: "التسويق والإعلان — الإنشاء (75%)", totalCost: totalRevenue * RATES.marketingTotal * RATES.marketingConstructionShare, investorAmount: totalRevenue * RATES.marketingTotal * RATES.marketingConstructionShare, funder: "investor", phase: "construction" },
+      { label: "التسويق والإعلان — الإنشاء (75%)", totalCost: totalRevenue * RATES.marketingRate * RATES.marketingConstructionShare, investorAmount: totalRevenue * RATES.marketingRate * RATES.marketingConstructionShare, funder: "investor", phase: "construction" },
       { label: "عمولة وكيل المبيعات (5%)", totalCost: totalRevenue * RATES.salesCommission, investorAmount: 0, funder: "escrow", phase: "construction" },
     ];
 

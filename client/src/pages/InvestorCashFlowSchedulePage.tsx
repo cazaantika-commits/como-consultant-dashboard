@@ -1,22 +1,17 @@
-import { useMemo, useState, useRef } from "react";
+import { useState, useMemo, useRef } from "react";
 import {
   PROJECT_INPUTS,
   RATES,
   PRICING_DEFAULTS,
   calculateProjectFormulas,
   calculatePricingFormulas,
+  calculateCosts,
 } from "@/lib/projectData";
 
 // ═══════════════════════════════════════════
 // أنواع السيناريوهات
 // ═══════════════════════════════════════════
 type Scenario = "offplan_escrow" | "offplan_construction" | "no_offplan";
-
-const SCENARIO_LABELS: Record<Scenario, string> = {
-  offplan_escrow: "أوف بلان مع إيداع في حساب الضمان",
-  offplan_construction: "تطوير بدون بيع على الخارطة", // Offplan with 20% construction completion
-  no_offplan: "تطوير بدون بيع على الخارطة",
-};
 
 // ═══════════════════════════════════════════
 // FORMAT HELPERS
@@ -35,13 +30,12 @@ interface CostRow {
   label: string;
   totalCost: number;
   investorAmount: number;
-  paid: number; // مدفوع
-  unpaid: number; // غير مدفوع
+  paid: number;
+  unpaid: number;
   funder: Funder;
   section: string;
-  // Monthly distribution: index 0 = month 1 of design, etc.
-  designMonths: number[]; // length = designDuration
-  constructionMonths: number[]; // length = constructionDuration
+  designMonths: number[];
+  constructionMonths: number[];
 }
 
 // ═══════════════════════════════════════════
@@ -61,52 +55,23 @@ export default function InvestorCashFlowSchedulePage() {
       count: u.defaultCount,
     }));
     const pricingFormulas = calculatePricingFormulas(pricingUnits);
+    const costs = calculateCosts(projectFormulas, pricingFormulas);
 
     const { landPrice, landRegistration, landBroker, constructionCost, gfaTotal } = projectFormulas;
     const { totalRevenue, totalUnits } = pricingFormulas;
     const designDuration = PROJECT_INPUTS.designDuration;
     const constructionDuration = PROJECT_INPUTS.constructionDuration;
 
-    // Helper: create empty month arrays
+    // Helper: empty month arrays
     const emptyDesign = () => new Array(designDuration).fill(0);
     const emptyConstruction = () => new Array(constructionDuration).fill(0);
 
-    // Helper: distribute evenly over design months
-    const spreadDesign = (amount: number, startMonth = 0, endMonth = designDuration - 1) => {
-      const arr = emptyDesign();
-      const months = endMonth - startMonth + 1;
-      for (let i = startMonth; i <= endMonth; i++) arr[i] = amount / months;
-      return arr;
-    };
-
-    // Helper: distribute evenly over construction months
-    const spreadConstruction = (amount: number, startMonth = 0, endMonth = constructionDuration - 1) => {
-      const arr = emptyConstruction();
-      const months = endMonth - startMonth + 1;
-      for (let i = startMonth; i <= endMonth; i++) arr[i] = amount / months;
-      return arr;
-    };
-
-    // Helper: single month in design
-    const singleDesign = (amount: number, month: number) => {
-      const arr = emptyDesign();
-      if (month >= 0 && month < designDuration) arr[month] = amount;
-      return arr;
-    };
-
-    // Helper: single month in construction
-    const singleConstruction = (amount: number, month: number) => {
-      const arr = emptyConstruction();
-      if (month >= 0 && month < constructionDuration) arr[month] = amount;
-      return arr;
-    };
-
     // ═══════════════════════════════════════════
-    // BUILD ROWS
+    // BUILD ROWS — نفس بنود البطاقة بالضبط
     // ═══════════════════════════════════════════
     const rows: CostRow[] = [];
 
-    // ─── القسم الأول — المبالغ المدفوعة (الأرض) ───
+    // ─── الأرض ───
     rows.push({
       label: "سعر الأرض",
       totalCost: landPrice,
@@ -114,19 +79,7 @@ export default function InvestorCashFlowSchedulePage() {
       paid: landPrice,
       unpaid: 0,
       funder: "investor",
-      section: "القسم الأول — المبالغ المدفوعة (الأرض)",
-      designMonths: emptyDesign(),
-      constructionMonths: emptyConstruction(),
-    });
-
-    rows.push({
-      label: "عمولة وسيط الأرض",
-      totalCost: landBroker,
-      investorAmount: landBroker,
-      paid: landBroker,
-      unpaid: 0,
-      funder: "investor",
-      section: "القسم الأول — المبالغ المدفوعة (الأرض)",
+      section: "الأرض",
       designMonths: emptyDesign(),
       constructionMonths: emptyConstruction(),
     });
@@ -138,34 +91,58 @@ export default function InvestorCashFlowSchedulePage() {
       paid: landRegistration,
       unpaid: 0,
       funder: "investor",
-      section: "القسم الأول — المبالغ المدفوعة (الأرض)",
+      section: "الأرض",
       designMonths: emptyDesign(),
       constructionMonths: emptyConstruction(),
     });
 
-    // ─── القسم الثاني — التصاميم ورخصة البناء ───
-    const govFeesInvestor = PROJECT_INPUTS.govFeesTotal * RATES.govFeesInvestorShare;
     rows.push({
-      label: "رسوم الجهات الحكومية (10%)",
-      totalCost: PROJECT_INPUTS.govFeesTotal,
-      investorAmount: govFeesInvestor,
+      label: "عمولة وسيط الأرض (1%)",
+      totalCost: landBroker,
+      investorAmount: landBroker,
+      paid: landBroker,
+      unpaid: 0,
+      funder: "investor",
+      section: "الأرض",
+      designMonths: emptyDesign(),
+      constructionMonths: emptyConstruction(),
+    });
+
+    // ─── التصاميم والإشراف ───
+    rows.push({
+      label: "أتعاب التصاميم (1.8%)",
+      totalCost: costs.designFee,
+      investorAmount: costs.designFee,
       paid: 0,
-      unpaid: govFeesInvestor,
-      funder: "split",
-      section: "القسم الثاني — التصاميم ورخصة البناء",
-      designMonths: spreadDesign(govFeesInvestor),
+      unpaid: costs.designFee,
+      funder: "investor",
+      section: "التصاميم والإشراف",
+      designMonths: emptyDesign(),
       constructionMonths: emptyConstruction(),
     });
 
     rows.push({
-      label: "فحص تربة",
+      label: "أتعاب الإشراف (2%)",
+      totalCost: costs.supervisionFee,
+      investorAmount: 0,
+      paid: 0,
+      unpaid: 0,
+      funder: "escrow",
+      section: "التصاميم والإشراف",
+      designMonths: emptyDesign(),
+      constructionMonths: emptyConstruction(),
+    });
+
+    // ─── الدراسات والمسوحات ───
+    rows.push({
+      label: "فحص التربة",
       totalCost: PROJECT_INPUTS.soilTest,
       investorAmount: PROJECT_INPUTS.soilTest,
       paid: 0,
       unpaid: PROJECT_INPUTS.soilTest,
       funder: "investor",
-      section: "القسم الثاني — التصاميم ورخصة البناء",
-      designMonths: singleDesign(PROJECT_INPUTS.soilTest, 0),
+      section: "الدراسات والمسوحات",
+      designMonths: emptyDesign(),
       constructionMonths: emptyConstruction(),
     });
 
@@ -176,293 +153,121 @@ export default function InvestorCashFlowSchedulePage() {
       paid: 0,
       unpaid: PROJECT_INPUTS.topography,
       funder: "investor",
-      section: "القسم الثاني — التصاميم ورخصة البناء",
-      designMonths: singleDesign(PROJECT_INPUTS.topography, 0),
+      section: "الدراسات والمسوحات",
+      designMonths: emptyDesign(),
       constructionMonths: emptyConstruction(),
     });
 
-    // أتعاب التصاميم — milestones: 30% شهر 2, 30% شهر 4, 20% شهر 6, 20% شهر 8
-    const designFee = constructionCost * RATES.designFee;
-    const designFeeMonths = emptyDesign();
-    designFeeMonths[1] = designFee * 0.30; // شهر 2
-    designFeeMonths[3] = designFee * 0.30; // شهر 4
-    designFeeMonths[5] = designFee * 0.20; // شهر 6
-    designFeeMonths[7] = designFee * 0.20; // شهر 8
     rows.push({
-      label: "أتعاب الاستشاري — التصاميم (1.8%)",
-      totalCost: designFee,
-      investorAmount: designFee,
+      label: "رسوم المساح",
+      totalCost: PROJECT_INPUTS.surveyorFee,
+      investorAmount: PROJECT_INPUTS.surveyorFee,
       paid: 0,
-      unpaid: designFee,
+      unpaid: PROJECT_INPUTS.surveyorFee,
       funder: "investor",
-      section: "القسم الثاني — التصاميم ورخصة البناء",
-      designMonths: designFeeMonths,
+      section: "الدراسات والمسوحات",
+      designMonths: emptyDesign(),
       constructionMonths: emptyConstruction(),
     });
 
-    const devFeeDesign = totalRevenue * RATES.developerFeeDesign;
+    // ─── الرسوم الحكومية والتنظيمية ───
     rows.push({
-      label: "أتعاب المطور — التصاميم (1%)",
-      totalCost: devFeeDesign,
-      investorAmount: devFeeDesign,
+      label: "رسوم المجتمع",
+      totalCost: PROJECT_INPUTS.communityFee,
+      investorAmount: PROJECT_INPUTS.communityFee,
       paid: 0,
-      unpaid: devFeeDesign,
+      unpaid: PROJECT_INPUTS.communityFee,
       funder: "investor",
-      section: "القسم الثاني — التصاميم ورخصة البناء",
-      designMonths: spreadDesign(devFeeDesign),
+      section: "الرسوم الحكومية والتنظيمية",
+      designMonths: emptyDesign(),
       constructionMonths: emptyConstruction(),
     });
 
-    // ─── القسم الثالث — ريرا والبيع أوف بلان ───
-    // هذه البنود تُدفع في آخر شهرين من التصاميم (أوف بلان = شهر 7 و 8)
-    const offplanStartMonth = designDuration - 2; // شهر 7 (index 6)
-
-    const devFeeOffplan = totalRevenue * RATES.developerFeeOffplan;
     rows.push({
-      label: "أتعاب المطور — أوف بلان (1%)",
-      totalCost: devFeeOffplan,
-      investorAmount: devFeeOffplan,
+      label: "رسوم الجهات الحكومية",
+      totalCost: PROJECT_INPUTS.govFeesTotal,
+      investorAmount: costs.govFeesInvestor,
       paid: 0,
-      unpaid: devFeeOffplan,
-      funder: "investor",
-      section: "القسم الثالث — ريرا والبيع أوف بلان",
-      designMonths: singleDesign(devFeeOffplan, offplanStartMonth),
+      unpaid: costs.govFeesInvestor,
+      funder: "split",
+      section: "الرسوم الحكومية والتنظيمية",
+      designMonths: emptyDesign(),
       constructionMonths: emptyConstruction(),
     });
 
-    const sortingFee = gfaTotal * RATES.sortingFeePerSqft;
     rows.push({
       label: "رسوم الفرز (40 د/قدم²)",
-      totalCost: sortingFee,
-      investorAmount: sortingFee,
+      totalCost: costs.sortingFee,
+      investorAmount: costs.sortingFee,
       paid: 0,
-      unpaid: sortingFee,
+      unpaid: costs.sortingFee,
       funder: "investor",
-      section: "القسم الثالث — ريرا والبيع أوف بلان",
-      designMonths: singleDesign(sortingFee, offplanStartMonth),
+      section: "الرسوم الحكومية والتنظيمية",
+      designMonths: emptyDesign(),
       constructionMonths: emptyConstruction(),
     });
 
     rows.push({
-      label: "تسجيل بيع على الخارطة — ريرا",
-      totalCost: PROJECT_INPUTS.reraProjectReg,
-      investorAmount: PROJECT_INPUTS.reraProjectReg,
-      paid: 0,
-      unpaid: PROJECT_INPUTS.reraProjectReg,
-      funder: "investor",
-      section: "القسم الثالث — ريرا والبيع أوف بلان",
-      designMonths: singleDesign(PROJECT_INPUTS.reraProjectReg, offplanStartMonth),
-      constructionMonths: emptyConstruction(),
-    });
-
-    const reraUnits = totalUnits * RATES.reraUnitFee;
-    rows.push({
-      label: "تسجيل الوحدات — ريرا",
-      totalCost: reraUnits,
-      investorAmount: reraUnits,
-      paid: 0,
-      unpaid: reraUnits,
-      funder: "investor",
-      section: "القسم الثالث — ريرا والبيع أوف بلان",
-      designMonths: singleDesign(reraUnits, offplanStartMonth),
-      constructionMonths: emptyConstruction(),
-    });
-
-    rows.push({
-      label: "رسوم NOC للبيع",
+      label: "رسوم NOC المطور",
       totalCost: PROJECT_INPUTS.nocSale,
       investorAmount: PROJECT_INPUTS.nocSale,
       paid: 0,
       unpaid: PROJECT_INPUTS.nocSale,
       funder: "investor",
-      section: "القسم الثالث — ريرا والبيع أوف بلان",
-      designMonths: singleDesign(PROJECT_INPUTS.nocSale, offplanStartMonth),
+      section: "الرسوم الحكومية والتنظيمية",
+      designMonths: emptyDesign(),
+      constructionMonths: emptyConstruction(),
+    });
+
+    // ─── ريرا (التنظيم العقاري) ───
+    rows.push({
+      label: "تسجيل المشروع — ريرا",
+      totalCost: PROJECT_INPUTS.reraProjectReg,
+      investorAmount: PROJECT_INPUTS.reraProjectReg,
+      paid: 0,
+      unpaid: PROJECT_INPUTS.reraProjectReg,
+      funder: "investor",
+      section: "ريرا (التنظيم العقاري)",
+      designMonths: emptyDesign(),
       constructionMonths: emptyConstruction(),
     });
 
     rows.push({
-      label: "رسوم حساب الضمان",
+      label: "تسجيل الوحدات — ريرا",
+      totalCost: costs.reraUnits,
+      investorAmount: costs.reraUnits,
+      paid: 0,
+      unpaid: costs.reraUnits,
+      funder: "investor",
+      section: "ريرا (التنظيم العقاري)",
+      designMonths: emptyDesign(),
+      constructionMonths: emptyConstruction(),
+    });
+
+    rows.push({
+      label: "حساب الضمان (رسوم فتح)",
       totalCost: PROJECT_INPUTS.escrowAccountFee,
       investorAmount: PROJECT_INPUTS.escrowAccountFee,
       paid: 0,
       unpaid: PROJECT_INPUTS.escrowAccountFee,
       funder: "investor",
-      section: "القسم الثالث — ريرا والبيع أوف بلان",
-      designMonths: singleDesign(PROJECT_INPUTS.escrowAccountFee, offplanStartMonth),
-      constructionMonths: emptyConstruction(),
-    });
-
-    const communityOffplan = PROJECT_INPUTS.communityFee * RATES.communityOffplanShare;
-    rows.push({
-      label: "رسوم المجتمع (25%)",
-      totalCost: PROJECT_INPUTS.communityFee,
-      investorAmount: communityOffplan,
-      paid: 0,
-      unpaid: communityOffplan,
-      funder: "investor",
-      section: "القسم الثالث — ريرا والبيع أوف بلان",
-      designMonths: singleDesign(communityOffplan, offplanStartMonth + 1),
-      constructionMonths: emptyConstruction(),
-    });
-
-    const marketingOffplan = totalRevenue * RATES.marketingTotal * RATES.marketingOffplanShare;
-    rows.push({
-      label: "التسويق والإعلان — أوف بلان (25%)",
-      totalCost: marketingOffplan,
-      investorAmount: marketingOffplan,
-      paid: 0,
-      unpaid: marketingOffplan,
-      funder: "investor",
-      section: "القسم الثالث — ريرا والبيع أوف بلان",
-      designMonths: (() => {
-        const arr = emptyDesign();
-        arr[offplanStartMonth] = marketingOffplan / 2;
-        arr[offplanStartMonth + 1] = marketingOffplan / 2;
-        return arr;
-      })(),
-      constructionMonths: emptyConstruction(),
-    });
-
-    // إيداع حساب الضمان (20%)
-    const escrowDeposit = constructionCost * RATES.escrowDeposit;
-    rows.push({
-      label: "إيداع حساب الضمان (20%)",
-      totalCost: escrowDeposit,
-      investorAmount: escrowDeposit,
-      paid: 0,
-      unpaid: escrowDeposit,
-      funder: "investor",
-      section: "القسم الثالث — ريرا والبيع أوف بلان",
-      designMonths: singleDesign(escrowDeposit, designDuration - 1), // آخر شهر تصاميم
-      constructionMonths: emptyConstruction(),
-    });
-
-    // ─── القسم الرابع — الإنشاء ───
-    // دفعة مقدمة 10% — أول شهر إنشاء
-    const advancePayment = constructionCost * RATES.advancePayment;
-    rows.push({
-      label: "دفعة مقدمة للمقاول (10%)",
-      totalCost: advancePayment,
-      investorAmount: advancePayment,
-      paid: 0,
-      unpaid: advancePayment,
-      funder: "investor",
-      section: "القسم الرابع — الإنشاء",
+      section: "ريرا (التنظيم العقاري)",
       designMonths: emptyDesign(),
-      constructionMonths: singleConstruction(advancePayment, 0),
+      constructionMonths: emptyConstruction(),
     });
 
-    // احتياطي 2% — موزع على الإنشاء
-    const contingency = constructionCost * RATES.contingency;
     rows.push({
-      label: "احتياطي وطوارئ (2%)",
-      totalCost: contingency,
-      investorAmount: contingency,
-      paid: 0,
-      unpaid: contingency,
-      funder: "investor",
-      section: "القسم الرابع — الإنشاء",
-      designMonths: emptyDesign(),
-      constructionMonths: spreadConstruction(contingency),
-    });
-
-    // رسوم بنكية
-    rows.push({
-      label: "رسوم بنكية",
+      label: "رسوم البنك",
       totalCost: PROJECT_INPUTS.bankFees,
       investorAmount: PROJECT_INPUTS.bankFees,
       paid: 0,
       unpaid: PROJECT_INPUTS.bankFees,
       funder: "investor",
-      section: "القسم الرابع — الإنشاء",
-      designMonths: emptyDesign(),
-      constructionMonths: spreadConstruction(PROJECT_INPUTS.bankFees),
-    });
-
-    // رسوم الجهات الحكومية (90%) — من الضمان
-    const govFeesEscrow = PROJECT_INPUTS.govFeesTotal * RATES.govFeesEscrowShare;
-    rows.push({
-      label: "رسوم الجهات الحكومية (90%)",
-      totalCost: govFeesEscrow,
-      investorAmount: 0,
-      paid: 0,
-      unpaid: 0,
-      funder: "escrow",
-      section: "القسم الرابع — الإنشاء",
-      designMonths: emptyDesign(),
-      constructionMonths: spreadConstruction(govFeesEscrow),
-    });
-
-    // دفعات المقاول (70% — من الضمان)
-    const contractorEscrow = constructionCost * RATES.constructionEscrowShare;
-    rows.push({
-      label: "دفعات المقاول (70% — من الضمان)",
-      totalCost: contractorEscrow,
-      investorAmount: 0,
-      paid: 0,
-      unpaid: 0,
-      funder: "escrow",
-      section: "القسم الرابع — الإنشاء",
-      designMonths: emptyDesign(),
-      constructionMonths: spreadConstruction(contractorEscrow),
-    });
-
-    // رسوم المجتمع (75%)
-    const communityConstruction = PROJECT_INPUTS.communityFee * RATES.communityConstructionShare;
-    rows.push({
-      label: "رسوم المجتمع (75%)",
-      totalCost: communityConstruction,
-      investorAmount: communityConstruction,
-      paid: 0,
-      unpaid: communityConstruction,
-      funder: "investor",
-      section: "القسم الرابع — الإنشاء",
-      designMonths: emptyDesign(),
-      constructionMonths: singleConstruction(communityConstruction, 2),
-    });
-
-    // أتعاب المطور — الإشراف (3%)
-    const devFeeSupervision = totalRevenue * RATES.developerFeeSupervision;
-    rows.push({
-      label: "أتعاب المطور — الإشراف (3%)",
-      totalCost: devFeeSupervision,
-      investorAmount: devFeeSupervision,
-      paid: 0,
-      unpaid: devFeeSupervision,
-      funder: "investor",
-      section: "القسم الرابع — الإنشاء",
-      designMonths: emptyDesign(),
-      constructionMonths: spreadConstruction(devFeeSupervision),
-    });
-
-    // أتعاب الإشراف — من الضمان
-    const supervisionFee = constructionCost * RATES.supervisionFee;
-    rows.push({
-      label: "أتعاب الاستشاري — الإشراف",
-      totalCost: supervisionFee,
-      investorAmount: 0,
-      paid: 0,
-      unpaid: 0,
-      funder: "escrow",
-      section: "القسم الرابع — الإنشاء",
-      designMonths: emptyDesign(),
-      constructionMonths: spreadConstruction(supervisionFee),
-    });
-
-    // رسوم المساح — من الضمان
-    rows.push({
-      label: "رسوم المساح",
-      totalCost: PROJECT_INPUTS.surveyorFee,
-      investorAmount: 0,
-      paid: 0,
-      unpaid: 0,
-      funder: "escrow",
-      section: "القسم الرابع — الإنشاء",
+      section: "ريرا (التنظيم العقاري)",
       designMonths: emptyDesign(),
       constructionMonths: emptyConstruction(),
     });
 
-    // تقرير مدقق ريرا — من الضمان
     rows.push({
       label: "تقرير مدقق ريرا",
       totalCost: PROJECT_INPUTS.reraAuditorReport,
@@ -470,73 +275,94 @@ export default function InvestorCashFlowSchedulePage() {
       paid: 0,
       unpaid: 0,
       funder: "escrow",
-      section: "القسم الرابع — الإنشاء",
+      section: "ريرا (التنظيم العقاري)",
       designMonths: emptyDesign(),
       constructionMonths: emptyConstruction(),
     });
 
-    // تقرير فحص ريرا — من الضمان
     rows.push({
-      label: "تقرير فحص ريرا",
+      label: "فحص ريرا",
       totalCost: PROJECT_INPUTS.reraInspection,
       investorAmount: 0,
       paid: 0,
       unpaid: 0,
       funder: "escrow",
-      section: "القسم الرابع — الإنشاء",
+      section: "ريرا (التنظيم العقاري)",
       designMonths: emptyDesign(),
       constructionMonths: emptyConstruction(),
     });
 
-    // التسويق والإعلان — الإنشاء (75%)
-    const marketingConstruction = totalRevenue * RATES.marketingTotal * RATES.marketingConstructionShare;
+    // ─── المبيعات والتسويق ───
     rows.push({
-      label: "التسويق والإعلان — الإنشاء (75%)",
-      totalCost: marketingConstruction,
-      investorAmount: marketingConstruction,
-      paid: 0,
-      unpaid: marketingConstruction,
-      funder: "investor",
-      section: "القسم الرابع — الإنشاء",
-      designMonths: emptyDesign(),
-      constructionMonths: spreadConstruction(marketingConstruction),
-    });
-
-    // عمولة وكيل المبيعات (5%) — من الضمان
-    const salesCommission = totalRevenue * RATES.salesCommission;
-    rows.push({
-      label: "عمولة وكيل المبيعات (5%)",
-      totalCost: salesCommission,
+      label: "عمولة المبيعات (5%)",
+      totalCost: costs.salesCommission,
       investorAmount: 0,
       paid: 0,
       unpaid: 0,
       funder: "escrow",
-      section: "القسم الرابع — الإنشاء",
+      section: "المبيعات والتسويق",
       designMonths: emptyDesign(),
-      constructionMonths: spreadConstruction(salesCommission),
+      constructionMonths: emptyConstruction(),
+    });
+
+    rows.push({
+      label: "التسويق (2%)",
+      totalCost: costs.marketing,
+      investorAmount: costs.marketing,
+      paid: 0,
+      unpaid: costs.marketing,
+      funder: "investor",
+      section: "المبيعات والتسويق",
+      designMonths: emptyDesign(),
+      constructionMonths: emptyConstruction(),
+    });
+
+    rows.push({
+      label: "أتعاب المطور (5%)",
+      totalCost: costs.developerFee,
+      investorAmount: costs.developerFee,
+      paid: 0,
+      unpaid: costs.developerFee,
+      funder: "investor",
+      section: "المبيعات والتسويق",
+      designMonths: emptyDesign(),
+      constructionMonths: emptyConstruction(),
+    });
+
+    // ─── الإنشاء ───
+    rows.push({
+      label: "تكلفة الإنشاء",
+      totalCost: constructionCost,
+      investorAmount: costs.constructionInvestor,
+      paid: 0,
+      unpaid: costs.constructionInvestor,
+      funder: "split",
+      section: "الإنشاء",
+      designMonths: emptyDesign(),
+      constructionMonths: emptyConstruction(),
     });
 
     // ═══════════════════════════════════════════
-    // TOTALS
+    // TOTALS — نفس معادلة البطاقة بالضبط
     // ═══════════════════════════════════════════
-    const grandTotalCost = rows.reduce((s, r) => s + r.totalCost, 0);
-    const grandInvestor = rows.reduce((s, r) => s + r.investorAmount, 0);
+    const grandTotalCost = costs.totalCosts;
+    const grandInvestor = costs.totalInvestor;
     const grandPaid = rows.reduce((s, r) => s + r.paid, 0);
-    const grandUnpaid = rows.reduce((s, r) => s + r.unpaid, 0);
+    const grandUnpaid = grandInvestor - grandPaid;
 
-    // Monthly totals (investor only — what the investor actually pays each month)
-    const designMonthlyTotals = emptyDesign();
-    const constructionMonthlyTotals = emptyConstruction();
+    // Monthly totals (فارغة حالياً — سيتم التوزيع لاحقاً)
+    const designMonthlyTotals = new Array(designDuration).fill(0);
+    const constructionMonthlyTotals = new Array(constructionDuration).fill(0);
     for (const row of rows) {
-      if (row.funder === "escrow") continue; // الضمان لا يُحسب في تدفق المستثمر
+      if (row.funder === "escrow") continue;
       for (let i = 0; i < designDuration; i++) designMonthlyTotals[i] += row.designMonths[i];
       for (let i = 0; i < constructionDuration; i++) constructionMonthlyTotals[i] += row.constructionMonths[i];
     }
 
     // Cumulative (investor)
-    const cumulativeDesign = emptyDesign();
-    const cumulativeConstruction = emptyConstruction();
-    let running = grandPaid; // start with paid (land)
+    const cumulativeDesign = new Array(designDuration).fill(0);
+    const cumulativeConstruction = new Array(constructionDuration).fill(0);
+    let running = grandPaid;
     for (let i = 0; i < designDuration; i++) {
       running += designMonthlyTotals[i];
       cumulativeDesign[i] = running;
@@ -546,12 +372,15 @@ export default function InvestorCashFlowSchedulePage() {
       cumulativeConstruction[i] = running;
     }
 
-    // Sections for grouping
+    // Sections
     const sections = [
-      "القسم الأول — المبالغ المدفوعة (الأرض)",
-      "القسم الثاني — التصاميم ورخصة البناء",
-      "القسم الثالث — ريرا والبيع أوف بلان",
-      "القسم الرابع — الإنشاء",
+      "الأرض",
+      "التصاميم والإشراف",
+      "الدراسات والمسوحات",
+      "الرسوم الحكومية والتنظيمية",
+      "ريرا (التنظيم العقاري)",
+      "المبيعات والتسويق",
+      "الإنشاء",
     ];
 
     return {

@@ -6,6 +6,14 @@ import {
   Calculator, Landmark, FileText, ShieldCheck, Hammer,
   TrendingUp, Users, Banknote, ArrowRight,
 } from "lucide-react";
+import {
+  PROJECT_INPUTS,
+  RATES,
+  PRICING_DEFAULTS,
+  calculateProjectFormulas,
+  calculatePricingFormulas,
+  calculateCosts,
+} from "@/lib/projectData";
 
 // ═══════════════════════════════════════════
 // TYPES
@@ -44,137 +52,53 @@ function fmtFull(n: number): string {
 }
 
 // ═══════════════════════════════════════════
-// PROJECT DATA - MAJAN G+4P+25 OFFPLAN
+// المصدر: projectData.ts (مثل الإكسل — غيّر هناك = يتغير هنا)
 // ═══════════════════════════════════════════
-
-// === INPUTS (User enters these) ===
-const INPUTS = {
-  projectName: "مجان متعدد الاستخدامات (G+4P+25)",
-  landArea: 66879.19,
-  bua: 875300,
-  constructionCostPerSqft: 400,
-  designDuration: 8,
-  constructionDuration: 30,
-  startDate: "2026-08",
-  gfaResidential: 93631,
-  gfaRetail: 74904.84,
-  gfaOffice: 299618.38,
-  sellableRatioResidential: 0.95,
-  sellableRatioRetail: 0.80,
-  sellableRatioOffice: 0.90,
-  // أسعار القدم — أصبحت فورمولا تأتي من التسعير
-  // pricePerSqftResidential: formula (إيراد السكني ÷ المساحة القابلة)
-  // pricePerSqftRetail: formula
-  // pricePerSqftOffice: formula
-  landPricePerSqft: 262,  // إدخال — سعر القدم للأرض
-  landRegistrationRate: 0.04,
-  landBrokerRate: 0.01,
-  designFeeRate: 0.018,
-  supervisionFeeRate: 0.02,
-  soilTestAmount: 45000,
-  topographyAmount: 12000,
-  communityFeeAmount: 80000,
-  govFeesAmount: 7000000,
-  sortingFeePerSqft: 40,
-  nocDeveloperAmount: 10000,
-  reraProjectReg: 150000,
-  reraUnitFee: 520, // رسوم تسجيل الوحدة الواحدة
-  // unitCount — فورمولا من التسعير
-  escrowAccountFee: 180000,
-  bankFees: 35000,
-  salesCommissionRate: 0.05,
-  marketingRate: 0.02,
-  developerFeeRate: 0.05,
-  surveyorFee: 35000,
-  reraAuditorReport: 24000,
-  reraInspection: 150000,
-  // Funding split ratios (offplan)
-  constructionInvestorShare: 0.30,
-  constructionEscrowShare: 0.70,
-  govFeesInvestorShare: 0.10,
-  govFeesEscrowShare: 0.90,
-};
-
-// ═══════════════════════════════════════════
-// من صفحة التسعير — فورمولا (لا إدخال متكرر)
-// ═══════════════════════════════════════════
-const PRICING_DATA = {
-  revenueResidential: 133_308_000,
-  revenueRetail: 149_290_000,
-  revenueOffice: 505_188_000,
-  totalRevenue: 787_786_000,
-  totalUnits: 245,
-  totalParking: 860,
-  avgPriceResidential: 1499,
-  avgPriceRetail: 2491,
-  avgPriceOffice: 1874,
-};
 
 export default function ProjectCardOffplanPage() {
-  // === FORMULAS (Calculated from inputs) ===
+  // === FORMULAS — كلها من projectData.ts ===
   const calc = useMemo(() => {
-    const i = INPUTS;
-    const gfaTotal = i.gfaResidential + i.gfaRetail + i.gfaOffice;
-    const sellableResidential = i.gfaResidential * i.sellableRatioResidential;
-    const sellableRetail = i.gfaRetail * i.sellableRatioRetail;
-    const sellableOffice = i.gfaOffice * i.sellableRatioOffice;
-    // الإيرادات تأتي من صفحة التسعير
-    const revenueResidential = PRICING_DATA.revenueResidential;
-    const revenueRetail = PRICING_DATA.revenueRetail;
-    const revenueOffice = PRICING_DATA.revenueOffice;
-    const totalRevenue = PRICING_DATA.totalRevenue;
-    // سعر القدم = فورمولا (إيراد ÷ مساحة قابلة)
+    const i = PROJECT_INPUTS;
+    const projectFormulas = calculateProjectFormulas();
+    const { gfaTotal, sellableResidential, sellableRetail, sellableOffice, landPrice, landRegistration, landBroker, constructionCost } = projectFormulas;
+
+    // الإيرادات من التسعير
+    const pricingUnits = PRICING_DEFAULTS.map(u => ({
+      name: u.name, category: u.category, area: u.defaultArea, price: u.defaultPrice, count: u.defaultCount,
+    }));
+    const pricingFormulas = calculatePricingFormulas(pricingUnits);
+    const { revenueResidential, revenueRetail, revenueOffice, totalRevenue, totalUnits, totalParking } = pricingFormulas;
+
+    // سعر القدم = فورمولا
     const pricePerSqftResidential = sellableResidential > 0 ? revenueResidential / sellableResidential : 0;
     const pricePerSqftRetail = sellableRetail > 0 ? revenueRetail / sellableRetail : 0;
     const pricePerSqftOffice = sellableOffice > 0 ? revenueOffice / sellableOffice : 0;
-    // عدد الوحدات والمواقف من التسعير
-    const unitCount = PRICING_DATA.totalUnits;
-    const totalParking = PRICING_DATA.totalParking;
-    const constructionCost = i.bua * i.constructionCostPerSqft;
-    const landPrice = i.landPricePerSqft * gfaTotal; // فورمولا: سعر القدم × GFA الإجمالي
-    const landRegistration = landPrice * i.landRegistrationRate;
-    const landBroker = landPrice * i.landBrokerRate;
-    const designFee = constructionCost * i.designFeeRate;
-    const supervisionFee = constructionCost * i.supervisionFeeRate;
-    const sortingFee = gfaTotal * i.sortingFeePerSqft;
-    const reraUnits = unitCount * i.reraUnitFee; // عدد الوحدات (من التسعير) × 520 درهم
-    const salesCommission = totalRevenue * i.salesCommissionRate;
-    const marketing = totalRevenue * i.marketingRate;
-    const developerFee = totalRevenue * i.developerFeeRate;
 
-    // Construction split
-    const constructionInvestor = constructionCost * i.constructionInvestorShare;
-    const constructionEscrow = constructionCost * i.constructionEscrowShare;
-    // Gov fees split
-    const govFeesInvestor = i.govFeesAmount * i.govFeesInvestorShare;
-    const govFeesEscrow = i.govFeesAmount * i.govFeesEscrowShare;
-
-    // Total investor
-    const totalInvestor = landPrice + landRegistration + landBroker + designFee +
-      i.soilTestAmount + i.topographyAmount + i.communityFeeAmount + govFeesInvestor +
-      sortingFee + i.nocDeveloperAmount + i.reraProjectReg + reraUnits +
-      i.escrowAccountFee + i.bankFees + marketing + developerFee + i.surveyorFee +
-      constructionInvestor;
-
-    // Total escrow
-    const totalEscrow = supervisionFee + govFeesEscrow + salesCommission +
-      i.reraAuditorReport + i.reraInspection + constructionEscrow;
-
-    const totalCosts = totalInvestor + totalEscrow;
-    const profit = totalRevenue - totalCosts;
-    const margin = (profit / totalRevenue) * 100;
+    // التكاليف — نفس المعادلة بالضبط
+    const costs = calculateCosts(projectFormulas, pricingFormulas);
 
     return {
       gfaTotal, sellableResidential, sellableRetail, sellableOffice,
       revenueResidential, revenueRetail, revenueOffice, totalRevenue,
       pricePerSqftResidential, pricePerSqftRetail, pricePerSqftOffice,
-      unitCount, totalParking,
+      unitCount: totalUnits, totalParking,
       constructionCost, landPrice, landRegistration, landBroker,
-      designFee, supervisionFee, sortingFee, reraUnits,
-      salesCommission, marketing, developerFee,
-      constructionInvestor, constructionEscrow,
-      govFeesInvestor, govFeesEscrow,
-      totalInvestor, totalEscrow, totalCosts, profit, margin,
+      designFee: costs.designFee,
+      supervisionFee: costs.supervisionFee,
+      sortingFee: costs.sortingFee,
+      reraUnits: costs.reraUnits,
+      salesCommission: costs.salesCommission,
+      marketing: costs.marketing,
+      developerFee: costs.developerFee,
+      constructionInvestor: costs.constructionInvestor,
+      constructionEscrow: costs.constructionEscrow,
+      govFeesInvestor: costs.govFeesInvestor,
+      govFeesEscrow: costs.govFeesEscrow,
+      totalInvestor: costs.totalInvestor,
+      totalEscrow: costs.totalEscrow,
+      totalCosts: costs.totalCosts,
+      profit: costs.profit,
+      margin: costs.margin,
     };
   }, []);
 
@@ -188,18 +112,18 @@ export default function ProjectCardOffplanPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-white">بطاقة المشروع — أوف بلان</h1>
-            <p className="text-slate-400 text-sm">{INPUTS.projectName}</p>
+            <p className="text-slate-400 text-sm">{PROJECT_INPUTS.name}</p>
           </div>
         </div>
         <div className="flex gap-3 mt-4">
           <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30 px-3 py-1">
-            <Calendar className="w-3 h-3 ml-1" /> تصاميم: {INPUTS.designDuration} شهور
+            <Calendar className="w-3 h-3 ml-1" /> تصاميم: {PROJECT_INPUTS.designDuration} شهور
           </Badge>
           <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 px-3 py-1">
-            <Hammer className="w-3 h-3 ml-1" /> إنشاء: {INPUTS.constructionDuration} شهر
+            <Hammer className="w-3 h-3 ml-1" /> إنشاء: {PROJECT_INPUTS.constructionDuration} شهر
           </Badge>
           <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30 px-3 py-1">
-            <Calendar className="w-3 h-3 ml-1" /> الإجمالي: {INPUTS.designDuration + INPUTS.constructionDuration} شهر
+            <Calendar className="w-3 h-3 ml-1" /> الإجمالي: {PROJECT_INPUTS.designDuration + PROJECT_INPUTS.constructionDuration} شهر
           </Badge>
         </div>
       </div>
@@ -228,14 +152,14 @@ export default function ProjectCardOffplanPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700/50">
-                  <FieldRow label="اسم المشروع" value={INPUTS.projectName} type="input" />
-                  <FieldRow label="مساحة الأرض (قدم²)" value={fmtFull(INPUTS.landArea)} type="input" />
-                  <FieldRow label="مساحة البناء BUA (قدم²)" value={fmtFull(INPUTS.bua)} type="input" />
-                  <FieldRow label="تكلفة الإنشاء (درهم/قدم)" value={fmtFull(INPUTS.constructionCostPerSqft)} type="input" />
+                  <FieldRow label="اسم المشروع" value={PROJECT_INPUTS.name} type="input" />
+                  <FieldRow label="مساحة الأرض (قدم²)" value={fmtFull(PROJECT_INPUTS.landArea)} type="input" />
+                  <FieldRow label="مساحة البناء BUA (قدم²)" value={fmtFull(PROJECT_INPUTS.bua)} type="input" />
+                  <FieldRow label="تكلفة الإنشاء (درهم/قدم)" value={fmtFull(PROJECT_INPUTS.constructionCostPerSqft)} type="input" />
                   <FieldRow label="تكلفة الإنشاء الإجمالية" value={fmtFull(calc.constructionCost)} type="formula" formula="BUA × تكلفة القدم" />
-                  <FieldRow label="مدة التصاميم (شهر)" value={String(INPUTS.designDuration)} type="input" />
-                  <FieldRow label="مدة الإنشاء (شهر)" value={String(INPUTS.constructionDuration)} type="input" />
-                  <FieldRow label="تاريخ البدء" value={INPUTS.startDate} type="input" />
+                  <FieldRow label="مدة التصاميم (شهر)" value={String(PROJECT_INPUTS.designDuration)} type="input" />
+                  <FieldRow label="مدة الإنشاء (شهر)" value={String(PROJECT_INPUTS.constructionDuration)} type="input" />
+                  <FieldRow label="تاريخ البدء" value={PROJECT_INPUTS.startDate} type="input" />
                 </tbody>
               </table>
             </div>
@@ -265,9 +189,9 @@ export default function ProjectCardOffplanPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-700/50">
                   <tr className="bg-slate-700/20"><td colSpan={4} className="py-2 px-3 text-slate-300 font-semibold text-xs">المساحات الإجمالية GFA</td></tr>
-                  <FieldRow label="GFA سكني" value={fmtFull(INPUTS.gfaResidential)} type="input" />
-                  <FieldRow label="GFA تجزئة" value={fmtFull(INPUTS.gfaRetail)} type="input" />
-                  <FieldRow label="GFA مكاتب" value={fmtFull(INPUTS.gfaOffice)} type="input" />
+                  <FieldRow label="GFA سكني" value={fmtFull(PROJECT_INPUTS.gfaResidential)} type="input" />
+                  <FieldRow label="GFA تجزئة" value={fmtFull(PROJECT_INPUTS.gfaRetail)} type="input" />
+                  <FieldRow label="GFA مكاتب" value={fmtFull(PROJECT_INPUTS.gfaOffice)} type="input" />
                   <FieldRow label="GFA إجمالي" value={fmtFull(calc.gfaTotal)} type="formula" formula="سكني + تجزئة + مكاتب" />
 
                   <tr className="bg-slate-700/20"><td colSpan={4} className="py-2 px-3 text-slate-300 font-semibold text-xs">النسب القابلة للبيع</td></tr>
@@ -335,25 +259,25 @@ export default function ProjectCardOffplanPage() {
 
                   {/* Studies & Surveys */}
                   <tr className="bg-slate-700/20"><td colSpan={6} className="py-2 px-3 text-slate-300 font-semibold text-xs">الدراسات والمسوحات</td></tr>
-                  <CostRow label="فحص التربة" type="input" rate="مبلغ مقطوع" amount={INPUTS.soilTestAmount} formula="—" funding="investor" />
-                  <CostRow label="المسح الطبوغرافي" type="input" rate="مبلغ مقطوع" amount={INPUTS.topographyAmount} formula="—" funding="investor" />
-                  <CostRow label="رسوم المساح" type="input" rate="مبلغ مقطوع" amount={INPUTS.surveyorFee} formula="—" funding="investor" />
+                  <CostRow label="فحص التربة" type="input" rate="مبلغ مقطوع" amount={PROJECT_INPUTS.soilTest} formula="—" funding="investor" />
+                  <CostRow label="المسح الطبوغرافي" type="input" rate="مبلغ مقطوع" amount={PROJECT_INPUTS.topography} formula="—" funding="investor" />
+                  <CostRow label="رسوم المساح" type="input" rate="مبلغ مقطوع" amount={PROJECT_INPUTS.surveyorFee} formula="—" funding="investor" />
 
                   {/* Government & Regulatory */}
                   <tr className="bg-slate-700/20"><td colSpan={6} className="py-2 px-3 text-slate-300 font-semibold text-xs">الرسوم الحكومية والتنظيمية</td></tr>
-                  <CostRow label="رسوم المجتمع" type="input" rate="مبلغ مقطوع" amount={INPUTS.communityFeeAmount} formula="—" funding="investor" />
-                  <CostRow label="رسوم الجهات الحكومية" type="input" rate="مبلغ مقطوع" amount={INPUTS.govFeesAmount} formula="—" funding="split" splitNote="10% مستثمر / 90% ضمان" investorAmt={calc.govFeesInvestor} escrowAmt={calc.govFeesEscrow} />
+                  <CostRow label="رسوم المجتمع" type="input" rate="مبلغ مقطوع" amount={PROJECT_INPUTS.communityFee} formula="—" funding="investor" />
+                  <CostRow label="رسوم الجهات الحكومية" type="input" rate="مبلغ مقطوع" amount={PROJECT_INPUTS.govFeesTotal} formula="—" funding="split" splitNote="10% مستثمر / 90% ضمان" investorAmt={calc.govFeesInvestor} escrowAmt={calc.govFeesEscrow} />
                   <CostRow label="رسوم الفرز" type="input" rate="40 درهم/قدم" amount={calc.sortingFee} formula="40 × GFA إجمالي" funding="investor" />
-                  <CostRow label="رسوم NOC المطور" type="input" rate="مبلغ مقطوع" amount={INPUTS.nocDeveloperAmount} formula="—" funding="investor" />
+                  <CostRow label="رسوم NOC المطور" type="input" rate="مبلغ مقطوع" amount={PROJECT_INPUTS.nocSale} formula="—" funding="investor" />
 
                   {/* RERA */}
                   <tr className="bg-slate-700/20"><td colSpan={6} className="py-2 px-3 text-slate-300 font-semibold text-xs">ريرا (التنظيم العقاري)</td></tr>
-                  <CostRow label="تسجيل المشروع — ريرا" type="input" rate="مبلغ مقطوع" amount={INPUTS.reraProjectReg} formula="—" funding="investor" />
+                  <CostRow label="تسجيل المشروع — ريرا" type="input" rate="مبلغ مقطوع" amount={PROJECT_INPUTS.reraProjectReg} formula="—" funding="investor" />
                   <CostRow label="تسجيل الوحدات — ريرا" type="formula" rate="520 × عدد الوحدات" amount={calc.reraUnits} formula={`520 × ${calc.unitCount} وحدة (من التسعير)`} funding="investor" />
-                  <CostRow label="حساب الضمان (رسوم فتح)" type="input" rate="مبلغ مقطوع" amount={INPUTS.escrowAccountFee} formula="—" funding="investor" />
-                  <CostRow label="رسوم البنك" type="input" rate="مبلغ مقطوع" amount={INPUTS.bankFees} formula="—" funding="investor" />
-                  <CostRow label="تقرير مدقق ريرا" type="input" rate="مبلغ مقطوع" amount={INPUTS.reraAuditorReport} formula="—" funding="escrow" />
-                  <CostRow label="فحص ريرا" type="input" rate="مبلغ مقطوع" amount={INPUTS.reraInspection} formula="—" funding="escrow" />
+                  <CostRow label="حساب الضمان (رسوم فتح)" type="input" rate="مبلغ مقطوع" amount={PROJECT_INPUTS.escrowAccountFee} formula="—" funding="investor" />
+                  <CostRow label="رسوم البنك" type="input" rate="مبلغ مقطوع" amount={PROJECT_INPUTS.bankFees} formula="—" funding="investor" />
+                  <CostRow label="تقرير مدقق ريرا" type="input" rate="مبلغ مقطوع" amount={PROJECT_INPUTS.reraAuditorReport} formula="—" funding="escrow" />
+                  <CostRow label="فحص ريرا" type="input" rate="مبلغ مقطوع" amount={PROJECT_INPUTS.reraInspection} formula="—" funding="escrow" />
 
                   {/* Sales & Marketing */}
                   <tr className="bg-slate-700/20"><td colSpan={6} className="py-2 px-3 text-slate-300 font-semibold text-xs">المبيعات والتسويق</td></tr>
