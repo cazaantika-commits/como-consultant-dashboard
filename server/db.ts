@@ -122,7 +122,7 @@ export async function updateProject(projectId: number, userId: number, data: Par
   const percentageFields = [
     'agentCommissionLandPct', 'designFeePct', 'supervisionFeePct', 
     'separationFeePerSqft', 'salesCommissionPct', 'marketingPct',
-    'developerFeePhase1Pct', 'developerFeePhase2Pct',
+    'developerFeePhase1Pct', 'developerFeePhase2Pct', 'developerFeePct',
     'saleableResidentialPct', 'saleableRetailPct', 'saleableOfficesPct'
   ];
   

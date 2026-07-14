@@ -893,3 +893,4 @@
 - [x] Add save/load for unit distribution in PricingPage (counts, areas, prices persist per project)
 - [x] Remove studio from PricingPage unit types
 - [x] Pre-fill default unit distributions for all 6 projects (no studio)
+- [x] Make ProjectCardOffplanPage fields editable (BUA, GFA, costs, dates, etc.) with save button

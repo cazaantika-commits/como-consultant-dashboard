@@ -91,6 +91,7 @@ const factSheetFields = {
   marketingPct: z.union([z.string(), z.number()]).optional(),
   developerFeePhase1Pct: z.union([z.string(), z.number()]).optional(),
   developerFeePhase2Pct: z.union([z.string(), z.number()]).optional(),
+  developerFeePct: z.union([z.string(), z.number()]).optional(),
   // نسب المساحة القابلة للبيع
   saleableResidentialPct: z.union([z.string(), z.number()]).optional(),
   saleableRetailPct: z.union([z.string(), z.number()]).optional(),
