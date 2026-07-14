@@ -875,3 +875,4 @@
 - [ ] Update InvestorCashFlowSchedulePage to match exact same items as the card
 - [ ] Verify both pages show identical totals
 - [ ] Build Escrow Cash Flow Schedule page (Scenario 1) with escrow items + revenues
+- [x] Rewrite EscrowCashFlowSchedulePage2 with full monthly distribution: S-Curve for construction/revenue, equal for supervision, penultimate for surveyor, periodic for RERA, first 12 months for sales commission, 5% completion/retention post-construction
