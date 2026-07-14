@@ -156,6 +156,7 @@ function Router() {
       <Route path="/capital-portfolio" component={CapitalPortfolioPage} />
       <Route path="/portfolio-summary-report" component={PortfolioSummaryReport} />
       <Route path="/engine-comparison" component={EngineComparisonPage} />
+      <Route path="/project-card" component={ProjectCardOffplanPage} />
       <Route path="/project-card-offplan" component={ProjectCardOffplanPage} />
       <Route path="/project-card-post-completion" component={ProjectCardPostCompletionPage} />
       <Route path="/pricing" component={PricingPage} />
