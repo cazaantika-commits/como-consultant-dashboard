@@ -71,6 +71,11 @@ import PortfolioAllScenariosPage from "./pages/PortfolioAllScenariosPage";
 import CapitalPortfolioPage from "./pages/CapitalPortfolioPage";
 import PortfolioSummaryReport from "./pages/PortfolioSummaryReport";
 import EngineComparisonPage from "./pages/EngineComparisonPage";
+import ProjectCardOffplanPage from "./pages/ProjectCardOffplanPage";
+import ProjectCardPostCompletionPage from "./pages/ProjectCardPostCompletionPage";
+import PricingPage from "./pages/PricingPage";
+import InvestorCapitalPlanPage from "./pages/InvestorCapitalPlanPage";
+import InvestorCashFlowSchedulePage from "./pages/InvestorCashFlowSchedulePage";
 import UserManagementPage from "./pages/UserManagementPage";
 import ApprovalSettings from "./pages/ApprovalSettings";
 import GeneralRequests from "./pages/GeneralRequests";
@@ -149,6 +154,11 @@ function Router() {
       <Route path="/capital-portfolio" component={CapitalPortfolioPage} />
       <Route path="/portfolio-summary-report" component={PortfolioSummaryReport} />
       <Route path="/engine-comparison" component={EngineComparisonPage} />
+      <Route path="/project-card-offplan" component={ProjectCardOffplanPage} />
+      <Route path="/project-card-post-completion" component={ProjectCardPostCompletionPage} />
+      <Route path="/pricing" component={PricingPage} />
+      <Route path="/investor-capital-plan" component={InvestorCapitalPlanPage} />
+      <Route path="/investor-cashflow-schedule" component={InvestorCashFlowSchedulePage} />
       <Route path="/user-management" component={UserManagementPage} />
       <Route path="/approval-settings" component={ApprovalSettings} />
       <Route path="/internal-messages" component={InternalMessages} />

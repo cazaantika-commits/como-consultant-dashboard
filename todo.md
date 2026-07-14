@@ -863,3 +863,10 @@
 - [x] Run all existing tests to confirm no regressions (67 tests passing)
 - [x] Fix: Revenue item (765M) was incorrectly included in totalCosts calculation — grandTotal showed 1.38B instead of 616M for Majan G+4P+25. Fixed in CapitalScheduleTablePage, FeasibilityStudyPage, and getPortfolioAllScenarios server endpoint.
 - [x] Fix EscrowCashFlowPage: show ONLY escrow-funded expenses (remove investor-funded items from escrow view)
+- [ ] Build Investor Cash Flow Schedule page (جدولة رأس المال) — columns: الوصف, إجمالي التكاليف, إجمالي المستثمر, مدفوع, غير مدفوع, then monthly columns for design (8 months) and construction (30 months)
+- [ ] Show "من الضمان" for escrow-funded items in investor column
+- [ ] Show cumulative row (إجمالي تراكمي) at bottom
+- [ ] Include scenario tabs (3 scenarios)
+- [ ] All data from projectData.ts — no hardcoded numbers, no database
+- [ ] Section headers: الأرض, التصاميم, ريرا وأوف بلان, الإنشاء
+- [ ] Light/white theme matching the provided screenshot style
