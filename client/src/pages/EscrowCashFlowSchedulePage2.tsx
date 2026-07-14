@@ -6,7 +6,14 @@ import {
   calculateProjectFormulas,
   calculatePricingFormulas,
   calculateCosts,
+  dbProjectToInputs,
+  dbProjectToRates,
+  type ProjectInputs,
+  type ProjectRates,
 } from "@/lib/projectData";
+import { ProjectSelector } from "@/components/ProjectSelector";
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 // ═══════════════════════════════════════════
 // SCENARIO TYPES
@@ -64,11 +71,16 @@ const POST_CONSTRUCTION_MONTHS = 12;
 // MAIN COMPONENT
 // ═══════════════════════════════════════════
 export default function EscrowCashFlowSchedulePage2() {
+  const { user } = useAuth();
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
   const [scenario, setScenario] = useState<Scenario>("offplan_escrow");
   const tableRef = useRef<HTMLDivElement>(null);
 
   const data = useMemo(() => {
-    const pf = calculateProjectFormulas();
+    const i: ProjectInputs = projectQuery.data ? dbProjectToInputs(projectQuery.data) : PROJECT_INPUTS;
+    const r: ProjectRates = projectQuery.data ? dbProjectToRates(projectQuery.data) : RATES;
+    const pf = calculateProjectFormulas(i, r);
     const units = PRICING_DEFAULTS.map((u) => ({
       name: u.name,
       category: u.category,
@@ -77,10 +89,10 @@ export default function EscrowCashFlowSchedulePage2() {
       count: u.defaultCount,
     }));
     const pr = calculatePricingFormulas(units);
-    const costs = calculateCosts(pf, pr);
+    const costs = calculateCosts(pf, pr, i, r);
 
-    const designDuration = PROJECT_INPUTS.designDuration;
-    const constructionDuration = PROJECT_INPUTS.constructionDuration;
+    const designDuration = i.designDuration;
+    const constructionDuration = i.constructionDuration;
     const postDuration = POST_CONSTRUCTION_MONTHS;
 
     const emptyDesign = () => new Array(designDuration).fill(0);
@@ -91,7 +103,7 @@ export default function EscrowCashFlowSchedulePage2() {
     // KEY AMOUNTS
     // ═══════════════════════════════════════════
     const constructionCost = pf.constructionCost;
-    const escrowDeposit = constructionCost * RATES.escrowDeposit; // 20%
+    const escrowDeposit = constructionCost * r.escrowDeposit; // 20%
 
     // ═══════════════════════════════════════════
     // S-CURVE for construction months
@@ -146,7 +158,7 @@ export default function EscrowCashFlowSchedulePage2() {
       }
 
       const escrowAmount = constructionCost * 0.90; // 90% always
-      const remaining = constructionCost * RATES.constructionEscrowShare; // 70%
+      const remaining = constructionCost * r.constructionEscrowShare; // 70%
 
       rows.push({
         label: "تكلفة الإنشاء",
@@ -207,7 +219,7 @@ export default function EscrowCashFlowSchedulePage2() {
 
     // ─── 3. رسوم المساح ───
     {
-      const amount = PROJECT_INPUTS.surveyorFee;
+      const amount = i.surveyorFee;
       const cMonths = emptyConstruction();
       const penultimateIndex = constructionDuration - 2;
       cMonths[penultimateIndex] = amount;
@@ -235,7 +247,7 @@ export default function EscrowCashFlowSchedulePage2() {
 
       rows.push({
         label: "رسوم الجهات الحكومية",
-        totalCost: PROJECT_INPUTS.govFeesTotal,
+        totalCost: i.govFeesTotal,
         escrowAmount: amount,
         openingBalance: 0,
         remainingToSpend: amount,
@@ -248,7 +260,7 @@ export default function EscrowCashFlowSchedulePage2() {
 
     // ─── 5. تقرير مدقق ريرا (سيناريو 1 و 2 فقط) ───
     if (!isScenario3) {
-      const amount = PROJECT_INPUTS.reraAuditorReport;
+      const amount = i.reraAuditorReport;
       const cMonths = emptyConstruction();
       const perPayment = amount / 3;
       const m1 = Math.floor(constructionDuration / 3) - 1;
@@ -273,7 +285,7 @@ export default function EscrowCashFlowSchedulePage2() {
 
     // ─── 6. فحص ريرا (سيناريو 1 و 2 فقط) ───
     if (!isScenario3) {
-      const amount = PROJECT_INPUTS.reraInspection;
+      const amount = i.reraInspection;
       const cMonths = emptyConstruction();
       const inspectionIndices: number[] = [];
       for (let i = 2; i < constructionDuration; i += 3) {
@@ -303,7 +315,7 @@ export default function EscrowCashFlowSchedulePage2() {
     // Scenario 3: 2% over 3 post-construction months
     {
       const amount = isScenario3
-        ? pr.totalRevenue * RATES.salesCommissionPostCompletion // 2%
+        ? pr.totalRevenue * r.salesCommissionPostCompletion // 2%
         : costs.salesCommission; // 5%
       const cMonths = emptyConstruction();
       const pMonths = emptyEffectivePost();
@@ -405,7 +417,7 @@ export default function EscrowCashFlowSchedulePage2() {
 
     // ─── 10. تسجيل بيع على الخارطة - ريرا (سيناريو 2 فقط — شهر 3) ───
     if (isScenario2 && !isScenario3) {
-      const amount = PROJECT_INPUTS.reraProjectReg;
+      const amount = i.reraProjectReg;
       const cMonths = emptyConstruction();
       cMonths[2] = amount;
 
@@ -456,7 +468,7 @@ export default function EscrowCashFlowSchedulePage2() {
     // Scenario 2: month 3 of construction
     // Scenario 3: over 3 post-construction months
     if (isScenario2 || isScenario3) {
-      const amount = PROJECT_INPUTS.nocSale;
+      const amount = i.nocSale;
       const cMonths = emptyConstruction();
       const pMonths = emptyEffectivePost();
 
@@ -484,7 +496,7 @@ export default function EscrowCashFlowSchedulePage2() {
 
     // ─── 13. رسوم حساب الضمان (سيناريو 2 فقط — شهر 3) ───
     if (isScenario2 && !isScenario3) {
-      const amount = PROJECT_INPUTS.escrowAccountFee;
+      const amount = i.escrowAccountFee;
       const cMonths = emptyConstruction();
       cMonths[2] = amount;
 
@@ -635,7 +647,7 @@ export default function EscrowCashFlowSchedulePage2() {
       cumulativeConstruction,
       cumulativePost,
     };
-  }, [scenario]);
+  }, [scenario, projectQuery.data]);
 
   // ═══════════════════════════════════════════
   // RENDER
@@ -669,10 +681,13 @@ export default function EscrowCashFlowSchedulePage2() {
   return (
     <div className="min-h-screen bg-white p-4" dir="rtl">
       <div className="max-w-full mx-auto space-y-4">
+        {/* Project Selector */}
+        <ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} />
+
         {/* Header */}
         <div className="text-right space-y-1">
           <h1 className="text-xl font-bold text-gray-900">
-            تدفقات حساب الضمان – {PROJECT_INPUTS.name}
+            تدفقات حساب الضمان – {projectQuery.data?.name || 'مجان متعدد الاستخدامات'}
           </h1>
           <p className="text-sm text-gray-500">
             توزيع المصروفات والإيرادات على المراحل الزمنية | المبالغ بالدرهم الإماراتي

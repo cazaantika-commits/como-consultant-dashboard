@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -13,7 +13,14 @@ import {
   calculateProjectFormulas,
   calculatePricingFormulas,
   calculateCosts,
+  dbProjectToInputs,
+  dbProjectToRates,
+  type ProjectInputs,
+  type ProjectRates,
 } from "@/lib/projectData";
+import { ProjectSelector } from "@/components/ProjectSelector";
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 // ═══════════════════════════════════════════
 // TYPES
@@ -56,10 +63,15 @@ function fmtFull(n: number): string {
 // ═══════════════════════════════════════════
 
 export default function ProjectCardOffplanPage() {
-  // === FORMULAS — كلها من projectData.ts ===
+  const { user } = useAuth();
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
+
+  // === FORMULAS — dynamic from DB or defaults ===
   const calc = useMemo(() => {
-    const i = PROJECT_INPUTS;
-    const projectFormulas = calculateProjectFormulas();
+    const i: ProjectInputs = projectQuery.data ? dbProjectToInputs(projectQuery.data) : PROJECT_INPUTS;
+    const r: ProjectRates = projectQuery.data ? dbProjectToRates(projectQuery.data) : RATES;
+    const projectFormulas = calculateProjectFormulas(i, r);
     const { gfaTotal, sellableResidential, sellableRetail, sellableOffice, landPrice, landRegistration, landBroker, constructionCost } = projectFormulas;
 
     // الإيرادات من التسعير
@@ -75,9 +87,10 @@ export default function ProjectCardOffplanPage() {
     const pricePerSqftOffice = sellableOffice > 0 ? revenueOffice / sellableOffice : 0;
 
     // التكاليف — نفس المعادلة بالضبط
-    const costs = calculateCosts(projectFormulas, pricingFormulas);
+    const costs = calculateCosts(projectFormulas, pricingFormulas, i, r);
 
     return {
+      i, r,
       gfaTotal, sellableResidential, sellableRetail, sellableOffice,
       revenueResidential, revenueRetail, revenueOffice, totalRevenue,
       pricePerSqftResidential, pricePerSqftRetail, pricePerSqftOffice,
@@ -100,7 +113,7 @@ export default function ProjectCardOffplanPage() {
       profit: costs.profit,
       margin: costs.margin,
     };
-  }, []);
+  }, [projectQuery.data]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 p-6" dir="rtl">
@@ -112,18 +125,21 @@ export default function ProjectCardOffplanPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-white">بطاقة المشروع — أوف بلان</h1>
-            <p className="text-slate-400 text-sm">{PROJECT_INPUTS.name}</p>
+            <p className="text-slate-400 text-sm">{calc.i.name}</p>
           </div>
         </div>
-        <div className="flex gap-3 mt-4">
+        <div className="mt-4 mb-4">
+          <ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} className="" />
+        </div>
+        <div className="flex gap-3">
           <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30 px-3 py-1">
-            <Calendar className="w-3 h-3 ml-1" /> تصاميم: {PROJECT_INPUTS.designDuration} شهور
+            <Calendar className="w-3 h-3 ml-1" /> تصاميم: {calc.i.designDuration} شهور
           </Badge>
           <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 px-3 py-1">
-            <Hammer className="w-3 h-3 ml-1" /> إنشاء: {PROJECT_INPUTS.constructionDuration} شهر
+            <Hammer className="w-3 h-3 ml-1" /> إنشاء: {calc.i.constructionDuration} شهر
           </Badge>
           <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30 px-3 py-1">
-            <Calendar className="w-3 h-3 ml-1" /> الإجمالي: {PROJECT_INPUTS.designDuration + PROJECT_INPUTS.constructionDuration} شهر
+            <Calendar className="w-3 h-3 ml-1" /> الإجمالي: {calc.i.designDuration + calc.i.constructionDuration} شهر
           </Badge>
         </div>
       </div>
@@ -152,14 +168,14 @@ export default function ProjectCardOffplanPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700/50">
-                  <FieldRow label="اسم المشروع" value={PROJECT_INPUTS.name} type="input" />
-                  <FieldRow label="مساحة الأرض (قدم²)" value={fmtFull(PROJECT_INPUTS.landArea)} type="input" />
-                  <FieldRow label="مساحة البناء BUA (قدم²)" value={fmtFull(PROJECT_INPUTS.bua)} type="input" />
-                  <FieldRow label="تكلفة الإنشاء (درهم/قدم)" value={fmtFull(PROJECT_INPUTS.constructionCostPerSqft)} type="input" />
+                  <FieldRow label="اسم المشروع" value={calc.i.name} type="input" />
+                  <FieldRow label="مساحة الأرض (قدم²)" value={fmtFull(calc.i.landArea)} type="input" />
+                  <FieldRow label="مساحة البناء BUA (قدم²)" value={fmtFull(calc.i.bua)} type="input" />
+                  <FieldRow label="تكلفة الإنشاء (درهم/قدم)" value={fmtFull(calc.i.constructionCostPerSqft)} type="input" />
                   <FieldRow label="تكلفة الإنشاء الإجمالية" value={fmtFull(calc.constructionCost)} type="formula" formula="BUA × تكلفة القدم" />
-                  <FieldRow label="مدة التصاميم (شهر)" value={String(PROJECT_INPUTS.designDuration)} type="input" />
-                  <FieldRow label="مدة الإنشاء (شهر)" value={String(PROJECT_INPUTS.constructionDuration)} type="input" />
-                  <FieldRow label="تاريخ البدء" value={PROJECT_INPUTS.startDate} type="input" />
+                  <FieldRow label="مدة التصاميم (شهر)" value={String(calc.i.designDuration)} type="input" />
+                  <FieldRow label="مدة الإنشاء (شهر)" value={String(calc.i.constructionDuration)} type="input" />
+                  <FieldRow label="تاريخ البدء" value={calc.i.startDate} type="input" />
                 </tbody>
               </table>
             </div>
@@ -189,9 +205,9 @@ export default function ProjectCardOffplanPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-700/50">
                   <tr className="bg-slate-700/20"><td colSpan={4} className="py-2 px-3 text-slate-300 font-semibold text-xs">المساحات الإجمالية GFA</td></tr>
-                  <FieldRow label="GFA سكني" value={fmtFull(PROJECT_INPUTS.gfaResidential)} type="input" />
-                  <FieldRow label="GFA تجزئة" value={fmtFull(PROJECT_INPUTS.gfaRetail)} type="input" />
-                  <FieldRow label="GFA مكاتب" value={fmtFull(PROJECT_INPUTS.gfaOffice)} type="input" />
+                  <FieldRow label="GFA سكني" value={fmtFull(calc.i.gfaResidential)} type="input" />
+                  <FieldRow label="GFA تجزئة" value={fmtFull(calc.i.gfaRetail)} type="input" />
+                  <FieldRow label="GFA مكاتب" value={fmtFull(calc.i.gfaOffice)} type="input" />
                   <FieldRow label="GFA إجمالي" value={fmtFull(calc.gfaTotal)} type="formula" formula="سكني + تجزئة + مكاتب" />
 
                   <tr className="bg-slate-700/20"><td colSpan={4} className="py-2 px-3 text-slate-300 font-semibold text-xs">النسب القابلة للبيع</td></tr>

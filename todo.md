@@ -877,4 +877,16 @@
 - [ ] Build Escrow Cash Flow Schedule page (Scenario 1) with escrow items + revenues
 - [x] Rewrite EscrowCashFlowSchedulePage2 with full monthly distribution: S-Curve for construction/revenue, equal for supervision, penultimate for surveyor, periodic for RERA, first 12 months for sales commission, 5% completion/retention post-construction
 - [x] Build Scenario 2 (أوف بلان بعد إنجاز 20%): no deposit, 20% paid to contractor in months 2-4 of construction equally, revenue starts month 5, commission starts month 5, 5 RERA/escrow items in month 3, marketing from month 1 over 12 months
-- [ ] Build Scenario 3 (تطوير بدون بيع على الخارطة): no escrow, no opening balance, revenue over 3 post-construction months, commission 2% + marketing 1% + sorting + RERA units + NOC all over 3 post-construction months, construction S-Curve + supervision + surveyor + gov fees during construction only, no RERA auditor/inspection/offplan registration/escrow fee/contractor 20%
+- [x] Build Scenario 3 (تطوير بدون بيع على الخارطة): no escrow, no opening balance, revenue over 3 post-construction months, commission 2% + marketing 1% + sorting + RERA units + NOC all over 3 post-construction months, construction S-Curve + supervision + surveyor + gov fees during construction only, no RERA auditor/inspection/offplan registration/escrow fee/contractor 20%
+- [ ] Add Scenario 4 (rental/no sale): construction costs only, no revenue/commission/marketing/sorting/NOC
+- [x] Wire all 4 pages to DB with project selector
+- [ ] Distribute units in PricingPage for each project
+- [x] Create consolidated cash flow page combining all projects
+- [x] Escrow surplus withdrawal: after 3 months post-completion, keep 5% retained for 1 year
+- [x] Convert projectData.ts to accept dynamic project inputs from DB instead of hardcoded values
+- [x] Add project selector dropdown to all 4 new pages (card, pricing, investor CF, escrow CF)
+- [x] Wire pages to read from projects table via tRPC
+- [x] Build consolidated investor cash flow page combining all 6 projects
+- [x] All projects start Aug 2026 (design phase)
+- [x] Escrow surplus transferred as investor revenue: 95% after 3 months post-completion, 5% after 12 months
+- [x] Scenario 4 for مركز مجان التجاري: construction costs only, no revenue/sale

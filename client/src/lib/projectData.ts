@@ -1,4 +1,4 @@
-// ═══════════════════════════════════════════════════════════════════
+
 // PROJECT DATA — SINGLE SOURCE OF TRUTH (مثل الإكسل)
 // ═══════════════════════════════════════════════════════════════════
 // البطاقة هي المصدر. كل الصفحات تقرأ من هنا.
@@ -6,30 +6,81 @@
 // ═══════════════════════════════════════════════════════════════════
 
 // ─────────────────────────────────────────
-// القسم 1: إدخالات بطاقة المشروع (INPUTS)
+// القسم 1: واجهة إدخالات المشروع (INPUTS INTERFACE)
 // ─────────────────────────────────────────
-export const PROJECT_INPUTS = {
-  // البيانات الأساسية
-  name: "مجان متعدد الاستخدامات (G+4P+25)",
-  landArea: 66879.19, // مساحة الأرض (قدم²)
-  bua: 875300, // مساحة البناء BUA (قدم²)
-  constructionCostPerSqft: 400, // تكلفة الإنشاء (درهم/قدم)
-  landPricePerSqft: 262, // سعر القدم أرض (درهم)
-  designDuration: 8, // مدة التصاميم (شهور)
-  constructionDuration: 30, // مدة الإنشاء (شهر)
-  startDate: "2026-08", // تاريخ البدء
+export interface ProjectInputs {
+  name: string;
+  landArea: number; // مساحة الأرض (قدم²)
+  bua: number; // مساحة البناء BUA (قدم²)
+  constructionCostPerSqft: number;
+  landPricePerSqft: number;
+  designDuration: number; // مدة التصاميم (شهور)
+  constructionDuration: number; // مدة الإنشاء (شهر)
+  startDate: string;
+  gfaResidential: number;
+  gfaRetail: number;
+  gfaOffice: number;
+  efficiencyResidential: number;
+  efficiencyRetail: number;
+  efficiencyOffice: number;
+  soilTest: number;
+  topography: number;
+  surveyorFee: number;
+  nocSale: number;
+  escrowAccountFee: number;
+  bankFees: number;
+  communityFee: number;
+  reraProjectReg: number;
+  reraAuditorReport: number;
+  reraInspection: number;
+  govFeesTotal: number;
+}
 
-  // GFA لكل فئة
+export interface ProjectRates {
+  landRegistration: number;
+  landBroker: number;
+  designFee: number;
+  supervisionFee: number;
+  sortingFeePerSqft: number;
+  reraUnitFee: number;
+  developerFeeRate: number;
+  developerFeeDesign: number;
+  developerFeeOffplan: number;
+  developerFeeSupervision: number;
+  marketingRate: number;
+  marketingOffplanShare: number;
+  marketingConstructionShare: number;
+  salesCommission: number;
+  salesCommissionPostCompletion: number;
+  constructionInvestorShare: number;
+  constructionEscrowShare: number;
+  govFeesInvestorShare: number;
+  govFeesEscrowShare: number;
+  advancePayment: number;
+  escrowDeposit: number;
+  contingency: number;
+  communityOffplanShare: number;
+  communityConstructionShare: number;
+}
+
+// ─────────────────────────────────────────
+// القسم 1b: القيم الافتراضية (DEFAULT — مجان متعدد الاستخدامات)
+// ─────────────────────────────────────────
+export const PROJECT_INPUTS: ProjectInputs = {
+  name: "مجان متعدد الاستخدامات (G+4P+25)",
+  landArea: 66879.19,
+  bua: 875300,
+  constructionCostPerSqft: 400,
+  landPricePerSqft: 262,
+  designDuration: 8,
+  constructionDuration: 30,
+  startDate: "2026-08",
   gfaResidential: 93631,
   gfaRetail: 74904.84,
   gfaOffice: 299618.38,
-
-  // نسب الكفاءة (المساحة القابلة للبيع)
   efficiencyResidential: 0.95,
   efficiencyRetail: 0.80,
   efficiencyOffice: 0.90,
-
-  // رسوم ثابتة (مبالغ مقطوعة)
   soilTest: 45000,
   topography: 12000,
   surveyorFee: 35000,
@@ -40,59 +91,117 @@ export const PROJECT_INPUTS = {
   reraProjectReg: 150000,
   reraAuditorReport: 24000,
   reraInspection: 150000,
-  govFeesTotal: 7000000, // رسوم الجهات الحكومية الإجمالية (ثابت)
+  govFeesTotal: 7000000,
 };
 
-// ─────────────────────────────────────────
-// القسم 2: النسب والمعدلات (RATES)
-// نفس النسب الموجودة في البطاقة بالضبط
-// ─────────────────────────────────────────
-export const RATES = {
-  // الأرض
-  landRegistration: 0.04, // رسوم تسجيل الأرض (4%)
-  landBroker: 0.01, // عمولة وسيط الأرض (1%)
-
-  // التصاميم والإشراف (من تكلفة الإنشاء)
-  designFee: 0.018, // أتعاب التصاميم (1.8%)
-  supervisionFee: 0.02, // أتعاب الإشراف (2%)
-
-  // رسوم الفرز وريرا
-  sortingFeePerSqft: 40, // رسوم الفرز (40 درهم/قدم²)
-  reraUnitFee: 520, // رسوم تسجيل الوحدة — ريرا
-
-  // أتعاب المطور (5% من الإيرادات — إجمالي)
-  developerFeeRate: 0.05, // 5% إجمالي
-  // تقسيم أتعاب المطور على المراحل (للتدفقات الشهرية)
-  developerFeeDesign: 0.01, // 1% تصاميم
-  developerFeeOffplan: 0.01, // 1% أوف بلان
-  developerFeeSupervision: 0.03, // 3% إشراف
-
-  // التسويق (2% من الإيرادات)
-  marketingRate: 0.02, // 2% إجمالي
-  marketingOffplanShare: 0.25, // 25% في مرحلة أوف بلان
-  marketingConstructionShare: 0.75, // 75% في مرحلة الإنشاء
-
-  // عمولة المبيعات (5% من الإيرادات)
+export const RATES: ProjectRates = {
+  landRegistration: 0.04,
+  landBroker: 0.01,
+  designFee: 0.018,
+  supervisionFee: 0.02,
+  sortingFeePerSqft: 40,
+  reraUnitFee: 520,
+  developerFeeRate: 0.05,
+  developerFeeDesign: 0.01,
+  developerFeeOffplan: 0.01,
+  developerFeeSupervision: 0.03,
+  marketingRate: 0.02,
+  marketingOffplanShare: 0.25,
+  marketingConstructionShare: 0.75,
   salesCommission: 0.05,
-  salesCommissionPostCompletion: 0.02, // 2% بيع بعد الإنجاز
-
-  // تقسيم الإنشاء (مستثمر / ضمان)
-  constructionInvestorShare: 0.30, // 30% من المستثمر
-  constructionEscrowShare: 0.70, // 70% من الضمان
-
-  // تقسيم رسوم الجهات الحكومية
-  govFeesInvestorShare: 0.10, // 10% مستثمر
-  govFeesEscrowShare: 0.90, // 90% ضمان
-
-  // الإنشاء — نسب إضافية للتدفقات
-  advancePayment: 0.10, // 10% دفعة مقدمة
-  escrowDeposit: 0.20, // 20% إيداع ضمان
-  contingency: 0.02, // 2% احتياطي
-
-  // تقسيم رسوم المجتمع
+  salesCommissionPostCompletion: 0.02,
+  constructionInvestorShare: 0.30,
+  constructionEscrowShare: 0.70,
+  govFeesInvestorShare: 0.10,
+  govFeesEscrowShare: 0.90,
+  advancePayment: 0.10,
+  escrowDeposit: 0.20,
+  contingency: 0.02,
   communityOffplanShare: 0.25,
   communityConstructionShare: 0.75,
 };
+
+// ─────────────────────────────────────────
+// القسم 1c: تحويل بيانات DB إلى ProjectInputs + ProjectRates
+// ─────────────────────────────────────────
+export function dbProjectToInputs(dbProject: any): ProjectInputs {
+  const gfaRes = parseFloat(dbProject.gfaResidentialSqft || '0') || 0;
+  const gfaRet = parseFloat(dbProject.gfaRetailSqft || '0') || 0;
+  const gfaOff = parseFloat(dbProject.gfaOfficesSqft || '0') || 0;
+  const gfaTotal = parseFloat(dbProject.gfaSqft || '0') || (gfaRes + gfaRet + gfaOff);
+  const bua = parseFloat(dbProject.manualBuaSqft || '0') || dbProject.bua || 0;
+  const plotArea = parseFloat(dbProject.plotAreaSqft || '0') || 0;
+  const landPrice = parseFloat(dbProject.landPrice || '0') || 0;
+  const constPricePerSqft = parseFloat(dbProject.estimatedConstructionPricePerSqft || '0') || 400;
+
+  // حساب سعر القدم أرض = سعر الأرض / GFA
+  const landPricePerSqft = gfaTotal > 0 ? landPrice / gfaTotal : 0;
+
+  return {
+    name: dbProject.name || 'مشروع',
+    landArea: plotArea,
+    bua,
+    constructionCostPerSqft: constPricePerSqft,
+    landPricePerSqft: Math.round(landPricePerSqft),
+    designDuration: dbProject.preConMonths || 6,
+    constructionDuration: dbProject.constructionMonths || 18,
+    startDate: dbProject.startDate || '2026-08',
+    gfaResidential: gfaRes,
+    gfaRetail: gfaRet,
+    gfaOffice: gfaOff,
+    efficiencyResidential: 0.95,
+    efficiencyRetail: 0.80,
+    efficiencyOffice: 0.90,
+    soilTest: parseFloat(dbProject.soilTestFee || '0') || 45000,
+    topography: parseFloat(dbProject.topographicSurveyFee || '0') || 12000,
+    surveyorFee: parseFloat(dbProject.surveyorFees || '0') || 35000,
+    nocSale: parseFloat(dbProject.developerNocFee || '0') || 10000,
+    escrowAccountFee: parseFloat(dbProject.escrowAccountFee || '0') || 180000,
+    bankFees: parseFloat(dbProject.bankFees || '0') || 35000,
+    communityFee: parseFloat(dbProject.communityFees || '0') || 80000,
+    reraProjectReg: parseFloat(dbProject.reraProjectRegFee || '0') || 150000,
+    reraAuditorReport: parseFloat(dbProject.reraAuditReportFee || '0') || 24000,
+    reraInspection: parseFloat(dbProject.reraInspectionReportFee || '0') || 150000,
+    govFeesTotal: parseFloat(dbProject.officialBodiesFees || '0') || 7000000,
+  };
+}
+
+export function dbProjectToRates(dbProject: any): ProjectRates {
+  const designPct = parseFloat(dbProject.designFeePct || '0') || 1.8;
+  const supervisionPct = parseFloat(dbProject.supervisionFeePct || '0') || 2;
+  const salesPct = parseFloat(dbProject.salesCommissionPct || '0') || 5;
+  const marketingPct = parseFloat(dbProject.marketingPct || '0') || 2;
+  const developerPct = parseFloat(dbProject.developerFeePct || '0') || 5;
+  const sortingPerSqft = parseFloat(dbProject.separationFeePerSqft || '0') || 40;
+  const landBrokerPct = parseFloat(dbProject.agentCommissionLandPct || '0') || 1;
+
+  return {
+    landRegistration: 0.04,
+    landBroker: landBrokerPct / 100,
+    designFee: designPct / 100,
+    supervisionFee: supervisionPct / 100,
+    sortingFeePerSqft: sortingPerSqft,
+    reraUnitFee: 520,
+    developerFeeRate: developerPct / 100,
+    developerFeeDesign: 0.01,
+    developerFeeOffplan: 0.01,
+    developerFeeSupervision: (developerPct / 100) - 0.02,
+    marketingRate: marketingPct / 100,
+    marketingOffplanShare: 0.25,
+    marketingConstructionShare: 0.75,
+    salesCommission: salesPct / 100,
+    salesCommissionPostCompletion: 0.02,
+    constructionInvestorShare: 0.30,
+    constructionEscrowShare: 0.70,
+    govFeesInvestorShare: 0.10,
+    govFeesEscrowShare: 0.90,
+    advancePayment: 0.10,
+    escrowDeposit: 0.20,
+    contingency: 0.02,
+    communityOffplanShare: 0.25,
+    communityConstructionShare: 0.75,
+  };
+}
 
 // ─────────────────────────────────────────
 // القسم 3: إدخالات التسعير (PRICING INPUTS)
@@ -126,7 +235,7 @@ export const PRICING_DEFAULTS: UnitType[] = [
 // ─────────────────────────────────────────
 
 // فورمولات المشروع الأساسية
-export function calculateProjectFormulas(inputs = PROJECT_INPUTS, rates = RATES) {
+export function calculateProjectFormulas(inputs: ProjectInputs = PROJECT_INPUTS, rates: ProjectRates = RATES) {
   const gfaTotal = inputs.gfaResidential + inputs.gfaRetail + inputs.gfaOffice;
   const sellableResidential = inputs.gfaResidential * inputs.efficiencyResidential;
   const sellableRetail = inputs.gfaRetail * inputs.efficiencyRetail;
@@ -203,8 +312,8 @@ export function calculatePricingFormulas(units: PricingUnit[]) {
 export function calculateCosts(
   projectFormulas: ReturnType<typeof calculateProjectFormulas>,
   pricingFormulas: ReturnType<typeof calculatePricingFormulas>,
-  inputs = PROJECT_INPUTS,
-  rates = RATES
+  inputs: ProjectInputs = PROJECT_INPUTS,
+  rates: ProjectRates = RATES
 ) {
   const { landPrice, landRegistration, landBroker, constructionCost, gfaTotal } = projectFormulas;
   const { totalRevenue, totalUnits } = pricingFormulas;

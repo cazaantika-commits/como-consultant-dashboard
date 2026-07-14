@@ -29,6 +29,7 @@ import {
   getTotalMonths,
   type FinancingScenario,
 } from "../investorCashFlow";
+import { computeFullFinancials, projectToInputs, calculateTimeline, monthToDate } from "../financialEngine";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -2334,6 +2335,170 @@ export const cashFlowSettingsRouter = router({
         },
       };
     }),
+
+  /**
+   * getConsolidatedInvestorCashFlow — تقرير التدفقات النقدية المجمّع للمستثمر
+   * يجمع كل المشاريع في تقرير واحد مع فائض الضمان كإيراد
+   */
+  getConsolidatedInvestorCashFlow: publicProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) return null;
+
+    const allProjects = await db.select().from(projects);
+    if (!allProjects.length) return null;
+
+    // Scenario 4 projects (rental - no revenue)
+    const SCENARIO_4_IDS = [1]; // مركز مجان التجاري
+
+    const MONTH_NAMES_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+
+    const projectResults: Array<{
+      id: number;
+      name: string;
+      scenario: string;
+      monthlyInvestor: number[];
+      escrowSurplusMonth: number | null;
+      escrowSurplusAmount: number;
+      retentionMonth: number | null;
+      retentionAmount: number;
+      totalMonths: number;
+      capitalRequired: number;
+    }> = [];
+
+    let maxMonths = 0;
+
+    for (const project of allProjects) {
+      // Get market overview and competition pricing for revenue calculation
+      const [moRows, cpRows] = await Promise.all([
+        db.select().from(marketOverview).where(eq(marketOverview.projectId, project.id)),
+        db.select().from(competitionPricing).where(eq(competitionPricing.projectId, project.id)),
+      ]);
+      const mo = moRows[0] || null;
+      const cp = cpRows[0] || null;
+
+      // Calculate costs to get totalRevenue and totalUnits
+      const costs = calculateProjectCosts(project, mo, cp);
+      const totalRevenue = costs?.totalRevenue || 0;
+      const calculatedRevenue = costs?.calculatedRevenue || 0;
+      const totalUnits = mo ? (() => {
+        const UNIT_KEYS = ["residentialStudioCount","residential1brCount","residential2brCount","residential3brCount","retailSmallCount","retailMediumCount","retailLargeCount","officeSmallCount","officeMediumCount","officeLargeCount"];
+        return UNIT_KEYS.reduce((s, k) => s + (Number((mo as any)[k]) || 0), 0);
+      })() : 0;
+
+      // Determine scenario
+      const isScenario4 = SCENARIO_4_IDS.includes(project.id);
+      let financingScenario = (project as any).financingScenario || "offplan_escrow";
+      if (isScenario4) financingScenario = "no_offplan";
+
+      // Build inputs for the engine
+      const inputs = projectToInputs(project, {
+        pricingScenario: (cp as any)?.activeScenario || "base",
+      }, totalUnits, isScenario4 ? 0 : (totalRevenue || calculatedRevenue));
+
+      // Override scenario and start date
+      inputs.financingScenario = financingScenario;
+      inputs.startDate = "2026-08"; // All projects start Aug 2026
+      if (isScenario4) {
+        inputs.approvedRevenue = 0;
+        inputs.calculatedRevenue = 0;
+      }
+
+      // Run the full financial engine
+      const result = computeFullFinancials(inputs);
+      const timeline = result.timeline;
+
+      // Convert investorMonthlyTotal to a flat array
+      const totalProjectMonths = timeline.totalMonths + 12; // extra for post-handover
+      const monthlyArr = new Array(totalProjectMonths).fill(0);
+      for (const item of result.investorMonthlyTotal) {
+        if (item.month >= 1 && item.month <= totalProjectMonths) {
+          monthlyArr[item.month - 1] += item.amount;
+        }
+      }
+
+      // Escrow surplus release timing
+      let escrowSurplusMonth: number | null = null;
+      let escrowSurplusAmount = 0;
+      let retentionMonth: number | null = null;
+      let retentionAmt = 0;
+
+      if (!isScenario4 && result.settlement.releasedAtHandover > 0) {
+        escrowSurplusMonth = timeline.handoverEnd + 3;
+        escrowSurplusAmount = result.settlement.releasedAtHandover;
+      }
+      if (!isScenario4 && result.settlement.releasedAfter12Months > 0) {
+        retentionMonth = timeline.handoverEnd + 12;
+        retentionAmt = result.settlement.releasedAfter12Months;
+      }
+
+      if (totalProjectMonths > maxMonths) maxMonths = totalProjectMonths;
+
+      projectResults.push({
+        id: project.id,
+        name: project.name || `مشروع ${project.id}`,
+        scenario: isScenario4 ? "rental" : financingScenario,
+        monthlyInvestor: monthlyArr,
+        escrowSurplusMonth,
+        escrowSurplusAmount,
+        retentionMonth,
+        retentionAmount: retentionAmt,
+        totalMonths: totalProjectMonths,
+        capitalRequired: result.capitalRequired,
+      });
+    }
+
+    // Extend all arrays to maxMonths and build consolidated
+    const consolidatedOutflow = new Array(maxMonths).fill(0);
+    const consolidatedRevenue = new Array(maxMonths).fill(0);
+
+    for (const proj of projectResults) {
+      // Extend monthly array if needed
+      while (proj.monthlyInvestor.length < maxMonths) proj.monthlyInvestor.push(0);
+
+      // Sum outflows
+      for (let m = 0; m < maxMonths; m++) {
+        consolidatedOutflow[m] += proj.monthlyInvestor[m];
+      }
+
+      // Add escrow surplus as revenue (negative = money coming back)
+      if (proj.escrowSurplusMonth && proj.escrowSurplusMonth <= maxMonths) {
+        consolidatedRevenue[proj.escrowSurplusMonth - 1] += proj.escrowSurplusAmount;
+      }
+      if (proj.retentionMonth && proj.retentionMonth <= maxMonths) {
+        consolidatedRevenue[proj.retentionMonth - 1] += proj.retentionAmount;
+      }
+    }
+
+    // Net = outflow - revenue (positive = money going out)
+    const monthlyNet = consolidatedOutflow.map((out, i) => out - consolidatedRevenue[i]);
+    const cumulativeNet: number[] = [];
+    let running = 0;
+    for (const net of monthlyNet) {
+      running += net;
+      cumulativeNet.push(running);
+    }
+
+    // Month labels starting from Aug 2026
+    const monthLabels: string[] = [];
+    for (let m = 0; m < maxMonths; m++) {
+      const absMonth = (8 - 1 + m) % 12; // 0-indexed month
+      const absYear = 2026 + Math.floor((8 - 1 + m) / 12);
+      monthLabels.push(`${MONTH_NAMES_AR[absMonth]} ${absYear}`);
+    }
+
+    return {
+      projects: projectResults,
+      consolidated: {
+        monthlyOutflow: consolidatedOutflow,
+        monthlyRevenue: consolidatedRevenue,
+        monthlyNet,
+        cumulativeNet,
+        totalCapitalRequired: projectResults.reduce((s, p) => s + p.capitalRequired, 0),
+        totalSurplusReturned: projectResults.reduce((s, p) => s + p.escrowSurplusAmount + p.retentionAmount, 0),
+      },
+      monthLabels,
+    };
+  }),
 });
 
 // ─── Helper: compute amount by item key ──────────────────────────────────────

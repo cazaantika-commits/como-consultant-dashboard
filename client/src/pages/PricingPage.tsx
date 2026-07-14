@@ -1,61 +1,21 @@
-import { useState, useMemo, useCallback } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Building2, Car, Ruler, Calculator, AlertTriangle, CheckCircle,
   Home, Store, Briefcase, Info, DollarSign, TrendingUp,
 } from "lucide-react";
-
-// ═══════════════════════════════════════════
-// من بطاقة المشروع — لا إدخال متكرر
-// ═══════════════════════════════════════════
-const PROJECT_CARD = {
-  landArea: 66879.19,
-  bua: 875300,
-  gfaResidential: 93631,
-  gfaRetail: 74904.84,
-  gfaOffice: 299618.38,
-  sellableRatioResidential: 0.95,
-  sellableRatioRetail: 0.80,
-  sellableRatioOffice: 0.90,
-};
-
-const SELLABLE = {
-  residential: PROJECT_CARD.gfaResidential * PROJECT_CARD.sellableRatioResidential,
-  retail: PROJECT_CARD.gfaRetail * PROJECT_CARD.sellableRatioRetail,
-  office: PROJECT_CARD.gfaOffice * PROJECT_CARD.sellableRatioOffice,
-};
-
-const GFA_TOTAL = PROJECT_CARD.gfaResidential + PROJECT_CARD.gfaRetail + PROJECT_CARD.gfaOffice;
-
-// ═══════════════════════════════════════════
-// المساحات الافتراضية + أسعار القدم الافتراضية
-// ═══════════════════════════════════════════
-const DEFAULT_AREAS: Record<string, number> = {
-  studio: 400,
-  onebed: 750,
-  twobed: 1300,
-  threebed: 1650,
-  retail_small: 850,
-  retail_medium: 1200,
-  retail_large: 1800,
-  office_small: 1200,
-  office_medium: 2000,
-  office_large: 3500,
-};
-
-const DEFAULT_PRICES: Record<string, number> = {
-  studio: 1600,
-  onebed: 1550,
-  twobed: 1500,
-  threebed: 1450,
-  retail_small: 3000,
-  retail_medium: 2500,
-  retail_large: 2000,
-  office_small: 1900,
-  office_medium: 1800,
-  office_large: 1700,
-};
+import { ProjectSelector } from "@/components/ProjectSelector";
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
+import {
+  PROJECT_INPUTS,
+  RATES,
+  dbProjectToInputs,
+  dbProjectToRates,
+  type ProjectInputs,
+  type ProjectRates,
+} from "@/lib/projectData";
 
 // ═══════════════════════════════════════════
 // قاعدة المواقف
@@ -91,6 +51,18 @@ const UNIT_TYPES: UnitType[] = [
   { key: "office_large", label: "مكتب كبير", category: "office", defaultArea: 3500, defaultPrice: 1700 },
 ];
 
+const DEFAULT_AREAS: Record<string, number> = {
+  studio: 400, onebed: 750, twobed: 1300, threebed: 1650,
+  retail_small: 850, retail_medium: 1200, retail_large: 1800,
+  office_small: 1200, office_medium: 2000, office_large: 3500,
+};
+
+const DEFAULT_PRICES: Record<string, number> = {
+  studio: 1600, onebed: 1550, twobed: 1500, threebed: 1450,
+  retail_small: 3000, retail_medium: 2500, retail_large: 2000,
+  office_small: 1900, office_medium: 1800, office_large: 1700,
+};
+
 // ═══════════════════════════════════════════
 // FORMAT HELPERS
 // ═══════════════════════════════════════════
@@ -98,16 +70,35 @@ function fmtN(n: number): string {
   return Math.round(n).toLocaleString("ar-AE");
 }
 
-function fmtCurrency(n: number): string {
-  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
-  if (n >= 1000) return `${(n / 1000).toFixed(0)}K`;
-  return Math.round(n).toLocaleString("ar-AE");
-}
-
 // ═══════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════
 export default function PricingPage() {
+  const { user } = useAuth();
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
+
+  // Dynamic project data
+  const projectData = useMemo(() => {
+    if (projectQuery.data) {
+      const i = dbProjectToInputs(projectQuery.data);
+      const r = dbProjectToRates(projectQuery.data);
+      return { i, r };
+    }
+    return { i: PROJECT_INPUTS, r: RATES };
+  }, [projectQuery.data]);
+
+  const { i } = projectData;
+
+  // Sellable areas from project data
+  const SELLABLE = useMemo(() => ({
+    residential: i.gfaResidential * i.efficiencyResidential,
+    retail: i.gfaRetail * i.efficiencyRetail,
+    office: i.gfaOffice * i.efficiencyOffice,
+  }), [i]);
+
+  const GFA_TOTAL = i.gfaResidential + i.gfaRetail + i.gfaOffice;
+
   const [counts, setCounts] = useState<Record<string, number>>({
     studio: 0, onebed: 0, twobed: 0, threebed: 0,
     retail_small: 0, retail_medium: 0, retail_large: 0,
@@ -180,7 +171,6 @@ export default function PricingPage() {
     const totalUnits = categoryUnits.residential + categoryUnits.retail + categoryUnits.office;
     const totalRevenue = categoryRevenue.residential + categoryRevenue.retail + categoryRevenue.office;
 
-    // Average price per sqft per category
     const avgPrice = {
       residential: categoryTotals.residential > 0 ? categoryRevenue.residential / categoryTotals.residential : 0,
       retail: categoryTotals.retail > 0 ? categoryRevenue.retail / categoryTotals.retail : 0,
@@ -188,7 +178,7 @@ export default function PricingPage() {
     };
 
     return { unitDetails, categoryTotals, categoryUnits, categoryParking, categoryRevenue, balance, totalParking, totalUnits, totalRevenue, avgPrice };
-  }, [counts, areas, prices]);
+  }, [counts, areas, prices, SELLABLE]);
 
   // Auto-adjust function
   const autoAdjust = useCallback((category: "residential" | "retail" | "office") => {
@@ -206,7 +196,7 @@ export default function PricingPage() {
       }
     });
     setAreas(newAreas);
-  }, [counts, areas]);
+  }, [counts, areas, SELLABLE]);
 
   function getStatus(balance: { waste: number; pct: number; diff: number }) {
     if (balance.pct === 0) return { color: "text-slate-500", bg: "bg-slate-500/20", icon: Info, label: "لم يُحدد" };
@@ -226,8 +216,11 @@ export default function PricingPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-white">التسعير وتوزيع الوحدات</h1>
-            <p className="text-slate-400 text-sm">مجان متعدد الاستخدامات (G+4P+25)</p>
+            <p className="text-slate-400 text-sm">{i.name}</p>
           </div>
+        </div>
+        <div className="mt-4 mb-4">
+          <ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} className="" />
         </div>
       </div>
 
@@ -246,11 +239,11 @@ export default function PricingPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 p-4 text-center">
                 <div className="text-xs text-slate-400 mb-1">مساحة الأرض</div>
-                <div className="text-xl font-bold text-blue-300 font-mono">{fmtN(PROJECT_CARD.landArea)} sqft</div>
+                <div className="text-xl font-bold text-blue-300 font-mono">{fmtN(i.landArea)} sqft</div>
               </div>
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-center">
                 <div className="text-xs text-slate-400 mb-1">BUA</div>
-                <div className="text-xl font-bold text-emerald-300 font-mono">{fmtN(PROJECT_CARD.bua)} sqft</div>
+                <div className="text-xl font-bold text-emerald-300 font-mono">{fmtN(i.bua)} sqft</div>
               </div>
               <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 p-4 text-center">
                 <div className="text-xs text-slate-400 mb-1">GFA الإجمالي</div>
@@ -270,20 +263,20 @@ export default function PricingPage() {
               <tbody className="divide-y divide-slate-700/50">
                 <tr>
                   <td className="py-2.5 px-3 text-slate-200 flex items-center gap-2"><Home className="w-4 h-4 text-blue-400" /> سكني</td>
-                  <td className="py-2.5 px-3 text-center font-mono text-white">{fmtN(PROJECT_CARD.gfaResidential)}</td>
-                  <td className="py-2.5 px-3 text-center"><Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40">95%</Badge></td>
+                  <td className="py-2.5 px-3 text-center font-mono text-white">{fmtN(i.gfaResidential)}</td>
+                  <td className="py-2.5 px-3 text-center"><Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40">{(i.efficiencyResidential * 100).toFixed(0)}%</Badge></td>
                   <td className="py-2.5 px-3 text-center font-mono text-emerald-300 font-bold">{fmtN(SELLABLE.residential)}</td>
                 </tr>
                 <tr>
                   <td className="py-2.5 px-3 text-slate-200 flex items-center gap-2"><Store className="w-4 h-4 text-amber-400" /> تجزئة</td>
-                  <td className="py-2.5 px-3 text-center font-mono text-white">{fmtN(PROJECT_CARD.gfaRetail)}</td>
-                  <td className="py-2.5 px-3 text-center"><Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40">80%</Badge></td>
+                  <td className="py-2.5 px-3 text-center font-mono text-white">{fmtN(i.gfaRetail)}</td>
+                  <td className="py-2.5 px-3 text-center"><Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40">{(i.efficiencyRetail * 100).toFixed(0)}%</Badge></td>
                   <td className="py-2.5 px-3 text-center font-mono text-emerald-300 font-bold">{fmtN(SELLABLE.retail)}</td>
                 </tr>
                 <tr>
                   <td className="py-2.5 px-3 text-slate-200 flex items-center gap-2"><Briefcase className="w-4 h-4 text-purple-400" /> مكاتب</td>
-                  <td className="py-2.5 px-3 text-center font-mono text-white">{fmtN(PROJECT_CARD.gfaOffice)}</td>
-                  <td className="py-2.5 px-3 text-center"><Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40">90%</Badge></td>
+                  <td className="py-2.5 px-3 text-center font-mono text-white">{fmtN(i.gfaOffice)}</td>
+                  <td className="py-2.5 px-3 text-center"><Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40">{(i.efficiencyOffice * 100).toFixed(0)}%</Badge></td>
                   <td className="py-2.5 px-3 text-center font-mono text-emerald-300 font-bold">{fmtN(SELLABLE.office)}</td>
                 </tr>
               </tbody>
@@ -292,67 +285,73 @@ export default function PricingPage() {
         </Card>
 
         {/* SECTION 2: RESIDENTIAL */}
-        <CategorySection
-          title="الوحدات السكنية"
-          icon={<Home className="w-5 h-5 text-blue-400" />}
-          category="residential"
-          unitTypes={UNIT_TYPES.filter(ut => ut.category === "residential")}
-          counts={counts}
-          areas={areas}
-          prices={prices}
-          balance={calc.balance.residential}
-          parking={calc.categoryParking.residential}
-          revenue={calc.categoryRevenue.residential}
-          avgPrice={calc.avgPrice.residential}
-          totalUnits={calc.categoryUnits.residential}
-          onCountChange={updateCount}
-          onAreaChange={updateArea}
-          onPriceChange={updatePrice}
-          onAutoAdjust={() => autoAdjust("residential")}
-          getStatus={getStatus}
-        />
+        {SELLABLE.residential > 0 && (
+          <CategorySection
+            title="الوحدات السكنية"
+            icon={<Home className="w-5 h-5 text-blue-400" />}
+            category="residential"
+            unitTypes={UNIT_TYPES.filter(ut => ut.category === "residential")}
+            counts={counts}
+            areas={areas}
+            prices={prices}
+            balance={calc.balance.residential}
+            parking={calc.categoryParking.residential}
+            revenue={calc.categoryRevenue.residential}
+            avgPrice={calc.avgPrice.residential}
+            totalUnits={calc.categoryUnits.residential}
+            onCountChange={updateCount}
+            onAreaChange={updateArea}
+            onPriceChange={updatePrice}
+            onAutoAdjust={() => autoAdjust("residential")}
+            getStatus={getStatus}
+          />
+        )}
 
         {/* SECTION 3: RETAIL */}
-        <CategorySection
-          title="المحلات التجارية"
-          icon={<Store className="w-5 h-5 text-amber-400" />}
-          category="retail"
-          unitTypes={UNIT_TYPES.filter(ut => ut.category === "retail")}
-          counts={counts}
-          areas={areas}
-          prices={prices}
-          balance={calc.balance.retail}
-          parking={calc.categoryParking.retail}
-          revenue={calc.categoryRevenue.retail}
-          avgPrice={calc.avgPrice.retail}
-          totalUnits={calc.categoryUnits.retail}
-          onCountChange={updateCount}
-          onAreaChange={updateArea}
-          onPriceChange={updatePrice}
-          onAutoAdjust={() => autoAdjust("retail")}
-          getStatus={getStatus}
-        />
+        {SELLABLE.retail > 0 && (
+          <CategorySection
+            title="المحلات التجارية"
+            icon={<Store className="w-5 h-5 text-amber-400" />}
+            category="retail"
+            unitTypes={UNIT_TYPES.filter(ut => ut.category === "retail")}
+            counts={counts}
+            areas={areas}
+            prices={prices}
+            balance={calc.balance.retail}
+            parking={calc.categoryParking.retail}
+            revenue={calc.categoryRevenue.retail}
+            avgPrice={calc.avgPrice.retail}
+            totalUnits={calc.categoryUnits.retail}
+            onCountChange={updateCount}
+            onAreaChange={updateArea}
+            onPriceChange={updatePrice}
+            onAutoAdjust={() => autoAdjust("retail")}
+            getStatus={getStatus}
+          />
+        )}
 
         {/* SECTION 4: OFFICE */}
-        <CategorySection
-          title="المكاتب"
-          icon={<Briefcase className="w-5 h-5 text-purple-400" />}
-          category="office"
-          unitTypes={UNIT_TYPES.filter(ut => ut.category === "office")}
-          counts={counts}
-          areas={areas}
-          prices={prices}
-          balance={calc.balance.office}
-          parking={calc.categoryParking.office}
-          revenue={calc.categoryRevenue.office}
-          avgPrice={calc.avgPrice.office}
-          totalUnits={calc.categoryUnits.office}
-          onCountChange={updateCount}
-          onAreaChange={updateArea}
-          onPriceChange={updatePrice}
-          onAutoAdjust={() => autoAdjust("office")}
-          getStatus={getStatus}
-        />
+        {SELLABLE.office > 0 && (
+          <CategorySection
+            title="المكاتب"
+            icon={<Briefcase className="w-5 h-5 text-purple-400" />}
+            category="office"
+            unitTypes={UNIT_TYPES.filter(ut => ut.category === "office")}
+            counts={counts}
+            areas={areas}
+            prices={prices}
+            balance={calc.balance.office}
+            parking={calc.categoryParking.office}
+            revenue={calc.categoryRevenue.office}
+            avgPrice={calc.avgPrice.office}
+            totalUnits={calc.categoryUnits.office}
+            onCountChange={updateCount}
+            onAreaChange={updateArea}
+            onPriceChange={updatePrice}
+            onAutoAdjust={() => autoAdjust("office")}
+            getStatus={getStatus}
+          />
+        )}
 
         {/* SECTION 5: PARKING SUMMARY */}
         <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur">

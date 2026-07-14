@@ -6,7 +6,14 @@ import {
   calculateProjectFormulas,
   calculatePricingFormulas,
   calculateCosts,
+  dbProjectToInputs,
+  dbProjectToRates,
+  type ProjectInputs,
+  type ProjectRates,
 } from "@/lib/projectData";
+import { ProjectSelector } from "@/components/ProjectSelector";
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 // ═══════════════════════════════════════════
 // أنواع السيناريوهات
@@ -128,11 +135,16 @@ function distributeCommunityFee(
 // MAIN COMPONENT
 // ═══════════════════════════════════════════
 export default function InvestorCashFlowSchedulePage() {
+  const { user } = useAuth();
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
   const [scenario, setScenario] = useState<Scenario>("offplan_escrow");
   const tableRef = useRef<HTMLDivElement>(null);
 
   const data = useMemo(() => {
-    const projectFormulas = calculateProjectFormulas();
+    const i: ProjectInputs = projectQuery.data ? dbProjectToInputs(projectQuery.data) : PROJECT_INPUTS;
+    const r: ProjectRates = projectQuery.data ? dbProjectToRates(projectQuery.data) : RATES;
+    const projectFormulas = calculateProjectFormulas(i, r);
     const pricingUnits = PRICING_DEFAULTS.map(u => ({
       name: u.name,
       category: u.category,
@@ -141,12 +153,12 @@ export default function InvestorCashFlowSchedulePage() {
       count: u.defaultCount,
     }));
     const pricingFormulas = calculatePricingFormulas(pricingUnits);
-    const costs = calculateCosts(projectFormulas, pricingFormulas);
+    const costs = calculateCosts(projectFormulas, pricingFormulas, i, r);
 
     const { landPrice, landRegistration, landBroker, constructionCost, gfaTotal } = projectFormulas;
     const { totalRevenue, totalUnits } = pricingFormulas;
-    const designDuration = PROJECT_INPUTS.designDuration;
-    const constructionDuration = PROJECT_INPUTS.constructionDuration;
+    const designDuration = i.designDuration;
+    const constructionDuration = i.constructionDuration;
     const penultimateDesign = designDuration - 2; // الشهر قبل الأخير (0-indexed)
 
     // Helper: empty month arrays
@@ -224,13 +236,13 @@ export default function InvestorCashFlowSchedulePage() {
 
     // ─── فحص التربة (شهر 1 تصاميم) ───
     const soilDesign = emptyDesign();
-    soilDesign[0] = PROJECT_INPUTS.soilTest;
+    soilDesign[0] = i.soilTest;
     rows.push({
       label: "فحص التربة",
-      totalCost: PROJECT_INPUTS.soilTest,
-      investorAmount: PROJECT_INPUTS.soilTest,
+      totalCost: i.soilTest,
+      investorAmount: i.soilTest,
       paid: 0,
-      unpaid: PROJECT_INPUTS.soilTest,
+      unpaid: i.soilTest,
       funder: "investor",
       section: "الدراسات والمسوحات",
       designMonths: soilDesign,
@@ -239,13 +251,13 @@ export default function InvestorCashFlowSchedulePage() {
 
     // ─── المسح الطبوغرافي (شهر 1 تصاميم) ───
     const topoDesign = emptyDesign();
-    topoDesign[0] = PROJECT_INPUTS.topography;
+    topoDesign[0] = i.topography;
     rows.push({
       label: "المسح الطبوغرافي",
-      totalCost: PROJECT_INPUTS.topography,
-      investorAmount: PROJECT_INPUTS.topography,
+      totalCost: i.topography,
+      investorAmount: i.topography,
       paid: 0,
-      unpaid: PROJECT_INPUTS.topography,
+      unpaid: i.topography,
       funder: "investor",
       section: "الدراسات والمسوحات",
       designMonths: topoDesign,
@@ -255,7 +267,7 @@ export default function InvestorCashFlowSchedulePage() {
     // ─── رسوم المساح — من الضمان ───
     rows.push({
       label: "رسوم المساح",
-      totalCost: PROJECT_INPUTS.surveyorFee,
+      totalCost: i.surveyorFee,
       investorAmount: 0,
       paid: 0,
       unpaid: 0,
@@ -267,16 +279,16 @@ export default function InvestorCashFlowSchedulePage() {
 
     // ─── رسوم المجتمع (كل 6 أشهر من شهر 1) ───
     const communityDist = distributeCommunityFee(
-      PROJECT_INPUTS.communityFee,
+      i.communityFee,
       designDuration,
       constructionDuration
     );
     rows.push({
       label: "رسوم المجتمع",
-      totalCost: PROJECT_INPUTS.communityFee,
-      investorAmount: PROJECT_INPUTS.communityFee,
+      totalCost: i.communityFee,
+      investorAmount: i.communityFee,
       paid: 0,
-      unpaid: PROJECT_INPUTS.communityFee,
+      unpaid: i.communityFee,
       funder: "investor",
       section: "الرسوم الحكومية والتنظيمية",
       designMonths: communityDist.design,
@@ -288,7 +300,7 @@ export default function InvestorCashFlowSchedulePage() {
     govDesign[1] = costs.govFeesInvestor; // شهر 2 (index 1)
     rows.push({
       label: "رسوم الجهات الحكومية",
-      totalCost: PROJECT_INPUTS.govFeesTotal,
+      totalCost: i.govFeesTotal,
       investorAmount: costs.govFeesInvestor,
       paid: 0,
       unpaid: costs.govFeesInvestor,
@@ -315,13 +327,13 @@ export default function InvestorCashFlowSchedulePage() {
 
     // ─── رسوم NOC ───
     const nocDesign = emptyDesign();
-    nocDesign[penultimateDesign] = PROJECT_INPUTS.nocSale;
+    nocDesign[penultimateDesign] = i.nocSale;
     rows.push({
       label: "رسوم NOC المطور",
-      totalCost: PROJECT_INPUTS.nocSale,
-      investorAmount: PROJECT_INPUTS.nocSale,
+      totalCost: i.nocSale,
+      investorAmount: i.nocSale,
       paid: 0,
-      unpaid: PROJECT_INPUTS.nocSale,
+      unpaid: i.nocSale,
       funder: "investor",
       section: "الرسوم الحكومية والتنظيمية",
       designMonths: nocDesign,
@@ -330,13 +342,13 @@ export default function InvestorCashFlowSchedulePage() {
 
     // ─── تسجيل المشروع — ريرا ───
     const reraRegDesign = emptyDesign();
-    reraRegDesign[penultimateDesign] = PROJECT_INPUTS.reraProjectReg;
+    reraRegDesign[penultimateDesign] = i.reraProjectReg;
     rows.push({
       label: "تسجيل المشروع — ريرا",
-      totalCost: PROJECT_INPUTS.reraProjectReg,
-      investorAmount: PROJECT_INPUTS.reraProjectReg,
+      totalCost: i.reraProjectReg,
+      investorAmount: i.reraProjectReg,
       paid: 0,
-      unpaid: PROJECT_INPUTS.reraProjectReg,
+      unpaid: i.reraProjectReg,
       funder: "investor",
       section: "ريرا (التنظيم العقاري)",
       designMonths: reraRegDesign,
@@ -360,13 +372,13 @@ export default function InvestorCashFlowSchedulePage() {
 
     // ─── حساب الضمان (رسوم فتح) — الشهر قبل الأخير ───
     const escrowFeeDesign = emptyDesign();
-    escrowFeeDesign[penultimateDesign] = PROJECT_INPUTS.escrowAccountFee;
+    escrowFeeDesign[penultimateDesign] = i.escrowAccountFee;
     rows.push({
       label: "حساب الضمان (رسوم فتح)",
-      totalCost: PROJECT_INPUTS.escrowAccountFee,
-      investorAmount: PROJECT_INPUTS.escrowAccountFee,
+      totalCost: i.escrowAccountFee,
+      investorAmount: i.escrowAccountFee,
       paid: 0,
-      unpaid: PROJECT_INPUTS.escrowAccountFee,
+      unpaid: i.escrowAccountFee,
       funder: "investor",
       section: "ريرا (التنظيم العقاري)",
       designMonths: escrowFeeDesign,
@@ -375,13 +387,13 @@ export default function InvestorCashFlowSchedulePage() {
 
     // ─── رسوم البنك (شهرياً من شهر 1 إنشاء) ───
     const bankConstruction = emptyConstruction();
-    distributeEqual(PROJECT_INPUTS.bankFees, constructionDuration, bankConstruction, 0);
+    distributeEqual(i.bankFees, constructionDuration, bankConstruction, 0);
     rows.push({
       label: "رسوم البنك",
-      totalCost: PROJECT_INPUTS.bankFees,
-      investorAmount: PROJECT_INPUTS.bankFees,
+      totalCost: i.bankFees,
+      investorAmount: i.bankFees,
       paid: 0,
-      unpaid: PROJECT_INPUTS.bankFees,
+      unpaid: i.bankFees,
       funder: "investor",
       section: "ريرا (التنظيم العقاري)",
       designMonths: emptyDesign(),
@@ -391,7 +403,7 @@ export default function InvestorCashFlowSchedulePage() {
     // ─── تقرير مدقق ريرا — من الضمان ───
     rows.push({
       label: "تقرير مدقق ريرا",
-      totalCost: PROJECT_INPUTS.reraAuditorReport,
+      totalCost: i.reraAuditorReport,
       investorAmount: 0,
       paid: 0,
       unpaid: 0,
@@ -404,7 +416,7 @@ export default function InvestorCashFlowSchedulePage() {
     // ─── فحص ريرا — من الضمان ───
     rows.push({
       label: "فحص ريرا",
-      totalCost: PROJECT_INPUTS.reraInspection,
+      totalCost: i.reraInspection,
       investorAmount: 0,
       paid: 0,
       unpaid: 0,
@@ -453,7 +465,7 @@ export default function InvestorCashFlowSchedulePage() {
     // ─── أتعاب المطور (2% تصميم بالتساوي + 3% إنشاء بالتساوي) ───
     const devFeeDesign = emptyDesign();
     const devFeeConstruction = emptyConstruction();
-    const devFee2pct = totalRevenue * RATES.developerFeeDesign; // 1% — لكن المستخدم قال 2%
+    const devFee2pct = totalRevenue * r.developerFeeDesign; // 1% — لكن المستخدم قال 2%
     // المستخدم قال: 2% مرحلة التصميم + 3% مرحلة الإنشاء = 5% إجمالي
     const devFeeDesignTotal = totalRevenue * 0.02;
     const devFeeConstructionTotal = totalRevenue * 0.03;
@@ -477,8 +489,8 @@ export default function InvestorCashFlowSchedulePage() {
     // المجموع من المستثمر = 30% من تكلفة الإنشاء
     const constructionDesign = emptyDesign();
     const constructionConst = emptyConstruction();
-    const escrowDeposit = constructionCost * RATES.escrowDeposit; // 20%
-    const advancePayment = constructionCost * RATES.advancePayment; // 10%
+    const escrowDeposit = constructionCost * r.escrowDeposit; // 20%
+    const advancePayment = constructionCost * r.advancePayment; // 10%
     constructionDesign[penultimateDesign] = escrowDeposit;
     constructionConst[0] = advancePayment;
     rows.push({
@@ -548,16 +560,19 @@ export default function InvestorCashFlowSchedulePage() {
       designDuration,
       constructionDuration,
     };
-  }, [scenario]);
+  }, [scenario, projectQuery.data]);
 
   return (
     <div className="min-h-screen bg-white p-4" dir="rtl">
       <div className="max-w-full mx-auto space-y-4">
 
+        {/* Project Selector */}
+        <ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} />
+
         {/* Header */}
         <div className="text-right space-y-1">
           <h1 className="text-xl font-bold text-gray-900">
-            جدولة رأس المال – {PROJECT_INPUTS.name}
+            جدولة رأس المال – {projectQuery.data?.name || 'مجان متعدد الاستخدامات'}
           </h1>
           <p className="text-sm text-gray-500">
             توزيع المصاريف على المراحل الزمنية حسب إعدادات التدفق | المبالغ بالدرهم الإماراتي
