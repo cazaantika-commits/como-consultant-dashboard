@@ -870,7 +870,7 @@
 - [ ] All data from projectData.ts — no hardcoded numbers, no database
 - [ ] Section headers: الأرض, التصاميم, ريرا وأوف بلان, الإنشاء
 - [ ] Light/white theme matching the provided screenshot style
-- [ ] Unify data source: update projectData.ts with correct card numbers (govFees=7M, developerFee=5%, reraInspection=150K)
-- [ ] Refactor ProjectCardOffplanPage to import from projectData.ts instead of local INPUTS
+- [x] Unify data source: update projectData.ts with correct card numbers (govFees=7M, developerFee=5%, reraInspection=150K)
+- [x] Refactor ProjectCardOffplanPage to import from projectData.ts instead of local INPUTS
 - [ ] Update InvestorCashFlowSchedulePage to match exact same items as the card
 - [ ] Verify both pages show identical totals

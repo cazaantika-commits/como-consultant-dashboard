@@ -39,6 +39,92 @@ interface CostRow {
 }
 
 // ═══════════════════════════════════════════
+// DISTRIBUTION HELPERS
+// ═══════════════════════════════════════════
+
+/**
+ * توزيع أتعاب التصاميم على المدة الفعلية
+ * 7 مراحل: 10%, 15%, 20%, 35%, 10%, 5%, 5%
+ * لو المدة >= 7: كل مرحلة في شهر، Detailed يُقسم على الأشهر الإضافية
+ * لو المدة < 7: تُدمج المراحل الأخيرة
+ */
+function distributeDesignFee(totalFee: number, months: number): number[] {
+  const stages = [0.10, 0.15, 0.20, 0.35, 0.10, 0.05, 0.05];
+  const result = new Array(months).fill(0);
+
+  if (months >= 7) {
+    // كل مرحلة في شهر، Detailed (35%) يُقسم على الأشهر الإضافية
+    const extraMonths = months - 6; // أشهر إضافية بعد أول 3 مراحل + Tender + 2 Approvals
+    // ش1=10%, ش2=15%, ش3=20%, ش4..ش(3+extra)=35%/extra, ش(months-2)=10%, ش(months-1)=5%, ش(months)=5%
+    result[0] = totalFee * stages[0]; // 10%
+    result[1] = totalFee * stages[1]; // 15%
+    result[2] = totalFee * stages[2]; // 20%
+    // Detailed Design split across extra months
+    const detailedPerMonth = (totalFee * stages[3]) / extraMonths;
+    for (let i = 3; i < 3 + extraMonths; i++) {
+      result[i] = detailedPerMonth;
+    }
+    result[months - 3] += totalFee * stages[4]; // Tender 10%
+    result[months - 2] += totalFee * stages[5]; // Preliminary Approval 5%
+    result[months - 1] += totalFee * stages[6]; // Final Approval 5%
+  } else {
+    // المدة < 7: أول (months-1) مراحل كل واحدة في شهر، الباقي يُدمج في الشهر الأخير
+    for (let i = 0; i < months - 1 && i < stages.length; i++) {
+      result[i] = totalFee * stages[i];
+    }
+    // باقي المراحل تُدمج في الشهر الأخير
+    let remaining = 0;
+    for (let i = months - 1; i < stages.length; i++) {
+      remaining += stages[i];
+    }
+    result[months - 1] = totalFee * remaining;
+  }
+
+  return result;
+}
+
+/**
+ * توزيع بالتساوي على عدد أشهر محدد
+ */
+function distributeEqual(total: number, months: number, arr: number[], startIndex: number = 0) {
+  const perMonth = total / months;
+  for (let i = startIndex; i < startIndex + months && i < arr.length; i++) {
+    arr[i] = perMonth;
+  }
+}
+
+/**
+ * توزيع رسوم المجتمع: كل 6 أشهر بدءاً من شهر 1
+ * المبلغ الإجمالي يُقسم على عدد الدفعات
+ */
+function distributeCommunityFee(
+  total: number,
+  designMonths: number,
+  constructionMonths: number
+): { design: number[]; construction: number[] } {
+  const totalMonths = designMonths + constructionMonths;
+  // حساب عدد الدفعات (كل 6 أشهر من شهر 1)
+  const paymentMonths: number[] = [];
+  for (let m = 0; m < totalMonths; m += 6) {
+    paymentMonths.push(m);
+  }
+  const paymentAmount = total / paymentMonths.length;
+
+  const design = new Array(designMonths).fill(0);
+  const construction = new Array(constructionMonths).fill(0);
+
+  for (const m of paymentMonths) {
+    if (m < designMonths) {
+      design[m] = paymentAmount;
+    } else {
+      construction[m - designMonths] = paymentAmount;
+    }
+  }
+
+  return { design, construction };
+}
+
+// ═══════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════
 export default function InvestorCashFlowSchedulePage() {
@@ -61,17 +147,18 @@ export default function InvestorCashFlowSchedulePage() {
     const { totalRevenue, totalUnits } = pricingFormulas;
     const designDuration = PROJECT_INPUTS.designDuration;
     const constructionDuration = PROJECT_INPUTS.constructionDuration;
+    const penultimateDesign = designDuration - 2; // الشهر قبل الأخير (0-indexed)
 
     // Helper: empty month arrays
     const emptyDesign = () => new Array(designDuration).fill(0);
     const emptyConstruction = () => new Array(constructionDuration).fill(0);
 
     // ═══════════════════════════════════════════
-    // BUILD ROWS — نفس بنود البطاقة بالضبط
+    // BUILD ROWS — نفس بنود البطاقة بالضبط + التوزيع
     // ═══════════════════════════════════════════
     const rows: CostRow[] = [];
 
-    // ─── الأرض ───
+    // ─── الأرض (مدفوعة — لا توزيع) ───
     rows.push({
       label: "سعر الأرض",
       totalCost: landPrice,
@@ -85,7 +172,7 @@ export default function InvestorCashFlowSchedulePage() {
     });
 
     rows.push({
-      label: "رسوم تسجيل الأرض (4%)",
+      label: "رسوم تسجيل الأرض",
       totalCost: landRegistration,
       investorAmount: landRegistration,
       paid: landRegistration,
@@ -97,7 +184,7 @@ export default function InvestorCashFlowSchedulePage() {
     });
 
     rows.push({
-      label: "عمولة وسيط الأرض (1%)",
+      label: "عمولة وسيط الأرض",
       totalCost: landBroker,
       investorAmount: landBroker,
       paid: landBroker,
@@ -108,21 +195,23 @@ export default function InvestorCashFlowSchedulePage() {
       constructionMonths: emptyConstruction(),
     });
 
-    // ─── التصاميم والإشراف ───
+    // ─── أتعاب التصاميم (توزيع حسب المراحل) ───
+    const designFeeDistribution = distributeDesignFee(costs.designFee, designDuration);
     rows.push({
-      label: "أتعاب التصاميم (1.8%)",
+      label: "أتعاب التصاميم",
       totalCost: costs.designFee,
       investorAmount: costs.designFee,
       paid: 0,
       unpaid: costs.designFee,
       funder: "investor",
       section: "التصاميم والإشراف",
-      designMonths: emptyDesign(),
+      designMonths: designFeeDistribution,
       constructionMonths: emptyConstruction(),
     });
 
+    // أتعاب الإشراف — من الضمان
     rows.push({
-      label: "أتعاب الإشراف (2%)",
+      label: "أتعاب الإشراف",
       totalCost: costs.supervisionFee,
       investorAmount: 0,
       paid: 0,
@@ -133,7 +222,9 @@ export default function InvestorCashFlowSchedulePage() {
       constructionMonths: emptyConstruction(),
     });
 
-    // ─── الدراسات والمسوحات ───
+    // ─── فحص التربة (شهر 1 تصاميم) ───
+    const soilDesign = emptyDesign();
+    soilDesign[0] = PROJECT_INPUTS.soilTest;
     rows.push({
       label: "فحص التربة",
       totalCost: PROJECT_INPUTS.soilTest,
@@ -142,10 +233,13 @@ export default function InvestorCashFlowSchedulePage() {
       unpaid: PROJECT_INPUTS.soilTest,
       funder: "investor",
       section: "الدراسات والمسوحات",
-      designMonths: emptyDesign(),
+      designMonths: soilDesign,
       constructionMonths: emptyConstruction(),
     });
 
+    // ─── المسح الطبوغرافي (شهر 1 تصاميم) ───
+    const topoDesign = emptyDesign();
+    topoDesign[0] = PROJECT_INPUTS.topography;
     rows.push({
       label: "المسح الطبوغرافي",
       totalCost: PROJECT_INPUTS.topography,
@@ -154,23 +248,29 @@ export default function InvestorCashFlowSchedulePage() {
       unpaid: PROJECT_INPUTS.topography,
       funder: "investor",
       section: "الدراسات والمسوحات",
-      designMonths: emptyDesign(),
+      designMonths: topoDesign,
       constructionMonths: emptyConstruction(),
     });
 
+    // ─── رسوم المساح — من الضمان ───
     rows.push({
       label: "رسوم المساح",
       totalCost: PROJECT_INPUTS.surveyorFee,
-      investorAmount: PROJECT_INPUTS.surveyorFee,
+      investorAmount: 0,
       paid: 0,
-      unpaid: PROJECT_INPUTS.surveyorFee,
-      funder: "investor",
+      unpaid: 0,
+      funder: "escrow",
       section: "الدراسات والمسوحات",
       designMonths: emptyDesign(),
       constructionMonths: emptyConstruction(),
     });
 
-    // ─── الرسوم الحكومية والتنظيمية ───
+    // ─── رسوم المجتمع (كل 6 أشهر من شهر 1) ───
+    const communityDist = distributeCommunityFee(
+      PROJECT_INPUTS.communityFee,
+      designDuration,
+      constructionDuration
+    );
     rows.push({
       label: "رسوم المجتمع",
       totalCost: PROJECT_INPUTS.communityFee,
@@ -179,10 +279,13 @@ export default function InvestorCashFlowSchedulePage() {
       unpaid: PROJECT_INPUTS.communityFee,
       funder: "investor",
       section: "الرسوم الحكومية والتنظيمية",
-      designMonths: emptyDesign(),
-      constructionMonths: emptyConstruction(),
+      designMonths: communityDist.design,
+      constructionMonths: communityDist.construction,
     });
 
+    // ─── رسوم الجهات الحكومية (10% مستثمر — شهر 2 تصاميم) ───
+    const govDesign = emptyDesign();
+    govDesign[1] = costs.govFeesInvestor; // شهر 2 (index 1)
     rows.push({
       label: "رسوم الجهات الحكومية",
       totalCost: PROJECT_INPUTS.govFeesTotal,
@@ -191,22 +294,26 @@ export default function InvestorCashFlowSchedulePage() {
       unpaid: costs.govFeesInvestor,
       funder: "split",
       section: "الرسوم الحكومية والتنظيمية",
-      designMonths: emptyDesign(),
+      designMonths: govDesign,
       constructionMonths: emptyConstruction(),
     });
 
+    // ─── رسوم الفرز (الشهر قبل الأخير من التصميم) ───
+    const sortingDesign = emptyDesign();
+    sortingDesign[penultimateDesign] = costs.sortingFee;
     rows.push({
-      label: "رسوم الفرز (40 د/قدم²)",
+      label: "رسوم الفرز",
       totalCost: costs.sortingFee,
       investorAmount: costs.sortingFee,
       paid: 0,
       unpaid: costs.sortingFee,
       funder: "investor",
       section: "الرسوم الحكومية والتنظيمية",
-      designMonths: emptyDesign(),
+      designMonths: sortingDesign,
       constructionMonths: emptyConstruction(),
     });
 
+    // ─── رسوم NOC ───
     rows.push({
       label: "رسوم NOC المطور",
       totalCost: PROJECT_INPUTS.nocSale,
@@ -219,7 +326,7 @@ export default function InvestorCashFlowSchedulePage() {
       constructionMonths: emptyConstruction(),
     });
 
-    // ─── ريرا (التنظيم العقاري) ───
+    // ─── تسجيل المشروع — ريرا ───
     rows.push({
       label: "تسجيل المشروع — ريرا",
       totalCost: PROJECT_INPUTS.reraProjectReg,
@@ -232,6 +339,7 @@ export default function InvestorCashFlowSchedulePage() {
       constructionMonths: emptyConstruction(),
     });
 
+    // ─── تسجيل الوحدات — ريرا ───
     rows.push({
       label: "تسجيل الوحدات — ريرا",
       totalCost: costs.reraUnits,
@@ -244,6 +352,9 @@ export default function InvestorCashFlowSchedulePage() {
       constructionMonths: emptyConstruction(),
     });
 
+    // ─── حساب الضمان (رسوم فتح) — الشهر قبل الأخير ───
+    const escrowFeeDesign = emptyDesign();
+    escrowFeeDesign[penultimateDesign] = PROJECT_INPUTS.escrowAccountFee;
     rows.push({
       label: "حساب الضمان (رسوم فتح)",
       totalCost: PROJECT_INPUTS.escrowAccountFee,
@@ -252,10 +363,13 @@ export default function InvestorCashFlowSchedulePage() {
       unpaid: PROJECT_INPUTS.escrowAccountFee,
       funder: "investor",
       section: "ريرا (التنظيم العقاري)",
-      designMonths: emptyDesign(),
+      designMonths: escrowFeeDesign,
       constructionMonths: emptyConstruction(),
     });
 
+    // ─── رسوم البنك (شهرياً من شهر 1 إنشاء) ───
+    const bankConstruction = emptyConstruction();
+    distributeEqual(PROJECT_INPUTS.bankFees, constructionDuration, bankConstruction, 0);
     rows.push({
       label: "رسوم البنك",
       totalCost: PROJECT_INPUTS.bankFees,
@@ -265,9 +379,10 @@ export default function InvestorCashFlowSchedulePage() {
       funder: "investor",
       section: "ريرا (التنظيم العقاري)",
       designMonths: emptyDesign(),
-      constructionMonths: emptyConstruction(),
+      constructionMonths: bankConstruction,
     });
 
+    // ─── تقرير مدقق ريرا — من الضمان ───
     rows.push({
       label: "تقرير مدقق ريرا",
       totalCost: PROJECT_INPUTS.reraAuditorReport,
@@ -280,6 +395,7 @@ export default function InvestorCashFlowSchedulePage() {
       constructionMonths: emptyConstruction(),
     });
 
+    // ─── فحص ريرا — من الضمان ───
     rows.push({
       label: "فحص ريرا",
       totalCost: PROJECT_INPUTS.reraInspection,
@@ -292,9 +408,9 @@ export default function InvestorCashFlowSchedulePage() {
       constructionMonths: emptyConstruction(),
     });
 
-    // ─── المبيعات والتسويق ───
+    // ─── عمولة المبيعات — من الضمان ───
     rows.push({
-      label: "عمولة المبيعات (5%)",
+      label: "عمولة المبيعات",
       totalCost: costs.salesCommission,
       investorAmount: 0,
       paid: 0,
@@ -305,31 +421,60 @@ export default function InvestorCashFlowSchedulePage() {
       constructionMonths: emptyConstruction(),
     });
 
+    // ─── التسويق (25% شهر قبل الأخير تصاميم + 75% أول 6 أشهر إنشاء) ───
+    const marketingDesign = emptyDesign();
+    const marketingConstruction = emptyConstruction();
+    const marketing25 = costs.marketing * 0.25;
+    const marketing75 = costs.marketing * 0.75;
+    marketingDesign[penultimateDesign] = marketing25;
+    const marketingMonths = Math.min(6, constructionDuration);
+    const marketing75PerMonth = marketing75 / marketingMonths;
+    for (let i = 0; i < marketingMonths; i++) {
+      marketingConstruction[i] = marketing75PerMonth;
+    }
     rows.push({
-      label: "التسويق (2%)",
+      label: "التسويق",
       totalCost: costs.marketing,
       investorAmount: costs.marketing,
       paid: 0,
       unpaid: costs.marketing,
       funder: "investor",
       section: "المبيعات والتسويق",
-      designMonths: emptyDesign(),
-      constructionMonths: emptyConstruction(),
+      designMonths: marketingDesign,
+      constructionMonths: marketingConstruction,
     });
 
+    // ─── أتعاب المطور (2% تصميم بالتساوي + 3% إنشاء بالتساوي) ───
+    const devFeeDesign = emptyDesign();
+    const devFeeConstruction = emptyConstruction();
+    const devFee2pct = totalRevenue * RATES.developerFeeDesign; // 1% — لكن المستخدم قال 2%
+    // المستخدم قال: 2% مرحلة التصميم + 3% مرحلة الإنشاء = 5% إجمالي
+    const devFeeDesignTotal = totalRevenue * 0.02;
+    const devFeeConstructionTotal = totalRevenue * 0.03;
+    distributeEqual(devFeeDesignTotal, designDuration, devFeeDesign, 0);
+    distributeEqual(devFeeConstructionTotal, constructionDuration, devFeeConstruction, 0);
     rows.push({
-      label: "أتعاب المطور (5%)",
+      label: "أتعاب المطور",
       totalCost: costs.developerFee,
       investorAmount: costs.developerFee,
       paid: 0,
       unpaid: costs.developerFee,
       funder: "investor",
       section: "المبيعات والتسويق",
-      designMonths: emptyDesign(),
-      constructionMonths: emptyConstruction(),
+      designMonths: devFeeDesign,
+      constructionMonths: devFeeConstruction,
     });
 
     // ─── الإنشاء ───
+    // إيداع حساب الضمان (20%) — الشهر قبل الأخير تصاميم
+    // دفعة مقدمة مقاول (10%) — شهر 1 إنشاء
+    // المجموع من المستثمر = 30% من تكلفة الإنشاء
+    const constructionDesign = emptyDesign();
+    const constructionConst = emptyConstruction();
+    const escrowDeposit = constructionCost * RATES.escrowDeposit; // 20%
+    const advancePayment = constructionCost * RATES.advancePayment; // 10%
+    constructionDesign[penultimateDesign] = escrowDeposit;
+    constructionConst[0] = advancePayment;
     rows.push({
       label: "تكلفة الإنشاء",
       totalCost: constructionCost,
@@ -338,19 +483,19 @@ export default function InvestorCashFlowSchedulePage() {
       unpaid: costs.constructionInvestor,
       funder: "split",
       section: "الإنشاء",
-      designMonths: emptyDesign(),
-      constructionMonths: emptyConstruction(),
+      designMonths: constructionDesign,
+      constructionMonths: constructionConst,
     });
 
     // ═══════════════════════════════════════════
-    // TOTALS — نفس معادلة البطاقة بالضبط
+    // TOTALS
     // ═══════════════════════════════════════════
     const grandTotalCost = costs.totalCosts;
     const grandInvestor = costs.totalInvestor;
     const grandPaid = rows.reduce((s, r) => s + r.paid, 0);
     const grandUnpaid = grandInvestor - grandPaid;
 
-    // Monthly totals (فارغة حالياً — سيتم التوزيع لاحقاً)
+    // Monthly totals (investor only)
     const designMonthlyTotals = new Array(designDuration).fill(0);
     const constructionMonthlyTotals = new Array(constructionDuration).fill(0);
     for (const row of rows) {
@@ -448,43 +593,40 @@ export default function InvestorCashFlowSchedulePage() {
         </div>
 
         {/* Table */}
-        <div ref={tableRef} className="overflow-x-auto border border-gray-200 rounded-lg">
+        <div ref={tableRef} className="overflow-x-auto border rounded-lg">
           <table className="w-max min-w-full text-xs border-collapse">
-            {/* Header Row 1 — Phase Groups */}
             <thead>
-              <tr>
-                <th className="sticky right-0 z-20 bg-white border border-gray-200 px-2 py-2 min-w-[180px]"></th>
-                <th className="bg-indigo-900 text-white border border-gray-300 px-2 py-2 text-center font-bold">إجمالي التكاليف</th>
-                <th className="bg-indigo-900 text-white border border-gray-300 px-2 py-2 text-center font-bold">إجمالي المستثمر</th>
-                <th className="bg-green-700 text-white border border-gray-300 px-2 py-2 text-center font-bold">مدفوع</th>
-                <th className="bg-red-700 text-white border border-gray-300 px-2 py-2 text-center font-bold">غير مدفوع</th>
+              {/* Header Row 1 — Groups */}
+              <tr className="bg-gray-800 text-white">
+                <th className="sticky right-0 z-30 bg-gray-800 border border-gray-600 px-2 py-2 text-right min-w-[180px]" rowSpan={2}>
+                  الوصف
+                </th>
+                <th className="border border-gray-600 px-2 py-2 text-center" rowSpan={2}>إجمالي التكاليف</th>
+                <th className="border border-gray-600 px-2 py-2 text-center bg-blue-900" rowSpan={2}>إجمالي المستثمر</th>
+                <th className="border border-gray-600 px-2 py-2 text-center bg-green-900" rowSpan={2}>مدفوع</th>
+                <th className="border border-gray-600 px-2 py-2 text-center bg-red-900" rowSpan={2}>غير مدفوع</th>
                 <th
+                  className="border border-gray-600 px-2 py-2 text-center bg-purple-800"
                   colSpan={data.designDuration}
-                  className="bg-purple-700 text-white border border-gray-300 px-2 py-2 text-center font-bold"
                 >
                   التصاميم ({data.designDuration} أشهر)
                 </th>
                 <th
+                  className="border border-gray-600 px-2 py-2 text-center bg-green-800"
                   colSpan={data.constructionDuration}
-                  className="bg-green-800 text-white border border-gray-300 px-2 py-2 text-center font-bold"
                 >
                   الإنشاء ({data.constructionDuration} شهر)
                 </th>
               </tr>
-              {/* Header Row 2 — Individual Months */}
-              <tr>
-                <th className="sticky right-0 z-20 bg-gray-50 border border-gray-200 px-2 py-1.5 text-right font-semibold text-gray-700">الوصف</th>
-                <th className="bg-gray-50 border border-gray-200 px-2 py-1.5 text-center font-semibold text-gray-600">الإجمالي</th>
-                <th className="bg-gray-50 border border-gray-200 px-2 py-1.5 text-center font-semibold text-gray-600">من المستثمر</th>
-                <th className="bg-gray-50 border border-gray-200 px-2 py-1.5 text-center font-semibold text-gray-600">مدفوع</th>
-                <th className="bg-gray-50 border border-gray-200 px-2 py-1.5 text-center font-semibold text-gray-600">غير مدفوع</th>
+              {/* Header Row 2 — Month Numbers */}
+              <tr className="bg-gray-700 text-white">
                 {Array.from({ length: data.designDuration }, (_, i) => (
-                  <th key={`d${i}`} className="bg-purple-50 border border-gray-200 px-1 py-1.5 text-center font-medium text-purple-900 min-w-[70px]">
+                  <th key={`dh${i}`} className="border border-gray-600 px-1 py-1 text-center min-w-[70px] bg-purple-700">
                     ش{i + 1}
                   </th>
                 ))}
                 {Array.from({ length: data.constructionDuration }, (_, i) => (
-                  <th key={`c${i}`} className="bg-green-50 border border-gray-200 px-1 py-1.5 text-center font-medium text-green-900 min-w-[70px]">
+                  <th key={`ch${i}`} className="border border-gray-600 px-1 py-1 text-center min-w-[70px] bg-green-700">
                     ش{i + 1}
                   </th>
                 ))}
@@ -493,6 +635,7 @@ export default function InvestorCashFlowSchedulePage() {
             <tbody>
               {data.sections.map((section) => {
                 const sectionRows = data.rows.filter(r => r.section === section);
+                if (sectionRows.length === 0) return null;
                 return (
                   <SectionGroup
                     key={section}
@@ -595,13 +738,25 @@ function SectionGroup({
           {/* Design Months */}
           {row.designMonths.map((v, i) => (
             <td key={`d${i}`} className="border border-gray-200 px-1 py-1.5 text-center text-gray-700">
-              {v > 0 ? fmt(v) : "–"}
+              {row.funder === "escrow" ? (
+                <span className="text-gray-300">–</span>
+              ) : v > 0 ? (
+                fmt(v)
+              ) : (
+                "–"
+              )}
             </td>
           ))}
           {/* Construction Months */}
           {row.constructionMonths.map((v, i) => (
             <td key={`c${i}`} className="border border-gray-200 px-1 py-1.5 text-center text-gray-700">
-              {v > 0 ? fmt(v) : "–"}
+              {row.funder === "escrow" ? (
+                <span className="text-gray-300">–</span>
+              ) : v > 0 ? (
+                fmt(v)
+              ) : (
+                "–"
+              )}
             </td>
           ))}
         </tr>
