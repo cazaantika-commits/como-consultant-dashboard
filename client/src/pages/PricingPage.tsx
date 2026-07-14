@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect, useRef } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -126,7 +126,7 @@ export default function PricingPage() {
   const saveMarketOverview = trpc.marketOverview.save.useMutation();
   const saveCompetitionPricing = trpc.competitionPricing.save.useMutation();
   const [isSaving, setIsSaving] = useState(false);
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Dynamic project data
   const projectData = useMemo(() => {
@@ -196,17 +196,17 @@ export default function PricingPage() {
     }
   }, [selectedProjectId, marketOverviewQuery.data, competitionPricingQuery.data]);
 
-  // Save function
-  const doSave = useCallback(async (currentCounts: Record<string, number>, currentAreas: Record<string, number>, currentPrices: Record<string, number>) => {
+  // Manual Save function
+  const handleSave = useCallback(async () => {
     if (!selectedProjectId || !user) return;
     setIsSaving(true);
     try {
       const moData: any = { projectId: selectedProjectId };
       Object.entries(COUNT_MAP).forEach(([key, dbField]) => {
-        moData[dbField] = currentCounts[key] || 0;
+        moData[dbField] = counts[key] || 0;
       });
       Object.entries(AREA_MAP).forEach(([key, dbField]) => {
-        moData[dbField] = currentAreas[key] || 0;
+        moData[dbField] = areas[key] || 0;
       });
       moData.residentialStudioCount = 0;
       moData.residentialStudioAvgArea = 0;
@@ -215,71 +215,54 @@ export default function PricingPage() {
 
       const cpData: any = { projectId: selectedProjectId };
       Object.entries(PRICE_MAP).forEach(([key, dbField]) => {
-        cpData[dbField] = currentPrices[key] || 0;
+        cpData[dbField] = prices[key] || 0;
       });
-      cpData.opt1brPrice = currentPrices.onebed || 0;
-      cpData.opt2brPrice = currentPrices.twobed || 0;
-      cpData.opt3brPrice = currentPrices.threebed || 0;
-      cpData.optRetailSmallPrice = currentPrices.retail_small || 0;
-      cpData.optRetailMediumPrice = currentPrices.retail_medium || 0;
-      cpData.optRetailLargePrice = currentPrices.retail_large || 0;
-      cpData.optOfficeSmallPrice = currentPrices.office_small || 0;
-      cpData.optOfficeMediumPrice = currentPrices.office_medium || 0;
-      cpData.optOfficeLargePrice = currentPrices.office_large || 0;
-      cpData.cons1brPrice = currentPrices.onebed || 0;
-      cpData.cons2brPrice = currentPrices.twobed || 0;
-      cpData.cons3brPrice = currentPrices.threebed || 0;
-      cpData.consRetailSmallPrice = currentPrices.retail_small || 0;
-      cpData.consRetailMediumPrice = currentPrices.retail_medium || 0;
-      cpData.consRetailLargePrice = currentPrices.retail_large || 0;
-      cpData.consOfficeSmallPrice = currentPrices.office_small || 0;
-      cpData.consOfficeMediumPrice = currentPrices.office_medium || 0;
-      cpData.consOfficeLargePrice = currentPrices.office_large || 0;
+      cpData.opt1brPrice = prices.onebed || 0;
+      cpData.opt2brPrice = prices.twobed || 0;
+      cpData.opt3brPrice = prices.threebed || 0;
+      cpData.optRetailSmallPrice = prices.retail_small || 0;
+      cpData.optRetailMediumPrice = prices.retail_medium || 0;
+      cpData.optRetailLargePrice = prices.retail_large || 0;
+      cpData.optOfficeSmallPrice = prices.office_small || 0;
+      cpData.optOfficeMediumPrice = prices.office_medium || 0;
+      cpData.optOfficeLargePrice = prices.office_large || 0;
+      cpData.cons1brPrice = prices.onebed || 0;
+      cpData.cons2brPrice = prices.twobed || 0;
+      cpData.cons3brPrice = prices.threebed || 0;
+      cpData.consRetailSmallPrice = prices.retail_small || 0;
+      cpData.consRetailMediumPrice = prices.retail_medium || 0;
+      cpData.consRetailLargePrice = prices.retail_large || 0;
+      cpData.consOfficeSmallPrice = prices.office_small || 0;
+      cpData.consOfficeMediumPrice = prices.office_medium || 0;
+      cpData.consOfficeLargePrice = prices.office_large || 0;
       cpData.baseStudioPrice = 0;
       cpData.optStudioPrice = 0;
       cpData.consStudioPrice = 0;
       await saveCompetitionPricing.mutateAsync(cpData);
 
-      toast({ title: "تم الحفظ ✓", description: "تم حفظ بيانات التسعير" });
+      setHasUnsavedChanges(false);
+      toast({ title: "تم الحفظ ✓", description: "تم حفظ بيانات التسعير بنجاح" });
     } catch (err) {
       toast({ title: "خطأ", description: "فشل حفظ البيانات", variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
-  }, [selectedProjectId, user, saveMarketOverview, saveCompetitionPricing, toast]);
-
-  // Debounced auto-save
-  const triggerSave = useCallback((newCounts: Record<string, number>, newAreas: Record<string, number>, newPrices: Record<string, number>) => {
-    if (!selectedProjectId || !user) return;
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
-      doSave(newCounts, newAreas, newPrices);
-    }, 2000);
-  }, [selectedProjectId, user, doSave]);
+  }, [selectedProjectId, user, counts, areas, prices, saveMarketOverview, saveCompetitionPricing, toast]);
 
   const updateCount = useCallback((key: string, val: number) => {
-    setCounts(prev => {
-      const next = { ...prev, [key]: Math.max(0, val) };
-      triggerSave(next, areas, prices);
-      return next;
-    });
-  }, [triggerSave, areas, prices]);
+    setCounts(prev => ({ ...prev, [key]: Math.max(0, val) }));
+    setHasUnsavedChanges(true);
+  }, []);
 
   const updateArea = useCallback((key: string, val: number) => {
-    setAreas(prev => {
-      const next = { ...prev, [key]: Math.max(0, val) };
-      triggerSave(counts, next, prices);
-      return next;
-    });
-  }, [triggerSave, counts, prices]);
+    setAreas(prev => ({ ...prev, [key]: Math.max(0, val) }));
+    setHasUnsavedChanges(true);
+  }, []);
 
   const updatePrice = useCallback((key: string, val: number) => {
-    setPrices(prev => {
-      const next = { ...prev, [key]: Math.max(0, val) };
-      triggerSave(counts, areas, next);
-      return next;
-    });
-  }, [triggerSave, counts, areas]);
+    setPrices(prev => ({ ...prev, [key]: Math.max(0, val) }));
+    setHasUnsavedChanges(true);
+  }, []);
 
   // ═══════════════════════════════════════════
   // CALCULATIONS
@@ -379,11 +362,20 @@ export default function PricingPage() {
             <h1 className="text-2xl font-bold text-white">التسعير وتوزيع الوحدات</h1>
             <p className="text-slate-400 text-sm">{i.name}</p>
           </div>
-          {isSaving && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40">
-              <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />
-              <span className="text-xs text-amber-300">جاري الحفظ...</span>
-            </div>
+          {selectedProjectId && (
+            <button
+              onClick={handleSave}
+              disabled={isSaving || !hasUnsavedChanges}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${isSaving ? 'bg-amber-500/20 border border-amber-500/40 text-amber-300 cursor-wait' : hasUnsavedChanges ? 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/30 animate-pulse' : 'bg-slate-700 border border-slate-600 text-slate-400 cursor-default'}`}
+            >
+              {isSaving ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /><span>جاري الحفظ...</span></>
+              ) : hasUnsavedChanges ? (
+                <><Save className="w-4 h-4" /><span>حفظ التغييرات</span></>
+              ) : (
+                <><CheckCircle className="w-4 h-4" /><span>محفوظ</span></>
+              )}
+            </button>
           )}
         </div>
         <div className="mt-4 mb-4">
