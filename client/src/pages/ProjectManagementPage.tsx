@@ -6,8 +6,13 @@ import FactSheetPage from "./FactSheetPage";
 import KnowledgeHubPage from "./KnowledgeHubPage";
 import FinancialPlanningHubPage from "./FinancialPlanningHubPage";
 import CapitalPortfolioPage from "./CapitalPortfolioPage";
+import ProjectCardOffplanPage from "./ProjectCardOffplanPage";
+import PricingPage from "./PricingPage";
+import InvestorCashFlowSchedulePage from "./InvestorCashFlowSchedulePage";
+import EscrowCashFlowSchedulePage2 from "./EscrowCashFlowSchedulePage2";
+import ConsolidatedInvestorCashFlowPage from "./ConsolidatedInvestorCashFlowPage";
 
-type View = "icons" | "fact-sheet" | "knowledge" | "financial" | "dynamic-portfolio";
+type View = "icons" | "fact-sheet" | "knowledge" | "financial" | "dynamic-portfolio" | "investor-study";
 
 // Custom SVG icon components for each section
 const FactSheetIcon = () => (
@@ -54,6 +59,15 @@ const PortfolioIcon = () => (
     <path d="M24 6v8" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
     <path d="M10 21h6M30 21h6" stroke="white" strokeWidth="2" strokeLinecap="round"/>
     <path d="M10 38h6M30 38h6" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+
+const InvestorStudyIcon = () => (
+  <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-7 h-7">
+    <rect x="6" y="8" width="36" height="32" rx="4" fill="white" fillOpacity="0.25" stroke="white" strokeWidth="2"/>
+    <path d="M12 18h24M12 24h18M12 30h12" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+    <circle cx="36" cy="32" r="6" fill="white" fillOpacity="0.4"/>
+    <path d="M34 32l1.5 1.5 3-3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
 
@@ -119,6 +133,15 @@ const SECTIONS = [
     borderColor: "#e65100",
     description: "اختيار السيناريو (O1/O2/O3) لكل مشروع بشكل مستقل مع تحكم بالتأخير",
   },
+  {
+    id: "investor-study" as View,
+    label: "دراسة جدوى المستثمر",
+    SvgIcon: InvestorStudyIcon,
+    gradient: "linear-gradient(135deg, #0d9488, #0f766e)",
+    shadow: "rgba(13, 148, 136, 0.35)",
+    borderColor: "#0d9488",
+    description: "البطاقة التعريفية والتسعير والتدفقات النقدية للمستثمر وحساب الضمان",
+  },
 ];
 
 export default function ProjectManagementPage() {
@@ -137,6 +160,9 @@ export default function ProjectManagementPage() {
   }
   if (activeView === "dynamic-portfolio") {
     return <CapitalPortfolioPage onBack={() => setActiveView("icons")} />;
+  }
+  if (activeView === "investor-study") {
+    return <InvestorStudyHub onBack={() => setActiveView("icons")} />;
   }
 
   // Icons grid
@@ -215,6 +241,63 @@ export default function ProjectManagementPage() {
           })}
         </div>
       </main>
+    </div>
+  );
+}
+
+// ─── Investor Study Hub (sub-view with tabs for the 5 new pages) ───
+function InvestorStudyHub({ onBack }: { onBack: () => void }) {
+  const [activeTab, setActiveTab] = useState<"card" | "pricing" | "investor-cf" | "escrow-cf" | "consolidated">("card");
+
+  const tabs = [
+    { id: "card" as const, label: "البطاقة التعريفية" },
+    { id: "pricing" as const, label: "التسعير" },
+    { id: "investor-cf" as const, label: "تدفقات المستثمر" },
+    { id: "escrow-cf" as const, label: "تدفقات الضمان" },
+    { id: "consolidated" as const, label: "التقرير المجمّع" },
+  ];
+
+  return (
+    <div className="min-h-screen bg-background" dir="rtl">
+      {/* Header */}
+      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 h-14 flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5">
+            <ArrowRight className="w-4 h-4" />
+            رجوع
+          </Button>
+          <div className="h-5 w-px bg-border" />
+          <h1 className="text-sm font-bold text-foreground">دراسة جدوى المستثمر</h1>
+        </div>
+      </header>
+
+      {/* Tabs */}
+      <div className="border-b border-border bg-card/50">
+        <div className="max-w-7xl mx-auto px-6 flex gap-1 overflow-x-auto">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                activeTab === tab.id
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="p-0">
+        {activeTab === "card" && <ProjectCardOffplanPage />}
+        {activeTab === "pricing" && <PricingPage />}
+        {activeTab === "investor-cf" && <InvestorCashFlowSchedulePage />}
+        {activeTab === "escrow-cf" && <EscrowCashFlowSchedulePage2 />}
+        {activeTab === "consolidated" && <ConsolidatedInvestorCashFlowPage />}
+      </div>
     </div>
   );
 }
