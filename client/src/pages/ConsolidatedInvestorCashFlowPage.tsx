@@ -46,11 +46,11 @@ function fmt(n: number): string {
   return Math.round(n).toLocaleString("en-US");
 }
 
-function getMonthLabel(offset: number): string {
+function getMonthLabel(offset: number, globalStartYear: number, globalStartMonth: number): string {
   const months = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
-  const globalMonth = 8 + offset; // Aug 2026 = month 8
-  const year = 2026 + Math.floor((globalMonth - 1) / 12);
-  const monthIdx = ((globalMonth - 1) % 12);
+  const absMonth = (globalStartYear * 12 + globalStartMonth - 1) + offset;
+  const year = Math.floor(absMonth / 12);
+  const monthIdx = absMonth % 12;
   return `${months[monthIdx]} ${year}`;
 }
 
@@ -150,12 +150,11 @@ function computeProjectForConsolidated(project: any, scenario: Scenario): Projec
 
   const monthlyNet = monthlyRevenue2.map((rev, idx) => rev - monthlyExpenses[idx]);
 
-  // Calculate start month offset from global start (Aug 2026)
+  // startMonthOffset is calculated in the useMemo below (after we know the global start)
   const startDate = i.startDate || "2026-08";
   const [startYear, startMonth] = startDate.split("-").map(Number);
-  const globalStartYear = 2026;
-  const globalStartMonth = 8;
-  const startMonthOffset = (startYear - globalStartYear) * 12 + (startMonth - globalStartMonth);
+  // Placeholder offset — will be recalculated in useMemo with actual globalStart
+  const startMonthOffset = 0; // overridden below
 
   return {
     id: project.id,
@@ -198,19 +197,37 @@ export default function ConsolidatedInvestorCashFlowPage() {
   const consolidated = useMemo(() => {
     if (!projectsQuery.data || projectsQuery.data.length === 0) return null;
 
+    // Step 1: Determine the global start date (earliest project start)
+    let globalStartYear = 2099;
+    let globalStartMonth = 12;
+    for (const proj of projectsQuery.data) {
+      const sd = (proj as any).startDate || "2026-08";
+      const [y, m] = sd.split("-").map(Number);
+      if (y < globalStartYear || (y === globalStartYear && m < globalStartMonth)) {
+        globalStartYear = y;
+        globalStartMonth = m;
+      }
+    }
+
+    // Step 2: Compute each project's cash flow and its correct offset
     const projectFlows: ProjectCashFlow[] = projectsQuery.data.map((proj: any) => {
       const scenario = getScenario(proj);
-      return computeProjectForConsolidated(proj, scenario);
+      const pf = computeProjectForConsolidated(proj, scenario);
+      // Recalculate startMonthOffset relative to the dynamic global start
+      const sd = proj.startDate || "2026-08";
+      const [y, m] = sd.split("-").map(Number);
+      const correctOffset = (y - globalStartYear) * 12 + (m - globalStartMonth);
+      return { ...pf, startMonthOffset: correctOffset };
     });
 
-    // Find global timeline range
+    // Step 3: Find global timeline range
     let maxGlobalMonth = 0;
     for (const pf of projectFlows) {
       const end = pf.startMonthOffset + pf.totalMonths;
       if (end > maxGlobalMonth) maxGlobalMonth = end;
     }
 
-    // Build consolidated arrays
+    // Step 4: Build consolidated arrays
     const totalMonths = maxGlobalMonth;
     const consolidatedExpenses = new Array(totalMonths).fill(0);
     const consolidatedRevenue = new Array(totalMonths).fill(0);
@@ -230,7 +247,7 @@ export default function ConsolidatedInvestorCashFlowPage() {
       }
     }
 
-    // Cumulative
+    // Step 5: Cumulative
     const cumulative = new Array(totalMonths).fill(0);
     let running = 0;
     for (let idx = 0; idx < totalMonths; idx++) {
@@ -238,8 +255,8 @@ export default function ConsolidatedInvestorCashFlowPage() {
       cumulative[idx] = running;
     }
 
-    // Month labels
-    const monthLabels = Array.from({ length: totalMonths }, (_, idx) => getMonthLabel(idx));
+    // Step 6: Month labels using dynamic global start
+    const monthLabels = Array.from({ length: totalMonths }, (_, idx) => getMonthLabel(idx, globalStartYear, globalStartMonth));
 
     return {
       projectFlows,
@@ -250,6 +267,8 @@ export default function ConsolidatedInvestorCashFlowPage() {
       cumulative,
       monthLabels,
       perProjectMonthly,
+      globalStartYear,
+      globalStartMonth,
     };
   }, [projectsQuery.data, scenarioOverrides]);
 
@@ -294,7 +313,7 @@ export default function ConsolidatedInvestorCashFlowPage() {
             التدفقات النقدية المجمّعة — جميع المشاريع
           </h1>
           <p className="text-sm text-gray-500">
-            بداية أغسطس 2026 | المبالغ بالدرهم الإماراتي
+            بداية {consolidated.monthLabels[0]} | المبالغ بالدرهم الإماراتي
           </p>
         </div>
 

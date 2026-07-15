@@ -910,3 +910,4 @@
 - [x] Extract shared computation logic into investorCashFlowEngine.ts utility
 - [x] Refactor InvestorCashFlowSchedulePage to use shared engine (identical numbers guaranteed)
 - [x] Rebuild ConsolidatedInvestorCashFlowPage to use shared engine per project with real timeline
+- [x] Bug: Consolidated cash flow page shows inflated amounts (21M vs 600K) for individual project months — fixed: global timeline start was hardcoded to Aug 2026 but projects start as early as April 2026, causing month shift. Now dynamically uses earliest project start date.
