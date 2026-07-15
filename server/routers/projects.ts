@@ -100,7 +100,7 @@ const factSheetFields = {
   preConMonths: z.number().int().optional(),
   constructionMonths: z.number().int().optional(),
   // سيناريو التمويل
-  financingScenario: z.enum(["offplan_escrow", "offplan_construction", "no_offplan"]).optional(),
+  financingScenario: z.enum(["offplan_escrow", "offplan_construction", "no_offplan", "rental"]).optional(),
   // Unit distribution - counts
   residential1brCount: z.number().int().optional(),
   residential2brCount: z.number().int().optional(),

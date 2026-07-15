@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useToast } from "@/hooks/use-toast";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import {
@@ -180,10 +181,22 @@ function computeProjectForConsolidated(project: any, scenario: Scenario): Projec
 // ═══════════════════════════════════════════
 export default function ConsolidatedInvestorCashFlowPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: !!user });
+  const utils = trpc.useUtils();
+  const updateProject = trpc.projects.update.useMutation({
+    onSuccess: () => {
+      utils.projects.list.invalidate();
+    },
+  });
 
   // Per-project scenario overrides (what-if)
   const [scenarioOverrides, setScenarioOverrides] = useState<Record<number, Scenario>>({});
+  // Per-project start date overrides
+  const [startDateOverrides, setStartDateOverrides] = useState<Record<number, string>>({});
+  // Track if there are unsaved changes
+  const [hasChanges, setHasChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const getScenario = (project: any): Scenario => {
     if (scenarioOverrides[project.id]) return scenarioOverrides[project.id];
@@ -338,25 +351,78 @@ export default function ConsolidatedInvestorCashFlowPage() {
           </div>
         </div>
 
-        {/* Project Scenario Selector */}
+        {/* Project Scenario & Start Date Selector */}
         <div className="bg-gray-50 border rounded-lg p-3">
-          <h2 className="text-sm font-bold text-gray-700 mb-2">اختيار السيناريو لكل مشروع</h2>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-bold text-gray-700">إعدادات المشاريع (السيناريو وتاريخ البداية)</h2>
+            {hasChanges && (
+              <button
+                onClick={async () => {
+                  setIsSaving(true);
+                  try {
+                    const promises: Promise<any>[] = [];
+                    for (const pf of consolidated.projectFlows) {
+                      const scenarioChanged = scenarioOverrides[pf.id] && scenarioOverrides[pf.id] !== pf.scenario;
+                      const dateChanged = startDateOverrides[pf.id];
+                      if (scenarioChanged || dateChanged) {
+                        const updateData: any = { id: pf.id };
+                        if (scenarioChanged) updateData.financingScenario = scenarioOverrides[pf.id];
+                        if (dateChanged) updateData.startDate = startDateOverrides[pf.id];
+                        promises.push(updateProject.mutateAsync(updateData));
+                      }
+                    }
+                    await Promise.all(promises);
+                    setHasChanges(false);
+                    setScenarioOverrides({});
+                    setStartDateOverrides({});
+                    toast({ title: "تم الحفظ", description: "تم حفظ التغييرات بنجاح" });
+                  } catch (err) {
+                    toast({ title: "خطأ", description: "فشل حفظ التغييرات", variant: "destructive" });
+                  } finally {
+                    setIsSaving(false);
+                  }
+                }}
+                disabled={isSaving}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-4 py-1.5 rounded-md disabled:opacity-50 transition-colors"
+              >
+                {isSaving ? "جاري الحفظ..." : "💾 حفظ التغييرات"}
+              </button>
+            )}
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-            {consolidated.projectFlows.map((pf) => (
-              <div key={pf.id} className="flex items-center gap-2 bg-white rounded p-2 border">
-                <span className="text-xs font-medium text-gray-700 flex-1 truncate">{pf.name}</span>
-                <select
-                  value={pf.scenario}
-                  onChange={(e) => setScenarioOverrides(prev => ({ ...prev, [pf.id]: e.target.value as Scenario }))}
-                  className="text-[10px] border rounded px-1 py-0.5 bg-white"
-                >
-                  <option value="offplan_escrow">س1 — أوف بلان + ضمان</option>
-                  <option value="offplan_construction">س2 — أوف بلان بدون إيداع</option>
-                  <option value="no_offplan">س3 — بيع بعد الإنجاز</option>
-                  <option value="rental">س4 — تطوير للتأجير</option>
-                </select>
-              </div>
-            ))}
+            {consolidated.projectFlows.map((pf) => {
+              const projData = projectsQuery.data?.find((p: any) => p.id === pf.id);
+              const currentStartDate = startDateOverrides[pf.id] || (projData as any)?.startDate || "2026-08";
+              return (
+                <div key={pf.id} className="flex flex-col gap-1 bg-white rounded p-2 border">
+                  <span className="text-xs font-medium text-gray-700 truncate">{pf.name}</span>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={scenarioOverrides[pf.id] || pf.scenario}
+                      onChange={(e) => {
+                        setScenarioOverrides(prev => ({ ...prev, [pf.id]: e.target.value as Scenario }));
+                        setHasChanges(true);
+                      }}
+                      className="text-[10px] border rounded px-1 py-0.5 bg-white flex-1"
+                    >
+                      <option value="offplan_escrow">س1 — أوف بلان + ضمان</option>
+                      <option value="offplan_construction">س2 — أوف بلان بدون إيداع</option>
+                      <option value="no_offplan">س3 — بيع بعد الإنجاز</option>
+                      <option value="rental">س4 — تطوير للتأجير</option>
+                    </select>
+                    <input
+                      type="month"
+                      value={currentStartDate}
+                      onChange={(e) => {
+                        setStartDateOverrides(prev => ({ ...prev, [pf.id]: e.target.value }));
+                        setHasChanges(true);
+                      }}
+                      className="text-[10px] border rounded px-1 py-0.5 bg-white w-[110px]"
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 

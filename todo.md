@@ -911,3 +911,6 @@
 - [x] Refactor InvestorCashFlowSchedulePage to use shared engine (identical numbers guaranteed)
 - [x] Rebuild ConsolidatedInvestorCashFlowPage to use shared engine per project with real timeline
 - [x] Bug: Consolidated cash flow page shows inflated amounts (21M vs 600K) for individual project months — fixed: global timeline start was hardcoded to Aug 2026 but projects start as early as April 2026, causing month shift. Now dynamically uses earliest project start date.
+- [x] Consolidated investor cash flow: Add start date picker per project (editable inline)
+- [x] Consolidated investor cash flow: Add save button to persist scenario and start date changes to DB
+- [x] Fix: مركز مجان التجاري should be scenario 4 (rental/إيجار) not scenario 1 — updated in DB
