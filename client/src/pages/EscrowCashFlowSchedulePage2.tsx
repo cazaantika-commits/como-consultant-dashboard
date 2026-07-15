@@ -825,15 +825,6 @@ export default function EscrowCashFlowSchedulePage2() {
                 if (sectionRows.length === 0) return null;
                 return (
                   <React.Fragment key={section}>
-                    {/* Section Header */}
-                    <tr className="bg-gray-100">
-                      <td
-                        colSpan={totalColumns}
-                        className="sticky right-0 z-10 px-2 py-1.5 text-right font-bold text-gray-800 text-xs border border-gray-200"
-                      >
-                        {section}
-                      </td>
-                    </tr>
                     {/* Section Rows */}
                     {sectionRows.map((row, idx) => (
                       <tr
