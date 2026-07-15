@@ -7,6 +7,7 @@
  * Data is fetched from the server using the saved settings (or defaults).
  */
 
+import { useProjectContext } from "@/contexts/ProjectContext";
 import React, { useState, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";

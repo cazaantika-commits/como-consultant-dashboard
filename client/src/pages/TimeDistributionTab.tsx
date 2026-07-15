@@ -2,6 +2,7 @@
  * Time Distribution of Expenses Tab
  * التوزيع الزمني للمصاريف — جدول شهري لجميع بنود التكاليف
  */
+import { useProjectContext } from "@/contexts/ProjectContext";
 import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";

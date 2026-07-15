@@ -2,6 +2,7 @@
  * Financial Feasibility Study Tab
  * ملخص الجدوى المالية — جدول ثابت بكل بنود التكاليف والإيرادات والأرباح
  */
+import { useProjectContext } from "@/contexts/ProjectContext";
 import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";

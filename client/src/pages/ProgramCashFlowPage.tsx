@@ -1,3 +1,4 @@
+import { useProjectContext } from "@/contexts/ProjectContext";
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import PortfolioView from "./PortfolioView";

@@ -1,3 +1,4 @@
+import { useProjectContext } from "@/contexts/ProjectContext";
 import React, { useMemo, useRef, useState } from "react";
 import {
   PROJECT_INPUTS,

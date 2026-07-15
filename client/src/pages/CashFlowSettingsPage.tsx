@@ -14,6 +14,7 @@
  * منفصل لكل سيناريو
  */
 
+import { useProjectContext } from "@/contexts/ProjectContext";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";

@@ -1,3 +1,4 @@
+import { useProjectContext } from "@/contexts/ProjectContext";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";

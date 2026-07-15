@@ -11,6 +11,7 @@
  *  6. Settings (admin)
  */
 
+import { useProjectContext } from "@/contexts/ProjectContext";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ScopeMatrixTable, ReferenceCostsTable, SupervisionBaselineTable } from "./CPASettingsMatrices";

@@ -2,6 +2,7 @@
  * CashFlowComparisonPage.tsx
  * Compares monthly cash flows across all three financing scenarios side by side.
  */
+import { useProjectContext } from "@/contexts/ProjectContext";
 import { useState, useRef, useMemo } from "react";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
