@@ -902,3 +902,4 @@
 - [x] Fix EscrowCashFlowSchedulePage2 Scenario 1: construction cost month 1 = 0 (investor pays 10% directly), escrow pays from month 2 (4%+7%+9%+60% S-Curve+5%+5% = 90%)
 - [x] Fix EscrowCashFlowSchedulePage2 Scenario 2: construction cost months 1-4 = 0 (investor pays 30% directly), escrow pays from month 5 (60% S-Curve+5%+5% = 70%)
 - [x] Fix InvestorCashFlowSchedulePage Scenario 2: construction cost 10%+4%+7%+9% in months 1-4 (no 20% deposit), sorting/NOC/rera/escrow fees in month 4, marketing from month 4 over 12 months
+- [x] Implement Scenario 3 (no_offplan) in InvestorCashFlowSchedulePage with post-construction months, correct distributions, and deleted items
