@@ -750,15 +750,6 @@ function SectionGroup({
 }) {
   return (
     <>
-      {/* Section Header */}
-      <tr className="bg-gray-100">
-        <td
-          colSpan={6 + designDuration + constructionDuration}
-          className="sticky right-0 z-10 px-2 py-1.5 text-right font-bold text-gray-800 text-xs border border-gray-200"
-        >
-          {title}
-        </td>
-      </tr>
       {/* Section Rows */}
       {rows.map((row, idx) => (
         <tr key={idx} className="hover:bg-blue-50/30">
