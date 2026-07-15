@@ -33,11 +33,8 @@ function fmtSigned(n: number): string {
 export default function EscrowCashFlowPage({ embedded, initialProjectId }: { embedded?: boolean; initialProjectId?: number | null } = {}) {
   const { isAuthenticated } = useAuth();
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(initialProjectId ?? null);
-
-  useEffect(() => {
-    if (initialProjectId != null) setSelectedProjectId(initialProjectId);
-  }, [initialProjectId]);
+  const { selectedProjectId: ctxProjectId, setSelectedProjectId } = useProjectContext();
+  const selectedProjectId = initialProjectId ?? ctxProjectId;
 
   const reportQuery = trpc.cashFlowSettings.getProjectMonthlyReport.useQuery(
     { projectId: selectedProjectId! },

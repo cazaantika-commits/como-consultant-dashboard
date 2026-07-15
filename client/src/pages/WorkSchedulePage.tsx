@@ -189,16 +189,14 @@ type RowData = {
 
 export default function WorkSchedulePage({ initialProjectId, onProjectChange }: { initialProjectId?: number | null; onProjectChange?: (id: number | null) => void } = {}) {
   const { isReadOnly } = useAuth();
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(initialProjectId ?? null);
+  const { selectedProjectId: ctxProjectId, setSelectedProjectId } = useProjectContext();
+  const selectedProjectId = initialProjectId ?? ctxProjectId;
   const handleSetProjectId = (id: number | null) => {
     setSelectedProjectId(id);
     onProjectChange?.(id);
   };
 
   // Sync when initialProjectId changes (e.g. user picks a project in lifecycle tab)
-  useEffect(() => {
-    if (initialProjectId != null) setSelectedProjectId(initialProjectId);
-  }, [initialProjectId]);
   const [expandedStages, setExpandedStages] = useState<Set<string>>(new Set());
   const [dayWidth, setDayWidth] = useState(28);
   const [editingRow, setEditingRow] = useState<string | null>(null);

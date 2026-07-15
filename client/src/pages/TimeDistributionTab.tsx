@@ -41,7 +41,8 @@ const PHASE_COLORS: Record<string, { header: string; cell: string }> = {
 export default function TimeDistributionTab({ initialProjectId }: { initialProjectId?: number | null } = {}) {
   const { isAuthenticated } = useAuth();
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(initialProjectId ?? null);
+  const { selectedProjectId: ctxProjectId, setSelectedProjectId } = useProjectContext();
+  const selectedProjectId = initialProjectId ?? ctxProjectId;
   const selectedProject = (projectsQuery.data || []).find((p: any) => p.id === selectedProjectId);
 
   // Read durations from the selected project (single source of truth) with fallback to defaults

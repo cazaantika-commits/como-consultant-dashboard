@@ -16,7 +16,7 @@ const CRITERIA = [
 ];
 
 export default function ConsultantRecommendPage() {
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const [recommendation, setRecommendation] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 

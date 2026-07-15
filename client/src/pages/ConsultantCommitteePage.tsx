@@ -19,7 +19,7 @@ const CRITERIA = [
 ];
 
 export default function ConsultantCommitteePage() {
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const [decisionType, setDecisionType] = useState<string>("");
   const [selectedConsultantId, setSelectedConsultantId] = useState<string>("");
   const [negotiationTarget, setNegotiationTarget] = useState("");

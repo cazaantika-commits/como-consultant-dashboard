@@ -102,14 +102,11 @@ export default function CashFlowReflectionPage({
 } = {}) {
   const { isAuthenticated } = useAuth();
 
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(initialProjectId ?? null);
+  const { selectedProjectId: ctxProjectId, setSelectedProjectId } = useProjectContext();
+  const selectedProjectId = initialProjectId ?? ctxProjectId;
   const [scenario, setScenario] = useState<Scenario>("offplan_escrow");
   const [viewMode, setViewMode] = useState<"all" | "investor" | "escrow">("all");
   const tableRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (initialProjectId != null) setSelectedProjectId(initialProjectId);
-  }, [initialProjectId]);
 
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
 

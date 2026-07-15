@@ -25,7 +25,7 @@ const LAST_PROJECT_KEY = "como_last_project_id";
 export default function KnowledgeHubPage({ onBack }: { onBack: () => void }) {
   const { isAuthenticated } = useAuth();
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const [activeTab, setActiveTab] = useState<TabId>("research");
 
   // Auto-select last opened project (or first project as fallback)

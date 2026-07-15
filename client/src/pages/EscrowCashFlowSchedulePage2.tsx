@@ -72,7 +72,7 @@ const POST_CONSTRUCTION_MONTHS = 12;
 // ═══════════════════════════════════════════
 export default function EscrowCashFlowSchedulePage2() {
   const { user } = useAuth();
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
   const [scenario, setScenario] = useState<Scenario>("offplan_escrow");
   const tableRef = useRef<HTMLDivElement>(null);

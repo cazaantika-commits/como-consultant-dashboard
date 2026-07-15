@@ -47,7 +47,7 @@ function fmtFull(n: number): string {
 export default function ProjectCardOffplanPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [hasChanges, setHasChanges] = useState(false);
   const [isEditing, setIsEditing] = useState(false);

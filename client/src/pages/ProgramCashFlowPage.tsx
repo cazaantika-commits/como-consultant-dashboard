@@ -101,7 +101,7 @@ function formatFullAED(amount: number): string {
 // ═══════════════════════════════════════════════════════════════
 
 export default function ProgramCashFlowPage() {
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showPortfolio, setShowPortfolio] = useState(false);
 

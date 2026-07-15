@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useProjectContext } from "@/contexts/ProjectContext";
 import {
   PROJECT_INPUTS,
   RATES,
@@ -12,9 +13,8 @@ import {
 
 export function useProjectData() {
   const { user } = useAuth();
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const { selectedProjectId, setSelectedProjectId, projects } = useProjectContext();
 
-  const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: !!user });
   const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, {
     enabled: !!selectedProjectId && !!user,
   });
@@ -32,7 +32,7 @@ export function useProjectData() {
   return {
     selectedProjectId,
     setSelectedProjectId,
-    projects: projectsQuery.data || [],
+    projects,
     projectData: projectQuery.data,
     inputs,
     rates,

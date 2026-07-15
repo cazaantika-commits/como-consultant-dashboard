@@ -64,7 +64,7 @@ type ViewMode = "grand" | "investor" | "escrow";
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function CashFlowComparisonPage() {
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const [viewMode, setViewMode] = useState<ViewMode>("investor");
   const tableRef = useRef<HTMLDivElement>(null);
 

@@ -452,7 +452,8 @@ export default function CashFlowSettingsPage({
   const { toast } = useToast();
   const utils = trpc.useUtils();
 
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(initialProjectId ?? null);
+  const { selectedProjectId: ctxProjectId, setSelectedProjectId } = useProjectContext();
+  const selectedProjectId = initialProjectId ?? ctxProjectId;
   const [scenario, setScenario] = useState<Scenario>(initialScenario ?? "offplan_escrow");
   const [scenarioInitialized, setScenarioInitialized] = useState(false);
 
@@ -462,10 +463,6 @@ export default function CashFlowSettingsPage({
   const [durations, setDurations] = useState<PhaseDurations>({ design: 6, construction: 16, handover: 2 });
   const [isDirty, setIsDirty] = useState(false);
   const [isDurationDirty, setIsDurationDirty] = useState(false);
-
-  useEffect(() => {
-    if (initialProjectId != null) setSelectedProjectId(initialProjectId);
-  }, [initialProjectId]);
 
   // Sync scenario from DB when project changes — single effect to avoid race condition
   const prevSettingsProjectRef = useRef<number | null>(null);

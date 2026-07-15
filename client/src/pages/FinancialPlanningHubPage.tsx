@@ -1,7 +1,7 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, lazy, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Settings2, FileBarChart2, Loader2 } from "lucide-react";
-import { trpc } from "@/lib/trpc";
+import { useProjectContext } from "@/contexts/ProjectContext";
 
 // Lazy-load heavy pages to keep initial bundle small
 const CashFlowSettingsPage = lazy(() => import("./CashFlowSettingsPage"));
@@ -14,7 +14,6 @@ type SettingsTab = "cost" | "o1" | "o2" | "o3";
 type ReportsTab = "feasibility" | "capital" | "escrow";
 type Scenario = "offplan_escrow" | "offplan_construction" | "no_offplan";
 
-const LAST_FP_PROJECT_KEY = "como_last_fp_project_id";
 
 const SETTINGS_TABS: { id: SettingsTab; label: string }[] = [
   { id: "cost", label: "إعدادات التكاليف" },
@@ -49,20 +48,7 @@ export default function FinancialPlanningHubPage({ onBack }: { onBack: () => voi
   const [activeView, setActiveView] = useState<ActiveView>("main");
   const [activeSettingsTab, setActiveSettingsTab] = useState<SettingsTab>("cost");
   const [activeReportsTab, setActiveReportsTab] = useState<ReportsTab>("feasibility");
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(() => {
-    const saved = localStorage.getItem(LAST_FP_PROJECT_KEY);
-    return saved ? Number(saved) : null;
-  });
-
-  const { data: projectsList } = trpc.projects.list.useQuery();
-
-  useEffect(() => {
-    if (projectsList && projectsList.length > 0 && !selectedProjectId) {
-      const first = (projectsList[0] as any).id;
-      setSelectedProjectId(first);
-      localStorage.setItem(LAST_FP_PROJECT_KEY, String(first));
-    }
-  }, [projectsList, selectedProjectId]);
+  const { selectedProjectId, setSelectedProjectId, projects: projectsList } = useProjectContext();
 
   const viewTitle =
     activeView === "settings"
@@ -74,7 +60,7 @@ export default function FinancialPlanningHubPage({ onBack }: { onBack: () => voi
   const activeTabs = activeView === "settings" ? SETTINGS_TABS : activeView === "reports" ? REPORTS_TABS : [];
   const activeTabId = activeView === "settings" ? activeSettingsTab : activeReportsTab;
 
-  const selectedProject = (projectsList as any[])?.find((p: any) => p.id === selectedProjectId);
+  const selectedProject = projectsList?.find((p: any) => p.id === selectedProjectId);
 
   return (
     <div className="min-h-screen bg-background flex flex-col" dir="rtl">
@@ -103,12 +89,12 @@ export default function FinancialPlanningHubPage({ onBack }: { onBack: () => voi
               onChange={(e) => {
                 const id = e.target.value ? Number(e.target.value) : null;
                 setSelectedProjectId(id);
-                if (id) localStorage.setItem(LAST_FP_PROJECT_KEY, String(id));
+
               }}
               className="text-xs h-8 px-2 rounded-md border border-border bg-background text-foreground focus:ring-1 focus:ring-primary"
             >
               <option value="">اختر المشروع...</option>
-              {(projectsList as any[])?.map((p: any) => (
+              {projectsList?.map((p: any) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>

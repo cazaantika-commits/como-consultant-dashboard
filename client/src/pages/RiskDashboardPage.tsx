@@ -34,7 +34,7 @@ const RISK_CATEGORIES = [
 ];
 
 export default function RiskDashboardPage({ embedded = false, initialProjectId }: { embedded?: boolean; initialProjectId?: number | null } = {}) {
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const { selectedProjectId, setSelectedProjectId } = useProjectContext();
 
   const allRisksQuery = trpc.riskDashboard.getAllProjectRisks.useQuery();
   const alertsQuery = trpc.riskDashboard.getAlerts.useQuery();

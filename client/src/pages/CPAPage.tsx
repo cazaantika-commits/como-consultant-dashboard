@@ -2892,7 +2892,7 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
 
 export default function CPAPage() {
   const [screen, setScreen] = useState<Screen>("home");
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const [selectedPcId, setSelectedPcId] = useState<number | null>(null);
   const [selectedConsultantName, setSelectedConsultantName] = useState("");
 

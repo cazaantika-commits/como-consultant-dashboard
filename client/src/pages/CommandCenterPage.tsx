@@ -128,7 +128,7 @@ type CCFinancialTab = (typeof CC_REPORTS_TABS)[number]["id"];
 
 function FinancialReportsView({ onBack, projectsList }: { onBack: () => void; projectsList: any[] }) {
   const [activeTab, setActiveTab] = useState<CCFinancialTab>("feasibility");
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const tabSrc = CC_REPORTS_TABS.find((t) => t.id === activeTab)?.src;
   const currentSrc = tabSrc && selectedProjectId ? `${tabSrc}?projectId=${selectedProjectId}` : undefined;
 

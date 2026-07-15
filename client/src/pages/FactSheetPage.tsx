@@ -161,7 +161,8 @@ function GroupHeader({ label, color = "stone" }: { label: string; color?: string
 export default function FactSheetPage({ embedded = false, initialProjectId, onBack }: { embedded?: boolean; initialProjectId?: number | null; onBack?: () => void }) {
   const { user, loading: authLoading } = useAuth();
   const [, navigate] = useLocation();
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(initialProjectId ?? null);
+  const { selectedProjectId: ctxProjectId, setSelectedProjectId } = useProjectContext();
+  const selectedProjectId = initialProjectId ?? ctxProjectId;
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [hasChanges, setHasChanges] = useState(false);
   const [khazenLoading, setKhazenLoading] = useState(false);

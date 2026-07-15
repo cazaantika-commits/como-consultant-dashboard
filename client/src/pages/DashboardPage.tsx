@@ -9,7 +9,7 @@ import { Loader2, Plus, Trash2 } from "lucide-react";
 
 export default function DashboardPage() {
   const { user, isAuthenticated } = useAuth();
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const [newProjectName, setNewProjectName] = useState("");
   const [newConsultantName, setNewConsultantName] = useState("");
 

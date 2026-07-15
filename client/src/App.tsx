@@ -6,6 +6,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { CCAuthProvider } from "./contexts/CCAuthContext";
 import { OwnerProvider } from "./contexts/OwnerContext";
+import { ProjectProvider } from "./contexts/ProjectContext";
 import Home from "./pages/Home";
 import ConsultantDashboardPage from "./pages/ConsultantDashboardPage";
 import ConsultantProfilesPage from "./pages/ConsultantProfilesPage";
@@ -183,9 +184,11 @@ function App() {
           <Toaster />
           <CCAuthProvider>
             <OwnerProvider>
-              <ReadOnlyGuard>
-                <Router />
-              </ReadOnlyGuard>
+              <ProjectProvider>
+                <ReadOnlyGuard>
+                  <Router />
+                </ReadOnlyGuard>
+              </ProjectProvider>
             </OwnerProvider>
           </CCAuthProvider>
         </TooltipProvider>

@@ -330,7 +330,8 @@ function AllProjectsComparison({ projects, onSelectProject }: {
 export default function FeasibilityStudyPage({ embedded, initialProjectId }: { embedded?: boolean; initialProjectId?: number | null } = {}) {
   const { user, loading, isAuthenticated, isReadOnly } = useAuth();
   const [, navigate] = useLocation();
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(initialProjectId ?? null);
+  const { selectedProjectId: ctxProjectId, setSelectedProjectId } = useProjectContext();
+  const selectedProjectId = initialProjectId ?? ctxProjectId;
   const [selectedStudyId, setSelectedStudyId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState("tab5");
   const [form, setForm] = useState<Record<string, any>>({});

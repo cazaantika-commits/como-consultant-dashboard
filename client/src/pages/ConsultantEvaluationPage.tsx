@@ -462,7 +462,7 @@ function FeeDeviationBadge({ deviation, zone, flag }: { deviation: number; zone:
 
 export default function ConsultantEvaluationPage() {
   const { user, isAuthenticated, loading: authLoading } = useAuth({ redirectOnUnauthenticated: true });
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const [newConsultantName, setNewConsultantName] = useState("");
 
   // Queries

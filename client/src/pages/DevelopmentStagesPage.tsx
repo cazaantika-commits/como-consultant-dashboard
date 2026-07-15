@@ -1038,7 +1038,7 @@ function CriticalPathView({ items }: { items: StageItem[] }) {
 export default function DevelopmentStagesPage({ embedded }: { embedded?: boolean } = {}) {
   const { user, loading, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const [activeView, setActiveView] = useState<"stages" | "critical" | "overdue">("stages");
   const [updatingIds, setUpdatingIds] = useState<Set<number>>(new Set());
 

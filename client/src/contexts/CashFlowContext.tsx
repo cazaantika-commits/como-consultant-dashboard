@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 import { type PhaseDurations, DEFAULT_DURATIONS } from "@/lib/cashFlowEngine";
+import { useProjectContext } from "@/contexts/ProjectContext";
 
 interface CashFlowState {
   // Shared durations
@@ -24,7 +25,7 @@ interface CashFlowState {
 
   // Selected project
   selectedProjectId: number | null;
-  setSelectedProjectId: React.Dispatch<React.SetStateAction<number | null>>;
+  setSelectedProjectId: (id: number | null) => void;
 
   // Reset all
   resetAll: () => void;
@@ -42,7 +43,7 @@ export function CashFlowProvider({ children }: { children: ReactNode }) {
   const [escrowOverrides, setEscrowOverrides] = useState<Record<string, { [month: number]: number }>>({});
   const [escrowShifts, setEscrowShifts] = useState<Record<string, number>>({});
   const [revenueData, setRevenueData] = useState<{ [month: number]: number }>({});
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const { selectedProjectId, setSelectedProjectId } = useProjectContext();
 
   const resetAll = useCallback(() => {
     setDurations({ ...DEFAULT_DURATIONS });

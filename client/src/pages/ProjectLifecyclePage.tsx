@@ -1053,7 +1053,7 @@ function ServicesListPanel({
 // -------------------------------------------------------------
 export default function ProjectLifecyclePage({ embedded, onProjectChange }: { embedded?: boolean; onProjectChange?: (id: number | null) => void } = {}) {
   const { user, loading: authLoading } = useAuth();
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const handleSetProjectId = (id: number | null) => {
     setSelectedProjectId(id);
     onProjectChange?.(id);

@@ -115,16 +115,8 @@ const PRICE_MAP: Record<string, string> = {
 export default function PricingPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
-  const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: !!user });
+  const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
-
-  // Auto-select first project on load
-  useEffect(() => {
-    if (!selectedProjectId && projectsQuery.data && projectsQuery.data.length > 0) {
-      setSelectedProjectId(projectsQuery.data[0].id);
-    }
-  }, [projectsQuery.data, selectedProjectId]);
 
   // Save directly to project table
   const updateProject = trpc.projects.update.useMutation();
