@@ -116,7 +116,15 @@ export default function PricingPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: !!user });
   const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
+
+  // Auto-select first project on load
+  useEffect(() => {
+    if (!selectedProjectId && projectsQuery.data && projectsQuery.data.length > 0) {
+      setSelectedProjectId(projectsQuery.data[0].id);
+    }
+  }, [projectsQuery.data, selectedProjectId]);
 
   // Save directly to project table
   const updateProject = trpc.projects.update.useMutation();
@@ -367,21 +375,19 @@ export default function PricingPage() {
             <h1 className="text-2xl font-bold text-white">التسعير وتوزيع الوحدات</h1>
             <p className="text-slate-400 text-sm">{i.name}</p>
           </div>
-          {selectedProjectId && (
-            <button
-              onClick={handleSave}
-              disabled={isSaving || !hasUnsavedChanges}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${isSaving ? 'bg-amber-500/20 border border-amber-500/40 text-amber-300 cursor-wait' : hasUnsavedChanges ? 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/30 animate-pulse' : 'bg-slate-700 border border-slate-600 text-slate-400 cursor-default'}`}
-            >
-              {isSaving ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /><span>جاري الحفظ...</span></>
-              ) : hasUnsavedChanges ? (
-                <><Save className="w-4 h-4" /><span>حفظ التغييرات</span></>
-              ) : (
-                <><CheckCircle className="w-4 h-4" /><span>محفوظ</span></>
-              )}
-            </button>
-          )}
+          <button
+            onClick={handleSave}
+            disabled={isSaving || !hasUnsavedChanges || !selectedProjectId}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${!selectedProjectId ? 'bg-slate-700 border border-slate-600 text-slate-500 cursor-not-allowed' : isSaving ? 'bg-amber-500/20 border border-amber-500/40 text-amber-300 cursor-wait' : hasUnsavedChanges ? 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/30 animate-pulse' : 'bg-slate-700 border border-slate-600 text-slate-400 cursor-default'}`}
+          >
+            {isSaving ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /><span>جاري الحفظ...</span></>
+            ) : hasUnsavedChanges ? (
+              <><Save className="w-4 h-4" /><span>💾 حفظ التغييرات</span></>
+            ) : (
+              <><CheckCircle className="w-4 h-4" /><span>محفوظ ✓</span></>
+            )}
+          </button>
         </div>
         <div className="mt-4 mb-4">
           <ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} className="" />
