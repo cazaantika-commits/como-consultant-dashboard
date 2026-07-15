@@ -186,6 +186,7 @@ export default function InvestorCashFlowSchedulePage() {
     const designDuration = i.designDuration;
     const constructionDuration = i.constructionDuration;
     const penultimateDesign = designDuration - 2; // الشهر قبل الأخير (0-indexed)
+    const isScenario2 = scenario === "offplan_construction";
 
     // Helper: empty month arrays
     const emptyDesign = () => new Array(designDuration).fill(0);
@@ -336,9 +337,15 @@ export default function InvestorCashFlowSchedulePage() {
       constructionMonths: emptyConstruction(),
     });
 
-    // ─── رسوم الفرز (الشهر قبل الأخير من التصميم) ───
+    // ─── رسوم الفرز ───
+    // س1: الشهر قبل الأخير من التصميم | س2: شهر إنشاء 4
     const sortingDesign = emptyDesign();
-    sortingDesign[penultimateDesign] = costs.sortingFee;
+    const sortingConstruction = emptyConstruction();
+    if (isScenario2) {
+      sortingConstruction[3] = costs.sortingFee; // شهر 4 إنشاء (index 3)
+    } else {
+      sortingDesign[penultimateDesign] = costs.sortingFee;
+    }
     rows.push({
       label: "رسوم الفرز",
       totalCost: costs.sortingFee,
@@ -348,12 +355,18 @@ export default function InvestorCashFlowSchedulePage() {
       funder: "investor",
       section: "الرسوم الحكومية والتنظيمية",
       designMonths: sortingDesign,
-      constructionMonths: emptyConstruction(),
+      constructionMonths: sortingConstruction,
     });
 
     // ─── رسوم NOC ───
+    // س1: الشهر قبل الأخير من التصميم | س2: شهر إنشاء 4
     const nocDesign = emptyDesign();
-    nocDesign[penultimateDesign] = i.nocSale;
+    const nocConstruction = emptyConstruction();
+    if (isScenario2) {
+      nocConstruction[3] = i.nocSale; // شهر 4 إنشاء (index 3)
+    } else {
+      nocDesign[penultimateDesign] = i.nocSale;
+    }
     rows.push({
       label: "رسوم NOC المطور",
       totalCost: i.nocSale,
@@ -363,12 +376,18 @@ export default function InvestorCashFlowSchedulePage() {
       funder: "investor",
       section: "الرسوم الحكومية والتنظيمية",
       designMonths: nocDesign,
-      constructionMonths: emptyConstruction(),
+      constructionMonths: nocConstruction,
     });
 
     // ─── تسجيل المشروع — ريرا ───
+    // س1: الشهر قبل الأخير من التصميم | س2: شهر إنشاء 4
     const reraRegDesign = emptyDesign();
-    reraRegDesign[penultimateDesign] = i.reraProjectReg;
+    const reraRegConstruction = emptyConstruction();
+    if (isScenario2) {
+      reraRegConstruction[3] = i.reraProjectReg; // شهر 4 إنشاء (index 3)
+    } else {
+      reraRegDesign[penultimateDesign] = i.reraProjectReg;
+    }
     rows.push({
       label: "تسجيل المشروع — ريرا",
       totalCost: i.reraProjectReg,
@@ -378,12 +397,18 @@ export default function InvestorCashFlowSchedulePage() {
       funder: "investor",
       section: "ريرا (التنظيم العقاري)",
       designMonths: reraRegDesign,
-      constructionMonths: emptyConstruction(),
+      constructionMonths: reraRegConstruction,
     });
 
     // ─── تسجيل الوحدات — ريرا ───
+    // س1: الشهر قبل الأخير من التصميم | س2: شهر إنشاء 4
     const reraUnitsDesign = emptyDesign();
-    reraUnitsDesign[penultimateDesign] = costs.reraUnits;
+    const reraUnitsConstruction = emptyConstruction();
+    if (isScenario2) {
+      reraUnitsConstruction[3] = costs.reraUnits; // شهر 4 إنشاء (index 3)
+    } else {
+      reraUnitsDesign[penultimateDesign] = costs.reraUnits;
+    }
     rows.push({
       label: "تسجيل الوحدات — ريرا",
       totalCost: costs.reraUnits,
@@ -393,12 +418,18 @@ export default function InvestorCashFlowSchedulePage() {
       funder: "investor",
       section: "ريرا (التنظيم العقاري)",
       designMonths: reraUnitsDesign,
-      constructionMonths: emptyConstruction(),
+      constructionMonths: reraUnitsConstruction,
     });
 
-    // ─── حساب الضمان (رسوم فتح) — الشهر قبل الأخير ───
+    // ─── حساب الضمان (رسوم فتح) ───
+    // س1: الشهر قبل الأخير من التصميم | س2: شهر إنشاء 4
     const escrowFeeDesign = emptyDesign();
-    escrowFeeDesign[penultimateDesign] = i.escrowAccountFee;
+    const escrowFeeConstruction = emptyConstruction();
+    if (isScenario2) {
+      escrowFeeConstruction[3] = i.escrowAccountFee; // شهر 4 إنشاء (index 3)
+    } else {
+      escrowFeeDesign[penultimateDesign] = i.escrowAccountFee;
+    }
     rows.push({
       label: "حساب الضمان (رسوم فتح)",
       totalCost: i.escrowAccountFee,
@@ -408,7 +439,7 @@ export default function InvestorCashFlowSchedulePage() {
       funder: "investor",
       section: "ريرا (التنظيم العقاري)",
       designMonths: escrowFeeDesign,
-      constructionMonths: emptyConstruction(),
+      constructionMonths: escrowFeeConstruction,
     });
 
     // ─── رسوم البنك (شهرياً من شهر 1 إنشاء) ───
@@ -465,16 +496,39 @@ export default function InvestorCashFlowSchedulePage() {
       constructionMonths: emptyConstruction(),
     });
 
-    // ─── التسويق (25% شهر قبل الأخير تصاميم + 75% أول 6 أشهر إنشاء) ───
+    // ─── التسويق ───
+    // س1: يبدأ من الشهر قبل الأخير من التصميم على 12 شهر
+    // س2: يبدأ من شهر إنشاء 4 على 12 شهر
     const marketingDesign = emptyDesign();
     const marketingConstruction = emptyConstruction();
-    const marketing25 = costs.marketing * 0.25;
-    const marketing75 = costs.marketing * 0.75;
-    marketingDesign[penultimateDesign] = marketing25;
-    const marketingMonths = Math.min(6, constructionDuration);
-    const marketing75PerMonth = marketing75 / marketingMonths;
-    for (let i = 0; i < marketingMonths; i++) {
-      marketingConstruction[i] = marketing75PerMonth;
+    const marketingTotal = costs.marketing;
+    const marketingPerMonth = marketingTotal / 12;
+
+    if (isScenario2) {
+      // س2: يبدأ من شهر إنشاء 4 (index 3) على 12 شهر
+      let placed = 0;
+      for (let idx = 3; idx < constructionDuration && placed < 12; idx++) {
+        marketingConstruction[idx] = marketingPerMonth;
+        placed++;
+      }
+    } else {
+      // س1: يبدأ من الشهر قبل الأخير من التصميم على 12 شهر
+      let placed = 0;
+      // الشهر قبل الأخير من التصميم
+      if (penultimateDesign >= 0 && placed < 12) {
+        marketingDesign[penultimateDesign] = marketingPerMonth;
+        placed++;
+      }
+      // الشهر الأخير من التصميم
+      if (designDuration - 1 > penultimateDesign && placed < 12) {
+        marketingDesign[designDuration - 1] = marketingPerMonth;
+        placed++;
+      }
+      // أشهر الإنشاء
+      for (let idx = 0; idx < constructionDuration && placed < 12; idx++) {
+        marketingConstruction[idx] = marketingPerMonth;
+        placed++;
+      }
     }
     rows.push({
       label: "التسويق",
@@ -510,15 +564,24 @@ export default function InvestorCashFlowSchedulePage() {
     });
 
     // ─── الإنشاء ───
-    // إيداع حساب الضمان (20%) — الشهر قبل الأخير تصاميم
-    // دفعة مقدمة مقاول (10%) — شهر 1 إنشاء
-    // المجموع من المستثمر = 30% من تكلفة الإنشاء
+    // س1: إيداع 20% (شهر قبل الأخير تصاميم) + دفعة مقدمة 10% (شهر 1 إنشاء) = 30%
+    // س2: لا إيداع — 10% شهر 1 + 4% شهر 2 + 7% شهر 3 + 9% شهر 4 = 30%
     const constructionDesign = emptyDesign();
     const constructionConst = emptyConstruction();
-    const escrowDeposit = constructionCost * r.escrowDeposit; // 20%
     const advancePayment = constructionCost * r.advancePayment; // 10%
-    constructionDesign[penultimateDesign] = escrowDeposit;
-    constructionConst[0] = advancePayment;
+
+    if (isScenario2) {
+      // س2: لا إيداع، المستثمر يدفع 10%+4%+7%+9% في أشهر 1-4
+      constructionConst[0] = constructionCost * 0.10; // شهر 1: 10%
+      constructionConst[1] = constructionCost * 0.04; // شهر 2: 4%
+      constructionConst[2] = constructionCost * 0.07; // شهر 3: 7%
+      constructionConst[3] = constructionCost * 0.09; // شهر 4: 9%
+    } else {
+      // س1: إيداع 20% + دفعة مقدمة 10%
+      const escrowDeposit = constructionCost * r.escrowDeposit; // 20%
+      constructionDesign[penultimateDesign] = escrowDeposit;
+      constructionConst[0] = advancePayment;
+    }
     rows.push({
       label: "تكلفة الإنشاء",
       totalCost: constructionCost,
