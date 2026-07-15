@@ -907,3 +907,6 @@
 - [x] Fix EscrowCashFlowSchedulePage2: remove 20% post-completion revenue from escrow (only 80% S-Curve during construction stays)
 - [x] Fix InvestorCashFlowSchedulePage S1/S2: add 20% revenue directly to investor (12 months post-completion) + add post-construction months
 - [x] Build consolidated cash flow report page with real timeline (all projects starting Aug 2026)
+- [x] Extract shared computation logic into investorCashFlowEngine.ts utility
+- [x] Refactor InvestorCashFlowSchedulePage to use shared engine (identical numbers guaranteed)
+- [x] Rebuild ConsolidatedInvestorCashFlowPage to use shared engine per project with real timeline
