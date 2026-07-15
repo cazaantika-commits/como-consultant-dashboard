@@ -615,8 +615,8 @@ export default function EscrowCashFlowSchedulePage2() {
 
     // ═══════════════════════════════════════════
     // REVENUE ROW — إيرادات المبيعات
-    // Scenario 1: 80% S-Curve from construction month 4 (index 3) + 20% over 12 post-construction months
-    // Scenario 2: 80% S-Curve from construction month 6 (index 5) + 20% over 12 post-construction months
+    // Scenario 1: 80% S-Curve from construction month 4 (index 3) — 20% goes directly to investor NOT escrow
+    // Scenario 2: 80% S-Curve from construction month 6 (index 5) — 20% goes directly to investor NOT escrow
     // Scenario 3: 100% equally over 3 post-construction months (no construction revenue)
     // ═══════════════════════════════════════════
     const revenueRow: CostRow = (() => {
@@ -631,8 +631,9 @@ export default function EscrowCashFlowSchedulePage2() {
           pMonths[i] = perMonth;
         }
       } else {
+        // Only 80% enters escrow (S-Curve during construction)
+        // 20% goes directly to investor after completion — NOT in escrow
         const constructionRevenue = totalRevenue * 0.80;
-        const postRevenue = totalRevenue * 0.20;
 
         // S1: starts from month 4 (index 3), S2: starts from month 6 (index 5)
         const remainingMonths = constructionDuration - revenueStartMonth;
@@ -640,19 +641,16 @@ export default function EscrowCashFlowSchedulePage2() {
         for (let i = 0; i < remainingMonths; i++) {
           cMonths[revenueStartMonth + i] = constructionRevenue * revSCurve[i];
         }
-
-        const postPerMonth = postRevenue / effectivePostDuration;
-        for (let i = 0; i < effectivePostDuration; i++) {
-          pMonths[i] = postPerMonth;
-        }
+        // No post-construction revenue in escrow — 20% goes to investor directly
       }
 
+      const escrowRevenue = isScenario3 ? totalRevenue : totalRevenue * 0.80;
       return {
-        label: "إيرادات المبيعات",
-        totalCost: totalRevenue,
-        escrowAmount: totalRevenue,
+        label: isScenario3 ? "إيرادات المبيعات" : "إيرادات المبيعات (80%)",
+        totalCost: escrowRevenue,
+        escrowAmount: escrowRevenue,
         openingBalance: 0,
-        remainingToSpend: totalRevenue,
+        remainingToSpend: escrowRevenue,
         section: "الإيرادات",
         isRevenue: true,
         designMonths: emptyDesign(),

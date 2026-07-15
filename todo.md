@@ -904,3 +904,6 @@
 - [x] Fix InvestorCashFlowSchedulePage Scenario 2: construction cost 10%+4%+7%+9% in months 1-4 (no 20% deposit), sorting/NOC/rera/escrow fees in month 4, marketing from month 4 over 12 months
 - [x] Implement Scenario 3 (no_offplan) in InvestorCashFlowSchedulePage with post-construction months, correct distributions, and deleted items
 - [x] Implement Scenario 4 (rental/no sale) in InvestorCashFlowSchedulePage: same as S3 but no revenue, no marketing, no sales commission, developer fee based on construction cost instead of revenue
+- [x] Fix EscrowCashFlowSchedulePage2: remove 20% post-completion revenue from escrow (only 80% S-Curve during construction stays)
+- [x] Fix InvestorCashFlowSchedulePage S1/S2: add 20% revenue directly to investor (12 months post-completion) + add post-construction months
+- [x] Build consolidated cash flow report page with real timeline (all projects starting Aug 2026)

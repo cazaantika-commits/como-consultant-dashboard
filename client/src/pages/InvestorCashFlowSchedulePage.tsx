@@ -202,8 +202,11 @@ export default function InvestorCashFlowSchedulePage() {
     const isScenario3 = scenario === "no_offplan";
     const isScenario4 = scenario === "rental";
 
-    // Post-construction months: S3 needs 3 months for revenue/commission, S4 has none
-    const postDuration = (isScenario3 || isScenario4) ? 3 : 0;
+    // Post-construction months:
+    // S1/S2: 12 months for 20% revenue that goes directly to investor
+    // S3: 3 months for revenue/commission
+    // S4: 3 months for 5% completion + 5% retention
+    const postDuration = isScenario4 ? 3 : isScenario3 ? 3 : 12;
 
     // Helper: empty month arrays
     const emptyDesign = () => new Array(designDuration).fill(0);
@@ -835,7 +838,10 @@ export default function InvestorCashFlowSchedulePage() {
       }
     }
 
-    // ─── الإيرادات (س3 فقط: 100% بالتساوي شهر 2 و 3 بعد الإنجاز | س4: لا إيرادات) ───
+    // ─── الإيرادات ───
+    // س1/س2: 20% من الإيرادات تذهب مباشرة للمستثمر (12 شهر بعد الإنجاز)
+    // س3: 100% بالتساوي شهر 2 و 3 بعد الإنجاز
+    // س4: لا إيرادات
     if (isScenario3) {
       const revenuePost = emptyPost();
       revenuePost[1] = totalRevenue / 2; // شهر 2 بعد الإنجاز
@@ -853,6 +859,27 @@ export default function InvestorCashFlowSchedulePage() {
         postConstructionMonths: revenuePost,
         isRevenue: true,
       });
+    } else if (!isScenario4) {
+      // S1/S2: 20% of revenue goes directly to investor (not escrow) over 12 months after completion
+      const directRevenue = totalRevenue * 0.20;
+      const revenuePost = emptyPost();
+      const perMonth = directRevenue / 12;
+      for (let i = 0; i < 12; i++) {
+        revenuePost[i] = perMonth;
+      }
+      rows.push({
+        label: "إيرادات مباشرة (20%)",
+        totalCost: directRevenue,
+        investorAmount: directRevenue,
+        paid: 0,
+        unpaid: directRevenue,
+        funder: "investor",
+        section: "الإيرادات",
+        designMonths: emptyDesign(),
+        constructionMonths: emptyConstruction(),
+        postConstructionMonths: revenuePost,
+        isRevenue: true,
+      });
     }
 
     // ═══════════════════════════════════════════
@@ -861,10 +888,10 @@ export default function InvestorCashFlowSchedulePage() {
     const expenseRows = rows.filter(r => !r.isRevenue);
     const revenueRows = rows.filter(r => r.isRevenue);
 
-    const grandTotalCost = isScenario3
+    const grandTotalCost = (isScenario3 || isScenario4)
       ? expenseRows.reduce((s, r) => s + r.investorAmount, 0)
       : costs.totalCosts;
-    const grandInvestor = isScenario3
+    const grandInvestor = (isScenario3 || isScenario4)
       ? expenseRows.reduce((s, r) => s + r.investorAmount, 0)
       : costs.totalInvestor;
     const grandPaid = expenseRows.reduce((s, r) => s + r.paid, 0);
@@ -906,16 +933,15 @@ export default function InvestorCashFlowSchedulePage() {
     }
 
     // Sections
-    const sections = isScenario3
+    const sections = isScenario4
       ? [
           "الأرض",
           "التصاميم والإشراف",
           "الدراسات والمسوحات",
           "الرسوم الحكومية والتنظيمية",
           "ريرا (التنظيم العقاري)",
-          "المبيعات والتسويق",
+          "أتعاب المطور",
           "الإنشاء",
-          "الإيرادات",
         ]
       : [
           "الأرض",
@@ -925,6 +951,7 @@ export default function InvestorCashFlowSchedulePage() {
           "ريرا (التنظيم العقاري)",
           "المبيعات والتسويق",
           "الإنشاء",
+          "الإيرادات",
         ];
 
     return {
