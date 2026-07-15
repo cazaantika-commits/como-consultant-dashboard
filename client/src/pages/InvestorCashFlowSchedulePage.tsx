@@ -3,7 +3,6 @@ import { useState, useMemo, useRef } from "react";
 import {
   PROJECT_INPUTS,
   RATES,
-  PRICING_DEFAULTS,
   calculateProjectFormulas,
   calculatePricingFormulas,
   calculateCosts,
@@ -146,13 +145,39 @@ export default function InvestorCashFlowSchedulePage() {
     const i: ProjectInputs = projectQuery.data ? dbProjectToInputs(projectQuery.data) : PROJECT_INPUTS;
     const r: ProjectRates = projectQuery.data ? dbProjectToRates(projectQuery.data) : RATES;
     const projectFormulas = calculateProjectFormulas(i, r);
-    const pricingUnits = PRICING_DEFAULTS.map(u => ({
-      name: u.name,
-      category: u.category,
-      area: u.defaultArea,
-      price: u.defaultPrice,
-      count: u.defaultCount,
-    }));
+    // === Read actual pricing data from project record (same as ProjectCard) ===
+    const p = projectQuery.data as any;
+    const defAreas = { res1: 750, res2: 1300, res3: 1650, retS: 850, retM: 1200, retL: 1800, offS: 1200, offM: 2000, offL: 3500 };
+    const defPrices = { res1: 1550, res2: 1500, res3: 1450, retS: 3000, retM: 2500, retL: 2000, offS: 1900, offM: 1800, offL: 1700 };
+    const hasSavedCounts = p && [p.residential1brCount, p.residential2brCount, p.residential3brCount, p.retailSmallCount, p.retailMediumCount, p.retailLargeCount, p.officeSmallCount, p.officeMediumCount, p.officeLargeCount].some((v: any) => Number(v) > 0);
+    let c1 = Number(p?.residential1brCount) || 0;
+    let c2 = Number(p?.residential2brCount) || 0;
+    let c3 = Number(p?.residential3brCount) || 0;
+    let cRS = Number(p?.retailSmallCount) || 0;
+    let cRM = Number(p?.retailMediumCount) || 0;
+    let cRL = Number(p?.retailLargeCount) || 0;
+    let cOS = Number(p?.officeSmallCount) || 0;
+    let cOM = Number(p?.officeMediumCount) || 0;
+    let cOL = Number(p?.officeLargeCount) || 0;
+    if (!hasSavedCounts) {
+      const sellRes = i.gfaResidential * i.efficiencyResidential;
+      const sellRet = i.gfaRetail * i.efficiencyRetail;
+      const sellOff = i.gfaOffice * i.efficiencyOffice;
+      if (sellRes > 0) { c1 = Math.round(sellRes * 0.4 / defAreas.res1); c2 = Math.round(sellRes * 0.4 / defAreas.res2); c3 = Math.round(sellRes * 0.2 / defAreas.res3); }
+      if (sellRet > 0) { cRS = Math.round(sellRet * 0.4 / defAreas.retS); cRM = Math.round(sellRet * 0.4 / defAreas.retM); cRL = Math.round(sellRet * 0.2 / defAreas.retL); }
+      if (sellOff > 0) { cOS = Math.round(sellOff * 0.4 / defAreas.offS); cOM = Math.round(sellOff * 0.4 / defAreas.offM); cOL = Math.round(sellOff * 0.2 / defAreas.offL); }
+    }
+    const pricingUnits = [
+      { name: "غرفة وصالة", category: "residential" as const, area: Number(p?.residential1brArea) || defAreas.res1, price: Number(p?.residential1brPrice) || defPrices.res1, count: c1 },
+      { name: "غرفتين وصالة", category: "residential" as const, area: Number(p?.residential2brArea) || defAreas.res2, price: Number(p?.residential2brPrice) || defPrices.res2, count: c2 },
+      { name: "ثلاث غرف وصالة", category: "residential" as const, area: Number(p?.residential3brArea) || defAreas.res3, price: Number(p?.residential3brPrice) || defPrices.res3, count: c3 },
+      { name: "تجزئة / صغير", category: "retail" as const, area: Number(p?.retailSmallArea) || defAreas.retS, price: Number(p?.retailSmallPrice) || defPrices.retS, count: cRS },
+      { name: "تجزئة / متوسط", category: "retail" as const, area: Number(p?.retailMediumArea) || defAreas.retM, price: Number(p?.retailMediumPrice) || defPrices.retM, count: cRM },
+      { name: "تجزئة / كبير", category: "retail" as const, area: Number(p?.retailLargeArea) || defAreas.retL, price: Number(p?.retailLargePrice) || defPrices.retL, count: cRL },
+      { name: "مكاتب / صغير", category: "office" as const, area: Number(p?.officeSmallArea) || defAreas.offS, price: Number(p?.officeSmallPrice) || defPrices.offS, count: cOS },
+      { name: "مكاتب / متوسط", category: "office" as const, area: Number(p?.officeMediumArea) || defAreas.offM, price: Number(p?.officeMediumPrice) || defPrices.offM, count: cOM },
+      { name: "مكاتب / كبير", category: "office" as const, area: Number(p?.officeLargeArea) || defAreas.offL, price: Number(p?.officeLargePrice) || defPrices.offL, count: cOL },
+    ];
     const pricingFormulas = calculatePricingFormulas(pricingUnits);
     const costs = calculateCosts(projectFormulas, pricingFormulas, i, r);
 

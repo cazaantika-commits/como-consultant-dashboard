@@ -897,3 +897,4 @@
 - [x] Rebuild PricingPage as dynamic Excel-like system (no separate save tables, compute from project GFA, save overrides to project record)
 - [ ] Fix revenue inconsistency: ProjectCardOffplanPage must calculate revenue from same source as PricingPage (unit counts × area × price from project record)
 - [x] Global project selection persistence: selecting a project on any page now persists across all pages via ProjectContext + localStorage
+- [x] Fix InvestorCashFlowSchedulePage: uses hardcoded PRICING_DEFAULTS instead of actual project pricing data from DB (causes cost discrepancy with ProjectCard)
