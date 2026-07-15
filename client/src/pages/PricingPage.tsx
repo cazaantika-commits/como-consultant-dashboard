@@ -161,6 +161,8 @@ export default function PricingPage() {
   // Load saved data when project data arrives
   useEffect(() => {
     if (!selectedProjectId) return;
+    // Wait for all queries to finish loading before deciding
+    if (marketOverviewQuery.isLoading || competitionPricingQuery.isLoading || projectQuery.isLoading) return;
     const mo = marketOverviewQuery.data;
     const cp = competitionPricingQuery.data;
     // Check if there's actually saved unit count data (not just empty records)
@@ -242,7 +244,7 @@ export default function PricingPage() {
       setAreas({ ...DEFAULT_AREAS });
       setPrices({ ...DEFAULT_PRICES });
     }
-  }, [selectedProjectId, marketOverviewQuery.data, competitionPricingQuery.data, projectQuery.data, i]);
+  }, [selectedProjectId, marketOverviewQuery.data, marketOverviewQuery.isLoading, competitionPricingQuery.data, competitionPricingQuery.isLoading, projectQuery.data, projectQuery.isLoading, i]);
 
   // Manual Save function
   const handleSave = useCallback(async () => {
