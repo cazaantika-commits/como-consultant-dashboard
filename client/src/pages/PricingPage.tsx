@@ -163,7 +163,14 @@ export default function PricingPage() {
     if (!selectedProjectId) return;
     const mo = marketOverviewQuery.data;
     const cp = competitionPricingQuery.data;
-    if (mo || cp) {
+    // Check if there's actually saved unit count data (not just empty records)
+    const hasSavedCounts = mo && Object.values(COUNT_MAP).some(dbField => {
+      const val = (mo as any)[dbField];
+      return val != null && Number(val) > 0;
+    });
+
+    if (hasSavedCounts) {
+      // Load from saved data
       const newCounts: Record<string, number> = { onebed: 0, twobed: 0, threebed: 0, retail_small: 0, retail_medium: 0, retail_large: 0, office_small: 0, office_medium: 0, office_large: 0 };
       const newAreas: Record<string, number> = { ...DEFAULT_AREAS };
       const newPrices: Record<string, number> = { ...DEFAULT_PRICES };
@@ -189,12 +196,53 @@ export default function PricingPage() {
       setCounts(newCounts);
       setAreas(newAreas);
       setPrices(newPrices);
+      setHasUnsavedChanges(false);
+    } else if (projectQuery.data) {
+      // Smart auto-fill: distribute units based on 40/40/20 ratios
+      // Only when no saved data exists (first time opening)
+      const sellableRes = i.gfaResidential * i.efficiencyResidential;
+      const sellableRetail = i.gfaRetail * i.efficiencyRetail;
+      const sellableOffice = i.gfaOffice * i.efficiencyOffice;
+
+      const smartCounts: Record<string, number> = { onebed: 0, twobed: 0, threebed: 0, retail_small: 0, retail_medium: 0, retail_large: 0, office_small: 0, office_medium: 0, office_large: 0 };
+
+      // Residential: 40% onebed, 40% twobed, 20% threebed
+      if (sellableRes > 0) {
+        const resArea40 = sellableRes * 0.4;
+        const resArea20 = sellableRes * 0.2;
+        smartCounts.onebed = Math.round(resArea40 / DEFAULT_AREAS.onebed);
+        smartCounts.twobed = Math.round(resArea40 / DEFAULT_AREAS.twobed);
+        smartCounts.threebed = Math.round(resArea20 / DEFAULT_AREAS.threebed);
+      }
+
+      // Retail: 40% small, 40% medium, 20% large
+      if (sellableRetail > 0) {
+        const retArea40 = sellableRetail * 0.4;
+        const retArea20 = sellableRetail * 0.2;
+        smartCounts.retail_small = Math.round(retArea40 / DEFAULT_AREAS.retail_small);
+        smartCounts.retail_medium = Math.round(retArea40 / DEFAULT_AREAS.retail_medium);
+        smartCounts.retail_large = Math.round(retArea20 / DEFAULT_AREAS.retail_large);
+      }
+
+      // Office: 40% small, 40% medium, 20% large
+      if (sellableOffice > 0) {
+        const offArea40 = sellableOffice * 0.4;
+        const offArea20 = sellableOffice * 0.2;
+        smartCounts.office_small = Math.round(offArea40 / DEFAULT_AREAS.office_small);
+        smartCounts.office_medium = Math.round(offArea40 / DEFAULT_AREAS.office_medium);
+        smartCounts.office_large = Math.round(offArea20 / DEFAULT_AREAS.office_large);
+      }
+
+      setCounts(smartCounts);
+      setAreas({ ...DEFAULT_AREAS });
+      setPrices({ ...DEFAULT_PRICES });
+      setHasUnsavedChanges(true); // Mark as unsaved so user knows to save after reviewing
     } else {
       setCounts({ onebed: 0, twobed: 0, threebed: 0, retail_small: 0, retail_medium: 0, retail_large: 0, office_small: 0, office_medium: 0, office_large: 0 });
       setAreas({ ...DEFAULT_AREAS });
       setPrices({ ...DEFAULT_PRICES });
     }
-  }, [selectedProjectId, marketOverviewQuery.data, competitionPricingQuery.data]);
+  }, [selectedProjectId, marketOverviewQuery.data, competitionPricingQuery.data, projectQuery.data, i]);
 
   // Manual Save function
   const handleSave = useCallback(async () => {
