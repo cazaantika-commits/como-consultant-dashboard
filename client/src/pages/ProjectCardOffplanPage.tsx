@@ -239,8 +239,7 @@ export default function ProjectCardOffplanPage() {
       profit: costs.profit,
       margin: costs.margin,
     };
-  }, [formData]);
-
+    }, [formData, projectQuery.data]);
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 p-6" dir="rtl">
       {/* Header */}
