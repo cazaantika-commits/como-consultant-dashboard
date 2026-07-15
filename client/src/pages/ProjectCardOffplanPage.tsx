@@ -433,7 +433,7 @@ export default function ProjectCardOffplanPage() {
                   <tr className="bg-slate-700/20"><td colSpan={6} className="py-2 px-3 text-slate-300 font-semibold text-xs">الدراسات والمسوحات</td></tr>
                   <CostRowEditable label="فحص التربة" fieldKey="soilTestFee" value={formData.soilTestFee} editing={isEditing} onChange={updateField} rate="مقطوع" amount={parseFloat(formData.soilTestFee || "45000")} formula="—" funding="investor" />
                   <CostRowEditable label="المسح الطبوغرافي" fieldKey="topographicSurveyFee" value={formData.topographicSurveyFee} editing={isEditing} onChange={updateField} rate="مقطوع" amount={parseFloat(formData.topographicSurveyFee || "12000")} formula="—" funding="investor" />
-                  <CostRowEditable label="رسوم المساح" fieldKey="surveyorFees" value={formData.surveyorFees} editing={isEditing} onChange={updateField} rate="مقطوع" amount={parseFloat(formData.surveyorFees || "35000")} formula="—" funding="investor" />
+                  <CostRowEditable label="رسوم المساح" fieldKey="surveyorFees" value={formData.surveyorFees} editing={isEditing} onChange={updateField} rate="مقطوع" amount={parseFloat(formData.surveyorFees || "35000")} formula="—" funding="escrow" />
 
                   {/* Government */}
                   <tr className="bg-slate-700/20"><td colSpan={6} className="py-2 px-3 text-slate-300 font-semibold text-xs">الرسوم الحكومية</td></tr>

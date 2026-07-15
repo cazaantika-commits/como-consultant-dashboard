@@ -329,18 +329,15 @@ export function calculateCosts(
   const constructionInvestor = constructionCost * rates.constructionInvestorShare;
   const constructionEscrow = constructionCost * rates.constructionEscrowShare;
   const govFeesInvestor = inputs.govFeesTotal * rates.govFeesInvestorShare;
-  const govFeesEscrow = inputs.govFeesTotal * rates.govFeesEscrowShare;
-
-  // ─── إجمالي المستثمر (نفس معادلة البطاقة بالضبط) ───
+  const govFeesEscrow = inputs.govFeesTotal * rates.govFeesEscrowShare;  // ─── إجمالي المستثمر (نفس معادلة البطاقة بالضبط) ───
   const totalInvestor = landPrice + landRegistration + landBroker + designFee +
     inputs.soilTest + inputs.topography + inputs.communityFee + govFeesInvestor +
     sortingFee + inputs.nocSale + inputs.reraProjectReg + reraUnits +
-    inputs.escrowAccountFee + inputs.bankFees + marketing + developerFee + inputs.surveyorFee +
+    inputs.escrowAccountFee + inputs.bankFees + marketing + developerFee +
     constructionInvestor;
-
   // ─── إجمالي الضمان (نفس معادلة البطاقة بالضبط) ───
   const totalEscrow = supervisionFee + govFeesEscrow + salesCommission +
-    inputs.reraAuditorReport + inputs.reraInspection + constructionEscrow;
+    inputs.reraAuditorReport + inputs.reraInspection + inputs.surveyorFee + constructionEscrow;
 
   const totalCosts = totalInvestor + totalEscrow;
   const profit = totalRevenue - totalCosts;
