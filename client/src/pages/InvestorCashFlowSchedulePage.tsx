@@ -18,7 +18,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 // ═══════════════════════════════════════════
 // أنواع السيناريوهات
 // ═══════════════════════════════════════════
-type Scenario = "offplan_escrow" | "offplan_construction" | "no_offplan";
+type Scenario = "offplan_escrow" | "offplan_construction" | "no_offplan" | "rental";
 
 // ═══════════════════════════════════════════
 // FORMAT HELPERS
@@ -200,9 +200,10 @@ export default function InvestorCashFlowSchedulePage() {
     const penultimateConstruction = constructionDuration - 2; // الشهر قبل الأخير من الإنشاء
     const isScenario2 = scenario === "offplan_construction";
     const isScenario3 = scenario === "no_offplan";
+    const isScenario4 = scenario === "rental";
 
-    // Post-construction months: S3 needs 3 months for revenue/commission
-    const postDuration = isScenario3 ? 3 : 0;
+    // Post-construction months: S3 needs 3 months for revenue/commission, S4 has none
+    const postDuration = (isScenario3 || isScenario4) ? 3 : 0;
 
     // Helper: empty month arrays
     const emptyDesign = () => new Array(designDuration).fill(0);
@@ -271,7 +272,7 @@ export default function InvestorCashFlowSchedulePage() {
 
     // أتعاب الإشراف
     // س1 و س2: من الضمان | س3: المستثمر يدفع بالتساوي على أشهر الإنشاء
-    if (isScenario3) {
+    if (isScenario3 || isScenario4) {
       const supervisionConst = emptyConstruction();
       distributeEqual(costs.supervisionFee, constructionDuration, supervisionConst, 0);
       rows.push({
@@ -335,7 +336,7 @@ export default function InvestorCashFlowSchedulePage() {
 
     // ─── رسوم المساح ───
     // س1 و س2: من الضمان | س3: المستثمر — الشهر قبل الأخير من الإنشاء
-    if (isScenario3) {
+    if (isScenario3 || isScenario4) {
       const surveyorConst = emptyConstruction();
       surveyorConst[penultimateConstruction] = i.surveyorFee;
       rows.push({
@@ -385,8 +386,8 @@ export default function InvestorCashFlowSchedulePage() {
     });
 
     // ─── رسوم الجهات الحكومية ───
-    // س1 و س2: 10% مستثمر (شهر 2 تصاميم) | س3: 100% مستثمر (نصف شهر 3 + نصف شهر 8 إنشاء)
-    if (isScenario3) {
+    // س1 و س2: 10% مستثمر (شهر 2 تصاميم) | س3 و س4: 100% مستثمر (نصف شهر 3 + نصف شهر 8 إنشاء)
+    if (isScenario3 || isScenario4) {
       const govConst = emptyConstruction();
       const half = i.govFeesTotal / 2;
       govConst[2] = half; // شهر 3 إنشاء (index 2)
@@ -421,11 +422,11 @@ export default function InvestorCashFlowSchedulePage() {
     }
 
     // ─── رسوم الفرز ───
-    // س1: الشهر قبل الأخير من التصميم | س2: شهر إنشاء 4 | س3: الشهر قبل الأخير من الإنشاء
+    // س1: الشهر قبل الأخير من التصميم | س2: شهر إنشاء 4 | س3 و س4: الشهر قبل الأخير من الإنشاء
     {
       const sortingDesign = emptyDesign();
       const sortingConstruction = emptyConstruction();
-      if (isScenario3) {
+      if (isScenario3 || isScenario4) {
         sortingConstruction[penultimateConstruction] = costs.sortingFee;
       } else if (isScenario2) {
         sortingConstruction[3] = costs.sortingFee;
@@ -447,11 +448,11 @@ export default function InvestorCashFlowSchedulePage() {
     }
 
     // ─── رسوم NOC ───
-    // س1: الشهر قبل الأخير من التصميم | س2: شهر إنشاء 4 | س3: الشهر قبل الأخير من الإنشاء
+    // س1: الشهر قبل الأخير من التصميم | س2: شهر إنشاء 4 | س3 و س4: الشهر قبل الأخير من الإنشاء
     {
       const nocDesign = emptyDesign();
       const nocConstruction = emptyConstruction();
-      if (isScenario3) {
+      if (isScenario3 || isScenario4) {
         nocConstruction[penultimateConstruction] = i.nocSale;
       } else if (isScenario2) {
         nocConstruction[3] = i.nocSale;
@@ -472,8 +473,8 @@ export default function InvestorCashFlowSchedulePage() {
       });
     }
 
-    // ─── تسجيل المشروع — ريرا (س3: محذوف) ───
-    if (!isScenario3) {
+    // ─── تسجيل المشروع — ريرا (س3 و س4: محذوف) ───
+    if (!isScenario3 && !isScenario4) {
       const reraRegDesign = emptyDesign();
       const reraRegConstruction = emptyConstruction();
       if (isScenario2) {
@@ -500,7 +501,7 @@ export default function InvestorCashFlowSchedulePage() {
     {
       const reraUnitsDesign = emptyDesign();
       const reraUnitsConstruction = emptyConstruction();
-      if (isScenario3) {
+      if (isScenario3 || isScenario4) {
         reraUnitsConstruction[penultimateConstruction] = costs.reraUnits;
       } else if (isScenario2) {
         reraUnitsConstruction[3] = costs.reraUnits;
@@ -521,8 +522,8 @@ export default function InvestorCashFlowSchedulePage() {
       });
     }
 
-    // ─── حساب الضمان (رسوم فتح) — س3: محذوف ───
-    if (!isScenario3) {
+    // ─── حساب الضمان (رسوم فتح) — س3 و س4: محذوف ───
+    if (!isScenario3 && !isScenario4) {
       const escrowFeeDesign = emptyDesign();
       const escrowFeeConstruction = emptyConstruction();
       if (isScenario2) {
@@ -544,8 +545,8 @@ export default function InvestorCashFlowSchedulePage() {
       });
     }
 
-    // ─── رسوم البنك — س3: محذوف ───
-    if (!isScenario3) {
+    // ─── رسوم البنك — س3 و س4: محذوف ───
+    if (!isScenario3 && !isScenario4) {
       const bankConstruction = emptyConstruction();
       distributeEqual(i.bankFees, constructionDuration, bankConstruction, 0);
       rows.push({
@@ -562,8 +563,8 @@ export default function InvestorCashFlowSchedulePage() {
       });
     }
 
-    // ─── تقرير مدقق ريرا — س3: محذوف ───
-    if (!isScenario3) {
+    // ─── تقرير مدقق ريرا — س3 و س4: محذوف ───
+    if (!isScenario3 && !isScenario4) {
       rows.push({
         label: "تقرير مدقق ريرا",
         totalCost: i.reraAuditorReport,
@@ -578,8 +579,8 @@ export default function InvestorCashFlowSchedulePage() {
       });
     }
 
-    // ─── فحص ريرا — س3: محذوف ───
-    if (!isScenario3) {
+    // ─── فحص ريرا — س3 و س4: محذوف ───
+    if (!isScenario3 && !isScenario4) {
       rows.push({
         label: "فحص ريرا",
         totalCost: i.reraInspection,
@@ -595,8 +596,10 @@ export default function InvestorCashFlowSchedulePage() {
     }
 
     // ─── عمولة المبيعات ───
-    // س1 و س2: من الضمان | س3: 2% من الإيرادات بالتساوي شهر 2 و 3 بعد الإنجاز
-    if (isScenario3) {
+    // س1 و س2: من الضمان | س3: 2% من الإيرادات بالتساوي شهر 2 و 3 بعد الإنجاز | س4: محذوف
+    if (isScenario4) {
+      // سيناريو 4: لا يوجد عمولة مبيعات
+    } else if (isScenario3) {
       const commissionAmount = totalRevenue * r.salesCommissionPostCompletion; // 2%
       const commissionPost = emptyPost();
       commissionPost[1] = commissionAmount / 2; // شهر 2 بعد الإنجاز (index 1)
@@ -632,7 +635,8 @@ export default function InvestorCashFlowSchedulePage() {
     // س1: يبدأ من الشهر قبل الأخير من التصميم على 12 شهر (2%)
     // س2: يبدأ من شهر إنشاء 4 على 12 شهر (2%)
     // س3: 0.5% دفعة واحدة في الشهر الأخير من الإنشاء
-    {
+    // س4: محذوف
+    if (!isScenario4) {
       const marketingDesign = emptyDesign();
       const marketingConstruction = emptyConstruction();
 
@@ -677,11 +681,11 @@ export default function InvestorCashFlowSchedulePage() {
           }
         }
         rows.push({
-          label: "التسويق",
-          totalCost: costs.marketing,
-          investorAmount: costs.marketing,
+          label: "التسويق (2%)",
+          totalCost: marketingTotal,
+          investorAmount: marketingTotal,
           paid: 0,
-          unpaid: costs.marketing,
+          unpaid: marketingTotal,
           funder: "investor",
           section: "المبيعات والتسويق",
           designMonths: marketingDesign,
@@ -689,7 +693,7 @@ export default function InvestorCashFlowSchedulePage() {
           postConstructionMonths: emptyPost(),
         });
       }
-    }
+    } // end !isScenario4
 
     // ─── أتعاب المطور ───
     // س1 و س2: 2% تصميم + 3% إنشاء = 5%
@@ -698,7 +702,26 @@ export default function InvestorCashFlowSchedulePage() {
       const devFeeDesign = emptyDesign();
       const devFeeConstruction = emptyConstruction();
 
-      if (isScenario3) {
+      if (isScenario4) {
+        // س4: 1% تصميم + 2% إنشاء من تكلفة الإنشاء
+        const devFeeDesignTotal = constructionCost * 0.01; // 1%
+        const devFeeConstructionTotal = constructionCost * 0.02; // 2%
+        distributeEqual(devFeeDesignTotal, designDuration, devFeeDesign, 0);
+        distributeEqual(devFeeConstructionTotal, constructionDuration, devFeeConstruction, 0);
+        const totalDevFee = devFeeDesignTotal + devFeeConstructionTotal;
+        rows.push({
+          label: "أتعاب المطور (3%)",
+          totalCost: totalDevFee,
+          investorAmount: totalDevFee,
+          paid: 0,
+          unpaid: totalDevFee,
+          funder: "investor",
+          section: "أتعاب المطور",
+          designMonths: devFeeDesign,
+          constructionMonths: devFeeConstruction,
+          postConstructionMonths: emptyPost(),
+        });
+      } else if (isScenario3) {
         const devFeeDesignTotal = totalRevenue * 0.01; // 1%
         const devFeeConstructionTotal = totalRevenue * 0.02; // 2%
         distributeEqual(devFeeDesignTotal, designDuration, devFeeDesign, 0);
@@ -745,7 +768,7 @@ export default function InvestorCashFlowSchedulePage() {
       const constructionConst = emptyConstruction();
       const constructionPost = emptyPost();
 
-      if (isScenario3) {
+      if (isScenario3 || isScenario4) {
         // 100% from investor
         constructionConst[0] = constructionCost * 0.10; // شهر 1: 10%
         constructionConst[1] = constructionCost * 0.04; // شهر 2: 4%
@@ -812,7 +835,7 @@ export default function InvestorCashFlowSchedulePage() {
       }
     }
 
-    // ─── الإيرادات (س3 فقط: 100% بالتساوي شهر 2 و 3 بعد الإنجاز) ───
+    // ─── الإيرادات (س3 فقط: 100% بالتساوي شهر 2 و 3 بعد الإنجاز | س4: لا إيرادات) ───
     if (isScenario3) {
       const revenuePost = emptyPost();
       revenuePost[1] = totalRevenue / 2; // شهر 2 بعد الإنجاز
@@ -972,6 +995,16 @@ export default function InvestorCashFlowSchedulePage() {
             }`}
           >
             تطوير بدون بيع على الخارطة
+          </button>
+          <button
+            onClick={() => setScenario("rental")}
+            className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+              scenario === "rental"
+                ? "bg-blue-700 text-white"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
+          >
+            تطوير للتأجير
           </button>
         </div>
 
