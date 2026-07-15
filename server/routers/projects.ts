@@ -99,6 +99,8 @@ const factSheetFields = {
   // مدد المراحل
   preConMonths: z.number().int().optional(),
   constructionMonths: z.number().int().optional(),
+  handoverMonths: z.number().int().optional(),
+  startDate: z.string().optional(),
   // سيناريو التمويل
   financingScenario: z.enum(["offplan_escrow", "offplan_construction", "no_offplan", "rental"]).optional(),
   // Unit distribution - counts
