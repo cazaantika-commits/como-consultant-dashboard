@@ -664,6 +664,7 @@ export default function InvestorCashFlowSchedulePage() {
                 >
                   الإنشاء ({data.constructionDuration} شهر)
                 </th>
+                <th className="border border-gray-600 px-2 py-2 text-center bg-yellow-700" rowSpan={2}>تحقق</th>
               </tr>
               {/* Header Row 2 — Month Numbers */}
               <tr className="bg-gray-700 text-white">
@@ -708,6 +709,7 @@ export default function InvestorCashFlowSchedulePage() {
                 {data.constructionMonthlyTotals.map((v, i) => (
                   <td key={`ct${i}`} className="border border-gray-200 px-1 py-2 text-center text-indigo-800">{fmt(v)}</td>
                 ))}
+                <td className="border border-gray-200 px-2 py-2 text-center"></td>
               </tr>
               <tr className="bg-gray-50 font-semibold">
                 <td className="sticky right-0 z-20 bg-gray-50 border border-gray-200 px-2 py-2 text-right text-gray-700">إجمالي تراكمي (مستثمر)</td>
@@ -721,6 +723,7 @@ export default function InvestorCashFlowSchedulePage() {
                 {data.cumulativeConstruction.map((v, i) => (
                   <td key={`cc${i}`} className="border border-gray-200 px-1 py-2 text-center text-gray-700">{fmt(v)}</td>
                 ))}
+                <td className="border border-gray-200"></td>
               </tr>
             </tfoot>
           </table>
@@ -750,7 +753,7 @@ function SectionGroup({
       {/* Section Header */}
       <tr className="bg-gray-100">
         <td
-          colSpan={5 + designDuration + constructionDuration}
+          colSpan={6 + designDuration + constructionDuration}
           className="sticky right-0 z-10 px-2 py-1.5 text-right font-bold text-gray-800 text-xs border border-gray-200"
         >
           {title}
@@ -806,6 +809,24 @@ function SectionGroup({
               )}
             </td>
           ))}
+          {/* Validation Column */}
+          {(() => {
+            const distributedSum = row.designMonths.reduce((s, v) => s + v, 0) + row.constructionMonths.reduce((s, v) => s + v, 0);
+            const expected = row.funder === "escrow" ? 0 : row.totalCost;
+            const diff = Math.abs(distributedSum - expected);
+            const isMatch = diff < 1;
+            return (
+              <td className={`border border-gray-200 px-1 py-1.5 text-center font-bold ${isMatch ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-100'}`}>
+                {row.funder === "escrow" ? (
+                  <span className="text-gray-400">–</span>
+                ) : isMatch ? (
+                  "✓"
+                ) : (
+                  <span title={`الفرق: ${fmt(diff)}`}>✗ {fmt(diff)}</span>
+                )}
+              </td>
+            );
+          })()}
         </tr>
       ))}
     </>

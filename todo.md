@@ -898,3 +898,4 @@
 - [ ] Fix revenue inconsistency: ProjectCardOffplanPage must calculate revenue from same source as PricingPage (unit counts × area × price from project record)
 - [x] Global project selection persistence: selecting a project on any page now persists across all pages via ProjectContext + localStorage
 - [x] Fix InvestorCashFlowSchedulePage: uses hardcoded PRICING_DEFAULTS instead of actual project pricing data from DB (causes cost discrepancy with ProjectCard)
+- [x] Add validation column (تحقق) to InvestorCashFlowSchedulePage and EscrowCashFlowSchedulePage2 - shows sum of distributed months vs total, highlights red if mismatch

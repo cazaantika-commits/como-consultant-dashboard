@@ -696,7 +696,7 @@ export default function EscrowCashFlowSchedulePage2() {
     cumulativePost,
   } = data;
 
-  const totalColumns = 5 + designDuration + constructionDuration + postDuration;
+  const totalColumns = 6 + designDuration + constructionDuration + postDuration;
 
   return (
     <div className="min-h-screen bg-white p-4" dir="rtl">
@@ -793,6 +793,9 @@ export default function EscrowCashFlowSchedulePage2() {
                 >
                   بعد الإنجاز ({postDuration} شهر)
                 </th>
+                <th className="border border-gray-600 px-2 py-2 text-center bg-yellow-700" rowSpan={2}>تحقق</th>
+                <td className="border border-gray-200 px-2 py-2 text-center"></td>
+                <td className="border border-gray-200 px-2 py-2 text-center"></td>
               </tr>
               {/* Header Row 2 — Month Numbers */}
               <tr className="bg-gray-700 text-white">
@@ -870,6 +873,18 @@ export default function EscrowCashFlowSchedulePage2() {
                             {v > 0 ? fmt(v) : "–"}
                           </td>
                         ))}
+                        {/* Validation Column */}
+                        {(() => {
+                          const distributedSum = row.designMonths.reduce((s, v) => s + v, 0) + row.constructionMonths.reduce((s, v) => s + v, 0) + row.postConstructionMonths.reduce((s, v) => s + v, 0);
+                          const expected = row.escrowAmount;
+                          const diff = Math.abs(distributedSum - expected);
+                          const isMatch = diff < 1;
+                          return (
+                            <td className={`border border-gray-200 px-1 py-1.5 text-center font-bold ${isMatch ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-100'}`}>
+                              {isMatch ? "✓" : <span title={`الفرق: ${fmt(diff)}`}>✗ {fmt(diff)}</span>}
+                            </td>
+                          );
+                        })()}
                       </tr>
                     ))}
                   </React.Fragment>
@@ -910,6 +925,7 @@ export default function EscrowCashFlowSchedulePage2() {
                     {fmt(v)}
                   </td>
                 ))}
+                <td className="border border-gray-200 px-2 py-2 text-center"></td>
               </tr>
 
               {/* Revenue Total Row */}
@@ -940,6 +956,7 @@ export default function EscrowCashFlowSchedulePage2() {
                     {fmt(v)}
                   </td>
                 ))}
+                <td className="border border-gray-200 px-2 py-2 text-center"></td>
               </tr>
 
               {/* Net Flow Row */}
@@ -968,6 +985,7 @@ export default function EscrowCashFlowSchedulePage2() {
                     {fmt(v)}
                   </td>
                 ))}
+                <td className="border border-gray-200 px-2 py-2 text-center"></td>
               </tr>
 
               {/* Cumulative Balance Row */}
@@ -996,6 +1014,7 @@ export default function EscrowCashFlowSchedulePage2() {
                     {fmt(v)}
                   </td>
                 ))}
+                <td className="border border-gray-200 px-2 py-2 text-center"></td>
               </tr>
             </tfoot>
           </table>
