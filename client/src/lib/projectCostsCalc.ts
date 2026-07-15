@@ -22,15 +22,17 @@ function getAvg(pctKey: string, avgVal: number | null | undefined): number {
  */
 export function calculateProjectCosts(
   project: any,
-  marketOverview: any,
-  competitionPricing: any,
+  marketOverview?: any,
+  competitionPricing?: any,
   scenario?: "optimistic" | "base" | "conservative"
 ): ProjectCosts | null {
   if (!project) return null;
 
   const p = project;
-  const mo = marketOverview;
-  const cp = competitionPricing;
+  // Prefer reading unit data from project record directly (new dynamic model)
+  // Fall back to marketOverview/competitionPricing for backward compatibility
+  const mo = marketOverview || p;
+  const cp = competitionPricing || p;
   const activeScenario = scenario || (cp?.activeScenario || "base") as "optimistic" | "base" | "conservative";
 
   const landPrice = parseFloat(p.landPrice || "0");
@@ -70,19 +72,19 @@ export function calculateProjectCosts(
   const saleableRet = gfaRetSqft * saleableRetPct;
   const saleableOff = gfaOffSqft * saleableOffPct;
 
-  // Get base prices and apply scenario multiplier (same logic as CostsCashFlowTab)
+  // Get base prices - prefer project-level fields, fall back to cp fields
   const scenarioMultiplier = activeScenario === "optimistic" ? 1.10 : activeScenario === "conservative" ? 0.90 : 1.00;
   const basePrices = {
     studioPrice: (cp?.baseStudioPrice || 0) * scenarioMultiplier,
-    oneBrPrice: (cp?.base1brPrice || 0) * scenarioMultiplier,
-    twoBrPrice: (cp?.base2brPrice || 0) * scenarioMultiplier,
-    threeBrPrice: (cp?.base3brPrice || 0) * scenarioMultiplier,
-    retailSmallPrice: (cp?.baseRetailSmallPrice || 0) * scenarioMultiplier,
-    retailMediumPrice: (cp?.baseRetailMediumPrice || 0) * scenarioMultiplier,
-    retailLargePrice: (cp?.baseRetailLargePrice || 0) * scenarioMultiplier,
-    officeSmallPrice: (cp?.baseOfficeSmallPrice || 0) * scenarioMultiplier,
-    officeMediumPrice: (cp?.baseOfficeMediumPrice || 0) * scenarioMultiplier,
-    officeLargePrice: (cp?.baseOfficeLargePrice || 0) * scenarioMultiplier,
+    oneBrPrice: (p.residential1brPrice || cp?.base1brPrice || 0) * scenarioMultiplier,
+    twoBrPrice: (p.residential2brPrice || cp?.base2brPrice || 0) * scenarioMultiplier,
+    threeBrPrice: (p.residential3brPrice || cp?.base3brPrice || 0) * scenarioMultiplier,
+    retailSmallPrice: (p.retailSmallPrice || cp?.baseRetailSmallPrice || 0) * scenarioMultiplier,
+    retailMediumPrice: (p.retailMediumPrice || cp?.baseRetailMediumPrice || 0) * scenarioMultiplier,
+    retailLargePrice: (p.retailLargePrice || cp?.baseRetailLargePrice || 0) * scenarioMultiplier,
+    officeSmallPrice: (p.officeSmallPrice || cp?.baseOfficeSmallPrice || 0) * scenarioMultiplier,
+    officeMediumPrice: (p.officeMediumPrice || cp?.baseOfficeMediumPrice || 0) * scenarioMultiplier,
+    officeLargePrice: (p.officeLargePrice || cp?.baseOfficeLargePrice || 0) * scenarioMultiplier,
   };
   const prices = basePrices;
 
@@ -105,10 +107,16 @@ export function calculateProjectCosts(
   const getSellable = (cat: string) => cat === "residential" ? saleableRes : cat === "retail" ? saleableRet : saleableOff;
 
   // Step 1: compute count and avg for each unit type
-  // Use saved counts if available, otherwise compute from pct
+  // Prefer project-level fields (new model), fall back to mo fields (old model)
   const unitData = UNIT_DEFS.map(def => {
-    const avgArea = mo ? getAvg(def.pctKey, (mo as any)[def.avgKey]) : 0;
-    const savedCount = mo ? (mo as any)[def.countKey] : null;
+    // Try project-level area fields first (new: residential1brArea, retailSmallArea, etc.)
+    const projectAreaKey = def.countKey.replace('Count', 'Area');
+    const projectArea = p[projectAreaKey] || 0;
+    const avgArea = projectArea > 0 ? projectArea : (mo ? getAvg(def.pctKey, (mo as any)[def.avgKey]) : 0);
+    
+    // Try project-level count first
+    const projectCount = p[def.countKey] || 0;
+    const savedCount = projectCount > 0 ? projectCount : (mo ? (mo as any)[def.countKey] : null);
     let count = 0;
     if (savedCount != null && savedCount > 0) {
       count = savedCount;

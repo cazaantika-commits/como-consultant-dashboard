@@ -101,6 +101,36 @@ const factSheetFields = {
   constructionMonths: z.number().int().optional(),
   // سيناريو التمويل
   financingScenario: z.enum(["offplan_escrow", "offplan_construction", "no_offplan"]).optional(),
+  // Unit distribution - counts
+  residential1brCount: z.number().int().optional(),
+  residential2brCount: z.number().int().optional(),
+  residential3brCount: z.number().int().optional(),
+  retailSmallCount: z.number().int().optional(),
+  retailMediumCount: z.number().int().optional(),
+  retailLargeCount: z.number().int().optional(),
+  officeSmallCount: z.number().int().optional(),
+  officeMediumCount: z.number().int().optional(),
+  officeLargeCount: z.number().int().optional(),
+  // Unit distribution - areas
+  residential1brArea: z.number().int().optional(),
+  residential2brArea: z.number().int().optional(),
+  residential3brArea: z.number().int().optional(),
+  retailSmallArea: z.number().int().optional(),
+  retailMediumArea: z.number().int().optional(),
+  retailLargeArea: z.number().int().optional(),
+  officeSmallArea: z.number().int().optional(),
+  officeMediumArea: z.number().int().optional(),
+  officeLargeArea: z.number().int().optional(),
+  // Unit distribution - prices per sqft
+  residential1brPrice: z.number().int().optional(),
+  residential2brPrice: z.number().int().optional(),
+  residential3brPrice: z.number().int().optional(),
+  retailSmallPrice: z.number().int().optional(),
+  retailMediumPrice: z.number().int().optional(),
+  retailLargePrice: z.number().int().optional(),
+  officeSmallPrice: z.number().int().optional(),
+  officeMediumPrice: z.number().int().optional(),
+  officeLargePrice: z.number().int().optional(),
 };
 
 // All Fact Sheet field keys for completeness calculation

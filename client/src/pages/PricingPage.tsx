@@ -71,7 +71,7 @@ function fmtN(n: number): string {
 }
 
 // ═══════════════════════════════════════════
-// MAPPING: PricingPage keys → DB fields
+// MAPPING: PricingPage keys → project DB fields (direct)
 // ═══════════════════════════════════════════
 const COUNT_MAP: Record<string, string> = {
   onebed: 'residential1brCount',
@@ -86,27 +86,27 @@ const COUNT_MAP: Record<string, string> = {
 };
 
 const AREA_MAP: Record<string, string> = {
-  onebed: 'residential1brAvgArea',
-  twobed: 'residential2brAvgArea',
-  threebed: 'residential3brAvgArea',
-  retail_small: 'retailSmallAvgArea',
-  retail_medium: 'retailMediumAvgArea',
-  retail_large: 'retailLargeAvgArea',
-  office_small: 'officeSmallAvgArea',
-  office_medium: 'officeMediumAvgArea',
-  office_large: 'officeLargeAvgArea',
+  onebed: 'residential1brArea',
+  twobed: 'residential2brArea',
+  threebed: 'residential3brArea',
+  retail_small: 'retailSmallArea',
+  retail_medium: 'retailMediumArea',
+  retail_large: 'retailLargeArea',
+  office_small: 'officeSmallArea',
+  office_medium: 'officeMediumArea',
+  office_large: 'officeLargeArea',
 };
 
 const PRICE_MAP: Record<string, string> = {
-  onebed: 'base1brPrice',
-  twobed: 'base2brPrice',
-  threebed: 'base3brPrice',
-  retail_small: 'baseRetailSmallPrice',
-  retail_medium: 'baseRetailMediumPrice',
-  retail_large: 'baseRetailLargePrice',
-  office_small: 'baseOfficeSmallPrice',
-  office_medium: 'baseOfficeMediumPrice',
-  office_large: 'baseOfficeLargePrice',
+  onebed: 'residential1brPrice',
+  twobed: 'residential2brPrice',
+  threebed: 'residential3brPrice',
+  retail_small: 'retailSmallPrice',
+  retail_medium: 'retailMediumPrice',
+  retail_large: 'retailLargePrice',
+  office_small: 'officeSmallPrice',
+  office_medium: 'officeMediumPrice',
+  office_large: 'officeLargePrice',
 };
 
 // ═══════════════════════════════════════════
@@ -118,13 +118,8 @@ export default function PricingPage() {
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
 
-  // Load saved data from DB
-  const marketOverviewQuery = trpc.marketOverview.getByProject.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
-  const competitionPricingQuery = trpc.competitionPricing.getByProject.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
-
-  // Save mutations
-  const saveMarketOverview = trpc.marketOverview.save.useMutation();
-  const saveCompetitionPricing = trpc.competitionPricing.save.useMutation();
+  // Save directly to project table
+  const updateProject = trpc.projects.update.useMutation();
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
@@ -158,57 +153,50 @@ export default function PricingPage() {
   const [areas, setAreas] = useState<Record<string, number>>({ ...DEFAULT_AREAS });
   const [prices, setPrices] = useState<Record<string, number>>({ ...DEFAULT_PRICES });
 
-  // Load saved data when project data arrives
+  // Load saved data directly from project record
   useEffect(() => {
     if (!selectedProjectId) return;
-    // Wait for all queries to finish loading before deciding
-    if (marketOverviewQuery.isLoading || competitionPricingQuery.isLoading || projectQuery.isLoading) return;
-    const mo = marketOverviewQuery.data;
-    const cp = competitionPricingQuery.data;
-    // Check if there's actually saved unit count data (not just empty records)
-    const hasSavedCounts = mo && Object.values(COUNT_MAP).some(dbField => {
-      const val = (mo as any)[dbField];
+    if (projectQuery.isLoading) return;
+    const p = projectQuery.data;
+    if (!p) return;
+
+    // Check if project has saved unit counts (any count > 0)
+    const hasSavedCounts = Object.values(COUNT_MAP).some(dbField => {
+      const val = (p as any)[dbField];
       return val != null && Number(val) > 0;
     });
 
     if (hasSavedCounts) {
-      // Load from saved data
+      // Load from project record
       const newCounts: Record<string, number> = { onebed: 0, twobed: 0, threebed: 0, retail_small: 0, retail_medium: 0, retail_large: 0, office_small: 0, office_medium: 0, office_large: 0 };
       const newAreas: Record<string, number> = { ...DEFAULT_AREAS };
       const newPrices: Record<string, number> = { ...DEFAULT_PRICES };
 
-      if (mo) {
-        Object.entries(COUNT_MAP).forEach(([key, dbField]) => {
-          const val = (mo as any)[dbField];
-          if (val != null && Number(val) > 0) newCounts[key] = Number(val);
-        });
-        Object.entries(AREA_MAP).forEach(([key, dbField]) => {
-          const val = (mo as any)[dbField];
-          if (val != null && Number(val) > 0) newAreas[key] = Number(val);
-        });
-      }
-
-      if (cp) {
-        Object.entries(PRICE_MAP).forEach(([key, dbField]) => {
-          const val = (cp as any)[dbField];
-          if (val != null && Number(val) > 0) newPrices[key] = Number(val);
-        });
-      }
+      Object.entries(COUNT_MAP).forEach(([key, dbField]) => {
+        const val = (p as any)[dbField];
+        if (val != null && Number(val) > 0) newCounts[key] = Number(val);
+      });
+      Object.entries(AREA_MAP).forEach(([key, dbField]) => {
+        const val = (p as any)[dbField];
+        if (val != null && Number(val) > 0) newAreas[key] = Number(val);
+      });
+      Object.entries(PRICE_MAP).forEach(([key, dbField]) => {
+        const val = (p as any)[dbField];
+        if (val != null && Number(val) > 0) newPrices[key] = Number(val);
+      });
 
       setCounts(newCounts);
       setAreas(newAreas);
       setPrices(newPrices);
       setHasUnsavedChanges(false);
-    } else if (projectQuery.data) {
+    } else {
       // Smart auto-fill: distribute units based on 40/40/20 ratios
-      // Only when no saved data exists (first time opening)
       const sellableRes = i.gfaResidential * i.efficiencyResidential;
       const sellableRetail = i.gfaRetail * i.efficiencyRetail;
       const sellableOffice = i.gfaOffice * i.efficiencyOffice;
 
       const smartCounts: Record<string, number> = { onebed: 0, twobed: 0, threebed: 0, retail_small: 0, retail_medium: 0, retail_large: 0, office_small: 0, office_medium: 0, office_large: 0 };
 
-      // Residential: 40% onebed, 40% twobed, 20% threebed
       if (sellableRes > 0) {
         const resArea40 = sellableRes * 0.4;
         const resArea20 = sellableRes * 0.2;
@@ -216,8 +204,6 @@ export default function PricingPage() {
         smartCounts.twobed = Math.round(resArea40 / DEFAULT_AREAS.twobed);
         smartCounts.threebed = Math.round(resArea20 / DEFAULT_AREAS.threebed);
       }
-
-      // Retail: 40% small, 40% medium, 20% large
       if (sellableRetail > 0) {
         const retArea40 = sellableRetail * 0.4;
         const retArea20 = sellableRetail * 0.2;
@@ -225,8 +211,6 @@ export default function PricingPage() {
         smartCounts.retail_medium = Math.round(retArea40 / DEFAULT_AREAS.retail_medium);
         smartCounts.retail_large = Math.round(retArea20 / DEFAULT_AREAS.retail_large);
       }
-
-      // Office: 40% small, 40% medium, 20% large
       if (sellableOffice > 0) {
         const offArea40 = sellableOffice * 0.4;
         const offArea20 = sellableOffice * 0.2;
@@ -238,66 +222,37 @@ export default function PricingPage() {
       setCounts(smartCounts);
       setAreas({ ...DEFAULT_AREAS });
       setPrices({ ...DEFAULT_PRICES });
-      setHasUnsavedChanges(true); // Mark as unsaved so user knows to save after reviewing
-    } else {
-      setCounts({ onebed: 0, twobed: 0, threebed: 0, retail_small: 0, retail_medium: 0, retail_large: 0, office_small: 0, office_medium: 0, office_large: 0 });
-      setAreas({ ...DEFAULT_AREAS });
-      setPrices({ ...DEFAULT_PRICES });
+      setHasUnsavedChanges(true);
     }
-  }, [selectedProjectId, marketOverviewQuery.data, marketOverviewQuery.isLoading, competitionPricingQuery.data, competitionPricingQuery.isLoading, projectQuery.data, projectQuery.isLoading, i]);
+  }, [selectedProjectId, projectQuery.data, projectQuery.isLoading, i]);
 
-  // Manual Save function
+  // Manual Save function - saves directly to project record
   const handleSave = useCallback(async () => {
     if (!selectedProjectId || !user) return;
     setIsSaving(true);
     try {
-      const moData: any = { projectId: selectedProjectId };
+      const updateData: any = { id: selectedProjectId };
       Object.entries(COUNT_MAP).forEach(([key, dbField]) => {
-        moData[dbField] = counts[key] || 0;
+        updateData[dbField] = counts[key] || 0;
       });
       Object.entries(AREA_MAP).forEach(([key, dbField]) => {
-        moData[dbField] = areas[key] || 0;
+        updateData[dbField] = areas[key] || 0;
       });
-      moData.residentialStudioCount = 0;
-      moData.residentialStudioAvgArea = 0;
-      moData.residentialStudioPct = 0;
-      await saveMarketOverview.mutateAsync(moData);
-
-      const cpData: any = { projectId: selectedProjectId };
       Object.entries(PRICE_MAP).forEach(([key, dbField]) => {
-        cpData[dbField] = prices[key] || 0;
+        updateData[dbField] = prices[key] || 0;
       });
-      cpData.opt1brPrice = prices.onebed || 0;
-      cpData.opt2brPrice = prices.twobed || 0;
-      cpData.opt3brPrice = prices.threebed || 0;
-      cpData.optRetailSmallPrice = prices.retail_small || 0;
-      cpData.optRetailMediumPrice = prices.retail_medium || 0;
-      cpData.optRetailLargePrice = prices.retail_large || 0;
-      cpData.optOfficeSmallPrice = prices.office_small || 0;
-      cpData.optOfficeMediumPrice = prices.office_medium || 0;
-      cpData.optOfficeLargePrice = prices.office_large || 0;
-      cpData.cons1brPrice = prices.onebed || 0;
-      cpData.cons2brPrice = prices.twobed || 0;
-      cpData.cons3brPrice = prices.threebed || 0;
-      cpData.consRetailSmallPrice = prices.retail_small || 0;
-      cpData.consRetailMediumPrice = prices.retail_medium || 0;
-      cpData.consRetailLargePrice = prices.retail_large || 0;
-      cpData.consOfficeSmallPrice = prices.office_small || 0;
-      cpData.consOfficeMediumPrice = prices.office_medium || 0;
-      cpData.consOfficeLargePrice = prices.office_large || 0;
-      cpData.baseStudioPrice = 0;
-      cpData.optStudioPrice = 0;
-      cpData.consStudioPrice = 0;
-      await saveCompetitionPricing.mutateAsync(cpData);
+      await updateProject.mutateAsync(updateData);
+      // Invalidate project query to refresh data everywhere
+      projectQuery.refetch();
 
       setHasUnsavedChanges(false);
-      toast({ title: "تم الحفظ ✓", description: "تم حفظ بيانات التسعير بنجاح" });
+      toast({ title: "تم الحفظ ✓", description: "تم حفظ بيانات التسعير في المشروع" });
     } catch (err) {
       toast({ title: "خطأ", description: "فشل حفظ البيانات", variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
-  }, [selectedProjectId, user, counts, areas, prices, saveMarketOverview, saveCompetitionPricing, toast]);
+  }, [selectedProjectId, user, counts, areas, prices, updateProject, toast, projectQuery]);
 
   const updateCount = useCallback((key: string, val: number) => {
     setCounts(prev => ({ ...prev, [key]: Math.max(0, val) }));

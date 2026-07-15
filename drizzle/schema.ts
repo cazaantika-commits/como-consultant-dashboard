@@ -1146,6 +1146,36 @@ export const projects = mysqlTable("projects", {
 	handoverMonths: int().default(2),
 	startDate: varchar({ length: 20 }),
 	financingScenario: varchar({ length: 50 }).default('offplan_escrow'),
+	// Unit distribution - counts (0 = auto-calculate from GFA)
+	residential1brCount: int().default(0),
+	residential2brCount: int().default(0),
+	residential3brCount: int().default(0),
+	retailSmallCount: int().default(0),
+	retailMediumCount: int().default(0),
+	retailLargeCount: int().default(0),
+	officeSmallCount: int().default(0),
+	officeMediumCount: int().default(0),
+	officeLargeCount: int().default(0),
+	// Unit distribution - areas (sqft)
+	residential1brArea: int().default(750),
+	residential2brArea: int().default(1300),
+	residential3brArea: int().default(1650),
+	retailSmallArea: int().default(500),
+	retailMediumArea: int().default(1000),
+	retailLargeArea: int().default(2000),
+	officeSmallArea: int().default(600),
+	officeMediumArea: int().default(1200),
+	officeLargeArea: int().default(2000),
+	// Unit distribution - prices per sqft
+	residential1brPrice: int().default(1550),
+	residential2brPrice: int().default(1500),
+	residential3brPrice: int().default(1450),
+	retailSmallPrice: int().default(2500),
+	retailMediumPrice: int().default(2300),
+	retailLargePrice: int().default(2100),
+	officeSmallPrice: int().default(1800),
+	officeMediumPrice: int().default(1700),
+	officeLargePrice: int().default(1600),
 });
 
 export const proposalComparisons = mysqlTable("proposalComparisons", {

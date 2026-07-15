@@ -894,3 +894,4 @@
 - [x] Remove studio from PricingPage unit types
 - [x] Pre-fill default unit distributions for all 6 projects (no studio)
 - [x] Make ProjectCardOffplanPage fields editable (BUA, GFA, costs, dates, etc.) with save button
+- [x] Rebuild PricingPage as dynamic Excel-like system (no separate save tables, compute from project GFA, save overrides to project record)
