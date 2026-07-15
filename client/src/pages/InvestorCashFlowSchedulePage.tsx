@@ -811,19 +811,18 @@ function SectionGroup({
           ))}
           {/* Validation Column */}
           {(() => {
+            // For escrow items or fully paid items (no distribution needed), show dash
+            if (row.funder === "escrow" || row.paid >= row.totalCost) {
+              return <td className="border border-gray-200 px-1 py-1.5 text-center text-gray-400">–</td>;
+            }
             const distributedSum = row.designMonths.reduce((s, v) => s + v, 0) + row.constructionMonths.reduce((s, v) => s + v, 0);
-            const expected = row.funder === "escrow" ? 0 : row.totalCost;
+            // Compare with investorAmount (the actual amount being distributed)
+            const expected = row.investorAmount;
             const diff = Math.abs(distributedSum - expected);
             const isMatch = diff < 1;
             return (
               <td className={`border border-gray-200 px-1 py-1.5 text-center font-bold ${isMatch ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-100'}`}>
-                {row.funder === "escrow" ? (
-                  <span className="text-gray-400">–</span>
-                ) : isMatch ? (
-                  "✓"
-                ) : (
-                  <span title={`الفرق: ${fmt(diff)}`}>✗ {fmt(diff)}</span>
-                )}
+                {isMatch ? "✓" : <span title={`الفرق: ${fmt(diff)}`}>✗ {fmt(diff)}</span>}
               </td>
             );
           })()}

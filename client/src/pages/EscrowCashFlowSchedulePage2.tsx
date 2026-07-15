@@ -875,6 +875,10 @@ export default function EscrowCashFlowSchedulePage2() {
                         ))}
                         {/* Validation Column */}
                         {(() => {
+                          // Skip revenue rows or fully pre-paid items
+                          if (row.isRevenue || row.openingBalance >= row.escrowAmount) {
+                            return <td className="border border-gray-200 px-1 py-1.5 text-center text-gray-400">–</td>;
+                          }
                           const distributedSum = row.designMonths.reduce((s, v) => s + v, 0) + row.constructionMonths.reduce((s, v) => s + v, 0) + row.postConstructionMonths.reduce((s, v) => s + v, 0);
                           const expected = row.escrowAmount;
                           const diff = Math.abs(distributedSum - expected);
