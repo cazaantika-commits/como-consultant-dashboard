@@ -133,16 +133,18 @@ export default function EscrowCashFlowSchedulePage2() {
     // ═══════════════════════════════════════════
     // SCENARIO-SPECIFIC PARAMETERS
     // ═══════════════════════════════════════════
-    // Scenario 1: Opening balance = 20% deposit, revenue from month 1, commission from month 1
-    // Scenario 2: No deposit (opening = 0), 20% paid to contractor in months 2-4,
-    //             revenue from month 5, commission from month 5, marketing from month 1 over 12 months
-    //             5 items (sorting, RERA reg, RERA units, NOC, escrow fee) in month 3
+    // Scenario 1: Opening balance = 20% deposit (penultimate design month), investor pays 10% month 1
+    //             Revenue from construction month 4, commission from month 6
+    //             Marketing from penultimate design month, sorting/RERA/NOC/escrow fee in penultimate design month
+    // Scenario 2: No deposit, investor pays 10% month 1 + 20% (4%+7%+9%) months 2-3-4
+    //             Revenue from construction month 6, commission from month 9
+    //             Marketing from construction month 4, sorting/RERA/NOC/escrow fee in construction month 4
 
     const isScenario2 = scenario === "offplan_construction";
     const isScenario3 = scenario === "no_offplan";
     const openingBalance = (isScenario2 || isScenario3) ? 0 : escrowDeposit;
-    const revenueStartMonth = isScenario2 ? 4 : 0; // 0-indexed: month 5 = index 4
-    const commissionStartMonth = isScenario2 ? 4 : 0; // same as revenue
+    const revenueStartMonth = isScenario2 ? 5 : 3; // 0-indexed: S2=month 6(idx 5), S1=month 4(idx 3)
+    const commissionStartMonth = isScenario2 ? 8 : 5; // 0-indexed: S2=month 9(idx 8), S1=month 6(idx 5)
 
     // Scenario 3: post-construction months = 3 (not 12)
     const effectivePostDuration = isScenario3 ? 3 : postDuration;
@@ -156,20 +158,46 @@ export default function EscrowCashFlowSchedulePage2() {
     const emptyEffectivePost = () => new Array(effectivePostDuration).fill(0);
 
     // ─── 1. تكلفة الإنشاء ───
+    // Scenario 1 (escrow): 10% paid by investor directly (NOT from escrow), escrow pays:
+    //   Month 2: 4%, Month 3: 7%, Month 4: 9%, Month 5+: 60% S-Curve, Post: 5% completion + 5% retention = 90%
+    // Scenario 2 (escrow): Investor pays 10% + 20% (months 1-4) directly, escrow pays:
+    //   Month 5+: 60% S-Curve, Post: 5% completion + 5% retention = 70%
     {
-      const sCurveTotal = constructionCost * 0.80;
+      const sCurveTotal = constructionCost * 0.60;
       const completionPayment = constructionCost * 0.05;
       const retentionPayment = constructionCost * 0.05;
 
       const cMonths = emptyConstruction();
-      // All scenarios: 80% S-Curve over construction months
-      for (let i = 0; i < constructionDuration; i++) {
-        cMonths[i] = sCurveTotal * sCurve[i];
+
+      if (isScenario2) {
+        // Scenario 2: investor pays 30% directly (10%+4%+7%+9%), escrow pays 60% S-Curve from month 5
+        const remainingMonths = constructionDuration - 4;
+        const sCurveRemaining = generateSCurve(remainingMonths);
+        for (let i = 0; i < remainingMonths; i++) {
+          cMonths[4 + i] = sCurveTotal * sCurveRemaining[i];
+        }
+      } else if (!isScenario3) {
+        // Scenario 1: investor pays 10% directly (month 1), escrow pays 4%+7%+9%+60% S-Curve
+        // Escrow starts paying from month 2
+        cMonths[1] = constructionCost * 0.04; // Month 2
+        cMonths[2] = constructionCost * 0.07; // Month 3
+        cMonths[3] = constructionCost * 0.09; // Month 4
+        // Month 5 onwards: 60% S-Curve
+        const remainingMonths = constructionDuration - 4;
+        const sCurveRemaining = generateSCurve(remainingMonths);
+        for (let i = 0; i < remainingMonths; i++) {
+          cMonths[4 + i] = sCurveTotal * sCurveRemaining[i];
+        }
+      } else {
+        // Scenario 3: all construction from escrow, 80% S-Curve
+        const sCurve80 = constructionCost * 0.80;
+        for (let i = 0; i < constructionDuration; i++) {
+          cMonths[i] = sCurve80 * sCurve[i];
+        }
       }
 
       const pMonths = emptyEffectivePost();
       if (isScenario3) {
-        // Scenario 3: 5% completion in post month 2 (index 1), 5% retention in post month 3 (index 2)
         pMonths[1] = completionPayment;
         if (effectivePostDuration > 2) pMonths[2] = retentionPayment;
       } else {
@@ -177,41 +205,21 @@ export default function EscrowCashFlowSchedulePage2() {
         if (effectivePostDuration > 11) pMonths[11] = retentionPayment; // post-construction month 12 (index 11)
       }
 
-      const escrowAmount = constructionCost * 0.90; // 90% always
-      const remaining = constructionCost * r.constructionEscrowShare; // 70%
+      // Escrow amount: S1 = 90% (all except 10% advance), S2 = 70% (all except 30%)
+      const escrowAmount = isScenario2 
+        ? constructionCost * 0.70 
+        : constructionCost * 0.90;
 
       rows.push({
         label: "تكلفة الإنشاء",
         totalCost: constructionCost,
         escrowAmount,
         openingBalance: (isScenario2 || isScenario3) ? 0 : escrowDeposit,
-        remainingToSpend: remaining,
+        remainingToSpend: escrowAmount,
         section: "الإنشاء",
         designMonths: emptyDesign(),
         constructionMonths: cMonths,
         postConstructionMonths: pMonths,
-      });
-    }
-
-    // ─── 1b. دفعات 20% للمقاول (سيناريو 2 فقط) ───
-    if (isScenario2 && !isScenario3) {
-      const contractorPayment = escrowDeposit; // 20% of construction cost
-      const perMonth = contractorPayment / 3;
-      const cMonths = emptyConstruction();
-      cMonths[1] = perMonth; // month 2 (index 1)
-      cMonths[2] = perMonth; // month 3 (index 2)
-      cMonths[3] = perMonth; // month 4 (index 3)
-
-      rows.push({
-        label: "دفعات 20% للمقاول (إنجاز مسبق)",
-        totalCost: contractorPayment,
-        escrowAmount: contractorPayment,
-        openingBalance: 0,
-        remainingToSpend: contractorPayment,
-        section: "الإنشاء",
-        designMonths: emptyDesign(),
-        constructionMonths: cMonths,
-        postConstructionMonths: emptyEffectivePost(),
       });
     }
 
@@ -330,8 +338,8 @@ export default function EscrowCashFlowSchedulePage2() {
     }
 
     // ─── 7. عمولة المبيعات ───
-    // Scenario 1: first 12 months of construction (5%)
-    // Scenario 2: starts from month 5 (index 4) over 12 months (5%)
+    // Scenario 1: starts from construction month 6 (index 5) over 12 months (5%)
+    // Scenario 2: starts from construction month 9 (index 8) over 12 months (5%)
     // Scenario 3: 2% over 3 post-construction months
     {
       const amount = isScenario3
@@ -341,7 +349,6 @@ export default function EscrowCashFlowSchedulePage2() {
       const pMonths = emptyEffectivePost();
 
       if (isScenario3) {
-        // Distribute over 3 post-construction months
         const perMonth = amount / effectivePostDuration;
         for (let i = 0; i < effectivePostDuration; i++) {
           pMonths[i] = perMonth;
@@ -349,8 +356,16 @@ export default function EscrowCashFlowSchedulePage2() {
       } else {
         const commissionMonths = 12;
         const perMonth = amount / commissionMonths;
-        for (let i = commissionStartMonth; i < commissionStartMonth + commissionMonths && i < constructionDuration; i++) {
+        let monthsPlaced = 0;
+        // Place in construction months
+        for (let i = commissionStartMonth; i < constructionDuration && monthsPlaced < commissionMonths; i++) {
           cMonths[i] = perMonth;
+          monthsPlaced++;
+        }
+        // Overflow into post-construction if needed
+        for (let i = 0; i < effectivePostDuration && monthsPlaced < commissionMonths; i++) {
+          pMonths[i] = perMonth;
+          monthsPlaced++;
         }
       }
 
@@ -368,27 +383,58 @@ export default function EscrowCashFlowSchedulePage2() {
     }
 
     // ─── 8. التسويق ───
-    // Scenario 2: from month 1 over 12 months (2%)
+    // Scenario 1: starts from penultimate design month over 12 months (2%)
+    // Scenario 2: starts from construction month 4 (index 3) over 12 months (2%)
     // Scenario 3: over 3 post-construction months (1%)
-    if (isScenario2 || isScenario3) {
+    {
       const amount = isScenario3
         ? pr.totalRevenue * 0.01 // 1% for scenario 3
-        : costs.marketing; // 2% for scenario 2
+        : costs.marketing; // 2%
+      const dMonths = emptyDesign();
       const cMonths = emptyConstruction();
       const pMonths = emptyEffectivePost();
 
       if (isScenario3) {
-        // Distribute over 3 post-construction months
         const perMonth = amount / effectivePostDuration;
         for (let i = 0; i < effectivePostDuration; i++) {
           pMonths[i] = perMonth;
         }
       } else {
-        // Scenario 2: from month 1 over 12 months
         const marketingMonths = 12;
         const perMonth = amount / marketingMonths;
-        for (let i = 0; i < marketingMonths && i < constructionDuration; i++) {
-          cMonths[i] = perMonth;
+        let monthsPlaced = 0;
+
+        if (isScenario2) {
+          // Scenario 2: starts from construction month 4 (index 3)
+          for (let i = 3; i < constructionDuration && monthsPlaced < marketingMonths; i++) {
+            cMonths[i] = perMonth;
+            monthsPlaced++;
+          }
+          for (let i = 0; i < effectivePostDuration && monthsPlaced < marketingMonths; i++) {
+            pMonths[i] = perMonth;
+            monthsPlaced++;
+          }
+        } else {
+          // Scenario 1: starts from penultimate design month
+          const penultimateDesign = designDuration - 2; // 0-indexed
+          if (penultimateDesign >= 0) {
+            dMonths[penultimateDesign] = perMonth;
+            monthsPlaced++;
+          }
+          // Last design month
+          if (designDuration - 1 >= 0 && monthsPlaced < marketingMonths) {
+            dMonths[designDuration - 1] = perMonth;
+            monthsPlaced++;
+          }
+          // Continue into construction months
+          for (let i = 0; i < constructionDuration && monthsPlaced < marketingMonths; i++) {
+            cMonths[i] = perMonth;
+            monthsPlaced++;
+          }
+          for (let i = 0; i < effectivePostDuration && monthsPlaced < marketingMonths; i++) {
+            pMonths[i] = perMonth;
+            monthsPlaced++;
+          }
         }
       }
 
@@ -399,17 +445,19 @@ export default function EscrowCashFlowSchedulePage2() {
         openingBalance: 0,
         remainingToSpend: amount,
         section: "المبيعات والتسويق",
-        designMonths: emptyDesign(),
+        designMonths: dMonths,
         constructionMonths: cMonths,
         postConstructionMonths: pMonths,
       });
     }
 
     // ─── 9. رسوم الفرز ───
-    // Scenario 2: month 3 of construction
+    // Scenario 1: penultimate design month
+    // Scenario 2: construction month 4 (index 3)
     // Scenario 3: over 3 post-construction months
-    if (isScenario2 || isScenario3) {
+    if (!isScenario3 || isScenario3) {
       const amount = costs.sortingFee;
+      const dMonths = emptyDesign();
       const cMonths = emptyConstruction();
       const pMonths = emptyEffectivePost();
 
@@ -418,8 +466,12 @@ export default function EscrowCashFlowSchedulePage2() {
         for (let i = 0; i < effectivePostDuration; i++) {
           pMonths[i] = perMonth;
         }
+      } else if (isScenario2) {
+        cMonths[3] = amount; // construction month 4 (index 3)
       } else {
-        cMonths[2] = amount; // month 3 (index 2)
+        // Scenario 1: penultimate design month
+        const penultimateDesign = designDuration - 2;
+        if (penultimateDesign >= 0) dMonths[penultimateDesign] = amount;
       }
 
       rows.push({
@@ -429,17 +481,26 @@ export default function EscrowCashFlowSchedulePage2() {
         openingBalance: 0,
         remainingToSpend: amount,
         section: "الرسوم الحكومية والتنظيمية",
-        designMonths: emptyDesign(),
+        designMonths: dMonths,
         constructionMonths: cMonths,
         postConstructionMonths: pMonths,
       });
     }
 
-    // ─── 10. تسجيل بيع على الخارطة - ريرا (سيناريو 2 فقط — شهر 3) ───
-    if (isScenario2 && !isScenario3) {
+    // ─── 10. تسجيل بيع على الخارطة - ريرا ───
+    // Scenario 1: penultimate design month
+    // Scenario 2: construction month 4 (index 3)
+    if (!isScenario3) {
       const amount = i.reraProjectReg;
+      const dMonths = emptyDesign();
       const cMonths = emptyConstruction();
-      cMonths[2] = amount;
+
+      if (isScenario2) {
+        cMonths[3] = amount; // construction month 4
+      } else {
+        const penultimateDesign = designDuration - 2;
+        if (penultimateDesign >= 0) dMonths[penultimateDesign] = amount;
+      }
 
       rows.push({
         label: "تسجيل بيع على الخارطة - ريرا",
@@ -448,17 +509,19 @@ export default function EscrowCashFlowSchedulePage2() {
         openingBalance: 0,
         remainingToSpend: amount,
         section: "ريرا (التنظيم العقاري)",
-        designMonths: emptyDesign(),
+        designMonths: dMonths,
         constructionMonths: cMonths,
         postConstructionMonths: emptyEffectivePost(),
       });
     }
 
     // ─── 11. تسجيل الوحدات - ريرا ───
-    // Scenario 2: month 3 of construction
+    // Scenario 1: penultimate design month
+    // Scenario 2: construction month 4 (index 3)
     // Scenario 3: over 3 post-construction months
-    if (isScenario2 || isScenario3) {
+    {
       const amount = costs.reraUnits;
+      const dMonths = emptyDesign();
       const cMonths = emptyConstruction();
       const pMonths = emptyEffectivePost();
 
@@ -467,8 +530,11 @@ export default function EscrowCashFlowSchedulePage2() {
         for (let i = 0; i < effectivePostDuration; i++) {
           pMonths[i] = perMonth;
         }
+      } else if (isScenario2) {
+        cMonths[3] = amount; // construction month 4
       } else {
-        cMonths[2] = amount;
+        const penultimateDesign = designDuration - 2;
+        if (penultimateDesign >= 0) dMonths[penultimateDesign] = amount;
       }
 
       rows.push({
@@ -478,17 +544,19 @@ export default function EscrowCashFlowSchedulePage2() {
         openingBalance: 0,
         remainingToSpend: amount,
         section: "ريرا (التنظيم العقاري)",
-        designMonths: emptyDesign(),
+        designMonths: dMonths,
         constructionMonths: cMonths,
         postConstructionMonths: pMonths,
       });
     }
 
     // ─── 12. رسوم NOC للبيع ───
-    // Scenario 2: month 3 of construction
+    // Scenario 1: penultimate design month
+    // Scenario 2: construction month 4 (index 3)
     // Scenario 3: over 3 post-construction months
-    if (isScenario2 || isScenario3) {
+    {
       const amount = i.nocSale;
+      const dMonths = emptyDesign();
       const cMonths = emptyConstruction();
       const pMonths = emptyEffectivePost();
 
@@ -497,8 +565,11 @@ export default function EscrowCashFlowSchedulePage2() {
         for (let i = 0; i < effectivePostDuration; i++) {
           pMonths[i] = perMonth;
         }
+      } else if (isScenario2) {
+        cMonths[3] = amount; // construction month 4
       } else {
-        cMonths[2] = amount;
+        const penultimateDesign = designDuration - 2;
+        if (penultimateDesign >= 0) dMonths[penultimateDesign] = amount;
       }
 
       rows.push({
@@ -508,17 +579,26 @@ export default function EscrowCashFlowSchedulePage2() {
         openingBalance: 0,
         remainingToSpend: amount,
         section: "الرسوم الحكومية والتنظيمية",
-        designMonths: emptyDesign(),
+        designMonths: dMonths,
         constructionMonths: cMonths,
         postConstructionMonths: pMonths,
       });
     }
 
-    // ─── 13. رسوم حساب الضمان (سيناريو 2 فقط — شهر 3) ───
-    if (isScenario2 && !isScenario3) {
+    // ─── 13. رسوم حساب الضمان ───
+    // Scenario 1: penultimate design month
+    // Scenario 2: construction month 4 (index 3)
+    if (!isScenario3) {
       const amount = i.escrowAccountFee;
+      const dMonths = emptyDesign();
       const cMonths = emptyConstruction();
-      cMonths[2] = amount;
+
+      if (isScenario2) {
+        cMonths[3] = amount; // construction month 4
+      } else {
+        const penultimateDesign = designDuration - 2;
+        if (penultimateDesign >= 0) dMonths[penultimateDesign] = amount;
+      }
 
       rows.push({
         label: "رسوم حساب الضمان",
@@ -527,7 +607,7 @@ export default function EscrowCashFlowSchedulePage2() {
         openingBalance: 0,
         remainingToSpend: amount,
         section: "الرسوم الحكومية والتنظيمية",
-        designMonths: emptyDesign(),
+        designMonths: dMonths,
         constructionMonths: cMonths,
         postConstructionMonths: emptyEffectivePost(),
       });
@@ -535,8 +615,8 @@ export default function EscrowCashFlowSchedulePage2() {
 
     // ═══════════════════════════════════════════
     // REVENUE ROW — إيرادات المبيعات
-    // Scenario 1: 80% S-Curve from month 1 + 20% equally over 12 post-construction months
-    // Scenario 2: 80% S-Curve from month 5 + 20% equally over 12 post-construction months
+    // Scenario 1: 80% S-Curve from construction month 4 (index 3) + 20% over 12 post-construction months
+    // Scenario 2: 80% S-Curve from construction month 6 (index 5) + 20% over 12 post-construction months
     // Scenario 3: 100% equally over 3 post-construction months (no construction revenue)
     // ═══════════════════════════════════════════
     const revenueRow: CostRow = (() => {
@@ -546,7 +626,6 @@ export default function EscrowCashFlowSchedulePage2() {
       const pMonths = emptyEffectivePost();
 
       if (isScenario3) {
-        // Scenario 3: ALL revenue over 3 post-construction months
         const perMonth = totalRevenue / effectivePostDuration;
         for (let i = 0; i < effectivePostDuration; i++) {
           pMonths[i] = perMonth;
@@ -555,18 +634,11 @@ export default function EscrowCashFlowSchedulePage2() {
         const constructionRevenue = totalRevenue * 0.80;
         const postRevenue = totalRevenue * 0.20;
 
-        if (isScenario2) {
-          // Revenue starts from month 5 (index 4)
-          const remainingMonths = constructionDuration - revenueStartMonth;
-          const revSCurve = generateSCurve(remainingMonths);
-          for (let i = 0; i < remainingMonths; i++) {
-            cMonths[revenueStartMonth + i] = constructionRevenue * revSCurve[i];
-          }
-        } else {
-          // Scenario 1: S-Curve over all construction months
-          for (let i = 0; i < constructionDuration; i++) {
-            cMonths[i] = constructionRevenue * sCurve[i];
-          }
+        // S1: starts from month 4 (index 3), S2: starts from month 6 (index 5)
+        const remainingMonths = constructionDuration - revenueStartMonth;
+        const revSCurve = generateSCurve(remainingMonths);
+        for (let i = 0; i < remainingMonths; i++) {
+          cMonths[revenueStartMonth + i] = constructionRevenue * revSCurve[i];
         }
 
         const postPerMonth = postRevenue / effectivePostDuration;
