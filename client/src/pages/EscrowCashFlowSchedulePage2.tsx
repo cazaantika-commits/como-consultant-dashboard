@@ -829,9 +829,9 @@ export default function EscrowCashFlowSchedulePage2() {
                     {sectionRows.map((row, idx) => (
                       <tr
                         key={`${section}-${idx}`}
-                        className={`hover:bg-blue-50/30 ${row.isRevenue ? "bg-green-50/50" : ""}`}
+                        className={`hover:bg-blue-50/30 ${row.isRevenue ? "bg-green-100 font-bold border-t-2 border-b-2 border-green-400" : ""}`}
                       >
-                        <td className="sticky right-0 z-10 bg-white border border-gray-200 px-2 py-1.5 text-right text-gray-800 whitespace-nowrap">
+                        <td className={`sticky right-0 z-10 border border-gray-200 px-2 py-1.5 text-right whitespace-nowrap ${row.isRevenue ? "bg-green-100 text-green-900 font-bold" : "bg-white text-gray-800"}`}>
                           {row.label}
                         </td>
                         <td className="border border-gray-200 px-2 py-1.5 text-center text-gray-800">
