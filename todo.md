@@ -935,3 +935,12 @@
 - [x] Audit: Verify escrow liquidation amounts match between escrow page and investor engine, verify all totals are consistent
 - [x] Fix: Investor engine month 13 — investor receives full 5% revenueRetention (construction retention paid to contractor from escrow, not deducted from investor)
 - [x] Fix: Escrow page summary cards and footer now include totalLiquidation in total outflows
+- [ ] Fix 5% retention: verify it equals exactly 5% of totalRevenue in escrow liquidation display
+- [ ] Rebuild revenue logic with proper Payment Plan (10% booking + 50% milestones + 40% post-completion) × S-Curve unit sales
+- [ ] Create detailed Excel payment plan table for user to review with broker
+
+## إصلاح حسابات الاحتجاز في التصفية (شهر 13)
+- [x] إصلاح revenueRetention = escrowRevenue * 0.05 (وليس totalRevenue * 0.05) في investorCashFlowEngine
+- [x] إصلاح revenueRetention = escrowRevenue * 0.05 في EscrowCashFlowSchedulePage2
+- [x] إصلاح شهر 13 في investorCashFlowEngine: المستثمر يستلم (revenueRetention - constructionRetention) وليس كامل revenueRetention
+- [x] إصلاح شهر 13 في EscrowCashFlowSchedulePage2: عرض دفعة المقاول (constructionRetention) + صافي التحويل للمالك (revenueRetention - constructionRetention) كسطرين منفصلين

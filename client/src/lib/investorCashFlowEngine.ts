@@ -888,7 +888,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
     // صافي الضمان = إيرادات 80% - مصروفات الضمان الكلية - 5% احتجاز إيرادات
     // costs.totalEscrow يشمل: constructionEscrow(70%) + supervision + govFees(90%) + salesCommission + reraAuditor + reraInspection + surveyor
     const escrowRevenue = totalRevenue * 0.80;
-    const revenueRetention = totalRevenue * 0.05;
+    const revenueRetention = escrowRevenue * 0.05;
     const escrowLiquidation = escrowRevenue - costs.totalEscrow - revenueRetention;
     const escrowLiqPost = emptyPost();
     escrowLiqPost[2] = escrowLiquidation; // شهر 3 (index 2)
@@ -907,15 +907,18 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
     });
 
     // ─── تصفية حساب الضمان (دفعة 2: شهر 13 بعد الإنجاز) ───
-    // 5% احتجاز إيرادات يُحرر للمالك بالكامل (5% إنشاء تُدفع للمقاول من رصيد الضمان — لا تُخصم من المالك)
+    // 5% احتجاز إيرادات يُحرر — لكن يُخصم منه 5% احتجاز المقاول (تُدفع للمقاول من الضمان)
+    // المستثمر يستلم: revenueRetention - constructionRetention
+    const constructionRetention = constructionCost * 0.05;
+    const month13ToInvestor = revenueRetention - constructionRetention;
     const escrowRetPost = emptyPost();
-    escrowRetPost[12] = revenueRetention; // شهر 13 (index 12)
+    escrowRetPost[12] = month13ToInvestor; // شهر 13 (index 12)
     rows.push({
-      label: "تصفية حساب الضمان (دفعة 2 - احتجاز)",
-      totalCost: revenueRetention,
-      investorAmount: revenueRetention,
+      label: "تصفية حساب الضمان (دفعة 2 - صافي الاحتجاز)",
+      totalCost: month13ToInvestor,
+      investorAmount: month13ToInvestor,
       paid: 0,
-      unpaid: revenueRetention,
+      unpaid: month13ToInvestor,
       funder: "investor",
       section: "الإيرادات",
       designMonths: emptyDesign(),

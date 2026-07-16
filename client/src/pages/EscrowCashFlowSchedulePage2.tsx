@@ -449,7 +449,7 @@ export default function EscrowCashFlowSchedulePage2() {
     if (!isScenario3) {
       const totalRevenue = pr.totalRevenue;
       const escrowRevenue = totalRevenue * 0.80;
-      const revenueRetention = totalRevenue * 0.05;
+      const revenueRetention = escrowRevenue * 0.05;
       const constructionRetention = constructionCost * 0.05;
       // دفعة 1: شهر 3 بعد الإنجاز — تحويل الرصيد للمالك (ناقص الاحتجازين)
       const liquidationAmount = escrowRevenue - costs.totalEscrow - revenueRetention;
@@ -468,20 +468,37 @@ export default function EscrowCashFlowSchedulePage2() {
         postConstructionMonths: liqPost1,
       });
 
-      // دفعة 2: شهر 13 بعد الإنجاز — تحرير احتجاز الإيرادات للمالك
-      const liqPost2 = emptyEffectivePost();
-      liqPost2[12] = revenueRetention; // index 12 = month 13
+      // دفعة 2أ: شهر 13 بعد الإنجاز — دفع احتجاز المقاول (5% من تكلفة الإنشاء)
+      const liqPost2a = emptyEffectivePost();
+      liqPost2a[12] = constructionRetention; // index 12 = month 13
       liquidationRows.push({
-        label: "تحرير احتجاز الإيرادات للمالك (5%)",
-        totalCost: revenueRetention,
-        escrowAmount: revenueRetention,
+        label: "دفع احتجاز المقاول (5% إنشاء)",
+        totalCost: constructionRetention,
+        escrowAmount: constructionRetention,
         openingBalance: 0,
-        remainingToSpend: revenueRetention,
+        remainingToSpend: constructionRetention,
         section: "التصفية",
         isRevenue: false,
         designMonths: emptyDesign(),
         constructionMonths: emptyConstruction(),
-        postConstructionMonths: liqPost2,
+        postConstructionMonths: liqPost2a,
+      });
+
+      // دفعة 2ب: شهر 13 بعد الإنجاز — تحويل صافي الاحتجاز للمالك
+      const netRetentionToOwner = revenueRetention - constructionRetention;
+      const liqPost2b = emptyEffectivePost();
+      liqPost2b[12] = netRetentionToOwner; // index 12 = month 13
+      liquidationRows.push({
+        label: "تحويل صافي الاحتجاز للمالك",
+        totalCost: netRetentionToOwner,
+        escrowAmount: netRetentionToOwner,
+        openingBalance: 0,
+        remainingToSpend: netRetentionToOwner,
+        section: "التصفية",
+        isRevenue: false,
+        designMonths: emptyDesign(),
+        constructionMonths: emptyConstruction(),
+        postConstructionMonths: liqPost2b,
       });
     }
 
