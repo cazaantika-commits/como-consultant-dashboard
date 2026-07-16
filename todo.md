@@ -928,3 +928,4 @@
 - [x] Bug: 20% direct revenue in investor cash flow now reduces net withdrawals — cumulative calculation subtracts revenue, added “صافي التدفق الشهري” row showing expenses minus revenue
 - [x] Add escrow liquidation as revenue in investor cash flow: Dufعة 1 (month 3 post = escrow net minus 5% retention), Dufعة 2 (month 13 = 5% retention)
 - [x] Add escrow liquidation revenue to investor cash flow: Month 3 post = escrow net (revenue - expenses - 5% revenue retention - 5% construction retention), Month 13 = 5% revenue retention minus 5% construction retention (net after paying contractor)
+- [x] Rewrite consolidated page to be pure reflection of investorCashFlowEngine (no duplicated escrow math — reads directly from engine outputs)

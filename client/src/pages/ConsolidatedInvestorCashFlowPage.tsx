@@ -5,19 +5,10 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import {
   computeInvestorCashFlow,
   type Scenario,
-  type CashFlowResult,
-  type CostRow,
 } from "@/lib/investorCashFlowEngine";
 import {
   dbProjectToInputs,
-  dbProjectToRates,
-  calculateProjectFormulas,
-  calculateCosts,
-  type ProjectInputs,
-  type ProjectRates,
 } from "@/lib/projectData";
-import { buildPricingUnits } from "@/lib/investorCashFlowEngine";
-import { calculatePricingFormulas } from "@/lib/projectData";
 import {
   Dialog,
   DialogContent,
@@ -74,32 +65,15 @@ function getMonthLabel(offset: number, globalStartYear: number, globalStartMonth
 
 // ═══════════════════════════════════════════
 // COMPUTE PROJECT CASH FLOW FOR CONSOLIDATED VIEW
-// Uses the shared engine, then flattens to a single timeline
+// Pure reflection of the shared investorCashFlowEngine — no independent calculations
 // ═══════════════════════════════════════════
 function computeProjectForConsolidated(project: any, scenario: Scenario): ProjectCashFlow {
-  // Call the shared engine (same logic as InvestorCashFlowSchedulePage)
+  // Call the shared engine (single source of truth)
   const result = computeInvestorCashFlow(project, scenario);
-
-  const i: ProjectInputs = dbProjectToInputs(project);
-  const r: ProjectRates = dbProjectToRates(project);
-  const projectFormulas = calculateProjectFormulas(i, r);
-  const pricingUnits = buildPricingUnits(project, i);
-  const pricingFormulas = calculatePricingFormulas(pricingUnits);
-  const costs = calculateCosts(projectFormulas, pricingFormulas, i, r);
-
-  const { constructionCost } = projectFormulas;
-  const { totalRevenue } = pricingFormulas;
   const { designDuration, constructionDuration, postDuration } = result;
 
-  const isScenario2 = scenario === "offplan_construction";
-  const isScenario3 = scenario === "no_offplan";
-  const isScenario4 = scenario === "rental";
-
-  // For consolidated view, S1/S2 need 13 months post-completion for escrow recovery
-  const consolidatedPostDuration = (isScenario3 || isScenario4) ? postDuration : 13;
-
-  // Flatten expenses from the engine result (design + construction + post)
-  const totalMonths = designDuration + constructionDuration + consolidatedPostDuration;
+  // Flatten engine arrays into a single timeline
+  const totalMonths = designDuration + constructionDuration + postDuration;
   const monthlyExpenses = new Array(totalMonths).fill(0);
   const monthlyRevenue2 = new Array(totalMonths).fill(0);
 
@@ -111,85 +85,38 @@ function computeProjectForConsolidated(project: any, scenario: Scenario): Projec
   for (let idx = 0; idx < constructionDuration; idx++) {
     monthlyExpenses[designDuration + idx] = result.constructionMonthlyTotals[idx];
   }
-  // Post expenses (from engine's postMonthlyTotals)
-  for (let idx = 0; idx < result.postDuration && idx < consolidatedPostDuration; idx++) {
+  // Post-construction expenses
+  for (let idx = 0; idx < postDuration; idx++) {
     monthlyExpenses[designDuration + constructionDuration + idx] = result.postMonthlyTotals[idx];
   }
 
-  // Revenue from engine's revenuePostTotals
-  for (let idx = 0; idx < result.postDuration && idx < consolidatedPostDuration; idx++) {
+  // Revenue from engine (already includes 20% direct + escrow liquidation payments)
+  for (let idx = 0; idx < postDuration; idx++) {
     monthlyRevenue2[designDuration + constructionDuration + idx] = result.revenuePostTotals[idx];
-  }
-
-  // ─── Escrow surplus recovery (S1/S2 only) ───
-  let escrowSurplusMonth3 = 0;
-  let escrowSurplusMonth13 = 0;
-  if (!isScenario3 && !isScenario4) {
-    // Calculate what escrow received (80% of revenue via S-Curve + 20% deposit in S1)
-    const escrowReceived80 = totalRevenue * 0.80;
-    const escrowDepositAmt = isScenario2 ? 0 : constructionCost * r.escrowDeposit;
-    const totalEscrowIn = escrowReceived80 + escrowDepositAmt;
-
-    // Calculate what escrow paid out
-    let escrowPaidOut = 0;
-    if (isScenario2) {
-      // S2: escrow pays from month 5 (60% S-Curve + 5% + 5% = 70%)
-      escrowPaidOut += constructionCost * 0.70;
-    } else {
-      // S1: escrow pays from month 2 (4%+7%+9%+60%+5%+5% = 90%)
-      escrowPaidOut += constructionCost * 0.90;
-    }
-    // Supervision from escrow
-    escrowPaidOut += costs.supervisionFee;
-    // Surveyor from escrow
-    escrowPaidOut += i.surveyorFee;
-    // Gov fees 90% from escrow
-    escrowPaidOut += i.govFeesTotal * 0.90;
-    // Sales commission from escrow
-    escrowPaidOut += costs.salesCommission;
-    // RERA auditor from escrow
-    escrowPaidOut += i.reraAuditorReport;
-    // RERA inspection from escrow
-    escrowPaidOut += i.reraInspection;
-
-    const escrowSurplus = totalEscrowIn - escrowPaidOut;
-    const retention5pct = totalRevenue * 0.05;
-
-    // Month 3 post: surplus minus 5% retention
-    escrowSurplusMonth3 = Math.max(0, escrowSurplus - retention5pct);
-    // Month 13 post: the 5% retention
-    escrowSurplusMonth13 = retention5pct;
-
-    // Add to revenue timeline
-    const postStart = designDuration + constructionDuration;
-    if (consolidatedPostDuration > 2) monthlyRevenue2[postStart + 2] += escrowSurplusMonth3;
-    if (consolidatedPostDuration > 12) monthlyRevenue2[postStart + 12] += escrowSurplusMonth13;
   }
 
   const monthlyNet = monthlyRevenue2.map((rev, idx) => rev - monthlyExpenses[idx]);
 
-  // startMonthOffset is calculated in the useMemo below (after we know the global start)
+  // Start date for timeline alignment
+  const i = dbProjectToInputs(project);
   const startDate = i.startDate || "2026-08";
-  const [startYear, startMonth] = startDate.split("-").map(Number);
-  // Placeholder offset — will be recalculated in useMemo with actual globalStart
-  const startMonthOffset = 0; // overridden below
 
   return {
     id: project.id,
     name: project.name || "مشروع بدون اسم",
     scenario,
-    startMonthOffset,
+    startMonthOffset: 0, // recalculated in useMemo
     designDuration,
     constructionDuration,
-    postDuration: consolidatedPostDuration,
+    postDuration,
     totalMonths,
     monthlyExpenses,
     monthlyRevenue: monthlyRevenue2,
     monthlyNet,
     totalExpenses: monthlyExpenses.reduce((s, v) => s + v, 0),
     totalRevenue: monthlyRevenue2.reduce((s, v) => s + v, 0),
-    escrowSurplusMonth3,
-    escrowSurplusMonth13,
+    escrowSurplusMonth3: 0, // kept for interface compat
+    escrowSurplusMonth13: 0,
     rows: result.rows,
   };
 }
