@@ -926,3 +926,5 @@
 - [x] Verify consolidated page escrow liquidation formula matches totalEscrow (correct: only includes construction, supervision, surveyor, govFees 90%, salesCommission, reraAuditor, reraInspection)
 - [x] Bug: Remove 5% construction completion (month 2 post) and 5% retention (month 13 post) from investor cash flow — these are escrow-funded, duplicated in investor table (fixed for S1/S2 only, S3/S4 investor pays 100% so they stay)
 - [x] Bug: 20% direct revenue in investor cash flow now reduces net withdrawals — cumulative calculation subtracts revenue, added “صافي التدفق الشهري” row showing expenses minus revenue
+- [x] Add escrow liquidation as revenue in investor cash flow: Dufعة 1 (month 3 post = escrow net minus 5% retention), Dufعة 2 (month 13 = 5% retention)
+- [x] Add escrow liquidation revenue to investor cash flow: Month 3 post = escrow net (revenue - expenses - 5% revenue retention - 5% construction retention), Month 13 = 5% revenue retention minus 5% construction retention (net after paying contractor)
