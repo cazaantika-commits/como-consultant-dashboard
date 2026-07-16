@@ -8,6 +8,12 @@ import {
   type Scenario,
   type CostRow,
 } from "@/lib/investorCashFlowEngine";
+import {
+  exportToExcel,
+  exportToHTML,
+  exportToPDF,
+  extractTableFromDOM,
+} from "@/lib/tableExport";
 
 // ═══════════════════════════════════════════
 // FORMAT HELPERS
@@ -16,6 +22,13 @@ function fmt(n: number): string {
   if (n === 0) return "–";
   return Math.round(n).toLocaleString("en-US");
 }
+
+const SCENARIO_LABELS: Record<Scenario, string> = {
+  offplan_escrow: "أوف بلان مع إيداع في حساب الضمان",
+  offplan_construction: "أوف بلان بعد إنجاز 20% من الإنشاء",
+  no_offplan: "تطوير بدون بيع على الخارطة",
+  rental: "تطوير للتأجير",
+};
 
 // ═══════════════════════════════════════════
 // MAIN COMPONENT
@@ -31,17 +44,52 @@ export default function InvestorCashFlowSchedulePage() {
     return computeInvestorCashFlow(projectQuery.data || null, scenario);
   }, [scenario, projectQuery.data]);
 
+  const projectName = projectQuery.data?.name || "مجان متعدد الاستخدامات";
+
+  // ─── Export Handlers ───
+  const handleExportExcel = () => {
+    const tableData = extractTableFromDOM(
+      tableRef,
+      "جدولة رأس المال — المستثمر",
+      projectName,
+      SCENARIO_LABELS[scenario],
+      "توزيع المصاريف على المراحل الزمنية حسب إعدادات التدفق | المبالغ بالدرهم الإماراتي"
+    );
+    if (tableData) {
+      exportToExcel(tableData, `جدولة_المستثمر_${projectName}_${scenario}`);
+    }
+  };
+
+  const handleExportHTML = () => {
+    const tableData = extractTableFromDOM(
+      tableRef,
+      "جدولة رأس المال — المستثمر",
+      projectName,
+      SCENARIO_LABELS[scenario],
+      "توزيع المصاريف على المراحل الزمنية حسب إعدادات التدفق | المبالغ بالدرهم الإماراتي"
+    );
+    if (tableData) {
+      exportToHTML(tableData, `جدولة_المستثمر_${projectName}_${scenario}`);
+    }
+  };
+
+  const handleExportPDF = () => {
+    exportToPDF();
+  };
+
   return (
     <div className="min-h-screen bg-white p-4" dir="rtl">
       <div className="max-w-full mx-auto space-y-4">
 
         {/* Project Selector */}
-        <ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} />
+        <div data-hide-print>
+          <ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} />
+        </div>
 
         {/* Header */}
         <div className="text-right space-y-1">
           <h1 className="text-xl font-bold text-gray-900">
-            جدولة رأس المال – {projectQuery.data?.name || 'مجان متعدد الاستخدامات'}
+            جدولة رأس المال – {projectName}
           </h1>
           <p className="text-sm text-gray-500">
             توزيع المصاريف على المراحل الزمنية حسب إعدادات التدفق | المبالغ بالدرهم الإماراتي
@@ -49,7 +97,7 @@ export default function InvestorCashFlowSchedulePage() {
         </div>
 
         {/* Scenario Tabs */}
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap" data-hide-print>
           <button
             onClick={() => setScenario("offplan_escrow")}
             className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
@@ -89,6 +137,29 @@ export default function InvestorCashFlowSchedulePage() {
             }`}
           >
             تطوير للتأجير
+          </button>
+        </div>
+
+        {/* Export Buttons */}
+        <div className="flex gap-2 flex-wrap" data-hide-print>
+          <button
+            onClick={handleExportPDF}
+            data-show-print
+            className="px-4 py-2 rounded text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
+          >
+            📄 تصدير PDF
+          </button>
+          <button
+            onClick={handleExportExcel}
+            className="px-4 py-2 rounded text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
+          >
+            📊 تصدير Excel
+          </button>
+          <button
+            onClick={handleExportHTML}
+            className="px-4 py-2 rounded text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+          >
+            🌐 تصدير HTML
           </button>
         </div>
 

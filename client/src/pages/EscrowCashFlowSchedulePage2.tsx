@@ -14,6 +14,18 @@ import {
 import { ProjectSelector } from "@/components/ProjectSelector";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import {
+  exportToExcel,
+  exportToHTML,
+  exportToPDF,
+  extractTableFromDOM,
+} from "@/lib/tableExport";
+
+const SCENARIO_LABELS_ESCROW: Record<string, string> = {
+  offplan_escrow: "أوف بلان مع إيداع في حساب الضمان",
+  offplan_construction: "أوف بلان بعد إنجاز 20% من الإنشاء",
+  no_offplan: "تطوير بدون بيع على الخارطة",
+};
 
 // ═══════════════════════════════════════════
 // SCENARIO TYPES
@@ -772,7 +784,9 @@ export default function EscrowCashFlowSchedulePage2() {
     <div className="min-h-screen bg-white p-4" dir="rtl">
       <div className="max-w-full mx-auto space-y-4">
         {/* Project Selector */}
-        <ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} />
+        <div data-hide-print>
+          <ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} />
+        </div>
 
         {/* Header */}
         <div className="text-right space-y-1">
@@ -784,8 +798,49 @@ export default function EscrowCashFlowSchedulePage2() {
           </p>
         </div>
 
+        {/* Export Buttons */}
+        <div className="flex gap-2 flex-wrap" data-hide-print>
+          <button
+            onClick={() => exportToPDF()}
+            data-show-print
+            className="px-4 py-2 rounded text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
+          >
+            📄 تصدير PDF
+          </button>
+          <button
+            onClick={() => {
+              const tableData = extractTableFromDOM(
+                tableRef,
+                "تدفقات حساب الضمان",
+                projectQuery.data?.name || "مجان متعدد الاستخدامات",
+                SCENARIO_LABELS_ESCROW[scenario] || scenario,
+                "توزيع المصروفات والإيرادات على المراحل الزمنية | المبالغ بالدرهم الإماراتي"
+              );
+              if (tableData) exportToExcel(tableData, `حساب_الضمان_${projectQuery.data?.name || "مشروع"}_${scenario}`);
+            }}
+            className="px-4 py-2 rounded text-sm font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
+          >
+            📊 تصدير Excel
+          </button>
+          <button
+            onClick={() => {
+              const tableData = extractTableFromDOM(
+                tableRef,
+                "تدفقات حساب الضمان",
+                projectQuery.data?.name || "مجان متعدد الاستخدامات",
+                SCENARIO_LABELS_ESCROW[scenario] || scenario,
+                "توزيع المصروفات والإيرادات على المراحل الزمنية | المبالغ بالدرهم الإماراتي"
+              );
+              if (tableData) exportToHTML(tableData, `حساب_الضمان_${projectQuery.data?.name || "مشروع"}_${scenario}`);
+            }}
+            className="px-4 py-2 rounded text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+          >
+            🌐 تصدير HTML
+          </button>
+        </div>
+
         {/* Scenario Buttons */}
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap" data-hide-print>
           <button
             onClick={() => setScenario("offplan_escrow")}
             className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
