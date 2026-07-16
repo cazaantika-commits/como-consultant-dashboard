@@ -929,3 +929,9 @@
 - [x] Add escrow liquidation as revenue in investor cash flow: Dufعة 1 (month 3 post = escrow net minus 5% retention), Dufعة 2 (month 13 = 5% retention)
 - [x] Add escrow liquidation revenue to investor cash flow: Month 3 post = escrow net (revenue - expenses - 5% revenue retention - 5% construction retention), Month 13 = 5% revenue retention minus 5% construction retention (net after paying contractor)
 - [x] Rewrite consolidated page to be pure reflection of investorCashFlowEngine (no duplicated escrow math — reads directly from engine outputs)
+- [x] Add post-completion liquidation rows to EscrowCashFlowSchedulePage2: show transfer to owner (month 3), retention settlement (month 13), and final balance = zero
+- [x] Escrow page: Add liquidation rows (transfer to owner month 3, retention settlement month 13) to zero the balance
+- [x] Investor page: Add profit row showing total revenue minus total expenses
+- [x] Audit: Verify escrow liquidation amounts match between escrow page and investor engine, verify all totals are consistent
+- [x] Fix: Investor engine month 13 — investor receives full 5% revenueRetention (construction retention paid to contractor from escrow, not deducted from investor)
+- [x] Fix: Escrow page summary cards and footer now include totalLiquidation in total outflows

@@ -309,6 +309,33 @@ export default function InvestorCashFlowSchedulePage() {
                   <td className="border border-gray-200"></td>
                 </tr>
               )}
+              {/* Profit row */}
+              {data.revenuePostTotals.some(v => v > 0) && (() => {
+                const totalRevenue = data.revenuePostTotals.reduce((s, v) => s + v, 0);
+                const totalExpenses = data.grandInvestor;
+                const profit = totalRevenue - totalExpenses;
+                const profitPct = totalExpenses > 0 ? ((profit / totalExpenses) * 100).toFixed(1) : "0";
+                return (
+                  <tr className="bg-emerald-100 font-bold border-t-2 border-emerald-500">
+                    <td className="sticky right-0 z-20 bg-emerald-100 border border-gray-200 px-2 py-2 text-right text-emerald-900">
+                      الربح ({profitPct}%)
+                    </td>
+                    <td className="border border-gray-200 px-2 py-2 text-center text-emerald-900 font-bold" colSpan={4}>
+                      {fmt(profit)}
+                    </td>
+                    {data.designMonthlyTotals.map((_, i) => (
+                      <td key={`prd${i}`} className="border border-gray-200"></td>
+                    ))}
+                    {data.constructionMonthlyTotals.map((_, i) => (
+                      <td key={`prc${i}`} className="border border-gray-200"></td>
+                    ))}
+                    {data.revenuePostTotals.map((_, i) => (
+                      <td key={`prp${i}`} className="border border-gray-200"></td>
+                    ))}
+                    <td className="border border-gray-200"></td>
+                  </tr>
+                );
+              })()}
             </tfoot>
           </table>
         </div>

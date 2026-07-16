@@ -77,7 +77,7 @@ function generateSCurve(months: number): number[] {
 // ═══════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════
-const POST_CONSTRUCTION_MONTHS = 12;
+const POST_CONSTRUCTION_MONTHS = 13;
 
 // ═══════════════════════════════════════════
 // MAIN COMPONENT
@@ -214,7 +214,7 @@ export default function EscrowCashFlowSchedulePage2() {
         if (effectivePostDuration > 2) pMonths[2] = retentionPayment;
       } else {
         pMonths[1] = completionPayment; // post-construction month 2 (index 1)
-        if (effectivePostDuration > 11) pMonths[11] = retentionPayment; // post-construction month 12 (index 11)
+        if (effectivePostDuration > 12) pMonths[12] = retentionPayment; // post-construction month 13 (index 12)
       }
 
       // Escrow amount: S1 = 90% (all except 10% advance), S2 = 70% (all except 30%)
@@ -443,16 +443,60 @@ export default function EscrowCashFlowSchedulePage2() {
     })();
 
     // ═══════════════════════════════════════════
+    // LIQUIDATION ROWS (تصفية حساب الضمان)
+    // ═══════════════════════════════════════════
+    const liquidationRows: CostRow[] = [];
+    if (!isScenario3) {
+      const totalRevenue = pr.totalRevenue;
+      const escrowRevenue = totalRevenue * 0.80;
+      const revenueRetention = totalRevenue * 0.05;
+      const constructionRetention = constructionCost * 0.05;
+      // دفعة 1: شهر 3 بعد الإنجاز — تحويل الرصيد للمالك (ناقص الاحتجازين)
+      const liquidationAmount = escrowRevenue - costs.totalEscrow - revenueRetention;
+      const liqPost1 = emptyEffectivePost();
+      liqPost1[2] = liquidationAmount; // index 2 = month 3
+      liquidationRows.push({
+        label: "تحويل للمالك (دفعة 1)",
+        totalCost: liquidationAmount,
+        escrowAmount: liquidationAmount,
+        openingBalance: 0,
+        remainingToSpend: liquidationAmount,
+        section: "التصفية",
+        isRevenue: false,
+        designMonths: emptyDesign(),
+        constructionMonths: emptyConstruction(),
+        postConstructionMonths: liqPost1,
+      });
+
+      // دفعة 2: شهر 13 بعد الإنجاز — تحرير احتجاز الإيرادات للمالك
+      const liqPost2 = emptyEffectivePost();
+      liqPost2[12] = revenueRetention; // index 12 = month 13
+      liquidationRows.push({
+        label: "تحرير احتجاز الإيرادات للمالك (5%)",
+        totalCost: revenueRetention,
+        escrowAmount: revenueRetention,
+        openingBalance: 0,
+        remainingToSpend: revenueRetention,
+        section: "التصفية",
+        isRevenue: false,
+        designMonths: emptyDesign(),
+        constructionMonths: emptyConstruction(),
+        postConstructionMonths: liqPost2,
+      });
+    }
+
+    // ═══════════════════════════════════════════
     // TOTALS
     // ═══════════════════════════════════════════
     const totalEscrowExpenses = rows.reduce((s, r) => s + r.escrowAmount, 0);
+    const totalLiquidation = liquidationRows.reduce((s, r) => s + r.escrowAmount, 0);
     const totalRevenue = pr.totalRevenue;
 
     // Monthly totals (expenses)
     const designMonthlyTotals = new Array(designDuration).fill(0);
     const constructionMonthlyTotals = new Array(constructionDuration).fill(0);
     const postMonthlyTotals = new Array(effectivePostDuration).fill(0);
-    for (const row of rows) {
+    for (const row of [...rows, ...liquidationRows]) {
       for (let i = 0; i < designDuration; i++) designMonthlyTotals[i] += row.designMonths[i];
       for (let i = 0; i < constructionDuration; i++) constructionMonthlyTotals[i] += row.constructionMonths[i];
       for (let i = 0; i < effectivePostDuration; i++) postMonthlyTotals[i] += row.postConstructionMonths[i];
@@ -495,13 +539,16 @@ export default function EscrowCashFlowSchedulePage2() {
       "ريرا (التنظيم العقاري)",
       "المبيعات والتسويق",
       "الإنشاء",
+      ...(liquidationRows.length > 0 ? ["التصفية"] : []),
     ];
 
     return {
       rows,
       revenueRow,
+      liquidationRows,
       sectionOrder,
       totalEscrowExpenses,
+      totalLiquidation,
       totalRevenue,
       openingBalance,
       designDuration,
@@ -528,8 +575,10 @@ export default function EscrowCashFlowSchedulePage2() {
   const {
     rows,
     revenueRow,
+    liquidationRows,
     sectionOrder,
     totalEscrowExpenses,
+    totalLiquidation,
     totalRevenue,
     openingBalance,
     designDuration,
@@ -717,6 +766,8 @@ export default function EscrowCashFlowSchedulePage2() {
                 const sectionRows =
                   section === "الإيرادات"
                     ? [revenueRow]
+                    : section === "التصفية"
+                    ? liquidationRows
                     : rows.filter((r) => r.section === section);
                 if (sectionRows.length === 0) return null;
                 return (
@@ -787,19 +838,19 @@ export default function EscrowCashFlowSchedulePage2() {
               {/* Expenses Total Row */}
               <tr className="bg-red-50 font-bold border-t-2 border-red-300">
                 <td className="sticky right-0 z-20 bg-red-50 border border-gray-200 px-2 py-2 text-right text-red-900">
-                  إجمالي المصروفات
+                  إجمالي المصروفات + التصفية
                 </td>
                 <td className="border border-gray-200 px-2 py-2 text-center text-red-900">
-                  {fmt(totalEscrowExpenses)}
+                  {fmt(totalEscrowExpenses + totalLiquidation)}
                 </td>
                 <td className="border border-gray-200 px-2 py-2 text-center text-red-800">
-                  {fmt(totalEscrowExpenses)}
+                  {fmt(totalEscrowExpenses + totalLiquidation)}
                 </td>
                 <td className="border border-gray-200 px-2 py-2 text-center text-green-700">
                   {fmt(openingBalance)}
                 </td>
                 <td className="border border-gray-200 px-2 py-2 text-center text-red-700">
-                  {fmt(totalEscrowExpenses - openingBalance)}
+                  {fmt(totalEscrowExpenses + totalLiquidation - openingBalance)}
                 </td>
                 {designMonthlyTotals.map((v, i) => (
                   <td key={`dt${i}`} className="border border-gray-200 px-1 py-2 text-center text-red-800">
@@ -856,7 +907,7 @@ export default function EscrowCashFlowSchedulePage2() {
                   صافي التدفق (إيرادات - مصروفات)
                 </td>
                 <td className="border border-gray-200 px-2 py-2 text-center text-amber-900">
-                  {fmt(totalRevenue - totalEscrowExpenses)}
+                  {fmt(totalRevenue - totalEscrowExpenses - totalLiquidation)}
                 </td>
                 <td className="border border-gray-200 px-2 py-2 text-center">–</td>
                 <td className="border border-gray-200 px-2 py-2 text-center">–</td>
@@ -920,8 +971,8 @@ export default function EscrowCashFlowSchedulePage2() {
             <p className="text-lg font-bold text-green-700">{fmt(openingBalance)} د.إ</p>
           </div>
           <div className="bg-white rounded-xl p-4 shadow border-r-4 border-red-500">
-            <p className="text-xs text-gray-500">{scenario === "no_offplan" ? "إجمالي المصروفات" : "إجمالي المصروفات من الضمان"}</p>
-            <p className="text-lg font-bold text-red-700">{fmt(totalEscrowExpenses)} د.إ</p>
+            <p className="text-xs text-gray-500">{scenario === "no_offplan" ? "إجمالي المصروفات" : "إجمالي المصروفات + التصفية"}</p>
+            <p className="text-lg font-bold text-red-700">{fmt(totalEscrowExpenses + totalLiquidation)} د.إ</p>
           </div>
           <div className="bg-white rounded-xl p-4 shadow border-r-4 border-blue-500">
             <p className="text-xs text-gray-500">إجمالي الإيرادات</p>
@@ -930,7 +981,7 @@ export default function EscrowCashFlowSchedulePage2() {
           <div className="bg-white rounded-xl p-4 shadow border-r-4 border-amber-500">
             <p className="text-xs text-gray-500">صافي التدفق</p>
             <p className="text-lg font-bold text-amber-700">
-              {fmt(totalRevenue - totalEscrowExpenses)} د.إ
+              {fmt(totalRevenue - totalEscrowExpenses - totalLiquidation)} د.إ
             </p>
           </div>
           <div className="bg-white rounded-xl p-4 shadow border-r-4 border-indigo-500">
