@@ -329,8 +329,34 @@ export default function ConsolidatedInvestorCashFlowPage() {
     );
   }
 
-  const totalExpenses = consolidated.consolidatedExpenses.reduce((s, v) => s + v, 0);
-  const totalRevenue = consolidated.consolidatedRevenue.reduce((s, v) => s + v, 0);
+  // ─── Financial Summary (excluding rental/commercial projects from revenue) ───
+  const saleProjects = consolidated.projectFlows.filter(pf => pf.scenario !== "rental");
+  const rentalProjects = consolidated.projectFlows.filter(pf => pf.scenario === "rental");
+
+  // Total revenue from sale projects only
+  const totalRevenueSales = saleProjects.reduce((s, pf) => s + pf.totalRevenue, 0);
+  // Total cost = all projects (including rental)
+  const totalCostAll = consolidated.projectFlows.reduce((s, pf) => s + pf.totalExpenses, 0);
+  // Total cost of sale projects only (for profit calculation)
+  const totalCostSales = saleProjects.reduce((s, pf) => s + pf.totalExpenses, 0);
+  // Investor capital = what investor actually pays (grandInvestor from engine)
+  // We need to get this from the engine result. For now, totalExpenses is what investor pays monthly.
+  // In the consolidated view, monthlyExpenses already excludes escrow-funded items (funder !== escrow)
+  const investorCapital = saleProjects.reduce((s, pf) => s + pf.totalExpenses, 0);
+  // Profit = revenue - cost (sale projects)
+  const profit = totalRevenueSales - totalCostSales;
+  // Profit % of total cost
+  const profitPctCost = totalCostSales > 0 ? (profit / totalCostSales) * 100 : 0;
+  // Profit % of investor capital
+  const profitPctInvestor = investorCapital > 0 ? (profit / investorCapital) * 100 : 0;
+  // Developer share (15% of profit)
+  const developerShare = profit * 0.15;
+  // Net investor profit after developer share
+  const netInvestorProfit = profit - developerShare;
+  // Net investor profit % of investor capital
+  const netProfitPctInvestor = investorCapital > 0 ? (netInvestorProfit / investorCapital) * 100 : 0;
+
+  // Peak capital (for reference)
   const peakExpense = Math.max(...consolidated.cumulative.map(v => Math.abs(v)));
   const peakMonth = consolidated.cumulative.indexOf(-peakExpense) >= 0
     ? consolidated.monthLabels[consolidated.cumulative.indexOf(-peakExpense)]
@@ -350,25 +376,56 @@ export default function ConsolidatedInvestorCashFlowPage() {
           </p>
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-            <div className="text-xs text-red-600 mb-1">إجمالي المصروفات</div>
-            <div className="text-lg font-bold text-red-700">{fmt(totalExpenses)}</div>
+        {/* Financial Summary */}
+        <div className="bg-gradient-to-l from-gray-50 to-white border rounded-lg p-4">
+          <h2 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2">الملخص المالي (بدون المركز التجاري)</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+              <div className="text-[10px] text-green-600 mb-1">إجمالي الإيرادات</div>
+              <div className="text-base font-bold text-green-700">{fmt(totalRevenueSales)}</div>
+            </div>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <div className="text-[10px] text-red-600 mb-1">إجمالي التكلفة</div>
+              <div className="text-base font-bold text-red-700">{fmt(totalCostSales)}</div>
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div className="text-[10px] text-blue-600 mb-1">الأرباح</div>
+              <div className={`text-base font-bold ${profit >= 0 ? "text-blue-700" : "text-red-700"}`}>{fmt(profit)}</div>
+            </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <div className="text-[10px] text-amber-600 mb-1">ذروة رأس المال المطلوب</div>
+              <div className="text-base font-bold text-amber-700">{fmt(peakExpense)}</div>
+              <div className="text-[9px] text-amber-500">{peakMonth}</div>
+            </div>
           </div>
-          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-            <div className="text-xs text-green-600 mb-1">إجمالي الإيرادات</div>
-            <div className="text-lg font-bold text-green-700">{fmt(totalRevenue)}</div>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div className="bg-white border rounded-lg p-2.5">
+              <div className="text-[10px] text-gray-500 mb-0.5">رأس مال المستثمر</div>
+              <div className="text-sm font-bold text-gray-800">{fmt(investorCapital)}</div>
+            </div>
+            <div className="bg-white border rounded-lg p-2.5">
+              <div className="text-[10px] text-gray-500 mb-0.5">نسبة الربح من التكلفة</div>
+              <div className="text-sm font-bold text-gray-800">{profitPctCost.toFixed(1)}%</div>
+            </div>
+            <div className="bg-white border rounded-lg p-2.5">
+              <div className="text-[10px] text-gray-500 mb-0.5">نسبة الربح من رأس المال</div>
+              <div className="text-sm font-bold text-gray-800">{profitPctInvestor.toFixed(1)}%</div>
+            </div>
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-2.5">
+              <div className="text-[10px] text-purple-600 mb-0.5">حصة المطور (15%)</div>
+              <div className="text-sm font-bold text-purple-700">{fmt(developerShare)}</div>
+            </div>
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2.5">
+              <div className="text-[10px] text-emerald-600 mb-0.5">صافي ربح المستثمر</div>
+              <div className="text-sm font-bold text-emerald-700">{fmt(netInvestorProfit)}</div>
+              <div className="text-[9px] text-emerald-500">{netProfitPctInvestor.toFixed(1)}% من رأس المال</div>
+            </div>
           </div>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <div className="text-xs text-blue-600 mb-1">صافي الاستثمار</div>
-            <div className="text-lg font-bold text-blue-700">{fmt(totalExpenses - totalRevenue)}</div>
-          </div>
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-            <div className="text-xs text-amber-600 mb-1">ذروة رأس المال</div>
-            <div className="text-lg font-bold text-amber-700">{fmt(peakExpense)}</div>
-            <div className="text-[10px] text-amber-500">{peakMonth}</div>
-          </div>
+          {rentalProjects.length > 0 && (
+            <div className="mt-2 text-[10px] text-gray-400 border-t pt-2">
+              * المركز التجاري ({rentalProjects.map(p => p.name).join("، ")}) مستبعد من حسبة الأرباح — سيناريو إيجار
+            </div>
+          )}
         </div>
 
         {/* Project Scenario & Start Date Selector */}
@@ -483,9 +540,9 @@ export default function ConsolidatedInvestorCashFlowPage() {
                   <td className="py-2 px-3"></td>
                   <td className="py-2 px-3"></td>
                   <td className="py-2 px-3"></td>
-                  <td className="py-2 px-3 text-red-700">{fmt(totalExpenses)}</td>
-                  <td className="py-2 px-3 text-green-700">{fmt(totalRevenue)}</td>
-                  <td className="py-2 px-3 text-blue-700">{fmt(totalRevenue - totalExpenses)}</td>
+                  <td className="py-2 px-3 text-red-700">{fmt(totalCostAll)}</td>
+                  <td className="py-2 px-3 text-green-700">{fmt(totalRevenueSales)}</td>
+                  <td className="py-2 px-3 text-blue-700">{fmt(totalRevenueSales - totalCostAll)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -604,9 +661,9 @@ export default function ConsolidatedInvestorCashFlowPage() {
                       {fmt(pf.totalRevenue - pf.totalExpenses)}
                     </td>
                   ))}
-                  <td className="text-center py-2 px-1 font-bold text-red-700">{fmt(totalExpenses)}</td>
-                  <td className="text-center py-2 px-1 font-bold text-green-700">{fmt(totalRevenue)}</td>
-                  <td className="text-center py-2 px-1 font-bold text-blue-700">{fmt(totalRevenue - totalExpenses)}</td>
+                  <td className="text-center py-2 px-1 font-bold text-red-700">{fmt(totalCostAll)}</td>
+                  <td className="text-center py-2 px-1 font-bold text-green-700">{fmt(totalRevenueSales)}</td>
+                  <td className="text-center py-2 px-1 font-bold text-blue-700">{fmt(totalRevenueSales - totalCostAll)}</td>
                   <td className="text-center py-2 px-1 font-bold text-amber-700">
                     {fmt(consolidated.cumulative[consolidated.cumulative.length - 1] || 0)}
                   </td>

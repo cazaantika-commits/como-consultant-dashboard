@@ -915,3 +915,4 @@
 - [x] Consolidated investor cash flow: Add save button to persist scenario and start date changes to DB
 - [x] Fix: مركز مجان التجاري should be scenario 4 (rental/إيجار) not scenario 1 — updated in DB
 - [x] Consolidated cash flow: Add clickable popup on each project cell showing breakdown details of that month's amount
+- [x] Consolidated page: Redesign top summary with financial metrics (revenue excl. commercial, total cost, profit, profit % of cost, profit % of investor capital, developer 15% share, net investor profit)
