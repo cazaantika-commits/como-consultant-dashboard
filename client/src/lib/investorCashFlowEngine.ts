@@ -810,9 +810,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
       constructionConst[1] = constructionCost * 0.04;
       constructionConst[2] = constructionCost * 0.07;
       constructionConst[3] = constructionCost * 0.09;
-      // 5% إتمام (شهر 2 بعد الإنجاز) + 5% احتجاز (شهر 13 بعد الإنجاز)
-      constructionPost[1] = constructionCost * 0.05;
-      constructionPost[12] = constructionCost * 0.05;
+      // 5% إتمام + 5% احتجاز تُدفع من حساب الضمان (ليست من المستثمر)
       rows.push({
         label: "تكلفة الإنشاء",
         totalCost: constructionCost,
@@ -830,9 +828,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
       const escrowDeposit = constructionCost * r.escrowDeposit;
       constructionDesign[penultimateDesign] = escrowDeposit;
       constructionConst[0] = constructionCost * r.advancePayment;
-      // 5% إتمام (شهر 2 بعد الإنجاز) + 5% احتجاز (شهر 13 بعد الإنجاز)
-      constructionPost[1] = constructionCost * 0.05;
-      constructionPost[12] = constructionCost * 0.05;
+      // 5% إتمام + 5% احتجاز تُدفع من حساب الضمان (ليست من المستثمر)
       rows.push({
         label: "تكلفة الإنشاء",
         totalCost: constructionCost,

@@ -924,3 +924,4 @@
 - [x] Hide project selector and scenario buttons during print (data-hide-print attribute)
 - [x] Remove duplicated investor items from escrow page (marketing 2%, sorting, RERA project reg, RERA units, NOC, escrow account fee) — these are investor expenses, not escrow
 - [x] Verify consolidated page escrow liquidation formula matches totalEscrow (correct: only includes construction, supervision, surveyor, govFees 90%, salesCommission, reraAuditor, reraInspection)
+- [x] Bug: Remove 5% construction completion (month 2 post) and 5% retention (month 13 post) from investor cash flow — these are escrow-funded, duplicated in investor table (fixed for S1/S2 only, S3/S4 investor pays 100% so they stay)
