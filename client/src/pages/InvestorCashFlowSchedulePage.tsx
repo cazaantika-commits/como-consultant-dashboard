@@ -269,7 +269,7 @@ export default function InvestorCashFlowSchedulePage() {
                 ))}
                 <td className="border border-gray-200"></td>
               </tr>
-              {/* Revenue totals row for S3 */}
+              {/* Revenue totals row */}
               {data.postDuration > 0 && data.revenuePostTotals.some(v => v > 0) && (
                 <tr className="bg-green-50 font-bold border-t-2 border-green-300">
                   <td className="sticky right-0 z-20 bg-green-50 border border-gray-200 px-2 py-2 text-right text-green-900">إجمالي الإيرادات</td>
@@ -285,6 +285,26 @@ export default function InvestorCashFlowSchedulePage() {
                   ))}
                   {data.revenuePostTotals.map((v, i) => (
                     <td key={`rp${i}`} className="border border-gray-200 px-1 py-2 text-center text-green-800">{fmt(v)}</td>
+                  ))}
+                  <td className="border border-gray-200"></td>
+                </tr>
+              )}
+              {/* Net cash flow row (expenses - revenue) */}
+              {data.postDuration > 0 && data.revenuePostTotals.some(v => v > 0) && (
+                <tr className="bg-amber-50 font-bold border-t-2 border-amber-300">
+                  <td className="sticky right-0 z-20 bg-amber-50 border border-gray-200 px-2 py-2 text-right text-amber-900">صافي التدفق الشهري</td>
+                  <td className="border border-gray-200"></td>
+                  <td className="border border-gray-200"></td>
+                  <td className="border border-gray-200"></td>
+                  <td className="border border-gray-200"></td>
+                  {data.designMonthlyTotals.map((v, i) => (
+                    <td key={`nd${i}`} className="border border-gray-200 px-1 py-2 text-center text-amber-800">{fmt(v)}</td>
+                  ))}
+                  {data.constructionMonthlyTotals.map((v, i) => (
+                    <td key={`nc${i}`} className="border border-gray-200 px-1 py-2 text-center text-amber-800">{fmt(v)}</td>
+                  ))}
+                  {data.postMonthlyTotals.map((v, i) => (
+                    <td key={`np${i}`} className="border border-gray-200 px-1 py-2 text-center text-amber-800">{fmt(v - data.revenuePostTotals[i])}</td>
                   ))}
                   <td className="border border-gray-200"></td>
                 </tr>

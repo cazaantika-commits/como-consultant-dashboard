@@ -917,7 +917,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
     for (let idx = 0; idx < postDuration; idx++) revenuePostTotals[idx] += row.postConstructionMonths[idx];
   }
 
-  // Cumulative (investor)
+  // Cumulative (investor) — revenue reduces net withdrawals
   const cumulativeDesign = new Array(designDuration).fill(0);
   const cumulativeConstruction = new Array(constructionDuration).fill(0);
   const cumulativePost = new Array(postDuration).fill(0);
@@ -931,7 +931,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
     cumulativeConstruction[idx] = running;
   }
   for (let idx = 0; idx < postDuration; idx++) {
-    running += postMonthlyTotals[idx];
+    running += postMonthlyTotals[idx] - revenuePostTotals[idx];
     cumulativePost[idx] = running;
   }
 
