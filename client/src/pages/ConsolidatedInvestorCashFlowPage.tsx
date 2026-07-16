@@ -6,6 +6,7 @@ import {
   computeInvestorCashFlow,
   type Scenario,
   type CashFlowResult,
+  type CostRow,
 } from "@/lib/investorCashFlowEngine";
 import {
   dbProjectToInputs,
@@ -17,6 +18,12 @@ import {
 } from "@/lib/projectData";
 import { buildPricingUnits } from "@/lib/investorCashFlowEngine";
 import { calculatePricingFormulas } from "@/lib/projectData";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // ═══════════════════════════════════════════
 // TYPES
@@ -37,6 +44,16 @@ interface ProjectCashFlow {
   totalRevenue: number;
   escrowSurplusMonth3: number;
   escrowSurplusMonth13: number;
+  rows: CostRow[]; // raw rows for breakdown popup
+}
+
+interface CellDetail {
+  projectName: string;
+  monthLabel: string;
+  items: { label: string; section: string; amount: number }[];
+  totalExpenses: number;
+  totalRevenue: number;
+  net: number;
 }
 
 // ═══════════════════════════════════════════
@@ -173,6 +190,7 @@ function computeProjectForConsolidated(project: any, scenario: Scenario): Projec
     totalRevenue: monthlyRevenue2.reduce((s, v) => s + v, 0),
     escrowSurplusMonth3,
     escrowSurplusMonth13,
+    rows: result.rows,
   };
 }
 
@@ -192,6 +210,8 @@ export default function ConsolidatedInvestorCashFlowPage() {
 
   // Per-project scenario overrides (what-if)
   const [scenarioOverrides, setScenarioOverrides] = useState<Record<number, Scenario>>({});
+  // Cell detail popup state
+  const [cellDetail, setCellDetail] = useState<CellDetail | null>(null);
   // Per-project start date overrides
   const [startDateOverrides, setStartDateOverrides] = useState<Record<number, string>>({});
   // Track if there are unsaved changes
@@ -506,9 +526,57 @@ export default function ConsolidatedInvestorCashFlowPage() {
                       </td>
                       {consolidated.projectFlows.map((pf) => {
                         const val = consolidated.perProjectMonthly[pf.id]?.[idx] || 0;
+                        const isClickable = Math.abs(val) > 1;
                         return (
-                          <td key={pf.id} className={`text-center py-1 px-1 ${val > 0 ? "text-green-600" : val < 0 ? "text-red-600" : "text-gray-300"}`}>
-                            {Math.abs(val) > 1 ? fmt(val) : "–"}
+                          <td
+                            key={pf.id}
+                            className={`text-center py-1 px-1 ${val > 0 ? "text-green-600" : val < 0 ? "text-red-600" : "text-gray-300"} ${isClickable ? "cursor-pointer hover:bg-blue-50 hover:underline" : ""}`}
+                            onClick={() => {
+                              if (!isClickable) return;
+                              // Determine which local month this global idx corresponds to
+                              const localMonth = idx - pf.startMonthOffset;
+                              if (localMonth < 0 || localMonth >= pf.totalMonths) return;
+                              // Determine phase and phase-local index
+                              let phase: "design" | "construction" | "post";
+                              let phaseIdx: number;
+                              if (localMonth < pf.designDuration) {
+                                phase = "design";
+                                phaseIdx = localMonth;
+                              } else if (localMonth < pf.designDuration + pf.constructionDuration) {
+                                phase = "construction";
+                                phaseIdx = localMonth - pf.designDuration;
+                              } else {
+                                phase = "post";
+                                phaseIdx = localMonth - pf.designDuration - pf.constructionDuration;
+                              }
+                              // Get breakdown from rows
+                              const items: { label: string; section: string; amount: number }[] = [];
+                              let expTotal = 0;
+                              let revTotal = 0;
+                              for (const row of pf.rows) {
+                                let amount = 0;
+                                if (phase === "design") amount = row.designMonths[phaseIdx] || 0;
+                                else if (phase === "construction") amount = row.constructionMonths[phaseIdx] || 0;
+                                else amount = row.postConstructionMonths[phaseIdx] || 0;
+                                if (Math.abs(amount) > 0.5) {
+                                  // Skip escrow-funded items for investor view
+                                  if (row.funder === "escrow" && !row.isRevenue) continue;
+                                  items.push({ label: row.label, section: row.section, amount });
+                                  if (row.isRevenue) revTotal += amount;
+                                  else expTotal += amount;
+                                }
+                              }
+                              setCellDetail({
+                                projectName: pf.name,
+                                monthLabel: label,
+                                items,
+                                totalExpenses: expTotal,
+                                totalRevenue: revTotal,
+                                net: revTotal - expTotal,
+                              });
+                            }}
+                          >
+                            {isClickable ? fmt(val) : "–"}
                           </td>
                         );
                       })}
@@ -549,6 +617,59 @@ export default function ConsolidatedInvestorCashFlowPage() {
         </div>
 
       </div>
+
+      {/* Cell Detail Popup */}
+      <Dialog open={!!cellDetail} onOpenChange={(open) => { if (!open) setCellDetail(null); }}>
+        <DialogContent className="max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-right text-sm">
+              {cellDetail?.projectName} — {cellDetail?.monthLabel}
+            </DialogTitle>
+          </DialogHeader>
+          {cellDetail && (
+            <div className="space-y-3">
+              <div className="max-h-[400px] overflow-y-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-gray-50 border-b">
+                      <th className="text-right py-1.5 px-2 text-gray-600">البند</th>
+                      <th className="text-right py-1.5 px-2 text-gray-600">القسم</th>
+                      <th className="text-left py-1.5 px-2 text-gray-600">المبلغ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cellDetail.items.map((item, i) => (
+                      <tr key={i} className="border-b hover:bg-gray-50">
+                        <td className="py-1.5 px-2 text-gray-800">{item.label}</td>
+                        <td className="py-1.5 px-2 text-gray-500 text-[10px]">{item.section}</td>
+                        <td className={`py-1.5 px-2 text-left font-medium ${item.amount > 0 ? "text-green-600" : "text-red-600"}`}>
+                          {fmt(Math.abs(item.amount))}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="border-t pt-2 space-y-1">
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-600">إجمالي المصروفات:</span>
+                  <span className="text-red-600 font-medium">{fmt(cellDetail.totalExpenses)}</span>
+                </div>
+                {cellDetail.totalRevenue > 0 && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-600">إجمالي الإيرادات:</span>
+                    <span className="text-green-600 font-medium">{fmt(cellDetail.totalRevenue)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-xs font-bold">
+                  <span className="text-gray-800">الصافي:</span>
+                  <span className={cellDetail.net >= 0 ? "text-green-700" : "text-red-700"}>{fmt(cellDetail.net)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
