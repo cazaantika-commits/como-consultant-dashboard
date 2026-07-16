@@ -226,10 +226,12 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
   const isScenario4 = scenario === "rental";
 
   // Post-construction months:
-  // S1/S2: 12 months for 20% revenue that goes directly to investor
-  // S3: 3 months for revenue/commission
-  // S4: 3 months for 5% completion + 5% retention
-  const postDuration = isScenario4 ? 3 : isScenario3 ? 3 : 12;
+  // All scenarios: 13 months post-construction
+  // Month 2: 5% completion payment to contractor
+  // Month 13: 5% retention payment to contractor
+  // S1/S2: also 12 months of 20% direct revenue
+  // S3: revenue split in months 2-3
+  const postDuration = 13;
 
   // Helper: empty month arrays
   const emptyDesign = () => new Array(designDuration).fill(0);
@@ -786,9 +788,9 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
       for (let idx = 0; idx < remainingMonths; idx++) {
         constructionConst[4 + idx] = sCurveTotal * sCurveWeights[idx];
       }
-      // 5% إتمام (شهر 2 بعد الإنجاز) + 5% احتجاز (شهر 3 بعد الإنجاز)
+      // 5% إتمام (شهر 2 بعد الإنجاز) + 5% احتجاز (شهر 13 بعد الإنجاز)
       constructionPost[1] = constructionCost * 0.05;
-      constructionPost[2] = constructionCost * 0.05;
+      constructionPost[12] = constructionCost * 0.05;
 
       rows.push({
         label: "تكلفة الإنشاء",
@@ -808,6 +810,9 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
       constructionConst[1] = constructionCost * 0.04;
       constructionConst[2] = constructionCost * 0.07;
       constructionConst[3] = constructionCost * 0.09;
+      // 5% إتمام (شهر 2 بعد الإنجاز) + 5% احتجاز (شهر 13 بعد الإنجاز)
+      constructionPost[1] = constructionCost * 0.05;
+      constructionPost[12] = constructionCost * 0.05;
       rows.push({
         label: "تكلفة الإنشاء",
         totalCost: constructionCost,
@@ -818,13 +823,16 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
         section: "الإنشاء",
         designMonths: constructionDesign,
         constructionMonths: constructionConst,
-        postConstructionMonths: emptyPost(),
+        postConstructionMonths: constructionPost,
       });
     } else {
       // س1: إيداع 20% + دفعة مقدمة 10%
       const escrowDeposit = constructionCost * r.escrowDeposit;
       constructionDesign[penultimateDesign] = escrowDeposit;
       constructionConst[0] = constructionCost * r.advancePayment;
+      // 5% إتمام (شهر 2 بعد الإنجاز) + 5% احتجاز (شهر 13 بعد الإنجاز)
+      constructionPost[1] = constructionCost * 0.05;
+      constructionPost[12] = constructionCost * 0.05;
       rows.push({
         label: "تكلفة الإنشاء",
         totalCost: constructionCost,
@@ -835,7 +843,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
         section: "الإنشاء",
         designMonths: constructionDesign,
         constructionMonths: constructionConst,
-        postConstructionMonths: emptyPost(),
+        postConstructionMonths: constructionPost,
       });
     }
   }

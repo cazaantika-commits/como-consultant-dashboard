@@ -914,5 +914,13 @@
 - [x] Consolidated investor cash flow: Add start date picker per project (editable inline)
 - [x] Consolidated investor cash flow: Add save button to persist scenario and start date changes to DB
 - [x] Fix: مركز مجان التجاري should be scenario 4 (rental/إيجار) not scenario 1 — updated in DB
+- [x] Consolidated cash flow: Add clickable popup on each project cell showing breakdown details of that month's amount
+- [x] Consolidated page: Redesign top summary with financial metrics (revenue excl. commercial, total cost, profit, profit % of cost, profit % of investor capital, developer 15% share, net investor profit)
+- [x] Bug: Contractor retention (5% of construction cost) fixed: 5% completion at month 2, 5% retention at month 13 after completion, applied to all scenarios
+- [x] Add PDF/Excel/HTML export buttons to InvestorCashFlowSchedulePage (3 buttons: PDF via print, Excel via xlsx, HTML standalone)
+- [x] Add PDF/Excel/HTML export buttons to EscrowCashFlowSchedulePage2 (same 3 buttons)
+- [x] Create shared tableExport.ts utility (exportToExcel, exportToHTML, exportToPDF, extractTableFromDOM)
+- [x] Install xlsx (SheetJS) and file-saver libraries for Excel export
+- [x] Hide project selector and scenario buttons during print (data-hide-print attribute)
 - [x] Remove duplicated investor items from escrow page (marketing 2%, sorting, RERA project reg, RERA units, NOC, escrow account fee) — these are investor expenses, not escrow
 - [x] Verify consolidated page escrow liquidation formula matches totalEscrow (correct: only includes construction, supervision, surveyor, govFees 90%, salesCommission, reraAuditor, reraInspection)
