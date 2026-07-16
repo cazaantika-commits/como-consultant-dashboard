@@ -914,3 +914,5 @@
 - [x] Consolidated investor cash flow: Add start date picker per project (editable inline)
 - [x] Consolidated investor cash flow: Add save button to persist scenario and start date changes to DB
 - [x] Fix: مركز مجان التجاري should be scenario 4 (rental/إيجار) not scenario 1 — updated in DB
+- [x] Remove duplicated investor items from escrow page (marketing 2%, sorting, RERA project reg, RERA units, NOC, escrow account fee) — these are investor expenses, not escrow
+- [x] Verify consolidated page escrow liquidation formula matches totalEscrow (correct: only includes construction, supervision, surveyor, govFees 90%, salesCommission, reraAuditor, reraInspection)
