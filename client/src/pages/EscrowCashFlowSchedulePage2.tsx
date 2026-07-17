@@ -171,12 +171,14 @@ export default function EscrowCashFlowSchedulePage2() {
 
     // ─── 1. تكلفة الإنشاء ───
     // Scenario 1 (escrow): 10% paid by investor directly (NOT from escrow), escrow pays:
-    //   Month 2: 4%, Month 3: 7%, Month 4: 9%, Month 5+: 60% S-Curve, Post: 5% completion + 5% retention = 90%
+    //   Month 2: 4%, Month 3: 7%, Month 4: 9%, Month 5+: 60% S-Curve = 80% during construction
+    //   Post month 13: 5% retention to contractor
+    //   5% completion paid by investor directly (NOT from escrow)
     // Scenario 2 (escrow): Investor pays 10% + 20% (months 1-4) directly, escrow pays:
-    //   Month 5+: 60% S-Curve, Post: 5% completion + 5% retention = 70%
+    //   Month 5+: 60% S-Curve, Post month 13: 5% retention = 65%
+    //   5% completion paid by investor directly (NOT from escrow)
     {
       const sCurveTotal = constructionCost * 0.60;
-      const completionPayment = constructionCost * 0.05;
       const retentionPayment = constructionCost * 0.05;
 
       const cMonths = emptyConstruction();
@@ -210,17 +212,18 @@ export default function EscrowCashFlowSchedulePage2() {
 
       const pMonths = emptyEffectivePost();
       if (isScenario3) {
-        pMonths[1] = completionPayment;
+        // Scenario 3: completion at month 2, retention at month 3
+        pMonths[1] = constructionCost * 0.05; // completion
         if (effectivePostDuration > 2) pMonths[2] = retentionPayment;
       } else {
-        pMonths[1] = completionPayment; // post-construction month 2 (index 1)
+        // S1/S2: only retention at month 13 (completion paid by investor directly)
         if (effectivePostDuration > 12) pMonths[12] = retentionPayment; // post-construction month 13 (index 12)
       }
 
-      // Escrow amount: S1 = 90% (all except 10% advance), S2 = 70% (all except 30%)
+      // Escrow amount: S1 = 85% (80% construction + 5% retention), S2 = 65% (60% + 5% retention)
       const escrowAmount = isScenario2 
-        ? constructionCost * 0.70 
-        : constructionCost * 0.90;
+        ? constructionCost * 0.65 
+        : isScenario3 ? constructionCost * 0.90 : constructionCost * 0.85;
 
       rows.push({
         label: "تكلفة الإنشاء",
@@ -452,16 +455,30 @@ export default function EscrowCashFlowSchedulePage2() {
       const revenueRetention = escrowRevenue * 0.05;
       const constructionRetention = constructionCost * 0.05;
 
-      // حساب المصروفات الفعلية من الجدول (مجموع escrowAmount لكل البنود)
-      const actualEscrowExpenses = rows.reduce((s, r) => s + r.escrowAmount, 0);
+      // حساب الرصيد الفعلي عند شهر 2 بعد الإنجاز (قبل التصفية)
+      // المصروفات المدفوعة فعلياً حتى شهر 2 بعد الإنجاز = كل المصروفات ما عدا احتجاز المقاول (يُدفع شهر 13)
+      // نجمع كل الأشهر الفعلية من البنود (تصاميم + إنشاء + بعد الإنجاز حتى شهر 2)
+      let expensesPaidByMonth2Post = 0;
+      for (const row of rows) {
+        // كل أشهر التصاميم
+        for (let i = 0; i < designDuration; i++) expensesPaidByMonth2Post += row.designMonths[i];
+        // كل أشهر الإنشاء
+        for (let i = 0; i < constructionDuration; i++) expensesPaidByMonth2Post += row.constructionMonths[i];
+        // بعد الإنجاز: شهر 1 + شهر 2 فقط (index 0 + 1)
+        expensesPaidByMonth2Post += row.postConstructionMonths[0] + row.postConstructionMonths[1];
+      }
+
+      // الإيرادات المستلمة حتى شهر 2 بعد الإنجاز
+      let revenueReceivedByMonth2Post = 0;
+      for (let i = 0; i < designDuration; i++) revenueReceivedByMonth2Post += revenueRow.designMonths[i];
+      for (let i = 0; i < constructionDuration; i++) revenueReceivedByMonth2Post += revenueRow.constructionMonths[i];
+      revenueReceivedByMonth2Post += revenueRow.postConstructionMonths[0] + revenueRow.postConstructionMonths[1];
+
+      // الرصيد الفعلي = رصيد افتتاحي + إيرادات مستلمة - مصروفات مدفوعة
+      const balanceAtMonth2Post = openingBalance + revenueReceivedByMonth2Post - expensesPaidByMonth2Post;
 
       // دفعة 1: شهر 3 بعد الإنجاز — الرصيد المتبقي ناقص احتجاز 5% إيرادات
-      // الرصيد = إيداع الضمان + إيرادات الضمان - المصروفات الفعلية
-      // لكن الإيداع مدرج ضمن المصروفات (openingBalance) فيلغي نفسه
-      // الرصيد الفعلي = escrowRevenue - (actualEscrowExpenses - openingBalance)
-      // ثم نطرح الاحتجاز + احتجاز المقاول (لأنه يُدفع في شهر 13 من ضمن تكلفة الإنشاء)
-      const balanceBeforeLiquidation = openingBalance + escrowRevenue - actualEscrowExpenses;
-      const liquidationAmount = balanceBeforeLiquidation - revenueRetention;
+      const liquidationAmount = balanceAtMonth2Post - revenueRetention;
       const liqPost1 = emptyEffectivePost();
       liqPost1[2] = liquidationAmount; // index 2 = month 3
       liquidationRows.push({

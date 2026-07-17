@@ -944,3 +944,11 @@
 - [x] إصلاح revenueRetention = escrowRevenue * 0.05 في EscrowCashFlowSchedulePage2
 - [x] إصلاح شهر 13 في investorCashFlowEngine: المستثمر يستلم (revenueRetention - constructionRetention) وليس كامل revenueRetention
 - [x] إصلاح شهر 13 في EscrowCashFlowSchedulePage2: عرض دفعة المقاول (constructionRetention) + صافي التحويل للمالك (revenueRetention - constructionRetention) كسطرين منفصلين
+
+## إصلاح حسابات التصفية — دفعة 1 والتكرار
+- [x] إزالة تكرار سطر "دفع احتجاز المقاول" من قسم التصفية (يبقى ضمن تكلفة الإنشاء)
+- [x] إصلاح حساب دفعة 1: استخدام الرصيد الفعلي (مجموع الإيرادات - المصروفات الشهرية حتى شهر 2 بعد الإنجاز) بدلاً من costs.totalEscrow النظري
+- [x] إزالة دفعة الإنجاز 5% من حساب الضمان (تُدفع من المستثمر مباشرة وليس من الضمان)
+- [x] تعديل escrowAmount للإنشاء: S1=85% (80% بناء + 5% احتجاز)، S2=65% (60% + 5% احتجاز)
+- [x] التأكد أن الرصيد النهائي = صفر بعد التصفية
+- [x] دفعة 1 ≈ 329.5M (الرصيد - 5% احتجاز إيرادات) ✓
