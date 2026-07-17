@@ -885,11 +885,17 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
     });
 
     // ─── تصفية حساب الضمان (دفعة 1: شهر 3 بعد الإنجاز) ───
-    // صافي الضمان = إيرادات 80% - مصروفات الضمان الكلية - 5% احتجاز إيرادات
-    // costs.totalEscrow يشمل: constructionEscrow(70%) + supervision + govFees(90%) + salesCommission + reraAuditor + reraInspection + surveyor
+    // الضمان يدفع 80% من الإنشاء أثناء البناء (وليس 70% — الـ5% completion تُدفع من المستثمر مباشرة)
+    // المصروفات الفعلية = construction*80% + supervision + govFees*90% + salesCommission + reraAuditor + reraInspection + surveyor
+    // الرصيد = openingBalance(20%) + escrowRevenue - actualExpenses
+    // دفعة 1 = الرصيد - 5% احتجاز إيرادات
     const escrowRevenue = totalRevenue * 0.80;
     const revenueRetention = escrowRevenue * 0.05;
-    const escrowLiquidation = escrowRevenue - costs.totalEscrow - revenueRetention;
+    const openingBalance = constructionCost * 0.20;
+    const actualEscrowExpenses = (constructionCost * 0.80) + costs.supervisionFee +
+      (i.govFeesTotal * r.govFeesEscrowShare) + costs.salesCommission +
+      i.reraAuditorReport + i.reraInspection + i.surveyorFee;
+    const escrowLiquidation = openingBalance + escrowRevenue - actualEscrowExpenses - revenueRetention;
     const escrowLiqPost = emptyPost();
     escrowLiqPost[2] = escrowLiquidation; // شهر 3 (index 2)
     rows.push({
