@@ -121,6 +121,9 @@ export default function EscrowCashFlowSchedulePage2() {
       { name: "مكاتب / كبير", category: "office" as const, area: Number(p?.officeLargeArea) || defAreas.offL, price: Number(p?.officeLargePrice) || defPrices.offL, count: cOL },
     ];
     const pr = calculatePricingFormulas(units);
+    console.log('[ESCROW DEBUG] hasSavedCounts:', hasSavedCounts, 'p?.residential1brCount:', p?.residential1brCount, 'typeof:', typeof p?.residential1brCount);
+    console.log('[ESCROW DEBUG] raw counts:', p?.residential1brCount, p?.residential2brCount, p?.residential3brCount, p?.retailSmallCount, p?.officeSmallCount);
+    console.log('[ESCROW DEBUG] totalRevenue:', pr.totalRevenue);
     const costs = calculateCosts(pf, pr, i, r);
 
     const designDuration = i.designDuration;
@@ -477,8 +480,25 @@ export default function EscrowCashFlowSchedulePage2() {
       // الرصيد الفعلي = رصيد افتتاحي + إيرادات مستلمة - مصروفات مدفوعة
       const balanceAtMonth2Post = openingBalance + revenueReceivedByMonth2Post - expensesPaidByMonth2Post;
 
-      // دفعة 1: شهر 3 بعد الإنجاز — الرصيد المتبقي ناقص احتجاز 5% إيرادات
-      const liquidationAmount = balanceAtMonth2Post - revenueRetention;
+      // دفع 5% إنجاز للمقاول (completion) — يُدفع عند التصفية شهر 3
+      const completionPayment = constructionCost * 0.05;
+      const liqPostCompletion = emptyEffectivePost();
+      liqPostCompletion[2] = completionPayment; // index 2 = month 3
+      liquidationRows.push({
+        label: "دفع إنجاز المقاول (5% إنشاء)",
+        totalCost: completionPayment,
+        escrowAmount: completionPayment,
+        openingBalance: 0,
+        remainingToSpend: completionPayment,
+        section: "التصفية",
+        isRevenue: false,
+        designMonths: emptyDesign(),
+        constructionMonths: emptyConstruction(),
+        postConstructionMonths: liqPostCompletion,
+      });
+
+      // دفعة 1: شهر 3 بعد الإنجاز — الرصيد المتبقي ناقص احتجاز 5% إيرادات ناقص 5% إنجاز المقاول
+      const liquidationAmount = balanceAtMonth2Post - revenueRetention - completionPayment;
       const liqPost1 = emptyEffectivePost();
       liqPost1[2] = liquidationAmount; // index 2 = month 3
       liquidationRows.push({

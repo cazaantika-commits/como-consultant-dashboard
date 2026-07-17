@@ -311,10 +311,10 @@ export default function InvestorCashFlowSchedulePage() {
               )}
               {/* Profit row */}
               {data.revenuePostTotals.some(v => v > 0) && (() => {
-                const totalRevenue = data.revenuePostTotals.reduce((s, v) => s + v, 0);
+                const totalRevenue = data.totalRevenue;
                 const totalExpenses = data.grandInvestor;
                 const profit = totalRevenue - totalExpenses;
-                const profitPct = totalExpenses > 0 ? ((profit / totalExpenses) * 100).toFixed(1) : "0";
+                const profitPct = totalRevenue > 0 ? ((profit / totalRevenue) * 100).toFixed(1) : "0";
                 return (
                   <tr className="bg-emerald-100 font-bold border-t-2 border-emerald-500">
                     <td className="sticky right-0 z-20 bg-emerald-100 border border-gray-200 px-2 py-2 text-right text-emerald-900">

@@ -56,6 +56,7 @@ export interface CashFlowResult {
   designDuration: number;
   constructionDuration: number;
   postDuration: number;
+  totalRevenue: number;
 }
 
 // ═══════════════════════════════════════════
@@ -885,17 +886,16 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
     });
 
     // ─── تصفية حساب الضمان (دفعة 1: شهر 3 بعد الإنجاز) ───
-    // الضمان يدفع 80% من الإنشاء أثناء البناء (وليس 70% — الـ5% completion تُدفع من المستثمر مباشرة)
-    // المصروفات الفعلية = construction*80% + supervision + govFees*90% + salesCommission + reraAuditor + reraInspection + surveyor
-    // الرصيد = openingBalance(20%) + escrowRevenue - actualExpenses
-    // دفعة 1 = الرصيد - 5% احتجاز إيرادات
+    // الضمان يدفع 80% من الإنشاء أثناء البناء
+    // عند التصفية: يُدفع 5% إنجاز للمقاول + يُحجز 5% إيرادات + الباقي للمستثمر
     const escrowRevenue = totalRevenue * 0.80;
     const revenueRetention = escrowRevenue * 0.05;
+    const completionPayment = constructionCost * 0.05;
     const openingBalance = constructionCost * 0.20;
     const actualEscrowExpenses = (constructionCost * 0.80) + costs.supervisionFee +
       (i.govFeesTotal * r.govFeesEscrowShare) + costs.salesCommission +
       i.reraAuditorReport + i.reraInspection + i.surveyorFee;
-    const escrowLiquidation = openingBalance + escrowRevenue - actualEscrowExpenses - revenueRetention;
+    const escrowLiquidation = openingBalance + escrowRevenue - actualEscrowExpenses - revenueRetention - completionPayment;
     const escrowLiqPost = emptyPost();
     escrowLiqPost[2] = escrowLiquidation; // شهر 3 (index 2)
     rows.push({
@@ -1023,5 +1023,6 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
     designDuration,
     constructionDuration,
     postDuration,
+    totalRevenue,
   };
 }
