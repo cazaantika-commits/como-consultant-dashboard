@@ -451,8 +451,17 @@ export default function EscrowCashFlowSchedulePage2() {
       const escrowRevenue = totalRevenue * 0.80;
       const revenueRetention = escrowRevenue * 0.05;
       const constructionRetention = constructionCost * 0.05;
-      // دفعة 1: شهر 3 بعد الإنجاز — تحويل الرصيد للمالك (ناقص الاحتجازين)
-      const liquidationAmount = escrowRevenue - costs.totalEscrow - revenueRetention;
+
+      // حساب المصروفات الفعلية من الجدول (مجموع escrowAmount لكل البنود)
+      const actualEscrowExpenses = rows.reduce((s, r) => s + r.escrowAmount, 0);
+
+      // دفعة 1: شهر 3 بعد الإنجاز — الرصيد المتبقي ناقص احتجاز 5% إيرادات
+      // الرصيد = إيداع الضمان + إيرادات الضمان - المصروفات الفعلية
+      // لكن الإيداع مدرج ضمن المصروفات (openingBalance) فيلغي نفسه
+      // الرصيد الفعلي = escrowRevenue - (actualEscrowExpenses - openingBalance)
+      // ثم نطرح الاحتجاز + احتجاز المقاول (لأنه يُدفع في شهر 13 من ضمن تكلفة الإنشاء)
+      const balanceBeforeLiquidation = openingBalance + escrowRevenue - actualEscrowExpenses;
+      const liquidationAmount = balanceBeforeLiquidation - revenueRetention;
       const liqPost1 = emptyEffectivePost();
       liqPost1[2] = liquidationAmount; // index 2 = month 3
       liquidationRows.push({
@@ -468,26 +477,12 @@ export default function EscrowCashFlowSchedulePage2() {
         postConstructionMonths: liqPost1,
       });
 
-      // دفعة 2أ: شهر 13 بعد الإنجاز — دفع احتجاز المقاول (5% من تكلفة الإنشاء)
-      const liqPost2a = emptyEffectivePost();
-      liqPost2a[12] = constructionRetention; // index 12 = month 13
-      liquidationRows.push({
-        label: "دفع احتجاز المقاول (5% إنشاء)",
-        totalCost: constructionRetention,
-        escrowAmount: constructionRetention,
-        openingBalance: 0,
-        remainingToSpend: constructionRetention,
-        section: "التصفية",
-        isRevenue: false,
-        designMonths: emptyDesign(),
-        constructionMonths: emptyConstruction(),
-        postConstructionMonths: liqPost2a,
-      });
-
-      // دفعة 2ب: شهر 13 بعد الإنجاز — تحويل صافي الاحتجاز للمالك
+      // دفعة 2: شهر 13 بعد الإنجاز — تحويل صافي الاحتجاز للمالك
+      // (احتجاز المقاول 5% يُدفع من ضمن بند تكلفة الإنشاء في شهر 13)
+      // المتبقي للمالك = revenueRetention - constructionRetention
       const netRetentionToOwner = revenueRetention - constructionRetention;
-      const liqPost2b = emptyEffectivePost();
-      liqPost2b[12] = netRetentionToOwner; // index 12 = month 13
+      const liqPost2 = emptyEffectivePost();
+      liqPost2[12] = netRetentionToOwner; // index 12 = month 13
       liquidationRows.push({
         label: "تحويل صافي الاحتجاز للمالك",
         totalCost: netRetentionToOwner,
@@ -498,7 +493,7 @@ export default function EscrowCashFlowSchedulePage2() {
         isRevenue: false,
         designMonths: emptyDesign(),
         constructionMonths: emptyConstruction(),
-        postConstructionMonths: liqPost2b,
+        postConstructionMonths: liqPost2,
       });
     }
 
