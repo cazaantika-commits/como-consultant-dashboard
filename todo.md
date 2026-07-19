@@ -952,3 +952,16 @@
 - [x] تعديل escrowAmount للإنشاء: S1=85% (80% بناء + 5% احتجاز)، S2=65% (60% + 5% احتجاز)
 - [x] التأكد أن الرصيد النهائي = صفر بعد التصفية
 - [x] دفعة 1 ≈ 329.5M (الرصيد - 5% احتجاز إيرادات) ✓
+
+## Wael Sales & Marketing Planning Page (v2 - Correct Timeline)
+- [x] Create WaelSalesPlan.tsx page component
+- [x] Add route in App.tsx
+- [x] Add navigation link in Home.tsx
+- [ ] Rebuild with correct timeline: Design phase first, then Construction
+- [ ] Marketing prep starts 3 months before design ends (relative rule)
+- [ ] Sales start in month before last of design phase (relative rule)
+- [ ] Sales & marketing continue through construction period
+- [ ] Wael inputs: revenue, design months, construction months, start date, marketing %, commission %, off-plan %
+- [ ] Results show full timeline (design + construction) with clear phase markers
+- [ ] Real-time result updates when any variable changes
+- [ ] Smart warnings when targets don't align
