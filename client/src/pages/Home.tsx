@@ -420,6 +420,7 @@ export default function Home() {
     { id: "tool-market", label: "تقارير السوق", icon: BarChart3, path: "/market-reports", borderColor: "#0891b2", iconBg: "linear-gradient(135deg, #0891b2, #06b6d4)", shadow: "rgba(8, 145, 178, 0.25)" },
     { id: "tool-assign", label: "ملخص التكليفات", icon: ClipboardList, path: "/agent-assignments-summary", borderColor: "#f59e0b", iconBg: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245, 158, 11, 0.25)" },
     { id: "tool-learn", label: "التعلم الذاتي", icon: Brain, path: "/self-learning", borderColor: "#ec4899", iconBg: "linear-gradient(135deg, #ec4899, #db2777)", shadow: "rgba(236, 72, 153, 0.25)" },
+    { id: "tool-wael-sales", label: "خطة المبيعات والتسويق", icon: Target, path: "/wael-sales-plan", borderColor: "#059669", iconBg: "linear-gradient(135deg, #059669, #10b981)", shadow: "rgba(5, 150, 105, 0.25)" },
     { id: "tool-news", label: "إدارة الأخبار", icon: Newspaper, path: "/news-manage", borderColor: "#f59e0b", iconBg: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245, 158, 11, 0.25)", ownerOnly: true },
     { id: "tool-users", label: "إدارة المستخدمين", icon: Users, path: "/user-management", borderColor: "#6366f1", iconBg: "linear-gradient(135deg, #6366f1, #8b5cf6)", shadow: "rgba(99, 102, 241, 0.25)", ownerOnly: true },
   ];

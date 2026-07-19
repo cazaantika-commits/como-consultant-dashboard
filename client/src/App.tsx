@@ -83,6 +83,7 @@ import UserManagementPage from "./pages/UserManagementPage";
 import ApprovalSettings from "./pages/ApprovalSettings";
 import GeneralRequests from "./pages/GeneralRequests";
 import InternalMessages from "./pages/InternalMessages";
+import WaelSalesPlan from "./pages/WaelSalesPlan";
 import { ReadOnlyGuard } from "./components/ReadOnlyGuard";
 
 function Router() {
@@ -165,6 +166,7 @@ function Router() {
       <Route path="/investor-cashflow-schedule" component={InvestorCashFlowSchedulePage} />
       <Route path="/escrow-cashflow-schedule" component={EscrowCashFlowSchedulePage2} />
       <Route path="/consolidated-investor-cashflow" component={ConsolidatedInvestorCashFlowPage} />
+      <Route path="/wael-sales-plan" component={WaelSalesPlan} />
       <Route path="/user-management" component={UserManagementPage} />
       <Route path="/approval-settings" component={ApprovalSettings} />
       <Route path="/internal-messages" component={InternalMessages} />
