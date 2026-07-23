@@ -51,6 +51,7 @@ import { portfolioScenariosRouter } from "./routers/portfolioScenarios";
 import { businessPartnersRouter, paymentRequestsRouter, approvalSettingsRouter } from "./routers/businessPartners";
 import { generalRequestsRouter } from "./routers/generalRequests";
 import { internalMessagesRouter } from "./routers/internalMessages";
+import { waelSalesPlanRouter } from "./routers/waelSalesPlan";
 import { adminProcedure } from "./_core/trpc";
 import { users } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -123,6 +124,7 @@ export const appRouter = router({
   approvalSettings: approvalSettingsRouter,
   generalRequests: generalRequestsRouter,
   internalMessages: internalMessagesRouter,
+  waelSalesPlan: waelSalesPlanRouter,
 
   // User Management (admin only)
   userManagement: router({

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,21 +13,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  ComposedChart,
-  Area,
-  ReferenceLine,
-} from "recharts";
-import {
   TrendingUp,
   Target,
   Megaphone,
@@ -41,7 +26,13 @@ import {
   Info,
   RefreshCw,
   Zap,
+  Save,
+  CreditCard,
+  Table2,
+  Loader2,
 } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { useToast } from "@/hooks/use-toast";
 
 // Dubai seasonality factors (1.0 = average, >1 = strong, <1 = weak)
 const DUBAI_SEASONALITY: Record<number, { factor: number; label: string; icon: string }> = {
@@ -64,15 +55,24 @@ const MONTH_NAMES_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", 
 
 // Marketing channels
 const DEFAULT_CHANNELS = [
-  { id: "digital", name: "التسويق الرقمي", nameEn: "Digital Marketing", defaultPct: 35, color: "#3b82f6" },
-  { id: "outdoor", name: "الإعلانات الخارجية", nameEn: "Outdoor & OOH", defaultPct: 20, color: "#10b981" },
-  { id: "events", name: "المعارض والفعاليات", nameEn: "Events & Exhibitions", defaultPct: 15, color: "#f59e0b" },
-  { id: "broker", name: "شبكة الوسطاء", nameEn: "Broker Network", defaultPct: 15, color: "#8b5cf6" },
-  { id: "pr", name: "العلاقات العامة", nameEn: "PR & Media", defaultPct: 10, color: "#ec4899" },
-  { id: "content", name: "المحتوى والعلامة", nameEn: "Content & Branding", defaultPct: 5, color: "#06b6d4" },
+  { id: "digital", name: "التسويق الرقمي", defaultPct: 35, color: "#3b82f6" },
+  { id: "outdoor", name: "الإعلانات الخارجية", defaultPct: 20, color: "#10b981" },
+  { id: "events", name: "المعارض والفعاليات", defaultPct: 15, color: "#f59e0b" },
+  { id: "broker", name: "شبكة الوسطاء", defaultPct: 15, color: "#8b5cf6" },
+  { id: "pr", name: "العلاقات العامة", defaultPct: 10, color: "#ec4899" },
+  { id: "content", name: "المحتوى والعلامة", defaultPct: 5, color: "#06b6d4" },
+];
+
+// Default payment plan milestones (from Excel model)
+const DEFAULT_PAYMENT_PLAN = [
+  { id: 1, name: "دفعة الحجز", pct: 10, trigger: "signing", lag: 0, description: "عند التوقيع" },
+  { id: 2, name: "دفعة SPA", pct: 10, trigger: "spa", lag: 1, description: "شهر بعد التوقيع" },
+  { id: 3, name: "أقساط البناء", pct: 50, trigger: "construction", lag: 0, description: "موزعة على فترة البناء" },
+  { id: 4, name: "دفعة التسليم", pct: 30, trigger: "handover", lag: 0, description: "عند التسليم" },
 ];
 
 function formatCurrency(n: number): string {
+  if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(2) + "B";
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
   if (n >= 1_000) return (n / 1_000).toFixed(0) + "K";
   return n.toFixed(0);
@@ -83,42 +83,45 @@ function formatAED(n: number): string {
 }
 
 export default function WaelSalesPlan() {
+  const { toast } = useToast();
+
+  // ═══════════════════════════════════════════
+  // PROJECT SELECTION
+  // ═══════════════════════════════════════════
+  const { data: projects } = trpc.projects.list.useQuery();
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const [planId, setPlanId] = useState<number | undefined>(undefined);
+  const [isSaving, setIsSaving] = useState(false);
+
   // ═══════════════════════════════════════════
   // PROJECT INPUTS (what Wael enters)
   // ═══════════════════════════════════════════
   const [totalRevenue, setTotalRevenue] = useState(765_000_000);
   const [designMonths, setDesignMonths] = useState(8);
   const [constructionMonths, setConstructionMonths] = useState(30);
-  const [startMonth, setStartMonth] = useState(1); // January
+  const [startMonth, setStartMonth] = useState(1);
   const [startYear, setStartYear] = useState(2026);
   const [marketingBudgetPct, setMarketingBudgetPct] = useState(2.0);
   const [salesCommissionPct, setSalesCommissionPct] = useState(5.0);
-  const [offplanPct, setOffplanPct] = useState(80); // % sold during construction (off-plan)
+  const [offplanPct, setOffplanPct] = useState(80);
 
-  // Monthly sales absorption percentages (for the sales period only)
-  const salesPeriodLength = useMemo(() => {
-    // Sales start: month before last of design = designMonths - 1
-    // Sales end: end of construction = designMonths + constructionMonths
-    // Sales period = from (designMonths - 1) to (designMonths + constructionMonths) = constructionMonths + 1 months
-    return constructionMonths + 1;
-  }, [constructionMonths]);
+  // Payment Plan
+  const [paymentPlan, setPaymentPlan] = useState(DEFAULT_PAYMENT_PLAN);
+
+  // Monthly sales absorption percentages
+  const salesPeriodLength = useMemo(() => constructionMonths + 1, [constructionMonths]);
 
   const [salesAbsorption, setSalesAbsorption] = useState<number[]>(() => {
-    const len = 31; // constructionMonths + 1
+    const len = 31;
     const base = 80 / len;
     return Array.from({ length: len }, () => parseFloat(base.toFixed(2)));
   });
 
-  // Marketing monthly distribution (for marketing period)
-  const marketingPeriodLength = useMemo(() => {
-    // Marketing starts: 3 months before design ends = designMonths - 3
-    // Marketing ends: end of construction = designMonths + constructionMonths
-    // Marketing period = from (designMonths - 3) to (designMonths + constructionMonths) = constructionMonths + 3 months
-    return constructionMonths + 3;
-  }, [constructionMonths]);
+  // Marketing monthly distribution
+  const marketingPeriodLength = useMemo(() => constructionMonths + 3, [constructionMonths]);
 
   const [marketingDist, setMarketingDist] = useState<number[]>(() => {
-    const len = 33; // constructionMonths + 3
+    const len = 33;
     const base = 100 / len;
     return Array.from({ length: len }, () => parseFloat(base.toFixed(2)));
   });
@@ -127,16 +130,83 @@ export default function WaelSalesPlan() {
   const [channels, setChannels] = useState(DEFAULT_CHANNELS.map(c => ({ ...c, pct: c.defaultPct })));
 
   // ═══════════════════════════════════════════
+  // DB SAVE/LOAD
+  // ═══════════════════════════════════════════
+  const saveMutation = trpc.waelSalesPlan.save.useMutation();
+  const { data: existingPlans } = trpc.waelSalesPlan.getByProject.useQuery(
+    { projectId: selectedProjectId! },
+    { enabled: !!selectedProjectId }
+  );
+
+  // Load existing plan when project changes
+  useEffect(() => {
+    if (existingPlans && existingPlans.length > 0) {
+      const plan = existingPlans[0];
+      setPlanId(plan.id);
+      if (plan.totalRevenue) setTotalRevenue(plan.totalRevenue);
+      if (plan.designMonths) setDesignMonths(plan.designMonths);
+      if (plan.constructionMonths) setConstructionMonths(plan.constructionMonths);
+      if (plan.offplanPct) setOffplanPct(plan.offplanPct);
+      if (plan.marketingBudgetPct) setMarketingBudgetPct(parseFloat(plan.marketingBudgetPct));
+      if (plan.salesCommissionPct) setSalesCommissionPct(parseFloat(plan.salesCommissionPct));
+      if (plan.salesAbsorptionJson) {
+        try { setSalesAbsorption(JSON.parse(plan.salesAbsorptionJson)); } catch {}
+      }
+      if (plan.marketingDistJson) {
+        try { setMarketingDist(JSON.parse(plan.marketingDistJson)); } catch {}
+      }
+      if (plan.channelsJson) {
+        try { setChannels(JSON.parse(plan.channelsJson)); } catch {}
+      }
+      if (plan.paymentPlanJson) {
+        try { setPaymentPlan(JSON.parse(plan.paymentPlanJson)); } catch {}
+      }
+    } else {
+      setPlanId(undefined);
+    }
+  }, [existingPlans]);
+
+  const handleSave = async () => {
+    if (!selectedProjectId) {
+      toast({ title: "اختر مشروعاً أولاً", variant: "destructive" });
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const result = await saveMutation.mutateAsync({
+        id: planId,
+        projectId: selectedProjectId,
+        totalRevenue,
+        designMonths,
+        constructionMonths,
+        offplanPct,
+        marketingBudgetPct: marketingBudgetPct.toString(),
+        salesCommissionPct: salesCommissionPct.toString(),
+        salesAbsorptionJson: JSON.stringify(salesAbsorption),
+        marketingDistJson: JSON.stringify(marketingDist),
+        channelsJson: JSON.stringify(channels),
+        paymentPlanJson: JSON.stringify(paymentPlan),
+        resultsJson: JSON.stringify({ cashInflowData }),
+      });
+      if (!planId) setPlanId(result.id);
+      toast({ title: "تم الحفظ بنجاح ✓" });
+    } catch (e: any) {
+      toast({ title: "خطأ في الحفظ", description: e.message, variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // ═══════════════════════════════════════════
   // COMPUTED VALUES (auto-calculated)
   // ═══════════════════════════════════════════
 
-  // Key timeline milestones (all relative to project start month 0)
   const timeline = useMemo(() => {
     const projectStart = 0;
     const designEnd = designMonths;
     const constructionEnd = designMonths + constructionMonths;
-    const marketingStart = Math.max(0, designMonths - 3); // 3 months before design ends
-    const salesStart = Math.max(0, designMonths - 1); // month before last of design
+    const marketingStart = Math.max(0, designMonths - 3);
+    const salesStart = Math.max(0, designMonths - 1);
     const totalProjectMonths = constructionEnd;
 
     return {
@@ -146,8 +216,8 @@ export default function WaelSalesPlan() {
       marketingStart,
       salesStart,
       totalProjectMonths,
-      marketingPeriod: constructionEnd - marketingStart, // = constructionMonths + 3
-      salesPeriod: constructionEnd - salesStart, // = constructionMonths + 1
+      marketingPeriod: constructionEnd - marketingStart,
+      salesPeriod: constructionEnd - salesStart,
     };
   }, [designMonths, constructionMonths]);
 
@@ -155,102 +225,140 @@ export default function WaelSalesPlan() {
   const salesCommission = useMemo(() => totalRevenue * (salesCommissionPct / 100), [totalRevenue, salesCommissionPct]);
   const offplanRevenue = useMemo(() => totalRevenue * (offplanPct / 100), [totalRevenue, offplanPct]);
 
-  // Ensure arrays match period lengths
   const effectiveSalesAbsorption = useMemo(() => {
     if (salesAbsorption.length === timeline.salesPeriod) return salesAbsorption;
-    const arr = Array.from({ length: timeline.salesPeriod }, (_, i) => salesAbsorption[i] ?? (offplanPct / timeline.salesPeriod));
-    return arr;
+    return Array.from({ length: timeline.salesPeriod }, (_, i) => salesAbsorption[i] ?? (offplanPct / timeline.salesPeriod));
   }, [salesAbsorption, timeline.salesPeriod, offplanPct]);
 
   const effectiveMarketingDist = useMemo(() => {
     if (marketingDist.length === timeline.marketingPeriod) return marketingDist;
-    const arr = Array.from({ length: timeline.marketingPeriod }, (_, i) => marketingDist[i] ?? (100 / timeline.marketingPeriod));
-    return arr;
+    return Array.from({ length: timeline.marketingPeriod }, (_, i) => marketingDist[i] ?? (100 / timeline.marketingPeriod));
   }, [marketingDist, timeline.marketingPeriod]);
 
   const totalSalesAbsorption = useMemo(() => effectiveSalesAbsorption.reduce((s, v) => s + v, 0), [effectiveSalesAbsorption]);
   const totalChannelPct = useMemo(() => channels.reduce((s, c) => s + c.pct, 0), [channels]);
   const totalMarketingDist = useMemo(() => effectiveMarketingDist.reduce((s, v) => s + v, 0), [effectiveMarketingDist]);
+  const totalPaymentPlanPct = useMemo(() => paymentPlan.reduce((s, m) => s + m.pct, 0), [paymentPlan]);
 
-  // Get calendar month for any project month index (0-based)
-  const getCalendarMonth = (projectMonthIndex: number) => {
-    return ((startMonth - 1 + projectMonthIndex) % 12) + 1;
-  };
-
-  const getCalendarYear = (projectMonthIndex: number) => {
-    return startYear + Math.floor((startMonth - 1 + projectMonthIndex) / 12);
-  };
-
+  const getCalendarMonth = (projectMonthIndex: number) => ((startMonth - 1 + projectMonthIndex) % 12) + 1;
+  const getCalendarYear = (projectMonthIndex: number) => startYear + Math.floor((startMonth - 1 + projectMonthIndex) / 12);
   const getMonthLabel = (projectMonthIndex: number) => {
     const cm = getCalendarMonth(projectMonthIndex);
     const yr = getCalendarYear(projectMonthIndex);
     return `${MONTH_NAMES_AR[cm - 1]} ${yr}`;
   };
-
   const getMonthLabelShort = (projectMonthIndex: number) => {
     const cm = getCalendarMonth(projectMonthIndex);
     const yr = getCalendarYear(projectMonthIndex);
     return `${MONTH_NAMES_EN[cm - 1]} ${yr.toString().slice(2)}`;
   };
 
-  // Full timeline chart data (one row per project month)
-  const fullTimelineData = useMemo(() => {
-    const data = [];
-    for (let m = 0; m < timeline.totalProjectMonths; m++) {
-      const calMonth = getCalendarMonth(m);
-      const seasonFactor = DUBAI_SEASONALITY[calMonth].factor;
+  // ═══════════════════════════════════════════
+  // CASH INFLOW CALCULATION (Payment Plan × Sales)
+  // This is the KEY output — actual cash received per month
+  // ═══════════════════════════════════════════
+  const cashInflowData = useMemo(() => {
+    // For each month in the project, calculate:
+    // 1. Sales that happen this month (from absorption plan)
+    // 2. Cash received this month (from all previous sales × their payment schedule)
+    const totalMonths = timeline.totalProjectMonths;
+    const data: Array<{
+      monthIndex: number;
+      label: string;
+      labelShort: string;
+      phase: string;
+      salesThisMonth: number;
+      salesPct: number;
+      cashInflow: number;
+      marketingSpend: number;
+      cumSales: number;
+      cumCash: number;
+    }> = [];
 
-      // Determine phase
-      let phase: "design" | "construction" = m < designMonths ? "design" : "construction";
+    // First, compute monthly sales amounts
+    const monthlySales: number[] = Array(totalMonths).fill(0);
+    for (let i = 0; i < effectiveSalesAbsorption.length; i++) {
+      const m = timeline.salesStart + i;
+      if (m < totalMonths) {
+        monthlySales[m] = (effectiveSalesAbsorption[i] / 100) * totalRevenue;
+      }
+    }
 
-      // Sales (only during sales period)
-      let salesTarget = 0;
-      let salesPct = 0;
-      if (m >= timeline.salesStart) {
-        const salesIdx = m - timeline.salesStart;
-        if (salesIdx < effectiveSalesAbsorption.length) {
-          salesPct = effectiveSalesAbsorption[salesIdx];
-          salesTarget = (salesPct / 100) * totalRevenue;
+    // Now compute cash inflow per month based on payment plan
+    // For each sale in month S, the buyer pays:
+    //   - Booking (e.g. 10%) in month S + lag
+    //   - SPA (e.g. 10%) in month S + lag
+    //   - Construction installments spread over construction period
+    //   - Handover payment at construction end
+    const cashPerMonth: number[] = Array(totalMonths + 24).fill(0); // extra months for post-completion payments
+
+    for (let saleMonth = 0; saleMonth < totalMonths; saleMonth++) {
+      const saleAmount = monthlySales[saleMonth];
+      if (saleAmount <= 0) continue;
+
+      for (const milestone of paymentPlan) {
+        const milestoneAmount = saleAmount * (milestone.pct / 100);
+        let payMonth = saleMonth;
+
+        if (milestone.trigger === "signing") {
+          payMonth = saleMonth + milestone.lag;
+        } else if (milestone.trigger === "spa") {
+          payMonth = saleMonth + milestone.lag;
+        } else if (milestone.trigger === "construction") {
+          // Spread evenly over remaining construction months from sale date
+          const remainingConstruction = Math.max(1, timeline.constructionEnd - saleMonth);
+          const monthlyInstallment = milestoneAmount / remainingConstruction;
+          for (let cm = saleMonth; cm < timeline.constructionEnd; cm++) {
+            if (cm < cashPerMonth.length) cashPerMonth[cm] += monthlyInstallment;
+          }
+          continue; // already distributed
+        } else if (milestone.trigger === "handover") {
+          payMonth = timeline.constructionEnd + milestone.lag;
+        }
+
+        if (payMonth >= 0 && payMonth < cashPerMonth.length) {
+          cashPerMonth[payMonth] += milestoneAmount;
         }
       }
+    }
 
-      // Marketing (only during marketing period)
+    // Build the results table
+    let cumSales = 0;
+    let cumCash = 0;
+    for (let m = 0; m < totalMonths; m++) {
+      const salesThisMonth = monthlySales[m];
+      const cashInflow = cashPerMonth[m];
+      cumSales += salesThisMonth;
+      cumCash += cashInflow;
+
+      // Marketing spend
       let marketingSpend = 0;
-      let marketingPct = 0;
       if (m >= timeline.marketingStart) {
         const mktIdx = m - timeline.marketingStart;
         if (mktIdx < effectiveMarketingDist.length) {
-          marketingPct = effectiveMarketingDist[mktIdx];
-          marketingSpend = (marketingPct / 100) * marketingBudget;
+          marketingSpend = (effectiveMarketingDist[mktIdx] / 100) * marketingBudget;
         }
       }
 
+      const phase = m < designMonths ? "تصاميم" : "بناء";
+      const salesPct = salesThisMonth > 0 ? (salesThisMonth / totalRevenue) * 100 : 0;
+
       data.push({
         monthIndex: m,
-        label: getMonthLabelShort(m),
-        labelAr: getMonthLabel(m),
+        label: getMonthLabel(m),
+        labelShort: getMonthLabelShort(m),
         phase,
-        calMonth,
-        seasonFactor,
-        salesTarget,
+        salesThisMonth,
         salesPct,
+        cashInflow,
         marketingSpend,
-        marketingPct,
-        isMarketingActive: m >= timeline.marketingStart,
-        isSalesActive: m >= timeline.salesStart,
+        cumSales,
+        cumCash,
       });
     }
-    return data;
-  }, [timeline, designMonths, effectiveSalesAbsorption, effectiveMarketingDist, totalRevenue, marketingBudget, startMonth, startYear]);
 
-  // Cumulative sales
-  const cumulativeSalesData = useMemo(() => {
-    let cum = 0;
-    return fullTimelineData.map(d => {
-      cum += d.salesTarget;
-      return { ...d, cumSales: cum };
-    });
-  }, [fullTimelineData]);
+    return data;
+  }, [timeline, effectiveSalesAbsorption, effectiveMarketingDist, totalRevenue, marketingBudget, paymentPlan, designMonths, startMonth, startYear]);
 
   // Warnings
   const warnings = useMemo(() => {
@@ -267,7 +375,9 @@ export default function WaelSalesPlan() {
     if (Math.abs(totalMarketingDist - 100) > 2) {
       w.push({ type: "warning", message: `مجموع التوزيع الشهري للتسويق (${totalMarketingDist.toFixed(1)}%) يجب أن يساوي 100%` });
     }
-    // Check high sales during weak season
+    if (Math.abs(totalPaymentPlanPct - 100) > 0.5) {
+      w.push({ type: "error", message: `مجموع خطة الدفع (${totalPaymentPlanPct}%) يجب أن يساوي 100%` });
+    }
     effectiveSalesAbsorption.forEach((pct, i) => {
       const projectMonth = timeline.salesStart + i;
       const calMonth = getCalendarMonth(projectMonth);
@@ -277,13 +387,9 @@ export default function WaelSalesPlan() {
       }
     });
     return w;
-  }, [totalSalesAbsorption, totalChannelPct, totalMarketingDist, effectiveSalesAbsorption, timeline, designMonths, offplanPct]);
+  }, [totalSalesAbsorption, totalChannelPct, totalMarketingDist, totalPaymentPlanPct, effectiveSalesAbsorption, timeline, designMonths, offplanPct]);
 
   // Handlers
-  const handleDesignMonthsChange = (months: number) => {
-    setDesignMonths(months);
-  };
-
   const handleConstructionMonthsChange = (months: number) => {
     setConstructionMonths(months);
     const newSalesPeriod = months + 1;
@@ -312,6 +418,12 @@ export default function WaelSalesPlan() {
     setChannels(newChannels);
   };
 
+  const handlePaymentPlanChange = (index: number, pct: number) => {
+    const newPlan = [...paymentPlan];
+    newPlan[index] = { ...newPlan[index], pct };
+    setPaymentPlan(newPlan);
+  };
+
   const distributeEven = () => {
     const base = offplanPct / timeline.salesPeriod;
     setSalesAbsorption(Array.from({ length: timeline.salesPeriod }, () => parseFloat(base.toFixed(2))));
@@ -324,8 +436,7 @@ export default function WaelSalesPlan() {
       return DUBAI_SEASONALITY[calMonth].factor;
     });
     const totalFactor = factors.reduce((s, f) => s + f, 0);
-    const arr = factors.map(f => parseFloat(((f / totalFactor) * offplanPct).toFixed(2)));
-    setSalesAbsorption(arr);
+    setSalesAbsorption(factors.map(f => parseFloat(((f / totalFactor) * offplanPct).toFixed(2))));
   };
 
   const distributeMktEven = () => {
@@ -334,15 +445,13 @@ export default function WaelSalesPlan() {
   };
 
   const distributeMktFrontLoaded = () => {
-    // First 3 months (prep) get 20%, rest gets 80%
     const prepMonths = 3;
     const restMonths = timeline.marketingPeriod - prepMonths;
     const prepPct = 20 / prepMonths;
     const restPct = 80 / restMonths;
-    const arr = Array.from({ length: timeline.marketingPeriod }, (_, i) =>
+    setMarketingDist(Array.from({ length: timeline.marketingPeriod }, (_, i) =>
       parseFloat((i < prepMonths ? prepPct : restPct).toFixed(2))
-    );
-    setMarketingDist(arr);
+    ));
   };
 
   return (
@@ -356,32 +465,64 @@ export default function WaelSalesPlan() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-900">خطة المبيعات والتسويق</h1>
-              <p className="text-xs text-gray-500">أداة تخطيط تفاعلية — النتائج تتحدث فوراً</p>
+              <p className="text-xs text-gray-500">أداة تخطيط تفاعلية — النتائج تتحدث فوراً مع حفظ تلقائي</p>
             </div>
           </div>
-          {/* Timeline summary badge */}
-          <div className="hidden md:flex items-center gap-3 text-xs">
-            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 gap-1">
-              <Paintbrush className="w-3 h-3" />
-              تصاميم: {designMonths} شهر
-            </Badge>
-            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1">
-              <HardHat className="w-3 h-3" />
-              بناء: {constructionMonths} شهر
-            </Badge>
-            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 gap-1">
-              <Megaphone className="w-3 h-3" />
-              تسويق يبدأ: شهر {timeline.marketingStart + 1}
-            </Badge>
-            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 gap-1">
-              <TrendingUp className="w-3 h-3" />
-              مبيعات تبدأ: شهر {timeline.salesStart + 1}
-            </Badge>
+          <div className="flex items-center gap-3">
+            {/* Project Selector */}
+            <Select
+              value={selectedProjectId?.toString() ?? ""}
+              onValueChange={(v) => setSelectedProjectId(Number(v))}
+            >
+              <SelectTrigger className="w-[200px] bg-white border-gray-200">
+                <SelectValue placeholder="اختر المشروع" />
+              </SelectTrigger>
+              <SelectContent>
+                {projects?.map((p: any) => (
+                  <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {/* Save Button */}
+            <Button
+              onClick={handleSave}
+              disabled={isSaving || !selectedProjectId}
+              className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+            >
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              حفظ
+            </Button>
           </div>
         </div>
       </div>
 
       <div className="max-w-[1600px] mx-auto p-6 space-y-6">
+
+        {/* Timeline summary badges */}
+        <div className="flex items-center gap-3 text-xs flex-wrap">
+          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 gap-1">
+            <Paintbrush className="w-3 h-3" />
+            تصاميم: {designMonths} شهر
+          </Badge>
+          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1">
+            <HardHat className="w-3 h-3" />
+            بناء: {constructionMonths} شهر
+          </Badge>
+          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 gap-1">
+            <Megaphone className="w-3 h-3" />
+            تسويق يبدأ: شهر {timeline.marketingStart + 1}
+          </Badge>
+          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 gap-1">
+            <TrendingUp className="w-3 h-3" />
+            مبيعات تبدأ: شهر {timeline.salesStart + 1}
+          </Badge>
+          {planId && (
+            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 gap-1">
+              <CheckCircle2 className="w-3 h-3" />
+              محفوظ
+            </Badge>
+          )}
+        </div>
 
         {/* Warnings */}
         {warnings.length > 0 && (
@@ -489,7 +630,7 @@ export default function WaelSalesPlan() {
                     min={3}
                     max={24}
                     value={designMonths}
-                    onChange={(e) => handleDesignMonthsChange(Number(e.target.value))}
+                    onChange={(e) => setDesignMonths(Number(e.target.value))}
                     className="mt-1 bg-purple-50 border-purple-200 text-lg font-bold text-purple-700"
                   />
                 </div>
@@ -538,15 +679,15 @@ export default function WaelSalesPlan() {
               <div className="p-3 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl border border-indigo-100 space-y-2">
                 <h4 className="text-xs font-bold text-indigo-700 flex items-center gap-1">
                   <Zap className="w-3 h-3" />
-                  محسوب تلقائياً
+                  محسوب تلقائياً (قواعد نسبية)
                 </h4>
                 <div className="grid grid-cols-1 gap-1.5 text-xs">
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-600">بداية تحضير التسويق:</span>
+                    <span className="text-gray-600">بداية تحضير التسويق (3 أشهر قبل نهاية التصاميم):</span>
                     <Badge variant="outline" className="text-xs bg-blue-50">{getMonthLabel(timeline.marketingStart)}</Badge>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-600">بداية المبيعات:</span>
+                    <span className="text-gray-600">بداية المبيعات (الشهر قبل الأخير من التصاميم):</span>
                     <Badge variant="outline" className="text-xs bg-amber-50">{getMonthLabel(timeline.salesStart)}</Badge>
                   </div>
                   <div className="flex justify-between items-center">
@@ -562,117 +703,68 @@ export default function WaelSalesPlan() {
             </CardContent>
           </Card>
 
-          {/* Timeline Visual */}
+          {/* Payment Plan */}
           <Card className="border-0 shadow-md bg-white">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
-                  <BarChart3 className="w-4 h-4 text-amber-600" />
+                <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+                  <CreditCard className="w-4 h-4 text-orange-600" />
                 </div>
-                خريطة المراحل
+                خطة الدفع للمشتري
               </CardTitle>
+              <Badge variant={Math.abs(totalPaymentPlanPct - 100) < 1 ? "default" : "destructive"} className="w-fit">
+                المجموع: {totalPaymentPlanPct}%
+              </Badge>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {/* Design Phase Bar */}
-                <div>
-                  <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="font-medium text-purple-700 flex items-center gap-1"><Paintbrush className="w-3 h-3" /> التصاميم</span>
-                    <span className="text-gray-400">{designMonths} شهر</span>
+            <CardContent className="space-y-3">
+              {paymentPlan.map((milestone, i) => (
+                <div key={milestone.id} className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-gray-700">{milestone.name}</span>
+                    <span className="text-xs text-gray-400">{milestone.description}</span>
                   </div>
-                  <div className="h-6 bg-gray-100 rounded-lg overflow-hidden relative">
-                    <div
-                      className="h-full bg-gradient-to-l from-purple-400 to-purple-500 rounded-lg flex items-center justify-center text-white text-[10px] font-bold"
-                      style={{ width: `${(designMonths / timeline.totalProjectMonths) * 100}%` }}
-                    >
-                      {designMonths}m
-                    </div>
+                  <div className="flex items-center gap-3">
+                    <Slider
+                      value={[milestone.pct]}
+                      onValueChange={([v]) => handlePaymentPlanChange(i, v)}
+                      min={0}
+                      max={60}
+                      step={1}
+                      className="flex-1"
+                    />
+                    <Input
+                      type="number"
+                      value={milestone.pct}
+                      onChange={(e) => handlePaymentPlanChange(i, Number(e.target.value))}
+                      className="w-16 h-8 text-center text-sm bg-white border-gray-200"
+                    />
+                    <span className="text-xs text-gray-400 w-8">%</span>
                   </div>
+                  <p className="text-xs text-orange-600 mt-1 font-medium">{formatAED(offplanRevenue * milestone.pct / 100)}</p>
                 </div>
-
-                {/* Construction Phase Bar */}
-                <div>
-                  <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="font-medium text-emerald-700 flex items-center gap-1"><HardHat className="w-3 h-3" /> البناء</span>
-                    <span className="text-gray-400">{constructionMonths} شهر</span>
+              ))}
+              {/* Visual bar */}
+              <div className="flex h-4 rounded-lg overflow-hidden mt-2">
+                {paymentPlan.map((m, i) => (
+                  <div
+                    key={m.id}
+                    className="flex items-center justify-center text-[9px] text-white font-bold"
+                    style={{
+                      width: `${m.pct}%`,
+                      backgroundColor: ["#f59e0b", "#3b82f6", "#10b981", "#8b5cf6"][i] || "#6b7280",
+                    }}
+                  >
+                    {m.pct > 8 ? `${m.pct}%` : ""}
                   </div>
-                  <div className="h-6 bg-gray-100 rounded-lg overflow-hidden relative">
-                    <div
-                      className="h-full bg-gradient-to-l from-emerald-400 to-emerald-500 rounded-lg flex items-center justify-center text-white text-[10px] font-bold"
-                      style={{
-                        width: `${(constructionMonths / timeline.totalProjectMonths) * 100}%`,
-                        marginRight: `${(designMonths / timeline.totalProjectMonths) * 100}%`,
-                      }}
-                    >
-                      {constructionMonths}m
-                    </div>
-                  </div>
-                </div>
-
-                {/* Marketing Bar */}
-                <div>
-                  <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="font-medium text-blue-700 flex items-center gap-1"><Megaphone className="w-3 h-3" /> التسويق</span>
-                    <span className="text-gray-400">{timeline.marketingPeriod} شهر</span>
-                  </div>
-                  <div className="h-6 bg-gray-100 rounded-lg overflow-hidden relative">
-                    <div
-                      className="h-full bg-gradient-to-l from-blue-400 to-blue-500 rounded-lg flex items-center justify-center text-white text-[10px] font-bold"
-                      style={{
-                        width: `${(timeline.marketingPeriod / timeline.totalProjectMonths) * 100}%`,
-                        marginRight: `${(timeline.marketingStart / timeline.totalProjectMonths) * 100}%`,
-                      }}
-                    >
-                      {timeline.marketingPeriod}m
-                    </div>
-                  </div>
-                </div>
-
-                {/* Sales Bar */}
-                <div>
-                  <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="font-medium text-amber-700 flex items-center gap-1"><TrendingUp className="w-3 h-3" /> المبيعات</span>
-                    <span className="text-gray-400">{timeline.salesPeriod} شهر</span>
-                  </div>
-                  <div className="h-6 bg-gray-100 rounded-lg overflow-hidden relative">
-                    <div
-                      className="h-full bg-gradient-to-l from-amber-400 to-amber-500 rounded-lg flex items-center justify-center text-white text-[10px] font-bold"
-                      style={{
-                        width: `${(timeline.salesPeriod / timeline.totalProjectMonths) * 100}%`,
-                        marginRight: `${(timeline.salesStart / timeline.totalProjectMonths) * 100}%`,
-                      }}
-                    >
-                      {timeline.salesPeriod}m
-                    </div>
-                  </div>
-                </div>
+                ))}
               </div>
-
-              {/* Seasonality reference */}
-              <div className="mt-4 p-3 bg-gray-50 rounded-xl border border-gray-100">
-                <h4 className="text-xs font-medium text-gray-600 mb-2 flex items-center gap-1">
-                  <Info className="w-3 h-3" />
-                  موسمية سوق دبي
-                </h4>
-                <div className="grid grid-cols-6 gap-1">
-                  {Object.entries(DUBAI_SEASONALITY).map(([month, data]) => (
-                    <div
-                      key={month}
-                      className={`text-center p-1 rounded text-[10px] ${
-                        data.factor >= 1.0
-                          ? "bg-emerald-100 text-emerald-700"
-                          : data.factor >= 0.7
-                          ? "bg-yellow-100 text-yellow-700"
-                          : data.factor >= 0.5
-                          ? "bg-orange-100 text-orange-700"
-                          : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      <span>{data.icon}</span>
-                      <p className="font-bold">{(data.factor * 100).toFixed(0)}%</p>
-                    </div>
-                  ))}
-                </div>
+              <div className="flex gap-2 flex-wrap mt-2">
+                {paymentPlan.map((m, i) => (
+                  <div key={m.id} className="flex items-center gap-1 text-[10px] text-gray-500">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ["#f59e0b", "#3b82f6", "#10b981", "#8b5cf6"][i] || "#6b7280" }} />
+                    {m.name}
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -689,7 +781,7 @@ export default function WaelSalesPlan() {
                   <TrendingUp className="w-4 h-4 text-amber-600" />
                 </div>
                 خطة الامتصاص الشهرية للمبيعات
-                <span className="text-xs text-gray-400 font-normal">({timeline.salesPeriod} شهر — من {getMonthLabel(timeline.salesStart)} إلى {getMonthLabel(timeline.constructionEnd - 1)})</span>
+                <span className="text-xs text-gray-400 font-normal">({timeline.salesPeriod} شهر)</span>
               </CardTitle>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={distributeEven} className="text-xs gap-1">
@@ -705,7 +797,7 @@ export default function WaelSalesPlan() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+            <div className="overflow-x-auto max-h-[350px] overflow-y-auto">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-white z-10 border-b-2 border-gray-200">
                   <tr>
@@ -714,7 +806,7 @@ export default function WaelSalesPlan() {
                     <th className="text-center py-2 px-2 text-gray-500 font-medium w-14">المرحلة</th>
                     <th className="text-center py-2 px-2 text-gray-500 font-medium w-12">الموسم</th>
                     <th className="text-center py-2 px-2 text-gray-500 font-medium w-24">نسبة البيع %</th>
-                    <th className="text-left py-2 px-2 text-gray-500 font-medium">المبلغ المستهدف</th>
+                    <th className="text-left py-2 px-2 text-gray-500 font-medium">المبلغ</th>
                     <th className="text-left py-2 px-2 text-gray-500 font-medium">التراكمي</th>
                   </tr>
                 </thead>
@@ -832,7 +924,7 @@ export default function WaelSalesPlan() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto max-h-[350px] overflow-y-auto">
+              <div className="overflow-x-auto max-h-[300px] overflow-y-auto">
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 bg-white z-10 border-b-2 border-gray-200">
                     <tr>
@@ -880,86 +972,129 @@ export default function WaelSalesPlan() {
         </div>
 
         {/* ═══════════════════════════════════════════ */}
-        {/* SECTION 4: RESULTS DASHBOARD */}
+        {/* SECTION 4: RESULTS TABLE (replaces chart) */}
         {/* ═══════════════════════════════════════════ */}
-        <div className="space-y-6">
-          {/* Full Timeline Chart */}
-          <Card className="border-0 shadow-md bg-white">
-            <CardHeader className="pb-2">
+        <Card className="border-0 shadow-md bg-white">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between flex-wrap gap-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
-                  <BarChart3 className="w-4 h-4 text-indigo-600" />
+                  <Table2 className="w-4 h-4 text-indigo-600" />
                 </div>
-                الجدول الزمني الكامل — المبيعات والتسويق
+                جدول النتائج — التدفق النقدي الفعلي للإيرادات
               </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[350px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={cumulativeSalesData} margin={{ top: 10, right: 30, left: 20, bottom: 40 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="label" tick={{ fontSize: 9 }} angle={-45} textAnchor="end" height={60} />
-                    <YAxis
-                      yAxisId="left"
-                      tick={{ fontSize: 10 }}
-                      tickFormatter={(v) => formatCurrency(v)}
-                    />
-                    <YAxis
-                      yAxisId="right"
-                      orientation="right"
-                      tick={{ fontSize: 10 }}
-                      tickFormatter={(v) => formatCurrency(v)}
-                    />
-                    <Tooltip
-                      formatter={(value: number, name: string) => [formatAED(value), name]}
-                      labelStyle={{ fontWeight: "bold" }}
-                    />
-                    <Legend />
-                    {/* Reference lines for phase transitions */}
-                    <ReferenceLine x={getMonthLabelShort(timeline.marketingStart)} yAxisId="left" stroke="#3b82f6" strokeDasharray="5 5" label={{ value: "تسويق", position: "top", fontSize: 10 }} />
-                    <ReferenceLine x={getMonthLabelShort(timeline.salesStart)} yAxisId="left" stroke="#f59e0b" strokeDasharray="5 5" label={{ value: "مبيعات", position: "top", fontSize: 10 }} />
-                    <ReferenceLine x={getMonthLabelShort(designMonths)} yAxisId="left" stroke="#8b5cf6" strokeDasharray="5 5" label={{ value: "نهاية التصاميم", position: "top", fontSize: 10 }} />
-                    <Bar yAxisId="left" dataKey="salesTarget" name="مبيعات شهرية" fill="#10b981" opacity={0.7} radius={[3, 3, 0, 0]} />
-                    <Line yAxisId="right" type="monotone" dataKey="marketingSpend" name="إنفاق تسويقي" stroke="#3b82f6" strokeWidth={2} dot={false} />
-                    <Line yAxisId="left" type="monotone" dataKey="cumSales" name="مبيعات تراكمية" stroke="#6366f1" strokeWidth={2} strokeDasharray="5 5" dot={false} />
-                  </ComposedChart>
-                </ResponsiveContainer>
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <Info className="w-3 h-3" />
+                يحسب متى تدخل الأموال فعلياً بناءً على خطة الدفع
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-white z-10 border-b-2 border-gray-200">
+                  <tr>
+                    <th className="text-right py-2 px-2 text-gray-500 font-medium w-12">#</th>
+                    <th className="text-right py-2 px-2 text-gray-500 font-medium">الشهر</th>
+                    <th className="text-center py-2 px-2 text-gray-500 font-medium w-14">المرحلة</th>
+                    <th className="text-left py-2 px-2 text-gray-500 font-medium">مبيعات الشهر</th>
+                    <th className="text-left py-2 px-2 text-gray-500 font-medium">تحصيل فعلي</th>
+                    <th className="text-left py-2 px-2 text-gray-500 font-medium">إنفاق تسويقي</th>
+                    <th className="text-left py-2 px-2 text-gray-500 font-medium">مبيعات تراكمية</th>
+                    <th className="text-left py-2 px-2 text-gray-500 font-medium">تحصيل تراكمي</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cashInflowData.map((row, i) => {
+                    const isActive = row.salesThisMonth > 0 || row.cashInflow > 0 || row.marketingSpend > 0;
+                    return (
+                      <tr
+                        key={i}
+                        className={`border-b border-gray-50 ${
+                          !isActive ? "opacity-40" : "hover:bg-blue-50/30"
+                        } ${row.monthIndex === timeline.salesStart ? "border-t-2 border-t-amber-300" : ""} ${row.monthIndex === timeline.marketingStart ? "border-t-2 border-t-blue-300" : ""}`}
+                      >
+                        <td className="py-1.5 px-2 text-gray-400 font-mono text-xs">{row.monthIndex + 1}</td>
+                        <td className="py-1.5 px-2 font-medium text-gray-700 text-xs">{row.label}</td>
+                        <td className="py-1.5 px-2 text-center">
+                          <Badge variant="outline" className={`text-[10px] ${row.phase === "تصاميم" ? "bg-purple-50 text-purple-600 border-purple-200" : "bg-emerald-50 text-emerald-600 border-emerald-200"}`}>
+                            {row.phase}
+                          </Badge>
+                        </td>
+                        <td className="py-1.5 px-2 text-left font-mono text-xs">
+                          {row.salesThisMonth > 0 ? (
+                            <span className="text-emerald-700 font-medium">{formatCurrency(row.salesThisMonth)}</span>
+                          ) : (
+                            <span className="text-gray-300">—</span>
+                          )}
+                        </td>
+                        <td className="py-1.5 px-2 text-left font-mono text-xs">
+                          {row.cashInflow > 0 ? (
+                            <span className="text-blue-700 font-bold">{formatCurrency(row.cashInflow)}</span>
+                          ) : (
+                            <span className="text-gray-300">—</span>
+                          )}
+                        </td>
+                        <td className="py-1.5 px-2 text-left font-mono text-xs">
+                          {row.marketingSpend > 0 ? (
+                            <span className="text-orange-600">{formatCurrency(row.marketingSpend)}</span>
+                          ) : (
+                            <span className="text-gray-300">—</span>
+                          )}
+                        </td>
+                        <td className="py-1.5 px-2 text-left font-mono text-xs text-indigo-600">{row.cumSales > 0 ? formatCurrency(row.cumSales) : "—"}</td>
+                        <td className="py-1.5 px-2 text-left font-mono text-xs text-blue-600 font-medium">{row.cumCash > 0 ? formatCurrency(row.cumCash) : "—"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot className="border-t-2 border-gray-300 bg-gray-50 font-bold">
+                  <tr>
+                    <td colSpan={3} className="py-2 px-2 text-right text-gray-700">الإجمالي</td>
+                    <td className="py-2 px-2 text-left font-mono text-emerald-700">{formatCurrency(cashInflowData.reduce((s, r) => s + r.salesThisMonth, 0))}</td>
+                    <td className="py-2 px-2 text-left font-mono text-blue-700">{formatCurrency(cashInflowData.reduce((s, r) => s + r.cashInflow, 0))}</td>
+                    <td className="py-2 px-2 text-left font-mono text-orange-600">{formatCurrency(cashInflowData.reduce((s, r) => s + r.marketingSpend, 0))}</td>
+                    <td colSpan={2}></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Summary Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
-              <p className="text-xs text-gray-500">إيرادات الأوف بلان</p>
-              <p className="text-lg font-bold text-emerald-700 mt-1">{formatCurrency(offplanRevenue)}</p>
-              <p className="text-[10px] text-gray-400">{offplanPct}% من الإجمالي</p>
-            </div>
-            <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
-              <p className="text-xs text-gray-500">ميزانية التسويق</p>
-              <p className="text-lg font-bold text-blue-700 mt-1">{formatCurrency(marketingBudget)}</p>
-              <p className="text-[10px] text-gray-400">{marketingBudgetPct}%</p>
-            </div>
-            <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
-              <p className="text-xs text-gray-500">عمولة المبيعات</p>
-              <p className="text-lg font-bold text-purple-700 mt-1">{formatCurrency(salesCommission)}</p>
-              <p className="text-[10px] text-gray-400">{salesCommissionPct}%</p>
-            </div>
-            <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
-              <p className="text-xs text-gray-500">متوسط مبيعات شهري</p>
-              <p className="text-lg font-bold text-amber-700 mt-1">{formatCurrency(offplanRevenue / timeline.salesPeriod)}</p>
-              <p className="text-[10px] text-gray-400">{timeline.salesPeriod} شهر</p>
-            </div>
-            <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
-              <p className="text-xs text-gray-500">متوسط تسويق شهري</p>
-              <p className="text-lg font-bold text-blue-700 mt-1">{formatCurrency(marketingBudget / timeline.marketingPeriod)}</p>
-              <p className="text-[10px] text-gray-400">{timeline.marketingPeriod} شهر</p>
-            </div>
-            <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
-              <p className="text-xs text-gray-500">عائد التسويق المستهدف</p>
-              <p className="text-lg font-bold text-indigo-700 mt-1">{(offplanRevenue / marketingBudget).toFixed(1)}x</p>
-              <p className="text-[10px] text-gray-400">إيرادات / تسويق</p>
-            </div>
+        {/* Summary Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+            <p className="text-xs text-gray-500">إيرادات الأوف بلان</p>
+            <p className="text-lg font-bold text-emerald-700 mt-1">{formatCurrency(offplanRevenue)}</p>
+            <p className="text-[10px] text-gray-400">{offplanPct}% من الإجمالي</p>
+          </div>
+          <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+            <p className="text-xs text-gray-500">ميزانية التسويق</p>
+            <p className="text-lg font-bold text-blue-700 mt-1">{formatCurrency(marketingBudget)}</p>
+            <p className="text-[10px] text-gray-400">{marketingBudgetPct}%</p>
+          </div>
+          <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+            <p className="text-xs text-gray-500">عمولة المبيعات</p>
+            <p className="text-lg font-bold text-purple-700 mt-1">{formatCurrency(salesCommission)}</p>
+            <p className="text-[10px] text-gray-400">{salesCommissionPct}%</p>
+          </div>
+          <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+            <p className="text-xs text-gray-500">تحصيل خلال المشروع</p>
+            <p className="text-lg font-bold text-blue-700 mt-1">{formatCurrency(cashInflowData.reduce((s, r) => s + r.cashInflow, 0))}</p>
+            <p className="text-[10px] text-gray-400">من إجمالي {formatCurrency(offplanRevenue)}</p>
+          </div>
+          <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+            <p className="text-xs text-gray-500">متوسط تحصيل شهري</p>
+            <p className="text-lg font-bold text-amber-700 mt-1">
+              {formatCurrency(cashInflowData.reduce((s, r) => s + r.cashInflow, 0) / Math.max(1, cashInflowData.filter(r => r.cashInflow > 0).length))}
+            </p>
+            <p className="text-[10px] text-gray-400">{cashInflowData.filter(r => r.cashInflow > 0).length} شهر نشط</p>
+          </div>
+          <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+            <p className="text-xs text-gray-500">عائد التسويق</p>
+            <p className="text-lg font-bold text-indigo-700 mt-1">{(offplanRevenue / marketingBudget).toFixed(1)}x</p>
+            <p className="text-[10px] text-gray-400">إيرادات / تسويق</p>
           </div>
         </div>
       </div>

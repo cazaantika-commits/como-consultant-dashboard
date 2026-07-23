@@ -2374,3 +2374,37 @@ export const cpaTrueCostReportApproval = mysqlTable("cpa_true_cost_report_approv
 (table) => [
   index("cpa_tcra_project").on(table.cpaProjectId),
 ]);
+
+// Wael Sales & Marketing Plans
+export const waelSalesPlans = mysqlTable("wael_sales_plans", {
+  id: int().autoincrement().notNull(),
+  projectId: int("project_id").notNull().references(() => projects.id),
+  userId: int("user_id").notNull().references(() => users.id),
+  name: varchar({ length: 255 }).notNull().default("السيناريو الافتراضي"),
+  status: mysqlEnum("status", ["draft", "submitted", "approved", "rejected"]).notNull().default("draft"),
+  // Timing inputs (from Excel T-codes)
+  t12Date: varchar("t12_date", { length: 10 }),
+  t03: int("t03").notNull().default(3),
+  t04: int("t04").notNull().default(0),
+  t05: int("t05").notNull().default(5),
+  t06: int("t06").notNull().default(3),
+  designMonths: int("design_months").notNull().default(8),
+  constructionMonths: int("construction_months").notNull().default(30),
+  postCompletionMonths: int("post_completion_months").notNull().default(12),
+  // Revenue & percentages
+  totalRevenue: bigint("total_revenue", { mode: "number" }),
+  offplanPct: int("offplan_pct").notNull().default(80),
+  marketingBudgetPct: decimal("marketing_budget_pct", { precision: 5, scale: 2 }).default("2.00"),
+  salesCommissionPct: decimal("sales_commission_pct", { precision: 5, scale: 2 }).default("5.00"),
+  // JSON data
+  salesAbsorptionJson: longtext("sales_absorption_json"),
+  marketingDistJson: longtext("marketing_dist_json"),
+  channelsJson: longtext("channels_json"),
+  paymentPlanJson: longtext("payment_plan_json"),
+  resultsJson: longtext("results_json"),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("wael_plan_project").on(table.projectId),
+  index("wael_plan_user").on(table.userId),
+]);
