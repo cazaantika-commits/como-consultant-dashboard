@@ -1,38 +1,53 @@
 import { useState } from "react";
-import { ArrowRight, Settings2, Download } from "lucide-react";
+import { ArrowRight, Download } from "lucide-react";
 import { useLocation } from "wouter";
 
-// ===== STRUCTURE ONLY — dummy data, correct names =====
+// ===== STRUCTURE ONLY — exact names from the existing system =====
 const DESIGN_MONTHS = 8;
-const CONSTRUCTION_MONTHS = 24;
+const CONSTRUCTION_MONTHS = 30;
 const POST_MONTHS = 13;
 
+// ─── مدفوع سابقاً (الأرض) ───
 const PAID_ITEMS = [
-  { name: "الأرض", amount: 125_000_000 },
-  { name: "رسوم تسجيل الأرض (4%)", amount: 5_000_000 },
-  { name: "عمولة سمسار الأرض (1%)", amount: 1_250_000 },
+  { name: "سعر الأرض" },
+  { name: "رسوم تسجيل الأرض" },
+  { name: "عمولة وسيط الأرض" },
 ];
 
-// Investor-funded cost items (Debit = Contributions)
+// ─── بنود المصروفات (Debit) — بالترتيب كما في النظام ───
 const DEBIT_ITEMS = [
-  { id: "dev_design", name: "أتعاب المطور — تصميم (2%)" },
-  { id: "dev_superv", name: "أتعاب المطور — إشراف (3%)" },
-  { id: "marketing", name: "تسويق (2% من المبيعات)" },
-  { id: "post_comm", name: "عمولة مبيعات ما بعد الإنجاز (5%)" },
-  { id: "contract_adv", name: "دفعة مقدمة المقاول (10% من الإنشاء)" },
-  { id: "retention_inv", name: "احتجاز المقاول — حصة المستثمر (5%)" },
-  { id: "escrow_deposit", name: "إيداع الضمان (20% من الإنشاء)" },
-  { id: "bank_fees", name: "رسوم بنكية" },
-  { id: "deficit_funding", name: "تمويل عجز الإسكرو" },
+  // التصاميم والإشراف
+  { id: "design_fee", name: "أتعاب التصاميم", section: "التصاميم والإشراف" },
+  { id: "supervision_fee", name: "أتعاب الإشراف", section: "التصاميم والإشراف" },
+  // الدراسات والمسوحات
+  { id: "soil_test", name: "فحص التربة", section: "الدراسات والمسوحات" },
+  { id: "topography", name: "المسح الطبوغرافي", section: "الدراسات والمسوحات" },
+  { id: "surveyor_fee", name: "رسوم المساح", section: "الدراسات والمسوحات" },
+  // الرسوم الحكومية والتنظيمية
+  { id: "community_fee", name: "رسوم المجتمع", section: "الرسوم الحكومية والتنظيمية" },
+  { id: "gov_fees", name: "رسوم الجهات الحكومية", section: "الرسوم الحكومية والتنظيمية" },
+  { id: "sorting_fee", name: "رسوم الفرز", section: "الرسوم الحكومية والتنظيمية" },
+  { id: "noc_fee", name: "رسوم NOC المطور", section: "الرسوم الحكومية والتنظيمية" },
+  // ريرا (التنظيم العقاري)
+  { id: "rera_project_reg", name: "تسجيل المشروع — ريرا", section: "ريرا (التنظيم العقاري)" },
+  { id: "rera_units_reg", name: "تسجيل الوحدات — ريرا", section: "ريرا (التنظيم العقاري)" },
+  { id: "escrow_fee", name: "حساب الضمان (رسوم فتح)", section: "ريرا (التنظيم العقاري)" },
+  { id: "bank_fees", name: "رسوم البنك", section: "ريرا (التنظيم العقاري)" },
+  { id: "rera_audit", name: "تقرير مدقق ريرا", section: "ريرا (التنظيم العقاري)" },
+  { id: "rera_inspect", name: "فحص ريرا", section: "ريرا (التنظيم العقاري)" },
+  // المبيعات والتسويق
+  { id: "sales_commission", name: "عمولة المبيعات", section: "المبيعات والتسويق" },
+  { id: "marketing", name: "التسويق (2%)", section: "المبيعات والتسويق" },
+  { id: "developer_fee", name: "أتعاب المطور", section: "المبيعات والتسويق" },
+  // الإنشاء
+  { id: "construction", name: "تكلفة الإنشاء", section: "الإنشاء" },
 ];
 
-// Credit items (Distributions) — only after completion
+// ─── بنود الإيرادات (Credit) — بالترتيب كما في النظام ───
 const CREDIT_ITEMS = [
-  { id: "direct_collections", name: "تحصيلات مباشرة (مبيعات ما بعد الإنجاز)" },
-  { id: "first_escrow_release", name: "تحرير الضمان الأول (شهر 3 بعد الإنجاز)" },
-  { id: "final_escrow_release", name: "تحرير الضمان النهائي (شهر 13 بعد الإنجاز)" },
-  { id: "capital_return", name: "استرداد رأس المال" },
-  { id: "investor_profit", name: "حصة أرباح المستثمر (85%)" },
+  { id: "direct_revenue", name: "إيرادات مباشرة (20%)", section: "الإيرادات" },
+  { id: "escrow_liq_1", name: "تصفية حساب الضمان (دفعة 1)", section: "الإيرادات" },
+  { id: "escrow_liq_2", name: "تصفية حساب الضمان (دفعة 2 - صافي الاحتجاز)", section: "الإيرادات" },
 ];
 
 function dummyRow(totalMonths: number, startFrom?: number): number[] {
@@ -61,230 +76,213 @@ export default function V2InvestorCashFlow() {
   );
 
   // Totals
-  const monthlyDebitTotals = Array.from({ length: totalMonths }, (_, m) =>
-    debitData.reduce((sum, row) => sum + row.values[m], 0)
+  const debitTotals = Array.from({ length: totalMonths }, (_, i) =>
+    debitData.reduce((s, r) => s + r.values[i], 0)
   );
-  const monthlyCreditTotals = Array.from({ length: totalMonths }, (_, m) =>
-    creditData.reduce((sum, row) => sum + row.values[m], 0)
+  const creditTotals = Array.from({ length: totalMonths }, (_, i) =>
+    creditData.reduce((s, r) => s + r.values[i], 0)
   );
-  const monthlyNet = monthlyDebitTotals.map((d, i) => monthlyCreditTotals[i] - d);
-  const cumulative = monthlyNet.reduce<number[]>((acc, val) => {
-    acc.push((acc[acc.length - 1] || 0) + val);
+  const netFlow = debitTotals.map((d, i) => creditTotals[i] - d);
+  const cumulative = netFlow.reduce<number[]>((acc, v) => {
+    acc.push((acc[acc.length - 1] || 0) + v);
     return acc;
   }, []);
 
-  const totalDebit = monthlyDebitTotals.reduce((a, b) => a + b, 0);
-  const totalCredit = monthlyCreditTotals.reduce((a, b) => a + b, 0);
-  const totalPaid = PAID_ITEMS.reduce((a, b) => a + b.amount, 0);
-  const profit = totalCredit - totalDebit - totalPaid;
+  const totalDebit = debitTotals.reduce((s, v) => s + v, 0);
+  const totalCredit = creditTotals.reduce((s, v) => s + v, 0);
+  const profit = totalCredit - totalDebit;
 
   const fmt = (n: number) => {
-    if (n === 0) return "—";
+    if (n === 0) return "-";
     if (Math.abs(n) >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
     if (Math.abs(n) >= 1_000) return (n / 1_000).toFixed(0) + "K";
-    return n.toFixed(0);
+    return n.toLocaleString();
   };
 
-  const fmtFull = (n: number) => n.toLocaleString("en-US");
+  // Generate month headers
+  const months: { label: string; phase: "design" | "construction" | "post" }[] = [];
+  for (let i = 0; i < DESIGN_MONTHS; i++) months.push({ label: `${i + 1}`, phase: "design" });
+  for (let i = 0; i < CONSTRUCTION_MONTHS; i++) months.push({ label: `${i + 1}`, phase: "construction" });
+  for (let i = 0; i < POST_MONTHS; i++) months.push({ label: `${i + 1}`, phase: "post" });
+
+  const phaseColors = {
+    design: "bg-blue-50 text-blue-700",
+    construction: "bg-amber-50 text-amber-700",
+    post: "bg-emerald-50 text-emerald-700",
+  };
+
+  // Group debit items by section
+  const sections: { name: string; items: typeof debitData }[] = [];
+  let currentSection = "";
+  for (const item of debitData) {
+    if (item.section !== currentSection) {
+      currentSection = item.section;
+      sections.push({ name: currentSection, items: [] });
+    }
+    sections[sections.length - 1].items.push(item);
+  }
 
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-20">
-        <div className="max-w-[1800px] mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-full mx-auto px-4 py-2 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button onClick={() => navigate("/v2")} className="p-1.5 rounded-lg hover:bg-gray-100 transition">
               <ArrowRight className="w-4 h-4 text-gray-600" />
             </button>
             <div>
-              <h1 className="text-lg font-bold text-gray-900">تدفقات المستثمر النقدية</h1>
-              <p className="text-xs text-gray-500">مجان متعدد الاستخدامات — G+4P+25</p>
+              <h1 className="text-sm font-bold text-gray-900">التدفقات النقدية للمستثمر</h1>
+              <p className="text-[10px] text-gray-500">مجان متعدد الاستخدامات — G+4P+25</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs text-gray-700">
-              <Settings2 className="w-3.5 h-3.5" /> إعدادات
-            </button>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs">
-              <Download className="w-3.5 h-3.5" /> تصدير
+          <div className="flex items-center gap-4">
+            {/* Summary KPIs */}
+            <div className="flex items-center gap-3 text-[10px]">
+              <span className="text-red-600 font-medium">المصروفات: {fmt(totalDebit)}</span>
+              <span className="text-green-600 font-medium">الإيرادات: {fmt(totalCredit)}</span>
+              <span className="text-blue-700 font-bold">الأرباح: {fmt(profit)}</span>
+            </div>
+            <button className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-800 hover:bg-gray-900 text-white text-[10px]">
+              <Download className="w-3 h-3" /> تصدير
             </button>
           </div>
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="max-w-[1800px] mx-auto px-4 py-4">
-        <div className="grid grid-cols-4 gap-3 mb-4">
-          <div className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm">
-            <p className="text-xs text-gray-500 mb-0.5">مدفوع سابقاً (لا يؤثر)</p>
-            <p className="text-lg font-bold text-gray-400">{fmt(totalPaid)}</p>
-            <div className="mt-1.5 text-[10px] text-gray-400 space-y-0.5">
-              {PAID_ITEMS.map((item) => (
-                <div key={item.name} className="flex justify-between">
-                  <span>{item.name}</span>
-                  <span>{fmtFull(item.amount)}</span>
-                </div>
+      {/* Phase Legend */}
+      <div className="bg-white border-b border-gray-100 px-4 py-1.5 flex items-center gap-4 text-[10px]">
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-100 border border-blue-200"></span> تصميم ({DESIGN_MONTHS} أشهر)</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-100 border border-amber-200"></span> إنشاء ({CONSTRUCTION_MONTHS} شهر)</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-100 border border-emerald-200"></span> ما بعد الإنجاز ({POST_MONTHS} شهر)</span>
+      </div>
+
+      {/* Main Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-[10px] border-collapse min-w-max">
+          <thead className="sticky top-[72px] z-10">
+            {/* Phase band */}
+            <tr>
+              <th className="sticky right-0 z-20 bg-gray-100 border-b border-gray-200 px-2 py-1 text-right w-[180px] min-w-[180px]"></th>
+              {months.map((m, i) => (
+                <th key={i} className={`px-1 py-0.5 text-center border-b border-gray-200 ${phaseColors[m.phase]} font-normal`}>
+                  {m.label}
+                </th>
               ))}
-            </div>
-          </div>
-          <div className="bg-white rounded-lg p-3 border border-red-100 shadow-sm">
-            <p className="text-xs text-red-600 mb-0.5">إجمالي المساهمات (Debit)</p>
-            <p className="text-lg font-bold text-red-700">{fmt(totalDebit)}</p>
-          </div>
-          <div className="bg-white rounded-lg p-3 border border-green-100 shadow-sm">
-            <p className="text-xs text-green-600 mb-0.5">إجمالي التوزيعات (Credit)</p>
-            <p className="text-lg font-bold text-green-700">{fmt(totalCredit)}</p>
-          </div>
-          <div className="bg-white rounded-lg p-3 border border-teal-100 shadow-sm">
-            <p className="text-xs text-teal-600 mb-0.5">صافي ربح المستثمر</p>
-            <p className={`text-lg font-bold ${profit >= 0 ? "text-teal-700" : "text-red-700"}`}>{fmt(profit)}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">التوزيعات − المساهمات − المدفوع</p>
-          </div>
-        </div>
+            </tr>
+          </thead>
+          <tbody>
+            {/* ─── مدفوع سابقاً ─── */}
+            <tr className="bg-gray-100">
+              <td colSpan={totalMonths + 1} className="px-2 py-[3px] font-bold text-gray-600 text-[9px] border-b border-gray-200">
+                مدفوع سابقاً (لا يؤثر على التدفقات)
+              </td>
+            </tr>
+            {PAID_ITEMS.map((item, i) => (
+              <tr key={`paid-${i}`} className="border-b border-gray-50 bg-gray-50/50 opacity-60">
+                <td className="sticky right-0 z-10 bg-gray-50 px-2 py-[3px] text-gray-500 font-medium border-l border-gray-100 w-[180px] min-w-[180px]">
+                  {item.name}
+                </td>
+                {months.map((_, j) => (
+                  <td key={j} className="px-1 py-[3px] text-center text-gray-400">-</td>
+                ))}
+              </tr>
+            ))}
 
-        {/* Main Table */}
-        <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-[11px]" style={{ minWidth: totalMonths * 70 + 200 }}>
-              <thead>
-                {/* Phase color bar */}
-                <tr>
-                  <th className="sticky right-0 z-10 bg-white border-b border-l border-gray-200 min-w-[180px]"></th>
-                  {Array.from({ length: DESIGN_MONTHS }, (_, i) => (
-                    <th key={`dp-${i}`} className="h-1.5 bg-blue-500 border-b border-blue-600"></th>
-                  ))}
-                  {Array.from({ length: CONSTRUCTION_MONTHS }, (_, i) => (
-                    <th key={`cp-${i}`} className="h-1.5 bg-amber-500 border-b border-amber-600"></th>
-                  ))}
-                  {Array.from({ length: POST_MONTHS }, (_, i) => (
-                    <th key={`pp-${i}`} className="h-1.5 bg-emerald-500 border-b border-emerald-600"></th>
-                  ))}
-                </tr>
-                {/* Month numbers */}
-                <tr className="bg-gray-50">
-                  <th className="sticky right-0 z-10 bg-gray-50 px-3 py-1.5 text-right font-bold text-gray-700 border-b border-l border-gray-200 min-w-[180px] text-xs">
-                    البند
-                  </th>
-                  {Array.from({ length: DESIGN_MONTHS }, (_, i) => (
-                    <th key={`d-${i}`} className="px-2 py-1.5 text-center border-b border-gray-200 font-medium text-blue-700 bg-blue-50/50 whitespace-nowrap">
-                      الشهر {i + 1}
-                    </th>
-                  ))}
-                  {Array.from({ length: CONSTRUCTION_MONTHS }, (_, i) => (
-                    <th key={`c-${i}`} className="px-2 py-1.5 text-center border-b border-gray-200 font-medium text-amber-700 bg-amber-50/50 whitespace-nowrap">
-                      الشهر {i + 1}
-                    </th>
-                  ))}
-                  {Array.from({ length: POST_MONTHS }, (_, i) => (
-                    <th key={`p-${i}`} className="px-2 py-1.5 text-center border-b border-gray-200 font-medium text-emerald-700 bg-emerald-50/50 whitespace-nowrap">
-                      الشهر {i + 1}
-                    </th>
-                  ))}
-                </tr>
-                {/* Phase labels */}
-                <tr>
-                  <th className="sticky right-0 z-10 bg-white px-3 py-1 text-right text-[10px] text-gray-400 border-b border-l border-gray-200">المرحلة</th>
-                  <th colSpan={DESIGN_MONTHS} className="py-1 text-center text-[10px] font-bold text-blue-600 bg-blue-50/30 border-b border-gray-200">تصميم</th>
-                  <th colSpan={CONSTRUCTION_MONTHS} className="py-1 text-center text-[10px] font-bold text-amber-600 bg-amber-50/30 border-b border-gray-200">إنشاء</th>
-                  <th colSpan={POST_MONTHS} className="py-1 text-center text-[10px] font-bold text-emerald-600 bg-emerald-50/30 border-b border-gray-200">ما بعد الإنجاز</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {/* === DEBIT SECTION === */}
-                <tr className="bg-red-50/40">
-                  <td colSpan={totalMonths + 1} className="px-3 py-1 font-bold text-red-800 text-[11px] border-b border-red-100">
-                    المساهمات — مطلوب من المستثمر
+            {/* ─── المصروفات (Debit) ─── */}
+            <tr className="bg-red-50">
+              <td colSpan={totalMonths + 1} className="px-2 py-[3px] font-bold text-red-700 text-[9px] border-b border-red-100">
+                المصروفات (Debit)
+              </td>
+            </tr>
+            {sections.map((section) => (
+              <>
+                <tr key={`section-${section.name}`} className="bg-gray-50/80">
+                  <td colSpan={totalMonths + 1} className="px-2 py-[2px] text-[9px] font-bold text-gray-500 border-b border-gray-100 pr-4">
+                    {section.name}
                   </td>
                 </tr>
-                {debitData.map((row) => (
-                  <tr key={row.id} className="hover:bg-gray-50/50 border-b border-gray-50">
-                    <td className="sticky right-0 z-10 bg-white px-3 py-[5px] text-right text-gray-800 font-medium border-l border-gray-100 whitespace-nowrap">
-                      {row.name}
+                {section.items.map((item) => (
+                  <tr key={item.id} className="border-b border-gray-50 hover:bg-red-50/30">
+                    <td className="sticky right-0 z-10 bg-white px-2 py-[3px] text-gray-800 font-medium border-l border-gray-100 w-[180px] min-w-[180px]">
+                      {item.name}
                     </td>
-                    {row.values.map((val, i) => (
-                      <td key={i} className="px-1.5 py-[5px] text-center text-gray-600 tabular-nums">
-                        {fmt(val)}
+                    {item.values.map((v, j) => (
+                      <td key={j} className={`px-1 py-[3px] text-center tabular-nums ${v > 0 ? "text-red-600" : "text-gray-300"}`}>
+                        {v > 0 ? fmt(v) : "-"}
                       </td>
                     ))}
                   </tr>
                 ))}
-                {/* Debit Total */}
-                <tr className="bg-red-50 font-bold border-b-2 border-red-200">
-                  <td className="sticky right-0 z-10 bg-red-50 px-3 py-[5px] text-right text-red-800 border-l border-red-200 text-[11px]">
-                    إجمالي المساهمات
-                  </td>
-                  {monthlyDebitTotals.map((val, i) => (
-                    <td key={i} className="px-1.5 py-[5px] text-center text-red-800 tabular-nums">
-                      {fmt(val)}
-                    </td>
-                  ))}
-                </tr>
+              </>
+            ))}
+            {/* Total Debit */}
+            <tr className="bg-red-100/50 font-bold border-t border-red-200">
+              <td className="sticky right-0 z-10 bg-red-50 px-2 py-[3px] text-red-800 border-l border-red-200 w-[180px] min-w-[180px]">
+                إجمالي المصروفات
+              </td>
+              {debitTotals.map((v, i) => (
+                <td key={i} className="px-1 py-[3px] text-center tabular-nums text-red-700">
+                  {v > 0 ? fmt(v) : "-"}
+                </td>
+              ))}
+            </tr>
 
-                {/* === CREDIT SECTION === */}
-                <tr className="bg-green-50/40">
-                  <td colSpan={totalMonths + 1} className="px-3 py-1 font-bold text-green-800 text-[11px] border-b border-green-100">
-                    التوزيعات — عائد للمستثمر
+            {/* ─── الإيرادات (Credit) ─── */}
+            <tr className="bg-green-50">
+              <td colSpan={totalMonths + 1} className="px-2 py-[3px] font-bold text-green-700 text-[9px] border-b border-green-100">
+                الإيرادات (Credit)
+              </td>
+            </tr>
+            {creditData.map((item) => (
+              <tr key={item.id} className="border-b border-gray-50 hover:bg-green-50/30">
+                <td className="sticky right-0 z-10 bg-white px-2 py-[3px] text-gray-800 font-medium border-l border-gray-100 w-[180px] min-w-[180px]">
+                  {item.name}
+                </td>
+                {item.values.map((v, j) => (
+                  <td key={j} className={`px-1 py-[3px] text-center tabular-nums ${v > 0 ? "text-green-600" : "text-gray-300"}`}>
+                    {v > 0 ? fmt(v) : "-"}
                   </td>
-                </tr>
-                {creditData.map((row) => (
-                  <tr key={row.id} className="hover:bg-gray-50/50 border-b border-gray-50">
-                    <td className="sticky right-0 z-10 bg-white px-3 py-[5px] text-right text-gray-800 font-medium border-l border-gray-100 whitespace-nowrap">
-                      {row.name}
-                    </td>
-                    {row.values.map((val, i) => (
-                      <td key={i} className="px-1.5 py-[5px] text-center text-gray-600 tabular-nums">
-                        {fmt(val)}
-                      </td>
-                    ))}
-                  </tr>
                 ))}
-                {/* Credit Total */}
-                <tr className="bg-green-50 font-bold border-b-2 border-green-200">
-                  <td className="sticky right-0 z-10 bg-green-50 px-3 py-[5px] text-right text-green-800 border-l border-green-200 text-[11px]">
-                    إجمالي التوزيعات
-                  </td>
-                  {monthlyCreditTotals.map((val, i) => (
-                    <td key={i} className="px-1.5 py-[5px] text-center text-green-800 tabular-nums">
-                      {fmt(val)}
-                    </td>
-                  ))}
-                </tr>
+              </tr>
+            ))}
+            {/* Total Credit */}
+            <tr className="bg-green-100/50 font-bold border-t border-green-200">
+              <td className="sticky right-0 z-10 bg-green-50 px-2 py-[3px] text-green-800 border-l border-green-200 w-[180px] min-w-[180px]">
+                إجمالي الإيرادات
+              </td>
+              {creditTotals.map((v, i) => (
+                <td key={i} className="px-1 py-[3px] text-center tabular-nums text-green-700">
+                  {v > 0 ? fmt(v) : "-"}
+                </td>
+              ))}
+            </tr>
 
-                {/* === NET === */}
-                <tr className="bg-gray-100 font-bold border-b border-gray-300">
-                  <td className="sticky right-0 z-10 bg-gray-100 px-3 py-[5px] text-right text-gray-800 border-l border-gray-200 text-[11px]">
-                    صافي الشهر
-                  </td>
-                  {monthlyNet.map((val, i) => (
-                    <td key={i} className={`px-1.5 py-[5px] text-center tabular-nums ${val >= 0 ? "text-green-700" : "text-red-700"}`}>
-                      {fmt(val)}
-                    </td>
-                  ))}
-                </tr>
+            {/* ─── صافي الشهر ─── */}
+            <tr className="bg-blue-50/50 font-bold border-t-2 border-blue-200">
+              <td className="sticky right-0 z-10 bg-blue-50 px-2 py-[3px] text-blue-800 border-l border-blue-200 w-[180px] min-w-[180px]">
+                صافي الشهر
+              </td>
+              {netFlow.map((v, i) => (
+                <td key={i} className={`px-1 py-[3px] text-center tabular-nums font-medium ${v >= 0 ? "text-green-700" : "text-red-600"}`}>
+                  {fmt(v)}
+                </td>
+              ))}
+            </tr>
 
-                {/* === CUMULATIVE === */}
-                <tr className="bg-teal-50 font-bold">
-                  <td className="sticky right-0 z-10 bg-teal-50 px-3 py-1.5 text-right text-teal-800 border-l border-teal-200 text-[11px]">
-                    التراكمي
-                  </td>
-                  {cumulative.map((val, i) => (
-                    <td key={i} className={`px-1.5 py-1.5 text-center tabular-nums ${val >= 0 ? "text-teal-700" : "text-red-700"}`}>
-                      {fmt(val)}
-                    </td>
-                  ))}
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Legend */}
-        <div className="flex items-center gap-4 mt-3 text-[10px] text-gray-500">
-          <div className="flex items-center gap-1.5"><div className="w-3 h-1.5 rounded bg-blue-500"></div> تصميم ({DESIGN_MONTHS} أشهر)</div>
-          <div className="flex items-center gap-1.5"><div className="w-3 h-1.5 rounded bg-amber-500"></div> إنشاء ({CONSTRUCTION_MONTHS} شهر)</div>
-          <div className="flex items-center gap-1.5"><div className="w-3 h-1.5 rounded bg-emerald-500"></div> ما بعد الإنجاز ({POST_MONTHS} شهر)</div>
-        </div>
+            {/* ─── التراكمي ─── */}
+            <tr className="bg-blue-100/50 font-bold">
+              <td className="sticky right-0 z-10 bg-blue-100 px-2 py-[3px] text-blue-900 border-l border-blue-200 w-[180px] min-w-[180px]">
+                التراكمي
+              </td>
+              {cumulative.map((v, i) => (
+                <td key={i} className={`px-1 py-[3px] text-center tabular-nums font-bold ${v >= 0 ? "text-green-700" : "text-red-600"}`}>
+                  {fmt(v)}
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   );
