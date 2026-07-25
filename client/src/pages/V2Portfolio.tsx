@@ -95,46 +95,41 @@ export default function V2Portfolio() {
     <div className="min-h-screen bg-gray-50" dir="rtl">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-20">
-        <div className="max-w-[1800px] mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-[1800px] mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate("/")}
-              className="p-2 rounded-lg hover:bg-gray-100 transition"
-            >
-              <ArrowRight className="w-5 h-5 text-gray-600" />
+            <button onClick={() => navigate("/v2")} className="p-1.5 rounded-lg hover:bg-gray-100 transition">
+              <ArrowRight className="w-4 h-4 text-gray-600" />
             </button>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">المحفظة الاستثمارية</h1>
-              <p className="text-sm text-gray-500">
+              <h1 className="text-lg font-bold text-gray-900">المحفظة الاستثمارية</h1>
+              <p className="text-xs text-gray-500">
                 التدفقات النقدية المجمّعة — {selectedProjects.length} مشاريع
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
-              <Settings2 className="w-4 h-4" />
-              إعدادات
+            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs text-gray-700">
+              <Settings2 className="w-3.5 h-3.5" /> إعدادات
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm">
-              <Download className="w-4 h-4" />
-              تصدير
+            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs">
+              <Download className="w-3.5 h-3.5" /> تصدير
             </button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-[1800px] mx-auto px-6 py-6">
+      <div className="max-w-[1800px] mx-auto px-4 py-4">
         {/* Project Selection */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 mb-6">
-          <h3 className="text-sm font-bold text-gray-700 mb-3">اختر المشاريع</h3>
-          <div className="flex flex-wrap gap-3">
+        <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-3 mb-4">
+          <h3 className="text-xs font-bold text-gray-700 mb-2">اختر المشاريع</h3>
+          <div className="flex flex-wrap gap-2">
             {PROJECTS.map((p) => {
               const isSelected = selected.includes(p.id);
               return (
                 <button
                   key={p.id}
                   onClick={() => toggleProject(p.id)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 transition text-sm font-medium ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 transition text-xs font-medium ${
                     isSelected
                       ? "border-current bg-opacity-10"
                       : "border-gray-200 text-gray-400 bg-gray-50"
@@ -142,12 +137,12 @@ export default function V2Portfolio() {
                   style={isSelected ? { color: p.color, borderColor: p.color, backgroundColor: p.color + "15" } : {}}
                 >
                   <div
-                    className={`w-5 h-5 rounded flex items-center justify-center ${
+                    className={`w-4 h-4 rounded flex items-center justify-center ${
                       isSelected ? "bg-current" : "bg-gray-200"
                     }`}
                     style={isSelected ? { backgroundColor: p.color } : {}}
                   >
-                    {isSelected && <Check className="w-3 h-3 text-white" />}
+                    {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
                   </div>
                   {p.name}
                 </button>
@@ -157,41 +152,33 @@ export default function V2Portfolio() {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-white rounded-xl p-5 border border-red-100 shadow-sm">
-            <p className="text-sm text-red-600 mb-1">ذروة رأس المال المطلوب</p>
-            <p className="text-2xl font-bold text-red-700">{fmt(peakNegative)}</p>
-            <p className="text-xs text-gray-400 mt-1">أقصى سحب تراكمي</p>
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="bg-white rounded-lg p-3 border border-red-100 shadow-sm">
+            <p className="text-[10px] text-red-600 mb-0.5">ذروة رأس المال المطلوب</p>
+            <p className="text-base font-bold text-red-700">{fmt(peakNegative)}</p>
           </div>
-          <div className="bg-white rounded-xl p-5 border border-teal-100 shadow-sm">
-            <p className="text-sm text-teal-600 mb-1">العائد النهائي</p>
-            <p className={`text-2xl font-bold ${finalValue >= 0 ? "text-teal-700" : "text-red-700"}`}>
-              {fmt(finalValue)}
-            </p>
-            <p className="text-xs text-gray-400 mt-1">القيمة التراكمية النهائية</p>
+          <div className="bg-white rounded-lg p-3 border border-teal-100 shadow-sm">
+            <p className="text-[10px] text-teal-600 mb-0.5">العائد النهائي</p>
+            <p className={`text-base font-bold ${finalValue >= 0 ? "text-teal-700" : "text-red-700"}`}>{fmt(finalValue)}</p>
           </div>
-          <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
-            <p className="text-sm text-gray-600 mb-1">عدد المشاريع</p>
-            <p className="text-2xl font-bold text-gray-800">{selectedProjects.length}</p>
-            <p className="text-xs text-gray-400 mt-1">من أصل {PROJECTS.length}</p>
+          <div className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm">
+            <p className="text-[10px] text-gray-600 mb-0.5">عدد المشاريع</p>
+            <p className="text-base font-bold text-gray-800">{selectedProjects.length} / {PROJECTS.length}</p>
           </div>
         </div>
 
         {/* Main Table */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm" style={{ minWidth: maxMonths * 80 + 200 }}>
+            <table className="w-full text-[11px]" style={{ minWidth: maxMonths * 65 + 180 }}>
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="sticky right-0 z-10 bg-gray-50 px-4 py-3 text-right font-bold text-gray-700 border-b border-l border-gray-200 min-w-[180px]">
+                  <th className="sticky right-0 z-10 bg-gray-50 px-3 py-1.5 text-right font-bold text-gray-700 border-b border-l border-gray-200 min-w-[160px] text-xs">
                     المشروع
                   </th>
                   {Array.from({ length: maxMonths }, (_, i) => (
-                    <th
-                      key={i}
-                      className="px-3 py-3 text-center border-b border-gray-200 font-medium text-gray-600 whitespace-nowrap"
-                    >
-                      شهر {i + 1}
+                    <th key={i} className="px-2 py-1.5 text-center border-b border-gray-200 font-medium text-gray-600 whitespace-nowrap">
+                      الشهر {i + 1}
                     </th>
                   ))}
                 </tr>
@@ -199,23 +186,15 @@ export default function V2Portfolio() {
               <tbody>
                 {/* Each project's cumulative row */}
                 {paddedData.map((p) => (
-                  <tr key={p.id} className="hover:bg-gray-50/50 border-b border-gray-100">
-                    <td className="sticky right-0 z-10 bg-white px-4 py-3 text-right border-l border-gray-100 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: p.color }}
-                        />
+                  <tr key={p.id} className="hover:bg-gray-50/50 border-b border-gray-50">
+                    <td className="sticky right-0 z-10 bg-white px-3 py-[5px] text-right border-l border-gray-100 whitespace-nowrap">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.color }} />
                         <span className="font-medium text-gray-800">{p.name}</span>
                       </div>
                     </td>
                     {p.cumulative.map((val, i) => (
-                      <td
-                        key={i}
-                        className={`px-3 py-3 text-center tabular-nums ${
-                          val >= 0 ? "text-teal-700" : "text-red-700"
-                        }`}
-                      >
+                      <td key={i} className={`px-1.5 py-[5px] text-center tabular-nums ${val >= 0 ? "text-teal-700" : "text-red-700"}`}>
                         {fmt(val)}
                       </td>
                     ))}
@@ -224,16 +203,11 @@ export default function V2Portfolio() {
 
                 {/* Combined Total Row */}
                 <tr className="bg-teal-50 font-bold border-t-2 border-teal-200">
-                  <td className="sticky right-0 z-10 bg-teal-50 px-4 py-3 text-right text-teal-800 border-l border-teal-200">
+                  <td className="sticky right-0 z-10 bg-teal-50 px-3 py-1.5 text-right text-teal-800 border-l border-teal-200">
                     الإجمالي المجمّع
                   </td>
                   {combined.map((val, i) => (
-                    <td
-                      key={i}
-                      className={`px-3 py-3 text-center tabular-nums ${
-                        val >= 0 ? "text-teal-700" : "text-red-700"
-                      }`}
-                    >
+                    <td key={i} className={`px-1.5 py-1.5 text-center tabular-nums ${val >= 0 ? "text-teal-700" : "text-red-700"}`}>
                       {fmt(val)}
                     </td>
                   ))}
