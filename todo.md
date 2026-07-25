@@ -965,3 +965,9 @@
 - [ ] Results show full timeline (design + construction) with clear phase markers
 - [ ] Real-time result updates when any variable changes
 - [ ] Smart warnings when targets don't align
+
+## Portfolio Page (المشاريع الكلية) — Priority #1
+- [x] Verify consolidated cashflow page loads correctly with restored files
+- [x] Add project selection feature (checkboxes to choose which projects to combine)
+- [x] Redesign with professional board-level aesthetics for Sheikh Issa presentation
+- [x] Ensure numbers are accurate (revenue, costs, profit, developer share, investor ROI)
