@@ -85,6 +85,12 @@ import GeneralRequests from "./pages/GeneralRequests";
 import InternalMessages from "./pages/InternalMessages";
 import WaelSalesPlan from "./pages/WaelSalesPlan";
 import { ReadOnlyGuard } from "./components/ReadOnlyGuard";
+import V2InvestorCashFlow from "./pages/V2InvestorCashFlow";
+import V2Portfolio from "./pages/V2Portfolio";
+import V2EscrowCashFlow from "./pages/V2EscrowCashFlow";
+import V2Feasibility from "./pages/V2Feasibility";
+import V2WaelSales from "./pages/V2WaelSales";
+import V2Timeline from "./pages/V2Timeline";
 
 function Router() {
   return (
@@ -166,6 +172,12 @@ function Router() {
       <Route path="/investor-cashflow-schedule" component={InvestorCashFlowSchedulePage} />
       <Route path="/escrow-cashflow-schedule" component={EscrowCashFlowSchedulePage2} />
       <Route path="/consolidated-investor-cashflow" component={ConsolidatedInvestorCashFlowPage} />
+      <Route path="/v2/investor-cashflow" component={V2InvestorCashFlow} />
+      <Route path="/v2/portfolio" component={V2Portfolio} />
+      <Route path="/v2/escrow-cashflow" component={V2EscrowCashFlow} />
+      <Route path="/v2/feasibility" component={V2Feasibility} />
+      <Route path="/v2/wael-sales" component={V2WaelSales} />
+      <Route path="/v2/timeline" component={V2Timeline} />
       <Route path="/wael-sales-plan" component={WaelSalesPlan} />
       <Route path="/user-management" component={UserManagementPage} />
       <Route path="/approval-settings" component={ApprovalSettings} />
