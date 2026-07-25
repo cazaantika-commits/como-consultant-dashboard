@@ -91,6 +91,7 @@ import V2EscrowCashFlow from "./pages/V2EscrowCashFlow";
 import V2Feasibility from "./pages/V2Feasibility";
 import V2WaelSales from "./pages/V2WaelSales";
 import V2Timeline from "./pages/V2Timeline";
+import V2Hub from "./pages/V2Hub";
 
 function Router() {
   return (
@@ -178,6 +179,7 @@ function Router() {
       <Route path="/v2/feasibility" component={V2Feasibility} />
       <Route path="/v2/wael-sales" component={V2WaelSales} />
       <Route path="/v2/timeline" component={V2Timeline} />
+      <Route path="/v2" component={V2Hub} />
       <Route path="/wael-sales-plan" component={WaelSalesPlan} />
       <Route path="/user-management" component={UserManagementPage} />
       <Route path="/approval-settings" component={ApprovalSettings} />
