@@ -413,7 +413,7 @@ export default function Home() {
     { id: "main-audit", label: "تدقيق وتحليل العقود", icon: FileText, path: "/contract-audit", borderColor: "#dc2626", iconBg: "linear-gradient(135deg, #dc2626, #b91c1c)", shadow: "rgba(220, 38, 38, 0.25)", badge: 2 },
     { id: "main-portfolio", label: "المحفظة الاستثمارية", icon: Wallet, path: "/consolidated-investor-cashflow", borderColor: "#0d9488", iconBg: "linear-gradient(135deg, #0d9488, #0f766e)", shadow: "rgba(13, 148, 136, 0.25)" },
     { id: "main-v2", label: "التقارير المالية (V2)", icon: LayoutGrid, path: "/v2", borderColor: "#2563eb", iconBg: "linear-gradient(135deg, #2563eb, #1d4ed8)", shadow: "rgba(37, 99, 235, 0.25)" },
-    { id: "main-bateekha", label: "بطيخة", icon: Layers, path: "/bateekha", borderColor: "#16a34a", iconBg: "linear-gradient(135deg, #16a34a, #15803d)", shadow: "rgba(22, 163, 74, 0.25)" },
+    { id: "main-bateekha", label: "الدراسات والتخطيط المالي", icon: Layers, path: "/bateekha", borderColor: "#16a34a", iconBg: "linear-gradient(135deg, #16a34a, #15803d)", shadow: "rgba(22, 163, 74, 0.25)" },
   ];
 
   const NAV_TOOLS = [

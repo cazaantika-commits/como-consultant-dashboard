@@ -1,21 +1,23 @@
 import { useState, lazy, Suspense } from "react";
 import { useLocation } from "wouter";
-import { ArrowRight, ClipboardList, HardHat, Target, Settings, Calendar, TrendingDown, FileText, Building2, Briefcase } from "lucide-react";
+import { ArrowRight, ClipboardList, HardHat, Target, Settings, Calendar, TrendingDown, FileText, Building2, Briefcase, LayoutGrid } from "lucide-react";
 
 // Lazy load the actual page components
 const GeneralInputsPage = lazy(() => import("./GeneralInputsPage"));
+const PricingPage = lazy(() => import("./PricingPage"));
 const ConstructionInputsPage = lazy(() => import("./ConstructionInputsPage"));
 const V2WaelSales = lazy(() => import("./V2WaelSales"));
 const SettingsRulesPage = lazy(() => import("./SettingsRulesPage"));
 const V2Timeline = lazy(() => import("./V2Timeline"));
-const V2InvestorCashFlow = lazy(() => import("./V2InvestorCashFlow"));
-const V2Feasibility = lazy(() => import("./V2Feasibility"));
+const InvestorCashFlowSchedulePage = lazy(() => import("./InvestorCashFlowSchedulePage"));
+const FeasibilityStudyPage = lazy(() => import("./FeasibilityStudyPage"));
 const ConsolidatedInvestorCashFlowPage = lazy(() => import("./ConsolidatedInvestorCashFlowPage"));
 
-type TabId = "general" | "construction" | "sales" | "settings" | "timeline" | "cashflows" | "feasibility" | "mall" | "portfolio";
+type TabId = "general" | "units" | "construction" | "sales" | "settings" | "timeline" | "cashflows" | "feasibility" | "mall" | "portfolio";
 
 const TABS: { id: TabId; label: string; icon: any; group: "input" | "output" }[] = [
   { id: "general", label: "المدخلات العامة", icon: ClipboardList, group: "input" },
+  { id: "units", label: "توزيع الوحدات", icon: LayoutGrid, group: "input" },
   { id: "construction", label: "الإنشاء", icon: HardHat, group: "input" },
   { id: "sales", label: "المبيعات والتسويق", icon: Target, group: "input" },
   { id: "settings", label: "الإعدادات والقواعد", icon: Settings, group: "input" },
@@ -30,6 +32,8 @@ function TabContent({ tabId }: { tabId: TabId }) {
   switch (tabId) {
     case "general":
       return <GeneralInputsPage embedded />;
+    case "units":
+      return <PricingPage />;
     case "construction":
       return <ConstructionInputsPage embedded />;
     case "sales":
@@ -39,9 +43,9 @@ function TabContent({ tabId }: { tabId: TabId }) {
     case "timeline":
       return <V2Timeline />;
     case "cashflows":
-      return <V2InvestorCashFlow />;
+      return <InvestorCashFlowSchedulePage />;
     case "feasibility":
-      return <V2Feasibility />;
+      return <FeasibilityStudyPage embedded />;
     case "mall":
       return (
         <div className="flex flex-col items-center justify-center text-center gap-4 py-20">
@@ -74,7 +78,7 @@ export default function BateekhaPage() {
           <button onClick={() => navigate("/")} className="p-1 rounded hover:bg-gray-100 transition">
             <ArrowRight className="w-4 h-4 text-gray-600" />
           </button>
-          <h1 className="text-sm font-bold text-gray-900">🍉 بطيخة</h1>
+          <h1 className="text-sm font-bold text-gray-900">📊 الدراسات والتخطيط المالي</h1>
         </div>
       </header>
 

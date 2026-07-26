@@ -985,3 +985,7 @@
 - [x] Add Bateekha route to App.tsx
 - [x] Add Bateekha icon to Home page navigation
 - [x] Tabs: المدخلات العامة, الإنشاء, المبيعات والتسويق, الإعدادات والقواعد, الجدول الزمني, التدفقات المالية, دراسة الجدوى, المركز التجاري, تجميع المشاريع
+- [x] Rename بطيخة to الدراسات والتخطيط المالي
+- [x] Add توزيع الوحدات tab (PricingPage without pricing)
+- [x] Replace V2InvestorCashFlow with InvestorCashFlowSchedulePage (real DB)
+- [x] Replace V2Feasibility with FeasibilityStudyPage (real DB)
