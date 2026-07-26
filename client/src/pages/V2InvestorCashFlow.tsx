@@ -7,8 +7,8 @@ const CONSTRUCTION_MONTHS = 30;
 const POST_MONTHS = 13;
 
 // ═══════════════════════════════════════════════════════════════
-// بنود كشف تدفقات المستثمر — سيناريو 1 (الافتراضي)
-// الترتيب مطابق تماماً لـ investorCashFlowEngine.ts
+// بنود كشف تدفقات المستثمر — فقط ما يدفعه المستثمر من جيبه
+// لا يوجد أي بند من حساب الضمان هنا
 // ═══════════════════════════════════════════════════════════════
 
 // ─── الأرض (مدفوعة بالكامل — لا توزيع شهري) ───
@@ -18,33 +18,30 @@ const LAND_ITEMS = [
   { id: "land_broker", name: "عمولة وسيط الأرض" },
 ];
 
-// ─── المصروفات الشهرية (Debit) ───
+// ─── المصروفات (Debit) — فقط ما يدفعه المستثمر ───
 const DEBIT_ITEMS = [
   // التصاميم والإشراف
-  { id: "design_fee", name: "أتعاب التصاميم", section: "التصاميم والإشراف", funder: "investor" },
-  { id: "supervision_fee", name: "أتعاب الإشراف", section: "التصاميم والإشراف", funder: "escrow" },
+  { id: "design_fee", name: "أتعاب التصاميم", section: "التصاميم والإشراف" },
   // الدراسات والمسوحات
-  { id: "soil_test", name: "فحص التربة", section: "الدراسات والمسوحات", funder: "investor" },
-  { id: "topography", name: "المسح الطبوغرافي", section: "الدراسات والمسوحات", funder: "investor" },
-  { id: "surveyor_fee", name: "رسوم المساح", section: "الدراسات والمسوحات", funder: "escrow" },
+  { id: "soil_test", name: "فحص التربة", section: "الدراسات والمسوحات" },
+  { id: "topography", name: "المسح الطبوغرافي", section: "الدراسات والمسوحات" },
   // الرسوم الحكومية والتنظيمية
-  { id: "community_fee", name: "رسوم المجتمع", section: "الرسوم الحكومية والتنظيمية", funder: "investor" },
-  { id: "gov_fees", name: "رسوم الجهات الحكومية", section: "الرسوم الحكومية والتنظيمية", funder: "split" },
-  { id: "sorting_fee", name: "رسوم الفرز", section: "الرسوم الحكومية والتنظيمية", funder: "investor" },
-  { id: "noc_fee", name: "رسوم NOC المطور", section: "الرسوم الحكومية والتنظيمية", funder: "investor" },
+  { id: "community_fee", name: "رسوم المجتمع", section: "الرسوم الحكومية والتنظيمية" },
+  { id: "gov_fees_investor", name: "رسوم الجهات الحكومية (10%)", section: "الرسوم الحكومية والتنظيمية" },
+  { id: "sorting_fee", name: "رسوم الفرز", section: "الرسوم الحكومية والتنظيمية" },
+  { id: "noc_fee", name: "رسوم NOC المطور", section: "الرسوم الحكومية والتنظيمية" },
   // ريرا (التنظيم العقاري)
-  { id: "rera_project_reg", name: "تسجيل المشروع — ريرا", section: "ريرا (التنظيم العقاري)", funder: "investor" },
-  { id: "rera_units_reg", name: "تسجيل الوحدات — ريرا", section: "ريرا (التنظيم العقاري)", funder: "investor" },
-  { id: "escrow_fee", name: "حساب الضمان (رسوم فتح)", section: "ريرا (التنظيم العقاري)", funder: "investor" },
-  { id: "bank_fees", name: "رسوم البنك", section: "ريرا (التنظيم العقاري)", funder: "investor" },
-  { id: "rera_audit", name: "تقرير مدقق ريرا", section: "ريرا (التنظيم العقاري)", funder: "escrow" },
-  { id: "rera_inspect", name: "فحص ريرا", section: "ريرا (التنظيم العقاري)", funder: "escrow" },
+  { id: "rera_project_reg", name: "تسجيل المشروع — ريرا", section: "ريرا (التنظيم العقاري)" },
+  { id: "rera_units_reg", name: "تسجيل الوحدات — ريرا", section: "ريرا (التنظيم العقاري)" },
+  { id: "escrow_fee", name: "حساب الضمان (رسوم فتح)", section: "ريرا (التنظيم العقاري)" },
+  { id: "bank_fees", name: "رسوم البنك", section: "ريرا (التنظيم العقاري)" },
   // المبيعات والتسويق
-  { id: "sales_commission", name: "عمولة المبيعات", section: "المبيعات والتسويق", funder: "escrow" },
-  { id: "marketing", name: "التسويق (2%)", section: "المبيعات والتسويق", funder: "investor" },
-  { id: "developer_fee", name: "أتعاب المطور", section: "المبيعات والتسويق", funder: "investor" },
-  // الإنشاء (المستثمر يدفع فقط إيداع 20% + دفعة مقدمة 10% — الباقي من الضمان)
-  { id: "construction", name: "تكلفة الإنشاء (إيداع 20% + مقدمة 10%)", section: "الإنشاء", funder: "split" },
+  { id: "marketing", name: "التسويق (2%)", section: "المبيعات والتسويق" },
+  { id: "developer_fee", name: "أتعاب المطور (15%)", section: "المبيعات والتسويق" },
+  // الإنشاء (حصة المستثمر فقط)
+  { id: "construction_advance", name: "دفعة مقدمة المقاول (10%)", section: "الإنشاء" },
+  { id: "construction_deposit", name: "إيداع حساب الضمان (20%)", section: "الإنشاء" },
+  { id: "construction_completion", name: "دفعة إنجاز المقاول (5%)", section: "الإنشاء" },
 ];
 
 // ─── الإيرادات (Credit) — ما يستلمه المستثمر ───
@@ -54,8 +51,11 @@ const CREDIT_ITEMS = [
   { id: "escrow_liq_2", name: "تصفية حساب الضمان (دفعة 2 — صافي الاحتجاز)" },
 ];
 
-function dummyRow(totalMonths: number): number[] {
-  return Array.from({ length: totalMonths }, () => Math.round(Math.random() * 2_000_000));
+function dummyRow(totalMonths: number, startMonth?: number): number[] {
+  return Array.from({ length: totalMonths }, (_, i) => {
+    if (startMonth !== undefined && i < startMonth) return 0;
+    return Math.round(Math.random() * 2_000_000);
+  });
 }
 
 export default function V2InvestorCashFlow() {
@@ -65,7 +65,7 @@ export default function V2InvestorCashFlow() {
   const [debitData] = useState(() =>
     DEBIT_ITEMS.map((item) => ({
       ...item,
-      values: item.funder === "investor" || item.funder === "split" ? dummyRow(totalMonths) : [],
+      values: dummyRow(totalMonths),
     }))
   );
 
@@ -78,10 +78,9 @@ export default function V2InvestorCashFlow() {
     }))
   );
 
-  // Totals (investor-funded + split items only)
-  const investorDebitItems = debitData.filter((d) => d.funder === "investor" || d.funder === "split");
+  // Totals
   const debitTotals = Array.from({ length: totalMonths }, (_, i) =>
-    investorDebitItems.reduce((s, r) => s + r.values[i], 0)
+    debitData.reduce((s, r) => s + r.values[i], 0)
   );
   const creditTotals = Array.from({ length: totalMonths }, (_, i) =>
     creditData.reduce((s, r) => s + r.values[i], 0)
@@ -208,19 +207,12 @@ export default function V2InvestorCashFlow() {
                   <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50/50">
                     <td className="sticky right-0 z-10 bg-white px-2 py-[2px] text-gray-800 border-l border-gray-100 w-[180px] min-w-[180px] text-[8px]">
                       {item.name}
-                      {item.funder === "escrow" && <span className="mr-1 text-[7px] text-orange-500 font-medium">(من الضمان)</span>}
                     </td>
-                    {item.funder === "escrow" ? (
-                      months.map((_, j) => (
-                        <td key={j} className="px-0.5 py-[2px] text-center text-orange-300 text-[7px]">●</td>
-                      ))
-                    ) : (
-                      item.values.map((v, j) => (
-                        <td key={j} className={`px-0.5 py-[2px] text-center tabular-nums text-[8px] ${v > 0 ? "text-red-600" : "text-gray-300"}`}>
-                          {v > 0 ? fmt(v) : "-"}
-                        </td>
-                      ))
-                    )}
+                    {item.values.map((v, j) => (
+                      <td key={j} className={`px-0.5 py-[2px] text-center tabular-nums text-[8px] ${v > 0 ? "text-red-600" : "text-gray-300"}`}>
+                        {v > 0 ? fmt(v) : "-"}
+                      </td>
+                    ))}
                   </tr>
                 ))}
               </tbody>
