@@ -996,3 +996,4 @@
 - [x] Add IRR/annualized ROI estimate to V2Feasibility
 - [x] Add cost/sqft vs selling price comparison to V2Feasibility
 - [x] Improve V2Feasibility colors to teal/gold/white brand style
+- [x] Align construction chart month labels with grid months above (same width/structure)

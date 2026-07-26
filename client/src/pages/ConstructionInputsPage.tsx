@@ -459,7 +459,7 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
           </div>
         )}
 
-        {/* Progress Chart */}
+        {/* Progress Chart — aligned with grid above */}
         {constructionCost > 0 && constructionMonths > 0 && (
           <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-4 mt-3">
             <div className="flex items-center gap-2 mb-3">
@@ -467,51 +467,49 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
               <span className="text-xs font-bold text-gray-800">منحنى الإنجاز الشهري</span>
               <span className="text-[9px] text-gray-400 mr-auto">نسبة الإنجاز % لكل شهر إنشاء</span>
             </div>
-            <div className="relative" style={{ height: '140px' }}>
-              {/* Y-axis labels */}
-              <div className="absolute left-0 top-0 bottom-0 w-8 flex flex-col justify-between text-[7px] text-gray-400 py-1">
-                <span>{Math.max(...monthlyProgress.slice(0, constructionMonths), 1).toFixed(0)}%</span>
-                <span>{(Math.max(...monthlyProgress.slice(0, constructionMonths), 1) / 2).toFixed(0)}%</span>
-                <span>0%</span>
-              </div>
-              {/* Bars */}
-              <div className="mr-0 ml-9 h-full flex items-end gap-[1px]" dir="rtl">
-                {monthlyProgress.slice(0, constructionMonths).map((pct, i) => {
+            <div className="overflow-x-auto">
+              <div style={{ display: 'grid', gridTemplateColumns: `70px repeat(${totalColumns}, minmax(40px, 1fr))`, direction: 'rtl' }}>
+                {/* Chart bars row */}
+                <div className="flex flex-col justify-end items-center text-[7px] text-gray-400" style={{ height: '100px' }}>
+                  <span>{Math.max(...monthlyProgress.slice(0, constructionMonths), 1).toFixed(0)}%</span>
+                  <div className="flex-1" />
+                  <span>0%</span>
+                </div>
+                {Array.from({ length: totalColumns }, (_, i) => {
+                  const isConstruction = i < constructionMonths;
+                  const pct = isConstruction ? (monthlyProgress[i] || 0) : 0;
                   const maxPct = Math.max(...monthlyProgress.slice(0, constructionMonths), 1);
-                  const barHeight = (pct / maxPct) * 100;
+                  const barHeight = isConstruction ? (pct / maxPct) * 100 : 0;
                   return (
-                    <div key={i} className="flex-1 flex flex-col items-center justify-end h-full">
-                      <div
-                        className="w-full rounded-t transition-all duration-300"
-                        style={{
-                          height: `${barHeight}%`,
-                          background: pct > 0 ? 'linear-gradient(to top, #0d9488, #5eead4)' : '#e5e7eb',
-                          minHeight: pct > 0 ? '2px' : '1px',
-                        }}
-                      />
-                      <span className="text-[6px] text-gray-500 mt-0.5 leading-none">{i + 1}</span>
+                    <div key={i} className="flex flex-col items-center justify-end px-[1px]" style={{ height: '100px' }}>
+                      {isConstruction ? (
+                        <div
+                          className="w-full rounded-t transition-all duration-300"
+                          style={{
+                            height: `${barHeight}%`,
+                            background: pct > 0 ? 'linear-gradient(to top, #0d9488, #5eead4)' : '#e5e7eb',
+                            minHeight: pct > 0 ? '2px' : '1px',
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full" style={{ height: '1px', background: '#e5e7eb' }} />
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* Month labels row (matches grid above) */}
+                <div className="text-[7px] font-bold text-gray-500 flex items-center justify-center py-0.5">الشهر</div>
+                {Array.from({ length: totalColumns }, (_, i) => {
+                  const isConstruction = i < constructionMonths;
+                  const displayNum = isConstruction ? i + 1 : i - constructionMonths + 1;
+                  return (
+                    <div key={i} className={`text-center text-[7px] font-bold py-0.5 ${isConstruction ? 'text-teal-700' : 'text-gray-400'}`}>
+                      {isConstruction ? displayNum : `+${displayNum}`}
                     </div>
                   );
                 })}
               </div>
-              {/* Cumulative S-curve line overlay */}
-              <svg className="absolute top-0 left-9 right-0 bottom-3 pointer-events-none" preserveAspectRatio="none" viewBox={`0 0 ${constructionMonths * 10} 100`}>
-                <polyline
-                  fill="none"
-                  stroke="#f59e0b"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  points={
-                    monthlyProgress.slice(0, constructionMonths).reduce((acc, pct, i) => {
-                      const cumSum = monthlyProgress.slice(0, i + 1).reduce((s, v) => s + v, 0);
-                      const x = (i + 0.5) * 10;
-                      const y = 100 - cumSum; // inverted Y
-                      return acc + `${x},${y} `;
-                    }, '')
-                  }
-                />
-              </svg>
             </div>
             <div className="flex items-center justify-center gap-4 mt-2">
               <div className="flex items-center gap-1">
