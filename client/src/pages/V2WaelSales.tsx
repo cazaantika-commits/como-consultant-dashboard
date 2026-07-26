@@ -303,7 +303,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   // RENDER
   // ═══════════════════════════════════════════════════════════════════════════════
   return (
-    <div className="bg-white p-2" dir="rtl">
+    <div className="bg-gray-50 p-2" dir="rtl">
       <div className="max-w-full mx-auto space-y-2">
         {/* ═══ HEADER ═══ */}
         <div className="flex items-center justify-between flex-wrap gap-2">
@@ -351,64 +351,64 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
         {selectedProjectId && !projectQuery.isLoading && projectQuery.data && (
           <>
             {/* SECTION 1: UNIT PRICING TABLE */}
-            <section className="bg-white rounded-xl border border-gray-100 shadow-md overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-emerald-600" />
-                  <h2 className="text-sm font-bold text-gray-800">جدول التسعير</h2>
-                  <Badge variant="secondary" className="text-[10px]">{totalUnits} وحدة</Badge>
+            <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
+                  <h2 className="text-[11px] font-bold text-gray-800">جدول التسعير</h2>
+                  <Badge variant="secondary" className="text-[9px]">{totalUnits} وحدة</Badge>
                 </div>
-                <p className="text-xs text-gray-500">الإيرادات: <span className="font-bold text-emerald-700">{fmt(totalRevenue)} AED</span></p>
+                <p className="text-[10px] text-gray-500">الإيرادات: <span className="font-bold text-emerald-700">{fmt(totalRevenue)} AED</span></p>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-xs">
+                <table className="w-full text-[11px]">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-3 py-2 text-right font-medium text-gray-600">النوع</th>
-                      <th className="px-3 py-2 text-center font-medium text-gray-600">العدد</th>
-                      <th className="px-3 py-2 text-center font-medium text-gray-600">المساحة (قدم²)</th>
-                      <th className="px-3 py-2 text-center font-medium text-gray-600">سعر/قدم (AED)</th>
-                      <th className="px-3 py-2 text-center font-medium text-gray-600">إجمالي المساحة</th>
-                      <th className="px-3 py-2 text-center font-medium text-gray-600">إجمالي الإيراد</th>
-                      <th className="px-3 py-2 text-center font-medium text-gray-600">%</th>
+                      <th className="px-2 py-1 text-right font-medium text-gray-600">النوع</th>
+                      <th className="px-2 py-1 text-center font-medium text-gray-600">العدد</th>
+                      <th className="px-2 py-1 text-center font-medium text-gray-600">المساحة (قدم²)</th>
+                      <th className="px-2 py-1 text-center font-medium text-gray-600">سعر/قدم (AED)</th>
+                      <th className="px-2 py-1 text-center font-medium text-gray-600">إجمالي المساحة</th>
+                      <th className="px-2 py-1 text-center font-medium text-gray-600">إجمالي الإيراد</th>
+                      <th className="px-2 py-1 text-center font-medium text-gray-600">%</th>
                     </tr>
                   </thead>
                   <tbody>
                     {unitRevenues.map((u) => (
                       <tr key={u.id} className="border-t border-gray-50 hover:bg-gray-50/50">
-                        <td className="px-3 py-2">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: u.color }} />
+                        <td className="px-2 py-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: u.color }} />
                             <span className="font-medium text-gray-800">{u.name}</span>
                           </div>
                         </td>
-                        <td className="px-3 py-2 text-center">
+                        <td className="px-2 py-0.5 text-center">
                           <input type="number" min={0} value={u.count} onChange={(e) => updateUnit(u.id, "count", parseInt(e.target.value) || 0)}
-                            className="w-14 h-7 text-center text-xs border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
+                            className="w-12 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
                         </td>
-                        <td className="px-3 py-2 text-center">
+                        <td className="px-2 py-0.5 text-center">
                           <input type="number" min={0} value={u.area} onChange={(e) => updateUnit(u.id, "area", parseInt(e.target.value) || 0)}
-                            className="w-16 h-7 text-center text-xs border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
+                            className="w-14 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
                         </td>
-                        <td className="px-3 py-2 text-center">
+                        <td className="px-2 py-0.5 text-center">
                           <input type="number" min={0} value={u.price} onChange={(e) => updateUnit(u.id, "price", parseInt(e.target.value) || 0)}
-                            className="w-16 h-7 text-center text-xs border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
+                            className="w-14 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
                         </td>
-                        <td className="px-3 py-2 text-center font-mono text-gray-700">{fmtFull(u.totalArea)}</td>
-                        <td className="px-3 py-2 text-center font-mono font-medium text-emerald-700">{fmt(u.total)}</td>
-                        <td className="px-3 py-2 text-center text-gray-500">{totalRevenue > 0 ? ((u.total / totalRevenue) * 100).toFixed(1) : 0}%</td>
+                        <td className="px-2 py-0.5 text-center font-mono text-gray-700">{fmtFull(u.totalArea)}</td>
+                        <td className="px-2 py-0.5 text-center font-mono font-medium text-emerald-700">{fmt(u.total)}</td>
+                        <td className="px-2 py-0.5 text-center text-gray-500">{totalRevenue > 0 ? ((u.total / totalRevenue) * 100).toFixed(1) : 0}%</td>
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="bg-gray-50 border-t-2 border-gray-200">
+                  <tfoot className="bg-teal-50 border-t-2 border-teal-200">
                     <tr>
-                      <td className="px-3 py-2 font-bold text-gray-800">المجموع</td>
-                      <td className="px-3 py-2 text-center font-bold">{totalUnits}</td>
-                      <td className="px-3 py-2" />
-                      <td className="px-3 py-2" />
-                      <td className="px-3 py-2 text-center font-mono font-bold">{fmtFull(totalArea)}</td>
-                      <td className="px-3 py-2 text-center font-mono font-bold text-emerald-700">{fmt(totalRevenue)}</td>
-                      <td className="px-3 py-2 text-center font-bold">100%</td>
+                      <td className="px-2 py-1 font-bold text-teal-800">المجموع</td>
+                      <td className="px-2 py-1 text-center font-bold text-teal-800">{totalUnits}</td>
+                      <td className="px-2 py-1" />
+                      <td className="px-2 py-1" />
+                      <td className="px-2 py-1 text-center font-mono font-bold text-teal-800">{fmtFull(totalArea)}</td>
+                      <td className="px-2 py-1 text-center font-mono font-bold text-teal-800">{fmt(totalRevenue)}</td>
+                      <td className="px-2 py-1 text-center font-bold text-teal-800">100%</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -425,52 +425,52 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
             </section>
 
             {/* SECTION 3: OPERATION COSTS + MARKETING DISTRIBUTION */}
-            <section className="grid grid-cols-12 gap-3">
-              <div className="col-span-12 md:col-span-4 bg-white rounded-xl border border-gray-100 shadow-md p-2 space-y-1">
-                <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                  <Percent className="w-4 h-4 text-amber-600" />
+            <section className="grid grid-cols-12 gap-2">
+              <div className="col-span-12 md:col-span-4 bg-white rounded-xl border border-gray-100 shadow-sm p-2 space-y-1">
+                <h3 className="text-[11px] font-bold text-gray-800 flex items-center gap-1.5">
+                  <Percent className="w-3.5 h-3.5 text-amber-600" />
                   تكاليف العملية
                 </h3>
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-gray-600">ميزانية التسويق</span>
-                    <span className="text-xs font-bold text-blue-700">{marketingPct}%</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-gray-600">ميزانية التسويق</span>
+                    <span className="text-[10px] font-bold text-blue-700">{marketingPct}%</span>
                   </div>
                   <Slider value={[marketingPct]} onValueChange={([v]) => { setMarketingPct(v); setHasUnitChanges(true); setHasPlanChanges(true); }} min={0} max={10} step={0.5} className="w-full" />
-                  <p className="text-[10px] text-gray-400 mt-0.5">{fmtFull(Math.round(marketingCost))} AED</p>
+                  <p className="text-[9px] text-gray-400">{fmtFull(Math.round(marketingCost))} AED</p>
                 </div>
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-gray-600">عمولة المبيعات</span>
-                    <span className="text-xs font-bold text-purple-700">{commissionPct}%</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-gray-600">عمولة المبيعات</span>
+                    <span className="text-[10px] font-bold text-purple-700">{commissionPct}%</span>
                   </div>
                   <Slider value={[commissionPct]} onValueChange={([v]) => { setCommissionPct(v); setHasUnitChanges(true); setHasPlanChanges(true); }} min={0} max={10} step={0.5} className="w-full" />
-                  <p className="text-[10px] text-gray-400 mt-0.5">{fmtFull(Math.round(commissionCost))} AED</p>
+                  <p className="text-[9px] text-gray-400">{fmtFull(Math.round(commissionCost))} AED</p>
                 </div>
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-gray-600">نسبة البيع على الخارطة</span>
-                    <span className="text-xs font-bold text-emerald-700">{offPlan}%</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-gray-600">نسبة البيع على الخارطة</span>
+                    <span className="text-[10px] font-bold text-emerald-700">{offPlan}%</span>
                   </div>
                   <Slider value={[offPlan]} onValueChange={([v]) => { setOffPlan(v); setHasPlanChanges(true); }} min={30} max={100} step={5} className="w-full" />
-                  <p className="text-[10px] text-gray-400 mt-0.5">{offPlanUnits} وحدة من {totalUnits}</p>
+                  <p className="text-[9px] text-gray-400">{offPlanUnits} وحدة من {totalUnits}</p>
                 </div>
               </div>
-              <div className="col-span-12 md:col-span-8 bg-white rounded-xl border border-gray-100 shadow-md p-2">
-                <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2 mb-3">
-                  <Megaphone className="w-4 h-4 text-pink-600" />
+              <div className="col-span-12 md:col-span-8 bg-white rounded-xl border border-gray-100 shadow-sm p-2">
+                <h3 className="text-[11px] font-bold text-gray-800 flex items-center gap-1.5 mb-2">
+                  <Megaphone className="w-3.5 h-3.5 text-pink-600" />
                   توزيع قنوات التسويق
-                  <Badge variant="secondary" className="text-[10px]">{fmtFull(Math.round(marketingCost))} AED</Badge>
+                  <Badge variant="secondary" className="text-[9px]">{fmtFull(Math.round(marketingCost))} AED</Badge>
                 </h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                   {MARKETING_CHANNELS.map((ch) => (
-                    <div key={ch.id} className="rounded-lg border border-gray-100 p-2.5">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[11px] font-medium text-gray-700">{ch.name}</span>
-                        <span className="text-[11px] font-bold" style={{ color: ch.color }}>{channelPcts[ch.id] || 0}%</span>
+                    <div key={ch.id} className="rounded-lg border border-gray-100 p-1.5">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-medium text-gray-700">{ch.name}</span>
+                        <span className="text-[10px] font-bold" style={{ color: ch.color }}>{channelPcts[ch.id] || 0}%</span>
                       </div>
                       <Slider value={[channelPcts[ch.id] || 0]} onValueChange={([v]) => { setChannelPcts((prev) => ({ ...prev, [ch.id]: v })); setHasPlanChanges(true); }} min={0} max={60} step={5} className="w-full" />
-                      <p className="text-[9px] text-gray-400 mt-1">{fmtFull(Math.round(marketingCost * (channelPcts[ch.id] || 0) / 100))} AED</p>
+                      <p className="text-[8px] text-gray-400 mt-0.5">{fmtFull(Math.round(marketingCost * (channelPcts[ch.id] || 0) / 100))} AED</p>
                     </div>
                   ))}
                 </div>
@@ -478,29 +478,29 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
             </section>
 
             {/* SECTION 4: PROJECT PHASES TIMELINE */}
-            <section className="bg-white rounded-xl border border-gray-100 shadow-md overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+            <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-blue-600" />
-                  <h2 className="text-sm font-bold text-gray-800">الجدول الزمني</h2>
+                  <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                  <h2 className="text-[11px] font-bold text-gray-800">الجدول الزمني</h2>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1">
                     <span className="text-[10px] text-gray-500">تصاميم:</span>
                     <input type="number" min={1} max={24} value={designMonths} onChange={(e) => { setDesignMonths(parseInt(e.target.value) || 8); setHasPlanChanges(true); }}
-                      className="w-10 h-6 text-center text-[10px] border border-gray-200 rounded" />
+                      className="w-9 h-5 text-center text-[10px] border border-gray-200 rounded" />
                     <span className="text-[10px] text-gray-400">شهر</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1">
                     <span className="text-[10px] text-gray-500">إنشاء:</span>
                     <input type="number" min={6} max={60} value={constructionMonths} onChange={(e) => { setConstructionMonths(parseInt(e.target.value) || 30); setHasPlanChanges(true); }}
-                      className="w-10 h-6 text-center text-[10px] border border-gray-200 rounded" />
+                      className="w-9 h-5 text-center text-[10px] border border-gray-200 rounded" />
                     <span className="text-[10px] text-gray-400">شهر</span>
                   </div>
                 </div>
               </div>
               <div className="p-2">
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {PROJECT_PHASES.map((phase) => {
                     let start = 0, end = 0;
                     if (phase.id === "design") { start = 1; end = timeline.designEnd; }
@@ -510,7 +510,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                     else if (phase.id === "sales") { start = timeline.salesStart; end = timeline.projectEnd; }
                     else if (phase.id === "construction") { start = timeline.constructionStart; end = timeline.projectEnd; }
                     const total = timeline.projectEnd;
-                    const leftPct = ((start - 1) / total) * 100;
+                    const rightPct = ((start - 1) / total) * 100;
                     const widthPct = ((end - start + 1) / total) * 100;
                     const Icon = phase.icon;
                     return (
@@ -519,9 +519,9 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                           <Icon className="w-3 h-3" style={{ color: phase.color }} />
                           <span className="text-[10px] font-medium text-gray-700 truncate">{phase.name}</span>
                         </div>
-                        <div className="flex-1 h-5 bg-gray-100 rounded-full relative overflow-hidden">
-                          <div className="absolute h-full rounded-full transition-all" style={{ left: `${leftPct}%`, width: `${widthPct}%`, backgroundColor: phase.color, opacity: 0.8 }} />
-                          <span className="absolute inset-0 flex items-center justify-center text-[9px] font-medium text-gray-700">شهر {start} – {end}</span>
+                        <div className="flex-1 h-4 bg-gray-100 rounded-full relative overflow-hidden" dir="ltr">
+                          <div className="absolute h-full rounded-full transition-all" style={{ left: `${rightPct}%`, width: `${widthPct}%`, backgroundColor: phase.color, opacity: 0.8 }} />
+                          <span className="absolute inset-0 flex items-center justify-center text-[8px] font-medium text-gray-700">شهر {start} – {end}</span>
                         </div>
                       </div>
                     );
@@ -545,11 +545,11 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
             </section>
 
             {/* SECTION 5: SALES CURVE */}
-            <section className="bg-white rounded-xl border border-gray-100 shadow-md overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-blue-600" />
-                  <h2 className="text-sm font-bold text-gray-800">توزيع البيع</h2>
+            <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <TrendingUp className="w-3.5 h-3.5 text-blue-600" />
+                  <h2 className="text-[11px] font-bold text-gray-800">توزيع البيع</h2>
                   <Badge variant="secondary" className="text-[10px]">{totalSold} / {offPlanUnits} وحدة</Badge>
                   {totalSold > offPlanUnits && <Badge variant="destructive" className="text-[9px]">تجاوز!</Badge>}
                 </div>
@@ -636,48 +636,48 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
             </section>
 
             {/* SECTION 6: PAYMENT PLAN */}
-            <section className="bg-white rounded-xl border border-gray-100 shadow-md overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
-                <CreditCard className="w-4 h-4 text-indigo-600" />
-                <h2 className="text-sm font-bold text-gray-800">خطة الدفع (Payment Plan)</h2>
-                <Badge variant="secondary" className="text-[10px]">المجموع: {downPaymentPct + duringConstructionPct + onHandoverPct}%</Badge>
+            <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-1.5">
+                <CreditCard className="w-3.5 h-3.5 text-indigo-600" />
+                <h2 className="text-[11px] font-bold text-gray-800">خطة الدفع (Payment Plan)</h2>
+                <Badge variant="secondary" className="text-[9px]">المجموع: {downPaymentPct + duringConstructionPct + onHandoverPct}%</Badge>
               </div>
-              <div className="p-4">
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
+              <div className="p-2">
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-600">دفعة أولى (Down Payment)</span>
-                      <span className="text-xs font-bold text-indigo-700">{downPaymentPct}%</span>
+                      <span className="text-[10px] text-gray-600">دفعة أولى</span>
+                      <span className="text-[10px] font-bold text-indigo-700">{downPaymentPct}%</span>
                     </div>
                     <Slider value={[downPaymentPct]} onValueChange={([v]) => { setDownPaymentPct(v); setDuringConstructionPct(100 - v - onHandoverPct); setHasPlanChanges(true); }} min={5} max={50} step={5} />
-                    <p className="text-[10px] text-gray-400">{fmtFull(Math.round(avgUnitPrice * downPaymentPct / 100))} AED / وحدة</p>
+                    <p className="text-[9px] text-gray-400">{fmtFull(Math.round(avgUnitPrice * downPaymentPct / 100))} AED / وحدة</p>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-600">أثناء الإنشاء</span>
-                      <span className="text-xs font-bold text-blue-700">{duringConstructionPct}%</span>
+                      <span className="text-[10px] text-gray-600">أثناء الإنشاء</span>
+                      <span className="text-[10px] font-bold text-blue-700">{duringConstructionPct}%</span>
                     </div>
                     <Slider value={[duringConstructionPct]} onValueChange={([v]) => { setDuringConstructionPct(v); setOnHandoverPct(100 - downPaymentPct - v); setHasPlanChanges(true); }} min={10} max={80} step={5} />
-                    <p className="text-[10px] text-gray-400">{fmtFull(Math.round(avgUnitPrice * duringConstructionPct / 100))} AED / وحدة ({constructionMonths} شهر)</p>
+                    <p className="text-[9px] text-gray-400">{fmtFull(Math.round(avgUnitPrice * duringConstructionPct / 100))} AED / وحدة ({constructionMonths} شهر)</p>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-600">عند التسليم (Handover)</span>
-                      <span className="text-xs font-bold text-emerald-700">{onHandoverPct}%</span>
+                      <span className="text-[10px] text-gray-600">عند التسليم</span>
+                      <span className="text-[10px] font-bold text-emerald-700">{onHandoverPct}%</span>
                     </div>
                     <Slider value={[onHandoverPct]} onValueChange={([v]) => { setOnHandoverPct(v); setDuringConstructionPct(100 - downPaymentPct - v); setHasPlanChanges(true); }} min={0} max={50} step={5} />
-                    <p className="text-[10px] text-gray-400">{fmtFull(Math.round(avgUnitPrice * onHandoverPct / 100))} AED / وحدة</p>
+                    <p className="text-[9px] text-gray-400">{fmtFull(Math.round(avgUnitPrice * onHandoverPct / 100))} AED / وحدة</p>
                   </div>
                 </div>
               </div>
             </section>
 
             {/* SECTION 7: ESCROW + CRITICAL MONTH */}
-            <section className="bg-white rounded-xl border border-gray-100 shadow-md overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CreditCard className="w-4 h-4 text-violet-600" />
-                  <h2 className="text-sm font-bold text-gray-800">تأثير الإسكرو (الضمان)</h2>
+            <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <CreditCard className="w-3.5 h-3.5 text-violet-600" />
+                  <h2 className="text-[11px] font-bold text-gray-800">تأثير الإسكرو (الضمان)</h2>
                   {hasDeficit && <Badge variant="destructive" className="text-[10px]">عجز: {fmt(Math.abs(maxDeficit))} AED</Badge>}
                   {!hasDeficit && <Badge className="text-[10px] bg-emerald-100 text-emerald-700">متوازن</Badge>}
                 </div>
@@ -769,10 +769,10 @@ function KPICard({ label, value, sub, color }: { label: string; value: string; s
     violet: "bg-violet-50 text-violet-700 border-violet-200",
   };
   return (
-    <div className={`rounded-xl border p-3 ${colorMap[color] || colorMap.slate}`}>
-      <p className="text-[10px] opacity-70 mb-0.5">{label}</p>
-      <p className="text-base font-bold">{value}</p>
-      <p className="text-[9px] opacity-60">{sub}</p>
+    <div className={`rounded-lg border p-2 ${colorMap[color] || colorMap.slate}`}>
+      <p className="text-[9px] opacity-70">{label}</p>
+      <p className="text-sm font-bold">{value}</p>
+      <p className="text-[8px] opacity-60">{sub}</p>
     </div>
   );
 }
