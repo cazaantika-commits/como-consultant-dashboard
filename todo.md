@@ -957,14 +957,14 @@
 - [x] Create WaelSalesPlan.tsx page component
 - [x] Add route in App.tsx
 - [x] Add navigation link in Home.tsx
-- [ ] Rebuild with correct timeline: Design phase first, then Construction
-- [ ] Marketing prep starts 3 months before design ends (relative rule)
-- [ ] Sales start in month before last of design phase (relative rule)
-- [ ] Sales & marketing continue through construction period
-- [ ] Wael inputs: revenue, design months, construction months, start date, marketing %, commission %, off-plan %
-- [ ] Results show full timeline (design + construction) with clear phase markers
-- [ ] Real-time result updates when any variable changes
-- [ ] Smart warnings when targets don't align
+- [x] Rebuild with correct timeline: Design phase first, then Construction
+- [x] Marketing prep starts 3 months before design ends (relative rule)
+- [x] Sales start in month before last of design phase (relative rule)
+- [x] Sales & marketing continue through construction period
+- [x] Wael inputs: revenue, design months, construction months, start date, marketing %, commission %, off-plan %
+- [x] Results show full timeline (design + construction) with clear phase markers
+- [x] Real-time result updates when any variable changes
+- [x] Smart warnings when targets don't align
 
 ## Portfolio Page (المشاريع الكلية) — Priority #1
 - [x] Verify consolidated cashflow page loads correctly with restored files
