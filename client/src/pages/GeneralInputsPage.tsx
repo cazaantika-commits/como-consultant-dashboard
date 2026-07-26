@@ -119,7 +119,7 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
             value={formData[field.key] || ""}
             onChange={e => updateField(field.key, e.target.value)}
             disabled={!isEditing}
-            className={`flex-1 h-[24px] px-2 text-[13px] rounded ${!isEditing ? "bg-transparent text-gray-800 font-medium" : "bg-gray-50 border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"}`}
+            className={`flex-1 h-[24px] px-2 text-[13px] rounded ${!isEditing ? "bg-transparent text-gray-800 font-medium" : "bg-white border border-gray-300 text-gray-900 focus:border-teal-500 focus:ring-1 focus:ring-teal-500"}`}
             dir="ltr"
             placeholder={field.defaultValue || "—"}
           />
@@ -130,12 +130,12 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
   );
 
   return (
-    <div className="bg-white px-4 py-2" dir="rtl">
+    <div className="bg-gray-50 px-4 py-2" dir="rtl">
       {/* Toolbar */}
-      <div className="flex items-center gap-3 mb-3 pb-2 border-b border-gray-200">
+      <div className="bg-white rounded-lg border border-gray-100 shadow-sm px-4 py-2 mb-3 flex items-center gap-3">
         <ProjectSelector selectedId={selectedProjectId} onSelect={(id) => { setSelectedProjectId(id); setIsEditing(false); }} />
         {!isEditing ? (
-          <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} className="h-7 text-[12px] px-3 gap-1">
+          <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} className="h-7 text-[12px] px-3 gap-1 border-gray-200 hover:bg-gray-50">
             <Pencil className="w-3.5 h-3.5" /> تعديل
           </Button>
         ) : (
@@ -143,33 +143,35 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
             <Button variant="ghost" size="sm" onClick={() => { setIsEditing(false); setHasChanges(false); projectQuery.refetch(); }} className="h-7 text-[12px] px-3 gap-1">
               <X className="w-3.5 h-3.5" /> إلغاء
             </Button>
-            <Button size="sm" onClick={handleSave} disabled={!hasChanges || updateProject.isPending} className="h-7 text-[12px] px-3 gap-1">
+            <Button size="sm" onClick={handleSave} disabled={!hasChanges || updateProject.isPending} className="h-7 text-[12px] px-3 gap-1 bg-teal-600 hover:bg-teal-700 text-white">
               {updateProject.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} حفظ
             </Button>
           </>
         )}
       </div>
 
-      {/* 3-column grid */}
-      <div className="grid grid-cols-3 gap-6">
-        {renderCol(col1)}
-        {renderCol(col2)}
-        {renderCol(col3)}
+      {/* 3-column grid inside white rounded container */}
+      <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-4">
+        <div className="grid grid-cols-3 gap-6">
+          {renderCol(col1)}
+          {renderCol(col2)}
+          {renderCol(col3)}
+        </div>
       </div>
 
-      {/* Computed summary cards */}
-      <div className="mt-3 pt-3 border-t border-gray-200 grid grid-cols-3 gap-4">
-        <div className="rounded-lg border border-gray-200 p-3 text-center">
-          <div className="text-[12px] text-gray-500">GFA الإجمالي</div>
-          <div className="text-[15px] font-bold text-gray-800 mt-1" dir="ltr">{fmt(computed.gfaTotal)} <span className="text-[11px] text-gray-400">قدم²</span></div>
+      {/* Computed summary cards - Portfolio style */}
+      <div className="mt-3 grid grid-cols-3 gap-3">
+        <div className="bg-white rounded-lg p-3 border border-teal-100 shadow-sm text-center">
+          <div className="text-[10px] text-teal-600 mb-0.5">GFA الإجمالي</div>
+          <div className="text-base font-bold text-teal-700" dir="ltr">{fmt(computed.gfaTotal)} <span className="text-[11px] text-gray-400">قدم²</span></div>
         </div>
-        <div className="rounded-lg border border-gray-200 p-3 text-center">
-          <div className="text-[12px] text-gray-500">القابل للبيع</div>
-          <div className="text-[15px] font-bold text-gray-800 mt-1" dir="ltr">{fmt(computed.sellableResidential + computed.sellableRetail + computed.sellableOffice)} <span className="text-[11px] text-gray-400">قدم²</span></div>
+        <div className="bg-white rounded-lg p-3 border border-teal-100 shadow-sm text-center">
+          <div className="text-[10px] text-teal-600 mb-0.5">القابل للبيع</div>
+          <div className="text-base font-bold text-teal-700" dir="ltr">{fmt(computed.sellableResidential + computed.sellableRetail + computed.sellableOffice)} <span className="text-[11px] text-gray-400">قدم²</span></div>
         </div>
-        <div className="rounded-lg border border-gray-200 p-3 text-center">
-          <div className="text-[12px] text-gray-500">تكلفة الإنشاء</div>
-          <div className="text-[15px] font-bold text-gray-800 mt-1" dir="ltr">{fmt(computed.constructionCost)} <span className="text-[11px] text-gray-400">درهم</span></div>
+        <div className="bg-white rounded-lg p-3 border border-red-100 shadow-sm text-center">
+          <div className="text-[10px] text-red-600 mb-0.5">تكلفة الإنشاء</div>
+          <div className="text-base font-bold text-red-700" dir="ltr">{fmt(computed.constructionCost)} <span className="text-[11px] text-gray-400">درهم</span></div>
         </div>
       </div>
     </div>

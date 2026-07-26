@@ -1,5 +1,6 @@
-import { useProjectContext } from "@/contexts/ProjectContext";
+
 import { useMemo, useState, useCallback, useEffect } from "react";
+import { useProjectContext } from "@/contexts/ProjectContext";
 import { ProjectSelector } from "@/components/ProjectSelector";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -160,28 +161,28 @@ export default function PricingPage() {
     return <div className="p-2 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto" /></div>;
   }
 
-  const renderCategory = (cat: "residential" | "retail" | "office", label: string, bgClass: string) => {
+  const renderCategory = (cat: "residential" | "retail" | "office", label: string) => {
     const c = calc[cat];
     return (
       <>
-        <tr className={`${bgClass} border-t border-gray-300`}>
-          <td colSpan={3} className="py-[2px] px-1 font-bold text-[10px] text-gray-700">{label}</td>
-          <td className="py-[2px] px-1 text-center text-[9px] text-gray-500">متاح: {fmt(c?.available || 0)} | فرق: {fmt(c?.diff || 0)}</td>
-          <td className="py-[2px] px-1 text-center text-[9px] text-gray-500">{c?.parking || 0}</td>
+        <tr className="bg-gray-50 border-t border-gray-200">
+          <td colSpan={3} className="py-[3px] px-2 font-bold text-[11px] text-gray-700">{label}</td>
+          <td className="py-[3px] px-2 text-center text-[10px] text-gray-500">متاح: {fmt(c?.available || 0)} | فرق: <span className={(c?.diff || 0) < 0 ? "text-red-600" : "text-teal-600"}>{fmt(c?.diff || 0)}</span></td>
+          <td className="py-[3px] px-2 text-center text-[10px] text-gray-500">{c?.parking || 0}</td>
         </tr>
         {UNIT_TYPES.filter(ut => ut.category === cat).map((ut, idx) => (
-          <tr key={ut.key} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"}>
-            <td className="py-[1px] px-1 text-[11px] text-gray-700">{ut.label}</td>
-            <td className="py-[1px] px-1 text-center">
+          <tr key={ut.key} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50/30"}>
+            <td className="py-[2px] px-2 text-[11px] text-gray-700">{ut.label}</td>
+            <td className="py-[2px] px-2 text-center">
               <input type="number" min={0} value={counts[ut.key] || 0} onChange={e => updateCount(ut.key, parseInt(e.target.value) || 0)}
-                className="w-12 h-[18px] text-[10px] text-center border border-gray-300 rounded bg-white focus:border-blue-500 focus:outline-none" />
+                className="w-14 h-[20px] text-[11px] text-center border border-gray-200 rounded bg-white focus:border-teal-500 focus:outline-none" />
             </td>
-            <td className="py-[1px] px-1 text-center">
+            <td className="py-[2px] px-2 text-center">
               <input type="number" min={0} value={areas[ut.key] || ut.defaultArea} onChange={e => updateArea(ut.key, parseInt(e.target.value) || 0)}
-                className="w-14 h-[18px] text-[10px] text-center border border-gray-300 rounded bg-white focus:border-blue-500 focus:outline-none" />
+                className="w-16 h-[20px] text-[11px] text-center border border-gray-200 rounded bg-white focus:border-teal-500 focus:outline-none" />
             </td>
-            <td className="py-[1px] px-1 text-center text-[10px] text-gray-600 font-mono">{(counts[ut.key] || 0) > 0 ? fmt((counts[ut.key] || 0) * (areas[ut.key] || ut.defaultArea)) : "—"}</td>
-            <td className="py-[1px] px-1 text-center text-[10px] text-gray-600 font-mono">{(counts[ut.key] || 0) > 0 ? calcParking(cat === "residential" ? "res" : cat, areas[ut.key] || ut.defaultArea, counts[ut.key] || 0) : "—"}</td>
+            <td className="py-[2px] px-2 text-center text-[11px] text-gray-600 tabular-nums">{(counts[ut.key] || 0) > 0 ? fmt((counts[ut.key] || 0) * (areas[ut.key] || ut.defaultArea)) : "—"}</td>
+            <td className="py-[2px] px-2 text-center text-[11px] text-gray-600 tabular-nums">{(counts[ut.key] || 0) > 0 ? calcParking(cat === "residential" ? "res" : cat, areas[ut.key] || ut.defaultArea, counts[ut.key] || 0) : "—"}</td>
           </tr>
         ))}
       </>
@@ -189,39 +190,60 @@ export default function PricingPage() {
   };
 
   return (
-    <div className="bg-white p-1" dir="rtl">
-      <div className="flex items-center gap-2 mb-1">
+    <div className="bg-gray-50 px-4 py-2" dir="rtl">
+      {/* Toolbar */}
+      <div className="bg-white rounded-lg border border-gray-100 shadow-sm px-4 py-2 mb-3 flex items-center gap-3">
         <ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} />
-        <Button size="sm" onClick={handleSave} disabled={!hasUnsavedChanges || isSaving} className="h-5 text-[9px] px-2">
-          {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} حفظ
+        <Button size="sm" onClick={handleSave} disabled={!hasUnsavedChanges || isSaving} className="h-7 text-[12px] px-3 gap-1 bg-teal-600 hover:bg-teal-700 text-white">
+          {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} حفظ
         </Button>
-        <span className="text-[9px] text-gray-400 mr-auto">{totalUnits} وحدة | {totalParking} موقف</span>
+        <span className="text-[11px] text-gray-500 mr-auto">{totalUnits} وحدة | {totalParking} موقف</span>
       </div>
-      <table className="w-full border-collapse text-[11px]">
-        <thead>
-          <tr className="border-b border-gray-300 bg-gray-100">
-            <th className="py-[2px] px-1 text-right text-[10px] text-gray-600">النوع</th>
-            <th className="py-[2px] px-1 text-center text-[10px] text-gray-600 w-14">العدد</th>
-            <th className="py-[2px] px-1 text-center text-[10px] text-gray-600 w-16">المساحة</th>
-            <th className="py-[2px] px-1 text-center text-[10px] text-gray-600">إجمالي</th>
-            <th className="py-[2px] px-1 text-center text-[10px] text-gray-600 w-14">مواقف</th>
-          </tr>
-        </thead>
-        <tbody>
-          {renderCategory("residential", "سكني", "bg-blue-50/50")}
-          {renderCategory("retail", "تجزئة", "bg-amber-50/50")}
-          {renderCategory("office", "مكاتب", "bg-purple-50/50")}
-        </tbody>
-        <tfoot>
-          <tr className="border-t-2 border-gray-400 bg-gray-100 font-bold text-[10px]">
-            <td className="py-[2px] px-1">الإجمالي</td>
-            <td className="py-[2px] px-1 text-center">{totalUnits}</td>
-            <td className="py-[2px] px-1 text-center">—</td>
-            <td className="py-[2px] px-1 text-center font-mono">{fmt((calc.residential?.used || 0) + (calc.retail?.used || 0) + (calc.office?.used || 0))}</td>
-            <td className="py-[2px] px-1 text-center">{totalParking}</td>
-          </tr>
-        </tfoot>
-      </table>
+
+      {/* Table in white rounded container */}
+      <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
+        <table className="w-full border-collapse text-[11px]">
+          <thead>
+            <tr className="bg-gray-50 border-b border-gray-200">
+              <th className="py-[4px] px-2 text-right text-[11px] font-bold text-gray-700">النوع</th>
+              <th className="py-[4px] px-2 text-center text-[11px] font-bold text-gray-700 w-16">العدد</th>
+              <th className="py-[4px] px-2 text-center text-[11px] font-bold text-gray-700 w-18">المساحة</th>
+              <th className="py-[4px] px-2 text-center text-[11px] font-bold text-gray-700">إجمالي المساحة</th>
+              <th className="py-[4px] px-2 text-center text-[11px] font-bold text-gray-700 w-16">مواقف</th>
+            </tr>
+          </thead>
+          <tbody>
+            {renderCategory("residential", "سكني")}
+            {renderCategory("retail", "تجزئة")}
+            {renderCategory("office", "مكاتب")}
+          </tbody>
+          <tfoot>
+            <tr className="bg-teal-50 font-bold border-t-2 border-teal-200 text-[11px]">
+              <td className="py-[4px] px-2 text-teal-800">الإجمالي</td>
+              <td className="py-[4px] px-2 text-center text-teal-800">{totalUnits}</td>
+              <td className="py-[4px] px-2 text-center text-teal-800">—</td>
+              <td className="py-[4px] px-2 text-center text-teal-800 tabular-nums">{fmt((calc.residential?.used || 0) + (calc.retail?.used || 0) + (calc.office?.used || 0))}</td>
+              <td className="py-[4px] px-2 text-center text-teal-800">{totalParking}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      {/* Summary cards - Portfolio style */}
+      <div className="mt-3 grid grid-cols-3 gap-3">
+        <div className="bg-white rounded-lg p-3 border border-teal-100 shadow-sm text-center">
+          <div className="text-[10px] text-teal-600 mb-0.5">إجمالي الوحدات</div>
+          <div className="text-base font-bold text-teal-700">{totalUnits}</div>
+        </div>
+        <div className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm text-center">
+          <div className="text-[10px] text-gray-600 mb-0.5">إجمالي المواقف</div>
+          <div className="text-base font-bold text-gray-800">{totalParking}</div>
+        </div>
+        <div className="bg-white rounded-lg p-3 border border-red-100 shadow-sm text-center">
+          <div className="text-[10px] text-red-600 mb-0.5">إجمالي المساحة المستخدمة</div>
+          <div className="text-base font-bold text-red-700" dir="ltr">{fmt((calc.residential?.used || 0) + (calc.retail?.used || 0) + (calc.office?.used || 0))} <span className="text-[11px] text-gray-400">قدم²</span></div>
+        </div>
+      </div>
     </div>
   );
 }
