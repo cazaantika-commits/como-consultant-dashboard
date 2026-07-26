@@ -5,7 +5,7 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { PROJECT_INPUTS, RATES, dbProjectToInputs, dbProjectToRates } from "@/lib/projectData";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Loader2 } from "lucide-react";
+import { Save, Loader2, Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 function calcParking(type: string, area: number, count: number): number {
@@ -18,49 +18,44 @@ interface UnitType {
   label: string;
   category: "residential" | "retail" | "office";
   defaultArea: number;
-  defaultPrice: number;
 }
 
 const UNIT_TYPES: UnitType[] = [
-  { key: "onebed", label: "غرفة وصالة", category: "residential", defaultArea: 750, defaultPrice: 1550 },
-  { key: "twobed", label: "غرفتين وصالة", category: "residential", defaultArea: 1300, defaultPrice: 1500 },
-  { key: "threebed", label: "ثلاث غرف وصالة", category: "residential", defaultArea: 1650, defaultPrice: 1450 },
-  { key: "retail_small", label: "محل صغير", category: "retail", defaultArea: 850, defaultPrice: 3000 },
-  { key: "retail_medium", label: "محل متوسط", category: "retail", defaultArea: 1200, defaultPrice: 2500 },
-  { key: "retail_large", label: "محل كبير", category: "retail", defaultArea: 1800, defaultPrice: 2000 },
-  { key: "office_small", label: "مكتب صغير", category: "office", defaultArea: 1200, defaultPrice: 1900 },
-  { key: "office_medium", label: "مكتب متوسط", category: "office", defaultArea: 2000, defaultPrice: 1800 },
-  { key: "office_large", label: "مكتب كبير", category: "office", defaultArea: 3500, defaultPrice: 1700 },
+  { key: "onebed", label: "غرفة وصالة", category: "residential", defaultArea: 750 },
+  { key: "twobed", label: "غرفتين وصالة", category: "residential", defaultArea: 1300 },
+  { key: "threebed", label: "ثلاث غرف وصالة", category: "residential", defaultArea: 1650 },
+  { key: "retail_small", label: "محل صغير", category: "retail", defaultArea: 850 },
+  { key: "retail_medium", label: "محل متوسط", category: "retail", defaultArea: 1200 },
+  { key: "retail_large", label: "محل كبير", category: "retail", defaultArea: 1800 },
+  { key: "office_small", label: "مكتب صغير", category: "office", defaultArea: 1200 },
+  { key: "office_medium", label: "مكتب متوسط", category: "office", defaultArea: 2000 },
+  { key: "office_large", label: "مكتب كبير", category: "office", defaultArea: 3500 },
 ];
-
-const DEFAULT_AREAS: Record<string, number> = {
-  onebed: 750, twobed: 1300, threebed: 1650,
-  retail_small: 850, retail_medium: 1200, retail_large: 1800,
-  office_small: 1200, office_medium: 2000, office_large: 3500,
-};
-
-const DEFAULT_PRICES: Record<string, number> = {
-  onebed: 1550, twobed: 1500, threebed: 1450,
-  retail_small: 3000, retail_medium: 2500, retail_large: 2000,
-  office_small: 1900, office_medium: 1800, office_large: 1700,
-};
 
 const COUNT_MAP: Record<string, string> = {
   onebed: 'residential1brCount', twobed: 'residential2brCount', threebed: 'residential3brCount',
   retail_small: 'retailSmallCount', retail_medium: 'retailMediumCount', retail_large: 'retailLargeCount',
   office_small: 'officeSmallCount', office_medium: 'officeMediumCount', office_large: 'officeLargeCount',
 };
-
 const AREA_MAP: Record<string, string> = {
   onebed: 'residential1brArea', twobed: 'residential2brArea', threebed: 'residential3brArea',
   retail_small: 'retailSmallArea', retail_medium: 'retailMediumArea', retail_large: 'retailLargeArea',
   office_small: 'officeSmallArea', office_medium: 'officeMediumArea', office_large: 'officeLargeArea',
 };
-
 const PRICE_MAP: Record<string, string> = {
   onebed: 'residential1brPrice', twobed: 'residential2brPrice', threebed: 'residential3brPrice',
   retail_small: 'retailSmallPrice', retail_medium: 'retailMediumPrice', retail_large: 'retailLargePrice',
   office_small: 'officeSmallPrice', office_medium: 'officeMediumPrice', office_large: 'officeLargePrice',
+};
+const DEFAULT_AREAS: Record<string, number> = {
+  onebed: 750, twobed: 1300, threebed: 1650,
+  retail_small: 850, retail_medium: 1200, retail_large: 1800,
+  office_small: 1200, office_medium: 2000, office_large: 3500,
+};
+const DEFAULT_PRICES: Record<string, number> = {
+  onebed: 1550, twobed: 1500, threebed: 1450,
+  retail_small: 3000, retail_medium: 2500, retail_large: 2000,
+  office_small: 1900, office_medium: 1800, office_large: 1700,
 };
 
 function fmt(n: number): string { return Math.round(n).toLocaleString("en-US"); }
@@ -72,6 +67,7 @@ export default function PricingPage() {
   const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
   const updateProject = trpc.projects.update.useMutation();
   const [isSaving, setIsSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const i = useMemo(() => {
@@ -117,8 +113,17 @@ export default function PricingPage() {
     }
   }, [selectedProjectId, projectQuery.data, projectQuery.isLoading, i]);
 
-  const updateCount = useCallback((key: string, val: number) => { setCounts(p => ({ ...p, [key]: Math.max(0, val) })); setHasUnsavedChanges(true); }, []);
-  const updateArea = useCallback((key: string, val: number) => { setAreas(p => ({ ...p, [key]: Math.max(0, val) })); setHasUnsavedChanges(true); }, []);
+  const updateCount = useCallback((key: string, val: number) => {
+    if (!isEditing) return;
+    setCounts(p => ({ ...p, [key]: Math.max(0, val) }));
+    setHasUnsavedChanges(true);
+  }, [isEditing]);
+
+  const updateArea = useCallback((key: string, val: number) => {
+    if (!isEditing) return;
+    setAreas(p => ({ ...p, [key]: Math.max(0, val) }));
+    setHasUnsavedChanges(true);
+  }, [isEditing]);
 
   const handleSave = useCallback(async () => {
     if (!selectedProjectId || !user) return;
@@ -130,6 +135,7 @@ export default function PricingPage() {
       Object.entries(PRICE_MAP).forEach(([k, f]) => { d[f] = String(prices[k] || 0); });
       await updateProject.mutateAsync(d);
       setHasUnsavedChanges(false);
+      setIsEditing(false);
       toast({ title: "تم الحفظ ✓" });
       projectQuery.refetch();
     } catch { toast({ title: "خطأ", variant: "destructive" }); }
@@ -152,36 +158,45 @@ export default function PricingPage() {
 
   const totalUnits = (calc.residential?.units || 0) + (calc.retail?.units || 0) + (calc.office?.units || 0);
   const totalParking = (calc.residential?.parking || 0) + (calc.retail?.parking || 0) + (calc.office?.parking || 0);
+  const totalUsed = (calc.residential?.used || 0) + (calc.retail?.used || 0) + (calc.office?.used || 0);
 
   if (!selectedProjectId) {
-    return (<div className="p-2 text-center text-xs text-gray-400" dir="rtl"><ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} /><p className="mt-1">اختر مشروعاً</p></div>);
+    return (<div className="p-4 text-center text-sm text-gray-500" dir="rtl"><ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} /><p className="mt-2">اختر مشروعاً</p></div>);
   }
   if (projectQuery.isLoading) {
-    return <div className="p-2 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto" /></div>;
+    return <div className="p-4 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></div>;
   }
 
-  const renderCategory = (cat: "residential" | "retail" | "office", label: string, bgClass: string) => {
+  const renderCategory = (cat: "residential" | "retail" | "office", label: string) => {
     const c = calc[cat];
     return (
       <>
-        <tr className={`${bgClass} border-t border-gray-300`}>
-          <td colSpan={3} className="py-[2px] px-1 font-bold text-[10px] text-gray-700">{label}</td>
-          <td className="py-[2px] px-1 text-center text-[9px] text-gray-500">متاح: {fmt(c?.available || 0)} | فرق: {fmt(c?.diff || 0)}</td>
-          <td className="py-[2px] px-1 text-center text-[9px] text-gray-500">{c?.parking || 0}</td>
+        <tr className="border-t-2 border-gray-300 bg-gray-50">
+          <td className="py-2 px-3 font-bold text-sm text-gray-800">{label}</td>
+          <td className="py-2 px-3 text-center text-sm text-gray-500">{c?.units || 0}</td>
+          <td className="py-2 px-3 text-center text-sm text-gray-500">—</td>
+          <td className="py-2 px-3 text-center text-sm font-medium text-gray-700" dir="ltr">{fmt(c?.used || 0)}</td>
+          <td className="py-2 px-3 text-center text-sm text-gray-500" dir="ltr">{fmt(c?.available || 0)}</td>
+          <td className="py-2 px-3 text-center text-sm font-medium" dir="ltr" style={{ color: (c?.diff || 0) >= 0 ? '#059669' : '#dc2626' }}>{fmt(c?.diff || 0)}</td>
+          <td className="py-2 px-3 text-center text-sm text-gray-500">{c?.parking || 0}</td>
         </tr>
-        {UNIT_TYPES.filter(ut => ut.category === cat).map((ut, idx) => (
-          <tr key={ut.key} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50/50"}>
-            <td className="py-[1px] px-1 text-[11px] text-gray-700">{ut.label}</td>
-            <td className="py-[1px] px-1 text-center">
+        {UNIT_TYPES.filter(ut => ut.category === cat).map((ut) => (
+          <tr key={ut.key} className="border-b border-gray-100 hover:bg-gray-50/50">
+            <td className="py-2 px-3 text-sm text-gray-600 pr-8">{ut.label}</td>
+            <td className="py-2 px-3 text-center">
               <input type="number" min={0} value={counts[ut.key] || 0} onChange={e => updateCount(ut.key, parseInt(e.target.value) || 0)}
-                className="w-12 h-[18px] text-[10px] text-center border border-gray-300 rounded bg-white focus:border-blue-500 focus:outline-none" />
+                disabled={!isEditing}
+                className={`w-16 h-7 text-sm text-center rounded ${!isEditing ? "bg-transparent border-none text-gray-800 font-medium" : "bg-white border border-gray-300 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"}`} />
             </td>
-            <td className="py-[1px] px-1 text-center">
+            <td className="py-2 px-3 text-center">
               <input type="number" min={0} value={areas[ut.key] || ut.defaultArea} onChange={e => updateArea(ut.key, parseInt(e.target.value) || 0)}
-                className="w-14 h-[18px] text-[10px] text-center border border-gray-300 rounded bg-white focus:border-blue-500 focus:outline-none" />
+                disabled={!isEditing}
+                className={`w-20 h-7 text-sm text-center rounded ${!isEditing ? "bg-transparent border-none text-gray-800 font-medium" : "bg-white border border-gray-300 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"}`} />
             </td>
-            <td className="py-[1px] px-1 text-center text-[10px] text-gray-600 font-mono">{(counts[ut.key] || 0) > 0 ? fmt((counts[ut.key] || 0) * (areas[ut.key] || ut.defaultArea)) : "—"}</td>
-            <td className="py-[1px] px-1 text-center text-[10px] text-gray-600 font-mono">{(counts[ut.key] || 0) > 0 ? calcParking(cat === "residential" ? "res" : cat, areas[ut.key] || ut.defaultArea, counts[ut.key] || 0) : "—"}</td>
+            <td className="py-2 px-3 text-center text-sm text-gray-700 font-medium" dir="ltr">{(counts[ut.key] || 0) > 0 ? fmt((counts[ut.key] || 0) * (areas[ut.key] || ut.defaultArea)) : "—"}</td>
+            <td className="py-2 px-3 text-center text-sm text-gray-400">—</td>
+            <td className="py-2 px-3 text-center text-sm text-gray-400">—</td>
+            <td className="py-2 px-3 text-center text-sm text-gray-600">{(counts[ut.key] || 0) > 0 ? calcParking(cat === "residential" ? "res" : cat, areas[ut.key] || ut.defaultArea, counts[ut.key] || 0) : "—"}</td>
           </tr>
         ))}
       </>
@@ -189,36 +204,72 @@ export default function PricingPage() {
   };
 
   return (
-    <div className="bg-white p-1" dir="rtl">
-      <div className="flex items-center gap-2 mb-1">
-        <ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} />
-        <Button size="sm" onClick={handleSave} disabled={!hasUnsavedChanges || isSaving} className="h-5 text-[9px] px-2">
-          {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} حفظ
-        </Button>
-        <span className="text-[9px] text-gray-400 mr-auto">{totalUnits} وحدة | {totalParking} موقف</span>
+    <div className="bg-white p-4" dir="rtl">
+      {/* Toolbar */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} />
+          {!isEditing ? (
+            <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} className="h-8 text-sm px-3 gap-1.5 rounded-md">
+              <Pencil className="w-3.5 h-3.5" /> تعديل
+            </Button>
+          ) : (
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={() => { setIsEditing(false); setHasUnsavedChanges(false); projectQuery.refetch(); }} className="h-8 text-sm px-3 gap-1.5">
+                <X className="w-3.5 h-3.5" /> إلغاء
+              </Button>
+              <Button size="sm" onClick={handleSave} disabled={!hasUnsavedChanges || isSaving} className="h-8 text-sm px-4 gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-md">
+                {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} حفظ
+              </Button>
+            </div>
+          )}
+        </div>
+        <div className="text-sm text-gray-500">{totalUnits} وحدة | {totalParking} موقف</div>
       </div>
-      <table className="w-full border-collapse text-[11px]">
+
+      {/* Summary cards */}
+      <div className="grid grid-cols-3 gap-4 mb-4">
+        <div className="rounded-lg border border-gray-200 p-3 text-center">
+          <div className="text-sm text-gray-500">إجمالي الوحدات</div>
+          <div className="text-lg font-bold text-gray-800 mt-1">{totalUnits}</div>
+        </div>
+        <div className="rounded-lg border border-gray-200 p-3 text-center">
+          <div className="text-sm text-gray-500">المساحة المستخدمة</div>
+          <div className="text-lg font-bold text-gray-800 mt-1" dir="ltr">{fmt(totalUsed)}</div>
+        </div>
+        <div className="rounded-lg border border-gray-200 p-3 text-center">
+          <div className="text-sm text-gray-500">المواقف المطلوبة</div>
+          <div className="text-lg font-bold text-gray-800 mt-1">{totalParking}</div>
+        </div>
+      </div>
+
+      {/* Table */}
+      <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-gray-300 bg-gray-100">
-            <th className="py-[2px] px-1 text-right text-[10px] text-gray-600">النوع</th>
-            <th className="py-[2px] px-1 text-center text-[10px] text-gray-600 w-14">العدد</th>
-            <th className="py-[2px] px-1 text-center text-[10px] text-gray-600 w-16">المساحة</th>
-            <th className="py-[2px] px-1 text-center text-[10px] text-gray-600">إجمالي</th>
-            <th className="py-[2px] px-1 text-center text-[10px] text-gray-600 w-14">مواقف</th>
+          <tr className="border-b-2 border-gray-300 bg-gray-50">
+            <th className="py-2 px-3 text-right text-sm text-gray-600 font-medium">النوع</th>
+            <th className="py-2 px-3 text-center text-sm text-gray-600 font-medium w-20">العدد</th>
+            <th className="py-2 px-3 text-center text-sm text-gray-600 font-medium w-24">المساحة/وحدة</th>
+            <th className="py-2 px-3 text-center text-sm text-gray-600 font-medium">إجمالي المساحة</th>
+            <th className="py-2 px-3 text-center text-sm text-gray-600 font-medium">المتاح</th>
+            <th className="py-2 px-3 text-center text-sm text-gray-600 font-medium">الفرق</th>
+            <th className="py-2 px-3 text-center text-sm text-gray-600 font-medium w-16">مواقف</th>
           </tr>
         </thead>
         <tbody>
-          {renderCategory("residential", "سكني", "bg-blue-50/50")}
-          {renderCategory("retail", "تجزئة", "bg-amber-50/50")}
-          {renderCategory("office", "مكاتب", "bg-purple-50/50")}
+          {renderCategory("residential", "الوحدات السكنية")}
+          {renderCategory("retail", "التجزئة")}
+          {renderCategory("office", "المكاتب")}
         </tbody>
         <tfoot>
-          <tr className="border-t-2 border-gray-400 bg-gray-100 font-bold text-[10px]">
-            <td className="py-[2px] px-1">الإجمالي</td>
-            <td className="py-[2px] px-1 text-center">{totalUnits}</td>
-            <td className="py-[2px] px-1 text-center">—</td>
-            <td className="py-[2px] px-1 text-center font-mono">{fmt((calc.residential?.used || 0) + (calc.retail?.used || 0) + (calc.office?.used || 0))}</td>
-            <td className="py-[2px] px-1 text-center">{totalParking}</td>
+          <tr className="border-t-2 border-gray-400 bg-gray-100 font-bold">
+            <td className="py-2 px-3 text-sm">الإجمالي</td>
+            <td className="py-2 px-3 text-center text-sm">{totalUnits}</td>
+            <td className="py-2 px-3 text-center text-sm">—</td>
+            <td className="py-2 px-3 text-center text-sm" dir="ltr">{fmt(totalUsed)}</td>
+            <td className="py-2 px-3 text-center text-sm" dir="ltr">{fmt(SELLABLE.residential + SELLABLE.retail + SELLABLE.office)}</td>
+            <td className="py-2 px-3 text-center text-sm" dir="ltr" style={{ color: (SELLABLE.residential + SELLABLE.retail + SELLABLE.office - totalUsed) >= 0 ? '#059669' : '#dc2626' }}>{fmt(SELLABLE.residential + SELLABLE.retail + SELLABLE.office - totalUsed)}</td>
+            <td className="py-2 px-3 text-center text-sm">{totalParking}</td>
           </tr>
         </tfoot>
       </table>
