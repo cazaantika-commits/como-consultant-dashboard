@@ -7,27 +7,28 @@ const DESIGN_MONTHS = 8;
 const CONSTRUCTION_MONTHS = 30;
 const POST_MONTHS = 13;
 
-// ─── بنود المصروفات (Outflows) — بالترتيب كما في النظام ───
+// ─── بنود المصروفات (Outflows) — فقط ما يخرج من حساب الضمان ───
 const OUTFLOW_ITEMS = [
-  { id: "construction", name: "تكلفة الإنشاء", section: "الإنشاء" },
-  { id: "supervision", name: "أتعاب الإشراف", section: "التصاميم والإشراف" },
-  { id: "surveyor", name: "رسوم المساح", section: "الدراسات والمسوحات" },
-  { id: "gov_fees", name: "رسوم الجهات الحكومية", section: "الرسوم الحكومية والتنظيمية" },
-  { id: "rera_audit", name: "تقرير مدقق ريرا", section: "ريرا (التنظيم العقاري)" },
-  { id: "rera_inspect", name: "فحص ريرا", section: "ريرا (التنظيم العقاري)" },
-  { id: "sales_commission", name: "عمولة المبيعات (5%)", section: "المبيعات والتسويق" },
+  { id: "construction", name: "مستخلصات المقاول", section: "الإنشاء" },
+  { id: "supervision", name: "أتعاب الإشراف", section: "الإشراف" },
+  { id: "surveyor_asbuilt", name: "رسوم المساح As-Built", section: "المسوحات" },
+  { id: "gov_fees", name: "رسوم الجهات الحكومية", section: "الرسوم الحكومية" },
+  { id: "rera_audit", name: "تقرير مدقق ريرا", section: "ريرا" },
+  { id: "rera_inspect", name: "فحص ريرا", section: "ريرا" },
+  { id: "sales_commission", name: "عمولة المبيعات", section: "المبيعات" },
 ];
 
-// ─── الإيرادات (Inflows) ───
+// ─── الإيرادات (Inflows) — ما يدخل حساب الضمان ───
 const INFLOW_ITEMS = [
-  { id: "sales_revenue", name: "إيرادات المبيعات (80%)", section: "الإيرادات" },
+  { id: "sales_revenue", name: "مبيعات أوف بلان", section: "الإيرادات" },
+  { id: "investor_deposit", name: "إيداع المستثمر", section: "الإيرادات" },
 ];
 
 // ─── التصفية (Liquidation) ───
 const LIQUIDATION_ITEMS = [
-  { id: "contractor_completion", name: "دفع إنجاز المقاول (5% إنشاء)", section: "التصفية" },
+  { id: "contractor_completion", name: "دفعة إنجاز المقاول", section: "التصفية" },
   { id: "transfer_owner_1", name: "تحويل للمالك (دفعة 1)", section: "التصفية" },
-  { id: "transfer_owner_2", name: "تحويل صافي الاحتجاز للمالك", section: "التصفية" },
+  { id: "transfer_owner_2", name: "صافي الاحتجاز (دفعة 2)", section: "التصفية" },
 ];
 
 function dummyRow(totalMonths: number, startFrom?: number): number[] {

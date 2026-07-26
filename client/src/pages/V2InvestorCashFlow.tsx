@@ -14,15 +14,14 @@ const PAID_ITEMS = [
   { name: "عمولة وسيط الأرض" },
 ];
 
-// ─── بنود المصروفات (Debit) — بالترتيب كما في النظام ───
+// ─── بنود المصروفات (Debit) — فقط ما يدفعه المستثمر من جيبه ───
 const DEBIT_ITEMS = [
-  // التصاميم والإشراف
-  { id: "design_fee", name: "أتعاب التصاميم", section: "التصاميم والإشراف" },
-  { id: "supervision_fee", name: "أتعاب الإشراف", section: "التصاميم والإشراف" },
+  // التصاميم
+  { id: "design_fee", name: "أتعاب التصاميم", section: "التصاميم" },
   // الدراسات والمسوحات
   { id: "soil_test", name: "فحص التربة", section: "الدراسات والمسوحات" },
   { id: "topography", name: "المسح الطبوغرافي", section: "الدراسات والمسوحات" },
-  { id: "surveyor_fee", name: "رسوم المساح", section: "الدراسات والمسوحات" },
+  { id: "surveyor_dwg", name: "رسوم المساح DWG", section: "الدراسات والمسوحات" },
   // الرسوم الحكومية والتنظيمية
   { id: "community_fee", name: "رسوم المجتمع", section: "الرسوم الحكومية والتنظيمية" },
   { id: "gov_fees", name: "رسوم الجهات الحكومية", section: "الرسوم الحكومية والتنظيمية" },
@@ -33,21 +32,21 @@ const DEBIT_ITEMS = [
   { id: "rera_units_reg", name: "تسجيل الوحدات — ريرا", section: "ريرا (التنظيم العقاري)" },
   { id: "escrow_fee", name: "حساب الضمان (رسوم فتح)", section: "ريرا (التنظيم العقاري)" },
   { id: "bank_fees", name: "رسوم البنك", section: "ريرا (التنظيم العقاري)" },
-  { id: "rera_audit", name: "تقرير مدقق ريرا", section: "ريرا (التنظيم العقاري)" },
-  { id: "rera_inspect", name: "فحص ريرا", section: "ريرا (التنظيم العقاري)" },
   // المبيعات والتسويق
-  { id: "sales_commission", name: "عمولة المبيعات", section: "المبيعات والتسويق" },
-  { id: "marketing", name: "التسويق (2%)", section: "المبيعات والتسويق" },
+  { id: "marketing_materials", name: "تحضير مواد التسويق", section: "المبيعات والتسويق" },
+  { id: "marketing", name: "التسويق", section: "المبيعات والتسويق" },
   { id: "developer_fee", name: "أتعاب المطور", section: "المبيعات والتسويق" },
   // الإنشاء
-  { id: "construction", name: "تكلفة الإنشاء", section: "الإنشاء" },
+  { id: "construction_advance", name: "دفعة مقدمة المقاول", section: "الإنشاء" },
+  { id: "construction_deposit", name: "إيداع حساب الضمان", section: "الإنشاء" },
+  { id: "construction_completion", name: "دفعة إنجاز المقاول", section: "الإنشاء" },
 ];
 
-// ─── بنود الإيرادات (Credit) — بالترتيب كما في النظام ───
+// ─── بنود الإيرادات (Credit) ───
 const CREDIT_ITEMS = [
-  { id: "direct_revenue", name: "إيرادات مباشرة (20%)", section: "الإيرادات" },
+  { id: "direct_revenue", name: "إيرادات مباشرة", section: "الإيرادات" },
   { id: "escrow_liq_1", name: "تصفية حساب الضمان (دفعة 1)", section: "الإيرادات" },
-  { id: "escrow_liq_2", name: "تصفية حساب الضمان (دفعة 2 - صافي الاحتجاز)", section: "الإيرادات" },
+  { id: "escrow_liq_2", name: "تصفية حساب الضمان (دفعة 2)", section: "الإيرادات" },
 ];
 
 function dummyRow(totalMonths: number, startFrom?: number): number[] {
