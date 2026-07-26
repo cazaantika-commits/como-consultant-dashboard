@@ -981,3 +981,7 @@
 - [x] Settings/Rules page (قواعد زمنية، ربط أحداث، معادلات التوقيت)
 - [x] Wire all 4 pages into Investor Study Hub as tabs
 - [ ] Connect V2 output pages to read from these input sources (not hardcoded)
+- [ ] Create BateekhaPage with 9 tabs using existing page components
+- [ ] Add Bateekha route to App.tsx
+- [ ] Add Bateekha icon to Home page navigation
+- [ ] Tabs: المدخلات العامة, الإنشاء, المبيعات والتسويق, الإعدادات والقواعد, الجدول الزمني, التدفقات المالية, دراسة الجدوى, المركز التجاري, تجميع المشاريع
