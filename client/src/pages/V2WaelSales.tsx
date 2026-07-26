@@ -1,13 +1,14 @@
 import { useState, useMemo } from "react";
 import {
   ArrowRight, AlertTriangle, CheckCircle, TrendingUp,
-  DollarSign, BarChart3, Sliders, Target, Zap, Shield
+  DollarSign, BarChart3, Sliders, Target, Zap, Calendar
 } from "lucide-react";
 import { useLocation } from "wouter";
 
 /* ═══════════════════════════════════════════════════════════
    غرفة عمليات المبيعات — وائل
-   خلفية فاتحة، أسطر مضغوطة، أثر البيع على الضمان واضح
+   تصميم إبداعي: gradient + glassmorphism + compact
+   المدة مرنة (salesStart → projectEnd)
    ═══════════════════════════════════════════════════════════ */
 
 const UNITS = [
@@ -18,10 +19,8 @@ const UNITS = [
   { id: "retail", name: "محلات", area: 600, count: 15, color: "#f59e0b" },
   { id: "office", name: "مكاتب", area: 900, count: 20, color: "#10b981" },
 ];
-const TOTAL_UNITS = UNITS.reduce((s, u) => s + u.count, 0); // 255
-const MONTHS = 30;
+const TOTAL_UNITS = UNITS.reduce((s, u) => s + u.count, 0);
 
-// Generate bell curve distribution
 function bellCurve(months: number, speed: number): number[] {
   const peak = speed > 60 ? months * 0.25 : speed > 40 ? months * 0.5 : months * 0.75;
   const sigma = months * 0.25;
@@ -33,6 +32,11 @@ function bellCurve(months: number, speed: number): number[] {
 export default function V2WaelSales() {
   const [, navigate] = useLocation();
 
+  // ─── Timeline (مرن — سيأتي من فورمولات لاحقاً) ───
+  const [salesStart, setSalesStart] = useState(1);
+  const [projectEnd, setProjectEnd] = useState(30);
+  const salesMonths = Math.max(1, projectEnd - salesStart + 1);
+
   // ─── Controls ───
   const [prices, setPrices] = useState<Record<string, number>>({
     studio: 1350, "1br": 1250, "2br": 1200, "3br": 1150, retail: 1800, office: 1400,
@@ -40,47 +44,41 @@ export default function V2WaelSales() {
   const [offPlan, setOffPlan] = useState(75);
   const [salesMode, setSalesMode] = useState<"auto" | "manual" | "detail">("auto");
   const [salesSpeed, setSalesSpeed] = useState(50);
-  const [manualUnits, setManualUnits] = useState<number[]>(Array(MONTHS).fill(0).map((_, i) => {
-    const dist = bellCurve(MONTHS, 50);
-    return Math.round(dist[i] * TOTAL_UNITS * 0.75);
-  }));
-  const [detailUnits, setDetailUnits] = useState<number[][]>(
-    UNITS.map(u => Array(MONTHS).fill(0).map((_, i) => {
-      const dist = bellCurve(MONTHS, 50);
-      return Math.round(dist[i] * u.count * 0.75);
-    }))
+  const [manualUnits, setManualUnits] = useState<number[]>(() => {
+    const dist = bellCurve(30, 50);
+    return dist.map(d => Math.round(d * TOTAL_UNITS * 0.75));
+  });
+  const [detailUnits, setDetailUnits] = useState<number[][]>(() =>
+    UNITS.map(u => {
+      const dist = bellCurve(30, 50);
+      return dist.map(d => Math.round(d * u.count * 0.75));
+    })
   );
 
   // ─── Computed ───
   const results = useMemo(() => {
     const revenue = UNITS.reduce((s, u) => s + (prices[u.id] || 0) * u.area * u.count, 0);
-    const offPlanRevenue = revenue * (offPlan / 100);
 
-    // Monthly sales units
     let monthlySales: number[];
     if (salesMode === "auto") {
-      const dist = bellCurve(MONTHS, salesSpeed);
+      const dist = bellCurve(salesMonths, salesSpeed);
       monthlySales = dist.map(d => Math.round(d * TOTAL_UNITS * (offPlan / 100)));
     } else if (salesMode === "manual") {
-      monthlySales = [...manualUnits];
+      monthlySales = manualUnits.slice(0, salesMonths);
     } else {
-      monthlySales = Array(MONTHS).fill(0).map((_, m) => detailUnits.reduce((s, row) => s + (row[m] || 0), 0));
+      monthlySales = Array(salesMonths).fill(0).map((_, m) => detailUnits.reduce((s, row) => s + (row[m] || 0), 0));
     }
 
-    // Average unit price
     const avgUnitPrice = revenue / TOTAL_UNITS;
-
-    // Monthly escrow calculation
     const constructionCost = revenue * 0.70;
-    const monthlyDraw = constructionCost / MONTHS; // monthly construction draw from escrow
-    
+    const monthlyDraw = constructionCost / salesMonths;
+
     const escrowData = monthlySales.map((units, i) => {
       const salesRevenue = units * avgUnitPrice;
-      const escrowIn = salesRevenue * 0.8; // 80% goes to escrow
-      return { month: i + 1, units, escrowIn, escrowOut: monthlyDraw, balance: 0 };
+      const escrowIn = salesRevenue * 0.8;
+      return { month: salesStart + i, units, escrowIn, escrowOut: monthlyDraw, balance: 0 };
     });
 
-    // Calculate running balance
     let runningBalance = 0;
     escrowData.forEach(row => {
       runningBalance += row.escrowIn - row.escrowOut;
@@ -93,7 +91,7 @@ export default function V2WaelSales() {
     const totalSold = monthlySales.reduce((a, b) => a + b, 0);
 
     return { revenue, escrowData, hasDeficit, deficitAmount, totalSold, monthlySales, avgUnitPrice };
-  }, [prices, offPlan, salesMode, salesSpeed, manualUnits, detailUnits]);
+  }, [prices, offPlan, salesMode, salesSpeed, manualUnits, detailUnits, salesMonths, salesStart]);
 
   const fmt = (n: number) => {
     if (Math.abs(n) >= 1e9) return (n / 1e9).toFixed(1) + "B";
@@ -115,26 +113,26 @@ export default function V2WaelSales() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50" dir="rtl">
+    <div className="min-h-screen" dir="rtl" style={{ background: "linear-gradient(135deg, #f0f4ff 0%, #faf5ff 30%, #fff7ed 60%, #f0fdf4 100%)" }}>
 
       {/* ═══ Header ═══ */}
-      <div className="bg-white border-b border-gray-200 px-4 py-2 sticky top-0 z-50 shadow-sm">
+      <div className="sticky top-0 z-50 backdrop-blur-md bg-white/70 border-b border-white/50 shadow-sm px-4 py-2">
         <div className="max-w-[1800px] mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate("/v2")} className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 transition">
+            <button onClick={() => navigate("/v2")} className="p-1.5 rounded-xl bg-white/80 hover:bg-white shadow-sm border border-gray-200/50 transition">
               <ArrowRight className="w-4 h-4 text-gray-600" />
             </button>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <h1 className="text-sm font-bold text-gray-800">غرفة عمليات المبيعات</h1>
-              <span className="text-[10px] text-gray-400">مجان — G+4P+25</span>
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-sm shadow-emerald-300" />
+              <h1 className="text-sm font-black text-gray-800">غرفة عمليات المبيعات</h1>
+              <span className="text-[10px] text-gray-400 bg-gray-100/80 px-2 py-0.5 rounded-full">مجان — G+4P+25</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded">وائل — مدير المبيعات</span>
-            <div className={`px-2 py-0.5 rounded flex items-center gap-1 text-[10px] font-bold ${results.hasDeficit ? "bg-red-50 text-red-600 border border-red-200" : "bg-emerald-50 text-emerald-600 border border-emerald-200"}`}>
+            <span className="text-[10px] text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full font-bold">وائل — مدير المبيعات</span>
+            <div className={`px-2.5 py-1 rounded-full flex items-center gap-1 text-[10px] font-bold shadow-sm ${results.hasDeficit ? "bg-red-500 text-white" : "bg-emerald-500 text-white"}`}>
               {results.hasDeficit ? <AlertTriangle className="w-3 h-3" /> : <CheckCircle className="w-3 h-3" />}
-              {results.hasDeficit ? `عجز: ${fmt(results.deficitAmount)}` : "متوازن"}
+              {results.hasDeficit ? `عجز: ${fmt(results.deficitAmount)}` : "متوازن ✓"}
             </div>
           </div>
         </div>
@@ -146,58 +144,96 @@ export default function V2WaelSales() {
           {/* ═══ LEFT — Controls ═══ */}
           <div className="col-span-4 space-y-3">
 
-            {/* Pricing */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-              <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
-                <DollarSign className="w-3.5 h-3.5 text-indigo-500" />
-                <span className="text-xs font-bold text-gray-700">تسعير الوحدات (سعر/قدم²)</span>
+            {/* Timeline */}
+            <div className="backdrop-blur-sm bg-white/60 rounded-2xl border border-white/80 shadow-lg shadow-gray-200/30 overflow-hidden">
+              <div className="px-3 py-1.5 border-b border-gray-100/50 flex items-center gap-2 bg-gradient-to-l from-blue-50/50 to-transparent">
+                <Calendar className="w-3.5 h-3.5 text-blue-500" />
+                <span className="text-[11px] font-bold text-gray-700">نطاق المبيعات</span>
               </div>
-              <div className="p-2 space-y-1">
-                {UNITS.map(u => (
-                  <div key={u.id} className="flex items-center gap-1.5 h-6">
-                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: u.color }} />
-                    <span className="text-[10px] text-gray-500 w-14 truncate">{u.name}</span>
-                    <input
-                      type="range" min={800} max={2500} step={50} value={prices[u.id]}
-                      onChange={e => setPrices(p => ({ ...p, [u.id]: +e.target.value }))}
-                      className="flex-1 h-1 rounded-full appearance-none cursor-pointer bg-gray-200 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-indigo-500 [&::-webkit-slider-thumb]:cursor-grab"
-                    />
-                    <span className="text-[10px] font-mono font-bold text-indigo-600 w-10 text-left">{prices[u.id]}</span>
-                  </div>
-                ))}
+              <div className="p-2 grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[8px] text-gray-400 block mb-0.5">بداية البيع (شهر)</label>
+                  <input type="number" min={1} max={projectEnd - 1} value={salesStart}
+                    onChange={e => setSalesStart(Math.max(1, +e.target.value))}
+                    className="w-full h-6 text-[11px] text-center font-bold rounded-lg border border-gray-200/80 bg-white/80 focus:border-blue-400 focus:ring-1 focus:ring-blue-200 focus:outline-none" />
+                </div>
+                <div>
+                  <label className="text-[8px] text-gray-400 block mb-0.5">اكتمال المشروع (شهر)</label>
+                  <input type="number" min={salesStart + 1} max={60} value={projectEnd}
+                    onChange={e => setProjectEnd(Math.max(salesStart + 1, +e.target.value))}
+                    className="w-full h-6 text-[11px] text-center font-bold rounded-lg border border-gray-200/80 bg-white/80 focus:border-blue-400 focus:ring-1 focus:ring-blue-200 focus:outline-none" />
+                </div>
+                <div className="col-span-2 text-center">
+                  <span className="text-[9px] text-blue-600 font-bold bg-blue-50/80 px-2 py-0.5 rounded-full">مدة البيع: {salesMonths} شهر</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Pricing */}
+            <div className="backdrop-blur-sm bg-white/60 rounded-2xl border border-white/80 shadow-lg shadow-gray-200/30 overflow-hidden">
+              <div className="px-3 py-1.5 border-b border-gray-100/50 flex items-center gap-2 bg-gradient-to-l from-indigo-50/50 to-transparent">
+                <DollarSign className="w-3.5 h-3.5 text-indigo-500" />
+                <span className="text-[11px] font-bold text-gray-700">تسعير الوحدات (سعر/قدم²)</span>
+              </div>
+              <div className="p-2 space-y-1.5">
+                {UNITS.map(u => {
+                  const totalArea = u.area * u.count;
+                  const totalPrice = totalArea * (prices[u.id] || 0);
+                  return (
+                    <div key={u.id} className="border-b border-gray-100/30 pb-1.5 last:border-0 last:pb-0">
+                      <div className="flex items-center gap-1.5 h-5">
+                        <div className="w-2 h-2 rounded-full shadow-sm" style={{ background: u.color }} />
+                        <span className="text-[10px] font-bold text-gray-700 w-14 truncate">{u.name}</span>
+                        <input
+                          type="range" min={800} max={2500} step={50} value={prices[u.id]}
+                          onChange={e => setPrices(p => ({ ...p, [u.id]: +e.target.value }))}
+                          className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-grab"
+                          style={{ background: `linear-gradient(to left, ${u.color}40, ${u.color}15)`, WebkitAppearance: "none" } as any}
+                        />
+                        <span className="text-[10px] font-mono font-black w-10 text-left" style={{ color: u.color }}>{prices[u.id]}</span>
+                      </div>
+                      <div className="flex items-center gap-1 mr-6 mt-0.5">
+                        <span className="text-[8px] text-gray-400">{u.count}×{u.area}=</span>
+                        <span className="text-[8px] font-bold text-gray-500">{(totalArea / 1000).toFixed(0)}K قدم²</span>
+                        <span className="text-[8px] text-gray-300">→</span>
+                        <span className="text-[10px] font-black text-emerald-600">{fmt(totalPrice)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
             {/* Strategy */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-              <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
+            <div className="backdrop-blur-sm bg-white/60 rounded-2xl border border-white/80 shadow-lg shadow-gray-200/30 overflow-hidden">
+              <div className="px-3 py-1.5 border-b border-gray-100/50 flex items-center gap-2 bg-gradient-to-l from-purple-50/50 to-transparent">
                 <Sliders className="w-3.5 h-3.5 text-purple-500" />
-                <span className="text-xs font-bold text-gray-700">استراتيجية البيع</span>
+                <span className="text-[11px] font-bold text-gray-700">استراتيجية البيع</span>
               </div>
               <div className="p-2 space-y-2">
                 <div className="flex items-center justify-between h-5">
-                  <span className="text-[10px] text-gray-500">أوف بلان</span>
-                  <span className="text-[10px] font-bold text-purple-600">{offPlan}%</span>
+                  <span className="text-[10px] text-gray-500">نسبة أوف بلان</span>
+                  <span className="text-[11px] font-black text-purple-600 bg-purple-50 px-1.5 rounded">{offPlan}%</span>
                 </div>
                 <input
                   type="range" min={30} max={100} value={offPlan}
                   onChange={e => setOffPlan(+e.target.value)}
-                  className="w-full h-1 rounded-full appearance-none cursor-pointer bg-gray-200 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:cursor-grab"
+                  className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-purple-100 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:shadow-purple-300 [&::-webkit-slider-thumb]:cursor-grab"
                 />
               </div>
             </div>
 
-            {/* Sales Input Mode */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-              <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
+            {/* Sales Mode */}
+            <div className="backdrop-blur-sm bg-white/60 rounded-2xl border border-white/80 shadow-lg shadow-gray-200/30 overflow-hidden">
+              <div className="px-3 py-1.5 border-b border-gray-100/50 flex items-center justify-between bg-gradient-to-l from-amber-50/50 to-transparent">
                 <div className="flex items-center gap-2">
                   <Target className="w-3.5 h-3.5 text-amber-500" />
-                  <span className="text-xs font-bold text-gray-700">منحنى المبيعات الشهري</span>
+                  <span className="text-[11px] font-bold text-gray-700">منحنى المبيعات</span>
                 </div>
-                <div className="flex gap-0.5 bg-gray-100 rounded p-0.5">
+                <div className="flex gap-0.5 bg-white/80 rounded-full p-0.5 shadow-inner">
                   {(["auto", "manual", "detail"] as const).map(m => (
                     <button key={m} onClick={() => setSalesMode(m)}
-                      className={`px-2 py-0.5 rounded text-[9px] font-bold transition ${salesMode === m ? "bg-white text-gray-800 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+                      className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold transition-all ${salesMode === m ? "bg-amber-500 text-white shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
                       {m === "auto" ? "تلقائي" : m === "manual" ? "يدوي" : "تفصيلي"}
                     </button>
                   ))}
@@ -208,12 +244,12 @@ export default function V2WaelSales() {
                   <div>
                     <div className="flex items-center justify-between h-5 mb-1">
                       <span className="text-[10px] text-gray-500">سرعة البيع</span>
-                      <span className="text-[10px] font-bold text-amber-600">{salesSpeed < 30 ? "بطيء" : salesSpeed < 70 ? "متوسط" : "سريع"}</span>
+                      <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 rounded">{salesSpeed < 30 ? "بطيء" : salesSpeed < 70 ? "متوسط" : "سريع"}</span>
                     </div>
                     <input
                       type="range" min={0} max={100} value={salesSpeed}
                       onChange={e => setSalesSpeed(+e.target.value)}
-                      className="w-full h-1 rounded-full appearance-none cursor-pointer bg-gray-200 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-amber-500 [&::-webkit-slider-thumb]:cursor-grab"
+                      className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-amber-100 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-amber-500 [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:shadow-amber-300 [&::-webkit-slider-thumb]:cursor-grab"
                     />
                     <div className="flex justify-between text-[8px] text-gray-400 mt-0.5">
                       <span>بطيء</span><span>سريع</span>
@@ -222,15 +258,15 @@ export default function V2WaelSales() {
                 )}
                 {salesMode === "manual" && (
                   <div>
-                    <div className="text-[9px] text-gray-500 mb-1">عدد الوحدات لكل شهر (الإجمالي: {results.totalSold} / {TOTAL_UNITS})</div>
-                    <div className="grid grid-cols-10 gap-0.5">
-                      {manualUnits.map((v, i) => (
+                    <div className="text-[9px] text-gray-500 mb-1">عدد الوحدات لكل شهر ({results.totalSold} / {TOTAL_UNITS})</div>
+                    <div className="grid grid-cols-10 gap-0.5 max-h-[120px] overflow-y-auto">
+                      {Array.from({ length: salesMonths }, (_, i) => (
                         <div key={i} className="text-center">
-                          <div className="text-[7px] text-gray-400">{i + 1}</div>
+                          <div className="text-[7px] text-gray-400">{salesStart + i}</div>
                           <input
-                            type="number" min={0} max={30} value={v}
+                            type="number" min={0} max={30} value={manualUnits[i] || 0}
                             onChange={e => updateManual(i, +e.target.value)}
-                            className="w-full h-5 text-[9px] text-center border border-gray-200 rounded bg-gray-50 focus:border-amber-400 focus:outline-none"
+                            className="w-full h-5 text-[9px] text-center border border-gray-200/80 rounded-md bg-white/80 focus:border-amber-400 focus:outline-none"
                           />
                         </div>
                       ))}
@@ -239,39 +275,32 @@ export default function V2WaelSales() {
                 )}
                 {salesMode === "detail" && (
                   <div>
-                    <div className="text-[9px] text-gray-500 mb-1">عدد الوحدات لكل نوع في كل شهر</div>
-                    <div className="overflow-x-auto max-h-[200px] overflow-y-auto">
+                    <div className="text-[9px] text-gray-500 mb-1">عدد الوحدات لكل نوع × شهر</div>
+                    <div className="overflow-x-auto max-h-[160px] overflow-y-auto rounded-lg border border-gray-100/50">
                       <table className="w-full text-[8px]">
-                        <thead className="sticky top-0 bg-white">
+                        <thead className="sticky top-0 bg-white/90 backdrop-blur-sm">
                           <tr>
-                            <th className="text-right text-gray-500 px-1 py-0.5 w-16">النوع</th>
-                            {Array.from({ length: MONTHS }, (_, i) => (
-                              <th key={i} className="text-center text-gray-400 px-0 py-0.5 w-5">{i + 1}</th>
+                            <th className="text-right text-gray-500 px-1 py-0.5 w-14">النوع</th>
+                            {Array.from({ length: salesMonths }, (_, i) => (
+                              <th key={i} className="text-center text-gray-400 px-0 py-0.5 w-5">{salesStart + i}</th>
                             ))}
-                            <th className="text-center text-gray-500 px-1 py-0.5">مج</th>
                           </tr>
                         </thead>
                         <tbody>
                           {UNITS.map((u, ui) => (
-                            <tr key={u.id}>
+                            <tr key={u.id} className="border-t border-gray-50">
                               <td className="text-right px-1 py-0.5">
-                                <div className="flex items-center gap-0.5">
-                                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: u.color }} />
-                                  <span className="text-gray-600">{u.name}</span>
-                                </div>
+                                <span className="text-gray-600 font-bold">{u.name}</span>
                               </td>
-                              {detailUnits[ui].map((v, mi) => (
+                              {Array.from({ length: salesMonths }, (_, mi) => (
                                 <td key={mi} className="px-0 py-0.5">
                                   <input
-                                    type="number" min={0} max={u.count} value={v}
+                                    type="number" min={0} max={u.count} value={detailUnits[ui]?.[mi] || 0}
                                     onChange={e => updateDetail(ui, mi, +e.target.value)}
-                                    className="w-5 h-4 text-[7px] text-center border border-gray-200 rounded bg-gray-50 focus:border-indigo-400 focus:outline-none"
+                                    className="w-5 h-4 text-[7px] text-center border border-gray-200/50 rounded bg-white/60 focus:border-indigo-400 focus:outline-none"
                                   />
                                 </td>
                               ))}
-                              <td className="text-center font-bold text-gray-700 px-1">
-                                {detailUnits[ui].reduce((a, b) => a + b, 0)}
-                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -282,59 +311,55 @@ export default function V2WaelSales() {
               </div>
             </div>
 
-            {/* Revenue Summary */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-2">
-              <div className="flex items-center gap-2 mb-1">
+            {/* Revenue */}
+            <div className="backdrop-blur-sm bg-gradient-to-bl from-emerald-50/80 to-white/60 rounded-2xl border border-emerald-100/50 shadow-lg shadow-emerald-100/20 p-3">
+              <div className="flex items-center gap-2 mb-0.5">
                 <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
-                <span className="text-xs font-bold text-gray-700">ملخص الإيرادات</span>
+                <span className="text-[11px] font-bold text-gray-700">إجمالي الإيرادات</span>
               </div>
-              <div className="text-xl font-black text-emerald-600">{fmt(results.revenue)}</div>
+              <div className="text-2xl font-black text-emerald-600">{fmt(results.revenue)}</div>
               <div className="text-[9px] text-gray-400">{TOTAL_UNITS} وحدة × متوسط {fmt(results.avgUnitPrice)}/وحدة</div>
             </div>
           </div>
 
-          {/* ═══ RIGHT — Impact (Escrow) ═══ */}
+          {/* ═══ RIGHT — Impact ═══ */}
           <div className="col-span-8 space-y-3">
 
             {/* KPI Strip */}
             <div className="grid grid-cols-4 gap-2">
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-2">
-                <div className="text-[9px] text-gray-500">إجمالي الإيرادات</div>
-                <div className="text-lg font-black text-gray-800">{fmt(results.revenue)}</div>
-              </div>
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-2">
-                <div className="text-[9px] text-gray-500">وحدات مباعة (أوف بلان)</div>
-                <div className="text-lg font-black text-indigo-600">{results.totalSold}</div>
-              </div>
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-2">
-                <div className="text-[9px] text-gray-500">يدخل الضمان</div>
-                <div className="text-lg font-black text-blue-600">{fmt(results.escrowData.reduce((s, r) => s + r.escrowIn, 0))}</div>
-              </div>
-              <div className={`rounded-lg border shadow-sm p-2 ${results.hasDeficit ? "bg-red-50 border-red-200" : "bg-emerald-50 border-emerald-200"}`}>
-                <div className={`text-[9px] ${results.hasDeficit ? "text-red-500" : "text-emerald-500"}`}>حالة الضمان</div>
-                <div className={`text-lg font-black ${results.hasDeficit ? "text-red-600" : "text-emerald-600"}`}>
-                  {results.hasDeficit ? `-${fmt(results.deficitAmount)}` : "متوازن ✓"}
+              {[
+                { label: "إجمالي الإيرادات", value: fmt(results.revenue), color: "from-indigo-500 to-purple-500", icon: DollarSign },
+                { label: "وحدات أوف بلان", value: results.totalSold.toString(), color: "from-blue-500 to-cyan-500", icon: Target },
+                { label: "يدخل الضمان", value: fmt(results.escrowData.reduce((s, r) => s + r.escrowIn, 0)), color: "from-emerald-500 to-teal-500", icon: TrendingUp },
+                { label: "حالة الضمان", value: results.hasDeficit ? `-${fmt(results.deficitAmount)}` : "متوازن", color: results.hasDeficit ? "from-red-500 to-rose-500" : "from-emerald-500 to-green-500", icon: results.hasDeficit ? AlertTriangle : CheckCircle },
+              ].map((kpi, i) => (
+                <div key={i} className="relative overflow-hidden rounded-2xl p-2.5 shadow-lg">
+                  <div className={`absolute inset-0 bg-gradient-to-br ${kpi.color} opacity-10`} />
+                  <div className="relative">
+                    <kpi.icon className="w-3.5 h-3.5 text-gray-500 mb-0.5" />
+                    <div className="text-[9px] text-gray-500">{kpi.label}</div>
+                    <div className="text-lg font-black text-gray-800">{kpi.value}</div>
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
 
             {/* Escrow Chart */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-              <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
+            <div className="backdrop-blur-sm bg-white/60 rounded-2xl border border-white/80 shadow-lg shadow-gray-200/30 overflow-hidden">
+              <div className="px-3 py-2 border-b border-gray-100/50 flex items-center justify-between bg-gradient-to-l from-blue-50/30 to-transparent">
                 <div className="flex items-center gap-2">
                   <BarChart3 className="w-3.5 h-3.5 text-blue-500" />
-                  <span className="text-xs font-bold text-gray-700">أثر المبيعات على رصيد الضمان</span>
+                  <span className="text-[11px] font-bold text-gray-700">أثر المبيعات على رصيد الضمان</span>
                 </div>
                 {results.hasDeficit && (
-                  <div className="flex items-center gap-1 text-[9px] text-red-500 font-bold bg-red-50 px-2 py-0.5 rounded border border-red-200">
-                    <AlertTriangle className="w-3 h-3" /> عجز {fmt(results.deficitAmount)}
-                  </div>
+                  <span className="text-[9px] font-bold text-white bg-red-500 px-2 py-0.5 rounded-full shadow-sm">
+                    عجز {fmt(results.deficitAmount)}
+                  </span>
                 )}
               </div>
               <div className="p-3">
-                {/* Chart */}
-                <div className="flex items-end gap-[2px] h-[100px] relative mb-1">
-                  <div className="absolute left-0 right-0 top-1/2 border-t border-dashed border-gray-300 z-10" />
+                <div className="flex items-end gap-[2px] h-[90px] relative">
+                  <div className="absolute left-0 right-0 top-1/2 border-t border-dashed border-gray-300/60" />
                   {results.escrowData.map((row, i) => {
                     const maxAbs = Math.max(...results.escrowData.map(r => Math.abs(r.balance)), 1);
                     const hPct = (Math.abs(row.balance) / maxAbs) * 45;
@@ -342,7 +367,7 @@ export default function V2WaelSales() {
                     return (
                       <div key={i} className="flex-1 relative h-full group cursor-pointer">
                         <div
-                          className={`w-full rounded-sm transition-all ${isNeg ? "bg-red-400" : "bg-emerald-400"}`}
+                          className={`w-full rounded-sm transition-all duration-200 ${isNeg ? "bg-gradient-to-t from-red-500 to-red-300" : "bg-gradient-to-b from-emerald-300 to-emerald-500"}`}
                           style={{
                             height: `${hPct}%`,
                             position: "absolute",
@@ -350,53 +375,55 @@ export default function V2WaelSales() {
                           }}
                         />
                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-30">
-                          <div className="bg-gray-800 text-white rounded px-1.5 py-0.5 text-[7px] whitespace-nowrap shadow">
-                            شهر {i + 1}: {fmt(row.balance)}
+                          <div className="bg-gray-800 text-white rounded-lg px-2 py-1 text-[8px] whitespace-nowrap shadow-xl">
+                            شهر {row.month}: <b>{fmt(row.balance)}</b>
                           </div>
                         </div>
                       </div>
                     );
                   })}
                 </div>
-                <div className="flex justify-between text-[8px] text-gray-400 px-1">
-                  <span>شهر 1</span><span>شهر 15</span><span>شهر 30</span>
+                <div className="flex justify-between text-[8px] text-gray-400 mt-1">
+                  <span>شهر {salesStart}</span>
+                  <span>شهر {Math.round((salesStart + projectEnd) / 2)}</span>
+                  <span>شهر {projectEnd}</span>
                 </div>
               </div>
             </div>
 
-            {/* ═══ ESCROW TABLE — The Key Impact View ═══ */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-              <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
+            {/* Escrow Table */}
+            <div className="backdrop-blur-sm bg-white/60 rounded-2xl border border-white/80 shadow-lg shadow-gray-200/30 overflow-hidden">
+              <div className="px-3 py-2 border-b border-gray-100/50 flex items-center gap-2 bg-gradient-to-l from-amber-50/30 to-transparent">
                 <Zap className="w-3.5 h-3.5 text-amber-500" />
-                <span className="text-xs font-bold text-gray-700">تفصيل أثر البيع على الضمان — شهر بشهر</span>
+                <span className="text-[11px] font-bold text-gray-700">تفصيل أثر البيع على الضمان — شهر بشهر</span>
               </div>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto max-h-[280px] overflow-y-auto">
                 <table className="w-full text-[9px]">
-                  <thead className="bg-gray-50">
-                    <tr className="border-b border-gray-200">
-                      <th className="text-right px-2 py-1 text-gray-500 font-medium">الشهر</th>
-                      <th className="text-center px-2 py-1 text-gray-500 font-medium">وحدات مباعة</th>
-                      <th className="text-center px-2 py-1 text-emerald-600 font-medium">↓ دخول الضمان</th>
-                      <th className="text-center px-2 py-1 text-red-500 font-medium">↑ سحب بناء</th>
-                      <th className="text-center px-2 py-1 text-gray-700 font-bold">الرصيد</th>
-                      <th className="text-center px-2 py-1 text-gray-500 font-medium">الحالة</th>
+                  <thead className="sticky top-0 bg-gray-50/90 backdrop-blur-sm">
+                    <tr className="border-b border-gray-200/50">
+                      <th className="text-right px-2 py-1.5 text-gray-500 font-medium">الشهر</th>
+                      <th className="text-center px-2 py-1.5 text-gray-500 font-medium">وحدات</th>
+                      <th className="text-center px-2 py-1.5 text-emerald-600 font-medium">↓ دخول</th>
+                      <th className="text-center px-2 py-1.5 text-red-500 font-medium">↑ سحب</th>
+                      <th className="text-center px-2 py-1.5 text-gray-700 font-bold">الرصيد</th>
+                      <th className="text-center px-2 py-1.5 text-gray-500 font-medium">الحالة</th>
                     </tr>
                   </thead>
                   <tbody>
                     {results.escrowData.map((row) => (
-                      <tr key={row.month} className={`border-b border-gray-100 h-6 ${row.balance < 0 ? "bg-red-50/50" : ""}`}>
+                      <tr key={row.month} className={`border-b border-gray-100/30 h-6 transition-colors ${row.balance < 0 ? "bg-red-50/40" : "hover:bg-emerald-50/20"}`}>
                         <td className="text-right px-2 py-0.5 font-bold text-gray-600">{row.month}</td>
-                        <td className="text-center px-2 py-0.5 text-gray-700">{row.units}</td>
-                        <td className="text-center px-2 py-0.5 text-emerald-600 font-mono">{fmt(row.escrowIn)}</td>
+                        <td className="text-center px-2 py-0.5 text-gray-700 font-mono">{row.units}</td>
+                        <td className="text-center px-2 py-0.5 text-emerald-600 font-mono font-bold">{fmt(row.escrowIn)}</td>
                         <td className="text-center px-2 py-0.5 text-red-500 font-mono">{fmt(row.escrowOut)}</td>
-                        <td className={`text-center px-2 py-0.5 font-bold font-mono ${row.balance < 0 ? "text-red-600" : "text-emerald-600"}`}>
+                        <td className={`text-center px-2 py-0.5 font-black font-mono ${row.balance < 0 ? "text-red-600" : "text-emerald-600"}`}>
                           {row.balance < 0 ? "-" : ""}{fmt(Math.abs(row.balance))}
                         </td>
                         <td className="text-center px-2 py-0.5">
                           {row.balance < 0 ? (
-                            <span className="inline-flex items-center gap-0.5 text-red-500"><AlertTriangle className="w-2.5 h-2.5" /> عجز</span>
+                            <span className="inline-flex items-center gap-0.5 text-[8px] text-white bg-red-500 px-1.5 py-0.5 rounded-full font-bold">عجز</span>
                           ) : (
-                            <span className="inline-flex items-center gap-0.5 text-emerald-500"><CheckCircle className="w-2.5 h-2.5" /> آمن</span>
+                            <span className="inline-flex items-center gap-0.5 text-[8px] text-white bg-emerald-500 px-1.5 py-0.5 rounded-full font-bold">آمن</span>
                           )}
                         </td>
                       </tr>
@@ -407,10 +434,10 @@ export default function V2WaelSales() {
             </div>
 
             {/* Revenue by type */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-              <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
+            <div className="backdrop-blur-sm bg-white/60 rounded-2xl border border-white/80 shadow-lg shadow-gray-200/30 overflow-hidden">
+              <div className="px-3 py-2 border-b border-gray-100/50 flex items-center gap-2 bg-gradient-to-l from-violet-50/30 to-transparent">
                 <BarChart3 className="w-3.5 h-3.5 text-violet-500" />
-                <span className="text-xs font-bold text-gray-700">مساهمة كل نوع</span>
+                <span className="text-[11px] font-bold text-gray-700">مساهمة كل نوع في الإيرادات</span>
               </div>
               <div className="p-2 space-y-1">
                 {UNITS.map(u => {
@@ -418,13 +445,13 @@ export default function V2WaelSales() {
                   const pct = (rev / results.revenue) * 100;
                   return (
                     <div key={u.id} className="flex items-center gap-2 h-5">
-                      <div className="w-1.5 h-1.5 rounded-full" style={{ background: u.color }} />
-                      <span className="text-[9px] text-gray-500 w-14">{u.name}</span>
-                      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full transition-all duration-300" style={{ width: `${pct}%`, background: u.color }} />
+                      <div className="w-2 h-2 rounded-full shadow-sm" style={{ background: u.color }} />
+                      <span className="text-[9px] text-gray-600 w-14 font-bold">{u.name}</span>
+                      <div className="flex-1 h-2.5 bg-gray-100/80 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full transition-all duration-500 shadow-sm" style={{ width: `${pct}%`, background: `linear-gradient(to left, ${u.color}, ${u.color}99)` }} />
                       </div>
-                      <span className="text-[9px] font-mono font-bold text-gray-700 w-12 text-left">{fmt(rev)}</span>
-                      <span className="text-[8px] text-gray-400 w-7 text-left">{pct.toFixed(0)}%</span>
+                      <span className="text-[9px] font-mono font-black text-gray-700 w-12 text-left">{fmt(rev)}</span>
+                      <span className="text-[8px] text-gray-400 w-6 text-left">{pct.toFixed(0)}%</span>
                     </div>
                   );
                 })}
