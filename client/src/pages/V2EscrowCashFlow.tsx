@@ -134,7 +134,7 @@ export default function V2EscrowCashFlow() {
       {/* Main Table */}
       <div className="overflow-x-auto">
         <table className="w-full text-[10px] border-collapse min-w-max">
-          <thead className="sticky top-[72px] z-10">
+          <thead className="sticky top-0 z-10 bg-white shadow-sm">
             <tr>
               <th className="sticky right-0 z-20 bg-gray-100 border-b border-gray-200 px-2 py-1 text-right w-[200px] min-w-[200px]"></th>
               {months.map((m, i) => (
