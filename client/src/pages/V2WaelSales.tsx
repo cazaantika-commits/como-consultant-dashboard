@@ -1,14 +1,10 @@
 import { useState, useMemo } from "react";
-import {
-  ArrowRight, AlertTriangle, CheckCircle, TrendingUp,
-  DollarSign, BarChart3, Sliders, Target, Zap, Calendar
-} from "lucide-react";
+import { ArrowRight, AlertTriangle, CheckCircle, DollarSign, Target, Zap, BarChart3 } from "lucide-react";
 import { useLocation } from "wouter";
 
 /* ═══════════════════════════════════════════════════════════
    غرفة عمليات المبيعات — وائل
-   تصميم إبداعي: gradient + glassmorphism + compact
-   المدة مرنة (salesStart → projectEnd)
+   أداة تفكير: تسعير → منحنى بيع → أثر على الضمان
    ═══════════════════════════════════════════════════════════ */
 
 const UNITS = [
@@ -32,12 +28,12 @@ function bellCurve(months: number, speed: number): number[] {
 export default function V2WaelSales() {
   const [, navigate] = useLocation();
 
-  // ─── Timeline (مرن — سيأتي من فورمولات لاحقاً) ───
+  // Timeline
   const [salesStart, setSalesStart] = useState(1);
   const [projectEnd, setProjectEnd] = useState(30);
   const salesMonths = Math.max(1, projectEnd - salesStart + 1);
 
-  // ─── Controls ───
+  // Controls
   const [prices, setPrices] = useState<Record<string, number>>({
     studio: 1350, "1br": 1250, "2br": 1200, "3br": 1150, retail: 1800, office: 1400,
   });
@@ -55,7 +51,7 @@ export default function V2WaelSales() {
     })
   );
 
-  // ─── Computed ───
+  // Computed
   const results = useMemo(() => {
     const revenue = UNITS.reduce((s, u) => s + (prices[u.id] || 0) * u.area * u.count, 0);
 
@@ -74,8 +70,7 @@ export default function V2WaelSales() {
     const monthlyDraw = constructionCost / salesMonths;
 
     const escrowData = monthlySales.map((units, i) => {
-      const salesRevenue = units * avgUnitPrice;
-      const escrowIn = salesRevenue * 0.8;
+      const escrowIn = units * avgUnitPrice * 0.8;
       return { month: salesStart + i, units, escrowIn, escrowOut: monthlyDraw, balance: 0 };
     });
 
@@ -113,24 +108,32 @@ export default function V2WaelSales() {
   };
 
   return (
-    <div className="min-h-screen" dir="rtl" style={{ background: "linear-gradient(135deg, #f0f4ff 0%, #faf5ff 30%, #fff7ed 60%, #f0fdf4 100%)" }}>
+    <div className="min-h-screen bg-slate-50" dir="rtl">
 
       {/* ═══ Header ═══ */}
-      <div className="sticky top-0 z-50 backdrop-blur-md bg-white/70 border-b border-white/50 shadow-sm px-4 py-2">
-        <div className="max-w-[1800px] mx-auto flex items-center justify-between">
+      <div className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm px-4 py-2">
+        <div className="max-w-[1600px] mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate("/v2")} className="p-1.5 rounded-xl bg-white/80 hover:bg-white shadow-sm border border-gray-200/50 transition">
-              <ArrowRight className="w-4 h-4 text-gray-600" />
+            <button onClick={() => navigate("/v2")} className="p-1.5 rounded-lg hover:bg-slate-100 transition">
+              <ArrowRight className="w-4 h-4 text-slate-600" />
             </button>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-sm shadow-emerald-300" />
-              <h1 className="text-sm font-black text-gray-800">غرفة عمليات المبيعات</h1>
-              <span className="text-[10px] text-gray-400 bg-gray-100/80 px-2 py-0.5 rounded-full">مجان — G+4P+25</span>
-            </div>
+            <h1 className="text-sm font-black text-slate-800">غرفة عمليات المبيعات</h1>
+            <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">مجان — G+4P+25</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full font-bold">وائل — مدير المبيعات</span>
-            <div className={`px-2.5 py-1 rounded-full flex items-center gap-1 text-[10px] font-bold shadow-sm ${results.hasDeficit ? "bg-red-500 text-white" : "bg-emerald-500 text-white"}`}>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] text-indigo-600 font-bold">وائل — مدير المبيعات</span>
+            <div className="flex items-center gap-1.5 text-[10px] font-bold">
+              <span className="text-slate-500">بداية:</span>
+              <input type="number" min={1} max={projectEnd - 1} value={salesStart}
+                onChange={e => setSalesStart(Math.max(1, +e.target.value))}
+                className="w-8 h-5 text-[10px] text-center font-bold rounded border border-slate-200 bg-white" />
+              <span className="text-slate-500">نهاية:</span>
+              <input type="number" min={salesStart + 1} max={60} value={projectEnd}
+                onChange={e => setProjectEnd(Math.max(salesStart + 1, +e.target.value))}
+                className="w-8 h-5 text-[10px] text-center font-bold rounded border border-slate-200 bg-white" />
+              <span className="text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded text-[9px]">{salesMonths} شهر</span>
+            </div>
+            <div className={`px-2 py-1 rounded-lg flex items-center gap-1 text-[10px] font-bold ${results.hasDeficit ? "bg-red-50 text-red-600 border border-red-200" : "bg-emerald-50 text-emerald-600 border border-emerald-200"}`}>
               {results.hasDeficit ? <AlertTriangle className="w-3 h-3" /> : <CheckCircle className="w-3 h-3" />}
               {results.hasDeficit ? `عجز: ${fmt(results.deficitAmount)}` : "متوازن ✓"}
             </div>
@@ -138,300 +141,302 @@ export default function V2WaelSales() {
         </div>
       </div>
 
-      <div className="max-w-[1800px] mx-auto p-3">
-        <div className="grid grid-cols-12 gap-3">
+      <div className="max-w-[1600px] mx-auto p-4 space-y-4">
 
-          {/* ═══ LEFT — Controls ═══ */}
-          <div className="col-span-4 space-y-3">
+        {/* ═══════════════════════════════════════════════════════
+           القسم 1: التسعير — بارز ومستقل بعرض كامل
+           ═══════════════════════════════════════════════════════ */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-indigo-500" />
+              <span className="text-xs font-bold text-slate-700">تسعير الوحدات</span>
+              <span className="text-[9px] text-slate-400">(سعر / قدم²)</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-black text-emerald-600">إجمالي الإيرادات: {fmt(results.revenue)}</span>
+            </div>
+          </div>
+          <div className="p-3">
+            {/* Header row */}
+            <div className="grid grid-cols-[120px_1fr_60px_100px_80px_70px] gap-2 items-center text-[9px] text-slate-400 font-medium mb-1 px-1">
+              <span>النوع</span>
+              <span className="text-center">السعر / قدم²</span>
+              <span className="text-center">السعر</span>
+              <span className="text-center">المساحة الإجمالية</span>
+              <span className="text-center">إجمالي النوع</span>
+              <span className="text-center">النسبة</span>
+            </div>
+            {UNITS.map(u => {
+              const totalArea = u.area * u.count;
+              const totalPrice = totalArea * (prices[u.id] || 0);
+              const pct = results.revenue > 0 ? (totalPrice / results.revenue) * 100 : 0;
+              return (
+                <div key={u.id} className="grid grid-cols-[120px_1fr_60px_100px_80px_70px] gap-2 items-center py-1.5 border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition rounded">
+                  <div className="flex items-center gap-2 px-1">
+                    <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ background: u.color }} />
+                    <span className="text-[11px] font-bold text-slate-700">{u.name}</span>
+                    <span className="text-[8px] text-slate-400">{u.count} وحدة</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range" min={800} max={2500} step={50} value={prices[u.id]}
+                      onChange={e => setPrices(p => ({ ...p, [u.id]: +e.target.value }))}
+                      className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-grab"
+                      style={{ background: `linear-gradient(to left, ${u.color}30, ${u.color}08)`, accentColor: u.color } as any}
+                    />
+                  </div>
+                  <span className="text-[11px] font-mono font-black text-center" style={{ color: u.color }}>{prices[u.id]}</span>
+                  <span className="text-[10px] text-slate-500 text-center font-mono">{u.count}×{u.area} = {totalArea.toLocaleString()} ft²</span>
+                  <span className="text-[11px] font-black text-emerald-600 text-center">{fmt(totalPrice)}</span>
+                  <div className="flex items-center gap-1">
+                    <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: u.color }} />
+                    </div>
+                    <span className="text-[9px] font-bold text-slate-500 w-7">{pct.toFixed(0)}%</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
-            {/* Timeline */}
-            <div className="backdrop-blur-sm bg-white/60 rounded-2xl border border-white/80 shadow-lg shadow-gray-200/30 overflow-hidden">
-              <div className="px-3 py-1.5 border-b border-gray-100/50 flex items-center gap-2 bg-gradient-to-l from-blue-50/50 to-transparent">
-                <Calendar className="w-3.5 h-3.5 text-blue-500" />
-                <span className="text-[11px] font-bold text-gray-700">نطاق المبيعات</span>
+        {/* ═══════════════════════════════════════════════════════
+           القسم 2: منحنى المبيعات — كيف ومتى نبيع
+           ═══════════════════════════════════════════════════════ */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Target className="w-4 h-4 text-amber-500" />
+              <span className="text-xs font-bold text-slate-700">منحنى المبيعات</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9px] text-slate-500">أوف بلان:</span>
+                <input
+                  type="range" min={30} max={100} value={offPlan}
+                  onChange={e => setOffPlan(+e.target.value)}
+                  className="w-20 h-1 rounded-full appearance-none cursor-pointer bg-purple-100 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-grab"
+                />
+                <span className="text-[10px] font-black text-purple-600">{offPlan}%</span>
               </div>
-              <div className="p-2 grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[8px] text-gray-400 block mb-0.5">بداية البيع (شهر)</label>
-                  <input type="number" min={1} max={projectEnd - 1} value={salesStart}
-                    onChange={e => setSalesStart(Math.max(1, +e.target.value))}
-                    className="w-full h-6 text-[11px] text-center font-bold rounded-lg border border-gray-200/80 bg-white/80 focus:border-blue-400 focus:ring-1 focus:ring-blue-200 focus:outline-none" />
-                </div>
-                <div>
-                  <label className="text-[8px] text-gray-400 block mb-0.5">اكتمال المشروع (شهر)</label>
-                  <input type="number" min={salesStart + 1} max={60} value={projectEnd}
-                    onChange={e => setProjectEnd(Math.max(salesStart + 1, +e.target.value))}
-                    className="w-full h-6 text-[11px] text-center font-bold rounded-lg border border-gray-200/80 bg-white/80 focus:border-blue-400 focus:ring-1 focus:ring-blue-200 focus:outline-none" />
-                </div>
-                <div className="col-span-2 text-center">
-                  <span className="text-[9px] text-blue-600 font-bold bg-blue-50/80 px-2 py-0.5 rounded-full">مدة البيع: {salesMonths} شهر</span>
-                </div>
+              <div className="h-4 w-px bg-slate-200" />
+              <div className="flex gap-0.5 bg-slate-100 rounded-lg p-0.5">
+                {(["auto", "manual", "detail"] as const).map(m => (
+                  <button key={m} onClick={() => setSalesMode(m)}
+                    className={`px-2.5 py-1 rounded-md text-[9px] font-bold transition-all ${salesMode === m ? "bg-amber-500 text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                    {m === "auto" ? "تلقائي" : m === "manual" ? "يدوي" : "تفصيلي"}
+                  </button>
+                ))}
               </div>
             </div>
-
-            {/* Sales Mode + Strategy — moved up */}
-            <div className="backdrop-blur-sm bg-white/60 rounded-2xl border border-white/80 shadow-lg shadow-gray-200/30 overflow-hidden">
-              <div className="px-3 py-1 border-b border-gray-100/50 flex items-center justify-between bg-gradient-to-l from-amber-50/50 to-transparent">
-                <div className="flex items-center gap-2">
-                  <Target className="w-3.5 h-3.5 text-amber-500" />
-                  <span className="text-[10px] font-bold text-gray-700">منحنى المبيعات</span>
+          </div>
+          <div className="p-3">
+            {salesMode === "auto" && (
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] text-slate-500 w-16">سرعة البيع</span>
+                <input
+                  type="range" min={0} max={100} value={salesSpeed}
+                  onChange={e => setSalesSpeed(+e.target.value)}
+                  className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer bg-amber-100 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-amber-500 [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-grab"
+                />
+                <span className="text-[10px] font-bold text-amber-600 w-12">{salesSpeed < 30 ? "بطيء" : salesSpeed < 70 ? "متوسط" : "سريع"}</span>
+                <span className="text-[9px] text-slate-400">({results.totalSold} وحدة أوف بلان)</span>
+              </div>
+            )}
+            {salesMode === "manual" && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] text-slate-500">عدد الوحدات لكل شهر</span>
+                  <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded">{results.totalSold} / {TOTAL_UNITS}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[8px] text-purple-600 font-bold">أوف بلان: {offPlan}%</span>
-                  <div className="flex gap-0.5 bg-white/80 rounded-full p-0.5 shadow-inner">
-                    {(["auto", "manual", "detail"] as const).map(m => (
-                      <button key={m} onClick={() => setSalesMode(m)}
-                        className={`px-2 py-0.5 rounded-full text-[8px] font-bold transition-all ${salesMode === m ? "bg-amber-500 text-white shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
-                        {m === "auto" ? "تلقائي" : m === "manual" ? "يدوي" : "تفصيلي"}
-                      </button>
+                <div className="grid gap-px" style={{ gridTemplateColumns: `repeat(${Math.min(salesMonths, 15)}, 1fr)` }}>
+                  {Array.from({ length: salesMonths }, (_, i) => (
+                    <div key={i} className="text-center">
+                      <div className="text-[7px] text-slate-400 mb-0.5">{salesStart + i}</div>
+                      <input
+                        type="number" min={0} max={30} value={manualUnits[i] || 0}
+                        onChange={e => updateManual(i, +e.target.value)}
+                        className="w-full h-6 text-[10px] text-center font-bold border border-slate-200 rounded bg-white focus:border-amber-400 focus:ring-1 focus:ring-amber-100 focus:outline-none"
+                      />
+                    </div>
+                  ))}
+                </div>
+                {salesMonths > 15 && (
+                  <div className="grid gap-px mt-1" style={{ gridTemplateColumns: `repeat(${salesMonths - 15}, 1fr)` }}>
+                    {Array.from({ length: salesMonths - 15 }, (_, i) => (
+                      <div key={i + 15} className="text-center">
+                        <div className="text-[7px] text-slate-400 mb-0.5">{salesStart + i + 15}</div>
+                        <input
+                          type="number" min={0} max={30} value={manualUnits[i + 15] || 0}
+                          onChange={e => updateManual(i + 15, +e.target.value)}
+                          className="w-full h-6 text-[10px] text-center font-bold border border-slate-200 rounded bg-white focus:border-amber-400 focus:ring-1 focus:ring-amber-100 focus:outline-none"
+                        />
+                      </div>
                     ))}
                   </div>
-                </div>
-              </div>
-              <div className="p-2 space-y-1.5">
-                {/* Off-plan slider */}
-                <div className="flex items-center gap-2 h-5">
-                  <span className="text-[9px] text-gray-500">نسبة أوف بلان</span>
-                  <input
-                    type="range" min={30} max={100} value={offPlan}
-                    onChange={e => setOffPlan(+e.target.value)}
-                    className="flex-1 h-1 rounded-full appearance-none cursor-pointer bg-purple-100 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-grab"
-                  />
-                  <span className="text-[9px] font-black text-purple-600 w-7">{offPlan}%</span>
-                </div>
-                {salesMode === "auto" && (
-                  <div className="flex items-center gap-2 h-5">
-                    <span className="text-[9px] text-gray-500">سرعة البيع</span>
-                    <input
-                      type="range" min={0} max={100} value={salesSpeed}
-                      onChange={e => setSalesSpeed(+e.target.value)}
-                      className="flex-1 h-1 rounded-full appearance-none cursor-pointer bg-amber-100 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-amber-500 [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-grab"
-                    />
-                    <span className="text-[8px] font-bold text-amber-600 w-10">{salesSpeed < 30 ? "بطيء" : salesSpeed < 70 ? "متوسط" : "سريع"}</span>
-                  </div>
                 )}
-                {salesMode === "manual" && (
-                  <div>
-                    <div className="text-[8px] text-gray-500 mb-0.5">عدد الوحدات لكل شهر ({results.totalSold} / {TOTAL_UNITS})</div>
-                    <div className="grid grid-cols-10 gap-0.5 max-h-[100px] overflow-y-auto">
+              </div>
+            )}
+            {salesMode === "detail" && (
+              <div className="overflow-x-auto">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] text-slate-500">عدد الوحدات لكل نوع × شهر</span>
+                  <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded">{results.totalSold} / {TOTAL_UNITS}</span>
+                </div>
+                <table className="w-full text-[9px] border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50">
+                      <th className="text-right px-2 py-1 text-slate-500 font-medium sticky right-0 bg-slate-50 z-10 w-20">النوع</th>
                       {Array.from({ length: salesMonths }, (_, i) => (
-                        <div key={i} className="text-center">
-                          <div className="text-[7px] text-gray-400">{salesStart + i}</div>
-                          <input
-                            type="number" min={0} max={30} value={manualUnits[i] || 0}
-                            onChange={e => updateManual(i, +e.target.value)}
-                            className="w-full h-4 text-[8px] text-center border border-gray-200/80 rounded bg-white/80 focus:border-amber-400 focus:outline-none"
-                          />
-                        </div>
+                        <th key={i} className="text-center px-0.5 py-1 text-slate-400 font-normal min-w-[28px]">{salesStart + i}</th>
                       ))}
-                    </div>
-                  </div>
-                )}
-                {salesMode === "detail" && (
-                  <div>
-                    <div className="text-[8px] text-gray-500 mb-0.5">عدد الوحدات لكل نوع × شهر</div>
-                    <div className="overflow-x-auto max-h-[130px] overflow-y-auto rounded-lg border border-gray-100/50">
-                      <table className="w-full text-[7px]">
-                        <thead className="sticky top-0 bg-white/90 backdrop-blur-sm">
-                          <tr>
-                            <th className="text-right text-gray-500 px-1 py-0.5 w-12">النوع</th>
-                            {Array.from({ length: salesMonths }, (_, i) => (
-                              <th key={i} className="text-center text-gray-400 px-0 py-0.5 w-4">{salesStart + i}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {UNITS.map((u, ui) => (
-                            <tr key={u.id} className="border-t border-gray-50">
-                              <td className="text-right px-1 py-0.5">
-                                <span className="text-gray-600 font-bold text-[7px]">{u.name}</span>
-                              </td>
-                              {Array.from({ length: salesMonths }, (_, mi) => (
-                                <td key={mi} className="px-0 py-0">
-                                  <input
-                                    type="number" min={0} max={u.count} value={detailUnits[ui]?.[mi] || 0}
-                                    onChange={e => updateDetail(ui, mi, +e.target.value)}
-                                    className="w-4 h-3.5 text-[6px] text-center border border-gray-200/50 rounded bg-white/60 focus:border-indigo-400 focus:outline-none"
-                                  />
-                                </td>
-                              ))}
-                            </tr>
+                      <th className="text-center px-2 py-1 text-slate-600 font-bold sticky left-0 bg-slate-50 z-10">المجموع</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {UNITS.map((u, ui) => {
+                      const rowTotal = detailUnits[ui]?.reduce((s, v) => s + v, 0) || 0;
+                      return (
+                        <tr key={u.id} className="border-t border-slate-100 hover:bg-slate-50/50">
+                          <td className="text-right px-2 py-1 sticky right-0 bg-white z-10">
+                            <div className="flex items-center gap-1">
+                              <div className="w-2 h-2 rounded-full" style={{ background: u.color }} />
+                              <span className="font-bold text-slate-700">{u.name}</span>
+                              <span className="text-[7px] text-slate-400">({u.count})</span>
+                            </div>
+                          </td>
+                          {Array.from({ length: salesMonths }, (_, mi) => (
+                            <td key={mi} className="text-center px-0 py-0.5">
+                              <input
+                                type="number" min={0} max={u.count} value={detailUnits[ui]?.[mi] || 0}
+                                onChange={e => updateDetail(ui, mi, +e.target.value)}
+                                className="w-7 h-5 text-[9px] text-center font-mono font-bold border border-slate-200 rounded bg-white focus:border-indigo-400 focus:outline-none"
+                              />
+                            </td>
                           ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
+                          <td className="text-center px-2 py-1 sticky left-0 bg-white z-10">
+                            <span className={`font-black ${rowTotal > u.count ? "text-red-500" : "text-slate-700"}`}>{rowTotal}</span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-            </div>
+            )}
+          </div>
+        </div>
 
-            {/* Pricing + Revenue Contribution — merged */}
-            <div className="backdrop-blur-sm bg-white/60 rounded-2xl border border-white/80 shadow-lg shadow-gray-200/30 overflow-hidden">
-              <div className="px-3 py-1 border-b border-gray-100/50 flex items-center justify-between bg-gradient-to-l from-indigo-50/50 to-transparent">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="w-3 h-3 text-indigo-500" />
-                  <span className="text-[10px] font-bold text-gray-700">تسعير الوحدات والإيرادات</span>
-                </div>
-                <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">{fmt(results.revenue)}</span>
+        {/* ═══════════════════════════════════════════════════════
+           القسم 3: أثر البيع على الضمان — الرسم + الجدول
+           ═══════════════════════════════════════════════════════ */}
+        <div className="grid grid-cols-12 gap-4">
+
+          {/* Chart */}
+          <div className="col-span-5 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-blue-500" />
+                <span className="text-xs font-bold text-slate-700">رصيد الضمان</span>
               </div>
-              <div className="p-1.5 space-y-0">
-                {UNITS.map(u => {
-                  const totalArea = u.area * u.count;
-                  const totalPrice = totalArea * (prices[u.id] || 0);
-                  const pct = results.revenue > 0 ? (totalPrice / results.revenue) * 100 : 0;
+              {results.hasDeficit && (
+                <span className="text-[9px] font-bold text-white bg-red-500 px-2 py-0.5 rounded-full">عجز {fmt(results.deficitAmount)}</span>
+              )}
+            </div>
+            <div className="p-3">
+              <div className="flex items-end gap-[2px] h-[140px] relative">
+                <div className="absolute left-0 right-0 top-1/2 border-t border-dashed border-slate-300" />
+                {results.escrowData.map((row, i) => {
+                  const maxAbs = Math.max(...results.escrowData.map(r => Math.abs(r.balance)), 1);
+                  const hPct = (Math.abs(row.balance) / maxAbs) * 45;
+                  const isNeg = row.balance < 0;
                   return (
-                    <div key={u.id} className="border-b border-gray-50 last:border-0 py-0.5">
-                      <div className="flex items-center gap-1 h-5">
-                        <div className="w-1.5 h-1.5 rounded-full" style={{ background: u.color }} />
-                        <span className="text-[9px] font-bold text-gray-600 w-12 truncate">{u.name}</span>
-                        <input
-                          type="range" min={800} max={2500} step={50} value={prices[u.id]}
-                          onChange={e => setPrices(p => ({ ...p, [u.id]: +e.target.value }))}
-                          className="flex-1 h-1 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-grab"
-                          style={{ background: `linear-gradient(to left, ${u.color}40, ${u.color}15)` } as any}
-                        />
-                        <span className="text-[9px] font-mono font-black w-8 text-left" style={{ color: u.color }}>{prices[u.id]}</span>
-                      </div>
-                      <div className="flex items-center gap-1 mr-4 h-3">
-                        <div className="flex-1 h-2 bg-gray-100/80 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full transition-all duration-300" style={{ width: `${pct}%`, background: `linear-gradient(to left, ${u.color}, ${u.color}80)` }} />
+                    <div key={i} className="flex-1 relative h-full group cursor-pointer">
+                      <div
+                        className={`w-full rounded-sm transition-all ${isNeg ? "bg-red-400" : "bg-emerald-400"}`}
+                        style={{
+                          height: `${hPct}%`,
+                          position: "absolute",
+                          ...(isNeg ? { top: "50%" } : { bottom: "50%" }),
+                        }}
+                      />
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-30">
+                        <div className="bg-slate-800 text-white rounded px-1.5 py-0.5 text-[8px] whitespace-nowrap shadow-lg">
+                          شهر {row.month}: {fmt(row.balance)}
                         </div>
-                        <span className="text-[8px] font-mono font-black text-gray-700 w-9 text-left">{fmt(totalPrice)}</span>
-                        <span className="text-[7px] text-gray-400 w-5 text-left">{pct.toFixed(0)}%</span>
                       </div>
                     </div>
                   );
                 })}
               </div>
-            </div>
-
-            {/* Revenue */}
-            <div className="backdrop-blur-sm bg-gradient-to-bl from-emerald-50/80 to-white/60 rounded-2xl border border-emerald-100/50 shadow-lg shadow-emerald-100/20 p-3">
-              <div className="flex items-center gap-2 mb-0.5">
-                <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
-                <span className="text-[11px] font-bold text-gray-700">إجمالي الإيرادات</span>
+              <div className="flex justify-between text-[8px] text-slate-400 mt-1">
+                <span>شهر {salesStart}</span>
+                <span>شهر {projectEnd}</span>
               </div>
-              <div className="text-2xl font-black text-emerald-600">{fmt(results.revenue)}</div>
-              <div className="text-[9px] text-gray-400">{TOTAL_UNITS} وحدة × متوسط {fmt(results.avgUnitPrice)}/وحدة</div>
+              {/* Summary KPIs */}
+              <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-100">
+                <div className="text-center">
+                  <div className="text-[8px] text-slate-400">إيرادات</div>
+                  <div className="text-[11px] font-black text-emerald-600">{fmt(results.revenue)}</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-[8px] text-slate-400">يدخل الضمان</div>
+                  <div className="text-[11px] font-black text-blue-600">{fmt(results.escrowData.reduce((s, r) => s + r.escrowIn, 0))}</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-[8px] text-slate-400">وحدات مباعة</div>
+                  <div className="text-[11px] font-black text-slate-700">{results.totalSold}</div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* ═══ RIGHT — Impact ═══ */}
-          <div className="col-span-8 space-y-3">
-
-            {/* KPI Strip */}
-            <div className="grid grid-cols-4 gap-2">
-              {[
-                { label: "إجمالي الإيرادات", value: fmt(results.revenue), color: "from-indigo-500 to-purple-500", icon: DollarSign },
-                { label: "وحدات أوف بلان", value: results.totalSold.toString(), color: "from-blue-500 to-cyan-500", icon: Target },
-                { label: "يدخل الضمان", value: fmt(results.escrowData.reduce((s, r) => s + r.escrowIn, 0)), color: "from-emerald-500 to-teal-500", icon: TrendingUp },
-                { label: "حالة الضمان", value: results.hasDeficit ? `-${fmt(results.deficitAmount)}` : "متوازن", color: results.hasDeficit ? "from-red-500 to-rose-500" : "from-emerald-500 to-green-500", icon: results.hasDeficit ? AlertTriangle : CheckCircle },
-              ].map((kpi, i) => (
-                <div key={i} className="relative overflow-hidden rounded-2xl p-2.5 shadow-lg">
-                  <div className={`absolute inset-0 bg-gradient-to-br ${kpi.color} opacity-10`} />
-                  <div className="relative">
-                    <kpi.icon className="w-3.5 h-3.5 text-gray-500 mb-0.5" />
-                    <div className="text-[9px] text-gray-500">{kpi.label}</div>
-                    <div className="text-lg font-black text-gray-800">{kpi.value}</div>
-                  </div>
-                </div>
-              ))}
+          {/* Table */}
+          <div className="col-span-7 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="px-4 py-2 border-b border-slate-100 flex items-center gap-2">
+              <Zap className="w-4 h-4 text-amber-500" />
+              <span className="text-xs font-bold text-slate-700">تفصيل أثر البيع على الضمان — شهر بشهر</span>
             </div>
-
-            {/* Escrow Chart */}
-            <div className="backdrop-blur-sm bg-white/60 rounded-2xl border border-white/80 shadow-lg shadow-gray-200/30 overflow-hidden">
-              <div className="px-3 py-2 border-b border-gray-100/50 flex items-center justify-between bg-gradient-to-l from-blue-50/30 to-transparent">
-                <div className="flex items-center gap-2">
-                  <BarChart3 className="w-3.5 h-3.5 text-blue-500" />
-                  <span className="text-[11px] font-bold text-gray-700">أثر المبيعات على رصيد الضمان</span>
-                </div>
-                {results.hasDeficit && (
-                  <span className="text-[9px] font-bold text-white bg-red-500 px-2 py-0.5 rounded-full shadow-sm">
-                    عجز {fmt(results.deficitAmount)}
-                  </span>
-                )}
-              </div>
-              <div className="p-3">
-                <div className="flex items-end gap-[2px] h-[90px] relative">
-                  <div className="absolute left-0 right-0 top-1/2 border-t border-dashed border-gray-300/60" />
-                  {results.escrowData.map((row, i) => {
-                    const maxAbs = Math.max(...results.escrowData.map(r => Math.abs(r.balance)), 1);
-                    const hPct = (Math.abs(row.balance) / maxAbs) * 45;
-                    const isNeg = row.balance < 0;
-                    return (
-                      <div key={i} className="flex-1 relative h-full group cursor-pointer">
-                        <div
-                          className={`w-full rounded-sm transition-all duration-200 ${isNeg ? "bg-gradient-to-t from-red-500 to-red-300" : "bg-gradient-to-b from-emerald-300 to-emerald-500"}`}
-                          style={{
-                            height: `${hPct}%`,
-                            position: "absolute",
-                            ...(isNeg ? { top: "50%" } : { bottom: "50%" }),
-                          }}
-                        />
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-30">
-                          <div className="bg-gray-800 text-white rounded-lg px-2 py-1 text-[8px] whitespace-nowrap shadow-xl">
-                            شهر {row.month}: <b>{fmt(row.balance)}</b>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="flex justify-between text-[8px] text-gray-400 mt-1">
-                  <span>شهر {salesStart}</span>
-                  <span>شهر {Math.round((salesStart + projectEnd) / 2)}</span>
-                  <span>شهر {projectEnd}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Escrow Table */}
-            <div className="backdrop-blur-sm bg-white/60 rounded-2xl border border-white/80 shadow-lg shadow-gray-200/30 overflow-hidden">
-              <div className="px-3 py-2 border-b border-gray-100/50 flex items-center gap-2 bg-gradient-to-l from-amber-50/30 to-transparent">
-                <Zap className="w-3.5 h-3.5 text-amber-500" />
-                <span className="text-[11px] font-bold text-gray-700">تفصيل أثر البيع على الضمان — شهر بشهر</span>
-              </div>
-              <div className="overflow-x-auto max-h-[280px] overflow-y-auto">
-                <table className="w-full text-[9px]">
-                  <thead className="sticky top-0 bg-gray-50/90 backdrop-blur-sm">
-                    <tr className="border-b border-gray-200/50">
-                      <th className="text-right px-2 py-1 text-gray-500 font-medium">الشهر</th>
-                      <th className="text-center px-2 py-1 text-gray-500 font-medium">وحدات</th>
-                      <th className="text-center px-2 py-1 text-gray-400 font-medium">%</th>
-                      <th className="text-center px-2 py-1 text-emerald-600 font-medium">↓ دخول</th>
-                      <th className="text-center px-2 py-1 text-red-500 font-medium">↑ سحب</th>
-                      <th className="text-center px-2 py-1 text-gray-700 font-bold">الرصيد</th>
-                      <th className="text-center px-2 py-1 text-gray-500 font-medium">الحالة</th>
+            <div className="overflow-y-auto max-h-[300px]">
+              <table className="w-full text-[10px]">
+                <thead className="sticky top-0 bg-slate-50 z-10">
+                  <tr className="border-b border-slate-200">
+                    <th className="text-right px-3 py-1.5 text-slate-500 font-medium w-12">الشهر</th>
+                    <th className="text-center px-2 py-1.5 text-slate-500 font-medium">وحدات</th>
+                    <th className="text-center px-2 py-1.5 text-slate-400 font-medium">%</th>
+                    <th className="text-center px-2 py-1.5 text-emerald-600 font-medium">↓ دخول</th>
+                    <th className="text-center px-2 py-1.5 text-red-500 font-medium">↑ سحب</th>
+                    <th className="text-center px-2 py-1.5 text-slate-700 font-bold">الرصيد</th>
+                    <th className="text-center px-2 py-1.5 text-slate-500 font-medium w-14">الحالة</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {results.escrowData.map((row) => (
+                    <tr key={row.month} className={`border-b border-slate-50 h-7 ${row.balance < 0 ? "bg-red-50/30" : "hover:bg-slate-50/50"}`}>
+                      <td className="text-right px-3 py-0.5 font-bold text-slate-600">{row.month}</td>
+                      <td className="text-center px-2 py-0.5 font-mono text-slate-700">{row.units}</td>
+                      <td className="text-center px-2 py-0.5 font-mono text-slate-400 text-[9px]">{results.totalSold > 0 ? ((row.units / results.totalSold) * 100).toFixed(0) + "%" : "—"}</td>
+                      <td className="text-center px-2 py-0.5 font-mono font-bold text-emerald-600">{fmt(row.escrowIn)}</td>
+                      <td className="text-center px-2 py-0.5 font-mono text-red-500">{fmt(row.escrowOut)}</td>
+                      <td className={`text-center px-2 py-0.5 font-mono font-black ${row.balance < 0 ? "text-red-600" : "text-emerald-600"}`}>
+                        {row.balance < 0 ? "-" : ""}{fmt(Math.abs(row.balance))}
+                      </td>
+                      <td className="text-center px-2 py-0.5">
+                        {row.balance < 0 ? (
+                          <span className="text-[8px] text-white bg-red-500 px-1.5 py-0.5 rounded font-bold">عجز</span>
+                        ) : (
+                          <span className="text-[8px] text-white bg-emerald-500 px-1.5 py-0.5 rounded font-bold">آمن</span>
+                        )}
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {results.escrowData.map((row) => (
-                      <tr key={row.month} className={`border-b border-gray-100/30 h-6 transition-colors ${row.balance < 0 ? "bg-red-50/40" : "hover:bg-emerald-50/20"}`}>
-                        <td className="text-right px-2 py-0.5 font-bold text-gray-600">{row.month}</td>
-                        <td className="text-center px-2 py-0.5 text-gray-700 font-mono">{row.units}</td>
-                        <td className="text-center px-2 py-0.5 text-gray-400 font-mono text-[8px]">{results.totalSold > 0 ? ((row.units / results.totalSold) * 100).toFixed(0) + "%" : "0%"}</td>
-                        <td className="text-center px-2 py-0.5 text-emerald-600 font-mono font-bold">{fmt(row.escrowIn)}</td>
-                        <td className="text-center px-2 py-0.5 text-red-500 font-mono">{fmt(row.escrowOut)}</td>
-                        <td className={`text-center px-2 py-0.5 font-black font-mono ${row.balance < 0 ? "text-red-600" : "text-emerald-600"}`}>
-                          {row.balance < 0 ? "-" : ""}{fmt(Math.abs(row.balance))}
-                        </td>
-                        <td className="text-center px-2 py-0.5">
-                          {row.balance < 0 ? (
-                            <span className="inline-flex items-center gap-0.5 text-[8px] text-white bg-red-500 px-1.5 py-0.5 rounded-full font-bold">عجز</span>
-                          ) : (
-                            <span className="inline-flex items-center gap-0.5 text-[8px] text-white bg-emerald-500 px-1.5 py-0.5 rounded-full font-bold">آمن</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
-
-
           </div>
         </div>
+
       </div>
     </div>
   );
