@@ -146,8 +146,8 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
     const mobilizationAmount = constructionCost * (mobilizationPct / 100);
     const workCost = constructionCost - mobilizationAmount; // cost excluding mobilization
     const retentionRate = retentionPct / 100; // 10% retained each month (5%+5%)
-    const totalRetention1 = workCost * 0.05; // 5% released at +2
-    const totalRetention2 = workCost * 0.05; // 5% released at +13
+    const totalRetention1 = constructionCost * 0.05; // 5% released at +2
+    const totalRetention2 = constructionCost * 0.05; // 5% released at +13
 
     let cumulativePaid = 0;
     let cumulativeRetained = 0;
@@ -186,7 +186,7 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
           // Month N: pays for progress of month N-1 (1 month delay)
           const progressIdx = col - 1; // progress of previous month
           progressPct = progressIdx < monthlyProgress.length ? monthlyProgress[progressIdx] : 0;
-          fullAmount = workCost * (progressPct / 100);
+          fullAmount = constructionCost * (progressPct / 100);
           actualPaid = fullAmount * (1 - retentionRate); // 80%
           retentionHeld = fullAmount * retentionRate; // 20%
         }
@@ -197,7 +197,7 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
           // Pay for last construction month's progress
           const lastIdx = constructionMonths - 1;
           progressPct = lastIdx < monthlyProgress.length ? monthlyProgress[lastIdx] : 0;
-          fullAmount = workCost * (progressPct / 100);
+          fullAmount = constructionCost * (progressPct / 100);
           actualPaid = fullAmount * (1 - retentionRate);
           retentionHeld = fullAmount * retentionRate;
         }
