@@ -165,8 +165,8 @@ export default function PricingPage() {
     const c = calc[cat];
     return (
       <>
-        <tr className="bg-gray-50 border-t border-gray-200">
-          <td colSpan={3} className="py-[3px] px-2 font-bold text-[11px] text-gray-700">{label}</td>
+        <tr className={`border-t ${cat === 'residential' ? 'bg-blue-50/60 border-blue-100' : cat === 'retail' ? 'bg-orange-50/60 border-orange-100' : 'bg-teal-50/60 border-teal-100'}`}>
+          <td colSpan={3} className={`py-[3px] px-2 font-bold text-[11px] ${cat === 'residential' ? 'text-blue-700' : cat === 'retail' ? 'text-orange-700' : 'text-teal-700'}`}>{label}</td>
           <td className="py-[3px] px-2 text-center text-[10px] text-gray-500">متاح: {fmt(c?.available || 0)} | فرق: <span className={(c?.diff || 0) < 0 ? "text-red-600" : "text-teal-600"}>{fmt(c?.diff || 0)}</span></td>
           <td className="py-[3px] px-2 text-center text-[10px] text-gray-500">{c?.parking || 0}</td>
         </tr>

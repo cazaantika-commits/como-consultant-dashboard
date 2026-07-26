@@ -390,7 +390,63 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                     </tr>
                   </thead>
                   <tbody>
-                    {unitRevenues.map((u) => (
+                    {/* سكني */}
+                    <tr><td colSpan={7} className="px-2 py-0.5 text-[10px] font-bold text-blue-700 bg-blue-50/60 border-b border-blue-100">سكني</td></tr>
+                    {unitRevenues.filter(u => u.id.startsWith('residential')).map((u) => (
+                      <tr key={u.id} className="border-t border-gray-50 hover:bg-gray-50/50">
+                        <td className="px-2 py-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: u.color }} />
+                            <span className="font-medium text-gray-800">{u.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-2 py-0.5 text-center">
+                          <input type="number" min={0} value={u.count} onChange={(e) => updateUnit(u.id, "count", parseInt(e.target.value) || 0)}
+                            className="w-12 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
+                        </td>
+                        <td className="px-2 py-0.5 text-center">
+                          <input type="number" min={0} value={u.area} onChange={(e) => updateUnit(u.id, "area", parseInt(e.target.value) || 0)}
+                            className="w-14 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
+                        </td>
+                        <td className="px-2 py-0.5 text-center">
+                          <input type="number" min={0} value={u.price} onChange={(e) => updateUnit(u.id, "price", parseInt(e.target.value) || 0)}
+                            className="w-14 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
+                        </td>
+                        <td className="px-2 py-0.5 text-center font-mono text-gray-700">{fmtFull(u.totalArea)}</td>
+                        <td className="px-2 py-0.5 text-center font-mono font-medium text-emerald-700">{fmt(u.total)}</td>
+                        <td className="px-2 py-0.5 text-center text-gray-500">{totalRevenue > 0 ? ((u.total / totalRevenue) * 100).toFixed(1) : 0}%</td>
+                      </tr>
+                    ))}
+                    {/* تجزئة */}
+                    <tr><td colSpan={7} className="px-2 py-0.5 text-[10px] font-bold text-orange-700 bg-orange-50/60 border-b border-orange-100">تجزئة</td></tr>
+                    {unitRevenues.filter(u => u.id.startsWith('retail')).map((u) => (
+                      <tr key={u.id} className="border-t border-gray-50 hover:bg-gray-50/50">
+                        <td className="px-2 py-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: u.color }} />
+                            <span className="font-medium text-gray-800">{u.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-2 py-0.5 text-center">
+                          <input type="number" min={0} value={u.count} onChange={(e) => updateUnit(u.id, "count", parseInt(e.target.value) || 0)}
+                            className="w-12 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
+                        </td>
+                        <td className="px-2 py-0.5 text-center">
+                          <input type="number" min={0} value={u.area} onChange={(e) => updateUnit(u.id, "area", parseInt(e.target.value) || 0)}
+                            className="w-14 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
+                        </td>
+                        <td className="px-2 py-0.5 text-center">
+                          <input type="number" min={0} value={u.price} onChange={(e) => updateUnit(u.id, "price", parseInt(e.target.value) || 0)}
+                            className="w-14 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
+                        </td>
+                        <td className="px-2 py-0.5 text-center font-mono text-gray-700">{fmtFull(u.totalArea)}</td>
+                        <td className="px-2 py-0.5 text-center font-mono font-medium text-emerald-700">{fmt(u.total)}</td>
+                        <td className="px-2 py-0.5 text-center text-gray-500">{totalRevenue > 0 ? ((u.total / totalRevenue) * 100).toFixed(1) : 0}%</td>
+                      </tr>
+                    ))}
+                    {/* مكاتب */}
+                    <tr><td colSpan={7} className="px-2 py-0.5 text-[10px] font-bold text-teal-700 bg-teal-50/60 border-b border-teal-100">مكاتب</td></tr>
+                    {unitRevenues.filter(u => u.id.startsWith('office')).map((u) => (
                       <tr key={u.id} className="border-t border-gray-50 hover:bg-gray-50/50">
                         <td className="px-2 py-0.5">
                           <div className="flex items-center gap-1.5">

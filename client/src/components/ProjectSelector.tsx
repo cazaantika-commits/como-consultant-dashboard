@@ -15,12 +15,12 @@ export function ProjectSelector({ selectedId, onSelect, className }: ProjectSele
 
   return (
     <div className={`flex items-center gap-2 ${className || ''}`}>
-      <Building2 className="w-4 h-4 text-slate-400" />
+      <Building2 className="w-4 h-4 text-teal-600" />
       <Select
         value={selectedId ? String(selectedId) : ""}
         onValueChange={(val) => onSelect(Number(val))}
       >
-        <SelectTrigger className="w-[280px] bg-slate-800/50 border-slate-600 h-9 text-sm text-white">
+        <SelectTrigger className="w-[280px] bg-white border-2 border-teal-400 rounded-full h-9 text-sm text-gray-800 font-semibold shadow-sm hover:border-teal-500 transition-colors">
           <SelectValue placeholder="اختر المشروع..." />
         </SelectTrigger>
         <SelectContent>
