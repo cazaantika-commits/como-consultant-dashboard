@@ -14,8 +14,8 @@ import {
   RotateCcw, Info, Percent, BarChart3,
 } from "lucide-react";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip as RechartsTooltip, ResponsiveContainer, Cell,
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip as RechartsTooltip, ResponsiveContainer, ReferenceLine, Cell,
 } from "recharts";
 
 // ═══════════════════════════════════════════════════════════════════
@@ -204,29 +204,22 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
 
   return (
     <TooltipProvider>
-      <div className="space-y-6 p-4 md:p-6" dir="rtl">
+      <div className="space-y-2 p-2" dir="rtl">
         {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
-              <HardHat className="w-5 h-5 text-amber-500" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold">جدول الإنشاء</h1>
-              <p className="text-sm text-muted-foreground">نسب الإنجاز الشهرية ودفعات المقاول</p>
-            </div>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <h1 className="text-xs font-bold flex items-center gap-1">
+              <HardHat className="w-3 h-3 text-amber-500" />
+              جدول الإنشاء
+            </h1>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <ProjectSelector
               selectedProjectId={selectedProjectId}
               onSelect={setSelectedProjectId}
             />
-            <Button
-              onClick={handleSave}
-              disabled={!isDirty || updateProject.isPending || !selectedProjectId}
-              className="gap-2"
-            >
-              {updateProject.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            <Button size="sm" onClick={handleSave} disabled={!isDirty || updateProject.isPending || !selectedProjectId} className="gap-1 text-xs h-7">
+              {updateProject.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
               حفظ
             </Button>
           </div>
@@ -234,27 +227,26 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
 
         {!selectedProjectId && (
           <Card className="border-dashed">
-            <CardContent className="p-12 text-center text-muted-foreground">
-              <HardHat className="w-12 h-12 mx-auto mb-4 opacity-30" />
-              <p className="text-lg">اختر مشروعاً لعرض جدول الإنشاء</p>
+            <CardContent className="py-4 text-center text-muted-foreground">
+              <p className="text-xs">اختر مشروعاً</p>
             </CardContent>
           </Card>
         )}
 
         {selectedProjectId && projectQuery.isLoading && (
-          <div className="flex items-center justify-center p-12">
-            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
           </div>
         )}
 
         {selectedProjectId && project && (
           <>
             {/* Construction Duration & Mobilization */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-1">
               <Card>
-                <CardContent className="p-4 space-y-3">
+                <CardContent className="p-2 space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">مدة الإنشاء</span>
+                    <span className="text-[10px]">مدة الإنشاء</span>
                     <Badge variant="outline">{constructionMonths} شهر</Badge>
                   </div>
                   <Slider
@@ -265,7 +257,7 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
                     step={1}
                     className="mt-2"
                   />
-                  <div className="flex justify-between text-xs text-muted-foreground">
+                  <div className="flex justify-between text-[9px] text-muted-foreground">
                     <span>6 أشهر</span>
                     <span>48 شهر</span>
                   </div>
@@ -273,9 +265,9 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
               </Card>
 
               <Card>
-                <CardContent className="p-4 space-y-3">
+                <CardContent className="p-2 space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">دفعة مقدمة (Mobilization)</span>
+                    <span className="text-[10px]">دفعة مقدمة (Mobilization)</span>
                     <Badge variant="outline">{mobilizationPct}%</Badge>
                   </div>
                   <Slider
@@ -286,7 +278,7 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
                     step={1}
                     className="mt-2"
                   />
-                  <div className="flex justify-between text-xs text-muted-foreground">
+                  <div className="flex justify-between text-[9px] text-muted-foreground">
                     <span>0%</span>
                     <span>25%</span>
                   </div>
@@ -294,18 +286,18 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
               </Card>
 
               <Card>
-                <CardContent className="p-4 space-y-3">
+                <CardContent className="p-2 space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">تكلفة الإنشاء الإجمالية</span>
+                    <span className="text-[10px]">تكلفة الإنشاء الإجمالية</span>
                     <Tooltip>
                       <TooltipTrigger><Info className="w-3.5 h-3.5 text-muted-foreground" /></TooltipTrigger>
                       <TooltipContent>BUA × تكلفة/قدم (من الإدخالات العامة)</TooltipContent>
                     </Tooltip>
                   </div>
-                  <div className="text-2xl font-bold text-amber-500">
+                  <div className="text-sm font-bold text-amber-500">
                     {constructionCost ? (constructionCost / 1_000_000).toFixed(1) + " م" : "—"}
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-[9px] text-muted-foreground">
                     المقدمة: {constructionCost ? ((constructionCost * mobilizationPct / 100) / 1_000_000).toFixed(2) + " م" : "—"}
                   </p>
                 </CardContent>
@@ -345,14 +337,52 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
                       }`}
                     >
                       <div className="font-medium text-sm">{t.label}</div>
-                      <div className="text-xs text-muted-foreground mt-1">{t.desc}</div>
+                      <div className="text-[9px] text-muted-foreground mt-1">{t.desc}</div>
                     </button>
                   ))}
                 </div>
               </CardContent>
             </Card>
-            <Card>
 
+            {/* S-Curve Chart */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4" />
+                  منحنى الإنجاز التراكمي
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[280px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                      <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+                      <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
+                      <RechartsTooltip
+                        contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }}
+                        formatter={(value: number, name: string) => [
+                          `${value}%`,
+                          name === "cumulative" ? "تراكمي" : "شهري"
+                        ]}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="cumulative"
+                        stroke="#f59e0b"
+                        fill="#f59e0b"
+                        fillOpacity={0.15}
+                        strokeWidth={2}
+                      />
+                      <ReferenceLine y={50} stroke="#666" strokeDasharray="3 3" label={{ value: "50%", position: "right", fontSize: 10 }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Monthly Progress Bars (editable) */}
+            <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base flex items-center gap-2">

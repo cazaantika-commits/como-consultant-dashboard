@@ -98,84 +98,78 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
   }, [formData]);
 
   if (!selectedProjectId) {
-    return (<div className="p-4 text-center text-sm text-gray-500" dir="rtl"><ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} /><p className="mt-2">اختر مشروعاً</p></div>);
+    return (<div className="p-4 text-center text-sm text-gray-400" dir="rtl"><ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} /><p className="mt-2">اختر مشروعاً</p></div>);
   }
   if (projectQuery.isLoading) {
     return <div className="p-4 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></div>;
   }
 
-  // Split into 3 columns of 10
+  // Split into 3 columns
   const col1 = ALL_FIELDS.slice(0, 10);
   const col2 = ALL_FIELDS.slice(10, 20);
   const col3 = ALL_FIELDS.slice(20, 30);
 
+  const renderCol = (fields: typeof ALL_FIELDS) => (
+    <div className="space-y-[2px]">
+      {fields.map((field) => (
+        <div key={field.key} className="flex items-center gap-2 h-[28px] border-b border-gray-100">
+          <span className="text-[13px] text-gray-600 w-[45%] text-right whitespace-nowrap overflow-hidden text-ellipsis">{field.label}</span>
+          <input
+            type={field.type === "date" ? "month" : "text"}
+            value={formData[field.key] || ""}
+            onChange={e => updateField(field.key, e.target.value)}
+            disabled={!isEditing}
+            className={`flex-1 h-[24px] px-2 text-[13px] rounded ${!isEditing ? "bg-transparent text-gray-800 font-medium" : "bg-gray-50 border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"}`}
+            dir="ltr"
+            placeholder={field.defaultValue || "—"}
+          />
+          <span className="text-[11px] text-gray-400 w-[50px] text-left">{field.unit}</span>
+        </div>
+      ))}
+    </div>
+  );
+
   return (
-    <div className="bg-gray-50 p-4" dir="rtl">
-      {/* Toolbar - same style as Portfolio header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <ProjectSelector selectedId={selectedProjectId} onSelect={(id) => { setSelectedProjectId(id); setIsEditing(false); }} />
-          {!isEditing ? (
-            <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} className="h-8 text-sm px-3 gap-1.5 rounded-md">
-              <Pencil className="w-3.5 h-3.5" /> تعديل
+    <div className="bg-white px-4 py-2" dir="rtl">
+      {/* Toolbar */}
+      <div className="flex items-center gap-3 mb-3 pb-2 border-b border-gray-200">
+        <ProjectSelector selectedId={selectedProjectId} onSelect={(id) => { setSelectedProjectId(id); setIsEditing(false); }} />
+        {!isEditing ? (
+          <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} className="h-7 text-[12px] px-3 gap-1">
+            <Pencil className="w-3.5 h-3.5" /> تعديل
+          </Button>
+        ) : (
+          <>
+            <Button variant="ghost" size="sm" onClick={() => { setIsEditing(false); setHasChanges(false); projectQuery.refetch(); }} className="h-7 text-[12px] px-3 gap-1">
+              <X className="w-3.5 h-3.5" /> إلغاء
             </Button>
-          ) : (
-            <div className="flex gap-2">
-              <Button variant="ghost" size="sm" onClick={() => { setIsEditing(false); setHasChanges(false); projectQuery.refetch(); }} className="h-8 text-sm px-3 gap-1.5">
-                <X className="w-3.5 h-3.5" /> إلغاء
-              </Button>
-              <Button size="sm" onClick={handleSave} disabled={!hasChanges || updateProject.isPending} className="h-8 text-sm px-4 gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-md">
-                {updateProject.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} حفظ
-              </Button>
-            </div>
-          )}
-        </div>
+            <Button size="sm" onClick={handleSave} disabled={!hasChanges || updateProject.isPending} className="h-7 text-[12px] px-3 gap-1">
+              {updateProject.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} حفظ
+            </Button>
+          </>
+        )}
       </div>
 
-      {/* Summary cards - Portfolio style with colored borders */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
-        <div className="bg-white rounded-lg p-3 border border-teal-100 shadow-sm">
-          <p className="text-[10px] text-teal-600 mb-0.5">GFA الإجمالي</p>
-          <p className="text-base font-bold text-teal-700" dir="ltr">{fmt(computed.gfaTotal)} قدم²</p>
-        </div>
-        <div className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm">
-          <p className="text-[10px] text-gray-600 mb-0.5">القابل للبيع</p>
-          <p className="text-base font-bold text-gray-800" dir="ltr">{fmt(computed.sellableResidential + computed.sellableRetail + computed.sellableOffice)} قدم²</p>
-        </div>
-        <div className="bg-white rounded-lg p-3 border border-red-100 shadow-sm">
-          <p className="text-[10px] text-red-600 mb-0.5">تكلفة الإنشاء</p>
-          <p className="text-base font-bold text-red-700" dir="ltr">{fmt(computed.constructionCost)} درهم</p>
-        </div>
+      {/* 3-column grid */}
+      <div className="grid grid-cols-3 gap-6">
+        {renderCol(col1)}
+        {renderCol(col2)}
+        {renderCol(col3)}
       </div>
 
-      {/* 3-column table grid - Portfolio style */}
-      <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
-        <div className="grid grid-cols-3 divide-x divide-gray-100" dir="rtl">
-          {[col1, col2, col3].map((col, ci) => (
-            <div key={ci} className="px-3">
-              <table className="w-full text-[11px]">
-                <tbody>
-                  {col.map((field) => (
-                    <tr key={field.key} className="border-b border-gray-50 hover:bg-gray-50/50">
-                      <td className="py-[5px] pr-2 text-gray-700 font-medium whitespace-nowrap">{field.label}</td>
-                      <td className="py-[5px] text-left" dir="ltr">
-                        <input
-                          type={field.type === "date" ? "month" : "text"}
-                          value={formData[field.key] || ""}
-                          onChange={e => updateField(field.key, e.target.value)}
-                          disabled={!isEditing}
-                          className={`w-full text-[11px] text-left px-2 py-0.5 rounded tabular-nums ${!isEditing ? "bg-transparent text-gray-800 font-medium border-none" : "bg-white border border-gray-300 text-gray-900 focus:border-teal-500 focus:ring-1 focus:ring-teal-500"}`}
-                          dir="ltr"
-                          placeholder={field.defaultValue || "—"}
-                        />
-                      </td>
-                      <td className="py-[5px] pl-2 text-[10px] text-gray-400 whitespace-nowrap">{field.unit}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ))}
+      {/* Computed summary cards */}
+      <div className="mt-3 pt-3 border-t border-gray-200 grid grid-cols-3 gap-4">
+        <div className="rounded-lg border border-gray-200 p-3 text-center">
+          <div className="text-[12px] text-gray-500">GFA الإجمالي</div>
+          <div className="text-[15px] font-bold text-gray-800 mt-1" dir="ltr">{fmt(computed.gfaTotal)} <span className="text-[11px] text-gray-400">قدم²</span></div>
+        </div>
+        <div className="rounded-lg border border-gray-200 p-3 text-center">
+          <div className="text-[12px] text-gray-500">القابل للبيع</div>
+          <div className="text-[15px] font-bold text-gray-800 mt-1" dir="ltr">{fmt(computed.sellableResidential + computed.sellableRetail + computed.sellableOffice)} <span className="text-[11px] text-gray-400">قدم²</span></div>
+        </div>
+        <div className="rounded-lg border border-gray-200 p-3 text-center">
+          <div className="text-[12px] text-gray-500">تكلفة الإنشاء</div>
+          <div className="text-[15px] font-bold text-gray-800 mt-1" dir="ltr">{fmt(computed.constructionCost)} <span className="text-[11px] text-gray-400">درهم</span></div>
         </div>
       </div>
     </div>
