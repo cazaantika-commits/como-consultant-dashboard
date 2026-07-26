@@ -99,20 +99,20 @@ export default function V2EscrowCashFlow() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50" dir="rtl">
+    <div className=" bg-gray-50" dir="rtl">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-20">
+      <div className="bg-white border-b border-gray-200 ">
         <div className="max-w-full mx-auto px-4 py-2 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button onClick={() => navigate("/v2")} className="p-1.5 rounded-lg hover:bg-gray-100 transition">
               <ArrowRight className="w-4 h-4 text-gray-600" />
             </button>
             <div>
-              <h1 className="text-sm font-bold text-gray-900">التدفقات النقدية — حساب الضمان (Escrow)</h1>
+              <h1 className="text-[10px] font-bold text-gray-900">التدفقات النقدية — حساب الضمان (Escrow)</h1>
               <p className="text-[10px] text-gray-500">مجان متعدد الاستخدامات — G+4P+25</p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1">
             <div className="flex items-center gap-3 text-[10px]">
               <span className="text-red-600 font-medium">المصروفات: {fmt(totalOutflow)}</span>
               <span className="text-green-600 font-medium">الإيرادات: {fmt(totalInflow)}</span>
@@ -125,7 +125,7 @@ export default function V2EscrowCashFlow() {
       </div>
 
       {/* Phase Legend */}
-      <div className="bg-white border-b border-gray-100 px-4 py-1.5 flex items-center gap-4 text-[10px]">
+      <div className="bg-white border-b border-gray-100 px-4 py-1.5 flex items-center gap-1 text-[10px]">
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-100 border border-blue-200"></span> تصميم ({DESIGN_MONTHS} أشهر)</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-100 border border-amber-200"></span> إنشاء ({CONSTRUCTION_MONTHS} شهر)</span>
         <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-100 border border-emerald-200"></span> ما بعد الإنجاز ({POST_MONTHS} شهر)</span>
@@ -134,7 +134,7 @@ export default function V2EscrowCashFlow() {
       {/* Main Table */}
       <div className="overflow-x-auto">
         <table className="w-full text-[10px] border-collapse min-w-max">
-          <thead className="sticky top-0 z-10 bg-white shadow-sm">
+          <thead className=" bg-white shadow-sm">
             <tr>
               <th className="sticky right-0 z-20 bg-gray-100 border-b border-gray-200 px-2 py-1 text-right w-[200px] min-w-[200px]"></th>
               {months.map((m, i) => (

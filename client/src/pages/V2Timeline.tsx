@@ -27,14 +27,14 @@ export default function V2Timeline() {
     <div className="bg-white" dir="rtl">
       {/* Header */}
       <div className="hidden">
-        <div className="max-w-[1800px] mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-[1800px] mx-auto px-1 py-1 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button onClick={() => navigate("/")} className="p-2 rounded-lg hover:bg-gray-100 transition">
               <ArrowRight className="w-5 h-5 text-gray-600" />
             </button>
             <div>
               <h1 className="text-xs font-bold text-gray-900">الجدول الزمني للمشروع</h1>
-              <p className="text-sm text-gray-500">مجان متعدد الاستخدامات — 36 شهر</p>
+              <p className="text-[10px] text-gray-500">مجان متعدد الاستخدامات — 36 شهر</p>
             </div>
           </div>
           <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm">
@@ -73,7 +73,7 @@ export default function V2Timeline() {
             <div style={{ minWidth: TOTAL_MONTHS * 50 + 200 }}>
               {/* Month Headers */}
               <div className="flex border-b border-gray-200">
-                <div className="w-[200px] flex-shrink-0 px-4 py-3 bg-gray-50 font-bold text-sm text-gray-700 border-l border-gray-200">
+                <div className="w-[200px] flex-shrink-0 px-4 py-3 bg-gray-50 font-bold text-[10px] text-gray-700 border-l border-gray-200">
                   المرحلة
                 </div>
                 <div className="flex-1 flex">
@@ -92,10 +92,10 @@ export default function V2Timeline() {
               {/* Phase Bars */}
               {PHASES.map((phase) => (
                 <div key={phase.id} className="flex border-b border-gray-100 hover:bg-gray-50/30">
-                  <div className="w-[200px] flex-shrink-0 px-4 py-4 border-l border-gray-100">
+                  <div className="w-[200px] flex-shrink-0 px-4 py-1 border-l border-gray-100">
                     <div className="flex items-center gap-2">
                       <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: phase.color }} />
-                      <span className="font-medium text-sm text-gray-800">{phase.name}</span>
+                      <span className="font-medium text-[10px] text-gray-800">{phase.name}</span>
                     </div>
                     <div className="mt-1 text-xs text-gray-400">
                       {phase.items.slice(0, 3).join(" • ")}
@@ -122,7 +122,7 @@ export default function V2Timeline() {
 
               {/* Milestones Row */}
               <div className="flex border-t-2 border-gray-200">
-                <div className="w-[200px] flex-shrink-0 px-4 py-3 bg-amber-50 font-bold text-sm text-amber-800 border-l border-gray-200">
+                <div className="w-[200px] flex-shrink-0 px-4 py-3 bg-amber-50 font-bold text-[10px] text-amber-800 border-l border-gray-200">
                   المعالم الرئيسية
                 </div>
                 <div className="flex-1 relative" style={{ minHeight: 48 }}>

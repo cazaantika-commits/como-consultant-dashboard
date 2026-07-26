@@ -92,16 +92,16 @@ export default function V2Portfolio() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50" dir="rtl">
+    <div className=" bg-gray-50" dir="rtl">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-20">
+      <div className="bg-white border-b border-gray-200 ">
         <div className="max-w-[1800px] mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button onClick={() => navigate("/v2")} className="p-1.5 rounded-lg hover:bg-gray-100 transition">
               <ArrowRight className="w-4 h-4 text-gray-600" />
             </button>
             <div>
-              <h1 className="text-lg font-bold text-gray-900">المحفظة الاستثمارية</h1>
+              <h1 className="text-xs font-bold text-gray-900">المحفظة الاستثمارية</h1>
               <p className="text-xs text-gray-500">
                 التدفقات النقدية المجمّعة — {selectedProjects.length} مشاريع
               </p>
@@ -118,7 +118,7 @@ export default function V2Portfolio() {
         </div>
       </div>
 
-      <div className="max-w-[1800px] mx-auto px-4 py-4">
+      <div className="max-w-[1800px] mx-auto px-4 py-1">
         {/* Project Selection */}
         <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-3 mb-4">
           <h3 className="text-xs font-bold text-gray-700 mb-2">اختر المشاريع</h3>

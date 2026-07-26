@@ -1,6 +1,6 @@
 import { useState, lazy, Suspense } from "react";
 import { useLocation } from "wouter";
-import { ArrowRight, ClipboardList, HardHat, Target, Settings, Calendar, TrendingDown, FileText, Building2, Briefcase, LayoutGrid } from "lucide-react";
+import { ArrowRight, ClipboardList, HardHat, Target, Settings, Calendar, TrendingDown, FileText, Building2, Briefcase, LayoutGrid, Landmark } from "lucide-react";
 
 const GeneralInputsPage = lazy(() => import("./GeneralInputsPage"));
 const PricingPage = lazy(() => import("./PricingPage"));
@@ -8,11 +8,12 @@ const ConstructionInputsPage = lazy(() => import("./ConstructionInputsPage"));
 const V2WaelSales = lazy(() => import("./V2WaelSales"));
 const SettingsRulesPage = lazy(() => import("./SettingsRulesPage"));
 const V2Timeline = lazy(() => import("./V2Timeline"));
-const InvestorCashFlowSchedulePage = lazy(() => import("./InvestorCashFlowSchedulePage"));
-const FeasibilityStudyPage = lazy(() => import("./FeasibilityStudyPage"));
-const ConsolidatedInvestorCashFlowPage = lazy(() => import("./ConsolidatedInvestorCashFlowPage"));
+const V2InvestorCashFlow = lazy(() => import("./V2InvestorCashFlow"));
+const V2EscrowCashFlow = lazy(() => import("./V2EscrowCashFlow"));
+const V2Feasibility = lazy(() => import("./V2Feasibility"));
+const V2Portfolio = lazy(() => import("./V2Portfolio"));
 
-type TabId = "general" | "units" | "construction" | "sales" | "settings" | "timeline" | "cashflows" | "feasibility" | "mall" | "portfolio";
+type TabId = "general" | "units" | "construction" | "sales" | "settings" | "timeline" | "cashflows" | "escrow" | "feasibility" | "mall" | "portfolio";
 
 const TABS: { id: TabId; label: string; icon: any; group: "input" | "output" }[] = [
   { id: "general", label: "المدخلات العامة", icon: ClipboardList, group: "input" },
@@ -21,7 +22,8 @@ const TABS: { id: TabId; label: string; icon: any; group: "input" | "output" }[]
   { id: "sales", label: "المبيعات والتسويق", icon: Target, group: "input" },
   { id: "settings", label: "الإعدادات والقواعد", icon: Settings, group: "input" },
   { id: "timeline", label: "الجدول الزمني", icon: Calendar, group: "output" },
-  { id: "cashflows", label: "التدفقات المالية", icon: TrendingDown, group: "output" },
+  { id: "cashflows", label: "تدفقات المستثمر", icon: TrendingDown, group: "output" },
+  { id: "escrow", label: "تدفقات الإسكرو", icon: Landmark, group: "output" },
   { id: "feasibility", label: "دراسة الجدوى", icon: FileText, group: "output" },
   { id: "mall", label: "المركز التجاري", icon: Building2, group: "output" },
   { id: "portfolio", label: "تجميع المشاريع", icon: Briefcase, group: "output" },
@@ -42,9 +44,11 @@ function TabContent({ tabId }: { tabId: TabId }) {
     case "timeline":
       return <V2Timeline />;
     case "cashflows":
-      return <InvestorCashFlowSchedulePage />;
+      return <V2InvestorCashFlow />;
+    case "escrow":
+      return <V2EscrowCashFlow />;
     case "feasibility":
-      return <FeasibilityStudyPage embedded />;
+      return <V2Feasibility />;
     case "mall":
       return (
         <div className="flex flex-col items-center justify-center text-center gap-2 py-12">
@@ -53,7 +57,7 @@ function TabContent({ tabId }: { tabId: TabId }) {
         </div>
       );
     case "portfolio":
-      return <ConsolidatedInvestorCashFlowPage />;
+      return <V2Portfolio />;
     default:
       return null;
   }

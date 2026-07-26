@@ -95,16 +95,16 @@ export default function V2Feasibility() {
   const [, navigate] = useLocation();
 
   return (
-    <div className="min-h-screen bg-gray-50" dir="rtl">
+    <div className=" bg-gray-50" dir="rtl">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-20">
+      <div className="bg-white border-b border-gray-200 ">
         <div className="max-w-[1200px] mx-auto px-4 py-2 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button onClick={() => navigate("/v2")} className="p-1.5 rounded-lg hover:bg-gray-100 transition">
               <ArrowRight className="w-4 h-4 text-gray-600" />
             </button>
             <div>
-              <h1 className="text-sm font-bold text-gray-900">دراسة الجدوى</h1>
+              <h1 className="text-[10px] font-bold text-gray-900">دراسة الجدوى</h1>
               <p className="text-[10px] text-gray-500">مجان متعدد الاستخدامات — G+4P+25</p>
             </div>
           </div>
@@ -119,24 +119,24 @@ export default function V2Feasibility() {
         <div className="grid grid-cols-5 gap-2">
           <div className="bg-white rounded-lg p-2.5 border border-gray-100 shadow-sm">
             <p className="text-[9px] text-gray-500 mb-0.5">إجمالي الإيرادات</p>
-            <p className="text-sm font-bold text-gray-900">{fmt(totalRevenue)}</p>
+            <p className="text-[10px] font-bold text-gray-900">{fmt(totalRevenue)}</p>
           </div>
           <div className="bg-white rounded-lg p-2.5 border border-gray-100 shadow-sm">
             <p className="text-[9px] text-gray-500 mb-0.5">إجمالي التكاليف</p>
-            <p className="text-sm font-bold text-gray-900">{fmt(totalCosts)}</p>
+            <p className="text-[10px] font-bold text-gray-900">{fmt(totalCosts)}</p>
           </div>
           <div className="bg-white rounded-lg p-2.5 border border-teal-100 shadow-sm">
             <p className="text-[9px] text-teal-600 mb-0.5">صافي الربح</p>
-            <p className="text-sm font-bold text-teal-700">{fmt(netProfit)}</p>
+            <p className="text-[10px] font-bold text-teal-700">{fmt(netProfit)}</p>
             <p className="text-[8px] text-gray-400">{((netProfit / totalCosts) * 100).toFixed(1)}% من التكلفة</p>
           </div>
           <div className="bg-white rounded-lg p-2.5 border border-blue-100 shadow-sm">
             <p className="text-[9px] text-blue-600 mb-0.5">MOIC</p>
-            <p className="text-sm font-bold text-blue-700">{moic.toFixed(2)}x</p>
+            <p className="text-[10px] font-bold text-blue-700">{moic.toFixed(2)}x</p>
           </div>
           <div className="bg-white rounded-lg p-2.5 border border-purple-100 shadow-sm">
             <p className="text-[9px] text-purple-600 mb-0.5">أرباح COMO</p>
-            <p className="text-sm font-bold text-purple-700">{fmt(comoTotal)}</p>
+            <p className="text-[10px] font-bold text-purple-700">{fmt(comoTotal)}</p>
           </div>
         </div>
 
