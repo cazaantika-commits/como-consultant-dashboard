@@ -991,3 +991,8 @@
 - [x] Replace V2Feasibility with FeasibilityStudyPage (real DB)
 - [x] Remove timeline tab from BateekhaPage navigation
 - [x] Redesign V2Feasibility with professional two-column layout (revenues, costs, profits, ratios, developer 15%/investor 85%, project details)
+- [x] Add break-even analysis (نقطة التعادل) to V2Feasibility page
+- [x] Add scenario comparison (متفائل/أساسي/متحفظ) to V2Feasibility
+- [x] Add IRR/annualized ROI estimate to V2Feasibility
+- [x] Add cost/sqft vs selling price comparison to V2Feasibility
+- [x] Improve V2Feasibility colors to teal/gold/white brand style
