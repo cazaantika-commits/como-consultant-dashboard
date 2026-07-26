@@ -279,20 +279,16 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   // RENDER
   // ═══════════════════════════════════════════════════════════════════════════════
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30 p-4 md:p-6" dir="rtl">
-      <div className="max-w-[1400px] mx-auto space-y-4">
+    <div className="bg-white p-2" dir="rtl">
+      <div className="max-w-full mx-auto space-y-2">
         {/* ═══ HEADER ═══ */}
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            <button onClick={() => navigate("/v2")} className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors">
-              <ArrowRight className="w-4 h-4 text-gray-600" />
-            </button>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
             <div>
-              <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <Target className="w-5 h-5 text-emerald-600" />
-                غرفة عمليات المبيعات
+              <h1 className="text-xs font-bold text-gray-900 flex items-center gap-1">
+                <Target className="w-3 h-3 text-emerald-600" />
+                المبيعات والتسويق
               </h1>
-              <p className="text-xs text-gray-500 mt-0.5">التسعير • خطة المبيعات • التسويق • الإسكرو</p>
             </div>
           </div>
           <div className="flex items-center gap-2">

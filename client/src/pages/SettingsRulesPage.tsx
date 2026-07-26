@@ -207,20 +207,16 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
   // RENDER
   // ═══════════════════════════════════════════════════════════════════════════════
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 p-4 md:p-6" dir="rtl">
-      <div className="max-w-[1200px] mx-auto space-y-4">
+    <div className="bg-white p-2" dir="rtl">
+      <div className="max-w-full mx-auto space-y-2">
         {/* HEADER */}
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            <button onClick={() => navigate("/v2")} className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors">
-              <ArrowRight className="w-4 h-4 text-gray-600" />
-            </button>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
             <div>
-              <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <Settings className="w-5 h-5 text-indigo-600" />
-                إعدادات القواعد والمعادلات
+              <h1 className="text-xs font-bold text-gray-900 flex items-center gap-1">
+                <Settings className="w-3 h-3 text-indigo-600" />
+                الإعدادات والقواعد
               </h1>
-              <p className="text-xs text-gray-500 mt-0.5">التوقيتات • النسب • تقسيم التمويل • جدول الدفعات</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -236,9 +232,9 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
 
         {/* No project */}
         {!selectedProjectId && (
-          <Card className="border-dashed"><CardContent className="py-12 text-center">
-            <Building2 className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-            <p className="text-gray-500">اختر مشروعاً من القائمة أعلاه</p>
+          <Card className="border-dashed"><CardContent className="py-4 text-center">
+            <Building2 className="w-6 h-6 mx-auto text-gray-300 mb-1" />
+            <p className="text-xs text-gray-500">اختر مشروعاً</p>
           </CardContent></Card>
         )}
 

@@ -254,7 +254,7 @@ export default function ConsolidatedInvestorCashFlowPage() {
   // ─── Loading / Auth States ───
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#fafbfc] flex items-center justify-center" dir="rtl">
+      <div className="bg-white flex items-center justify-center" dir="rtl">
         <div className="text-center space-y-4">
           <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center shadow-lg">
             <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
@@ -267,7 +267,7 @@ export default function ConsolidatedInvestorCashFlowPage() {
 
   if (projectsQuery.isLoading) {
     return (
-      <div className="min-h-screen bg-[#fafbfc] flex items-center justify-center" dir="rtl">
+      <div className="bg-white flex items-center justify-center" dir="rtl">
         <div className="text-center space-y-4">
           <div className="w-12 h-12 mx-auto rounded-full border-4 border-slate-200 border-t-slate-700 animate-spin" />
           <p className="text-slate-500 text-sm font-medium">جاري تحميل بيانات المحفظة...</p>
@@ -278,7 +278,7 @@ export default function ConsolidatedInvestorCashFlowPage() {
 
   if (!consolidated) {
     return (
-      <div className="min-h-screen bg-[#fafbfc] flex items-center justify-center" dir="rtl">
+      <div className="bg-white flex items-center justify-center" dir="rtl">
         <div className="text-center space-y-4">
           <div className="w-16 h-16 mx-auto rounded-2xl bg-slate-100 flex items-center justify-center">
             <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
@@ -308,10 +308,10 @@ export default function ConsolidatedInvestorCashFlowPage() {
   const peakMonth = peakIdx >= 0 ? consolidated.monthLabels[peakIdx] : "";
 
   return (
-    <div className="min-h-screen bg-[#fafbfc]" dir="rtl">
+    <div className="bg-white" dir="rtl">
       {/* ═══ TOP BAR ═══ */}
       <div className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-slate-200 shadow-sm">
-        <div className="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-full mx-auto px-2 py-1 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-800 to-slate-600 flex items-center justify-center shadow-md">
               <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>

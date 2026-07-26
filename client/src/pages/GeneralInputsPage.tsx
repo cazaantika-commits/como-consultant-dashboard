@@ -214,13 +214,12 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
 
   // ═══ RENDER ═══
   return (
-    <div className="min-h-screen bg-background p-6" dir="rtl">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <div className="bg-white p-2" dir="rtl">
+      <div className="max-w-full mx-auto space-y-2">
         {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
-            <h1 className="text-xl font-bold text-foreground">الإدخالات العامة</h1>
-            <p className="text-sm text-muted-foreground mt-1">بيانات المشروع الأساسية — المساحات، المدد، الرسوم، والنسب</p>
+            <h1 className="text-xs font-bold text-foreground">الإدخالات العامة</h1>
           </div>
           <div className="flex items-center gap-3">
             <ProjectSelector selectedId={selectedProjectId} onSelect={(id) => { setSelectedProjectId(id); setIsEditing(false); }} />
@@ -247,18 +246,18 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
 
         {!selectedProjectId && (
           <Card className="border-dashed">
-            <CardContent className="py-12 text-center">
-              <Building2 className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
-              <p className="text-muted-foreground">اختر مشروعاً من القائمة أعلاه لعرض الإدخالات</p>
+            <CardContent className="py-4 text-center">
+              <Building2 className="w-6 h-6 mx-auto text-muted-foreground/50 mb-1" />
+              <p className="text-xs text-muted-foreground">اختر مشروعاً من القائمة أعلاه</p>
             </CardContent>
           </Card>
         )}
 
         {selectedProjectId && projectQuery.isLoading && (
           <Card>
-            <CardContent className="py-12 text-center">
-              <Loader2 className="w-8 h-8 mx-auto animate-spin text-primary" />
-              <p className="text-muted-foreground mt-2">جاري تحميل البيانات...</p>
+            <CardContent className="py-4 text-center">
+              <Loader2 className="w-5 h-5 mx-auto animate-spin text-primary" />
+              <p className="text-xs text-muted-foreground mt-1">جاري التحميل...</p>
             </CardContent>
           </Card>
         )}
@@ -274,20 +273,18 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
             </div>
 
             {/* Input Sections */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
               {SECTIONS.map((section) => {
                 const Icon = section.icon;
                 return (
                   <Card key={section.id} className="overflow-hidden">
-                    <CardHeader className="pb-3 border-b border-border/50">
-                      <CardTitle className="text-sm font-bold flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Icon className="w-3.5 h-3.5 text-primary" />
-                        </div>
+                    <CardHeader className="py-1.5 px-2 border-b border-border/50">
+                      <CardTitle className="text-[11px] font-bold flex items-center gap-1">
+                        <Icon className="w-3 h-3 text-primary" />
                         {section.title}
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-4 space-y-3">
+                    <CardContent className="p-2 space-y-1">
                       {section.fields.map((field) => (
                         <FieldRow
                           key={field.key}
@@ -341,10 +338,9 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
 
 function SummaryCard({ label, value, unit }: { label: string; value: string; unit: string }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-3">
-      <p className="text-[11px] text-muted-foreground mb-1">{label}</p>
-      <p className="text-base font-bold text-foreground">{value}</p>
-      <p className="text-[10px] text-muted-foreground">{unit}</p>
+    <div className="rounded border border-border bg-card px-2 py-1">
+      <p className="text-[9px] text-muted-foreground">{label}</p>
+      <p className="text-xs font-bold text-foreground">{value} <span className="text-[9px] font-normal text-muted-foreground">{unit}</span></p>
     </div>
   );
 }

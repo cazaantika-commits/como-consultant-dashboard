@@ -78,8 +78,8 @@ export default function InvestorCashFlowSchedulePage() {
   };
 
   return (
-    <div className="min-h-screen bg-white p-4" dir="rtl">
-      <div className="max-w-full mx-auto space-y-4">
+    <div className="bg-white p-2" dir="rtl">
+      <div className="max-w-full mx-auto space-y-2">
 
         {/* Project Selector */}
         <div data-hide-print>

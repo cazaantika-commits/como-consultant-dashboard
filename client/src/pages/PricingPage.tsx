@@ -349,7 +349,7 @@ export default function PricingPage() {
   }, [counts, areas, SELLABLE]);
 
   function getStatus(balance: { waste: number; pct: number; diff: number }) {
-    if (balance.pct === 0) return { color: "text-slate-500", bg: "bg-slate-500/20", icon: Info, label: "لم يُحدد" };
+    if (balance.pct === 0) return { color: "text-gray-500", bg: "bg-slate-500/20", icon: Info, label: "لم يُحدد" };
     if (balance.pct > 100.5) return { color: "text-red-400", bg: "bg-red-500/20", icon: AlertTriangle, label: "تجاوز!" };
     if (balance.pct >= 99.5) return { color: "text-emerald-400", bg: "bg-emerald-500/20", icon: CheckCircle, label: "متوازن" };
     if (balance.waste <= 5) return { color: "text-amber-400", bg: "bg-amber-500/20", icon: AlertTriangle, label: "هدر بسيط" };
@@ -357,21 +357,21 @@ export default function PricingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 p-6" dir="rtl">
+    <div className="bg-white p-2" dir="rtl">
       {/* Header */}
       <div className="max-w-7xl mx-auto mb-8">
         <div className="flex items-center gap-4 mb-2">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-            <Calculator className="w-6 h-6 text-white" />
+            <Calculator className="w-6 h-6 text-gray-900" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white">التسعير وتوزيع الوحدات</h1>
-            <p className="text-slate-400 text-sm">{i.name}</p>
+            <h1 className="text-2xl font-bold text-gray-900">التسعير وتوزيع الوحدات</h1>
+            <p className="text-gray-500 text-sm">{i.name}</p>
           </div>
           <button
             onClick={handleSave}
             disabled={isSaving || !hasUnsavedChanges || !selectedProjectId}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${!selectedProjectId ? 'bg-slate-700 border border-slate-600 text-slate-500 cursor-not-allowed' : isSaving ? 'bg-amber-500/20 border border-amber-500/40 text-amber-300 cursor-wait' : hasUnsavedChanges ? 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/30 animate-pulse' : 'bg-slate-700 border border-slate-600 text-slate-400 cursor-default'}`}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${!selectedProjectId ? 'bg-gray-200 border border-gray-200 text-gray-500 cursor-not-allowed' : isSaving ? 'bg-amber-500/20 border border-amber-500/40 text-amber-300 cursor-wait' : hasUnsavedChanges ? 'bg-emerald-500 hover:bg-emerald-400 text-gray-900 shadow-lg shadow-emerald-500/30 animate-pulse' : 'bg-gray-200 border border-gray-200 text-gray-500 cursor-default'}`}
           >
             {isSaving ? (
               <><Loader2 className="w-4 h-4 animate-spin" /><span>جاري الحفظ...</span></>
@@ -390,55 +390,55 @@ export default function PricingPage() {
       <div className="max-w-7xl mx-auto space-y-6">
 
         {/* SECTION 1: LAND & AREAS SUMMARY */}
-        <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur">
+        <Card className="bg-gray-50 border-gray-200/50 backdrop-blur">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg text-white flex items-center gap-2">
+            <CardTitle className="text-lg text-gray-900 flex items-center gap-2">
               <Ruler className="w-5 h-5 text-amber-400" />
               تفاصيل الأرض والمساحات
-              <Badge className="bg-slate-700/50 text-slate-400 border-slate-600 text-xs mr-2">من بطاقة المشروع</Badge>
+              <Badge className="bg-gray-100 text-gray-500 border-gray-200 text-xs mr-2">من بطاقة المشروع</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 p-4 text-center">
-                <div className="text-xs text-slate-400 mb-1">مساحة الأرض</div>
+                <div className="text-xs text-gray-500 mb-1">مساحة الأرض</div>
                 <div className="text-xl font-bold text-blue-300 font-mono">{fmtN(i.landArea)} sqft</div>
               </div>
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-center">
-                <div className="text-xs text-slate-400 mb-1">BUA</div>
+                <div className="text-xs text-gray-500 mb-1">BUA</div>
                 <div className="text-xl font-bold text-emerald-300 font-mono">{fmtN(i.bua)} sqft</div>
               </div>
               <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 p-4 text-center">
-                <div className="text-xs text-slate-400 mb-1">GFA الإجمالي</div>
+                <div className="text-xs text-gray-500 mb-1">GFA الإجمالي</div>
                 <div className="text-xl font-bold text-purple-300 font-mono">{fmtN(GFA_TOTAL)} sqft</div>
               </div>
             </div>
 
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-700">
-                  <th className="text-right py-2 px-3 text-slate-400">الفئة</th>
-                  <th className="text-center py-2 px-3 text-slate-400">GFA (sqft)</th>
-                  <th className="text-center py-2 px-3 text-slate-400">الكفاءة</th>
-                  <th className="text-center py-2 px-3 text-slate-400">قابل للبيع (sqft)</th>
+                <tr className="border-b border-gray-200">
+                  <th className="text-right py-2 px-3 text-gray-500">الفئة</th>
+                  <th className="text-center py-2 px-3 text-gray-500">GFA (sqft)</th>
+                  <th className="text-center py-2 px-3 text-gray-500">الكفاءة</th>
+                  <th className="text-center py-2 px-3 text-gray-500">قابل للبيع (sqft)</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-700/50">
+              <tbody className="divide-y divide-gray-200">
                 <tr>
-                  <td className="py-2.5 px-3 text-slate-200 flex items-center gap-2"><Home className="w-4 h-4 text-blue-400" /> سكني</td>
-                  <td className="py-2.5 px-3 text-center font-mono text-white">{fmtN(i.gfaResidential)}</td>
+                  <td className="py-2.5 px-3 text-gray-700 flex items-center gap-2"><Home className="w-4 h-4 text-blue-400" /> سكني</td>
+                  <td className="py-2.5 px-3 text-center font-mono text-gray-900">{fmtN(i.gfaResidential)}</td>
                   <td className="py-2.5 px-3 text-center"><Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40">{(i.efficiencyResidential * 100).toFixed(0)}%</Badge></td>
                   <td className="py-2.5 px-3 text-center font-mono text-emerald-300 font-bold">{fmtN(SELLABLE.residential)}</td>
                 </tr>
                 <tr>
-                  <td className="py-2.5 px-3 text-slate-200 flex items-center gap-2"><Store className="w-4 h-4 text-amber-400" /> تجزئة</td>
-                  <td className="py-2.5 px-3 text-center font-mono text-white">{fmtN(i.gfaRetail)}</td>
+                  <td className="py-2.5 px-3 text-gray-700 flex items-center gap-2"><Store className="w-4 h-4 text-amber-400" /> تجزئة</td>
+                  <td className="py-2.5 px-3 text-center font-mono text-gray-900">{fmtN(i.gfaRetail)}</td>
                   <td className="py-2.5 px-3 text-center"><Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40">{(i.efficiencyRetail * 100).toFixed(0)}%</Badge></td>
                   <td className="py-2.5 px-3 text-center font-mono text-emerald-300 font-bold">{fmtN(SELLABLE.retail)}</td>
                 </tr>
                 <tr>
-                  <td className="py-2.5 px-3 text-slate-200 flex items-center gap-2"><Briefcase className="w-4 h-4 text-purple-400" /> مكاتب</td>
-                  <td className="py-2.5 px-3 text-center font-mono text-white">{fmtN(i.gfaOffice)}</td>
+                  <td className="py-2.5 px-3 text-gray-700 flex items-center gap-2"><Briefcase className="w-4 h-4 text-purple-400" /> مكاتب</td>
+                  <td className="py-2.5 px-3 text-center font-mono text-gray-900">{fmtN(i.gfaOffice)}</td>
                   <td className="py-2.5 px-3 text-center"><Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40">{(i.efficiencyOffice * 100).toFixed(0)}%</Badge></td>
                   <td className="py-2.5 px-3 text-center font-mono text-emerald-300 font-bold">{fmtN(SELLABLE.office)}</td>
                 </tr>
@@ -517,9 +517,9 @@ export default function PricingPage() {
         )}
 
         {/* SECTION 5: PARKING SUMMARY */}
-        <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur">
+        <Card className="bg-gray-50 border-gray-200/50 backdrop-blur">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg text-white flex items-center gap-2">
+            <CardTitle className="text-lg text-gray-900 flex items-center gap-2">
               <Car className="w-5 h-5 text-cyan-400" />
               ملخص المواقف المطلوبة
             </CardTitle>
@@ -527,38 +527,38 @@ export default function PricingPage() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 p-4 text-center">
-                <div className="text-xs text-slate-400 mb-1">سكني</div>
+                <div className="text-xs text-gray-500 mb-1">سكني</div>
                 <div className="text-2xl font-bold text-blue-300 font-mono">{fmtN(calc.categoryParking.residential)}</div>
-                <div className="text-xs text-slate-500 mt-1">موقف</div>
+                <div className="text-xs text-gray-500 mt-1">موقف</div>
               </div>
               <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-center">
-                <div className="text-xs text-slate-400 mb-1">تجزئة</div>
+                <div className="text-xs text-gray-500 mb-1">تجزئة</div>
                 <div className="text-2xl font-bold text-amber-300 font-mono">{fmtN(calc.categoryParking.retail)}</div>
-                <div className="text-xs text-slate-500 mt-1">موقف</div>
+                <div className="text-xs text-gray-500 mt-1">موقف</div>
               </div>
               <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 p-4 text-center">
-                <div className="text-xs text-slate-400 mb-1">مكاتب</div>
+                <div className="text-xs text-gray-500 mb-1">مكاتب</div>
                 <div className="text-2xl font-bold text-purple-300 font-mono">{fmtN(calc.categoryParking.office)}</div>
-                <div className="text-xs text-slate-500 mt-1">موقف</div>
+                <div className="text-xs text-gray-500 mt-1">موقف</div>
               </div>
               <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-4 text-center">
-                <div className="text-xs text-slate-400 mb-1">الإجمالي</div>
+                <div className="text-xs text-gray-500 mb-1">الإجمالي</div>
                 <div className="text-2xl font-bold text-cyan-300 font-mono">{fmtN(calc.totalParking)}</div>
-                <div className="text-xs text-slate-500 mt-1">موقف</div>
+                <div className="text-xs text-gray-500 mt-1">موقف</div>
               </div>
             </div>
-            <div className="mt-4 p-3 rounded-lg bg-slate-700/30 border border-slate-600/30">
-              <p className="text-xs text-slate-400">
-                <strong className="text-slate-300">قاعدة الحساب:</strong> سكني أقل من 1,500 قدم = 1 موقف | سكني 1,500+ قدم = 2 موقف | تجزئة ومكاتب = 1 موقف لكل 500 قدم
+            <div className="mt-4 p-3 rounded-lg bg-gray-50 border border-gray-200">
+              <p className="text-xs text-gray-500">
+                <strong className="text-gray-600">قاعدة الحساب:</strong> سكني أقل من 1,500 قدم = 1 موقف | سكني 1,500+ قدم = 2 موقف | تجزئة ومكاتب = 1 موقف لكل 500 قدم
               </p>
             </div>
           </CardContent>
         </Card>
 
         {/* SECTION 6: REVENUE SUMMARY */}
-        <Card className="bg-gradient-to-br from-slate-800/80 to-emerald-900/30 border-emerald-700/30 backdrop-blur">
+        <Card className="bg-gradient-to-br from-gray-50 to-emerald-50 border-emerald-200 backdrop-blur">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg text-white flex items-center gap-2">
+            <CardTitle className="text-lg text-gray-900 flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-emerald-400" />
               ملخص الإيرادات المتوقعة
             </CardTitle>
@@ -566,42 +566,42 @@ export default function PricingPage() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
               <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 p-4 text-center">
-                <div className="text-xs text-slate-400 mb-1">إيراد السكني</div>
+                <div className="text-xs text-gray-500 mb-1">إيراد السكني</div>
                 <div className="text-xl font-bold text-blue-300 font-mono">{fmtN(calc.categoryRevenue.residential)}</div>
-                <div className="text-xs text-slate-500 mt-1">درهم</div>
+                <div className="text-xs text-gray-500 mt-1">درهم</div>
                 {calc.avgPrice.residential > 0 && (
                   <div className="text-xs text-blue-400 mt-1">متوسط: {fmtN(calc.avgPrice.residential)} د/قدم</div>
                 )}
               </div>
               <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-center">
-                <div className="text-xs text-slate-400 mb-1">إيراد التجزئة</div>
+                <div className="text-xs text-gray-500 mb-1">إيراد التجزئة</div>
                 <div className="text-xl font-bold text-amber-300 font-mono">{fmtN(calc.categoryRevenue.retail)}</div>
-                <div className="text-xs text-slate-500 mt-1">درهم</div>
+                <div className="text-xs text-gray-500 mt-1">درهم</div>
                 {calc.avgPrice.retail > 0 && (
                   <div className="text-xs text-amber-400 mt-1">متوسط: {fmtN(calc.avgPrice.retail)} د/قدم</div>
                 )}
               </div>
               <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 p-4 text-center">
-                <div className="text-xs text-slate-400 mb-1">إيراد المكاتب</div>
+                <div className="text-xs text-gray-500 mb-1">إيراد المكاتب</div>
                 <div className="text-xl font-bold text-purple-300 font-mono">{fmtN(calc.categoryRevenue.office)}</div>
-                <div className="text-xs text-slate-500 mt-1">درهم</div>
+                <div className="text-xs text-gray-500 mt-1">درهم</div>
                 {calc.avgPrice.office > 0 && (
                   <div className="text-xs text-purple-400 mt-1">متوسط: {fmtN(calc.avgPrice.office)} د/قدم</div>
                 )}
               </div>
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-center">
-                <div className="text-xs text-slate-400 mb-1">إجمالي الإيرادات</div>
+                <div className="text-xs text-gray-500 mb-1">إجمالي الإيرادات</div>
                 <div className="text-2xl font-bold text-emerald-300 font-mono">{fmtN(calc.totalRevenue)}</div>
-                <div className="text-xs text-slate-500 mt-1">درهم</div>
+                <div className="text-xs text-gray-500 mt-1">درهم</div>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* SECTION 7: TOTAL SUMMARY */}
-        <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur">
+        <Card className="bg-gray-50 border-gray-200/50 backdrop-blur">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg text-white flex items-center gap-2">
+            <CardTitle className="text-lg text-gray-900 flex items-center gap-2">
               <Building2 className="w-5 h-5 text-emerald-400" />
               ملخص إجمالي
             </CardTitle>
@@ -609,19 +609,19 @@ export default function PricingPage() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-center">
-                <div className="text-xs text-slate-400 mb-1">إجمالي الوحدات</div>
+                <div className="text-xs text-gray-500 mb-1">إجمالي الوحدات</div>
                 <div className="text-2xl font-bold text-emerald-300 font-mono">{fmtN(calc.totalUnits)}</div>
-                <div className="text-xs text-slate-500 mt-1">وحدة</div>
+                <div className="text-xs text-gray-500 mt-1">وحدة</div>
               </div>
               <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-4 text-center">
-                <div className="text-xs text-slate-400 mb-1">إجمالي المواقف</div>
+                <div className="text-xs text-gray-500 mb-1">إجمالي المواقف</div>
                 <div className="text-2xl font-bold text-cyan-300 font-mono">{fmtN(calc.totalParking)}</div>
-                <div className="text-xs text-slate-500 mt-1">موقف</div>
+                <div className="text-xs text-gray-500 mt-1">موقف</div>
               </div>
               <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-4 text-center">
-                <div className="text-xs text-slate-400 mb-1">إجمالي المساحة القابلة</div>
+                <div className="text-xs text-gray-500 mb-1">إجمالي المساحة القابلة</div>
                 <div className="text-2xl font-bold text-indigo-300 font-mono">{fmtN(SELLABLE.residential + SELLABLE.retail + SELLABLE.office)}</div>
-                <div className="text-xs text-slate-500 mt-1">قدم²</div>
+                <div className="text-xs text-gray-500 mt-1">قدم²</div>
               </div>
             </div>
           </CardContent>
@@ -661,10 +661,10 @@ function CategorySection({
   const StatusIcon = status.icon;
 
   return (
-    <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur">
+    <Card className="bg-gray-50 border-gray-200/50 backdrop-blur">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg text-white flex items-center gap-2">
+          <CardTitle className="text-lg text-gray-900 flex items-center gap-2">
             {icon}
             {title}
             <Badge className="text-xs mr-2" variant="outline">
@@ -695,13 +695,13 @@ function CategorySection({
       </CardHeader>
       <CardContent>
         {/* Balance bar */}
-        <div className="mb-4 p-3 rounded-lg bg-slate-700/30 border border-slate-600/30">
-          <div className="flex justify-between text-xs text-slate-400 mb-2">
+        <div className="mb-4 p-3 rounded-lg bg-gray-50 border border-gray-200">
+          <div className="flex justify-between text-xs text-gray-500 mb-2">
             <span>المستخدم: {fmtN(balance.used)} قدم²</span>
             <span>المتاح: {fmtN(balance.available)} قدم²</span>
             <span>الفرق: {fmtN(Math.abs(balance.diff))} قدم² {balance.diff >= 0 ? "(متبقي)" : "(تجاوز)"}</span>
           </div>
-          <div className="w-full h-3 bg-slate-700 rounded-full overflow-hidden">
+          <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-300 ${
                 balance.pct > 100 ? "bg-red-500" :
@@ -720,18 +720,18 @@ function CategorySection({
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-700">
-                <th className="text-right py-2 px-2 text-slate-400">النوع</th>
-                <th className="text-center py-2 px-2 text-slate-400">العدد</th>
-                <th className="text-center py-2 px-2 text-slate-400">المساحة</th>
-                <th className="text-center py-2 px-2 text-slate-400">سعر/قدم</th>
-                <th className="text-center py-2 px-2 text-slate-400">إجمالي المساحة</th>
-                <th className="text-center py-2 px-2 text-slate-400">سعر الوحدة</th>
-                <th className="text-center py-2 px-2 text-slate-400">الإيراد</th>
-                <th className="text-center py-2 px-2 text-slate-400">المواقف</th>
+              <tr className="border-b border-gray-200">
+                <th className="text-right py-2 px-2 text-gray-500">النوع</th>
+                <th className="text-center py-2 px-2 text-gray-500">العدد</th>
+                <th className="text-center py-2 px-2 text-gray-500">المساحة</th>
+                <th className="text-center py-2 px-2 text-gray-500">سعر/قدم</th>
+                <th className="text-center py-2 px-2 text-gray-500">إجمالي المساحة</th>
+                <th className="text-center py-2 px-2 text-gray-500">سعر الوحدة</th>
+                <th className="text-center py-2 px-2 text-gray-500">الإيراد</th>
+                <th className="text-center py-2 px-2 text-gray-500">المواقف</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-700/50">
+            <tbody className="divide-y divide-gray-200">
               {unitTypes.map(ut => {
                 const count = counts[ut.key] || 0;
                 const area = areas[ut.key] || ut.defaultArea;
@@ -742,14 +742,14 @@ function CategorySection({
                 const unitParking = calcParking(category === "residential" ? "res" : category, area, count);
                 return (
                   <tr key={ut.key}>
-                    <td className="py-2.5 px-2 text-slate-200">{ut.label}</td>
+                    <td className="py-2.5 px-2 text-gray-700">{ut.label}</td>
                     <td className="py-2.5 px-2 text-center">
                       <input
                         type="number"
                         min={0}
                         value={count}
                         onChange={e => onCountChange(ut.key, parseInt(e.target.value) || 0)}
-                        className="w-14 bg-slate-700/50 border border-slate-600 rounded px-1.5 py-1 text-center text-white text-sm focus:border-indigo-500 focus:outline-none"
+                        className="w-14 bg-gray-100 border border-gray-200 rounded px-1.5 py-1 text-center text-gray-900 text-sm focus:border-indigo-500 focus:outline-none"
                       />
                     </td>
                     <td className="py-2.5 px-2 text-center">
@@ -758,7 +758,7 @@ function CategorySection({
                         min={0}
                         value={area}
                         onChange={e => onAreaChange(ut.key, parseInt(e.target.value) || 0)}
-                        className="w-16 bg-slate-700/50 border border-slate-600 rounded px-1.5 py-1 text-center text-white text-sm focus:border-indigo-500 focus:outline-none"
+                        className="w-16 bg-gray-100 border border-gray-200 rounded px-1.5 py-1 text-center text-gray-900 text-sm focus:border-indigo-500 focus:outline-none"
                       />
                     </td>
                     <td className="py-2.5 px-2 text-center">
@@ -770,8 +770,8 @@ function CategorySection({
                         className="w-16 bg-amber-900/30 border border-amber-600/50 rounded px-1.5 py-1 text-center text-amber-200 text-sm focus:border-amber-400 focus:outline-none"
                       />
                     </td>
-                    <td className="py-2.5 px-2 text-center font-mono text-white text-xs">{count > 0 ? fmtN(total) : "—"}</td>
-                    <td className="py-2.5 px-2 text-center font-mono text-slate-300 text-xs">{count > 0 ? fmtN(unitPrice) : "—"}</td>
+                    <td className="py-2.5 px-2 text-center font-mono text-gray-900 text-xs">{count > 0 ? fmtN(total) : "—"}</td>
+                    <td className="py-2.5 px-2 text-center font-mono text-gray-600 text-xs">{count > 0 ? fmtN(unitPrice) : "—"}</td>
                     <td className="py-2.5 px-2 text-center font-mono text-emerald-300 text-xs font-bold">{count > 0 ? fmtN(rev) : "—"}</td>
                     <td className="py-2.5 px-2 text-center font-mono text-cyan-300 text-xs">{count > 0 ? unitParking : "—"}</td>
                   </tr>
@@ -779,13 +779,13 @@ function CategorySection({
               })}
             </tbody>
             <tfoot>
-              <tr className="border-t-2 border-slate-600 bg-slate-700/20">
-                <td className="py-2.5 px-2 text-white font-bold">الإجمالي</td>
-                <td className="py-2.5 px-2 text-center font-mono text-white font-bold">{totalUnits}</td>
-                <td className="py-2.5 px-2 text-center text-slate-500">—</td>
+              <tr className="border-t-2 border-gray-200 bg-gray-200/20">
+                <td className="py-2.5 px-2 text-gray-900 font-bold">الإجمالي</td>
+                <td className="py-2.5 px-2 text-center font-mono text-gray-900 font-bold">{totalUnits}</td>
+                <td className="py-2.5 px-2 text-center text-gray-500">—</td>
                 <td className="py-2.5 px-2 text-center text-xs text-amber-300">{avgPrice > 0 ? `${fmtN(avgPrice)} متوسط` : "—"}</td>
-                <td className="py-2.5 px-2 text-center font-mono text-white font-bold text-xs">{fmtN(balance.used)}</td>
-                <td className="py-2.5 px-2 text-center text-slate-500">—</td>
+                <td className="py-2.5 px-2 text-center font-mono text-gray-900 font-bold text-xs">{fmtN(balance.used)}</td>
+                <td className="py-2.5 px-2 text-center text-gray-500">—</td>
                 <td className="py-2.5 px-2 text-center font-mono text-emerald-300 font-bold text-xs">{fmtN(revenue)}</td>
                 <td className="py-2.5 px-2 text-center font-mono text-cyan-300 font-bold">{parking}</td>
               </tr>

@@ -204,29 +204,22 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
 
   return (
     <TooltipProvider>
-      <div className="space-y-6 p-4 md:p-6" dir="rtl">
+      <div className="space-y-2 p-2" dir="rtl">
         {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
-              <HardHat className="w-5 h-5 text-amber-500" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold">جدول الإنشاء</h1>
-              <p className="text-sm text-muted-foreground">نسب الإنجاز الشهرية ودفعات المقاول</p>
-            </div>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <h1 className="text-xs font-bold flex items-center gap-1">
+              <HardHat className="w-3 h-3 text-amber-500" />
+              جدول الإنشاء
+            </h1>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <ProjectSelector
               selectedProjectId={selectedProjectId}
               onSelect={setSelectedProjectId}
             />
-            <Button
-              onClick={handleSave}
-              disabled={!isDirty || updateProject.isPending || !selectedProjectId}
-              className="gap-2"
-            >
-              {updateProject.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            <Button size="sm" onClick={handleSave} disabled={!isDirty || updateProject.isPending || !selectedProjectId} className="gap-1 text-xs h-7">
+              {updateProject.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
               حفظ
             </Button>
           </div>
@@ -234,16 +227,15 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
 
         {!selectedProjectId && (
           <Card className="border-dashed">
-            <CardContent className="p-12 text-center text-muted-foreground">
-              <HardHat className="w-12 h-12 mx-auto mb-4 opacity-30" />
-              <p className="text-lg">اختر مشروعاً لعرض جدول الإنشاء</p>
+            <CardContent className="py-4 text-center text-muted-foreground">
+              <p className="text-xs">اختر مشروعاً</p>
             </CardContent>
           </Card>
         )}
 
         {selectedProjectId && projectQuery.isLoading && (
-          <div className="flex items-center justify-center p-12">
-            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
           </div>
         )}
 

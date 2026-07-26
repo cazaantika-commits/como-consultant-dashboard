@@ -2,7 +2,6 @@ import { useState, lazy, Suspense } from "react";
 import { useLocation } from "wouter";
 import { ArrowRight, ClipboardList, HardHat, Target, Settings, Calendar, TrendingDown, FileText, Building2, Briefcase, LayoutGrid } from "lucide-react";
 
-// Lazy load the actual page components
 const GeneralInputsPage = lazy(() => import("./GeneralInputsPage"));
 const PricingPage = lazy(() => import("./PricingPage"));
 const ConstructionInputsPage = lazy(() => import("./ConstructionInputsPage"));
@@ -48,12 +47,9 @@ function TabContent({ tabId }: { tabId: TabId }) {
       return <FeasibilityStudyPage embedded />;
     case "mall":
       return (
-        <div className="flex flex-col items-center justify-center text-center gap-4 py-20">
-          <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center">
-            <Building2 className="w-8 h-8 text-gray-400" />
-          </div>
-          <h2 className="text-xl font-bold text-gray-800">المركز التجاري</h2>
-          <p className="text-sm text-gray-500">مشروع التأجير — قيد الإنشاء</p>
+        <div className="flex flex-col items-center justify-center text-center gap-2 py-12">
+          <Building2 className="w-8 h-8 text-gray-300" />
+          <p className="text-xs text-gray-400">المركز التجاري — قيد الإنشاء</p>
         </div>
       );
     case "portfolio":
@@ -71,20 +67,15 @@ export default function BateekhaPage() {
   const outputTabs = TABS.filter(t => t.group === "output");
 
   return (
-    <div className="min-h-screen bg-gray-50" dir="rtl">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-full mx-auto px-2 h-8 flex items-center gap-2">
-          <button onClick={() => navigate("/")} className="p-1 rounded hover:bg-gray-100 transition">
-            <ArrowRight className="w-4 h-4 text-gray-600" />
+    <div className="min-h-screen bg-white" dir="rtl">
+      {/* Combined Header + Tabs in one compact bar */}
+      <div className="sticky top-0 z-50 bg-white border-b border-gray-200">
+        <div className="flex items-center h-7 px-1 gap-1">
+          <button onClick={() => navigate("/")} className="p-0.5 rounded hover:bg-gray-100">
+            <ArrowRight className="w-3.5 h-3.5 text-gray-500" />
           </button>
-          <h1 className="text-sm font-bold text-gray-900">📊 الدراسات والتخطيط المالي</h1>
-        </div>
-      </header>
-
-      {/* Tabs */}
-      <div className="border-b border-gray-200 bg-white sticky top-8 z-40">
-        <div className="max-w-full mx-auto px-2 flex gap-0 overflow-x-auto items-center">
+          <span className="text-[10px] font-bold text-gray-700 whitespace-nowrap ml-1">الدراسات والتخطيط المالي</span>
+          <div className="h-3 w-px bg-gray-200 mx-0.5 shrink-0" />
           {/* Input Tabs */}
           {inputTabs.map((tab) => {
             const Icon = tab.icon;
@@ -92,21 +83,18 @@ export default function BateekhaPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-2 py-1 text-[11px] font-medium whitespace-nowrap border-b-2 transition-colors flex items-center gap-0.5 ${
+                className={`px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap rounded transition-colors flex items-center gap-0.5 leading-none ${
                   activeTab === tab.id
-                    ? "border-emerald-600 text-emerald-700 bg-emerald-50"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
+                    ? "bg-emerald-100 text-emerald-800"
+                    : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
                 }`}
               >
-                <Icon className="w-3 h-3" />
+                <Icon className="w-2.5 h-2.5" />
                 {tab.label}
               </button>
             );
           })}
-
-          {/* Separator */}
-          <div className="h-4 w-px bg-gray-300 mx-1 shrink-0" />
-
+          <div className="h-3 w-px bg-gray-200 mx-0.5 shrink-0" />
           {/* Output Tabs */}
           {outputTabs.map((tab) => {
             const Icon = tab.icon;
@@ -114,13 +102,13 @@ export default function BateekhaPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-2 py-1 text-[11px] font-medium whitespace-nowrap border-b-2 transition-colors flex items-center gap-0.5 ${
+                className={`px-1.5 py-0.5 text-[10px] font-medium whitespace-nowrap rounded transition-colors flex items-center gap-0.5 leading-none ${
                   activeTab === tab.id
-                    ? "border-blue-600 text-blue-700 bg-blue-50"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
+                    ? "bg-blue-100 text-blue-800"
+                    : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
                 }`}
               >
-                <Icon className="w-3 h-3" />
+                <Icon className="w-2.5 h-2.5" />
                 {tab.label}
               </button>
             );
@@ -128,11 +116,11 @@ export default function BateekhaPage() {
         </div>
       </div>
 
-      {/* Content */}
+      {/* Content - no padding, full width, white bg */}
       <div className="w-full">
         <Suspense fallback={
-          <div className="flex items-center justify-center py-20">
-            <div className="animate-spin w-8 h-8 border-4 border-gray-200 border-t-emerald-600 rounded-full" />
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin w-5 h-5 border-2 border-gray-200 border-t-emerald-600 rounded-full" />
           </div>
         }>
           <TabContent tabId={activeTab} />

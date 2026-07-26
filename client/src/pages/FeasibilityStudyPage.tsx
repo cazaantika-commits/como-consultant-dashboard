@@ -496,16 +496,16 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
   };
 
   // Auth check
-  if (loading) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
+  if (loading) return <div className="flex items-center justify-center py-8"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   if (!isAuthenticated) return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+    <div className="flex flex-col items-center justify-center py-8 gap-4">
       <p className="text-muted-foreground">يرجى تسجيل الدخول</p>
       <Button onClick={() => window.location.href = getLoginUrl()}>تسجيل الدخول</Button>
     </div>
   );
 
   return (
-    <div className={embedded ? "bg-background" : "min-h-screen bg-gradient-to-b from-muted/30 to-background"} dir="rtl">
+    <div className="bg-white" dir="rtl">
       <div className="container max-w-7xl py-6 space-y-5">
 
         {/* Header */}
