@@ -1,216 +1,228 @@
 import { useState, useMemo } from "react";
-import { useLocation } from "wouter";
-import { ArrowRight, DollarSign, Target, BarChart3, Zap, TrendingUp, Calculator } from "lucide-react";
 
-/* ═══════════════════════════════════════
-   بيانات الوحدات
-   ═══════════════════════════════════════ */
-const UNITS = [
-  { id: "studio", name: "استوديو", area: 400, count: 50, color: "#6366f1" },
-  { id: "1br", name: "غرفة وصالة", area: 700, count: 80, color: "#8b5cf6" },
-  { id: "2br", name: "غرفتين", area: 1050, count: 60, color: "#a855f7" },
-  { id: "3br", name: "ثلاث غرف", area: 1400, count: 30, color: "#d946ef" },
-  { id: "retail", name: "محلات", area: 600, count: 15, color: "#f59e0b" },
-  { id: "office", name: "مكاتب", area: 900, count: 20, color: "#10b981" },
+// ─── Data Model ───────────────────────────────────────────────────────────────
+const UNIT_TYPES = [
+  { id: "studio", name: "استوديو", count: 50, area: 400, color: "#6366f1", defaultPrice: 1350 },
+  { id: "1br", name: "غرفة وصالة", count: 80, area: 700, color: "#8b5cf6", defaultPrice: 1250 },
+  { id: "2br", name: "غرفتين", count: 60, area: 1050, color: "#a855f7", defaultPrice: 1200 },
+  { id: "3br", name: "ثلاث غرف", count: 30, area: 1400, color: "#d946ef", defaultPrice: 1150 },
+  { id: "retail", name: "محلات", count: 15, area: 600, color: "#f59e0b", defaultPrice: 1800 },
+  { id: "office", name: "مكاتب", count: 20, area: 900, color: "#10b981", defaultPrice: 1400 },
 ];
-const TOTAL_UNITS = UNITS.reduce((s, u) => s + u.count, 0);
 
-const fmt = (n: number) => {
+const TOTAL_UNITS = UNIT_TYPES.reduce((s, u) => s + u.count, 0);
+
+function fmt(n: number): string {
+  if (Math.abs(n) >= 1e9) return (n / 1e9).toFixed(1) + "B";
   if (Math.abs(n) >= 1e6) return (n / 1e6).toFixed(1) + "M";
   if (Math.abs(n) >= 1e3) return (n / 1e3).toFixed(0) + "K";
   return n.toFixed(0);
-};
+}
+
+// Bell curve distribution
+function bellCurve(months: number, total: number): number[] {
+  const mid = months / 2;
+  const sigma = months / 5;
+  const raw = Array.from({ length: months }, (_, i) =>
+    Math.exp(-0.5 * Math.pow((i - mid) / sigma, 2))
+  );
+  const sum = raw.reduce((a, b) => a + b, 0);
+  const scaled = raw.map((v) => Math.round((v / sum) * total));
+  const diff = total - scaled.reduce((a, b) => a + b, 0);
+  if (diff !== 0) scaled[Math.floor(mid)] += diff;
+  return scaled;
+}
 
 export default function V2WaelSales() {
-  const [, navigate] = useLocation();
-
-  // ═══ State: Timeline ═══
+  // ─── State ────────────────────────────────────────────────────────────────
+  const [prices, setPrices] = useState<Record<string, number>>(
+    Object.fromEntries(UNIT_TYPES.map((u) => [u.id, u.defaultPrice]))
+  );
   const [salesStart, setSalesStart] = useState(1);
   const [projectEnd, setProjectEnd] = useState(30);
-  const salesMonths = projectEnd - salesStart + 1;
-
-  // ═══ State: Pricing ═══
-  const [prices, setPrices] = useState<Record<string, number>>({
-    studio: 1350, "1br": 1250, "2br": 1200, "3br": 1150, retail: 1800, office: 1400,
-  });
-
-  // ═══ State: Costs ═══
-  const [marketingPct, setMarketingPct] = useState(2);
-  const [salesCommPct, setSalesCommPct] = useState(5);
-  const [materialsCost, setMaterialsCost] = useState(2); // M
-
-  // ═══ State: Sales Mode ═══
-  const [salesMode, setSalesMode] = useState<"auto" | "manual" | "detail">("auto");
   const [offPlan, setOffPlan] = useState(75);
-  const [salesSpeed, setSalesSpeed] = useState(50);
-  const [manualUnits, setManualUnits] = useState<number[]>(Array(60).fill(0));
-  const [detailUnits, setDetailUnits] = useState<number[][]>(UNITS.map(() => Array(60).fill(0)));
+  const [marketingPct, setMarketingPct] = useState(2);
+  const [commissionPct, setCommissionPct] = useState(5);
+  const [materialsCost, setMaterialsCost] = useState(2); // in millions
+  const [salesMode, setSalesMode] = useState<"auto" | "manual" | "detail">("auto");
+  const [manualUnits, setManualUnits] = useState<number[]>([]);
+  const [speed, setSpeed] = useState(50);
 
-  // ═══ Computed ═══
-  const results = useMemo(() => {
-    // Revenue per unit type
-    const revenueByType = UNITS.map(u => ({
-      ...u,
-      totalArea: u.area * u.count,
-      totalRevenue: u.area * u.count * (prices[u.id] || 0),
-    }));
-    const revenue = revenueByType.reduce((s, r) => s + r.totalRevenue, 0);
+  // ─── Computed ─────────────────────────────────────────────────────────────
+  const months = projectEnd - salesStart + 1;
 
-    // Costs
-    const marketing = revenue * (marketingPct / 100);
-    const salesComm = revenue * (salesCommPct / 100);
-    const materials = materialsCost * 1e6;
-    const constructionCost = UNITS.reduce((s, u) => s + u.area * u.count, 0) * 450; // ~450/sqft construction
-    const totalCosts = constructionCost + marketing + salesComm + materials;
-    const profit = revenue - totalCosts;
-    const capitalBase = constructionCost * 0.3 + materials; // peak capital = 30% construction + materials
-    const roiCapital = capitalBase > 0 ? (profit / capitalBase) * 100 : 0;
-    const marginPct = totalCosts > 0 ? (profit / totalCosts) * 100 : 0;
+  const unitRevenues = useMemo(
+    () => UNIT_TYPES.map((u) => ({ ...u, total: u.count * u.area * prices[u.id], totalArea: u.count * u.area })),
+    [prices]
+  );
 
-    // Sales distribution
-    const offPlanUnits = Math.round(TOTAL_UNITS * offPlan / 100);
-    let monthlyUnits: number[] = Array(salesMonths).fill(0);
+  const totalRevenue = unitRevenues.reduce((s, u) => s + u.total, 0);
+  const totalArea = unitRevenues.reduce((s, u) => s + u.totalArea, 0);
 
-    if (salesMode === "auto") {
-      // Bell curve based on speed
-      const peak = salesSpeed < 30 ? salesMonths * 0.7 : salesSpeed < 70 ? salesMonths * 0.5 : salesMonths * 0.3;
-      const sigma = salesMonths / 4;
-      let raw = Array.from({ length: salesMonths }, (_, i) => Math.exp(-0.5 * ((i - peak) / sigma) ** 2));
-      const rawSum = raw.reduce((s, v) => s + v, 0);
-      monthlyUnits = raw.map(v => Math.round((v / rawSum) * offPlanUnits));
-      // Adjust rounding
-      const diff = offPlanUnits - monthlyUnits.reduce((s, v) => s + v, 0);
-      if (diff !== 0) monthlyUnits[Math.floor(peak)] += diff;
-    } else if (salesMode === "manual") {
-      monthlyUnits = manualUnits.slice(0, salesMonths);
-    } else {
-      monthlyUnits = Array.from({ length: salesMonths }, (_, mi) =>
-        UNITS.reduce((s, _, ui) => s + (detailUnits[ui]?.[mi] || 0), 0)
-      );
+  const constructionCost = totalArea * 450; // 450 AED/sqft construction
+  const marketingCost = totalRevenue * (marketingPct / 100);
+  const commissionCost = totalRevenue * (commissionPct / 100);
+  const materialsTotal = materialsCost * 1e6;
+  const totalCosts = constructionCost + marketingCost + commissionCost + materialsTotal;
+  const profit = totalRevenue - totalCosts;
+  const roiPct = ((profit / constructionCost) * 100).toFixed(0);
+  const marginPct = ((profit / totalCosts) * 100).toFixed(0);
+
+  // Escrow starts at 20% of construction cost
+  const escrowInitial = constructionCost * 0.2;
+  const monthlySiphon = constructionCost / months;
+
+  const offPlanUnits = Math.round((TOTAL_UNITS * offPlan) / 100);
+
+  const salesDistribution = useMemo(() => {
+    if (salesMode === "manual" && manualUnits.length === months) {
+      return manualUnits;
     }
+    // Auto mode with speed factor
+    const mid = months * (1 - speed / 100) + (months / 2) * (speed / 100);
+    const sigma = months / (3 + (speed / 100) * 3);
+    const raw = Array.from({ length: months }, (_, i) =>
+      Math.exp(-0.5 * Math.pow((i - mid + months / 2) / sigma, 2))
+    );
+    const sum = raw.reduce((a, b) => a + b, 0);
+    const scaled = raw.map((v) => Math.max(1, Math.round((v / sum) * offPlanUnits)));
+    const diff = offPlanUnits - scaled.reduce((a, b) => a + b, 0);
+    if (diff !== 0) scaled[Math.floor(months / 2)] += diff;
+    return scaled;
+  }, [months, offPlanUnits, speed, salesMode, manualUnits]);
 
-    const totalSold = monthlyUnits.reduce((s, v) => s + v, 0);
+  const avgUnitPrice = totalRevenue / TOTAL_UNITS;
 
-    // Escrow calculation
-    const avgPricePerUnit = revenue / TOTAL_UNITS;
-    const monthlyConstCost = constructionCost / salesMonths;
-    let balance = 0;
-    let maxDeficit = 0;
-    const escrowData = monthlyUnits.map((units, i) => {
-      const escrowIn = units * avgPricePerUnit * 0.80; // 80% enters escrow
-      const escrowOut = monthlyConstCost;
-      balance += escrowIn - escrowOut;
-      if (balance < maxDeficit) maxDeficit = balance;
-      return { month: salesStart + i, units, escrowIn, escrowOut, balance };
+  // Escrow monthly calculation
+  const escrowData = useMemo(() => {
+    let balance = escrowInitial;
+    return salesDistribution.map((units, i) => {
+      const income = units * avgUnitPrice * 0.8 * 0.3; // 80% goes to escrow, 30% first payment
+      const withdrawal = monthlySiphon;
+      balance = balance + income - withdrawal;
+      return { month: i + 1 + salesStart - 1, units, income, withdrawal, balance };
     });
+  }, [salesDistribution, escrowInitial, avgUnitPrice, monthlySiphon, salesStart]);
 
-    return {
-      revenueByType, revenue, marketing, salesComm, materials, constructionCost,
-      totalCosts, profit, capitalBase, roiCapital, marginPct,
-      monthlyUnits, totalSold, offPlanUnits,
-      escrowData, hasDeficit: maxDeficit < 0, deficitAmount: Math.abs(maxDeficit),
-    };
-  }, [prices, marketingPct, salesCommPct, materialsCost, salesMode, offPlan, salesSpeed, manualUnits, detailUnits, salesStart, projectEnd, salesMonths]);
+  const maxDeficit = Math.min(...escrowData.map((d) => d.balance));
+  const maxBalance = Math.max(...escrowData.map((d) => d.balance));
+  const chartMax = Math.max(Math.abs(maxDeficit), Math.abs(maxBalance));
+  const hasDeficit = maxDeficit < 0;
+  const deficitMonths = escrowData.filter((d) => d.balance < 0).length;
 
-  const updateManual = (idx: number, val: number) => {
-    const arr = [...manualUnits];
-    arr[idx] = Math.max(0, val);
-    setManualUnits(arr);
-  };
-  const updateDetail = (unitIdx: number, monthIdx: number, val: number) => {
-    const arr = detailUnits.map(r => [...r]);
-    arr[unitIdx][monthIdx] = Math.max(0, val);
-    setDetailUnits(arr);
-  };
+  const totalSold = salesDistribution.reduce((a, b) => a + b, 0);
+  const totalEscrowIn = escrowData.reduce((s, d) => s + d.income, 0);
+  const totalEscrowOut = escrowData.reduce((s, d) => s + d.withdrawal, 0);
 
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20" dir="rtl">
-
-      {/* ═══ Header ═══ */}
-      <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-slate-200 px-4 py-1.5">
-        <div className="max-w-[1600px] mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <button onClick={() => navigate("/v2")} className="p-1 rounded hover:bg-slate-100">
-              <ArrowRight className="w-3.5 h-3.5 text-slate-500" />
-            </button>
-            <h1 className="text-xs font-black text-slate-800">غرفة عمليات المبيعات</h1>
-            <span className="text-[9px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">مجان — G+4P+25</span>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/30" dir="rtl">
+      {/* ═══ HEADER ═══ */}
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 border-b border-slate-200/60 shadow-sm">
+        <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-200">
+              <span className="text-white text-sm font-bold">W</span>
+            </div>
+            <div>
+              <h1 className="text-base font-bold text-slate-800">غرفة عمليات المبيعات</h1>
+              <p className="text-[11px] text-slate-400">مجان — G+4P+25 • وائل</p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 text-[9px]">
-              <span className="text-slate-400">بداية:</span>
-              <input type="number" min={1} max={projectEnd-1} value={salesStart}
-                onChange={e => setSalesStart(Math.max(1,+e.target.value))}
-                className="w-7 h-4 text-[9px] text-center font-bold rounded border border-slate-200" />
-              <span className="text-slate-400">نهاية:</span>
-              <input type="number" min={salesStart+1} max={60} value={projectEnd}
-                onChange={e => setProjectEnd(Math.max(salesStart+1,+e.target.value))}
-                className="w-7 h-4 text-[9px] text-center font-bold rounded border border-slate-200" />
-              <span className="text-blue-600 bg-blue-50 px-1 py-0.5 rounded text-[8px] font-bold">{salesMonths} شهر</span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+              <span>الشهر {salesStart}</span>
+              <span className="text-slate-300">→</span>
+              <span>الشهر {projectEnd}</span>
+              <span className="bg-slate-100 px-2 py-0.5 rounded-full text-[10px] font-medium">{months} شهر</span>
             </div>
-            <div className={`px-2 py-0.5 rounded flex items-center gap-1 text-[9px] font-bold ${results.hasDeficit ? "bg-red-50 text-red-600 border border-red-200" : "bg-emerald-50 text-emerald-600 border border-emerald-200"}`}>
-              {results.hasDeficit ? `⚠ عجز: ${fmt(results.deficitAmount)}` : "✓ متوازن"}
-            </div>
+            {hasDeficit && (
+              <div className="flex items-center gap-1.5 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
+                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                <span className="text-xs font-bold text-red-700">عجز {fmt(Math.abs(maxDeficit))}</span>
+                <span className="text-[10px] text-red-400">({deficitMonths} شهر)</span>
+              </div>
+            )}
+            {!hasDeficit && (
+              <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5">
+                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span className="text-xs font-bold text-emerald-700">الضمان آمن</span>
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="max-w-[1600px] mx-auto p-3 space-y-3">
-
-        {/* ═══════════════════════════════════════
-           القسم 1: التسعير
-           ═══════════════════════════════════════ */}
-        <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
-          <div className="px-3 py-1.5 border-b border-slate-100 flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <DollarSign className="w-3.5 h-3.5 text-indigo-500" />
-              <span className="text-[11px] font-bold text-slate-700">تسعير الوحدات</span>
+      <main className="max-w-[1600px] mx-auto px-6 py-5 space-y-5">
+        {/* ═══ SECTION 1: PRICING ═══ */}
+        <section className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-lg bg-indigo-50 flex items-center justify-center">
+                <span className="text-indigo-600 text-xs">💰</span>
+              </div>
+              <h2 className="text-sm font-bold text-slate-700">تسعير الوحدات</h2>
             </div>
-            <span className="text-[10px] font-black text-emerald-600">إجمالي: {fmt(results.revenue)}</span>
+            <div className="flex items-center gap-3 text-xs">
+              <span className="text-slate-400">إجمالي المساحة:</span>
+              <span className="font-bold text-slate-700">{totalArea.toLocaleString()} قدم²</span>
+              <span className="text-slate-300">|</span>
+              <span className="text-slate-400">إجمالي الإيرادات:</span>
+              <span className="font-bold text-indigo-600">{fmt(totalRevenue)}</span>
+            </div>
           </div>
-          <div className="p-2">
-            <table className="w-full text-[9px] border-collapse">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/50">
-                  <th className="text-right px-1.5 py-0.5 text-slate-500 w-20">النوع</th>
-                  <th className="text-center px-1 py-0.5 text-slate-500">العدد</th>
-                  <th className="text-center px-1 py-0.5 text-slate-500">مساحة الوحدة</th>
-                  <th className="text-center px-1 py-0.5 text-slate-500">المساحة الكلية</th>
-                  <th className="text-center px-1 py-0.5 text-slate-500 w-[140px]">السعر / قدم²</th>
-                  <th className="text-center px-1 py-0.5 text-slate-500">إجمالي النوع</th>
-                  <th className="text-center px-1 py-0.5 text-slate-500 w-16">النسبة</th>
+                <tr className="bg-slate-50/80 text-slate-500 text-[11px]">
+                  <th className="py-2 px-3 text-right font-medium w-24">النوع</th>
+                  <th className="py-2 px-2 text-center font-medium w-14">العدد</th>
+                  <th className="py-2 px-2 text-center font-medium w-20">مساحة الوحدة</th>
+                  <th className="py-2 px-2 text-center font-medium w-24">المساحة الكلية</th>
+                  <th className="py-2 px-2 text-center font-medium w-64">السعر / قدم²</th>
+                  <th className="py-2 px-2 text-center font-medium w-24">إجمالي النوع</th>
+                  <th className="py-2 px-2 text-center font-medium w-16">النسبة</th>
+                  <th className="py-2 px-2 text-center font-medium w-32">المساهمة</th>
                 </tr>
               </thead>
               <tbody>
-                {results.revenueByType.map(u => {
-                  const pct = results.revenue > 0 ? (u.totalRevenue / results.revenue) * 100 : 0;
+                {unitRevenues.map((u) => {
+                  const pct = ((u.total / totalRevenue) * 100).toFixed(0);
                   return (
-                    <tr key={u.id} className="border-b border-slate-50 hover:bg-slate-50/30 h-6">
-                      <td className="px-1.5 py-0">
-                        <div className="flex items-center gap-1">
-                          <div className="w-1.5 h-1.5 rounded-full" style={{ background: u.color }} />
-                          <span className="font-bold text-slate-700">{u.name}</span>
+                    <tr key={u.id} className="border-t border-slate-50 hover:bg-slate-50/50 transition-colors">
+                      <td className="py-1.5 px-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: u.color }} />
+                          <span className="font-medium text-slate-700">{u.name}</span>
                         </div>
                       </td>
-                      <td className="text-center px-1 py-0 font-mono font-bold text-slate-700">{u.count}</td>
-                      <td className="text-center px-1 py-0 font-mono text-slate-500">{u.area}</td>
-                      <td className="text-center px-1 py-0 font-mono font-bold text-slate-600">{u.totalArea.toLocaleString()}</td>
-                      <td className="text-center px-1 py-0">
-                        <div className="flex items-center gap-1">
-                          <input type="range" min={800} max={2500} step={50} value={prices[u.id]}
-                            onChange={e => setPrices(p => ({ ...p, [u.id]: +e.target.value }))}
-                            className="flex-1 h-0.5 rounded appearance-none cursor-pointer"
-                            style={{ accentColor: u.color } as any} />
-                          <span className="font-mono font-black w-8 text-left text-[9px]" style={{ color: u.color }}>{prices[u.id]}</span>
+                      <td className="py-1.5 px-2 text-center font-bold text-slate-800">{u.count}</td>
+                      <td className="py-1.5 px-2 text-center text-slate-500">{u.area} ft²</td>
+                      <td className="py-1.5 px-2 text-center font-medium text-slate-600">{u.totalArea.toLocaleString()}</td>
+                      <td className="py-1.5 px-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="range"
+                            min={800}
+                            max={2500}
+                            step={50}
+                            value={prices[u.id]}
+                            onChange={(e) => setPrices((p) => ({ ...p, [u.id]: +e.target.value }))}
+                            className="flex-1 h-1.5 accent-indigo-500 cursor-pointer"
+                          />
+                          <span className="w-12 text-center font-bold text-indigo-600 bg-indigo-50 rounded px-1.5 py-0.5 text-[11px]">
+                            {prices[u.id]}
+                          </span>
                         </div>
                       </td>
-                      <td className="text-center px-1 py-0 font-mono font-black text-emerald-600">{fmt(u.totalRevenue)}</td>
-                      <td className="text-center px-1 py-0">
-                        <div className="flex items-center gap-0.5">
-                          <div className="flex-1 h-1 bg-slate-100 rounded-full overflow-hidden">
-                            <div className="h-full rounded-full" style={{ width: `${pct}%`, background: u.color }} />
-                          </div>
-                          <span className="text-[8px] text-slate-500 w-5">{pct.toFixed(0)}%</span>
+                      <td className="py-1.5 px-2 text-center font-bold text-slate-800">{fmt(u.total)}</td>
+                      <td className="py-1.5 px-2 text-center text-slate-500">{pct}%</td>
+                      <td className="py-1.5 px-2">
+                        <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-300"
+                            style={{ width: `${pct}%`, backgroundColor: u.color }}
+                          />
                         </div>
                       </td>
                     </tr>
@@ -218,329 +230,361 @@ export default function V2WaelSales() {
                 })}
               </tbody>
               <tfoot>
-                <tr className="border-t border-slate-200 bg-slate-50/60 font-bold h-6">
-                  <td className="px-1.5 py-0 text-slate-700">الإجمالي</td>
-                  <td className="text-center px-1 py-0 font-mono text-slate-700">{TOTAL_UNITS}</td>
-                  <td className="text-center px-1 py-0 text-slate-400">—</td>
-                  <td className="text-center px-1 py-0 font-mono text-slate-700">{UNITS.reduce((s,u) => s + u.area*u.count, 0).toLocaleString()}</td>
-                  <td className="text-center px-1 py-0 text-slate-400">—</td>
-                  <td className="text-center px-1 py-0 font-mono font-black text-emerald-600">{fmt(results.revenue)}</td>
-                  <td className="text-center px-1 py-0 text-slate-700">100%</td>
+                <tr className="border-t-2 border-slate-200 bg-slate-50/50">
+                  <td className="py-2 px-3 font-bold text-slate-700">الإجمالي</td>
+                  <td className="py-2 px-2 text-center font-bold text-slate-800">{TOTAL_UNITS}</td>
+                  <td className="py-2 px-2 text-center text-slate-400">—</td>
+                  <td className="py-2 px-2 text-center font-bold text-slate-700">{totalArea.toLocaleString()}</td>
+                  <td className="py-2 px-2 text-center text-slate-400">—</td>
+                  <td className="py-2 px-2 text-center font-bold text-indigo-600">{fmt(totalRevenue)}</td>
+                  <td className="py-2 px-2 text-center font-bold">100%</td>
+                  <td className="py-2 px-2" />
                 </tr>
               </tfoot>
             </table>
           </div>
-        </div>
+        </section>
 
-        {/* ═══════════════════════════════════════
-           القسم 2: الملخص المالي + التكاليف
-           ═══════════════════════════════════════ */}
-        <div className="grid grid-cols-12 gap-3">
+        {/* ═══ SECTION 2: FINANCIAL SUMMARY + COSTS ═══ */}
+        <div className="grid grid-cols-12 gap-4">
           {/* Financial Summary */}
-          <div className="col-span-7 bg-white rounded-lg border border-slate-200 shadow-sm p-3">
-            <div className="flex items-center gap-1.5 mb-2">
-              <Calculator className="w-3.5 h-3.5 text-blue-500" />
-              <span className="text-[11px] font-bold text-slate-700">الملخص المالي</span>
+          <div className="col-span-7 bg-white rounded-2xl border border-slate-200/60 shadow-sm p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-6 h-6 rounded-lg bg-emerald-50 flex items-center justify-center">
+                <span className="text-emerald-600 text-xs">📊</span>
+              </div>
+              <h2 className="text-sm font-bold text-slate-700">الملخص المالي</h2>
             </div>
             <div className="grid grid-cols-5 gap-2">
-              <div className="bg-emerald-50 rounded-lg px-2 py-1.5 text-center border border-emerald-100">
-                <div className="text-[7px] text-emerald-500 font-medium">الإيرادات</div>
-                <div className="text-[13px] font-black text-emerald-700">{fmt(results.revenue)}</div>
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-3 text-center border border-blue-100">
+                <p className="text-[10px] text-blue-500 mb-0.5">الإيرادات</p>
+                <p className="text-lg font-black text-blue-700">{fmt(totalRevenue)}</p>
               </div>
-              <div className="bg-red-50 rounded-lg px-2 py-1.5 text-center border border-red-100">
-                <div className="text-[7px] text-red-500 font-medium">التكاليف</div>
-                <div className="text-[13px] font-black text-red-600">{fmt(results.totalCosts)}</div>
+              <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-3 text-center border border-orange-100">
+                <p className="text-[10px] text-orange-500 mb-0.5">التكاليف</p>
+                <p className="text-lg font-black text-orange-700">{fmt(totalCosts)}</p>
               </div>
-              <div className="bg-blue-50 rounded-lg px-2 py-1.5 text-center border border-blue-100">
-                <div className="text-[7px] text-blue-500 font-medium">الأرباح</div>
-                <div className="text-[13px] font-black text-blue-700">{fmt(results.profit)}</div>
+              <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-3 text-center border border-emerald-100">
+                <p className="text-[10px] text-emerald-500 mb-0.5">الأرباح</p>
+                <p className="text-lg font-black text-emerald-700">{fmt(profit)}</p>
               </div>
-              <div className="bg-purple-50 rounded-lg px-2 py-1.5 text-center border border-purple-100">
-                <div className="text-[7px] text-purple-500 font-medium">الربح / رأس المال</div>
-                <div className="text-[13px] font-black text-purple-700">{results.roiCapital.toFixed(0)}%</div>
+              <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl p-3 text-center border border-purple-100">
+                <p className="text-[10px] text-purple-500 mb-0.5">ربح / رأس المال</p>
+                <p className="text-lg font-black text-purple-700">{roiPct}%</p>
               </div>
-              <div className="bg-indigo-50 rounded-lg px-2 py-1.5 text-center border border-indigo-100">
-                <div className="text-[7px] text-indigo-500 font-medium">الربح / التكاليف</div>
-                <div className="text-[13px] font-black text-indigo-700">{results.marginPct.toFixed(0)}%</div>
+              <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-xl p-3 text-center border border-pink-100">
+                <p className="text-[10px] text-pink-500 mb-0.5">ربح / التكاليف</p>
+                <p className="text-lg font-black text-pink-700">{marginPct}%</p>
+              </div>
+            </div>
+            {/* Cost breakdown bar */}
+            <div className="mt-3 bg-slate-50 rounded-xl p-3">
+              <div className="flex items-center justify-between text-[10px] text-slate-500 mb-1.5">
+                <span>توزيع التكاليف</span>
+                <span>{fmt(totalCosts)}</span>
+              </div>
+              <div className="flex h-3 rounded-full overflow-hidden gap-0.5">
+                <div className="bg-slate-400 rounded-full" style={{ width: `${(constructionCost / totalCosts) * 100}%` }} title="إنشاء" />
+                <div className="bg-amber-400 rounded-full" style={{ width: `${(marketingCost / totalCosts) * 100}%` }} title="تسويق" />
+                <div className="bg-violet-400 rounded-full" style={{ width: `${(commissionCost / totalCosts) * 100}%` }} title="عمولة" />
+                <div className="bg-rose-400 rounded-full" style={{ width: `${(materialsTotal / totalCosts) * 100}%` }} title="مواد" />
+              </div>
+              <div className="flex items-center gap-4 mt-2 text-[10px]">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-400" />إنشاء {fmt(constructionCost)}</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" />تسويق {fmt(marketingCost)}</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-violet-400" />عمولة {fmt(commissionCost)}</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-400" />مواد {fmt(materialsTotal)}</span>
               </div>
             </div>
           </div>
 
-          {/* Cost Inputs */}
-          <div className="col-span-5 bg-white rounded-lg border border-slate-200 shadow-sm p-3">
-            <div className="flex items-center gap-1.5 mb-2">
-              <TrendingUp className="w-3.5 h-3.5 text-amber-500" />
-              <span className="text-[11px] font-bold text-slate-700">تكاليف العملية</span>
+          {/* Operations Costs Controls */}
+          <div className="col-span-5 bg-white rounded-2xl border border-slate-200/60 shadow-sm p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-6 h-6 rounded-lg bg-amber-50 flex items-center justify-center">
+                <span className="text-amber-600 text-xs">⚙️</span>
+              </div>
+              <h2 className="text-sm font-bold text-slate-700">تكاليف العملية</h2>
             </div>
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <span className="text-[9px] text-slate-500 w-20">تسويق</span>
-                <input type="range" min={0} max={10} step={0.5} value={marketingPct}
-                  onChange={e => setMarketingPct(+e.target.value)}
-                  className="flex-1 h-1 rounded appearance-none cursor-pointer bg-amber-100" style={{ accentColor: "#f59e0b" } as any} />
-                <span className="text-[9px] font-black text-amber-600 w-7">{marketingPct}%</span>
-                <span className="text-[8px] text-slate-400 w-12">{fmt(results.marketing)}</span>
+            <div className="space-y-3">
+              {/* Marketing */}
+              <div className="flex items-center gap-3">
+                <span className="text-[11px] text-slate-500 w-20">تسويق</span>
+                <input type="range" min={0} max={5} step={0.5} value={marketingPct}
+                  onChange={(e) => setMarketingPct(+e.target.value)}
+                  className="flex-1 h-1.5 accent-amber-500" />
+                <span className="bg-amber-50 text-amber-700 font-bold text-[11px] px-2 py-0.5 rounded w-12 text-center">{marketingPct}%</span>
+                <span className="text-[10px] text-slate-400 w-14 text-left">{fmt(marketingCost)}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[9px] text-slate-500 w-20">عمولة مبيعات</span>
-                <input type="range" min={0} max={10} step={0.5} value={salesCommPct}
-                  onChange={e => setSalesCommPct(+e.target.value)}
-                  className="flex-1 h-1 rounded appearance-none cursor-pointer bg-orange-100" style={{ accentColor: "#ea580c" } as any} />
-                <span className="text-[9px] font-black text-orange-600 w-7">{salesCommPct}%</span>
-                <span className="text-[8px] text-slate-400 w-12">{fmt(results.salesComm)}</span>
+              {/* Commission */}
+              <div className="flex items-center gap-3">
+                <span className="text-[11px] text-slate-500 w-20">عمولة مبيعات</span>
+                <input type="range" min={0} max={10} step={0.5} value={commissionPct}
+                  onChange={(e) => setCommissionPct(+e.target.value)}
+                  className="flex-1 h-1.5 accent-violet-500" />
+                <span className="bg-violet-50 text-violet-700 font-bold text-[11px] px-2 py-0.5 rounded w-12 text-center">{commissionPct}%</span>
+                <span className="text-[10px] text-slate-400 w-14 text-left">{fmt(commissionCost)}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[9px] text-slate-500 w-20">مواد تسويق</span>
+              {/* Materials */}
+              <div className="flex items-center gap-3">
+                <span className="text-[11px] text-slate-500 w-20">مواد تسويق</span>
                 <input type="range" min={0} max={10} step={0.5} value={materialsCost}
-                  onChange={e => setMaterialsCost(+e.target.value)}
-                  className="flex-1 h-1 rounded appearance-none cursor-pointer bg-pink-100" style={{ accentColor: "#db2777" } as any} />
-                <span className="text-[9px] font-black text-pink-600 w-7">{materialsCost}M</span>
-                <span className="text-[8px] text-slate-400 w-12">{fmt(results.materials)}</span>
+                  onChange={(e) => setMaterialsCost(+e.target.value)}
+                  className="flex-1 h-1.5 accent-rose-500" />
+                <span className="bg-rose-50 text-rose-700 font-bold text-[11px] px-2 py-0.5 rounded w-12 text-center">{materialsCost}M</span>
+                <span className="text-[10px] text-slate-400 w-14 text-left">{fmt(materialsTotal)}</span>
+              </div>
+              {/* Timeline */}
+              <div className="border-t border-slate-100 pt-3 mt-2">
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] text-slate-500 w-20">بداية البيع</span>
+                  <input type="number" min={1} max={projectEnd - 1} value={salesStart}
+                    onChange={(e) => setSalesStart(Math.max(1, +e.target.value))}
+                    className="w-14 text-center text-xs border border-slate-200 rounded-lg py-1 focus:ring-2 focus:ring-indigo-200 outline-none" />
+                  <span className="text-[11px] text-slate-500 w-20 text-center">نهاية المشروع</span>
+                  <input type="number" min={salesStart + 1} max={60} value={projectEnd}
+                    onChange={(e) => setProjectEnd(Math.max(salesStart + 1, +e.target.value))}
+                    className="w-14 text-center text-xs border border-slate-200 rounded-lg py-1 focus:ring-2 focus:ring-indigo-200 outline-none" />
+                  <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{months} شهر</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* ═══════════════════════════════════════
-           القسم 3: منحنى المبيعات
-           ═══════════════════════════════════════ */}
-        <div className="bg-white rounded-lg border border-slate-200 shadow-sm">
-          <div className="px-3 py-1.5 border-b border-slate-100 flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <Target className="w-3.5 h-3.5 text-amber-500" />
-              <span className="text-[11px] font-bold text-slate-700">منحنى المبيعات</span>
-              <span className="text-[8px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
-                {results.totalSold} / {TOTAL_UNITS} وحدة
-                ({((results.totalSold / TOTAL_UNITS) * 100).toFixed(0)}%)
+        {/* ═══ SECTION 3: SALES CURVE ═══ */}
+        <section className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-lg bg-purple-50 flex items-center justify-center">
+                <span className="text-purple-600 text-xs">📈</span>
+              </div>
+              <h2 className="text-sm font-bold text-slate-700">منحنى المبيعات</h2>
+              <span className="text-[10px] bg-purple-50 text-purple-600 font-medium px-2 py-0.5 rounded-full">
+                {totalSold} / {TOTAL_UNITS} وحدة ({Math.round((totalSold / TOTAL_UNITS) * 100)}%)
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                <span className="text-[8px] text-slate-400">أوف بلان:</span>
-                <input type="range" min={30} max={100} value={offPlan}
-                  onChange={e => setOffPlan(+e.target.value)}
-                  className="w-16 h-0.5 rounded appearance-none cursor-pointer" style={{ accentColor: "#7c3aed" } as any} />
-                <span className="text-[9px] font-black text-purple-600">{offPlan}%</span>
+              <div className="flex items-center gap-1.5 bg-indigo-50 rounded-lg px-2.5 py-1">
+                <span className="text-[10px] text-indigo-500">أوف بلان:</span>
+                <span className="text-[11px] font-bold text-indigo-700">{offPlan}%</span>
               </div>
-              <div className="flex gap-0.5 bg-slate-100 rounded p-0.5">
-                {(["auto","manual","detail"] as const).map(m => (
+              <input type="range" min={50} max={100} value={offPlan}
+                onChange={(e) => setOffPlan(+e.target.value)}
+                className="w-20 h-1.5 accent-indigo-500" />
+              <div className="flex bg-slate-100 rounded-lg p-0.5 gap-0.5">
+                {(["auto", "manual", "detail"] as const).map((m) => (
                   <button key={m} onClick={() => setSalesMode(m)}
-                    className={`px-2 py-0.5 rounded text-[8px] font-bold transition ${salesMode === m ? "bg-amber-500 text-white shadow" : "text-slate-500 hover:text-slate-700"}`}>
+                    className={`px-2.5 py-1 rounded-md text-[10px] font-medium transition-all ${
+                      salesMode === m ? "bg-white shadow-sm text-indigo-700" : "text-slate-500 hover:text-slate-700"
+                    }`}>
                     {m === "auto" ? "تلقائي" : m === "manual" ? "يدوي" : "تفصيلي"}
                   </button>
                 ))}
               </div>
             </div>
           </div>
-          <div className="p-2">
+
+          <div className="p-4">
             {salesMode === "auto" && (
-              <div className="flex items-center gap-2">
-                <span className="text-[9px] text-slate-500 w-14">سرعة البيع</span>
-                <input type="range" min={0} max={100} value={salesSpeed}
-                  onChange={e => setSalesSpeed(+e.target.value)}
-                  className="flex-1 h-1 rounded appearance-none cursor-pointer bg-amber-100" style={{ accentColor: "#f59e0b" } as any} />
-                <span className="text-[9px] font-bold text-amber-600 w-10">{salesSpeed < 30 ? "بطيء" : salesSpeed < 70 ? "متوسط" : "سريع"}</span>
-                <span className="text-[8px] text-slate-400">({results.offPlanUnits} وحدة أوف بلان)</span>
-              </div>
-            )}
-            {salesMode === "manual" && (
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[9px] text-slate-500">عدد الوحدات لكل شهر</span>
-                  <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${results.totalSold > TOTAL_UNITS ? "bg-red-100 text-red-600" : "bg-amber-50 text-amber-600"}`}>
-                    {results.totalSold} / {TOTAL_UNITS}
-                    {results.totalSold > 0 && ` (${((results.totalSold/TOTAL_UNITS)*100).toFixed(0)}%)`}
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] text-slate-500">سرعة البيع</span>
+                  <input type="range" min={10} max={90} value={speed}
+                    onChange={(e) => setSpeed(+e.target.value)}
+                    className="flex-1 h-1.5 accent-purple-500" />
+                  <span className="text-[11px] font-medium text-purple-600 bg-purple-50 px-2 py-0.5 rounded">
+                    {speed < 33 ? "بطيء" : speed < 66 ? "متوسط" : "سريع"}
                   </span>
                 </div>
-                <div className="grid gap-px" style={{ gridTemplateColumns: `repeat(${Math.min(salesMonths, 15)}, 1fr)` }}>
-                  {Array.from({ length: Math.min(salesMonths, 15) }, (_, i) => (
-                    <div key={i} className="text-center">
-                      <div className="text-[7px] text-slate-400">{salesStart + i}</div>
-                      <input type="number" min={0} max={50} value={manualUnits[i] || 0}
-                        onChange={e => updateManual(i, +e.target.value)}
-                        className="w-full h-5 text-[9px] text-center font-bold border border-slate-200 rounded bg-white focus:border-amber-400 focus:outline-none" />
-                      <div className="text-[6px] text-slate-300">{manualUnits[i] > 0 && TOTAL_UNITS > 0 ? ((manualUnits[i]/TOTAL_UNITS)*100).toFixed(0)+"%" : ""}</div>
-                    </div>
-                  ))}
-                </div>
-                {salesMonths > 15 && (
-                  <div className="grid gap-px mt-1" style={{ gridTemplateColumns: `repeat(${salesMonths - 15}, 1fr)` }}>
-                    {Array.from({ length: salesMonths - 15 }, (_, i) => (
-                      <div key={i+15} className="text-center">
-                        <div className="text-[7px] text-slate-400">{salesStart + i + 15}</div>
-                        <input type="number" min={0} max={50} value={manualUnits[i+15] || 0}
-                          onChange={e => updateManual(i+15, +e.target.value)}
-                          className="w-full h-5 text-[9px] text-center font-bold border border-slate-200 rounded bg-white focus:border-amber-400 focus:outline-none" />
-                        <div className="text-[6px] text-slate-300">{manualUnits[i+15] > 0 && TOTAL_UNITS > 0 ? ((manualUnits[i+15]/TOTAL_UNITS)*100).toFixed(0)+"%" : ""}</div>
+                {/* Mini bar chart */}
+                <div className="flex items-end gap-[2px] h-16 px-1">
+                  {salesDistribution.map((units, i) => {
+                    const maxU = Math.max(...salesDistribution);
+                    const h = (units / maxU) * 100;
+                    return (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
+                        <div
+                          className="w-full rounded-t transition-all duration-300"
+                          style={{
+                            height: `${h}%`,
+                            backgroundColor: escrowData[i]?.balance < 0 ? "#f87171" : "#818cf8",
+                            minHeight: "2px",
+                          }}
+                        />
                       </div>
-                    ))}
-                  </div>
-                )}
+                    );
+                  })}
+                </div>
+                <div className="flex justify-between text-[9px] text-slate-400 px-1">
+                  <span>شهر {salesStart}</span>
+                  <span>شهر {projectEnd}</span>
+                </div>
               </div>
             )}
-            {salesMode === "detail" && (
-              <div className="overflow-x-auto">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[9px] text-slate-500">عدد الوحدات لكل نوع × شهر</span>
-                  <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${results.totalSold > TOTAL_UNITS ? "bg-red-100 text-red-600" : "bg-amber-50 text-amber-600"}`}>
-                    {results.totalSold} / {TOTAL_UNITS}
-                  </span>
+
+            {salesMode === "manual" && (
+              <div className="space-y-2">
+                <p className="text-[10px] text-slate-400">عدد الوحدات لكل شهر — الإجمالي: {totalSold} / {offPlanUnits}</p>
+                <div className="grid grid-cols-10 gap-1.5">
+                  {Array.from({ length: months }, (_, i) => {
+                    const val = manualUnits[i] ?? salesDistribution[i] ?? 0;
+                    const pct = ((val / TOTAL_UNITS) * 100).toFixed(0);
+                    return (
+                      <div key={i} className="flex flex-col items-center">
+                        <span className="text-[8px] text-slate-400 mb-0.5">{i + salesStart}</span>
+                        <input
+                          type="number" min={0} max={30} value={val}
+                          onChange={(e) => {
+                            const arr = [...(manualUnits.length === months ? manualUnits : salesDistribution)];
+                            arr[i] = Math.max(0, +e.target.value);
+                            setManualUnits(arr);
+                          }}
+                          className="w-full text-center text-[11px] font-bold border border-slate-200 rounded-lg py-1 focus:ring-2 focus:ring-purple-200 outline-none bg-white"
+                        />
+                        <span className="text-[8px] text-slate-300 mt-0.5">{pct}%</span>
+                      </div>
+                    );
+                  })}
                 </div>
-                <table className="w-full text-[8px] border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50">
-                      <th className="text-right px-1 py-0.5 text-slate-500 sticky right-0 bg-slate-50 z-10 w-16">النوع</th>
-                      {Array.from({ length: salesMonths }, (_, i) => (
-                        <th key={i} className="text-center px-0 py-0.5 text-slate-400 min-w-[26px]">{salesStart+i}</th>
-                      ))}
-                      <th className="text-center px-1 py-0.5 text-slate-600 font-bold sticky left-0 bg-slate-50 z-10 w-12">مجموع</th>
-                      <th className="text-center px-1 py-0.5 text-slate-400 sticky left-12 bg-slate-50 z-10 w-10">من</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {UNITS.map((u, ui) => {
-                      const rowTotal = detailUnits[ui]?.slice(0, salesMonths).reduce((s,v) => s+v, 0) || 0;
-                      return (
-                        <tr key={u.id} className="border-t border-slate-100">
-                          <td className="text-right px-1 py-0.5 sticky right-0 bg-white z-10">
-                            <div className="flex items-center gap-0.5">
-                              <div className="w-1.5 h-1.5 rounded-full" style={{ background: u.color }} />
-                              <span className="font-bold text-slate-700 text-[8px]">{u.name}</span>
-                            </div>
-                          </td>
-                          {Array.from({ length: salesMonths }, (_, mi) => (
-                            <td key={mi} className="text-center px-0 py-0">
-                              <input type="number" min={0} max={u.count} value={detailUnits[ui]?.[mi] || 0}
-                                onChange={e => updateDetail(ui, mi, +e.target.value)}
-                                className="w-6 h-4 text-[8px] text-center font-mono font-bold border border-slate-200 rounded bg-white focus:border-indigo-400 focus:outline-none" />
+              </div>
+            )}
+
+            {salesMode === "detail" && (
+              <div className="space-y-2">
+                <p className="text-[10px] text-slate-400">عدد الوحدات لكل نوع × شهر</p>
+                <div className="overflow-x-auto">
+                  <table className="text-[10px] w-full">
+                    <thead>
+                      <tr className="text-slate-400">
+                        <th className="py-1 px-2 text-right sticky right-0 bg-white z-10 w-24">النوع (المتاح)</th>
+                        {Array.from({ length: Math.min(months, 30) }, (_, i) => (
+                          <th key={i} className="py-1 px-1 text-center w-8">{i + salesStart}</th>
+                        ))}
+                        <th className="py-1 px-2 text-center">المجموع</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {UNIT_TYPES.map((u) => {
+                        const perMonth = Math.max(1, Math.round(salesDistribution[0] * (u.count / TOTAL_UNITS)));
+                        return (
+                          <tr key={u.id} className="border-t border-slate-50">
+                            <td className="py-1 px-2 sticky right-0 bg-white z-10">
+                              <div className="flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: u.color }} />
+                                <span className="font-medium">{u.name}</span>
+                                <span className="text-slate-300">({u.count})</span>
+                              </div>
                             </td>
-                          ))}
-                          <td className="text-center px-1 py-0.5 sticky left-0 bg-white z-10">
-                            <span className={`font-black text-[9px] ${rowTotal > u.count ? "text-red-500" : "text-slate-700"}`}>{rowTotal}</span>
-                          </td>
-                          <td className="text-center px-1 py-0.5 sticky left-12 bg-white z-10">
-                            <span className="text-[8px] text-slate-400">{u.count}</span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                            {Array.from({ length: Math.min(months, 30) }, (_, i) => {
+                              const val = Math.round(salesDistribution[i] * (u.count / TOTAL_UNITS));
+                              return (
+                                <td key={i} className="py-1 px-1 text-center text-slate-600">{val}</td>
+                              );
+                            })}
+                            <td className="py-1 px-2 text-center font-bold text-slate-700">
+                              {Math.round(totalSold * (u.count / TOTAL_UNITS))}/{u.count}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>
-        </div>
+        </section>
 
-        {/* ═══════════════════════════════════════
-           القسم 4: أثر البيع على الضمان
-           ═══════════════════════════════════════ */}
-        <div className="grid grid-cols-12 gap-3">
-
-          {/* Chart - wider */}
-          <div className="col-span-8 bg-white rounded-lg border border-slate-200 shadow-sm">
-            <div className="px-3 py-1.5 border-b border-slate-100 flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <BarChart3 className="w-3.5 h-3.5 text-blue-500" />
-                <span className="text-[11px] font-bold text-slate-700">رصيد الضمان — شهر بشهر</span>
+        {/* ═══ SECTION 4: ESCROW IMPACT ═══ */}
+        <section className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-lg bg-teal-50 flex items-center justify-center">
+                <span className="text-teal-600 text-xs">🏦</span>
               </div>
-              {results.hasDeficit && (
-                <span className="text-[8px] font-bold text-white bg-red-500 px-1.5 py-0.5 rounded-full">عجز {fmt(results.deficitAmount)}</span>
-              )}
+              <h2 className="text-sm font-bold text-slate-700">رصيد الضمان — شهر بشهر</h2>
+              <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">
+                يبدأ بـ {fmt(escrowInitial)} (20% من الإنشاء)
+              </span>
             </div>
-            <div className="p-3">
-              {/* Bar chart */}
-              <div className="flex items-end gap-[1px] h-[100px] relative">
-                <div className="absolute left-0 right-0 top-1/2 border-t border-dashed border-slate-300 z-0" />
-                {results.escrowData.map((row, i) => {
-                  const maxAbs = Math.max(...results.escrowData.map(r => Math.abs(r.balance)), 1);
-                  const hPct = (Math.abs(row.balance) / maxAbs) * 45;
-                  const isNeg = row.balance < 0;
+            <div className="flex items-center gap-4 text-[10px]">
+              <span className="text-slate-400">وحدات مباعة: <b className="text-slate-700">{totalSold}</b></span>
+              <span className="text-slate-400">دخول الضمان: <b className="text-emerald-600">{fmt(totalEscrowIn)}</b></span>
+              <span className="text-slate-400">سحب بناء: <b className="text-red-500">{fmt(totalEscrowOut)}</b></span>
+            </div>
+          </div>
+
+          <div className="p-4 grid grid-cols-12 gap-4">
+            {/* Chart - wider */}
+            <div className="col-span-8">
+              <div className="relative h-48 flex items-end gap-[2px] px-2">
+                {/* Zero line */}
+                <div className="absolute left-0 right-0 border-t border-dashed border-slate-300" style={{ bottom: `${(chartMax / (chartMax * 2)) * 100}%` }} />
+                {escrowData.map((d, i) => {
+                  const isNeg = d.balance < 0;
+                  const h = (Math.abs(d.balance) / (chartMax * 1.1)) * 50;
                   return (
-                    <div key={i} className="flex-1 relative h-full group cursor-pointer z-10">
-                      <div className={`w-full rounded-sm ${isNeg ? "bg-red-400" : "bg-emerald-400"}`}
-                        style={{ height: `${hPct}%`, position: "absolute", ...(isNeg ? { top: "50%" } : { bottom: "50%" }) }} />
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-30">
-                        <div className="bg-slate-800 text-white rounded px-1.5 py-0.5 text-[7px] whitespace-nowrap shadow-lg">
-                          شهر {row.month}: {fmt(row.balance)}
-                        </div>
+                    <div key={i} className="flex-1 flex flex-col items-center relative" style={{ height: "100%" }}>
+                      <div className="absolute flex flex-col items-center" style={{
+                        bottom: isNeg ? `${50 - h}%` : "50%",
+                        height: `${h}%`,
+                        width: "100%",
+                      }}>
+                        <div
+                          className={`w-full rounded-sm transition-all duration-300 ${isNeg ? "rounded-b" : "rounded-t"}`}
+                          style={{
+                            height: "100%",
+                            backgroundColor: isNeg ? "#f87171" : "#34d399",
+                            opacity: 0.85,
+                          }}
+                        />
                       </div>
                     </div>
                   );
                 })}
               </div>
-              {/* Numbers below bars */}
-              <div className="flex gap-[1px] mt-0.5">
-                {results.escrowData.map((row, i) => (
+              {/* Numbers below chart */}
+              <div className="flex gap-[2px] px-2 mt-1">
+                {escrowData.map((d, i) => (
                   <div key={i} className="flex-1 text-center">
-                    <div className={`text-[6px] font-mono font-bold leading-tight ${row.balance < 0 ? "text-red-500" : "text-emerald-600"}`}>
-                      {fmt(row.balance)}
-                    </div>
+                    <p className={`text-[7px] font-bold ${d.balance < 0 ? "text-red-500" : "text-emerald-600"}`}>
+                      {fmt(d.balance)}
+                    </p>
+                    <p className="text-[7px] text-slate-300">{d.month}</p>
                   </div>
                 ))}
-              </div>
-              {/* Month labels */}
-              <div className="flex gap-[1px] mt-0">
-                {results.escrowData.map((row, i) => (
-                  <div key={i} className="flex-1 text-center">
-                    <div className="text-[5px] text-slate-400">{row.month}</div>
-                  </div>
-                ))}
-              </div>
-              {/* Summary */}
-              <div className="grid grid-cols-4 gap-2 mt-2 pt-2 border-t border-slate-100">
-                <div className="text-center">
-                  <div className="text-[7px] text-slate-400">إيرادات</div>
-                  <div className="text-[10px] font-black text-emerald-600">{fmt(results.revenue)}</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-[7px] text-slate-400">يدخل الضمان</div>
-                  <div className="text-[10px] font-black text-blue-600">{fmt(results.escrowData.reduce((s,r) => s + r.escrowIn, 0))}</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-[7px] text-slate-400">سحب بناء</div>
-                  <div className="text-[10px] font-black text-red-500">{fmt(results.escrowData.reduce((s,r) => s + r.escrowOut, 0))}</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-[7px] text-slate-400">وحدات مباعة</div>
-                  <div className="text-[10px] font-black text-slate-700">{results.totalSold}</div>
-                </div>
               </div>
             </div>
-          </div>
 
-          {/* Table - compressed */}
-          <div className="col-span-4 bg-white rounded-lg border border-slate-200 shadow-sm">
-            <div className="px-2 py-1.5 border-b border-slate-100 flex items-center gap-1">
-              <Zap className="w-3 h-3 text-amber-500" />
-              <span className="text-[10px] font-bold text-slate-700">التفصيل الشهري</span>
-            </div>
-            <div className="overflow-y-auto max-h-[220px]">
-              <table className="w-full text-[8px]">
-                <thead className="sticky top-0 bg-slate-50 z-10">
-                  <tr className="border-b border-slate-200">
-                    <th className="text-right px-1 py-0.5 text-slate-500 w-6">م</th>
-                    <th className="text-center px-0.5 py-0.5 text-slate-500">وحدات</th>
-                    <th className="text-center px-0.5 py-0.5 text-emerald-600">دخول</th>
-                    <th className="text-center px-0.5 py-0.5 text-red-500">سحب</th>
-                    <th className="text-center px-0.5 py-0.5 text-slate-700 font-bold">رصيد</th>
-                    <th className="text-center px-0.5 py-0.5 w-5">⚡</th>
+            {/* Table - compact */}
+            <div className="col-span-4 overflow-y-auto max-h-56 border border-slate-100 rounded-xl">
+              <table className="w-full text-[10px]">
+                <thead className="sticky top-0 bg-slate-50">
+                  <tr className="text-slate-400">
+                    <th className="py-1.5 px-1.5 text-center">م</th>
+                    <th className="py-1.5 px-1 text-center">وحدات</th>
+                    <th className="py-1.5 px-1 text-center text-emerald-500">↓ دخول</th>
+                    <th className="py-1.5 px-1 text-center text-red-400">↑ سحب</th>
+                    <th className="py-1.5 px-1 text-center">رصيد</th>
+                    <th className="py-1.5 px-1 text-center">⚡</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {results.escrowData.map((row) => (
-                    <tr key={row.month} className={`border-b border-slate-50 h-5 ${row.balance < 0 ? "bg-red-50/40" : ""}`}>
-                      <td className="text-right px-1 py-0 font-bold text-slate-500">{row.month}</td>
-                      <td className="text-center px-0.5 py-0 font-mono text-slate-600">{row.units}</td>
-                      <td className="text-center px-0.5 py-0 font-mono text-emerald-600">{fmt(row.escrowIn)}</td>
-                      <td className="text-center px-0.5 py-0 font-mono text-red-500">{fmt(row.escrowOut)}</td>
-                      <td className={`text-center px-0.5 py-0 font-mono font-black ${row.balance < 0 ? "text-red-600" : "text-emerald-600"}`}>
-                        {fmt(row.balance)}
+                  {escrowData.map((d) => (
+                    <tr key={d.month} className="border-t border-slate-50">
+                      <td className="py-1 px-1.5 text-center font-medium text-slate-600">{d.month}</td>
+                      <td className="py-1 px-1 text-center text-slate-700">{d.units}</td>
+                      <td className="py-1 px-1 text-center text-emerald-600 font-medium">{fmt(d.income)}</td>
+                      <td className="py-1 px-1 text-center text-red-400">{fmt(d.withdrawal)}</td>
+                      <td className={`py-1 px-1 text-center font-bold ${d.balance < 0 ? "text-red-600" : "text-emerald-600"}`}>
+                        {fmt(d.balance)}
                       </td>
-                      <td className="text-center px-0.5 py-0">
-                        {row.balance < 0 ? (
-                          <span className="inline-block w-2 h-2 rounded-full bg-red-500" />
+                      <td className="py-1 px-1 text-center">
+                        {d.balance < 0 ? (
+                          <span className="inline-block w-4 h-4 leading-4 text-[8px] bg-red-100 text-red-600 rounded-full font-bold">!</span>
                         ) : (
-                          <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
+                          <span className="inline-block w-4 h-4 leading-4 text-[8px] bg-emerald-100 text-emerald-600 rounded-full">✓</span>
                         )}
                       </td>
                     </tr>
@@ -549,9 +593,8 @@ export default function V2WaelSales() {
               </table>
             </div>
           </div>
-        </div>
-
-      </div>
+        </section>
+      </main>
     </div>
   );
 }
