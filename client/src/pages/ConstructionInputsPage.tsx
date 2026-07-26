@@ -187,8 +187,8 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
           const progressIdx = col - 1; // progress of previous month
           progressPct = progressIdx < monthlyProgress.length ? monthlyProgress[progressIdx] : 0;
           fullAmount = constructionCost * (progressPct / 100);
-          actualPaid = fullAmount * (1 - retentionRate); // 80%
-          retentionHeld = fullAmount * retentionRate; // 20%
+          actualPaid = fullAmount * 0.8; // 80% of full amount
+          retentionHeld = 0;
         }
       } else {
         // Post-completion months
@@ -198,8 +198,8 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
           const lastIdx = constructionMonths - 1;
           progressPct = lastIdx < monthlyProgress.length ? monthlyProgress[lastIdx] : 0;
           fullAmount = constructionCost * (progressPct / 100);
-          actualPaid = fullAmount * (1 - retentionRate);
-          retentionHeld = fullAmount * retentionRate;
+          actualPaid = fullAmount * 0.8;
+          retentionHeld = 0;
         }
         if (postMonth === 2) {
           retention1Release = totalRetention1; // 5% released
@@ -433,40 +433,23 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
                       );
                     })}
 
-                    {/* Row 4: Full monthly amount */}
-                    <div className="text-[7px] font-bold text-blue-700 flex items-center justify-center border-b border-gray-200 py-0.5">المستحق</div>
-                    {paymentData.map((d, i) => (
-                      <div key={i} className="text-center text-[7px] py-0.5 border-b border-l border-gray-200">
-                        <span className="text-blue-700">{d.fullAmount > 0 ? fmt(d.fullAmount) : '-'}</span>
-                      </div>
-                    ))}
 
-                    {/* Row 5: Actual paid (80%) */}
-                    <div className="text-[7px] font-bold text-emerald-700 flex items-center justify-center border-b border-gray-200 py-0.5">المدفوع</div>
-                    {paymentData.map((d, i) => (
-                      <div key={i} className="text-center text-[7px] py-0.5 border-b border-l border-gray-200">
-                        <span className="text-emerald-700">{d.actualPaid > 0 ? fmt(d.actualPaid) : '-'}</span>
-                      </div>
-                    ))}
 
-                    {/* Row 6: Retention held */}
-                    <div className="text-[7px] font-bold text-amber-700 flex items-center justify-center border-b border-gray-200 py-0.5">محتجز</div>
-                    {paymentData.map((d, i) => (
-                      <div key={i} className="text-center text-[7px] py-0.5 border-b border-l border-gray-200">
-                        <span className="text-amber-700">{d.retentionHeld > 0 ? fmt(d.retentionHeld) : '-'}</span>
-                      </div>
-                    ))}
-
-                    {/* Row 7: Retention releases */}
-                    <div className="text-[7px] font-bold text-violet-700 flex items-center justify-center border-b border-gray-200 py-0.5">إفراج</div>
+                    {/* Row 5: Contractor payment (80% + retention releases) */}
+                    <div className="text-[7px] font-bold text-emerald-700 flex items-center justify-center border-b border-gray-200 py-0.5">دفعة المقاول</div>
                     {paymentData.map((d, i) => {
-                      const release = d.retention1Release + d.retention2Release;
+                      const payment = d.actualPaid + d.retention1Release + d.retention2Release;
+                      const isRetention = d.retention1Release > 0 || d.retention2Release > 0;
                       return (
-                        <div key={i} className={`text-center text-[7px] py-0.5 border-b border-l border-gray-200 ${release > 0 ? 'bg-violet-50' : ''}`}>
-                          <span className="text-violet-700 font-bold">{release > 0 ? fmt(release) : '-'}</span>
+                        <div key={i} className={`text-center text-[7px] py-0.5 border-b border-l border-gray-200 ${isRetention ? 'bg-amber-50' : ''}`}>
+                          <span className={isRetention ? 'text-amber-700 font-bold' : 'text-emerald-700'}>
+                            {payment > 0 ? fmt(payment) : '-'}
+                          </span>
                         </div>
                       );
                     })}
+
+
 
                     {/* Row 8: Cumulative paid */}
                     <div className="text-[7px] font-bold text-gray-800 flex items-center justify-center py-0.5">التراكمي</div>
