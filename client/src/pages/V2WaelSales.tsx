@@ -549,30 +549,75 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
               <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-blue-600" />
-                  <h2 className="text-sm font-bold text-gray-800">منحنى المبيعات</h2>
+                  <h2 className="text-sm font-bold text-gray-800">توزيع البيع</h2>
                   <Badge variant="secondary" className="text-[10px]">{totalSold} / {offPlanUnits} وحدة</Badge>
+                  {totalSold > offPlanUnits && <Badge variant="destructive" className="text-[9px]">تجاوز!</Badge>}
                 </div>
                 <div className="flex items-center gap-2">
-                  <Select value={curveTemplate} onValueChange={(v: any) => { setCurveTemplate(v); setHasPlanChanges(true); }}>
-                    <SelectTrigger className="h-7 text-[10px] w-24">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="bell">جرس</SelectItem>
-                      <SelectItem value="fast">سريع</SelectItem>
-                      <SelectItem value="gradual">تدريجي</SelectItem>
-                      <SelectItem value="late">متأخر</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  {/* Mode tabs */}
+                  <div className="flex bg-gray-100 rounded-lg p-0.5 gap-0.5">
+                    {(["auto", "manual"] as const).map((m) => (
+                      <button key={m} onClick={() => { setSalesMode(m); setHasPlanChanges(true); }}
+                        className={`px-2.5 py-1 rounded-md text-[10px] font-medium transition-all ${
+                          salesMode === m ? "bg-white shadow-sm text-emerald-700" : "text-gray-500 hover:text-gray-700"
+                        }`}>
+                        {m === "auto" ? "تلقائي" : "يدوي"}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
-              <div className="p-2">
-                <div className="flex items-center gap-3 mb-3">
-                  <span className="text-[10px] text-gray-500">سرعة البيع:</span>
-                  <Slider value={[speed]} onValueChange={([v]) => { setSpeed(v); setHasPlanChanges(true); }} min={10} max={90} step={5} className="flex-1 max-w-xs" />
-                  <span className="text-[10px] font-bold text-blue-700">{speed}%</span>
-                </div>
-                <div className="h-48">
+              <div className="p-3">
+                {/* AUTO MODE */}
+                {salesMode === "auto" && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <Select value={curveTemplate} onValueChange={(v: any) => { setCurveTemplate(v); setHasPlanChanges(true); }}>
+                        <SelectTrigger className="h-7 text-[10px] w-24">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="bell">جرس</SelectItem>
+                          <SelectItem value="fast">سريع</SelectItem>
+                          <SelectItem value="gradual">تدريجي</SelectItem>
+                          <SelectItem value="late">متأخر</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <span className="text-[10px] text-gray-500">سرعة البيع:</span>
+                      <Slider value={[speed]} onValueChange={([v]) => { setSpeed(v); setHasPlanChanges(true); }} min={10} max={90} step={5} className="flex-1 max-w-xs" />
+                      <span className="text-[10px] font-bold text-blue-700">{speed}%</span>
+                    </div>
+                  </div>
+                )}
+                {/* MANUAL MODE */}
+                {salesMode === "manual" && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] text-gray-500">أدخل عدد الوحدات المباعة لكل شهر</p>
+                    <div className="grid grid-cols-10 gap-1.5 max-h-48 overflow-y-auto">
+                      {Array.from({ length: salesMonths }, (_, i) => {
+                        const val = manualUnits[i] ?? salesDistribution[i] ?? 0;
+                        return (
+                          <div key={i} className="flex flex-col items-center bg-gray-50 rounded-lg p-1">
+                            <span className="text-[8px] text-gray-400 mb-0.5">شهر {i + timeline.salesStart}</span>
+                            <input
+                              type="number" min={0} max={50} value={val}
+                              onChange={(e) => {
+                                const arr = [...(manualUnits.length === salesMonths ? manualUnits : salesDistribution)];
+                                arr[i] = Math.max(0, +e.target.value);
+                                setManualUnits(arr);
+                                setHasPlanChanges(true);
+                              }}
+                              className="w-full text-center text-[11px] font-bold border border-gray-200 rounded py-0.5 focus:ring-1 focus:ring-emerald-200 outline-none bg-white"
+                            />
+                            <span className="text-[8px] text-gray-400 mt-0.5">{offPlanUnits > 0 ? ((val / offPlanUnits) * 100).toFixed(0) : 0}%</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {/* Chart - always visible */}
+                <div className="h-44 mt-3">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={salesDistribution.map((units, i) => ({ month: i + timeline.salesStart, units }))} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
