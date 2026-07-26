@@ -515,17 +515,32 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                     const Icon = phase.icon;
                     return (
                       <div key={phase.id} className="flex items-center gap-2">
-                        <div className="w-28 flex items-center gap-1.5 flex-shrink-0">
+                        <div className="w-32 flex items-center gap-1.5 flex-shrink-0">
                           <Icon className="w-3 h-3" style={{ color: phase.color }} />
                           <span className="text-[10px] font-medium text-gray-700 truncate">{phase.name}</span>
                         </div>
-                        <div className="flex-1 h-4 bg-gray-100 rounded-full relative overflow-hidden" dir="ltr">
-                          <div className="absolute h-full rounded-full transition-all" style={{ left: `${rightPct}%`, width: `${widthPct}%`, backgroundColor: phase.color, opacity: 0.8 }} />
-                          <span className="absolute inset-0 flex items-center justify-center text-[8px] font-medium text-gray-700">شهر {start} – {end}</span>
+                        <div className="flex-1 h-5 bg-gray-100 rounded-full relative overflow-hidden">
+                          <div className="absolute h-full rounded-full transition-all" style={{ right: `${rightPct}%`, width: `${widthPct}%`, backgroundColor: phase.color, opacity: 0.8 }} />
+                          <span className="absolute inset-0 flex items-center justify-center text-[8px] font-medium text-gray-700">شهر {start} - {end}</span>
                         </div>
                       </div>
                     );
                   })}
+                </div>
+                {/* Month numbers axis */}
+                <div className="flex items-center gap-2 mt-2">
+                  <div className="w-32 flex-shrink-0" />
+                  <div className="flex-1 flex">
+                    {Array.from({ length: timeline.projectEnd }, (_, i) => {
+                      const monthNum = i + 1;
+                      const isDesign = monthNum <= timeline.designEnd;
+                      return (
+                        <div key={i} className="flex-1 text-center">
+                          <span className={`text-[7px] font-bold ${isDesign ? 'text-blue-600' : 'text-emerald-600'}`}>{monthNum}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
                 <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-1 flex-wrap">
                   <div className="flex items-center gap-1.5">
