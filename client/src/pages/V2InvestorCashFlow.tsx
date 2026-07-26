@@ -178,13 +178,13 @@ export default function V2InvestorCashFlow() {
               </td>
             </tr>
             {PAID_ITEMS.map((item, i) => (
-              <tr key={`paid-${i}`} className="border-b border-gray-50 bg-gray-50/50 opacity-60">
-                <td className="sticky right-0 z-10 bg-gray-50 px-2 py-[3px] text-gray-500 font-medium border-l border-gray-100 w-[180px] min-w-[180px]">
+              <tr key={`paid-${i}`} className="border-b border-gray-100 bg-gray-50">
+                <td className="sticky right-0 z-10 bg-gray-50 px-2 py-[3px] text-gray-700 font-medium border-l border-gray-200 w-[180px] min-w-[180px]">
                   {item.name}
                 </td>
-                {months.map((_, j) => (
-                  <td key={j} className="px-1 py-[3px] text-center text-gray-400">-</td>
-                ))}
+                <td className="px-1 py-[3px] text-center text-gray-500 font-medium" colSpan={totalMonths}>
+                  مدفوع
+                </td>
               </tr>
             ))}
 
