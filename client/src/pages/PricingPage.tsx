@@ -360,7 +360,7 @@ export default function PricingPage() {
     <div className="bg-white p-2" dir="rtl">
       {/* Header */}
       <div className="max-w-7xl mx-auto mb-8">
-        <div className="flex items-center gap-4 mb-2">
+        <div className="flex items-center gap-1 mb-2">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
             <Calculator className="w-6 h-6 text-gray-900" />
           </div>
@@ -387,7 +387,7 @@ export default function PricingPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-2">
 
         {/* SECTION 1: LAND & AREAS SUMMARY */}
         <Card className="bg-gray-50 border-gray-200/50 backdrop-blur">
@@ -399,18 +399,18 @@ export default function PricingPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 p-4 text-center">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-1 mb-6">
+              <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 p-2 text-center">
                 <div className="text-xs text-gray-500 mb-1">مساحة الأرض</div>
-                <div className="text-xl font-bold text-blue-300 font-mono">{fmtN(i.landArea)} sqft</div>
+                <div className="text-xs font-bold text-blue-300 font-mono">{fmtN(i.landArea)} sqft</div>
               </div>
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-center">
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-2 text-center">
                 <div className="text-xs text-gray-500 mb-1">BUA</div>
-                <div className="text-xl font-bold text-emerald-300 font-mono">{fmtN(i.bua)} sqft</div>
+                <div className="text-xs font-bold text-emerald-300 font-mono">{fmtN(i.bua)} sqft</div>
               </div>
-              <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 p-4 text-center">
+              <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 p-2 text-center">
                 <div className="text-xs text-gray-500 mb-1">GFA الإجمالي</div>
-                <div className="text-xl font-bold text-purple-300 font-mono">{fmtN(GFA_TOTAL)} sqft</div>
+                <div className="text-xs font-bold text-purple-300 font-mono">{fmtN(GFA_TOTAL)} sqft</div>
               </div>
             </div>
 
@@ -525,23 +525,23 @@ export default function PricingPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 p-4 text-center">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-1">
+              <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 p-2 text-center">
                 <div className="text-xs text-gray-500 mb-1">سكني</div>
                 <div className="text-2xl font-bold text-blue-300 font-mono">{fmtN(calc.categoryParking.residential)}</div>
                 <div className="text-xs text-gray-500 mt-1">موقف</div>
               </div>
-              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-center">
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-2 text-center">
                 <div className="text-xs text-gray-500 mb-1">تجزئة</div>
                 <div className="text-2xl font-bold text-amber-300 font-mono">{fmtN(calc.categoryParking.retail)}</div>
                 <div className="text-xs text-gray-500 mt-1">موقف</div>
               </div>
-              <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 p-4 text-center">
+              <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 p-2 text-center">
                 <div className="text-xs text-gray-500 mb-1">مكاتب</div>
                 <div className="text-2xl font-bold text-purple-300 font-mono">{fmtN(calc.categoryParking.office)}</div>
                 <div className="text-xs text-gray-500 mt-1">موقف</div>
               </div>
-              <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-4 text-center">
+              <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-2 text-center">
                 <div className="text-xs text-gray-500 mb-1">الإجمالي</div>
                 <div className="text-2xl font-bold text-cyan-300 font-mono">{fmtN(calc.totalParking)}</div>
                 <div className="text-xs text-gray-500 mt-1">موقف</div>
@@ -564,32 +564,32 @@ export default function PricingPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-              <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 p-4 text-center">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-1 mb-4">
+              <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 p-2 text-center">
                 <div className="text-xs text-gray-500 mb-1">إيراد السكني</div>
-                <div className="text-xl font-bold text-blue-300 font-mono">{fmtN(calc.categoryRevenue.residential)}</div>
+                <div className="text-xs font-bold text-blue-300 font-mono">{fmtN(calc.categoryRevenue.residential)}</div>
                 <div className="text-xs text-gray-500 mt-1">درهم</div>
                 {calc.avgPrice.residential > 0 && (
                   <div className="text-xs text-blue-400 mt-1">متوسط: {fmtN(calc.avgPrice.residential)} د/قدم</div>
                 )}
               </div>
-              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-center">
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-2 text-center">
                 <div className="text-xs text-gray-500 mb-1">إيراد التجزئة</div>
-                <div className="text-xl font-bold text-amber-300 font-mono">{fmtN(calc.categoryRevenue.retail)}</div>
+                <div className="text-xs font-bold text-amber-300 font-mono">{fmtN(calc.categoryRevenue.retail)}</div>
                 <div className="text-xs text-gray-500 mt-1">درهم</div>
                 {calc.avgPrice.retail > 0 && (
                   <div className="text-xs text-amber-400 mt-1">متوسط: {fmtN(calc.avgPrice.retail)} د/قدم</div>
                 )}
               </div>
-              <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 p-4 text-center">
+              <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 p-2 text-center">
                 <div className="text-xs text-gray-500 mb-1">إيراد المكاتب</div>
-                <div className="text-xl font-bold text-purple-300 font-mono">{fmtN(calc.categoryRevenue.office)}</div>
+                <div className="text-xs font-bold text-purple-300 font-mono">{fmtN(calc.categoryRevenue.office)}</div>
                 <div className="text-xs text-gray-500 mt-1">درهم</div>
                 {calc.avgPrice.office > 0 && (
                   <div className="text-xs text-purple-400 mt-1">متوسط: {fmtN(calc.avgPrice.office)} د/قدم</div>
                 )}
               </div>
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-center">
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-2 text-center">
                 <div className="text-xs text-gray-500 mb-1">إجمالي الإيرادات</div>
                 <div className="text-2xl font-bold text-emerald-300 font-mono">{fmtN(calc.totalRevenue)}</div>
                 <div className="text-xs text-gray-500 mt-1">درهم</div>
@@ -607,18 +607,18 @@ export default function PricingPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-center">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-1">
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-2 text-center">
                 <div className="text-xs text-gray-500 mb-1">إجمالي الوحدات</div>
                 <div className="text-2xl font-bold text-emerald-300 font-mono">{fmtN(calc.totalUnits)}</div>
                 <div className="text-xs text-gray-500 mt-1">وحدة</div>
               </div>
-              <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-4 text-center">
+              <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-2 text-center">
                 <div className="text-xs text-gray-500 mb-1">إجمالي المواقف</div>
                 <div className="text-2xl font-bold text-cyan-300 font-mono">{fmtN(calc.totalParking)}</div>
                 <div className="text-xs text-gray-500 mt-1">موقف</div>
               </div>
-              <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-4 text-center">
+              <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-2 text-center">
                 <div className="text-xs text-gray-500 mb-1">إجمالي المساحة القابلة</div>
                 <div className="text-2xl font-bold text-indigo-300 font-mono">{fmtN(SELLABLE.residential + SELLABLE.retail + SELLABLE.office)}</div>
                 <div className="text-xs text-gray-500 mt-1">قدم²</div>

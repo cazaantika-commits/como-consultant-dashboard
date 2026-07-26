@@ -242,11 +242,11 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
         {selectedProjectId && project && (
           <>
             {/* Construction Duration & Mobilization */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-1">
               <Card>
-                <CardContent className="p-4 space-y-3">
+                <CardContent className="p-2 space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">مدة الإنشاء</span>
+                    <span className="text-[10px]">مدة الإنشاء</span>
                     <Badge variant="outline">{constructionMonths} شهر</Badge>
                   </div>
                   <Slider
@@ -257,7 +257,7 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
                     step={1}
                     className="mt-2"
                   />
-                  <div className="flex justify-between text-xs text-muted-foreground">
+                  <div className="flex justify-between text-[9px] text-muted-foreground">
                     <span>6 أشهر</span>
                     <span>48 شهر</span>
                   </div>
@@ -265,9 +265,9 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
               </Card>
 
               <Card>
-                <CardContent className="p-4 space-y-3">
+                <CardContent className="p-2 space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">دفعة مقدمة (Mobilization)</span>
+                    <span className="text-[10px]">دفعة مقدمة (Mobilization)</span>
                     <Badge variant="outline">{mobilizationPct}%</Badge>
                   </div>
                   <Slider
@@ -278,7 +278,7 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
                     step={1}
                     className="mt-2"
                   />
-                  <div className="flex justify-between text-xs text-muted-foreground">
+                  <div className="flex justify-between text-[9px] text-muted-foreground">
                     <span>0%</span>
                     <span>25%</span>
                   </div>
@@ -286,18 +286,18 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
               </Card>
 
               <Card>
-                <CardContent className="p-4 space-y-3">
+                <CardContent className="p-2 space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">تكلفة الإنشاء الإجمالية</span>
+                    <span className="text-[10px]">تكلفة الإنشاء الإجمالية</span>
                     <Tooltip>
                       <TooltipTrigger><Info className="w-3.5 h-3.5 text-muted-foreground" /></TooltipTrigger>
                       <TooltipContent>BUA × تكلفة/قدم (من الإدخالات العامة)</TooltipContent>
                     </Tooltip>
                   </div>
-                  <div className="text-2xl font-bold text-amber-500">
+                  <div className="text-sm font-bold text-amber-500">
                     {constructionCost ? (constructionCost / 1_000_000).toFixed(1) + " م" : "—"}
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-[9px] text-muted-foreground">
                     المقدمة: {constructionCost ? ((constructionCost * mobilizationPct / 100) / 1_000_000).toFixed(2) + " م" : "—"}
                   </p>
                 </CardContent>
@@ -337,7 +337,7 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
                       }`}
                     >
                       <div className="font-medium text-sm">{t.label}</div>
-                      <div className="text-xs text-muted-foreground mt-1">{t.desc}</div>
+                      <div className="text-[9px] text-muted-foreground mt-1">{t.desc}</div>
                     </button>
                   ))}
                 </div>

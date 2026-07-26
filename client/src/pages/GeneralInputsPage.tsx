@@ -265,7 +265,7 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
         {selectedProjectId && !projectQuery.isLoading && (
           <>
             {/* Computed Summary Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-1">
               <SummaryCard label="GFA الإجمالي" value={fmt(computed.gfaTotal)} unit="قدم²" />
               <SummaryCard label="القابل للبيع" value={fmt(computed.sellableTotal)} unit="قدم²" />
               <SummaryCard label="تكلفة الإنشاء" value={fmt(computed.constructionCost)} unit="درهم" />
@@ -301,18 +301,15 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
             </div>
 
             {/* Computed Formulas Section */}
-            <Card>
-              <CardHeader className="pb-3 border-b border-border/50">
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                    <Calculator className="w-3.5 h-3.5 text-emerald-500" />
-                  </div>
-                  القيم المحسوبة تلقائياً
-                  <Badge variant="secondary" className="text-[10px]">للقراءة فقط</Badge>
+            <Card className="overflow-hidden">
+              <CardHeader className="py-1 px-2 border-b border-border/50">
+                <CardTitle className="text-[10px] font-bold flex items-center gap-1">
+                  <Calculator className="w-3 h-3 text-emerald-500" />
+                  القيم المحسوبة
                 </CardTitle>
               </CardHeader>
-              <CardContent className="pt-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <CardContent className="p-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-0">
                   <FormulaRow label="GFA الإجمالي" value={fmt(computed.gfaTotal)} unit="قدم²" formula="سكني + تجزئة + مكاتب" />
                   <FormulaRow label="القابل للبيع (سكني)" value={fmt(computed.sellableResidential)} unit="قدم²" formula="GFA × نسبة البيع" />
                   <FormulaRow label="القابل للبيع (تجزئة)" value={fmt(computed.sellableRetail)} unit="قدم²" formula="GFA × نسبة البيع" />
@@ -347,54 +344,30 @@ function SummaryCard({ label, value, unit }: { label: string; value: string; uni
 
 function FieldRow({ field, value, onChange, disabled }: { field: FieldDef; value: string; onChange: (v: string) => void; disabled: boolean }) {
   return (
-    <div className="flex items-center gap-3">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          <label className="text-xs font-medium text-foreground truncate">{field.label}</label>
-          {field.tooltip && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="w-3 h-3 text-muted-foreground cursor-help flex-shrink-0" />
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-[200px]">
-                  <p className="text-xs">{field.tooltip}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
-        <input
-          type={field.type === "date" ? "month" : "text"}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          disabled={disabled}
-          className={`w-36 h-8 px-2.5 text-xs text-left rounded-md border transition-colors ${
-            disabled
-              ? "bg-muted/30 border-border text-muted-foreground cursor-not-allowed"
-              : "bg-input border-border text-foreground focus:border-primary focus:ring-1 focus:ring-primary/30"
-          }`}
-          dir="ltr"
-          placeholder={field.defaultValue || "—"}
-        />
-        {field.unit && (
-          <span className="text-[10px] text-muted-foreground w-12 text-right">{field.unit}</span>
-        )}
-      </div>
+    <div className="flex items-center gap-1 leading-none" style={{height:'22px'}}>
+      <label className="flex-1 text-[10px] text-foreground truncate">{field.label}</label>
+      <input
+        type={field.type === "date" ? "month" : "text"}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        className={`w-28 h-5 px-1 text-[10px] text-left rounded border ${
+          disabled ? "bg-muted/30 border-border text-muted-foreground" : "bg-input border-border text-foreground focus:border-primary"
+        }`}
+        dir="ltr"
+        placeholder={field.defaultValue || "—"}
+      />
+      {field.unit && <span className="text-[8px] text-muted-foreground w-8 text-right">{field.unit}</span>}
     </div>
   );
 }
 
 function FormulaRow({ label, value, unit, formula }: { label: string; value: string; unit: string; formula: string }) {
   return (
-    <div className="rounded-lg bg-muted/30 border border-border/50 p-3">
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-xs font-medium text-foreground">{label}</span>
-        <Badge variant="outline" className="text-[9px] h-4 px-1.5">{formula}</Badge>
-      </div>
-      <p className="text-sm font-bold text-primary" dir="ltr">{value} <span className="text-[10px] font-normal text-muted-foreground">{unit}</span></p>
+    <div className="flex items-center gap-1 leading-none" style={{height:'20px'}}>
+      <span className="text-[10px] text-foreground flex-1">{label}</span>
+      <span className="text-[10px] font-bold text-primary" dir="ltr">{value}</span>
+      <span className="text-[8px] text-muted-foreground w-10">{unit}</span>
     </div>
   );
 }

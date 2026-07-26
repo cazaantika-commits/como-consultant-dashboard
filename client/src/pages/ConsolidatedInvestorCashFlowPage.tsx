@@ -255,7 +255,7 @@ export default function ConsolidatedInvestorCashFlowPage() {
   if (!user) {
     return (
       <div className="bg-white flex items-center justify-center" dir="rtl">
-        <div className="text-center space-y-4">
+        <div className="text-center space-y-1">
           <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center shadow-lg">
             <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
           </div>
@@ -268,7 +268,7 @@ export default function ConsolidatedInvestorCashFlowPage() {
   if (projectsQuery.isLoading) {
     return (
       <div className="bg-white flex items-center justify-center" dir="rtl">
-        <div className="text-center space-y-4">
+        <div className="text-center space-y-1">
           <div className="w-12 h-12 mx-auto rounded-full border-4 border-slate-200 border-t-slate-700 animate-spin" />
           <p className="text-slate-500 text-sm font-medium">جاري تحميل بيانات المحفظة...</p>
         </div>
@@ -279,7 +279,7 @@ export default function ConsolidatedInvestorCashFlowPage() {
   if (!consolidated) {
     return (
       <div className="bg-white flex items-center justify-center" dir="rtl">
-        <div className="text-center space-y-4">
+        <div className="text-center space-y-1">
           <div className="w-16 h-16 mx-auto rounded-2xl bg-slate-100 flex items-center justify-center">
             <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
           </div>
@@ -381,7 +381,7 @@ export default function ConsolidatedInvestorCashFlowPage() {
                 )}
               </div>
             </div>
-            <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="p-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {allProjects.map((proj: any) => {
                 const isSelected = activeProjectIds.has(proj.id);
                 const currentStartDate = startDateOverrides[proj.id] || proj.startDate || "2026-08";
@@ -505,7 +505,7 @@ export default function ConsolidatedInvestorCashFlowPage() {
           <div className="px-5 py-3 border-b border-slate-100">
             <h2 className="text-sm font-bold text-slate-800">التدفق النقدي التراكمي</h2>
           </div>
-          <div className="p-4">
+          <div className="p-2">
             <CumulativeChart data={consolidated.cumulative} labels={consolidated.monthLabels} />
           </div>
         </div>
@@ -692,7 +692,7 @@ function SummaryCard({ label, value, color, sub }: { label: string; value: strin
   return (
     <div className={`${c.bg} border ${c.border} rounded-xl p-3`}>
       <div className="text-[10px] text-slate-500 mb-1 font-medium">{label}</div>
-      <div className={`text-lg font-bold ${c.text}`}>{value}</div>
+      <div className={`text-xs font-bold ${c.text}`}>{value}</div>
       {sub && <div className="text-[10px] text-slate-400 mt-0.5">{sub}</div>}
     </div>
   );

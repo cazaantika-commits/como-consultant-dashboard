@@ -402,7 +402,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
 
             {/* SECTION 3: OPERATION COSTS + MARKETING DISTRIBUTION */}
             <section className="grid grid-cols-12 gap-3">
-              <div className="col-span-12 md:col-span-4 bg-white rounded-xl border border-gray-100 shadow-md p-4 space-y-4">
+              <div className="col-span-12 md:col-span-4 bg-white rounded-xl border border-gray-100 shadow-md p-2 space-y-1">
                 <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
                   <Percent className="w-4 h-4 text-amber-600" />
                   تكاليف العملية
@@ -432,7 +432,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                   <p className="text-[10px] text-gray-400 mt-0.5">{offPlanUnits} وحدة من {totalUnits}</p>
                 </div>
               </div>
-              <div className="col-span-12 md:col-span-8 bg-white rounded-xl border border-gray-100 shadow-md p-4">
+              <div className="col-span-12 md:col-span-8 bg-white rounded-xl border border-gray-100 shadow-md p-2">
                 <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2 mb-3">
                   <Megaphone className="w-4 h-4 text-pink-600" />
                   توزيع قنوات التسويق
@@ -475,7 +475,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                   </div>
                 </div>
               </div>
-              <div className="p-4">
+              <div className="p-2">
                 <div className="space-y-2">
                   {PROJECT_PHASES.map((phase) => {
                     let start = 0, end = 0;
@@ -503,7 +503,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                     );
                   })}
                 </div>
-                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-4 flex-wrap">
+                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-1 flex-wrap">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[10px] text-gray-500">تحضير المواد قبل:</span>
                     <input type="number" min={1} max={6} value={marketingPrepLead} onChange={(e) => { setMarketingPrepLead(parseInt(e.target.value) || 3); setHasPlanChanges(true); }}
@@ -542,7 +542,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                   </Select>
                 </div>
               </div>
-              <div className="p-4">
+              <div className="p-2">
                 <div className="flex items-center gap-3 mb-3">
                   <span className="text-[10px] text-gray-500">سرعة البيع:</span>
                   <Slider value={[speed]} onValueChange={([v]) => { setSpeed(v); setHasPlanChanges(true); }} min={10} max={90} step={5} className="flex-1 max-w-xs" />
@@ -577,7 +577,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                 </div>
                 <p className="text-[10px] text-gray-500">يبدأ بـ {fmt(escrowInitial)} (20% من الإنشاء)</p>
               </div>
-              <div className="p-4">
+              <div className="p-2">
                 <div className="h-44 mb-4">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={escrowData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>

@@ -253,7 +253,7 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
                 <h2 className="text-sm font-bold text-gray-800">قواعد التوقيت</h2>
                 <Badge variant="secondary" className="text-[10px]">متى يحدث كل شيء</Badge>
               </div>
-              <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-2 grid grid-cols-1 md:grid-cols-2 gap-1">
                 {timingRules.map((rule) => {
                   const Icon = rule.icon;
                   return (
@@ -289,7 +289,7 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
                   </Badge>
                 )}
               </div>
-              <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-2 grid grid-cols-1 md:grid-cols-2 gap-1">
                 {percentageRules.map((rule) => {
                   const Icon = rule.icon;
                   return (
@@ -316,8 +316,8 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
                 <Link2 className="w-4 h-4 text-violet-600" />
                 <h2 className="text-sm font-bold text-gray-800">تقسيم التمويل (مستثمر / ضمان)</h2>
               </div>
-              <div className="p-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
                   {paymentSplits.map((rule) => {
                     const Icon = rule.icon;
                     return (
@@ -364,7 +364,7 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
                   <Badge className="text-[10px] mr-auto bg-emerald-100 text-emerald-700">100% ✓</Badge>
                 )}
               </div>
-              <div className="p-4">
+              <div className="p-2">
                 <div className="space-y-3">
                   {designPayments.map((phase, idx) => (
                     <div key={phase.id} className="flex items-center gap-3">

@@ -88,7 +88,7 @@ export default function InvestorCashFlowSchedulePage() {
 
         {/* Header */}
         <div className="text-right space-y-1">
-          <h1 className="text-xl font-bold text-gray-900">
+          <h1 className="text-xs font-bold text-gray-900">
             جدولة رأس المال – {projectName}
           </h1>
           <p className="text-sm text-gray-500">

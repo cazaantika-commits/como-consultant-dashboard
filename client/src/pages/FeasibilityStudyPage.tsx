@@ -73,9 +73,9 @@ function KpiCard({ label, value, sub, color, icon }: {
     teal: "bg-teal-50 border-teal-200 text-teal-700",
   };
   return (
-    <div className={`rounded-2xl border p-4 ${colorMap[color] || colorMap.gray}`}>
+    <div className={`rounded-2xl border p-2 ${colorMap[color] || colorMap.gray}`}>
       <div className="flex items-center gap-2 mb-2 opacity-70">{icon}<span className="text-xs font-medium">{label}</span></div>
-      <div className="text-xl font-bold font-mono" dir="ltr">{value}</div>
+      <div className="text-xs font-bold font-mono" dir="ltr">{value}</div>
       {sub && <div className="text-[11px] mt-1 opacity-60">{sub}</div>}
     </div>
   );
@@ -120,7 +120,7 @@ function ReadOnlyValue({ label, value, suffix, highlight, large }: {
   return (
     <div className={`flex items-center justify-between py-2 ${large ? "py-3" : ""}`}>
       <span className={`text-sm ${highlight ? "font-bold text-foreground" : "text-muted-foreground"}`}>{label}</span>
-      <span className={`font-mono ${large ? "text-lg font-bold" : "text-sm font-semibold"} ${highlight ? ((value ?? 0) >= 0 ? "text-emerald-600" : "text-red-600") : "text-foreground"}`} dir="ltr">
+      <span className={`font-mono ${large ? "text-xs font-bold" : "text-sm font-semibold"} ${highlight ? ((value ?? 0) >= 0 ? "text-emerald-600" : "text-red-600") : "text-foreground"}`} dir="ltr">
         {fmtFull(value)} {suffix || "AED"}
       </span>
     </div>
@@ -245,7 +245,7 @@ function AllProjectsComparison({ projects, onSelectProject }: {
       </div>
 
       {/* Portfolio KPI Summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 border-b border-gray-100 bg-gray-50/50">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-2 border-b border-gray-100 bg-gray-50/50">
         <div className="text-center">
           <p className="text-[10px] text-gray-500 mb-0.5">إجمالي التكاليف</p>
           <p className="text-sm font-bold font-mono text-rose-700" dir="ltr">{fmt(totals.totalCosts)}</p>
@@ -498,7 +498,7 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
   // Auth check
   if (loading) return <div className="flex items-center justify-center py-8"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   if (!isAuthenticated) return (
-    <div className="flex flex-col items-center justify-center py-8 gap-4">
+    <div className="flex flex-col items-center justify-center py-8 gap-1">
       <p className="text-muted-foreground">يرجى تسجيل الدخول</p>
       <Button onClick={() => window.location.href = getLoginUrl()}>تسجيل الدخول</Button>
     </div>
@@ -534,7 +534,7 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
         {!initialProjectId && (
           <Card>
             <CardContent className="pt-4 pb-4">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1">
                 <div className="flex-1 space-y-1">
                   <Label className="text-xs font-bold text-muted-foreground">اختر المشروع</Label>
                   <select
@@ -582,7 +582,7 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
         {!selectedProjectId ? (
           <div className="text-center py-10">
             <Building2 className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
-            <h2 className="text-lg font-bold text-muted-foreground mb-1">اختر مشروع لبدء دراسة الجدوى</h2>
+            <h2 className="text-xs font-bold text-muted-foreground mb-1">اختر مشروع لبدء دراسة الجدوى</h2>
             <p className="text-xs text-muted-foreground/70">أو اطّلع على ملخص المحفظة أعلاه</p>
           </div>
         ) : !selectedStudyId ? (
