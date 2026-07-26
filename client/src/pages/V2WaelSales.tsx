@@ -626,7 +626,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
               </div>
             </section>
 
-            {/* SECTION 5: SALES CURVE */}
+            {/* SECTION 5: SALES INPUT (Manual - aligned to escrow range) */}
             <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
@@ -635,70 +635,71 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                   <Badge variant="secondary" className="text-[10px]">{totalSold} / {offPlanUnits} وحدة</Badge>
                   {totalSold > offPlanUnits && <Badge variant="destructive" className="text-[9px]">تجاوز!</Badge>}
                 </div>
-                <div className="flex items-center gap-2">
-                  {/* Mode tabs */}
-                  <div className="flex bg-gray-100 rounded-lg p-0.5 gap-0.5">
-                    {(["auto", "manual"] as const).map((m) => (
-                      <button key={m} onClick={() => { setSalesMode(m); setHasPlanChanges(true); }}
-                        className={`px-2.5 py-1 rounded-md text-[10px] font-medium transition-all ${
-                          salesMode === m ? "bg-white shadow-sm text-emerald-700" : "text-gray-500 hover:text-gray-700"
-                        }`}>
-                        {m === "auto" ? "تلقائي" : "يدوي"}
-                      </button>
-                    ))}
-                  </div>
-                </div>
               </div>
-              <div className="p-3">
-                {/* AUTO MODE */}
-                {salesMode === "auto" && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <Select value={curveTemplate} onValueChange={(v: any) => { setCurveTemplate(v); setHasPlanChanges(true); }}>
-                        <SelectTrigger className="h-7 text-[10px] w-24">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="bell">جرس</SelectItem>
-                          <SelectItem value="fast">سريع</SelectItem>
-                          <SelectItem value="gradual">تدريجي</SelectItem>
-                          <SelectItem value="late">متأخر</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <span className="text-[10px] text-gray-500">سرعة البيع:</span>
-                      <Slider value={[speed]} onValueChange={([v]) => { setSpeed(v); setHasPlanChanges(true); }} min={10} max={90} step={5} className="flex-1 max-w-xs" />
-                      <span className="text-[10px] font-bold text-blue-700">{speed}%</span>
-                    </div>
-                  </div>
-                )}
-                {/* MANUAL MODE */}
-                {salesMode === "manual" && (
-                  <div className="space-y-2">
-                    <p className="text-[10px] text-gray-500">أدخل عدد الوحدات المباعة لكل شهر</p>
-                    <div className="flex gap-1 overflow-x-auto pb-1" dir="rtl">
-                      {Array.from({ length: salesMonths }, (_, i) => {
-                        const val = manualUnits[i] ?? salesDistribution[i] ?? 0;
+              <div className="p-2 overflow-x-auto">
+                {(() => {
+                  const escrowStartMonth = timeline.reraStart + 1;
+                  const escrowEndMonth = timeline.projectEnd;
+                  const escrowMonthCount = escrowEndMonth - escrowStartMonth + 1;
+                  const colWidth = `minmax(42px, 1fr)`;
+                  return (
+                    <div style={{ display: 'grid', gridTemplateColumns: `60px repeat(${escrowMonthCount}, ${colWidth})`, direction: 'rtl' }}>
+                      {/* Row 1: Month labels */}
+                      <div className="text-[8px] font-bold text-gray-500 flex items-center justify-center border-b border-gray-200 py-0.5">الشهر</div>
+                      {Array.from({ length: escrowMonthCount }, (_, i) => {
+                        const absMonth = escrowStartMonth + i;
+                        const isDesign = absMonth <= timeline.designEnd;
+                        const displayNum = isDesign ? absMonth : absMonth - timeline.designEnd;
                         return (
-                          <div key={i} className="flex flex-col items-center flex-shrink-0 w-14 bg-gray-50 rounded p-0.5">
-                            <span className="text-[7px] text-gray-400">شهر {i + timeline.salesStart}</span>
-                            <input
-                              type="number" min={0} max={50} value={val}
-                              onChange={(e) => {
-                                const arr = [...(manualUnits.length === salesMonths ? manualUnits : salesDistribution)];
-                                arr[i] = Math.max(0, +e.target.value);
-                                setManualUnits(arr);
-                                setHasPlanChanges(true);
-                              }}
-                              className="w-10 text-center text-[11px] font-bold border border-gray-200 rounded py-0.5 focus:ring-1 focus:ring-emerald-200 outline-none bg-white"
-                            />
-                            <span className="text-[7px] text-gray-400">{offPlanUnits > 0 ? ((val / offPlanUnits) * 100).toFixed(0) : 0}%</span>
+                          <div key={i} className={`text-center text-[8px] font-bold py-0.5 border-b border-l border-gray-200 ${isDesign ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                            {displayNum}
+                          </div>
+                        );
+                      })}
+                      {/* Row 2: Unit inputs */}
+                      <div className="text-[8px] font-bold text-gray-500 flex items-center justify-center border-b border-gray-200 py-0.5">وحدات</div>
+                      {Array.from({ length: escrowMonthCount }, (_, i) => {
+                        const absMonth = escrowStartMonth + i;
+                        const salesIdx = absMonth - timeline.salesStart;
+                        const inSalesRange = salesIdx >= 0 && salesIdx < salesMonths;
+                        const val = inSalesRange ? (manualUnits[salesIdx] ?? salesDistribution[salesIdx] ?? 0) : 0;
+                        return (
+                          <div key={i} className="flex items-center justify-center border-b border-l border-gray-200 py-0.5">
+                            {inSalesRange ? (
+                              <input
+                                type="number" min={0} max={50} value={val}
+                                onChange={(e) => {
+                                  const arr = [...(manualUnits.length === salesMonths ? manualUnits : salesDistribution)];
+                                  arr[salesIdx] = Math.max(0, +e.target.value);
+                                  setManualUnits(arr);
+                                  setSalesMode("manual");
+                                  setHasPlanChanges(true);
+                                }}
+                                className="w-8 h-5 text-center text-[10px] font-bold border border-gray-200 rounded bg-white focus:ring-1 focus:ring-emerald-200 outline-none"
+                              />
+                            ) : (
+                              <span className="text-[8px] text-gray-300">-</span>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {/* Row 3: Percentages (bold) */}
+                      <div className="text-[8px] font-bold text-gray-500 flex items-center justify-center py-0.5">%</div>
+                      {Array.from({ length: escrowMonthCount }, (_, i) => {
+                        const absMonth = escrowStartMonth + i;
+                        const salesIdx = absMonth - timeline.salesStart;
+                        const inSalesRange = salesIdx >= 0 && salesIdx < salesMonths;
+                        const val = inSalesRange ? (manualUnits[salesIdx] ?? salesDistribution[salesIdx] ?? 0) : 0;
+                        const pct = offPlanUnits > 0 ? ((val / offPlanUnits) * 100).toFixed(0) : '0';
+                        return (
+                          <div key={i} className="text-center text-[9px] font-black text-gray-800 py-0.5 border-l border-gray-200">
+                            {inSalesRange ? `${pct}%` : '-'}
                           </div>
                         );
                       })}
                     </div>
-                  </div>
-                )}
-
+                  );
+                })()}
               </div>
             </section>
 
