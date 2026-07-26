@@ -98,10 +98,10 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
   }, [formData]);
 
   if (!selectedProjectId) {
-    return (<div className="p-2 text-center text-xs text-gray-400" dir="rtl"><ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} /><p className="mt-1">اختر مشروعاً</p></div>);
+    return (<div className="p-4 text-center text-sm text-gray-400" dir="rtl"><ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} /><p className="mt-2">اختر مشروعاً</p></div>);
   }
   if (projectQuery.isLoading) {
-    return <div className="p-2 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto" /></div>;
+    return <div className="p-4 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></div>;
   }
 
   // Split into 3 columns
@@ -110,65 +110,67 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
   const col3 = ALL_FIELDS.slice(20, 30);
 
   const renderCol = (fields: typeof ALL_FIELDS) => (
-    <table className="w-full border-collapse">
-      <tbody>
-        {fields.map((field, i) => (
-          <tr key={field.key} className={i % 2 === 0 ? "bg-gray-50/50" : ""}>
-            <td className="py-[1px] px-0.5 text-[9px] text-gray-600 whitespace-nowrap">{field.label}</td>
-            <td className="py-[1px] px-0.5">
-              <input
-                type={field.type === "date" ? "month" : "text"}
-                value={formData[field.key] || ""}
-                onChange={e => updateField(field.key, e.target.value)}
-                disabled={!isEditing}
-                className={`w-full h-[16px] px-0.5 text-[9px] rounded border ${!isEditing ? "bg-transparent border-transparent text-gray-700 font-mono" : "bg-white border-gray-300 focus:border-blue-500 font-mono"}`}
-                dir="ltr"
-                placeholder={field.defaultValue || "—"}
-              />
-            </td>
-            <td className="py-[1px] px-0.5 text-[7px] text-gray-400">{field.unit}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <div className="space-y-[2px]">
+      {fields.map((field) => (
+        <div key={field.key} className="flex items-center gap-2 h-[28px] border-b border-gray-100">
+          <span className="text-[13px] text-gray-600 w-[45%] text-right whitespace-nowrap overflow-hidden text-ellipsis">{field.label}</span>
+          <input
+            type={field.type === "date" ? "month" : "text"}
+            value={formData[field.key] || ""}
+            onChange={e => updateField(field.key, e.target.value)}
+            disabled={!isEditing}
+            className={`flex-1 h-[24px] px-2 text-[13px] rounded ${!isEditing ? "bg-transparent text-gray-800 font-medium" : "bg-gray-50 border border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"}`}
+            dir="ltr"
+            placeholder={field.defaultValue || "—"}
+          />
+          <span className="text-[11px] text-gray-400 w-[50px] text-left">{field.unit}</span>
+        </div>
+      ))}
+    </div>
   );
 
   return (
-    <div className="bg-white p-1" dir="rtl">
+    <div className="bg-white px-4 py-2" dir="rtl">
       {/* Toolbar */}
-      <div className="flex items-center gap-1 mb-1">
+      <div className="flex items-center gap-3 mb-3 pb-2 border-b border-gray-200">
         <ProjectSelector selectedId={selectedProjectId} onSelect={(id) => { setSelectedProjectId(id); setIsEditing(false); }} />
         {!isEditing ? (
-          <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} className="h-4 text-[8px] px-1.5">
-            <Pencil className="w-2.5 h-2.5" /> تعديل
+          <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} className="h-7 text-[12px] px-3 gap-1">
+            <Pencil className="w-3.5 h-3.5" /> تعديل
           </Button>
         ) : (
           <>
-            <Button variant="ghost" size="sm" onClick={() => { setIsEditing(false); setHasChanges(false); projectQuery.refetch(); }} className="h-4 text-[8px] px-1.5">
-              <X className="w-2.5 h-2.5" /> إلغاء
+            <Button variant="ghost" size="sm" onClick={() => { setIsEditing(false); setHasChanges(false); projectQuery.refetch(); }} className="h-7 text-[12px] px-3 gap-1">
+              <X className="w-3.5 h-3.5" /> إلغاء
             </Button>
-            <Button size="sm" onClick={handleSave} disabled={!hasChanges || updateProject.isPending} className="h-4 text-[8px] px-1.5">
-              {updateProject.isPending ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Save className="w-2.5 h-2.5" />} حفظ
+            <Button size="sm" onClick={handleSave} disabled={!hasChanges || updateProject.isPending} className="h-7 text-[12px] px-3 gap-1">
+              {updateProject.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} حفظ
             </Button>
           </>
         )}
       </div>
 
-      {/* 3-column grid - all fields visible without scrolling */}
-      <div className="grid grid-cols-3 gap-0.5">
+      {/* 3-column grid */}
+      <div className="grid grid-cols-3 gap-6">
         {renderCol(col1)}
         {renderCol(col2)}
         {renderCol(col3)}
       </div>
 
-      {/* Computed values - single row */}
-      <div className="mt-1 border-t border-gray-200 pt-0.5 grid grid-cols-6 gap-0.5 text-[8px]">
-        <div className="text-center"><span className="text-gray-400 block">GFA إجمالي</span><span className="font-bold">{fmt(computed.gfaTotal)}</span></div>
-        <div className="text-center"><span className="text-gray-400 block">قابل للبيع</span><span className="font-bold">{fmt(computed.sellableResidential + computed.sellableRetail + computed.sellableOffice)}</span></div>
-        <div className="text-center"><span className="text-gray-400 block">تكلفة إنشاء</span><span className="font-bold">{fmt(computed.constructionCost)}</span></div>
-        <div className="text-center"><span className="text-gray-400 block">سعر أرض</span><span className="font-bold">{fmt(computed.landPrice)}</span></div>
-        <div className="text-center"><span className="text-gray-400 block">تسجيل 4%</span><span className="font-bold">{fmt(computed.landRegistration)}</span></div>
-        <div className="text-center"><span className="text-gray-400 block">عمولة وسيط</span><span className="font-bold">{fmt(computed.landBroker)}</span></div>
+      {/* Computed summary cards */}
+      <div className="mt-3 pt-3 border-t border-gray-200 grid grid-cols-3 gap-4">
+        <div className="rounded-lg border border-gray-200 p-3 text-center">
+          <div className="text-[12px] text-gray-500">GFA الإجمالي</div>
+          <div className="text-[15px] font-bold text-gray-800 mt-1" dir="ltr">{fmt(computed.gfaTotal)} <span className="text-[11px] text-gray-400">قدم²</span></div>
+        </div>
+        <div className="rounded-lg border border-gray-200 p-3 text-center">
+          <div className="text-[12px] text-gray-500">القابل للبيع</div>
+          <div className="text-[15px] font-bold text-gray-800 mt-1" dir="ltr">{fmt(computed.sellableResidential + computed.sellableRetail + computed.sellableOffice)} <span className="text-[11px] text-gray-400">قدم²</span></div>
+        </div>
+        <div className="rounded-lg border border-gray-200 p-3 text-center">
+          <div className="text-[12px] text-gray-500">تكلفة الإنشاء</div>
+          <div className="text-[15px] font-bold text-gray-800 mt-1" dir="ltr">{fmt(computed.constructionCost)} <span className="text-[11px] text-gray-400">درهم</span></div>
+        </div>
       </div>
     </div>
   );
