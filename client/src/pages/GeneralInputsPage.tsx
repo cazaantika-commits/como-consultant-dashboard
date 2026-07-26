@@ -110,7 +110,7 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
   const col3 = ALL_FIELDS.slice(20, 30);
 
   return (
-    <div className="bg-white p-4" dir="rtl">
+    <div className="bg-gray-50 p-4" dir="rtl">
       {/* Toolbar - same style as Portfolio header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
@@ -132,47 +132,51 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
         </div>
       </div>
 
-      {/* Summary cards - same style as Portfolio */}
-      <div className="grid grid-cols-3 gap-4 mb-4">
-        <div className="rounded-lg border border-gray-200 p-3 text-center">
-          <div className="text-sm text-gray-500">GFA الإجمالي</div>
-          <div className="text-lg font-bold text-gray-800 mt-1" dir="ltr">{fmt(computed.gfaTotal)}</div>
+      {/* Summary cards - Portfolio style with colored borders */}
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="bg-white rounded-lg p-3 border border-teal-100 shadow-sm">
+          <p className="text-[10px] text-teal-600 mb-0.5">GFA الإجمالي</p>
+          <p className="text-base font-bold text-teal-700" dir="ltr">{fmt(computed.gfaTotal)} قدم²</p>
         </div>
-        <div className="rounded-lg border border-gray-200 p-3 text-center">
-          <div className="text-sm text-gray-500">القابل للبيع</div>
-          <div className="text-lg font-bold text-gray-800 mt-1" dir="ltr">{fmt(computed.sellableResidential + computed.sellableRetail + computed.sellableOffice)}</div>
+        <div className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm">
+          <p className="text-[10px] text-gray-600 mb-0.5">القابل للبيع</p>
+          <p className="text-base font-bold text-gray-800" dir="ltr">{fmt(computed.sellableResidential + computed.sellableRetail + computed.sellableOffice)} قدم²</p>
         </div>
-        <div className="rounded-lg border border-gray-200 p-3 text-center">
-          <div className="text-sm text-gray-500">تكلفة الإنشاء</div>
-          <div className="text-lg font-bold text-emerald-600 mt-1" dir="ltr">{fmt(computed.constructionCost)}</div>
+        <div className="bg-white rounded-lg p-3 border border-red-100 shadow-sm">
+          <p className="text-[10px] text-red-600 mb-0.5">تكلفة الإنشاء</p>
+          <p className="text-base font-bold text-red-700" dir="ltr">{fmt(computed.constructionCost)} درهم</p>
         </div>
       </div>
 
-      {/* 3-column table grid - same row style as Portfolio table */}
-      <div className="grid grid-cols-3 gap-6">
-        {[col1, col2, col3].map((col, ci) => (
-          <table key={ci} className="w-full text-sm">
-            <tbody>
-              {col.map((field) => (
-                <tr key={field.key} className="border-b border-gray-100 hover:bg-gray-50/50">
-                  <td className="py-2 pr-2 text-gray-600 whitespace-nowrap">{field.label}</td>
-                  <td className="py-2 text-left" dir="ltr">
-                    <input
-                      type={field.type === "date" ? "month" : "text"}
-                      value={formData[field.key] || ""}
-                      onChange={e => updateField(field.key, e.target.value)}
-                      disabled={!isEditing}
-                      className={`w-full text-sm text-left px-2 py-0.5 rounded ${!isEditing ? "bg-transparent text-gray-800 font-medium border-none" : "bg-white border border-gray-300 text-gray-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"}`}
-                      dir="ltr"
-                      placeholder={field.defaultValue || "—"}
-                    />
-                  </td>
-                  <td className="py-2 pl-2 text-xs text-gray-400 whitespace-nowrap">{field.unit}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ))}
+      {/* 3-column table grid - Portfolio style */}
+      <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
+        <div className="grid grid-cols-3 divide-x divide-gray-100" dir="rtl">
+          {[col1, col2, col3].map((col, ci) => (
+            <div key={ci} className="px-3">
+              <table className="w-full text-[11px]">
+                <tbody>
+                  {col.map((field) => (
+                    <tr key={field.key} className="border-b border-gray-50 hover:bg-gray-50/50">
+                      <td className="py-[5px] pr-2 text-gray-700 font-medium whitespace-nowrap">{field.label}</td>
+                      <td className="py-[5px] text-left" dir="ltr">
+                        <input
+                          type={field.type === "date" ? "month" : "text"}
+                          value={formData[field.key] || ""}
+                          onChange={e => updateField(field.key, e.target.value)}
+                          disabled={!isEditing}
+                          className={`w-full text-[11px] text-left px-2 py-0.5 rounded tabular-nums ${!isEditing ? "bg-transparent text-gray-800 font-medium border-none" : "bg-white border border-gray-300 text-gray-900 focus:border-teal-500 focus:ring-1 focus:ring-teal-500"}`}
+                          dir="ltr"
+                          placeholder={field.defaultValue || "—"}
+                        />
+                      </td>
+                      <td className="py-[5px] pl-2 text-[10px] text-gray-400 whitespace-nowrap">{field.unit}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
