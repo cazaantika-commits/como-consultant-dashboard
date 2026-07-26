@@ -118,6 +118,11 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   );
   const [hasPlanChanges, setHasPlanChanges] = useState(false);
 
+  // ─── State: Payment Plan ───────────────────────────────────────────────────
+  const [downPaymentPct, setDownPaymentPct] = useState(20); // دفعة أولى
+  const [duringConstructionPct, setDuringConstructionPct] = useState(50); // أثناء الإنشاء
+  const [onHandoverPct, setOnHandoverPct] = useState(30); // عند التسليم
+
   // ─── Load data from DB ──────────────────────────────────────────────────────
   useEffect(() => {
     if (projectQuery.data) {
@@ -156,6 +161,9 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
           if (parsed.manual) setManualUnits(parsed.manual);
           if (parsed.marketingPrepLead) setMarketingPrepLead(parsed.marketingPrepLead);
           if (parsed.reraLead) setReraLead(parsed.reraLead);
+          if (parsed.downPaymentPct) setDownPaymentPct(parsed.downPaymentPct);
+          if (parsed.duringConstructionPct) setDuringConstructionPct(parsed.duringConstructionPct);
+          if (parsed.onHandoverPct) setOnHandoverPct(parsed.onHandoverPct);
         } catch {}
       }
       setHasPlanChanges(false);
@@ -223,20 +231,36 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   const totalSold = salesDistribution.reduce((a, b) => a + b, 0);
   const avgUnitPrice = totalUnits > 0 ? totalRevenue / totalUnits : 0;
 
-  // ─── Computed: Escrow ─────────────────────────────────────────────────────
+  // ─── Computed: Escrow with Payment Plan ────────────────────────────────────
   const escrowInitial = constructionCost * 0.2;
   const monthlySiphon = salesMonths > 0 ? constructionCost / salesMonths : 0;
   const escrowData = useMemo(() => {
     let balance = escrowInitial;
+    // Each unit sold: buyer pays downPaymentPct immediately, duringConstructionPct spread over construction months
+    const monthlyInstallmentPerUnit = avgUnitPrice * (duringConstructionPct / 100) / (constructionMonths || 1);
+    // Track cumulative sold units for ongoing installments
+    let cumulativeSold = 0;
     return salesDistribution.map((units, i) => {
-      const income = units * avgUnitPrice * 0.8 * 0.3;
+      // New sales this month: down payment goes to escrow
+      const downPaymentIncome = units * avgUnitPrice * (downPaymentPct / 100);
+      // Ongoing installments from all previously sold units
+      cumulativeSold += units;
+      const installmentIncome = cumulativeSold * monthlyInstallmentPerUnit;
+      const totalIncome = downPaymentIncome + installmentIncome;
       const withdrawal = monthlySiphon;
-      balance = balance + income - withdrawal;
-      return { month: i + timeline.salesStart, units, income, withdrawal, balance };
+      balance = balance + totalIncome - withdrawal;
+      return { month: i + timeline.salesStart, units, income: totalIncome, downPayment: downPaymentIncome, installments: installmentIncome, withdrawal, balance, cumulativeSold };
     });
-  }, [salesDistribution, escrowInitial, avgUnitPrice, monthlySiphon, timeline.salesStart, constructionCost]);
+  }, [salesDistribution, escrowInitial, avgUnitPrice, monthlySiphon, timeline.salesStart, constructionCost, downPaymentPct, duringConstructionPct, constructionMonths]);
   const maxDeficit = escrowData.length > 0 ? Math.min(...escrowData.map((d) => d.balance)) : 0;
   const hasDeficit = maxDeficit < 0;
+  const criticalMonth = useMemo(() => {
+    if (escrowData.length === 0) return null;
+    let minBalance = Infinity;
+    let minIdx = 0;
+    escrowData.forEach((d, i) => { if (d.balance < minBalance) { minBalance = d.balance; minIdx = i; } });
+    return escrowData[minIdx];
+  }, [escrowData]);
 
   // ─── Save Handlers ────────────────────────────────────────────────────────
   const handleSaveUnits = useCallback(() => {
@@ -263,7 +287,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       offplanPct: offPlan,
       marketingBudgetPct: String(marketingPct),
       salesCommissionPct: String(commissionPct),
-      salesAbsorptionJson: JSON.stringify({ mode: salesMode, speed, template: curveTemplate, manual: manualUnits, marketingPrepLead, reraLead }),
+      salesAbsorptionJson: JSON.stringify({ mode: salesMode, speed, template: curveTemplate, manual: manualUnits, marketingPrepLead, reraLead, downPaymentPct, duringConstructionPct, onHandoverPct }),
       channelsJson: JSON.stringify(channelPcts),
       resultsJson: JSON.stringify({ escrowData, salesDistribution }),
     });
@@ -566,19 +590,74 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
               </div>
             </section>
 
-            {/* SECTION 6: ESCROW IMPACT */}
+            {/* SECTION 6: PAYMENT PLAN */}
+            <section className="bg-white rounded-xl border border-gray-100 shadow-md overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+                <CreditCard className="w-4 h-4 text-indigo-600" />
+                <h2 className="text-sm font-bold text-gray-800">خطة الدفع (Payment Plan)</h2>
+                <Badge variant="secondary" className="text-[10px]">المجموع: {downPaymentPct + duringConstructionPct + onHandoverPct}%</Badge>
+              </div>
+              <div className="p-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-600">دفعة أولى (Down Payment)</span>
+                      <span className="text-xs font-bold text-indigo-700">{downPaymentPct}%</span>
+                    </div>
+                    <Slider value={[downPaymentPct]} onValueChange={([v]) => { setDownPaymentPct(v); setDuringConstructionPct(100 - v - onHandoverPct); setHasPlanChanges(true); }} min={5} max={50} step={5} />
+                    <p className="text-[10px] text-gray-400">{fmtFull(Math.round(avgUnitPrice * downPaymentPct / 100))} AED / وحدة</p>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-600">أثناء الإنشاء</span>
+                      <span className="text-xs font-bold text-blue-700">{duringConstructionPct}%</span>
+                    </div>
+                    <Slider value={[duringConstructionPct]} onValueChange={([v]) => { setDuringConstructionPct(v); setOnHandoverPct(100 - downPaymentPct - v); setHasPlanChanges(true); }} min={10} max={80} step={5} />
+                    <p className="text-[10px] text-gray-400">{fmtFull(Math.round(avgUnitPrice * duringConstructionPct / 100))} AED / وحدة ({constructionMonths} شهر)</p>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-600">عند التسليم (Handover)</span>
+                      <span className="text-xs font-bold text-emerald-700">{onHandoverPct}%</span>
+                    </div>
+                    <Slider value={[onHandoverPct]} onValueChange={([v]) => { setOnHandoverPct(v); setDuringConstructionPct(100 - downPaymentPct - v); setHasPlanChanges(true); }} min={0} max={50} step={5} />
+                    <p className="text-[10px] text-gray-400">{fmtFull(Math.round(avgUnitPrice * onHandoverPct / 100))} AED / وحدة</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* SECTION 7: ESCROW + CRITICAL MONTH */}
             <section className="bg-white rounded-xl border border-gray-100 shadow-md overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <CreditCard className="w-4 h-4 text-violet-600" />
-                  <h2 className="text-sm font-bold text-gray-800">تأثير الإسكرو</h2>
+                  <h2 className="text-sm font-bold text-gray-800">تأثير الإسكرو (الضمان)</h2>
                   {hasDeficit && <Badge variant="destructive" className="text-[10px]">عجز: {fmt(Math.abs(maxDeficit))} AED</Badge>}
                   {!hasDeficit && <Badge className="text-[10px] bg-emerald-100 text-emerald-700">متوازن</Badge>}
                 </div>
-                <p className="text-[10px] text-gray-500">يبدأ بـ {fmt(escrowInitial)} (20% من الإنشاء)</p>
+                <p className="text-[10px] text-gray-500">رصيد أولي: {fmt(escrowInitial)} (20% من الإنشاء)</p>
               </div>
-              <div className="p-2">
-                <div className="h-44 mb-4">
+              <div className="p-3">
+                {/* Critical Month Alert */}
+                {criticalMonth && (
+                  <div className={`mb-3 p-3 rounded-lg border ${criticalMonth.balance < 0 ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className={`text-xs font-bold ${criticalMonth.balance < 0 ? 'text-red-700' : 'text-amber-700'}`}>
+                          ⚠️ الشهر الحرج: شهر {criticalMonth.month}
+                        </span>
+                        <p className="text-[10px] text-gray-600 mt-0.5">أقل رصيد في حساب الضمان خلال فترة المشروع</p>
+                      </div>
+                      <div className="text-left">
+                        <p className={`text-base font-bold ${criticalMonth.balance < 0 ? 'text-red-700' : 'text-amber-700'}`}>{fmt(criticalMonth.balance)} AED</p>
+                        <p className="text-[9px] text-gray-500">وحدات مباعة تراكمياً: {criticalMonth.cumulativeSold}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="h-44 mb-3">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={escrowData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -589,26 +668,34 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
+
+                {/* Detailed Escrow Table */}
                 {escrowData.length > 0 && (
-                  <div className="overflow-x-auto max-h-48">
+                  <div className="overflow-x-auto max-h-56">
                     <table className="w-full text-[10px]">
                       <thead className="bg-gray-50 sticky top-0">
                         <tr>
-                          <th className="px-2 py-1.5 text-right">الشهر</th>
-                          <th className="px-2 py-1.5 text-center">وحدات</th>
-                          <th className="px-2 py-1.5 text-center">دخل</th>
-                          <th className="px-2 py-1.5 text-center">سحب</th>
-                          <th className="px-2 py-1.5 text-center">الرصيد</th>
+                          <th className="px-2 py-1.5 text-right font-bold">الشهر</th>
+                          <th className="px-2 py-1.5 text-center font-bold">وحدات مباعة</th>
+                          <th className="px-2 py-1.5 text-center font-bold">تراكمي</th>
+                          <th className="px-2 py-1.5 text-center font-bold">دفعات أولى</th>
+                          <th className="px-2 py-1.5 text-center font-bold">أقساط</th>
+                          <th className="px-2 py-1.5 text-center font-bold">إجمالي الدخل</th>
+                          <th className="px-2 py-1.5 text-center font-bold">سحب للمقاول</th>
+                          <th className="px-2 py-1.5 text-center font-bold">رصيد الضمان</th>
                         </tr>
                       </thead>
                       <tbody>
                         {escrowData.map((d) => (
-                          <tr key={d.month} className={`border-t border-gray-50 ${d.balance < 0 ? "bg-red-50" : ""}`}>
-                            <td className="px-2 py-1 font-medium">شهر {d.month}</td>
+                          <tr key={d.month} className={`border-t border-gray-50 ${d.month === criticalMonth?.month ? 'bg-red-100 font-bold' : d.balance < 0 ? 'bg-red-50' : ''}`}>
+                            <td className="px-2 py-1">{d.month === criticalMonth?.month ? '⚠️ ' : ''}شهر {d.month}</td>
                             <td className="px-2 py-1 text-center">{d.units}</td>
+                            <td className="px-2 py-1 text-center text-gray-600">{d.cumulativeSold}</td>
+                            <td className="px-2 py-1 text-center text-indigo-600">{fmt(d.downPayment)}</td>
+                            <td className="px-2 py-1 text-center text-blue-600">{fmt(d.installments)}</td>
                             <td className="px-2 py-1 text-center text-emerald-700">{fmt(d.income)}</td>
                             <td className="px-2 py-1 text-center text-red-600">{fmt(d.withdrawal)}</td>
-                            <td className={`px-2 py-1 text-center font-bold ${d.balance < 0 ? "text-red-700" : "text-violet-700"}`}>{fmt(d.balance)}</td>
+                            <td className={`px-2 py-1 text-center font-bold ${d.balance < 0 ? 'text-red-700' : 'text-violet-700'}`}>{fmt(d.balance)}</td>
                           </tr>
                         ))}
                       </tbody>
