@@ -1,263 +1,315 @@
-import { Fragment } from "react";
-import { ArrowRight, Download } from "lucide-react";
-import { useLocation } from "wouter";
+/**
+ * V2Feasibility — دراسة الجدوى المالية (Bateekha tab)
+ * Professional compact two-column layout with real project data
+ */
+import { useProjectContext } from "@/contexts/ProjectContext";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
+import { calculateProjectCosts } from "@/lib/projectCostsCalc";
+import { ProjectSelector } from "@/components/ProjectSelector";
+import {
+  DollarSign, TrendingUp, BarChart2, Briefcase, Building2,
+  Percent, Users, Sparkles, Target, Landmark, Info, ArrowDownCircle
+} from "lucide-react";
 
-// ===== STRUCTURE ONLY — exact names from the existing system (projectCostsCalc.ts) =====
+const fmt = (n: number) =>
+  n === 0 ? "—" : new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.round(n));
 
-// Revenue breakdown
-const REVENUE_ITEMS = [
-  { name: "شقق سكنية (1BR + 2BR + 3BR)", amount: 285_000_000 },
-  { name: "محلات تجارية (صغير + متوسط + كبير)", amount: 187_500_000 },
-  { name: "مكاتب (صغير + متوسط + كبير)", amount: 150_000_000 },
-];
+const fmtPct = (n: number) =>
+  n === 0 ? "—" : `${n.toFixed(1)}%`;
 
-// Cost breakdown — مجموع كل البنود من كشف المستثمر + كشف الإسكرو
-const COST_CATEGORIES = [
-  {
-    category: "الأرض",
-    items: [
-      { name: "سعر الأرض", amount: 125_000_000 },
-      { name: "رسوم تسجيل الأرض", amount: 5_000_000 },
-      { name: "عمولة وسيط الأرض", amount: 1_250_000 },
-    ],
-  },
-  {
-    category: "التصاميم والإشراف",
-    items: [
-      { name: "أتعاب التصاميم", amount: 6_300_000 },
-      { name: "أتعاب الإشراف", amount: 7_000_000 },
-    ],
-  },
-  {
-    category: "الدراسات والمسوحات",
-    items: [
-      { name: "فحص التربة", amount: 12_000 },
-      { name: "المسح الطبوغرافي", amount: 15_000 },
-      { name: "رسوم المساح DWG", amount: 45_000 },
-      { name: "رسوم المساح As-Built", amount: 45_000 },
-    ],
-  },
-  {
-    category: "الرسوم الحكومية والتنظيمية",
-    items: [
-      { name: "رسوم المجتمع", amount: 2_000_000 },
-      { name: "رسوم الجهات الحكومية", amount: 500_000 },
-      { name: "رسوم الفرز", amount: 611_772 },
-      { name: "رسوم NOC المطور", amount: 10_000 },
-    ],
-  },
-  {
-    category: "ريرا (التنظيم العقاري)",
-    items: [
-      { name: "تسجيل المشروع — ريرا", amount: 150_000 },
-      { name: "تسجيل الوحدات — ريرا", amount: 186_400 },
-      { name: "حساب الضمان (رسوم فتح)", amount: 140_000 },
-      { name: "رسوم البنك", amount: 35_000 },
-      { name: "تقرير مدقق ريرا", amount: 24_000 },
-      { name: "فحص ريرا", amount: 150_000 },
-    ],
-  },
-  {
-    category: "المبيعات والتسويق",
-    items: [
-      { name: "تحضير مواد التسويق", amount: 500_000 },
-      { name: "التسويق", amount: 12_450_000 },
-      { name: "عمولة المبيعات", amount: 31_125_000 },
-      { name: "أتعاب المطور", amount: 31_125_000 },
-    ],
-  },
-  {
-    category: "الإنشاء",
-    items: [
-      { name: "تكلفة الإنشاء", amount: 350_000_000 },
-    ],
-  },
-];
-
-// KPIs
-const totalRevenue = REVENUE_ITEMS.reduce((s, r) => s + r.amount, 0);
-const totalCosts = COST_CATEGORIES.reduce((s, cat) => s + cat.items.reduce((ss, i) => ss + i.amount, 0), 0);
-const netProfit = totalRevenue - totalCosts;
-const investorContributions = 220_000_000;
-const investorDistributions = 310_000_000;
-const moic = investorDistributions / investorContributions;
-const comoTotal = 31_125_000 + (netProfit * 0.15);
-
-const fmt = (n: number) => {
+const fmtM = (n: number) => {
   if (Math.abs(n) >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
   if (Math.abs(n) >= 1_000) return (n / 1_000).toFixed(0) + "K";
   return n.toFixed(0);
 };
 
-const fmtFull = (n: number) => n.toLocaleString("en-US");
-
 export default function V2Feasibility() {
-  const [, navigate] = useLocation();
+  const { user } = useAuth();
+  const { selectedProjectId, setSelectedProjectId } = useProjectContext();
+  const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
+  const project = projectQuery.data;
+  const costs = project ? calculateProjectCosts(project) : null;
+
+  // Computed values
+  const totalRevenue = costs?.totalRevenue || 0;
+  const totalCosts = costs?.totalCosts || 0;
+  const profit = totalRevenue - totalCosts;
+  const profitOnCost = totalCosts > 0 ? (profit / totalCosts) * 100 : 0;
+  const profitOnCapital = totalCosts > 0 ? (profit / totalCosts) * 100 : 0; // simplified — investor capital ≈ total costs
+  const comoFee = profit > 0 ? profit * 0.15 : 0;
+  const investorProfit = profit - comoFee;
+  const investorROI = totalCosts > 0 ? (investorProfit / totalCosts) * 100 : 0;
+
+  // Revenue breakdown
+  const revRes = costs?.revenueRes || 0;
+  const revRet = costs?.revenueRet || 0;
+  const revOff = costs?.revenueOff || 0;
+
+  // Cost breakdown groups
+  const landCosts = (costs?.landPrice || 0) + (costs?.agentCommissionLand || 0) + (costs?.landRegistration || 0);
+  const designCosts = (costs?.designFee || 0) + (costs?.soilTestFee || 0) + (costs?.topographicSurveyFee || 0) + (costs?.surveyorFees || 0);
+  const constructionCosts = (costs?.constructionCost || 0) + (costs?.supervisionFee || 0) + (costs?.contingencies || 0);
+  const regulatoryCosts = (costs?.communityFees || 0) + (costs?.officialBodiesFees || 0) + (costs?.reraUnitRegFee || 0) + (costs?.reraProjectRegFee || 0) + (costs?.developerNocFee || 0) + (costs?.escrowAccountFee || 0) + (costs?.bankFees || 0) + (costs?.reraAuditReportFee || 0) + (costs?.reraInspectionReportFee || 0);
+  const salesCosts = (costs?.developerFee || 0) + (costs?.salesCommission || 0) + (costs?.marketingCost || 0);
 
   return (
-    <div className=" bg-gray-50" dir="rtl">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 ">
-        <div className="max-w-[1200px] mx-auto px-4 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button onClick={() => navigate("/v2")} className="p-1.5 rounded-lg hover:bg-gray-100 transition">
-              <ArrowRight className="w-4 h-4 text-gray-600" />
-            </button>
-            <div>
-              <h1 className="text-[10px] font-bold text-gray-900">دراسة الجدوى</h1>
-              <p className="text-[10px] text-gray-500">مجان متعدد الاستخدامات — G+4P+25</p>
-            </div>
+    <div className="bg-gray-50 min-h-[400px]" dir="rtl">
+      {/* Header with project selector */}
+      <div className="bg-white border-b border-gray-100 px-4 py-2 flex items-center gap-3 sticky top-0 z-10">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-teal-600 to-emerald-700 flex items-center justify-center shadow-sm">
+            <BarChart2 className="w-3.5 h-3.5 text-white" />
           </div>
-          <button className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-800 hover:bg-gray-900 text-white text-[10px]">
-            <Download className="w-3 h-3" /> تصدير PDF
-          </button>
+          <span className="text-xs font-bold text-gray-800">دراسة الجدوى المالية</span>
+        </div>
+        <div className="mr-auto w-56">
+          <ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} />
         </div>
       </div>
 
-      <div className="max-w-[1200px] mx-auto px-4 py-3 space-y-3">
-        {/* KPI Cards */}
-        <div className="grid grid-cols-5 gap-2">
-          <div className="bg-white rounded-lg p-2.5 border border-gray-100 shadow-sm">
-            <p className="text-[9px] text-gray-500 mb-0.5">إجمالي الإيرادات</p>
-            <p className="text-[10px] font-bold text-gray-900">{fmt(totalRevenue)}</p>
-          </div>
-          <div className="bg-white rounded-lg p-2.5 border border-gray-100 shadow-sm">
-            <p className="text-[9px] text-gray-500 mb-0.5">إجمالي التكاليف</p>
-            <p className="text-[10px] font-bold text-gray-900">{fmt(totalCosts)}</p>
-          </div>
-          <div className="bg-white rounded-lg p-2.5 border border-teal-100 shadow-sm">
-            <p className="text-[9px] text-teal-600 mb-0.5">صافي الربح</p>
-            <p className="text-[10px] font-bold text-teal-700">{fmt(netProfit)}</p>
-            <p className="text-[8px] text-gray-400">{((netProfit / totalCosts) * 100).toFixed(1)}% من التكلفة</p>
-          </div>
-          <div className="bg-white rounded-lg p-2.5 border border-blue-100 shadow-sm">
-            <p className="text-[9px] text-blue-600 mb-0.5">MOIC</p>
-            <p className="text-[10px] font-bold text-blue-700">{moic.toFixed(2)}x</p>
-          </div>
-          <div className="bg-white rounded-lg p-2.5 border border-purple-100 shadow-sm">
-            <p className="text-[9px] text-purple-600 mb-0.5">أرباح COMO</p>
-            <p className="text-[10px] font-bold text-purple-700">{fmt(comoTotal)}</p>
-          </div>
-        </div>
+      {!selectedProjectId && (
+        <div className="text-center py-16 text-gray-400 text-sm">اختر مشروعاً لعرض دراسة الجدوى</div>
+      )}
 
-        {/* Revenue Table */}
-        <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-3 py-1.5 border-b border-gray-100 bg-green-50/30">
-            <h3 className="text-[10px] font-bold text-green-800">الإيرادات</h3>
-          </div>
-          <table className="w-full text-[10px]">
-            <tbody>
-              {REVENUE_ITEMS.map((item, i) => (
-                <tr key={i} className="border-b border-gray-50 hover:bg-gray-50/50">
-                  <td className="px-3 py-[4px] text-gray-800 font-medium">{item.name}</td>
-                  <td className="px-3 py-[4px] text-left text-gray-700 tabular-nums w-[120px]">{fmtFull(item.amount)}</td>
-                  <td className="px-3 py-[4px] text-left text-gray-400 w-[50px]">{((item.amount / totalRevenue) * 100).toFixed(0)}%</td>
-                </tr>
-              ))}
-              <tr className="bg-green-50 font-bold">
-                <td className="px-3 py-[4px] text-green-800">إجمالي الإيرادات</td>
-                <td className="px-3 py-[4px] text-left text-green-800 tabular-nums">{fmtFull(totalRevenue)}</td>
-                <td className="px-3 py-[4px] text-left text-green-800">100%</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+      {selectedProjectId && !costs && (
+        <div className="text-center py-16 text-gray-400 text-sm">جاري تحميل البيانات...</div>
+      )}
 
-        {/* Cost Table */}
-        <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-3 py-1.5 border-b border-gray-100 bg-red-50/30">
-            <h3 className="text-[10px] font-bold text-red-800">التكاليف</h3>
-          </div>
-          <table className="w-full text-[10px]">
-            <tbody>
-              {COST_CATEGORIES.map((cat) => (
-                <Fragment key={cat.category}>
-                  <tr className="bg-gray-50/50">
-                    <td colSpan={3} className="px-3 py-[3px] text-[9px] font-bold text-gray-600 border-b border-gray-100">
-                      {cat.category}
-                    </td>
-                  </tr>
-                  {cat.items.map((item, j) => (
-                    <tr key={`${cat.category}-${j}`} className="border-b border-gray-50 hover:bg-gray-50/50">
-                      <td className="px-3 py-[4px] text-gray-800 font-medium pr-6">{item.name}</td>
-                      <td className="px-3 py-[4px] text-left text-gray-700 tabular-nums w-[120px]">{fmtFull(item.amount)}</td>
-                      <td className="px-3 py-[4px] text-left text-gray-400 w-[50px]">{((item.amount / totalCosts) * 100).toFixed(1)}%</td>
-                    </tr>
-                  ))}
-                </Fragment>
-              ))}
-              <tr className="bg-red-50 font-bold border-t-2 border-red-200">
-                <td className="px-3 py-[4px] text-red-800">إجمالي التكاليف</td>
-                <td className="px-3 py-[4px] text-left text-red-800 tabular-nums">{fmtFull(totalCosts)}</td>
-                <td className="px-3 py-[4px] text-left text-red-800">100%</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+      {costs && project && (
+        <div className="max-w-[1100px] mx-auto px-4 py-3 space-y-3">
 
-        {/* Investor vs COMO Split */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
-            <div className="px-3 py-1.5 border-b border-gray-100 bg-blue-50/30">
-              <h3 className="text-[10px] font-bold text-blue-800">عوائد المستثمر</h3>
+          {/* ═══ KPI STRIP ═══ */}
+          <div className="grid grid-cols-3 lg:grid-cols-6 gap-2">
+            <KpiMini label="الإيرادات" value={fmtM(totalRevenue)} color="emerald" icon={<TrendingUp className="w-3 h-3" />} />
+            <KpiMini label="التكاليف" value={fmtM(totalCosts)} color="red" icon={<DollarSign className="w-3 h-3" />} />
+            <KpiMini label="صافي الربح" value={fmtM(profit)} color={profit >= 0 ? "teal" : "red"} icon={<BarChart2 className="w-3 h-3" />} />
+            <KpiMini label="ربح/تكلفة" value={fmtPct(profitOnCost)} color="violet" icon={<Percent className="w-3 h-3" />} />
+            <KpiMini label="ربح/رأس المال" value={fmtPct(profitOnCapital)} color="blue" icon={<Target className="w-3 h-3" />} />
+            <KpiMini label="ROI المستثمر" value={fmtPct(investorROI)} color="amber" icon={<Sparkles className="w-3 h-3" />} />
+          </div>
+
+          {/* ═══ TWO COLUMNS ═══ */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
+
+            {/* ─── LEFT: FINANCIALS ─── */}
+            <div className="space-y-3">
+
+              {/* Revenue */}
+              <SectionCard title="الإيرادات" icon={<TrendingUp className="w-3.5 h-3.5 text-white" />} gradient="from-emerald-500 to-green-600" borderColor="border-emerald-200/60">
+                <div className="space-y-1">
+                  <Row label="سكني" value={fmt(revRes)} pct={totalRevenue > 0 ? (revRes / totalRevenue * 100) : 0} color="text-emerald-700" />
+                  <Row label="تجزئة" value={fmt(revRet)} pct={totalRevenue > 0 ? (revRet / totalRevenue * 100) : 0} color="text-emerald-700" />
+                  <Row label="مكاتب" value={fmt(revOff)} pct={totalRevenue > 0 ? (revOff / totalRevenue * 100) : 0} color="text-emerald-700" />
+                  <TotalRow label="إجمالي الإيرادات" value={fmt(totalRevenue)} bgColor="bg-emerald-50" textColor="text-emerald-800" />
+                </div>
+              </SectionCard>
+
+              {/* Costs */}
+              <SectionCard title="التكاليف" icon={<DollarSign className="w-3.5 h-3.5 text-white" />} gradient="from-red-500 to-rose-600" borderColor="border-red-200/60">
+                <div className="space-y-1">
+                  <Row label="الأرض" value={fmt(landCosts)} pct={totalCosts > 0 ? (landCosts / totalCosts * 100) : 0} color="text-gray-700" />
+                  <Row label="التصاميم والدراسات" value={fmt(designCosts)} pct={totalCosts > 0 ? (designCosts / totalCosts * 100) : 0} color="text-gray-700" />
+                  <Row label="الإنشاء والإشراف" value={fmt(constructionCosts)} pct={totalCosts > 0 ? (constructionCosts / totalCosts * 100) : 0} color="text-gray-700" />
+                  <Row label="الرسوم التنظيمية" value={fmt(regulatoryCosts)} pct={totalCosts > 0 ? (regulatoryCosts / totalCosts * 100) : 0} color="text-gray-700" />
+                  <Row label="المبيعات والتسويق" value={fmt(salesCosts)} pct={totalCosts > 0 ? (salesCosts / totalCosts * 100) : 0} color="text-gray-700" />
+                  <TotalRow label="إجمالي التكاليف" value={fmt(totalCosts)} bgColor="bg-red-50" textColor="text-red-800" />
+                </div>
+              </SectionCard>
+
+              {/* Profit & Ratios */}
+              <SectionCard title="الأرباح والعوائد" icon={<BarChart2 className="w-3.5 h-3.5 text-white" />} gradient="from-teal-500 to-emerald-600" borderColor="border-teal-200/60">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+                    <span className="text-[11px] font-bold text-gray-700">صافي الربح</span>
+                    <span className={`text-lg font-black tabular-nums ${profit >= 0 ? 'text-teal-700' : 'text-red-700'}`} dir="ltr">{fmt(profit)} <span className="text-[9px] text-gray-400">AED</span></span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <RatioBox label="ربح/تكلفة" value={fmtPct(profitOnCost)} color="violet" />
+                    <RatioBox label="ربح/رأس المال" value={fmtPct(profitOnCapital)} color="blue" />
+                    <RatioBox label="هامش الربح" value={fmtPct(totalRevenue > 0 ? (profit / totalRevenue * 100) : 0)} color="amber" />
+                  </div>
+                  {/* Developer / Investor split */}
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100">
+                    <div className="bg-orange-50/70 border border-orange-200/50 rounded-lg px-3 py-2">
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <Sparkles className="w-3 h-3 text-orange-500" />
+                        <span className="text-[10px] font-bold text-orange-800">أتعاب المطور (15%)</span>
+                      </div>
+                      <div className="text-sm font-black text-orange-800 tabular-nums" dir="ltr">{fmt(comoFee)}</div>
+                    </div>
+                    <div className="bg-emerald-50/70 border border-emerald-200/50 rounded-lg px-3 py-2">
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <Users className="w-3 h-3 text-emerald-500" />
+                        <span className="text-[10px] font-bold text-emerald-800">ربح المستثمر (85%)</span>
+                      </div>
+                      <div className="text-sm font-black text-emerald-800 tabular-nums" dir="ltr">{fmt(investorProfit)}</div>
+                      <div className="text-[9px] text-emerald-600 mt-0.5">ROI: {fmtPct(investorROI)}</div>
+                    </div>
+                  </div>
+                </div>
+              </SectionCard>
             </div>
-            <table className="w-full text-[10px]">
-              <tbody>
-                <tr className="border-b border-gray-50">
-                  <td className="px-3 py-[4px] text-gray-800">إجمالي المساهمات</td>
-                  <td className="px-3 py-[4px] text-left tabular-nums text-red-600">{fmtFull(investorContributions)}</td>
-                </tr>
-                <tr className="border-b border-gray-50">
-                  <td className="px-3 py-[4px] text-gray-800">إجمالي التوزيعات</td>
-                  <td className="px-3 py-[4px] text-left tabular-nums text-green-600">{fmtFull(investorDistributions)}</td>
-                </tr>
-                <tr className="border-b border-gray-50">
-                  <td className="px-3 py-[4px] text-gray-800">صافي ربح المستثمر (85%)</td>
-                  <td className="px-3 py-[4px] text-left tabular-nums font-bold text-blue-700">{fmtFull(investorDistributions - investorContributions)}</td>
-                </tr>
-                <tr className="border-b border-gray-50">
-                  <td className="px-3 py-[4px] text-gray-800">MOIC</td>
-                  <td className="px-3 py-[4px] text-left font-bold text-blue-700">{moic.toFixed(2)}x</td>
-                </tr>
-                <tr className="border-b border-gray-50">
-                  <td className="px-3 py-[4px] text-gray-800">IRR</td>
-                  <td className="px-3 py-[4px] text-left font-bold text-blue-700">22.4%</td>
-                </tr>
-                <tr>
-                  <td className="px-3 py-[4px] text-gray-800">تاريخ استرداد رأس المال</td>
-                  <td className="px-3 py-[4px] text-left text-gray-700">الشهر 34</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
 
-          <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
-            <div className="px-3 py-1.5 border-b border-gray-100 bg-purple-50/30">
-              <h3 className="text-[10px] font-bold text-purple-800">أرباح COMO (المطور)</h3>
+            {/* ─── RIGHT: PROJECT DETAILS ─── */}
+            <div className="space-y-3">
+
+              {/* Project Details */}
+              <SectionCard title="تفاصيل المشروع" icon={<Building2 className="w-3.5 h-3.5 text-white" />} gradient="from-slate-600 to-gray-700" borderColor="border-gray-200">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[11px]">
+                  <DetailRow label="اسم المشروع" value={project.name || "—"} />
+                  <DetailRow label="المنطقة" value={project.community || project.areaCode || "—"} />
+                  <DetailRow label="مساحة الأرض" value={project.plotAreaSqft ? `${fmt(parseFloat(project.plotAreaSqft))} قدم²` : "—"} />
+                  <DetailRow label="مساحة البناء (BUA)" value={project.manualBuaSqft ? `${fmt(parseFloat(project.manualBuaSqft))} قدم²` : "—"} />
+                  <DetailRow label="سعر الأرض" value={project.landPrice ? `${fmt(parseFloat(project.landPrice))} AED` : "—"} />
+                  <DetailRow label="تكلفة الإنشاء/قدم²" value={project.estimatedConstructionPricePerSqft ? `${parseFloat(project.estimatedConstructionPricePerSqft).toFixed(0)} AED` : "—"} />
+                  <DetailRow label="مدة التصاميم" value={project.preConMonths ? `${project.preConMonths} شهر` : "—"} />
+                  <DetailRow label="مدة الإنشاء" value={project.constructionMonths ? `${project.constructionMonths} شهر` : "—"} />
+                  <DetailRow label="مدة التسليم" value={project.handoverMonths ? `${project.handoverMonths} شهر` : "—"} />
+                  <DetailRow label="أتعاب المطور" value={project.developerFeePct ? `${project.developerFeePct}%` : "—"} />
+                  <DetailRow label="عمولة المبيعات" value={project.salesCommissionPct ? `${project.salesCommissionPct}%` : "—"} />
+                  <DetailRow label="التسويق" value={project.marketingPct ? `${project.marketingPct}%` : "—"} />
+                  <DetailRow label="أتعاب التصميم" value={project.designFeePct ? `${project.designFeePct}%` : "—"} />
+                  <DetailRow label="أتعاب الإشراف" value={project.supervisionFeePct ? `${project.supervisionFeePct}%` : "—"} />
+                  <DetailRow label="الملكية" value={project.ownershipType || "—"} />
+                  <DetailRow label="سيناريو التمويل" value={
+                    project.financingScenario === 'offplan_escrow' ? 'أوف بلان + ضمان' :
+                    project.financingScenario === 'offplan_construction' ? 'أوف بلان + بناء' :
+                    project.financingScenario === 'no_offplan' ? 'بدون أوف بلان' :
+                    project.financingScenario || "—"
+                  } />
+                </div>
+              </SectionCard>
+
+              {/* Areas */}
+              <SectionCard title="المساحات" icon={<Landmark className="w-3.5 h-3.5 text-white" />} gradient="from-sky-500 to-blue-600" borderColor="border-sky-200/60">
+                <div className="space-y-1.5">
+                  <AreaRow label="GFA سكني" value={project.gfaResidentialSqft ? `${fmt(parseFloat(project.gfaResidentialSqft))} قدم²` : "—"} />
+                  <AreaRow label="GFA تجزئة" value={project.gfaRetailSqft ? `${fmt(parseFloat(project.gfaRetailSqft))} قدم²` : "—"} />
+                  <AreaRow label="GFA مكاتب" value={project.gfaOfficesSqft ? `${fmt(parseFloat(project.gfaOfficesSqft))} قدم²` : "—"} />
+                  <div className="border-t border-gray-100 pt-1.5">
+                    <AreaRow label="إجمالي GFA" value={
+                      (parseFloat(project.gfaResidentialSqft || "0") + parseFloat(project.gfaRetailSqft || "0") + parseFloat(project.gfaOfficesSqft || "0")) > 0
+                        ? `${fmt(parseFloat(project.gfaResidentialSqft || "0") + parseFloat(project.gfaRetailSqft || "0") + parseFloat(project.gfaOfficesSqft || "0"))} قدم²`
+                        : "—"
+                    } bold />
+                  </div>
+                </div>
+              </SectionCard>
+
+              {/* Key Metrics Summary */}
+              <SectionCard title="ملخص المؤشرات" icon={<Info className="w-3.5 h-3.5 text-white" />} gradient="from-indigo-500 to-violet-600" borderColor="border-indigo-200/60">
+                <div className="space-y-1.5 text-[11px]">
+                  <MetricRow label="تكلفة الإنشاء" value={`${fmt(costs?.constructionCost || 0)} AED`} />
+                  <MetricRow label="رأس المال المطلوب (المستثمر)" value={`${fmt(totalCosts)} AED`} />
+                  <MetricRow label="أتعاب المطور من الأرباح" value={`${fmt(comoFee)} AED (15%)`} highlight />
+                  <MetricRow label="صافي ربح المستثمر" value={`${fmt(investorProfit)} AED (85%)`} highlight />
+                  <MetricRow label="نسبة ربح المستثمر من رأس المال" value={fmtPct(investorROI)} highlight />
+                  <MetricRow label="فترة الاسترداد التقديرية" value={`${parseInt(project.preConMonths || "6") + parseInt(project.constructionMonths || "18") + parseInt(project.handoverMonths || "2")} شهر`} />
+                  <MetricRow label="تكلفة القدم المربع (إجمالي)" value={
+                    parseFloat(project.manualBuaSqft || "0") > 0
+                      ? `${(totalCosts / parseFloat(project.manualBuaSqft)).toFixed(0)} AED/sqft`
+                      : "—"
+                  } />
+                </div>
+              </SectionCard>
             </div>
-            <table className="w-full text-[10px]">
-              <tbody>
-                <tr className="border-b border-gray-50">
-                  <td className="px-3 py-[4px] text-gray-800">أتعاب تصميم (2%)</td>
-                  <td className="px-3 py-[4px] text-left tabular-nums">{fmtFull(12_450_000)}</td>
-                </tr>
-                <tr className="border-b border-gray-50">
-                  <td className="px-3 py-[4px] text-gray-800">أتعاب إشراف (3%)</td>
-                  <td className="px-3 py-[4px] text-left tabular-nums">{fmtFull(18_675_000)}</td>
-                </tr>
-                <tr className="border-b border-gray-50">
-                  <td className="px-3 py-[4px] text-gray-800">حصة الأرباح (15%)</td>
-                  <td className="px-3 py-[4px] text-left tabular-nums">{fmtFull(netProfit * 0.15)}</td>
-                </tr>
-                <tr className="bg-purple-50 font-bold">
-                  <td className="px-3 py-[4px] text-purple-800">إجمالي أرباح COMO</td>
-                  <td className="px-3 py-[4px] text-left tabular-nums text-purple-800">{fmtFull(comoTotal)}</td>
-                </tr>
-              </tbody>
-            </table>
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════ SUB-COMPONENTS ═══════════════════ */
+
+function KpiMini({ label, value, color, icon }: { label: string; value: string; color: string; icon: React.ReactNode }) {
+  const colorMap: Record<string, string> = {
+    emerald: "bg-emerald-50 border-emerald-200/60 text-emerald-700",
+    red: "bg-red-50 border-red-200/60 text-red-700",
+    teal: "bg-teal-50 border-teal-200/60 text-teal-700",
+    violet: "bg-violet-50 border-violet-200/60 text-violet-700",
+    blue: "bg-blue-50 border-blue-200/60 text-blue-700",
+    amber: "bg-amber-50 border-amber-200/60 text-amber-700",
+  };
+  return (
+    <div className={`rounded-lg border px-2 py-1.5 ${colorMap[color] || colorMap.teal}`}>
+      <div className="flex items-center gap-1 mb-0.5 opacity-70">{icon}<span className="text-[8px] font-medium">{label}</span></div>
+      <div className="text-sm font-black tabular-nums" dir="ltr">{value}</div>
+    </div>
+  );
+}
+
+function SectionCard({ title, icon, gradient, borderColor, children }: { title: string; icon: React.ReactNode; gradient: string; borderColor: string; children: React.ReactNode }) {
+  return (
+    <div className={`rounded-xl bg-white border ${borderColor} shadow-sm overflow-hidden`}>
+      <div className={`px-3 py-1.5 border-b border-gray-100 flex items-center gap-2`}>
+        <div className={`w-6 h-6 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center`}>{icon}</div>
+        <h3 className="text-[11px] font-bold text-gray-800">{title}</h3>
       </div>
+      <div className="px-3 py-2">{children}</div>
+    </div>
+  );
+}
+
+function Row({ label, value, pct, color }: { label: string; value: string; pct: number; color: string }) {
+  return (
+    <div className="flex items-center justify-between text-[11px] py-0.5">
+      <span className="text-gray-600">{label}</span>
+      <div className="flex items-center gap-3">
+        <span className={`font-bold tabular-nums ${color}`} dir="ltr">{value}</span>
+        <span className="text-[9px] text-gray-400 w-8 text-left">{pct > 0 ? `${pct.toFixed(0)}%` : ""}</span>
+      </div>
+    </div>
+  );
+}
+
+function TotalRow({ label, value, bgColor, textColor }: { label: string; value: string; bgColor: string; textColor: string }) {
+  return (
+    <div className={`flex items-center justify-between text-[11px] font-bold ${bgColor} rounded-md px-2 py-1 mt-1`}>
+      <span className={textColor}>{label}</span>
+      <span className={`tabular-nums ${textColor}`} dir="ltr">{value}</span>
+    </div>
+  );
+}
+
+function RatioBox({ label, value, color }: { label: string; value: string; color: string }) {
+  const colorMap: Record<string, string> = {
+    violet: "bg-violet-50/80 border-violet-200/60 text-violet-700",
+    blue: "bg-blue-50/80 border-blue-200/60 text-blue-700",
+    amber: "bg-amber-50/80 border-amber-200/60 text-amber-700",
+  };
+  return (
+    <div className={`border rounded-lg p-1.5 text-center ${colorMap[color] || colorMap.violet}`}>
+      <div className="text-[9px] font-medium opacity-70 mb-0.5">{label}</div>
+      <div className="text-base font-black tabular-nums">{value}</div>
+    </div>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="text-gray-400 font-medium whitespace-nowrap">{label}:</span>
+      <span className="font-bold text-gray-800 truncate" dir="auto">{value}</span>
+    </div>
+  );
+}
+
+function AreaRow({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+  return (
+    <div className="flex items-center justify-between text-[11px]">
+      <span className={`${bold ? 'font-bold text-gray-800' : 'text-gray-600'}`}>{label}</span>
+      <span className={`tabular-nums ${bold ? 'font-black text-sky-800' : 'font-bold text-gray-700'}`} dir="ltr">{value}</span>
+    </div>
+  );
+}
+
+function MetricRow({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <div className={`flex items-center justify-between py-0.5 ${highlight ? 'bg-indigo-50/50 rounded px-1.5 -mx-1.5' : ''}`}>
+      <span className="text-gray-600">{label}</span>
+      <span className={`font-bold tabular-nums ${highlight ? 'text-indigo-700' : 'text-gray-800'}`} dir="ltr">{value}</span>
     </div>
   );
 }

@@ -1,19 +1,18 @@
 import { useState, lazy, Suspense } from "react";
 import { useLocation } from "wouter";
-import { ArrowRight, ClipboardList, HardHat, Target, Settings, Calendar, TrendingDown, FileText, Building2, Briefcase, LayoutGrid, Landmark } from "lucide-react";
+import { ArrowRight, ClipboardList, HardHat, Target, Settings, TrendingDown, FileText, Building2, Briefcase, LayoutGrid, Landmark } from "lucide-react";
 
 const GeneralInputsPage = lazy(() => import("./GeneralInputsPage"));
 const PricingPage = lazy(() => import("./PricingPage"));
 const ConstructionInputsPage = lazy(() => import("./ConstructionInputsPage"));
 const V2WaelSales = lazy(() => import("./V2WaelSales"));
 const SettingsRulesPage = lazy(() => import("./SettingsRulesPage"));
-const V2Timeline = lazy(() => import("./V2Timeline"));
 const V2InvestorCashFlow = lazy(() => import("./V2InvestorCashFlow"));
 const V2EscrowCashFlow = lazy(() => import("./V2EscrowCashFlow"));
 const V2Feasibility = lazy(() => import("./V2Feasibility"));
 const V2Portfolio = lazy(() => import("./V2Portfolio"));
 
-type TabId = "general" | "units" | "construction" | "sales" | "settings" | "timeline" | "cashflows" | "escrow" | "feasibility" | "mall" | "portfolio";
+type TabId = "general" | "units" | "construction" | "sales" | "settings" | "cashflows" | "escrow" | "feasibility" | "mall" | "portfolio";
 
 const TABS: { id: TabId; label: string; icon: any; group: "input" | "output" }[] = [
   { id: "general", label: "المدخلات العامة", icon: ClipboardList, group: "input" },
@@ -21,7 +20,6 @@ const TABS: { id: TabId; label: string; icon: any; group: "input" | "output" }[]
   { id: "construction", label: "الإنشاء", icon: HardHat, group: "input" },
   { id: "sales", label: "المبيعات والتسويق", icon: Target, group: "input" },
   { id: "settings", label: "الإعدادات والقواعد", icon: Settings, group: "input" },
-  { id: "timeline", label: "الجدول الزمني", icon: Calendar, group: "output" },
   { id: "cashflows", label: "تدفقات المستثمر", icon: TrendingDown, group: "output" },
   { id: "escrow", label: "تدفقات الإسكرو", icon: Landmark, group: "output" },
   { id: "feasibility", label: "دراسة الجدوى", icon: FileText, group: "output" },
@@ -41,8 +39,7 @@ function TabContent({ tabId }: { tabId: TabId }) {
       return <V2WaelSales embedded />;
     case "settings":
       return <SettingsRulesPage embedded />;
-    case "timeline":
-      return <V2Timeline />;
+
     case "cashflows":
       return <V2InvestorCashFlow />;
     case "escrow":

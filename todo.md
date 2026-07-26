@@ -989,3 +989,5 @@
 - [x] Add توزيع الوحدات tab (PricingPage without pricing)
 - [x] Replace V2InvestorCashFlow with InvestorCashFlowSchedulePage (real DB)
 - [x] Replace V2Feasibility with FeasibilityStudyPage (real DB)
+- [x] Remove timeline tab from BateekhaPage navigation
+- [x] Redesign V2Feasibility with professional two-column layout (revenues, costs, profits, ratios, developer 15%/investor 85%, project details)
