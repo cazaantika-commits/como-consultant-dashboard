@@ -1176,6 +1176,8 @@ export const projects = mysqlTable("projects", {
 	officeSmallPrice: int().default(1800),
 	officeMediumPrice: int().default(1700),
 	officeLargePrice: int().default(1600),
+	// Construction S-Curve — JSON array of monthly progress percentages
+	constructionScheduleJson: longtext(),
 });
 
 export const proposalComparisons = mysqlTable("proposalComparisons", {

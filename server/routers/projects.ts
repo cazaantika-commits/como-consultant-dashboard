@@ -133,6 +133,8 @@ const factSheetFields = {
   officeSmallPrice: z.number().int().optional(),
   officeMediumPrice: z.number().int().optional(),
   officeLargePrice: z.number().int().optional(),
+  // Construction S-Curve JSON
+  constructionScheduleJson: z.string().optional(),
 };
 
 // All Fact Sheet field keys for completeness calculation

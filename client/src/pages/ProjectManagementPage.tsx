@@ -11,6 +11,10 @@ import PricingPage from "./PricingPage";
 import InvestorCashFlowSchedulePage from "./InvestorCashFlowSchedulePage";
 import EscrowCashFlowSchedulePage2 from "./EscrowCashFlowSchedulePage2";
 import ConsolidatedInvestorCashFlowPage from "./ConsolidatedInvestorCashFlowPage";
+import GeneralInputsPage from "./GeneralInputsPage";
+import ConstructionInputsPage from "./ConstructionInputsPage";
+import V2WaelSales from "./V2WaelSales";
+import SettingsRulesPage from "./SettingsRulesPage";
 
 type View = "icons" | "fact-sheet" | "knowledge" | "financial" | "dynamic-portfolio" | "investor-study";
 
@@ -247,9 +251,16 @@ export default function ProjectManagementPage() {
 
 // ─── Investor Study Hub (sub-view with tabs for the 5 new pages) ───
 function InvestorStudyHub({ onBack }: { onBack: () => void }) {
-  const [activeTab, setActiveTab] = useState<"card" | "pricing" | "investor-cf" | "escrow-cf" | "consolidated">("card");
+  const [activeTab, setActiveTab] = useState<"general" | "construction" | "wael" | "settings" | "card" | "pricing" | "investor-cf" | "escrow-cf" | "consolidated">("general");
 
-  const tabs = [
+  const inputTabs = [
+    { id: "general" as const, label: "الإدخالات العامة", emoji: "📋" },
+    { id: "construction" as const, label: "الإنشاء", emoji: "🏗️" },
+    { id: "wael" as const, label: "المبيعات والتسويق", emoji: "📊" },
+    { id: "settings" as const, label: "الإعدادات", emoji: "⚙️" },
+  ];
+
+  const outputTabs = [
     { id: "card" as const, label: "البطاقة التعريفية" },
     { id: "pricing" as const, label: "التسعير" },
     { id: "investor-cf" as const, label: "تدفقات المستثمر" },
@@ -271,10 +282,28 @@ function InvestorStudyHub({ onBack }: { onBack: () => void }) {
         </div>
       </header>
 
-      {/* Tabs */}
+      {/* Tabs - Two Groups */}
       <div className="border-b border-border bg-card/50">
-        <div className="max-w-7xl mx-auto px-6 flex gap-1 overflow-x-auto">
-          {tabs.map((tab) => (
+        <div className="max-w-7xl mx-auto px-6 flex gap-1 overflow-x-auto items-center">
+          {/* Input Tabs */}
+          {inputTabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                activeTab === tab.id
+                  ? "border-emerald-600 text-emerald-700"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <span className="ml-1">{tab.emoji}</span>
+              {tab.label}
+            </button>
+          ))}
+          {/* Separator */}
+          <div className="h-6 w-px bg-border mx-2" />
+          {/* Output Tabs */}
+          {outputTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -292,6 +321,10 @@ function InvestorStudyHub({ onBack }: { onBack: () => void }) {
 
       {/* Content */}
       <div className="p-0">
+        {activeTab === "general" && <GeneralInputsPage embedded />}
+        {activeTab === "construction" && <ConstructionInputsPage embedded />}
+        {activeTab === "wael" && <V2WaelSales embedded />}
+        {activeTab === "settings" && <SettingsRulesPage embedded />}
         {activeTab === "card" && <ProjectCardOffplanPage />}
         {activeTab === "pricing" && <PricingPage />}
         {activeTab === "investor-cf" && <InvestorCashFlowSchedulePage />}

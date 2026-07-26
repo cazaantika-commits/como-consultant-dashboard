@@ -971,3 +971,13 @@
 - [x] Add project selection feature (checkboxes to choose which projects to combine)
 - [x] Redesign with professional board-level aesthetics for Sheikh Issa presentation
 - [x] Ensure numbers are accurate (revenue, costs, profit, developer share, investor ROI)
+
+## Input Architecture — 4 Input Pages
+
+- [x] Write INPUTS_ARCHITECTURE.md as permanent reference
+- [x] General Inputs page (مساحات، تكاليف، نسب، مدد — كل ما لا يخص وائل ولا الإنشاء)
+- [x] Construction page (نسب إنجاز شهرية، مستخلصات المقاول، دفعة مقدمة)
+- [x] Wael page rebuild (تسعير، منحنى مبيعات، تسويق، دعاية، خطة دفع، قنوات)
+- [x] Settings/Rules page (قواعد زمنية، ربط أحداث، معادلات التوقيت)
+- [x] Wire all 4 pages into Investor Study Hub as tabs
+- [ ] Connect V2 output pages to read from these input sources (not hardcoded)
