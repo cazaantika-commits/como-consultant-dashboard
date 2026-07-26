@@ -169,104 +169,58 @@ export default function V2WaelSales() {
               </div>
             </div>
 
-            {/* Pricing */}
+            {/* Sales Mode + Strategy — moved up */}
             <div className="backdrop-blur-sm bg-white/60 rounded-2xl border border-white/80 shadow-lg shadow-gray-200/30 overflow-hidden">
-              <div className="px-3 py-1.5 border-b border-gray-100/50 flex items-center gap-2 bg-gradient-to-l from-indigo-50/50 to-transparent">
-                <DollarSign className="w-3.5 h-3.5 text-indigo-500" />
-                <span className="text-[11px] font-bold text-gray-700">تسعير الوحدات (سعر/قدم²)</span>
-              </div>
-              <div className="p-2 space-y-1.5">
-                {UNITS.map(u => {
-                  const totalArea = u.area * u.count;
-                  const totalPrice = totalArea * (prices[u.id] || 0);
-                  return (
-                    <div key={u.id} className="border-b border-gray-100/30 pb-1.5 last:border-0 last:pb-0">
-                      <div className="flex items-center gap-1.5 h-5">
-                        <div className="w-2 h-2 rounded-full shadow-sm" style={{ background: u.color }} />
-                        <span className="text-[10px] font-bold text-gray-700 w-14 truncate">{u.name}</span>
-                        <input
-                          type="range" min={800} max={2500} step={50} value={prices[u.id]}
-                          onChange={e => setPrices(p => ({ ...p, [u.id]: +e.target.value }))}
-                          className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-grab"
-                          style={{ background: `linear-gradient(to left, ${u.color}40, ${u.color}15)`, WebkitAppearance: "none" } as any}
-                        />
-                        <span className="text-[10px] font-mono font-black w-10 text-left" style={{ color: u.color }}>{prices[u.id]}</span>
-                      </div>
-                      <div className="flex items-center gap-1 mr-6 mt-0.5">
-                        <span className="text-[8px] text-gray-400">{u.count}×{u.area}=</span>
-                        <span className="text-[8px] font-bold text-gray-500">{(totalArea / 1000).toFixed(0)}K قدم²</span>
-                        <span className="text-[8px] text-gray-300">→</span>
-                        <span className="text-[10px] font-black text-emerald-600">{fmt(totalPrice)}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Strategy */}
-            <div className="backdrop-blur-sm bg-white/60 rounded-2xl border border-white/80 shadow-lg shadow-gray-200/30 overflow-hidden">
-              <div className="px-3 py-1.5 border-b border-gray-100/50 flex items-center gap-2 bg-gradient-to-l from-purple-50/50 to-transparent">
-                <Sliders className="w-3.5 h-3.5 text-purple-500" />
-                <span className="text-[11px] font-bold text-gray-700">استراتيجية البيع</span>
-              </div>
-              <div className="p-2 space-y-2">
-                <div className="flex items-center justify-between h-5">
-                  <span className="text-[10px] text-gray-500">نسبة أوف بلان</span>
-                  <span className="text-[11px] font-black text-purple-600 bg-purple-50 px-1.5 rounded">{offPlan}%</span>
-                </div>
-                <input
-                  type="range" min={30} max={100} value={offPlan}
-                  onChange={e => setOffPlan(+e.target.value)}
-                  className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-purple-100 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:shadow-purple-300 [&::-webkit-slider-thumb]:cursor-grab"
-                />
-              </div>
-            </div>
-
-            {/* Sales Mode */}
-            <div className="backdrop-blur-sm bg-white/60 rounded-2xl border border-white/80 shadow-lg shadow-gray-200/30 overflow-hidden">
-              <div className="px-3 py-1.5 border-b border-gray-100/50 flex items-center justify-between bg-gradient-to-l from-amber-50/50 to-transparent">
+              <div className="px-3 py-1 border-b border-gray-100/50 flex items-center justify-between bg-gradient-to-l from-amber-50/50 to-transparent">
                 <div className="flex items-center gap-2">
                   <Target className="w-3.5 h-3.5 text-amber-500" />
-                  <span className="text-[11px] font-bold text-gray-700">منحنى المبيعات</span>
+                  <span className="text-[10px] font-bold text-gray-700">منحنى المبيعات</span>
                 </div>
-                <div className="flex gap-0.5 bg-white/80 rounded-full p-0.5 shadow-inner">
-                  {(["auto", "manual", "detail"] as const).map(m => (
-                    <button key={m} onClick={() => setSalesMode(m)}
-                      className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold transition-all ${salesMode === m ? "bg-amber-500 text-white shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
-                      {m === "auto" ? "تلقائي" : m === "manual" ? "يدوي" : "تفصيلي"}
-                    </button>
-                  ))}
+                <div className="flex items-center gap-2">
+                  <span className="text-[8px] text-purple-600 font-bold">أوف بلان: {offPlan}%</span>
+                  <div className="flex gap-0.5 bg-white/80 rounded-full p-0.5 shadow-inner">
+                    {(["auto", "manual", "detail"] as const).map(m => (
+                      <button key={m} onClick={() => setSalesMode(m)}
+                        className={`px-2 py-0.5 rounded-full text-[8px] font-bold transition-all ${salesMode === m ? "bg-amber-500 text-white shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+                        {m === "auto" ? "تلقائي" : m === "manual" ? "يدوي" : "تفصيلي"}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
-              <div className="p-2">
+              <div className="p-2 space-y-1.5">
+                {/* Off-plan slider */}
+                <div className="flex items-center gap-2 h-5">
+                  <span className="text-[9px] text-gray-500">نسبة أوف بلان</span>
+                  <input
+                    type="range" min={30} max={100} value={offPlan}
+                    onChange={e => setOffPlan(+e.target.value)}
+                    className="flex-1 h-1 rounded-full appearance-none cursor-pointer bg-purple-100 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-grab"
+                  />
+                  <span className="text-[9px] font-black text-purple-600 w-7">{offPlan}%</span>
+                </div>
                 {salesMode === "auto" && (
-                  <div>
-                    <div className="flex items-center justify-between h-5 mb-1">
-                      <span className="text-[10px] text-gray-500">سرعة البيع</span>
-                      <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 rounded">{salesSpeed < 30 ? "بطيء" : salesSpeed < 70 ? "متوسط" : "سريع"}</span>
-                    </div>
+                  <div className="flex items-center gap-2 h-5">
+                    <span className="text-[9px] text-gray-500">سرعة البيع</span>
                     <input
                       type="range" min={0} max={100} value={salesSpeed}
                       onChange={e => setSalesSpeed(+e.target.value)}
-                      className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-amber-100 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-amber-500 [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:shadow-amber-300 [&::-webkit-slider-thumb]:cursor-grab"
+                      className="flex-1 h-1 rounded-full appearance-none cursor-pointer bg-amber-100 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-amber-500 [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-grab"
                     />
-                    <div className="flex justify-between text-[8px] text-gray-400 mt-0.5">
-                      <span>بطيء</span><span>سريع</span>
-                    </div>
+                    <span className="text-[8px] font-bold text-amber-600 w-10">{salesSpeed < 30 ? "بطيء" : salesSpeed < 70 ? "متوسط" : "سريع"}</span>
                   </div>
                 )}
                 {salesMode === "manual" && (
                   <div>
-                    <div className="text-[9px] text-gray-500 mb-1">عدد الوحدات لكل شهر ({results.totalSold} / {TOTAL_UNITS})</div>
-                    <div className="grid grid-cols-10 gap-0.5 max-h-[120px] overflow-y-auto">
+                    <div className="text-[8px] text-gray-500 mb-0.5">عدد الوحدات لكل شهر ({results.totalSold} / {TOTAL_UNITS})</div>
+                    <div className="grid grid-cols-10 gap-0.5 max-h-[100px] overflow-y-auto">
                       {Array.from({ length: salesMonths }, (_, i) => (
                         <div key={i} className="text-center">
                           <div className="text-[7px] text-gray-400">{salesStart + i}</div>
                           <input
                             type="number" min={0} max={30} value={manualUnits[i] || 0}
                             onChange={e => updateManual(i, +e.target.value)}
-                            className="w-full h-5 text-[9px] text-center border border-gray-200/80 rounded-md bg-white/80 focus:border-amber-400 focus:outline-none"
+                            className="w-full h-4 text-[8px] text-center border border-gray-200/80 rounded bg-white/80 focus:border-amber-400 focus:outline-none"
                           />
                         </div>
                       ))}
@@ -275,14 +229,14 @@ export default function V2WaelSales() {
                 )}
                 {salesMode === "detail" && (
                   <div>
-                    <div className="text-[9px] text-gray-500 mb-1">عدد الوحدات لكل نوع × شهر</div>
-                    <div className="overflow-x-auto max-h-[160px] overflow-y-auto rounded-lg border border-gray-100/50">
-                      <table className="w-full text-[8px]">
+                    <div className="text-[8px] text-gray-500 mb-0.5">عدد الوحدات لكل نوع × شهر</div>
+                    <div className="overflow-x-auto max-h-[130px] overflow-y-auto rounded-lg border border-gray-100/50">
+                      <table className="w-full text-[7px]">
                         <thead className="sticky top-0 bg-white/90 backdrop-blur-sm">
                           <tr>
-                            <th className="text-right text-gray-500 px-1 py-0.5 w-14">النوع</th>
+                            <th className="text-right text-gray-500 px-1 py-0.5 w-12">النوع</th>
                             {Array.from({ length: salesMonths }, (_, i) => (
-                              <th key={i} className="text-center text-gray-400 px-0 py-0.5 w-5">{salesStart + i}</th>
+                              <th key={i} className="text-center text-gray-400 px-0 py-0.5 w-4">{salesStart + i}</th>
                             ))}
                           </tr>
                         </thead>
@@ -290,14 +244,14 @@ export default function V2WaelSales() {
                           {UNITS.map((u, ui) => (
                             <tr key={u.id} className="border-t border-gray-50">
                               <td className="text-right px-1 py-0.5">
-                                <span className="text-gray-600 font-bold">{u.name}</span>
+                                <span className="text-gray-600 font-bold text-[7px]">{u.name}</span>
                               </td>
                               {Array.from({ length: salesMonths }, (_, mi) => (
-                                <td key={mi} className="px-0 py-0.5">
+                                <td key={mi} className="px-0 py-0">
                                   <input
                                     type="number" min={0} max={u.count} value={detailUnits[ui]?.[mi] || 0}
                                     onChange={e => updateDetail(ui, mi, +e.target.value)}
-                                    className="w-5 h-4 text-[7px] text-center border border-gray-200/50 rounded bg-white/60 focus:border-indigo-400 focus:outline-none"
+                                    className="w-4 h-3.5 text-[6px] text-center border border-gray-200/50 rounded bg-white/60 focus:border-indigo-400 focus:outline-none"
                                   />
                                 </td>
                               ))}
@@ -308,6 +262,46 @@ export default function V2WaelSales() {
                     </div>
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Pricing + Revenue Contribution — merged */}
+            <div className="backdrop-blur-sm bg-white/60 rounded-2xl border border-white/80 shadow-lg shadow-gray-200/30 overflow-hidden">
+              <div className="px-3 py-1 border-b border-gray-100/50 flex items-center justify-between bg-gradient-to-l from-indigo-50/50 to-transparent">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="w-3 h-3 text-indigo-500" />
+                  <span className="text-[10px] font-bold text-gray-700">تسعير الوحدات والإيرادات</span>
+                </div>
+                <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">{fmt(results.revenue)}</span>
+              </div>
+              <div className="p-1.5 space-y-0">
+                {UNITS.map(u => {
+                  const totalArea = u.area * u.count;
+                  const totalPrice = totalArea * (prices[u.id] || 0);
+                  const pct = results.revenue > 0 ? (totalPrice / results.revenue) * 100 : 0;
+                  return (
+                    <div key={u.id} className="border-b border-gray-50 last:border-0 py-0.5">
+                      <div className="flex items-center gap-1 h-5">
+                        <div className="w-1.5 h-1.5 rounded-full" style={{ background: u.color }} />
+                        <span className="text-[9px] font-bold text-gray-600 w-12 truncate">{u.name}</span>
+                        <input
+                          type="range" min={800} max={2500} step={50} value={prices[u.id]}
+                          onChange={e => setPrices(p => ({ ...p, [u.id]: +e.target.value }))}
+                          className="flex-1 h-1 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-grab"
+                          style={{ background: `linear-gradient(to left, ${u.color}40, ${u.color}15)` } as any}
+                        />
+                        <span className="text-[9px] font-mono font-black w-8 text-left" style={{ color: u.color }}>{prices[u.id]}</span>
+                      </div>
+                      <div className="flex items-center gap-1 mr-4 h-3">
+                        <div className="flex-1 h-2 bg-gray-100/80 rounded-full overflow-hidden">
+                          <div className="h-full rounded-full transition-all duration-300" style={{ width: `${pct}%`, background: `linear-gradient(to left, ${u.color}, ${u.color}80)` }} />
+                        </div>
+                        <span className="text-[8px] font-mono font-black text-gray-700 w-9 text-left">{fmt(totalPrice)}</span>
+                        <span className="text-[7px] text-gray-400 w-5 text-left">{pct.toFixed(0)}%</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -401,12 +395,13 @@ export default function V2WaelSales() {
                 <table className="w-full text-[9px]">
                   <thead className="sticky top-0 bg-gray-50/90 backdrop-blur-sm">
                     <tr className="border-b border-gray-200/50">
-                      <th className="text-right px-2 py-1.5 text-gray-500 font-medium">الشهر</th>
-                      <th className="text-center px-2 py-1.5 text-gray-500 font-medium">وحدات</th>
-                      <th className="text-center px-2 py-1.5 text-emerald-600 font-medium">↓ دخول</th>
-                      <th className="text-center px-2 py-1.5 text-red-500 font-medium">↑ سحب</th>
-                      <th className="text-center px-2 py-1.5 text-gray-700 font-bold">الرصيد</th>
-                      <th className="text-center px-2 py-1.5 text-gray-500 font-medium">الحالة</th>
+                      <th className="text-right px-2 py-1 text-gray-500 font-medium">الشهر</th>
+                      <th className="text-center px-2 py-1 text-gray-500 font-medium">وحدات</th>
+                      <th className="text-center px-2 py-1 text-gray-400 font-medium">%</th>
+                      <th className="text-center px-2 py-1 text-emerald-600 font-medium">↓ دخول</th>
+                      <th className="text-center px-2 py-1 text-red-500 font-medium">↑ سحب</th>
+                      <th className="text-center px-2 py-1 text-gray-700 font-bold">الرصيد</th>
+                      <th className="text-center px-2 py-1 text-gray-500 font-medium">الحالة</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -414,6 +409,7 @@ export default function V2WaelSales() {
                       <tr key={row.month} className={`border-b border-gray-100/30 h-6 transition-colors ${row.balance < 0 ? "bg-red-50/40" : "hover:bg-emerald-50/20"}`}>
                         <td className="text-right px-2 py-0.5 font-bold text-gray-600">{row.month}</td>
                         <td className="text-center px-2 py-0.5 text-gray-700 font-mono">{row.units}</td>
+                        <td className="text-center px-2 py-0.5 text-gray-400 font-mono text-[8px]">{results.totalSold > 0 ? ((row.units / results.totalSold) * 100).toFixed(0) + "%" : "0%"}</td>
                         <td className="text-center px-2 py-0.5 text-emerald-600 font-mono font-bold">{fmt(row.escrowIn)}</td>
                         <td className="text-center px-2 py-0.5 text-red-500 font-mono">{fmt(row.escrowOut)}</td>
                         <td className={`text-center px-2 py-0.5 font-black font-mono ${row.balance < 0 ? "text-red-600" : "text-emerald-600"}`}>
@@ -433,30 +429,7 @@ export default function V2WaelSales() {
               </div>
             </div>
 
-            {/* Revenue by type */}
-            <div className="backdrop-blur-sm bg-white/60 rounded-2xl border border-white/80 shadow-lg shadow-gray-200/30 overflow-hidden">
-              <div className="px-3 py-2 border-b border-gray-100/50 flex items-center gap-2 bg-gradient-to-l from-violet-50/30 to-transparent">
-                <BarChart3 className="w-3.5 h-3.5 text-violet-500" />
-                <span className="text-[11px] font-bold text-gray-700">مساهمة كل نوع في الإيرادات</span>
-              </div>
-              <div className="p-2 space-y-1">
-                {UNITS.map(u => {
-                  const rev = (prices[u.id] || 0) * u.area * u.count;
-                  const pct = (rev / results.revenue) * 100;
-                  return (
-                    <div key={u.id} className="flex items-center gap-2 h-5">
-                      <div className="w-2 h-2 rounded-full shadow-sm" style={{ background: u.color }} />
-                      <span className="text-[9px] text-gray-600 w-14 font-bold">{u.name}</span>
-                      <div className="flex-1 h-2.5 bg-gray-100/80 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full transition-all duration-500 shadow-sm" style={{ width: `${pct}%`, background: `linear-gradient(to left, ${u.color}, ${u.color}99)` }} />
-                      </div>
-                      <span className="text-[9px] font-mono font-black text-gray-700 w-12 text-left">{fmt(rev)}</span>
-                      <span className="text-[8px] text-gray-400 w-6 text-left">{pct.toFixed(0)}%</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+
           </div>
         </div>
       </div>
