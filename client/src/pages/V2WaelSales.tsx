@@ -118,10 +118,21 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   );
   const [hasPlanChanges, setHasPlanChanges] = useState(false);
 
-  // ─── State: Payment Plan ───────────────────────────────────────────────────
-  const [downPaymentPct, setDownPaymentPct] = useState(20); // دفعة أولى
-  const [duringConstructionPct, setDuringConstructionPct] = useState(50); // أثناء الإنشاء
-  const [onHandoverPct, setOnHandoverPct] = useState(30); // عند التسليم
+  // ─── State: Payment Plan (installment-based) ──────────────────────────────
+  const [ppDownPct, setPpDownPct] = useState(10); // دفعة أولى
+  const [ppSecondPct, setPpSecondPct] = useState(10); // بعد شهر
+  const [ppSecondAfterMonths, setPpSecondAfterMonths] = useState(1); // بعد كم شهر
+  const [ppInstallmentPct, setPpInstallmentPct] = useState(10); // كل فترة
+  const [ppInstallmentEvery, setPpInstallmentEvery] = useState(6); // كل كم شهر
+  const [ppHandoverPct, setPpHandoverPct] = useState(40); // عند التسليم
+  // Computed: installments during construction = 100 - down - second - handover
+  const ppDuringTotal = 100 - ppDownPct - ppSecondPct - ppHandoverPct;
+  const ppInstallmentCount = ppInstallmentPct > 0 ? Math.floor(ppDuringTotal / ppInstallmentPct) : 0;
+  const ppTotal = ppDownPct + ppSecondPct + (ppInstallmentCount * ppInstallmentPct) + ppHandoverPct;
+  // Legacy compat for escrow calc
+  const downPaymentPct = ppDownPct;
+  const duringConstructionPct = 100 - ppDownPct - ppHandoverPct;
+  const onHandoverPct = ppHandoverPct;
 
   // ─── Load data from DB ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -161,9 +172,12 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
           if (parsed.manual) setManualUnits(parsed.manual);
           if (parsed.marketingPrepLead) setMarketingPrepLead(parsed.marketingPrepLead);
           if (parsed.reraLead) setReraLead(parsed.reraLead);
-          if (parsed.downPaymentPct) setDownPaymentPct(parsed.downPaymentPct);
-          if (parsed.duringConstructionPct) setDuringConstructionPct(parsed.duringConstructionPct);
-          if (parsed.onHandoverPct) setOnHandoverPct(parsed.onHandoverPct);
+          if (parsed.ppDownPct) setPpDownPct(parsed.ppDownPct);
+          if (parsed.ppSecondPct) setPpSecondPct(parsed.ppSecondPct);
+          if (parsed.ppSecondAfterMonths) setPpSecondAfterMonths(parsed.ppSecondAfterMonths);
+          if (parsed.ppInstallmentPct) setPpInstallmentPct(parsed.ppInstallmentPct);
+          if (parsed.ppInstallmentEvery) setPpInstallmentEvery(parsed.ppInstallmentEvery);
+          if (parsed.ppHandoverPct) setPpHandoverPct(parsed.ppHandoverPct);
         } catch {}
       }
       setHasPlanChanges(false);
@@ -287,7 +301,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       offplanPct: offPlan,
       marketingBudgetPct: String(marketingPct),
       salesCommissionPct: String(commissionPct),
-      salesAbsorptionJson: JSON.stringify({ mode: salesMode, speed, template: curveTemplate, manual: manualUnits, marketingPrepLead, reraLead, downPaymentPct, duringConstructionPct, onHandoverPct }),
+      salesAbsorptionJson: JSON.stringify({ mode: salesMode, speed, template: curveTemplate, manual: manualUnits, marketingPrepLead, reraLead, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppInstallmentPct, ppInstallmentEvery, ppHandoverPct }),
       channelsJson: JSON.stringify(channelPcts),
       resultsJson: JSON.stringify({ escrowData, salesDistribution }),
     });
@@ -655,35 +669,76 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
               <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-1.5">
                 <CreditCard className="w-3.5 h-3.5 text-indigo-600" />
                 <h2 className="text-[11px] font-bold text-gray-800">خطة الدفع (Payment Plan)</h2>
-                <Badge variant="secondary" className="text-[9px]">المجموع: {downPaymentPct + duringConstructionPct + onHandoverPct}%</Badge>
+                <Badge variant={ppTotal === 100 ? "secondary" : "destructive"} className="text-[9px]">المجموع: {ppTotal}%</Badge>
+                {ppTotal !== 100 && <span className="text-[9px] text-red-600 font-bold">يجب أن يكون 100%</span>}
               </div>
               <div className="p-2">
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-gray-600">دفعة أولى</span>
-                      <span className="text-[10px] font-bold text-indigo-700">{downPaymentPct}%</span>
-                    </div>
-                    <Slider value={[downPaymentPct]} onValueChange={([v]) => { setDownPaymentPct(v); setDuringConstructionPct(100 - v - onHandoverPct); setHasPlanChanges(true); }} min={5} max={50} step={5} />
-                    <p className="text-[9px] text-gray-400">{fmtFull(Math.round(avgUnitPrice * downPaymentPct / 100))} AED / وحدة</p>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-gray-600">أثناء الإنشاء</span>
-                      <span className="text-[10px] font-bold text-blue-700">{duringConstructionPct}%</span>
-                    </div>
-                    <Slider value={[duringConstructionPct]} onValueChange={([v]) => { setDuringConstructionPct(v); setOnHandoverPct(100 - downPaymentPct - v); setHasPlanChanges(true); }} min={10} max={80} step={5} />
-                    <p className="text-[9px] text-gray-400">{fmtFull(Math.round(avgUnitPrice * duringConstructionPct / 100))} AED / وحدة ({constructionMonths} شهر)</p>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-gray-600">عند التسليم</span>
-                      <span className="text-[10px] font-bold text-emerald-700">{onHandoverPct}%</span>
-                    </div>
-                    <Slider value={[onHandoverPct]} onValueChange={([v]) => { setOnHandoverPct(v); setDuringConstructionPct(100 - downPaymentPct - v); setHasPlanChanges(true); }} min={0} max={50} step={5} />
-                    <p className="text-[9px] text-gray-400">{fmtFull(Math.round(avgUnitPrice * onHandoverPct / 100))} AED / وحدة</p>
-                  </div>
-                </div>
+                {/* Payment schedule table */}
+                <table className="w-full text-[10px] mb-2">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="px-2 py-1 text-right font-bold">البند</th>
+                      <th className="px-2 py-1 text-center font-bold">النسبة</th>
+                      <th className="px-2 py-1 text-center font-bold">التوقيت</th>
+                      <th className="px-2 py-1 text-center font-bold">المبلغ / وحدة</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* Down payment */}
+                    <tr className="border-t border-gray-100">
+                      <td className="px-2 py-0.5 text-right">دفعة أولى</td>
+                      <td className="px-2 py-0.5 text-center">
+                        <input type="number" min={5} max={30} value={ppDownPct} onChange={(e) => { setPpDownPct(+e.target.value); setHasPlanChanges(true); }}
+                          className="w-10 h-5 text-center text-[10px] font-bold border border-gray-200 rounded bg-white" />%
+                      </td>
+                      <td className="px-2 py-0.5 text-center text-gray-500">عند التوقيع</td>
+                      <td className="px-2 py-0.5 text-center text-indigo-700 font-bold">{fmtFull(Math.round(avgUnitPrice * ppDownPct / 100))}</td>
+                    </tr>
+                    {/* Second payment */}
+                    <tr className="border-t border-gray-100">
+                      <td className="px-2 py-0.5 text-right">دفعة ثانية</td>
+                      <td className="px-2 py-0.5 text-center">
+                        <input type="number" min={5} max={20} value={ppSecondPct} onChange={(e) => { setPpSecondPct(+e.target.value); setHasPlanChanges(true); }}
+                          className="w-10 h-5 text-center text-[10px] font-bold border border-gray-200 rounded bg-white" />%
+                      </td>
+                      <td className="px-2 py-0.5 text-center">
+                        بعد <input type="number" min={1} max={6} value={ppSecondAfterMonths} onChange={(e) => { setPpSecondAfterMonths(+e.target.value); setHasPlanChanges(true); }}
+                          className="w-7 h-5 text-center text-[10px] font-bold border border-gray-200 rounded bg-white mx-0.5" /> شهر
+                      </td>
+                      <td className="px-2 py-0.5 text-center text-indigo-700 font-bold">{fmtFull(Math.round(avgUnitPrice * ppSecondPct / 100))}</td>
+                    </tr>
+                    {/* Periodic installments */}
+                    <tr className="border-t border-gray-100 bg-blue-50">
+                      <td className="px-2 py-0.5 text-right">أقساط دورية ({ppInstallmentCount} قسط)</td>
+                      <td className="px-2 py-0.5 text-center">
+                        <input type="number" min={5} max={20} value={ppInstallmentPct} onChange={(e) => { setPpInstallmentPct(+e.target.value); setHasPlanChanges(true); }}
+                          className="w-10 h-5 text-center text-[10px] font-bold border border-gray-200 rounded bg-white" />% لكل قسط
+                      </td>
+                      <td className="px-2 py-0.5 text-center">
+                        كل <input type="number" min={2} max={12} value={ppInstallmentEvery} onChange={(e) => { setPpInstallmentEvery(+e.target.value); setHasPlanChanges(true); }}
+                          className="w-7 h-5 text-center text-[10px] font-bold border border-gray-200 rounded bg-white mx-0.5" /> شهر
+                      </td>
+                      <td className="px-2 py-0.5 text-center text-blue-700 font-bold">{fmtFull(Math.round(avgUnitPrice * ppInstallmentPct / 100))} × {ppInstallmentCount}</td>
+                    </tr>
+                    {/* Handover */}
+                    <tr className="border-t border-gray-100 bg-emerald-50">
+                      <td className="px-2 py-0.5 text-right font-bold">عند التسليم</td>
+                      <td className="px-2 py-0.5 text-center">
+                        <input type="number" min={10} max={60} value={ppHandoverPct} onChange={(e) => { setPpHandoverPct(+e.target.value); setHasPlanChanges(true); }}
+                          className="w-10 h-5 text-center text-[10px] font-bold border border-gray-200 rounded bg-white" />%
+                      </td>
+                      <td className="px-2 py-0.5 text-center text-gray-500">عند اكتمال المشروع</td>
+                      <td className="px-2 py-0.5 text-center text-emerald-700 font-bold">{fmtFull(Math.round(avgUnitPrice * ppHandoverPct / 100))}</td>
+                    </tr>
+                    {/* Total */}
+                    <tr className="border-t-2 border-gray-300 bg-gray-100">
+                      <td className="px-2 py-1 text-right font-bold">الإجمالي</td>
+                      <td className={`px-2 py-1 text-center font-bold ${ppTotal === 100 ? 'text-emerald-700' : 'text-red-700'}`}>{ppTotal}%</td>
+                      <td className="px-2 py-1 text-center text-[9px] text-gray-500">{ppDownPct}% + {ppSecondPct}% + ({ppInstallmentPct}×{ppInstallmentCount}) + {ppHandoverPct}%</td>
+                      <td className="px-2 py-1 text-center font-bold text-gray-800">{fmtFull(Math.round(avgUnitPrice))}</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </section>
 
