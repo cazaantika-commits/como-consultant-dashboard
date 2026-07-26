@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useProjectContext } from "@/contexts/ProjectContext";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -11,12 +10,8 @@ import { Slider } from "@/components/ui/slider";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Save, Loader2, HardHat, TrendingUp, DollarSign,
-  RotateCcw, Info, Percent, BarChart3,
+  RotateCcw, Info, Percent,
 } from "lucide-react";
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip as RechartsTooltip, ResponsiveContainer, Cell,
-} from "recharts";
 
 // ═══════════════════════════════════════════════════════════════════
 // S-CURVE TEMPLATES
@@ -55,6 +50,12 @@ function generateSCurve(months: number, type: "standard" | "front_loaded" | "bac
   return result;
 }
 
+function fmt(n: number): string {
+  if (Math.abs(n) >= 1_000_000) return (n / 1_000_000).toFixed(1) + "م";
+  if (Math.abs(n) >= 1_000) return (n / 1_000).toFixed(0) + "ك";
+  return n.toFixed(0);
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════
@@ -76,6 +77,7 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
 
   const [constructionMonths, setConstructionMonths] = useState(18);
   const [mobilizationPct, setMobilizationPct] = useState(10);
+  const [retentionPct] = useState(10); // 5% + 5% = 10% total retention
   const [monthlyProgress, setMonthlyProgress] = useState<number[]>([]);
   const [curveType, setCurveType] = useState<"standard" | "front_loaded" | "back_loaded" | "linear">("standard");
   const [isDirty, setIsDirty] = useState(false);
@@ -125,19 +127,6 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
     setIsDirty(true);
   }, []);
 
-  const chartData = useMemo(() => {
-    let cumulative = 0;
-    return monthlyProgress.map((pct, i) => {
-      cumulative += pct;
-      return {
-        month: i + 1,
-        label: `ش${i + 1}`,
-        progress: pct,
-        cumulative: Math.round(cumulative * 10) / 10,
-      };
-    });
-  }, [monthlyProgress]);
-
   const totalPct = useMemo(() => Math.round(monthlyProgress.reduce((a, b) => a + b, 0) * 10) / 10, [monthlyProgress]);
 
   const constructionCost = useMemo(() => {
@@ -147,24 +136,97 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
     return bua * costPerSqft;
   }, [project]);
 
-  const paymentSchedule = useMemo(() => {
+  // Total columns: construction months + 13 post-completion months
+  const postCompletionMonths = 13;
+  const totalColumns = constructionMonths + postCompletionMonths;
+
+  // Payment data for each column
+  const paymentData = useMemo(() => {
     if (!constructionCost || !monthlyProgress.length) return [];
     const mobilizationAmount = constructionCost * (mobilizationPct / 100);
-    const remainingCost = constructionCost - mobilizationAmount;
-    let cumPaid = mobilizationAmount;
-    return monthlyProgress.map((pct, i) => {
-      const monthPayment = remainingCost * (pct / 100);
-      cumPaid += monthPayment;
-      return {
-        month: i + 1,
-        label: `شهر ${i + 1}`,
-        progress: pct,
-        payment: Math.round(monthPayment),
-        cumPaid: Math.round(cumPaid),
-        cumPaidPct: Math.round((cumPaid / constructionCost) * 1000) / 10,
-      };
-    });
-  }, [constructionCost, monthlyProgress, mobilizationPct]);
+    const workCost = constructionCost - mobilizationAmount; // cost excluding mobilization
+    const retentionRate = retentionPct / 100; // 10% retained each month (5%+5%)
+    const totalRetention1 = workCost * 0.05; // 5% released at +2
+    const totalRetention2 = workCost * 0.05; // 5% released at +13
+
+    let cumulativePaid = 0;
+    let cumulativeRetained = 0;
+
+    const data: Array<{
+      month: number; // 1-based
+      isConstruction: boolean;
+      progressPct: number;
+      fullAmount: number; // full payment based on %
+      actualPaid: number; // 80% of full (or mobilization for month 1)
+      retentionHeld: number; // 20% held
+      cumulativePaid: number;
+      cumulativeRetained: number;
+      retention1Release: number; // 5% released at completion+2
+      retention2Release: number; // 5% released at completion+13
+    }> = [];
+
+    for (let col = 0; col < totalColumns; col++) {
+      const monthNum = col + 1;
+      const isConstruction = col < constructionMonths;
+      let progressPct = 0;
+      let fullAmount = 0;
+      let actualPaid = 0;
+      let retentionHeld = 0;
+      let retention1Release = 0;
+      let retention2Release = 0;
+
+      if (isConstruction) {
+        if (col === 0) {
+          // Month 1: mobilization (advance payment)
+          progressPct = 0;
+          fullAmount = mobilizationAmount;
+          actualPaid = mobilizationAmount;
+          retentionHeld = 0;
+        } else {
+          // Month N: pays for progress of month N-1 (1 month delay)
+          const progressIdx = col - 1; // progress of previous month
+          progressPct = progressIdx < monthlyProgress.length ? monthlyProgress[progressIdx] : 0;
+          fullAmount = workCost * (progressPct / 100);
+          actualPaid = fullAmount * (1 - retentionRate); // 80%
+          retentionHeld = fullAmount * retentionRate; // 20%
+        }
+      } else {
+        // Post-completion months
+        const postMonth = col - constructionMonths + 1; // 1-based post month
+        if (postMonth === 1) {
+          // Pay for last construction month's progress
+          const lastIdx = constructionMonths - 1;
+          progressPct = lastIdx < monthlyProgress.length ? monthlyProgress[lastIdx] : 0;
+          fullAmount = workCost * (progressPct / 100);
+          actualPaid = fullAmount * (1 - retentionRate);
+          retentionHeld = fullAmount * retentionRate;
+        }
+        if (postMonth === 2) {
+          retention1Release = totalRetention1; // 5% released
+        }
+        if (postMonth === 13) {
+          retention2Release = totalRetention2; // 5% released
+        }
+      }
+
+      cumulativePaid += actualPaid + retention1Release + retention2Release;
+      cumulativeRetained += retentionHeld - (retention1Release > 0 ? totalRetention1 : 0) - (retention2Release > 0 ? totalRetention2 : 0);
+
+      data.push({
+        month: monthNum,
+        isConstruction,
+        progressPct,
+        fullAmount,
+        actualPaid,
+        retentionHeld,
+        cumulativePaid,
+        cumulativeRetained: Math.max(0, cumulativeRetained),
+        retention1Release,
+        retention2Release,
+      });
+    }
+    return data;
+  }, [constructionCost, monthlyProgress, mobilizationPct, retentionPct, constructionMonths, totalColumns]);
 
   const handleSave = () => {
     if (!selectedProjectId) return;
@@ -196,7 +258,7 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
             <span className="text-xs font-bold text-gray-800">جدول الإنشاء</span>
           </div>
           <div className="flex items-center gap-2">
-<ProjectSelector
+            <ProjectSelector
               selectedId={selectedProjectId}
               onSelect={setSelectedProjectId}
             />
@@ -222,206 +284,204 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
         {selectedProjectId && project && (
           <div className="space-y-3">
             {/* Summary Cards */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm">
+            <div className="grid grid-cols-4 gap-3">
+              <div className="bg-white rounded-lg p-2 border border-gray-100 shadow-sm">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[11px] text-gray-600">مدة الإنشاء</span>
-                  <Badge variant="outline" className="text-[10px] h-5">{constructionMonths} شهر</Badge>
+                  <span className="text-[10px] text-gray-600">مدة الإنشاء</span>
+                  <Badge variant="outline" className="text-[9px] h-4">{constructionMonths} شهر</Badge>
                 </div>
                 <Slider
                   value={[constructionMonths]}
                   onValueChange={([v]) => handleMonthsChange(v)}
-                  min={6}
-                  max={48}
-                  step={1}
-                  className="mt-1"
+                  min={6} max={48} step={1} className="mt-1"
                 />
-                <div className="flex justify-between text-[9px] text-gray-400 mt-1">
-                  <span>6</span>
-                  <span>48</span>
-                </div>
               </div>
 
-              <div className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm">
+              <div className="bg-white rounded-lg p-2 border border-gray-100 shadow-sm">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[11px] text-gray-600">دفعة مقدمة</span>
-                  <Badge variant="outline" className="text-[10px] h-5">{mobilizationPct}%</Badge>
+                  <span className="text-[10px] text-gray-600">دفعة مقدمة</span>
+                  <Badge variant="outline" className="text-[9px] h-4">{mobilizationPct}%</Badge>
                 </div>
                 <Slider
                   value={[mobilizationPct]}
                   onValueChange={([v]) => { setMobilizationPct(v); setIsDirty(true); }}
-                  min={0}
-                  max={25}
-                  step={1}
-                  className="mt-1"
+                  min={0} max={25} step={1} className="mt-1"
                 />
-                <div className="flex justify-between text-[9px] text-gray-400 mt-1">
-                  <span>0%</span>
-                  <span>25%</span>
-                </div>
               </div>
 
-              <div className="bg-white rounded-lg p-3 border border-red-100 shadow-sm">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[11px] text-red-600">تكلفة الإنشاء</span>
+              <div className="bg-white rounded-lg p-2 border border-red-100 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-red-600">تكلفة الإنشاء</span>
                   <Tooltip>
                     <TooltipTrigger><Info className="w-3 h-3 text-gray-400" /></TooltipTrigger>
                     <TooltipContent>BUA × تكلفة/قدم</TooltipContent>
                   </Tooltip>
                 </div>
-                <div className="text-base font-bold text-red-700">
+                <div className="text-sm font-bold text-red-700">
                   {constructionCost ? (constructionCost / 1_000_000).toFixed(1) + " م" : "—"}
                 </div>
-                <p className="text-[10px] text-gray-500">
-                  المقدمة: {constructionCost ? ((constructionCost * mobilizationPct / 100) / 1_000_000).toFixed(2) + " م" : "—"}
-                </p>
+              </div>
+
+              <div className="bg-white rounded-lg p-2 border border-amber-100 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-amber-700">الريتنشن ({retentionPct}%)</span>
+                </div>
+                <div className="text-[9px] text-gray-600">5% بعد شهرين | 5% بعد 13 شهر</div>
               </div>
             </div>
 
             {/* Curve Type Selector */}
-            <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-3">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
+            <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-2">
+              <div className="flex items-center justify-between mb-1.5">
+                <h3 className="text-[11px] font-bold text-gray-700 flex items-center gap-1.5">
                   <TrendingUp className="w-3.5 h-3.5 text-teal-600" />
-                  نوع منحنى الإنجاز (S-Curve)
+                  نوع المنحنى
                 </h3>
                 {totalPct !== 100 && (
-                  <Badge variant="destructive" className="text-[10px] h-5">
-                    المجموع: {totalPct}%
-                  </Badge>
+                  <Badge variant="destructive" className="text-[9px] h-4">المجموع: {totalPct}%</Badge>
                 )}
+                <Button variant="ghost" size="sm" onClick={() => handleRegenerateFromTemplate(curveType)} className="gap-1 text-[10px] h-5 text-gray-600 hover:text-teal-700">
+                  <RotateCcw className="w-3 h-3" /> إعادة توليد
+                </Button>
               </div>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-4 gap-1.5">
                 {[
-                  { id: "standard" as const, label: "قياسي (S)", desc: "بداية بطيئة → تسارع → تباطؤ" },
-                  { id: "front_loaded" as const, label: "مبكر", desc: "تسارع في البداية" },
-                  { id: "back_loaded" as const, label: "متأخر", desc: "تسارع في النهاية" },
-                  { id: "linear" as const, label: "خطي", desc: "توزيع متساوي" },
+                  { id: "standard" as const, label: "قياسي (S)" },
+                  { id: "front_loaded" as const, label: "مبكر" },
+                  { id: "back_loaded" as const, label: "متأخر" },
+                  { id: "linear" as const, label: "خطي" },
                 ].map(t => (
                   <button
                     key={t.id}
                     onClick={() => handleRegenerateFromTemplate(t.id)}
-                    className={`p-2 rounded-lg border text-right transition-all ${
+                    className={`py-1 px-2 rounded border text-[10px] font-medium transition-all ${
                       curveType === t.id
-                        ? "border-teal-500 bg-teal-50 ring-1 ring-teal-500/30"
-                        : "border-gray-200 hover:border-teal-300 bg-white"
+                        ? "border-teal-500 bg-teal-50 text-teal-700"
+                        : "border-gray-200 hover:border-teal-300 bg-white text-gray-700"
                     }`}
                   >
-                    <div className="font-medium text-[11px] text-gray-800">{t.label}</div>
-                    <div className="text-[9px] text-gray-500 mt-0.5">{t.desc}</div>
+                    {t.label}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Monthly Progress Bars (editable) - KEPT */}
-            <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-3">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-                  <Percent className="w-3.5 h-3.5 text-teal-600" />
-                  نسب الإنجاز الشهرية
-                </h3>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleRegenerateFromTemplate(curveType)}
-                  className="gap-1 text-[11px] h-6 text-gray-600 hover:text-teal-700"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  إعادة توليد
-                </Button>
+            {/* ═══════════════════════════════════════════════════════════ */}
+            {/* MAIN GRID: Month boxes + inputs + payment rows */}
+            {/* ═══════════════════════════════════════════════════════════ */}
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <DollarSign className="w-3.5 h-3.5 text-teal-600" />
+                  <h2 className="text-[11px] font-bold text-gray-800">جدول دفعات المقاول</h2>
+                  {totalPct !== 100 && <Badge variant="destructive" className="text-[9px]">الإنجاز: {totalPct}% ≠ 100%</Badge>}
+                </div>
+                <div className="flex items-center gap-2 text-[9px] text-gray-500">
+                  <span>المقدمة: {mobilizationPct}%</span>
+                  <span>|</span>
+                  <span>ريتنشن: {retentionPct}%</span>
+                  <span>|</span>
+                  <span>صافي الدفع: {100 - retentionPct}%</span>
+                </div>
               </div>
-              <div className="h-[180px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
-                    <XAxis dataKey="label" tick={{ fontSize: 9 }} interval={constructionMonths > 24 ? 2 : 0} />
-                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
-                    <RechartsTooltip
-                      contentStyle={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 11 }}
-                      formatter={(value: number) => [`${value}%`, "إنجاز"]}
-                    />
-                    <Bar dataKey="progress" radius={[2, 2, 0, 0]}>
-                      {chartData.map((entry, index) => (
-                        <Cell key={index} fill={entry.progress > 8 ? "#0d9488" : entry.progress > 4 ? "#5eead4" : "#ccfbf1"} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              <div className="p-2 overflow-x-auto">
+                {constructionCost > 0 ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: `70px repeat(${totalColumns}, minmax(40px, 1fr))`, direction: 'rtl' }}>
+                    {/* Row 1: Month numbers */}
+                    <div className="text-[7px] font-bold text-gray-500 flex items-center justify-center border-b border-gray-200 py-0.5">الشهر</div>
+                    {Array.from({ length: totalColumns }, (_, i) => {
+                      const isConstruction = i < constructionMonths;
+                      const displayNum = isConstruction ? i + 1 : i - constructionMonths + 1;
+                      return (
+                        <div key={i} className={`text-center text-[7px] font-bold py-0.5 border-b border-l border-gray-200 ${
+                          isConstruction ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'
+                        }`}>
+                          {isConstruction ? displayNum : `+${displayNum}`}
+                        </div>
+                      );
+                    })}
 
-              {/* Editable grid */}
-              <div className="mt-3 grid grid-cols-6 gap-1.5">
-                {monthlyProgress.map((pct, i) => (
-                  <div key={i} className="text-center">
-                    <div className="text-[9px] text-gray-400 mb-0.5">ش{i + 1}</div>
-                    <input
-                      type="number"
-                      value={pct}
-                      onChange={(e) => handleMonthEdit(i, parseFloat(e.target.value) || 0)}
-                      className="w-full text-center text-[11px] py-[2px] rounded border border-gray-200 bg-white focus:border-teal-500 focus:outline-none"
-                      min={0}
-                      max={30}
-                      step={0.5}
-                    />
+                    {/* Row 2: Progress % inputs (only during construction, starting from month 1) */}
+                    <div className="text-[7px] font-bold text-gray-500 flex items-center justify-center border-b border-gray-200 py-0.5">إنجاز %</div>
+                    {Array.from({ length: totalColumns }, (_, i) => {
+                      const isConstruction = i < constructionMonths;
+                      return (
+                        <div key={i} className="flex items-center justify-center border-b border-l border-gray-200 py-0.5">
+                          {isConstruction ? (
+                            <input
+                              type="number" min={0} max={30} step={0.5}
+                              value={monthlyProgress[i] ?? 0}
+                              onChange={(e) => handleMonthEdit(i, parseFloat(e.target.value) || 0)}
+                              className="w-7 h-4 text-center text-[9px] font-bold border border-gray-200 rounded bg-white focus:ring-1 focus:ring-teal-200 outline-none"
+                            />
+                          ) : (
+                            <span className="text-[7px] text-gray-300">-</span>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {/* Row 3: Bold percentage display */}
+                    <div className="text-[7px] font-bold text-gray-500 flex items-center justify-center border-b border-gray-200 py-0.5">%</div>
+                    {Array.from({ length: totalColumns }, (_, i) => {
+                      const isConstruction = i < constructionMonths;
+                      const pct = isConstruction ? (monthlyProgress[i] ?? 0) : 0;
+                      return (
+                        <div key={i} className="text-center text-[8px] font-black text-gray-800 py-0.5 border-b border-l border-gray-200">
+                          {isConstruction ? `${pct}%` : '-'}
+                        </div>
+                      );
+                    })}
+
+                    {/* Row 4: Full monthly amount */}
+                    <div className="text-[7px] font-bold text-blue-700 flex items-center justify-center border-b border-gray-200 py-0.5">المستحق</div>
+                    {paymentData.map((d, i) => (
+                      <div key={i} className="text-center text-[7px] py-0.5 border-b border-l border-gray-200">
+                        <span className="text-blue-700">{d.fullAmount > 0 ? fmt(d.fullAmount) : '-'}</span>
+                      </div>
+                    ))}
+
+                    {/* Row 5: Actual paid (80%) */}
+                    <div className="text-[7px] font-bold text-emerald-700 flex items-center justify-center border-b border-gray-200 py-0.5">المدفوع</div>
+                    {paymentData.map((d, i) => (
+                      <div key={i} className="text-center text-[7px] py-0.5 border-b border-l border-gray-200">
+                        <span className="text-emerald-700">{d.actualPaid > 0 ? fmt(d.actualPaid) : '-'}</span>
+                      </div>
+                    ))}
+
+                    {/* Row 6: Retention held */}
+                    <div className="text-[7px] font-bold text-amber-700 flex items-center justify-center border-b border-gray-200 py-0.5">محتجز</div>
+                    {paymentData.map((d, i) => (
+                      <div key={i} className="text-center text-[7px] py-0.5 border-b border-l border-gray-200">
+                        <span className="text-amber-700">{d.retentionHeld > 0 ? fmt(d.retentionHeld) : '-'}</span>
+                      </div>
+                    ))}
+
+                    {/* Row 7: Retention releases */}
+                    <div className="text-[7px] font-bold text-violet-700 flex items-center justify-center border-b border-gray-200 py-0.5">إفراج</div>
+                    {paymentData.map((d, i) => {
+                      const release = d.retention1Release + d.retention2Release;
+                      return (
+                        <div key={i} className={`text-center text-[7px] py-0.5 border-b border-l border-gray-200 ${release > 0 ? 'bg-violet-50' : ''}`}>
+                          <span className="text-violet-700 font-bold">{release > 0 ? fmt(release) : '-'}</span>
+                        </div>
+                      );
+                    })}
+
+                    {/* Row 8: Cumulative paid */}
+                    <div className="text-[7px] font-bold text-gray-800 flex items-center justify-center py-0.5">التراكمي</div>
+                    {paymentData.map((d, i) => (
+                      <div key={i} className="text-center text-[7px] font-bold py-0.5 border-l border-gray-200 text-gray-800">
+                        {d.cumulativePaid > 0 ? fmt(d.cumulativePaid) : '-'}
+                      </div>
+                    ))}
                   </div>
-                ))}
+                ) : (
+                  <div className="text-center text-gray-400 p-4 text-xs">
+                    أدخل مساحة البناء (BUA) وتكلفة الإنشاء في الإدخالات العامة لعرض جدول الدفعات
+                  </div>
+                )}
               </div>
-            </div>
-
-            {/* Payment Schedule Table */}
-            <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-1.5">
-                <DollarSign className="w-3.5 h-3.5 text-teal-600" />
-                <h3 className="text-xs font-bold text-gray-700">جدول دفعات المقاول</h3>
-              </div>
-              {constructionCost > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-[11px]">
-                    <thead>
-                      <tr className="bg-gray-50 border-b border-gray-200">
-                        <th className="text-right px-3 py-[4px] font-bold text-gray-700">الشهر</th>
-                        <th className="text-right px-3 py-[4px] font-bold text-gray-700">نسبة الإنجاز</th>
-                        <th className="text-right px-3 py-[4px] font-bold text-gray-700">الدفعة (درهم)</th>
-                        <th className="text-right px-3 py-[4px] font-bold text-gray-700">المدفوع التراكمي</th>
-                        <th className="text-right px-3 py-[4px] font-bold text-gray-700">% المدفوع</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {/* Mobilization row */}
-                      <tr className="border-b border-gray-100 bg-teal-50/50">
-                        <td className="px-3 py-[3px] font-medium text-teal-800">مقدمة</td>
-                        <td className="px-3 py-[3px]">—</td>
-                        <td className="px-3 py-[3px] tabular-nums">{Math.round(constructionCost * mobilizationPct / 100).toLocaleString()}</td>
-                        <td className="px-3 py-[3px] tabular-nums">{Math.round(constructionCost * mobilizationPct / 100).toLocaleString()}</td>
-                        <td className="px-3 py-[3px]">{mobilizationPct}%</td>
-                      </tr>
-                      {paymentSchedule.map((row) => (
-                        <tr key={row.month} className="border-b border-gray-50 hover:bg-gray-50/50">
-                          <td className="px-3 py-[3px] text-gray-700">شهر {row.month}</td>
-                          <td className="px-3 py-[3px] text-gray-600">{row.progress}%</td>
-                          <td className="px-3 py-[3px] tabular-nums text-gray-700">{row.payment.toLocaleString()}</td>
-                          <td className="px-3 py-[3px] tabular-nums text-gray-700">{row.cumPaid.toLocaleString()}</td>
-                          <td className="px-3 py-[3px] text-gray-600">{row.cumPaidPct}%</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    <tfoot>
-                      <tr className="bg-teal-50 font-bold border-t-2 border-teal-200">
-                        <td className="px-3 py-[4px] text-teal-800">الإجمالي</td>
-                        <td className="px-3 py-[4px] text-teal-800">100%</td>
-                        <td className="px-3 py-[4px] text-teal-800 tabular-nums">{constructionCost.toLocaleString()}</td>
-                        <td className="px-3 py-[4px] text-teal-800 tabular-nums">{constructionCost.toLocaleString()}</td>
-                        <td className="px-3 py-[4px] text-teal-800">100%</td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-center text-gray-400 p-4 text-xs">
-                  أدخل مساحة البناء (BUA) وتكلفة الإنشاء في الإدخالات العامة لعرض جدول الدفعات
-                </div>
-              )}
             </div>
           </div>
         )}
