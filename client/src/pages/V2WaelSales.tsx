@@ -364,8 +364,10 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
         {/* Main Content */}
         {selectedProjectId && !projectQuery.isLoading && projectQuery.data && (
           <>
-            {/* SECTION 1: UNIT PRICING TABLE */}
-            <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+            {/* SECTION 1: PRICING + PAYMENT PLAN SIDE BY SIDE */}
+            <div className="grid grid-cols-3 gap-2">
+            {/* Pricing Table - 2/3 */}
+            <section className="col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
@@ -428,6 +430,54 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                 </table>
               </div>
             </section>
+
+            {/* Payment Plan - 1/3 */}
+            <section className="col-span-1 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-1.5">
+                <CreditCard className="w-3.5 h-3.5 text-indigo-600" />
+                <h2 className="text-[11px] font-bold text-gray-800">خطة الدفع</h2>
+                <Badge variant={ppTotal === 100 ? "secondary" : "destructive"} className="text-[9px]">{ppTotal}%</Badge>
+              </div>
+              <div className="p-2">
+                <table className="w-full text-[9px]">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="px-1 py-0.5 text-right font-bold">البند</th>
+                      <th className="px-1 py-0.5 text-center font-bold">%</th>
+                      <th className="px-1 py-0.5 text-center font-bold">التوقيت</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-t border-gray-100">
+                      <td className="px-1 py-0.5 text-right">دفعة أولى</td>
+                      <td className="px-1 py-0.5 text-center"><input type="number" min={5} max={30} value={ppDownPct} onChange={(e) => { setPpDownPct(+e.target.value); setHasPlanChanges(true); }} className="w-8 h-4 text-center text-[9px] font-bold border border-gray-200 rounded bg-white" />%</td>
+                      <td className="px-1 py-0.5 text-center text-gray-500">عند التوقيع</td>
+                    </tr>
+                    <tr className="border-t border-gray-100">
+                      <td className="px-1 py-0.5 text-right">دفعة ثانية</td>
+                      <td className="px-1 py-0.5 text-center"><input type="number" min={5} max={20} value={ppSecondPct} onChange={(e) => { setPpSecondPct(+e.target.value); setHasPlanChanges(true); }} className="w-8 h-4 text-center text-[9px] font-bold border border-gray-200 rounded bg-white" />%</td>
+                      <td className="px-1 py-0.5 text-center">بعد <input type="number" min={1} max={6} value={ppSecondAfterMonths} onChange={(e) => { setPpSecondAfterMonths(+e.target.value); setHasPlanChanges(true); }} className="w-6 h-4 text-center text-[9px] font-bold border border-gray-200 rounded bg-white mx-0.5" />شهر</td>
+                    </tr>
+                    <tr className="border-t border-gray-100 bg-blue-50">
+                      <td className="px-1 py-0.5 text-right">أقساط ({ppInstallmentCount})</td>
+                      <td className="px-1 py-0.5 text-center"><input type="number" min={5} max={20} value={ppInstallmentPct} onChange={(e) => { setPpInstallmentPct(+e.target.value); setHasPlanChanges(true); }} className="w-8 h-4 text-center text-[9px] font-bold border border-gray-200 rounded bg-white" />%</td>
+                      <td className="px-1 py-0.5 text-center">كل <input type="number" min={2} max={12} value={ppInstallmentEvery} onChange={(e) => { setPpInstallmentEvery(+e.target.value); setHasPlanChanges(true); }} className="w-6 h-4 text-center text-[9px] font-bold border border-gray-200 rounded bg-white mx-0.5" />شهر</td>
+                    </tr>
+                    <tr className="border-t border-gray-100 bg-emerald-50">
+                      <td className="px-1 py-0.5 text-right font-bold">عند التسليم</td>
+                      <td className="px-1 py-0.5 text-center"><input type="number" min={10} max={60} value={ppHandoverPct} onChange={(e) => { setPpHandoverPct(+e.target.value); setHasPlanChanges(true); }} className="w-8 h-4 text-center text-[9px] font-bold border border-gray-200 rounded bg-white" />%</td>
+                      <td className="px-1 py-0.5 text-center text-gray-500">عند الاكتمال</td>
+                    </tr>
+                    <tr className="border-t-2 border-gray-300 bg-gray-100">
+                      <td className="px-1 py-0.5 text-right font-bold">الإجمالي</td>
+                      <td className={`px-1 py-0.5 text-center font-bold ${ppTotal === 100 ? 'text-emerald-700' : 'text-red-700'}`}>{ppTotal}%</td>
+                      <td className="px-1 py-0.5 text-center text-[8px] text-gray-500">{fmtFull(Math.round(avgUnitPrice))} / وحدة</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+            </div>
 
             {/* SECTION 2: FINANCIAL SUMMARY */}
             <section className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -648,100 +698,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                     </div>
                   </div>
                 )}
-                {/* Chart - always visible */}
-                <div className="h-44 mt-3">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={salesDistribution.map((units, i) => ({ month: i + timeline.salesStart, units }))} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                      <XAxis dataKey="month" tick={{ fontSize: 9 }} />
-                      <YAxis tick={{ fontSize: 9 }} />
-                      <ReTooltip formatter={(v: any) => [v + " وحدة", "المبيعات"]} labelFormatter={(l) => `شهر ${l}`} />
-                      <Bar dataKey="units" radius={[2, 2, 0, 0]}>
-                        {salesDistribution.map((_, i) => (
-                          <Cell key={i} fill={escrowData[i]?.balance < 0 ? "#f87171" : "#34d399"} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </section>
 
-            {/* SECTION 6: PAYMENT PLAN */}
-            <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-1.5">
-                <CreditCard className="w-3.5 h-3.5 text-indigo-600" />
-                <h2 className="text-[11px] font-bold text-gray-800">خطة الدفع (Payment Plan)</h2>
-                <Badge variant={ppTotal === 100 ? "secondary" : "destructive"} className="text-[9px]">المجموع: {ppTotal}%</Badge>
-                {ppTotal !== 100 && <span className="text-[9px] text-red-600 font-bold">يجب أن يكون 100%</span>}
-              </div>
-              <div className="p-2">
-                {/* Payment schedule table */}
-                <table className="w-full text-[10px] mb-2">
-                  <thead>
-                    <tr className="bg-gray-50">
-                      <th className="px-2 py-1 text-right font-bold">البند</th>
-                      <th className="px-2 py-1 text-center font-bold">النسبة</th>
-                      <th className="px-2 py-1 text-center font-bold">التوقيت</th>
-                      <th className="px-2 py-1 text-center font-bold">المبلغ / وحدة</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {/* Down payment */}
-                    <tr className="border-t border-gray-100">
-                      <td className="px-2 py-0.5 text-right">دفعة أولى</td>
-                      <td className="px-2 py-0.5 text-center">
-                        <input type="number" min={5} max={30} value={ppDownPct} onChange={(e) => { setPpDownPct(+e.target.value); setHasPlanChanges(true); }}
-                          className="w-10 h-5 text-center text-[10px] font-bold border border-gray-200 rounded bg-white" />%
-                      </td>
-                      <td className="px-2 py-0.5 text-center text-gray-500">عند التوقيع</td>
-                      <td className="px-2 py-0.5 text-center text-indigo-700 font-bold">{fmtFull(Math.round(avgUnitPrice * ppDownPct / 100))}</td>
-                    </tr>
-                    {/* Second payment */}
-                    <tr className="border-t border-gray-100">
-                      <td className="px-2 py-0.5 text-right">دفعة ثانية</td>
-                      <td className="px-2 py-0.5 text-center">
-                        <input type="number" min={5} max={20} value={ppSecondPct} onChange={(e) => { setPpSecondPct(+e.target.value); setHasPlanChanges(true); }}
-                          className="w-10 h-5 text-center text-[10px] font-bold border border-gray-200 rounded bg-white" />%
-                      </td>
-                      <td className="px-2 py-0.5 text-center">
-                        بعد <input type="number" min={1} max={6} value={ppSecondAfterMonths} onChange={(e) => { setPpSecondAfterMonths(+e.target.value); setHasPlanChanges(true); }}
-                          className="w-7 h-5 text-center text-[10px] font-bold border border-gray-200 rounded bg-white mx-0.5" /> شهر
-                      </td>
-                      <td className="px-2 py-0.5 text-center text-indigo-700 font-bold">{fmtFull(Math.round(avgUnitPrice * ppSecondPct / 100))}</td>
-                    </tr>
-                    {/* Periodic installments */}
-                    <tr className="border-t border-gray-100 bg-blue-50">
-                      <td className="px-2 py-0.5 text-right">أقساط دورية ({ppInstallmentCount} قسط)</td>
-                      <td className="px-2 py-0.5 text-center">
-                        <input type="number" min={5} max={20} value={ppInstallmentPct} onChange={(e) => { setPpInstallmentPct(+e.target.value); setHasPlanChanges(true); }}
-                          className="w-10 h-5 text-center text-[10px] font-bold border border-gray-200 rounded bg-white" />% لكل قسط
-                      </td>
-                      <td className="px-2 py-0.5 text-center">
-                        كل <input type="number" min={2} max={12} value={ppInstallmentEvery} onChange={(e) => { setPpInstallmentEvery(+e.target.value); setHasPlanChanges(true); }}
-                          className="w-7 h-5 text-center text-[10px] font-bold border border-gray-200 rounded bg-white mx-0.5" /> شهر
-                      </td>
-                      <td className="px-2 py-0.5 text-center text-blue-700 font-bold">{fmtFull(Math.round(avgUnitPrice * ppInstallmentPct / 100))} × {ppInstallmentCount}</td>
-                    </tr>
-                    {/* Handover */}
-                    <tr className="border-t border-gray-100 bg-emerald-50">
-                      <td className="px-2 py-0.5 text-right font-bold">عند التسليم</td>
-                      <td className="px-2 py-0.5 text-center">
-                        <input type="number" min={10} max={60} value={ppHandoverPct} onChange={(e) => { setPpHandoverPct(+e.target.value); setHasPlanChanges(true); }}
-                          className="w-10 h-5 text-center text-[10px] font-bold border border-gray-200 rounded bg-white" />%
-                      </td>
-                      <td className="px-2 py-0.5 text-center text-gray-500">عند اكتمال المشروع</td>
-                      <td className="px-2 py-0.5 text-center text-emerald-700 font-bold">{fmtFull(Math.round(avgUnitPrice * ppHandoverPct / 100))}</td>
-                    </tr>
-                    {/* Total */}
-                    <tr className="border-t-2 border-gray-300 bg-gray-100">
-                      <td className="px-2 py-1 text-right font-bold">الإجمالي</td>
-                      <td className={`px-2 py-1 text-center font-bold ${ppTotal === 100 ? 'text-emerald-700' : 'text-red-700'}`}>{ppTotal}%</td>
-                      <td className="px-2 py-1 text-center text-[9px] text-gray-500">{ppDownPct}% + {ppSecondPct}% + ({ppInstallmentPct}×{ppInstallmentCount}) + {ppHandoverPct}%</td>
-                      <td className="px-2 py-1 text-center font-bold text-gray-800">{fmtFull(Math.round(avgUnitPrice))}</td>
-                    </tr>
-                  </tbody>
-                </table>
               </div>
             </section>
 
