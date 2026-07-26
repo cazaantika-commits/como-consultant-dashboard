@@ -1,206 +1,355 @@
 import { useState } from "react";
-import { ArrowRight, Download, Plus, TrendingUp } from "lucide-react";
+import { ArrowRight, AlertTriangle, CheckCircle, DollarSign, PieChart, BarChart3, TrendingUp } from "lucide-react";
 import { useLocation } from "wouter";
 
-// ===== DUMMY DATA =====
-const SALES_MONTHS = 24;
+// ===== DUMMY DATA — structure only =====
+const PROJECT_NAME = "مجان متعدد الاستخدامات — G+4P+25";
 
+// Unit types
 const UNIT_TYPES = [
-  { id: "studio", name: "استوديو", count: 45, avgPrice: 725_000 },
-  { id: "1br", name: "غرفة واحدة", count: 120, avgPrice: 945_000 },
-  { id: "2br", name: "غرفتين", count: 100, avgPrice: 1_235_000 },
-  { id: "3br", name: "3 غرف", count: 50, avgPrice: 1_750_000 },
-  { id: "penthouse", name: "بنتهاوس", count: 10, avgPrice: 4_500_000 },
-  { id: "commercial", name: "تجاري", count: 25, avgPrice: 1_320_000 },
+  { id: "studio", name: "استوديو", area: 400, count: 50 },
+  { id: "1br", name: "غرفة وصالة", area: 700, count: 80 },
+  { id: "2br", name: "غرفتين وصالة", area: 1050, count: 60 },
+  { id: "3br", name: "ثلاث غرف وصالة", area: 1400, count: 30 },
+  { id: "retail", name: "محلات تجارية", area: 600, count: 15 },
+  { id: "office", name: "مكاتب", area: 900, count: 20 },
 ];
 
-const TOTAL_UNITS = UNIT_TYPES.reduce((a, b) => a + b.count, 0);
-
-// Dummy sales curve (units sold per month)
-function dummySalesCurve(): number[] {
-  return Array.from({ length: SALES_MONTHS }, (_, i) => {
-    if (i < 3) return Math.round(Math.random() * 20 + 15);
-    if (i < 8) return Math.round(Math.random() * 15 + 8);
-    return Math.round(Math.random() * 8 + 2);
-  });
-}
-
-const MARKETING_BUDGET = [
-  { name: "إعلانات رقمية", budget: 3_500_000 },
-  { name: "معارض ومؤتمرات", budget: 2_000_000 },
-  { name: "وسطاء عقاريون (2%)", budget: 8_850_000 },
-  { name: "مواد تسويقية", budget: 1_500_000 },
-  { name: "علاقات عامة", budget: 800_000 },
+// Payment plan stages
+const PAYMENT_STAGES = [
+  { id: "booking", name: "دفعة الحجز" },
+  { id: "first", name: "الدفعة الأولى" },
+  { id: "construction1", name: "قسط البناء 1" },
+  { id: "construction2", name: "قسط البناء 2" },
+  { id: "construction3", name: "قسط البناء 3" },
+  { id: "handover", name: "دفعة التسليم" },
 ];
+
+const SALES_MONTHS = 30;
 
 export default function V2WaelSales() {
   const [, navigate] = useLocation();
-  const [salesCurve] = useState(dummySalesCurve);
+  
+  // Dummy state for inputs
+  const [prices] = useState<Record<string, number>>({
+    studio: 1350, "1br": 1250, "2br": 1200, "3br": 1150, retail: 1800, office: 1400
+  });
+  const [paymentPlan] = useState<Record<string, number>>({
+    booking: 10, first: 10, construction1: 15, construction2: 15, construction3: 15, handover: 35
+  });
+  const [offPlanPercent] = useState(75);
+  const [marketingBudget] = useState(2);
+  const [salesCommission] = useState(5);
+  const [marketingPrep] = useState(850000);
+  
+  // Dummy calculated results
+  const totalRevenue = 622500000;
+  const projectProfit = 185000000;
+  const peakCapital = 48000000;
+  const investorROI = 32;
+  const escrowStatus = "deficit" as "ok" | "deficit";
+  const escrowDeficit = 4200000;
+  const deficitMonths = "الشهر 4 — الشهر 9";
 
-  const cumulativeSales = salesCurve.reduce<number[]>((acc, val) => {
-    acc.push((acc[acc.length - 1] || 0) + val);
-    return acc;
-  }, []);
-
-  const totalSold = cumulativeSales[cumulativeSales.length - 1] || 0;
-  const soldPct = ((totalSold / TOTAL_UNITS) * 100).toFixed(0);
-  const totalMarketingBudget = MARKETING_BUDGET.reduce((a, b) => a + b.budget, 0);
-
-  const fmt = (n: number) => {
-    if (Math.abs(n) >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
-    if (Math.abs(n) >= 1_000) return (n / 1_000).toFixed(0) + "K";
-    return n.toFixed(0);
-  };
-  const fmtFull = (n: number) => n.toLocaleString("en-US");
+  // Dummy escrow monthly balance
+  const escrowBalance = Array.from({ length: SALES_MONTHS }, (_, i) => {
+    if (i < 3) return 2000000 + i * 500000;
+    if (i < 6) return -1000000 - (i - 3) * 1200000;
+    if (i < 10) return -4200000 + (i - 6) * 1500000;
+    return 1000000 + (i - 10) * 800000;
+  });
 
   return (
-    <div className="min-h-screen bg-gray-50" dir="rtl">
+    <div className="min-h-screen bg-slate-50" dir="rtl">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-20">
-        <div className="max-w-[1800px] mx-auto px-6 py-4 flex items-center justify-between">
+      <div className="bg-gradient-to-l from-indigo-900 via-indigo-800 to-purple-900 text-white px-4 py-2">
+        <div className="max-w-[1600px] mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate("/")} className="p-2 rounded-lg hover:bg-gray-100 transition">
-              <ArrowRight className="w-5 h-5 text-gray-600" />
+            <button onClick={() => navigate("/v2")} className="p-1 hover:bg-white/10 rounded">
+              <ArrowRight className="w-4 h-4" />
             </button>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">خطة المبيعات والتسويق</h1>
-              <p className="text-sm text-gray-500">مجان متعدد الاستخدامات — إدارة وائل</p>
+              <h1 className="text-base font-bold">مركز عمليات المبيعات</h1>
+              <p className="text-indigo-200 text-[10px]">{PROJECT_NAME}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm text-gray-700">
-              <Plus className="w-4 h-4" />
-              إضافة عملية بيع
-            </button>
-            <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-sm">
-              <Download className="w-4 h-4" />
-              تصدير
-            </button>
-          </div>
+          <div className="text-[10px] text-indigo-200">وائل — مدير المبيعات والتسويق</div>
         </div>
       </div>
 
-      <div className="max-w-[1800px] mx-auto px-6 py-6">
-        {/* Summary Cards */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl p-5 border border-orange-100 shadow-sm">
-            <p className="text-sm text-orange-600 mb-1">إجمالي الوحدات</p>
-            <p className="text-2xl font-bold text-orange-700">{TOTAL_UNITS}</p>
+      <div className="max-w-[1600px] mx-auto p-2">
+        {/* ═══ KPI Cards ═══ */}
+        <div className="grid grid-cols-5 gap-2 mb-2">
+          <div className="bg-white rounded border border-gray-200 p-2">
+            <div className="flex items-center gap-1 mb-[2px]">
+              <DollarSign className="w-3 h-3 text-emerald-600" />
+              <span className="text-[8px] text-gray-500">إجمالي الإيرادات</span>
+            </div>
+            <div className="text-sm font-bold text-emerald-700">622.5M</div>
           </div>
-          <div className="bg-white rounded-xl p-5 border border-green-100 shadow-sm">
-            <p className="text-sm text-green-600 mb-1">تم بيعها (مخطط)</p>
-            <p className="text-2xl font-bold text-green-700">{totalSold}</p>
-            <p className="text-xs text-gray-400 mt-1">{soldPct}% من الإجمالي</p>
+          <div className="bg-white rounded border border-gray-200 p-2">
+            <div className="flex items-center gap-1 mb-[2px]">
+              <TrendingUp className="w-3 h-3 text-blue-600" />
+              <span className="text-[8px] text-gray-500">ربح المشروع</span>
+            </div>
+            <div className="text-sm font-bold text-blue-700">185M</div>
           </div>
-          <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
-            <p className="text-sm text-gray-600 mb-1">المتبقي</p>
-            <p className="text-2xl font-bold text-gray-700">{TOTAL_UNITS - totalSold}</p>
+          <div className="bg-white rounded border border-gray-200 p-2">
+            <div className="flex items-center gap-1 mb-[2px]">
+              <BarChart3 className="w-3 h-3 text-orange-600" />
+              <span className="text-[8px] text-gray-500">ذروة رأس المال</span>
+            </div>
+            <div className="text-sm font-bold text-orange-700">48M</div>
           </div>
-          <div className="bg-white rounded-xl p-5 border border-purple-100 shadow-sm">
-            <p className="text-sm text-purple-600 mb-1">ميزانية التسويق</p>
-            <p className="text-2xl font-bold text-purple-700">{fmt(totalMarketingBudget)}</p>
+          <div className="bg-white rounded border border-gray-200 p-2">
+            <div className="flex items-center gap-1 mb-[2px]">
+              <PieChart className="w-3 h-3 text-purple-600" />
+              <span className="text-[8px] text-gray-500">عائد المستثمر</span>
+            </div>
+            <div className="text-sm font-bold text-purple-700">32%</div>
+          </div>
+          <div className={`rounded border-2 p-2 ${escrowStatus === "deficit" ? "bg-red-50 border-red-400" : "bg-green-50 border-green-300"}`}>
+            <div className="flex items-center gap-1 mb-[2px]">
+              {escrowStatus === "deficit" ? <AlertTriangle className="w-3 h-3 text-red-600" /> : <CheckCircle className="w-3 h-3 text-green-600" />}
+              <span className="text-[8px] text-gray-600">حالة الضمان</span>
+            </div>
+            {escrowStatus === "deficit" ? (
+              <div>
+                <div className="text-sm font-bold text-red-700">عجز: 4.2M</div>
+                <div className="text-[7px] text-red-600">{deficitMonths}</div>
+              </div>
+            ) : (
+              <div className="text-sm font-bold text-green-700">متوازن ✓</div>
+            )}
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-6 mb-6">
-          {/* Unit Types Table */}
-          <div className="col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="px-5 py-3 bg-orange-50 border-b border-orange-100 flex items-center justify-between">
-              <h3 className="font-bold text-orange-800">مزيج الوحدات والتسعير</h3>
-              <TrendingUp className="w-4 h-4 text-orange-600" />
-            </div>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="px-4 py-2 text-right font-medium text-gray-600">النوع</th>
-                  <th className="px-4 py-2 text-center font-medium text-gray-600">العدد</th>
-                  <th className="px-4 py-2 text-center font-medium text-gray-600">متوسط السعر</th>
-                  <th className="px-4 py-2 text-center font-medium text-gray-600">إجمالي الإيرادات</th>
-                  <th className="px-4 py-2 text-center font-medium text-gray-600">النسبة</th>
-                </tr>
-              </thead>
-              <tbody>
-                {UNIT_TYPES.map((type) => (
-                  <tr key={type.id} className="border-b border-gray-100 hover:bg-gray-50/50">
-                    <td className="px-4 py-2.5 text-right text-gray-800 font-medium">{type.name}</td>
-                    <td className="px-4 py-2.5 text-center text-gray-700">{type.count}</td>
-                    <td className="px-4 py-2.5 text-center text-gray-700 tabular-nums">{fmtFull(type.avgPrice)}</td>
-                    <td className="px-4 py-2.5 text-center text-green-700 font-medium tabular-nums">{fmt(type.count * type.avgPrice)}</td>
-                    <td className="px-4 py-2.5 text-center text-gray-600">{((type.count / TOTAL_UNITS) * 100).toFixed(0)}%</td>
+        {/* ═══ Main Content ═══ */}
+        <div className="grid grid-cols-12 gap-2">
+          
+          {/* ─── Left: Inputs (5 cols) ─── */}
+          <div className="col-span-5 space-y-2">
+            
+            {/* Unit Pricing */}
+            <div className="bg-white rounded border border-gray-200">
+              <div className="bg-indigo-50 px-2 py-[4px] border-b border-indigo-100">
+                <h3 className="text-[10px] font-bold text-indigo-800">تسعير الوحدات (سعر القدم²)</h3>
+              </div>
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-[8px] text-gray-500 px-2 py-[2px] text-right">النوع</th>
+                    <th className="text-[8px] text-gray-500 px-1 py-[2px] text-center">المساحة</th>
+                    <th className="text-[8px] text-gray-500 px-1 py-[2px] text-center">العدد</th>
+                    <th className="text-[8px] text-gray-500 px-1 py-[2px] text-center">السعر/قدم²</th>
+                    <th className="text-[8px] text-gray-500 px-1 py-[2px] text-center">إجمالي</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Marketing Budget */}
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="px-5 py-3 bg-purple-50 border-b border-purple-100">
-              <h3 className="font-bold text-purple-800">ميزانية التسويق</h3>
+                </thead>
+                <tbody>
+                  {UNIT_TYPES.map((unit) => {
+                    const price = prices[unit.id] || 0;
+                    const unitTotal = price * unit.area * unit.count;
+                    return (
+                      <tr key={unit.id} className="border-b border-gray-50 hover:bg-indigo-50/30">
+                        <td className="px-2 py-[2px] text-[9px] font-medium text-gray-800">{unit.name}</td>
+                        <td className="px-1 py-[2px] text-[9px] text-center text-gray-600">{unit.area}</td>
+                        <td className="px-1 py-[2px] text-[9px] text-center text-gray-600">{unit.count}</td>
+                        <td className="px-1 py-[2px] text-center">
+                          <span className="text-[9px] bg-indigo-50 border border-indigo-200 rounded px-1 py-[0px] font-medium text-indigo-800">{price.toLocaleString()}</span>
+                        </td>
+                        <td className="px-1 py-[2px] text-[9px] text-center font-medium text-gray-700">{(unitTotal / 1000000).toFixed(1)}M</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-            <div className="p-4 space-y-3">
-              {MARKETING_BUDGET.map((item) => (
-                <div key={item.name} className="flex items-center justify-between">
-                  <span className="text-sm text-gray-700">{item.name}</span>
-                  <span className="text-sm font-medium text-purple-700 tabular-nums">{fmt(item.budget)}</span>
+
+            {/* Payment Plan */}
+            <div className="bg-white rounded border border-gray-200">
+              <div className="bg-emerald-50 px-2 py-[4px] border-b border-emerald-100">
+                <h3 className="text-[10px] font-bold text-emerald-800">خطة الدفع</h3>
+              </div>
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-[8px] text-gray-500 px-2 py-[2px] text-right">المرحلة</th>
+                    <th className="text-[8px] text-gray-500 px-1 py-[2px] text-center">النسبة</th>
+                    <th className="text-[8px] text-gray-500 px-1 py-[2px] text-center">المبلغ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {PAYMENT_STAGES.map((stage) => {
+                    const pct = paymentPlan[stage.id] || 0;
+                    return (
+                      <tr key={stage.id} className="border-b border-gray-50 hover:bg-emerald-50/30">
+                        <td className="px-2 py-[2px] text-[9px] font-medium text-gray-800">{stage.name}</td>
+                        <td className="px-1 py-[2px] text-center">
+                          <span className="text-[9px] bg-emerald-50 border border-emerald-200 rounded px-1 font-medium text-emerald-800">{pct}%</span>
+                        </td>
+                        <td className="px-1 py-[2px] text-[9px] text-center text-gray-600">{((pct / 100) * totalRevenue / 1000000).toFixed(1)}M</td>
+                      </tr>
+                    );
+                  })}
+                  <tr className="bg-emerald-50">
+                    <td className="px-2 py-[2px] text-[9px] font-bold text-emerald-800">المجموع</td>
+                    <td className="px-1 py-[2px] text-[9px] text-center font-bold text-emerald-800">100%</td>
+                    <td className="px-1 py-[2px] text-[9px] text-center font-bold text-emerald-800">{(totalRevenue / 1000000).toFixed(1)}M</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Sales & Marketing Settings */}
+            <div className="bg-white rounded border border-gray-200">
+              <div className="bg-amber-50 px-2 py-[4px] border-b border-amber-100">
+                <h3 className="text-[10px] font-bold text-amber-800">إعدادات المبيعات والتسويق</h3>
+              </div>
+              <div className="p-2 space-y-[4px]">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] text-gray-700">نسبة المبيعات أوف بلان</span>
+                  <span className="text-[9px] bg-amber-50 border border-amber-200 rounded px-2 font-medium text-amber-800">{offPlanPercent}%</span>
                 </div>
-              ))}
-              <div className="pt-3 border-t border-gray-200 flex items-center justify-between">
-                <span className="text-sm font-bold text-gray-800">الإجمالي</span>
-                <span className="text-sm font-bold text-purple-800 tabular-nums">{fmt(totalMarketingBudget)}</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] text-gray-700">ميزانية التسويق</span>
+                  <span className="text-[9px] bg-amber-50 border border-amber-200 rounded px-2 font-medium text-amber-800">{marketingBudget}%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] text-gray-700">عمولة المبيعات</span>
+                  <span className="text-[9px] bg-amber-50 border border-amber-200 rounded px-2 font-medium text-amber-800">{salesCommission}%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] text-gray-700">تحضير مواد التسويق</span>
+                  <span className="text-[9px] bg-amber-50 border border-amber-200 rounded px-2 font-medium text-amber-800">{(marketingPrep / 1000).toLocaleString()}K</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Sales Curve Mini */}
+            <div className="bg-white rounded border border-gray-200">
+              <div className="bg-violet-50 px-2 py-[4px] border-b border-violet-100">
+                <h3 className="text-[10px] font-bold text-violet-800">منحنى المبيعات (توزيع شهري)</h3>
+              </div>
+              <div className="p-2 flex items-end gap-[1px] h-[40px]">
+                {Array.from({ length: SALES_MONTHS }, (_, i) => {
+                  const height = Math.max(8, Math.sin((i / SALES_MONTHS) * Math.PI) * 100);
+                  return (
+                    <div key={i} className="flex-1 bg-violet-400 rounded-t-[1px] hover:bg-violet-600 transition-colors" style={{ height: `${height}%` }} title={`الشهر ${i + 1}`} />
+                  );
+                })}
+              </div>
+              <div className="px-2 pb-1 flex justify-between text-[7px] text-gray-400">
+                <span>الشهر 1</span>
+                <span>الشهر {SALES_MONTHS}</span>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Sales Curve Table */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-5 py-3 bg-green-50 border-b border-green-100">
-            <h3 className="font-bold text-green-800">منحنى المبيعات الشهري</h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm" style={{ minWidth: SALES_MONTHS * 80 + 180 }}>
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="sticky right-0 z-10 bg-gray-50 px-4 py-2 text-right font-bold text-gray-700 border-b border-l border-gray-200 min-w-[150px]">
-                    البند
-                  </th>
-                  {Array.from({ length: SALES_MONTHS }, (_, i) => (
-                    <th key={i} className="px-3 py-2 text-center border-b border-gray-200 font-medium text-gray-600 whitespace-nowrap">
-                      شهر {i + 1}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b border-gray-100">
-                  <td className="sticky right-0 z-10 bg-white px-4 py-2 text-right text-gray-800 font-medium border-l border-gray-100">
-                    وحدات مباعة
-                  </td>
-                  {salesCurve.map((val, i) => (
-                    <td key={i} className="px-3 py-2 text-center text-gray-700 tabular-nums">{val}</td>
-                  ))}
-                </tr>
-                <tr className="bg-green-50 font-bold">
-                  <td className="sticky right-0 z-10 bg-green-50 px-4 py-2.5 text-right text-green-800 border-l border-green-200">
-                    التراكمي
-                  </td>
-                  {cumulativeSales.map((val, i) => (
-                    <td key={i} className="px-3 py-2.5 text-center text-green-800 tabular-nums">{val}</td>
-                  ))}
-                </tr>
-                <tr className="border-b border-gray-100">
-                  <td className="sticky right-0 z-10 bg-white px-4 py-2 text-right text-gray-800 font-medium border-l border-gray-100">
-                    نسبة الإنجاز
-                  </td>
-                  {cumulativeSales.map((val, i) => (
-                    <td key={i} className="px-3 py-2 text-center text-orange-700 tabular-nums">
-                      {((val / TOTAL_UNITS) * 100).toFixed(0)}%
-                    </td>
-                  ))}
-                </tr>
-              </tbody>
-            </table>
+          {/* ─── Right: Results (7 cols) ─── */}
+          <div className="col-span-7 space-y-2">
+            
+            {/* Escrow Balance Chart */}
+            <div className="bg-white rounded border border-gray-200">
+              <div className="bg-slate-100 px-2 py-[4px] border-b border-slate-200 flex items-center justify-between">
+                <h3 className="text-[10px] font-bold text-slate-800">رصيد حساب الضمان الشهري</h3>
+                {escrowStatus === "deficit" && (
+                  <span className="text-[8px] bg-red-100 text-red-700 px-2 py-[1px] rounded-full font-bold">⚠️ عجز: 4.2M</span>
+                )}
+              </div>
+              <div className="p-2">
+                <div className="flex items-end gap-[2px] h-[100px] relative">
+                  <div className="absolute left-0 right-0 top-1/2 border-t border-dashed border-gray-300 z-0" />
+                  {escrowBalance.map((val, i) => {
+                    const maxAbs = Math.max(...escrowBalance.map(Math.abs));
+                    const heightPct = Math.abs(val) / maxAbs * 45;
+                    const isNegative = val < 0;
+                    return (
+                      <div key={i} className="flex-1 relative h-full">
+                        <div 
+                          className={`w-full rounded-[1px] ${isNegative ? "bg-red-500" : "bg-emerald-500"}`}
+                          style={{ height: `${heightPct}%`, position: "absolute", ...(isNegative ? { top: "50%" } : { bottom: "50%" }) }}
+                          title={`الشهر ${i + 1}: ${(val / 1000000).toFixed(1)}M`}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex justify-between text-[7px] text-gray-400 mt-1">
+                  <span>الشهر 1</span>
+                  <span className="text-red-500 font-bold">منطقة العجز</span>
+                  <span>الشهر {SALES_MONTHS}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Revenue Breakdown */}
+            <div className="bg-white rounded border border-gray-200">
+              <div className="bg-slate-100 px-2 py-[4px] border-b border-slate-200">
+                <h3 className="text-[10px] font-bold text-slate-800">تفصيل الإيرادات حسب النوع</h3>
+              </div>
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-[8px] text-gray-500 px-2 py-[2px] text-right">النوع</th>
+                    <th className="text-[8px] text-gray-500 px-1 py-[2px] text-center">العدد</th>
+                    <th className="text-[8px] text-gray-500 px-1 py-[2px] text-center">سعر الوحدة</th>
+                    <th className="text-[8px] text-gray-500 px-1 py-[2px] text-center">إجمالي</th>
+                    <th className="text-[8px] text-gray-500 px-1 py-[2px] text-center">%</th>
+                    <th className="text-[8px] text-gray-500 px-1 py-[2px] w-[80px]"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {UNIT_TYPES.map((unit) => {
+                    const price = prices[unit.id] || 0;
+                    const typeTotal = price * unit.area * unit.count;
+                    const pct = (typeTotal / totalRevenue) * 100;
+                    return (
+                      <tr key={unit.id} className="border-b border-gray-50">
+                        <td className="px-2 py-[2px] text-[9px] font-medium text-gray-800">{unit.name}</td>
+                        <td className="px-1 py-[2px] text-[9px] text-center text-gray-600">{unit.count}</td>
+                        <td className="px-1 py-[2px] text-[9px] text-center text-gray-600">{(price * unit.area / 1000000).toFixed(2)}M</td>
+                        <td className="px-1 py-[2px] text-[9px] text-center font-medium text-gray-800">{(typeTotal / 1000000).toFixed(1)}M</td>
+                        <td className="px-1 py-[2px] text-[9px] text-center text-gray-600">{pct.toFixed(0)}%</td>
+                        <td className="px-1 py-[2px]">
+                          <div className="w-full bg-gray-100 rounded-full h-[4px]">
+                            <div className="bg-indigo-500 h-[4px] rounded-full" style={{ width: `${Math.min(pct, 100)}%` }} />
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  <tr className="bg-indigo-50">
+                    <td className="px-2 py-[2px] text-[9px] font-bold text-indigo-800">الإجمالي</td>
+                    <td className="px-1 py-[2px] text-[9px] text-center font-bold text-indigo-800">{UNIT_TYPES.reduce((s, u) => s + u.count, 0)}</td>
+                    <td></td>
+                    <td className="px-1 py-[2px] text-[9px] text-center font-bold text-indigo-800">{(totalRevenue / 1000000).toFixed(1)}M</td>
+                    <td className="px-1 py-[2px] text-[9px] text-center font-bold text-indigo-800">100%</td>
+                    <td></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Cash Flow Impact */}
+            <div className="bg-white rounded border border-gray-200">
+              <div className="bg-slate-100 px-2 py-[4px] border-b border-slate-200">
+                <h3 className="text-[10px] font-bold text-slate-800">أثر المبيعات على التدفقات</h3>
+              </div>
+              <div className="grid grid-cols-3 divide-x divide-gray-100" dir="ltr">
+                <div className="p-2 text-center" dir="rtl">
+                  <div className="text-[8px] text-gray-500 mb-[2px]">يدخل الضمان (80%)</div>
+                  <div className="text-sm font-bold text-emerald-700">{(totalRevenue * 0.8 * offPlanPercent / 100 / 1000000).toFixed(0)}M</div>
+                </div>
+                <div className="p-2 text-center" dir="rtl">
+                  <div className="text-[8px] text-gray-500 mb-[2px]">إيرادات مباشرة (20%)</div>
+                  <div className="text-sm font-bold text-blue-700">{(totalRevenue * 0.2 * offPlanPercent / 100 / 1000000).toFixed(0)}M</div>
+                </div>
+                <div className="p-2 text-center" dir="rtl">
+                  <div className="text-[8px] text-gray-500 mb-[2px]">مبيعات بعد الإنجاز</div>
+                  <div className="text-sm font-bold text-purple-700">{(totalRevenue * (1 - offPlanPercent / 100) / 1000000).toFixed(0)}M</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
