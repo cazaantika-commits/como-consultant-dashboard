@@ -421,17 +421,7 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
                       );
                     })}
 
-                    {/* Row 3: Bold percentage display */}
-                    <div className="text-[7px] font-bold text-gray-500 flex items-center justify-center border-b border-gray-200 py-0.5">%</div>
-                    {Array.from({ length: totalColumns }, (_, i) => {
-                      const isConstruction = i < constructionMonths;
-                      const pct = isConstruction ? (monthlyProgress[i] ?? 0) : 0;
-                      return (
-                        <div key={i} className="text-center text-[8px] font-black text-gray-800 py-0.5 border-b border-l border-gray-200">
-                          {isConstruction ? `${pct}%` : '-'}
-                        </div>
-                      );
-                    })}
+
 
 
 
@@ -464,6 +454,73 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
                     أدخل مساحة البناء (BUA) وتكلفة الإنشاء في الإدخالات العامة لعرض جدول الدفعات
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Progress Chart */}
+        {constructionCost > 0 && constructionMonths > 0 && (
+          <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-4 mt-3">
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingUp className="w-4 h-4 text-teal-600" />
+              <span className="text-xs font-bold text-gray-800">منحنى الإنجاز الشهري</span>
+              <span className="text-[9px] text-gray-400 mr-auto">نسبة الإنجاز % لكل شهر إنشاء</span>
+            </div>
+            <div className="relative" style={{ height: '140px' }}>
+              {/* Y-axis labels */}
+              <div className="absolute left-0 top-0 bottom-0 w-8 flex flex-col justify-between text-[7px] text-gray-400 py-1">
+                <span>{Math.max(...monthlyProgress.slice(0, constructionMonths), 1).toFixed(0)}%</span>
+                <span>{(Math.max(...monthlyProgress.slice(0, constructionMonths), 1) / 2).toFixed(0)}%</span>
+                <span>0%</span>
+              </div>
+              {/* Bars */}
+              <div className="mr-0 ml-9 h-full flex items-end gap-[1px]" dir="rtl">
+                {monthlyProgress.slice(0, constructionMonths).map((pct, i) => {
+                  const maxPct = Math.max(...monthlyProgress.slice(0, constructionMonths), 1);
+                  const barHeight = (pct / maxPct) * 100;
+                  return (
+                    <div key={i} className="flex-1 flex flex-col items-center justify-end h-full">
+                      <div
+                        className="w-full rounded-t transition-all duration-300"
+                        style={{
+                          height: `${barHeight}%`,
+                          background: pct > 0 ? 'linear-gradient(to top, #0d9488, #5eead4)' : '#e5e7eb',
+                          minHeight: pct > 0 ? '2px' : '1px',
+                        }}
+                      />
+                      <span className="text-[6px] text-gray-500 mt-0.5 leading-none">{i + 1}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Cumulative S-curve line overlay */}
+              <svg className="absolute top-0 left-9 right-0 bottom-3 pointer-events-none" preserveAspectRatio="none" viewBox={`0 0 ${constructionMonths * 10} 100`}>
+                <polyline
+                  fill="none"
+                  stroke="#f59e0b"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  points={
+                    monthlyProgress.slice(0, constructionMonths).reduce((acc, pct, i) => {
+                      const cumSum = monthlyProgress.slice(0, i + 1).reduce((s, v) => s + v, 0);
+                      const x = (i + 0.5) * 10;
+                      const y = 100 - cumSum; // inverted Y
+                      return acc + `${x},${y} `;
+                    }, '')
+                  }
+                />
+              </svg>
+            </div>
+            <div className="flex items-center justify-center gap-4 mt-2">
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-2 rounded-sm" style={{ background: 'linear-gradient(to top, #0d9488, #5eead4)' }} />
+                <span className="text-[8px] text-gray-500">إنجاز شهري %</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-0.5 bg-amber-500 rounded" />
+                <span className="text-[8px] text-gray-500">تراكمي %</span>
               </div>
             </div>
           </div>
