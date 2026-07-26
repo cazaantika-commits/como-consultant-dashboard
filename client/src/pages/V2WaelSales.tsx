@@ -157,47 +157,71 @@ export default function V2WaelSales() {
               <span className="text-xs font-black text-emerald-600">إجمالي الإيرادات: {fmt(results.revenue)}</span>
             </div>
           </div>
-          <div className="p-3">
-            {/* Header row */}
-            <div className="grid grid-cols-[120px_1fr_60px_100px_80px_70px] gap-2 items-center text-[9px] text-slate-400 font-medium mb-1 px-1">
-              <span>النوع</span>
-              <span className="text-center">السعر / قدم²</span>
-              <span className="text-center">السعر</span>
-              <span className="text-center">المساحة الإجمالية</span>
-              <span className="text-center">إجمالي النوع</span>
-              <span className="text-center">النسبة</span>
-            </div>
-            {UNITS.map(u => {
-              const totalArea = u.area * u.count;
-              const totalPrice = totalArea * (prices[u.id] || 0);
-              const pct = results.revenue > 0 ? (totalPrice / results.revenue) * 100 : 0;
-              return (
-                <div key={u.id} className="grid grid-cols-[120px_1fr_60px_100px_80px_70px] gap-2 items-center py-1.5 border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition rounded">
-                  <div className="flex items-center gap-2 px-1">
-                    <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ background: u.color }} />
-                    <span className="text-[11px] font-bold text-slate-700">{u.name}</span>
-                    <span className="text-[8px] text-slate-400">{u.count} وحدة</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="range" min={800} max={2500} step={50} value={prices[u.id]}
-                      onChange={e => setPrices(p => ({ ...p, [u.id]: +e.target.value }))}
-                      className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-grab"
-                      style={{ background: `linear-gradient(to left, ${u.color}30, ${u.color}08)`, accentColor: u.color } as any}
-                    />
-                  </div>
-                  <span className="text-[11px] font-mono font-black text-center" style={{ color: u.color }}>{prices[u.id]}</span>
-                  <span className="text-[10px] text-slate-500 text-center font-mono">{u.count}×{u.area} = {totalArea.toLocaleString()} ft²</span>
-                  <span className="text-[11px] font-black text-emerald-600 text-center">{fmt(totalPrice)}</span>
-                  <div className="flex items-center gap-1">
-                    <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: u.color }} />
-                    </div>
-                    <span className="text-[9px] font-bold text-slate-500 w-7">{pct.toFixed(0)}%</span>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="p-2 overflow-x-auto">
+            <table className="w-full text-[10px] border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/50">
+                  <th className="text-right px-2 py-0.5 text-slate-500 font-medium text-[9px]">النوع</th>
+                  <th className="text-center px-1.5 py-0.5 text-slate-500 font-medium text-[9px]">العدد</th>
+                  <th className="text-center px-1.5 py-0.5 text-slate-500 font-medium text-[9px]">مساحة الوحدة</th>
+                  <th className="text-center px-1.5 py-0.5 text-slate-500 font-medium text-[9px]">المساحة الإجمالية</th>
+                  <th className="text-center px-1.5 py-0.5 text-slate-500 font-medium text-[9px] w-[160px]">السعر / قدم²</th>
+                  <th className="text-center px-1.5 py-0.5 text-slate-500 font-medium text-[9px]">إجمالي النوع</th>
+                  <th className="text-center px-1.5 py-0.5 text-slate-500 font-medium text-[9px]">النسبة</th>
+                </tr>
+              </thead>
+              <tbody>
+                {UNITS.map(u => {
+                  const totalArea = u.area * u.count;
+                  const totalPrice = totalArea * (prices[u.id] || 0);
+                  const pct = results.revenue > 0 ? (totalPrice / results.revenue) * 100 : 0;
+                  return (
+                    <tr key={u.id} className="border-b border-slate-100 hover:bg-slate-50/50 h-7">
+                      <td className="px-2 py-0.5">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2 h-2 rounded-full" style={{ background: u.color }} />
+                          <span className="font-bold text-slate-700 text-[10px]">{u.name}</span>
+                        </div>
+                      </td>
+                      <td className="text-center px-1.5 py-0.5 font-mono font-bold text-slate-700 text-[10px]">{u.count}</td>
+                      <td className="text-center px-1.5 py-0.5 font-mono text-slate-600 text-[10px]">{u.area} ft²</td>
+                      <td className="text-center px-1.5 py-0.5 font-mono font-bold text-slate-700 text-[10px]">{totalArea.toLocaleString()} ft²</td>
+                      <td className="text-center px-1.5 py-0.5">
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="range" min={800} max={2500} step={50} value={prices[u.id]}
+                            onChange={e => setPrices(p => ({ ...p, [u.id]: +e.target.value }))}
+                            className="flex-1 h-1 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:cursor-grab"
+                            style={{ background: `linear-gradient(to left, ${u.color}30, ${u.color}08)`, accentColor: u.color } as any}
+                          />
+                          <span className="font-mono font-black w-9 text-left text-[10px]" style={{ color: u.color }}>{prices[u.id]}</span>
+                        </div>
+                      </td>
+                      <td className="text-center px-1.5 py-0.5 font-mono font-black text-emerald-600 text-[10px]">{fmt(totalPrice)}</td>
+                      <td className="text-center px-1.5 py-0.5">
+                        <div className="flex items-center gap-1">
+                          <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: u.color }} />
+                          </div>
+                          <span className="font-bold text-slate-500 w-6 text-[8px]">{pct.toFixed(0)}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-slate-200 bg-slate-50/80 font-bold h-7">
+                  <td className="px-2 py-0.5 text-slate-700 text-[10px]">الإجمالي</td>
+                  <td className="text-center px-1.5 py-0.5 text-slate-700 font-mono text-[10px]">{TOTAL_UNITS}</td>
+                  <td className="text-center px-1.5 py-0.5 text-slate-400 text-[10px]">—</td>
+                  <td className="text-center px-1.5 py-0.5 text-slate-700 font-mono text-[10px]">{UNITS.reduce((s, u) => s + u.area * u.count, 0).toLocaleString()} ft²</td>
+                  <td className="text-center px-1.5 py-0.5 text-slate-400 text-[10px]">—</td>
+                  <td className="text-center px-1.5 py-0.5 text-emerald-600 font-mono font-black text-[10px]">{fmt(results.revenue)}</td>
+                  <td className="text-center px-1.5 py-0.5 text-slate-700 text-[10px]">100%</td>
+                </tr>
+              </tfoot>
+            </table>
           </div>
         </div>
 
