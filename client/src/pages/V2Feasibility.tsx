@@ -52,7 +52,7 @@ export default function V2Feasibility() {
 
   // Cost breakdown groups
   const landCosts = (costs?.landPrice || 0) + (costs?.agentCommissionLand || 0) + (costs?.landRegistration || 0);
-  const designCosts = (costs?.designFee || 0) + (costs?.soilTestFee || 0) + (costs?.topographicSurveyFee || 0) + (costs?.surveyorFees || 0);
+  const designCosts = (costs?.designFee || 0) + (costs?.soilTestFee || 0) + (costs?.topographicSurveyFee || 0);
   const constructionCosts = (costs?.constructionCost || 0) + (costs?.supervisionFee || 0) + (costs?.contingencies || 0);
   const regulatoryCosts = (costs?.communityFees || 0) + (costs?.officialBodiesFees || 0) + (costs?.reraUnitRegFee || 0) + (costs?.reraProjectRegFee || 0) + (costs?.developerNocFee || 0) + (costs?.escrowAccountFee || 0) + (costs?.bankFees || 0) + (costs?.reraAuditReportFee || 0) + (costs?.reraInspectionReportFee || 0);
   const salesCosts = (costs?.developerFee || 0) + (costs?.salesCommission || 0) + (costs?.marketingCost || 0);
@@ -85,7 +85,7 @@ export default function V2Feasibility() {
 
   // ═══ IRR ESTIMATE ═══
   // Simple annualized ROI based on project duration
-  const totalMonths = parseInt(project?.preConMonths || "6") + parseInt(project?.constructionMonths || "18") + parseInt(project?.handoverMonths || "2");
+  const totalMonths = parseInt(project?.preConMonths || "6") + parseInt(project?.constructionMonths || "18");
   const totalYears = totalMonths / 12;
   const annualizedROI = totalYears > 0 && investorROI > 0 ? investorROI / totalYears : 0;
 
@@ -147,14 +147,42 @@ export default function V2Feasibility() {
                 </div>
               </SectionCard>
 
-              {/* Costs */}
+              {/* Costs - كل بند مفصل */}
               <SectionCard title="التكاليف" icon={<DollarSign className="w-3.5 h-3.5 text-white" />} gradient="from-slate-600 to-slate-800" borderColor="border-slate-200/60">
-                <div className="space-y-1">
-                  <Row label="الأرض" value={fmt(landCosts)} pct={totalCosts > 0 ? (landCosts / totalCosts * 100) : 0} color="text-gray-700" />
-                  <Row label="التصاميم والدراسات" value={fmt(designCosts)} pct={totalCosts > 0 ? (designCosts / totalCosts * 100) : 0} color="text-gray-700" />
-                  <Row label="الإنشاء والإشراف" value={fmt(constructionCosts)} pct={totalCosts > 0 ? (constructionCosts / totalCosts * 100) : 0} color="text-gray-700" />
-                  <Row label="الرسوم التنظيمية" value={fmt(regulatoryCosts)} pct={totalCosts > 0 ? (regulatoryCosts / totalCosts * 100) : 0} color="text-gray-700" />
-                  <Row label="المبيعات والتسويق" value={fmt(salesCosts)} pct={totalCosts > 0 ? (salesCosts / totalCosts * 100) : 0} color="text-gray-700" />
+                <div className="space-y-0.5">
+                  {/* الأرض */}
+                  <div className="text-[9px] font-bold text-gray-500 pt-1 pb-0.5 border-b border-gray-100">الأرض</div>
+                  <Row label="سعر الأرض" value={fmt(costs?.landPrice || 0)} pct={totalCosts > 0 ? ((costs?.landPrice || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  <Row label="عمولة وسيط الأرض" value={fmt(costs?.agentCommissionLand || 0)} pct={totalCosts > 0 ? ((costs?.agentCommissionLand || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  <Row label="رسوم تسجيل الأرض (4%)" value={fmt(costs?.landRegistration || 0)} pct={totalCosts > 0 ? ((costs?.landRegistration || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  {/* التصاميم والدراسات */}
+                  <div className="text-[9px] font-bold text-gray-500 pt-1.5 pb-0.5 border-b border-gray-100">التصاميم والدراسات</div>
+                  <Row label="أتعاب التصميم" value={fmt(costs?.designFee || 0)} pct={totalCosts > 0 ? ((costs?.designFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  <Row label="فحص التربة" value={fmt(costs?.soilTestFee || 0)} pct={totalCosts > 0 ? ((costs?.soilTestFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  <Row label="المسح الطبوغرافي" value={fmt(costs?.topographicSurveyFee || 0)} pct={totalCosts > 0 ? ((costs?.topographicSurveyFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  {/* الإنشاء */}
+                  <div className="text-[9px] font-bold text-gray-500 pt-1.5 pb-0.5 border-b border-gray-100">الإنشاء</div>
+                  <Row label="تكلفة الإنشاء" value={fmt(costs?.constructionCost || 0)} pct={totalCosts > 0 ? ((costs?.constructionCost || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  <Row label="أتعاب الإشراف" value={fmt(costs?.supervisionFee || 0)} pct={totalCosts > 0 ? ((costs?.supervisionFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  <Row label="احتياطي (2%)" value={fmt(costs?.contingencies || 0)} pct={totalCosts > 0 ? ((costs?.contingencies || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  {/* الرسوم */}
+                  <div className="text-[9px] font-bold text-gray-500 pt-1.5 pb-0.5 border-b border-gray-100">الرسوم والجهات</div>
+                  <Row label="رسوم الفرز" value={fmt(costs?.separationFee || 0)} pct={totalCosts > 0 ? ((costs?.separationFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  <Row label="رسوم المجتمع" value={fmt(costs?.communityFees || 0)} pct={totalCosts > 0 ? ((costs?.communityFees || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  <Row label="رسوم الجهات الحكومية" value={fmt(costs?.officialBodiesFees || 0)} pct={totalCosts > 0 ? ((costs?.officialBodiesFees || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  <Row label="تسجيل الوحدات (ريرا)" value={fmt(costs?.reraUnitRegFee || 0)} pct={totalCosts > 0 ? ((costs?.reraUnitRegFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  <Row label="تسجيل المشروع (ريرا)" value={fmt(costs?.reraProjectRegFee || 0)} pct={totalCosts > 0 ? ((costs?.reraProjectRegFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  <Row label="NOC المطور" value={fmt(costs?.developerNocFee || 0)} pct={totalCosts > 0 ? ((costs?.developerNocFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  <Row label="حساب الضمان" value={fmt(costs?.escrowAccountFee || 0)} pct={totalCosts > 0 ? ((costs?.escrowAccountFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  <Row label="رسوم البنك" value={fmt(costs?.bankFees || 0)} pct={totalCosts > 0 ? ((costs?.bankFees || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  <Row label="تقرير مدقق ريرا" value={fmt(costs?.reraAuditReportFee || 0)} pct={totalCosts > 0 ? ((costs?.reraAuditReportFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  <Row label="تقارير فحص ريرا" value={fmt(costs?.reraInspectionReportFee || 0)} pct={totalCosts > 0 ? ((costs?.reraInspectionReportFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  {/* المبيعات */}
+                  <div className="text-[9px] font-bold text-gray-500 pt-1.5 pb-0.5 border-b border-gray-100">المبيعات والتسويق</div>
+                  <Row label="أتعاب المطور" value={fmt(costs?.developerFee || 0)} pct={totalCosts > 0 ? ((costs?.developerFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  <Row label="عمولة المبيعات" value={fmt(costs?.salesCommission || 0)} pct={totalCosts > 0 ? ((costs?.salesCommission || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  <Row label="التسويق" value={fmt(costs?.marketingCost || 0)} pct={totalCosts > 0 ? ((costs?.marketingCost || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  {/* الإجمالي */}
                   <TotalRow label="إجمالي التكاليف" value={fmt(totalCosts)} bgColor="bg-slate-100" textColor="text-slate-800" />
                 </div>
               </SectionCard>
@@ -243,7 +271,7 @@ export default function V2Feasibility() {
                   <DetailRow label="تكلفة الإنشاء/قدم²" value={project.estimatedConstructionPricePerSqft ? `${parseFloat(project.estimatedConstructionPricePerSqft).toFixed(0)} AED` : "—"} />
                   <DetailRow label="مدة التصاميم" value={project.preConMonths ? `${project.preConMonths} شهر` : "—"} />
                   <DetailRow label="مدة الإنشاء" value={project.constructionMonths ? `${project.constructionMonths} شهر` : "—"} />
-                  <DetailRow label="مدة التسليم" value={project.handoverMonths ? `${project.handoverMonths} شهر` : "—"} />
+
                   <DetailRow label="أتعاب المطور" value={project.developerFeePct ? `${project.developerFeePct}%` : "—"} />
                   <DetailRow label="عمولة المبيعات" value={project.salesCommissionPct ? `${project.salesCommissionPct}%` : "—"} />
                   <DetailRow label="أتعاب التصميم" value={project.designFeePct ? `${project.designFeePct}%` : "—"} />

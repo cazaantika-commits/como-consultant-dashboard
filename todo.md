@@ -997,3 +997,7 @@
 - [x] Add cost/sqft vs selling price comparison to V2Feasibility
 - [x] Improve V2Feasibility colors to teal/gold/white brand style
 - [x] Align construction chart month labels with grid months above (same width/structure)
+- [x] Remove "مدة التسليم" (handover) field from GeneralInputsPage
+- [x] Make consultant fees (design/supervision) support both fixed amount OR percentage (toggle)
+- [x] Remove surveyor field from GeneralInputsPage and align with feasibility study costs
+- [x] Verify feasibility study costs section is complete (all individual cost items shown in V2Feasibility)

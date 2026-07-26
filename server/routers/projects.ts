@@ -85,7 +85,9 @@ const factSheetFields = {
   officialBodiesFees: z.string().optional(),
   // نسب التكاليف المتغيرة
   designFeePct: z.union([z.string(), z.number()]).optional(),
+  designFeeFixed: z.union([z.string(), z.number()]).optional(),
   supervisionFeePct: z.union([z.string(), z.number()]).optional(),
+  supervisionFeeFixed: z.union([z.string(), z.number()]).optional(),
   separationFeePerSqft: z.union([z.string(), z.number()]).optional(),
   salesCommissionPct: z.union([z.string(), z.number()]).optional(),
   marketingPct: z.union([z.string(), z.number()]).optional(),
