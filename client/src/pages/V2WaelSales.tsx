@@ -625,12 +625,12 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                 {salesMode === "manual" && (
                   <div className="space-y-2">
                     <p className="text-[10px] text-gray-500">أدخل عدد الوحدات المباعة لكل شهر</p>
-                    <div className="grid grid-cols-10 gap-1.5 max-h-48 overflow-y-auto">
+                    <div className="flex gap-1 overflow-x-auto pb-1" dir="rtl">
                       {Array.from({ length: salesMonths }, (_, i) => {
                         const val = manualUnits[i] ?? salesDistribution[i] ?? 0;
                         return (
-                          <div key={i} className="flex flex-col items-center bg-gray-50 rounded-lg p-1">
-                            <span className="text-[8px] text-gray-400 mb-0.5">شهر {i + timeline.salesStart}</span>
+                          <div key={i} className="flex flex-col items-center flex-shrink-0 w-14 bg-gray-50 rounded p-0.5">
+                            <span className="text-[7px] text-gray-400">شهر {i + timeline.salesStart}</span>
                             <input
                               type="number" min={0} max={50} value={val}
                               onChange={(e) => {
@@ -639,9 +639,9 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                                 setManualUnits(arr);
                                 setHasPlanChanges(true);
                               }}
-                              className="w-full text-center text-[11px] font-bold border border-gray-200 rounded py-0.5 focus:ring-1 focus:ring-emerald-200 outline-none bg-white"
+                              className="w-10 text-center text-[11px] font-bold border border-gray-200 rounded py-0.5 focus:ring-1 focus:ring-emerald-200 outline-none bg-white"
                             />
-                            <span className="text-[8px] text-gray-400 mt-0.5">{offPlanUnits > 0 ? ((val / offPlanUnits) * 100).toFixed(0) : 0}%</span>
+                            <span className="text-[7px] text-gray-400">{offPlanUnits > 0 ? ((val / offPlanUnits) * 100).toFixed(0) : 0}%</span>
                           </div>
                         );
                       })}
