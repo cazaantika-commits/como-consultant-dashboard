@@ -51,7 +51,7 @@ const MARKETING_CHANNELS = [
 ];
 
 const PROJECT_PHASES = [
-  { id: "design", name: "التصميم المعماري", color: "#3b82f6", icon: Palette },
+  { id: "design", name: "التصاميم", color: "#3b82f6", icon: Palette },
   { id: "materials", name: "تحضير مواد التسويق", color: "#f59e0b", icon: Rocket },
   { id: "rera", name: "ريرا + اعتمادات البيع", color: "#8b5cf6", icon: FileCheck },
   { id: "marketing", name: "إطلاق التسويق", color: "#ec4899", icon: Megaphone },
@@ -493,23 +493,40 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
 
             {/* SECTION 4: PROJECT PHASES TIMELINE */}
             <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-3.5 h-3.5 text-blue-600" />
-                  <h2 className="text-[11px] font-bold text-gray-800">الجدول الزمني</h2>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1">
-                    <span className="text-[10px] text-gray-500">تصاميم:</span>
-                    <input type="number" min={1} max={24} value={designMonths} onChange={(e) => { setDesignMonths(parseInt(e.target.value) || 8); setHasPlanChanges(true); }}
-                      className="w-9 h-5 text-center text-[10px] border border-gray-200 rounded" />
-                    <span className="text-[10px] text-gray-400">شهر</span>
+              <div className="px-3 py-2 border-b border-gray-100">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                    <h2 className="text-[11px] font-bold text-gray-800">الجدول الزمني</h2>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <span className="text-[10px] text-gray-500">إنشاء:</span>
-                    <input type="number" min={6} max={60} value={constructionMonths} onChange={(e) => { setConstructionMonths(parseInt(e.target.value) || 30); setHasPlanChanges(true); }}
-                      className="w-9 h-5 text-center text-[10px] border border-gray-200 rounded" />
-                    <span className="text-[10px] text-gray-400">شهر</span>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-gray-500">تصاميم:</span>
+                      <input type="number" min={1} max={24} value={designMonths} onChange={(e) => { setDesignMonths(parseInt(e.target.value) || 8); setHasPlanChanges(true); }}
+                        className="w-9 h-5 text-center text-[10px] border border-gray-200 rounded" />
+                      <span className="text-[10px] text-gray-400">شهر</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-gray-500">إنشاء:</span>
+                      <input type="number" min={6} max={60} value={constructionMonths} onChange={(e) => { setConstructionMonths(parseInt(e.target.value) || 30); setHasPlanChanges(true); }}
+                        className="w-9 h-5 text-center text-[10px] border border-gray-200 rounded" />
+                      <span className="text-[10px] text-gray-400">شهر</span>
+                    </div>
+                  </div>
+                </div>
+                {/* Month numbers on same header line */}
+                <div className="flex items-center gap-2">
+                  <div className="w-32 flex-shrink-0" />
+                  <div className="flex-1 flex">
+                    {Array.from({ length: timeline.projectEnd }, (_, i) => {
+                      const isDesign = i < designMonths;
+                      const displayNum = isDesign ? i + 1 : i - designMonths + 1;
+                      return (
+                        <div key={i} className="flex-1 text-center">
+                          <span className={`text-[7px] font-bold ${isDesign ? 'text-blue-600' : 'text-emerald-600'}`}>{displayNum}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -541,21 +558,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                     );
                   })}
                 </div>
-                {/* Month numbers axis */}
-                <div className="flex items-center gap-2 mt-2">
-                  <div className="w-32 flex-shrink-0" />
-                  <div className="flex-1 flex">
-                    {Array.from({ length: timeline.projectEnd }, (_, i) => {
-                      const monthNum = i + 1;
-                      const isDesign = monthNum <= timeline.designEnd;
-                      return (
-                        <div key={i} className="flex-1 text-center">
-                          <span className={`text-[7px] font-bold ${isDesign ? 'text-blue-600' : 'text-emerald-600'}`}>{monthNum}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+
                 <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-1 flex-wrap">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[10px] text-gray-500">تحضير المواد قبل:</span>
