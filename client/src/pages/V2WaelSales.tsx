@@ -745,81 +745,124 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
               </div>
             </section>
 
-            {/* SECTION 7: ESCROW + CRITICAL MONTH */}
+            {/* SECTION 7: ESCROW (GUARANTEE ACCOUNT) */}
             <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <CreditCard className="w-3.5 h-3.5 text-violet-600" />
-                  <h2 className="text-[11px] font-bold text-gray-800">تأثير الإسكرو (الضمان)</h2>
+                  <h2 className="text-[11px] font-bold text-gray-800">حساب الضمان (Escrow)</h2>
                   {hasDeficit && <Badge variant="destructive" className="text-[10px]">عجز: {fmt(Math.abs(maxDeficit))} AED</Badge>}
                   {!hasDeficit && <Badge className="text-[10px] bg-emerald-100 text-emerald-700">متوازن</Badge>}
                 </div>
-                <p className="text-[10px] text-gray-500">رصيد أولي: {fmt(escrowInitial)} (20% من الإنشاء)</p>
-              </div>
-              <div className="p-3">
-                {/* Critical Month Alert */}
-                {criticalMonth && (
-                  <div className={`mb-3 p-3 rounded-lg border ${criticalMonth.balance < 0 ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <span className={`text-xs font-bold ${criticalMonth.balance < 0 ? 'text-red-700' : 'text-amber-700'}`}>
-                          ⚠️ الشهر الحرج: شهر {criticalMonth.month}
-                        </span>
-                        <p className="text-[10px] text-gray-600 mt-0.5">أقل رصيد في حساب الضمان خلال فترة المشروع</p>
-                      </div>
-                      <div className="text-left">
-                        <p className={`text-base font-bold ${criticalMonth.balance < 0 ? 'text-red-700' : 'text-amber-700'}`}>{fmt(criticalMonth.balance)} AED</p>
-                        <p className="text-[9px] text-gray-500">وحدات مباعة تراكمياً: {criticalMonth.cumulativeSold}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="h-44 mb-3">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={escrowData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                      <XAxis dataKey="month" tick={{ fontSize: 9 }} />
-                      <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => fmt(v)} />
-                      <ReTooltip formatter={(v: any) => [fmtFull(Math.round(v)) + " AED", ""]} labelFormatter={(l) => `شهر ${l}`} />
-                      <Area type="monotone" dataKey="balance" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.15} strokeWidth={2} />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                <div className="flex items-center gap-3">
+                  {criticalMonth && (
+                    <span className={`text-[10px] font-bold ${criticalMonth.balance < 0 ? 'text-red-600' : 'text-amber-600'}`}>
+                      ⚠️ الشهر الحرج: {criticalMonth.month} | رصيد: {fmt(criticalMonth.balance)}
+                    </span>
+                  )}
+                  <span className="text-[10px] text-gray-500">رصيد افتتاحي: {fmt(escrowInitial)}</span>
                 </div>
+              </div>
+              <div className="p-2 overflow-x-auto">
+                {/* Escrow start = reraStart + 1 (second month of rera), end = projectEnd */}
+                {(() => {
+                  const escrowStartMonth = timeline.reraStart + 1;
+                  const escrowEndMonth = timeline.projectEnd;
+                  const escrowMonthCount = escrowEndMonth - escrowStartMonth + 1;
+                  const colWidth = `minmax(42px, 1fr)`;
+                  return (
+                    <div style={{ display: 'grid', gridTemplateColumns: `60px repeat(${escrowMonthCount}, ${colWidth})`, direction: 'rtl' }}>
+                      {/* Row 1: Month number boxes */}
+                      <div className="text-[8px] font-bold text-gray-500 flex items-center justify-center border-b border-gray-200 py-0.5">الشهر</div>
+                      {Array.from({ length: escrowMonthCount }, (_, i) => {
+                        const absMonth = escrowStartMonth + i;
+                        const isDesign = absMonth <= timeline.designEnd;
+                        const displayNum = isDesign ? absMonth : absMonth - timeline.designEnd;
+                        const isCritical = criticalMonth && absMonth === criticalMonth.month;
+                        return (
+                          <div key={i} className={`text-center text-[8px] font-bold py-0.5 border-b border-l border-gray-200 ${isCritical ? 'bg-red-100 text-red-700' : isDesign ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                            {displayNum}
+                          </div>
+                        );
+                      })}
 
-                {/* Detailed Escrow Table */}
-                {escrowData.length > 0 && (
-                  <div className="overflow-x-auto max-h-56">
-                    <table className="w-full text-[10px]">
-                      <thead className="bg-gray-50 sticky top-0">
-                        <tr>
-                          <th className="px-2 py-1.5 text-right font-bold">الشهر</th>
-                          <th className="px-2 py-1.5 text-center font-bold">وحدات مباعة</th>
-                          <th className="px-2 py-1.5 text-center font-bold">تراكمي</th>
-                          <th className="px-2 py-1.5 text-center font-bold">دفعات أولى</th>
-                          <th className="px-2 py-1.5 text-center font-bold">أقساط</th>
-                          <th className="px-2 py-1.5 text-center font-bold">إجمالي الدخل</th>
-                          <th className="px-2 py-1.5 text-center font-bold">سحب للمقاول</th>
-                          <th className="px-2 py-1.5 text-center font-bold">رصيد الضمان</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {escrowData.map((d) => (
-                          <tr key={d.month} className={`border-t border-gray-50 ${d.month === criticalMonth?.month ? 'bg-red-100 font-bold' : d.balance < 0 ? 'bg-red-50' : ''}`}>
-                            <td className="px-2 py-1">{d.month === criticalMonth?.month ? '⚠️ ' : ''}شهر {d.month}</td>
-                            <td className="px-2 py-1 text-center">{d.units}</td>
-                            <td className="px-2 py-1 text-center text-gray-600">{d.cumulativeSold}</td>
-                            <td className="px-2 py-1 text-center text-indigo-600">{fmt(d.downPayment)}</td>
-                            <td className="px-2 py-1 text-center text-blue-600">{fmt(d.installments)}</td>
-                            <td className="px-2 py-1 text-center text-emerald-700">{fmt(d.income)}</td>
-                            <td className="px-2 py-1 text-center text-red-600">{fmt(d.withdrawal)}</td>
-                            <td className={`px-2 py-1 text-center font-bold ${d.balance < 0 ? 'text-red-700' : 'text-violet-700'}`}>{fmt(d.balance)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                      {/* Row 2: Chart (bar chart inline) */}
+                      <div className="text-[8px] font-bold text-gray-500 flex items-center justify-center border-b border-gray-200 py-0.5">الرصيد</div>
+                      {Array.from({ length: escrowMonthCount }, (_, i) => {
+                        const absMonth = escrowStartMonth + i;
+                        const ed = escrowData.find(d => d.month === absMonth);
+                        const balance = ed ? ed.balance : (i === 0 ? escrowInitial : 0);
+                        const maxBal = Math.max(...escrowData.map(d => Math.abs(d.balance)), escrowInitial);
+                        const pct = maxBal > 0 ? Math.abs(balance) / maxBal * 100 : 0;
+                        const isCritical = criticalMonth && absMonth === criticalMonth.month;
+                        return (
+                          <div key={i} className="flex flex-col items-center justify-end h-24 border-b border-l border-gray-200 px-0.5 pb-0.5 relative">
+                            {/* Vertical grid line */}
+                            <div className="absolute inset-0 border-l border-gray-100" />
+                            <div
+                              className={`w-full rounded-t-sm ${balance < 0 ? 'bg-red-400' : isCritical ? 'bg-amber-400' : 'bg-violet-400'}`}
+                              style={{ height: `${Math.max(pct, 3)}%`, opacity: 0.7 }}
+                            />
+                          </div>
+                        );
+                      })}
+
+                      {/* Row 3: Revenue (income) */}
+                      <div className="text-[7px] font-bold text-emerald-700 flex items-center justify-center border-b border-gray-200 py-0.5">الإيرادات</div>
+                      {Array.from({ length: escrowMonthCount }, (_, i) => {
+                        const absMonth = escrowStartMonth + i;
+                        const ed = escrowData.find(d => d.month === absMonth);
+                        const isCritical = criticalMonth && absMonth === criticalMonth.month;
+                        return (
+                          <div key={i} className={`text-center text-[7px] py-0.5 border-b border-l border-gray-200 ${isCritical ? 'bg-red-50' : ''}`}>
+                            <span className="text-emerald-700">{ed ? fmt(ed.income) : '-'}</span>
+                          </div>
+                        );
+                      })}
+
+                      {/* Row 4: Expenses (withdrawal) */}
+                      <div className="text-[7px] font-bold text-red-600 flex items-center justify-center border-b border-gray-200 py-0.5">المصاريف</div>
+                      {Array.from({ length: escrowMonthCount }, (_, i) => {
+                        const absMonth = escrowStartMonth + i;
+                        const ed = escrowData.find(d => d.month === absMonth);
+                        const isCritical = criticalMonth && absMonth === criticalMonth.month;
+                        return (
+                          <div key={i} className={`text-center text-[7px] py-0.5 border-b border-l border-gray-200 ${isCritical ? 'bg-red-50' : ''}`}>
+                            <span className="text-red-600">{ed ? fmt(ed.withdrawal) : '-'}</span>
+                          </div>
+                        );
+                      })}
+
+                      {/* Row 5: Difference */}
+                      <div className="text-[7px] font-bold text-gray-700 flex items-center justify-center border-b border-gray-200 py-0.5">الفرق</div>
+                      {Array.from({ length: escrowMonthCount }, (_, i) => {
+                        const absMonth = escrowStartMonth + i;
+                        const ed = escrowData.find(d => d.month === absMonth);
+                        const diff = ed ? ed.income - ed.withdrawal : 0;
+                        const isCritical = criticalMonth && absMonth === criticalMonth.month;
+                        return (
+                          <div key={i} className={`text-center text-[7px] py-0.5 border-b border-l border-gray-200 ${isCritical ? 'bg-red-50' : ''}`}>
+                            <span className={diff >= 0 ? 'text-emerald-700' : 'text-red-600'}>{fmt(diff)}</span>
+                          </div>
+                        );
+                      })}
+
+                      {/* Row 6: Cumulative (balance) */}
+                      <div className="text-[7px] font-bold text-violet-700 flex items-center justify-center py-0.5">التراكمي</div>
+                      {Array.from({ length: escrowMonthCount }, (_, i) => {
+                        const absMonth = escrowStartMonth + i;
+                        const ed = escrowData.find(d => d.month === absMonth);
+                        const balance = ed ? ed.balance : escrowInitial;
+                        const isCritical = criticalMonth && absMonth === criticalMonth.month;
+                        return (
+                          <div key={i} className={`text-center text-[7px] font-bold py-0.5 border-l border-gray-200 ${isCritical ? 'bg-red-100 text-red-700' : balance < 0 ? 'text-red-600' : 'text-violet-700'}`}>
+                            {fmt(balance)}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </div>
             </section>
           </>
