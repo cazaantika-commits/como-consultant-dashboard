@@ -722,9 +722,13 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                         const absMonth = escrowStartMonth + i;
                         const isDesign = absMonth <= timeline.designEnd;
                         const displayNum = isDesign ? absMonth : absMonth - timeline.designEnd;
+                        const MN = ["ينا","فبر","مار","أبر","ماي","يون","يول","أغس","سبت","أكت","نوف","ديس"];
+                        let mLabel = "";
+                        if (projectStartDate) { const [y,m] = projectStartDate.split("-").map(Number); if (y&&m) mLabel = MN[(m-1+absMonth-1)%12]; }
                         return (
-                          <div key={i} className={`text-center text-[8px] font-bold py-0.5 border-b border-l border-gray-200 ${isDesign ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'}`}>
-                            {displayNum}
+                          <div key={i} className={`text-center py-0.5 border-b border-l border-gray-200 flex flex-col items-center leading-tight ${isDesign ? 'bg-blue-50' : 'bg-emerald-50'}`}>
+                            <span className={`text-[6px] ${isDesign ? 'text-blue-400' : 'text-emerald-400'}`}>{displayNum}</span>
+                            <span className={`text-[7px] font-bold ${isDesign ? 'text-blue-700' : 'text-emerald-700'}`}>{mLabel || displayNum}</span>
                           </div>
                         );
                       })}
@@ -809,9 +813,13 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                         const isDesign = absMonth <= timeline.designEnd;
                         const displayNum = isDesign ? absMonth : absMonth - timeline.designEnd;
                         const isCritical = criticalMonth && absMonth === criticalMonth.month;
+                        const MN = ["ينا","فبر","مار","أبر","ماي","يون","يول","أغس","سبت","أكت","نوف","ديس"];
+                        let mLabel = "";
+                        if (projectStartDate) { const [y,m] = projectStartDate.split("-").map(Number); if (y&&m) mLabel = MN[(m-1+absMonth-1)%12]; }
                         return (
-                          <div key={i} className={`text-center text-[8px] font-bold py-0.5 border-b border-l border-gray-200 ${isCritical ? 'bg-red-100 text-red-700' : isDesign ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'}`}>
-                            {displayNum}
+                          <div key={i} className={`text-center py-0.5 border-b border-l border-gray-200 flex flex-col items-center leading-tight ${isCritical ? 'bg-red-100' : isDesign ? 'bg-blue-50' : 'bg-emerald-50'}`}>
+                            <span className={`text-[6px] ${isCritical ? 'text-red-400' : isDesign ? 'text-blue-400' : 'text-emerald-400'}`}>{displayNum}</span>
+                            <span className={`text-[7px] font-bold ${isCritical ? 'text-red-700' : isDesign ? 'text-blue-700' : 'text-emerald-700'}`}>{mLabel || displayNum}</span>
                           </div>
                         );
                       })}
@@ -929,7 +937,9 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                       return (
                         <tr key={i} className={`border-b border-gray-50 ${!isActive ? 'opacity-30' : 'hover:bg-blue-50/30'} ${isSalesStart ? 'border-t-2 border-t-amber-300' : ''}`}>
                           <td className="py-0.5 px-1.5 text-gray-400 font-mono">{row.month}</td>
-                          <td className="py-0.5 px-1.5 font-medium text-gray-700">شهر {row.month}</td>
+                          <td className="py-0.5 px-1.5 font-medium text-gray-700">
+                            {(() => { const MN=["ينا","فبر","مار","أبر","ماي","يون","يول","أغس","سبت","أكت","نوف","ديس"]; let ml=""; if(projectStartDate){const[y,m]=projectStartDate.split("-").map(Number);if(y&&m)ml=MN[(m-1+row.month-1)%12];} return ml ? <><span className="font-bold">{ml}</span> <span className="text-[7px] text-gray-400">{row.month}</span></> : `شهر ${row.month}`; })()}
+                          </td>
                           <td className="py-0.5 px-1.5 text-center">
                             <span className={`inline-block px-1 py-0.5 rounded text-[8px] font-bold ${isDesign ? 'bg-purple-50 text-purple-600' : 'bg-emerald-50 text-emerald-600'}`}>
                               {isDesign ? 'تصاميم' : 'بناء'}
@@ -998,11 +1008,18 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                     <tr className="border-b-2 border-gray-300">
                       <th className="py-1 px-1 text-right text-gray-600 font-bold sticky left-0 bg-white z-20 min-w-[80px]">شهر البيع \ شهر التحصيل</th>
                       <th className="py-1 px-1 text-right text-gray-600 font-bold sticky left-[80px] bg-white z-20 min-w-[60px]">مبلغ البيع</th>
-                      {Array.from({ length: timeline.projectEnd }, (_, i) => i + 1).map(m => (
-                        <th key={m} className={`py-1 px-0.5 text-center font-medium min-w-[45px] ${m === timeline.salesStart ? 'border-l-2 border-amber-300' : ''} ${m >= timeline.salesStart ? 'text-gray-700' : 'text-gray-400'}`}>
-                          ش{m}
-                        </th>
-                      ))}
+                      {Array.from({ length: timeline.projectEnd }, (_, i) => i + 1).map(m => {
+                        const MN=["\u064a\u0646\u0627","\u0641\u0628\u0631","\u0645\u0627\u0631","\u0623\u0628\u0631","\u0645\u0627\u064a","\u064a\u0648\u0646","\u064a\u0648\u0644","\u0623\u063a\u0633","\u0633\u0628\u062a","\u0623\u0643\u062a","\u0646\u0648\u0641","\u062f\u064a\u0633"];
+                        let ml=""; if(projectStartDate){const[y,mo]=projectStartDate.split("-").map(Number);if(y&&mo)ml=MN[(mo-1+m-1)%12];}
+                        return (
+                          <th key={m} className={`py-1 px-0.5 text-center min-w-[45px] ${m === timeline.salesStart ? 'border-l-2 border-amber-300' : ''} ${m >= timeline.salesStart ? 'text-gray-700' : 'text-gray-400'}`}>
+                            <div className="flex flex-col items-center leading-tight">
+                              <span className="text-[6px] text-gray-400">{m}</span>
+                              <span className="text-[7px] font-bold">{ml || `\u0634${m}`}</span>
+                            </div>
+                          </th>
+                        );
+                      })}
                       <th className="py-1 px-1 text-center text-gray-700 font-bold min-w-[60px]">المجموع</th>
                     </tr>
                   </thead>
@@ -1013,7 +1030,10 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                       const rowTotal = rowData ? rowData.reduce((s, v) => s + v, 0) : 0;
                       return (
                         <tr key={saleMonth} className={`border-b border-gray-50 ${idx % 2 === 0 ? 'bg-gray-50/30' : ''} hover:bg-purple-50/30`}>
-                          <td className="py-0.5 px-1 font-bold text-purple-700 sticky left-0 bg-inherit z-10">شهر {saleMonth} ({salesDistribution[saleMonth - timeline.salesStart] || 0} وحدة)</td>
+                          <td className="py-0.5 px-1 font-bold text-purple-700 sticky left-0 bg-inherit z-10">
+                            {(() => { const MN=["\u064a\u0646\u0627","\u0641\u0628\u0631","\u0645\u0627\u0631","\u0623\u0628\u0631","\u0645\u0627\u064a","\u064a\u0648\u0646","\u064a\u0648\u0644","\u0623\u063a\u0633","\u0633\u0628\u062a","\u0623\u0643\u062a","\u0646\u0648\u0641","\u062f\u064a\u0633"]; let ml=""; if(projectStartDate){const[y,m]=projectStartDate.split("-").map(Number);if(y&&m)ml=MN[(m-1+saleMonth-1)%12];} return ml ? <>{ml} <span className="text-[7px] text-purple-400">{saleMonth}</span></> : `\u0634\u0647\u0631 ${saleMonth}`; })()}
+                            ({salesDistribution[saleMonth - timeline.salesStart] || 0} \u0648\u062d\u062f\u0629)
+                          </td>
                           <td className="py-0.5 px-1 font-mono text-emerald-700 sticky left-[80px] bg-inherit z-10">{fmtFull(Math.round(saleAmount))}</td>
                           {Array.from({ length: timeline.projectEnd }, (_, i) => i + 1).map(m => {
                             const val = rowData ? rowData[m] || 0 : 0;

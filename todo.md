@@ -1043,3 +1043,5 @@
 - [x] V2WaelSales timeline: make all inputs read-only (no editing here)
 - [x] V2WaelSales timeline: add faint vertical grid lines between months
 - [x] V2WaelSales timeline: month headers show phase-relative numbers (1-8 design, 1-30 construction, 1-13 post) with actual month name as small label above/below
+- [x] Apply month names to all tables in V2WaelSales (sales distribution, cash inflow, payment plan grid)
+- [x] Apply month names to all tables in MarketingPage (monthly distribution table)

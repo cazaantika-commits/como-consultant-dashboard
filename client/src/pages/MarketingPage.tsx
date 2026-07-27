@@ -64,6 +64,7 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
   const [constructionMonths, setConstructionMonths] = useState(30);
   const [marketingPrepLead, setMarketingPrepLead] = useState(3);
   const [reraLead, setReraLead] = useState(2);
+  const [projectStartDate, setProjectStartDate] = useState("");
 
   // ─── Load from DB ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -72,6 +73,7 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
       if (p.preConMonths) setDesignMonths(Number(p.preConMonths));
       if (p.constructionMonths) setConstructionMonths(Number(p.constructionMonths));
       if (p.marketingPct) setMarketingPct(Number(p.marketingPct));
+      if (p.startDate) setProjectStartDate(String(p.startDate));
 
     }
   }, [projectQuery.data]);
@@ -406,11 +408,19 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
                       <tr>
                         <th className="text-right py-1.5 px-2 text-gray-600 font-bold sticky right-0 bg-gray-50 min-w-[120px]">القناة / الشهر</th>
                         <th className="text-center py-1.5 px-1 text-gray-600 font-bold min-w-[80px]">المتبقي</th>
-                        {Array.from({ length: marketingActualEnd - marketingActualStart + 1 }, (_, i) => (
-                          <th key={i} className="text-center py-1.5 px-1 text-gray-500 font-medium min-w-[70px]">
-                            ش{marketingActualStart + i}
-                          </th>
-                        ))}
+                        {Array.from({ length: marketingActualEnd - marketingActualStart + 1 }, (_, i) => {
+                          const absMonth = marketingActualStart + i;
+                          const MN=["\u064a\u0646\u0627","\u0641\u0628\u0631","\u0645\u0627\u0631","\u0623\u0628\u0631","\u0645\u0627\u064a","\u064a\u0648\u0646","\u064a\u0648\u0644","\u0623\u063a\u0633","\u0633\u0628\u062a","\u0623\u0643\u062a","\u0646\u0648\u0641","\u062f\u064a\u0633"];
+                          let ml=""; if(projectStartDate){const[y,m]=projectStartDate.split("-").map(Number);if(y&&m)ml=MN[(m-1+absMonth-1)%12];}
+                          return (
+                            <th key={i} className="text-center py-1.5 px-1 min-w-[70px]">
+                              <div className="flex flex-col items-center leading-tight">
+                                <span className="text-[7px] text-gray-400">{absMonth}</span>
+                                <span className="text-[9px] font-bold text-gray-600">{ml || `\u0634${absMonth}`}</span>
+                              </div>
+                            </th>
+                          );
+                        })}
                         <th className="text-center py-1.5 px-2 text-gray-600 font-bold min-w-[80px]">المجموع</th>
                       </tr>
                     </thead>
