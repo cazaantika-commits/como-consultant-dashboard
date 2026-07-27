@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useProjectContext } from "@/contexts/ProjectContext";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -226,6 +226,51 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
   const totalDesignWeeks = designPayments.reduce((s, p) => s + p.durationWeeks, 0);
   const totalDesignMonths = Math.ceil(totalDesignWeeks / 4.33);
 
+  // ─── Computed: Phase Start Months ─────────────────────────────────────────
+  // Schematic Design ends after phases 1-3 (mobilization + concept + schematic)
+  const schematicEndWeek = designPayments.slice(0, 3).reduce((s, p) => s + p.durationWeeks, 0);
+  const schematicEndMonth = Math.ceil(schematicEndWeek / 4.33);
+
+  const computedPhaseStarts = useMemo(() => {
+    const starts: Record<string, number> = {};
+    const constructionMonths = projectQuery.data ? Number((projectQuery.data as any).constructionMonths) || 30 : 30;
+
+    // 1. Designs: starts at month 1
+    starts.designs = 1;
+
+    // 2. Marketing Prep: starts when Schematic Design completes
+    const marketingPrepPhase = projectPhases.find(p => p.id === 'marketingPrep');
+    starts.marketingPrep = schematicEndMonth + 1;
+
+    // 3. RERA + Sales Approvals: X months before sales start
+    //    Sales start = after marketing prep + marketing launch
+    const marketingPrepDuration = marketingPrepPhase?.durationMonths || 2;
+    const marketingLaunchPhase = projectPhases.find(p => p.id === 'marketingLaunch');
+    const marketingLaunchDuration = marketingLaunchPhase?.durationMonths || 2;
+    const reraPhase = projectPhases.find(p => p.id === 'reraApprovals');
+    const reraOffset = reraPhase?.startOffsetMonths || 2;
+    
+    // Sales start = after marketing prep + marketing launch
+    const salesStartMonth = starts.marketingPrep + marketingPrepDuration + marketingLaunchDuration;
+    starts.salesStart = salesStartMonth;
+
+    // RERA starts X months before sales
+    starts.reraApprovals = Math.max(1, salesStartMonth - reraOffset);
+
+    // 4. Marketing Launch: after marketing prep ends
+    starts.marketingLaunch = starts.marketingPrep + marketingPrepDuration;
+
+    // 5. Sales Start: after RERA + approvals complete (or after marketing launch)
+    // Already computed above
+
+    // 6. Construction: after designs end
+    const constructionPhase = projectPhases.find(p => p.id === 'construction');
+    const constructionOffset = constructionPhase?.startOffsetMonths || 1;
+    starts.construction = totalDesignMonths + constructionOffset;
+
+    return starts;
+  }, [projectPhases, schematicEndMonth, totalDesignMonths, projectQuery.data]);
+
   // ═══════════════════════════════════════════════════════════════════════════════
   // RENDER
   // ═══════════════════════════════════════════════════════════════════════════════
@@ -291,15 +336,18 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
                     </div>
                     <div className="text-center">
                       {phase.startEditable ? (
-                        <input
-                          type="number"
-                          value={phase.startOffsetMonths}
-                          onChange={(e) => updatePhaseOffset(phase.id, parseInt(e.target.value) || 0)}
-                          className="w-12 text-center text-xs font-mono border border-gray-200 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-teal-400"
-                          min={0} max={12}
-                        />
+                        <div className="flex items-center justify-center gap-1">
+                          <input
+                            type="number"
+                            value={phase.startOffsetMonths}
+                            onChange={(e) => updatePhaseOffset(phase.id, parseInt(e.target.value) || 0)}
+                            className="w-12 text-center text-xs font-mono border border-gray-200 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-teal-400"
+                            min={0} max={12}
+                          />
+                          <span className="text-[9px] text-teal-600 font-bold">→ ش{computedPhaseStarts[phase.id] || '?'}</span>
+                        </div>
                       ) : (
-                        <span className="text-[10px] text-gray-400">تلقائي</span>
+                        <span className="text-[10px] font-bold text-teal-700">شهر {computedPhaseStarts[phase.id] || '?'}</span>
                       )}
                     </div>
                     <div className="text-center">
