@@ -19,8 +19,15 @@ import {
 import {
   ArrowRight, TrendingUp, Target, Megaphone, Calendar, DollarSign,
   Palette, Rocket, FileCheck, HardHat, Save, Loader2,
-  Building2, Percent, CreditCard,
+  Building2, Percent, CreditCard, Table2, Info,
 } from "lucide-react";
+import {
+  dbProjectToInputs,
+  dbProjectToRates,
+  calculateProjectFormulas,
+  calculatePricingFormulas,
+  calculateCosts,
+} from "@/lib/projectData";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip as ReTooltip, ResponsiveContainer, Cell,
@@ -185,12 +192,33 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   const totalUnits = unitRevenues.reduce((s, u) => s + u.count, 0);
   const totalArea = unitRevenues.reduce((s, u) => s + u.totalArea, 0);
 
-  // ─── Computed: Costs ──────────────────────────────────────────────────────
+  // ─── Computed: Full Costs from Feasibility ─────────────────────────────────
   const constructionCostPerSqft = projectQuery.data ? Number((projectQuery.data as any).estimatedConstructionPricePerSqft) || 400 : 400;
   const constructionCost = totalArea * constructionCostPerSqft;
   const marketingCost = totalRevenue * (marketingPct / 100);
   const commissionCost = totalRevenue * (commissionPct / 100);
-  const totalCosts = constructionCost + marketingCost + commissionCost;
+
+  // Full project costs using the same model as ProjectCard/Feasibility
+  const fullCosts = useMemo(() => {
+    if (!projectQuery.data) return null;
+    const p = projectQuery.data as any;
+    const inputs = dbProjectToInputs(p);
+    const rates = dbProjectToRates(p);
+    const projectFormulas = calculateProjectFormulas(inputs, rates);
+    // Build pricing units from current unitRevenues
+    const pricingUnits = unitRevenues.map(u => ({
+      name: u.name,
+      category: u.id.startsWith('residential') ? 'residential' as const : u.id.startsWith('retail') ? 'retail' as const : 'office' as const,
+      area: u.area,
+      price: u.price,
+      count: u.count,
+    }));
+    const pricingFormulas = calculatePricingFormulas(pricingUnits);
+    const costs = calculateCosts(projectFormulas, pricingFormulas, inputs, rates);
+    return costs;
+  }, [projectQuery.data, unitRevenues]);
+
+  const totalCosts = fullCosts ? fullCosts.totalCosts : (constructionCost + marketingCost + commissionCost);
   const profit = totalRevenue - totalCosts;
   const roiCosts = totalCosts > 0 ? ((profit / totalCosts) * 100).toFixed(0) : "0";
 
@@ -264,6 +292,52 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     escrowData.forEach((d, i) => { if (d.balance < minBalance) { minBalance = d.balance; minIdx = i; } });
     return escrowData[minIdx];
   }, [escrowData]);
+
+  // ─── Computed: Cash Inflow (Payment Plan × Sales) + Detailed Grid ────────
+  const { cashInflowData, perSaleGrid, activeSaleMonths } = useMemo(() => {
+    const totalMonths = timeline.projectEnd;
+    const monthlySales: number[] = Array(totalMonths + 1).fill(0);
+    salesDistribution.forEach((units, i) => {
+      const m = timeline.salesStart + i;
+      if (m <= totalMonths) monthlySales[m] = units * avgUnitPrice;
+    });
+    const cashPerMonth: number[] = Array(totalMonths + 24).fill(0);
+    const grid: Record<number, number[]> = {};
+    const saleMonthsList: number[] = [];
+    for (let saleMonth = 1; saleMonth <= totalMonths; saleMonth++) {
+      const saleAmount = monthlySales[saleMonth];
+      if (saleAmount <= 0) continue;
+      saleMonthsList.push(saleMonth);
+      grid[saleMonth] = Array(totalMonths + 1).fill(0);
+      const downAmount = saleAmount * (ppDownPct / 100);
+      if (saleMonth < cashPerMonth.length) { cashPerMonth[saleMonth] += downAmount; grid[saleMonth][saleMonth] += downAmount; }
+      const secondAmount = saleAmount * (ppSecondPct / 100);
+      const secondMonth = saleMonth + ppSecondAfterMonths;
+      if (secondMonth < cashPerMonth.length) { cashPerMonth[secondMonth] += secondAmount; if (secondMonth <= totalMonths) grid[saleMonth][secondMonth] += secondAmount; }
+      const installmentTotal = saleAmount * (ppDuringTotal / 100);
+      const constructionEnd = timeline.constructionStart + constructionMonths - 1;
+      const installmentMonthsList: number[] = [];
+      for (let im = saleMonth + ppInstallmentEvery + ppSecondAfterMonths; im <= constructionEnd; im += ppInstallmentEvery) installmentMonthsList.push(im);
+      if (installmentMonthsList.length > 0) {
+        const perInstallment = installmentTotal / installmentMonthsList.length;
+        installmentMonthsList.forEach(im => { if (im < cashPerMonth.length) { cashPerMonth[im] += perInstallment; if (im <= totalMonths) grid[saleMonth][im] += perInstallment; } });
+      } else {
+        const ce = Math.min(constructionEnd, totalMonths);
+        cashPerMonth[ce] += installmentTotal;
+        grid[saleMonth][ce] += installmentTotal;
+      }
+      const handoverAmount = saleAmount * (ppHandoverPct / 100);
+      const handoverMonth = Math.min(timeline.constructionStart + constructionMonths - 1, totalMonths);
+      if (handoverMonth < cashPerMonth.length) { cashPerMonth[handoverMonth] += handoverAmount; if (handoverMonth <= totalMonths) grid[saleMonth][handoverMonth] += handoverAmount; }
+    }
+    const data: { month: number; salesThisMonth: number; cashInflow: number; cumSales: number; cumCash: number }[] = [];
+    let cumSales = 0, cumCash = 0;
+    for (let m = 1; m <= totalMonths; m++) {
+      cumSales += monthlySales[m]; cumCash += cashPerMonth[m];
+      data.push({ month: m, salesThisMonth: monthlySales[m], cashInflow: cashPerMonth[m], cumSales, cumCash });
+    }
+    return { cashInflowData: data, perSaleGrid: grid, activeSaleMonths: saleMonthsList };
+  }, [salesDistribution, avgUnitPrice, timeline, constructionMonths, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppDuringTotal, ppInstallmentEvery, ppHandoverPct]);
 
   // ─── Save Handlers ────────────────────────────────────────────────────────
   const handleSaveUnits = useCallback(() => {
@@ -506,7 +580,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
             {/* SECTION 2: FINANCIAL SUMMARY */}
             <section className="grid grid-cols-2 md:grid-cols-6 gap-3">
               <KPICard label="الإيرادات" value={fmt(totalRevenue)} sub="AED" color="emerald" />
-              <KPICard label="تكلفة الإنشاء" value={fmt(constructionCost)} sub="AED" color="slate" />
+              <KPICard label="تكلفة المشروع" value={fmt(totalCosts)} sub="كل التكاليف" color="slate" />
               <KPICard label="التسويق" value={fmt(marketingCost)} sub={`${marketingPct}%`} color="amber" />
               <KPICard label="العمولة" value={fmt(commissionCost)} sub={`${commissionPct}%`} color="amber" />
               <KPICard label="الربح" value={fmt(profit)} sub="AED" color={profit >= 0 ? "blue" : "red"} />
@@ -821,13 +895,168 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                 })()}
               </div>
             </section>
+
+            {/* SECTION 8: CASH INFLOW RESULTS TABLE (Payment Plan × Sales) */}
+            <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Table2 className="w-3.5 h-3.5 text-indigo-600" />
+                  <h2 className="text-[11px] font-bold text-gray-800">جدول التدفق النقدي — التحصيل الفعلي من المبيعات</h2>
+                </div>
+                <div className="flex items-center gap-2 text-[9px] text-gray-500">
+                  <Info className="w-3 h-3" />
+                  يحسب متى تدخل الأموال فعلياً بناءً على خطة الدفع
+                </div>
+              </div>
+              <div className="p-2 overflow-x-auto max-h-[400px] overflow-y-auto">
+                <table className="w-full text-[9px]">
+                  <thead className="sticky top-0 bg-white z-10 border-b-2 border-gray-200">
+                    <tr>
+                      <th className="text-right py-1 px-1.5 text-gray-500 font-bold w-8">#</th>
+                      <th className="text-right py-1 px-1.5 text-gray-500 font-bold">الشهر</th>
+                      <th className="text-center py-1 px-1.5 text-gray-500 font-bold w-12">المرحلة</th>
+                      <th className="text-left py-1 px-1.5 text-gray-500 font-bold">مبيعات الشهر</th>
+                      <th className="text-left py-1 px-1.5 text-gray-500 font-bold">تحصيل فعلي</th>
+                      <th className="text-left py-1 px-1.5 text-gray-500 font-bold">مبيعات تراكمية</th>
+                      <th className="text-left py-1 px-1.5 text-gray-500 font-bold">تحصيل تراكمي</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cashInflowData.map((row, i) => {
+                      const isActive = row.salesThisMonth > 0 || row.cashInflow > 0;
+                      const isDesign = row.month <= timeline.designEnd;
+                      const isSalesStart = row.month === timeline.salesStart;
+                      return (
+                        <tr key={i} className={`border-b border-gray-50 ${!isActive ? 'opacity-30' : 'hover:bg-blue-50/30'} ${isSalesStart ? 'border-t-2 border-t-amber-300' : ''}`}>
+                          <td className="py-0.5 px-1.5 text-gray-400 font-mono">{row.month}</td>
+                          <td className="py-0.5 px-1.5 font-medium text-gray-700">شهر {row.month}</td>
+                          <td className="py-0.5 px-1.5 text-center">
+                            <span className={`inline-block px-1 py-0.5 rounded text-[8px] font-bold ${isDesign ? 'bg-purple-50 text-purple-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                              {isDesign ? 'تصاميم' : 'بناء'}
+                            </span>
+                          </td>
+                          <td className="py-0.5 px-1.5 text-left font-mono">
+                            {row.salesThisMonth > 0 ? <span className="text-emerald-700 font-medium">{fmtFull(Math.round(row.salesThisMonth))}</span> : <span className="text-gray-300">—</span>}
+                          </td>
+                          <td className="py-0.5 px-1.5 text-left font-mono">
+                            {row.cashInflow > 0 ? <span className="text-blue-700 font-bold">{fmtFull(Math.round(row.cashInflow))}</span> : <span className="text-gray-300">—</span>}
+                          </td>
+                          <td className="py-0.5 px-1.5 text-left font-mono text-indigo-600">{row.cumSales > 0 ? fmtFull(Math.round(row.cumSales)) : '—'}</td>
+                          <td className="py-0.5 px-1.5 text-left font-mono text-blue-600 font-medium">{row.cumCash > 0 ? fmtFull(Math.round(row.cumCash)) : '—'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot className="border-t-2 border-gray-300 bg-gray-50 font-bold">
+                    <tr>
+                      <td colSpan={3} className="py-1 px-1.5 text-right text-gray-700">الإجمالي</td>
+                      <td className="py-1 px-1.5 text-left font-mono text-emerald-700">{fmtFull(Math.round(cashInflowData.reduce((s, r) => s + r.salesThisMonth, 0)))}</td>
+                      <td className="py-1 px-1.5 text-left font-mono text-blue-700">{fmtFull(Math.round(cashInflowData.reduce((s, r) => s + r.cashInflow, 0)))}</td>
+                      <td colSpan={2}></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              <div className="px-3 py-2 border-t border-gray-100 bg-gray-50/50">
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="text-center">
+                    <p className="text-[8px] text-gray-500">إجمالي المبيعات</p>
+                    <p className="text-[10px] font-bold text-emerald-700">{fmtFull(Math.round(cashInflowData.reduce((s, r) => s + r.salesThisMonth, 0)))} AED</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-[8px] text-gray-500">تحصيل خلال المشروع</p>
+                    <p className="text-[10px] font-bold text-blue-700">{fmtFull(Math.round(cashInflowData.reduce((s, r) => s + r.cashInflow, 0)))} AED</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-[8px] text-gray-500">نسبة التحصيل</p>
+                    <p className="text-[10px] font-bold text-indigo-700">
+                      {cashInflowData.reduce((s, r) => s + r.salesThisMonth, 0) > 0
+                        ? Math.round((cashInflowData.reduce((s, r) => s + r.cashInflow, 0) / cashInflowData.reduce((s, r) => s + r.salesThisMonth, 0)) * 100)
+                        : 0}%
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* SECTION 9: DETAILED PAYMENT PLAN BREAKDOWN GRID */}
+            {activeSaleMonths.length > 0 && (
+            <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Table2 className="w-3.5 h-3.5 text-purple-600" />
+                  <h2 className="text-[11px] font-bold text-gray-800">تفصيل توزيع الأقساط — من أين جاء كل مبلغ</h2>
+                </div>
+                <div className="flex items-center gap-2 text-[9px] text-gray-500">
+                  <Info className="w-3 h-3" />
+                  الصفوف = أشهر البيع | الأعمدة = أشهر التحصيل
+                </div>
+              </div>
+              <div className="p-2 overflow-x-auto max-h-[500px] overflow-y-auto">
+                <table className="w-full text-[8px] border-collapse">
+                  <thead className="sticky top-0 bg-white z-10">
+                    <tr className="border-b-2 border-gray-300">
+                      <th className="py-1 px-1 text-right text-gray-600 font-bold sticky left-0 bg-white z-20 min-w-[80px]">شهر البيع \ شهر التحصيل</th>
+                      <th className="py-1 px-1 text-right text-gray-600 font-bold sticky left-[80px] bg-white z-20 min-w-[60px]">مبلغ البيع</th>
+                      {Array.from({ length: timeline.projectEnd }, (_, i) => i + 1).map(m => (
+                        <th key={m} className={`py-1 px-0.5 text-center font-medium min-w-[45px] ${m === timeline.salesStart ? 'border-l-2 border-amber-300' : ''} ${m >= timeline.salesStart ? 'text-gray-700' : 'text-gray-400'}`}>
+                          ش{m}
+                        </th>
+                      ))}
+                      <th className="py-1 px-1 text-center text-gray-700 font-bold min-w-[60px]">المجموع</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activeSaleMonths.map((saleMonth, idx) => {
+                      const rowData = perSaleGrid[saleMonth];
+                      const saleAmount = cashInflowData.find(d => d.month === saleMonth)?.salesThisMonth || 0;
+                      const rowTotal = rowData ? rowData.reduce((s, v) => s + v, 0) : 0;
+                      return (
+                        <tr key={saleMonth} className={`border-b border-gray-50 ${idx % 2 === 0 ? 'bg-gray-50/30' : ''} hover:bg-purple-50/30`}>
+                          <td className="py-0.5 px-1 font-bold text-purple-700 sticky left-0 bg-inherit z-10">شهر {saleMonth} ({salesDistribution[saleMonth - timeline.salesStart] || 0} وحدة)</td>
+                          <td className="py-0.5 px-1 font-mono text-emerald-700 sticky left-[80px] bg-inherit z-10">{fmtFull(Math.round(saleAmount))}</td>
+                          {Array.from({ length: timeline.projectEnd }, (_, i) => i + 1).map(m => {
+                            const val = rowData ? rowData[m] || 0 : 0;
+                            return (
+                              <td key={m} className={`py-0.5 px-0.5 text-center font-mono ${m === saleMonth ? 'bg-amber-50 font-bold text-amber-700' : val > 0 ? 'text-blue-700' : 'text-gray-200'}`}>
+                                {val > 0 ? (val >= 1000000 ? `${(val / 1000000).toFixed(1)}M` : val >= 1000 ? `${Math.round(val / 1000)}K` : Math.round(val)) : '—'}
+                              </td>
+                            );
+                          })}
+                          <td className="py-0.5 px-1 text-center font-mono font-bold text-indigo-700">{fmtFull(Math.round(rowTotal))}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot className="border-t-2 border-gray-400 bg-gray-100 font-bold sticky bottom-0">
+                    <tr>
+                      <td className="py-1 px-1 text-right text-gray-800 sticky left-0 bg-gray-100 z-10">مجموع التحصيل الشهري</td>
+                      <td className="py-1 px-1 font-mono text-emerald-800 sticky left-[80px] bg-gray-100 z-10">{fmtFull(Math.round(activeSaleMonths.reduce((s, sm) => s + (cashInflowData.find(d => d.month === sm)?.salesThisMonth || 0), 0)))}</td>
+                      {Array.from({ length: timeline.projectEnd }, (_, i) => i + 1).map(m => {
+                        const colTotal = activeSaleMonths.reduce((s, sm) => s + (perSaleGrid[sm]?.[m] || 0), 0);
+                        return (
+                          <td key={m} className={`py-1 px-0.5 text-center font-mono ${colTotal > 0 ? 'text-blue-800 font-bold' : 'text-gray-300'}`}>
+                            {colTotal > 0 ? (colTotal >= 1000000 ? `${(colTotal / 1000000).toFixed(1)}M` : `${Math.round(colTotal / 1000)}K`) : '—'}
+                          </td>
+                        );
+                      })}
+                      <td className="py-1 px-1 text-center font-mono text-blue-800">{fmtFull(Math.round(cashInflowData.reduce((s, r) => s + r.cashInflow, 0)))}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              <div className="px-3 py-1.5 border-t border-gray-100 bg-purple-50/30 text-[9px] text-gray-600">
+                <strong>ملاحظة:</strong> الخلية الصفراء = دفعة الحجز (في شهر البيع) | الخلايا الزرقاء = أقساط لاحقة حسب البيمنت بلان | الصف الأخير = إجمالي ما يدخل الإسكرو كل شهر
+              </div>
+            </section>
+            )}
+
           </>
         )}
       </div>
     </div>
   );
 }
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // SUB-COMPONENTS
 // ═══════════════════════════════════════════════════════════════════════════════

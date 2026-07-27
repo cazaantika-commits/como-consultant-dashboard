@@ -1036,3 +1036,6 @@
 - [x] MarketingPage: Remove commission% slider (keep marketing% + channels only)
 - [x] FactSheetPage: Make marketing% and commission% read-only
 - [x] ProjectCardOffplanPage: Make marketing% and commission% read-only
+- [x] V2WaelSales: Fix profit calculation to use ALL project costs (not just construction+marketing+commission)
+- [x] V2WaelSales: Fix "تكلفة الإنشاء" KPI to show total project cost from feasibility
+- [x] V2WaelSales: Restore detailed revenue tables distributed by Payment Plan (accidentally removed)
