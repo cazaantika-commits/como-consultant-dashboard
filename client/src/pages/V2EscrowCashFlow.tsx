@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { ArrowRight, Download, Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -28,7 +28,7 @@ export default function V2EscrowCashFlow() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const { selectedProjectId } = useProjectContext();
-  const [scenario, setScenario] = useState<Scenario>("offplan_escrow");
+  const scenario: Scenario = "offplan_escrow";
 
   // ─── DB Queries ─────────────────────────────────────────────────────────
   const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, {
@@ -196,28 +196,7 @@ export default function V2EscrowCashFlow() {
         </div>
       </div>
 
-      {/* Scenario Tabs */}
-      <div className="bg-white border-b border-gray-200 px-4 py-1.5 flex items-center gap-2 text-[10px]">
-        <span className="text-gray-500 font-medium">السيناريو:</span>
-        {([
-          { key: "offplan_escrow" as Scenario, label: "S1 أوف بلان + ضمان" },
-          { key: "offplan_construction" as Scenario, label: "S2 أوف بلان + بناء" },
-          { key: "no_offplan" as Scenario, label: "S3 بدون أوف بلان" },
-          { key: "rental" as Scenario, label: "S4 إيجار" },
-        ]).map(s => (
-          <button
-            key={s.key}
-            onClick={() => setScenario(s.key)}
-            className={`px-2 py-0.5 rounded-md border transition ${
-              scenario === s.key
-                ? "bg-gray-800 text-white border-gray-800"
-                : "bg-white text-gray-600 border-gray-300 hover:bg-gray-100"
-            }`}
-          >
-            {s.label}
-          </button>
-        ))}
-      </div>
+
 
       {/* Phase Legend */}
       <div className="bg-white border-b border-gray-100 px-4 py-1.5 flex items-center gap-1 text-[10px]">
