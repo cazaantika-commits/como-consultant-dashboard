@@ -1023,3 +1023,5 @@
 - [x] V2WaelSales: Change month numbers to real calendar dates + darker text color
 - [x] ConstructionInputsPage: Change month numbers to real calendar dates + darker text color
 - [x] Fix SettingsRulesPage crash: designPayments stored as {pct, durationWeeks} objects but code expected plain numbers
+- [x] ConstructionInputsPage: Match colors to ConsolidatedInvestorCashFlowPage style
+- [x] ConstructionInputsPage: Make all fields read-only EXCEPT progress percentages
