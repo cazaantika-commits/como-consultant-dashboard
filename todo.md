@@ -1002,6 +1002,9 @@
 - [x] Remove surveyor field from GeneralInputsPage and align with feasibility study costs
 - [x] Verify feasibility study costs section is complete (all individual cost items shown in V2Feasibility)
 
+## Bug Fixes
+- [x] Fix GeneralInputsPage save error: preConMonths/constructionMonths sent as strings but server expected numbers (changed to z.coerce.number())
+
 ## V2 Cash Flow Pages — Real Data Integration
 - [x] Update investorCashFlowEngine to accept salesResult parameter from V2WaelSales
 - [x] Rewrite V2InvestorCashFlow.tsx to use real engine data (no dummy data)

@@ -82,7 +82,15 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
     if (!selectedProjectId) return;
     try {
       const payload: any = { id: selectedProjectId };
-      ALL_FIELDS.forEach(f => { if (formData[f.key] !== undefined) payload[f.key] = formData[f.key]; });
+      ALL_FIELDS.forEach(f => {
+        if (formData[f.key] === undefined || formData[f.key] === "") return;
+        const val = formData[f.key];
+        if (f.key === "preConMonths" || f.key === "constructionMonths" || f.key === "handoverMonths") {
+          payload[f.key] = parseInt(val) || 0;
+        } else {
+          payload[f.key] = val;
+        }
+      });
       await updateProject.mutateAsync(payload);
       setHasChanges(false);
       setIsEditing(false);
