@@ -49,6 +49,8 @@ export function calculateProjectCosts(
   const bankFees = parseFloat(p.bankFees || "0");
   const communityFees = parseFloat(p.communityFees || "0");
 
+  const surveyorDwgFee = parseFloat(p.surveyorDwgFee || "0");
+  const surveyorAsbuiltFee = parseFloat(p.surveyorAsbuiltFee || "0");
   const reraAuditReportFee = parseFloat(p.reraAuditReportFee || "0");
   const reraInspectionReportFee = parseFloat(p.reraInspectionReportFee || "0");
   const designFeePct = parseFloat(p.designFeePct ?? "2");
@@ -186,7 +188,7 @@ export function calculateProjectCosts(
   const inspectionVisits = Math.floor(constructionMonths / 3) + 1;
   const computedReraInspectionFee = inspectionVisits * 15000;
 
-  const totalRegulatory = computedReraUnitRegFee + reraProjectRegFee + developerNocFee + escrowAccountFee + bankFees + reraAuditReportFee + computedReraInspectionFee;
+  const totalRegulatory = computedReraUnitRegFee + reraProjectRegFee + developerNocFee + escrowAccountFee + bankFees + surveyorDwgFee + surveyorAsbuiltFee + reraAuditReportFee + computedReraInspectionFee;
   const totalCosts = landPrice + agentCommissionLand + landRegistration + soilTestFee + topographicSurveyFee + officialBodiesFees + designFee + supervisionFee + separationFee + constructionCost + computedCommunityFees + contingencies + developerFee + salesCommission + marketingCost + totalRegulatory;
 
   return {
@@ -210,6 +212,8 @@ export function calculateProjectCosts(
     developerNocFee,
     escrowAccountFee,
     bankFees,
+    surveyorDwgFee,
+    surveyorAsbuiltFee,
     reraAuditReportFee,
     reraInspectionReportFee: computedReraInspectionFee,
     revenueRes,

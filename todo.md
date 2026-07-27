@@ -1001,3 +1001,4 @@
 - [x] Make consultant fees (design/supervision) support both fixed amount OR percentage (toggle)
 - [x] Remove surveyor field from GeneralInputsPage and align with feasibility study costs
 - [x] Verify feasibility study costs section is complete (all individual cost items shown in V2Feasibility)
+- [x] Add مساح DWG and مساح As-built fields to GeneralInputsPage and V2Feasibility (under رسوم الجهات الحكومية)
