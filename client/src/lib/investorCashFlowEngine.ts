@@ -376,9 +376,9 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     });
   }
 
-  // ─── فحص التربة (شهر 1 تصاميم) ───
+  // ─── فحص التربة (شهر 2 تصاميم) ───
   const soilDesign = emptyDesign();
-  soilDesign[0] = i.soilTest;
+  soilDesign[1] = i.soilTest;
   rows.push({
     label: "فحص التربة",
     totalCost: i.soilTest,
@@ -392,9 +392,9 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     postConstructionMonths: emptyPost(),
   });
 
-  // ─── المسح الطبوغرافي (شهر 1 تصاميم) ───
+  // ─── المسح الطبوغرافي (شهر 2 تصاميم) ───
   const topoDesign = emptyDesign();
-  topoDesign[0] = i.topography;
+  topoDesign[1] = i.topography;
   rows.push({
     label: "المسح الطبوغرافي",
     totalCost: i.topography,
@@ -408,9 +408,10 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     postConstructionMonths: emptyPost(),
   });
 
-  // ─── رسوم المساح DWG (مستثمر — شهر 1 من التصاميم) ───
+  // ─── رسوم المساح DWG (مستثمر — شهر 1 من مرحلة تسجيل المشروع) ───
   const surveyorDwgDesign = emptyDesign();
-  surveyorDwgDesign[0] = i.surveyorDwgFee;
+  const surveyorDwgMonth = Math.max(0, designDuration - reraLeadMonths);
+  surveyorDwgDesign[surveyorDwgMonth] = i.surveyorDwgFee;
   rows.push({
     label: "رسوم المساح (DWG)",
     totalCost: i.surveyorDwgFee,
@@ -473,18 +474,40 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       postConstructionMonths: emptyPost(),
     });
   } else {
+    // Investor portion: 10% at completion of schematic design
     const govDesign = emptyDesign();
-    govDesign[1] = costs.govFeesInvestor;
+    govDesign[2] = costs.govFeesInvestor;
     rows.push({
-      label: "رسوم الجهات الحكومية",
-      totalCost: i.govFeesTotal,
+      label: "رسوم الجهات الحكومية (10%)",
+      totalCost: costs.govFeesInvestor,
       investorAmount: costs.govFeesInvestor,
       paid: 0,
       unpaid: costs.govFeesInvestor,
-      funder: "split",
+      funder: "investor",
       section: "الرسوم الحكومية والتنظيمية",
       designMonths: govDesign,
       constructionMonths: emptyConstruction(),
+      postConstructionMonths: emptyPost(),
+    });
+
+    // Escrow portion: 45% at 80% completion + 45% at 90% completion
+    const govEscrowConst = emptyConstruction();
+    const govEscrowPortion = i.govFeesTotal * r.govFeesEscrowShare; // 90% total
+    const govEscrowHalf = govEscrowPortion / 2; // 45% each
+    const month80pct = Math.max(0, Math.round(constructionDuration * 0.8) - 1);
+    const month90pct = Math.max(0, Math.round(constructionDuration * 0.9) - 1);
+    govEscrowConst[month80pct] = govEscrowHalf;
+    govEscrowConst[month90pct] += govEscrowHalf;
+    rows.push({
+      label: "رسوم الجهات الحكومية (45%+45%)",
+      totalCost: govEscrowPortion,
+      investorAmount: 0,
+      paid: 0,
+      unpaid: 0,
+      funder: "escrow",
+      section: "الرسوم الحكومية والتنظيمية",
+      designMonths: emptyDesign(),
+      constructionMonths: govEscrowConst,
       postConstructionMonths: emptyPost(),
     });
   }
@@ -547,10 +570,10 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   if (!isScenario3 && !isScenario4) {
     const reraRegDesign = emptyDesign();
     const reraRegConstruction = emptyConstruction();
-    // RERA registration happens at (designDuration - reraLeadMonths) in design phase
-    const reraMonthInDesign = Math.max(0, designDuration - reraLeadMonths);
+    // RERA registration happens at month 2 of RERA phase = (designDuration - reraLeadMonths + 1)
+    const reraMonthInDesign = Math.min(designDuration - 1, Math.max(0, designDuration - reraLeadMonths + 1));
     if (isScenario2) {
-      reraRegConstruction[reraLeadMonths] = i.reraProjectReg;
+      reraRegConstruction[Math.min(reraLeadMonths + 1, constructionDuration - 1)] = i.reraProjectReg;
     } else {
       reraRegDesign[reraMonthInDesign] = i.reraProjectReg;
     }
@@ -572,11 +595,12 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   {
     const reraUnitsDesign = emptyDesign();
     const reraUnitsConstruction = emptyConstruction();
-    const reraMonthInDesign2 = Math.max(0, designDuration - reraLeadMonths);
+    // RERA unit registration at month 2 of RERA phase = (designDuration - reraLeadMonths + 1)
+    const reraMonthInDesign2 = Math.min(designDuration - 1, Math.max(0, designDuration - reraLeadMonths + 1));
     if (isScenario3 || isScenario4) {
       reraUnitsConstruction[penultimateConstruction] = costs.reraUnits;
     } else if (isScenario2) {
-      reraUnitsConstruction[reraLeadMonths] = costs.reraUnits;
+      reraUnitsConstruction[Math.min(reraLeadMonths + 1, constructionDuration - 1)] = costs.reraUnits;
     } else {
       reraUnitsDesign[reraMonthInDesign2] = costs.reraUnits;
     }
@@ -598,10 +622,10 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   if (!isScenario3 && !isScenario4) {
     const escrowFeeDesign = emptyDesign();
     const escrowFeeConstruction = emptyConstruction();
-    // Escrow account opens at same time as RERA registration
-    const escrowMonthInDesign = Math.max(0, designDuration - reraLeadMonths);
+    // Escrow account opens at month 2 of RERA phase (same as RERA registration)
+    const escrowMonthInDesign = Math.min(designDuration - 1, Math.max(0, designDuration - reraLeadMonths + 1));
     if (isScenario2) {
-      escrowFeeConstruction[reraLeadMonths] = i.escrowAccountFee;
+      escrowFeeConstruction[Math.min(reraLeadMonths + 1, constructionDuration - 1)] = i.escrowAccountFee;
     } else {
       escrowFeeDesign[escrowMonthInDesign] = i.escrowAccountFee;
     }
@@ -621,8 +645,19 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
 
   // ─── رسوم البنك — س3 و س4: محذوف ───
   if (!isScenario3 && !isScenario4) {
+    const bankDesign = emptyDesign();
     const bankConstruction = emptyConstruction();
-    distributeEqual(i.bankFees, constructionDuration, bankConstruction, 0);
+    // Bank fees distributed from month 2 of RERA phase until end of construction
+    const bankStartInDesign = Math.min(designDuration - 1, Math.max(0, designDuration - reraLeadMonths + 1));
+    const remainingDesignMonths = designDuration - bankStartInDesign;
+    const totalBankMonths = remainingDesignMonths + constructionDuration;
+    const bankPerMonth = i.bankFees / totalBankMonths;
+    for (let m = bankStartInDesign; m < designDuration; m++) {
+      bankDesign[m] = bankPerMonth;
+    }
+    for (let m = 0; m < constructionDuration; m++) {
+      bankConstruction[m] = bankPerMonth;
+    }
     rows.push({
       label: "رسوم البنك",
       totalCost: i.bankFees,
@@ -631,16 +666,27 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       unpaid: i.bankFees,
       funder: "investor",
       section: "ريرا (التنظيم العقاري)",
-      designMonths: emptyDesign(),
+      designMonths: bankDesign,
       constructionMonths: bankConstruction,
       postConstructionMonths: emptyPost(),
     });
   }
 
-  // ─── تقرير مدقق ريرا — س3 و س4: محذوف ───
+    // ─── تقرير مدقق ريرا (ربع سنوي من فتح حساب الضمان) — س3 و س4: محذوف ───
   if (!isScenario3 && !isScenario4) {
     const auditorConst = emptyConstruction();
-    auditorConst[Math.min(Math.floor(constructionDuration / 2), constructionDuration - 1)] = i.reraAuditorReport;
+    // Quarterly from start of construction (escrow opens at RERA phase month 2, before construction)
+    const auditorPayments: number[] = [];
+    for (let m = 2; m < constructionDuration; m += 3) {
+      auditorPayments.push(m);
+    }
+    const auditorPerPayment = auditorPayments.length > 0 ? i.reraAuditorReport / auditorPayments.length : i.reraAuditorReport;
+    for (const m of auditorPayments) {
+      auditorConst[m] = auditorPerPayment;
+    }
+    if (auditorPayments.length === 0 && constructionDuration > 0) {
+      auditorConst[0] = i.reraAuditorReport;
+    }
     rows.push({
       label: "تقرير مدقق ريرا",
       totalCost: i.reraAuditorReport,
@@ -654,11 +700,21 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       postConstructionMonths: emptyPost(),
     });
   }
-
-  // ─── فحص ريرا — س٣ و س٤: محذوف ───
+  // ─── فحص ريرا (ربع سنوي من بدء الإنشاء) — س٣ و س٤: محذوف ───
   if (!isScenario3 && !isScenario4) {
     const inspConst = emptyConstruction();
-    inspConst[Math.max(0, penultimateConstruction)] = i.reraInspection;
+    // Quarterly from start of construction
+    const inspPayments: number[] = [];
+    for (let m = 2; m < constructionDuration; m += 3) {
+      inspPayments.push(m);
+    }
+    const inspPerPayment = inspPayments.length > 0 ? i.reraInspection / inspPayments.length : i.reraInspection;
+    for (const m of inspPayments) {
+      inspConst[m] = inspPerPayment;
+    }
+    if (inspPayments.length === 0 && constructionDuration > 0) {
+      inspConst[0] = i.reraInspection;
+    }
     rows.push({
       label: "فحص ريرا",
       totalCost: i.reraInspection,
@@ -869,8 +925,8 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     const depositConst = emptyConstruction();
     const depositPost = emptyPost();
     const escrowDepositAmount = constructionCost * r.escrowDeposit;
-    // Escrow deposit happens at same time as RERA/escrow account opening
-    const escrowDepositMonth = Math.max(0, designDuration - reraLeadMonths);
+    // Escrow deposit happens at month 2 of RERA phase (same as RERA registration and escrow account opening)
+    const escrowDepositMonth = Math.min(designDuration - 1, Math.max(0, designDuration - reraLeadMonths + 1));
     depositDesign[escrowDepositMonth] = escrowDepositAmount;
     rows.push({
       label: "إيداع حساب الضمان (20%)",

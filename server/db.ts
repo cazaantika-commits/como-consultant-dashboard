@@ -126,7 +126,11 @@ export async function updateProject(projectId: number, userId: number, data: Par
     'saleableResidentialPct', 'saleableRetailPct', 'saleableOfficesPct'
   ];
   
-  const convertedData = { ...data };
+  // Filter out undefined values to prevent overwriting existing DB data with NULL
+  const filteredData = Object.fromEntries(
+    Object.entries(data).filter(([, v]) => v !== undefined)
+  );
+  const convertedData = { ...filteredData };
   for (const field of percentageFields) {
     if (field in convertedData && convertedData[field as keyof typeof convertedData]) {
       const value = convertedData[field as keyof typeof convertedData];

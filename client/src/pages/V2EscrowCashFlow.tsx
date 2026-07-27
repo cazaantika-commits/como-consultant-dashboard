@@ -93,25 +93,18 @@ export default function V2EscrowCashFlow() {
   );
 
   // ─── Escrow inflows: deposit + sales income ────────────────────────────
-  // Build inflow rows manually from engine data
-  const constructionCostFromProject = useMemo(() => {
-    if (!projectQuery.data) return 0;
-    const p = projectQuery.data as any;
-    const gfa = parseFloat(p.gfaSqft || p.manualBuaSqft || "0") || 0;
-    const pricePerSqft = parseFloat(p.estimatedConstructionPricePerSqft || "0") || 350;
-    return gfa * pricePerSqft;
-  }, [projectQuery.data]);
-
-  const escrowDeposit = constructionCostFromProject * 0.20;
-
-  // Deposit goes in first month of construction
+  // Use the engine's isTransfer row for deposit timing (consistent with investor cash flow)
   const depositRow = useMemo(() => {
+    const transferRow = rows.find((r) => r.isTransfer);
     const values = new Array(totalMonths).fill(0);
-    if (designDuration < totalMonths) {
-      values[designDuration] = escrowDeposit; // First month of construction
+    if (transferRow) {
+      const rowValues = [...transferRow.designMonths, ...transferRow.constructionMonths, ...transferRow.postConstructionMonths];
+      for (let i = 0; i < totalMonths && i < rowValues.length; i++) {
+        values[i] = rowValues[i];
+      }
     }
     return { label: "إيداع المستثمر (20%)", values };
-  }, [totalMonths, designDuration, escrowDeposit]);
+  }, [rows, totalMonths]);
 
   // Sales income from escrowData (monthly buyer payments flowing into escrow)
   const salesIncomeRow = useMemo(() => {

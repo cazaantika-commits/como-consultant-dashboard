@@ -1070,3 +1070,16 @@
 - [x] FIX: Added scenario tabs to V2InvestorCashFlow and V2EscrowCashFlow (4 scenarios)
 - [x] Added Excel export button to V2WaelSales (payment plan + cash inflow data)
 - [x] Create detailed Excel payment plan table for user to review with broker
+- [x] FIX: Remove debug console.log from server/routers/projects.ts
+- [x] FIX: Off-by-one timing bug — soil test and topographic survey moved from month 1 (index 0) to month 2 (index 1) of design phase
+- [x] FIX: Surveyor DWG fee placed at month 1 of RERA registration phase (designDuration - reraLeadMonths)
+- [x] FIX: RERA project registration moved to month 2 of RERA phase (designDuration - reraLeadMonths + 1)
+- [x] FIX: RERA unit registration moved to month 2 of RERA phase
+- [x] FIX: Escrow account opening fee moved to month 2 of RERA phase
+- [x] FIX: Escrow deposit (20%) moved to month 2 of RERA phase
+- [x] FIX: Bank fees now distributed from month 2 of RERA phase through end of construction (not just construction)
+- [x] FIX: Gov fees investor portion (10%) moved to month 3 of design (completion of schematic design)
+- [x] FIX: Added separate escrow gov fees rows (45% at 80% completion + 45% at 90% completion)
+- [x] FIX: RERA auditor report now quarterly (every 3 months from construction start)
+- [x] FIX: RERA inspection now quarterly (every 3 months from construction start)
+- [x] FIX: V2EscrowCashFlow deposit row now uses engine's isTransfer row timing (consistent with investor cash flow)
