@@ -60,6 +60,20 @@ const PROJECT_PHASES = [
 ];
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
+const MONTH_NAMES_AR = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+function getMonthLabel(offset: number, startYear: number, startMonth: number): string {
+  const absMonth = (startYear * 12 + startMonth - 1) + offset;
+  const year = Math.floor(absMonth / 12);
+  const monthIdx = absMonth % 12;
+  return `${MONTH_NAMES_AR[monthIdx]} ${year}`;
+}
+function getMonthLabelShort(offset: number, startYear: number, startMonth: number): string {
+  const absMonth = (startYear * 12 + startMonth - 1) + offset;
+  const year = Math.floor(absMonth / 12);
+  const monthIdx = absMonth % 12;
+  return `${MONTH_NAMES_AR[monthIdx].substring(0, 3)} ${year % 100}`;
+}
+
 function fmt(n: number): string {
   if (Math.abs(n) >= 1e9) return (n / 1e9).toFixed(2) + "B";
   if (Math.abs(n) >= 1e6) return (n / 1e6).toFixed(1) + "M";
@@ -133,6 +147,9 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   const downPaymentPct = ppDownPct;
   const duringConstructionPct = 100 - ppDownPct - ppHandoverPct;
   const onHandoverPct = ppHandoverPct;
+  // ─── Parse startDate for real calendar labels ───────────────────────────────
+  const projectStartDate = (projectQuery.data as any)?.startDate || "2026-08";
+  const [startYear, startMonth] = projectStartDate.split("-").map(Number);
 
   // ─── Load data from DB ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -620,16 +637,15 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                     </div>
                   </div>
                 </div>
-                {/* Month numbers on same header line */}
+                {/* Month labels - real calendar dates */}
                 <div className="flex items-center gap-2">
                   <div className="w-32 flex-shrink-0" />
                   <div className="flex-1 flex">
                     {Array.from({ length: timeline.projectEnd }, (_, i) => {
                       const isDesign = i < designMonths;
-                      const displayNum = isDesign ? i + 1 : i - designMonths + 1;
                       return (
                         <div key={i} className="flex-1 text-center">
-                          <span className={`text-[7px] font-bold ${isDesign ? 'text-blue-600' : 'text-emerald-600'}`}>{displayNum}</span>
+                          <span className={`text-[7px] font-bold ${isDesign ? 'text-blue-700' : 'text-emerald-700'}`}>{getMonthLabelShort(i, startYear, startMonth)}</span>
                         </div>
                       );
                     })}
@@ -701,14 +717,13 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                   return (
                     <div style={{ display: 'grid', gridTemplateColumns: `60px repeat(${escrowMonthCount}, ${colWidth})`, direction: 'rtl' }}>
                       {/* Row 1: Month labels */}
-                      <div className="text-[8px] font-bold text-gray-500 flex items-center justify-center border-b border-gray-200 py-0.5">الشهر</div>
+                      <div className="text-[8px] font-bold text-slate-700 flex items-center justify-center border-b border-gray-200 py-0.5">الشهر</div>
                       {Array.from({ length: escrowMonthCount }, (_, i) => {
                         const absMonth = escrowStartMonth + i;
                         const isDesign = absMonth <= timeline.designEnd;
-                        const displayNum = isDesign ? absMonth : absMonth - timeline.designEnd;
                         return (
-                          <div key={i} className={`text-center text-[8px] font-bold py-0.5 border-b border-l border-gray-200 ${isDesign ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'}`}>
-                            {displayNum}
+                          <div key={i} className={`text-center text-[7px] font-bold py-0.5 border-b border-l border-gray-200 ${isDesign ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                            {getMonthLabelShort(absMonth, startYear, startMonth)}
                           </div>
                         );
                       })}
@@ -786,16 +801,15 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                   const colWidth = `minmax(42px, 1fr)`;
                   return (
                     <div style={{ display: 'grid', gridTemplateColumns: `60px repeat(${escrowMonthCount}, ${colWidth})`, direction: 'rtl' }}>
-                      {/* Row 1: Month number boxes */}
-                      <div className="text-[8px] font-bold text-gray-500 flex items-center justify-center border-b border-gray-200 py-0.5">الشهر</div>
+                      {/* Row 1: Month labels - real calendar dates */}
+                      <div className="text-[8px] font-bold text-slate-700 flex items-center justify-center border-b border-gray-200 py-0.5">الشهر</div>
                       {Array.from({ length: escrowMonthCount }, (_, i) => {
                         const absMonth = escrowStartMonth + i;
                         const isDesign = absMonth <= timeline.designEnd;
-                        const displayNum = isDesign ? absMonth : absMonth - timeline.designEnd;
                         const isCritical = criticalMonth && absMonth === criticalMonth.month;
                         return (
-                          <div key={i} className={`text-center text-[8px] font-bold py-0.5 border-b border-l border-gray-200 ${isCritical ? 'bg-red-100 text-red-700' : isDesign ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'}`}>
-                            {displayNum}
+                          <div key={i} className={`text-center text-[7px] font-bold py-0.5 border-b border-l border-gray-200 ${isCritical ? 'bg-red-100 text-red-700' : isDesign ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                            {getMonthLabelShort(absMonth, startYear, startMonth)}
                           </div>
                         );
                       })}

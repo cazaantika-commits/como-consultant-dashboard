@@ -13,6 +13,14 @@ import {
   RotateCcw, Info, Percent,
 } from "lucide-react";
 
+const MONTH_NAMES_AR = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+function getMonthLabelShort(monthOffset: number, startYear: number, startMonth: number): string {
+  const totalMonths = (startYear * 12 + startMonth - 1) + monthOffset;
+  const year = Math.floor(totalMonths / 12);
+  const monthIdx = totalMonths % 12;
+  return `${MONTH_NAMES_AR[monthIdx].substring(0, 3)} ${year % 100}`;
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // S-CURVE TEMPLATES
 // ═══════════════════════════════════════════════════════════════════
@@ -74,6 +82,14 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
   });
 
   const project = projectQuery.data;
+
+  // Parse startDate for real calendar labels
+  const projectStartDate = (project as any)?.startDate || "2026-08";
+  const [pStartYear, pStartMonth] = projectStartDate.split("-").map(Number);
+  // Construction starts after pre-construction (design) months
+  const preConMonths = Number((project as any)?.preConMonths) || 8;
+  const constructionStartYear = pStartYear;
+  const constructionStartMonth = pStartMonth + preConMonths;
 
   const [constructionMonths, setConstructionMonths] = useState(18);
   const [mobilizationPct, setMobilizationPct] = useState(10);
@@ -387,16 +403,15 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
               <div className="p-3 overflow-x-auto">
                 {constructionCost > 0 ? (
                   <div style={{ display: 'grid', gridTemplateColumns: `80px repeat(${totalColumns}, minmax(50px, 1fr))`, direction: 'rtl' }}>
-                    {/* Row 1: Month numbers */}
-                    <div className="text-[9px] font-semibold text-slate-500 flex items-center justify-center border-b border-slate-200 py-1.5">الشهر</div>
+                    {/* Row 1: Month labels - real calendar dates */}
+                    <div className="text-[9px] font-bold text-slate-700 flex items-center justify-center border-b border-slate-200 py-1.5">الشهر</div>
                     {Array.from({ length: totalColumns }, (_, i) => {
                       const isConstruction = i < constructionMonths;
-                      const displayNum = isConstruction ? i + 1 : i - constructionMonths + 1;
                       return (
-                        <div key={i} className={`text-center text-[9px] font-semibold py-1.5 border-b border-l border-slate-200 ${
+                        <div key={i} className={`text-center text-[8px] font-bold py-1.5 border-b border-l border-slate-200 ${
                           isConstruction ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-50 text-slate-500'
                         }`}>
-                          {isConstruction ? displayNum : `+${displayNum}`}
+                          {getMonthLabelShort(i, constructionStartYear, constructionStartMonth)}
                         </div>
                       );
                     })}
@@ -499,13 +514,12 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
                 })}
 
                 {/* Month labels row (matches grid above) */}
-                <div className="text-[7px] font-bold text-gray-500 flex items-center justify-center py-0.5">الشهر</div>
+                <div className="text-[7px] font-bold text-slate-700 flex items-center justify-center py-0.5">الشهر</div>
                 {Array.from({ length: totalColumns }, (_, i) => {
                   const isConstruction = i < constructionMonths;
-                  const displayNum = isConstruction ? i + 1 : i - constructionMonths + 1;
                   return (
                     <div key={i} className={`text-center text-[7px] font-bold py-0.5 ${isConstruction ? 'text-teal-700' : 'text-gray-400'}`}>
-                      {isConstruction ? displayNum : `+${displayNum}`}
+                      {getMonthLabelShort(i, constructionStartYear, constructionStartMonth)}
                     </div>
                   );
                 })}

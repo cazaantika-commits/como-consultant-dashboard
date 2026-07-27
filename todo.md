@@ -1018,3 +1018,7 @@
 - [x] Apply ConsolidatedInvestorCashFlowPage table styling to V2EscrowCashFlow
 - [x] Apply ConsolidatedInvestorCashFlowPage table styling to V2WaelSales (المبيعات والتسويق)
 - [x] Apply ConsolidatedInvestorCashFlowPage table styling to Construction page
+
+## Month Headers Styling Fix (match ConsolidatedInvestorCashFlowPage)
+- [x] V2WaelSales: Change month numbers to real calendar dates + darker text color
+- [x] ConstructionInputsPage: Change month numbers to real calendar dates + darker text color
