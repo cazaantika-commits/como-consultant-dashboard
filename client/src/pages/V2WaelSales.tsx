@@ -60,20 +60,6 @@ const PROJECT_PHASES = [
 ];
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
-const MONTH_NAMES_AR = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
-function getMonthLabel(offset: number, startYear: number, startMonth: number): string {
-  const absMonth = (startYear * 12 + startMonth - 1) + offset;
-  const year = Math.floor(absMonth / 12);
-  const monthIdx = absMonth % 12;
-  return `${MONTH_NAMES_AR[monthIdx]} ${year}`;
-}
-function getMonthLabelShort(offset: number, startYear: number, startMonth: number): string {
-  const absMonth = (startYear * 12 + startMonth - 1) + offset;
-  const year = Math.floor(absMonth / 12);
-  const monthIdx = absMonth % 12;
-  return `${MONTH_NAMES_AR[monthIdx].substring(0, 3)} ${year % 100}`;
-}
-
 function fmt(n: number): string {
   if (Math.abs(n) >= 1e9) return (n / 1e9).toFixed(2) + "B";
   if (Math.abs(n) >= 1e6) return (n / 1e6).toFixed(1) + "M";
@@ -147,9 +133,6 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   const downPaymentPct = ppDownPct;
   const duringConstructionPct = 100 - ppDownPct - ppHandoverPct;
   const onHandoverPct = ppHandoverPct;
-  // ─── Parse startDate for real calendar labels ───────────────────────────────
-  const projectStartDate = (projectQuery.data as any)?.startDate || "2026-08";
-  const [startYear, startMonth] = projectStartDate.split("-").map(Number);
 
   // ─── Load data from DB ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -394,21 +377,21 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                 <p className="text-[10px] text-gray-500">الإيرادات: <span className="font-bold text-emerald-700">{fmt(totalRevenue)} AED</span></p>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-[10px] border-collapse">
-                  <thead className="bg-slate-50 sticky top-0 z-10">
+                <table className="w-full text-[11px]">
+                  <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-3 py-2 text-right font-semibold text-slate-600 border-b border-slate-200">النوع</th>
-                      <th className="px-2 py-2 text-center font-semibold text-slate-600 border-b border-slate-200">العدد</th>
-                      <th className="px-2 py-2 text-center font-semibold text-slate-600 border-b border-slate-200">المساحة (قدم²)</th>
-                      <th className="px-2 py-2 text-center font-semibold text-slate-600 border-b border-slate-200">سعر/قدم (AED)</th>
-                      <th className="px-2 py-2 text-center font-semibold text-slate-600 border-b border-slate-200">إجمالي المساحة</th>
-                      <th className="px-2 py-2 text-center font-semibold text-slate-600 border-b border-slate-200">إجمالي الإيراد</th>
-                      <th className="px-2 py-2 text-center font-semibold text-slate-600 border-b border-slate-200">%</th>
+                      <th className="px-2 py-1 text-right font-medium text-gray-600">النوع</th>
+                      <th className="px-2 py-1 text-center font-medium text-gray-600">العدد</th>
+                      <th className="px-2 py-1 text-center font-medium text-gray-600">المساحة (قدم²)</th>
+                      <th className="px-2 py-1 text-center font-medium text-gray-600">سعر/قدم (AED)</th>
+                      <th className="px-2 py-1 text-center font-medium text-gray-600">إجمالي المساحة</th>
+                      <th className="px-2 py-1 text-center font-medium text-gray-600">إجمالي الإيراد</th>
+                      <th className="px-2 py-1 text-center font-medium text-gray-600">%</th>
                     </tr>
                   </thead>
                   <tbody>
                     {/* سكني */}
-                    <tr><td colSpan={7} className="px-3 py-1.5 text-[9px] font-bold text-blue-700 bg-blue-50/60 border-b border-blue-100">سكني</td></tr>
+                    <tr><td colSpan={7} className="px-2 py-0.5 text-[10px] font-bold text-blue-700 bg-blue-50/60 border-b border-blue-100">سكني</td></tr>
                     {unitRevenues.filter(u => u.id.startsWith('residential')).map((u) => (
                       <tr key={u.id} className="border-t border-gray-50 hover:bg-gray-50/50">
                         <td className="px-2 py-0.5">
@@ -435,7 +418,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                       </tr>
                     ))}
                     {/* تجزئة */}
-                    <tr><td colSpan={7} className="px-3 py-1.5 text-[9px] font-bold text-orange-700 bg-orange-50/60 border-b border-orange-100">تجزئة</td></tr>
+                    <tr><td colSpan={7} className="px-2 py-0.5 text-[10px] font-bold text-orange-700 bg-orange-50/60 border-b border-orange-100">تجزئة</td></tr>
                     {unitRevenues.filter(u => u.id.startsWith('retail')).map((u) => (
                       <tr key={u.id} className="border-t border-gray-50 hover:bg-gray-50/50">
                         <td className="px-2 py-0.5">
@@ -462,7 +445,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                       </tr>
                     ))}
                     {/* مكاتب */}
-                    <tr><td colSpan={7} className="px-3 py-1.5 text-[9px] font-bold text-teal-700 bg-teal-50/60 border-b border-teal-100">مكاتب</td></tr>
+                    <tr><td colSpan={7} className="px-2 py-0.5 text-[10px] font-bold text-teal-700 bg-teal-50/60 border-b border-teal-100">مكاتب</td></tr>
                     {unitRevenues.filter(u => u.id.startsWith('office')).map((u) => (
                       <tr key={u.id} className="border-t border-gray-50 hover:bg-gray-50/50">
                         <td className="px-2 py-0.5">
@@ -489,15 +472,15 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="bg-slate-800 text-white">
+                  <tfoot className="bg-teal-50 border-t-2 border-teal-200">
                     <tr>
-                      <td className="px-3 py-2.5 font-bold">المجموع</td>
-                      <td className="px-2 py-2.5 text-center font-bold">{totalUnits}</td>
-                      <td className="px-2 py-2.5" />
-                      <td className="px-2 py-2.5" />
-                      <td className="px-2 py-2.5 text-center font-mono font-bold">{fmtFull(totalArea)}</td>
-                      <td className="px-2 py-2.5 text-center font-mono font-bold text-emerald-300">{fmt(totalRevenue)}</td>
-                      <td className="px-2 py-2.5 text-center font-bold">100%</td>
+                      <td className="px-2 py-1 font-bold text-teal-800">المجموع</td>
+                      <td className="px-2 py-1 text-center font-bold text-teal-800">{totalUnits}</td>
+                      <td className="px-2 py-1" />
+                      <td className="px-2 py-1" />
+                      <td className="px-2 py-1 text-center font-mono font-bold text-teal-800">{fmtFull(totalArea)}</td>
+                      <td className="px-2 py-1 text-center font-mono font-bold text-teal-800">{fmt(totalRevenue)}</td>
+                      <td className="px-2 py-1 text-center font-bold text-teal-800">100%</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -505,46 +488,46 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
             </section>
 
             {/* Payment Plan - 1/3 */}
-            <section className="col-span-1 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2">
+            <section className="col-span-1 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-1.5">
                 <CreditCard className="w-3.5 h-3.5 text-indigo-600" />
-                <h2 className="text-xs font-bold text-slate-800">خطة الدفع</h2>
+                <h2 className="text-[11px] font-bold text-gray-800">خطة الدفع</h2>
                 <Badge variant={ppTotal === 100 ? "secondary" : "destructive"} className="text-[9px]">{ppTotal}%</Badge>
               </div>
-              <div className="p-3">
-                <table className="w-full text-[10px] border-collapse">
+              <div className="p-2">
+                <table className="w-full text-[9px]">
                   <thead>
-                    <tr className="bg-slate-50">
-                      <th className="px-2 py-2 text-right font-semibold text-slate-600 border-b border-slate-200">البند</th>
-                      <th className="px-2 py-2 text-center font-semibold text-slate-600 border-b border-slate-200">%</th>
-                      <th className="px-2 py-2 text-center font-semibold text-slate-600 border-b border-slate-200">التوقيت</th>
+                    <tr className="bg-gray-50">
+                      <th className="px-1 py-0.5 text-right font-bold">البند</th>
+                      <th className="px-1 py-0.5 text-center font-bold">%</th>
+                      <th className="px-1 py-0.5 text-center font-bold">التوقيت</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                      <td className="px-2 py-2 text-right text-slate-800">دفعة أولى</td>
-                      <td className="px-2 py-2 text-center"><input type="number" min={5} max={30} value={ppDownPct} onChange={(e) => { setPpDownPct(+e.target.value); setHasPlanChanges(true); }} className="w-10 h-5 text-center text-[10px] font-bold border border-slate-200 rounded bg-white focus:ring-1 focus:ring-blue-200" />%</td>
-                      <td className="px-2 py-2 text-center text-slate-500">عند التوقيع</td>
+                    <tr className="border-t border-gray-100">
+                      <td className="px-1 py-0.5 text-right">دفعة أولى</td>
+                      <td className="px-1 py-0.5 text-center"><input type="number" min={5} max={30} value={ppDownPct} onChange={(e) => { setPpDownPct(+e.target.value); setHasPlanChanges(true); }} className="w-8 h-4 text-center text-[9px] font-bold border border-gray-200 rounded bg-white" />%</td>
+                      <td className="px-1 py-0.5 text-center text-gray-500">عند التوقيع</td>
                     </tr>
-                    <tr className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                      <td className="px-2 py-2 text-right text-slate-800">دفعة ثانية</td>
-                      <td className="px-2 py-2 text-center"><input type="number" min={5} max={20} value={ppSecondPct} onChange={(e) => { setPpSecondPct(+e.target.value); setHasPlanChanges(true); }} className="w-10 h-5 text-center text-[10px] font-bold border border-slate-200 rounded bg-white focus:ring-1 focus:ring-blue-200" />%</td>
-                      <td className="px-2 py-2 text-center">بعد <input type="number" min={1} max={6} value={ppSecondAfterMonths} onChange={(e) => { setPpSecondAfterMonths(+e.target.value); setHasPlanChanges(true); }} className="w-8 h-5 text-center text-[10px] font-bold border border-slate-200 rounded bg-white mx-0.5 focus:ring-1 focus:ring-blue-200" />شهر</td>
+                    <tr className="border-t border-gray-100">
+                      <td className="px-1 py-0.5 text-right">دفعة ثانية</td>
+                      <td className="px-1 py-0.5 text-center"><input type="number" min={5} max={20} value={ppSecondPct} onChange={(e) => { setPpSecondPct(+e.target.value); setHasPlanChanges(true); }} className="w-8 h-4 text-center text-[9px] font-bold border border-gray-200 rounded bg-white" />%</td>
+                      <td className="px-1 py-0.5 text-center">بعد <input type="number" min={1} max={6} value={ppSecondAfterMonths} onChange={(e) => { setPpSecondAfterMonths(+e.target.value); setHasPlanChanges(true); }} className="w-6 h-4 text-center text-[9px] font-bold border border-gray-200 rounded bg-white mx-0.5" />شهر</td>
                     </tr>
-                    <tr className="border-b border-slate-100 bg-blue-50/50 hover:bg-blue-50 transition-colors">
-                      <td className="px-2 py-2 text-right text-slate-800">أقساط ({ppInstallmentCount})</td>
-                      <td className="px-2 py-2 text-center"><input type="number" min={5} max={20} value={ppInstallmentPct} onChange={(e) => { setPpInstallmentPct(+e.target.value); setHasPlanChanges(true); }} className="w-10 h-5 text-center text-[10px] font-bold border border-slate-200 rounded bg-white focus:ring-1 focus:ring-blue-200" />%</td>
-                      <td className="px-2 py-2 text-center">كل <input type="number" min={2} max={12} value={ppInstallmentEvery} onChange={(e) => { setPpInstallmentEvery(+e.target.value); setHasPlanChanges(true); }} className="w-8 h-5 text-center text-[10px] font-bold border border-slate-200 rounded bg-white mx-0.5 focus:ring-1 focus:ring-blue-200" />شهر</td>
+                    <tr className="border-t border-gray-100 bg-blue-50">
+                      <td className="px-1 py-0.5 text-right">أقساط ({ppInstallmentCount})</td>
+                      <td className="px-1 py-0.5 text-center"><input type="number" min={5} max={20} value={ppInstallmentPct} onChange={(e) => { setPpInstallmentPct(+e.target.value); setHasPlanChanges(true); }} className="w-8 h-4 text-center text-[9px] font-bold border border-gray-200 rounded bg-white" />%</td>
+                      <td className="px-1 py-0.5 text-center">كل <input type="number" min={2} max={12} value={ppInstallmentEvery} onChange={(e) => { setPpInstallmentEvery(+e.target.value); setHasPlanChanges(true); }} className="w-6 h-4 text-center text-[9px] font-bold border border-gray-200 rounded bg-white mx-0.5" />شهر</td>
                     </tr>
-                    <tr className="border-b border-slate-100 bg-emerald-50/50 hover:bg-emerald-50 transition-colors">
-                      <td className="px-2 py-2 text-right font-bold text-slate-800">عند التسليم</td>
-                      <td className="px-2 py-2 text-center"><input type="number" min={10} max={60} value={ppHandoverPct} onChange={(e) => { setPpHandoverPct(+e.target.value); setHasPlanChanges(true); }} className="w-10 h-5 text-center text-[10px] font-bold border border-slate-200 rounded bg-white focus:ring-1 focus:ring-blue-200" />%</td>
-                      <td className="px-2 py-2 text-center text-slate-500">عند الاكتمال</td>
+                    <tr className="border-t border-gray-100 bg-emerald-50">
+                      <td className="px-1 py-0.5 text-right font-bold">عند التسليم</td>
+                      <td className="px-1 py-0.5 text-center"><input type="number" min={10} max={60} value={ppHandoverPct} onChange={(e) => { setPpHandoverPct(+e.target.value); setHasPlanChanges(true); }} className="w-8 h-4 text-center text-[9px] font-bold border border-gray-200 rounded bg-white" />%</td>
+                      <td className="px-1 py-0.5 text-center text-gray-500">عند الاكتمال</td>
                     </tr>
-                    <tr className="bg-slate-800 text-white">
-                      <td className="px-2 py-2.5 text-right font-bold">الإجمالي</td>
-                      <td className={`px-2 py-2.5 text-center font-bold ${ppTotal === 100 ? 'text-emerald-300' : 'text-red-300'}`}>{ppTotal}%</td>
-                      <td className="px-2 py-2.5 text-center text-[9px] text-slate-300">{fmtFull(Math.round(avgUnitPrice))} / وحدة</td>
+                    <tr className="border-t-2 border-gray-300 bg-gray-100">
+                      <td className="px-1 py-0.5 text-right font-bold">الإجمالي</td>
+                      <td className={`px-1 py-0.5 text-center font-bold ${ppTotal === 100 ? 'text-emerald-700' : 'text-red-700'}`}>{ppTotal}%</td>
+                      <td className="px-1 py-0.5 text-center text-[8px] text-gray-500">{fmtFull(Math.round(avgUnitPrice))} / وحدة</td>
                     </tr>
                   </tbody>
                 </table>
@@ -637,15 +620,16 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                     </div>
                   </div>
                 </div>
-                {/* Month labels - real calendar dates */}
+                {/* Month numbers on same header line */}
                 <div className="flex items-center gap-2">
                   <div className="w-32 flex-shrink-0" />
                   <div className="flex-1 flex">
                     {Array.from({ length: timeline.projectEnd }, (_, i) => {
                       const isDesign = i < designMonths;
+                      const displayNum = isDesign ? i + 1 : i - designMonths + 1;
                       return (
                         <div key={i} className="flex-1 text-center">
-                          <span className={`text-[7px] font-bold ${isDesign ? 'text-blue-700' : 'text-emerald-700'}`}>{getMonthLabelShort(i, startYear, startMonth)}</span>
+                          <span className={`text-[7px] font-bold ${isDesign ? 'text-blue-600' : 'text-emerald-600'}`}>{displayNum}</span>
                         </div>
                       );
                     })}
@@ -699,11 +683,11 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
             </section>
 
             {/* SECTION 5: SALES INPUT (Manual - aligned to escrow range) */}
-            <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-2">
+            <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
                   <TrendingUp className="w-3.5 h-3.5 text-blue-600" />
-                  <h2 className="text-xs font-bold text-slate-800">توزيع البيع</h2>
+                  <h2 className="text-[11px] font-bold text-gray-800">توزيع البيع</h2>
                   <Badge variant="secondary" className="text-[10px]">{totalSold} / {offPlanUnits} وحدة</Badge>
                   {totalSold > offPlanUnits && <Badge variant="destructive" className="text-[9px]">تجاوز!</Badge>}
                 </div>
@@ -717,13 +701,14 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                   return (
                     <div style={{ display: 'grid', gridTemplateColumns: `60px repeat(${escrowMonthCount}, ${colWidth})`, direction: 'rtl' }}>
                       {/* Row 1: Month labels */}
-                      <div className="text-[8px] font-bold text-slate-700 flex items-center justify-center border-b border-gray-200 py-0.5">الشهر</div>
+                      <div className="text-[8px] font-bold text-gray-500 flex items-center justify-center border-b border-gray-200 py-0.5">الشهر</div>
                       {Array.from({ length: escrowMonthCount }, (_, i) => {
                         const absMonth = escrowStartMonth + i;
                         const isDesign = absMonth <= timeline.designEnd;
+                        const displayNum = isDesign ? absMonth : absMonth - timeline.designEnd;
                         return (
-                          <div key={i} className={`text-center text-[7px] font-bold py-0.5 border-b border-l border-gray-200 ${isDesign ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'}`}>
-                            {getMonthLabelShort(absMonth, startYear, startMonth)}
+                          <div key={i} className={`text-center text-[8px] font-bold py-0.5 border-b border-l border-gray-200 ${isDesign ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                            {displayNum}
                           </div>
                         );
                       })}
@@ -775,11 +760,11 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
             </section>
 
             {/* SECTION 7: ESCROW (GUARANTEE ACCOUNT) */}
-            <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-2">
+            <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
                   <CreditCard className="w-3.5 h-3.5 text-violet-600" />
-                  <h2 className="text-xs font-bold text-slate-800">حساب الضمان (Escrow)</h2>
+                  <h2 className="text-[11px] font-bold text-gray-800">حساب الضمان (Escrow)</h2>
                   {hasDeficit && <Badge variant="destructive" className="text-[10px]">عجز: {fmt(Math.abs(maxDeficit))} AED</Badge>}
                   {!hasDeficit && <Badge className="text-[10px] bg-emerald-100 text-emerald-700">متوازن</Badge>}
                 </div>
@@ -801,15 +786,16 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                   const colWidth = `minmax(42px, 1fr)`;
                   return (
                     <div style={{ display: 'grid', gridTemplateColumns: `60px repeat(${escrowMonthCount}, ${colWidth})`, direction: 'rtl' }}>
-                      {/* Row 1: Month labels - real calendar dates */}
-                      <div className="text-[8px] font-bold text-slate-700 flex items-center justify-center border-b border-gray-200 py-0.5">الشهر</div>
+                      {/* Row 1: Month number boxes */}
+                      <div className="text-[8px] font-bold text-gray-500 flex items-center justify-center border-b border-gray-200 py-0.5">الشهر</div>
                       {Array.from({ length: escrowMonthCount }, (_, i) => {
                         const absMonth = escrowStartMonth + i;
                         const isDesign = absMonth <= timeline.designEnd;
+                        const displayNum = isDesign ? absMonth : absMonth - timeline.designEnd;
                         const isCritical = criticalMonth && absMonth === criticalMonth.month;
                         return (
-                          <div key={i} className={`text-center text-[7px] font-bold py-0.5 border-b border-l border-gray-200 ${isCritical ? 'bg-red-100 text-red-700' : isDesign ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'}`}>
-                            {getMonthLabelShort(absMonth, startYear, startMonth)}
+                          <div key={i} className={`text-center text-[8px] font-bold py-0.5 border-b border-l border-gray-200 ${isCritical ? 'bg-red-100 text-red-700' : isDesign ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                            {displayNum}
                           </div>
                         );
                       })}
