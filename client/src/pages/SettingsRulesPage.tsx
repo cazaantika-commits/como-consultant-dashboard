@@ -156,13 +156,7 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
             }
             if (s.designPayments) {
               setDesignPayments((prev) =>
-                prev.map((r) => {
-                  const stored = s.designPayments[r.id];
-                  if (stored == null) return r;
-                  // Handle both formats: object {pct, durationWeeks} or plain number
-                  const pctValue = typeof stored === 'object' ? stored.pct : stored;
-                  return { ...r, pct: pctValue ?? r.pct };
-                })
+                prev.map((r) => ({ ...r, pct: s.designPayments[r.id] ?? r.pct }))
               );
             }
           }
