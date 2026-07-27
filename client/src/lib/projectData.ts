@@ -14,6 +14,7 @@ export interface ProjectInputs {
   bua: number; // مساحة البناء BUA (قدم²)
   constructionCostPerSqft: number;
   landPricePerSqft: number;
+  landPriceTotal: number; // سعر الأرض الفعلي من قاعدة البيانات
   designDuration: number; // مدة التصاميم (شهور)
   constructionDuration: number; // مدة الإنشاء (شهر)
   startDate: string;
@@ -72,6 +73,7 @@ export const PROJECT_INPUTS: ProjectInputs = {
   bua: 875300,
   constructionCostPerSqft: 400,
   landPricePerSqft: 262,
+  landPriceTotal: 122000000,
   designDuration: 8,
   constructionDuration: 30,
   startDate: "2026-08",
@@ -143,6 +145,7 @@ export function dbProjectToInputs(dbProject: any): ProjectInputs {
     bua,
     constructionCostPerSqft: constPricePerSqft,
     landPricePerSqft: Math.round(landPricePerSqft),
+    landPriceTotal: landPrice,
     designDuration: dbProject.preConMonths || 6,
     constructionDuration: dbProject.constructionMonths || 18,
     startDate: dbProject.startDate || '2026-08',
@@ -242,7 +245,8 @@ export function calculateProjectFormulas(inputs: ProjectInputs = PROJECT_INPUTS,
   const sellableOffice = inputs.gfaOffice * inputs.efficiencyOffice;
   const sellableTotal = sellableResidential + sellableRetail + sellableOffice;
 
-  const landPrice = inputs.landPricePerSqft * gfaTotal;
+  // استخدام سعر الأرض الفعلي من قاعدة البيانات (بدون تقريب)
+  const landPrice = inputs.landPriceTotal > 0 ? inputs.landPriceTotal : (inputs.landPricePerSqft * gfaTotal);
   const landRegistration = landPrice * rates.landRegistration;
   const landBroker = landPrice * rates.landBroker;
   const constructionCost = inputs.bua * inputs.constructionCostPerSqft;

@@ -1011,3 +1011,4 @@
 - [x] Rewrite V2EscrowCashFlow.tsx to use real engine data (no dummy data)
 - [x] Show real calendar dates in column headers (from project startDate)
 - [x] Fix engine surveyorDwgFee/surveyorAsbuiltFee references (use surveyorFee from ProjectInputs)
+- [x] Fix land price discrepancy (188K AED) between V2Feasibility and V2InvestorCashFlow - use DB landPrice directly via landPriceTotal field
