@@ -52,12 +52,12 @@ interface ConfigurableRate {
 // DEFAULTS
 // ═══════════════════════════════════════════════════════════════════════════════
 const DEFAULT_PROJECT_PHASES: ProjectPhase[] = [
-  { id: "designs", label: "التصاميم", startRule: "بداية المشروع", durationMonths: 0, durationEditable: false, startEditable: false, startOffsetMonths: 0, startReference: "projectStart", color: "#3b82f6" },
-  { id: "marketingPrep", label: "تحضير مواد التسويق", startRule: "عند اكتمال التصميم التخطيطي", durationMonths: 2, durationEditable: true, startEditable: false, startOffsetMonths: 0, startReference: "schematicEnd", color: "#f59e0b" },
-  { id: "reraApprovals", label: "ريرا + اعتمادات البيع", startRule: "قبل X شهر من بدء المبيعات", durationMonths: 2, durationEditable: true, startEditable: true, startOffsetMonths: 2, startReference: "beforeSalesStart", color: "#8b5cf6" },
-  { id: "marketingLaunch", label: "إطلاق التسويق", startRule: "بعد تحضير مواد التسويق", durationMonths: 2, durationEditable: true, startEditable: false, startOffsetMonths: 0, startReference: "marketingPrepEnd", color: "#ec4899" },
-  { id: "salesStart", label: "بدء المبيعات", startRule: "بعد ريرا + اعتمادات البيع", durationMonths: 0, durationEditable: false, startEditable: false, startOffsetMonths: 0, startReference: "reraApprovalsEnd", color: "#10b981" },
-  { id: "construction", label: "الإنشاء", startRule: "من المدخلات العامة", durationMonths: 0, durationEditable: false, startEditable: true, startOffsetMonths: 1, startReference: "designsEnd", color: "#64748b" },
+  { id: "designs", label: "التصاميم", startRule: "بداية المشروع — المدة من مراحل التصميم", durationMonths: 0, durationEditable: false, startEditable: false, startOffsetMonths: 0, startReference: "projectStart", color: "#3b82f6" },
+  { id: "marketingPrep", label: "تحضير مواد التسويق", startRule: "فوراً عند اكتمال المخططات التخطيطية", durationMonths: 2, durationEditable: true, startEditable: false, startOffsetMonths: 0, startReference: "schematicEnd", color: "#f59e0b" },
+  { id: "reraApprovals", label: "ريرا + اعتمادات البيع", startRule: "بعد شهر من اكتمال المخططات التخطيطية", durationMonths: 2, durationEditable: true, startEditable: false, startOffsetMonths: 1, startReference: "schematicEnd+1", color: "#8b5cf6" },
+  { id: "marketingLaunch", label: "إطلاق التسويق", startRule: "بعد اكتمال تحضير مواد التسويق — المدة يحددها وائل", durationMonths: 0, durationEditable: false, startEditable: false, startOffsetMonths: 0, startReference: "marketingPrepEnd", color: "#ec4899" },
+  { id: "salesStart", label: "بدء المبيعات", startRule: "بعد شهر من اكتمال ريرا + اعتمادات البيع", durationMonths: 0, durationEditable: false, startEditable: false, startOffsetMonths: 0, startReference: "reraEnd+1", color: "#10b981" },
+  { id: "construction", label: "الإنشاء", startRule: "من المدخلات العامة", durationMonths: 0, durationEditable: false, startEditable: false, startOffsetMonths: 0, startReference: "designsEnd", color: "#64748b" },
 ];
 
 const DEFAULT_DESIGN_PAYMENTS: DesignPaymentPhase[] = [
@@ -235,38 +235,30 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
     const starts: Record<string, number> = {};
     const constructionMonths = projectQuery.data ? Number((projectQuery.data as any).constructionMonths) || 30 : 30;
 
-    // 1. Designs: starts at month 1
+    // نقطة الانطلاق = اكتمال المخططات التخطيطية (المرحلة 3 من التصاميم)
+    const schematicCompletionMonth = schematicEndMonth;
+
+    // 1. التصاميم: تبدأ شهر 1
     starts.designs = 1;
 
-    // 2. Marketing Prep: starts when Schematic Design completes
+    // 2. تحضير مواد التسويق: فوراً عند اكتمال المخططات التخطيطية
+    starts.marketingPrep = schematicCompletionMonth + 1;
     const marketingPrepPhase = projectPhases.find(p => p.id === 'marketingPrep');
-    starts.marketingPrep = schematicEndMonth + 1;
-
-    // 3. RERA + Sales Approvals: X months before sales start
-    //    Sales start = after marketing prep + marketing launch
     const marketingPrepDuration = marketingPrepPhase?.durationMonths || 2;
-    const marketingLaunchPhase = projectPhases.find(p => p.id === 'marketingLaunch');
-    const marketingLaunchDuration = marketingLaunchPhase?.durationMonths || 2;
+
+    // 3. ريرا + اعتمادات البيع: بعد شهر من اكتمال المخططات التخطيطية
+    starts.reraApprovals = schematicCompletionMonth + 1 + 1; // +1 شهر بعد الاكتمال
     const reraPhase = projectPhases.find(p => p.id === 'reraApprovals');
-    const reraOffset = reraPhase?.startOffsetMonths || 2;
-    
-    // Sales start = after marketing prep + marketing launch
-    const salesStartMonth = starts.marketingPrep + marketingPrepDuration + marketingLaunchDuration;
-    starts.salesStart = salesStartMonth;
+    const reraDuration = reraPhase?.durationMonths || 2;
 
-    // RERA starts X months before sales
-    starts.reraApprovals = Math.max(1, salesStartMonth - reraOffset);
-
-    // 4. Marketing Launch: after marketing prep ends
+    // 4. إطلاق التسويق: بعد اكتمال تحضير مواد التسويق
     starts.marketingLaunch = starts.marketingPrep + marketingPrepDuration;
 
-    // 5. Sales Start: after RERA + approvals complete (or after marketing launch)
-    // Already computed above
+    // 5. بدء المبيعات: بعد شهر من اكتمال ريرا + اعتمادات البيع
+    starts.salesStart = starts.reraApprovals + reraDuration + 1;
 
-    // 6. Construction: after designs end
-    const constructionPhase = projectPhases.find(p => p.id === 'construction');
-    const constructionOffset = constructionPhase?.startOffsetMonths || 1;
-    starts.construction = totalDesignMonths + constructionOffset;
+    // 6. الإنشاء: من المدخلات العامة (بعد اكتمال التصاميم)
+    starts.construction = totalDesignMonths + 1;
 
     return starts;
   }, [projectPhases, schematicEndMonth, totalDesignMonths, projectQuery.data]);
@@ -335,20 +327,7 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
                       <p className="text-[9px] text-gray-400">{phase.startRule}</p>
                     </div>
                     <div className="text-center">
-                      {phase.startEditable ? (
-                        <div className="flex items-center justify-center gap-1">
-                          <input
-                            type="number"
-                            value={phase.startOffsetMonths}
-                            onChange={(e) => updatePhaseOffset(phase.id, parseInt(e.target.value) || 0)}
-                            className="w-12 text-center text-xs font-mono border border-gray-200 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-teal-400"
-                            min={0} max={12}
-                          />
-                          <span className="text-[9px] text-teal-600 font-bold">→ ش{computedPhaseStarts[phase.id] || '?'}</span>
-                        </div>
-                      ) : (
-                        <span className="text-[10px] font-bold text-teal-700">شهر {computedPhaseStarts[phase.id] || '?'}</span>
-                      )}
+                      <span className="text-[10px] font-bold text-teal-700">شهر {computedPhaseStarts[phase.id] || '—'}</span>
                     </div>
                     <div className="text-center">
                       {phase.durationEditable ? (

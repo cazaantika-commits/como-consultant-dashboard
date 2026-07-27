@@ -1013,3 +1013,7 @@
 - [x] Rebuild SettingsRulesPage: Add escrow account payment rules display (all defined items with timing)
 - [ ] Update V2WaelSales: Timeline reads from settings phases
 - [x] Update V2WaelSales: Add marketing budget/percentage inputs
+
+- [x] Fix SettingsRulesPage phases: correct start rules (all start from schematic design completion as anchor point)
+- [x] Fix SettingsRulesPage: RERA starts 1 month after schematic completion (not X months before sales)
+- [x] Fix V2WaelSales: Wael must control marketing launch duration and monthly distribution (not just percentage)

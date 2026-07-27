@@ -212,16 +212,45 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   const roiCosts = totalCosts > 0 ? ((profit / totalCosts) * 100).toFixed(0) : "0";
 
   // ─── Computed: Timeline ───────────────────────────────────────────────────
+  // ─── Timeline: computed from settings rules ─────────────────────────────
+  // نقطة الانطلاق = اكتمال المخططات التخطيطية (المرحلة 3 من التصاميم)
+  // نحسب شهر اكتمال المخططات التخطيطية من الإعدادات إذا توفرت
+  const schematicCompletionMonth = useMemo(() => {
+    if (projectQuery.data) {
+      const p = projectQuery.data as any;
+      if (p.constructionScheduleJson) {
+        try {
+          const stored = JSON.parse(p.constructionScheduleJson);
+          if (stored.settings?.designPayments) {
+            const phases = ['mobilization', 'concept', 'schematic'];
+            let totalWeeks = 0;
+            for (const phId of phases) {
+              const ph = stored.settings.designPayments[phId];
+              totalWeeks += ph?.durationWeeks || (phId === 'mobilization' ? 2 : 4);
+            }
+            return Math.ceil(totalWeeks / 4.33);
+          }
+        } catch {}
+      }
+    }
+    // fallback: ~40% of design months (phases 1-3 out of 7)
+    return Math.ceil(designMonths * 0.4);
+  }, [projectQuery.data, designMonths]);
+
   const timeline = useMemo(() => {
     const designEnd = designMonths;
-    const materialsStart = Math.max(1, designEnd - marketingPrepLead);
-    const salesStart = designEnd - 1;
-    const reraStart = Math.max(1, salesStart - reraLead);
-    const marketingStart = Math.max(1, materialsStart + 1);
+    // تحضير مواد التسويق: فوراً عند اكتمال المخططات التخطيطية
+    const materialsStart = schematicCompletionMonth + 1;
+    // ريرا + اعتمادات البيع: بعد شهر من اكتمال المخططات التخطيطية
+    const reraStart = schematicCompletionMonth + 2;
+    // إطلاق التسويق: بعد اكتمال تحضير مواد التسويق (مدة marketingPrepLead)
+    const marketingStart = materialsStart + marketingPrepLead;
+    // بدء المبيعات: بعد شهر من اكتمال ريرا (مدة reraLead)
+    const salesStart = reraStart + reraLead + 1;
     const constructionStart = designEnd + 1;
     const projectEnd = constructionStart + constructionMonths - 1;
     return { designEnd, materialsStart, reraStart, marketingStart, salesStart, constructionStart, projectEnd };
-  }, [designMonths, constructionMonths, marketingPrepLead, reraLead]);
+  }, [designMonths, constructionMonths, marketingPrepLead, reraLead, schematicCompletionMonth]);
   const salesMonths = timeline.projectEnd - timeline.salesStart + 1;
 
   // Sync marketing actual start/end defaults when timeline changes (only if no saved plan)
@@ -681,16 +710,16 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
 
                 <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-1 flex-wrap">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-gray-500">تحضير المواد قبل:</span>
-                    <input type="number" min={1} max={6} value={marketingPrepLead} onChange={(e) => { setMarketingPrepLead(parseInt(e.target.value) || 3); setHasPlanChanges(true); }}
+                    <span className="text-[10px] text-gray-500">مدة تحضير المواد:</span>
+                    <input type="number" min={1} max={6} value={marketingPrepLead} onChange={(e) => { setMarketingPrepLead(parseInt(e.target.value) || 2); setHasPlanChanges(true); }}
                       className="w-8 h-5 text-center text-[10px] border border-gray-200 rounded" />
-                    <span className="text-[10px] text-gray-400">شهر من نهاية التصاميم</span>
+                    <span className="text-[10px] text-gray-400">شهر (من الإعدادات)</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-gray-500">ريرا قبل:</span>
+                    <span className="text-[10px] text-gray-500">مدة ريرا:</span>
                     <input type="number" min={1} max={6} value={reraLead} onChange={(e) => { setReraLead(parseInt(e.target.value) || 2); setHasPlanChanges(true); }}
                       className="w-8 h-5 text-center text-[10px] border border-gray-200 rounded" />
-                    <span className="text-[10px] text-gray-400">شهر من بدء المبيعات</span>
+                    <span className="text-[10px] text-gray-400">شهر (من الإعدادات)</span>
                   </div>
                 </div>
               </div>
