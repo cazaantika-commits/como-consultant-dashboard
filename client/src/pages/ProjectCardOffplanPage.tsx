@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Building2, MapPin, Ruler, Calendar, DollarSign,
-  Calculator, Hammer, TrendingUp, Save, Loader2, Pencil, Info,
+  Calculator, Hammer, TrendingUp, Save, Loader2, Pencil,
 } from "lucide-react";
 import {
   PROJECT_INPUTS,
@@ -51,7 +51,7 @@ export default function ProjectCardOffplanPage() {
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [hasChanges, setHasChanges] = useState(false);
-  const isEditing = false; // Read-only — editing is done from المدخلات العامة
+  const [isEditing, setIsEditing] = useState(false);
 
   const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
   const updateProject = trpc.projects.update.useMutation({
@@ -255,11 +255,39 @@ export default function ProjectCardOffplanPage() {
           </div>
           {/* Edit / Save buttons */}
           <div className="flex items-center gap-2 mr-auto">
-            {selectedProjectId && (
-              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-600/30 border border-slate-500/30 text-slate-400 text-xs">
-                <Info className="w-3.5 h-3.5" />
-                <span>للعرض فقط • التعديل من "المدخلات العامة"</span>
-              </div>
+            {selectedProjectId && !isEditing && (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 hover:bg-amber-500/30 transition-all text-sm font-bold"
+              >
+                <Pencil className="w-4 h-4" />
+                <span>تعديل</span>
+              </button>
+            )}
+            {selectedProjectId && isEditing && (
+              <>
+                <button
+                  onClick={() => { setIsEditing(false); setHasChanges(false); projectQuery.refetch(); }}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-600/50 border border-slate-500/40 text-slate-300 hover:bg-slate-600/70 transition-all text-sm"
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={!hasChanges || updateProject.isPending}
+                  className={`flex items-center gap-2 px-5 py-2 rounded-xl font-bold text-sm transition-all ${
+                    updateProject.isPending ? 'bg-amber-500/20 border border-amber-500/40 text-amber-300 cursor-wait' :
+                    hasChanges ? 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/30' :
+                    'bg-slate-700 border border-slate-600 text-slate-400 cursor-default'
+                  }`}
+                >
+                  {updateProject.isPending ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /><span>جاري الحفظ...</span></>
+                  ) : (
+                    <><Save className="w-4 h-4" /><span>حفظ التعديلات</span></>
+                  )}
+                </button>
+              </>
             )}
           </div>
         </div>

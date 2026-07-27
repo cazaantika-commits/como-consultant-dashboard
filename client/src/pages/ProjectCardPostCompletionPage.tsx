@@ -64,8 +64,7 @@ const INPUTS = {
   nocDeveloperAmount: 10000,
   unitCount: 520,
   reraUnitFee: 400,
-  surveyorDwgFee: 15000,
-  surveyorAsbuiltFee: 20000,
+  surveyorFee: 35000,
   // === النسب المختلفة عن الأوف بلان ===
   salesCommissionRate: 0.02,   // 2% بدل 5%
   marketingRate: 0.01,         // 1% بدل 2%
@@ -107,7 +106,7 @@ export default function ProjectCardPostCompletionPage() {
     const totalCosts = landPrice + landRegistration + landBroker + designFee +
       supervisionFee + i.soilTestAmount + i.topographyAmount + i.communityFeeAmount +
       i.govFeesAmount + sortingFee + i.nocDeveloperAmount + reraUnits +
-      salesCommission + marketing + developerFee + i.surveyorDwgFee + i.surveyorAsbuiltFee + constructionCost;
+      salesCommission + marketing + developerFee + i.surveyorFee + constructionCost;
 
     const profit = totalRevenue - totalCosts;
     const margin = (profit / totalRevenue) * 100;
@@ -274,8 +273,7 @@ export default function ProjectCardPostCompletionPage() {
                   <tr className="bg-slate-700/20"><td colSpan={5} className="py-2 px-3 text-slate-300 font-semibold text-xs">الدراسات والمسوحات</td></tr>
                   <CostRow label="فحص التربة" type="input" rate="مبلغ مقطوع" amount={INPUTS.soilTestAmount} formula="—" />
                   <CostRow label="المسح الطبوغرافي" type="input" rate="مبلغ مقطوع" amount={INPUTS.topographyAmount} formula="—" />
-                  <CostRow label="رسوم المساح DWG" type="input" rate="مبلغ مقطوع" amount={INPUTS.surveyorDwgFee} formula="—" />
-                  <CostRow label="رسوم المساح As-Built" type="input" rate="مبلغ مقطوع" amount={INPUTS.surveyorAsbuiltFee} formula="—" />
+                  <CostRow label="رسوم المساح" type="input" rate="مبلغ مقطوع" amount={INPUTS.surveyorFee} formula="—" />
 
                   {/* Government & Regulatory */}
                   <tr className="bg-slate-700/20"><td colSpan={5} className="py-2 px-3 text-slate-300 font-semibold text-xs">الرسوم الحكومية والتنظيمية</td></tr>

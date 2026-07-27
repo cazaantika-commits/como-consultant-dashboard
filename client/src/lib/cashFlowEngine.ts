@@ -482,8 +482,6 @@ export interface ProjectCosts {
   escrowAccountFee: number;
   bankFees: number;
   surveyorFees: number;
-  surveyorDwgFee: number;
-  surveyorAsbuiltFee: number;
   reraAuditReportFee: number;
   reraInspectionReportFee: number;
   revenueRes?: number;

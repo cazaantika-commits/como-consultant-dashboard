@@ -39,6 +39,44 @@ export interface CostRow {
   isRevenue?: boolean;
 }
 
+export interface TimingRules {
+  developerFeePct: number;
+  developerFeeRetentionPct: number;
+  developerFeeDelayMonths: number;
+  developerFeeRetentionMonth: number;
+  sortingFeeMonth: number;
+  sortingFeePerSqft: number;
+  salesCommissionPct: number;
+  salesCommissionTriggerPct: number;
+  surveyorAsbuiltMonthFromEnd: number;
+}
+
+export const DEFAULT_TIMING_RULES: TimingRules = {
+  developerFeePct: 15,
+  developerFeeRetentionPct: 15,
+  developerFeeDelayMonths: 1,
+  developerFeeRetentionMonth: 13,
+  sortingFeeMonth: 1,
+  sortingFeePerSqft: 40,
+  salesCommissionPct: 5,
+  salesCommissionTriggerPct: 20,
+  surveyorAsbuiltMonthFromEnd: 1,
+};
+
+export interface SalesResult {
+  escrowData: Array<{
+    month: number;
+    units: number;
+    income: number;
+    downPayment: number;
+    installments: number;
+    withdrawal: number;
+    balance: number;
+    cumulativeSold: number;
+  }>;
+  salesDistribution: number[];
+}
+
 export interface CashFlowResult {
   rows: CostRow[];
   sections: string[];
@@ -57,6 +95,8 @@ export interface CashFlowResult {
   constructionDuration: number;
   postDuration: number;
   totalRevenue: number;
+  monthDates: string[];
+  startDate: string;
 }
 
 // ═══════════════════════════════════════════
@@ -206,7 +246,8 @@ export function buildPricingUnits(project: any, inputs: ProjectInputs) {
  * @param scenario - The financing scenario to compute
  * @returns CashFlowResult with all rows, totals, and monthly distributions
  */
-export function computeInvestorCashFlow(projectData: any, scenario: Scenario): CashFlowResult {
+export function computeInvestorCashFlow(projectData: any, scenario: Scenario, timingRules?: TimingRules, salesResult?: SalesResult): CashFlowResult {
+  const tr = timingRules || DEFAULT_TIMING_RULES;
   const i: ProjectInputs = projectData ? dbProjectToInputs(projectData) : PROJECT_INPUTS;
   const r: ProjectRates = projectData ? dbProjectToRates(projectData) : RATES;
   const projectFormulas = calculateProjectFormulas(i, r);
@@ -316,6 +357,8 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
       postConstructionMonths: emptyPost(),
     });
   } else {
+    const supervisionConstEscrow = emptyConstruction();
+    distributeEqual(costs.supervisionFee, constructionDuration, supervisionConstEscrow, 0);
     rows.push({
       label: "أتعاب الإشراف",
       totalCost: costs.supervisionFee,
@@ -325,7 +368,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
       funder: "escrow",
       section: "التصاميم والإشراف",
       designMonths: emptyDesign(),
-      constructionMonths: emptyConstruction(),
+      constructionMonths: supervisionConstEscrow,
       postConstructionMonths: emptyPost(),
     });
   }
@@ -362,69 +405,33 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
     postConstructionMonths: emptyPost(),
   });
 
-  // ─── رسوم المساح DWG (الشهر الأول من الإنشاء/ريرا) ───
+  // ─── رسوم المساح ───
   if (isScenario3 || isScenario4) {
-    const dwgConst = emptyConstruction();
-    dwgConst[0] = i.surveyorDwgFee; // الشهر الأول من الإنشاء
+    const surveyorConst = emptyConstruction();
+    surveyorConst[penultimateConstruction] = i.surveyorFee;
     rows.push({
-      label: "رسوم المساح DWG",
-      totalCost: i.surveyorDwgFee,
-      investorAmount: i.surveyorDwgFee,
+      label: "رسوم المساح",
+      totalCost: i.surveyorFee,
+      investorAmount: i.surveyorFee,
       paid: 0,
-      unpaid: i.surveyorDwgFee,
+      unpaid: i.surveyorFee,
       funder: "investor",
       section: "الدراسات والمسوحات",
       designMonths: emptyDesign(),
-      constructionMonths: dwgConst,
+      constructionMonths: surveyorConst,
       postConstructionMonths: emptyPost(),
     });
   } else {
-    // في سيناريو 1 و 2: يُدفع من الضمان — الشهر الأول من الإنشاء
-    const dwgConst = emptyConstruction();
-    dwgConst[0] = i.surveyorDwgFee;
     rows.push({
-      label: "رسوم المساح DWG",
-      totalCost: i.surveyorDwgFee,
+      label: "رسوم المساح",
+      totalCost: i.surveyorFee,
       investorAmount: 0,
       paid: 0,
       unpaid: 0,
       funder: "escrow",
       section: "الدراسات والمسوحات",
       designMonths: emptyDesign(),
-      constructionMonths: dwgConst,
-      postConstructionMonths: emptyPost(),
-    });
-  }
-  // ─── رسوم المساح As-Built (الشهر قبل الأخير من الإنشاء) ───
-  if (isScenario3 || isScenario4) {
-    const asbuiltConst = emptyConstruction();
-    asbuiltConst[penultimateConstruction] = i.surveyorAsbuiltFee;
-    rows.push({
-      label: "رسوم المساح As-Built",
-      totalCost: i.surveyorAsbuiltFee,
-      investorAmount: i.surveyorAsbuiltFee,
-      paid: 0,
-      unpaid: i.surveyorAsbuiltFee,
-      funder: "investor",
-      section: "الدراسات والمسوحات",
-      designMonths: emptyDesign(),
-      constructionMonths: asbuiltConst,
-      postConstructionMonths: emptyPost(),
-    });
-  } else {
-    // في سيناريو 1 و 2: يُدفع من الضمان — الشهر قبل الأخير من الإنشاء
-    const asbuiltConst = emptyConstruction();
-    asbuiltConst[penultimateConstruction] = i.surveyorAsbuiltFee;
-    rows.push({
-      label: "رسوم المساح As-Built",
-      totalCost: i.surveyorAsbuiltFee,
-      investorAmount: 0,
-      paid: 0,
-      unpaid: 0,
-      funder: "escrow",
-      section: "الدراسات والمسوحات",
-      designMonths: emptyDesign(),
-      constructionMonths: asbuiltConst,
+      constructionMonths: emptyConstruction(),
       postConstructionMonths: emptyPost(),
     });
   }
@@ -620,6 +627,8 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
 
   // ─── تقرير مدقق ريرا — س3 و س4: محذوف ───
   if (!isScenario3 && !isScenario4) {
+    const auditorConst = emptyConstruction();
+    auditorConst[Math.min(Math.floor(constructionDuration / 2), constructionDuration - 1)] = i.reraAuditorReport;
     rows.push({
       label: "تقرير مدقق ريرا",
       totalCost: i.reraAuditorReport,
@@ -629,13 +638,15 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
       funder: "escrow",
       section: "ريرا (التنظيم العقاري)",
       designMonths: emptyDesign(),
-      constructionMonths: emptyConstruction(),
+      constructionMonths: auditorConst,
       postConstructionMonths: emptyPost(),
     });
   }
 
-  // ─── فحص ريرا — س3 و س4: محذوف ───
+  // ─── فحص ريرا — س٣ و س٤: محذوف ───
   if (!isScenario3 && !isScenario4) {
+    const inspConst = emptyConstruction();
+    inspConst[Math.max(0, penultimateConstruction)] = i.reraInspection;
     rows.push({
       label: "فحص ريرا",
       totalCost: i.reraInspection,
@@ -645,7 +656,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
       funder: "escrow",
       section: "ريرا (التنظيم العقاري)",
       designMonths: emptyDesign(),
-      constructionMonths: emptyConstruction(),
+      constructionMonths: inspConst,
       postConstructionMonths: emptyPost(),
     });
   }
@@ -671,6 +682,10 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
       postConstructionMonths: commissionPost,
     });
   } else {
+    // عمولة المبيعات تُصرف عند تحصيل 20% من المشتري (تقريباً شهر 3 من الإنشاء)
+    const commConst = emptyConstruction();
+    const commMonth = Math.min(2, constructionDuration - 1); // شهر 3 (index 2)
+    commConst[commMonth] = costs.salesCommission;
     rows.push({
       label: "عمولة المبيعات",
       totalCost: costs.salesCommission,
@@ -680,7 +695,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
       funder: "escrow",
       section: "المبيعات والتسويق",
       designMonths: emptyDesign(),
-      constructionMonths: emptyConstruction(),
+      constructionMonths: commConst,
       postConstructionMonths: emptyPost(),
     });
   }
@@ -881,26 +896,10 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
     }
   }
 
-  // ─── الاحتياطي (2% من الإنشاء — يُوزع على أشهر الإنشاء) ───
-  const contingencyTotal = constructionCost * r.contingency;
-  const contingencyConst = emptyConstruction();
-  // توزيع متساوي على أشهر الإنشاء
-  const contingencyPerMonth = contingencyTotal / constructionDuration;
-  for (let idx = 0; idx < constructionDuration; idx++) {
-    contingencyConst[idx] = contingencyPerMonth;
-  }
-  rows.push({
-    label: "الاحتياطي (Contingency)",
-    totalCost: contingencyTotal,
-    investorAmount: contingencyTotal,
-    paid: 0,
-    unpaid: contingencyTotal,
-    funder: "investor",
-    section: "الإنشاء",
-    designMonths: emptyDesign(),
-    constructionMonths: contingencyConst,
-    postConstructionMonths: emptyPost(),
-  });
+  // Pre-compute revenue variables for S1/S2 (needed by profit share section)
+  let directRevenue = 0;
+  let escrowLiquidation = 0;
+  let month13ToInvestor = 0;
 
   // ─── الإيرادات ───
   if (isScenario3) {
@@ -921,73 +920,183 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
       isRevenue: true,
     });
   } else if (!isScenario4) {
-    // S1/S2: 20% of revenue goes directly to investor over 12 months
-    const directRevenue = totalRevenue * 0.20;
-    const revenuePost = emptyPost();
-    const perMonth = directRevenue / 12;
-    for (let idx = 0; idx < 12; idx++) {
-      revenuePost[idx] = perMonth;
+    // S1/S2: Revenue comes from sales
+    // When salesResult is provided, use actual monthly income from escrowData
+    // Otherwise fall back to the simplified 20%/80% split
+    
+    if (salesResult && salesResult.escrowData.length > 0) {
+      // ─── إيرادات من خطة المبيعات الفعلية ───
+      // Direct revenue to investor = down payments (20% of each sale)
+      // These flow during sales months (design + construction period)
+      const revenueDesign = emptyDesign();
+      const revenueConstruction = emptyConstruction();
+      const revenuePost = emptyPost();
+      
+      let totalDirectToInvestor = 0;
+      for (const entry of salesResult.escrowData) {
+        // entry.month is absolute month from project start (1-indexed)
+        // entry.downPayment = amount paid directly by buyer at signing (goes to investor as advance)
+        // For S1: down payment goes to escrow, but 20% of total revenue goes directly to investor
+        // Actually in the escrow model: ALL buyer payments go to escrow account
+        // Investor gets money back only at liquidation
+        // So "direct revenue" in S1 = 0 during construction
+        // Revenue comes back at liquidation (month 3 post) and retention (month 13 post)
+      }
+      
+      // In S1/S2 with escrow: all buyer payments go to escrow
+      // Investor revenue = escrow liquidation at month 3 post + retention at month 13 post
+      // The escrowData tells us total income collected, which determines escrow balance
+      const totalSalesIncome = salesResult.escrowData.reduce((s, e) => s + e.income, 0);
+      directRevenue = 0; // No direct revenue in escrow model - all goes through escrow
+      
+      // ─── تصفية حساب الضمان (دفعة 1: شهر 3 بعد الإنجاز) ───
+      const escrowRevenue = totalSalesIncome; // Total collected from buyers through escrow
+      const revenueRetention = escrowRevenue * 0.05;
+      const completionPayment = constructionCost * 0.05;
+      const openingBalance = constructionCost * 0.20;
+      const actualEscrowExpenses = (constructionCost * 0.80) + costs.supervisionFee +
+        (i.govFeesTotal * r.govFeesEscrowShare) + costs.salesCommission +
+        i.reraAuditorReport + i.reraInspection + i.surveyorFee;
+      escrowLiquidation = openingBalance + escrowRevenue - actualEscrowExpenses - revenueRetention - completionPayment;
+      const escrowLiqPost = emptyPost();
+      escrowLiqPost[2] = escrowLiquidation; // شهر 3 (index 2)
+      rows.push({
+        label: "تصفية حساب الضمان (دفعة 1)",
+        totalCost: escrowLiquidation,
+        investorAmount: escrowLiquidation,
+        paid: 0,
+        unpaid: escrowLiquidation,
+        funder: "investor",
+        section: "الإيرادات",
+        designMonths: emptyDesign(),
+        constructionMonths: emptyConstruction(),
+        postConstructionMonths: escrowLiqPost,
+        isRevenue: true,
+      });
+
+      // ─── تصفية حساب الضمان (دفعة 2: شهر 13 بعد الإنجاز) ───
+      const constructionRetention = constructionCost * 0.05;
+      month13ToInvestor = revenueRetention - constructionRetention;
+      const escrowRetPost = emptyPost();
+      escrowRetPost[12] = month13ToInvestor; // شهر 13 (index 12)
+      rows.push({
+        label: "تصفية حساب الضمان (دفعة 2 - صافي الاحتجاز)",
+        totalCost: month13ToInvestor,
+        investorAmount: month13ToInvestor,
+        paid: 0,
+        unpaid: month13ToInvestor,
+        funder: "investor",
+        section: "الإيرادات",
+        designMonths: emptyDesign(),
+        constructionMonths: emptyConstruction(),
+        postConstructionMonths: escrowRetPost,
+        isRevenue: true,
+      });
+    } else {
+      // ─── Fallback: simplified revenue (no salesResult) ───
+      directRevenue = totalRevenue * 0.20;
+      const revenuePost = emptyPost();
+      const perMonth = directRevenue / 12;
+      for (let idx = 0; idx < 12; idx++) {
+        revenuePost[idx] = perMonth;
+      }
+      rows.push({
+        label: "إيرادات مباشرة (20%)",
+        totalCost: directRevenue,
+        investorAmount: directRevenue,
+        paid: 0,
+        unpaid: directRevenue,
+        funder: "investor",
+        section: "الإيرادات",
+        designMonths: emptyDesign(),
+        constructionMonths: emptyConstruction(),
+        postConstructionMonths: revenuePost,
+        isRevenue: true,
+      });
+
+      // ─── تصفية حساب الضمان (دفعة 1: شهر 3 بعد الإنجاز) ───
+      const escrowRevenue = totalRevenue * 0.80;
+      const revenueRetention = escrowRevenue * 0.05;
+      const completionPayment = constructionCost * 0.05;
+      const openingBalance = constructionCost * 0.20;
+      const actualEscrowExpenses = (constructionCost * 0.80) + costs.supervisionFee +
+        (i.govFeesTotal * r.govFeesEscrowShare) + costs.salesCommission +
+        i.reraAuditorReport + i.reraInspection + i.surveyorFee;
+      escrowLiquidation = openingBalance + escrowRevenue - actualEscrowExpenses - revenueRetention - completionPayment;
+      const escrowLiqPost = emptyPost();
+      escrowLiqPost[2] = escrowLiquidation; // شهر 3 (index 2)
+      rows.push({
+        label: "تصفية حساب الضمان (دفعة 1)",
+        totalCost: escrowLiquidation,
+        investorAmount: escrowLiquidation,
+        paid: 0,
+        unpaid: escrowLiquidation,
+        funder: "investor",
+        section: "الإيرادات",
+        designMonths: emptyDesign(),
+        constructionMonths: emptyConstruction(),
+        postConstructionMonths: escrowLiqPost,
+        isRevenue: true,
+      });
+
+      // ─── تصفية حساب الضمان (دفعة 2: شهر 13 بعد الإنجاز) ───
+      const constructionRetention = constructionCost * 0.05;
+      month13ToInvestor = revenueRetention - constructionRetention;
+      const escrowRetPost = emptyPost();
+      escrowRetPost[12] = month13ToInvestor; // شهر 13 (index 12)
+      rows.push({
+        label: "تصفية حساب الضمان (دفعة 2 - صافي الاحتجاز)",
+        totalCost: month13ToInvestor,
+        investorAmount: month13ToInvestor,
+        paid: 0,
+        unpaid: month13ToInvestor,
+        funder: "investor",
+        section: "الإيرادات",
+        designMonths: emptyDesign(),
+        constructionMonths: emptyConstruction(),
+        postConstructionMonths: escrowRetPost,
+        isRevenue: true,
+      });
     }
-    rows.push({
-      label: "إيرادات مباشرة (20%)",
-      totalCost: directRevenue,
-      investorAmount: directRevenue,
-      paid: 0,
-      unpaid: directRevenue,
-      funder: "investor",
-      section: "الإيرادات",
-      designMonths: emptyDesign(),
-      constructionMonths: emptyConstruction(),
-      postConstructionMonths: revenuePost,
-      isRevenue: true,
-    });
+  }
 
-    // ─── تصفية حساب الضمان (دفعة 1: شهر 3 بعد الإنجاز) ───
-    // الضمان يدفع 80% من الإنشاء أثناء البناء
-    // عند التصفية: يُدفع 5% إنجاز للمقاول + يُحجز 5% إيرادات + الباقي للمستثمر
-    const escrowRevenue = totalRevenue * 0.80;
-    const revenueRetention = escrowRevenue * 0.05;
-    const completionPayment = constructionCost * 0.05;
-    const openingBalance = constructionCost * 0.20;
-    const actualEscrowExpenses = (constructionCost * 0.80) + costs.supervisionFee +
-      (i.govFeesTotal * r.govFeesEscrowShare) + costs.salesCommission +
-      i.reraAuditorReport + i.reraInspection + i.surveyorDwgFee + i.surveyorAsbuiltFee;
-    const escrowLiquidation = openingBalance + escrowRevenue - actualEscrowExpenses - revenueRetention - completionPayment;
-    const escrowLiqPost = emptyPost();
-    escrowLiqPost[2] = escrowLiquidation; // شهر 3 (index 2)
+  // ─── حصة المطور من الأرباح (15%) ───
+  if (!isScenario3 && !isScenario4) {
+    // رأس مال المستثمر = كل ما دفعه (مصاريف المستثمر + وديعة الضمان)
+    const investorCapital = costs.totalInvestor;
+    
+    // الدفعة 1: الشهر 3 بعد الإنجاز
+    // المستثمر يستلم: إيرادات مباشرة (20%) + تصفية الإسكرو
+    const totalReceivedByLiq1 = directRevenue + escrowLiquidation;
+    const surplus1 = Math.max(0, totalReceivedByLiq1 - investorCapital);
+    const devProfitShare1 = surplus1 * (tr.developerFeePct / 100);
+    const devProfitRetention1 = devProfitShare1 * (tr.developerFeeRetentionPct / 100);
+    const devProfitPaid1 = devProfitShare1 - devProfitRetention1;
+    
+    // الدفعة 2: الشهر 13 بعد الإنجاز
+    // المبلغ المحتجز يدخل — يُخصم منه retention المقاول — الباقي ربح
+    const surplus2 = Math.max(0, month13ToInvestor);
+    const devProfitShare2 = surplus2 * (tr.developerFeePct / 100);
+    // يُضاف المحتجز من الدفعة الأولى
+    const devProfitMonth13 = devProfitShare2 + devProfitRetention1;
+    
+    const devProfitPost = emptyPost();
+    // تُصرف في نفس شهر التصفية
+    devProfitPost[2] = devProfitPaid1; // شهر 3
+    devProfitPost[12] = devProfitMonth13; // شهر 13
+    
+    const totalDevProfit = devProfitPaid1 + devProfitMonth13;
     rows.push({
-      label: "تصفية حساب الضمان (دفعة 1)",
-      totalCost: escrowLiquidation,
-      investorAmount: escrowLiquidation,
+      label: "حصة المطور من الأرباح (15%)",
+      totalCost: totalDevProfit,
+      investorAmount: totalDevProfit,
       paid: 0,
-      unpaid: escrowLiquidation,
+      unpaid: totalDevProfit,
       funder: "investor",
-      section: "الإيرادات",
+      section: "المبيعات والتسويق",
       designMonths: emptyDesign(),
       constructionMonths: emptyConstruction(),
-      postConstructionMonths: escrowLiqPost,
-      isRevenue: true,
-    });
-
-    // ─── تصفية حساب الضمان (دفعة 2: شهر 13 بعد الإنجاز) ───
-    // 5% احتجاز إيرادات يُحرر — لكن يُخصم منه 5% احتجاز المقاول (تُدفع للمقاول من الضمان)
-    // المستثمر يستلم: revenueRetention - constructionRetention
-    const constructionRetention = constructionCost * 0.05;
-    const month13ToInvestor = revenueRetention - constructionRetention;
-    const escrowRetPost = emptyPost();
-    escrowRetPost[12] = month13ToInvestor; // شهر 13 (index 12)
-    rows.push({
-      label: "تصفية حساب الضمان (دفعة 2 - صافي الاحتجاز)",
-      totalCost: month13ToInvestor,
-      investorAmount: month13ToInvestor,
-      paid: 0,
-      unpaid: month13ToInvestor,
-      funder: "investor",
-      section: "الإيرادات",
-      designMonths: emptyDesign(),
-      constructionMonths: emptyConstruction(),
-      postConstructionMonths: escrowRetPost,
-      isRevenue: true,
+      postConstructionMonths: devProfitPost,
     });
   }
 
@@ -1063,6 +1172,18 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
         "الإيرادات",
       ];
 
+  // ─── حساب التواريخ الحقيقية ───
+  const startDateStr = i.startDate || "2026-08";
+  const monthDates: string[] = [];
+  const totalMonthCount = designDuration + constructionDuration + postDuration;
+  const [startY, startMo] = startDateStr.split("-").map(Number);
+  for (let idx = 0; idx < totalMonthCount; idx++) {
+    const absMonth = (startY * 12 + (startMo - 1)) + idx;
+    const y = Math.floor(absMonth / 12);
+    const m = (absMonth % 12) + 1;
+    monthDates.push(`${y}-${String(m).padStart(2, "0")}`);
+  }
+
   return {
     rows,
     sections,
@@ -1081,5 +1202,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
     constructionDuration,
     postDuration,
     totalRevenue,
+    monthDates,
+    startDate: startDateStr,
   };
 }

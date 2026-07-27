@@ -35,8 +35,6 @@ const ALL_FIELDS = [
 
   { key: "communityFees", label: "رسوم المجتمع", unit: "درهم", type: "number", defaultValue: "80000" },
   { key: "officialBodiesFees", label: "رسوم الجهات الحكومية", unit: "درهم", type: "number", defaultValue: "7000000" },
-  { key: "surveyorDwgFee", label: "مساح DWG", unit: "درهم", type: "number", defaultValue: "15000" },
-  { key: "surveyorAsbuiltFee", label: "مساح As-built", unit: "درهم", type: "number", defaultValue: "25000" },
   { key: "developerNocFee", label: "رسوم NOC المطور", unit: "درهم", type: "number", defaultValue: "10000" },
   { key: "reraProjectRegFee", label: "تسجيل المشروع (ريرا)", unit: "درهم", type: "number", defaultValue: "150000" },
   { key: "escrowAccountFee", label: "فتح حساب الضمان", unit: "درهم", type: "number", defaultValue: "180000" },

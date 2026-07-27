@@ -170,8 +170,6 @@ export default function V2Feasibility() {
                   <Row label="رسوم الفرز" value={fmt(costs?.separationFee || 0)} pct={totalCosts > 0 ? ((costs?.separationFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
                   <Row label="رسوم المجتمع" value={fmt(costs?.communityFees || 0)} pct={totalCosts > 0 ? ((costs?.communityFees || 0) / totalCosts * 100) : 0} color="text-gray-700" />
                   <Row label="رسوم الجهات الحكومية" value={fmt(costs?.officialBodiesFees || 0)} pct={totalCosts > 0 ? ((costs?.officialBodiesFees || 0) / totalCosts * 100) : 0} color="text-gray-700" />
-                  <Row label="مساح DWG" value={fmt(costs?.surveyorDwgFee || 0)} pct={totalCosts > 0 ? ((costs?.surveyorDwgFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
-                  <Row label="مساح As-built" value={fmt(costs?.surveyorAsbuiltFee || 0)} pct={totalCosts > 0 ? ((costs?.surveyorAsbuiltFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
                   <Row label="تسجيل الوحدات (ريرا)" value={fmt(costs?.reraUnitRegFee || 0)} pct={totalCosts > 0 ? ((costs?.reraUnitRegFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
                   <Row label="تسجيل المشروع (ريرا)" value={fmt(costs?.reraProjectRegFee || 0)} pct={totalCosts > 0 ? ((costs?.reraProjectRegFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
                   <Row label="NOC المطور" value={fmt(costs?.developerNocFee || 0)} pct={totalCosts > 0 ? ((costs?.developerNocFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />

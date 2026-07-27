@@ -7,7 +7,6 @@ import { useToast } from "@/hooks/use-toast";
 import { ProjectSelector } from "@/components/ProjectSelector";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -18,9 +17,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  ArrowRight, TrendingUp, Target, DollarSign,
-  Save, Loader2,
-  Building2, Percent, CreditCard, Table2, Info, Plus, Trash2, RefreshCw,
+  ArrowRight, TrendingUp, Target, Megaphone, Calendar, DollarSign,
+  Palette, Rocket, FileCheck, HardHat, Save, Loader2,
+  Building2, Percent, CreditCard,
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -51,7 +50,14 @@ const MARKETING_CHANNELS = [
   { id: "content", name: "المحتوى والعلامة", defaultPct: 5, color: "#06b6d4" },
 ];
 
-
+const PROJECT_PHASES = [
+  { id: "design", name: "التصاميم", color: "#3b82f6", icon: Palette },
+  { id: "materials", name: "تحضير مواد التسويق", color: "#f59e0b", icon: Rocket },
+  { id: "rera", name: "ريرا + اعتمادات البيع", color: "#8b5cf6", icon: FileCheck },
+  { id: "marketing", name: "إطلاق التسويق", color: "#ec4899", icon: Megaphone },
+  { id: "sales", name: "بدء المبيعات", color: "#10b981", icon: Target },
+  { id: "construction", name: "الإنشاء", color: "#64748b", icon: HardHat },
+];
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
 function fmt(n: number): string {
@@ -111,14 +117,6 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     Object.fromEntries(MARKETING_CHANNELS.map((c) => [c.id, c.defaultPct]))
   );
   const [hasPlanChanges, setHasPlanChanges] = useState(false);
-
-  // ─── State: Marketing Timeline (Wael decides) ─────────────────────────────
-  const [marketingActualStart, setMarketingActualStart] = useState(6);
-  const [marketingActualEnd, setMarketingActualEnd] = useState(38);
-  // ─── State: Marketing Monthly Distribution per Channel (Wael inputs) ────────
-  // Each entry: { channelId, monthIndex (relative to marketingActualStart), amount }
-  // We store as: Record<channelId, number[]> where number[] is amounts per month
-  const [marketingDistribution, setMarketingDistribution] = useState<Record<string, number[]>>({});
 
   // ─── State: Payment Plan (installment-based) ──────────────────────────────
   const [ppDownPct, setPpDownPct] = useState(10); // دفعة أولى
@@ -180,9 +178,6 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
           if (parsed.ppInstallmentPct) setPpInstallmentPct(parsed.ppInstallmentPct);
           if (parsed.ppInstallmentEvery) setPpInstallmentEvery(parsed.ppInstallmentEvery);
           if (parsed.ppHandoverPct) setPpHandoverPct(parsed.ppHandoverPct);
-          if (parsed.marketingActualStart) setMarketingActualStart(parsed.marketingActualStart);
-          if (parsed.marketingActualEnd) setMarketingActualEnd(parsed.marketingActualEnd);
-          if (parsed.marketingDistribution) setMarketingDistribution(parsed.marketingDistribution);
         } catch {}
       }
       setHasPlanChanges(false);
@@ -211,54 +206,17 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   const roiCosts = totalCosts > 0 ? ((profit / totalCosts) * 100).toFixed(0) : "0";
 
   // ─── Computed: Timeline ───────────────────────────────────────────────────
-  // ─── Timeline: computed from settings rules ─────────────────────────────
-  // نقطة الانطلاق = اكتمال المخططات التخطيطية (المرحلة 3 من التصاميم)
-  // نحسب شهر اكتمال المخططات التخطيطية من الإعدادات إذا توفرت
-  const schematicCompletionMonth = useMemo(() => {
-    if (projectQuery.data) {
-      const p = projectQuery.data as any;
-      if (p.constructionScheduleJson) {
-        try {
-          const stored = JSON.parse(p.constructionScheduleJson);
-          if (stored.settings?.designPayments) {
-            const phases = ['mobilization', 'concept', 'schematic'];
-            let totalWeeks = 0;
-            for (const phId of phases) {
-              const ph = stored.settings.designPayments[phId];
-              totalWeeks += ph?.durationWeeks || (phId === 'mobilization' ? 2 : 4);
-            }
-            return Math.ceil(totalWeeks / 4.33);
-          }
-        } catch {}
-      }
-    }
-    // fallback: ~40% of design months (phases 1-3 out of 7)
-    return Math.ceil(designMonths * 0.4);
-  }, [projectQuery.data, designMonths]);
-
   const timeline = useMemo(() => {
     const designEnd = designMonths;
-    // تحضير مواد التسويق: فوراً عند اكتمال المخططات التخطيطية
-    const materialsStart = schematicCompletionMonth + 1;
-    // ريرا + اعتمادات البيع: بعد شهر من اكتمال المخططات التخطيطية
-    const reraStart = schematicCompletionMonth + 2;
-    // إطلاق التسويق: بعد اكتمال تحضير مواد التسويق (مدة marketingPrepLead)
-    const marketingStart = materialsStart + marketingPrepLead;
-    // بدء المبيعات: بعد شهر من اكتمال ريرا (مدة reraLead)
-    const salesStart = reraStart + reraLead + 1;
+    const materialsStart = Math.max(1, designEnd - marketingPrepLead);
+    const salesStart = designEnd - 1;
+    const reraStart = Math.max(1, salesStart - reraLead);
+    const marketingStart = Math.max(1, materialsStart + 1);
     const constructionStart = designEnd + 1;
     const projectEnd = constructionStart + constructionMonths - 1;
     return { designEnd, materialsStart, reraStart, marketingStart, salesStart, constructionStart, projectEnd };
-  }, [designMonths, constructionMonths, marketingPrepLead, reraLead, schematicCompletionMonth]);
+  }, [designMonths, constructionMonths, marketingPrepLead, reraLead]);
   const salesMonths = timeline.projectEnd - timeline.salesStart + 1;
-
-  // Sync marketing actual start/end defaults when timeline changes (only if no saved plan)
-  useEffect(() => {
-    if (!plansQuery.data || plansQuery.data.length === 0) {
-      setMarketingActualStart(timeline.marketingStart);
-      setMarketingActualEnd(timeline.projectEnd);
-    }
-  }, [timeline.marketingStart, timeline.projectEnd, plansQuery.data]);
 
   // ─── Computed: Sales Distribution ─────────────────────────────────────────
   const offPlanUnits = Math.round((totalUnits * offPlan) / 100);
@@ -287,113 +245,27 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   const totalSold = salesDistribution.reduce((a, b) => a + b, 0);
   const avgUnitPrice = totalUnits > 0 ? totalRevenue / totalUnits : 0;
 
-  // ─── Computed: Detailed Cash Inflow (Payment Plan × Sales) ─────────────────
-  // For each sale in month S, the buyer pays according to the payment plan:
-  //   - Down payment (ppDownPct%) in month S
-  //   - Second payment (ppSecondPct%) after ppSecondAfterMonths months
-  //   - Construction installments (ppInstallmentPct% each ppInstallmentEvery months)
-  //   - Handover payment (ppHandoverPct%) at project end
-  // Also produces a detailed grid: perSaleGrid[saleMonth][projectMonth] = amount
-  const { cashInflowData, perSaleGrid, activeSaleMonths } = useMemo(() => {
-    const totalMonths = timeline.projectEnd;
-    const monthlySales: number[] = Array(totalMonths + 1).fill(0);
-    // Convert salesDistribution (units per month) to revenue per month
-    salesDistribution.forEach((units, i) => {
-      const m = timeline.salesStart + i;
-      if (m <= totalMonths) {
-        monthlySales[m] = units * avgUnitPrice;
-      }
-    });
-
-    // Cash inflow per month (extra months for post-completion payments)
-    const cashPerMonth: number[] = Array(totalMonths + 24).fill(0);
-    // Detailed grid: for each sale month, track what goes into each project month
-    const grid: Record<number, number[]> = {}; // grid[saleMonth] = amounts per project month
-    const saleMonthsList: number[] = [];
-
-    for (let saleMonth = 1; saleMonth <= totalMonths; saleMonth++) {
-      const saleAmount = monthlySales[saleMonth];
-      if (saleAmount <= 0) continue;
-      saleMonthsList.push(saleMonth);
-      grid[saleMonth] = Array(totalMonths + 1).fill(0);
-
-      // 1. Down payment - immediate
-      const downAmount = saleAmount * (ppDownPct / 100);
-      if (saleMonth < cashPerMonth.length) {
-        cashPerMonth[saleMonth] += downAmount;
-        grid[saleMonth][saleMonth] += downAmount;
-      }
-
-      // 2. Second payment - after ppSecondAfterMonths
-      const secondAmount = saleAmount * (ppSecondPct / 100);
-      const secondMonth = saleMonth + ppSecondAfterMonths;
-      if (secondMonth < cashPerMonth.length) {
-        cashPerMonth[secondMonth] += secondAmount;
-        if (secondMonth <= totalMonths) grid[saleMonth][secondMonth] += secondAmount;
-      }
-
-      // 3. Construction installments - spread over remaining construction period
-      const installmentTotal = saleAmount * (ppDuringTotal / 100);
-      const constructionEnd = timeline.constructionStart + constructionMonths - 1;
-      const installmentMonthsList: number[] = [];
-      for (let im = saleMonth + ppInstallmentEvery + ppSecondAfterMonths; im <= constructionEnd; im += ppInstallmentEvery) {
-        installmentMonthsList.push(im);
-      }
-      if (installmentMonthsList.length > 0) {
-        const perInstallment = installmentTotal / installmentMonthsList.length;
-        installmentMonthsList.forEach(im => {
-          if (im < cashPerMonth.length) {
-            cashPerMonth[im] += perInstallment;
-            if (im <= totalMonths) grid[saleMonth][im] += perInstallment;
-          }
-        });
-      } else {
-        if (constructionEnd < cashPerMonth.length) {
-          cashPerMonth[constructionEnd] += installmentTotal;
-          if (constructionEnd <= totalMonths) grid[saleMonth][constructionEnd] += installmentTotal;
-        }
-      }
-
-      // 4. Handover payment - at project end
-      const handoverAmount = saleAmount * (ppHandoverPct / 100);
-      const handoverMonth = constructionEnd;
-      if (handoverMonth < cashPerMonth.length) {
-        cashPerMonth[handoverMonth] += handoverAmount;
-        if (handoverMonth <= totalMonths) grid[saleMonth][handoverMonth] += handoverAmount;
-      }
-    }
-
-    // Build results table
-    const data: { month: number; salesThisMonth: number; cashInflow: number; cumSales: number; cumCash: number }[] = [];
-    let cumSales = 0;
-    let cumCash = 0;
-    for (let m = 1; m <= totalMonths; m++) {
-      const salesThisMonth = monthlySales[m];
-      const cashInflow = cashPerMonth[m];
-      cumSales += salesThisMonth;
-      cumCash += cashInflow;
-      data.push({ month: m, salesThisMonth, cashInflow, cumSales, cumCash });
-    }
-    return { cashInflowData: data, perSaleGrid: grid, activeSaleMonths: saleMonthsList };
-  }, [salesDistribution, avgUnitPrice, timeline, constructionMonths, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppDuringTotal, ppInstallmentEvery, ppHandoverPct]);
-
-  // ─── Computed: Escrow with detailed cash inflow ────────────────────────────
+  // ─── Computed: Escrow with Payment Plan ────────────────────────────────────
   const escrowInitial = constructionCost * 0.2;
   const monthlySiphon = salesMonths > 0 ? constructionCost / salesMonths : 0;
   const escrowData = useMemo(() => {
     let balance = escrowInitial;
+    // Each unit sold: buyer pays downPaymentPct immediately, duringConstructionPct spread over construction months
+    const monthlyInstallmentPerUnit = avgUnitPrice * (duringConstructionPct / 100) / (constructionMonths || 1);
+    // Track cumulative sold units for ongoing installments
+    let cumulativeSold = 0;
     return salesDistribution.map((units, i) => {
-      const absMonth = i + timeline.salesStart;
-      // Revenue from cashInflowData for this month
-      const cid = cashInflowData.find(d => d.month === absMonth);
-      const totalIncome = cid ? cid.cashInflow : 0;
+      // New sales this month: down payment goes to escrow
+      const downPaymentIncome = units * avgUnitPrice * (downPaymentPct / 100);
+      // Ongoing installments from all previously sold units
+      cumulativeSold += units;
+      const installmentIncome = cumulativeSold * monthlyInstallmentPerUnit;
+      const totalIncome = downPaymentIncome + installmentIncome;
       const withdrawal = monthlySiphon;
       balance = balance + totalIncome - withdrawal;
-      let cumulativeSold = 0;
-      for (let j = 0; j <= i; j++) cumulativeSold += salesDistribution[j];
-      return { month: absMonth, units, income: totalIncome, downPayment: 0, installments: 0, withdrawal, balance, cumulativeSold };
+      return { month: i + timeline.salesStart, units, income: totalIncome, downPayment: downPaymentIncome, installments: installmentIncome, withdrawal, balance, cumulativeSold };
     });
-  }, [salesDistribution, escrowInitial, cashInflowData, monthlySiphon, timeline.salesStart]);
+  }, [salesDistribution, escrowInitial, avgUnitPrice, monthlySiphon, timeline.salesStart, constructionCost, downPaymentPct, duringConstructionPct, constructionMonths]);
   const maxDeficit = escrowData.length > 0 ? Math.min(...escrowData.map((d) => d.balance)) : 0;
   const hasDeficit = maxDeficit < 0;
   const criticalMonth = useMemo(() => {
@@ -410,7 +282,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     const payload: Record<string, any> = { id: selectedProjectId };
     UNIT_TYPES.forEach((u) => {
       const d = unitData[u.id];
-      if (d) { payload[u.dbPrice] = d.price; }
+      if (d) { payload[u.dbCount] = d.count; payload[u.dbArea] = d.area; payload[u.dbPrice] = d.price; }
     });
     payload.marketingPct = String(marketingPct);
     payload.salesCommissionPct = String(commissionPct);
@@ -429,14 +301,14 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       offplanPct: offPlan,
       marketingBudgetPct: String(marketingPct),
       salesCommissionPct: String(commissionPct),
-      salesAbsorptionJson: JSON.stringify({ mode: salesMode, speed, template: curveTemplate, manual: manualUnits, marketingPrepLead, reraLead, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppInstallmentPct, ppInstallmentEvery, ppHandoverPct, marketingActualStart, marketingActualEnd, marketingDistribution }),
+      salesAbsorptionJson: JSON.stringify({ mode: salesMode, speed, template: curveTemplate, manual: manualUnits, marketingPrepLead, reraLead, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppInstallmentPct, ppInstallmentEvery, ppHandoverPct }),
       channelsJson: JSON.stringify(channelPcts),
-      resultsJson: JSON.stringify({ escrowData, salesDistribution, cashInflowData }),
+      resultsJson: JSON.stringify({ escrowData, salesDistribution }),
     });
     setHasPlanChanges(false);
-  }, [selectedProjectId, planId, totalRevenue, designMonths, constructionMonths, offPlan, marketingPct, commissionPct, salesMode, speed, curveTemplate, manualUnits, channelPcts, escrowData, salesDistribution, marketingPrepLead, reraLead, marketingActualStart, marketingActualEnd, marketingDistribution, savePlan]);
+  }, [selectedProjectId, planId, totalRevenue, designMonths, constructionMonths, offPlan, marketingPct, commissionPct, salesMode, speed, curveTemplate, manualUnits, channelPcts, escrowData, salesDistribution, marketingPrepLead, reraLead, savePlan]);
 
-  const updateUnit = (id: string, field: "price", value: number) => {
+  const updateUnit = (id: string, field: "count" | "area" | "price", value: number) => {
     setUnitData((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
     setHasUnitChanges(true);
   };
@@ -490,7 +362,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
         )}
 
         {/* Main Content */}
-        {selectedProjectId && !projectQuery.isLoading && (
+        {selectedProjectId && !projectQuery.isLoading && projectQuery.data && (
           <>
             {/* SECTION 1: PRICING + PAYMENT PLAN SIDE BY SIDE */}
             <div className="grid grid-cols-3 gap-2">
@@ -528,8 +400,14 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                             <span className="font-medium text-gray-800">{u.name}</span>
                           </div>
                         </td>
-                        <td className="px-2 py-0.5 text-center font-mono text-gray-700">{u.count}</td>
-                        <td className="px-2 py-0.5 text-center font-mono text-gray-700">{fmtFull(u.area)}</td>
+                        <td className="px-2 py-0.5 text-center">
+                          <input type="number" min={0} value={u.count} onChange={(e) => updateUnit(u.id, "count", parseInt(e.target.value) || 0)}
+                            className="w-12 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
+                        </td>
+                        <td className="px-2 py-0.5 text-center">
+                          <input type="number" min={0} value={u.area} onChange={(e) => updateUnit(u.id, "area", parseInt(e.target.value) || 0)}
+                            className="w-14 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
+                        </td>
                         <td className="px-2 py-0.5 text-center">
                           <input type="number" min={0} value={u.price} onChange={(e) => updateUnit(u.id, "price", parseInt(e.target.value) || 0)}
                             className="w-14 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
@@ -549,8 +427,14 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                             <span className="font-medium text-gray-800">{u.name}</span>
                           </div>
                         </td>
-                        <td className="px-2 py-0.5 text-center font-mono text-gray-700">{u.count}</td>
-                        <td className="px-2 py-0.5 text-center font-mono text-gray-700">{fmtFull(u.area)}</td>
+                        <td className="px-2 py-0.5 text-center">
+                          <input type="number" min={0} value={u.count} onChange={(e) => updateUnit(u.id, "count", parseInt(e.target.value) || 0)}
+                            className="w-12 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
+                        </td>
+                        <td className="px-2 py-0.5 text-center">
+                          <input type="number" min={0} value={u.area} onChange={(e) => updateUnit(u.id, "area", parseInt(e.target.value) || 0)}
+                            className="w-14 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
+                        </td>
                         <td className="px-2 py-0.5 text-center">
                           <input type="number" min={0} value={u.price} onChange={(e) => updateUnit(u.id, "price", parseInt(e.target.value) || 0)}
                             className="w-14 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
@@ -570,8 +454,14 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                             <span className="font-medium text-gray-800">{u.name}</span>
                           </div>
                         </td>
-                        <td className="px-2 py-0.5 text-center font-mono text-gray-700">{u.count}</td>
-                        <td className="px-2 py-0.5 text-center font-mono text-gray-700">{fmtFull(u.area)}</td>
+                        <td className="px-2 py-0.5 text-center">
+                          <input type="number" min={0} value={u.count} onChange={(e) => updateUnit(u.id, "count", parseInt(e.target.value) || 0)}
+                            className="w-12 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
+                        </td>
+                        <td className="px-2 py-0.5 text-center">
+                          <input type="number" min={0} value={u.area} onChange={(e) => updateUnit(u.id, "area", parseInt(e.target.value) || 0)}
+                            className="w-14 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
+                        </td>
                         <td className="px-2 py-0.5 text-center">
                           <input type="number" min={0} value={u.price} onChange={(e) => updateUnit(u.id, "price", parseInt(e.target.value) || 0)}
                             className="w-14 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
@@ -654,13 +544,13 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
               <KPICard label="ROI" value={roiCosts + "%"} sub="على التكاليف" color="violet" />
             </section>
 
-            {/* SECTION 3: OPERATION COSTS */}
-            <section className="bg-white rounded-xl border border-gray-100 shadow-sm p-2">
-              <h3 className="text-[11px] font-bold text-gray-800 flex items-center gap-1.5 mb-2">
-                <Percent className="w-3.5 h-3.5 text-amber-600" />
-                تكاليف العملية
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {/* SECTION 3: OPERATION COSTS + MARKETING DISTRIBUTION */}
+            <section className="grid grid-cols-12 gap-2">
+              <div className="col-span-12 md:col-span-4 bg-white rounded-xl border border-gray-100 shadow-sm p-2 space-y-1">
+                <h3 className="text-[11px] font-bold text-gray-800 flex items-center gap-1.5">
+                  <Percent className="w-3.5 h-3.5 text-amber-600" />
+                  تكاليف العملية
+                </h3>
                 <div>
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] text-gray-600">ميزانية التسويق</span>
@@ -684,6 +574,110 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                   </div>
                   <Slider value={[offPlan]} onValueChange={([v]) => { setOffPlan(v); setHasPlanChanges(true); }} min={30} max={100} step={5} className="w-full" />
                   <p className="text-[9px] text-gray-400">{offPlanUnits} وحدة من {totalUnits}</p>
+                </div>
+              </div>
+              <div className="col-span-12 md:col-span-8 bg-white rounded-xl border border-gray-100 shadow-sm p-2">
+                <h3 className="text-[11px] font-bold text-gray-800 flex items-center gap-1.5 mb-2">
+                  <Megaphone className="w-3.5 h-3.5 text-pink-600" />
+                  توزيع قنوات التسويق
+                  <Badge variant="secondary" className="text-[9px]">{fmtFull(Math.round(marketingCost))} AED</Badge>
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {MARKETING_CHANNELS.map((ch) => (
+                    <div key={ch.id} className="rounded-lg border border-gray-100 p-1.5">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-medium text-gray-700">{ch.name}</span>
+                        <span className="text-[10px] font-bold" style={{ color: ch.color }}>{channelPcts[ch.id] || 0}%</span>
+                      </div>
+                      <Slider value={[channelPcts[ch.id] || 0]} onValueChange={([v]) => { setChannelPcts((prev) => ({ ...prev, [ch.id]: v })); setHasPlanChanges(true); }} min={0} max={60} step={5} className="w-full" />
+                      <p className="text-[8px] text-gray-400 mt-0.5">{fmtFull(Math.round(marketingCost * (channelPcts[ch.id] || 0) / 100))} AED</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            {/* SECTION 4: PROJECT PHASES TIMELINE */}
+            <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-3 py-2 border-b border-gray-100">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                    <h2 className="text-[11px] font-bold text-gray-800">الجدول الزمني</h2>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-gray-500">تصاميم:</span>
+                      <input type="number" min={1} max={24} value={designMonths} onChange={(e) => { setDesignMonths(parseInt(e.target.value) || 8); setHasPlanChanges(true); }}
+                        className="w-9 h-5 text-center text-[10px] border border-gray-200 rounded" />
+                      <span className="text-[10px] text-gray-400">شهر</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-gray-500">إنشاء:</span>
+                      <input type="number" min={6} max={60} value={constructionMonths} onChange={(e) => { setConstructionMonths(parseInt(e.target.value) || 30); setHasPlanChanges(true); }}
+                        className="w-9 h-5 text-center text-[10px] border border-gray-200 rounded" />
+                      <span className="text-[10px] text-gray-400">شهر</span>
+                    </div>
+                  </div>
+                </div>
+                {/* Month numbers on same header line */}
+                <div className="flex items-center gap-2">
+                  <div className="w-32 flex-shrink-0" />
+                  <div className="flex-1 flex">
+                    {Array.from({ length: timeline.projectEnd }, (_, i) => {
+                      const isDesign = i < designMonths;
+                      const displayNum = isDesign ? i + 1 : i - designMonths + 1;
+                      return (
+                        <div key={i} className="flex-1 text-center">
+                          <span className={`text-[7px] font-bold ${isDesign ? 'text-blue-600' : 'text-emerald-600'}`}>{displayNum}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+              <div className="p-2">
+                <div className="space-y-1.5">
+                  {PROJECT_PHASES.map((phase) => {
+                    let start = 0, end = 0;
+                    if (phase.id === "design") { start = 1; end = timeline.designEnd; }
+                    else if (phase.id === "materials") { start = timeline.materialsStart; end = timeline.materialsStart + 2; }
+                    else if (phase.id === "rera") { start = timeline.reraStart; end = timeline.reraStart + 1; }
+                    else if (phase.id === "marketing") { start = timeline.marketingStart; end = timeline.projectEnd; }
+                    else if (phase.id === "sales") { start = timeline.salesStart; end = timeline.projectEnd; }
+                    else if (phase.id === "construction") { start = timeline.constructionStart; end = timeline.projectEnd; }
+                    const total = timeline.projectEnd;
+                    const rightPct = ((start - 1) / total) * 100;
+                    const widthPct = ((end - start + 1) / total) * 100;
+                    const Icon = phase.icon;
+                    return (
+                      <div key={phase.id} className="flex items-center gap-2">
+                        <div className="w-32 flex items-center gap-1.5 flex-shrink-0">
+                          <Icon className="w-3 h-3" style={{ color: phase.color }} />
+                          <span className="text-[10px] font-medium text-gray-700 truncate">{phase.name}</span>
+                        </div>
+                        <div className="flex-1 h-5 bg-gray-100 rounded-full relative overflow-hidden">
+                          <div className="absolute h-full rounded-full transition-all" style={{ right: `${rightPct}%`, width: `${widthPct}%`, backgroundColor: phase.color, opacity: 0.8 }} />
+                          <span className="absolute inset-0 flex items-center justify-center text-[8px] font-medium text-gray-700">شهر {start} - {end}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-1 flex-wrap">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-gray-500">تحضير المواد قبل:</span>
+                    <input type="number" min={1} max={6} value={marketingPrepLead} onChange={(e) => { setMarketingPrepLead(parseInt(e.target.value) || 3); setHasPlanChanges(true); }}
+                      className="w-8 h-5 text-center text-[10px] border border-gray-200 rounded" />
+                    <span className="text-[10px] text-gray-400">شهر من نهاية التصاميم</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-gray-500">ريرا قبل:</span>
+                    <input type="number" min={1} max={6} value={reraLead} onChange={(e) => { setReraLead(parseInt(e.target.value) || 2); setHasPlanChanges(true); }}
+                      className="w-8 h-5 text-center text-[10px] border border-gray-200 rounded" />
+                    <span className="text-[10px] text-gray-400">شهر من بدء المبيعات</span>
+                  </div>
                 </div>
               </div>
             </section>
@@ -885,162 +879,6 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                 })()}
               </div>
             </section>
-
-            {/* SECTION 7: CASH INFLOW RESULTS TABLE (Payment Plan × Sales) */}
-            <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Table2 className="w-3.5 h-3.5 text-indigo-600" />
-                  <h2 className="text-[11px] font-bold text-gray-800">جدول التدفق النقدي — التحصيل الفعلي من المبيعات</h2>
-                </div>
-                <div className="flex items-center gap-2 text-[9px] text-gray-500">
-                  <Info className="w-3 h-3" />
-                  يحسب متى تدخل الأموال فعلياً بناءً على خطة الدفع
-                </div>
-              </div>
-              <div className="p-2 overflow-x-auto max-h-[400px] overflow-y-auto">
-                <table className="w-full text-[9px]">
-                  <thead className="sticky top-0 bg-white z-10 border-b-2 border-gray-200">
-                    <tr>
-                      <th className="text-right py-1 px-1.5 text-gray-500 font-bold w-8">#</th>
-                      <th className="text-right py-1 px-1.5 text-gray-500 font-bold">الشهر</th>
-                      <th className="text-center py-1 px-1.5 text-gray-500 font-bold w-12">المرحلة</th>
-                      <th className="text-left py-1 px-1.5 text-gray-500 font-bold">مبيعات الشهر</th>
-                      <th className="text-left py-1 px-1.5 text-gray-500 font-bold">تحصيل فعلي</th>
-                      <th className="text-left py-1 px-1.5 text-gray-500 font-bold">مبيعات تراكمية</th>
-                      <th className="text-left py-1 px-1.5 text-gray-500 font-bold">تحصيل تراكمي</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cashInflowData.map((row, i) => {
-                      const isActive = row.salesThisMonth > 0 || row.cashInflow > 0;
-                      const isDesign = row.month <= timeline.designEnd;
-                      const isSalesStart = row.month === timeline.salesStart;
-                      return (
-                        <tr key={i} className={`border-b border-gray-50 ${!isActive ? 'opacity-30' : 'hover:bg-blue-50/30'} ${isSalesStart ? 'border-t-2 border-t-amber-300' : ''}`}>
-                          <td className="py-0.5 px-1.5 text-gray-400 font-mono">{row.month}</td>
-                          <td className="py-0.5 px-1.5 font-medium text-gray-700">شهر {row.month}</td>
-                          <td className="py-0.5 px-1.5 text-center">
-                            <span className={`inline-block px-1 py-0.5 rounded text-[8px] font-bold ${isDesign ? 'bg-purple-50 text-purple-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                              {isDesign ? 'تصاميم' : 'بناء'}
-                            </span>
-                          </td>
-                          <td className="py-0.5 px-1.5 text-left font-mono">
-                            {row.salesThisMonth > 0 ? <span className="text-emerald-700 font-medium">{fmtFull(Math.round(row.salesThisMonth))}</span> : <span className="text-gray-300">—</span>}
-                          </td>
-                          <td className="py-0.5 px-1.5 text-left font-mono">
-                            {row.cashInflow > 0 ? <span className="text-blue-700 font-bold">{fmtFull(Math.round(row.cashInflow))}</span> : <span className="text-gray-300">—</span>}
-                          </td>
-                          <td className="py-0.5 px-1.5 text-left font-mono text-indigo-600">{row.cumSales > 0 ? fmtFull(Math.round(row.cumSales)) : '—'}</td>
-                          <td className="py-0.5 px-1.5 text-left font-mono text-blue-600 font-medium">{row.cumCash > 0 ? fmtFull(Math.round(row.cumCash)) : '—'}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                  <tfoot className="border-t-2 border-gray-300 bg-gray-50 font-bold">
-                    <tr>
-                      <td colSpan={3} className="py-1 px-1.5 text-right text-gray-700">الإجمالي</td>
-                      <td className="py-1 px-1.5 text-left font-mono text-emerald-700">{fmtFull(Math.round(cashInflowData.reduce((s, r) => s + r.salesThisMonth, 0)))}</td>
-                      <td className="py-1 px-1.5 text-left font-mono text-blue-700">{fmtFull(Math.round(cashInflowData.reduce((s, r) => s + r.cashInflow, 0)))}</td>
-                      <td colSpan={2}></td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-              <div className="px-3 py-2 border-t border-gray-100 bg-gray-50/50">
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="text-center">
-                    <p className="text-[8px] text-gray-500">إجمالي المبيعات</p>
-                    <p className="text-[10px] font-bold text-emerald-700">{fmtFull(Math.round(cashInflowData.reduce((s, r) => s + r.salesThisMonth, 0)))} AED</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-[8px] text-gray-500">تحصيل خلال المشروع</p>
-                    <p className="text-[10px] font-bold text-blue-700">{fmtFull(Math.round(cashInflowData.reduce((s, r) => s + r.cashInflow, 0)))} AED</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-[8px] text-gray-500">نسبة التحصيل</p>
-                    <p className="text-[10px] font-bold text-indigo-700">
-                      {cashInflowData.reduce((s, r) => s + r.salesThisMonth, 0) > 0
-                        ? Math.round((cashInflowData.reduce((s, r) => s + r.cashInflow, 0) / cashInflowData.reduce((s, r) => s + r.salesThisMonth, 0)) * 100)
-                        : 0}%
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* SECTION 8: DETAILED PAYMENT PLAN BREAKDOWN GRID */}
-            {activeSaleMonths.length > 0 && (
-            <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Table2 className="w-3.5 h-3.5 text-purple-600" />
-                  <h2 className="text-[11px] font-bold text-gray-800">تفصيل توزيع الأقساط — من أين جاء كل مبلغ</h2>
-                </div>
-                <div className="flex items-center gap-2 text-[9px] text-gray-500">
-                  <Info className="w-3 h-3" />
-                  الصفوف = أشهر البيع | الأعمدة = أشهر التحصيل
-                </div>
-              </div>
-              <div className="p-2 overflow-x-auto max-h-[500px] overflow-y-auto">
-                <table className="w-full text-[8px] border-collapse">
-                  <thead className="sticky top-0 bg-white z-10">
-                    <tr className="border-b-2 border-gray-300">
-                      <th className="py-1 px-1 text-right text-gray-600 font-bold sticky left-0 bg-white z-20 min-w-[80px]">شهر البيع \ شهر التحصيل</th>
-                      <th className="py-1 px-1 text-right text-gray-600 font-bold sticky left-[80px] bg-white z-20 min-w-[60px]">مبلغ البيع</th>
-                      {Array.from({ length: timeline.projectEnd }, (_, i) => i + 1).map(m => (
-                        <th key={m} className={`py-1 px-0.5 text-center font-medium min-w-[45px] ${m === timeline.salesStart ? 'border-l-2 border-amber-300' : ''} ${m >= timeline.salesStart ? 'text-gray-700' : 'text-gray-400'}`}>
-                          ش{m}
-                        </th>
-                      ))}
-                      <th className="py-1 px-1 text-center text-gray-700 font-bold min-w-[60px]">المجموع</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {activeSaleMonths.map((saleMonth, idx) => {
-                      const rowData = perSaleGrid[saleMonth];
-                      const saleAmount = cashInflowData.find(d => d.month === saleMonth)?.salesThisMonth || 0;
-                      const rowTotal = rowData ? rowData.reduce((s, v) => s + v, 0) : 0;
-                      return (
-                        <tr key={saleMonth} className={`border-b border-gray-50 ${idx % 2 === 0 ? 'bg-gray-50/30' : ''} hover:bg-purple-50/30`}>
-                          <td className="py-0.5 px-1 font-bold text-purple-700 sticky left-0 bg-inherit z-10">شهر {saleMonth} ({salesDistribution[saleMonth - timeline.salesStart] || 0} وحدة)</td>
-                          <td className="py-0.5 px-1 font-mono text-emerald-700 sticky left-[80px] bg-inherit z-10">{fmtFull(Math.round(saleAmount))}</td>
-                          {Array.from({ length: timeline.projectEnd }, (_, i) => i + 1).map(m => {
-                            const val = rowData ? rowData[m] || 0 : 0;
-                            return (
-                              <td key={m} className={`py-0.5 px-0.5 text-center font-mono ${m === saleMonth ? 'bg-amber-50 font-bold text-amber-700' : val > 0 ? 'text-blue-700' : 'text-gray-200'}`}>
-                                {val > 0 ? (val >= 1000000 ? `${(val / 1000000).toFixed(1)}M` : val >= 1000 ? `${Math.round(val / 1000)}K` : Math.round(val)) : '—'}
-                              </td>
-                            );
-                          })}
-                          <td className="py-0.5 px-1 text-center font-mono font-bold text-indigo-700">{fmtFull(Math.round(rowTotal))}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                  <tfoot className="border-t-2 border-gray-400 bg-gray-100 font-bold sticky bottom-0">
-                    <tr>
-                      <td className="py-1 px-1 text-right text-gray-800 sticky left-0 bg-gray-100 z-10">مجموع التحصيل الشهري</td>
-                      <td className="py-1 px-1 font-mono text-emerald-800 sticky left-[80px] bg-gray-100 z-10">{fmtFull(Math.round(activeSaleMonths.reduce((s, sm) => s + (cashInflowData.find(d => d.month === sm)?.salesThisMonth || 0), 0)))}</td>
-                      {Array.from({ length: timeline.projectEnd }, (_, i) => i + 1).map(m => {
-                        const colTotal = activeSaleMonths.reduce((s, sm) => s + (perSaleGrid[sm]?.[m] || 0), 0);
-                        return (
-                          <td key={m} className={`py-1 px-0.5 text-center font-mono ${colTotal > 0 ? 'text-blue-800 font-bold' : 'text-gray-300'}`}>
-                            {colTotal > 0 ? (colTotal >= 1000000 ? `${(colTotal / 1000000).toFixed(1)}M` : `${Math.round(colTotal / 1000)}K`) : '—'}
-                          </td>
-                        );
-                      })}
-                      <td className="py-1 px-1 text-center font-mono text-blue-800">{fmtFull(Math.round(cashInflowData.reduce((s, r) => s + r.cashInflow, 0)))}</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-              <div className="px-3 py-1.5 border-t border-gray-100 bg-purple-50/30 text-[9px] text-gray-600">
-                <strong>ملاحظة:</strong> الخلية الصفراء = دفعة الحجز (في شهر البيع) | الخلايا الزرقاء = أقساط لاحقة حسب البيمنت بلان | الصف الأخير = إجمالي ما يدخل الإسكرو كل شهر
-              </div>
-            </section>
-            )}
-
           </>
         )}
       </div>

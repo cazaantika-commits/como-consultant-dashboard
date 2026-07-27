@@ -263,33 +263,19 @@ export default function EscrowCashFlowSchedulePage2() {
       });
     }
 
-    // ─── 3a. رسوم المساح DWG (الشهر الأول من الإنشاء) ───
+    // ─── 3. رسوم المساح ───
     {
-      const cMonths = emptyConstruction();
-      cMonths[0] = i.surveyorDwgFee;
-      rows.push({
-        label: "رسوم المساح DWG",
-        totalCost: i.surveyorDwgFee,
-        escrowAmount: i.surveyorDwgFee,
-        openingBalance: 0,
-        remainingToSpend: i.surveyorDwgFee,
-        section: "الدراسات والمسوحات",
-        designMonths: emptyDesign(),
-        constructionMonths: cMonths,
-        postConstructionMonths: emptyEffectivePost(),
-      });
-    }
-    // ─── 3b. رسوم المساح As-Built (الشهر قبل الأخير من الإنشاء) ───
-    {
+      const amount = i.surveyorFee;
       const cMonths = emptyConstruction();
       const penultimateIndex = constructionDuration - 2;
-      cMonths[penultimateIndex] = i.surveyorAsbuiltFee;
+      cMonths[penultimateIndex] = amount;
+
       rows.push({
-        label: "رسوم المساح As-Built",
-        totalCost: i.surveyorAsbuiltFee,
-        escrowAmount: i.surveyorAsbuiltFee,
+        label: "رسوم المساح",
+        totalCost: amount,
+        escrowAmount: amount,
         openingBalance: 0,
-        remainingToSpend: i.surveyorAsbuiltFee,
+        remainingToSpend: amount,
         section: "الدراسات والمسوحات",
         designMonths: emptyDesign(),
         constructionMonths: cMonths,

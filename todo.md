@@ -1001,38 +1001,10 @@
 - [x] Make consultant fees (design/supervision) support both fixed amount OR percentage (toggle)
 - [x] Remove surveyor field from GeneralInputsPage and align with feasibility study costs
 - [x] Verify feasibility study costs section is complete (all individual cost items shown in V2Feasibility)
-- [x] Add مساح DWG and مساح As-built fields to GeneralInputsPage and V2Feasibility (under رسوم الجهات الحكومية)
-- [x] Make FactSheetPage financial fields read-only (source is GeneralInputsPage)
-- [x] Make ProjectCardOffplanPage shared fields read-only (source is GeneralInputsPage)
-- [x] Remove constructionMonths edit from ConstructionInputsPage (read from project data only)
-- [x] Update SettingsRulesPage design phases to 7 correct phases with duration (weeks) and consultant fee percentage inputs
 
-- [x] Rebuild SettingsRulesPage: Add project phases section (6 phases with configurable start/duration)
-- [x] Rebuild SettingsRulesPage: Add configurable rates (community fee/sqft, RERA unit reg fee, RERA auditor quarterly, RERA inspection quarterly)
-- [x] Rebuild SettingsRulesPage: Add investor account payment rules display (all defined items with timing)
-- [x] Rebuild SettingsRulesPage: Add escrow account payment rules display (all defined items with timing)
-- [x] Update V2WaelSales: Timeline reads from settings phases
-- [x] Update V2WaelSales: Add marketing budget/percentage inputs
-
-- [x] Fix SettingsRulesPage phases: correct start rules (all start from schematic design completion as anchor point)
-- [x] Fix SettingsRulesPage: RERA starts 1 month after schematic completion (not X months before sales)
-- [x] Fix V2WaelSales: Wael must control marketing launch duration and monthly distribution (not just percentage)
-- [x] Restore detailed cash inflow table (Payment Plan × Sales distribution) in V2WaelSales
-- [x] V2WaelSales: Add monthly marketing distribution table (Wael inputs amount per channel per month)
-- [x] V2WaelSales: Add detailed payment plan breakdown table (rows=sale months, cols=project months, cells=installment amount from that sale in that month, bottom row=total monthly collection)
-- [x] Move all marketing sections from V2WaelSales to a new dedicated Marketing page (channels, budget, distribution table)
-- [x] Create new Timeline page (move timeline bar + consultant schedule table from V2WaelSales)
-- [x] Register Marketing and Timeline as new tabs in BateekhaPage
-- [x] MarketingPage: Sliders set channel budget cap → table shows max per channel → Wael inputs monthly amounts that cannot exceed channel cap
-
-- [x] Add 4 editable investor payment timing rules to SettingsRulesPage (persisted to DB):
-  - [x] أتعاب المطور (15%): تُدفع بعد شهر من استلام أموال الإسكرو، يُحتجز 15% حتى الشهر 13 بعد الإنجاز
-  - [x] رسوم الفرز: تُدفع في الشهر الأول من مرحلة ريرا + اعتمادات البيع
-  - [x] عمولة المبيعات (5%): تُصرف عند تحصيل 20% من قيمة الوحدة من المشتري
-  - [x] رسوم المساح As-Built: تُدفع في الشهر قبل الأخير من الإنشاء
-- [ ] Wire V2InvestorCashFlow to real computed data using these rules + project settings
-- [ ] Fix: Add both surveyor fees (DWG + As-Built) to investor and escrow cash flow sheets
-- [ ] Fix: Ensure total expenses in both sheets match feasibility study total exactly
-- [ ] Fix: Escrow sheet starts with opening balance = 20% deposit from investor
-- [ ] Fix: Investor sheet shows 20% deposit payment at correct month (penultimate design month)
-- [x] Fix: Pricing table in V2WaelSales — only price/sqft should be editable input, count and area are read-only (from project data card)
+## V2 Cash Flow Pages — Real Data Integration
+- [x] Update investorCashFlowEngine to accept salesResult parameter from V2WaelSales
+- [x] Rewrite V2InvestorCashFlow.tsx to use real engine data (no dummy data)
+- [x] Rewrite V2EscrowCashFlow.tsx to use real engine data (no dummy data)
+- [x] Show real calendar dates in column headers (from project startDate)
+- [x] Fix engine surveyorDwgFee/surveyorAsbuiltFee references (use surveyorFee from ProjectInputs)

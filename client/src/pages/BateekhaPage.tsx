@@ -1,6 +1,6 @@
 import { useState, lazy, Suspense } from "react";
 import { useLocation } from "wouter";
-import { ArrowRight, ClipboardList, HardHat, Target, Settings, TrendingDown, FileText, Building2, Briefcase, LayoutGrid, Landmark, Calendar, Megaphone } from "lucide-react";
+import { ArrowRight, ClipboardList, HardHat, Target, Settings, TrendingDown, FileText, Building2, Briefcase, LayoutGrid, Landmark } from "lucide-react";
 
 const GeneralInputsPage = lazy(() => import("./GeneralInputsPage"));
 const PricingPage = lazy(() => import("./PricingPage"));
@@ -11,18 +11,14 @@ const V2InvestorCashFlow = lazy(() => import("./V2InvestorCashFlow"));
 const V2EscrowCashFlow = lazy(() => import("./V2EscrowCashFlow"));
 const V2Feasibility = lazy(() => import("./V2Feasibility"));
 const V2Portfolio = lazy(() => import("./V2Portfolio"));
-const MarketingPage = lazy(() => import("./MarketingPage"));
-const TimelinePage = lazy(() => import("./TimelinePage"));
 
-type TabId = "general" | "units" | "construction" | "sales" | "marketing" | "timeline" | "settings" | "cashflows" | "escrow" | "feasibility" | "mall" | "portfolio";
+type TabId = "general" | "units" | "construction" | "sales" | "settings" | "cashflows" | "escrow" | "feasibility" | "mall" | "portfolio";
 
 const TABS: { id: TabId; label: string; icon: any; group: "input" | "output" }[] = [
   { id: "general", label: "المدخلات العامة", icon: ClipboardList, group: "input" },
   { id: "units", label: "توزيع الوحدات", icon: LayoutGrid, group: "input" },
   { id: "construction", label: "الإنشاء", icon: HardHat, group: "input" },
-  { id: "sales", label: "المبيعات", icon: Target, group: "input" },
-  { id: "marketing", label: "التسويق", icon: Megaphone, group: "input" },
-  { id: "timeline", label: "الجدول الزمني", icon: Calendar, group: "input" },
+  { id: "sales", label: "المبيعات والتسويق", icon: Target, group: "input" },
   { id: "settings", label: "الإعدادات والقواعد", icon: Settings, group: "input" },
   { id: "cashflows", label: "تدفقات المستثمر", icon: TrendingDown, group: "output" },
   { id: "escrow", label: "تدفقات الإسكرو", icon: Landmark, group: "output" },
@@ -41,10 +37,6 @@ function TabContent({ tabId }: { tabId: TabId }) {
       return <ConstructionInputsPage embedded />;
     case "sales":
       return <V2WaelSales embedded />;
-    case "marketing":
-      return <MarketingPage embedded />;
-    case "timeline":
-      return <TimelinePage embedded />;
     case "settings":
       return <SettingsRulesPage embedded />;
 

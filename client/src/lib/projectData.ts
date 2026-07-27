@@ -25,8 +25,7 @@ export interface ProjectInputs {
   efficiencyOffice: number;
   soilTest: number;
   topography: number;
-  surveyorDwgFee: number;
-  surveyorAsbuiltFee: number;
+  surveyorFee: number;
   nocSale: number;
   escrowAccountFee: number;
   bankFees: number;
@@ -84,8 +83,7 @@ export const PROJECT_INPUTS: ProjectInputs = {
   efficiencyOffice: 0.90,
   soilTest: 45000,
   topography: 12000,
-  surveyorDwgFee: 15000,
-  surveyorAsbuiltFee: 20000,
+  surveyorFee: 35000,
   nocSale: 10000,
   escrowAccountFee: 180000,
   bankFees: 35000,
@@ -156,8 +154,7 @@ export function dbProjectToInputs(dbProject: any): ProjectInputs {
     efficiencyOffice: dbProject.saleableOfficesPct ? parseFloat(dbProject.saleableOfficesPct) / 100 : 0.90,
     soilTest: parseFloat(dbProject.soilTestFee || '0') || 45000,
     topography: parseFloat(dbProject.topographicSurveyFee || '0') || 12000,
-    surveyorDwgFee: parseFloat(dbProject.surveyorDwgFee || '0') || parseFloat(dbProject.surveyorFees || '0') * 0.5 || 15000,
-    surveyorAsbuiltFee: parseFloat(dbProject.surveyorAsbuiltFee || '0') || parseFloat(dbProject.surveyorFees || '0') * 0.5 || 20000,
+    surveyorFee: parseFloat(dbProject.surveyorFees || '0') || 35000,
     nocSale: parseFloat(dbProject.developerNocFee || '0') || 10000,
     escrowAccountFee: parseFloat(dbProject.escrowAccountFee || '0') || 180000,
     bankFees: parseFloat(dbProject.bankFees || '0') || 35000,
@@ -332,17 +329,15 @@ export function calculateCosts(
   const constructionInvestor = constructionCost * rates.constructionInvestorShare;
   const constructionEscrow = constructionCost * rates.constructionEscrowShare;
   const govFeesInvestor = inputs.govFeesTotal * rates.govFeesInvestorShare;
-  const govFeesEscrow = inputs.govFeesTotal * rates.govFeesEscrowShare;
-  const contingencies = constructionCost * rates.contingency;
-  // ─── إجمالي المستثمر (نفس معادلة البطاقة بالضبط) ───
+  const govFeesEscrow = inputs.govFeesTotal * rates.govFeesEscrowShare;  // ─── إجمالي المستثمر (نفس معادلة البطاقة بالضبط) ───
   const totalInvestor = landPrice + landRegistration + landBroker + designFee +
     inputs.soilTest + inputs.topography + inputs.communityFee + govFeesInvestor +
     sortingFee + inputs.nocSale + inputs.reraProjectReg + reraUnits +
     inputs.escrowAccountFee + inputs.bankFees + marketing + developerFee +
-    constructionInvestor + contingencies;
+    constructionInvestor;
   // ─── إجمالي الضمان (نفس معادلة البطاقة بالضبط) ───
   const totalEscrow = supervisionFee + govFeesEscrow + salesCommission +
-    inputs.reraAuditorReport + inputs.reraInspection + inputs.surveyorDwgFee + inputs.surveyorAsbuiltFee + constructionEscrow;
+    inputs.reraAuditorReport + inputs.reraInspection + inputs.surveyorFee + constructionEscrow;
 
   const totalCosts = totalInvestor + totalEscrow;
   const profit = totalRevenue - totalCosts;
@@ -361,7 +356,6 @@ export function calculateCosts(
     constructionEscrow,
     govFeesInvestor,
     govFeesEscrow,
-    contingencies,
     // الإجماليات
     totalInvestor,
     totalEscrow,

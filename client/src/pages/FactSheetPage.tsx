@@ -559,8 +559,8 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
               <div className="h-5 w-5 rounded bg-amber-100 flex items-center justify-center flex-shrink-0">
                 <PenLine className="h-3 w-3 text-amber-600" />
               </div>
-              <h3 className="text-xs font-bold text-amber-800">البيانات المالية</h3>
-              <span className="text-[9px] text-amber-500">— للعرض فقط • التعديل من "المدخلات العامة" في الدراسات والتخطيط المالي</span>
+              <h3 className="text-xs font-bold text-amber-800">الإدخالات اليدوية</h3>
+              <span className="text-[9px] text-amber-500">— تُدخلها يدوياً وتُستخدم في الحسابات</span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -568,58 +568,58 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
               {/* Land Purchase */}
               <Section title="شراء الأرض" icon={Landmark} color="amber">
                 <div className="grid grid-cols-2 gap-1.5">
-                  <Field label="سعر الأرض (AED)" value={formData.landPrice} readOnly type="number" suffix="AED" source="manual" />
-                  <Field label="عمولة الوسيط (%)" value={formData.agentCommissionLandPct} readOnly type="number" suffix="%" source="manual" />
+                  <Field label="سعر الأرض (AED)" value={formData.landPrice} onChange={v => updateField("landPrice", v)} type="number" suffix="AED" source="manual" />
+                  <Field label="عمولة الوسيط (%)" value={formData.agentCommissionLandPct} onChange={v => updateField("agentCommissionLandPct", v)} type="number" suffix="%" source="manual" />
                 </div>
               </Section>
 
               {/* Construction */}
               <Section title="تكلفة البناء" icon={Building2} color="amber">
                 <div className="grid grid-cols-2 gap-1.5">
-                  <Field label="BUA (قدم²)" value={formData.manualBuaSqft} readOnly type="number" suffix="sqft" source="manual" />
-                  <Field label="سعر القدم² (AED)" value={formData.estimatedConstructionPricePerSqft} readOnly type="number" suffix="AED" source="manual" />
+                  <Field label="BUA (قدم²)" value={formData.manualBuaSqft} onChange={v => updateField("manualBuaSqft", v)} type="number" suffix="sqft" source="manual" />
+                  <Field label="سعر القدم² (AED)" value={formData.estimatedConstructionPricePerSqft} onChange={v => updateField("estimatedConstructionPricePerSqft", v)} type="number" suffix="AED" source="manual" />
                 </div>
               </Section>
 
               {/* Variable percentages (construction-based) */}
               <Section title="نسب متغيرة (بناء)" icon={Calculator} color="amber">
                 <div className="grid grid-cols-3 gap-1.5">
-                  <Field label="تصميم%" value={formData.designFeePct} readOnly type="number" suffix="%" source="manual" />
-                  <Field label="إشراف%" value={formData.supervisionFeePct} readOnly type="number" suffix="%" source="manual" />
-                  <Field label="فرز/قدم²" value={formData.separationFeePerSqft} readOnly type="number" suffix="AED" source="manual" />
+                  <Field label="تصميم%" value={formData.designFeePct} onChange={v => updateField("designFeePct", v)} type="number" suffix="%" source="manual" />
+                  <Field label="إشراف%" value={formData.supervisionFeePct} onChange={v => updateField("supervisionFeePct", v)} type="number" suffix="%" source="manual" />
+                  <Field label="فرز/قدم²" value={formData.separationFeePerSqft} onChange={v => updateField("separationFeePerSqft", v)} type="number" suffix="AED" source="manual" />
                 </div>
               </Section>
 
               {/* Revenue-based percentages */}
               <Section title="نسب إيرادية" icon={Calculator} color="orange">
                 <div className="grid grid-cols-3 gap-1.5">
-                  <Field label="وسيط بيع%" value={formData.salesCommissionPct} readOnly type="number" suffix="%" source="manual" />
-                  <Field label="تسويق%" value={formData.marketingPct} readOnly type="number" suffix="%" source="manual" />
-                  <Field label="أتعاب مطور%" value={formData.developerFeePct} readOnly type="number" suffix="%" source="manual" />
+                  <Field label="وسيط بيع%" value={formData.salesCommissionPct} onChange={v => updateField("salesCommissionPct", v)} type="number" suffix="%" source="manual" />
+                  <Field label="تسويق%" value={formData.marketingPct} onChange={v => updateField("marketingPct", v)} type="number" suffix="%" source="manual" />
+                  <Field label="أتعاب مطور%" value={formData.developerFeePct} onChange={v => updateField("developerFeePct", v)} type="number" suffix="%" source="manual" />
                 </div>
               </Section>
 
               {/* Pre-construction fixed fees */}
               <Section title="رسوم ما قبل البناء" icon={FileText} color="amber">
                 <div className="grid grid-cols-3 gap-1.5">
-                  <Field label="فحص تربة" value={formData.soilTestFee} readOnly type="number" suffix="AED" source="manual" />
-                  <Field label="رفع مساحي" value={formData.topographicSurveyFee} readOnly type="number" suffix="AED" source="manual" />
-                  <Field label="جهات رسمية" value={formData.officialBodiesFees} readOnly type="number" suffix="AED" source="manual" />
+                  <Field label="فحص تربة" value={formData.soilTestFee} onChange={v => updateField("soilTestFee", v)} type="number" suffix="AED" source="manual" />
+                  <Field label="رفع مساحي" value={formData.topographicSurveyFee} onChange={v => updateField("topographicSurveyFee", v)} type="number" suffix="AED" source="manual" />
+                  <Field label="جهات رسمية" value={formData.officialBodiesFees} onChange={v => updateField("officialBodiesFees", v)} type="number" suffix="AED" source="manual" />
                 </div>
               </Section>
 
               {/* Regulatory fees */}
               <Section title="رسوم تنظيمية" icon={Landmark} color="amber">
                 <div className="grid grid-cols-3 gap-1.5">
-                  <Field label="ريرا وحدات" value={formData.reraUnitRegFee} readOnly type="number" suffix="AED" source="manual" />
-                  <Field label="ريرا مشروع" value={formData.reraProjectRegFee} readOnly type="number" suffix="AED" source="manual" />
-                  <Field label="NOC مطور" value={formData.developerNocFee} readOnly type="number" suffix="AED" source="manual" />
-                  <Field label="حساب ضمان" value={formData.escrowAccountFee} readOnly type="number" suffix="AED" source="manual" />
-                  <Field label="رسوم بنكية" value={formData.bankFees} readOnly type="number" suffix="AED" source="manual" />
-                  <Field label="رسوم مجتمع" value={formData.communityFees} readOnly type="number" suffix="AED" source="manual" />
-                  <Field label="أتعاب مساح" value={formData.surveyorFees} readOnly type="number" suffix="AED" source="manual" />
-                  <Field label="تدقيق ريرا" value={formData.reraAuditReportFee} readOnly type="number" suffix="AED" source="manual" />
-                  <Field label="تفتيش ريرا" value={formData.reraInspectionReportFee} readOnly type="number" suffix="AED" source="manual" />
+                  <Field label="ريرا وحدات" value={formData.reraUnitRegFee} onChange={v => updateField("reraUnitRegFee", v)} type="number" suffix="AED" source="manual" />
+                  <Field label="ريرا مشروع" value={formData.reraProjectRegFee} onChange={v => updateField("reraProjectRegFee", v)} type="number" suffix="AED" source="manual" />
+                  <Field label="NOC مطور" value={formData.developerNocFee} onChange={v => updateField("developerNocFee", v)} type="number" suffix="AED" source="manual" />
+                  <Field label="حساب ضمان" value={formData.escrowAccountFee} onChange={v => updateField("escrowAccountFee", v)} type="number" suffix="AED" source="manual" />
+                  <Field label="رسوم بنكية" value={formData.bankFees} onChange={v => updateField("bankFees", v)} type="number" suffix="AED" source="manual" />
+                  <Field label="رسوم مجتمع" value={formData.communityFees} onChange={v => updateField("communityFees", v)} type="number" suffix="AED" source="manual" />
+                  <Field label="أتعاب مساح" value={formData.surveyorFees} onChange={v => updateField("surveyorFees", v)} type="number" suffix="AED" source="manual" />
+                  <Field label="تدقيق ريرا" value={formData.reraAuditReportFee} onChange={v => updateField("reraAuditReportFee", v)} type="number" suffix="AED" source="manual" />
+                  <Field label="تفتيش ريرا" value={formData.reraInspectionReportFee} onChange={v => updateField("reraInspectionReportFee", v)} type="number" suffix="AED" source="manual" />
                 </div>
               </Section>
 
@@ -628,8 +628,8 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
                 <div className="grid grid-cols-3 gap-1.5">
                   <div className="space-y-0.5">
                     <label className="text-[10px] font-medium text-muted-foreground">تصميم (شهر)</label>
-                    <Input type="number" value={formData.preConMonths || "6"} readOnly
-                      className="text-[11px] h-7 bg-stone-50 border-stone-200 text-stone-500 cursor-default" />
+                    <Input type="number" value={formData.preConMonths || "6"} onChange={e => updateField("preConMonths", e.target.value)}
+                      className="text-[11px] h-7 bg-white/50 border-stone-200 focus:border-indigo-400" />
                   </div>
                   <div className="space-y-0.5">
                     <label className="text-[10px] font-medium text-muted-foreground">ما قبل بيع</label>
@@ -638,8 +638,8 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
                   </div>
                   <div className="space-y-0.5">
                     <label className="text-[10px] font-medium text-muted-foreground">إنشاء (شهر)</label>
-                    <Input type="number" value={formData.constructionMonths || "18"} readOnly
-                      className="text-[11px] h-7 bg-stone-50 border-stone-200 text-stone-500 cursor-default" />
+                    <Input type="number" value={formData.constructionMonths || "18"} onChange={e => updateField("constructionMonths", e.target.value)}
+                      className="text-[11px] h-7 bg-white/50 border-stone-200 focus:border-indigo-400" />
                   </div>
                 </div>
                 <div className="bg-stone-50 border border-stone-200 rounded px-2 py-1 mt-1.5 flex items-center justify-between">
@@ -652,9 +652,19 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
               <Section title="سيناريو التمويل" icon={Landmark} color="purple">
                 <div className="space-y-0.5">
                   <label className="text-[10px] font-medium text-muted-foreground">سيناريو البيع والتمويل</label>
-                  <div className="text-[11px] h-7 flex items-center px-2 bg-stone-50 border border-stone-200 rounded text-stone-600">
-                    {formData.financingScenario === "offplan_construction" ? "سيناريو 2 — أوف بلان بعد 20% إنشاء" : formData.financingScenario === "no_offplan" ? "سيناريو 3 — بدون أوف بلان" : "سيناريو 1 — أوف بلان + حساب ضمان"}
-                  </div>
+                  <Select
+                    value={formData.financingScenario || "offplan_escrow"}
+                    onValueChange={v => { updateField("financingScenario", v); }}
+                  >
+                    <SelectTrigger className="text-[11px] h-7 border-stone-200 focus:border-purple-400 bg-white/50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="offplan_escrow" className="text-xs">سيناريو 1 — أوف بلان + حساب ضمان (O1)</SelectItem>
+                      <SelectItem value="offplan_construction" className="text-xs">سيناريو 2 — أوف بلان بعد 20% إنشاء (O2)</SelectItem>
+                      <SelectItem value="no_offplan" className="text-xs">سيناريو 3 — بدون أوف بلان (O3)</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <div className="text-[9px] text-purple-600 mt-0.5">يؤثر على الجدول الشامل وخطط التدفق المالي</div>
                 </div>
               </Section>
@@ -700,9 +710,9 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
                 </div>
                 <GroupHeader label="GFA حسب النوع" color="purple" />
                 <div className="grid grid-cols-3 gap-1.5 mt-1">
-                  <Field label="سكني" value={formData.gfaResidentialSqft} readOnly type="number" suffix="sqft" source="ai" />
-                  <Field label="محلات" value={formData.gfaRetailSqft} readOnly type="number" suffix="sqft" source="ai" />
-                  <Field label="مكاتب" value={formData.gfaOfficesSqft} readOnly type="number" suffix="sqft" source="ai" />
+                  <Field label="سكني" value={formData.gfaResidentialSqft} onChange={v => updateField("gfaResidentialSqft", v)} type="number" suffix="sqft" source="ai" />
+                  <Field label="محلات" value={formData.gfaRetailSqft} onChange={v => updateField("gfaRetailSqft", v)} type="number" suffix="sqft" source="ai" />
+                  <Field label="مكاتب" value={formData.gfaOfficesSqft} onChange={v => updateField("gfaOfficesSqft", v)} type="number" suffix="sqft" source="ai" />
                 </div>
                 {(n("gfaResidentialSqft") > 0 || n("gfaRetailSqft") > 0 || n("gfaOfficesSqft") > 0) && (
                   <div className="bg-emerald-50 border border-emerald-200 rounded p-1.5 mt-1.5">
@@ -711,9 +721,9 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
                       <span className="text-[9px] font-semibold text-emerald-700">نسب قابل للبيع</span>
                     </div>
                     <div className="grid grid-cols-3 gap-1.5 mb-2">
-                      {n("gfaResidentialSqft") > 0 && <Field label="سكني%" value={formData.saleableResidentialPct ?? "95"} readOnly type="number" suffix="%" source="manual" />}
-                      {n("gfaRetailSqft") > 0 && <Field label="محلات%" value={formData.saleableRetailPct ?? "97"} readOnly type="number" suffix="%" source="manual" />}
-                      {n("gfaOfficesSqft") > 0 && <Field label="مكاتب%" value={formData.saleableOfficesPct ?? "95"} readOnly type="number" suffix="%" source="manual" />}
+                      {n("gfaResidentialSqft") > 0 && <Field label="سكني%" value={formData.saleableResidentialPct ?? "95"} onChange={v => updateField("saleableResidentialPct", v)} type="number" suffix="%" source="manual" />}
+                      {n("gfaRetailSqft") > 0 && <Field label="محلات%" value={formData.saleableRetailPct ?? "97"} onChange={v => updateField("saleableRetailPct", v)} type="number" suffix="%" source="manual" />}
+                      {n("gfaOfficesSqft") > 0 && <Field label="مكاتب%" value={formData.saleableOfficesPct ?? "95"} onChange={v => updateField("saleableOfficesPct", v)} type="number" suffix="%" source="manual" />}
                     </div>
                     <div className="text-[9px] font-semibold text-emerald-700 mb-1">قابل للبيع</div>
                     <div className="grid grid-cols-3 gap-1.5 text-center">
