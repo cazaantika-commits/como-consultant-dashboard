@@ -118,6 +118,10 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   );
   const [hasPlanChanges, setHasPlanChanges] = useState(false);
 
+  // ─── State: Marketing Timeline (Wael decides) ─────────────────────────────
+  const [marketingActualStart, setMarketingActualStart] = useState(6);
+  const [marketingActualEnd, setMarketingActualEnd] = useState(38);
+
   // ─── State: Payment Plan (installment-based) ──────────────────────────────
   const [ppDownPct, setPpDownPct] = useState(10); // دفعة أولى
   const [ppSecondPct, setPpSecondPct] = useState(10); // بعد شهر
@@ -178,6 +182,8 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
           if (parsed.ppInstallmentPct) setPpInstallmentPct(parsed.ppInstallmentPct);
           if (parsed.ppInstallmentEvery) setPpInstallmentEvery(parsed.ppInstallmentEvery);
           if (parsed.ppHandoverPct) setPpHandoverPct(parsed.ppHandoverPct);
+          if (parsed.marketingActualStart) setMarketingActualStart(parsed.marketingActualStart);
+          if (parsed.marketingActualEnd) setMarketingActualEnd(parsed.marketingActualEnd);
         } catch {}
       }
       setHasPlanChanges(false);
@@ -217,6 +223,14 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     return { designEnd, materialsStart, reraStart, marketingStart, salesStart, constructionStart, projectEnd };
   }, [designMonths, constructionMonths, marketingPrepLead, reraLead]);
   const salesMonths = timeline.projectEnd - timeline.salesStart + 1;
+
+  // Sync marketing actual start/end defaults when timeline changes (only if no saved plan)
+  useEffect(() => {
+    if (!plansQuery.data || plansQuery.data.length === 0) {
+      setMarketingActualStart(timeline.marketingStart);
+      setMarketingActualEnd(timeline.projectEnd);
+    }
+  }, [timeline.marketingStart, timeline.projectEnd, plansQuery.data]);
 
   // ─── Computed: Sales Distribution ─────────────────────────────────────────
   const offPlanUnits = Math.round((totalUnits * offPlan) / 100);
@@ -301,12 +315,12 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       offplanPct: offPlan,
       marketingBudgetPct: String(marketingPct),
       salesCommissionPct: String(commissionPct),
-      salesAbsorptionJson: JSON.stringify({ mode: salesMode, speed, template: curveTemplate, manual: manualUnits, marketingPrepLead, reraLead, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppInstallmentPct, ppInstallmentEvery, ppHandoverPct }),
+      salesAbsorptionJson: JSON.stringify({ mode: salesMode, speed, template: curveTemplate, manual: manualUnits, marketingPrepLead, reraLead, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppInstallmentPct, ppInstallmentEvery, ppHandoverPct, marketingActualStart, marketingActualEnd }),
       channelsJson: JSON.stringify(channelPcts),
       resultsJson: JSON.stringify({ escrowData, salesDistribution }),
     });
     setHasPlanChanges(false);
-  }, [selectedProjectId, planId, totalRevenue, designMonths, constructionMonths, offPlan, marketingPct, commissionPct, salesMode, speed, curveTemplate, manualUnits, channelPcts, escrowData, salesDistribution, marketingPrepLead, reraLead, savePlan]);
+  }, [selectedProjectId, planId, totalRevenue, designMonths, constructionMonths, offPlan, marketingPct, commissionPct, salesMode, speed, curveTemplate, manualUnits, channelPcts, escrowData, salesDistribution, marketingPrepLead, reraLead, marketingActualStart, marketingActualEnd, savePlan]);
 
   const updateUnit = (id: string, field: "count" | "area" | "price", value: number) => {
     setUnitData((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
@@ -888,45 +902,59 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                   <h2 className="text-[11px] font-bold text-gray-800">ميزانية التسويق والجدول الزمني</h2>
                   <Badge variant="secondary" className="text-[9px]">يحدده وائل</Badge>
                 </div>
-                <p className="text-[9px] text-gray-400">يبدأ بعد اكتمال تحضير مواد التسويق</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] text-gray-400">النطاق المتاح: شهر {timeline.marketingStart} إلى شهر {timeline.projectEnd}</span>
+                </div>
               </div>
               <div className="p-3">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {/* Marketing Total Budget */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  {/* Marketing Percentage - Wael decides */}
                   <div className="rounded-lg border border-pink-100 bg-pink-50/30 p-2">
-                    <label className="text-[10px] font-medium text-gray-600 block mb-1">إجمالي ميزانية التسويق</label>
+                    <label className="text-[10px] font-medium text-gray-600 block mb-1">نسبة التسويق من الإيرادات</label>
                     <div className="flex items-center gap-1">
-                      <input type="number" min={0} value={Math.round(marketingCost)} readOnly
-                        className="flex-1 h-6 text-[11px] text-center font-bold border border-gray-200 rounded bg-gray-50 text-pink-700" />
-                      <span className="text-[9px] text-gray-400">AED</span>
+                      <input type="number" min={0} max={20} step={0.5} value={marketingPct}
+                        onChange={(e) => { setMarketingPct(Number(e.target.value) || 0); setHasUnitChanges(true); setHasPlanChanges(true); }}
+                        className="w-14 h-6 text-[11px] text-center font-bold border border-pink-300 rounded bg-white text-pink-700 focus:ring-1 focus:ring-pink-400" />
+                      <span className="text-[9px] text-gray-400">%</span>
                     </div>
-                    <p className="text-[8px] text-gray-400 mt-0.5">محسوب: {marketingPct}% × الإيرادات</p>
+                    <p className="text-[8px] text-gray-400 mt-0.5">= {fmtFull(Math.round(marketingCost))} AED</p>
                   </div>
-                  {/* Marketing Duration */}
+                  {/* Marketing Start Month - Wael decides */}
                   <div className="rounded-lg border border-pink-100 bg-pink-50/30 p-2">
-                    <label className="text-[10px] font-medium text-gray-600 block mb-1">مدة التسويق</label>
+                    <label className="text-[10px] font-medium text-gray-600 block mb-1">بداية التسويق (شهر)</label>
                     <div className="flex items-center gap-1">
-                      <span className="text-[9px] text-gray-500">من شهر</span>
-                      <span className="text-[11px] font-bold text-pink-700">{timeline.marketingStart}</span>
-                      <span className="text-[9px] text-gray-500">إلى شهر</span>
-                      <span className="text-[11px] font-bold text-pink-700">{timeline.projectEnd}</span>
+                      <input type="number" min={timeline.marketingStart} max={timeline.projectEnd} value={marketingActualStart}
+                        onChange={(e) => { setMarketingActualStart(Number(e.target.value) || timeline.marketingStart); setHasPlanChanges(true); }}
+                        className="w-14 h-6 text-[11px] text-center font-bold border border-pink-300 rounded bg-white text-pink-700 focus:ring-1 focus:ring-pink-400" />
+                      <span className="text-[9px] text-gray-400">من أصل {timeline.projectEnd}</span>
                     </div>
-                    <p className="text-[8px] text-gray-400 mt-0.5">إجمالي: {timeline.projectEnd - timeline.marketingStart + 1} شهر (من الإعدادات)</p>
+                    <p className="text-[8px] text-gray-400 mt-0.5">أقرب بداية ممكنة: شهر {timeline.marketingStart}</p>
                   </div>
-                  {/* Monthly Marketing */}
+                  {/* Marketing End Month - Wael decides */}
                   <div className="rounded-lg border border-pink-100 bg-pink-50/30 p-2">
-                    <label className="text-[10px] font-medium text-gray-600 block mb-1">التسويق الشهري</label>
+                    <label className="text-[10px] font-medium text-gray-600 block mb-1">نهاية التسويق (شهر)</label>
                     <div className="flex items-center gap-1">
-                      <span className="text-[11px] font-bold text-pink-700">
-                        {(timeline.projectEnd - timeline.marketingStart + 1) > 0 ? fmtFull(Math.round(marketingCost / (timeline.projectEnd - timeline.marketingStart + 1))) : '—'}
+                      <input type="number" min={marketingActualStart} max={timeline.projectEnd} value={marketingActualEnd}
+                        onChange={(e) => { setMarketingActualEnd(Number(e.target.value) || timeline.projectEnd); setHasPlanChanges(true); }}
+                        className="w-14 h-6 text-[11px] text-center font-bold border border-pink-300 rounded bg-white text-pink-700 focus:ring-1 focus:ring-pink-400" />
+                      <span className="text-[9px] text-gray-400">أقصى: {timeline.projectEnd}</span>
+                    </div>
+                    <p className="text-[8px] text-gray-400 mt-0.5">المدة: {marketingActualEnd - marketingActualStart + 1} شهر</p>
+                  </div>
+                  {/* Monthly Marketing - computed */}
+                  <div className="rounded-lg border border-emerald-100 bg-emerald-50/30 p-2">
+                    <label className="text-[10px] font-medium text-gray-600 block mb-1">التسويق الشهري (محسوب)</label>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[11px] font-bold text-emerald-700">
+                        {(marketingActualEnd - marketingActualStart + 1) > 0 ? fmtFull(Math.round(marketingCost / (marketingActualEnd - marketingActualStart + 1))) : '—'}
                       </span>
                       <span className="text-[9px] text-gray-400">AED/شهر</span>
                     </div>
-                    <p className="text-[8px] text-gray-400 mt-0.5">موزع بالتساوي على مدة التسويق</p>
+                    <p className="text-[8px] text-gray-400 mt-0.5">= {fmtFull(Math.round(marketingCost))} ÷ {marketingActualEnd - marketingActualStart + 1} شهر</p>
                   </div>
                 </div>
                 <div className="mt-3 pt-3 border-t border-gray-100">
-                  <p className="text-[9px] text-gray-500">💡 لتعديل نسبة التسويق استخدم شريط "ميزانية التسويق" أعلاه. المبلغ يُوزع شهرياً من بداية إطلاق التسويق حتى نهاية المشروع ويُدفع من حساب المستثمر.</p>
+                  <p className="text-[9px] text-gray-500">💡 وائل يحدد النسبة والمدة. المبلغ يُدفع شهرياً من حساب المستثمر خلال الفترة المحددة. النطاق المتاح يبدأ بعد اكتمال تحضير مواد التسويق وينتهي باكتمال المشروع.</p>
                 </div>
               </div>
             </section>
