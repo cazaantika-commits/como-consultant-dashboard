@@ -6,9 +6,11 @@ import { useToast } from "@/hooks/use-toast";
 import { ProjectSelector } from "@/components/ProjectSelector";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  Save, Loader2, HardHat, TrendingUp, DollarSign, Info,
+  Save, Loader2, HardHat, TrendingUp, DollarSign,
+  RotateCcw, Info, Percent,
 } from "lucide-react";
 
 const MONTH_NAMES_AR = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
@@ -120,6 +122,17 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
     setIsDirty(false);
   }, [project]);
 
+  const handleRegenerateFromTemplate = useCallback((type: typeof curveType) => {
+    setCurveType(type);
+    setMonthlyProgress(generateSCurve(constructionMonths, type));
+    setIsDirty(true);
+  }, [constructionMonths]);
+
+  const handleMonthsChange = useCallback((newMonths: number) => {
+    setConstructionMonths(newMonths);
+    setMonthlyProgress(generateSCurve(newMonths, curveType));
+    setIsDirty(true);
+  }, [curveType]);
 
   const handleMonthEdit = useCallback((index: number, value: number) => {
     setMonthlyProgress(prev => {
@@ -286,27 +299,37 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
 
         {selectedProjectId && project && (
           <div className="space-y-3">
-            {/* Summary Cards (read-only display) */}
+            {/* Summary Cards */}
             <div className="grid grid-cols-4 gap-3">
-              <div className="bg-white rounded-lg p-2 border border-slate-200 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-slate-600">مدة الإنشاء</span>
-                  <Badge variant="outline" className="text-[10px] h-5 font-bold text-slate-800 border-slate-300">{constructionMonths} شهر</Badge>
+              <div className="bg-white rounded-lg p-2 border border-gray-100 shadow-sm">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-gray-600">مدة الإنشاء</span>
+                  <Badge variant="outline" className="text-[9px] h-4">{constructionMonths} شهر</Badge>
                 </div>
+                <Slider
+                  value={[constructionMonths]}
+                  onValueChange={([v]) => handleMonthsChange(v)}
+                  min={6} max={48} step={1} className="mt-1"
+                />
               </div>
 
-              <div className="bg-white rounded-lg p-2 border border-slate-200 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-slate-600">دفعة مقدمة</span>
-                  <Badge variant="outline" className="text-[10px] h-5 font-bold text-slate-800 border-slate-300">{mobilizationPct}%</Badge>
+              <div className="bg-white rounded-lg p-2 border border-gray-100 shadow-sm">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-gray-600">دفعة مقدمة</span>
+                  <Badge variant="outline" className="text-[9px] h-4">{mobilizationPct}%</Badge>
                 </div>
+                <Slider
+                  value={[mobilizationPct]}
+                  onValueChange={([v]) => { setMobilizationPct(v); setIsDirty(true); }}
+                  min={0} max={25} step={1} className="mt-1"
+                />
               </div>
 
-              <div className="bg-white rounded-lg p-2 border border-slate-200 shadow-sm">
+              <div className="bg-white rounded-lg p-2 border border-red-100 shadow-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] text-red-600">تكلفة الإنشاء</span>
                   <Tooltip>
-                    <TooltipTrigger><Info className="w-3 h-3 text-slate-400" /></TooltipTrigger>
+                    <TooltipTrigger><Info className="w-3 h-3 text-gray-400" /></TooltipTrigger>
                     <TooltipContent>BUA × تكلفة/قدم</TooltipContent>
                   </Tooltip>
                 </div>
@@ -315,24 +338,27 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg p-2 border border-slate-200 shadow-sm">
+              <div className="bg-white rounded-lg p-2 border border-amber-100 shadow-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] text-amber-700">الريتنشن ({retentionPct}%)</span>
                 </div>
-                <div className="text-[9px] text-slate-600">5% بعد شهرين | 5% بعد 13 شهر</div>
+                <div className="text-[9px] text-gray-600">5% بعد شهرين | 5% بعد 13 شهر</div>
               </div>
             </div>
 
-            {/* Curve Type Display (read-only) */}
-            <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-2">
+            {/* Curve Type Selector */}
+            <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-2">
               <div className="flex items-center justify-between mb-1.5">
-                <h3 className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                <h3 className="text-[11px] font-bold text-gray-700 flex items-center gap-1.5">
                   <TrendingUp className="w-3.5 h-3.5 text-teal-600" />
                   نوع المنحنى
                 </h3>
                 {totalPct !== 100 && (
                   <Badge variant="destructive" className="text-[9px] h-4">المجموع: {totalPct}%</Badge>
                 )}
+                <Button variant="ghost" size="sm" onClick={() => handleRegenerateFromTemplate(curveType)} className="gap-1 text-[10px] h-5 text-gray-600 hover:text-teal-700">
+                  <RotateCcw className="w-3 h-3" /> إعادة توليد
+                </Button>
               </div>
               <div className="grid grid-cols-4 gap-1.5">
                 {[
@@ -341,16 +367,17 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
                   { id: "back_loaded" as const, label: "متأخر" },
                   { id: "linear" as const, label: "خطي" },
                 ].map(t => (
-                  <div
+                  <button
                     key={t.id}
-                    className={`py-1 px-2 rounded border text-[10px] font-medium text-center ${
+                    onClick={() => handleRegenerateFromTemplate(t.id)}
+                    className={`py-1 px-2 rounded border text-[10px] font-medium transition-all ${
                       curveType === t.id
                         ? "border-teal-500 bg-teal-50 text-teal-700"
-                        : "border-slate-200 bg-slate-50 text-slate-400"
+                        : "border-gray-200 hover:border-teal-300 bg-white text-gray-700"
                     }`}
                   >
                     {t.label}
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -358,14 +385,14 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
             {/* ═══════════════════════════════════════════════════════════ */}
             {/* MAIN GRID: Month boxes + inputs + payment rows */}
             {/* ═══════════════════════════════════════════════════════════ */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="px-3 py-2 border-b border-slate-200 flex items-center justify-between">
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <DollarSign className="w-3.5 h-3.5 text-teal-600" />
-                  <h2 className="text-[11px] font-bold text-slate-800">جدول دفعات المقاول</h2>
+                  <h2 className="text-[11px] font-bold text-gray-800">جدول دفعات المقاول</h2>
                   {totalPct !== 100 && <Badge variant="destructive" className="text-[9px]">الإنجاز: {totalPct}% ≠ 100%</Badge>}
                 </div>
-                <div className="flex items-center gap-2 text-[9px] text-slate-500">
+                <div className="flex items-center gap-2 text-[9px] text-gray-500">
                   <span>المقدمة: {mobilizationPct}%</span>
                   <span>|</span>
                   <span>ريتنشن: {retentionPct}%</span>
@@ -382,7 +409,7 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
                       const isConstruction = i < constructionMonths;
                       return (
                         <div key={i} className={`text-center text-[8px] font-bold py-1.5 border-b border-l border-slate-200 ${
-                          isConstruction ? 'bg-slate-100 text-slate-700' : 'bg-slate-50 text-slate-500'
+                          isConstruction ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-50 text-slate-500'
                         }`}>
                           {getMonthLabelShort(i, constructionStartYear, constructionStartMonth)}
                         </div>
@@ -452,13 +479,13 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mt-3">
             <div className="flex items-center gap-2 mb-3">
               <TrendingUp className="w-4 h-4 text-teal-600" />
-              <span className="text-xs font-bold text-slate-800">منحنى الإنجاز الشهري</span>
-              <span className="text-[9px] text-slate-400 mr-auto">نسبة الإنجاز % لكل شهر إنشاء</span>
+              <span className="text-xs font-bold text-gray-800">منحنى الإنجاز الشهري</span>
+              <span className="text-[9px] text-gray-400 mr-auto">نسبة الإنجاز % لكل شهر إنشاء</span>
             </div>
             <div className="overflow-x-auto">
               <div style={{ display: 'grid', gridTemplateColumns: `70px repeat(${totalColumns}, minmax(40px, 1fr))`, direction: 'rtl' }}>
                 {/* Chart bars row */}
-                <div className="flex flex-col justify-end items-center text-[7px] text-slate-400" style={{ height: '100px' }}>
+                <div className="flex flex-col justify-end items-center text-[7px] text-gray-400" style={{ height: '100px' }}>
                   <span>{Math.max(...monthlyProgress.slice(0, constructionMonths), 1).toFixed(0)}%</span>
                   <div className="flex-1" />
                   <span>0%</span>
@@ -491,7 +518,7 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
                 {Array.from({ length: totalColumns }, (_, i) => {
                   const isConstruction = i < constructionMonths;
                   return (
-                    <div key={i} className={`text-center text-[7px] font-bold py-0.5 ${isConstruction ? 'text-slate-700' : 'text-slate-400'}`}>
+                    <div key={i} className={`text-center text-[7px] font-bold py-0.5 ${isConstruction ? 'text-teal-700' : 'text-gray-400'}`}>
                       {getMonthLabelShort(i, constructionStartYear, constructionStartMonth)}
                     </div>
                   );
@@ -501,11 +528,11 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
             <div className="flex items-center justify-center gap-4 mt-2">
               <div className="flex items-center gap-1">
                 <div className="w-3 h-2 rounded-sm" style={{ background: 'linear-gradient(to top, #0d9488, #5eead4)' }} />
-                <span className="text-[8px] text-slate-500">إنجاز شهري %</span>
+                <span className="text-[8px] text-gray-500">إنجاز شهري %</span>
               </div>
               <div className="flex items-center gap-1">
                 <div className="w-3 h-0.5 bg-amber-500 rounded" />
-                <span className="text-[8px] text-slate-500">تراكمي %</span>
+                <span className="text-[8px] text-gray-500">تراكمي %</span>
               </div>
             </div>
           </div>
