@@ -48,6 +48,7 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
     onSuccess: () => { plansQuery.refetch(); toast({ title: "تم حفظ بيانات التسويق ✓" }); },
     onError: (e: any) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
   });
+  const updateProject = trpc.projects.update.useMutation();
 
   // ─── State ─────────────────────────────────────────────────────────────────
   const [planId, setPlanId] = useState<number | undefined>(undefined);
@@ -222,8 +223,10 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
       salesAbsorptionJson: JSON.stringify(updatedAbsorption),
       channelsJson: JSON.stringify(channelPcts),
     });
+    // Also sync marketingPct to the project table so other pages read it correctly
+    updateProject.mutate({ id: selectedProjectId, marketingPct: String(marketingPct) });
     setHasChanges(false);
-  }, [selectedProjectId, planId, marketingPct, channelPcts, marketingActualStart, marketingActualEnd, marketingDistribution, marketingPrepLead, reraLead, plansQuery.data, savePlan]);
+  }, [selectedProjectId, planId, marketingPct, channelPcts, marketingActualStart, marketingActualEnd, marketingDistribution, marketingPrepLead, reraLead, plansQuery.data, savePlan, updateProject]);
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // RENDER

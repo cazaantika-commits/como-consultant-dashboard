@@ -1046,3 +1046,6 @@
 - [x] Apply month names to all tables in V2WaelSales (sales distribution, cash inflow, payment plan grid)
 - [x] Apply month names to all tables in MarketingPage (monthly distribution table)
 - [x] V2WaelSales timeline: Ensure it reads ALL phase durations from project settings (designMonths, constructionMonths, marketingPrepLead, reraLead, startDate) and updates dynamically
+- [x] Audit: MarketingPage now syncs marketingPct to BOTH plan table AND project table (fixes disconnect where V2WaelSales reads from project)
+- [x] Audit: Verified all pages read startDate, marketingPrepMonths, reraLeadMonths from project table correctly
+- [x] Audit: Verified commissionPct saves to both project and plan tables from V2WaelSales
