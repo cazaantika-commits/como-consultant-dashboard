@@ -1019,3 +1019,7 @@
 - [x] Fix V2WaelSales: Wael must control marketing launch duration and monthly distribution (not just percentage)
 - [x] Restore detailed cash inflow table (Payment Plan × Sales distribution) in V2WaelSales
 - [x] V2WaelSales: Add monthly marketing distribution table (Wael inputs amount per channel per month)
+- [x] V2WaelSales: Add detailed payment plan breakdown table (rows=sale months, cols=project months, cells=installment amount from that sale in that month, bottom row=total monthly collection)
+- [x] Move all marketing sections from V2WaelSales to a new dedicated Marketing page (channels, budget, distribution table)
+- [x] Create new Timeline page (move timeline bar + consultant schedule table from V2WaelSales)
+- [x] Register Marketing and Timeline as new tabs in BateekhaPage

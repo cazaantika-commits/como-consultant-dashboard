@@ -18,8 +18,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  ArrowRight, TrendingUp, Target, Megaphone, Calendar, DollarSign,
-  Palette, Rocket, FileCheck, HardHat, Save, Loader2,
+  ArrowRight, TrendingUp, Target, DollarSign,
+  Save, Loader2,
   Building2, Percent, CreditCard, Table2, Info, Plus, Trash2, RefreshCw,
 } from "lucide-react";
 import {
@@ -51,14 +51,7 @@ const MARKETING_CHANNELS = [
   { id: "content", name: "المحتوى والعلامة", defaultPct: 5, color: "#06b6d4" },
 ];
 
-const PROJECT_PHASES = [
-  { id: "design", name: "التصاميم", color: "#3b82f6", icon: Palette },
-  { id: "materials", name: "تحضير مواد التسويق", color: "#f59e0b", icon: Rocket },
-  { id: "rera", name: "ريرا + اعتمادات البيع", color: "#8b5cf6", icon: FileCheck },
-  { id: "marketing", name: "إطلاق التسويق", color: "#ec4899", icon: Megaphone },
-  { id: "sales", name: "بدء المبيعات", color: "#10b981", icon: Target },
-  { id: "construction", name: "الإنشاء", color: "#64748b", icon: HardHat },
-];
+
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
 function fmt(n: number): string {
@@ -300,7 +293,8 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   //   - Second payment (ppSecondPct%) after ppSecondAfterMonths months
   //   - Construction installments (ppInstallmentPct% each ppInstallmentEvery months)
   //   - Handover payment (ppHandoverPct%) at project end
-  const cashInflowData = useMemo(() => {
+  // Also produces a detailed grid: perSaleGrid[saleMonth][projectMonth] = amount
+  const { cashInflowData, perSaleGrid, activeSaleMonths } = useMemo(() => {
     const totalMonths = timeline.projectEnd;
     const monthlySales: number[] = Array(totalMonths + 1).fill(0);
     // Convert salesDistribution (units per month) to revenue per month
@@ -313,42 +307,60 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
 
     // Cash inflow per month (extra months for post-completion payments)
     const cashPerMonth: number[] = Array(totalMonths + 24).fill(0);
+    // Detailed grid: for each sale month, track what goes into each project month
+    const grid: Record<number, number[]> = {}; // grid[saleMonth] = amounts per project month
+    const saleMonthsList: number[] = [];
 
     for (let saleMonth = 1; saleMonth <= totalMonths; saleMonth++) {
       const saleAmount = monthlySales[saleMonth];
       if (saleAmount <= 0) continue;
+      saleMonthsList.push(saleMonth);
+      grid[saleMonth] = Array(totalMonths + 1).fill(0);
 
       // 1. Down payment - immediate
       const downAmount = saleAmount * (ppDownPct / 100);
-      if (saleMonth < cashPerMonth.length) cashPerMonth[saleMonth] += downAmount;
+      if (saleMonth < cashPerMonth.length) {
+        cashPerMonth[saleMonth] += downAmount;
+        grid[saleMonth][saleMonth] += downAmount;
+      }
 
       // 2. Second payment - after ppSecondAfterMonths
       const secondAmount = saleAmount * (ppSecondPct / 100);
       const secondMonth = saleMonth + ppSecondAfterMonths;
-      if (secondMonth < cashPerMonth.length) cashPerMonth[secondMonth] += secondAmount;
+      if (secondMonth < cashPerMonth.length) {
+        cashPerMonth[secondMonth] += secondAmount;
+        if (secondMonth <= totalMonths) grid[saleMonth][secondMonth] += secondAmount;
+      }
 
       // 3. Construction installments - spread over remaining construction period
       const installmentTotal = saleAmount * (ppDuringTotal / 100);
       const constructionEnd = timeline.constructionStart + constructionMonths - 1;
-      // Installments every ppInstallmentEvery months from sale date
-      const installmentMonths: number[] = [];
+      const installmentMonthsList: number[] = [];
       for (let im = saleMonth + ppInstallmentEvery + ppSecondAfterMonths; im <= constructionEnd; im += ppInstallmentEvery) {
-        installmentMonths.push(im);
+        installmentMonthsList.push(im);
       }
-      if (installmentMonths.length > 0) {
-        const perInstallment = installmentTotal / installmentMonths.length;
-        installmentMonths.forEach(im => {
-          if (im < cashPerMonth.length) cashPerMonth[im] += perInstallment;
+      if (installmentMonthsList.length > 0) {
+        const perInstallment = installmentTotal / installmentMonthsList.length;
+        installmentMonthsList.forEach(im => {
+          if (im < cashPerMonth.length) {
+            cashPerMonth[im] += perInstallment;
+            if (im <= totalMonths) grid[saleMonth][im] += perInstallment;
+          }
         });
       } else {
-        // If no installment months fit, put it all at construction end
-        if (constructionEnd < cashPerMonth.length) cashPerMonth[constructionEnd] += installmentTotal;
+        if (constructionEnd < cashPerMonth.length) {
+          cashPerMonth[constructionEnd] += installmentTotal;
+          if (constructionEnd <= totalMonths) grid[saleMonth][constructionEnd] += installmentTotal;
+        }
       }
 
       // 4. Handover payment - at project end
       const handoverAmount = saleAmount * (ppHandoverPct / 100);
       const handoverMonth = constructionEnd;
-      if (handoverMonth < cashPerMonth.length) cashPerMonth[handoverMonth] += handoverAmount;
+      if (handoverMonth < cashPerMonth.length) {
+        cashPerMonth[handoverMonth] += handoverAmount;
+        if (handoverMonth <= totalMonths) grid[saleMonth][handoverMonth] += handoverAmount;
+      }
     }
 
     // Build results table
@@ -362,7 +374,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       cumCash += cashInflow;
       data.push({ month: m, salesThisMonth, cashInflow, cumSales, cumCash });
     }
-    return data;
+    return { cashInflowData: data, perSaleGrid: grid, activeSaleMonths: saleMonthsList };
   }, [salesDistribution, avgUnitPrice, timeline, constructionMonths, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppDuringTotal, ppInstallmentEvery, ppHandoverPct]);
 
   // ─── Computed: Escrow with detailed cash inflow ────────────────────────────
@@ -660,13 +672,13 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
               <KPICard label="ROI" value={roiCosts + "%"} sub="على التكاليف" color="violet" />
             </section>
 
-            {/* SECTION 3: OPERATION COSTS + MARKETING DISTRIBUTION */}
-            <section className="grid grid-cols-12 gap-2">
-              <div className="col-span-12 md:col-span-4 bg-white rounded-xl border border-gray-100 shadow-sm p-2 space-y-1">
-                <h3 className="text-[11px] font-bold text-gray-800 flex items-center gap-1.5">
-                  <Percent className="w-3.5 h-3.5 text-amber-600" />
-                  تكاليف العملية
-                </h3>
+            {/* SECTION 3: OPERATION COSTS */}
+            <section className="bg-white rounded-xl border border-gray-100 shadow-sm p-2">
+              <h3 className="text-[11px] font-bold text-gray-800 flex items-center gap-1.5 mb-2">
+                <Percent className="w-3.5 h-3.5 text-amber-600" />
+                تكاليف العملية
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] text-gray-600">ميزانية التسويق</span>
@@ -690,110 +702,6 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                   </div>
                   <Slider value={[offPlan]} onValueChange={([v]) => { setOffPlan(v); setHasPlanChanges(true); }} min={30} max={100} step={5} className="w-full" />
                   <p className="text-[9px] text-gray-400">{offPlanUnits} وحدة من {totalUnits}</p>
-                </div>
-              </div>
-              <div className="col-span-12 md:col-span-8 bg-white rounded-xl border border-gray-100 shadow-sm p-2">
-                <h3 className="text-[11px] font-bold text-gray-800 flex items-center gap-1.5 mb-2">
-                  <Megaphone className="w-3.5 h-3.5 text-pink-600" />
-                  توزيع قنوات التسويق
-                  <Badge variant="secondary" className="text-[9px]">{fmtFull(Math.round(marketingCost))} AED</Badge>
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {MARKETING_CHANNELS.map((ch) => (
-                    <div key={ch.id} className="rounded-lg border border-gray-100 p-1.5">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-medium text-gray-700">{ch.name}</span>
-                        <span className="text-[10px] font-bold" style={{ color: ch.color }}>{channelPcts[ch.id] || 0}%</span>
-                      </div>
-                      <Slider value={[channelPcts[ch.id] || 0]} onValueChange={([v]) => { setChannelPcts((prev) => ({ ...prev, [ch.id]: v })); setHasPlanChanges(true); }} min={0} max={60} step={5} className="w-full" />
-                      <p className="text-[8px] text-gray-400 mt-0.5">{fmtFull(Math.round(marketingCost * (channelPcts[ch.id] || 0) / 100))} AED</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </section>
-
-            {/* SECTION 4: PROJECT PHASES TIMELINE */}
-            <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-3 py-2 border-b border-gray-100">
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-3.5 h-3.5 text-blue-600" />
-                    <h2 className="text-[11px] font-bold text-gray-800">الجدول الزمني</h2>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1">
-                      <span className="text-[10px] text-gray-500">تصاميم:</span>
-                      <input type="number" min={1} max={24} value={designMonths} onChange={(e) => { setDesignMonths(parseInt(e.target.value) || 8); setHasPlanChanges(true); }}
-                        className="w-9 h-5 text-center text-[10px] border border-gray-200 rounded" />
-                      <span className="text-[10px] text-gray-400">شهر</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-[10px] text-gray-500">إنشاء:</span>
-                      <input type="number" min={6} max={60} value={constructionMonths} onChange={(e) => { setConstructionMonths(parseInt(e.target.value) || 30); setHasPlanChanges(true); }}
-                        className="w-9 h-5 text-center text-[10px] border border-gray-200 rounded" />
-                      <span className="text-[10px] text-gray-400">شهر</span>
-                    </div>
-                  </div>
-                </div>
-                {/* Month numbers on same header line */}
-                <div className="flex items-center gap-2">
-                  <div className="w-32 flex-shrink-0" />
-                  <div className="flex-1 flex">
-                    {Array.from({ length: timeline.projectEnd }, (_, i) => {
-                      const isDesign = i < designMonths;
-                      const displayNum = isDesign ? i + 1 : i - designMonths + 1;
-                      return (
-                        <div key={i} className="flex-1 text-center">
-                          <span className={`text-[7px] font-bold ${isDesign ? 'text-blue-600' : 'text-emerald-600'}`}>{displayNum}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-              <div className="p-2">
-                <div className="space-y-1.5">
-                  {PROJECT_PHASES.map((phase) => {
-                    let start = 0, end = 0;
-                    if (phase.id === "design") { start = 1; end = timeline.designEnd; }
-                    else if (phase.id === "materials") { start = timeline.materialsStart; end = timeline.materialsStart + 2; }
-                    else if (phase.id === "rera") { start = timeline.reraStart; end = timeline.reraStart + 1; }
-                    else if (phase.id === "marketing") { start = timeline.marketingStart; end = timeline.projectEnd; }
-                    else if (phase.id === "sales") { start = timeline.salesStart; end = timeline.projectEnd; }
-                    else if (phase.id === "construction") { start = timeline.constructionStart; end = timeline.projectEnd; }
-                    const total = timeline.projectEnd;
-                    const rightPct = ((start - 1) / total) * 100;
-                    const widthPct = ((end - start + 1) / total) * 100;
-                    const Icon = phase.icon;
-                    return (
-                      <div key={phase.id} className="flex items-center gap-2">
-                        <div className="w-32 flex items-center gap-1.5 flex-shrink-0">
-                          <Icon className="w-3 h-3" style={{ color: phase.color }} />
-                          <span className="text-[10px] font-medium text-gray-700 truncate">{phase.name}</span>
-                        </div>
-                        <div className="flex-1 h-5 bg-gray-100 rounded-full relative overflow-hidden">
-                          <div className="absolute h-full rounded-full transition-all" style={{ right: `${rightPct}%`, width: `${widthPct}%`, backgroundColor: phase.color, opacity: 0.8 }} />
-                          <span className="absolute inset-0 flex items-center justify-center text-[8px] font-medium text-gray-700">شهر {start} - {end}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-1 flex-wrap">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-gray-500">مدة تحضير المواد:</span>
-                    <input type="number" min={1} max={6} value={marketingPrepLead} onChange={(e) => { setMarketingPrepLead(parseInt(e.target.value) || 2); setHasPlanChanges(true); }}
-                      className="w-8 h-5 text-center text-[10px] border border-gray-200 rounded" />
-                    <span className="text-[10px] text-gray-400">شهر (من الإعدادات)</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-gray-500">مدة ريرا:</span>
-                    <input type="number" min={1} max={6} value={reraLead} onChange={(e) => { setReraLead(parseInt(e.target.value) || 2); setHasPlanChanges(true); }}
-                      className="w-8 h-5 text-center text-[10px] border border-gray-200 rounded" />
-                    <span className="text-[10px] text-gray-400">شهر (من الإعدادات)</span>
-                  </div>
                 </div>
               </div>
             </section>
@@ -1079,168 +987,78 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
               </div>
             </section>
 
-            {/* SECTION 8: MARKETING BUDGET & TIMELINE (Wael inputs) */}
+            {/* SECTION 8: DETAILED PAYMENT PLAN BREAKDOWN GRID */}
+            {activeSaleMonths.length > 0 && (
             <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
-                  <Megaphone className="w-3.5 h-3.5 text-pink-600" />
-                  <h2 className="text-[11px] font-bold text-gray-800">توزيع ميزانية التسويق</h2>
-                  <Badge variant="secondary" className="text-[9px]">يحدده وائل</Badge>
+                  <Table2 className="w-3.5 h-3.5 text-purple-600" />
+                  <h2 className="text-[11px] font-bold text-gray-800">تفصيل توزيع الأقساط — من أين جاء كل مبلغ</h2>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="text-[9px]">
-                    الميزانية: {fmtFull(Math.round(marketingCost))} AED ({marketingPct}%)
-                  </Badge>
-                  <Badge variant="outline" className="text-[9px]">
-                    الفترة: شهر {marketingActualStart} → {marketingActualEnd}
-                  </Badge>
-                  <Button variant="outline" size="sm" className="h-5 text-[9px] gap-1" onClick={() => {
-                    // Distribute evenly across all channels and months
-                    const months = marketingActualEnd - marketingActualStart + 1;
-                    const perChannelTotal = marketingCost / MARKETING_CHANNELS.length;
-                    const perMonth = Math.round(perChannelTotal / months);
-                    const newDist: Record<string, number[]> = {};
-                    MARKETING_CHANNELS.forEach(ch => {
-                      newDist[ch.id] = Array(months).fill(perMonth);
-                    });
-                    setMarketingDistribution(newDist);
-                    setHasPlanChanges(true);
-                  }}>
-                    <RefreshCw className="w-3 h-3" /> توزيع متساوي
-                  </Button>
+                <div className="flex items-center gap-2 text-[9px] text-gray-500">
+                  <Info className="w-3 h-3" />
+                  الصفوف = أشهر البيع | الأعمدة = أشهر التحصيل
                 </div>
               </div>
-              <div className="p-3">
-                {/* Summary row: budget controls */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-                  <div className="rounded-lg border border-pink-100 bg-pink-50/30 p-2">
-                    <label className="text-[10px] font-medium text-gray-600 block mb-1">نسبة التسويق من الإيرادات</label>
-                    <div className="flex items-center gap-1">
-                      <input type="number" min={0} max={20} step={0.5} value={marketingPct}
-                        onChange={(e) => { setMarketingPct(Number(e.target.value) || 0); setHasUnitChanges(true); setHasPlanChanges(true); }}
-                        className="w-14 h-6 text-[11px] text-center font-bold border border-pink-300 rounded bg-white text-pink-700 focus:ring-1 focus:ring-pink-400" />
-                      <span className="text-[9px] text-gray-400">% = {fmtFull(Math.round(marketingCost))} AED</span>
-                    </div>
-                  </div>
-                  <div className="rounded-lg border border-pink-100 bg-pink-50/30 p-2">
-                    <label className="text-[10px] font-medium text-gray-600 block mb-1">بداية التسويق (شهر)</label>
-                    <div className="flex items-center gap-1">
-                      <input type="number" min={timeline.marketingStart} max={timeline.projectEnd} value={marketingActualStart}
-                        onChange={(e) => { setMarketingActualStart(Number(e.target.value) || timeline.marketingStart); setHasPlanChanges(true); }}
-                        className="w-14 h-6 text-[11px] text-center font-bold border border-pink-300 rounded bg-white text-pink-700 focus:ring-1 focus:ring-pink-400" />
-                      <span className="text-[9px] text-gray-400">→</span>
-                      <input type="number" min={marketingActualStart} max={timeline.projectEnd} value={marketingActualEnd}
-                        onChange={(e) => { setMarketingActualEnd(Number(e.target.value) || timeline.projectEnd); setHasPlanChanges(true); }}
-                        className="w-14 h-6 text-[11px] text-center font-bold border border-pink-300 rounded bg-white text-pink-700 focus:ring-1 focus:ring-pink-400" />
-                      <span className="text-[9px] text-gray-400">({marketingActualEnd - marketingActualStart + 1} شهر)</span>
-                    </div>
-                  </div>
-                  <div className="rounded-lg border border-emerald-100 bg-emerald-50/30 p-2">
-                    <label className="text-[10px] font-medium text-gray-600 block mb-1">المجموع المدخل</label>
-                    <div className="flex items-center gap-1">
-                      {(() => {
-                        const totalEntered = Object.values(marketingDistribution).flat().reduce((s, v) => s + (v || 0), 0);
-                        const diff = marketingCost - totalEntered;
-                        return (
-                          <>
-                            <span className={`text-[11px] font-bold ${Math.abs(diff) < 100 ? 'text-emerald-700' : 'text-red-600'}`}>
-                              {fmtFull(Math.round(totalEntered))}
-                            </span>
-                            <span className="text-[9px] text-gray-400">/ {fmtFull(Math.round(marketingCost))}</span>
-                            {Math.abs(diff) >= 100 && <span className="text-[9px] text-red-500">({diff > 0 ? 'متبقي' : 'زيادة'}: {fmtFull(Math.abs(Math.round(diff)))})</span>}
-                          </>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                </div>
-                {/* Distribution Table: rows=channels, columns=months */}
-                <div className="overflow-x-auto max-h-[400px] overflow-y-auto border border-gray-200 rounded-lg">
-                  <table className="w-full text-[10px]">
-                    <thead className="sticky top-0 bg-gray-50 z-10 border-b border-gray-200">
-                      <tr>
-                        <th className="text-right py-1.5 px-2 text-gray-600 font-bold sticky right-0 bg-gray-50 min-w-[120px]">القناة / الشهر</th>
-                        <th className="text-center py-1.5 px-1 text-gray-600 font-bold min-w-[60px]">النسبة</th>
-                        {Array.from({ length: marketingActualEnd - marketingActualStart + 1 }, (_, i) => (
-                          <th key={i} className="text-center py-1.5 px-1 text-gray-500 font-medium min-w-[70px]">
-                            ش{marketingActualStart + i}
-                          </th>
-                        ))}
-                        <th className="text-center py-1.5 px-2 text-gray-600 font-bold min-w-[80px]">المجموع</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {MARKETING_CHANNELS.map((ch) => {
-                        const months = marketingActualEnd - marketingActualStart + 1;
-                        const channelAmounts = marketingDistribution[ch.id] || Array(months).fill(0);
-                        const channelTotal = channelAmounts.reduce((s, v) => s + (v || 0), 0);
-                        const channelPctOfBudget = marketingCost > 0 ? ((channelTotal / marketingCost) * 100).toFixed(1) : '0';
-                        return (
-                          <tr key={ch.id} className="border-b border-gray-50 hover:bg-gray-50/50">
-                            <td className="py-1 px-2 font-medium text-gray-700 sticky right-0 bg-white">
-                              <div className="flex items-center gap-1">
-                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ch.color }} />
-                                {ch.name}
-                              </div>
-                            </td>
-                            <td className="py-1 px-1 text-center">
-                              <span className="text-[10px] font-bold" style={{ color: ch.color }}>{channelPctOfBudget}%</span>
-                            </td>
-                            {Array.from({ length: months }, (_, i) => (
-                              <td key={i} className="py-1 px-0.5 text-center">
-                                <input
-                                  type="number"
-                                  min={0}
-                                  step={1000}
-                                  value={channelAmounts[i] || 0}
-                                  onChange={(e) => {
-                                    const val = Number(e.target.value) || 0;
-                                    setMarketingDistribution(prev => {
-                                      const arr = [...(prev[ch.id] || Array(months).fill(0))];
-                                      // Ensure array is correct length
-                                      while (arr.length < months) arr.push(0);
-                                      arr[i] = val;
-                                      return { ...prev, [ch.id]: arr };
-                                    });
-                                    setHasPlanChanges(true);
-                                  }}
-                                  className="w-[60px] h-5 text-[9px] text-center border border-gray-200 rounded bg-white focus:ring-1 focus:ring-pink-300 focus:border-pink-300"
-                                />
+              <div className="p-2 overflow-x-auto max-h-[500px] overflow-y-auto">
+                <table className="w-full text-[8px] border-collapse">
+                  <thead className="sticky top-0 bg-white z-10">
+                    <tr className="border-b-2 border-gray-300">
+                      <th className="py-1 px-1 text-right text-gray-600 font-bold sticky left-0 bg-white z-20 min-w-[80px]">شهر البيع \ شهر التحصيل</th>
+                      <th className="py-1 px-1 text-right text-gray-600 font-bold sticky left-[80px] bg-white z-20 min-w-[60px]">مبلغ البيع</th>
+                      {Array.from({ length: timeline.projectEnd }, (_, i) => i + 1).map(m => (
+                        <th key={m} className={`py-1 px-0.5 text-center font-medium min-w-[45px] ${m === timeline.salesStart ? 'border-l-2 border-amber-300' : ''} ${m >= timeline.salesStart ? 'text-gray-700' : 'text-gray-400'}`}>
+                          ش{m}
+                        </th>
+                      ))}
+                      <th className="py-1 px-1 text-center text-gray-700 font-bold min-w-[60px]">المجموع</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activeSaleMonths.map((saleMonth, idx) => {
+                      const rowData = perSaleGrid[saleMonth];
+                      const saleAmount = cashInflowData.find(d => d.month === saleMonth)?.salesThisMonth || 0;
+                      const rowTotal = rowData ? rowData.reduce((s, v) => s + v, 0) : 0;
+                      return (
+                        <tr key={saleMonth} className={`border-b border-gray-50 ${idx % 2 === 0 ? 'bg-gray-50/30' : ''} hover:bg-purple-50/30`}>
+                          <td className="py-0.5 px-1 font-bold text-purple-700 sticky left-0 bg-inherit z-10">شهر {saleMonth} ({salesDistribution[saleMonth - timeline.salesStart] || 0} وحدة)</td>
+                          <td className="py-0.5 px-1 font-mono text-emerald-700 sticky left-[80px] bg-inherit z-10">{fmtFull(Math.round(saleAmount))}</td>
+                          {Array.from({ length: timeline.projectEnd }, (_, i) => i + 1).map(m => {
+                            const val = rowData ? rowData[m] || 0 : 0;
+                            return (
+                              <td key={m} className={`py-0.5 px-0.5 text-center font-mono ${m === saleMonth ? 'bg-amber-50 font-bold text-amber-700' : val > 0 ? 'text-blue-700' : 'text-gray-200'}`}>
+                                {val > 0 ? (val >= 1000000 ? `${(val / 1000000).toFixed(1)}M` : val >= 1000 ? `${Math.round(val / 1000)}K` : Math.round(val)) : '—'}
                               </td>
-                            ))}
-                            <td className="py-1 px-2 text-center font-bold text-gray-700">
-                              {fmtFull(Math.round(channelTotal))}
-                            </td>
-                          </tr>
+                            );
+                          })}
+                          <td className="py-0.5 px-1 text-center font-mono font-bold text-indigo-700">{fmtFull(Math.round(rowTotal))}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot className="border-t-2 border-gray-400 bg-gray-100 font-bold sticky bottom-0">
+                    <tr>
+                      <td className="py-1 px-1 text-right text-gray-800 sticky left-0 bg-gray-100 z-10">مجموع التحصيل الشهري</td>
+                      <td className="py-1 px-1 font-mono text-emerald-800 sticky left-[80px] bg-gray-100 z-10">{fmtFull(Math.round(activeSaleMonths.reduce((s, sm) => s + (cashInflowData.find(d => d.month === sm)?.salesThisMonth || 0), 0)))}</td>
+                      {Array.from({ length: timeline.projectEnd }, (_, i) => i + 1).map(m => {
+                        const colTotal = activeSaleMonths.reduce((s, sm) => s + (perSaleGrid[sm]?.[m] || 0), 0);
+                        return (
+                          <td key={m} className={`py-1 px-0.5 text-center font-mono ${colTotal > 0 ? 'text-blue-800 font-bold' : 'text-gray-300'}`}>
+                            {colTotal > 0 ? (colTotal >= 1000000 ? `${(colTotal / 1000000).toFixed(1)}M` : `${Math.round(colTotal / 1000)}K`) : '—'}
+                          </td>
                         );
                       })}
-                      {/* Totals row */}
-                      <tr className="bg-gray-50 border-t-2 border-gray-200 font-bold">
-                        <td className="py-1.5 px-2 text-gray-800 sticky right-0 bg-gray-50">المجموع</td>
-                        <td className="py-1.5 px-1 text-center text-gray-800">100%</td>
-                        {Array.from({ length: marketingActualEnd - marketingActualStart + 1 }, (_, i) => {
-                          const monthTotal = MARKETING_CHANNELS.reduce((s, ch) => {
-                            const arr = marketingDistribution[ch.id] || [];
-                            return s + (arr[i] || 0);
-                          }, 0);
-                          return (
-                            <td key={i} className="py-1.5 px-1 text-center text-[9px] text-gray-700">
-                              {fmtFull(Math.round(monthTotal))}
-                            </td>
-                          );
-                        })}
-                        <td className="py-1.5 px-2 text-center text-gray-800">
-                          {fmtFull(Math.round(Object.values(marketingDistribution).flat().reduce((s, v) => s + (v || 0), 0)))}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <div className="mt-2 pt-2 border-t border-gray-100">
-                  <p className="text-[9px] text-gray-500">وائل يحدد المبلغ لكل قناة في كل شهر. المجموع يجب أن يساوي ميزانية التسويق الإجمالية. يبدأ التسويق بعد اكتمال تحضير مواد التسويق وينتهي باكتمال المشروع.</p>
-                </div>
+                      <td className="py-1 px-1 text-center font-mono text-blue-800">{fmtFull(Math.round(cashInflowData.reduce((s, r) => s + r.cashInflow, 0)))}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              <div className="px-3 py-1.5 border-t border-gray-100 bg-purple-50/30 text-[9px] text-gray-600">
+                <strong>ملاحظة:</strong> الخلية الصفراء = دفعة الحجز (في شهر البيع) | الخلايا الزرقاء = أقساط لاحقة حسب البيمنت بلان | الصف الأخير = إجمالي ما يدخل الإسكرو كل شهر
               </div>
             </section>
+            )}
+
           </>
         )}
       </div>
