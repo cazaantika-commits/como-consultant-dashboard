@@ -63,7 +63,7 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
   const [hasChanges, setHasChanges] = useState(false);
   const [designMonths, setDesignMonths] = useState(8);
   const [constructionMonths, setConstructionMonths] = useState(30);
-  const [marketingPrepLead, setMarketingPrepLead] = useState(3);
+  const [marketingPrepLead, setMarketingPrepLead] = useState(2);
   const [reraLead, setReraLead] = useState(2);
   const [projectStartDate, setProjectStartDate] = useState("");
 
@@ -223,8 +223,8 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
       salesAbsorptionJson: JSON.stringify(updatedAbsorption),
       channelsJson: JSON.stringify(channelPcts),
     });
-    // Also sync marketingPct to the project table so other pages read it correctly
-    updateProject.mutate({ id: selectedProjectId, marketingPct: String(marketingPct) });
+    // Also sync marketingPct + timeline settings to the project table so other pages read them correctly
+    updateProject.mutate({ id: selectedProjectId, marketingPct: String(marketingPct), marketingPrepMonths: marketingPrepLead, reraLeadMonths: reraLead });
     setHasChanges(false);
   }, [selectedProjectId, planId, marketingPct, channelPcts, marketingActualStart, marketingActualEnd, marketingDistribution, marketingPrepLead, reraLead, plansQuery.data, savePlan, updateProject]);
 

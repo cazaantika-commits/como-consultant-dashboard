@@ -54,12 +54,15 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
     onSuccess: () => { plansQuery.refetch(); toast({ title: "تم حفظ الجدول الزمني ✓" }); },
     onError: (e: any) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
   });
+  const updateProject = trpc.projects.update.useMutation({
+    onSuccess: () => { projectQuery.refetch(); },
+  });
 
   // ─── State ─────────────────────────────────────────────────────────────────
   const [planId, setPlanId] = useState<number | undefined>(undefined);
   const [designMonths, setDesignMonths] = useState(8);
   const [constructionMonths, setConstructionMonths] = useState(30);
-  const [marketingPrepLead, setMarketingPrepLead] = useState(3);
+  const [marketingPrepLead, setMarketingPrepLead] = useState(2);
   const [reraLead, setReraLead] = useState(2);
   const [projectStartDate, setProjectStartDate] = useState("");
   const [hasChanges, setHasChanges] = useState(false);
@@ -149,8 +152,16 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
       constructionMonths,
       salesAbsorptionJson: JSON.stringify(updatedAbsorption),
     });
+    // Also save to projects table so all pages see the updated values
+    updateProject.mutate({
+      id: selectedProjectId,
+      preConMonths: designMonths,
+      constructionMonths,
+      marketingPrepMonths: marketingPrepLead,
+      reraLeadMonths: reraLead,
+    });
     setHasChanges(false);
-  }, [selectedProjectId, planId, designMonths, constructionMonths, marketingPrepLead, reraLead, plansQuery.data, savePlan]);
+  }, [selectedProjectId, planId, designMonths, constructionMonths, marketingPrepLead, reraLead, plansQuery.data, savePlan, updateProject]);
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // RENDER

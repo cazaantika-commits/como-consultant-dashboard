@@ -1049,3 +1049,13 @@
 - [x] Audit: MarketingPage now syncs marketingPct to BOTH plan table AND project table (fixes disconnect where V2WaelSales reads from project)
 - [x] Audit: Verified all pages read startDate, marketingPrepMonths, reraLeadMonths from project table correctly
 - [x] Audit: Verified commissionPct saves to both project and plan tables from V2WaelSales
+- [x] FIX CRITICAL: Server factSheetFields was missing marketingPrepMonths and reraLeadMonths - settings could NEVER be saved
+- [x] FIX: TimelinePage now saves marketingPrepMonths/reraLeadMonths to projects table (not just plan)
+- [x] FIX: V2WaelSales handleSavePlan now saves marketingPrepMonths/reraLeadMonths to projects table
+- [x] FIX: MarketingPage now saves marketingPrepMonths/reraLeadMonths to projects table
+- [x] FIX: All useState defaults changed from 3 to 2 for marketingPrepLead
+- [x] FIX: DB schema default changed from 3 to 2 for marketingPrepMonths
+- [x] AUDIT: All 27 active pages verified to read settings from project table (dynamic)
+- [x] AUDIT: V2InvestorCashFlow uses investorCashFlowEngine which reads ALL settings from project
+- [x] AUDIT: V2Feasibility uses calculateProjectCosts which reads ALL settings from project
+- [x] AUDIT: CashFlowSettingsPage reads durations from project via server getSettings

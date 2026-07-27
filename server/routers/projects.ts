@@ -102,6 +102,8 @@ const factSheetFields = {
   preConMonths: z.coerce.number().int().optional(),
   constructionMonths: z.coerce.number().int().optional(),
   handoverMonths: z.coerce.number().int().optional(),
+  marketingPrepMonths: z.coerce.number().int().optional(),
+  reraLeadMonths: z.coerce.number().int().optional(),
   startDate: z.string().optional(),
   // سيناريو التمويل
   financingScenario: z.enum(["offplan_escrow", "offplan_construction", "no_offplan", "rental"]).optional(),
