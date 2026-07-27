@@ -237,7 +237,6 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
     });
     updateProject.mutate({
       id: selectedProjectId,
-      constructionMonths,
       constructionScheduleJson: scheduleData,
     });
     setIsDirty(false);
@@ -286,15 +285,11 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
             {/* Summary Cards */}
             <div className="grid grid-cols-4 gap-3">
               <div className="bg-white rounded-lg p-2 border border-gray-100 shadow-sm">
-                <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center justify-between">
                   <span className="text-[10px] text-gray-600">مدة الإنشاء</span>
                   <Badge variant="outline" className="text-[9px] h-4">{constructionMonths} شهر</Badge>
                 </div>
-                <Slider
-                  value={[constructionMonths]}
-                  onValueChange={([v]) => handleMonthsChange(v)}
-                  min={6} max={48} step={1} className="mt-1"
-                />
+                <div className="text-[8px] text-gray-400 mt-0.5">من المدخلات العامة</div>
               </div>
 
               <div className="bg-white rounded-lg p-2 border border-gray-100 shadow-sm">

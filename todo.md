@@ -1002,3 +1002,6 @@
 - [x] Remove surveyor field from GeneralInputsPage and align with feasibility study costs
 - [x] Verify feasibility study costs section is complete (all individual cost items shown in V2Feasibility)
 - [x] Add مساح DWG and مساح As-built fields to GeneralInputsPage and V2Feasibility (under رسوم الجهات الحكومية)
+- [x] Make FactSheetPage financial fields read-only (source is GeneralInputsPage)
+- [x] Make ProjectCardOffplanPage shared fields read-only (source is GeneralInputsPage)
+- [x] Remove constructionMonths edit from ConstructionInputsPage (read from project data only)
