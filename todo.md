@@ -1097,3 +1097,5 @@
 - [x] FIX Escrow: Sales commission showing as lump sum — must distribute per month based on 20% trigger
 - [x] FIX Escrow: Revenue inflows (buyer installments) showing zeros — entry.month is 0-indexed, removed -1
 - [x] FIX Escrow: Remove "إيرادات مباشرة (20%)" from escrow page — filtered out from liquidation rows
+- [x] FIX Escrow: Sales commission STILL showing as lump sum — engine now generates default salesResult when no saved plan exists
+- [x] FIX Escrow: Revenue inflows showing empty — engine returns usedSalesResult, escrow page uses it for inflows

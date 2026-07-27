@@ -109,6 +109,7 @@ export interface CashFlowResult {
   totalRevenue: number;
   monthDates: string[];
   startDate: string;
+  usedSalesResult?: SalesResult;
 }
 
 // ═══════════════════════════════════════════
@@ -294,9 +295,51 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   const emptyConstruction = () => new Array(constructionDuration).fill(0);
   const emptyPost = () => new Array(postDuration).fill(0);
 
-  // ═══════════════════════════════════════════
+  // ─── Generate default salesResult when not provided (for offplan scenarios) ───
+  // This ensures commission distribution and revenue inflows work even without a saved V2WaelSales plan
+  if (!salesResult && !isScenario3 && !isScenario4 && totalUnits > 0 && totalRevenue > 0) {
+    const offPlanPct = 80; // default 80% offplan
+    const offPlanUnits = Math.round(totalUnits * offPlanPct / 100);
+    const salesStart = Math.max(1, designDuration); // sales start at first month of construction (1-indexed)
+    const salesMonths = constructionDuration; // sales period = construction duration
+    // Generate uniform sales distribution
+    const unitsPerMonth = Math.floor(offPlanUnits / salesMonths);
+    const remainderUnits = offPlanUnits - (unitsPerMonth * salesMonths);
+    const defaultSalesDist: number[] = new Array(salesMonths).fill(unitsPerMonth);
+    for (let rm = 0; rm < remainderUnits; rm++) defaultSalesDist[rm]++;
+    // Compute escrowData (same logic as V2WaelSales)
+    const avgUnitPrice = totalRevenue / totalUnits;
+    const ppDownPct = 10; // default 10% down payment
+    const ppHandoverPct = 40; // default 40% at handover
+    const duringConstructionPct = 100 - ppDownPct - ppHandoverPct; // 50%
+    const monthlyInstPerUnit = avgUnitPrice * (duringConstructionPct / 100) / (constructionDuration || 1);
+    let cumSold = 0;
+    const defaultEscrowData = defaultSalesDist.map((units, idx) => {
+      const dpIncome = units * avgUnitPrice * (ppDownPct / 100);
+      cumSold += units;
+      const instIncome = cumSold * monthlyInstPerUnit;
+      const totalIncome = dpIncome + instIncome;
+      return {
+        month: idx + salesStart, // 1-indexed absolute month
+        units,
+        income: totalIncome,
+        downPayment: dpIncome,
+        installments: instIncome,
+        withdrawal: 0,
+        balance: 0,
+        cumulativeSold: cumSold,
+      };
+    });
+    salesResult = {
+      escrowData: defaultEscrowData,
+      salesDistribution: defaultSalesDist,
+      ppDownPct,
+    };
+  }
+
+  // ═════════════════════════════════════════════
   // BUILD ROWS
-  // ═══════════════════════════════════════════
+  // ═════════════════════════════════════════════
   const rows: CostRow[] = [];
 
   // ─── الأرض (مدفوعة — لا توزيع) ───
@@ -750,7 +793,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       
       for (const entry of salesResult.escrowData) {
         if (entry.units <= 0) continue;
-        const saleMonth = entry.month; // absolute project month (0-indexed)
+        const saleMonth = entry.month - 1; // convert from 1-indexed (V2WaelSales) to 0-indexed array position
         const commAmount = entry.units * avgUnitPrice * commPct; // commission = units sold × avg price × rate
         
         // When does buyer reach triggerPct? 
@@ -1352,5 +1395,6 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     totalRevenue,
     monthDates,
     startDate: startDateStr,
+    usedSalesResult: salesResult,
   };
 }

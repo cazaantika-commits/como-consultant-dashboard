@@ -130,19 +130,22 @@ export default function V2EscrowCashFlow() {
   }, [rows, totalMonths]);
 
   // Sales income from escrowData (monthly buyer payments flowing into escrow)
+  // Use the engine's usedSalesResult which includes the default generated data when no saved plan exists
+  const effectiveSalesResult = data.usedSalesResult || salesResult;
   const salesIncomeRow = useMemo(() => {
     const values = new Array(totalMonths).fill(0);
-    if (salesResult && salesResult.escrowData.length > 0) {
-      for (const entry of salesResult.escrowData) {
-        // entry.month is 0-indexed absolute month from project start
-        const idx = entry.month;
+    if (effectiveSalesResult && effectiveSalesResult.escrowData.length > 0) {
+      for (const entry of effectiveSalesResult.escrowData) {
+        // entry.month is 1-indexed absolute month from project start (from V2WaelSales: i + timeline.salesStart)
+        // Flat array is 0-indexed, so subtract 1
+        const idx = entry.month - 1;
         if (idx >= 0 && idx < totalMonths) {
           values[idx] += entry.income;
         }
       }
     }
     return { label: "مبيعات أوف بلان (أقساط المشترين)", values };
-  }, [totalMonths, salesResult]);
+  }, [totalMonths, effectiveSalesResult]);
 
   const inflowRows = [depositRow, salesIncomeRow];
   const inflowTotals = Array.from({ length: totalMonths }, (_, i) =>
