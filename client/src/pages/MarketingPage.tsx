@@ -159,6 +159,40 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
     }
   }, [timeline.marketingStart, timeline.projectEnd, plansQuery.data]);
 
+  // ─── Channel slider handler (FIX #2: cap total at 100%) ────────────────────
+  const handleChannelSliderChange = useCallback((channelId: string, newValue: number) => {
+    setChannelPcts((prev) => {
+      const currentTotal = Object.entries(prev).reduce((sum, [id, pct]) => {
+        return id === channelId ? sum : sum + pct;
+      }, 0);
+      // Cap: the new value cannot push total above 100%
+      const maxAllowed = 100 - currentTotal;
+      const clampedValue = Math.min(newValue, Math.max(0, maxAllowed));
+      return { ...prev, [channelId]: clampedValue };
+    });
+    setHasChanges(true);
+  }, []);
+
+  // ─── Monthly input handler (FIX #3: cap at channel budget) ─────────────────
+  const handleMonthlyInput = useCallback((channelId: string, monthIndex: number, rawValue: number, months: number) => {
+    setMarketingDistribution(prev => {
+      const arr = [...(prev[channelId] || Array(months).fill(0))];
+      while (arr.length < months) arr.push(0);
+      // Calculate channel budget cap
+      const channelPct = channelPcts[channelId] || 0;
+      const channelBudgetCap = marketingCost * (channelPct / 100);
+      // Sum of all other months (excluding current)
+      const otherMonthsTotal = arr.reduce((s, v, idx) => idx === monthIndex ? s : s + (v || 0), 0);
+      // Max allowed for this month = channelBudget - sum of other months
+      const maxForThisMonth = Math.max(0, channelBudgetCap - otherMonthsTotal);
+      // Clamp the value
+      const clampedValue = Math.min(Math.max(0, rawValue), maxForThisMonth);
+      arr[monthIndex] = clampedValue;
+      return { ...prev, [channelId]: arr };
+    });
+    setHasChanges(true);
+  }, [channelPcts, marketingCost]);
+
   // ─── Save ──────────────────────────────────────────────────────────────────
   const handleSave = useCallback(() => {
     if (!selectedProjectId) return;
@@ -192,6 +226,10 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
   // ═══════════════════════════════════════════════════════════════════════════════
   // RENDER
   // ═══════════════════════════════════════════════════════════════════════════════
+
+  // Compute total channel allocation percentage for display
+  const totalChannelPct = Object.values(channelPcts).reduce((s, v) => s + v, 0);
+
   return (
     <div className="bg-gray-50 p-2" dir="rtl">
       <div className="max-w-full mx-auto space-y-2">
@@ -254,18 +292,43 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
                   <Megaphone className="w-3.5 h-3.5 text-pink-600" />
                   توزيع قنوات التسويق
                   <Badge variant="secondary" className="text-[9px]">{fmtFull(Math.round(marketingCost))} AED</Badge>
+                  {/* Show total allocation percentage */}
+                  <Badge variant={totalChannelPct === 100 ? "secondary" : "destructive"} className="text-[9px] mr-1">
+                    المجموع: {totalChannelPct}%{totalChannelPct !== 100 && " ⚠"}
+                  </Badge>
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {MARKETING_CHANNELS.map((ch) => (
-                    <div key={ch.id} className="rounded-lg border border-gray-100 p-1.5">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-medium text-gray-700">{ch.name}</span>
-                        <span className="text-[10px] font-bold" style={{ color: ch.color }}>{channelPcts[ch.id] || 0}%</span>
+                  {MARKETING_CHANNELS.map((ch) => {
+                    const channelBudget = marketingCost * ((channelPcts[ch.id] || 0) / 100);
+                    // FIX #1: Calculate remaining for THIS channel from its own budget
+                    const channelMonthlyTotal = (marketingDistribution[ch.id] || []).reduce((s, v) => s + (v || 0), 0);
+                    const channelRemaining = channelBudget - channelMonthlyTotal;
+                    return (
+                      <div key={ch.id} className="rounded-lg border border-gray-100 p-1.5">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] font-medium text-gray-700">{ch.name}</span>
+                          <span className="text-[10px] font-bold" style={{ color: ch.color }}>{channelPcts[ch.id] || 0}%</span>
+                        </div>
+                        {/* FIX #2: Slider capped so total never exceeds 100% */}
+                        <Slider
+                          value={[channelPcts[ch.id] || 0]}
+                          onValueChange={([v]) => handleChannelSliderChange(ch.id, v)}
+                          min={0}
+                          max={100}
+                          step={5}
+                          className="w-full"
+                        />
+                        <p className="text-[8px] text-gray-400 mt-0.5">{fmtFull(Math.round(channelBudget))} AED</p>
+                        {/* FIX #1: Show remaining from THIS channel's budget */}
+                        {channelMonthlyTotal > 0 && channelRemaining > 100 && (
+                          <p className="text-[8px] text-emerald-600 mt-0.5">متبقي: {fmtFull(Math.round(channelRemaining))} AED</p>
+                        )}
+                        {channelMonthlyTotal > 0 && channelRemaining < -100 && (
+                          <p className="text-[8px] text-red-500 mt-0.5">تجاوز: {fmtFull(Math.abs(Math.round(channelRemaining)))} AED</p>
+                        )}
                       </div>
-                      <Slider value={[channelPcts[ch.id] || 0]} onValueChange={([v]) => { setChannelPcts((prev) => ({ ...prev, [ch.id]: v })); setHasChanges(true); }} min={0} max={60} step={5} className="w-full" />
-                      <p className="text-[8px] text-gray-400 mt-0.5">{fmtFull(Math.round(marketingCost * (channelPcts[ch.id] || 0) / 100))} AED</p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </section>
@@ -350,7 +413,7 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
                     <thead className="sticky top-0 bg-gray-50 z-10 border-b border-gray-200">
                       <tr>
                         <th className="text-right py-1.5 px-2 text-gray-600 font-bold sticky right-0 bg-gray-50 min-w-[120px]">القناة / الشهر</th>
-                        <th className="text-center py-1.5 px-1 text-gray-600 font-bold min-w-[60px]">النسبة</th>
+                        <th className="text-center py-1.5 px-1 text-gray-600 font-bold min-w-[80px]">المتبقي</th>
                         {Array.from({ length: marketingActualEnd - marketingActualStart + 1 }, (_, i) => (
                           <th key={i} className="text-center py-1.5 px-1 text-gray-500 font-medium min-w-[70px]">
                             ش{marketingActualStart + i}
@@ -366,6 +429,7 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
                         const channelTotal = channelAmounts.reduce((s, v) => s + (v || 0), 0);
                         const channelBudgetCap = marketingCost * ((channelPcts[ch.id] || 0) / 100);
                         const isOverCap = channelTotal > channelBudgetCap + 100;
+                        // FIX #1: remaining = channel budget - channel monthly total
                         const remaining = channelBudgetCap - channelTotal;
                         return (
                           <tr key={ch.id} className={`border-b border-gray-50 hover:bg-gray-50/50 ${isOverCap ? 'bg-red-50/50' : ''}`}>
@@ -378,12 +442,24 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
                                 الحد: {fmtFull(Math.round(channelBudgetCap))} ({channelPcts[ch.id] || 0}%)
                               </div>
                             </td>
+                            {/* FIX #1: Show remaining per channel */}
                             <td className="py-1 px-1 text-center">
-                              <span className={`text-[10px] font-bold ${isOverCap ? 'text-red-600' : ''}`} style={{ color: isOverCap ? undefined : ch.color }}>
-                                {fmtFull(Math.round(channelTotal))}
-                              </span>
-                              {isOverCap && <div className="text-[8px] text-red-500">تجاوز!</div>}
-                              {!isOverCap && remaining > 100 && <div className="text-[8px] text-gray-400">متبقي: {fmtFull(Math.round(remaining))}</div>}
+                              {isOverCap ? (
+                                <div>
+                                  <span className="text-[10px] font-bold text-red-600">تجاوز!</span>
+                                  <div className="text-[8px] text-red-500">+{fmtFull(Math.abs(Math.round(remaining)))}</div>
+                                </div>
+                              ) : remaining > 100 ? (
+                                <div>
+                                  <span className="text-[10px] font-bold text-emerald-600">{fmtFull(Math.round(remaining))}</span>
+                                  <div className="text-[8px] text-gray-400">متبقي</div>
+                                </div>
+                              ) : (
+                                <div>
+                                  <span className="text-[10px] font-bold text-emerald-700">✓</span>
+                                  <div className="text-[8px] text-emerald-600">مكتمل</div>
+                                </div>
+                              )}
                             </td>
                             {Array.from({ length: months }, (_, i) => (
                               <td key={i} className="py-1 px-0.5 text-center">
@@ -393,21 +469,9 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
                                   step={1000}
                                   value={channelAmounts[i] || 0}
                                   onChange={(e) => {
+                                    // FIX #3: clamp monthly input at channel budget
                                     const val = Number(e.target.value) || 0;
-                                    setMarketingDistribution(prev => {
-                                      const arr = [...(prev[ch.id] || Array(months).fill(0))];
-                                      while (arr.length < months) arr.push(0);
-                                      // Check if new value would exceed channel cap
-                                      const newArr = [...arr];
-                                      newArr[i] = val;
-                                      const newTotal = newArr.reduce((s, v) => s + (v || 0), 0);
-                                      if (newTotal > channelBudgetCap + 100) {
-                                        // Allow but mark as over (validation only, don't block)
-                                      }
-                                      arr[i] = val;
-                                      return { ...prev, [ch.id]: arr };
-                                    });
-                                    setHasChanges(true);
+                                    handleMonthlyInput(ch.id, i, val, months);
                                   }}
                                   className={`w-[60px] h-5 text-[9px] text-center border rounded bg-white focus:ring-1 focus:ring-pink-300 focus:border-pink-300 ${isOverCap ? 'border-red-300' : 'border-gray-200'}`}
                                 />
@@ -422,7 +486,9 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
                       {/* Totals row */}
                       <tr className="bg-gray-50 border-t-2 border-gray-200 font-bold">
                         <td className="py-1.5 px-2 text-gray-800 sticky right-0 bg-gray-50">المجموع</td>
-                        <td className="py-1.5 px-1 text-center text-gray-800">100%</td>
+                        <td className="py-1.5 px-1 text-center text-gray-800">
+                          {fmtFull(Math.round(marketingCost - Object.values(marketingDistribution).flat().reduce((s, v) => s + (v || 0), 0)))}
+                        </td>
                         {Array.from({ length: marketingActualEnd - marketingActualStart + 1 }, (_, i) => {
                           const monthTotal = MARKETING_CHANNELS.reduce((s, ch) => {
                             const arr = marketingDistribution[ch.id] || [];

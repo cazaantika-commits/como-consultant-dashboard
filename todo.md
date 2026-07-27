@@ -1027,3 +1027,6 @@
 - [ ] Ensure investor engine has correct investor items
 - [ ] Ensure escrow engine has correct escrow items
 - [ ] Verify: total investor + total escrow = total feasibility
+- [x] MarketingPage: Show remaining per channel (not from total)
+- [x] MarketingPage: Prevent sliders from exceeding 100% total
+- [x] MarketingPage: Prevent monthly inputs from exceeding channel budget
