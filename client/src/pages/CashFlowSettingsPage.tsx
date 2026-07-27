@@ -25,7 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Settings2, Save, RotateCcw, Building2, Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
-import getMonthLabel from "@/lib/monthUtils";
+import { getMonthLabel } from "@/lib/monthUtils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

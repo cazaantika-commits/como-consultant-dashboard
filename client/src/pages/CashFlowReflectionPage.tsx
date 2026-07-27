@@ -19,7 +19,7 @@ import {
   Table2, Settings2, Building2, ArrowLeft, Download, Info, BarChart3
 } from "lucide-react";
 import { Link } from "wouter";
-import getMonthLabel from "@/lib/monthUtils";
+import { getMonthLabel } from "@/lib/monthUtils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
