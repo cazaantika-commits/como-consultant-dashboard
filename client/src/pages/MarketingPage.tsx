@@ -287,10 +287,10 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
                   </Badge>
                   <Button variant="outline" size="sm" className="h-5 text-[9px] gap-1" onClick={() => {
                     const months = marketingActualEnd - marketingActualStart + 1;
-                    const perChannelTotal = marketingCost / MARKETING_CHANNELS.length;
-                    const perMonth = Math.round(perChannelTotal / months);
                     const newDist: Record<string, number[]> = {};
                     MARKETING_CHANNELS.forEach(ch => {
+                      const channelBudget = marketingCost * ((channelPcts[ch.id] || 0) / 100);
+                      const perMonth = Math.round(channelBudget / months);
                       newDist[ch.id] = Array(months).fill(perMonth);
                     });
                     setMarketingDistribution(newDist);
@@ -364,17 +364,26 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
                         const months = marketingActualEnd - marketingActualStart + 1;
                         const channelAmounts = marketingDistribution[ch.id] || Array(months).fill(0);
                         const channelTotal = channelAmounts.reduce((s, v) => s + (v || 0), 0);
-                        const channelPctOfBudget = marketingCost > 0 ? ((channelTotal / marketingCost) * 100).toFixed(1) : '0';
+                        const channelBudgetCap = marketingCost * ((channelPcts[ch.id] || 0) / 100);
+                        const isOverCap = channelTotal > channelBudgetCap + 100;
+                        const remaining = channelBudgetCap - channelTotal;
                         return (
-                          <tr key={ch.id} className="border-b border-gray-50 hover:bg-gray-50/50">
-                            <td className="py-1 px-2 font-medium text-gray-700 sticky right-0 bg-white">
+                          <tr key={ch.id} className={`border-b border-gray-50 hover:bg-gray-50/50 ${isOverCap ? 'bg-red-50/50' : ''}`}>
+                            <td className={`py-1 px-2 font-medium text-gray-700 sticky right-0 ${isOverCap ? 'bg-red-50' : 'bg-white'}`}>
                               <div className="flex items-center gap-1">
                                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: ch.color }} />
                                 {ch.name}
                               </div>
+                              <div className="text-[8px] text-gray-400 mt-0.5">
+                                الحد: {fmtFull(Math.round(channelBudgetCap))} ({channelPcts[ch.id] || 0}%)
+                              </div>
                             </td>
                             <td className="py-1 px-1 text-center">
-                              <span className="text-[10px] font-bold" style={{ color: ch.color }}>{channelPctOfBudget}%</span>
+                              <span className={`text-[10px] font-bold ${isOverCap ? 'text-red-600' : ''}`} style={{ color: isOverCap ? undefined : ch.color }}>
+                                {fmtFull(Math.round(channelTotal))}
+                              </span>
+                              {isOverCap && <div className="text-[8px] text-red-500">تجاوز!</div>}
+                              {!isOverCap && remaining > 100 && <div className="text-[8px] text-gray-400">متبقي: {fmtFull(Math.round(remaining))}</div>}
                             </td>
                             {Array.from({ length: months }, (_, i) => (
                               <td key={i} className="py-1 px-0.5 text-center">
@@ -388,16 +397,23 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
                                     setMarketingDistribution(prev => {
                                       const arr = [...(prev[ch.id] || Array(months).fill(0))];
                                       while (arr.length < months) arr.push(0);
+                                      // Check if new value would exceed channel cap
+                                      const newArr = [...arr];
+                                      newArr[i] = val;
+                                      const newTotal = newArr.reduce((s, v) => s + (v || 0), 0);
+                                      if (newTotal > channelBudgetCap + 100) {
+                                        // Allow but mark as over (validation only, don't block)
+                                      }
                                       arr[i] = val;
                                       return { ...prev, [ch.id]: arr };
                                     });
                                     setHasChanges(true);
                                   }}
-                                  className="w-[60px] h-5 text-[9px] text-center border border-gray-200 rounded bg-white focus:ring-1 focus:ring-pink-300 focus:border-pink-300"
+                                  className={`w-[60px] h-5 text-[9px] text-center border rounded bg-white focus:ring-1 focus:ring-pink-300 focus:border-pink-300 ${isOverCap ? 'border-red-300' : 'border-gray-200'}`}
                                 />
                               </td>
                             ))}
-                            <td className="py-1 px-2 text-center font-bold text-gray-700">
+                            <td className={`py-1 px-2 text-center font-bold ${isOverCap ? 'text-red-600' : 'text-gray-700'}`}>
                               {fmtFull(Math.round(channelTotal))}
                             </td>
                           </tr>

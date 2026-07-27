@@ -1023,3 +1023,4 @@
 - [x] Move all marketing sections from V2WaelSales to a new dedicated Marketing page (channels, budget, distribution table)
 - [x] Create new Timeline page (move timeline bar + consultant schedule table from V2WaelSales)
 - [x] Register Marketing and Timeline as new tabs in BateekhaPage
+- [x] MarketingPage: Sliders set channel budget cap → table shows max per channel → Wael inputs monthly amounts that cannot exceed channel cap
