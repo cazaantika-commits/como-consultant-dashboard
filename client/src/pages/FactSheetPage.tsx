@@ -593,8 +593,8 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
               {/* Revenue-based percentages */}
               <Section title="نسب إيرادية" icon={Calculator} color="orange">
                 <div className="grid grid-cols-3 gap-1.5">
-                  <Field label="وسيط بيع%" value={formData.salesCommissionPct} onChange={v => updateField("salesCommissionPct", v)} type="number" suffix="%" source="manual" />
-                  <Field label="تسويق%" value={formData.marketingPct} onChange={v => updateField("marketingPct", v)} type="number" suffix="%" source="manual" />
+                  <Field label="وسيط بيع%" value={formData.salesCommissionPct} type="number" suffix="%" readOnly source="calc" />
+                  <Field label="تسويق%" value={formData.marketingPct} type="number" suffix="%" readOnly source="calc" />
                   <Field label="أتعاب مطور%" value={formData.developerFeePct} onChange={v => updateField("developerFeePct", v)} type="number" suffix="%" source="manual" />
                 </div>
               </Section>

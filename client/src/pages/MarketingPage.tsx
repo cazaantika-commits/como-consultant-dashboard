@@ -52,7 +52,7 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
   // ─── State ─────────────────────────────────────────────────────────────────
   const [planId, setPlanId] = useState<number | undefined>(undefined);
   const [marketingPct, setMarketingPct] = useState(2);
-  const [commissionPct, setCommissionPct] = useState(5);
+
   const [channelPcts, setChannelPcts] = useState<Record<string, number>>(
     Object.fromEntries(MARKETING_CHANNELS.map((c) => [c.id, c.defaultPct]))
   );
@@ -72,7 +72,7 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
       if (p.preConMonths) setDesignMonths(Number(p.preConMonths));
       if (p.constructionMonths) setConstructionMonths(Number(p.constructionMonths));
       if (p.marketingPct) setMarketingPct(Number(p.marketingPct));
-      if (p.salesCommissionPct) setCommissionPct(Number(p.salesCommissionPct));
+
     }
   }, [projectQuery.data]);
 
@@ -116,7 +116,7 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
   }, [projectQuery.data]);
 
   const marketingCost = totalRevenue * (marketingPct / 100);
-  const commissionCost = totalRevenue * (commissionPct / 100);
+
 
   // Timeline computation (same as V2WaelSales)
   const schematicCompletionMonth = useMemo(() => {
@@ -216,12 +216,11 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
       id: planId,
       projectId: selectedProjectId,
       marketingBudgetPct: String(marketingPct),
-      salesCommissionPct: String(commissionPct),
       salesAbsorptionJson: JSON.stringify(updatedAbsorption),
       channelsJson: JSON.stringify(channelPcts),
     });
     setHasChanges(false);
-  }, [selectedProjectId, planId, marketingPct, commissionPct, channelPcts, marketingActualStart, marketingActualEnd, marketingDistribution, marketingPrepLead, reraLead, plansQuery.data, savePlan]);
+  }, [selectedProjectId, planId, marketingPct, channelPcts, marketingActualStart, marketingActualEnd, marketingDistribution, marketingPrepLead, reraLead, plansQuery.data, savePlan]);
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // RENDER
@@ -278,14 +277,7 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
                   <Slider value={[marketingPct]} onValueChange={([v]) => { setMarketingPct(v); setHasChanges(true); }} min={0} max={10} step={0.5} className="w-full" />
                   <p className="text-[9px] text-gray-400">{fmtFull(Math.round(marketingCost))} AED</p>
                 </div>
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-gray-600">عمولة المبيعات</span>
-                    <span className="text-[10px] font-bold text-purple-700">{commissionPct}%</span>
-                  </div>
-                  <Slider value={[commissionPct]} onValueChange={([v]) => { setCommissionPct(v); setHasChanges(true); }} min={0} max={10} step={0.5} className="w-full" />
-                  <p className="text-[9px] text-gray-400">{fmtFull(Math.round(commissionCost))} AED</p>
-                </div>
+
               </div>
               <div className="col-span-12 md:col-span-8 bg-white rounded-xl border border-gray-100 shadow-sm p-2">
                 <h3 className="text-[11px] font-bold text-gray-800 flex items-center gap-1.5 mb-2">

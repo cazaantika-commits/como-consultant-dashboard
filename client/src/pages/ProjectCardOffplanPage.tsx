@@ -453,8 +453,8 @@ export default function ProjectCardOffplanPage() {
 
                   {/* Sales & Marketing */}
                   <tr className="bg-slate-700/20"><td colSpan={6} className="py-2 px-3 text-slate-300 font-semibold text-xs">المبيعات والتسويق</td></tr>
-                  <CostRowEditable label="عمولة المبيعات" fieldKey="salesCommissionPct" value={formData.salesCommissionPct} editing={isEditing} onChange={updateField} rate={`${formData.salesCommissionPct || "5"}%`} amount={calc.salesCommission} formula="النسبة × الإيرادات" funding="escrow" />
-                  <CostRowEditable label="التسويق" fieldKey="marketingPct" value={formData.marketingPct} editing={isEditing} onChange={updateField} rate={`${formData.marketingPct || "2"}%`} amount={calc.marketing} formula="النسبة × الإيرادات" funding="investor" />
+                  <CostRowEditable label="عمولة المبيعات" fieldKey="salesCommissionPct" value={formData.salesCommissionPct} editing={false} onChange={updateField} rate={`${formData.salesCommissionPct || "5"}%`} amount={calc.salesCommission} formula="يُعدّل من صفحة المبيعات" funding="escrow" />
+                  <CostRowEditable label="التسويق" fieldKey="marketingPct" value={formData.marketingPct} editing={false} onChange={updateField} rate={`${formData.marketingPct || "2"}%`} amount={calc.marketing} formula="يُعدّل من صفحة التسويق" funding="investor" />
                   <CostRowEditable label="أتعاب المطور" fieldKey="developerFeePct" value={formData.developerFeePct} editing={isEditing} onChange={updateField} rate={`${formData.developerFeePct || "5"}%`} amount={calc.developerFee} formula="النسبة × الإيرادات" funding="investor" />
 
                   {/* Construction */}

@@ -1030,3 +1030,9 @@
 - [x] MarketingPage: Show remaining per channel (not from total)
 - [x] MarketingPage: Prevent sliders from exceeding 100% total
 - [x] MarketingPage: Prevent monthly inputs from exceeding channel budget
+- [x] Sales page: Remove marketing% slider + channel distribution section (keep commission% + offplan%)
+- [x] Sales page: Lock pricing table (only sqft price editable, count+area read-only)
+- [x] Sales page: Split KPI "التسويق + العمولة" into two separate cards
+- [x] MarketingPage: Remove commission% slider (keep marketing% + channels only)
+- [x] FactSheetPage: Make marketing% and commission% read-only
+- [x] ProjectCardOffplanPage: Make marketing% and commission% read-only

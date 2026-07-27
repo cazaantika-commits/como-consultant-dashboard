@@ -41,14 +41,7 @@ const UNIT_TYPES = [
   { id: "officeLarge", name: "مكاتب كبير", color: "#06b6d4", dbCount: "officeLargeCount", dbArea: "officeLargeArea", dbPrice: "officeLargePrice" },
 ];
 
-const MARKETING_CHANNELS = [
-  { id: "digital", name: "التسويق الرقمي", defaultPct: 35, color: "#3b82f6" },
-  { id: "outdoor", name: "الإعلانات الخارجية", defaultPct: 20, color: "#10b981" },
-  { id: "events", name: "المعارض والفعاليات", defaultPct: 15, color: "#f59e0b" },
-  { id: "broker", name: "شبكة الوسطاء", defaultPct: 15, color: "#8b5cf6" },
-  { id: "pr", name: "العلاقات العامة", defaultPct: 10, color: "#ec4899" },
-  { id: "content", name: "المحتوى والعلامة", defaultPct: 5, color: "#06b6d4" },
-];
+
 
 const PROJECT_PHASES = [
   { id: "design", name: "التصاميم", color: "#3b82f6", icon: Palette },
@@ -113,9 +106,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   const [curveTemplate, setCurveTemplate] = useState<"bell" | "fast" | "gradual" | "late">("bell");
   const [salesMode, setSalesMode] = useState<"auto" | "manual">("auto");
   const [manualUnits, setManualUnits] = useState<number[]>([]);
-  const [channelPcts, setChannelPcts] = useState<Record<string, number>>(
-    Object.fromEntries(MARKETING_CHANNELS.map((c) => [c.id, c.defaultPct]))
-  );
+
   const [hasPlanChanges, setHasPlanChanges] = useState(false);
 
   // ─── State: Payment Plan (installment-based) ──────────────────────────────
@@ -160,9 +151,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       const plan = plansQuery.data[0] as any;
       setPlanId(plan.id);
       if (plan.offplanPct) setOffPlan(plan.offplanPct);
-      if (plan.channelsJson) {
-        try { setChannelPcts(JSON.parse(plan.channelsJson)); } catch {}
-      }
+
       if (plan.salesAbsorptionJson) {
         try {
           const parsed = JSON.parse(plan.salesAbsorptionJson);
@@ -284,11 +273,10 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       const d = unitData[u.id];
       if (d) { payload[u.dbCount] = d.count; payload[u.dbArea] = d.area; payload[u.dbPrice] = d.price; }
     });
-    payload.marketingPct = String(marketingPct);
     payload.salesCommissionPct = String(commissionPct);
     updateProject.mutate(payload as any);
     setHasUnitChanges(false);
-  }, [selectedProjectId, unitData, marketingPct, commissionPct, updateProject]);
+  }, [selectedProjectId, unitData, commissionPct, updateProject]);
 
   const handleSavePlan = useCallback(() => {
     if (!selectedProjectId) return;
@@ -299,14 +287,12 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       designMonths,
       constructionMonths,
       offplanPct: offPlan,
-      marketingBudgetPct: String(marketingPct),
       salesCommissionPct: String(commissionPct),
       salesAbsorptionJson: JSON.stringify({ mode: salesMode, speed, template: curveTemplate, manual: manualUnits, marketingPrepLead, reraLead, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppInstallmentPct, ppInstallmentEvery, ppHandoverPct }),
-      channelsJson: JSON.stringify(channelPcts),
       resultsJson: JSON.stringify({ escrowData, salesDistribution }),
     });
     setHasPlanChanges(false);
-  }, [selectedProjectId, planId, totalRevenue, designMonths, constructionMonths, offPlan, marketingPct, commissionPct, salesMode, speed, curveTemplate, manualUnits, channelPcts, escrowData, salesDistribution, marketingPrepLead, reraLead, savePlan]);
+  }, [selectedProjectId, planId, totalRevenue, designMonths, constructionMonths, offPlan, commissionPct, salesMode, speed, curveTemplate, manualUnits, escrowData, salesDistribution, marketingPrepLead, reraLead, savePlan]);
 
   const updateUnit = (id: string, field: "count" | "area" | "price", value: number) => {
     setUnitData((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
@@ -400,14 +386,8 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                             <span className="font-medium text-gray-800">{u.name}</span>
                           </div>
                         </td>
-                        <td className="px-2 py-0.5 text-center">
-                          <input type="number" min={0} value={u.count} onChange={(e) => updateUnit(u.id, "count", parseInt(e.target.value) || 0)}
-                            className="w-12 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
-                        </td>
-                        <td className="px-2 py-0.5 text-center">
-                          <input type="number" min={0} value={u.area} onChange={(e) => updateUnit(u.id, "area", parseInt(e.target.value) || 0)}
-                            className="w-14 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
-                        </td>
+                        <td className="px-2 py-0.5 text-center font-mono text-gray-700">{u.count}</td>
+                        <td className="px-2 py-0.5 text-center font-mono text-gray-700">{fmtFull(u.area)}</td>
                         <td className="px-2 py-0.5 text-center">
                           <input type="number" min={0} value={u.price} onChange={(e) => updateUnit(u.id, "price", parseInt(e.target.value) || 0)}
                             className="w-14 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
@@ -427,14 +407,8 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                             <span className="font-medium text-gray-800">{u.name}</span>
                           </div>
                         </td>
-                        <td className="px-2 py-0.5 text-center">
-                          <input type="number" min={0} value={u.count} onChange={(e) => updateUnit(u.id, "count", parseInt(e.target.value) || 0)}
-                            className="w-12 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
-                        </td>
-                        <td className="px-2 py-0.5 text-center">
-                          <input type="number" min={0} value={u.area} onChange={(e) => updateUnit(u.id, "area", parseInt(e.target.value) || 0)}
-                            className="w-14 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
-                        </td>
+                        <td className="px-2 py-0.5 text-center font-mono text-gray-700">{u.count}</td>
+                        <td className="px-2 py-0.5 text-center font-mono text-gray-700">{fmtFull(u.area)}</td>
                         <td className="px-2 py-0.5 text-center">
                           <input type="number" min={0} value={u.price} onChange={(e) => updateUnit(u.id, "price", parseInt(e.target.value) || 0)}
                             className="w-14 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
@@ -454,14 +428,8 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                             <span className="font-medium text-gray-800">{u.name}</span>
                           </div>
                         </td>
-                        <td className="px-2 py-0.5 text-center">
-                          <input type="number" min={0} value={u.count} onChange={(e) => updateUnit(u.id, "count", parseInt(e.target.value) || 0)}
-                            className="w-12 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
-                        </td>
-                        <td className="px-2 py-0.5 text-center">
-                          <input type="number" min={0} value={u.area} onChange={(e) => updateUnit(u.id, "area", parseInt(e.target.value) || 0)}
-                            className="w-14 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
-                        </td>
+                        <td className="px-2 py-0.5 text-center font-mono text-gray-700">{u.count}</td>
+                        <td className="px-2 py-0.5 text-center font-mono text-gray-700">{fmtFull(u.area)}</td>
                         <td className="px-2 py-0.5 text-center">
                           <input type="number" min={0} value={u.price} onChange={(e) => updateUnit(u.id, "price", parseInt(e.target.value) || 0)}
                             className="w-14 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
@@ -536,29 +504,22 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
             </div>
 
             {/* SECTION 2: FINANCIAL SUMMARY */}
-            <section className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <section className="grid grid-cols-2 md:grid-cols-6 gap-3">
               <KPICard label="الإيرادات" value={fmt(totalRevenue)} sub="AED" color="emerald" />
               <KPICard label="تكلفة الإنشاء" value={fmt(constructionCost)} sub="AED" color="slate" />
-              <KPICard label="التسويق + العمولة" value={fmt(marketingCost + commissionCost)} sub="AED" color="amber" />
+              <KPICard label="التسويق" value={fmt(marketingCost)} sub={`${marketingPct}%`} color="amber" />
+              <KPICard label="العمولة" value={fmt(commissionCost)} sub={`${commissionPct}%`} color="amber" />
               <KPICard label="الربح" value={fmt(profit)} sub="AED" color={profit >= 0 ? "blue" : "red"} />
               <KPICard label="ROI" value={roiCosts + "%"} sub="على التكاليف" color="violet" />
             </section>
 
-            {/* SECTION 3: OPERATION COSTS + MARKETING DISTRIBUTION */}
-            <section className="grid grid-cols-12 gap-2">
-              <div className="col-span-12 md:col-span-4 bg-white rounded-xl border border-gray-100 shadow-sm p-2 space-y-1">
-                <h3 className="text-[11px] font-bold text-gray-800 flex items-center gap-1.5">
-                  <Percent className="w-3.5 h-3.5 text-amber-600" />
-                  تكاليف العملية
-                </h3>
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-gray-600">ميزانية التسويق</span>
-                    <span className="text-[10px] font-bold text-blue-700">{marketingPct}%</span>
-                  </div>
-                  <Slider value={[marketingPct]} onValueChange={([v]) => { setMarketingPct(v); setHasUnitChanges(true); setHasPlanChanges(true); }} min={0} max={10} step={0.5} className="w-full" />
-                  <p className="text-[9px] text-gray-400">{fmtFull(Math.round(marketingCost))} AED</p>
-                </div>
+            {/* SECTION 3: COMMISSION + OFF-PLAN CONTROLS */}
+            <section className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
+              <h3 className="text-[11px] font-bold text-gray-800 flex items-center gap-1.5 mb-2">
+                <Percent className="w-3.5 h-3.5 text-amber-600" />
+                إعدادات المبيعات
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] text-gray-600">عمولة المبيعات</span>
@@ -574,25 +535,6 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                   </div>
                   <Slider value={[offPlan]} onValueChange={([v]) => { setOffPlan(v); setHasPlanChanges(true); }} min={30} max={100} step={5} className="w-full" />
                   <p className="text-[9px] text-gray-400">{offPlanUnits} وحدة من {totalUnits}</p>
-                </div>
-              </div>
-              <div className="col-span-12 md:col-span-8 bg-white rounded-xl border border-gray-100 shadow-sm p-2">
-                <h3 className="text-[11px] font-bold text-gray-800 flex items-center gap-1.5 mb-2">
-                  <Megaphone className="w-3.5 h-3.5 text-pink-600" />
-                  توزيع قنوات التسويق
-                  <Badge variant="secondary" className="text-[9px]">{fmtFull(Math.round(marketingCost))} AED</Badge>
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {MARKETING_CHANNELS.map((ch) => (
-                    <div key={ch.id} className="rounded-lg border border-gray-100 p-1.5">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-medium text-gray-700">{ch.name}</span>
-                        <span className="text-[10px] font-bold" style={{ color: ch.color }}>{channelPcts[ch.id] || 0}%</span>
-                      </div>
-                      <Slider value={[channelPcts[ch.id] || 0]} onValueChange={([v]) => { setChannelPcts((prev) => ({ ...prev, [ch.id]: v })); setHasPlanChanges(true); }} min={0} max={60} step={5} className="w-full" />
-                      <p className="text-[8px] text-gray-400 mt-0.5">{fmtFull(Math.round(marketingCost * (channelPcts[ch.id] || 0) / 100))} AED</p>
-                    </div>
-                  ))}
                 </div>
               </div>
             </section>
