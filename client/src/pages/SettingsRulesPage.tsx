@@ -58,7 +58,9 @@ interface PaymentSplitRule {
 interface DesignPaymentPhase {
   id: string;
   label: string;
+  labelEn: string;
   pct: number;
+  durationWeeks: number;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -92,12 +94,13 @@ const DEFAULT_PAYMENT_SPLITS: PaymentSplitRule[] = [
 ];
 
 const DEFAULT_DESIGN_PAYMENTS: DesignPaymentPhase[] = [
-  { id: "signing", label: "عند التوقيع", pct: 10 },
-  { id: "concept", label: "التصميم المبدئي (Concept)", pct: 15 },
-  { id: "schematic", label: "السكيماتيك (SD)", pct: 25 },
-  { id: "dd", label: "التصميم التفصيلي (DD)", pct: 25 },
-  { id: "cd", label: "وثائق الإنشاء (CD)", pct: 20 },
-  { id: "asBuilt", label: "As-Built", pct: 5 },
+  { id: "mobilization", label: "التعبئة وجمع البيانات", labelEn: "Mobilization & Data Collection", pct: 5, durationWeeks: 2 },
+  { id: "concept", label: "التصميم المبدئي", labelEn: "Concept Design", pct: 15, durationWeeks: 4 },
+  { id: "schematic", label: "التصميم التخطيطي", labelEn: "Schematic Design", pct: 20, durationWeeks: 4 },
+  { id: "dd", label: "تطوير التصميم التفصيلي", labelEn: "Detailed Design Development", pct: 25, durationWeeks: 6 },
+  { id: "authorities", label: "اعتماد الجهات", labelEn: "Authorities Approval", pct: 10, durationWeeks: 4 },
+  { id: "tender", label: "تأهيل المقاولين ووثائق المناقصة", labelEn: "Prequalification & Tender Documents", pct: 15, durationWeeks: 4 },
+  { id: "ifc", label: "صادر للتنفيذ", labelEn: "Issued for Construction", pct: 10, durationWeeks: 2 },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -156,7 +159,13 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
             }
             if (s.designPayments) {
               setDesignPayments((prev) =>
-                prev.map((r) => ({ ...r, pct: s.designPayments[r.id] ?? r.pct }))
+                prev.map((r) => {
+                  const stored = s.designPayments[r.id];
+                  if (typeof stored === 'object' && stored !== null) {
+                    return { ...r, pct: stored.pct ?? r.pct, durationWeeks: stored.durationWeeks ?? r.durationWeeks };
+                  }
+                  return { ...r, pct: typeof stored === 'number' ? stored : r.pct };
+                })
               );
             }
           }
@@ -177,7 +186,7 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
       timingRules: Object.fromEntries(timingRules.map((r) => [r.id, r.value])),
       percentageRules: Object.fromEntries(percentageRules.map((r) => [r.id, r.value])),
       paymentSplits: Object.fromEntries(paymentSplits.map((r) => [r.id, { investor: r.investorPct, escrow: r.escrowPct }])),
-      designPayments: Object.fromEntries(designPayments.map((r) => [r.id, r.pct])),
+      designPayments: Object.fromEntries(designPayments.map((r) => [r.id, { pct: r.pct, durationWeeks: r.durationWeeks }])),
     };
     updateProject.mutate({ id: selectedProjectId, constructionScheduleJson: JSON.stringify(existing) } as any);
     setHasChanges(false);
@@ -197,6 +206,10 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
   };
   const updateDesignPayment = (id: string, pct: number) => {
     setDesignPayments((prev) => prev.map((r) => (r.id === id ? { ...r, pct } : r)));
+    setHasChanges(true);
+  };
+  const updateDesignDuration = (id: string, durationWeeks: number) => {
+    setDesignPayments((prev) => prev.map((r) => (r.id === id ? { ...r, durationWeeks } : r)));
     setHasChanges(true);
   };
 
@@ -353,7 +366,7 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
             <section className="bg-white rounded-xl border border-gray-100 shadow-md overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
                 <Palette className="w-4 h-4 text-blue-600" />
-                <h2 className="text-sm font-bold text-gray-800">جدول دفعات التصميم</h2>
+                <h2 className="text-sm font-bold text-gray-800">مراحل التصميم واستحقاق الاستشاري</h2>
                 {designPaymentTotal !== 100 && (
                   <Badge variant="destructive" className="text-[10px] mr-auto">
                     <AlertTriangle className="w-3 h-3 ml-1" />
@@ -363,17 +376,43 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
                 {designPaymentTotal === 100 && (
                   <Badge className="text-[10px] mr-auto bg-emerald-100 text-emerald-700">100% ✓</Badge>
                 )}
+                <span className="text-[10px] text-gray-400 mr-2">إجمالي: {designPayments.reduce((s, p) => s + p.durationWeeks, 0)} أسبوع</span>
               </div>
-              <div className="p-2">
-                <div className="space-y-3">
+              <div className="p-3">
+                {/* Table header */}
+                <div className="grid grid-cols-[32px_1fr_1fr_100px_100px] gap-2 mb-2 text-[10px] font-bold text-gray-500 border-b border-gray-100 pb-2">
+                  <span>#</span>
+                  <span>المرحلة</span>
+                  <span className="text-gray-400">English</span>
+                  <span className="text-center">المدة (أسابيع)</span>
+                  <span className="text-center">نسبة الاستحقاق %</span>
+                </div>
+                <div className="space-y-2">
                   {designPayments.map((phase, idx) => (
-                    <div key={phase.id} className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                    <div key={phase.id} className="grid grid-cols-[32px_1fr_1fr_100px_100px] gap-2 items-center py-1.5 border-b border-gray-50">
+                      <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold">
                         {idx + 1}
                       </div>
-                      <span className="text-xs font-medium text-gray-700 w-40 flex-shrink-0">{phase.label}</span>
-                      <Slider value={[phase.pct]} onValueChange={([v]) => updateDesignPayment(phase.id, v)} min={0} max={50} step={5} className="flex-1" />
-                      <span className="text-sm font-bold text-blue-700 min-w-[40px] text-left">{phase.pct}%</span>
+                      <span className="text-xs font-medium text-gray-800">{phase.label}</span>
+                      <span className="text-[10px] text-gray-400">{phase.labelEn}</span>
+                      <div className="flex items-center justify-center">
+                        <input
+                          type="number"
+                          value={phase.durationWeeks}
+                          onChange={(e) => { updateDesignDuration(phase.id, parseInt(e.target.value) || 0); }}
+                          className="w-14 text-center text-xs font-mono border border-gray-200 rounded-md px-1 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                          min={1} max={52}
+                        />
+                      </div>
+                      <div className="flex items-center justify-center">
+                        <input
+                          type="number"
+                          value={phase.pct}
+                          onChange={(e) => { updateDesignPayment(phase.id, parseInt(e.target.value) || 0); }}
+                          className="w-14 text-center text-xs font-mono border border-gray-200 rounded-md px-1 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                          min={0} max={100}
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -385,6 +424,23 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
                       {phase.pct > 8 ? `${phase.pct}%` : ""}
                     </div>
                   ))}
+                </div>
+                {/* Duration bar */}
+                <div className="mt-2 h-4 rounded-full overflow-hidden flex bg-gray-50 border border-gray-100">
+                  {designPayments.map((phase, idx) => {
+                    const totalWeeks = designPayments.reduce((s, p) => s + p.durationWeeks, 0);
+                    const widthPct = totalWeeks > 0 ? (phase.durationWeeks / totalWeeks) * 100 : 0;
+                    return (
+                      <div key={phase.id} className="h-full flex items-center justify-center text-[7px] font-medium text-gray-600 transition-all border-l border-white first:border-l-0"
+                        style={{ width: `${widthPct}%`, backgroundColor: `hsl(${210 + idx * 20}, 30%, 85%)` }}>
+                        {phase.durationWeeks > 2 ? `${phase.durationWeeks}w` : ""}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex justify-between mt-1 text-[9px] text-gray-400">
+                  <span>شريط المدة (أسابيع)</span>
+                  <span>شريط الاستحقاق (%)</span>
                 </div>
               </div>
             </section>

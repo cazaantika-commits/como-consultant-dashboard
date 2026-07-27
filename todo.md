@@ -1005,3 +1005,4 @@
 - [x] Make FactSheetPage financial fields read-only (source is GeneralInputsPage)
 - [x] Make ProjectCardOffplanPage shared fields read-only (source is GeneralInputsPage)
 - [x] Remove constructionMonths edit from ConstructionInputsPage (read from project data only)
+- [x] Update SettingsRulesPage design phases to 7 correct phases with duration (weeks) and consultant fee percentage inputs
