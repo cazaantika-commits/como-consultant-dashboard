@@ -47,9 +47,32 @@ export default function V2EscrowCashFlow() {
     try {
       const parsed = JSON.parse(plan.resultsJson);
       if (parsed.escrowData && parsed.salesDistribution) {
+        // Parse marketing monthly amounts from salesAbsorptionJson
+        let marketingMonthlyAmounts: number[] | undefined;
+        let ppDownPct: number | undefined;
+        if (plan.salesAbsorptionJson) {
+          try {
+            const absorption = JSON.parse(plan.salesAbsorptionJson);
+            ppDownPct = absorption.ppDownPct;
+            if (absorption.marketingDistribution) {
+              const channels = Object.values(absorption.marketingDistribution) as number[][];
+              if (channels.length > 0) {
+                const maxLen = Math.max(...channels.map((c: number[]) => c.length));
+                marketingMonthlyAmounts = new Array(maxLen).fill(0);
+                for (const ch of channels) {
+                  for (let m = 0; m < ch.length; m++) {
+                    marketingMonthlyAmounts[m] += (ch[m] || 0);
+                  }
+                }
+              }
+            }
+          } catch {}
+        }
         return {
           escrowData: parsed.escrowData,
           salesDistribution: parsed.salesDistribution,
+          marketingMonthlyAmounts,
+          ppDownPct,
         };
       }
     } catch {}

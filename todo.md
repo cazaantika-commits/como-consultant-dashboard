@@ -1083,3 +1083,13 @@
 - [x] FIX: RERA auditor report now quarterly (every 3 months from construction start)
 - [x] FIX: RERA inspection now quarterly (every 3 months from construction start)
 - [x] FIX: V2EscrowCashFlow deposit row now uses engine's isTransfer row timing (consistent with investor cash flow)
+- [x] Add missing rules to SettingsRulesPage: pre-paid items (land, broker, registration), developer fees (40/60), developer profit share (15%), marketing (from page), sales commission (with 20% trigger)
+- [x] Fix RERA auditor: 3,500 AED per quarterly payment (editable in settings), not total amount
+- [x] Fix RERA inspection: 15,020 AED per quarterly payment (editable in settings), not total amount
+- [x] Community fee: ensure 0.25 AED/sqft rate is editable in settings and computed automatically
+- [x] Update engine to compute auditor/inspection/community from per-payment rates (not manual total input)
+- [x] Update engine: developer fees 40% design + 60% construction distribution
+- [x] Update engine: marketing reads directly from marketing page data (no auto-distribution)
+- [x] Update engine: sales commission = rate × monthly sales, paid only when buyer reaches 20%
+- [x] Update engine: land/broker/registration marked as pre-paid (no monthly distribution)
+- [x] Disable manual input in GeneralInputsPage for computed fields (auditor, inspection, community fee)

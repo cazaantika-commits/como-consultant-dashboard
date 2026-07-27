@@ -35,14 +35,14 @@ const ALL_FIELDS = [
   { key: "soilTestFee", label: "فحص التربة", unit: "درهم", type: "number", defaultValue: "45000" },
   { key: "topographicSurveyFee", label: "المسح الطبوغرافي", unit: "درهم", type: "number", defaultValue: "12000" },
 
-  { key: "communityFees", label: "رسوم المجتمع", unit: "درهم", type: "number", defaultValue: "80000" },
+  { key: "communityFees", label: "رسوم المجتمع (محسوب تلقائياً)", unit: "درهم", type: "number", defaultValue: "80000", computed: true, hint: "= GFA × 0.25 × عدد الدفعات (من الإعدادات)" },
   { key: "officialBodiesFees", label: "رسوم الجهات الحكومية", unit: "درهم", type: "number", defaultValue: "7000000" },
   { key: "developerNocFee", label: "رسوم NOC المطور", unit: "درهم", type: "number", defaultValue: "10000" },
   { key: "reraProjectRegFee", label: "تسجيل المشروع (ريرا)", unit: "درهم", type: "number", defaultValue: "150000" },
   { key: "escrowAccountFee", label: "فتح حساب الضمان", unit: "درهم", type: "number", defaultValue: "180000" },
   { key: "bankFees", label: "رسوم البنك", unit: "درهم", type: "number", defaultValue: "35000" },
-  { key: "reraAuditReportFee", label: "تقرير مدقق ريرا", unit: "درهم", type: "number", defaultValue: "24000" },
-  { key: "reraInspectionReportFee", label: "تقرير فحص ريرا", unit: "درهم", type: "number", defaultValue: "150000" },
+  { key: "reraAuditReportFee", label: "تقرير مدقق ريرا (محسوب تلقائياً)", unit: "درهم", type: "number", defaultValue: "24000", computed: true, hint: "= 3,500 × عدد الدفعات الربع سنوية (من الإعدادات)" },
+  { key: "reraInspectionReportFee", label: "تقرير فحص ريرا (محسوب تلقائياً)", unit: "درهم", type: "number", defaultValue: "150000", computed: true, hint: "= 15,020 × عدد الدفعات الربع سنوية (من الإعدادات)" },
 ];
 
 function fmt(n: number): string {
@@ -123,21 +123,26 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
 
   const renderCol = (fields: typeof ALL_FIELDS) => (
     <div className="space-y-[2px]">
-      {fields.map((field) => (
-        <div key={field.key} className="flex items-center gap-2 h-[28px] border-b border-gray-100">
-          <span className="text-[13px] text-gray-600 w-[45%] text-right whitespace-nowrap overflow-hidden text-ellipsis">{field.label}</span>
-          <input
-            type={field.type === "date" ? "month" : "text"}
-            value={formData[field.key] || ""}
-            onChange={e => updateField(field.key, e.target.value)}
-            disabled={!isEditing}
-            className={`flex-1 h-[24px] px-2 text-[13px] rounded ${!isEditing ? "bg-transparent text-gray-800 font-medium" : "bg-white border border-gray-300 text-gray-900 focus:border-teal-500 focus:ring-1 focus:ring-teal-500"}`}
-            dir="ltr"
-            placeholder={field.defaultValue || "—"}
-          />
-          <span className="text-[11px] text-gray-400 w-[50px] text-left">{field.unit}</span>
-        </div>
-      ))}
+      {fields.map((field) => {
+        const isComputed = (field as any).computed;
+        const hint = (field as any).hint;
+        return (
+          <div key={field.key} className={`flex items-center gap-2 h-[28px] border-b border-gray-100 ${isComputed ? "bg-amber-50/50" : ""}`}>
+            <span className="text-[13px] text-gray-600 w-[45%] text-right whitespace-nowrap overflow-hidden text-ellipsis" title={hint || ""}>{field.label}</span>
+            <input
+              type={field.type === "date" ? "month" : "text"}
+              value={formData[field.key] || ""}
+              onChange={e => updateField(field.key, e.target.value)}
+              disabled={!isEditing || isComputed}
+              className={`flex-1 h-[24px] px-2 text-[13px] rounded ${isComputed ? "bg-amber-50 text-amber-700 font-medium cursor-not-allowed" : !isEditing ? "bg-transparent text-gray-800 font-medium" : "bg-white border border-gray-300 text-gray-900 focus:border-teal-500 focus:ring-1 focus:ring-teal-500"}`}
+              dir="ltr"
+              placeholder={field.defaultValue || "—"}
+              title={isComputed ? hint : ""}
+            />
+            <span className="text-[11px] text-gray-400 w-[50px] text-left">{field.unit}</span>
+          </div>
+        );
+      })}
     </div>
   );
 

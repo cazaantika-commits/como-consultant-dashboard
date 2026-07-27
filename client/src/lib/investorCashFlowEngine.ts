@@ -50,6 +50,11 @@ export interface TimingRules {
   salesCommissionPct: number;
   salesCommissionTriggerPct: number;
   surveyorAsbuiltMonthFromEnd: number;
+  // Configurable per-payment amounts from settings
+  reraAuditorQuarterlyFee: number;
+  reraInspectionQuarterlyFee: number;
+  communityFeePerSqft: number;
+  communityFeeFrequency: number;
 }
 
 export const DEFAULT_TIMING_RULES: TimingRules = {
@@ -62,6 +67,10 @@ export const DEFAULT_TIMING_RULES: TimingRules = {
   salesCommissionPct: 5,
   salesCommissionTriggerPct: 20,
   surveyorAsbuiltMonthFromEnd: 1,
+  reraAuditorQuarterlyFee: 3500,
+  reraInspectionQuarterlyFee: 15020,
+  communityFeePerSqft: 0.25,
+  communityFeeFrequency: 6,
 };
 
 export interface SalesResult {
@@ -76,6 +85,8 @@ export interface SalesResult {
     cumulativeSold: number;
   }>;
   salesDistribution: number[];
+  marketingMonthlyAmounts?: number[]; // Monthly marketing amounts from marketing page (indexed from project month 1)
+  ppDownPct?: number; // Down payment percentage from payment plan
 }
 
 export interface CashFlowResult {
@@ -257,7 +268,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   const pricingFormulas = calculatePricingFormulas(pricingUnits);
   const costs = calculateCosts(projectFormulas, pricingFormulas, i, r);
 
-  const { landPrice, landRegistration, landBroker, constructionCost } = projectFormulas;
+  const { landPrice, landRegistration, landBroker, constructionCost, gfaTotal } = projectFormulas;
   const { totalRevenue, totalUnits } = pricingFormulas;
   const designDuration = i.designDuration;
   const constructionDuration = i.constructionDuration;
@@ -440,18 +451,33 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     postConstructionMonths: emptyPost(),
   });
 
-  // ─── رسوم المجتمع (كل 6 أشهر من شهر 1) ───
-  const communityDist = distributeCommunityFee(i.communityFee, designDuration, constructionDuration);
+  // ─── رسوم المجتمع (كل 6 أشهر من بدء التصاميم حتى الإنجاز) — GFA × المعدل لكل دفعة ───
+  const communityFeePerPayment = (gfaTotal || 0) * tr.communityFeePerSqft;
+  const communityTotalMonths = designDuration + constructionDuration;
+  const communityPaymentMonths: number[] = [];
+  for (let m = 0; m < communityTotalMonths; m += tr.communityFeeFrequency) {
+    communityPaymentMonths.push(m);
+  }
+  const communityTotal = communityFeePerPayment * communityPaymentMonths.length;
+  const communityDesign = new Array(designDuration).fill(0);
+  const communityConstruction = new Array(constructionDuration).fill(0);
+  for (const m of communityPaymentMonths) {
+    if (m < designDuration) {
+      communityDesign[m] = communityFeePerPayment;
+    } else {
+      communityConstruction[m - designDuration] = communityFeePerPayment;
+    }
+  }
   rows.push({
     label: "رسوم المجتمع",
-    totalCost: i.communityFee,
-    investorAmount: i.communityFee,
+    totalCost: communityTotal,
+    investorAmount: communityTotal,
     paid: 0,
-    unpaid: i.communityFee,
+    unpaid: communityTotal,
     funder: "investor",
     section: "الرسوم الحكومية والتنظيمية",
-    designMonths: communityDist.design,
-    constructionMonths: communityDist.construction,
+    designMonths: communityDesign,
+    constructionMonths: communityConstruction,
     postConstructionMonths: emptyPost(),
   });
 
@@ -672,24 +698,22 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     });
   }
 
-    // ─── تقرير مدقق ريرا (ربع سنوي من فتح حساب الضمان) — س3 و س4: محذوف ───
+    // ─── تقرير مدقق ريرا (ربع سنوي من بداية الإنشاء) — س3 و س4: محذوف ───
   if (!isScenario3 && !isScenario4) {
     const auditorConst = emptyConstruction();
-    // Quarterly from start of construction (escrow opens at RERA phase month 2, before construction)
+    // Per-payment amount from settings (default 3500 AED)
+    const auditorPerPayment = tr.reraAuditorQuarterlyFee;
     const auditorPayments: number[] = [];
-    for (let m = 2; m < constructionDuration; m += 3) {
+    for (let m = 0; m < constructionDuration; m += 3) {
       auditorPayments.push(m);
     }
-    const auditorPerPayment = auditorPayments.length > 0 ? i.reraAuditorReport / auditorPayments.length : i.reraAuditorReport;
     for (const m of auditorPayments) {
       auditorConst[m] = auditorPerPayment;
     }
-    if (auditorPayments.length === 0 && constructionDuration > 0) {
-      auditorConst[0] = i.reraAuditorReport;
-    }
+    const auditorTotal = auditorPerPayment * auditorPayments.length;
     rows.push({
       label: "تقرير مدقق ريرا",
-      totalCost: i.reraAuditorReport,
+      totalCost: auditorTotal,
       investorAmount: 0,
       paid: 0,
       unpaid: 0,
@@ -700,24 +724,22 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       postConstructionMonths: emptyPost(),
     });
   }
-  // ─── فحص ريرا (ربع سنوي من بدء الإنشاء) — س٣ و س٤: محذوف ───
+  // ─── فحص ريرا (ربع سنوي من بداية الإنشاء) — س٣ و س٤: محذوف ───
   if (!isScenario3 && !isScenario4) {
     const inspConst = emptyConstruction();
-    // Quarterly from start of construction
+    // Per-payment amount from settings (default 15020 AED)
+    const inspPerPayment = tr.reraInspectionQuarterlyFee;
     const inspPayments: number[] = [];
-    for (let m = 2; m < constructionDuration; m += 3) {
+    for (let m = 0; m < constructionDuration; m += 3) {
       inspPayments.push(m);
     }
-    const inspPerPayment = inspPayments.length > 0 ? i.reraInspection / inspPayments.length : i.reraInspection;
     for (const m of inspPayments) {
       inspConst[m] = inspPerPayment;
     }
-    if (inspPayments.length === 0 && constructionDuration > 0) {
-      inspConst[0] = i.reraInspection;
-    }
+    const inspTotal = inspPerPayment * inspPayments.length;
     rows.push({
       label: "فحص ريرا",
-      totalCost: i.reraInspection,
+      totalCost: inspTotal,
       investorAmount: 0,
       paid: 0,
       unpaid: 0,
@@ -729,78 +751,107 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     });
   }
 
-  // ─── عمولة المبيعات ───
-  if (isScenario4) {
-    // سيناريو 4: لا يوجد عمولة مبيعات
-  } else if (isScenario3) {
-    const commissionAmount = totalRevenue * r.salesCommissionPostCompletion; // 2%
-    const commissionPost = emptyPost();
-    commissionPost[1] = commissionAmount / 2;
-    commissionPost[2] = commissionAmount / 2;
-    rows.push({
-      label: "عمولة المبيعات (2%)",
-      totalCost: commissionAmount,
-      investorAmount: commissionAmount,
-      paid: 0,
-      unpaid: commissionAmount,
-      funder: "investor",
-      section: "المبيعات والتسويق",
-      designMonths: emptyDesign(),
-      constructionMonths: emptyConstruction(),
-      postConstructionMonths: commissionPost,
-    });
-  } else {
-    // عمولة المبيعات تُصرف عند تحصيل 20% من المشتري (تقريباً شهر 3 من الإنشاء)
+  // ─── عمولة المبيعات (نسبة العمولة × مبيعات كل شهر، تُصرف عند سداد المشتري 20%) ───
+  if (!isScenario4) {
+    const commDesign = emptyDesign();
     const commConst = emptyConstruction();
-    const commMonth = Math.min(2, constructionDuration - 1); // شهر 3 (index 2)
-    commConst[commMonth] = costs.salesCommission;
-    rows.push({
-      label: "عمولة المبيعات",
-      totalCost: costs.salesCommission,
-      investorAmount: 0,
-      paid: 0,
-      unpaid: 0,
-      funder: "escrow",
-      section: "المبيعات والتسويق",
-      designMonths: emptyDesign(),
-      constructionMonths: commConst,
-      postConstructionMonths: emptyPost(),
-    });
+    const commPost = emptyPost();
+    let commTotal = 0;
+
+    if (salesResult && salesResult.escrowData.length > 0) {
+      // Calculate commission per month's sales batch, paid when buyer reaches 20%
+      // Parse payment plan from salesResult (saved from V2WaelSales)
+      const ppDownPct = salesResult.ppDownPct || 10;
+      const triggerPct = tr.salesCommissionTriggerPct; // 20%
+      const commPct = r.salesCommission; // e.g. 0.05
+      
+      // For each month with sales, calculate:
+      // - Commission amount = units sold × avgPrice × commPct
+      // - When is it paid? When cumulative buyer payments reach triggerPct%
+      // If downPayment >= triggerPct, commission is paid same month as sale
+      // Otherwise, need to wait for installments to accumulate to triggerPct
+      
+      const monthlyInstallmentPct = (100 - ppDownPct - 30) / (constructionDuration || 1); // simplified
+      
+      for (const entry of salesResult.escrowData) {
+        if (entry.units <= 0) continue;
+        const saleMonth = entry.month; // absolute project month (0-indexed)
+        const commAmount = entry.income * commPct; // commission on this batch's total income value
+        
+        // When does buyer reach triggerPct? 
+        // After downPayment (ppDownPct%), then monthly installments
+        let paymentMonth = saleMonth;
+        if (ppDownPct >= triggerPct) {
+          // Down payment alone covers 20%, commission paid same month + 1
+          paymentMonth = saleMonth + 1;
+        } else {
+          // Need additional months of installments
+          const remainingPct = triggerPct - ppDownPct;
+          const monthsNeeded = Math.ceil(remainingPct / (monthlyInstallmentPct || 1));
+          paymentMonth = saleMonth + monthsNeeded + 1; // +1 for processing
+        }
+        
+        // Place commission in the correct phase array
+        if (paymentMonth < designDuration) {
+          commDesign[paymentMonth] = (commDesign[paymentMonth] || 0) + commAmount;
+        } else if (paymentMonth - designDuration < constructionDuration) {
+          commConst[paymentMonth - designDuration] = (commConst[paymentMonth - designDuration] || 0) + commAmount;
+        } else {
+          const postIdx = paymentMonth - designDuration - constructionDuration;
+          if (postIdx < commPost.length) {
+            commPost[postIdx] = (commPost[postIdx] || 0) + commAmount;
+          }
+        }
+        commTotal += commAmount;
+      }
+    } else {
+      // Fallback: total commission at month 3 of construction
+      commTotal = costs.salesCommission;
+      const commMonth = Math.min(2, constructionDuration - 1);
+      commConst[commMonth] = commTotal;
+    }
+
+    if (commTotal > 0) {
+      rows.push({
+        label: "عمولة المبيعات",
+        totalCost: commTotal,
+        investorAmount: 0,
+        paid: 0,
+        unpaid: 0,
+        funder: "escrow",
+        section: "المبيعات والتسويق",
+        designMonths: commDesign,
+        constructionMonths: commConst,
+        postConstructionMonths: commPost,
+      });
+    }
   }
 
-  // ─── التسويق ───
-  if (!isScenario4) {
+  // ─── التسويق (يُنسخ مباشرة من صفحة التسويق) ───
+  {
     const marketingDesign = emptyDesign();
     const marketingConstruction = emptyConstruction();
+    let marketingTotal = 0;
 
-    if (isScenario3) {
-      const marketingAmount = totalRevenue * 0.005; // 0.5%
-      marketingConstruction[constructionDuration - 1] = marketingAmount;
-      rows.push({
-        label: "التسويق (0.5%)",
-        totalCost: marketingAmount,
-        investorAmount: marketingAmount,
-        paid: 0,
-        unpaid: marketingAmount,
-        funder: "investor",
-        section: "المبيعات والتسويق",
-        designMonths: marketingDesign,
-        constructionMonths: marketingConstruction,
-        postConstructionMonths: emptyPost(),
-      });
-    } else {
-      const marketingTotal = costs.marketing;
-      const marketingPerMonth = marketingTotal / 12;
-      if (isScenario2) {
-        // S2: marketing starts at month (marketingPrepMonths) into construction
-        let placed = 0;
-        for (let idx = marketingPrepMonths; idx < constructionDuration && placed < 12; idx++) {
-          marketingConstruction[idx] = marketingPerMonth;
-          placed++;
+    if (salesResult?.marketingMonthlyAmounts && salesResult.marketingMonthlyAmounts.length > 0) {
+      // Use the monthly amounts directly from marketing page
+      // marketingMonthlyAmounts is indexed by project month (0 = month 1 of design)
+      const amounts = salesResult.marketingMonthlyAmounts;
+      for (let m = 0; m < amounts.length; m++) {
+        if (amounts[m] && amounts[m] > 0) {
+          if (m < designDuration) {
+            marketingDesign[m] = amounts[m];
+          } else if (m - designDuration < constructionDuration) {
+            marketingConstruction[m - designDuration] = amounts[m];
+          }
+          marketingTotal += amounts[m];
         }
-      } else {
-        // S1: marketing starts at (designDuration - marketingPrepMonths) in design phase
-        // then continues into construction
+      }
+    } else {
+      // Fallback: use costs.marketing distributed equally over 12 months starting from marketingPrepMonths before construction
+      marketingTotal = costs.marketing;
+      if (marketingTotal > 0) {
+        const marketingPerMonth = marketingTotal / 12;
         let placed = 0;
         const marketingStartInDesign = Math.max(0, designDuration - marketingPrepMonths);
         for (let idx = marketingStartInDesign; idx < designDuration && placed < 12; idx++) {
@@ -812,8 +863,11 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
           placed++;
         }
       }
+    }
+
+    if (marketingTotal > 0) {
       rows.push({
-        label: "التسويق (2%)",
+        label: "التسويق",
         totalCost: marketingTotal,
         investorAmount: marketingTotal,
         paid: 0,
@@ -827,65 +881,27 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     }
   }
 
-  // ─── أتعاب المطور ───
+  // ─── أتعاب المطور (40% تصميم + 60% إنشاء) ───
   {
     const devFeeDesign = emptyDesign();
     const devFeeConstruction = emptyConstruction();
-
-    if (isScenario4) {
-      const devFeeDesignTotal = constructionCost * 0.01;
-      const devFeeConstructionTotal = constructionCost * 0.02;
-      distributeEqual(devFeeDesignTotal, designDuration, devFeeDesign, 0);
-      distributeEqual(devFeeConstructionTotal, constructionDuration, devFeeConstruction, 0);
-      const totalDevFee = devFeeDesignTotal + devFeeConstructionTotal;
-      rows.push({
-        label: "أتعاب المطور (3%)",
-        totalCost: totalDevFee,
-        investorAmount: totalDevFee,
-        paid: 0,
-        unpaid: totalDevFee,
-        funder: "investor",
-        section: "أتعاب المطور",
-        designMonths: devFeeDesign,
-        constructionMonths: devFeeConstruction,
-        postConstructionMonths: emptyPost(),
-      });
-    } else if (isScenario3) {
-      const devFeeDesignTotal = totalRevenue * 0.01;
-      const devFeeConstructionTotal = totalRevenue * 0.02;
-      distributeEqual(devFeeDesignTotal, designDuration, devFeeDesign, 0);
-      distributeEqual(devFeeConstructionTotal, constructionDuration, devFeeConstruction, 0);
-      const totalDevFee = devFeeDesignTotal + devFeeConstructionTotal;
-      rows.push({
-        label: "أتعاب المطور (3%)",
-        totalCost: totalDevFee,
-        investorAmount: totalDevFee,
-        paid: 0,
-        unpaid: totalDevFee,
-        funder: "investor",
-        section: "المبيعات والتسويق",
-        designMonths: devFeeDesign,
-        constructionMonths: devFeeConstruction,
-        postConstructionMonths: emptyPost(),
-      });
-    } else {
-      const devFeeDesignTotal = totalRevenue * 0.02;
-      const devFeeConstructionTotal = totalRevenue * 0.03;
-      distributeEqual(devFeeDesignTotal, designDuration, devFeeDesign, 0);
-      distributeEqual(devFeeConstructionTotal, constructionDuration, devFeeConstruction, 0);
-      rows.push({
-        label: "أتعاب المطور",
-        totalCost: costs.developerFee,
-        investorAmount: costs.developerFee,
-        paid: 0,
-        unpaid: costs.developerFee,
-        funder: "investor",
-        section: "المبيعات والتسويق",
-        designMonths: devFeeDesign,
-        constructionMonths: devFeeConstruction,
-        postConstructionMonths: emptyPost(),
-      });
-    }
+    const totalDevFee = costs.developerFee;
+    const devFeeDesignTotal = totalDevFee * 0.4;
+    const devFeeConstructionTotal = totalDevFee * 0.6;
+    distributeEqual(devFeeDesignTotal, designDuration, devFeeDesign, 0);
+    distributeEqual(devFeeConstructionTotal, constructionDuration, devFeeConstruction, 0);
+    rows.push({
+      label: "أتعاب المطور",
+      totalCost: totalDevFee,
+      investorAmount: totalDevFee,
+      paid: 0,
+      unpaid: totalDevFee,
+      funder: "investor",
+      section: "أتعاب المطور",
+      designMonths: devFeeDesign,
+      constructionMonths: devFeeConstruction,
+      postConstructionMonths: emptyPost(),
+    });
   }
 
   // ─── الإنشاء (5 بنود مستقلة حسب الإعدادات) ───
