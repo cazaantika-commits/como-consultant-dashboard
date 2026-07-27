@@ -8,50 +8,24 @@ import { ProjectSelector } from "@/components/ProjectSelector";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Slider } from "@/components/ui/slider";
 import {
-  ArrowRight, Settings, Save, Loader2, Building2,
-  Calendar, Link2, Percent, Clock, Zap, AlertTriangle,
-  Banknote, HardHat, Megaphone, FileCheck, Palette,
+  Settings, Save, Loader2, Building2, Calendar,
+  Percent, Clock, Banknote, HardHat, Megaphone,
+  FileCheck, Palette, AlertTriangle, Landmark, Shield,
 } from "lucide-react";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════════
-interface TimingRule {
+interface ProjectPhase {
   id: string;
-  category: string;
   label: string;
-  description: string;
-  value: number;
-  unit: string;
-  min: number;
-  max: number;
-  step: number;
-  icon: any;
-  color: string;
-}
-
-interface PercentageRule {
-  id: string;
-  category: string;
-  label: string;
-  description: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  icon: any;
-  color: string;
-}
-
-interface PaymentSplitRule {
-  id: string;
-  category: string;
-  label: string;
-  investorPct: number;
-  escrowPct: number;
-  icon: any;
+  startRule: string; // human-readable description of when it starts
+  durationMonths: number;
+  durationEditable: boolean; // can user edit duration?
+  startEditable: boolean; // can user edit start offset?
+  startOffsetMonths: number; // offset from reference point
+  startReference: string; // reference event id
   color: string;
 }
 
@@ -63,34 +37,27 @@ interface DesignPaymentPhase {
   durationWeeks: number;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// DEFAULT RULES
-// ═══════════════════════════════════════════════════════════════════════════════
-const DEFAULT_TIMING_RULES: TimingRule[] = [
-  { id: "marketingPrepLead", category: "التسويق", label: "تحضير مواد الدعاية", description: "تبدأ قبل X شهر من انتهاء التصاميم", value: 3, unit: "شهر", min: 1, max: 8, step: 1, icon: Megaphone, color: "#ec4899" },
-  { id: "reraApprovalLead", category: "التسويق", label: "اعتمادات ريرا", description: "تبدأ قبل X شهر من بدء المبيعات", value: 2, unit: "شهر", min: 1, max: 6, step: 1, icon: FileCheck, color: "#8b5cf6" },
-  { id: "salesStartOffset", category: "المبيعات", label: "بدء المبيعات", description: "تبدأ قبل X شهر من نهاية التصاميم", value: 1, unit: "شهر", min: 0, max: 6, step: 1, icon: Zap, color: "#10b981" },
-  { id: "govFeesMonth", category: "الرسوم", label: "دفع الرسوم الحكومية", description: "تُدفع في الشهر X من المشروع", value: 9, unit: "شهر", min: 1, max: 24, step: 1, icon: Banknote, color: "#f59e0b" },
-  { id: "sortingFeesMonth", category: "الرسوم", label: "رسوم الفرز", description: "تُدفع في الشهر X من المشروع", value: 6, unit: "شهر", min: 1, max: 18, step: 1, icon: Banknote, color: "#f97316" },
-  { id: "reraRegistrationMonth", category: "الرسوم", label: "تسجيل ريرا", description: "يتم في الشهر X من المشروع", value: 7, unit: "شهر", min: 1, max: 18, step: 1, icon: FileCheck, color: "#6366f1" },
-  { id: "constructionStartDelay", category: "الإنشاء", label: "بدء الإنشاء بعد التصاميم", description: "يبدأ بعد X شهر من انتهاء التصاميم", value: 1, unit: "شهر", min: 0, max: 6, step: 1, icon: HardHat, color: "#64748b" },
-  { id: "mobilizationMonth", category: "الإنشاء", label: "دفعة التعبئة (Mobilization)", description: "تُدفع في الشهر X من بدء الإنشاء", value: 1, unit: "شهر", min: 1, max: 6, step: 1, icon: HardHat, color: "#475569" },
-];
+interface ConfigurableRate {
+  id: string;
+  label: string;
+  description: string;
+  value: number;
+  unit: string;
+  min: number;
+  max: number;
+  step: number;
+}
 
-const DEFAULT_PERCENTAGE_RULES: PercentageRule[] = [
-  { id: "escrowDepositPct", category: "الضمان", label: "إيداع حساب الضمان", description: "نسبة من تكلفة الإنشاء تودع مقدماً", value: 20, min: 5, max: 50, step: 5, icon: Percent, color: "#8b5cf6" },
-  { id: "buyerBookingPct", category: "خطة الدفع", label: "دفعة الحجز من المشتري", description: "نسبة من سعر الوحدة عند التوقيع", value: 10, min: 5, max: 30, step: 5, icon: Percent, color: "#3b82f6" },
-  { id: "buyerConstructionPct", category: "خطة الدفع", label: "أقساط الإنشاء", description: "نسبة من سعر الوحدة خلال الإنشاء", value: 60, min: 20, max: 80, step: 5, icon: Percent, color: "#10b981" },
-  { id: "buyerHandoverPct", category: "خطة الدفع", label: "دفعة التسليم", description: "نسبة من سعر الوحدة عند التسليم", value: 30, min: 5, max: 50, step: 5, icon: Percent, color: "#f59e0b" },
-  { id: "contingencyPct", category: "عام", label: "نسبة الطوارئ", description: "نسبة إضافية على التكاليف للطوارئ", value: 2, min: 0, max: 10, step: 0.5, icon: AlertTriangle, color: "#ef4444" },
-];
-
-const DEFAULT_PAYMENT_SPLITS: PaymentSplitRule[] = [
-  { id: "constructionSplit", category: "الإنشاء", label: "تكاليف الإنشاء", investorPct: 30, escrowPct: 70, icon: HardHat, color: "#64748b" },
-  { id: "govFeesSplit", category: "الرسوم", label: "الرسوم الحكومية", investorPct: 10, escrowPct: 90, icon: Banknote, color: "#f59e0b" },
-  { id: "designFeesSplit", category: "التصميم", label: "أتعاب التصميم", investorPct: 100, escrowPct: 0, icon: Palette, color: "#3b82f6" },
-  { id: "supervisionSplit", category: "الإشراف", label: "أتعاب الإشراف", investorPct: 50, escrowPct: 50, icon: Settings, color: "#10b981" },
-  { id: "marketingSplit", category: "التسويق", label: "تكاليف التسويق", investorPct: 100, escrowPct: 0, icon: Megaphone, color: "#ec4899" },
+// ═══════════════════════════════════════════════════════════════════════════════
+// DEFAULTS
+// ═══════════════════════════════════════════════════════════════════════════════
+const DEFAULT_PROJECT_PHASES: ProjectPhase[] = [
+  { id: "designs", label: "التصاميم", startRule: "بداية المشروع", durationMonths: 0, durationEditable: false, startEditable: false, startOffsetMonths: 0, startReference: "projectStart", color: "#3b82f6" },
+  { id: "marketingPrep", label: "تحضير مواد التسويق", startRule: "عند اكتمال التصميم التخطيطي", durationMonths: 2, durationEditable: true, startEditable: false, startOffsetMonths: 0, startReference: "schematicEnd", color: "#f59e0b" },
+  { id: "reraApprovals", label: "ريرا + اعتمادات البيع", startRule: "قبل X شهر من بدء المبيعات", durationMonths: 2, durationEditable: true, startEditable: true, startOffsetMonths: 2, startReference: "beforeSalesStart", color: "#8b5cf6" },
+  { id: "marketingLaunch", label: "إطلاق التسويق", startRule: "بعد تحضير مواد التسويق", durationMonths: 2, durationEditable: true, startEditable: false, startOffsetMonths: 0, startReference: "marketingPrepEnd", color: "#ec4899" },
+  { id: "salesStart", label: "بدء المبيعات", startRule: "بعد ريرا + اعتمادات البيع", durationMonths: 0, durationEditable: false, startEditable: false, startOffsetMonths: 0, startReference: "reraApprovalsEnd", color: "#10b981" },
+  { id: "construction", label: "الإنشاء", startRule: "من المدخلات العامة", durationMonths: 0, durationEditable: false, startEditable: true, startOffsetMonths: 1, startReference: "designsEnd", color: "#64748b" },
 ];
 
 const DEFAULT_DESIGN_PAYMENTS: DesignPaymentPhase[] = [
@@ -101,6 +68,52 @@ const DEFAULT_DESIGN_PAYMENTS: DesignPaymentPhase[] = [
   { id: "authorities", label: "اعتماد الجهات", labelEn: "Authorities Approval", pct: 10, durationWeeks: 4 },
   { id: "tender", label: "تأهيل المقاولين ووثائق المناقصة", labelEn: "Prequalification & Tender Documents", pct: 15, durationWeeks: 4 },
   { id: "ifc", label: "صادر للتنفيذ", labelEn: "Issued for Construction", pct: 10, durationWeeks: 2 },
+];
+
+const DEFAULT_CONFIGURABLE_RATES: ConfigurableRate[] = [
+  { id: "communityFeePerSqft", label: "رسوم المجتمع (لكل قدم مربع)", description: "GFA × هذا المعدل × عدد الدفعات", value: 0.25, unit: "درهم/قدم²", min: 0.1, max: 2, step: 0.05 },
+  { id: "reraUnitRegistrationFee", label: "رسوم تسجيل الوحدات — ريرا", description: "عدد الوحدات × هذا المبلغ", value: 520, unit: "درهم/وحدة", min: 100, max: 2000, step: 10 },
+  { id: "reraAuditorQuarterlyFee", label: "تقرير مدقق ريرا (ربع سنوي)", description: "يُدفع كل 3 أشهر من فتح حساب الضمان", value: 15000, unit: "درهم", min: 5000, max: 100000, step: 1000 },
+  { id: "reraInspectionQuarterlyFee", label: "فحص ريرا (ربع سنوي)", description: "يُدفع كل 3 أشهر من بدء الإنشاء", value: 15000, unit: "درهم", min: 5000, max: 100000, step: 1000 },
+  { id: "escrowDepositPct", label: "إيداع حساب الضمان", description: "نسبة من تكلفة الإنشاء — ليس مصروفاً", value: 20, unit: "%", min: 5, max: 50, step: 5 },
+  { id: "communityFeeFrequency", label: "دورية رسوم المجتمع", description: "كل X أشهر من بدء التصاميم", value: 6, unit: "شهر", min: 3, max: 12, step: 3 },
+];
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INVESTOR PAYMENT RULES (read-only display)
+// ═══════════════════════════════════════════════════════════════════════════════
+const INVESTOR_RULES = [
+  { id: "designFees", label: "أتعاب التصاميم", timing: "موزعة حسب مراحل التصميم السبع (نسبة كل مرحلة × إجمالي الأتعاب)", type: "موزعة" },
+  { id: "soilTest", label: "فحص التربة", timing: "دفعة واحدة — الشهر 2 من مرحلة التصاميم", type: "دفعة واحدة" },
+  { id: "topographySurvey", label: "المسح الطبوغرافي", timing: "دفعة واحدة — الشهر 2 من مرحلة التصاميم", type: "دفعة واحدة" },
+  { id: "surveyorDwg", label: "رسوم المساح DWG", timing: "دفعة واحدة — الشهر 1 من مرحلة ريرا + اعتمادات البيع", type: "دفعة واحدة" },
+  { id: "communityFees", label: "رسوم المجتمع", timing: "كل 6 أشهر من بدء التصاميم حتى الإنجاز — GFA × المعدل", type: "دورية" },
+  { id: "govFees10", label: "رسوم الجهات الحكومية (10%)", timing: "دفعة واحدة — عند اكتمال التصميم التخطيطي", type: "دفعة واحدة" },
+  { id: "sortingFees", label: "رسوم الفرز", timing: "دفعة واحدة — الشهر 1 من مرحلة ريرا + اعتمادات البيع", type: "دفعة واحدة" },
+  { id: "nocDeveloper", label: "رسوم NOC المطور", timing: "دفعة واحدة — الشهر 1 من مرحلة ريرا + اعتمادات البيع", type: "دفعة واحدة" },
+  { id: "reraProjectReg", label: "تسجيل المشروع — ريرا", timing: "دفعة واحدة — الشهر 2 من مرحلة ريرا + اعتمادات البيع", type: "دفعة واحدة" },
+  { id: "reraUnitReg", label: "تسجيل الوحدات — ريرا", timing: "دفعة واحدة — الشهر 2 من ريرا (عدد الوحدات × 520)", type: "محسوبة" },
+  { id: "escrowDeposit", label: "إيداع حساب الضمان", timing: "الشهر 2 من ريرا — 20% من تكلفة الإنشاء (ليس مصروفاً)", type: "تحويل" },
+  { id: "bankFees", label: "رسوم البنك", timing: "موزعة بالتساوي من الشهر 2 من ريرا حتى نهاية المشروع", type: "موزعة" },
+  { id: "marketingPrep", label: "تحضير مواد التسويق", timing: "موزعة بالتساوي على مدة مرحلة تحضير المواد", type: "موزعة" },
+  { id: "marketing", label: "التسويق", timing: "من صفحة المبيعات والتسويق (وائل يحدد المبلغ والنسبة)", type: "متغير" },
+  { id: "contractorMobilization", label: "دفعة مقدمة المقاول (10%)", timing: "الشهر 1 من الإنشاء", type: "دفعة واحدة" },
+  { id: "contractorFinalRetention", label: "ريتنشن أخيرة المقاول (5%)", timing: "الشهر +13 بعد الإنجاز", type: "دفعة واحدة" },
+];
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ESCROW PAYMENT RULES (read-only display)
+// ═══════════════════════════════════════════════════════════════════════════════
+const ESCROW_RULES = [
+  { id: "contractorProgress", label: "مستخلصات المقاول (80%)", timing: "شهرياً حسب نسبة الإنجاز — تُدفع الشهر التالي", type: "شهرية" },
+  { id: "contractorRetention1", label: "ريتنشن المقاول الأولى (5%)", timing: "الشهر +2 بعد الإنجاز", type: "دفعة واحدة" },
+  { id: "supervisionFees", label: "أتعاب الإشراف", timing: "نسبة الإشراف × (نسبة الإنجاز الشهرية × تكلفة الإنشاء) — الشهر التالي", type: "شهرية" },
+  { id: "surveyorAsbuilt", label: "رسوم المساح As-Built", timing: "دفعة واحدة — الشهر قبل الأخير من الإنشاء", type: "دفعة واحدة" },
+  { id: "govFees45a", label: "رسوم الجهات الحكومية (45%)", timing: "عند 80% إنجاز الإنشاء", type: "دفعة واحدة" },
+  { id: "govFees45b", label: "رسوم الجهات الحكومية (45%)", timing: "عند 90% إنجاز الإنشاء", type: "دفعة واحدة" },
+  { id: "reraAuditor", label: "تقرير مدقق ريرا", timing: "كل 3 أشهر من فتح حساب الضمان حتى الإنجاز", type: "ربع سنوية" },
+  { id: "reraInspection", label: "فحص ريرا", timing: "كل 3 أشهر من بدء الإنشاء حتى الإنجاز", type: "ربع سنوية" },
+  { id: "salesCommission", label: "عمولة المبيعات", timing: "تُدفع بعد شهر من سداد المشتري 20% من سعر الوحدة", type: "مرتبطة بالمبيعات" },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -122,50 +135,47 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
   });
 
   // ─── State ──────────────────────────────────────────────────────────────────
-  const [timingRules, setTimingRules] = useState<TimingRule[]>(DEFAULT_TIMING_RULES);
-  const [percentageRules, setPercentageRules] = useState<PercentageRule[]>(DEFAULT_PERCENTAGE_RULES);
-  const [paymentSplits, setPaymentSplits] = useState<PaymentSplitRule[]>(DEFAULT_PAYMENT_SPLITS);
+  const [projectPhases, setProjectPhases] = useState<ProjectPhase[]>(DEFAULT_PROJECT_PHASES);
   const [designPayments, setDesignPayments] = useState<DesignPaymentPhase[]>(DEFAULT_DESIGN_PAYMENTS);
+  const [configurableRates, setConfigurableRates] = useState<ConfigurableRate[]>(DEFAULT_CONFIGURABLE_RATES);
   const [hasChanges, setHasChanges] = useState(false);
 
   // ─── Load from DB ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (projectQuery.data) {
       const p = projectQuery.data as any;
-      // Load settings from constructionScheduleJson if it contains settings
       if (p.constructionScheduleJson) {
         try {
           const stored = JSON.parse(p.constructionScheduleJson);
           if (stored.settings) {
             const s = stored.settings;
-            if (s.timingRules) {
-              setTimingRules((prev) =>
-                prev.map((r) => ({ ...r, value: s.timingRules[r.id] ?? r.value }))
-              );
-            }
-            if (s.percentageRules) {
-              setPercentageRules((prev) =>
-                prev.map((r) => ({ ...r, value: s.percentageRules[r.id] ?? r.value }))
-              );
-            }
-            if (s.paymentSplits) {
-              setPaymentSplits((prev) =>
-                prev.map((r) => ({
-                  ...r,
-                  investorPct: s.paymentSplits[r.id]?.investor ?? r.investorPct,
-                  escrowPct: s.paymentSplits[r.id]?.escrow ?? r.escrowPct,
-                }))
+            if (s.projectPhases) {
+              setProjectPhases((prev) =>
+                prev.map((ph) => {
+                  const saved = s.projectPhases[ph.id];
+                  if (!saved) return ph;
+                  return {
+                    ...ph,
+                    durationMonths: saved.durationMonths ?? ph.durationMonths,
+                    startOffsetMonths: saved.startOffsetMonths ?? ph.startOffsetMonths,
+                  };
+                })
               );
             }
             if (s.designPayments) {
               setDesignPayments((prev) =>
                 prev.map((r) => {
-                  const stored = s.designPayments[r.id];
-                  if (typeof stored === 'object' && stored !== null) {
-                    return { ...r, pct: stored.pct ?? r.pct, durationWeeks: stored.durationWeeks ?? r.durationWeeks };
+                  const saved = s.designPayments[r.id];
+                  if (typeof saved === 'object' && saved !== null) {
+                    return { ...r, pct: saved.pct ?? r.pct, durationWeeks: saved.durationWeeks ?? r.durationWeeks };
                   }
-                  return { ...r, pct: typeof stored === 'number' ? stored : r.pct };
+                  return { ...r, pct: typeof saved === 'number' ? saved : r.pct };
                 })
+              );
+            }
+            if (s.configurableRates) {
+              setConfigurableRates((prev) =>
+                prev.map((r) => ({ ...r, value: s.configurableRates[r.id] ?? r.value }))
               );
             }
           }
@@ -178,30 +188,25 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
   // ─── Save ───────────────────────────────────────────────────────────────────
   const handleSave = useCallback(() => {
     if (!selectedProjectId) return;
-    // Merge settings into constructionScheduleJson
     const existingJson = (projectQuery.data as any)?.constructionScheduleJson;
     let existing: any = {};
     if (existingJson) { try { existing = JSON.parse(existingJson); } catch {} }
     existing.settings = {
-      timingRules: Object.fromEntries(timingRules.map((r) => [r.id, r.value])),
-      percentageRules: Object.fromEntries(percentageRules.map((r) => [r.id, r.value])),
-      paymentSplits: Object.fromEntries(paymentSplits.map((r) => [r.id, { investor: r.investorPct, escrow: r.escrowPct }])),
+      projectPhases: Object.fromEntries(projectPhases.map((ph) => [ph.id, { durationMonths: ph.durationMonths, startOffsetMonths: ph.startOffsetMonths }])),
       designPayments: Object.fromEntries(designPayments.map((r) => [r.id, { pct: r.pct, durationWeeks: r.durationWeeks }])),
+      configurableRates: Object.fromEntries(configurableRates.map((r) => [r.id, r.value])),
     };
     updateProject.mutate({ id: selectedProjectId, constructionScheduleJson: JSON.stringify(existing) } as any);
     setHasChanges(false);
-  }, [selectedProjectId, timingRules, percentageRules, paymentSplits, designPayments, projectQuery.data, updateProject]);
+  }, [selectedProjectId, projectPhases, designPayments, configurableRates, projectQuery.data, updateProject]);
 
-  const updateTiming = (id: string, value: number) => {
-    setTimingRules((prev) => prev.map((r) => (r.id === id ? { ...r, value } : r)));
+  // ─── Updaters ──────────────────────────────────────────────────────────────
+  const updatePhaseDuration = (id: string, val: number) => {
+    setProjectPhases((prev) => prev.map((p) => (p.id === id ? { ...p, durationMonths: val } : p)));
     setHasChanges(true);
   };
-  const updatePercentage = (id: string, value: number) => {
-    setPercentageRules((prev) => prev.map((r) => (r.id === id ? { ...r, value } : r)));
-    setHasChanges(true);
-  };
-  const updateSplit = (id: string, investorPct: number) => {
-    setPaymentSplits((prev) => prev.map((r) => (r.id === id ? { ...r, investorPct, escrowPct: 100 - investorPct } : r)));
+  const updatePhaseOffset = (id: string, val: number) => {
+    setProjectPhases((prev) => prev.map((p) => (p.id === id ? { ...p, startOffsetMonths: val } : p)));
     setHasChanges(true);
   };
   const updateDesignPayment = (id: string, pct: number) => {
@@ -212,149 +217,119 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
     setDesignPayments((prev) => prev.map((r) => (r.id === id ? { ...r, durationWeeks } : r)));
     setHasChanges(true);
   };
+  const updateRate = (id: string, value: number) => {
+    setConfigurableRates((prev) => prev.map((r) => (r.id === id ? { ...r, value } : r)));
+    setHasChanges(true);
+  };
 
   const designPaymentTotal = designPayments.reduce((s, d) => s + d.pct, 0);
-  const buyerPaymentTotal = percentageRules.filter((r) => r.category === "خطة الدفع").reduce((s, r) => s + r.value, 0);
+  const totalDesignWeeks = designPayments.reduce((s, p) => s + p.durationWeeks, 0);
+  const totalDesignMonths = Math.ceil(totalDesignWeeks / 4.33);
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // RENDER
   // ═══════════════════════════════════════════════════════════════════════════════
   return (
     <div className="bg-white p-2" dir="rtl">
-      <div className="max-w-full mx-auto space-y-2">
+      <div className="max-w-full mx-auto space-y-3">
         {/* HEADER */}
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <div>
-              <h1 className="text-xs font-bold text-gray-900 flex items-center gap-1">
-                <Settings className="w-3 h-3 text-indigo-600" />
-                الإعدادات والقواعد
-              </h1>
-            </div>
+            <Settings className="w-4 h-4 text-teal-600" />
+            <h1 className="text-sm font-bold text-gray-900">الإعدادات والقواعد</h1>
           </div>
           <div className="flex items-center gap-2">
             <ProjectSelector selectedId={selectedProjectId} onSelect={(id) => setSelectedProjectId(id)} />
             {hasChanges && (
-              <Button size="sm" onClick={handleSave} disabled={updateProject.isPending} className="gap-1.5 bg-indigo-600 hover:bg-indigo-700">
+              <Button size="sm" onClick={handleSave} disabled={updateProject.isPending} className="gap-1.5 bg-teal-600 hover:bg-teal-700">
                 {updateProject.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                حفظ الإعدادات
+                حفظ
               </Button>
             )}
           </div>
         </div>
 
-        {/* No project */}
+        {/* No project selected */}
         {!selectedProjectId && (
           <Card className="border-dashed"><CardContent className="py-4 text-center">
             <Building2 className="w-6 h-6 mx-auto text-gray-300 mb-1" />
-            <p className="text-xs text-gray-500">اختر مشروعاً</p>
+            <p className="text-xs text-gray-500">اختر مشروعاً لعرض الإعدادات</p>
           </CardContent></Card>
         )}
 
         {/* Loading */}
         {selectedProjectId && projectQuery.isLoading && (
-          <Card><CardContent className="py-12 text-center"><Loader2 className="w-8 h-8 mx-auto animate-spin text-indigo-600" /></CardContent></Card>
+          <Card><CardContent className="py-12 text-center"><Loader2 className="w-8 h-8 mx-auto animate-spin text-teal-600" /></CardContent></Card>
         )}
 
-        {/* Main Content */}
-        {selectedProjectId && !projectQuery.isLoading && projectQuery.data && (
-          <>
-            {/* SECTION 1: TIMING RULES */}
-            <section className="bg-white rounded-xl border border-gray-100 shadow-md overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
-                <Clock className="w-4 h-4 text-blue-600" />
-                <h2 className="text-sm font-bold text-gray-800">قواعد التوقيت</h2>
-                <Badge variant="secondary" className="text-[10px]">متى يحدث كل شيء</Badge>
-              </div>
-              <div className="p-2 grid grid-cols-1 md:grid-cols-2 gap-1">
-                {timingRules.map((rule) => {
-                  const Icon = rule.icon;
-                  return (
-                    <div key={rule.id} className="rounded-lg border border-gray-100 p-3 hover:border-gray-200 transition-colors">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Icon className="w-3.5 h-3.5" style={{ color: rule.color }} />
-                        <span className="text-xs font-bold text-gray-800">{rule.label}</span>
-                        <Badge variant="outline" className="text-[9px] mr-auto">{rule.category}</Badge>
-                      </div>
-                      <p className="text-[10px] text-gray-500 mb-2">{rule.description}</p>
-                      <div className="flex items-center gap-3">
-                        <Slider value={[rule.value]} onValueChange={([v]) => updateTiming(rule.id, v)} min={rule.min} max={rule.max} step={rule.step} className="flex-1" />
-                        <div className="flex items-center gap-1 min-w-[60px] justify-end">
-                          <span className="text-sm font-bold" style={{ color: rule.color }}>{rule.value}</span>
-                          <span className="text-[10px] text-gray-400">{rule.unit}</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
+        {/* Main Content - show when project selected (even if data hasn't loaded yet due to auth) */}
+        {selectedProjectId && !projectQuery.isLoading && (
+          <div className="space-y-3">
 
-            {/* SECTION 2: PERCENTAGE RULES */}
-            <section className="bg-white rounded-xl border border-gray-100 shadow-md overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
-                <Percent className="w-4 h-4 text-emerald-600" />
-                <h2 className="text-sm font-bold text-gray-800">النسب والقواعد المالية</h2>
-                {buyerPaymentTotal !== 100 && (
-                  <Badge variant="destructive" className="text-[10px] mr-auto">
-                    <AlertTriangle className="w-3 h-3 ml-1" />
-                    خطة الدفع = {buyerPaymentTotal}% (يجب 100%)
-                  </Badge>
-                )}
+            {/* ═══ SECTION 1: PROJECT PHASES ═══ */}
+            <section className="rounded-xl border border-teal-100 shadow-sm overflow-hidden">
+              <div className="px-4 py-2.5 bg-teal-50 border-b border-teal-100 flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-teal-700" />
+                <h2 className="text-sm font-bold text-teal-800">مراحل المشروع</h2>
+                <Badge className="text-[10px] bg-teal-100 text-teal-700 mr-auto">البداية والمدة</Badge>
               </div>
-              <div className="p-2 grid grid-cols-1 md:grid-cols-2 gap-1">
-                {percentageRules.map((rule) => {
-                  const Icon = rule.icon;
-                  return (
-                    <div key={rule.id} className="rounded-lg border border-gray-100 p-3 hover:border-gray-200 transition-colors">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Icon className="w-3.5 h-3.5" style={{ color: rule.color }} />
-                        <span className="text-xs font-bold text-gray-800">{rule.label}</span>
-                        <Badge variant="outline" className="text-[9px] mr-auto">{rule.category}</Badge>
-                      </div>
-                      <p className="text-[10px] text-gray-500 mb-2">{rule.description}</p>
-                      <div className="flex items-center gap-3">
-                        <Slider value={[rule.value]} onValueChange={([v]) => updatePercentage(rule.id, v)} min={rule.min} max={rule.max} step={rule.step} className="flex-1" />
-                        <span className="text-sm font-bold min-w-[40px] text-left" style={{ color: rule.color }}>{rule.value}%</span>
-                      </div>
+              <div className="p-3">
+                <div className="grid grid-cols-[auto_1fr_120px_120px] gap-x-3 gap-y-1 text-[10px] font-bold text-gray-500 border-b border-gray-100 pb-2 mb-2">
+                  <span></span>
+                  <span>المرحلة</span>
+                  <span className="text-center">البداية</span>
+                  <span className="text-center">المدة (أشهر)</span>
+                </div>
+                {projectPhases.map((phase, idx) => (
+                  <div key={phase.id} className="grid grid-cols-[auto_1fr_120px_120px] gap-x-3 gap-y-0 items-center py-2 border-b border-gray-50 last:border-b-0">
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white" style={{ backgroundColor: phase.color }}>
+                      {idx + 1}
                     </div>
-                  );
-                })}
-              </div>
-            </section>
-
-            {/* SECTION 3: PAYMENT SPLITS (Investor vs Escrow) */}
-            <section className="bg-white rounded-xl border border-gray-100 shadow-md overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
-                <Link2 className="w-4 h-4 text-violet-600" />
-                <h2 className="text-sm font-bold text-gray-800">تقسيم التمويل (مستثمر / ضمان)</h2>
-              </div>
-              <div className="p-2">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
-                  {paymentSplits.map((rule) => {
-                    const Icon = rule.icon;
+                    <div>
+                      <p className="text-xs font-bold text-gray-800">{phase.label}</p>
+                      <p className="text-[9px] text-gray-400">{phase.startRule}</p>
+                    </div>
+                    <div className="text-center">
+                      {phase.startEditable ? (
+                        <input
+                          type="number"
+                          value={phase.startOffsetMonths}
+                          onChange={(e) => updatePhaseOffset(phase.id, parseInt(e.target.value) || 0)}
+                          className="w-12 text-center text-xs font-mono border border-gray-200 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-teal-400"
+                          min={0} max={12}
+                        />
+                      ) : (
+                        <span className="text-[10px] text-gray-400">تلقائي</span>
+                      )}
+                    </div>
+                    <div className="text-center">
+                      {phase.durationEditable ? (
+                        <input
+                          type="number"
+                          value={phase.durationMonths}
+                          onChange={(e) => updatePhaseDuration(phase.id, parseInt(e.target.value) || 0)}
+                          className="w-12 text-center text-xs font-mono border border-gray-200 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-teal-400"
+                          min={1} max={24}
+                        />
+                      ) : (
+                        <span className="text-[10px] text-gray-400">
+                          {phase.id === "designs" ? `${totalDesignMonths} (محسوب)` : "—"}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {/* Visual timeline bar */}
+                <div className="mt-3 h-5 rounded-full overflow-hidden flex bg-gray-50 border border-gray-100">
+                  {projectPhases.map((phase) => {
+                    const dur = phase.id === "designs" ? totalDesignMonths : phase.durationMonths;
+                    const total = totalDesignMonths + projectPhases.filter(p => p.id !== "designs" && p.id !== "salesStart").reduce((s, p) => s + p.durationMonths, 0);
+                    const widthPct = total > 0 ? (dur / total) * 100 : 0;
+                    if (phase.id === "salesStart") return null;
                     return (
-                      <div key={rule.id} className="rounded-lg border border-gray-100 p-3">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Icon className="w-3.5 h-3.5" style={{ color: rule.color }} />
-                          <span className="text-xs font-bold text-gray-800">{rule.label}</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1">
-                            <Slider value={[rule.investorPct]} onValueChange={([v]) => updateSplit(rule.id, v)} min={0} max={100} step={5} className="w-full" />
-                          </div>
-                          <div className="flex items-center gap-2 min-w-[120px]">
-                            <div className="text-center">
-                              <p className="text-[9px] text-gray-400">مستثمر</p>
-                              <p className="text-xs font-bold text-blue-700">{rule.investorPct}%</p>
-                            </div>
-                            <span className="text-gray-300">/</span>
-                            <div className="text-center">
-                              <p className="text-[9px] text-gray-400">ضمان</p>
-                              <p className="text-xs font-bold text-violet-700">{rule.escrowPct}%</p>
-                            </div>
-                          </div>
-                        </div>
+                      <div key={phase.id} className="h-full flex items-center justify-center text-[7px] font-bold text-white transition-all"
+                        style={{ width: `${widthPct}%`, backgroundColor: phase.color, minWidth: widthPct > 0 ? '20px' : '0' }}>
+                        {widthPct > 12 ? phase.label.slice(0, 8) : ""}
                       </div>
                     );
                   })}
@@ -362,89 +337,135 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
               </div>
             </section>
 
-            {/* SECTION 4: DESIGN PAYMENT SCHEDULE */}
-            <section className="bg-white rounded-xl border border-gray-100 shadow-md overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
-                <Palette className="w-4 h-4 text-blue-600" />
-                <h2 className="text-sm font-bold text-gray-800">مراحل التصميم واستحقاق الاستشاري</h2>
+            {/* ═══ SECTION 2: DESIGN PHASES ═══ */}
+            <section className="rounded-xl border border-blue-100 shadow-sm overflow-hidden">
+              <div className="px-4 py-2.5 bg-blue-50 border-b border-blue-100 flex items-center gap-2">
+                <Palette className="w-4 h-4 text-blue-700" />
+                <h2 className="text-sm font-bold text-blue-800">مراحل التصميم واستحقاق الاستشاري</h2>
                 {designPaymentTotal !== 100 && (
                   <Badge variant="destructive" className="text-[10px] mr-auto">
                     <AlertTriangle className="w-3 h-3 ml-1" />
-                    المجموع = {designPaymentTotal}% (يجب 100%)
+                    المجموع = {designPaymentTotal}%
                   </Badge>
                 )}
                 {designPaymentTotal === 100 && (
                   <Badge className="text-[10px] mr-auto bg-emerald-100 text-emerald-700">100% ✓</Badge>
                 )}
-                <span className="text-[10px] text-gray-400 mr-2">إجمالي: {designPayments.reduce((s, p) => s + p.durationWeeks, 0)} أسبوع</span>
+                <span className="text-[10px] text-gray-400">إجمالي: {totalDesignWeeks} أسبوع ≈ {totalDesignMonths} شهر</span>
               </div>
               <div className="p-3">
-                {/* Table header */}
-                <div className="grid grid-cols-[32px_1fr_1fr_100px_100px] gap-2 mb-2 text-[10px] font-bold text-gray-500 border-b border-gray-100 pb-2">
+                <div className="grid grid-cols-[28px_1fr_1fr_80px_80px] gap-2 mb-2 text-[10px] font-bold text-gray-500 border-b border-gray-100 pb-2">
                   <span>#</span>
                   <span>المرحلة</span>
                   <span className="text-gray-400">English</span>
-                  <span className="text-center">المدة (أسابيع)</span>
-                  <span className="text-center">نسبة الاستحقاق %</span>
+                  <span className="text-center">أسابيع</span>
+                  <span className="text-center">%</span>
                 </div>
-                <div className="space-y-2">
-                  {designPayments.map((phase, idx) => (
-                    <div key={phase.id} className="grid grid-cols-[32px_1fr_1fr_100px_100px] gap-2 items-center py-1.5 border-b border-gray-50">
-                      <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold">
-                        {idx + 1}
-                      </div>
-                      <span className="text-xs font-medium text-gray-800">{phase.label}</span>
-                      <span className="text-[10px] text-gray-400">{phase.labelEn}</span>
-                      <div className="flex items-center justify-center">
-                        <input
-                          type="number"
-                          value={phase.durationWeeks}
-                          onChange={(e) => { updateDesignDuration(phase.id, parseInt(e.target.value) || 0); }}
-                          className="w-14 text-center text-xs font-mono border border-gray-200 rounded-md px-1 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
-                          min={1} max={52}
-                        />
-                      </div>
-                      <div className="flex items-center justify-center">
-                        <input
-                          type="number"
-                          value={phase.pct}
-                          onChange={(e) => { updateDesignPayment(phase.id, parseInt(e.target.value) || 0); }}
-                          className="w-14 text-center text-xs font-mono border border-gray-200 rounded-md px-1 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
-                          min={0} max={100}
-                        />
-                      </div>
+                {designPayments.map((phase, idx) => (
+                  <div key={phase.id} className="grid grid-cols-[28px_1fr_1fr_80px_80px] gap-2 items-center py-1.5 border-b border-gray-50">
+                    <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[9px] font-bold">
+                      {idx + 1}
                     </div>
-                  ))}
-                </div>
-                {/* Visual bar */}
-                <div className="mt-4 h-6 rounded-full overflow-hidden flex bg-gray-100">
+                    <span className="text-[11px] font-medium text-gray-800">{phase.label}</span>
+                    <span className="text-[9px] text-gray-400">{phase.labelEn}</span>
+                    <input
+                      type="number" value={phase.durationWeeks}
+                      onChange={(e) => updateDesignDuration(phase.id, parseInt(e.target.value) || 0)}
+                      className="w-12 mx-auto text-center text-xs font-mono border border-gray-200 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                      min={1} max={52}
+                    />
+                    <input
+                      type="number" value={phase.pct}
+                      onChange={(e) => updateDesignPayment(phase.id, parseInt(e.target.value) || 0)}
+                      className="w-12 mx-auto text-center text-xs font-mono border border-gray-200 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                      min={0} max={100}
+                    />
+                  </div>
+                ))}
+                {/* Visual bars */}
+                <div className="mt-3 h-5 rounded-full overflow-hidden flex bg-gray-100">
                   {designPayments.map((phase, idx) => (
-                    <div key={phase.id} className="h-full flex items-center justify-center text-[8px] font-bold text-white transition-all"
+                    <div key={phase.id} className="h-full flex items-center justify-center text-[7px] font-bold text-white transition-all"
                       style={{ width: `${phase.pct}%`, backgroundColor: `hsl(${210 + idx * 20}, 70%, ${45 + idx * 5}%)` }}>
                       {phase.pct > 8 ? `${phase.pct}%` : ""}
                     </div>
                   ))}
                 </div>
-                {/* Duration bar */}
-                <div className="mt-2 h-4 rounded-full overflow-hidden flex bg-gray-50 border border-gray-100">
-                  {designPayments.map((phase, idx) => {
-                    const totalWeeks = designPayments.reduce((s, p) => s + p.durationWeeks, 0);
-                    const widthPct = totalWeeks > 0 ? (phase.durationWeeks / totalWeeks) * 100 : 0;
-                    return (
-                      <div key={phase.id} className="h-full flex items-center justify-center text-[7px] font-medium text-gray-600 transition-all border-l border-white first:border-l-0"
-                        style={{ width: `${widthPct}%`, backgroundColor: `hsl(${210 + idx * 20}, 30%, 85%)` }}>
-                        {phase.durationWeeks > 2 ? `${phase.durationWeeks}w` : ""}
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="flex justify-between mt-1 text-[9px] text-gray-400">
-                  <span>شريط المدة (أسابيع)</span>
-                  <span>شريط الاستحقاق (%)</span>
-                </div>
               </div>
             </section>
-          </>
+
+            {/* ═══ SECTION 3: CONFIGURABLE RATES ═══ */}
+            <section className="rounded-xl border border-amber-100 shadow-sm overflow-hidden">
+              <div className="px-4 py-2.5 bg-amber-50 border-b border-amber-100 flex items-center gap-2">
+                <Banknote className="w-4 h-4 text-amber-700" />
+                <h2 className="text-sm font-bold text-amber-800">المعدلات والرسوم القابلة للتعديل</h2>
+              </div>
+              <div className="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                {configurableRates.map((rate) => (
+                  <div key={rate.id} className="rounded-lg border border-gray-100 p-2.5 hover:border-amber-200 transition-colors">
+                    <p className="text-[11px] font-bold text-gray-800 mb-0.5">{rate.label}</p>
+                    <p className="text-[9px] text-gray-400 mb-2">{rate.description}</p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number" value={rate.value}
+                        onChange={(e) => updateRate(rate.id, parseFloat(e.target.value) || 0)}
+                        className="w-20 text-center text-xs font-mono border border-gray-200 rounded px-1 py-1 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                        min={rate.min} max={rate.max} step={rate.step}
+                      />
+                      <span className="text-[10px] text-gray-500">{rate.unit}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* ═══ SECTION 4: INVESTOR PAYMENT RULES ═══ */}
+            <section className="rounded-xl border border-emerald-100 shadow-sm overflow-hidden">
+              <div className="px-4 py-2.5 bg-emerald-50 border-b border-emerald-100 flex items-center gap-2">
+                <Landmark className="w-4 h-4 text-emerald-700" />
+                <h2 className="text-sm font-bold text-emerald-800">قواعد الدفع — حساب المستثمر</h2>
+                <Badge className="text-[10px] bg-emerald-100 text-emerald-700 mr-auto">{INVESTOR_RULES.length} بند</Badge>
+              </div>
+              <div className="p-2">
+                <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 gap-y-0 text-[10px] font-bold text-gray-500 border-b border-gray-100 pb-1 mb-1 px-2">
+                  <span>البند</span>
+                  <span>التوقيت</span>
+                  <span>النوع</span>
+                </div>
+                {INVESTOR_RULES.map((rule, idx) => (
+                  <div key={rule.id} className={`grid grid-cols-[1fr_auto_auto] gap-x-3 items-center py-1.5 px-2 rounded ${idx % 2 === 0 ? 'bg-gray-50/50' : ''}`}>
+                    <span className="text-[11px] font-medium text-gray-800">{rule.label}</span>
+                    <span className="text-[9px] text-gray-500 max-w-[280px]">{rule.timing}</span>
+                    <Badge variant="outline" className="text-[8px] px-1.5 py-0">{rule.type}</Badge>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* ═══ SECTION 5: ESCROW PAYMENT RULES ═══ */}
+            <section className="rounded-xl border border-violet-100 shadow-sm overflow-hidden">
+              <div className="px-4 py-2.5 bg-violet-50 border-b border-violet-100 flex items-center gap-2">
+                <Shield className="w-4 h-4 text-violet-700" />
+                <h2 className="text-sm font-bold text-violet-800">قواعد الدفع — حساب الضمان (Escrow)</h2>
+                <Badge className="text-[10px] bg-violet-100 text-violet-700 mr-auto">{ESCROW_RULES.length} بند</Badge>
+              </div>
+              <div className="p-2">
+                <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 gap-y-0 text-[10px] font-bold text-gray-500 border-b border-gray-100 pb-1 mb-1 px-2">
+                  <span>البند</span>
+                  <span>التوقيت</span>
+                  <span>النوع</span>
+                </div>
+                {ESCROW_RULES.map((rule, idx) => (
+                  <div key={rule.id} className={`grid grid-cols-[1fr_auto_auto] gap-x-3 items-center py-1.5 px-2 rounded ${idx % 2 === 0 ? 'bg-gray-50/50' : ''}`}>
+                    <span className="text-[11px] font-medium text-gray-800">{rule.label}</span>
+                    <span className="text-[9px] text-gray-500 max-w-[280px]">{rule.timing}</span>
+                    <Badge variant="outline" className="text-[8px] px-1.5 py-0">{rule.type}</Badge>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+          </div>
         )}
       </div>
     </div>

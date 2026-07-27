@@ -1006,3 +1006,10 @@
 - [x] Make ProjectCardOffplanPage shared fields read-only (source is GeneralInputsPage)
 - [x] Remove constructionMonths edit from ConstructionInputsPage (read from project data only)
 - [x] Update SettingsRulesPage design phases to 7 correct phases with duration (weeks) and consultant fee percentage inputs
+
+- [x] Rebuild SettingsRulesPage: Add project phases section (6 phases with configurable start/duration)
+- [x] Rebuild SettingsRulesPage: Add configurable rates (community fee/sqft, RERA unit reg fee, RERA auditor quarterly, RERA inspection quarterly)
+- [x] Rebuild SettingsRulesPage: Add investor account payment rules display (all defined items with timing)
+- [x] Rebuild SettingsRulesPage: Add escrow account payment rules display (all defined items with timing)
+- [ ] Update V2WaelSales: Timeline reads from settings phases
+- [x] Update V2WaelSales: Add marketing budget/percentage inputs

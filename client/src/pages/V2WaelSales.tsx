@@ -362,7 +362,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
         )}
 
         {/* Main Content */}
-        {selectedProjectId && !projectQuery.isLoading && projectQuery.data && (
+        {selectedProjectId && !projectQuery.isLoading && (
           <>
             {/* SECTION 1: PRICING + PAYMENT PLAN SIDE BY SIDE */}
             <div className="grid grid-cols-3 gap-2">
@@ -877,6 +877,57 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                     </div>
                   );
                 })()}
+              </div>
+            </section>
+
+            {/* SECTION 7: MARKETING BUDGET & TIMELINE (Wael inputs) */}
+            <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Megaphone className="w-3.5 h-3.5 text-pink-600" />
+                  <h2 className="text-[11px] font-bold text-gray-800">ميزانية التسويق والجدول الزمني</h2>
+                  <Badge variant="secondary" className="text-[9px]">يحدده وائل</Badge>
+                </div>
+                <p className="text-[9px] text-gray-400">يبدأ بعد اكتمال تحضير مواد التسويق</p>
+              </div>
+              <div className="p-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {/* Marketing Total Budget */}
+                  <div className="rounded-lg border border-pink-100 bg-pink-50/30 p-2">
+                    <label className="text-[10px] font-medium text-gray-600 block mb-1">إجمالي ميزانية التسويق</label>
+                    <div className="flex items-center gap-1">
+                      <input type="number" min={0} value={Math.round(marketingCost)} readOnly
+                        className="flex-1 h-6 text-[11px] text-center font-bold border border-gray-200 rounded bg-gray-50 text-pink-700" />
+                      <span className="text-[9px] text-gray-400">AED</span>
+                    </div>
+                    <p className="text-[8px] text-gray-400 mt-0.5">محسوب: {marketingPct}% × الإيرادات</p>
+                  </div>
+                  {/* Marketing Duration */}
+                  <div className="rounded-lg border border-pink-100 bg-pink-50/30 p-2">
+                    <label className="text-[10px] font-medium text-gray-600 block mb-1">مدة التسويق</label>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px] text-gray-500">من شهر</span>
+                      <span className="text-[11px] font-bold text-pink-700">{timeline.marketingStart}</span>
+                      <span className="text-[9px] text-gray-500">إلى شهر</span>
+                      <span className="text-[11px] font-bold text-pink-700">{timeline.projectEnd}</span>
+                    </div>
+                    <p className="text-[8px] text-gray-400 mt-0.5">إجمالي: {timeline.projectEnd - timeline.marketingStart + 1} شهر (من الإعدادات)</p>
+                  </div>
+                  {/* Monthly Marketing */}
+                  <div className="rounded-lg border border-pink-100 bg-pink-50/30 p-2">
+                    <label className="text-[10px] font-medium text-gray-600 block mb-1">التسويق الشهري</label>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[11px] font-bold text-pink-700">
+                        {(timeline.projectEnd - timeline.marketingStart + 1) > 0 ? fmtFull(Math.round(marketingCost / (timeline.projectEnd - timeline.marketingStart + 1))) : '—'}
+                      </span>
+                      <span className="text-[9px] text-gray-400">AED/شهر</span>
+                    </div>
+                    <p className="text-[8px] text-gray-400 mt-0.5">موزع بالتساوي على مدة التسويق</p>
+                  </div>
+                </div>
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  <p className="text-[9px] text-gray-500">💡 لتعديل نسبة التسويق استخدم شريط "ميزانية التسويق" أعلاه. المبلغ يُوزع شهرياً من بداية إطلاق التسويق حتى نهاية المشروع ويُدفع من حساب المستثمر.</p>
+                </div>
               </div>
             </section>
           </>
