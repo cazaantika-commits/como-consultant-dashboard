@@ -1025,3 +1025,9 @@
 - [x] Fix SettingsRulesPage crash: designPayments stored as {pct, durationWeeks} objects but code expected plain numbers
 - [x] ConstructionInputsPage: Match colors to ConsolidatedInvestorCashFlowPage style
 - [x] ConstructionInputsPage: Make all fields read-only EXCEPT progress percentages
+
+## Restored Missing Files (lost during GitHub sync divergence b5c65526)
+- [x] Restore MarketingPage.tsx (marketing budget & channel distribution)
+- [x] Restore TimelinePage.tsx (project phases timeline)
+- [x] Re-register marketing and timeline tabs in BateekhaPage
+- [x] Restore documentation files (ESCROW_RULES.md, NOTES_ENGINE_RULES.md, SINGLE_SOURCE_MAPPING.md, SPLIT_PAGES_NOTES.md)
