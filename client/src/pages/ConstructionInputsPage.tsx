@@ -252,7 +252,7 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
     <TooltipProvider>
       <div className="bg-gray-50 px-4 py-2" dir="rtl">
         {/* Toolbar */}
-        <div className="bg-white rounded-lg border border-gray-100 shadow-sm px-4 py-2 mb-3 flex items-center justify-between gap-3">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm px-5 py-3 mb-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <HardHat className="w-4 h-4 text-teal-600" />
             <span className="text-xs font-bold text-gray-800">جدول الإنشاء</span>
@@ -384,17 +384,17 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
                   <span>صافي الدفع: {100 - retentionPct}%</span>
                 </div>
               </div>
-              <div className="p-2 overflow-x-auto">
+              <div className="p-3 overflow-x-auto">
                 {constructionCost > 0 ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: `70px repeat(${totalColumns}, minmax(40px, 1fr))`, direction: 'rtl' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: `80px repeat(${totalColumns}, minmax(50px, 1fr))`, direction: 'rtl' }}>
                     {/* Row 1: Month numbers */}
-                    <div className="text-[7px] font-bold text-gray-500 flex items-center justify-center border-b border-gray-200 py-0.5">الشهر</div>
+                    <div className="text-[9px] font-semibold text-slate-500 flex items-center justify-center border-b border-slate-200 py-1.5">الشهر</div>
                     {Array.from({ length: totalColumns }, (_, i) => {
                       const isConstruction = i < constructionMonths;
                       const displayNum = isConstruction ? i + 1 : i - constructionMonths + 1;
                       return (
-                        <div key={i} className={`text-center text-[7px] font-bold py-0.5 border-b border-l border-gray-200 ${
-                          isConstruction ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'
+                        <div key={i} className={`text-center text-[9px] font-semibold py-1.5 border-b border-l border-slate-200 ${
+                          isConstruction ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-50 text-slate-500'
                         }`}>
                           {isConstruction ? displayNum : `+${displayNum}`}
                         </div>
@@ -402,20 +402,20 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
                     })}
 
                     {/* Row 2: Progress % inputs (only during construction, starting from month 1) */}
-                    <div className="text-[7px] font-bold text-gray-500 flex items-center justify-center border-b border-gray-200 py-0.5">إنجاز %</div>
+                    <div className="text-[9px] font-semibold text-slate-500 flex items-center justify-center border-b border-slate-200 py-1.5">إنجاز %</div>
                     {Array.from({ length: totalColumns }, (_, i) => {
                       const isConstruction = i < constructionMonths;
                       return (
-                        <div key={i} className="flex items-center justify-center border-b border-l border-gray-200 py-0.5">
+                        <div key={i} className="flex items-center justify-center border-b border-l border-slate-200 py-1.5">
                           {isConstruction ? (
                             <input
                               type="number" min={0} max={30} step={0.5}
                               value={monthlyProgress[i] ?? 0}
                               onChange={(e) => handleMonthEdit(i, parseFloat(e.target.value) || 0)}
-                              className="w-7 h-4 text-center text-[9px] font-bold border border-gray-200 rounded bg-white focus:ring-1 focus:ring-teal-200 outline-none"
+                              className="w-9 h-5 text-center text-[10px] font-bold border border-slate-200 rounded bg-white focus:ring-1 focus:ring-teal-200 outline-none"
                             />
                           ) : (
-                            <span className="text-[7px] text-gray-300">-</span>
+                            <span className="text-[9px] text-slate-300">–</span>
                           )}
                         </div>
                       );
@@ -426,14 +426,14 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
 
 
                     {/* Row 5: Contractor payment (80% + retention releases) */}
-                    <div className="text-[7px] font-bold text-emerald-700 flex items-center justify-center border-b border-gray-200 py-0.5">دفعة المقاول</div>
+                    <div className="text-[9px] font-semibold text-emerald-700 flex items-center justify-center border-b border-slate-200 py-1.5">دفعة المقاول</div>
                     {paymentData.map((d, i) => {
                       const payment = d.actualPaid + d.retention1Release + d.retention2Release;
                       const isRetention = d.retention1Release > 0 || d.retention2Release > 0;
                       return (
-                        <div key={i} className={`text-center text-[7px] py-0.5 border-b border-l border-gray-200 ${isRetention ? 'bg-amber-50' : ''}`}>
+                        <div key={i} className={`text-center text-[9px] py-1.5 border-b border-l border-slate-200 ${isRetention ? 'bg-amber-50' : ''}`}>
                           <span className={isRetention ? 'text-amber-700 font-bold' : 'text-emerald-700'}>
-                            {payment > 0 ? fmt(payment) : '-'}
+                            {payment > 0 ? fmt(payment) : '–'}
                           </span>
                         </div>
                       );
@@ -442,10 +442,10 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
 
 
                     {/* Row 8: Cumulative paid */}
-                    <div className="text-[7px] font-bold text-gray-800 flex items-center justify-center py-0.5">التراكمي</div>
+                    <div className="text-[9px] font-bold text-slate-800 flex items-center justify-center py-1.5 bg-slate-50">التراكمي</div>
                     {paymentData.map((d, i) => (
-                      <div key={i} className="text-center text-[7px] font-bold py-0.5 border-l border-gray-200 text-gray-800">
-                        {d.cumulativePaid > 0 ? fmt(d.cumulativePaid) : '-'}
+                      <div key={i} className="text-center text-[9px] font-bold py-1.5 border-l border-slate-200 text-slate-800 bg-slate-50">
+                        {d.cumulativePaid > 0 ? fmt(d.cumulativePaid) : '–'}
                       </div>
                     ))}
                   </div>
@@ -461,7 +461,7 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
 
         {/* Progress Chart — aligned with grid above */}
         {constructionCost > 0 && constructionMonths > 0 && (
-          <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-4 mt-3">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mt-3">
             <div className="flex items-center gap-2 mb-3">
               <TrendingUp className="w-4 h-4 text-teal-600" />
               <span className="text-xs font-bold text-gray-800">منحنى الإنجاز الشهري</span>

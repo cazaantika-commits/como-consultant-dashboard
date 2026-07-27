@@ -377,21 +377,21 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                 <p className="text-[10px] text-gray-500">الإيرادات: <span className="font-bold text-emerald-700">{fmt(totalRevenue)} AED</span></p>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-[11px]">
-                  <thead className="bg-gray-50">
+                <table className="w-full text-[10px] border-collapse">
+                  <thead className="bg-slate-50 sticky top-0 z-10">
                     <tr>
-                      <th className="px-2 py-1 text-right font-medium text-gray-600">النوع</th>
-                      <th className="px-2 py-1 text-center font-medium text-gray-600">العدد</th>
-                      <th className="px-2 py-1 text-center font-medium text-gray-600">المساحة (قدم²)</th>
-                      <th className="px-2 py-1 text-center font-medium text-gray-600">سعر/قدم (AED)</th>
-                      <th className="px-2 py-1 text-center font-medium text-gray-600">إجمالي المساحة</th>
-                      <th className="px-2 py-1 text-center font-medium text-gray-600">إجمالي الإيراد</th>
-                      <th className="px-2 py-1 text-center font-medium text-gray-600">%</th>
+                      <th className="px-3 py-2 text-right font-semibold text-slate-600 border-b border-slate-200">النوع</th>
+                      <th className="px-2 py-2 text-center font-semibold text-slate-600 border-b border-slate-200">العدد</th>
+                      <th className="px-2 py-2 text-center font-semibold text-slate-600 border-b border-slate-200">المساحة (قدم²)</th>
+                      <th className="px-2 py-2 text-center font-semibold text-slate-600 border-b border-slate-200">سعر/قدم (AED)</th>
+                      <th className="px-2 py-2 text-center font-semibold text-slate-600 border-b border-slate-200">إجمالي المساحة</th>
+                      <th className="px-2 py-2 text-center font-semibold text-slate-600 border-b border-slate-200">إجمالي الإيراد</th>
+                      <th className="px-2 py-2 text-center font-semibold text-slate-600 border-b border-slate-200">%</th>
                     </tr>
                   </thead>
                   <tbody>
                     {/* سكني */}
-                    <tr><td colSpan={7} className="px-2 py-0.5 text-[10px] font-bold text-blue-700 bg-blue-50/60 border-b border-blue-100">سكني</td></tr>
+                    <tr><td colSpan={7} className="px-3 py-1.5 text-[9px] font-bold text-blue-700 bg-blue-50/60 border-b border-blue-100">سكني</td></tr>
                     {unitRevenues.filter(u => u.id.startsWith('residential')).map((u) => (
                       <tr key={u.id} className="border-t border-gray-50 hover:bg-gray-50/50">
                         <td className="px-2 py-0.5">
@@ -418,7 +418,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                       </tr>
                     ))}
                     {/* تجزئة */}
-                    <tr><td colSpan={7} className="px-2 py-0.5 text-[10px] font-bold text-orange-700 bg-orange-50/60 border-b border-orange-100">تجزئة</td></tr>
+                    <tr><td colSpan={7} className="px-3 py-1.5 text-[9px] font-bold text-orange-700 bg-orange-50/60 border-b border-orange-100">تجزئة</td></tr>
                     {unitRevenues.filter(u => u.id.startsWith('retail')).map((u) => (
                       <tr key={u.id} className="border-t border-gray-50 hover:bg-gray-50/50">
                         <td className="px-2 py-0.5">
@@ -445,7 +445,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                       </tr>
                     ))}
                     {/* مكاتب */}
-                    <tr><td colSpan={7} className="px-2 py-0.5 text-[10px] font-bold text-teal-700 bg-teal-50/60 border-b border-teal-100">مكاتب</td></tr>
+                    <tr><td colSpan={7} className="px-3 py-1.5 text-[9px] font-bold text-teal-700 bg-teal-50/60 border-b border-teal-100">مكاتب</td></tr>
                     {unitRevenues.filter(u => u.id.startsWith('office')).map((u) => (
                       <tr key={u.id} className="border-t border-gray-50 hover:bg-gray-50/50">
                         <td className="px-2 py-0.5">
@@ -472,15 +472,15 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="bg-teal-50 border-t-2 border-teal-200">
+                  <tfoot className="bg-slate-800 text-white">
                     <tr>
-                      <td className="px-2 py-1 font-bold text-teal-800">المجموع</td>
-                      <td className="px-2 py-1 text-center font-bold text-teal-800">{totalUnits}</td>
-                      <td className="px-2 py-1" />
-                      <td className="px-2 py-1" />
-                      <td className="px-2 py-1 text-center font-mono font-bold text-teal-800">{fmtFull(totalArea)}</td>
-                      <td className="px-2 py-1 text-center font-mono font-bold text-teal-800">{fmt(totalRevenue)}</td>
-                      <td className="px-2 py-1 text-center font-bold text-teal-800">100%</td>
+                      <td className="px-3 py-2.5 font-bold">المجموع</td>
+                      <td className="px-2 py-2.5 text-center font-bold">{totalUnits}</td>
+                      <td className="px-2 py-2.5" />
+                      <td className="px-2 py-2.5" />
+                      <td className="px-2 py-2.5 text-center font-mono font-bold">{fmtFull(totalArea)}</td>
+                      <td className="px-2 py-2.5 text-center font-mono font-bold text-emerald-300">{fmt(totalRevenue)}</td>
+                      <td className="px-2 py-2.5 text-center font-bold">100%</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -488,46 +488,46 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
             </section>
 
             {/* Payment Plan - 1/3 */}
-            <section className="col-span-1 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-1.5">
+            <section className="col-span-1 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2">
                 <CreditCard className="w-3.5 h-3.5 text-indigo-600" />
-                <h2 className="text-[11px] font-bold text-gray-800">خطة الدفع</h2>
+                <h2 className="text-xs font-bold text-slate-800">خطة الدفع</h2>
                 <Badge variant={ppTotal === 100 ? "secondary" : "destructive"} className="text-[9px]">{ppTotal}%</Badge>
               </div>
-              <div className="p-2">
-                <table className="w-full text-[9px]">
+              <div className="p-3">
+                <table className="w-full text-[10px] border-collapse">
                   <thead>
-                    <tr className="bg-gray-50">
-                      <th className="px-1 py-0.5 text-right font-bold">البند</th>
-                      <th className="px-1 py-0.5 text-center font-bold">%</th>
-                      <th className="px-1 py-0.5 text-center font-bold">التوقيت</th>
+                    <tr className="bg-slate-50">
+                      <th className="px-2 py-2 text-right font-semibold text-slate-600 border-b border-slate-200">البند</th>
+                      <th className="px-2 py-2 text-center font-semibold text-slate-600 border-b border-slate-200">%</th>
+                      <th className="px-2 py-2 text-center font-semibold text-slate-600 border-b border-slate-200">التوقيت</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-t border-gray-100">
-                      <td className="px-1 py-0.5 text-right">دفعة أولى</td>
-                      <td className="px-1 py-0.5 text-center"><input type="number" min={5} max={30} value={ppDownPct} onChange={(e) => { setPpDownPct(+e.target.value); setHasPlanChanges(true); }} className="w-8 h-4 text-center text-[9px] font-bold border border-gray-200 rounded bg-white" />%</td>
-                      <td className="px-1 py-0.5 text-center text-gray-500">عند التوقيع</td>
+                    <tr className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                      <td className="px-2 py-2 text-right text-slate-800">دفعة أولى</td>
+                      <td className="px-2 py-2 text-center"><input type="number" min={5} max={30} value={ppDownPct} onChange={(e) => { setPpDownPct(+e.target.value); setHasPlanChanges(true); }} className="w-10 h-5 text-center text-[10px] font-bold border border-slate-200 rounded bg-white focus:ring-1 focus:ring-blue-200" />%</td>
+                      <td className="px-2 py-2 text-center text-slate-500">عند التوقيع</td>
                     </tr>
-                    <tr className="border-t border-gray-100">
-                      <td className="px-1 py-0.5 text-right">دفعة ثانية</td>
-                      <td className="px-1 py-0.5 text-center"><input type="number" min={5} max={20} value={ppSecondPct} onChange={(e) => { setPpSecondPct(+e.target.value); setHasPlanChanges(true); }} className="w-8 h-4 text-center text-[9px] font-bold border border-gray-200 rounded bg-white" />%</td>
-                      <td className="px-1 py-0.5 text-center">بعد <input type="number" min={1} max={6} value={ppSecondAfterMonths} onChange={(e) => { setPpSecondAfterMonths(+e.target.value); setHasPlanChanges(true); }} className="w-6 h-4 text-center text-[9px] font-bold border border-gray-200 rounded bg-white mx-0.5" />شهر</td>
+                    <tr className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                      <td className="px-2 py-2 text-right text-slate-800">دفعة ثانية</td>
+                      <td className="px-2 py-2 text-center"><input type="number" min={5} max={20} value={ppSecondPct} onChange={(e) => { setPpSecondPct(+e.target.value); setHasPlanChanges(true); }} className="w-10 h-5 text-center text-[10px] font-bold border border-slate-200 rounded bg-white focus:ring-1 focus:ring-blue-200" />%</td>
+                      <td className="px-2 py-2 text-center">بعد <input type="number" min={1} max={6} value={ppSecondAfterMonths} onChange={(e) => { setPpSecondAfterMonths(+e.target.value); setHasPlanChanges(true); }} className="w-8 h-5 text-center text-[10px] font-bold border border-slate-200 rounded bg-white mx-0.5 focus:ring-1 focus:ring-blue-200" />شهر</td>
                     </tr>
-                    <tr className="border-t border-gray-100 bg-blue-50">
-                      <td className="px-1 py-0.5 text-right">أقساط ({ppInstallmentCount})</td>
-                      <td className="px-1 py-0.5 text-center"><input type="number" min={5} max={20} value={ppInstallmentPct} onChange={(e) => { setPpInstallmentPct(+e.target.value); setHasPlanChanges(true); }} className="w-8 h-4 text-center text-[9px] font-bold border border-gray-200 rounded bg-white" />%</td>
-                      <td className="px-1 py-0.5 text-center">كل <input type="number" min={2} max={12} value={ppInstallmentEvery} onChange={(e) => { setPpInstallmentEvery(+e.target.value); setHasPlanChanges(true); }} className="w-6 h-4 text-center text-[9px] font-bold border border-gray-200 rounded bg-white mx-0.5" />شهر</td>
+                    <tr className="border-b border-slate-100 bg-blue-50/50 hover:bg-blue-50 transition-colors">
+                      <td className="px-2 py-2 text-right text-slate-800">أقساط ({ppInstallmentCount})</td>
+                      <td className="px-2 py-2 text-center"><input type="number" min={5} max={20} value={ppInstallmentPct} onChange={(e) => { setPpInstallmentPct(+e.target.value); setHasPlanChanges(true); }} className="w-10 h-5 text-center text-[10px] font-bold border border-slate-200 rounded bg-white focus:ring-1 focus:ring-blue-200" />%</td>
+                      <td className="px-2 py-2 text-center">كل <input type="number" min={2} max={12} value={ppInstallmentEvery} onChange={(e) => { setPpInstallmentEvery(+e.target.value); setHasPlanChanges(true); }} className="w-8 h-5 text-center text-[10px] font-bold border border-slate-200 rounded bg-white mx-0.5 focus:ring-1 focus:ring-blue-200" />شهر</td>
                     </tr>
-                    <tr className="border-t border-gray-100 bg-emerald-50">
-                      <td className="px-1 py-0.5 text-right font-bold">عند التسليم</td>
-                      <td className="px-1 py-0.5 text-center"><input type="number" min={10} max={60} value={ppHandoverPct} onChange={(e) => { setPpHandoverPct(+e.target.value); setHasPlanChanges(true); }} className="w-8 h-4 text-center text-[9px] font-bold border border-gray-200 rounded bg-white" />%</td>
-                      <td className="px-1 py-0.5 text-center text-gray-500">عند الاكتمال</td>
+                    <tr className="border-b border-slate-100 bg-emerald-50/50 hover:bg-emerald-50 transition-colors">
+                      <td className="px-2 py-2 text-right font-bold text-slate-800">عند التسليم</td>
+                      <td className="px-2 py-2 text-center"><input type="number" min={10} max={60} value={ppHandoverPct} onChange={(e) => { setPpHandoverPct(+e.target.value); setHasPlanChanges(true); }} className="w-10 h-5 text-center text-[10px] font-bold border border-slate-200 rounded bg-white focus:ring-1 focus:ring-blue-200" />%</td>
+                      <td className="px-2 py-2 text-center text-slate-500">عند الاكتمال</td>
                     </tr>
-                    <tr className="border-t-2 border-gray-300 bg-gray-100">
-                      <td className="px-1 py-0.5 text-right font-bold">الإجمالي</td>
-                      <td className={`px-1 py-0.5 text-center font-bold ${ppTotal === 100 ? 'text-emerald-700' : 'text-red-700'}`}>{ppTotal}%</td>
-                      <td className="px-1 py-0.5 text-center text-[8px] text-gray-500">{fmtFull(Math.round(avgUnitPrice))} / وحدة</td>
+                    <tr className="bg-slate-800 text-white">
+                      <td className="px-2 py-2.5 text-right font-bold">الإجمالي</td>
+                      <td className={`px-2 py-2.5 text-center font-bold ${ppTotal === 100 ? 'text-emerald-300' : 'text-red-300'}`}>{ppTotal}%</td>
+                      <td className="px-2 py-2.5 text-center text-[9px] text-slate-300">{fmtFull(Math.round(avgUnitPrice))} / وحدة</td>
                     </tr>
                   </tbody>
                 </table>
@@ -683,11 +683,11 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
             </section>
 
             {/* SECTION 5: SALES INPUT (Manual - aligned to escrow range) */}
-            <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
+            <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2">
                   <TrendingUp className="w-3.5 h-3.5 text-blue-600" />
-                  <h2 className="text-[11px] font-bold text-gray-800">توزيع البيع</h2>
+                  <h2 className="text-xs font-bold text-slate-800">توزيع البيع</h2>
                   <Badge variant="secondary" className="text-[10px]">{totalSold} / {offPlanUnits} وحدة</Badge>
                   {totalSold > offPlanUnits && <Badge variant="destructive" className="text-[9px]">تجاوز!</Badge>}
                 </div>
@@ -760,11 +760,11 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
             </section>
 
             {/* SECTION 7: ESCROW (GUARANTEE ACCOUNT) */}
-            <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
+            <section className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2">
                   <CreditCard className="w-3.5 h-3.5 text-violet-600" />
-                  <h2 className="text-[11px] font-bold text-gray-800">حساب الضمان (Escrow)</h2>
+                  <h2 className="text-xs font-bold text-slate-800">حساب الضمان (Escrow)</h2>
                   {hasDeficit && <Badge variant="destructive" className="text-[10px]">عجز: {fmt(Math.abs(maxDeficit))} AED</Badge>}
                   {!hasDeficit && <Badge className="text-[10px] bg-emerald-100 text-emerald-700">متوازن</Badge>}
                 </div>

@@ -15,10 +15,14 @@ import {
 // FORMAT HELPERS
 // ═══════════════════════════════════════════
 function fmt(n: number): string {
-  if (n === 0) return "-";
-  if (Math.abs(n) >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
-  if (Math.abs(n) >= 1_000) return (n / 1_000).toFixed(0) + "K";
+  if (Math.abs(n) < 1) return "–";
   return Math.round(n).toLocaleString("en-US");
+}
+
+function fmtM(n: number): string {
+  if (Math.abs(n) < 1000) return fmt(n);
+  if (Math.abs(n) >= 1e6) return (n / 1e6).toFixed(1) + "M";
+  return (n / 1e3).toFixed(0) + "K";
 }
 
 function formatDate(dateStr: string): string {
@@ -72,16 +76,6 @@ export default function V2InvestorCashFlow() {
     designDuration,
     constructionDuration,
     postDuration,
-    designMonthlyTotals,
-    constructionMonthlyTotals,
-    postMonthlyTotals,
-    revenuePostTotals,
-    cumulativeDesign,
-    cumulativeConstruction,
-    cumulativePost,
-    grandPaid,
-    grandInvestor,
-    totalRevenue,
     monthDates,
   } = data;
 
@@ -118,18 +112,13 @@ export default function V2InvestorCashFlow() {
   const totalDebit = debitTotals.reduce((s, v) => s + v, 0);
   const totalCredit = creditTotals.reduce((s, v) => s + v, 0);
   const profit = totalCredit - totalDebit;
+  const profitPct = totalDebit > 0 ? (profit / totalDebit * 100) : 0;
 
   // ─── Month headers with phase info ─────────────────────────────────────
   const months: { label: string; date: string; phase: "design" | "construction" | "post" }[] = [];
   for (let i = 0; i < designDuration; i++) months.push({ label: `${i + 1}`, date: monthDates[i] || "", phase: "design" });
   for (let i = 0; i < constructionDuration; i++) months.push({ label: `${i + 1}`, date: monthDates[designDuration + i] || "", phase: "construction" });
   for (let i = 0; i < postDuration; i++) months.push({ label: `${i + 1}`, date: monthDates[designDuration + constructionDuration + i] || "", phase: "post" });
-
-  const phaseColors = {
-    design: "bg-blue-50 text-blue-700",
-    construction: "bg-amber-50 text-amber-700",
-    post: "bg-emerald-50 text-emerald-700",
-  };
 
   // ─── Group debit items by section ──────────────────────────────────────
   const sections: { name: string; items: CostRow[] }[] = [];
@@ -146,191 +135,253 @@ export default function V2InvestorCashFlow() {
   if (projectQuery.isLoading) {
     return (
       <div className="flex items-center justify-center h-64" dir="rtl">
-        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-        <span className="mr-2 text-gray-500 text-sm">جاري تحميل البيانات...</span>
+        <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+        <span className="mr-2 text-slate-500 text-sm">جاري تحميل البيانات...</span>
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-50" dir="rtl">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-full mx-auto px-4 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button onClick={() => navigate("/v2")} className="p-1.5 rounded-lg hover:bg-gray-100 transition">
-              <ArrowRight className="w-4 h-4 text-gray-600" />
-            </button>
-            <div>
-              <h1 className="text-[10px] font-bold text-gray-900">التدفقات النقدية للمستثمر</h1>
-              <p className="text-[10px] text-gray-500">{projectName}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="flex items-center gap-3 text-[10px]">
-              <span className="text-red-600 font-medium">المصروفات: {fmt(totalDebit)}</span>
-              <span className="text-green-600 font-medium">الإيرادات: {fmt(totalCredit)}</span>
-              <span className="text-blue-700 font-bold">الأرباح: {fmt(profit)}</span>
-            </div>
-            <button className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-800 hover:bg-gray-900 text-white text-[10px]">
-              <Download className="w-3 h-3" /> تصدير
-            </button>
-          </div>
+    <div className="space-y-4 p-4" dir="rtl">
+      {/* ═══ SUMMARY CARDS ═══ */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3">
+          <div className="text-[10px] text-slate-500 mb-1">المشروع</div>
+          <div className="text-xs font-bold text-slate-800 truncate">{projectName}</div>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3">
+          <div className="text-[10px] text-red-500 mb-1">إجمالي المصروفات</div>
+          <div className="text-xs font-bold text-red-600">{fmtM(totalDebit)}</div>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3">
+          <div className="text-[10px] text-emerald-500 mb-1">إجمالي الإيرادات</div>
+          <div className="text-xs font-bold text-emerald-600">{fmtM(totalCredit)}</div>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3">
+          <div className="text-[10px] text-blue-500 mb-1">صافي الأرباح</div>
+          <div className="text-xs font-bold text-blue-600">{fmtM(profit)}</div>
+          <div className="text-[9px] text-slate-400">{profitPct.toFixed(0)}% من التكلفة</div>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3">
+          <div className="text-[10px] text-slate-500 mb-1">المدة الإجمالية</div>
+          <div className="text-xs font-bold text-slate-800">{totalMonths} شهر</div>
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3">
+          <div className="text-[10px] text-amber-500 mb-1">ذروة رأس المال</div>
+          <div className="text-xs font-bold text-amber-600">{fmtM(Math.abs(Math.min(...cumulative)))}</div>
         </div>
       </div>
 
-      {/* Phase Legend */}
-      <div className="bg-white border-b border-gray-100 px-4 py-1.5 flex items-center gap-1 text-[10px]">
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-100 border border-blue-200"></span> تصميم ({designDuration} أشهر)</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-100 border border-amber-200"></span> إنشاء ({constructionDuration} شهر)</span>
-        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-100 border border-emerald-200"></span> ما بعد الإنجاز ({postDuration} شهر)</span>
+      {/* ═══ PHASE LEGEND ═══ */}
+      <div className="flex items-center gap-4 text-[10px] text-slate-600">
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-blue-100 border border-blue-300"></span> تصميم ({designDuration} أشهر)</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-amber-100 border border-amber-300"></span> إنشاء ({constructionDuration} شهر)</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-emerald-100 border border-emerald-300"></span> ما بعد الإنجاز ({postDuration} شهر)</span>
       </div>
 
-      {/* Main Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-[10px] border-collapse min-w-max">
-          <thead className="bg-white shadow-sm">
-            {/* Date row */}
-            <tr>
-              <th className="sticky right-0 z-20 bg-gray-100 border-b border-gray-200 px-2 py-0.5 text-right w-[180px] min-w-[180px] text-[8px] text-gray-400">التاريخ</th>
-              {months.map((m, i) => (
-                <th key={i} className="px-0.5 py-0 text-center border-b border-gray-100 text-[7px] text-gray-400 font-normal whitespace-nowrap">
-                  {m.date ? m.date.split("-")[1] + "/" + m.date.split("-")[0].slice(2) : ""}
+      {/* ═══ MAIN TABLE ═══ */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-bold text-slate-800">التدفقات النقدية للمستثمر</h2>
+            <p className="text-[10px] text-slate-400 mt-0.5">جدول شهري تفصيلي للمصروفات والإيرادات</p>
+          </div>
+          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-[10px] transition">
+            <Download className="w-3 h-3" /> تصدير
+          </button>
+        </div>
+        <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+          <table className="w-full text-[10px] border-collapse">
+            <thead className="sticky top-0 bg-slate-50 z-10">
+              {/* Date row */}
+              <tr>
+                <th className="sticky right-0 bg-slate-50 z-20 text-right py-2 px-3 border-b border-slate-200 text-slate-400 font-normal min-w-[160px] text-[8px]">
+                  التاريخ
                 </th>
-              ))}
-            </tr>
-            {/* Phase band */}
-            <tr>
-              <th className="sticky right-0 z-20 bg-gray-100 border-b border-gray-200 px-2 py-1 text-right w-[180px] min-w-[180px]"></th>
-              {months.map((m, i) => (
-                <th key={i} className={`px-1 py-0.5 text-center border-b border-gray-200 ${phaseColors[m.phase]} font-normal`}>
-                  {m.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {/* ─── مدفوع سابقاً ─── */}
-            {paidRows.length > 0 && (
-              <>
-                <tr className="bg-gray-100">
-                  <td colSpan={totalMonths + 1} className="px-2 py-[3px] font-bold text-gray-600 text-[9px] border-b border-gray-200">
-                    مدفوع سابقاً (لا يؤثر على التدفقات)
-                  </td>
-                </tr>
-                {paidRows.map((item, i) => (
-                  <tr key={`paid-${i}`} className="border-b border-gray-100 bg-gray-50">
-                    <td className="sticky right-0 z-10 bg-gray-50 px-2 py-[3px] text-gray-700 font-medium border-l border-gray-200 w-[180px] min-w-[180px]">
-                      {item.label}
-                    </td>
-                    <td className="px-1 py-[3px] text-center text-gray-500 font-medium" colSpan={totalMonths}>
-                      {fmt(item.paid)} (مدفوع)
-                    </td>
-                  </tr>
+                {months.map((m, i) => (
+                  <th key={i} className="px-1 py-1 text-center border-b border-slate-100 text-[8px] text-slate-400 font-normal whitespace-nowrap min-w-[65px]">
+                    {m.date ? formatDate(m.date) : ""}
+                  </th>
                 ))}
-              </>
-            )}
-
-            {/* ─── المصروفات (Debit) ─── */}
-            <tr className="bg-red-50">
-              <td colSpan={totalMonths + 1} className="px-2 py-[3px] font-bold text-red-700 text-[9px] border-b border-red-100">
-                المصروفات (Debit)
-              </td>
-            </tr>
-            {sections.map((section, si) => (
-              <React.Fragment key={`section-${si}`}>
-                <tr className="bg-gray-50/80">
-                  <td colSpan={totalMonths + 1} className="px-2 py-[2px] text-[9px] font-bold text-gray-500 border-b border-gray-100 pr-4">
-                    {section.name}
-                  </td>
-                </tr>
-                {section.items.map((item, ii) => {
-                  const values = getRowValues(item);
+                <th className="text-center py-2 px-2 border-b border-slate-200 text-slate-600 font-bold min-w-[75px] bg-slate-100 text-[9px]">الإجمالي</th>
+              </tr>
+              {/* Phase band */}
+              <tr>
+                <th className="sticky right-0 bg-slate-50 z-20 text-right py-2 px-3 border-b border-slate-200 text-slate-600 font-semibold min-w-[160px]">
+                  البند
+                </th>
+                {months.map((m, i) => {
+                  const phaseColors = {
+                    design: "bg-blue-50 text-blue-700 border-b border-blue-200",
+                    construction: "bg-amber-50 text-amber-700 border-b border-amber-200",
+                    post: "bg-emerald-50 text-emerald-700 border-b border-emerald-200",
+                  };
                   return (
-                    <tr key={`debit-${si}-${ii}`} className="border-b border-gray-50 hover:bg-red-50/30">
-                      <td className="sticky right-0 z-10 bg-white px-2 py-[3px] text-gray-800 font-medium border-l border-gray-100 w-[180px] min-w-[180px]">
-                        {item.label}
-                      </td>
-                      {values.map((v, j) => (
-                        <td key={j} className={`px-1 py-[3px] text-center tabular-nums ${v > 0 ? "text-red-600" : "text-gray-300"}`}>
-                          {v > 0 ? fmt(v) : "-"}
-                        </td>
-                      ))}
-                    </tr>
+                    <th key={i} className={`px-1 py-1.5 text-center font-semibold min-w-[65px] ${phaseColors[m.phase]}`}>
+                      {m.label}
+                    </th>
                   );
                 })}
-              </React.Fragment>
-            ))}
-            {/* Total Debit */}
-            <tr className="bg-red-100/50 font-bold border-t border-red-200">
-              <td className="sticky right-0 z-10 bg-red-50 px-2 py-[3px] text-red-800 border-l border-red-200 w-[180px] min-w-[180px]">
-                إجمالي المصروفات
-              </td>
-              {debitTotals.map((v, i) => (
-                <td key={i} className="px-1 py-[3px] text-center tabular-nums text-red-700">
-                  {v > 0 ? fmt(v) : "-"}
-                </td>
-              ))}
-            </tr>
-
-            {/* ─── الإيرادات (Credit) ─── */}
-            <tr className="bg-green-50">
-              <td colSpan={totalMonths + 1} className="px-2 py-[3px] font-bold text-green-700 text-[9px] border-b border-green-100">
-                الإيرادات (Credit)
-              </td>
-            </tr>
-            {creditRows.map((item, i) => {
-              const values = getRowValues(item);
-              return (
-                <tr key={`credit-${i}`} className="border-b border-gray-50 hover:bg-green-50/30">
-                  <td className="sticky right-0 z-10 bg-white px-2 py-[3px] text-gray-800 font-medium border-l border-gray-100 w-[180px] min-w-[180px]">
-                    {item.label}
-                  </td>
-                  {values.map((v, j) => (
-                    <td key={j} className={`px-1 py-[3px] text-center tabular-nums ${v > 0 ? "text-green-600" : "text-gray-300"}`}>
-                      {v > 0 ? fmt(v) : "-"}
+                <th className="text-center py-2 px-2 border-b border-slate-200 text-slate-800 font-bold min-w-[75px] bg-slate-100"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {/* ─── مدفوع سابقاً ─── */}
+              {paidRows.length > 0 && (
+                <>
+                  <tr className="bg-slate-50">
+                    <td colSpan={totalMonths + 2} className="px-3 py-2 font-bold text-slate-600 text-[9px] border-b border-slate-200">
+                      مدفوع سابقاً (لا يؤثر على التدفقات)
                     </td>
+                  </tr>
+                  {paidRows.map((item, i) => (
+                    <tr key={`paid-${i}`} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                      <td className="sticky right-0 z-10 bg-white py-2 px-3 text-slate-700 font-medium border-l border-slate-100 min-w-[160px]">
+                        {item.label}
+                      </td>
+                      <td className="py-2 px-1 text-center text-slate-500 font-medium" colSpan={totalMonths}>
+                        {fmt(item.paid)} (مدفوع)
+                      </td>
+                      <td className="py-2 px-2 text-center text-slate-600 font-medium bg-slate-50/50">{fmt(item.paid)}</td>
+                    </tr>
                   ))}
-                </tr>
-              );
-            })}
-            {/* Total Credit */}
-            <tr className="bg-green-100/50 font-bold border-t border-green-200">
-              <td className="sticky right-0 z-10 bg-green-50 px-2 py-[3px] text-green-800 border-l border-green-200 w-[180px] min-w-[180px]">
-                إجمالي الإيرادات
-              </td>
-              {creditTotals.map((v, i) => (
-                <td key={i} className="px-1 py-[3px] text-center tabular-nums text-green-700">
-                  {v > 0 ? fmt(v) : "-"}
-                </td>
-              ))}
-            </tr>
+                </>
+              )}
 
-            {/* ─── صافي الشهر ─── */}
-            <tr className="bg-blue-50/50 font-bold border-t-2 border-blue-200">
-              <td className="sticky right-0 z-10 bg-blue-50 px-2 py-[3px] text-blue-800 border-l border-blue-200 w-[180px] min-w-[180px]">
-                صافي الشهر
-              </td>
-              {netFlow.map((v, i) => (
-                <td key={i} className={`px-1 py-[3px] text-center tabular-nums font-medium ${v >= 0 ? "text-green-700" : "text-red-600"}`}>
-                  {fmt(v)}
+              {/* ─── المصروفات (Debit) ─── */}
+              <tr className="bg-red-50/50">
+                <td colSpan={totalMonths + 2} className="px-3 py-2 font-bold text-red-700 text-[9px] border-b border-red-100">
+                  المصروفات
                 </td>
+              </tr>
+              {sections.map((section, si) => (
+                <React.Fragment key={`section-${si}`}>
+                  <tr className="bg-slate-50/60">
+                    <td colSpan={totalMonths + 2} className="px-4 py-1.5 text-[9px] font-bold text-slate-500 border-b border-slate-100">
+                      {section.name}
+                    </td>
+                  </tr>
+                  {section.items.map((item, ii) => {
+                    const values = getRowValues(item);
+                    const rowTotal = values.reduce((s, v) => s + v, 0);
+                    return (
+                      <tr key={`debit-${si}-${ii}`} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                        <td className="sticky right-0 z-10 bg-white py-2 px-3 text-slate-800 font-medium border-l border-slate-100 min-w-[160px]">
+                          {item.label}
+                        </td>
+                        {values.map((v, j) => (
+                          <td key={j} className={`px-1 py-2 text-center tabular-nums ${v > 0 ? "text-red-600" : "text-slate-300"}`}>
+                            {v > 0 ? fmt(v) : "–"}
+                          </td>
+                        ))}
+                        <td className="py-2 px-2 text-center tabular-nums text-red-600 font-medium bg-red-50/30">
+                          {rowTotal > 0 ? fmt(rowTotal) : "–"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </React.Fragment>
               ))}
-            </tr>
+              {/* Total Debit */}
+              <tr className="bg-red-50 font-bold border-t border-red-200">
+                <td className="sticky right-0 z-10 bg-red-50 py-2.5 px-3 text-red-800 border-l border-red-200 min-w-[160px]">
+                  إجمالي المصروفات
+                </td>
+                {debitTotals.map((v, i) => (
+                  <td key={i} className="px-1 py-2.5 text-center tabular-nums text-red-700">
+                    {v > 0 ? fmt(v) : "–"}
+                  </td>
+                ))}
+                <td className="py-2.5 px-2 text-center tabular-nums text-red-800 font-bold bg-red-100/50">
+                  {fmt(totalDebit)}
+                </td>
+              </tr>
 
-            {/* ─── التراكمي ─── */}
-            <tr className="bg-blue-100/50 font-bold">
-              <td className="sticky right-0 z-10 bg-blue-100 px-2 py-[3px] text-blue-900 border-l border-blue-200 w-[180px] min-w-[180px]">
-                التراكمي
-              </td>
-              {cumulative.map((v, i) => (
-                <td key={i} className={`px-1 py-[3px] text-center tabular-nums font-bold ${v >= 0 ? "text-green-700" : "text-red-600"}`}>
-                  {fmt(v)}
+              {/* ─── الإيرادات (Credit) ─── */}
+              <tr className="bg-emerald-50/50">
+                <td colSpan={totalMonths + 2} className="px-3 py-2 font-bold text-emerald-700 text-[9px] border-b border-emerald-100">
+                  الإيرادات
                 </td>
-              ))}
-            </tr>
-          </tbody>
-        </table>
+              </tr>
+              {creditRows.map((item, i) => {
+                const values = getRowValues(item);
+                const rowTotal = values.reduce((s, v) => s + v, 0);
+                return (
+                  <tr key={`credit-${i}`} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                    <td className="sticky right-0 z-10 bg-white py-2 px-3 text-slate-800 font-medium border-l border-slate-100 min-w-[160px]">
+                      {item.label}
+                    </td>
+                    {values.map((v, j) => (
+                      <td key={j} className={`px-1 py-2 text-center tabular-nums ${v > 0 ? "text-emerald-600" : "text-slate-300"}`}>
+                        {v > 0 ? fmt(v) : "–"}
+                      </td>
+                    ))}
+                    <td className="py-2 px-2 text-center tabular-nums text-emerald-600 font-medium bg-emerald-50/30">
+                      {rowTotal > 0 ? fmt(rowTotal) : "–"}
+                    </td>
+                  </tr>
+                );
+              })}
+              {/* Total Credit */}
+              <tr className="bg-emerald-50 font-bold border-t border-emerald-200">
+                <td className="sticky right-0 z-10 bg-emerald-50 py-2.5 px-3 text-emerald-800 border-l border-emerald-200 min-w-[160px]">
+                  إجمالي الإيرادات
+                </td>
+                {creditTotals.map((v, i) => (
+                  <td key={i} className="px-1 py-2.5 text-center tabular-nums text-emerald-700">
+                    {v > 0 ? fmt(v) : "–"}
+                  </td>
+                ))}
+                <td className="py-2.5 px-2 text-center tabular-nums text-emerald-800 font-bold bg-emerald-100/50">
+                  {fmt(totalCredit)}
+                </td>
+              </tr>
+
+              {/* ─── صافي الشهر ─── */}
+              <tr className="bg-blue-50/50 font-bold border-t-2 border-blue-200">
+                <td className="sticky right-0 z-10 bg-blue-50 py-2.5 px-3 text-blue-800 border-l border-blue-200 min-w-[160px]">
+                  صافي الشهر
+                </td>
+                {netFlow.map((v, i) => (
+                  <td key={i} className={`px-1 py-2.5 text-center tabular-nums font-medium ${v >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+                    {Math.abs(v) > 0 ? fmt(v) : "–"}
+                  </td>
+                ))}
+                <td className={`py-2.5 px-2 text-center tabular-nums font-bold bg-blue-50/50 ${profit >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+                  {fmt(profit)}
+                </td>
+              </tr>
+
+              {/* ─── التراكمي ─── */}
+              <tr className="bg-slate-100 font-bold">
+                <td className="sticky right-0 z-10 bg-slate-100 py-2.5 px-3 text-slate-900 border-l border-slate-200 min-w-[160px]">
+                  التراكمي
+                </td>
+                {cumulative.map((v, i) => (
+                  <td key={i} className={`px-1 py-2.5 text-center tabular-nums font-bold ${v >= 0 ? "text-emerald-700" : "text-red-700"}`}>
+                    {fmt(v)}
+                  </td>
+                ))}
+                <td className="py-2.5 px-2 text-center tabular-nums font-bold bg-slate-100 text-slate-800">
+                  {fmt(cumulative[cumulative.length - 1] || 0)}
+                </td>
+              </tr>
+            </tbody>
+            <tfoot className="sticky bottom-0 bg-slate-800 text-white z-10">
+              <tr>
+                <td className="sticky right-0 bg-slate-800 py-3 px-3 font-bold min-w-[160px]">الإجمالي</td>
+                {debitTotals.map((_, i) => (
+                  <td key={i} className="py-3 px-1 text-center font-bold text-[9px]">
+                    {Math.abs(netFlow[i]) > 0 ? fmtM(netFlow[i]) : "–"}
+                  </td>
+                ))}
+                <td className={`py-3 px-2 text-center font-bold ${profit >= 0 ? "text-emerald-300" : "text-red-300"}`}>
+                  {fmtM(profit)}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
       </div>
     </div>
   );

@@ -1012,3 +1012,9 @@
 - [x] Show real calendar dates in column headers (from project startDate)
 - [x] Fix engine surveyorDwgFee/surveyorAsbuiltFee references (use surveyorFee from ProjectInputs)
 - [x] Fix land price discrepancy (188K AED) between V2Feasibility and V2InvestorCashFlow - use DB landPrice directly via landPriceTotal field
+
+## Table Styling Unification (match تجميع المشاريع reference)
+- [x] Apply ConsolidatedInvestorCashFlowPage table styling to V2InvestorCashFlow
+- [x] Apply ConsolidatedInvestorCashFlowPage table styling to V2EscrowCashFlow
+- [x] Apply ConsolidatedInvestorCashFlowPage table styling to V2WaelSales (المبيعات والتسويق)
+- [x] Apply ConsolidatedInvestorCashFlowPage table styling to Construction page
