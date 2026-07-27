@@ -19,7 +19,7 @@ import {
 import {
   ArrowRight, TrendingUp, Target, Megaphone, Calendar, DollarSign,
   Palette, Rocket, FileCheck, HardHat, Save, Loader2,
-  Building2, Percent, CreditCard,
+  Building2, Percent, CreditCard, Table2, Info,
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -288,27 +288,94 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   const totalSold = salesDistribution.reduce((a, b) => a + b, 0);
   const avgUnitPrice = totalUnits > 0 ? totalRevenue / totalUnits : 0;
 
-  // ─── Computed: Escrow with Payment Plan ────────────────────────────────────
+  // ─── Computed: Detailed Cash Inflow (Payment Plan × Sales) ─────────────────
+  // For each sale in month S, the buyer pays according to the payment plan:
+  //   - Down payment (ppDownPct%) in month S
+  //   - Second payment (ppSecondPct%) after ppSecondAfterMonths months
+  //   - Construction installments (ppInstallmentPct% each ppInstallmentEvery months)
+  //   - Handover payment (ppHandoverPct%) at project end
+  const cashInflowData = useMemo(() => {
+    const totalMonths = timeline.projectEnd;
+    const monthlySales: number[] = Array(totalMonths + 1).fill(0);
+    // Convert salesDistribution (units per month) to revenue per month
+    salesDistribution.forEach((units, i) => {
+      const m = timeline.salesStart + i;
+      if (m <= totalMonths) {
+        monthlySales[m] = units * avgUnitPrice;
+      }
+    });
+
+    // Cash inflow per month (extra months for post-completion payments)
+    const cashPerMonth: number[] = Array(totalMonths + 24).fill(0);
+
+    for (let saleMonth = 1; saleMonth <= totalMonths; saleMonth++) {
+      const saleAmount = monthlySales[saleMonth];
+      if (saleAmount <= 0) continue;
+
+      // 1. Down payment - immediate
+      const downAmount = saleAmount * (ppDownPct / 100);
+      if (saleMonth < cashPerMonth.length) cashPerMonth[saleMonth] += downAmount;
+
+      // 2. Second payment - after ppSecondAfterMonths
+      const secondAmount = saleAmount * (ppSecondPct / 100);
+      const secondMonth = saleMonth + ppSecondAfterMonths;
+      if (secondMonth < cashPerMonth.length) cashPerMonth[secondMonth] += secondAmount;
+
+      // 3. Construction installments - spread over remaining construction period
+      const installmentTotal = saleAmount * (ppDuringTotal / 100);
+      const constructionEnd = timeline.constructionStart + constructionMonths - 1;
+      // Installments every ppInstallmentEvery months from sale date
+      const installmentMonths: number[] = [];
+      for (let im = saleMonth + ppInstallmentEvery + ppSecondAfterMonths; im <= constructionEnd; im += ppInstallmentEvery) {
+        installmentMonths.push(im);
+      }
+      if (installmentMonths.length > 0) {
+        const perInstallment = installmentTotal / installmentMonths.length;
+        installmentMonths.forEach(im => {
+          if (im < cashPerMonth.length) cashPerMonth[im] += perInstallment;
+        });
+      } else {
+        // If no installment months fit, put it all at construction end
+        if (constructionEnd < cashPerMonth.length) cashPerMonth[constructionEnd] += installmentTotal;
+      }
+
+      // 4. Handover payment - at project end
+      const handoverAmount = saleAmount * (ppHandoverPct / 100);
+      const handoverMonth = constructionEnd;
+      if (handoverMonth < cashPerMonth.length) cashPerMonth[handoverMonth] += handoverAmount;
+    }
+
+    // Build results table
+    const data: { month: number; salesThisMonth: number; cashInflow: number; cumSales: number; cumCash: number }[] = [];
+    let cumSales = 0;
+    let cumCash = 0;
+    for (let m = 1; m <= totalMonths; m++) {
+      const salesThisMonth = monthlySales[m];
+      const cashInflow = cashPerMonth[m];
+      cumSales += salesThisMonth;
+      cumCash += cashInflow;
+      data.push({ month: m, salesThisMonth, cashInflow, cumSales, cumCash });
+    }
+    return data;
+  }, [salesDistribution, avgUnitPrice, timeline, constructionMonths, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppDuringTotal, ppInstallmentEvery, ppHandoverPct]);
+
+  // ─── Computed: Escrow with detailed cash inflow ────────────────────────────
   const escrowInitial = constructionCost * 0.2;
   const monthlySiphon = salesMonths > 0 ? constructionCost / salesMonths : 0;
   const escrowData = useMemo(() => {
     let balance = escrowInitial;
-    // Each unit sold: buyer pays downPaymentPct immediately, duringConstructionPct spread over construction months
-    const monthlyInstallmentPerUnit = avgUnitPrice * (duringConstructionPct / 100) / (constructionMonths || 1);
-    // Track cumulative sold units for ongoing installments
-    let cumulativeSold = 0;
     return salesDistribution.map((units, i) => {
-      // New sales this month: down payment goes to escrow
-      const downPaymentIncome = units * avgUnitPrice * (downPaymentPct / 100);
-      // Ongoing installments from all previously sold units
-      cumulativeSold += units;
-      const installmentIncome = cumulativeSold * monthlyInstallmentPerUnit;
-      const totalIncome = downPaymentIncome + installmentIncome;
+      const absMonth = i + timeline.salesStart;
+      // Revenue from cashInflowData for this month
+      const cid = cashInflowData.find(d => d.month === absMonth);
+      const totalIncome = cid ? cid.cashInflow : 0;
       const withdrawal = monthlySiphon;
       balance = balance + totalIncome - withdrawal;
-      return { month: i + timeline.salesStart, units, income: totalIncome, downPayment: downPaymentIncome, installments: installmentIncome, withdrawal, balance, cumulativeSold };
+      let cumulativeSold = 0;
+      for (let j = 0; j <= i; j++) cumulativeSold += salesDistribution[j];
+      return { month: absMonth, units, income: totalIncome, downPayment: 0, installments: 0, withdrawal, balance, cumulativeSold };
     });
-  }, [salesDistribution, escrowInitial, avgUnitPrice, monthlySiphon, timeline.salesStart, constructionCost, downPaymentPct, duringConstructionPct, constructionMonths]);
+  }, [salesDistribution, escrowInitial, cashInflowData, monthlySiphon, timeline.salesStart]);
   const maxDeficit = escrowData.length > 0 ? Math.min(...escrowData.map((d) => d.balance)) : 0;
   const hasDeficit = maxDeficit < 0;
   const criticalMonth = useMemo(() => {
@@ -346,7 +413,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       salesCommissionPct: String(commissionPct),
       salesAbsorptionJson: JSON.stringify({ mode: salesMode, speed, template: curveTemplate, manual: manualUnits, marketingPrepLead, reraLead, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppInstallmentPct, ppInstallmentEvery, ppHandoverPct, marketingActualStart, marketingActualEnd }),
       channelsJson: JSON.stringify(channelPcts),
-      resultsJson: JSON.stringify({ escrowData, salesDistribution }),
+      resultsJson: JSON.stringify({ escrowData, salesDistribution, cashInflowData }),
     });
     setHasPlanChanges(false);
   }, [selectedProjectId, planId, totalRevenue, designMonths, constructionMonths, offPlan, marketingPct, commissionPct, salesMode, speed, curveTemplate, manualUnits, channelPcts, escrowData, salesDistribution, marketingPrepLead, reraLead, marketingActualStart, marketingActualEnd, savePlan]);
@@ -923,7 +990,90 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
               </div>
             </section>
 
-            {/* SECTION 7: MARKETING BUDGET & TIMELINE (Wael inputs) */}
+            {/* SECTION 7: CASH INFLOW RESULTS TABLE (Payment Plan × Sales) */}
+            <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Table2 className="w-3.5 h-3.5 text-indigo-600" />
+                  <h2 className="text-[11px] font-bold text-gray-800">جدول التدفق النقدي — التحصيل الفعلي من المبيعات</h2>
+                </div>
+                <div className="flex items-center gap-2 text-[9px] text-gray-500">
+                  <Info className="w-3 h-3" />
+                  يحسب متى تدخل الأموال فعلياً بناءً على خطة الدفع
+                </div>
+              </div>
+              <div className="p-2 overflow-x-auto max-h-[400px] overflow-y-auto">
+                <table className="w-full text-[9px]">
+                  <thead className="sticky top-0 bg-white z-10 border-b-2 border-gray-200">
+                    <tr>
+                      <th className="text-right py-1 px-1.5 text-gray-500 font-bold w-8">#</th>
+                      <th className="text-right py-1 px-1.5 text-gray-500 font-bold">الشهر</th>
+                      <th className="text-center py-1 px-1.5 text-gray-500 font-bold w-12">المرحلة</th>
+                      <th className="text-left py-1 px-1.5 text-gray-500 font-bold">مبيعات الشهر</th>
+                      <th className="text-left py-1 px-1.5 text-gray-500 font-bold">تحصيل فعلي</th>
+                      <th className="text-left py-1 px-1.5 text-gray-500 font-bold">مبيعات تراكمية</th>
+                      <th className="text-left py-1 px-1.5 text-gray-500 font-bold">تحصيل تراكمي</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cashInflowData.map((row, i) => {
+                      const isActive = row.salesThisMonth > 0 || row.cashInflow > 0;
+                      const isDesign = row.month <= timeline.designEnd;
+                      const isSalesStart = row.month === timeline.salesStart;
+                      return (
+                        <tr key={i} className={`border-b border-gray-50 ${!isActive ? 'opacity-30' : 'hover:bg-blue-50/30'} ${isSalesStart ? 'border-t-2 border-t-amber-300' : ''}`}>
+                          <td className="py-0.5 px-1.5 text-gray-400 font-mono">{row.month}</td>
+                          <td className="py-0.5 px-1.5 font-medium text-gray-700">شهر {row.month}</td>
+                          <td className="py-0.5 px-1.5 text-center">
+                            <span className={`inline-block px-1 py-0.5 rounded text-[8px] font-bold ${isDesign ? 'bg-purple-50 text-purple-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                              {isDesign ? 'تصاميم' : 'بناء'}
+                            </span>
+                          </td>
+                          <td className="py-0.5 px-1.5 text-left font-mono">
+                            {row.salesThisMonth > 0 ? <span className="text-emerald-700 font-medium">{fmtFull(Math.round(row.salesThisMonth))}</span> : <span className="text-gray-300">—</span>}
+                          </td>
+                          <td className="py-0.5 px-1.5 text-left font-mono">
+                            {row.cashInflow > 0 ? <span className="text-blue-700 font-bold">{fmtFull(Math.round(row.cashInflow))}</span> : <span className="text-gray-300">—</span>}
+                          </td>
+                          <td className="py-0.5 px-1.5 text-left font-mono text-indigo-600">{row.cumSales > 0 ? fmtFull(Math.round(row.cumSales)) : '—'}</td>
+                          <td className="py-0.5 px-1.5 text-left font-mono text-blue-600 font-medium">{row.cumCash > 0 ? fmtFull(Math.round(row.cumCash)) : '—'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot className="border-t-2 border-gray-300 bg-gray-50 font-bold">
+                    <tr>
+                      <td colSpan={3} className="py-1 px-1.5 text-right text-gray-700">الإجمالي</td>
+                      <td className="py-1 px-1.5 text-left font-mono text-emerald-700">{fmtFull(Math.round(cashInflowData.reduce((s, r) => s + r.salesThisMonth, 0)))}</td>
+                      <td className="py-1 px-1.5 text-left font-mono text-blue-700">{fmtFull(Math.round(cashInflowData.reduce((s, r) => s + r.cashInflow, 0)))}</td>
+                      <td colSpan={2}></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              <div className="px-3 py-2 border-t border-gray-100 bg-gray-50/50">
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="text-center">
+                    <p className="text-[8px] text-gray-500">إجمالي المبيعات</p>
+                    <p className="text-[10px] font-bold text-emerald-700">{fmtFull(Math.round(cashInflowData.reduce((s, r) => s + r.salesThisMonth, 0)))} AED</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-[8px] text-gray-500">تحصيل خلال المشروع</p>
+                    <p className="text-[10px] font-bold text-blue-700">{fmtFull(Math.round(cashInflowData.reduce((s, r) => s + r.cashInflow, 0)))} AED</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-[8px] text-gray-500">نسبة التحصيل</p>
+                    <p className="text-[10px] font-bold text-indigo-700">
+                      {cashInflowData.reduce((s, r) => s + r.salesThisMonth, 0) > 0
+                        ? Math.round((cashInflowData.reduce((s, r) => s + r.cashInflow, 0) / cashInflowData.reduce((s, r) => s + r.salesThisMonth, 0)) * 100)
+                        : 0}%
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* SECTION 8: MARKETING BUDGET & TIMELINE (Wael inputs) */}
             <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
