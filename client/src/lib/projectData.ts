@@ -114,8 +114,8 @@ export const RATES: ProjectRates = {
   marketingConstructionShare: 0.75,
   salesCommission: 0.05,
   salesCommissionPostCompletion: 0.02,
-  constructionInvestorShare: 0.30,
-  constructionEscrowShare: 0.70,
+  constructionInvestorShare: 0.15, // 10% مقدمة + 5% ريتنشن أخيرة
+  constructionEscrowShare: 0.85, // 80% مستخلصات + 5% ريتنشن أولى
   govFeesInvestorShare: 0.10,
   govFeesEscrowShare: 0.90,
   advancePayment: 0.10,
@@ -197,8 +197,8 @@ export function dbProjectToRates(dbProject: any): ProjectRates {
     marketingConstructionShare: 0.75,
     salesCommission: salesPct / 100,
     salesCommissionPostCompletion: 0.02,
-    constructionInvestorShare: 0.30,
-    constructionEscrowShare: 0.70,
+    constructionInvestorShare: 0.15, // 10% مقدمة + 5% ريتنشن أخيرة
+    constructionEscrowShare: 0.85, // 80% مستخلصات + 5% ريتنشن أولى
     govFeesInvestorShare: 0.10,
     govFeesEscrowShare: 0.90,
     advancePayment: 0.10,

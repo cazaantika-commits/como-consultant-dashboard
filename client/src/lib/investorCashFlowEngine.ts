@@ -37,6 +37,7 @@ export interface CostRow {
   constructionMonths: number[];
   postConstructionMonths: number[];
   isRevenue?: boolean;
+  isTransfer?: boolean;
 }
 
 export interface TimingRules {
@@ -821,79 +822,127 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     }
   }
 
-  // ─── الإنشاء ───
+  // ─── الإنشاء (5 بنود مستقلة حسب الإعدادات) ───
   {
-    const constructionDesign = emptyDesign();
-    const constructionConst = emptyConstruction();
-    const constructionPost = emptyPost();
-
-    if (isScenario3 || isScenario4) {
-      // 100% from investor
-      constructionConst[0] = constructionCost * 0.10;
-      constructionConst[1] = constructionCost * 0.04;
-      constructionConst[2] = constructionCost * 0.07;
-      constructionConst[3] = constructionCost * 0.09;
-      // 60% S-Curve from month 5
-      const sCurveTotal = constructionCost * 0.60;
-      const remainingMonths = constructionDuration - 4;
-      const sCurveWeights = generateSCurve(remainingMonths);
-      for (let idx = 0; idx < remainingMonths; idx++) {
-        constructionConst[4 + idx] = sCurveTotal * sCurveWeights[idx];
-      }
-      // 5% إتمام (شهر 2 بعد الإنجاز) + 5% احتجاز (شهر 13 بعد الإنجاز)
-      constructionPost[1] = constructionCost * 0.05;
-      constructionPost[12] = constructionCost * 0.05;
-
-      rows.push({
-        label: "تكلفة الإنشاء",
-        totalCost: constructionCost,
-        investorAmount: constructionCost,
-        paid: 0,
-        unpaid: constructionCost,
-        funder: "investor",
-        section: "الإنشاء",
-        designMonths: constructionDesign,
-        constructionMonths: constructionConst,
-        postConstructionMonths: constructionPost,
-      });
-    } else if (isScenario2) {
-      // س2: لا إيداع، المستثمر يدفع 10%+4%+7%+9% في أشهر 1-4
-      constructionConst[0] = constructionCost * 0.10;
-      constructionConst[1] = constructionCost * 0.04;
-      constructionConst[2] = constructionCost * 0.07;
-      constructionConst[3] = constructionCost * 0.09;
-      // 5% إتمام + 5% احتجاز تُدفع من حساب الضمان (ليست من المستثمر)
-      rows.push({
-        label: "تكلفة الإنشاء",
-        totalCost: constructionCost,
-        investorAmount: costs.constructionInvestor,
-        paid: 0,
-        unpaid: costs.constructionInvestor,
-        funder: "split",
-        section: "الإنشاء",
-        designMonths: constructionDesign,
-        constructionMonths: constructionConst,
-        postConstructionMonths: constructionPost,
-      });
-    } else {
-      // س1: إيداع 20% + دفعة مقدمة 10%
-      const escrowDeposit = constructionCost * r.escrowDeposit;
-      constructionDesign[penultimateDesign] = escrowDeposit;
-      constructionConst[0] = constructionCost * r.advancePayment;
-      // 5% إتمام + 5% احتجاز تُدفع من حساب الضمان (ليست من المستثمر)
-      rows.push({
-        label: "تكلفة الإنشاء",
-        totalCost: constructionCost,
-        investorAmount: costs.constructionInvestor,
-        paid: 0,
-        unpaid: costs.constructionInvestor,
-        funder: "split",
-        section: "الإنشاء",
-        designMonths: constructionDesign,
-        constructionMonths: constructionConst,
-        postConstructionMonths: constructionPost,
-      });
+    // Parse monthly progress from constructionScheduleJson if available
+    let monthlyProgressPcts: number[] | null = null;
+    if (projectData?.constructionScheduleJson) {
+      try {
+        const schedule = JSON.parse(projectData.constructionScheduleJson);
+        if (schedule.monthlyProgress && schedule.monthlyProgress.length === constructionDuration) {
+          monthlyProgressPcts = schedule.monthlyProgress;
+        }
+      } catch {}
     }
+
+    // 1. دفعة مقدمة المقاول (10%) — المستثمر — شهر 1 من الإنشاء
+    const mobDesign = emptyDesign();
+    const mobConst = emptyConstruction();
+    const mobPost = emptyPost();
+    const mobilizationAmount = constructionCost * r.advancePayment;
+    mobConst[0] = mobilizationAmount;
+    rows.push({
+      label: "دفعة مقدمة المقاول (10%)",
+      totalCost: mobilizationAmount,
+      investorAmount: mobilizationAmount,
+      paid: 0,
+      unpaid: mobilizationAmount,
+      funder: "investor",
+      section: "الإنشاء",
+      designMonths: mobDesign,
+      constructionMonths: mobConst,
+      postConstructionMonths: mobPost,
+    });
+
+    // 2. إيداع حساب الضمان (20%) — تحويل (ليس مصروف) — المستثمر يحوّل للضمان
+    const depositDesign = emptyDesign();
+    const depositConst = emptyConstruction();
+    const depositPost = emptyPost();
+    const escrowDepositAmount = constructionCost * r.escrowDeposit;
+    depositDesign[penultimateDesign] = escrowDepositAmount;
+    rows.push({
+      label: "إيداع حساب الضمان (20%)",
+      totalCost: escrowDepositAmount,
+      investorAmount: escrowDepositAmount,
+      paid: 0,
+      unpaid: escrowDepositAmount,
+      funder: "investor",
+      section: "الإنشاء",
+      designMonths: depositDesign,
+      constructionMonths: depositConst,
+      postConstructionMonths: depositPost,
+      isTransfer: true,
+    });
+
+    // 3. مستخلصات المقاول (80%) — الضمان — شهرياً حسب نسبة الإنجاز
+    const progressDesign = emptyDesign();
+    const progressConst = emptyConstruction();
+    const progressPost = emptyPost();
+    const progressTotal = constructionCost * 0.80;
+    if (monthlyProgressPcts) {
+      // Use actual progress percentages from ConstructionInputsPage
+      const totalPct = monthlyProgressPcts.reduce((s, v) => s + v, 0);
+      for (let m = 0; m < constructionDuration; m++) {
+        const pct = monthlyProgressPcts[m] || 0;
+        progressConst[m] = totalPct > 0 ? progressTotal * (pct / totalPct) : 0;
+      }
+    } else {
+      // Fallback: S-Curve distribution
+      const sCurveWeights = generateSCurve(constructionDuration);
+      for (let m = 0; m < constructionDuration; m++) {
+        progressConst[m] = progressTotal * sCurveWeights[m];
+      }
+    }
+    rows.push({
+      label: "مستخلصات المقاول (80%)",
+      totalCost: progressTotal,
+      investorAmount: 0,
+      paid: 0,
+      unpaid: progressTotal,
+      funder: "escrow",
+      section: "الإنشاء",
+      designMonths: progressDesign,
+      constructionMonths: progressConst,
+      postConstructionMonths: progressPost,
+    });
+
+    // 4. ريتنشن المقاول الأولى (5%) — الضمان — شهر +2 بعد الإنجاز
+    const ret1Design = emptyDesign();
+    const ret1Const = emptyConstruction();
+    const ret1Post = emptyPost();
+    const retention1Amount = constructionCost * 0.05;
+    ret1Post[1] = retention1Amount;
+    rows.push({
+      label: "ريتنشن المقاول الأولى (5%)",
+      totalCost: retention1Amount,
+      investorAmount: 0,
+      paid: 0,
+      unpaid: retention1Amount,
+      funder: "escrow",
+      section: "الإنشاء",
+      designMonths: ret1Design,
+      constructionMonths: ret1Const,
+      postConstructionMonths: ret1Post,
+    });
+
+    // 5. ريتنشن أخيرة المقاول (5%) — المستثمر — شهر +13 بعد الإنجاز
+    const ret2Design = emptyDesign();
+    const ret2Const = emptyConstruction();
+    const ret2Post = emptyPost();
+    const retentionFinalAmount = constructionCost * 0.05;
+    ret2Post[12] = retentionFinalAmount;
+    rows.push({
+      label: "ريتنشن أخيرة المقاول (5%)",
+      totalCost: retentionFinalAmount,
+      investorAmount: retentionFinalAmount,
+      paid: 0,
+      unpaid: retentionFinalAmount,
+      funder: "investor",
+      section: "الإنشاء",
+      designMonths: ret2Design,
+      constructionMonths: ret2Const,
+      postConstructionMonths: ret2Post,
+    });
   }
 
   // Pre-compute revenue variables for S1/S2 (needed by profit share section)

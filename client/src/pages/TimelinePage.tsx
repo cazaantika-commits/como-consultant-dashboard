@@ -17,21 +17,21 @@ import {
 // ═══════════════════════════════════════════════════════════════════════════════
 const PROJECT_PHASES = [
   { id: "design", name: "التصاميم", color: "#3b82f6", icon: Palette },
-  { id: "materials", name: "تحضير مواد التسويق", color: "#f59e0b", icon: Rocket },
-  { id: "rera", name: "ريرا + اعتمادات البيع", color: "#8b5cf6", icon: FileCheck },
-  { id: "marketing", name: "إطلاق التسويق", color: "#ec4899", icon: Megaphone },
-  { id: "sales", name: "بدء المبيعات", color: "#10b981", icon: Target },
+  { id: "materials", name: "تحضير مواد التسويق وإصدار ترخيص التسويق", color: "#f59e0b", icon: Rocket },
+  { id: "rera", name: "تسجيل المشروع وإصدار ترخيص البيع", color: "#8b5cf6", icon: FileCheck },
+  { id: "marketing", name: "التسويق", color: "#ec4899", icon: Megaphone },
+  { id: "sales", name: "بدء البيع", color: "#10b981", icon: Target },
   { id: "construction", name: "الإنشاء", color: "#64748b", icon: HardHat },
 ];
 
 const DEFAULT_DESIGN_PAYMENTS = [
-  { id: "mobilization", label: "التعبئة", labelEn: "Mobilization", pct: 5, durationWeeks: 2 },
-  { id: "concept", label: "التصميم المبدئي", labelEn: "Concept Design", pct: 10, durationWeeks: 4 },
-  { id: "schematic", label: "التصميم التخطيطي", labelEn: "Schematic Design", pct: 15, durationWeeks: 6 },
-  { id: "detailed", label: "التصميم التفصيلي", labelEn: "Detailed Design", pct: 20, durationWeeks: 8 },
-  { id: "tender", label: "وثائق المناقصة", labelEn: "Tender Documents", pct: 20, durationWeeks: 6 },
-  { id: "construction", label: "مرحلة الإنشاء", labelEn: "Construction Phase", pct: 25, durationWeeks: 0 },
-  { id: "closeout", label: "الإغلاق", labelEn: "Close-out", pct: 5, durationWeeks: 4 },
+  { id: "mobilization", label: "التعبئة وجمع البيانات", labelEn: "Mobilization & Data Collection", pct: 5, durationWeeks: 2 },
+  { id: "concept", label: "التصميم المبدئي", labelEn: "Concept Design", pct: 15, durationWeeks: 4 },
+  { id: "schematic", label: "التصميم التخطيطي", labelEn: "Schematic Design", pct: 20, durationWeeks: 4 },
+  { id: "dd", label: "تطوير التصميم التفصيلي", labelEn: "Detailed Design Development", pct: 25, durationWeeks: 6 },
+  { id: "authorities", label: "اعتماد الجهات", labelEn: "Authorities Approval", pct: 10, durationWeeks: 4 },
+  { id: "tender", label: "تأهيل المقاولين ووثائق المناقصة", labelEn: "Prequalification & Tender Documents", pct: 15, durationWeeks: 4 },
+  { id: "ifc", label: "صادر للتنفيذ", labelEn: "Issued for Construction", pct: 10, durationWeeks: 2 },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -302,24 +302,8 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
                     </div>
                     <span className="text-[11px] font-medium text-gray-800">{phase.label}</span>
                     <span className="text-[9px] text-gray-400">{phase.labelEn}</span>
-                    <input
-                      type="number" value={phase.durationWeeks}
-                      onChange={(e) => {
-                        setDesignPayments(prev => prev.map(p => p.id === phase.id ? { ...p, durationWeeks: parseInt(e.target.value) || 0 } : p));
-                        setHasChanges(true);
-                      }}
-                      className="w-12 mx-auto text-center text-xs font-mono border border-gray-200 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
-                      min={0} max={52}
-                    />
-                    <input
-                      type="number" value={phase.pct}
-                      onChange={(e) => {
-                        setDesignPayments(prev => prev.map(p => p.id === phase.id ? { ...p, pct: parseInt(e.target.value) || 0 } : p));
-                        setHasChanges(true);
-                      }}
-                      className="w-12 mx-auto text-center text-xs font-mono border border-gray-200 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
-                      min={0} max={100}
-                    />
+                    <span className="w-12 mx-auto text-center text-xs font-mono bg-gray-50 border border-gray-100 rounded px-1 py-0.5 text-gray-700">{phase.durationWeeks}</span>
+                    <span className="w-12 mx-auto text-center text-xs font-mono bg-gray-50 border border-gray-100 rounded px-1 py-0.5 text-gray-700">{phase.pct}%</span>
                   </div>
                 ))}
                 {/* Visual bars */}
