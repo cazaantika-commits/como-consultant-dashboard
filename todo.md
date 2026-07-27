@@ -1018,3 +1018,4 @@
 - [x] Fix SettingsRulesPage: RERA starts 1 month after schematic completion (not X months before sales)
 - [x] Fix V2WaelSales: Wael must control marketing launch duration and monthly distribution (not just percentage)
 - [x] Restore detailed cash inflow table (Payment Plan × Sales distribution) in V2WaelSales
+- [x] V2WaelSales: Add monthly marketing distribution table (Wael inputs amount per channel per month)
