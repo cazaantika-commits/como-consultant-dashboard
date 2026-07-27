@@ -1147,6 +1147,8 @@ export const projects = mysqlTable("projects", {
 	preConMonths: int().default(6),
 	constructionMonths: int().default(16),
 	handoverMonths: int().default(2),
+	marketingPrepMonths: int().default(3),
+	reraLeadMonths: int().default(2),
 	startDate: varchar({ length: 20 }),
 	financingScenario: varchar({ length: 50 }).default('offplan_escrow'),
 	// Unit distribution - counts (0 = auto-calculate from GFA)

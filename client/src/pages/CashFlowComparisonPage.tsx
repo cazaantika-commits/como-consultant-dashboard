@@ -3,7 +3,8 @@
  * Compares monthly cash flows across all three financing scenarios side by side.
  */
 import { useProjectContext } from "@/contexts/ProjectContext";
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
+import { getMonthLabel } from "@/lib/monthUtils";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import {
@@ -68,8 +69,18 @@ export default function CashFlowComparisonPage() {
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const [viewMode, setViewMode] = useState<ViewMode>("investor");
   const tableRef = useRef<HTMLDivElement>(null);
+  const [projectStartDate, setProjectStartDate] = useState<string>("");
 
   const projectsQuery = trpc.projects.list.useQuery(undefined, { staleTime: 60_000 });
+
+  useEffect(() => {
+    if (projectsQuery.data && selectedProjectId) {
+      const p = projectsQuery.data.find((proj: any) => proj.id === selectedProjectId);
+      if (p && p.startDate) {
+        setProjectStartDate(String(p.startDate));
+      }
+    }
+  }, [projectsQuery.data, selectedProjectId]);
   const comparisonQuery = trpc.cashFlowSettings.getComparisonData.useQuery(
     { projectId: selectedProjectId! },
     { enabled: !!selectedProjectId, staleTime: 30_000 }
@@ -334,7 +345,10 @@ export default function CashFlowComparisonPage() {
                             key={i}
                             className={`${pc.header} px-1 py-2 text-center font-medium min-w-[55px] border-b border-gray-600`}
                           >
-                            <div className="text-xs opacity-80">ش{i + 1}</div>
+                            <div className="flex flex-col items-center leading-tight">
+                              <span className="text-[7px] font-bold">{getMonthLabel(i, projectStartDate)}</span>
+                              <span className="text-[7px] text-gray-400">{i + 1}</span>
+                            </div>
                             <div className="text-xs truncate max-w-[52px]" title={data.monthLabels[i]}>
                               {data.monthLabels[i]?.split(" ")[0]}
                             </div>

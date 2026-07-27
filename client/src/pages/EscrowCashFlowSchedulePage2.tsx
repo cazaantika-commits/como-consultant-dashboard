@@ -20,6 +20,7 @@ import {
   exportToPDF,
   extractTableFromDOM,
 } from "@/lib/tableExport";
+import { getMonthLabel } from "@/lib/monthUtils";
 
 const SCENARIO_LABELS_ESCROW: Record<string, string> = {
   offplan_escrow: "أوف بلان مع إيداع في حساب الضمان",
@@ -88,6 +89,13 @@ export default function EscrowCashFlowSchedulePage2() {
   const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
   const [scenario, setScenario] = useState<Scenario>("offplan_escrow");
   const tableRef = useRef<HTMLDivElement>(null);
+  const [projectStartDate, setProjectStartDate] = useState<string>("");
+
+  React.useEffect(() => {
+    if (projectQuery.data?.startDate) {
+      setProjectStartDate(String(projectQuery.data.startDate));
+    }
+  }, [projectQuery.data?.startDate]);
 
   const data = useMemo(() => {
     const i: ProjectInputs = projectQuery.data ? dbProjectToInputs(projectQuery.data) : PROJECT_INPUTS;
@@ -795,17 +803,26 @@ export default function EscrowCashFlowSchedulePage2() {
               <tr className="bg-gray-700 text-white">
                 {Array.from({ length: designDuration }, (_, i) => (
                   <th key={`dh${i}`} className="border border-gray-600 px-1 py-1 text-center min-w-[70px] bg-purple-700">
-                    ش{i + 1}
+                    <div className="flex flex-col items-center leading-tight">
+                      <span className="text-[7px] font-bold">{getMonthLabel(i, projectStartDate)}</span>
+                      <span className="text-[7px] text-gray-400">{i + 1}</span>
+                    </div>
                   </th>
                 ))}
                 {Array.from({ length: constructionDuration }, (_, i) => (
                   <th key={`ch${i}`} className="border border-gray-600 px-1 py-1 text-center min-w-[70px] bg-green-700">
-                    ش{i + 1}
+                    <div className="flex flex-col items-center leading-tight">
+                      <span className="text-[7px] font-bold">{getMonthLabel(designDuration + i, projectStartDate)}</span>
+                      <span className="text-[7px] text-gray-400">{i + 1}</span>
+                    </div>
                   </th>
                 ))}
                 {Array.from({ length: postDuration }, (_, i) => (
                   <th key={`ph${i}`} className="border border-gray-600 px-1 py-1 text-center min-w-[70px] bg-amber-600">
-                    ش{i + 1}
+                    <div className="flex flex-col items-center leading-tight">
+                      <span className="text-[7px] font-bold">{getMonthLabel(designDuration + constructionDuration + i, projectStartDate)}</span>
+                      <span className="text-[7px] text-gray-400">{i + 1}</span>
+                    </div>
                   </th>
                 ))}
               </tr>

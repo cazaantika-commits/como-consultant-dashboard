@@ -1,6 +1,7 @@
 import { useProjectContext } from "@/contexts/ProjectContext";
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { ProjectSelector } from "@/components/ProjectSelector";
+import { getMonthLabel } from "@/lib/monthUtils";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import {
@@ -39,6 +40,14 @@ export default function InvestorCashFlowSchedulePage() {
   const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
   const [scenario, setScenario] = useState<Scenario>("offplan_escrow");
   const tableRef = useRef<HTMLDivElement>(null);
+  const [projectStartDate, setProjectStartDate] = useState<string>("");
+
+  useEffect(() => {
+    if (projectQuery.data) {
+      const p = projectQuery.data;
+      if (p.startDate) setProjectStartDate(String(p.startDate));
+    }
+  }, [projectQuery.data]);
 
   const data = useMemo(() => {
     return computeInvestorCashFlow(projectQuery.data || null, scenario);
@@ -202,17 +211,26 @@ export default function InvestorCashFlowSchedulePage() {
               <tr className="bg-gray-700 text-white">
                 {Array.from({ length: data.designDuration }, (_, i) => (
                   <th key={`dh${i}`} className="border border-gray-600 px-1 py-1 text-center min-w-[70px] bg-purple-700">
-                    ش{i + 1}
+                    <div className="flex flex-col items-center leading-tight">
+                      <span className="text-[7px] font-bold">{getMonthLabel(i, projectStartDate)}</span>
+                      <span className="text-[7px] text-gray-400">{i + 1}</span>
+                    </div>
                   </th>
                 ))}
                 {Array.from({ length: data.constructionDuration }, (_, i) => (
                   <th key={`ch${i}`} className="border border-gray-600 px-1 py-1 text-center min-w-[70px] bg-green-700">
-                    ش{i + 1}
+                    <div className="flex flex-col items-center leading-tight">
+                      <span className="text-[7px] font-bold">{getMonthLabel(data.designDuration + i, projectStartDate)}</span>
+                      <span className="text-[7px] text-gray-400">{i + 1}</span>
+                    </div>
                   </th>
                 ))}
                 {Array.from({ length: data.postDuration }, (_, i) => (
                   <th key={`ph${i}`} className="border border-gray-600 px-1 py-1 text-center min-w-[70px] bg-orange-600">
-                    ش{i + 1}
+                    <div className="flex flex-col items-center leading-tight">
+                      <span className="text-[7px] font-bold">{getMonthLabel(data.designDuration + data.constructionDuration + i, projectStartDate)}</span>
+                      <span className="text-[7px] text-gray-400">{i + 1}</span>
+                    </div>
                   </th>
                 ))}
               </tr>

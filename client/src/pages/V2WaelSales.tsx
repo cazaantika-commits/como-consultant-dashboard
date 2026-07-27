@@ -152,6 +152,8 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       if (p.startDate) setProjectStartDate(String(p.startDate));
       if (p.marketingPct) setMarketingPct(Number(p.marketingPct));
       if (p.salesCommissionPct) setCommissionPct(Number(p.salesCommissionPct));
+      if (p.marketingPrepMonths) setMarketingPrepLead(Number(p.marketingPrepMonths));
+      if (p.reraLeadMonths) setReraLead(Number(p.reraLeadMonths));
     }
   }, [projectQuery.data]);
 
@@ -168,8 +170,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
           if (parsed.speed) setSpeed(parsed.speed);
           if (parsed.template) setCurveTemplate(parsed.template);
           if (parsed.manual) setManualUnits(parsed.manual);
-          if (parsed.marketingPrepLead) setMarketingPrepLead(parsed.marketingPrepLead);
-          if (parsed.reraLead) setReraLead(parsed.reraLead);
+          // marketingPrepLead and reraLead now come from project settings (not salesAbsorptionJson)
           if (parsed.ppDownPct) setPpDownPct(parsed.ppDownPct);
           if (parsed.ppSecondPct) setPpSecondPct(parsed.ppSecondPct);
           if (parsed.ppSecondAfterMonths) setPpSecondAfterMonths(parsed.ppSecondAfterMonths);
@@ -666,8 +667,8 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                   {PROJECT_PHASES.map((phase) => {
                     let start = 0, end = 0;
                     if (phase.id === "design") { start = 1; end = timeline.designEnd; }
-                    else if (phase.id === "materials") { start = timeline.materialsStart; end = timeline.materialsStart + 2; }
-                    else if (phase.id === "rera") { start = timeline.reraStart; end = timeline.reraStart + 1; }
+                    else if (phase.id === "materials") { start = timeline.materialsStart; end = timeline.materialsStart + marketingPrepLead - 1; }
+                    else if (phase.id === "rera") { start = timeline.reraStart; end = timeline.reraStart + reraLead - 1; }
                     else if (phase.id === "marketing") { start = timeline.marketingStart; end = timeline.projectEnd; }
                     else if (phase.id === "sales") { start = timeline.salesStart; end = timeline.projectEnd; }
                     else if (phase.id === "construction") { start = timeline.constructionStart; end = timeline.projectEnd; }

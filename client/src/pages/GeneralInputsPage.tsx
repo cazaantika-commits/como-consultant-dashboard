@@ -16,6 +16,8 @@ const ALL_FIELDS = [
   { key: "startDate", label: "تاريخ البدء", unit: "", type: "date" },
   { key: "preConMonths", label: "مدة التصاميم", unit: "شهر", type: "number", defaultValue: "6" },
   { key: "constructionMonths", label: "مدة الإنشاء", unit: "شهر", type: "number", defaultValue: "18" },
+  { key: "marketingPrepMonths", label: "مدة تحضير المواد التسويقية", unit: "شهر", type: "number", defaultValue: "3" },
+  { key: "reraLeadMonths", label: "مدة ريرا", unit: "شهر", type: "number", defaultValue: "2" },
 
   { key: "gfaResidentialSqft", label: "GFA سكني", unit: "قدم²", type: "number" },
   { key: "gfaRetailSqft", label: "GFA تجزئة", unit: "قدم²", type: "number" },
@@ -85,7 +87,7 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
       ALL_FIELDS.forEach(f => {
         if (formData[f.key] === undefined || formData[f.key] === "") return;
         const val = formData[f.key];
-        if (f.key === "preConMonths" || f.key === "constructionMonths" || f.key === "handoverMonths") {
+        if (f.key === "preConMonths" || f.key === "constructionMonths" || f.key === "handoverMonths" || f.key === "marketingPrepMonths" || f.key === "reraLeadMonths") {
           payload[f.key] = parseInt(val) || 0;
         } else {
           payload[f.key] = val;

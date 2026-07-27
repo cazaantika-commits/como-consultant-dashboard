@@ -19,6 +19,7 @@ import {
   Table2, Settings2, Building2, ArrowLeft, Download, Info, BarChart3
 } from "lucide-react";
 import { Link } from "wouter";
+import getMonthLabel from "@/lib/monthUtils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -110,6 +111,8 @@ export default function CashFlowReflectionPage({
   const tableRef = useRef<HTMLDivElement>(null);
 
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
+  const selectedProject = projectsQuery.data?.find((p: any) => p.id === selectedProjectId);
+  const projectStartDate = selectedProject?.startDate ? String(selectedProject.startDate) : "";
 
   const reflectionQuery = trpc.cashFlowSettings.getReflectionData.useQuery(
     { projectId: selectedProjectId!, scenario },
@@ -392,7 +395,10 @@ export default function CashFlowReflectionPage({
                             key={`hdr-${i}`}
                             className={`${pc.header} px-1 py-2 text-center font-medium min-w-[65px] border-b border-gray-600`}
                           >
-                            <div className="text-xs opacity-80">ش{i + 1}</div>
+                            <div className="flex flex-col items-center leading-tight">
+                              <span className="text-[7px] font-bold">{getMonthLabel(i, projectStartDate)}</span>
+                              <span className="text-[7px] text-gray-400">{i + 1}</span>
+                            </div>
                             <div className="text-xs truncate max-w-[60px]" title={monthLabels[i]}>
                               {monthLabels[i]?.split(" ")[0]}
                             </div>

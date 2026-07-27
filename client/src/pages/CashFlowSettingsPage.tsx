@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Settings2, Save, RotateCcw, Building2, Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
+import getMonthLabel from "@/lib/monthUtils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -154,10 +155,14 @@ function CustomPercentagesEditor({
   months,
   percentages,
   onChange,
+  phaseStart,
+  projectStartDate,
 }: {
   months: number;
   percentages: number[];
   onChange: (p: number[]) => void;
+  phaseStart: number;
+  projectStartDate: string;
 }) {
   const pct = Array.from({ length: months }, (_, i) => percentages[i] ?? 0);
   const total = pct.reduce((s, v) => s + v, 0);
@@ -195,7 +200,10 @@ function CustomPercentagesEditor({
       <div className="flex flex-wrap gap-1.5">
         {pct.map((v, i) => (
           <div key={i} className="flex flex-col items-center gap-0.5">
-            <span className="text-xs text-gray-400">ش{i + 1}</span>
+            <div className="flex flex-col items-center leading-tight">
+              <span className="text-[7px] font-bold">{getMonthLabel(phaseStart + i - 1, projectStartDate)}</span>
+              <span className="text-[7px] text-gray-400">{i + 1}</span>
+            </div>
             <Input
               type="number"
               min={0}
@@ -226,6 +234,7 @@ function DistributionPreview({
   phaseMonth,
   customPercentages,
   amount,
+  projectStartDate,
 }: {
   method: DistributionMethod;
   phaseStart: number;
@@ -233,6 +242,7 @@ function DistributionPreview({
   phaseMonth: number;
   customPercentages: number[];
   amount: number;
+  projectStartDate: string;
 }) {
   if (!amount || amount === 0) return null;
 
@@ -261,7 +271,10 @@ function DistributionPreview({
     <div className="mt-1.5 flex flex-wrap gap-1">
       {months.map(({ month, value }) => (
         <div key={month} className="flex items-center gap-0.5 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5">
-          <span className="text-xs text-emerald-700 font-medium">ش{month}</span>
+          <div className="flex flex-col items-center leading-tight">
+            <span className="text-[7px] font-bold">{getMonthLabel(month - 1, projectStartDate)}</span>
+            <span className="text-[7px] text-emerald-700 font-medium">{month}</span>
+          </div>
           <span className="text-xs text-emerald-600">: {value.toLocaleString("ar-AE", { maximumFractionDigits: 0 })}</span>
         </div>
       ))}
@@ -274,11 +287,13 @@ function ItemRow({
   phaseDuration,
   phaseStart,
   onUpdate,
+  projectStartDate,
 }: {
   item: SettingItem;
   phaseDuration: number;
   phaseStart: number;
   onUpdate: (updates: Partial<SettingItem>) => void;
+  projectStartDate: string;
 }) {
   const [showCustom, setShowCustom] = useState(false);
   const isPaid = item.section === "paid";
@@ -417,6 +432,8 @@ function ItemRow({
                 months={phaseDuration}
                 percentages={item.customPercentages}
                 onChange={(p) => onUpdate({ customPercentages: p })}
+                phaseStart={phaseStart}
+                projectStartDate={projectStartDate}
               />
             )}
 
@@ -428,6 +445,7 @@ function ItemRow({
               phaseMonth={item.phaseMonth}
               customPercentages={item.customPercentages}
               amount={item.computedAmount}
+              projectStartDate={projectStartDate}
             />
           </div>
         )}
@@ -486,6 +504,8 @@ export default function CashFlowSettingsPage({
   }, [selectedProjectId, scenariosQuery.data]);
 
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
+  const selectedProject = projectsQuery.data?.find((p: any) => p.id === selectedProjectId);
+  const projectStartDate = selectedProject?.startDate ? String(selectedProject.startDate) : "";
 
   // CRITICAL: Only fetch settings AFTER scenario is loaded from DB to prevent saving to wrong scenario
   const settingsQuery = trpc.cashFlowSettings.getSettings.useQuery(
@@ -914,11 +934,17 @@ export default function CashFlowSettingsPage({
                           <thead>
                             <tr className="bg-gray-50">
                               <th className="px-2 py-1.5 text-right border border-gray-200 font-medium text-gray-600">الشهر</th>
-                              {currentAbsorption.map((_, i) => (
-                                <th key={i} className="px-2 py-1.5 text-center border border-gray-200 font-medium text-gray-600 min-w-[50px]">
-                                  {i + 1}
-                                </th>
-                              ))}
+                              {currentAbsorption.map((_, i) => {
+                                const absoluteMonthIndex = durations.design + 2 + i;
+                                return (
+                                  <th key={i} className="px-2 py-1.5 text-center border border-gray-200 font-medium text-gray-600 min-w-[50px]">
+                                    <div className="flex flex-col items-center leading-tight">
+                                      <span className="text-[7px] font-bold">{getMonthLabel(absoluteMonthIndex, projectStartDate)}</span>
+                                      <span className="text-[7px] text-gray-400">{i + 1}</span>
+                                    </div>
+                                  </th>
+                                );
+                              })}
                               <th className="px-2 py-1.5 text-center border border-gray-200 font-medium text-emerald-700 bg-emerald-50">المجموع</th>
                               <th className="px-2 py-1.5 text-center border border-gray-200 font-medium text-amber-700 bg-amber-50">بعد التسليم</th>
                             </tr>
@@ -1068,6 +1094,7 @@ export default function CashFlowSettingsPage({
                             phaseDuration={getPhaseDuration(item.assignedPhase)}
                             phaseStart={phaseStart}
                             onUpdate={(updates) => updateItem(item.itemKey, updates)}
+                            projectStartDate={projectStartDate}
                           />
                            );
                         })}

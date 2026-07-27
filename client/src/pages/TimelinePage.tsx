@@ -61,6 +61,7 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
   const [constructionMonths, setConstructionMonths] = useState(30);
   const [marketingPrepLead, setMarketingPrepLead] = useState(3);
   const [reraLead, setReraLead] = useState(2);
+  const [projectStartDate, setProjectStartDate] = useState("");
   const [hasChanges, setHasChanges] = useState(false);
   const [designPayments, setDesignPayments] = useState(DEFAULT_DESIGN_PAYMENTS);
 
@@ -70,6 +71,9 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
       const p = projectQuery.data as any;
       if (p.preConMonths) setDesignMonths(Number(p.preConMonths));
       if (p.constructionMonths) setConstructionMonths(Number(p.constructionMonths));
+      if (p.marketingPrepMonths) setMarketingPrepLead(Number(p.marketingPrepMonths));
+      if (p.reraLeadMonths) setReraLead(Number(p.reraLeadMonths));
+      if (p.startDate) setProjectStartDate(String(p.startDate));
       // Load design payments from constructionScheduleJson
       if (p.constructionScheduleJson) {
         try {
@@ -93,8 +97,7 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
       if (plan.salesAbsorptionJson) {
         try {
           const parsed = JSON.parse(plan.salesAbsorptionJson);
-          if (parsed.marketingPrepLead) setMarketingPrepLead(parsed.marketingPrepLead);
-          if (parsed.reraLead) setReraLead(parsed.reraLead);
+          // marketingPrepLead and reraLead now come from project settings (not salesAbsorptionJson)
         } catch {}
       }
       setHasChanges(false);
@@ -196,14 +199,12 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1">
                       <span className="text-[10px] text-gray-500">تصاميم:</span>
-                      <input type="number" min={1} max={24} value={designMonths} onChange={(e) => { setDesignMonths(parseInt(e.target.value) || 8); setHasChanges(true); }}
-                        className="w-9 h-5 text-center text-[10px] border border-gray-200 rounded" />
+                      <span className="text-[10px] font-bold text-blue-700">{designMonths}</span>
                       <span className="text-[10px] text-gray-400">شهر</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <span className="text-[10px] text-gray-500">إنشاء:</span>
-                      <input type="number" min={6} max={60} value={constructionMonths} onChange={(e) => { setConstructionMonths(parseInt(e.target.value) || 30); setHasChanges(true); }}
-                        className="w-9 h-5 text-center text-[10px] border border-gray-200 rounded" />
+                      <span className="text-[10px] font-bold text-emerald-700">{constructionMonths}</span>
                       <span className="text-[10px] text-gray-400">شهر</span>
                     </div>
                   </div>
@@ -215,9 +216,12 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
                     {Array.from({ length: timeline.projectEnd }, (_, i) => {
                       const isDesign = i < designMonths;
                       const displayNum = isDesign ? i + 1 : i - designMonths + 1;
+                      const MN=["\u064a\u0646\u0627","\u0641\u0628\u0631","\u0645\u0627\u0631","\u0623\u0628\u0631","\u0645\u0627\u064a","\u064a\u0648\u0646","\u064a\u0648\u0644","\u0623\u063a\u0633","\u0633\u0628\u062a","\u0623\u0643\u062a","\u0646\u0648\u0641","\u062f\u064a\u0633"];
+                      let ml=""; if(projectStartDate){const pts=projectStartDate.split("-").map(Number);if(pts[0]&&pts[1])ml=MN[(pts[1]-1+i)%12];}
                       return (
-                        <div key={i} className="flex-1 text-center">
-                          <span className={`text-[7px] font-bold ${isDesign ? 'text-blue-600' : 'text-emerald-600'}`}>{displayNum}</span>
+                        <div key={i} className="flex-1 text-center flex flex-col items-center leading-tight">
+                          <span className={`text-[7px] font-bold ${isDesign ? 'text-blue-600' : 'text-emerald-600'}`}>{ml || displayNum}</span>
+                          <span className="text-[6px] text-gray-400">{displayNum}</span>
                         </div>
                       );
                     })}
@@ -244,7 +248,7 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
                           <Icon className="w-3 h-3" style={{ color: phase.color }} />
                           <span className="text-[10px] font-medium text-gray-700 truncate">{phase.name}</span>
                         </div>
-                        <div className="flex-1 h-5 bg-gray-100 rounded-full relative overflow-hidden">
+                        <div className="flex-1 h-5 bg-gray-100 rounded-full relative overflow-hidden" style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent calc(100% / ' + timeline.projectEnd + ' - 1px), rgba(0,0,0,0.04) calc(100% / ' + timeline.projectEnd + ' - 1px), rgba(0,0,0,0.04) calc(100% / ' + timeline.projectEnd + '))' }}>
                           <div className="absolute h-full rounded-full transition-all" style={{ right: `${rightPct}%`, width: `${widthPct}%`, backgroundColor: phase.color, opacity: 0.8 }} />
                           <span className="absolute inset-0 flex items-center justify-center text-[8px] font-medium text-gray-700">شهر {start} - {end}</span>
                         </div>
@@ -256,14 +260,12 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
                 <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-1 flex-wrap">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[10px] text-gray-500">مدة تحضير المواد:</span>
-                    <input type="number" min={1} max={6} value={marketingPrepLead} onChange={(e) => { setMarketingPrepLead(parseInt(e.target.value) || 2); setHasChanges(true); }}
-                      className="w-8 h-5 text-center text-[10px] border border-gray-200 rounded" />
+                    <span className="text-[10px] font-bold text-gray-800">{marketingPrepLead}</span>
                     <span className="text-[10px] text-gray-400">شهر</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-[10px] text-gray-500">مدة ريرا:</span>
-                    <input type="number" min={1} max={6} value={reraLead} onChange={(e) => { setReraLead(parseInt(e.target.value) || 2); setHasChanges(true); }}
-                      className="w-8 h-5 text-center text-[10px] border border-gray-200 rounded" />
+                    <span className="text-[10px] font-bold text-gray-800">{reraLead}</span>
                     <span className="text-[10px] text-gray-400">شهر</span>
                   </div>
                   <div className="flex items-center gap-1.5 mr-4">

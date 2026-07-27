@@ -74,6 +74,8 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
       if (p.constructionMonths) setConstructionMonths(Number(p.constructionMonths));
       if (p.marketingPct) setMarketingPct(Number(p.marketingPct));
       if (p.startDate) setProjectStartDate(String(p.startDate));
+      if (p.marketingPrepMonths) setMarketingPrepLead(Number(p.marketingPrepMonths));
+      if (p.reraLeadMonths) setReraLead(Number(p.reraLeadMonths));
 
     }
   }, [projectQuery.data]);
@@ -88,8 +90,7 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
       if (plan.salesAbsorptionJson) {
         try {
           const parsed = JSON.parse(plan.salesAbsorptionJson);
-          if (parsed.marketingPrepLead) setMarketingPrepLead(parsed.marketingPrepLead);
-          if (parsed.reraLead) setReraLead(parsed.reraLead);
+          // marketingPrepLead and reraLead now come from project settings (not salesAbsorptionJson)
           if (parsed.marketingActualStart) setMarketingActualStart(parsed.marketingActualStart);
           if (parsed.marketingActualEnd) setMarketingActualEnd(parsed.marketingActualEnd);
           if (parsed.marketingDistribution) setMarketingDistribution(parsed.marketingDistribution);

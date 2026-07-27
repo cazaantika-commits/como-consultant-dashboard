@@ -1045,3 +1045,4 @@
 - [x] V2WaelSales timeline: month headers show phase-relative numbers (1-8 design, 1-30 construction, 1-13 post) with actual month name as small label above/below
 - [x] Apply month names to all tables in V2WaelSales (sales distribution, cash inflow, payment plan grid)
 - [x] Apply month names to all tables in MarketingPage (monthly distribution table)
+- [x] V2WaelSales timeline: Ensure it reads ALL phase durations from project settings (designMonths, constructionMonths, marketingPrepLead, reraLead, startDate) and updates dynamically
