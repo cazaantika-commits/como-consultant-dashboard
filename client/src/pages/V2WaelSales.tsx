@@ -104,6 +104,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   const [planId, setPlanId] = useState<number | undefined>(undefined);
   const [designMonths, setDesignMonths] = useState(8);
   const [constructionMonths, setConstructionMonths] = useState(30);
+  const [projectStartDate, setProjectStartDate] = useState<string>(""); // e.g. "2026-08"
   const [marketingPrepLead, setMarketingPrepLead] = useState(3);
   const [reraLead, setReraLead] = useState(2);
   const [marketingPct, setMarketingPct] = useState(2);
@@ -148,6 +149,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       setHasUnitChanges(false);
       if (p.preConMonths) setDesignMonths(Number(p.preConMonths));
       if (p.constructionMonths) setConstructionMonths(Number(p.constructionMonths));
+      if (p.startDate) setProjectStartDate(String(p.startDate));
       if (p.marketingPct) setMarketingPct(Number(p.marketingPct));
       if (p.salesCommissionPct) setCommissionPct(Number(p.salesCommissionPct));
     }
@@ -624,28 +626,35 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1">
                       <span className="text-[10px] text-gray-500">تصاميم:</span>
-                      <input type="number" min={1} max={24} value={designMonths} onChange={(e) => { setDesignMonths(parseInt(e.target.value) || 8); setHasPlanChanges(true); }}
-                        className="w-9 h-5 text-center text-[10px] border border-gray-200 rounded" />
-                      <span className="text-[10px] text-gray-400">شهر</span>
+                      <span className="text-[10px] font-bold text-blue-700">{designMonths} شهر</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <span className="text-[10px] text-gray-500">إنشاء:</span>
-                      <input type="number" min={6} max={60} value={constructionMonths} onChange={(e) => { setConstructionMonths(parseInt(e.target.value) || 30); setHasPlanChanges(true); }}
-                        className="w-9 h-5 text-center text-[10px] border border-gray-200 rounded" />
-                      <span className="text-[10px] text-gray-400">شهر</span>
+                      <span className="text-[10px] font-bold text-emerald-700">{constructionMonths} شهر</span>
                     </div>
                   </div>
                 </div>
-                {/* Month numbers on same header line */}
+                {/* Month headers: actual month name (bold) + small phase-relative number */}
                 <div className="flex items-center gap-2">
                   <div className="w-32 flex-shrink-0" />
                   <div className="flex-1 flex">
                     {Array.from({ length: timeline.projectEnd }, (_, i) => {
                       const isDesign = i < designMonths;
                       const displayNum = isDesign ? i + 1 : i - designMonths + 1;
+                      // Calculate actual month name from startDate
+                      const MONTH_NAMES_AR = ["ينا", "فبر", "مار", "أبر", "ماي", "يون", "يول", "أغس", "سبت", "أكت", "نوف", "ديس"];
+                      let monthLabel = "";
+                      if (projectStartDate) {
+                        const [y, m] = projectStartDate.split("-").map(Number);
+                        if (y && m) {
+                          const idx = (m - 1 + i) % 12;
+                          monthLabel = MONTH_NAMES_AR[idx];
+                        }
+                      }
                       return (
-                        <div key={i} className="flex-1 text-center">
-                          <span className={`text-[7px] font-bold ${isDesign ? 'text-blue-600' : 'text-emerald-600'}`}>{displayNum}</span>
+                        <div key={i} className="flex-1 text-center flex flex-col items-center leading-none" style={{ borderLeft: i > 0 ? '1px solid rgba(0,0,0,0.06)' : 'none' }}>
+                          <span className={`text-[7px] ${isDesign ? 'text-blue-400' : 'text-emerald-400'}`}>{displayNum}</span>
+                          <span className={`text-[7px] font-bold ${isDesign ? 'text-blue-700' : 'text-emerald-700'}`}>{monthLabel || displayNum}</span>
                         </div>
                       );
                     })}
@@ -672,7 +681,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                           <Icon className="w-3 h-3" style={{ color: phase.color }} />
                           <span className="text-[10px] font-medium text-gray-700 truncate">{phase.name}</span>
                         </div>
-                        <div className="flex-1 h-5 bg-gray-100 rounded-full relative overflow-hidden">
+                        <div className="flex-1 h-5 bg-gray-100 rounded-full relative overflow-hidden" style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent calc(100% / ' + timeline.projectEnd + ' - 1px), rgba(0,0,0,0.04) calc(100% / ' + timeline.projectEnd + ' - 1px), rgba(0,0,0,0.04) calc(100% / ' + timeline.projectEnd + '))' }}>
                           <div className="absolute h-full rounded-full transition-all" style={{ right: `${rightPct}%`, width: `${widthPct}%`, backgroundColor: phase.color, opacity: 0.8 }} />
                           <span className="absolute inset-0 flex items-center justify-center text-[8px] font-medium text-gray-700">شهر {start} - {end}</span>
                         </div>
@@ -681,19 +690,10 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                   })}
                 </div>
 
-                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-1 flex-wrap">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-gray-500">تحضير المواد قبل:</span>
-                    <input type="number" min={1} max={6} value={marketingPrepLead} onChange={(e) => { setMarketingPrepLead(parseInt(e.target.value) || 3); setHasPlanChanges(true); }}
-                      className="w-8 h-5 text-center text-[10px] border border-gray-200 rounded" />
-                    <span className="text-[10px] text-gray-400">شهر من نهاية التصاميم</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-gray-500">ريرا قبل:</span>
-                    <input type="number" min={1} max={6} value={reraLead} onChange={(e) => { setReraLead(parseInt(e.target.value) || 2); setHasPlanChanges(true); }}
-                      className="w-8 h-5 text-center text-[10px] border border-gray-200 rounded" />
-                    <span className="text-[10px] text-gray-400">شهر من بدء المبيعات</span>
-                  </div>
+                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2 flex-wrap text-[10px] text-gray-500">
+                  <span>نقطة الانطلاق (اكتمال المخططات التخطيطية): <strong className="text-gray-800">شهر {designMonths - marketingPrepLead}</strong></span>
+                  <span>مدة تحضير المواد: <strong className="text-gray-800">{marketingPrepLead} شهر</strong></span>
+                  <span>مدة ريرا: <strong className="text-gray-800">{reraLead} شهر</strong></span>
                 </div>
               </div>
             </section>

@@ -1039,3 +1039,7 @@
 - [x] V2WaelSales: Fix profit calculation to use ALL project costs (not just construction+marketing+commission)
 - [x] V2WaelSales: Fix "تكلفة الإنشاء" KPI to show total project cost from feasibility
 - [x] V2WaelSales: Restore detailed revenue tables distributed by Payment Plan (accidentally removed)
+- [x] Add startDate input field to GeneralInputs/SettingsRulesPage (بداية المشروع)
+- [x] V2WaelSales timeline: make all inputs read-only (no editing here)
+- [x] V2WaelSales timeline: add faint vertical grid lines between months
+- [x] V2WaelSales timeline: month headers show phase-relative numbers (1-8 design, 1-30 construction, 1-13 post) with actual month name as small label above/below

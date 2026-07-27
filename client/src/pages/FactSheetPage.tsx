@@ -202,7 +202,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
     "soilTestFee", "topographicSurveyFee", "officialBodiesFees",
     "reraUnitRegFee", "reraProjectRegFee", "developerNocFee", "escrowAccountFee",
     "bankFees", "communityFees", "surveyorFees", "reraAuditReportFee", "reraInspectionReportFee",
-    "preConMonths", "constructionMonths",
+    "preConMonths", "constructionMonths", "startDate",
   ];
 
   const FIELD_LABELS: Record<string, string> = {
@@ -236,7 +236,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
     escrowAccountFee: "حساب الضمان", bankFees: "الرسوم البنكية",
     communityFees: "رسوم المجتمع", surveyorFees: "أتعاب المساح",
     reraAuditReportFee: "تدقيق ريرا", reraInspectionReportFee: "تفتيش ريرا",
-    preConMonths: "مدة ما قبل التنفيذ", constructionMonths: "مدة الإنشاء",
+    preConMonths: "مدة ما قبل التنفيذ", constructionMonths: "مدة الإنشاء", startDate: "بداية المشروع",
   };
 
   const [khazenReport, setKhazenReport] = useState<{
@@ -345,6 +345,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
         developerFeePct: p.developerFeePct ? String(p.developerFeePct) : "5",
         preConMonths: p.preConMonths ? String(p.preConMonths) : "6",
         constructionMonths: p.constructionMonths ? String(p.constructionMonths) : "18",
+        startDate: (p as any).startDate || "",
         saleableResidentialPct: p.saleableResidentialPct ? String(p.saleableResidentialPct) : "95",
         saleableRetailPct: p.saleableRetailPct ? String(p.saleableRetailPct) : "97",
         saleableOfficesPct: p.saleableOfficesPct ? String(p.saleableOfficesPct) : "95",
@@ -625,6 +626,11 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
 
               {/* Phase durations */}
               <Section title="مدد المراحل" icon={Calendar} color="indigo">
+                <div className="space-y-0.5 mb-2">
+                  <label className="text-[10px] font-medium text-muted-foreground">بداية المشروع</label>
+                  <Input type="month" value={formData.startDate || ""} onChange={e => updateField("startDate", e.target.value)}
+                    className="text-[11px] h-7 bg-white/50 border-stone-200 focus:border-indigo-400" placeholder="2026-08" />
+                </div>
                 <div className="grid grid-cols-3 gap-1.5">
                   <div className="space-y-0.5">
                     <label className="text-[10px] font-medium text-muted-foreground">تصميم (شهر)</label>
