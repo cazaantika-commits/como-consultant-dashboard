@@ -354,38 +354,12 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     postConstructionMonths: emptyPost(),
   });
 
-  // أتعاب الإشراف
-  if (isScenario3 || isScenario4) {
-    const supervisionConst = emptyConstruction();
-    distributeEqual(costs.supervisionFee, constructionDuration, supervisionConst, 0);
-    rows.push({
-      label: "أتعاب الإشراف",
-      totalCost: costs.supervisionFee,
-      investorAmount: costs.supervisionFee,
-      paid: 0,
-      unpaid: costs.supervisionFee,
-      funder: "investor",
-      section: "التصاميم والإشراف",
-      designMonths: emptyDesign(),
-      constructionMonths: supervisionConst,
-      postConstructionMonths: emptyPost(),
-    });
-  } else {
-    const supervisionConstEscrow = emptyConstruction();
-    distributeEqual(costs.supervisionFee, constructionDuration, supervisionConstEscrow, 0);
-    rows.push({
-      label: "أتعاب الإشراف",
-      totalCost: costs.supervisionFee,
-      investorAmount: 0,
-      paid: 0,
-      unpaid: 0,
-      funder: "escrow",
-      section: "التصاميم والإشراف",
-      designMonths: emptyDesign(),
-      constructionMonths: supervisionConstEscrow,
-      postConstructionMonths: emptyPost(),
-    });
-  }
+  // أتعاب الإشراف — تتبع نسبة الإنجاز (نفس توزيع المستخلصات)
+  // Will be filled after construction section where monthlyProgressPcts is available
+  // Placeholder: push later after construction progress is computed
+  const supervisionFeeTotal = costs.supervisionFee;
+  const supervisionFunder = (isScenario3 || isScenario4) ? "investor" : "escrow";
+  const supervisionInvestorAmount = (isScenario3 || isScenario4) ? supervisionFeeTotal : 0;
 
   // ─── فحص التربة (شهر 2 تصاميم) ───
   const soilDesign = emptyDesign();
@@ -772,11 +746,12 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       // Otherwise, need to wait for installments to accumulate to triggerPct
       
       const monthlyInstallmentPct = (100 - ppDownPct - 30) / (constructionDuration || 1); // simplified
+      const avgUnitPrice = totalUnits > 0 ? totalRevenue / totalUnits : 0;
       
       for (const entry of salesResult.escrowData) {
         if (entry.units <= 0) continue;
         const saleMonth = entry.month; // absolute project month (0-indexed)
-        const commAmount = entry.income * commPct; // commission on this batch's total income value
+        const commAmount = entry.units * avgUnitPrice * commPct; // commission = units sold × avg price × rate
         
         // When does buyer reach triggerPct? 
         // After downPayment (ppDownPct%), then monthly installments
@@ -1026,6 +1001,46 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       designMonths: ret2Design,
       constructionMonths: ret2Const,
       postConstructionMonths: ret2Post,
+    });
+  }
+
+  // ─── أتعاب الإشراف — تتبع نسبة الإنجاز (نفس توزيع المستخلصات) ───
+  {
+    const supervisionConst = emptyConstruction();
+    // Parse monthly progress (same logic as contractor payments)
+    let supProgressPcts: number[] | null = null;
+    if (projectData?.constructionScheduleJson) {
+      try {
+        const schedule = JSON.parse(projectData.constructionScheduleJson);
+        if (schedule.monthlyProgress && schedule.monthlyProgress.length === constructionDuration) {
+          supProgressPcts = schedule.monthlyProgress;
+        }
+      } catch {}
+    }
+    if (supProgressPcts) {
+      const totalPct = supProgressPcts.reduce((s: number, v: number) => s + v, 0);
+      for (let m = 0; m < constructionDuration; m++) {
+        const pct = supProgressPcts[m] || 0;
+        supervisionConst[m] = totalPct > 0 ? supervisionFeeTotal * (pct / totalPct) : 0;
+      }
+    } else {
+      // Fallback: S-Curve distribution (same as contractor)
+      const sCurveW = generateSCurve(constructionDuration);
+      for (let m = 0; m < constructionDuration; m++) {
+        supervisionConst[m] = supervisionFeeTotal * sCurveW[m];
+      }
+    }
+    rows.push({
+      label: "أتعاب الإشراف",
+      totalCost: supervisionFeeTotal,
+      investorAmount: supervisionInvestorAmount,
+      paid: 0,
+      unpaid: supervisionFeeTotal,
+      funder: supervisionFunder as "investor" | "escrow",
+      section: "التصاميم والإشراف",
+      designMonths: emptyDesign(),
+      constructionMonths: supervisionConst,
+      postConstructionMonths: emptyPost(),
     });
   }
 

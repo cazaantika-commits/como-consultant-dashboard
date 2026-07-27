@@ -1093,3 +1093,7 @@
 - [x] Update engine: sales commission = rate × monthly sales, paid only when buyer reaches 20%
 - [x] Update engine: land/broker/registration marked as pre-paid (no monthly distribution)
 - [x] Disable manual input in GeneralInputsPage for computed fields (auditor, inspection, community fee)
+- [x] FIX Escrow: Supervision fees must follow construction progress (not equal distribution)
+- [x] FIX Escrow: Sales commission showing as lump sum — must distribute per month based on 20% trigger
+- [x] FIX Escrow: Revenue inflows (buyer installments) showing zeros — entry.month is 0-indexed, removed -1
+- [x] FIX Escrow: Remove "إيرادات مباشرة (20%)" from escrow page — filtered out from liquidation rows

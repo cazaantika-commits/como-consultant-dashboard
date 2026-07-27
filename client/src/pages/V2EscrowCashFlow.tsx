@@ -134,10 +134,10 @@ export default function V2EscrowCashFlow() {
     const values = new Array(totalMonths).fill(0);
     if (salesResult && salesResult.escrowData.length > 0) {
       for (const entry of salesResult.escrowData) {
-        // entry.month is 1-indexed absolute month from project start
-        const idx = entry.month - 1;
+        // entry.month is 0-indexed absolute month from project start
+        const idx = entry.month;
         if (idx >= 0 && idx < totalMonths) {
-          values[idx] = entry.income;
+          values[idx] += entry.income;
         }
       }
     }
@@ -160,8 +160,9 @@ export default function V2EscrowCashFlow() {
   const totalInflow = inflowTotals.reduce((s, v) => s + v, 0);
   const finalBalance = cumulative[cumulative.length - 1] || 0;
 
-  // ─── Liquidation rows (revenue items that go to investor post-construction) ───
-  const liquidationRows = rows.filter((r) => r.isRevenue);
+  // ─── Liquidation rows (escrow liquidation items transferred to investor post-construction) ───
+  // Exclude "إيرادات مباشرة (20%)" - that goes directly to investor, not through escrow
+  const liquidationRows = rows.filter((r) => r.isRevenue && !r.label.includes("إيرادات مباشرة"));
 
   // ─── Month headers ─────────────────────────────────────────────────────
   const months: { label: string; date: string; phase: "design" | "construction" | "post" }[] = [];
