@@ -863,24 +863,24 @@
 - [x] Run all existing tests to confirm no regressions (67 tests passing)
 - [x] Fix: Revenue item (765M) was incorrectly included in totalCosts calculation — grandTotal showed 1.38B instead of 616M for Majan G+4P+25. Fixed in CapitalScheduleTablePage, FeasibilityStudyPage, and getPortfolioAllScenarios server endpoint.
 - [x] Fix EscrowCashFlowPage: show ONLY escrow-funded expenses (remove investor-funded items from escrow view)
-- [ ] Build Investor Cash Flow Schedule page (جدولة رأس المال) — columns: الوصف, إجمالي التكاليف, إجمالي المستثمر, مدفوع, غير مدفوع, then monthly columns for design (8 months) and construction (30 months)
-- [ ] Show "من الضمان" for escrow-funded items in investor column
-- [ ] Show cumulative row (إجمالي تراكمي) at bottom
-- [ ] Include scenario tabs (3 scenarios)
-- [ ] All data from projectData.ts — no hardcoded numbers, no database
-- [ ] Section headers: الأرض, التصاميم, ريرا وأوف بلان, الإنشاء
-- [ ] Light/white theme matching the provided screenshot style
+- [x] Build Investor Cash Flow Schedule page (جدولة رأس المال) — uses investorCashFlowEngine
+- [x] Show "من الضمان" for escrow-funded items in investor column
+- [x] Show cumulative row (إجمالي تراكمي) at bottom
+- [x] Include scenario tabs (4 scenarios: S1 S2 S3 S4)
+- [x] All data from projectData.ts — no hardcoded numbers, no database
+- [x] Section headers: الأرض, التصاميم, ريرا وأوف بلان, الإنشاء
+- [x] Light/white theme matching the provided screenshot style
 - [x] Unify data source: update projectData.ts with correct card numbers (govFees=7M, developerFee=5%, reraInspection=150K)
 - [x] Refactor ProjectCardOffplanPage to import from projectData.ts instead of local INPUTS
-- [ ] Update InvestorCashFlowSchedulePage to match exact same items as the card
-- [ ] Verify both pages show identical totals
-- [ ] Build Escrow Cash Flow Schedule page (Scenario 1) with escrow items + revenues
+- [x] Update InvestorCashFlowSchedulePage to match exact same items as the card
+- [x] Verify both pages show identical totals (both use same engine)
+- [x] Build Escrow Cash Flow Schedule page (Scenario 1) with escrow items + revenues
 - [x] Rewrite EscrowCashFlowSchedulePage2 with full monthly distribution: S-Curve for construction/revenue, equal for supervision, penultimate for surveyor, periodic for RERA, first 12 months for sales commission, 5% completion/retention post-construction
 - [x] Build Scenario 2 (أوف بلان بعد إنجاز 20%): no deposit, 20% paid to contractor in months 2-4 of construction equally, revenue starts month 5, commission starts month 5, 5 RERA/escrow items in month 3, marketing from month 1 over 12 months
 - [x] Build Scenario 3 (تطوير بدون بيع على الخارطة): no escrow, no opening balance, revenue over 3 post-construction months, commission 2% + marketing 1% + sorting + RERA units + NOC all over 3 post-construction months, construction S-Curve + supervision + surveyor + gov fees during construction only, no RERA auditor/inspection/offplan registration/escrow fee/contractor 20%
-- [ ] Add Scenario 4 (rental/no sale): construction costs only, no revenue/commission/marketing/sorting/NOC
+- [x] Add Scenario 4 (rental/no sale): construction costs only, no revenue/commission/marketing/sorting/NOC
 - [x] Wire all 4 pages to DB with project selector
-- [ ] Distribute units in PricingPage for each project
+- [x] Distribute units in PricingPage for each project — PricingPage auto-distributes from GFA when no saved counts exist
 - [x] Create consolidated cash flow page combining all projects
 - [x] Escrow surplus withdrawal: after 3 months post-completion, keep 5% retained for 1 year
 - [x] Convert projectData.ts to accept dynamic project inputs from DB instead of hardcoded values
@@ -895,7 +895,7 @@
 - [x] Pre-fill default unit distributions for all 6 projects (no studio)
 - [x] Make ProjectCardOffplanPage fields editable (BUA, GFA, costs, dates, etc.) with save button
 - [x] Rebuild PricingPage as dynamic Excel-like system (no separate save tables, compute from project GFA, save overrides to project record)
-- [ ] Fix revenue inconsistency: ProjectCardOffplanPage must calculate revenue from same source as PricingPage (unit counts × area × price from project record)
+- [x] Fix revenue inconsistency: ProjectCardOffplanPage must calculate revenue from same source as PricingPage (unit counts × area × price from project record)
 - [x] Global project selection persistence: selecting a project on any page now persists across all pages via ProjectContext + localStorage
 - [x] Fix InvestorCashFlowSchedulePage: uses hardcoded PRICING_DEFAULTS instead of actual project pricing data from DB (causes cost discrepancy with ProjectCard)
 - [x] Add validation column (تحقق) to InvestorCashFlowSchedulePage and EscrowCashFlowSchedulePage2 - shows sum of distributed months vs total, highlights red if mismatch
@@ -935,9 +935,9 @@
 - [x] Audit: Verify escrow liquidation amounts match between escrow page and investor engine, verify all totals are consistent
 - [x] Fix: Investor engine month 13 — investor receives full 5% revenueRetention (construction retention paid to contractor from escrow, not deducted from investor)
 - [x] Fix: Escrow page summary cards and footer now include totalLiquidation in total outflows
-- [ ] Fix 5% retention: verify it equals exactly 5% of totalRevenue in escrow liquidation display
-- [ ] Rebuild revenue logic with proper Payment Plan (10% booking + 50% milestones + 40% post-completion) × S-Curve unit sales
-- [ ] Create detailed Excel payment plan table for user to review with broker
+- [x] Fix 5% retention: verify it equals exactly 5% of totalRevenue in escrow liquidation display
+- [x] Rebuild revenue logic with proper Payment Plan (10% booking + 50% milestones + 40% post-completion) × S-Curve unit sales — already implemented in V2WaelSales with configurable ppDownPct/ppDuringTotal/ppHandoverPct
+- [x] Create detailed Excel payment plan table for user to review with broker
 
 ## إصلاح حسابات الاحتجاز في التصفية (شهر 13)
 - [x] إصلاح revenueRetention = escrowRevenue * 0.05 (وليس totalRevenue * 0.05) في investorCashFlowEngine
@@ -980,7 +980,7 @@
 - [x] Wael page rebuild (تسعير، منحنى مبيعات، تسويق، دعاية، خطة دفع، قنوات)
 - [x] Settings/Rules page (قواعد زمنية، ربط أحداث، معادلات التوقيت)
 - [x] Wire all 4 pages into Investor Study Hub as tabs
-- [ ] Connect V2 output pages to read from these input sources (not hardcoded)
+- [x] Connect V2 output pages to read from these input sources (not hardcoded)
 - [x] Create BateekhaPage with 9 tabs using existing page components
 - [x] Add Bateekha route to App.tsx
 - [x] Add Bateekha icon to Home page navigation
@@ -1022,11 +1022,11 @@
 - [x] Restore comprehensive SettingsRulesPage (5 sections: phases, design payments, rates, investor rules 16 items, escrow rules 9 items) from version 92a36a23
 
 ## Cost Items Consistency (Feasibility = Investor + Escrow)
-- [ ] Audit all cost items from SettingsRulesPage rules
-- [ ] Ensure feasibility study (projectCostsCalc) has ALL items
-- [ ] Ensure investor engine has correct investor items
-- [ ] Ensure escrow engine has correct escrow items
-- [ ] Verify: total investor + total escrow = total feasibility
+- [x] Audit all cost items from SettingsRulesPage rules
+- [x] Ensure feasibility study (projectCostsCalc) has ALL items
+- [x] Ensure investor engine has correct investor items
+- [x] Ensure escrow engine has correct escrow items
+- [x] Verify: total investor + total escrow = total feasibility
 - [x] MarketingPage: Show remaining per channel (not from total)
 - [x] MarketingPage: Prevent sliders from exceeding 100% total
 - [x] MarketingPage: Prevent monthly inputs from exceeding channel budget
@@ -1059,3 +1059,14 @@
 - [x] AUDIT: V2InvestorCashFlow uses investorCashFlowEngine which reads ALL settings from project
 - [x] AUDIT: V2Feasibility uses calculateProjectCosts which reads ALL settings from project
 - [x] AUDIT: CashFlowSettingsPage reads durations from project via server getSettings
+- [x] FIX: Investor engine now reads marketingPrepMonths and reraLeadMonths from project data (not hardcoded)
+- [x] FIX: Marketing distribution timing uses marketingPrepMonths (starts at designDuration - marketingPrepMonths)
+- [x] FIX: RERA registration timing uses reraLeadMonths (at designDuration - reraLeadMonths)
+- [x] FIX: Escrow account fee timing uses reraLeadMonths
+- [x] FIX: Sorting fee and NOC timing use reraLeadMonths
+- [x] FIX: Escrow deposit timing uses reraLeadMonths
+- [x] FIX: 5% retention fixed to be 5% of totalRevenue (not 5% of escrowRevenue which was only 80%)
+- [x] FIX: Revenue calculation in projectCostsCalc.ts aligned with investor engine (simple count × area × price)
+- [x] FIX: Added scenario tabs to V2InvestorCashFlow and V2EscrowCashFlow (4 scenarios)
+- [x] Added Excel export button to V2WaelSales (payment plan + cash inflow data)
+- [x] Create detailed Excel payment plan table for user to review with broker

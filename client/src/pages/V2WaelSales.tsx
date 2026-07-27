@@ -19,8 +19,9 @@ import {
 import {
   ArrowRight, TrendingUp, Target, Megaphone, Calendar, DollarSign,
   Palette, Rocket, FileCheck, HardHat, Save, Loader2,
-  Building2, Percent, CreditCard, Table2, Info,
+  Building2, Percent, CreditCard, Table2, Info, Download,
 } from "lucide-react";
+import { exportToExcel } from "@/lib/tableExport";
 import {
   dbProjectToInputs,
   dbProjectToRates,
@@ -412,6 +413,15 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                 حفظ الخطة
               </Button>
             )}
+            <Button size="sm" variant="outline" onClick={() => {
+              const headers = [["الشهر", "مبيعات الشهر", "التدفق النقدي", "إجمالي المبيعات التراكمي", "إجمالي النقد التراكمي"]];
+              const rows = cashInflowData.map(d => [d.month, Math.round(d.salesThisMonth), Math.round(d.cashInflow), Math.round(d.cumSales), Math.round(d.cumCash)]);
+              const projectName = (projectQuery.data as any)?.name || "مشروع";
+              exportToExcel({ title: "خطة المبيعات والتدفقات", projectName, scenario: "offplan_escrow", headers, rows }, `خطة_المبيعات_${projectName}`);
+            }} className="gap-1.5">
+              <Download className="w-3.5 h-3.5" />
+              تصدير Excel
+            </Button>
           </div>
         </div>
 

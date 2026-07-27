@@ -261,6 +261,8 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   const { totalRevenue, totalUnits } = pricingFormulas;
   const designDuration = i.designDuration;
   const constructionDuration = i.constructionDuration;
+  const marketingPrepMonths = Number(projectData?.marketingPrepMonths) || 2;
+  const reraLeadMonths = Number(projectData?.reraLeadMonths) || 2;
   const penultimateDesign = designDuration - 2;
   const penultimateConstruction = constructionDuration - 2;
 
@@ -491,12 +493,14 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   {
     const sortingDesign = emptyDesign();
     const sortingConstruction = emptyConstruction();
+    // Sorting happens at same time as RERA registration
+    const sortingMonthInDesign = Math.max(0, designDuration - reraLeadMonths);
     if (isScenario3 || isScenario4) {
       sortingConstruction[penultimateConstruction] = costs.sortingFee;
     } else if (isScenario2) {
-      sortingConstruction[3] = costs.sortingFee;
+      sortingConstruction[reraLeadMonths] = costs.sortingFee;
     } else {
-      sortingDesign[penultimateDesign] = costs.sortingFee;
+      sortingDesign[sortingMonthInDesign] = costs.sortingFee;
     }
     rows.push({
       label: "رسوم الفرز",
@@ -516,12 +520,14 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   {
     const nocDesign = emptyDesign();
     const nocConstruction = emptyConstruction();
+    // NOC happens at same time as RERA registration
+    const nocMonthInDesign = Math.max(0, designDuration - reraLeadMonths);
     if (isScenario3 || isScenario4) {
       nocConstruction[penultimateConstruction] = i.nocSale;
     } else if (isScenario2) {
-      nocConstruction[3] = i.nocSale;
+      nocConstruction[reraLeadMonths] = i.nocSale;
     } else {
-      nocDesign[penultimateDesign] = i.nocSale;
+      nocDesign[nocMonthInDesign] = i.nocSale;
     }
     rows.push({
       label: "رسوم NOC المطور",
@@ -541,10 +547,12 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   if (!isScenario3 && !isScenario4) {
     const reraRegDesign = emptyDesign();
     const reraRegConstruction = emptyConstruction();
+    // RERA registration happens at (designDuration - reraLeadMonths) in design phase
+    const reraMonthInDesign = Math.max(0, designDuration - reraLeadMonths);
     if (isScenario2) {
-      reraRegConstruction[3] = i.reraProjectReg;
+      reraRegConstruction[reraLeadMonths] = i.reraProjectReg;
     } else {
-      reraRegDesign[penultimateDesign] = i.reraProjectReg;
+      reraRegDesign[reraMonthInDesign] = i.reraProjectReg;
     }
     rows.push({
       label: "تسجيل المشروع — ريرا",
@@ -564,12 +572,13 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   {
     const reraUnitsDesign = emptyDesign();
     const reraUnitsConstruction = emptyConstruction();
+    const reraMonthInDesign2 = Math.max(0, designDuration - reraLeadMonths);
     if (isScenario3 || isScenario4) {
       reraUnitsConstruction[penultimateConstruction] = costs.reraUnits;
     } else if (isScenario2) {
-      reraUnitsConstruction[3] = costs.reraUnits;
+      reraUnitsConstruction[reraLeadMonths] = costs.reraUnits;
     } else {
-      reraUnitsDesign[penultimateDesign] = costs.reraUnits;
+      reraUnitsDesign[reraMonthInDesign2] = costs.reraUnits;
     }
     rows.push({
       label: "تسجيل الوحدات — ريرا",
@@ -589,10 +598,12 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   if (!isScenario3 && !isScenario4) {
     const escrowFeeDesign = emptyDesign();
     const escrowFeeConstruction = emptyConstruction();
+    // Escrow account opens at same time as RERA registration
+    const escrowMonthInDesign = Math.max(0, designDuration - reraLeadMonths);
     if (isScenario2) {
-      escrowFeeConstruction[3] = i.escrowAccountFee;
+      escrowFeeConstruction[reraLeadMonths] = i.escrowAccountFee;
     } else {
-      escrowFeeDesign[penultimateDesign] = i.escrowAccountFee;
+      escrowFeeDesign[escrowMonthInDesign] = i.escrowAccountFee;
     }
     rows.push({
       label: "حساب الضمان (رسوم فتح)",
@@ -724,21 +735,20 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     } else {
       const marketingTotal = costs.marketing;
       const marketingPerMonth = marketingTotal / 12;
-
       if (isScenario2) {
+        // S2: marketing starts at month (marketingPrepMonths) into construction
         let placed = 0;
-        for (let idx = 3; idx < constructionDuration && placed < 12; idx++) {
+        for (let idx = marketingPrepMonths; idx < constructionDuration && placed < 12; idx++) {
           marketingConstruction[idx] = marketingPerMonth;
           placed++;
         }
       } else {
+        // S1: marketing starts at (designDuration - marketingPrepMonths) in design phase
+        // then continues into construction
         let placed = 0;
-        if (penultimateDesign >= 0 && placed < 12) {
-          marketingDesign[penultimateDesign] = marketingPerMonth;
-          placed++;
-        }
-        if (designDuration - 1 > penultimateDesign && placed < 12) {
-          marketingDesign[designDuration - 1] = marketingPerMonth;
+        const marketingStartInDesign = Math.max(0, designDuration - marketingPrepMonths);
+        for (let idx = marketingStartInDesign; idx < designDuration && placed < 12; idx++) {
+          marketingDesign[idx] = marketingPerMonth;
           placed++;
         }
         for (let idx = 0; idx < constructionDuration && placed < 12; idx++) {
@@ -859,7 +869,9 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     const depositConst = emptyConstruction();
     const depositPost = emptyPost();
     const escrowDepositAmount = constructionCost * r.escrowDeposit;
-    depositDesign[penultimateDesign] = escrowDepositAmount;
+    // Escrow deposit happens at same time as RERA/escrow account opening
+    const escrowDepositMonth = Math.max(0, designDuration - reraLeadMonths);
+    depositDesign[escrowDepositMonth] = escrowDepositAmount;
     rows.push({
       label: "إيداع حساب الضمان (20%)",
       totalCost: escrowDepositAmount,
@@ -1000,7 +1012,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       
       // ─── تصفية حساب الضمان (دفعة 1: شهر 3 بعد الإنجاز) ───
       const escrowRevenue = totalSalesIncome; // Total collected from buyers through escrow
-      const revenueRetention = escrowRevenue * 0.05;
+      const revenueRetention = totalRevenue * 0.05; // DLD retention = 5% of TOTAL project revenue
       const completionPayment = constructionCost * 0.05;
       const openingBalance = constructionCost * 0.20;
       const actualEscrowExpenses = (constructionCost * 0.80) + costs.supervisionFee +
@@ -1065,7 +1077,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
 
       // ─── تصفية حساب الضمان (دفعة 1: شهر 3 بعد الإنجاز) ───
       const escrowRevenue = totalRevenue * 0.80;
-      const revenueRetention = escrowRevenue * 0.05;
+      const revenueRetention = totalRevenue * 0.05; // DLD retention = 5% of TOTAL project revenue
       const completionPayment = constructionCost * 0.05;
       const openingBalance = constructionCost * 0.20;
       const actualEscrowExpenses = (constructionCost * 0.80) + costs.supervisionFee +

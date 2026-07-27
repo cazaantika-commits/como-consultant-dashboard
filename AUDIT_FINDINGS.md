@@ -110,3 +110,30 @@ The hub imports pages and renders them inside tabs. We need to:
 3. Rebuild V2WaelSales.tsx to read from DB (currently hardcoded)
 4. Create SettingsRulesPage.tsx
 5. Update InvestorStudyHub tabs to use new pages
+
+
+## Cost Items Audit (Latest)
+
+### Architecture Confirmed:
+- **calculateCosts** (projectData.ts): Single source of truth for TOTALS
+- **investorCashFlowEngine.ts**: Uses `calculateCosts()` for totals, distributes monthly
+- **dbProjectToInputs** / **dbProjectToRates**: Read ALL settings from project DB record
+- All pages use either `calculateCosts` directly or `computeInvestorCashFlow` which calls it
+
+### ALL cost items from calculateCosts ARE present in the investor engine ✓
+- Land items: landPrice, landRegistration, landBroker ✓
+- Design: designFee, supervisionFee ✓
+- Fixed fees: soilTest, topography, surveyorDwg, surveyorAsBuilt, communityFee, govFees, sortingFee, nocSale, reraProjectReg, reraUnits, escrowAccountFee, bankFees ✓
+- Revenue-based: marketing, developerFee, salesCommission ✓
+- Construction: contractorMobilization(10%), progress(80%), retention1(5%), retentionFinal(5%) ✓
+
+### What's Working Correctly:
+1. Change any rate in settings → saves to project → all engines read it ✓
+2. Change unit counts/prices → saves to project → all engines recalculate ✓
+3. Change designDuration/constructionDuration → saves to project → engines use it ✓
+4. Change marketingPct → saves to project → engines use it ✓
+5. Change marketingPrepMonths → NOW saves to project (after fix) → TimelinePage uses it ✓
+
+### Remaining Issues:
+- Marketing timing in engine uses hardcoded 12-month distribution, doesn't use marketingPrepMonths for prep phase timing
+- This affects WHEN costs appear monthly but NOT the total amounts
