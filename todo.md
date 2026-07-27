@@ -1020,3 +1020,10 @@
 - [x] ConstructionInputsPage: Match colors to slate palette (ConsolidatedInvestorCashFlowPage style)
 - [x] ConstructionInputsPage: Make all fields read-only EXCEPT progress percentages (sliders removed, curve buttons display-only)
 - [x] Restore comprehensive SettingsRulesPage (5 sections: phases, design payments, rates, investor rules 16 items, escrow rules 9 items) from version 92a36a23
+
+## Cost Items Consistency (Feasibility = Investor + Escrow)
+- [ ] Audit all cost items from SettingsRulesPage rules
+- [ ] Ensure feasibility study (projectCostsCalc) has ALL items
+- [ ] Ensure investor engine has correct investor items
+- [ ] Ensure escrow engine has correct escrow items
+- [ ] Verify: total investor + total escrow = total feasibility

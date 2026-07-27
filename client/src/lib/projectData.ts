@@ -26,7 +26,8 @@ export interface ProjectInputs {
   efficiencyOffice: number;
   soilTest: number;
   topography: number;
-  surveyorFee: number;
+  surveyorFee: number; // As-Built (ضمان)
+  surveyorDwgFee: number; // DWG (مستثمر)
   nocSale: number;
   escrowAccountFee: number;
   bankFees: number;
@@ -85,7 +86,8 @@ export const PROJECT_INPUTS: ProjectInputs = {
   efficiencyOffice: 0.90,
   soilTest: 45000,
   topography: 12000,
-  surveyorFee: 35000,
+  surveyorFee: 35000, // As-Built (ضمان)
+  surveyorDwgFee: 12000, // DWG (مستثمر)
   nocSale: 10000,
   escrowAccountFee: 180000,
   bankFees: 35000,
@@ -158,6 +160,7 @@ export function dbProjectToInputs(dbProject: any): ProjectInputs {
     soilTest: parseFloat(dbProject.soilTestFee || '0') || 45000,
     topography: parseFloat(dbProject.topographicSurveyFee || '0') || 12000,
     surveyorFee: parseFloat(dbProject.surveyorFees || '0') || 35000,
+    surveyorDwgFee: parseFloat(dbProject.surveyorDwgFees || '0') || 12000,
     nocSale: parseFloat(dbProject.developerNocFee || '0') || 10000,
     escrowAccountFee: parseFloat(dbProject.escrowAccountFee || '0') || 180000,
     bankFees: parseFloat(dbProject.bankFees || '0') || 35000,
@@ -338,7 +341,7 @@ export function calculateCosts(
     inputs.soilTest + inputs.topography + inputs.communityFee + govFeesInvestor +
     sortingFee + inputs.nocSale + inputs.reraProjectReg + reraUnits +
     inputs.escrowAccountFee + inputs.bankFees + marketing + developerFee +
-    constructionInvestor;
+    inputs.surveyorDwgFee + constructionInvestor;
   // ─── إجمالي الضمان (نفس معادلة البطاقة بالضبط) ───
   const totalEscrow = supervisionFee + govFeesEscrow + salesCommission +
     inputs.reraAuditorReport + inputs.reraInspection + inputs.surveyorFee + constructionEscrow;

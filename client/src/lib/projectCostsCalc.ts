@@ -168,7 +168,8 @@ export function calculateProjectCosts(
   const supervisionFee = supervisionFeeFixed > 0 ? supervisionFeeFixed : constructionCost * (supervisionFeePct / 100);
   const totalGfaSqft = gfaResSqft + gfaRetSqft + gfaOffSqft;
   const separationFee = totalGfaSqft * separationFeePerM2;
-  const contingencies = constructionCost * 0.02;
+  const surveyorFees = parseFloat(p.surveyorFees || "0");
+  const surveyorDwgFees = parseFloat(p.surveyorDwgFees || "0") || 12000;
 
   // أتعاب المطور حسب السيناريو: O3 (no_offplan) = 3% max
   const financingScenario = p.financingScenario || "offplan_escrow";
@@ -187,7 +188,7 @@ export function calculateProjectCosts(
   const computedReraInspectionFee = inspectionVisits * 15000;
 
   const totalRegulatory = computedReraUnitRegFee + reraProjectRegFee + developerNocFee + escrowAccountFee + bankFees + reraAuditReportFee + computedReraInspectionFee;
-  const totalCosts = landPrice + agentCommissionLand + landRegistration + soilTestFee + topographicSurveyFee + officialBodiesFees + designFee + supervisionFee + separationFee + constructionCost + computedCommunityFees + contingencies + developerFee + salesCommission + marketingCost + totalRegulatory;
+  const totalCosts = landPrice + agentCommissionLand + landRegistration + soilTestFee + topographicSurveyFee + officialBodiesFees + designFee + supervisionFee + separationFee + constructionCost + computedCommunityFees + surveyorFees + surveyorDwgFees + developerFee + salesCommission + marketingCost + totalRegulatory;
 
   return {
     landPrice,
@@ -201,7 +202,8 @@ export function calculateProjectCosts(
     separationFee,
     constructionCost,
     communityFees: computedCommunityFees,
-    contingencies,
+    surveyorFees,
+    surveyorDwgFees,
     developerFee,
     salesCommission,
     marketingCost,

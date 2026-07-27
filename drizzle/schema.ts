@@ -1122,6 +1122,7 @@ export const projects = mysqlTable("projects", {
 	bankFees: decimal({ precision: 14, scale: 2 }),
 	communityFees: decimal({ precision: 14, scale: 2 }),
 	surveyorFees: decimal({ precision: 14, scale: 2 }),
+	surveyorDwgFees: decimal({ precision: 14, scale: 2 }),
 	reraAuditReportFee: decimal({ precision: 14, scale: 2 }),
 	reraInspectionReportFee: decimal({ precision: 14, scale: 2 }),
 	reraProjectRegFee: decimal({ precision: 14, scale: 2 }),

@@ -53,7 +53,7 @@ export default function V2Feasibility() {
   // Cost breakdown groups
   const landCosts = (costs?.landPrice || 0) + (costs?.agentCommissionLand || 0) + (costs?.landRegistration || 0);
   const designCosts = (costs?.designFee || 0) + (costs?.soilTestFee || 0) + (costs?.topographicSurveyFee || 0);
-  const constructionCosts = (costs?.constructionCost || 0) + (costs?.supervisionFee || 0) + (costs?.contingencies || 0);
+  const constructionCosts = (costs?.constructionCost || 0) + (costs?.supervisionFee || 0);
   const regulatoryCosts = (costs?.communityFees || 0) + (costs?.officialBodiesFees || 0) + (costs?.reraUnitRegFee || 0) + (costs?.reraProjectRegFee || 0) + (costs?.developerNocFee || 0) + (costs?.escrowAccountFee || 0) + (costs?.bankFees || 0) + (costs?.reraAuditReportFee || 0) + (costs?.reraInspectionReportFee || 0);
   const salesCosts = (costs?.developerFee || 0) + (costs?.salesCommission || 0) + (costs?.marketingCost || 0);
 
@@ -164,7 +164,8 @@ export default function V2Feasibility() {
                   <div className="text-[9px] font-bold text-gray-500 pt-1.5 pb-0.5 border-b border-gray-100">الإنشاء</div>
                   <Row label="تكلفة الإنشاء" value={fmt(costs?.constructionCost || 0)} pct={totalCosts > 0 ? ((costs?.constructionCost || 0) / totalCosts * 100) : 0} color="text-gray-700" />
                   <Row label="أتعاب الإشراف" value={fmt(costs?.supervisionFee || 0)} pct={totalCosts > 0 ? ((costs?.supervisionFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
-                  <Row label="احتياطي (2%)" value={fmt(costs?.contingencies || 0)} pct={totalCosts > 0 ? ((costs?.contingencies || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  <Row label="رسوم المساح (As-Built)" value={fmt(costs?.surveyorFees || 0)} pct={totalCosts > 0 ? ((costs?.surveyorFees || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  <Row label="رسوم المساح (DWG)" value={fmt((costs as any)?.surveyorDwgFees || 0)} pct={totalCosts > 0 ? (((costs as any)?.surveyorDwgFees || 0) / totalCosts * 100) : 0} color="text-gray-700" />
                   {/* الرسوم */}
                   <div className="text-[9px] font-bold text-gray-500 pt-1.5 pb-0.5 border-b border-gray-100">الرسوم والجهات</div>
                   <Row label="رسوم الفرز" value={fmt(costs?.separationFee || 0)} pct={totalCosts > 0 ? ((costs?.separationFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />

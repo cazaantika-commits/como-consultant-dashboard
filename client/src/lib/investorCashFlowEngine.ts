@@ -405,36 +405,36 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     postConstructionMonths: emptyPost(),
   });
 
-  // ─── رسوم المساح ───
-  if (isScenario3 || isScenario4) {
-    const surveyorConst = emptyConstruction();
-    surveyorConst[penultimateConstruction] = i.surveyorFee;
-    rows.push({
-      label: "رسوم المساح",
-      totalCost: i.surveyorFee,
-      investorAmount: i.surveyorFee,
-      paid: 0,
-      unpaid: i.surveyorFee,
-      funder: "investor",
-      section: "الدراسات والمسوحات",
-      designMonths: emptyDesign(),
-      constructionMonths: surveyorConst,
-      postConstructionMonths: emptyPost(),
-    });
-  } else {
-    rows.push({
-      label: "رسوم المساح",
-      totalCost: i.surveyorFee,
-      investorAmount: 0,
-      paid: 0,
-      unpaid: 0,
-      funder: "escrow",
-      section: "الدراسات والمسوحات",
-      designMonths: emptyDesign(),
-      constructionMonths: emptyConstruction(),
-      postConstructionMonths: emptyPost(),
-    });
-  }
+  // ─── رسوم المساح DWG (مستثمر — شهر 1 من التصاميم) ───
+  const surveyorDwgDesign = emptyDesign();
+  surveyorDwgDesign[0] = i.surveyorDwgFee;
+  rows.push({
+    label: "رسوم المساح (DWG)",
+    totalCost: i.surveyorDwgFee,
+    investorAmount: i.surveyorDwgFee,
+    paid: 0,
+    unpaid: i.surveyorDwgFee,
+    funder: "investor",
+    section: "الدراسات والمسوحات",
+    designMonths: surveyorDwgDesign,
+    constructionMonths: emptyConstruction(),
+    postConstructionMonths: emptyPost(),
+  });
+  // ─── رسوم المساح As-Built (ضمان — شهر قبل الأخير من الإنشاء) ───
+  const surveyorAsbuiltConst = emptyConstruction();
+  surveyorAsbuiltConst[penultimateConstruction] = i.surveyorFee;
+  rows.push({
+    label: "رسوم المساح (As-Built)",
+    totalCost: i.surveyorFee,
+    investorAmount: 0,
+    paid: 0,
+    unpaid: 0,
+    funder: "escrow",
+    section: "الدراسات والمسوحات",
+    designMonths: emptyDesign(),
+    constructionMonths: surveyorAsbuiltConst,
+    postConstructionMonths: emptyPost(),
+  });
 
   // ─── رسوم المجتمع (كل 6 أشهر من شهر 1) ───
   const communityDist = distributeCommunityFee(i.communityFee, designDuration, constructionDuration);
