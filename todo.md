@@ -1022,3 +1022,4 @@
 ## Month Headers Styling Fix (match ConsolidatedInvestorCashFlowPage)
 - [x] V2WaelSales: Change month numbers to real calendar dates + darker text color
 - [x] ConstructionInputsPage: Change month numbers to real calendar dates + darker text color
+- [x] Fix SettingsRulesPage crash: designPayments stored as {pct, durationWeeks} objects but code expected plain numbers
