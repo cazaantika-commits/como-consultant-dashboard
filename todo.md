@@ -1012,3 +1012,10 @@
 - [x] Show real calendar dates in column headers (from project startDate)
 - [x] Fix engine surveyorDwgFee/surveyorAsbuiltFee references (use surveyorFee from ProjectInputs)
 - [x] Fix land price discrepancy (188K AED) between V2Feasibility and V2InvestorCashFlow - use DB landPrice directly via landPriceTotal field
+
+## Restored Files & Fixes (after rollback to 27261b54)
+- [x] Restore MarketingPage.tsx + TimelinePage.tsx (lost during GitHub sync)
+- [x] Re-register Marketing + Timeline tabs in BateekhaPage
+- [x] Fix SettingsRulesPage crash (designPayments object vs number format detection)
+- [x] ConstructionInputsPage: Match colors to slate palette (ConsolidatedInvestorCashFlowPage style)
+- [x] ConstructionInputsPage: Make all fields read-only EXCEPT progress percentages (sliders removed, curve buttons display-only)

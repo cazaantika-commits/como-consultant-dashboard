@@ -156,7 +156,13 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
             }
             if (s.designPayments) {
               setDesignPayments((prev) =>
-                prev.map((r) => ({ ...r, pct: s.designPayments[r.id] ?? r.pct }))
+                prev.map((r) => {
+                  const val = s.designPayments[r.id];
+                  if (val == null) return r;
+                  // Handle both formats: plain number or {pct, durationWeeks}
+                  const pct = typeof val === 'object' ? (val.pct ?? r.pct) : val;
+                  return { ...r, pct };
+                })
               );
             }
           }

@@ -6,11 +6,11 @@ import { useToast } from "@/hooks/use-toast";
 import { ProjectSelector } from "@/components/ProjectSelector";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Slider } from "@/components/ui/slider";
+
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Save, Loader2, HardHat, TrendingUp, DollarSign,
-  RotateCcw, Info, Percent,
+  Info,
 } from "lucide-react";
 
 // ═══════════════════════════════════════════════════════════════════
@@ -250,12 +250,12 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
 
   return (
     <TooltipProvider>
-      <div className="bg-gray-50 px-4 py-2" dir="rtl">
+      <div className="bg-slate-50 px-4 py-2" dir="rtl">
         {/* Toolbar */}
-        <div className="bg-white rounded-lg border border-gray-100 shadow-sm px-4 py-2 mb-3 flex items-center justify-between gap-3">
+        <div className="bg-white rounded-lg border border-slate-200 shadow-sm px-4 py-2 mb-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <HardHat className="w-4 h-4 text-teal-600" />
-            <span className="text-xs font-bold text-gray-800">جدول الإنشاء</span>
+            <span className="text-xs font-bold text-slate-800">جدول الإنشاء</span>
           </div>
           <div className="flex items-center gap-2">
             <ProjectSelector
@@ -270,14 +270,14 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
         </div>
 
         {!selectedProjectId && (
-          <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-4 text-center text-gray-400 text-xs">
+          <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-4 text-center text-slate-400 text-xs">
             اختر مشروعاً
           </div>
         )}
 
         {selectedProjectId && projectQuery.isLoading && (
           <div className="flex items-center justify-center py-4">
-            <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+            <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
           </div>
         )}
 
@@ -285,35 +285,25 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
           <div className="space-y-3">
             {/* Summary Cards */}
             <div className="grid grid-cols-4 gap-3">
-              <div className="bg-white rounded-lg p-2 border border-gray-100 shadow-sm">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] text-gray-600">مدة الإنشاء</span>
-                  <Badge variant="outline" className="text-[9px] h-4">{constructionMonths} شهر</Badge>
+              <div className="bg-white rounded-lg p-2 border border-slate-200 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-slate-600">مدة الإنشاء</span>
+                  <Badge variant="outline" className="text-[9px] h-4 border-slate-300 text-slate-700">{constructionMonths} شهر</Badge>
                 </div>
-                <Slider
-                  value={[constructionMonths]}
-                  onValueChange={([v]) => handleMonthsChange(v)}
-                  min={6} max={48} step={1} className="mt-1"
-                />
               </div>
 
-              <div className="bg-white rounded-lg p-2 border border-gray-100 shadow-sm">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] text-gray-600">دفعة مقدمة</span>
-                  <Badge variant="outline" className="text-[9px] h-4">{mobilizationPct}%</Badge>
+              <div className="bg-white rounded-lg p-2 border border-slate-200 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-slate-600">دفعة مقدمة</span>
+                  <Badge variant="outline" className="text-[9px] h-4 border-slate-300 text-slate-700">{mobilizationPct}%</Badge>
                 </div>
-                <Slider
-                  value={[mobilizationPct]}
-                  onValueChange={([v]) => { setMobilizationPct(v); setIsDirty(true); }}
-                  min={0} max={25} step={1} className="mt-1"
-                />
               </div>
 
-              <div className="bg-white rounded-lg p-2 border border-red-100 shadow-sm">
+              <div className="bg-white rounded-lg p-2 border border-red-200 shadow-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] text-red-600">تكلفة الإنشاء</span>
                   <Tooltip>
-                    <TooltipTrigger><Info className="w-3 h-3 text-gray-400" /></TooltipTrigger>
+                    <TooltipTrigger><Info className="w-3 h-3 text-slate-400" /></TooltipTrigger>
                     <TooltipContent>BUA × تكلفة/قدم</TooltipContent>
                   </Tooltip>
                 </div>
@@ -322,27 +312,24 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg p-2 border border-amber-100 shadow-sm">
+              <div className="bg-white rounded-lg p-2 border border-amber-200 shadow-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] text-amber-700">الريتنشن ({retentionPct}%)</span>
                 </div>
-                <div className="text-[9px] text-gray-600">5% بعد شهرين | 5% بعد 13 شهر</div>
+                <div className="text-[9px] text-slate-600">5% بعد شهرين | 5% بعد 13 شهر</div>
               </div>
             </div>
 
-            {/* Curve Type Selector */}
-            <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-2">
+            {/* Curve Type Display (read-only) */}
+            <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-2">
               <div className="flex items-center justify-between mb-1.5">
-                <h3 className="text-[11px] font-bold text-gray-700 flex items-center gap-1.5">
+                <h3 className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
                   <TrendingUp className="w-3.5 h-3.5 text-teal-600" />
                   نوع المنحنى
                 </h3>
                 {totalPct !== 100 && (
                   <Badge variant="destructive" className="text-[9px] h-4">المجموع: {totalPct}%</Badge>
                 )}
-                <Button variant="ghost" size="sm" onClick={() => handleRegenerateFromTemplate(curveType)} className="gap-1 text-[10px] h-5 text-gray-600 hover:text-teal-700">
-                  <RotateCcw className="w-3 h-3" /> إعادة توليد
-                </Button>
               </div>
               <div className="grid grid-cols-4 gap-1.5">
                 {[
@@ -351,17 +338,16 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
                   { id: "back_loaded" as const, label: "متأخر" },
                   { id: "linear" as const, label: "خطي" },
                 ].map(t => (
-                  <button
+                  <div
                     key={t.id}
-                    onClick={() => handleRegenerateFromTemplate(t.id)}
-                    className={`py-1 px-2 rounded border text-[10px] font-medium transition-all ${
+                    className={`py-1 px-2 rounded border text-[10px] font-medium text-center ${
                       curveType === t.id
                         ? "border-teal-500 bg-teal-50 text-teal-700"
-                        : "border-gray-200 hover:border-teal-300 bg-white text-gray-700"
+                        : "border-slate-200 bg-slate-50 text-slate-400"
                     }`}
                   >
                     {t.label}
-                  </button>
+                  </div>
                 ))}
               </div>
             </div>
@@ -369,14 +355,14 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
             {/* ═══════════════════════════════════════════════════════════ */}
             {/* MAIN GRID: Month boxes + inputs + payment rows */}
             {/* ═══════════════════════════════════════════════════════════ */}
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="px-3 py-2 border-b border-slate-200 flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <DollarSign className="w-3.5 h-3.5 text-teal-600" />
-                  <h2 className="text-[11px] font-bold text-gray-800">جدول دفعات المقاول</h2>
+                  <h2 className="text-[11px] font-bold text-slate-800">جدول دفعات المقاول</h2>
                   {totalPct !== 100 && <Badge variant="destructive" className="text-[9px]">الإنجاز: {totalPct}% ≠ 100%</Badge>}
                 </div>
-                <div className="flex items-center gap-2 text-[9px] text-gray-500">
+                <div className="flex items-center gap-2 text-[9px] text-slate-500">
                   <span>المقدمة: {mobilizationPct}%</span>
                   <span>|</span>
                   <span>ريتنشن: {retentionPct}%</span>
@@ -388,13 +374,13 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
                 {constructionCost > 0 ? (
                   <div style={{ display: 'grid', gridTemplateColumns: `70px repeat(${totalColumns}, minmax(40px, 1fr))`, direction: 'rtl' }}>
                     {/* Row 1: Month numbers */}
-                    <div className="text-[7px] font-bold text-gray-500 flex items-center justify-center border-b border-gray-200 py-0.5">الشهر</div>
+                    <div className="text-[7px] font-bold text-slate-500 flex items-center justify-center border-b border-slate-200 py-0.5">الشهر</div>
                     {Array.from({ length: totalColumns }, (_, i) => {
                       const isConstruction = i < constructionMonths;
                       const displayNum = isConstruction ? i + 1 : i - constructionMonths + 1;
                       return (
-                        <div key={i} className={`text-center text-[7px] font-bold py-0.5 border-b border-l border-gray-200 ${
-                          isConstruction ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'
+                        <div key={i} className={`text-center text-[7px] font-bold py-0.5 border-b border-l border-slate-200 ${
+                          isConstruction ? 'bg-slate-100 text-slate-700' : 'bg-slate-50 text-slate-400'
                         }`}>
                           {isConstruction ? displayNum : `+${displayNum}`}
                         </div>
@@ -402,20 +388,20 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
                     })}
 
                     {/* Row 2: Progress % inputs (only during construction, starting from month 1) */}
-                    <div className="text-[7px] font-bold text-gray-500 flex items-center justify-center border-b border-gray-200 py-0.5">إنجاز %</div>
+                    <div className="text-[7px] font-bold text-slate-500 flex items-center justify-center border-b border-slate-200 py-0.5">إنجاز %</div>
                     {Array.from({ length: totalColumns }, (_, i) => {
                       const isConstruction = i < constructionMonths;
                       return (
-                        <div key={i} className="flex items-center justify-center border-b border-l border-gray-200 py-0.5">
+                        <div key={i} className="flex items-center justify-center border-b border-l border-slate-200 py-0.5">
                           {isConstruction ? (
                             <input
                               type="number" min={0} max={30} step={0.5}
                               value={monthlyProgress[i] ?? 0}
                               onChange={(e) => handleMonthEdit(i, parseFloat(e.target.value) || 0)}
-                              className="w-7 h-4 text-center text-[9px] font-bold border border-gray-200 rounded bg-white focus:ring-1 focus:ring-teal-200 outline-none"
+                              className="w-7 h-4 text-center text-[9px] font-bold border border-slate-300 rounded bg-white focus:ring-1 focus:ring-teal-200 outline-none"
                             />
                           ) : (
-                            <span className="text-[7px] text-gray-300">-</span>
+                            <span className="text-[7px] text-slate-300">-</span>
                           )}
                         </div>
                       );
@@ -426,12 +412,12 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
 
 
                     {/* Row 5: Contractor payment (80% + retention releases) */}
-                    <div className="text-[7px] font-bold text-emerald-700 flex items-center justify-center border-b border-gray-200 py-0.5">دفعة المقاول</div>
+                    <div className="text-[7px] font-bold text-emerald-700 flex items-center justify-center border-b border-slate-200 py-0.5">دفعة المقاول</div>
                     {paymentData.map((d, i) => {
                       const payment = d.actualPaid + d.retention1Release + d.retention2Release;
                       const isRetention = d.retention1Release > 0 || d.retention2Release > 0;
                       return (
-                        <div key={i} className={`text-center text-[7px] py-0.5 border-b border-l border-gray-200 ${isRetention ? 'bg-amber-50' : ''}`}>
+                        <div key={i} className={`text-center text-[7px] py-0.5 border-b border-l border-slate-200 ${isRetention ? 'bg-amber-50' : ''}`}>
                           <span className={isRetention ? 'text-amber-700 font-bold' : 'text-emerald-700'}>
                             {payment > 0 ? fmt(payment) : '-'}
                           </span>
@@ -442,9 +428,9 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
 
 
                     {/* Row 8: Cumulative paid */}
-                    <div className="text-[7px] font-bold text-gray-800 flex items-center justify-center py-0.5">التراكمي</div>
+                    <div className="text-[7px] font-bold text-slate-800 flex items-center justify-center py-0.5">التراكمي</div>
                     {paymentData.map((d, i) => (
-                      <div key={i} className="text-center text-[7px] font-bold py-0.5 border-l border-gray-200 text-gray-800">
+                      <div key={i} className="text-center text-[7px] font-bold py-0.5 border-l border-slate-200 text-slate-800">
                         {d.cumulativePaid > 0 ? fmt(d.cumulativePaid) : '-'}
                       </div>
                     ))}
@@ -461,16 +447,16 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
 
         {/* Progress Chart — aligned with grid above */}
         {constructionCost > 0 && constructionMonths > 0 && (
-          <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-4 mt-3">
+          <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-4 mt-3">
             <div className="flex items-center gap-2 mb-3">
               <TrendingUp className="w-4 h-4 text-teal-600" />
-              <span className="text-xs font-bold text-gray-800">منحنى الإنجاز الشهري</span>
-              <span className="text-[9px] text-gray-400 mr-auto">نسبة الإنجاز % لكل شهر إنشاء</span>
+              <span className="text-xs font-bold text-slate-800">منحنى الإنجاز الشهري</span>
+              <span className="text-[9px] text-slate-400 mr-auto">نسبة الإنجاز % لكل شهر إنشاء</span>
             </div>
             <div className="overflow-x-auto">
               <div style={{ display: 'grid', gridTemplateColumns: `70px repeat(${totalColumns}, minmax(40px, 1fr))`, direction: 'rtl' }}>
                 {/* Chart bars row */}
-                <div className="flex flex-col justify-end items-center text-[7px] text-gray-400" style={{ height: '100px' }}>
+                <div className="flex flex-col justify-end items-center text-[7px] text-slate-400" style={{ height: '100px' }}>
                   <span>{Math.max(...monthlyProgress.slice(0, constructionMonths), 1).toFixed(0)}%</span>
                   <div className="flex-1" />
                   <span>0%</span>
@@ -504,7 +490,7 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
                   const isConstruction = i < constructionMonths;
                   const displayNum = isConstruction ? i + 1 : i - constructionMonths + 1;
                   return (
-                    <div key={i} className={`text-center text-[7px] font-bold py-0.5 ${isConstruction ? 'text-teal-700' : 'text-gray-400'}`}>
+                    <div key={i} className={`text-center text-[7px] font-bold py-0.5 ${isConstruction ? 'text-teal-700' : 'text-slate-400'}`}>
                       {isConstruction ? displayNum : `+${displayNum}`}
                     </div>
                   );
@@ -514,11 +500,11 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
             <div className="flex items-center justify-center gap-4 mt-2">
               <div className="flex items-center gap-1">
                 <div className="w-3 h-2 rounded-sm" style={{ background: 'linear-gradient(to top, #0d9488, #5eead4)' }} />
-                <span className="text-[8px] text-gray-500">إنجاز شهري %</span>
+                <span className="text-[8px] text-slate-500">إنجاز شهري %</span>
               </div>
               <div className="flex items-center gap-1">
                 <div className="w-3 h-0.5 bg-amber-500 rounded" />
-                <span className="text-[8px] text-gray-500">تراكمي %</span>
+                <span className="text-[8px] text-slate-500">تراكمي %</span>
               </div>
             </div>
           </div>
