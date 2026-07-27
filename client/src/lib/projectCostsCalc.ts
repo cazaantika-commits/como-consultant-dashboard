@@ -212,6 +212,7 @@ export function calculateProjectCosts(
     developerNocFee,
     escrowAccountFee,
     bankFees,
+    surveyorFees: surveyorDwgFee + surveyorAsbuiltFee,
     surveyorDwgFee,
     surveyorAsbuiltFee,
     reraAuditReportFee,

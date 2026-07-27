@@ -362,33 +362,69 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
     postConstructionMonths: emptyPost(),
   });
 
-  // ─── رسوم المساح ───
+  // ─── رسوم المساح DWG (الشهر الأول من الإنشاء/ريرا) ───
   if (isScenario3 || isScenario4) {
-    const surveyorConst = emptyConstruction();
-    surveyorConst[penultimateConstruction] = i.surveyorFee;
+    const dwgConst = emptyConstruction();
+    dwgConst[0] = i.surveyorDwgFee; // الشهر الأول من الإنشاء
     rows.push({
-      label: "رسوم المساح",
-      totalCost: i.surveyorFee,
-      investorAmount: i.surveyorFee,
+      label: "رسوم المساح DWG",
+      totalCost: i.surveyorDwgFee,
+      investorAmount: i.surveyorDwgFee,
       paid: 0,
-      unpaid: i.surveyorFee,
+      unpaid: i.surveyorDwgFee,
       funder: "investor",
       section: "الدراسات والمسوحات",
       designMonths: emptyDesign(),
-      constructionMonths: surveyorConst,
+      constructionMonths: dwgConst,
       postConstructionMonths: emptyPost(),
     });
   } else {
+    // في سيناريو 1 و 2: يُدفع من الضمان — الشهر الأول من الإنشاء
+    const dwgConst = emptyConstruction();
+    dwgConst[0] = i.surveyorDwgFee;
     rows.push({
-      label: "رسوم المساح",
-      totalCost: i.surveyorFee,
+      label: "رسوم المساح DWG",
+      totalCost: i.surveyorDwgFee,
       investorAmount: 0,
       paid: 0,
       unpaid: 0,
       funder: "escrow",
       section: "الدراسات والمسوحات",
       designMonths: emptyDesign(),
-      constructionMonths: emptyConstruction(),
+      constructionMonths: dwgConst,
+      postConstructionMonths: emptyPost(),
+    });
+  }
+  // ─── رسوم المساح As-Built (الشهر قبل الأخير من الإنشاء) ───
+  if (isScenario3 || isScenario4) {
+    const asbuiltConst = emptyConstruction();
+    asbuiltConst[penultimateConstruction] = i.surveyorAsbuiltFee;
+    rows.push({
+      label: "رسوم المساح As-Built",
+      totalCost: i.surveyorAsbuiltFee,
+      investorAmount: i.surveyorAsbuiltFee,
+      paid: 0,
+      unpaid: i.surveyorAsbuiltFee,
+      funder: "investor",
+      section: "الدراسات والمسوحات",
+      designMonths: emptyDesign(),
+      constructionMonths: asbuiltConst,
+      postConstructionMonths: emptyPost(),
+    });
+  } else {
+    // في سيناريو 1 و 2: يُدفع من الضمان — الشهر قبل الأخير من الإنشاء
+    const asbuiltConst = emptyConstruction();
+    asbuiltConst[penultimateConstruction] = i.surveyorAsbuiltFee;
+    rows.push({
+      label: "رسوم المساح As-Built",
+      totalCost: i.surveyorAsbuiltFee,
+      investorAmount: 0,
+      paid: 0,
+      unpaid: 0,
+      funder: "escrow",
+      section: "الدراسات والمسوحات",
+      designMonths: emptyDesign(),
+      constructionMonths: asbuiltConst,
       postConstructionMonths: emptyPost(),
     });
   }
@@ -845,6 +881,27 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
     }
   }
 
+  // ─── الاحتياطي (2% من الإنشاء — يُوزع على أشهر الإنشاء) ───
+  const contingencyTotal = constructionCost * r.contingency;
+  const contingencyConst = emptyConstruction();
+  // توزيع متساوي على أشهر الإنشاء
+  const contingencyPerMonth = contingencyTotal / constructionDuration;
+  for (let idx = 0; idx < constructionDuration; idx++) {
+    contingencyConst[idx] = contingencyPerMonth;
+  }
+  rows.push({
+    label: "الاحتياطي (Contingency)",
+    totalCost: contingencyTotal,
+    investorAmount: contingencyTotal,
+    paid: 0,
+    unpaid: contingencyTotal,
+    funder: "investor",
+    section: "الإنشاء",
+    designMonths: emptyDesign(),
+    constructionMonths: contingencyConst,
+    postConstructionMonths: emptyPost(),
+  });
+
   // ─── الإيرادات ───
   if (isScenario3) {
     const revenuePost = emptyPost();
@@ -894,7 +951,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario): C
     const openingBalance = constructionCost * 0.20;
     const actualEscrowExpenses = (constructionCost * 0.80) + costs.supervisionFee +
       (i.govFeesTotal * r.govFeesEscrowShare) + costs.salesCommission +
-      i.reraAuditorReport + i.reraInspection + i.surveyorFee;
+      i.reraAuditorReport + i.reraInspection + i.surveyorDwgFee + i.surveyorAsbuiltFee;
     const escrowLiquidation = openingBalance + escrowRevenue - actualEscrowExpenses - revenueRetention - completionPayment;
     const escrowLiqPost = emptyPost();
     escrowLiqPost[2] = escrowLiquidation; // شهر 3 (index 2)

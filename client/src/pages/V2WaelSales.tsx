@@ -410,7 +410,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     const payload: Record<string, any> = { id: selectedProjectId };
     UNIT_TYPES.forEach((u) => {
       const d = unitData[u.id];
-      if (d) { payload[u.dbCount] = d.count; payload[u.dbArea] = d.area; payload[u.dbPrice] = d.price; }
+      if (d) { payload[u.dbPrice] = d.price; }
     });
     payload.marketingPct = String(marketingPct);
     payload.salesCommissionPct = String(commissionPct);
@@ -436,7 +436,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     setHasPlanChanges(false);
   }, [selectedProjectId, planId, totalRevenue, designMonths, constructionMonths, offPlan, marketingPct, commissionPct, salesMode, speed, curveTemplate, manualUnits, channelPcts, escrowData, salesDistribution, marketingPrepLead, reraLead, marketingActualStart, marketingActualEnd, marketingDistribution, savePlan]);
 
-  const updateUnit = (id: string, field: "count" | "area" | "price", value: number) => {
+  const updateUnit = (id: string, field: "price", value: number) => {
     setUnitData((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
     setHasUnitChanges(true);
   };
@@ -528,14 +528,8 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                             <span className="font-medium text-gray-800">{u.name}</span>
                           </div>
                         </td>
-                        <td className="px-2 py-0.5 text-center">
-                          <input type="number" min={0} value={u.count} onChange={(e) => updateUnit(u.id, "count", parseInt(e.target.value) || 0)}
-                            className="w-12 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
-                        </td>
-                        <td className="px-2 py-0.5 text-center">
-                          <input type="number" min={0} value={u.area} onChange={(e) => updateUnit(u.id, "area", parseInt(e.target.value) || 0)}
-                            className="w-14 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
-                        </td>
+                        <td className="px-2 py-0.5 text-center font-mono text-gray-700">{u.count}</td>
+                        <td className="px-2 py-0.5 text-center font-mono text-gray-700">{fmtFull(u.area)}</td>
                         <td className="px-2 py-0.5 text-center">
                           <input type="number" min={0} value={u.price} onChange={(e) => updateUnit(u.id, "price", parseInt(e.target.value) || 0)}
                             className="w-14 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
@@ -555,14 +549,8 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                             <span className="font-medium text-gray-800">{u.name}</span>
                           </div>
                         </td>
-                        <td className="px-2 py-0.5 text-center">
-                          <input type="number" min={0} value={u.count} onChange={(e) => updateUnit(u.id, "count", parseInt(e.target.value) || 0)}
-                            className="w-12 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
-                        </td>
-                        <td className="px-2 py-0.5 text-center">
-                          <input type="number" min={0} value={u.area} onChange={(e) => updateUnit(u.id, "area", parseInt(e.target.value) || 0)}
-                            className="w-14 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
-                        </td>
+                        <td className="px-2 py-0.5 text-center font-mono text-gray-700">{u.count}</td>
+                        <td className="px-2 py-0.5 text-center font-mono text-gray-700">{fmtFull(u.area)}</td>
                         <td className="px-2 py-0.5 text-center">
                           <input type="number" min={0} value={u.price} onChange={(e) => updateUnit(u.id, "price", parseInt(e.target.value) || 0)}
                             className="w-14 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
@@ -582,14 +570,8 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                             <span className="font-medium text-gray-800">{u.name}</span>
                           </div>
                         </td>
-                        <td className="px-2 py-0.5 text-center">
-                          <input type="number" min={0} value={u.count} onChange={(e) => updateUnit(u.id, "count", parseInt(e.target.value) || 0)}
-                            className="w-12 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
-                        </td>
-                        <td className="px-2 py-0.5 text-center">
-                          <input type="number" min={0} value={u.area} onChange={(e) => updateUnit(u.id, "area", parseInt(e.target.value) || 0)}
-                            className="w-14 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />
-                        </td>
+                        <td className="px-2 py-0.5 text-center font-mono text-gray-700">{u.count}</td>
+                        <td className="px-2 py-0.5 text-center font-mono text-gray-700">{fmtFull(u.area)}</td>
                         <td className="px-2 py-0.5 text-center">
                           <input type="number" min={0} value={u.price} onChange={(e) => updateUnit(u.id, "price", parseInt(e.target.value) || 0)}
                             className="w-14 h-5 text-center text-[11px] border border-gray-200 rounded bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-200" />

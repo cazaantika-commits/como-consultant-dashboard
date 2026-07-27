@@ -80,6 +80,56 @@ const DEFAULT_CONFIGURABLE_RATES: ConfigurableRate[] = [
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// PAYMENT TIMING RULES (editable)
+// ═══════════════════════════════════════════════════════════════════════════════
+interface PaymentTimingRule {
+  id: string;
+  label: string;
+  description: string;
+  fields: { key: string; label: string; value: number; unit: string; min: number; max: number; step: number }[];
+}
+
+const DEFAULT_PAYMENT_TIMING_RULES: PaymentTimingRule[] = [
+  {
+    id: "developerFee",
+    label: "أتعاب المطور",
+    description: "تُدفع بعد شهر من استلام المستثمر لأموال حساب الضمان (تصفية الإسكرو) — يُحتجز جزء منها حتى الشهر 13 بعد الإنجاز",
+    fields: [
+      { key: "developerFeePct", label: "نسبة أتعاب المطور", value: 15, unit: "%", min: 1, max: 30, step: 1 },
+      { key: "developerFeeRetentionPct", label: "نسبة الاحتجاز", value: 15, unit: "%", min: 5, max: 50, step: 5 },
+      { key: "developerFeeDelayMonths", label: "تأخير بعد تصفية الإسكرو", value: 1, unit: "شهر", min: 0, max: 6, step: 1 },
+      { key: "developerFeeRetentionMonth", label: "شهر صرف المحتجز (بعد الإنجاز)", value: 13, unit: "شهر", min: 6, max: 24, step: 1 },
+    ],
+  },
+  {
+    id: "sortingFees",
+    label: "رسوم الفرز",
+    description: "تُدفع في الشهر المحدد من مرحلة ريرا + اعتمادات البيع",
+    fields: [
+      { key: "sortingFeeMonth", label: "الشهر من مرحلة ريرا", value: 1, unit: "شهر", min: 1, max: 6, step: 1 },
+      { key: "sortingFeePerSqft", label: "رسوم الفرز لكل قدم مربع", value: 40, unit: "درهم/قدم²", min: 10, max: 100, step: 5 },
+    ],
+  },
+  {
+    id: "salesCommission",
+    label: "عمولة المبيعات",
+    description: "تُصرف عند تحصيل نسبة محددة من قيمة الوحدة من المشتري",
+    fields: [
+      { key: "salesCommissionPct", label: "نسبة العمولة", value: 5, unit: "%", min: 1, max: 10, step: 0.5 },
+      { key: "salesCommissionTriggerPct", label: "نسبة التحصيل المطلوبة للصرف", value: 20, unit: "%", min: 10, max: 50, step: 5 },
+    ],
+  },
+  {
+    id: "surveyorAsbuilt",
+    label: "رسوم المساح As-Built",
+    description: "تُدفع في الشهر قبل الأخير من الإنشاء",
+    fields: [
+      { key: "surveyorAsbuiltMonthFromEnd", label: "شهر من نهاية الإنشاء (قبل الأخير = 1)", value: 1, unit: "شهر قبل النهاية", min: 1, max: 6, step: 1 },
+    ],
+  },
+];
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // INVESTOR PAYMENT RULES (read-only display)
 // ═══════════════════════════════════════════════════════════════════════════════
 const INVESTOR_RULES = [
@@ -138,6 +188,7 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
   const [projectPhases, setProjectPhases] = useState<ProjectPhase[]>(DEFAULT_PROJECT_PHASES);
   const [designPayments, setDesignPayments] = useState<DesignPaymentPhase[]>(DEFAULT_DESIGN_PAYMENTS);
   const [configurableRates, setConfigurableRates] = useState<ConfigurableRate[]>(DEFAULT_CONFIGURABLE_RATES);
+  const [paymentTimingRules, setPaymentTimingRules] = useState<PaymentTimingRule[]>(DEFAULT_PAYMENT_TIMING_RULES);
   const [hasChanges, setHasChanges] = useState(false);
 
   // ─── Load from DB ───────────────────────────────────────────────────────────
@@ -178,6 +229,21 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
                 prev.map((r) => ({ ...r, value: s.configurableRates[r.id] ?? r.value }))
               );
             }
+            if (s.paymentTimingRules) {
+              setPaymentTimingRules((prev) =>
+                prev.map((rule) => {
+                  const savedRule = s.paymentTimingRules[rule.id];
+                  if (!savedRule) return rule;
+                  return {
+                    ...rule,
+                    fields: rule.fields.map((f) => ({
+                      ...f,
+                      value: savedRule[f.key] ?? f.value,
+                    })),
+                  };
+                })
+              );
+            }
           }
         } catch {}
       }
@@ -195,10 +261,11 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
       projectPhases: Object.fromEntries(projectPhases.map((ph) => [ph.id, { durationMonths: ph.durationMonths, startOffsetMonths: ph.startOffsetMonths }])),
       designPayments: Object.fromEntries(designPayments.map((r) => [r.id, { pct: r.pct, durationWeeks: r.durationWeeks }])),
       configurableRates: Object.fromEntries(configurableRates.map((r) => [r.id, r.value])),
+      paymentTimingRules: Object.fromEntries(paymentTimingRules.map((rule) => [rule.id, Object.fromEntries(rule.fields.map((f) => [f.key, f.value]))])),
     };
     updateProject.mutate({ id: selectedProjectId, constructionScheduleJson: JSON.stringify(existing) } as any);
     setHasChanges(false);
-  }, [selectedProjectId, projectPhases, designPayments, configurableRates, projectQuery.data, updateProject]);
+  }, [selectedProjectId, projectPhases, designPayments, configurableRates, paymentTimingRules, projectQuery.data, updateProject]);
 
   // ─── Updaters ──────────────────────────────────────────────────────────────
   const updatePhaseDuration = (id: string, val: number) => {
@@ -219,6 +286,16 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
   };
   const updateRate = (id: string, value: number) => {
     setConfigurableRates((prev) => prev.map((r) => (r.id === id ? { ...r, value } : r)));
+    setHasChanges(true);
+  };
+  const updateTimingRule = (ruleId: string, fieldKey: string, value: number) => {
+    setPaymentTimingRules((prev) =>
+      prev.map((rule) =>
+        rule.id === ruleId
+          ? { ...rule, fields: rule.fields.map((f) => (f.key === fieldKey ? { ...f, value } : f)) }
+          : rule
+      )
+    );
     setHasChanges(true);
   };
 
@@ -440,6 +517,39 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
                         min={rate.min} max={rate.max} step={rate.step}
                       />
                       <span className="text-[10px] text-gray-500">{rate.unit}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* ═══ SECTION 3.5: PAYMENT TIMING RULES (editable) ═══ */}
+            <section className="rounded-xl border border-rose-100 shadow-sm overflow-hidden">
+              <div className="px-4 py-2.5 bg-rose-50 border-b border-rose-100 flex items-center gap-2">
+                <Clock className="w-4 h-4 text-rose-700" />
+                <h2 className="text-sm font-bold text-rose-800">قواعد توقيت الدفع (قابلة للتعديل)</h2>
+                <Badge className="text-[10px] bg-rose-100 text-rose-700 mr-auto">{paymentTimingRules.length} قاعدة</Badge>
+              </div>
+              <div className="p-3 space-y-3">
+                {paymentTimingRules.map((rule) => (
+                  <div key={rule.id} className="rounded-lg border border-gray-100 p-3 hover:border-rose-200 transition-colors">
+                    <p className="text-[11px] font-bold text-gray-800 mb-0.5">{rule.label}</p>
+                    <p className="text-[9px] text-gray-400 mb-2">{rule.description}</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      {rule.fields.map((field) => (
+                        <div key={field.key} className="flex flex-col gap-0.5">
+                          <label className="text-[9px] text-gray-500">{field.label}</label>
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number" value={field.value}
+                              onChange={(e) => updateTimingRule(rule.id, field.key, parseFloat(e.target.value) || 0)}
+                              className="w-16 text-center text-xs font-mono border border-gray-200 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-rose-400"
+                              min={field.min} max={field.max} step={field.step}
+                            />
+                            <span className="text-[9px] text-gray-400">{field.unit}</span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}

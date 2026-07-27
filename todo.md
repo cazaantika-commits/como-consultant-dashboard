@@ -1024,3 +1024,15 @@
 - [x] Create new Timeline page (move timeline bar + consultant schedule table from V2WaelSales)
 - [x] Register Marketing and Timeline as new tabs in BateekhaPage
 - [x] MarketingPage: Sliders set channel budget cap → table shows max per channel → Wael inputs monthly amounts that cannot exceed channel cap
+
+- [x] Add 4 editable investor payment timing rules to SettingsRulesPage (persisted to DB):
+  - [x] أتعاب المطور (15%): تُدفع بعد شهر من استلام أموال الإسكرو، يُحتجز 15% حتى الشهر 13 بعد الإنجاز
+  - [x] رسوم الفرز: تُدفع في الشهر الأول من مرحلة ريرا + اعتمادات البيع
+  - [x] عمولة المبيعات (5%): تُصرف عند تحصيل 20% من قيمة الوحدة من المشتري
+  - [x] رسوم المساح As-Built: تُدفع في الشهر قبل الأخير من الإنشاء
+- [ ] Wire V2InvestorCashFlow to real computed data using these rules + project settings
+- [ ] Fix: Add both surveyor fees (DWG + As-Built) to investor and escrow cash flow sheets
+- [ ] Fix: Ensure total expenses in both sheets match feasibility study total exactly
+- [ ] Fix: Escrow sheet starts with opening balance = 20% deposit from investor
+- [ ] Fix: Investor sheet shows 20% deposit payment at correct month (penultimate design month)
+- [x] Fix: Pricing table in V2WaelSales — only price/sqft should be editable input, count and area are read-only (from project data card)
