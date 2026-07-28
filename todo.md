@@ -1101,3 +1101,4 @@
 - [x] FIX Escrow: Revenue inflows showing empty — engine returns usedSalesResult, escrow page uses it for inflows
 - [x] FIX Escrow: Revenue still empty when plan has escrowData=[] — engine now checks hasValidSalesData (non-empty + income>0) before skipping default generation
 - [x] FIX V2InvestorCashFlow: Duplicate land section — excluded paid-only items (paid>0, unpaid=0) from debitRows
+- [x] FIX V2InvestorCashFlow: Marketing costs now use saved data from MarketingPage with correct month offset (marketingActualStart-1)

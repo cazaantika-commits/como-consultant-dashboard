@@ -43,39 +43,59 @@ export default function V2EscrowCashFlow() {
   const salesResult: SalesResult | undefined = useMemo(() => {
     if (!plansQuery.data || plansQuery.data.length === 0) return undefined;
     const plan = plansQuery.data[0] as any;
-    if (!plan.resultsJson) return undefined;
-    try {
-      const parsed = JSON.parse(plan.resultsJson);
-      if (parsed.escrowData && parsed.salesDistribution) {
-        // Parse marketing monthly amounts from salesAbsorptionJson
-        let marketingMonthlyAmounts: number[] | undefined;
-        let ppDownPct: number | undefined;
-        if (plan.salesAbsorptionJson) {
-          try {
-            const absorption = JSON.parse(plan.salesAbsorptionJson);
-            ppDownPct = absorption.ppDownPct;
-            if (absorption.marketingDistribution) {
-              const channels = Object.values(absorption.marketingDistribution) as number[][];
-              if (channels.length > 0) {
-                const maxLen = Math.max(...channels.map((c: number[]) => c.length));
-                marketingMonthlyAmounts = new Array(maxLen).fill(0);
-                for (const ch of channels) {
-                  for (let m = 0; m < ch.length; m++) {
-                    marketingMonthlyAmounts[m] += (ch[m] || 0);
-                  }
-                }
+
+    // Parse marketing monthly amounts from salesAbsorptionJson (saved from MarketingPage)
+    // marketingDistribution arrays are indexed from 0 = marketingActualStart month
+    // Engine expects marketingMonthlyAmounts indexed from 0 = project month 1
+    // So we offset by (marketingActualStart - 1)
+    let marketingMonthlyAmounts: number[] | undefined;
+    let ppDownPct: number | undefined;
+    if (plan.salesAbsorptionJson) {
+      try {
+        const absorption = JSON.parse(plan.salesAbsorptionJson);
+        ppDownPct = absorption.ppDownPct;
+        if (absorption.marketingDistribution) {
+          const channels = Object.values(absorption.marketingDistribution) as number[][];
+          const startOffset = (absorption.marketingActualStart || 1) - 1; // convert 1-indexed to 0-indexed
+          if (channels.length > 0) {
+            const maxLen = Math.max(...channels.map((c: number[]) => c.length));
+            // Total array length = offset + channel length
+            marketingMonthlyAmounts = new Array(startOffset + maxLen).fill(0);
+            for (const ch of channels) {
+              for (let m = 0; m < ch.length; m++) {
+                marketingMonthlyAmounts[startOffset + m] += (ch[m] || 0);
               }
             }
-          } catch {}
+          }
         }
-        return {
-          escrowData: parsed.escrowData,
-          salesDistribution: parsed.salesDistribution,
-          marketingMonthlyAmounts,
-          ppDownPct,
-        };
-      }
-    } catch {}
+      } catch {}
+    }
+
+    // If resultsJson exists, use escrowData and salesDistribution from it
+    if (plan.resultsJson) {
+      try {
+        const parsed = JSON.parse(plan.resultsJson);
+        if (parsed.escrowData && parsed.salesDistribution) {
+          return {
+            escrowData: parsed.escrowData,
+            salesDistribution: parsed.salesDistribution,
+            marketingMonthlyAmounts,
+            ppDownPct,
+          };
+        }
+      } catch {}
+    }
+
+    // Even without resultsJson, return marketing data so engine can use it
+    if (marketingMonthlyAmounts && marketingMonthlyAmounts.length > 0) {
+      return {
+        escrowData: [],
+        salesDistribution: [],
+        marketingMonthlyAmounts,
+        ppDownPct,
+      };
+    }
+
     return undefined;
   }, [plansQuery.data]);
 

@@ -335,6 +335,8 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       escrowData: defaultEscrowData,
       salesDistribution: defaultSalesDist,
       ppDownPct,
+      // Preserve marketing data from original salesResult (saved from MarketingPage)
+      marketingMonthlyAmounts: salesResult?.marketingMonthlyAmounts,
     };
   }
 
