@@ -295,9 +295,10 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   const emptyConstruction = () => new Array(constructionDuration).fill(0);
   const emptyPost = () => new Array(postDuration).fill(0);
 
-  // ─── Generate default salesResult when not provided (for offplan scenarios) ───
+  // ─── Generate default salesResult when not provided or empty (for offplan scenarios) ───
   // This ensures commission distribution and revenue inflows work even without a saved V2WaelSales plan
-  if (!salesResult && !isScenario3 && !isScenario4 && totalUnits > 0 && totalRevenue > 0) {
+  const hasValidSalesData = salesResult && salesResult.escrowData && salesResult.escrowData.length > 0 && salesResult.escrowData.some(e => e.income > 0);
+  if (!hasValidSalesData && !isScenario3 && !isScenario4 && totalUnits > 0 && totalRevenue > 0) {
     const offPlanPct = 80; // default 80% offplan
     const offPlanUnits = Math.round(totalUnits * offPlanPct / 100);
     const salesStart = Math.max(1, designDuration); // sales start at first month of construction (1-indexed)
