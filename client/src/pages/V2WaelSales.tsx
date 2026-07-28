@@ -94,7 +94,11 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   });
   const savePlan = trpc.waelSalesPlan.save.useMutation({
     onSuccess: () => { plansQuery.refetch(); toast({ title: "تم حفظ خطة المبيعات ✓" }); },
-    onError: (e: any) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
+    onError: (e: any) => {
+      const errorMsg = e?.data?.zodError?.[0]?.message || e?.data?.code || e.message || "خطأ غير معروف";
+      toast({ title: "خطأ في الحفظ", description: errorMsg, variant: "destructive" });
+      console.error("Save error:", e);
+    },
   });
 
   // ─── State: Unit Pricing (from DB) ──────────────────────────────────────────
