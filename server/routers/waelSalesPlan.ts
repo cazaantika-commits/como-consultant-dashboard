@@ -46,8 +46,8 @@ export const waelSalesPlanRouter = router({
       postCompletionMonths: z.number().optional(),
       totalRevenue: z.number().optional(),
       offplanPct: z.number().optional(),
-      marketingBudgetPct: z.string().optional(),
-      salesCommissionPct: z.string().optional(),
+      marketingPct: z.string().optional(),
+      commissionPct: z.string().optional(),
       salesAbsorptionJson: z.string().optional(),
       marketingDistJson: z.string().optional(),
       channelsJson: z.string().optional(),
@@ -74,8 +74,8 @@ export const waelSalesPlanRouter = router({
       if (input.postCompletionMonths !== undefined) data.postCompletionMonths = input.postCompletionMonths;
       if (input.totalRevenue !== undefined) data.totalRevenue = input.totalRevenue;
       if (input.offplanPct !== undefined) data.offplanPct = input.offplanPct;
-      if (input.marketingBudgetPct !== undefined) data.marketingBudgetPct = input.marketingBudgetPct;
-      if (input.salesCommissionPct !== undefined) data.salesCommissionPct = input.salesCommissionPct;
+      if (input.marketingPct !== undefined) data.marketingBudgetPct = input.marketingPct;
+      if (input.commissionPct !== undefined) data.salesCommissionPct = input.commissionPct;
       if (input.salesAbsorptionJson !== undefined) data.salesAbsorptionJson = input.salesAbsorptionJson;
       if (input.marketingDistJson !== undefined) data.marketingDistJson = input.marketingDistJson;
       if (input.channelsJson !== undefined) data.channelsJson = input.channelsJson;
