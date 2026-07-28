@@ -1099,3 +1099,4 @@
 - [x] FIX Escrow: Remove "إيرادات مباشرة (20%)" from escrow page — filtered out from liquidation rows
 - [x] FIX Escrow: Sales commission STILL showing as lump sum — engine now generates default salesResult when no saved plan exists
 - [x] FIX Escrow: Revenue inflows showing empty — engine returns usedSalesResult, escrow page uses it for inflows
+- [x] FIX V2InvestorCashFlow: Duplicate land section — excluded paid-only items (paid>0, unpaid=0) from debitRows

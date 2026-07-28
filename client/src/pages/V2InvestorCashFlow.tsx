@@ -118,7 +118,7 @@ export default function V2InvestorCashFlow() {
   const projectName = projectQuery.data?.name || "—";
 
   // ─── Separate rows into debit (investor costs) and credit (revenue) ────
-  const debitRows = rows.filter((r) => !r.isRevenue && r.funder === "investor");
+  const debitRows = rows.filter((r) => !r.isRevenue && r.funder === "investor" && !(r.paid > 0 && r.unpaid === 0));
   const creditRows = rows.filter((r) => r.isRevenue);
   const paidRows = rows.filter((r) => r.paid > 0 && !r.isRevenue);
 
