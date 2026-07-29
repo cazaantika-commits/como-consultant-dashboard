@@ -362,6 +362,10 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
 
   const handleSavePlan = useCallback(() => {
     if (!selectedProjectId) return;
+    const monthlyRevenue = new Array(timeline.projectEnd + 1).fill(0);
+    cashInflowData.forEach(d => {
+      monthlyRevenue[d.month] = d.cashInflow;
+    });
     savePlan.mutate({
       id: planId,
       projectId: selectedProjectId,
@@ -371,7 +375,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       offplanPct: offPlan,
       salesCommissionPct: String(commissionPct),
       salesAbsorptionJson: JSON.stringify({ mode: salesMode, speed, template: curveTemplate, manual: manualUnits, marketingPrepLead, reraLead, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppInstallmentPct, ppInstallmentEvery, ppHandoverPct }),
-      resultsJson: JSON.stringify({ escrowData, salesDistribution }),
+      resultsJson: JSON.stringify({ escrowData, salesDistribution, monthlyRevenue }),
     });
     // Also save timeline settings to projects table so all pages see updated values
     updateProject.mutate({
@@ -380,7 +384,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       reraLeadMonths: reraLead,
     });
     setHasPlanChanges(false);
-  }, [selectedProjectId, planId, totalRevenue, designMonths, constructionMonths, offPlan, commissionPct, salesMode, speed, curveTemplate, manualUnits, escrowData, salesDistribution, marketingPrepLead, reraLead, savePlan, updateProject]);
+  }, [selectedProjectId, planId, totalRevenue, designMonths, constructionMonths, offPlan, commissionPct, salesMode, speed, curveTemplate, manualUnits, escrowData, salesDistribution, marketingPrepLead, reraLead, timeline, cashInflowData, savePlan, updateProject]);
 
   const updateUnit = (id: string, field: "count" | "area" | "price", value: number) => {
     setUnitData((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
