@@ -27,29 +27,35 @@ export default function V2Portfolio() {
   // Initialize selected projects on first load
   useMemo(() => {
     if (projects.length > 0 && selected.length === 0) {
-      setSelected(projects.map(p => p.id));
+      setSelected(projects.map((p: any) => p.projectId));
     }
   }, [projects.length]);
 
   // Get selected projects
   const selectedProjects = useMemo(() => 
-    projects.filter(p => selected.includes(p.id)),
+    projects.filter((p: any) => selected.includes(p.projectId)),
     [projects, selected]
   );
 
-  // Build table data from portfolio data
+  // Build table data from portfolio data - use O1 scenario (offplan_escrow)
   const tableData = useMemo(() => {
     if (selectedProjects.length === 0) return { rows: [], maxMonths: 0 };
 
     // Get max months across all selected projects
     const maxMonths = Math.max(
-      ...selectedProjects.map(p => p.monthlyInvestor?.length || 0),
+      ...selectedProjects.map((p: any) => {
+        const scenario = p.scenarios?.offplan_escrow;
+        return scenario?.monthlyInvestor?.length || 0;
+      }),
       0
     );
 
+    if (maxMonths === 0) return { rows: [], maxMonths: 0 };
+
     // Build rows for each project
-    const rows = selectedProjects.map(project => {
-      const monthlyValues = project.monthlyInvestor || [];
+    const rows = selectedProjects.map((project: any) => {
+      const scenario = project.scenarios?.offplan_escrow;
+      const monthlyValues = scenario?.monthlyInvestor || [];
       
       // Calculate cumulative
       const cumulative: number[] = [];
@@ -60,10 +66,10 @@ export default function V2Portfolio() {
       }
 
       return {
-        id: project.id,
+        id: project.projectId,
         name: project.name,
         cumulative,
-        color: project.color || "#0d9488"
+        color: "#0d9488"
       };
     });
 
@@ -110,6 +116,14 @@ export default function V2Portfolio() {
     );
   }
 
+  if (!projects || projects.length === 0) {
+    return (
+      <div className="bg-gray-50 min-h-screen flex items-center justify-center">
+        <div className="text-gray-600">لا توجد مشاريع</div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-gray-50" dir="rtl">
       {/* Header */}
@@ -142,14 +156,14 @@ export default function V2Portfolio() {
         <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-3 mb-4">
           <h3 className="text-xs font-bold text-gray-700 mb-2">اختر المشاريع</h3>
           <div className="flex flex-wrap gap-2">
-            {projects.map((p, idx) => {
-              const isSelected = selected.includes(p.id);
+            {projects.map((p: any, idx: number) => {
+              const isSelected = selected.includes(p.projectId);
               const colors = ["#0d9488", "#6366f1", "#f59e0b", "#ec4899"];
               const color = colors[idx % colors.length];
               return (
                 <button
-                  key={p.id}
-                  onClick={() => toggleProject(p.id)}
+                  key={p.projectId}
+                  onClick={() => toggleProject(p.projectId)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 transition text-xs font-medium ${
                     isSelected
                       ? "border-current bg-opacity-10"
