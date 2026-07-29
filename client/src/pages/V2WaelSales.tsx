@@ -362,9 +362,9 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
 
   const handleSavePlan = useCallback(() => {
     if (!selectedProjectId) return;
-    const monthlyRevenue = new Array(timeline.projectEnd + 1).fill(0);
+    const actualCashInflow = new Array(timeline.projectEnd + 1).fill(0);
     cashInflowData.forEach(d => {
-      monthlyRevenue[d.month] = d.cashInflow;
+      actualCashInflow[d.month] = d.cashInflow;
     });
     savePlan.mutate({
       id: planId,
@@ -375,7 +375,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       offplanPct: offPlan,
       salesCommissionPct: String(commissionPct),
       salesAbsorptionJson: JSON.stringify({ mode: salesMode, speed, template: curveTemplate, manual: manualUnits, marketingPrepLead, reraLead, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppInstallmentPct, ppInstallmentEvery, ppHandoverPct }),
-      resultsJson: JSON.stringify({ escrowData, salesDistribution, monthlyRevenue }),
+      resultsJson: JSON.stringify({ escrowData, salesDistribution, actualCashInflow }),
     });
     // Also save timeline settings to projects table so all pages see updated values
     updateProject.mutate({

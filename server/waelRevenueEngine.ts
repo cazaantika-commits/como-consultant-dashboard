@@ -22,7 +22,15 @@ export function calculateWaelMonthlyRevenue(input: WaelRevenueInput): number[] {
   try {
     const results = JSON.parse(waelPlan.resultsJson);
     
-    // Use pre-computed monthly revenue from V2WaelSales if available
+    // Use pre-computed actual cash inflow from V2WaelSales if available
+    if (results.actualCashInflow && Array.isArray(results.actualCashInflow)) {
+      for (let m = 0; m < Math.min(totalMonths, results.actualCashInflow.length); m++) {
+        revenuePerMonth[m] = results.actualCashInflow[m] || 0;
+      }
+      return revenuePerMonth;
+    }
+    
+    // Fallback: try old monthlyRevenue field for backward compatibility
     if (results.monthlyRevenue && Array.isArray(results.monthlyRevenue)) {
       for (let m = 0; m < Math.min(totalMonths, results.monthlyRevenue.length); m++) {
         revenuePerMonth[m] = results.monthlyRevenue[m] || 0;
