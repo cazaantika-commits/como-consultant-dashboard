@@ -57,6 +57,7 @@ export const waelSalesPlanRouter = router({
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("DB not available");
+      if (!ctx.user) throw new Error("Unauthorized");
 
       const data: any = {
         projectId: input.projectId,
@@ -86,8 +87,10 @@ export const waelSalesPlanRouter = router({
         await db.update(waelSalesPlans).set(data).where(eq(waelSalesPlans.id, input.id));
         return { id: input.id, action: "updated" as const };
       } else {
-        const [result] = await db.insert(waelSalesPlans).values(data);
-        return { id: result.insertId, action: "created" as const };
+        const result = await db.insert(waelSalesPlans).values(data);
+        const insertId = result[0]?.insertId || 0;
+        if (!insertId) throw new Error("Failed to create sales plan");
+        return { id: insertId, action: "created" as const };
       }
     }),
 
