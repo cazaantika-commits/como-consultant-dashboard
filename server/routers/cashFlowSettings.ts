@@ -19,8 +19,9 @@ import {
   marketOverview,
   competitionPricing,
   users,
+  waelSalesPlans,
 } from "../../drizzle/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { ENV } from "../_core/env";
 import {
   calculateProjectCosts,
@@ -30,6 +31,7 @@ import {
   type FinancingScenario,
 } from "../investorCashFlow";
 import { computeFullFinancials, projectToInputs, calculateTimeline, monthToDate } from "../financialEngine";
+import { calculateWaelMonthlyRevenue } from "../waelRevenueEngine";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -2055,8 +2057,10 @@ export const cashFlowSettingsRouter = router({
 
       const moRows = await db.select().from(marketOverview).where(eq(marketOverview.projectId, input.projectId));
       const cpRows = await db.select().from(competitionPricing).where(eq(competitionPricing.projectId, input.projectId));
+      const waelPlansRows = await db.select().from(waelSalesPlans).where(eq(waelSalesPlans.projectId, input.projectId)).orderBy(desc(waelSalesPlans.updatedAt));
       const mo = moRows[0] || null;
       const cp = cpRows[0] || null;
+      const waelPlan = waelPlansRows[0] || null;
 
       const costs = calculateProjectCosts(project, mo, cp);
       if (!costs) throw new Error("Cannot calculate project costs");
@@ -2202,53 +2206,50 @@ export const cashFlowSettingsRouter = router({
       const grandTotal = totalPerMonth.reduce((s, v) => s + v, 0);
 
       // ─── Revenue Inflow Calculation ───────────────────────────────────────
-      // Revenue enters the escrow account based on:
-      // 1. Absorption schedule: when units are sold (linear over offplan+construction)
-      // 2. Payment plan: how buyers pay (booking%, construction installments%, handover%)
+      // Try to use Wael sales plan data if available, otherwise fall back to defaults
       const totalRevenue = costs.totalRevenue || 0;
       const isOffplanScenario = scenario === "offplan_escrow" || scenario === "offplan_construction";
 
-      // Payment plan percentages from competition_pricing
-      const bookingPct = cp?.paymentBookingPct ? parseFloat(String(cp.paymentBookingPct)) / 100 : 0.10;
-      const constructionPct = cp?.paymentConstructionPct ? parseFloat(String(cp.paymentConstructionPct)) / 100 : 0.60;
-      const handoverPct = cp?.paymentHandoverPct ? parseFloat(String(cp.paymentHandoverPct)) / 100 : 0.30;
+      // Use Wael revenue engine if sales plan exists
+      let revenuePerMonth = new Array(totalMonths).fill(0);
+      if (waelPlan && isOffplanScenario) {
+        revenuePerMonth = calculateWaelMonthlyRevenue({
+          waelPlan,
+          totalRevenue,
+          totalMonths,
+          phases,
+        });
+      }
 
-      // Phase boundaries (0-indexed months)
-      const offplanPhase = phases.find(p => p.type === "offplan");
-      const constructionPhase = phases.find(p => p.type === "construction");
-      const handoverPhase = phases.find(p => p.type === "handover");
+      // Fallback: if no Wael data or all zeros, use default linear absorption
+      if (revenuePerMonth.every(v => v === 0) && isOffplanScenario && totalRevenue > 0) {
+        const bookingPct = cp?.paymentBookingPct ? parseFloat(String(cp.paymentBookingPct)) / 100 : 0.10;
+        const constructionPct = cp?.paymentConstructionPct ? parseFloat(String(cp.paymentConstructionPct)) / 100 : 0.60;
+        const handoverPct = cp?.paymentHandoverPct ? parseFloat(String(cp.paymentHandoverPct)) / 100 : 0.30;
 
-      // Offplan = last 2 months of design (marketing/prep only, no actual sales)
-      // Sales (revenue) start from first month of construction
-      const salesStartMonth = constructionPhase ? constructionPhase.startMonth : 0;
-      const salesEndMonth = constructionPhase
-        ? constructionPhase.startMonth + Math.floor(constructionPhase.duration * 0.8) - 1
-        : totalMonths - 1;
-      const salesMonths = Math.max(1, salesEndMonth - salesStartMonth + 1);
+        const constructionPhase = phases.find(p => p.type === "construction");
+        const handoverPhase = phases.find(p => p.type === "handover");
 
-      // Construction installment period: from sale month to end of construction
-      const constructionEndMonth = constructionPhase
-        ? constructionPhase.startMonth + constructionPhase.duration - 1
-        : totalMonths - 3;
+        const salesStartMonth = constructionPhase ? constructionPhase.startMonth : 0;
+        const salesEndMonth = constructionPhase
+          ? constructionPhase.startMonth + Math.floor(constructionPhase.duration * 0.8) - 1
+          : totalMonths - 1;
+        const salesMonths = Math.max(1, salesEndMonth - salesStartMonth + 1);
 
-      // Handover month
-      const handoverStartMonth = handoverPhase ? handoverPhase.startMonth : totalMonths - 2;
+        const constructionEndMonth = constructionPhase
+          ? constructionPhase.startMonth + constructionPhase.duration - 1
+          : totalMonths - 3;
 
-      // Revenue per month array
-      const revenuePerMonth = new Array(totalMonths).fill(0);
+        const handoverStartMonth = handoverPhase ? handoverPhase.startMonth : totalMonths - 2;
 
-      if (isOffplanScenario && totalRevenue > 0) {
-        // Revenue per unit sold each month (linear absorption)
         const revenuePerSaleMonth = totalRevenue / salesMonths;
 
         for (let saleMonth = salesStartMonth; saleMonth <= salesEndMonth && saleMonth < totalMonths; saleMonth++) {
           const unitRevenue = revenuePerSaleMonth;
 
-          // 1. Booking payment: received at sale month
           const bookingAmount = unitRevenue * bookingPct;
           revenuePerMonth[saleMonth] += bookingAmount;
 
-          // 2. Construction installments: spread equally from sale month+1 to construction end
           const installmentStart = saleMonth + 1;
           const installmentEnd = Math.min(constructionEndMonth, totalMonths - 1);
           const installmentMonths = Math.max(1, installmentEnd - installmentStart + 1);
@@ -2258,7 +2259,6 @@ export const cashFlowSettingsRouter = router({
             revenuePerMonth[m] += monthlyInstallment;
           }
 
-          // 3. Handover payment: received at handover start
           const handoverAmount = unitRevenue * handoverPct;
           const hMonth = Math.min(handoverStartMonth, totalMonths - 1);
           revenuePerMonth[hMonth] += handoverAmount;
