@@ -16,12 +16,13 @@ function getMonthName(monthIndex: number): string {
 export default function V2Portfolio() {
   const [, navigate] = useLocation();
   
-  // Fetch all projects
-  const projectsQuery = trpc.projects.list.useQuery();
-  const projects = projectsQuery.data || [];
+  // Fetch portfolio data with all scenarios
+  const portfolioQuery = trpc.cashFlowSettings.getPortfolioAllScenarios.useQuery(undefined, {
+    staleTime: 60000
+  });
   
-  // Fetch investor cash flow data for each project
-  const [selected, setSelected] = useState<string[]>([]);
+  const projects = useMemo(() => portfolioQuery.data || [], [portfolioQuery.data]);
+  const [selected, setSelected] = useState<number[]>([]);
   
   // Initialize selected projects on first load
   useMemo(() => {
@@ -30,77 +31,59 @@ export default function V2Portfolio() {
     }
   }, [projects.length]);
 
-  // Fetch cash flow data for each project
-  const cashFlowQueries = projects.map(project =>
-    trpc.projects.getInvestorCashFlow.useQuery(
-      { projectId: project.id },
-      { enabled: selected.includes(project.id) }
-    )
+  // Get selected projects
+  const selectedProjects = useMemo(() => 
+    projects.filter(p => selected.includes(p.id)),
+    [projects, selected]
   );
 
-  // Build project data with cumulative values
-  const selectedProjects = projects.filter(p => selected.includes(p.id));
-  
-  const projectDataWithCumulative = useMemo(() => {
-    return selectedProjects.map((project, idx) => {
-      const cashFlowData = cashFlowQueries[projects.findIndex(p => p.id === project.id)]?.data;
-      
-      if (!cashFlowData || !cashFlowData.rows) {
-        return { ...project, cumulative: [] };
-      }
+  // Build table data from portfolio data
+  const tableData = useMemo(() => {
+    if (selectedProjects.length === 0) return { rows: [], maxMonths: 0 };
 
-      // Extract monthly values from cash flow rows
-      // Sum all rows for each month to get total monthly cash flow
-      const monthlyValues: number[] = [];
-      const totalMonths = project.designDuration + project.constructionDuration;
-      
-      for (let month = 0; month < totalMonths; month++) {
-        let monthTotal = 0;
-        cashFlowData.rows.forEach(row => {
-          if (row.designMonths && row.designMonths[month] !== undefined) {
-            monthTotal += row.designMonths[month];
-          }
-          if (row.constructionMonths && row.constructionMonths[month] !== undefined) {
-            monthTotal += row.constructionMonths[month];
-          }
-          if (row.postConstructionMonths && row.postConstructionMonths[month] !== undefined) {
-            monthTotal += row.postConstructionMonths[month];
-          }
-        });
-        monthlyValues.push(monthTotal);
-      }
+    // Get max months across all selected projects
+    const maxMonths = Math.max(
+      ...selectedProjects.map(p => p.monthlyInvestor?.length || 0),
+      0
+    );
 
+    // Build rows for each project
+    const rows = selectedProjects.map(project => {
+      const monthlyValues = project.monthlyInvestor || [];
+      
       // Calculate cumulative
       const cumulative: number[] = [];
       let cum = 0;
-      monthlyValues.forEach(val => {
-        cum += val;
+      for (let i = 0; i < maxMonths; i++) {
+        cum += monthlyValues[i] || 0;
         cumulative.push(cum);
-      });
+      }
 
-      return { ...project, cumulative };
+      return {
+        id: project.id,
+        name: project.name,
+        cumulative,
+        color: project.color || "#0d9488"
+      };
     });
-  }, [selectedProjects, cashFlowQueries]);
 
-  // Find max months
-  const maxMonths = Math.max(
-    ...selectedProjects.map(p => p.designDuration + p.constructionDuration),
-    0
-  );
+    return { rows, maxMonths };
+  }, [selectedProjects]);
 
-  // Pad shorter projects
-  const paddedData = projectDataWithCumulative.map(p => {
-    const padded = [...p.cumulative];
-    while (padded.length < maxMonths) {
-      padded.push(padded[padded.length - 1] || 0);
+  // Calculate combined totals
+  const combined = useMemo(() => {
+    if (tableData.maxMonths === 0) return [];
+    
+    const totals: number[] = [];
+    for (let month = 0; month < tableData.maxMonths; month++) {
+      let monthTotal = 0;
+      tableData.rows.forEach(row => {
+        monthTotal += row.cumulative[month] || 0;
+      });
+      totals.push(monthTotal);
     }
-    return { ...p, cumulative: padded };
-  });
-
-  // Combined cumulative
-  const combined = Array.from({ length: maxMonths }, (_, m) =>
-    paddedData.reduce((sum, p) => sum + (p.cumulative[m] || 0), 0)
-  );
+    return totals;
+  }, [tableData]);
 
   const peakNegative = Math.min(...combined, 0);
   const finalValue = combined[combined.length - 1] || 0;
@@ -111,13 +94,13 @@ export default function V2Portfolio() {
     return n.toFixed(0);
   };
 
-  const toggleProject = (id: string) => {
+  const toggleProject = (id: number) => {
     setSelected((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   };
 
-  const isLoading = projectsQuery.isLoading || cashFlowQueries.some(q => q.isLoading);
+  const isLoading = portfolioQuery.isLoading;
 
   if (isLoading) {
     return (
@@ -208,13 +191,13 @@ export default function V2Portfolio() {
         {/* Main Table */}
         <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-[11px]" style={{ minWidth: maxMonths * 65 + 180 }}>
+            <table className="w-full text-[11px]" style={{ minWidth: tableData.maxMonths * 65 + 180 }}>
               <thead>
                 <tr className="bg-gray-50">
                   <th className="sticky right-0 z-10 bg-gray-50 px-3 py-1.5 text-right font-bold text-gray-700 border-b border-l border-gray-200 min-w-[160px] text-xs">
                     المشروع
                   </th>
-                  {Array.from({ length: maxMonths }, (_, i) => (
+                  {Array.from({ length: tableData.maxMonths }, (_, i) => (
                     <th key={i} className="px-2 py-1.5 text-center border-b border-gray-200 font-medium text-gray-600 whitespace-nowrap">
                       {getMonthName(i)}
                     </th>
@@ -223,7 +206,7 @@ export default function V2Portfolio() {
               </thead>
               <tbody>
                 {/* Each project's cumulative row */}
-                {paddedData.map((p, idx) => {
+                {tableData.rows.map((p, idx) => {
                   const colors = ["#0d9488", "#6366f1", "#f59e0b", "#ec4899"];
                   const color = colors[idx % colors.length];
                   return (
