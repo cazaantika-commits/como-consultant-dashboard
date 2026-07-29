@@ -88,9 +88,10 @@ export const waelSalesPlanRouter = router({
         return { id: input.id, action: "updated" as const };
       } else {
         const result = await db.insert(waelSalesPlans).values(data);
-        const insertId = result[0]?.insertId || 0;
-        if (!insertId) throw new Error("Failed to create sales plan");
-        return { id: insertId, action: "created" as const };
+        // Drizzle returns the inserted row(s), get the ID from the data we just inserted
+        const newPlan = await db.select().from(waelSalesPlans).where(eq(waelSalesPlans.userId, ctx.user.id)).orderBy(desc(waelSalesPlans.id)).limit(1);
+        if (!newPlan || newPlan.length === 0) throw new Error("Failed to create sales plan");
+        return { id: newPlan[0].id, action: "created" as const };
       }
     }),
 
