@@ -71,16 +71,19 @@ export default function V2EscrowCashFlow() {
       } catch {}
     }
 
-    // If resultsJson exists, use escrowData and salesDistribution from it
+    // If resultsJson exists, use escrowData, salesDistribution, and actualCashInflow from it
     if (plan.resultsJson) {
       try {
         const parsed = JSON.parse(plan.resultsJson);
         if (parsed.escrowData && parsed.salesDistribution) {
+          // Use actualCashInflow if available, otherwise fall back to escrowData
+          const actualCashInflow = parsed.actualCashInflow || [];
           return {
             escrowData: parsed.escrowData,
             salesDistribution: parsed.salesDistribution,
             marketingMonthlyAmounts,
             ppDownPct,
+            actualCashInflow, // Pass the actual cash inflow from sales plan
           };
         }
       } catch {}
