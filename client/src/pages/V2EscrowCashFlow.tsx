@@ -165,27 +165,25 @@ export default function V2EscrowCashFlow() {
     return { label: "إيداع المستثمر (20%)", values };
   }, [rows, totalMonths]);
 
-  // Sales income from actualCashInflow (monthly buyer payments flowing into escrow)
-  // Use actualCashInflow from saved sales plan to ensure accuracy
-  const effectiveSalesResult = salesResult; // Use saved plan data directly, not fallback
+  // Sales income from escrowData (monthly buyer payments flowing into escrow)
+  // Use the engine's usedSalesResult which includes the default generated data when no saved plan exists
+  const effectiveSalesResult = data.usedSalesResult || salesResult;
   const salesIncomeRow = useMemo(() => {
     const values = new Array(totalMonths).fill(0);
-    // Use actualCashInflow which contains the real monthly cash flow from sales plan
-    if (effectiveSalesResult && effectiveSalesResult.actualCashInflow && effectiveSalesResult.actualCashInflow.length > 0) {
-      for (let i = 0; i < effectiveSalesResult.actualCashInflow.length; i++) {
-        const amount = effectiveSalesResult.actualCashInflow[i] || 0;
-        if (i < totalMonths && amount > 0) {
-          values[i] = amount;
+    if (effectiveSalesResult && effectiveSalesResult.escrowData.length > 0) {
+      for (const entry of effectiveSalesResult.escrowData) {
+        // entry.month is 1-indexed absolute month from project start (from V2WaelSales: i + timeline.salesStart)
+        // Flat array is 0-indexed, so subtract 1
+        const idx = entry.month - 1;
+        if (idx >= 0 && idx < totalMonths) {
+          values[idx] += entry.income;
         }
       }
     }
     return { label: "مبيعات أوف بلان (أقساط المشترين)", values };
   }, [totalMonths, effectiveSalesResult]);
 
-  // Only include salesIncomeRow if we have actual data from saved plan
-  const inflowRows = effectiveSalesResult && effectiveSalesResult.actualCashInflow && effectiveSalesResult.actualCashInflow.length > 0
-    ? [depositRow, salesIncomeRow]
-    : [depositRow];
+  const inflowRows = [depositRow, salesIncomeRow];
   const inflowTotals = Array.from({ length: totalMonths }, (_, i) =>
     inflowRows.reduce((s, r) => s + r.values[i], 0)
   );
