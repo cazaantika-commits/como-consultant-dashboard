@@ -134,9 +134,20 @@ export default function V2EscrowCashFlow() {
   ];
 
   // ─── Escrow outflow totals per month ───────────────────────────────────
-  const outflowTotals = Array.from({ length: totalMonths }, (_, i) =>
-    escrowOutflows.reduce((s, r) => s + getRowValues(r)[i], 0)
-  );
+  // Include both regular outflows AND liquidation payments
+  const outflowTotals = Array.from({ length: totalMonths }, (_, i) => {
+    // Regular escrow outflows (contractor payments, fees, etc.)
+    let outflow = escrowOutflows.reduce((s, r) => s + getRowValues(r)[i], 0);
+    
+    // Add liquidation payments (these are transfers OUT of escrow to investor)
+    const liquidationRows = rows.filter((r) => r.isRevenue && r.label.includes("تصفية حساب الضمان"));
+    for (const row of liquidationRows) {
+      const rowValues = getRowValues(row);
+      outflow += rowValues[i] || 0;
+    }
+    
+    return outflow;
+  });
 
   // ─── Escrow inflows: deposit + sales income ────────────────────────────
   // Use the engine's isTransfer row for deposit timing (consistent with investor cash flow)
@@ -186,9 +197,8 @@ export default function V2EscrowCashFlow() {
   const totalInflow = inflowTotals.reduce((s, v) => s + v, 0);
   const finalBalance = cumulative[cumulative.length - 1] || 0;
 
-  // ─── Liquidation rows (escrow liquidation items transferred to investor post-construction) ───
-  // Exclude "إيرادات مباشرة (20%)" - that goes directly to investor, not through escrow
-  const liquidationRows = rows.filter((r) => r.isRevenue && !r.label.includes("إيرادات مباشرة"));
+  // Note: liquidationRows are now included in outflowTotals calculation above
+  // This ensures escrow balance becomes zero after liquidation payments
 
   // ─── Month headers ─────────────────────────────────────────────────────
   const months: { label: string; date: string; phase: "design" | "construction" | "post" }[] = [];
