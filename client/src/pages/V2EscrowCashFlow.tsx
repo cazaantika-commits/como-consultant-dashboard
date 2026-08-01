@@ -133,6 +133,9 @@ export default function V2EscrowCashFlow() {
     ...row.postConstructionMonths,
   ];
 
+  // ─── Get liquidation rows (escrow liquidation items transferred to investor post-construction) ───
+  const liquidationRows = rows.filter((r) => r.isRevenue && r.label.includes("تصفية حساب الضمان"));
+
   // ─── Escrow outflow totals per month ───────────────────────────────────
   // Include both regular outflows AND liquidation payments
   const outflowTotals = Array.from({ length: totalMonths }, (_, i) => {
@@ -140,7 +143,6 @@ export default function V2EscrowCashFlow() {
     let outflow = escrowOutflows.reduce((s, r) => s + getRowValues(r)[i], 0);
     
     // Add liquidation payments (these are transfers OUT of escrow to investor)
-    const liquidationRows = rows.filter((r) => r.isRevenue && r.label.includes("تصفية حساب الضمان"));
     for (const row of liquidationRows) {
       const rowValues = getRowValues(row);
       outflow += rowValues[i] || 0;
@@ -199,6 +201,7 @@ export default function V2EscrowCashFlow() {
 
   // Note: liquidationRows are now included in outflowTotals calculation above
   // This ensures escrow balance becomes zero after liquidation payments
+  // liquidationRows variable is defined above for use in outflowTotals
 
   // ─── Month headers ─────────────────────────────────────────────────────
   const months: { label: string; date: string; phase: "design" | "construction" | "post" }[] = [];
