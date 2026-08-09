@@ -88,9 +88,17 @@ export const waelSalesPlanRouter = router({
         return { id: input.id, action: "updated" as const };
       } else {
         const result = await db.insert(waelSalesPlans).values(data);
-        // Get the inserted ID from the result
-        const insertedId = (result as any)?.[0]?.insertId || (result as any)?.lastInsertRowid;
-        if (!insertedId) throw new Error("Failed to get inserted ID");
+        // MySQL/TiDB: result[0].insertId is the correct way
+        const insertedId = Number((result as any)[0]?.insertId);
+        if (!insertedId) {
+          // Fallback: query the latest record for this project
+          const [latest] = await db.select({ id: waelSalesPlans.id })
+            .from(waelSalesPlans)
+            .where(eq(waelSalesPlans.projectId, input.projectId))
+            .orderBy(desc(waelSalesPlans.id))
+            .limit(1);
+          return { id: latest?.id || 0, action: "created" as const };
+        }
         return { id: insertedId, action: "created" as const };
       }
     }),

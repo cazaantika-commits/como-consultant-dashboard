@@ -170,10 +170,17 @@ export default function V2EscrowCashFlow() {
   const effectiveSalesResult = data.usedSalesResult || salesResult;
   const salesIncomeRow = useMemo(() => {
     const values = new Array(totalMonths).fill(0);
-    if (effectiveSalesResult && effectiveSalesResult.escrowData.length > 0) {
+    // Priority 1: Use actualCashInflow from saved sales plan (single source of truth)
+    if (effectiveSalesResult && (effectiveSalesResult as any).actualCashInflow && (effectiveSalesResult as any).actualCashInflow.length > 0) {
+      const actualCashInflow = (effectiveSalesResult as any).actualCashInflow as number[];
+      for (let i = 0; i < actualCashInflow.length && i < totalMonths; i++) {
+        values[i] = actualCashInflow[i] || 0;
+      }
+    }
+    // Priority 2: Fall back to escrowData if actualCashInflow not available
+    else if (effectiveSalesResult && effectiveSalesResult.escrowData.length > 0) {
       for (const entry of effectiveSalesResult.escrowData) {
-        // entry.month is 1-indexed absolute month from project start (from V2WaelSales: i + timeline.salesStart)
-        // Flat array is 0-indexed, so subtract 1
+        // entry.month is 1-indexed absolute month from project start
         const idx = entry.month - 1;
         if (idx >= 0 && idx < totalMonths) {
           values[idx] += entry.income;
@@ -189,19 +196,58 @@ export default function V2EscrowCashFlow() {
   );
 
   // ─── Net flow and cumulative balance ───────────────────────────────────
-  const netFlow = outflowTotals.map((d, i) => inflowTotals[i] - d);
+  // Calculate net flow and cumulative balance with proper liquidation handling
+  // Liquidation payments should drain the escrow balance to zero:
+  // - Month 3 after completion: transfer all balance minus 5% retention to investor
+  // - Month 13 after completion: transfer remaining balance (5% retention minus contractor retention) to investor
+  const postStartIdx = designDuration + constructionDuration;
+  const liq1MonthIdx = postStartIdx + 2; // Month 3 after completion (0-indexed: +2)
+  const liq2MonthIdx = postStartIdx + 12; // Month 13 after completion (0-indexed: +12)
+
+  // First pass: calculate cumulative WITHOUT liquidation to find actual balance at liquidation months
+  const outflowsWithoutLiq = Array.from({ length: totalMonths }, (_, i) => {
+    return escrowOutflows.reduce((s, r) => s + getRowValues(r)[i], 0);
+  });
+  const netFlowNoLiq = outflowsWithoutLiq.map((d, i) => inflowTotals[i] - d);
+  const cumulativeNoLiq = netFlowNoLiq.reduce<number[]>((acc, v) => {
+    acc.push((acc[acc.length - 1] || 0) + v);
+    return acc;
+  }, []);
+
+  // Calculate actual liquidation amounts based on real escrow balance
+  const actualLiq1 = liq1MonthIdx < totalMonths && cumulativeNoLiq[liq1MonthIdx] > 0
+    ? cumulativeNoLiq[liq1MonthIdx]  // Transfer entire remaining balance at month 3
+    : 0;
+  
+  // After first liquidation, calculate what's left for month 13
+  // Recalculate cumulative after first liquidation
+  const cumulativeAfterLiq1 = [...cumulativeNoLiq];
+  if (actualLiq1 > 0 && liq1MonthIdx < totalMonths) {
+    for (let i = liq1MonthIdx; i < totalMonths; i++) {
+      cumulativeAfterLiq1[i] -= actualLiq1;
+    }
+  }
+  const actualLiq2 = liq2MonthIdx < totalMonths && cumulativeAfterLiq1[liq2MonthIdx] > 0
+    ? cumulativeAfterLiq1[liq2MonthIdx]  // Transfer remaining balance at month 13
+    : 0;
+
+  // Final outflow totals with corrected liquidation amounts
+  const finalOutflowTotals = Array.from({ length: totalMonths }, (_, i) => {
+    let outflow = escrowOutflows.reduce((s, r) => s + getRowValues(r)[i], 0);
+    if (i === liq1MonthIdx) outflow += actualLiq1;
+    if (i === liq2MonthIdx) outflow += actualLiq2;
+    return outflow;
+  });
+
+  const netFlow = finalOutflowTotals.map((d, i) => inflowTotals[i] - d);
   const cumulative = netFlow.reduce<number[]>((acc, v) => {
     acc.push((acc[acc.length - 1] || 0) + v);
     return acc;
   }, []);
 
-  const totalOutflow = outflowTotals.reduce((s, v) => s + v, 0);
+  const totalOutflow = finalOutflowTotals.reduce((s, v) => s + v, 0);
   const totalInflow = inflowTotals.reduce((s, v) => s + v, 0);
   const finalBalance = cumulative[cumulative.length - 1] || 0;
-
-  // Note: liquidationRows are now included in outflowTotals calculation above
-  // This ensures escrow balance becomes zero after liquidation payments
-  // liquidationRows variable is defined above for use in outflowTotals
 
   // ─── Month headers ─────────────────────────────────────────────────────
   const months: { label: string; date: string; phase: "design" | "construction" | "post" }[] = [];

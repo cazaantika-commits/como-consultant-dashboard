@@ -9,13 +9,15 @@
   "env_vars": {
     "DATABASE_URL": "mysql://4E8R6wFgxnBhGVF.1a403e654cd7:39n6YipyPL3QrCcDk81O@gateway02.us-east-1.prod.aws.tidbcloud.com:4000/Q366eAYG4Q7iaM8VuAmmFX?ssl={\"rejectUnauthorized\":true}"
   },
-  "experiments": null,
+  "experiments": [
+    "no_db_push"
+  ],
   "git_remote": {
     "repo_url": "s3://vida-prod-gitrepo/webdev-git/310519663200809965/Q366eAYG4Q7iaM8VuAmmFX",
-    "access_key_id": "ASIAZV3A2ECZBHKP2V4D",
-    "secret_access_key": "y4c0H+JDeKxoA+4RoM1jsdLXb9VYdXU6JpRX8TtS",
-    "session_token": "IQoJb3JpZ2luX2VjEN3//////////wEaCXVzLWVhc3QtMSJGMEQCIClHVcosmqzMa3K8maO7KR3t2tGHTmDFzGvXFMpQNaXRAiBSESUIJi0ElUg+jxqM12nEYyCbP8S2nmEBqL3m+Gk8rCr/Awim//////////8BEAQaDDY2NTM4NjA5ODg2NiIMD6fjApfbL8eeC2r1KtMD7qXnt6NvpcYXo3hgVXmkGjwQELxKoQ15YHVvdPYIVG4AiFUBRhHWFIVMqWaW/ZZp4BMsuAfOCyR//5BJ24+TAxVhrb2kOcisUlXjr2F6tKOzZGE8fHshpV6P14JBGRq9hQKaD6DZwmj/TV8NZWOrcNeznuqKGHrdfs6a4jWWU64Z/Lq4M5Lu9Mo96tGvxeh4NiAx555q8L8ZP7P4z1LnizCy6WjgXzuDv6mmgp9SNLsWJn7C+yUz/iOdfdW4AdNcd0Omwsqm37EK2oO8V4WA3uNA53DwndAAYP4rmJ59q1rcJOmtGAUZWgwLcypLJBsiMf/omQyj/Ky6DMG3IJ9aSV2kbIGYw+v2gmqNKPdnNBAMp83ytP/9EOw4dF2QJjkCk3p60Me9ydArPUu7WBlGK4SRQbZoDtIGbfCAJuZfE8jl8kDQaF8Cq1kstvCF9cmHSTIH/PtA/B7nxS5+WZP2aUDB8E28OvK/P9+KnY1PvW/p3I6UqmGM4FWcpCkQFEFab4OXiZ65L4grutA/SieQmnRtrnDc7vrmi+gjKJWrJepeprrvUXEFtMsHYIWxflbjIMiBXr9G47NzQFXPIbZNnLbyiE2UA6I8P134VtcPxtEaZ3Aww9mw0wY6ngFn7KfVedPet75S8SPQ8uKSpFn4p4XotZztv7tDwZShLJ2ESte4XQLZ/M+jJdj0bgp+TAtgtfLv2Tz6/4C8O4IDRkmbQMN/1ECPJXOHYT1ftQrHiNAIlYt8xUOp+AkGeULiFYnQq2IEL5HDuEuy4JgSXFSzWo3ZBiS4mEYsu6R783vjOYMOXIEKG59ngpmOFEORvW08ews84DBMFPujSg==",
-    "expiration": "2026-07-31T17:04:03.000Z",
+    "access_key_id": "ASIAZV3A2ECZM6CAMBKD",
+    "secret_access_key": "Xm2J24oNonkoPqQnjmJdM8qPy9VlwxvKgaxno6Ai",
+    "session_token": "IQoJb3JpZ2luX2VjEMT//////////wEaCXVzLWVhc3QtMSJHMEUCIQCk9RFyaCQWRGIwgQdLajJdjt4ClePkAMDHVApzAfxNrQIgT1PJd9Qb/BJuJaIejeIg0O2UjHg4uSYWTCUcMdoJ0Poq/wMIjP//////////ARAEGgw2NjUzODYwOTg4NjYiDOun9LgENGGnOdWSmyrTA+9ywfCJp9asxhtWL10vFWnolYfzyFrLZD9kkut5WCsnZhc8BGAeI4reEvEF66g7c9dnOvJD7r6EWXfwo6GXrfmRwVkJoOS3UeqfPxTpVvpWTQ2Igsj30/ynL32/zF4EC2tpeYglso0PXc6FVD1Hyxi12n+h7vKr93Ae3WXLzTPa3NB7FBtyXnRlgSDnHdPob5qKC4kbT+dmekRZjtQp9Cy7QKlGwb6OxbvD7fV664zkQjdtt64T0qI9mZJNMWdm3a0ZFCvCnAvNmDndWKbjTDKtrnm5qezapcdnhFoLfEjCULvgm8YvygTIlRX/pYCVpo+03/mwcMVycSaW2gxZok39KZMuirjHMOt3z4CEMOjQ/Kudx7NBYXxjfTttK6BNpfWvJIscBqzPSq7evHQwx/WpEIyQsB5DlVJt1OwQtqAHgEDjXL1lX+daOAvbNHc2TkeMNV4RXINfr0KX6GUpRGozln/b5qMJsSP2VOROsO8rHjasRt7A9xfOdPrq1GZdvgXl/+bISDHDEPNXevUHzL/XE2EZltoaE9PJ5MRDjtVTpXZeN2+OGWUkq6o80MKLzoEzgNT5lboM2/99Jx4OSw+1eqSgmRg3WSTmRrN5XLG2H6LoMIii49MGOp0BMCDalm1258YCJvI6Bqn0XK/ljhdsUVDRDpylDrfILukzY3ByYZbiM3OMpl/KKWda+bzjp7/SEORYfAuYKVuA43aTe82EGdVO11dlnpRo78pQGGewPPBrNB1rEcFeotEB4OwjFkwh5BBfvaKMdDLB5UB5RQoaejwAsQo4mHbdim8US6tssoufa1Y145NKWoZIRshI+5Atu2vzZb/OKA==",
+    "expiration": "2026-08-10T07:12:08.000Z",
     "backend": "GIT_BACKEND_S3"
   },
   "name": "como-consultant-dashboard",
