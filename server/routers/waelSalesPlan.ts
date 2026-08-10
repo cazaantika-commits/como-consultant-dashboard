@@ -48,6 +48,7 @@ export const waelSalesPlanRouter = router({
       offplanPct: z.number().optional(),
       marketingPct: z.union([z.string(), z.number()]).transform(v => String(v)).optional(),
       commissionPct: z.union([z.string(), z.number()]).transform(v => String(v)).optional(),
+      salesCommissionPct: z.union([z.string(), z.number()]).transform(v => String(v)).optional(),
       salesAbsorptionJson: z.string().optional(),
       marketingDistJson: z.string().optional(),
       channelsJson: z.string().optional(),
@@ -62,21 +63,22 @@ export const waelSalesPlanRouter = router({
       const data: any = {
         projectId: input.projectId,
         userId: ctx.user.id,
+        name: input.name || "السيناريو الافتراضي",
+        status: input.status || "draft",
+        t03: input.t03 ?? 3,
+        t04: input.t04 ?? 0,
+        t05: input.t05 ?? 5,
+        t06: input.t06 ?? 3,
+        designMonths: input.designMonths ?? 8,
+        constructionMonths: input.constructionMonths ?? 30,
+        postCompletionMonths: input.postCompletionMonths ?? 12,
+        offplanPct: input.offplanPct ?? 80,
       };
-      if (input.name !== undefined) data.name = input.name;
-      if (input.status !== undefined) data.status = input.status;
       if (input.t12Date !== undefined) data.t12Date = input.t12Date;
-      if (input.t03 !== undefined) data.t03 = input.t03;
-      if (input.t04 !== undefined) data.t04 = input.t04;
-      if (input.t05 !== undefined) data.t05 = input.t05;
-      if (input.t06 !== undefined) data.t06 = input.t06;
-      if (input.designMonths !== undefined) data.designMonths = input.designMonths;
-      if (input.constructionMonths !== undefined) data.constructionMonths = input.constructionMonths;
-      if (input.postCompletionMonths !== undefined) data.postCompletionMonths = input.postCompletionMonths;
       if (input.totalRevenue !== undefined) data.totalRevenue = input.totalRevenue;
-      if (input.offplanPct !== undefined) data.offplanPct = input.offplanPct;
       if (input.marketingPct !== undefined) data.marketingBudgetPct = input.marketingPct;
       if (input.commissionPct !== undefined) data.salesCommissionPct = input.commissionPct;
+      if (input.salesCommissionPct !== undefined) data.salesCommissionPct = input.salesCommissionPct;
       if (input.salesAbsorptionJson !== undefined) data.salesAbsorptionJson = input.salesAbsorptionJson;
       if (input.marketingDistJson !== undefined) data.marketingDistJson = input.marketingDistJson;
       if (input.channelsJson !== undefined) data.channelsJson = input.channelsJson;
