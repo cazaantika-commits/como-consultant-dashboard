@@ -1103,3 +1103,8 @@
 - [x] FIX V2InvestorCashFlow: Duplicate land section — excluded paid-only items (paid>0, unpaid=0) from debitRows
 - [x] FIX V2InvestorCashFlow: Marketing costs now use saved data from MarketingPage with correct month offset (marketingActualStart-1)
 - [x] FIX V2WaelSales: Percentage validation error preventing save — schema now accepts marketingPct and commissionPct from frontend
+- [x] Reproduce the Sales Plan save error in the published app and capture the exact server response
+- [x] Fix Sales Plan persistence so edited monthly distribution and payment-plan values are saved and survive a page reload
+- [x] Add a regression test covering creation and update of a Wael sales plan
+- [x] Verify month-by-month Sales Plan figures match Escrow Cash Flow after a real successful save
+- [x] Verify the Escrow Cash Flow closing balance reaches zero under the two-stage liquidation logic

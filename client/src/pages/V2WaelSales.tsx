@@ -302,14 +302,15 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   }, [escrowData]);
 
   // ─── Computed: Cash Inflow (Payment Plan × Sales) + Detailed Grid ────────
-  const { cashInflowData, perSaleGrid, activeSaleMonths } = useMemo(() => {
+  const { cashInflowData, perSaleGrid, activeSaleMonths, actualCashInflow } = useMemo(() => {
     const totalMonths = timeline.projectEnd;
+    const cashFlowHorizon = totalMonths + 13;
     const monthlySales: number[] = Array(totalMonths + 1).fill(0);
     salesDistribution.forEach((units, i) => {
       const m = timeline.salesStart + i;
       if (m <= totalMonths) monthlySales[m] = units * avgUnitPrice;
     });
-    const cashPerMonth: number[] = Array(totalMonths + 24).fill(0);
+    const cashPerMonth: number[] = Array(cashFlowHorizon + 1).fill(0);
     const grid: Record<number, number[]> = {};
     const saleMonthsList: number[] = [];
     for (let saleMonth = 1; saleMonth <= totalMonths; saleMonth++) {
@@ -344,7 +345,10 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       cumSales += monthlySales[m]; cumCash += cashPerMonth[m];
       data.push({ month: m, salesThisMonth: monthlySales[m], cashInflow: cashPerMonth[m], cumSales, cumCash });
     }
-    return { cashInflowData: data, perSaleGrid: grid, activeSaleMonths: saleMonthsList };
+    // Persisted convention: array index 0 represents project month 1. This is
+    // the same convention consumed by the Escrow Cash Flow page and engine.
+    const persistedCashInflow = Array.from({ length: cashFlowHorizon }, (_, i) => cashPerMonth[i + 1] || 0);
+    return { cashInflowData: data, perSaleGrid: grid, activeSaleMonths: saleMonthsList, actualCashInflow: persistedCashInflow };
   }, [salesDistribution, avgUnitPrice, timeline, constructionMonths, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppDuringTotal, ppInstallmentEvery, ppHandoverPct]);
 
   // ─── Save Handlers ────────────────────────────────────────────────────────
@@ -360,31 +364,36 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     setHasUnitChanges(false);
   }, [selectedProjectId, unitData, commissionPct, updateProject]);
 
-  const handleSavePlan = useCallback(() => {
+  const handleSavePlan = useCallback(async () => {
     if (!selectedProjectId) return;
-    const actualCashInflow = new Array(timeline.projectEnd + 1).fill(0);
-    cashInflowData.forEach(d => {
-      actualCashInflow[d.month] = d.cashInflow;
-    });
-    savePlan.mutate({
-      id: planId,
-      projectId: selectedProjectId,
-      totalRevenue,
-      designMonths,
-      constructionMonths,
-      offplanPct: offPlan,
-      salesCommissionPct: String(commissionPct),
-      salesAbsorptionJson: JSON.stringify({ mode: salesMode, speed, template: curveTemplate, manual: manualUnits, marketingPrepLead, reraLead, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppInstallmentPct, ppInstallmentEvery, ppHandoverPct }),
-      resultsJson: JSON.stringify({ escrowData, salesDistribution, actualCashInflow }),
-    });
-    // Also save timeline settings to projects table so all pages see updated values
-    updateProject.mutate({
-      id: selectedProjectId,
-      marketingPrepMonths: marketingPrepLead,
-      reraLeadMonths: reraLead,
-    });
-    setHasPlanChanges(false);
-  }, [selectedProjectId, planId, totalRevenue, designMonths, constructionMonths, offPlan, commissionPct, salesMode, speed, curveTemplate, manualUnits, escrowData, salesDistribution, marketingPrepLead, reraLead, timeline, cashInflowData, savePlan, updateProject]);
+    try {
+      const savedPlan = await savePlan.mutateAsync({
+        id: planId,
+        projectId: selectedProjectId,
+        totalRevenue,
+        designMonths,
+        constructionMonths,
+        offplanPct: offPlan,
+        salesCommissionPct: String(commissionPct),
+        salesAbsorptionJson: JSON.stringify({ mode: salesMode, speed, template: curveTemplate, manual: manualUnits, marketingPrepLead, reraLead, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppInstallmentPct, ppInstallmentEvery, ppHandoverPct }),
+        resultsJson: JSON.stringify({ escrowData, salesDistribution, actualCashInflow, actualCashInflowVersion: 2 }),
+      });
+
+      setPlanId(savedPlan.id);
+      setHasPlanChanges(false);
+      await plansQuery.refetch();
+
+      // Store shared timeline settings only after the Sales Plan itself succeeds.
+      await updateProject.mutateAsync({
+        id: selectedProjectId,
+        marketingPrepMonths: marketingPrepLead,
+        reraLeadMonths: reraLead,
+      });
+    } catch {
+      // The mutations display the exact failure message. Keep the page marked as changed.
+      setHasPlanChanges(true);
+    }
+  }, [selectedProjectId, planId, totalRevenue, designMonths, constructionMonths, offPlan, commissionPct, salesMode, speed, curveTemplate, manualUnits, escrowData, salesDistribution, marketingPrepLead, reraLead, actualCashInflow, savePlan, updateProject]);
 
   const updateUnit = (id: string, field: "count" | "area" | "price", value: number) => {
     setUnitData((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));

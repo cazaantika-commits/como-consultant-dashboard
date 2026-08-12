@@ -10,6 +10,7 @@ import {
   type CostRow,
   type SalesResult,
 } from "@/lib/investorCashFlowEngine";
+import { calculateEscrowSettlement } from "@/lib/escrowSettlement";
 
 // ═══════════════════════════════════════════
 // FORMAT HELPERS
@@ -77,7 +78,13 @@ export default function V2EscrowCashFlow() {
         const parsed = JSON.parse(plan.resultsJson);
         if (parsed.escrowData && parsed.salesDistribution) {
           // Use actualCashInflow if available, otherwise fall back to escrowData
-          const actualCashInflow = parsed.actualCashInflow || [];
+          const storedCashInflow = parsed.actualCashInflow || [];
+          // Earlier saved plans used index 1 for project month 1 and left index
+          // 0 empty. Normalize these legacy records at the boundary so all
+          // downstream calculations use index 0 = project month 1.
+          const actualCashInflow = parsed.actualCashInflowVersion === 2
+            ? storedCashInflow
+            : (storedCashInflow.length > 0 && storedCashInflow[0] === 0 ? storedCashInflow.slice(1) : storedCashInflow);
           return {
             escrowData: parsed.escrowData,
             salesDistribution: parsed.salesDistribution,
@@ -214,22 +221,12 @@ export default function V2EscrowCashFlow() {
     return acc;
   }, []);
 
-  // Calculate actual liquidation amounts based on real escrow balance
-  const actualLiq1 = liq1MonthIdx < totalMonths && cumulativeNoLiq[liq1MonthIdx] > 0
-    ? cumulativeNoLiq[liq1MonthIdx]  // Transfer entire remaining balance at month 3
-    : 0;
-  
-  // After first liquidation, calculate what's left for month 13
-  // Recalculate cumulative after first liquidation
-  const cumulativeAfterLiq1 = [...cumulativeNoLiq];
-  if (actualLiq1 > 0 && liq1MonthIdx < totalMonths) {
-    for (let i = liq1MonthIdx; i < totalMonths; i++) {
-      cumulativeAfterLiq1[i] -= actualLiq1;
-    }
-  }
-  const actualLiq2 = liq2MonthIdx < totalMonths && cumulativeAfterLiq1[liq2MonthIdx] > 0
-    ? cumulativeAfterLiq1[liq2MonthIdx]  // Transfer remaining balance at month 13
-    : 0;
+  const { firstLiquidation: actualLiq1, finalLiquidation: actualLiq2 } = calculateEscrowSettlement({
+    cumulativeWithoutLiquidation: cumulativeNoLiq,
+    firstLiquidationIndex: liq1MonthIdx,
+    finalLiquidationIndex: liq2MonthIdx,
+    actualSalesCashInflow: salesIncomeRow.values,
+  });
 
   // Final outflow totals with corrected liquidation amounts
   const finalOutflowTotals = Array.from({ length: totalMonths }, (_, i) => {
@@ -357,7 +354,7 @@ export default function V2EscrowCashFlow() {
               <td className="sticky right-0 z-10 bg-red-50 px-2 py-[3px] text-red-800 border-l border-red-200 w-[200px] min-w-[200px]">
                 إجمالي المصروفات
               </td>
-              {outflowTotals.map((v, i) => (
+              {finalOutflowTotals.map((v, i) => (
                 <td key={i} className="px-1 py-[3px] text-center tabular-nums text-red-700">
                   {v > 0 ? fmt(v) : "-"}
                 </td>
@@ -427,7 +424,9 @@ export default function V2EscrowCashFlow() {
                   </td>
                 </tr>
                 {liquidationRows.map((item, i) => {
-                  const values = getRowValues(item);
+                  const values = new Array(totalMonths).fill(0);
+                  if (item.label.includes("دفعة 1")) values[liq1MonthIdx] = actualLiq1;
+                  if (item.label.includes("دفعة 2")) values[liq2MonthIdx] = actualLiq2;
                   return (
                     <tr key={`liq-${i}`} className="border-b border-gray-50 hover:bg-purple-50/30">
                       <td className="sticky right-0 z-10 bg-white px-2 py-[3px] text-gray-800 font-medium border-l border-gray-100 w-[200px] min-w-[200px]">
