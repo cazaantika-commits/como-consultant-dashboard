@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getFallbackFinancialStudiesTab,
+  isFinancialStudiesGeneralInputVisible,
   isFinancialStudiesTabVisible,
 } from "../client/src/lib/financialStudiesNavigation";
 
@@ -21,5 +22,15 @@ describe("Financial Studies build-for-sale navigation", () => {
     expect(getFallbackFinancialStudiesTab("escrow", "build_for_sale")).toBe("general");
     expect(getFallbackFinancialStudiesTab("sales", "build_for_sale")).toBe("sales");
     expect(getFallbackFinancialStudiesTab("escrow", "offplan_escrow")).toBe("escrow");
+  });
+
+  it("removes only Off-Plan-specific General Inputs for build-for-sale projects", () => {
+    expect(isFinancialStudiesGeneralInputVisible("reraProjectRegFee", "build_for_sale")).toBe(false);
+    expect(isFinancialStudiesGeneralInputVisible("escrowAccountFee", "build_for_sale")).toBe(false);
+    expect(isFinancialStudiesGeneralInputVisible("bankFees", "build_for_sale")).toBe(false);
+    expect(isFinancialStudiesGeneralInputVisible("reraAuditReportFee", "build_for_sale")).toBe(false);
+    expect(isFinancialStudiesGeneralInputVisible("reraInspectionReportFee", "build_for_sale")).toBe(false);
+    expect(isFinancialStudiesGeneralInputVisible("developerNocFee", "build_for_sale")).toBe(true);
+    expect(isFinancialStudiesGeneralInputVisible("bankFees", "offplan_escrow")).toBe(true);
   });
 });

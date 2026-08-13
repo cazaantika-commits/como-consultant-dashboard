@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Save, Loader2, Pencil, X } from "lucide-react";
 import { dbProjectToInputs, dbProjectToRates, calculateProjectFormulas } from "@/lib/projectData";
 import { getProjectDesignTiming, getProjectReraQuarterlyFeeSettings } from "@/lib/projectTiming";
+import { isFinancialStudiesGeneralInputVisible } from "@/lib/financialStudiesNavigation";
 
 const ALL_FIELDS = [
   { key: "plotAreaSqft", label: "مساحة الأرض", unit: "قدم²", type: "number" },
@@ -42,14 +43,6 @@ const ALL_FIELDS = [
   { key: "reraAuditReportFee", label: "تقرير مدقق ريرا (محسوب تلقائياً)", unit: "درهم", type: "number", defaultValue: "24000", computed: true, hint: "= 3,500 × عدد الدفعات الربع سنوية (من الإعدادات)" },
   { key: "reraInspectionReportFee", label: "تقرير فحص ريرا (محسوب تلقائياً)", unit: "درهم", type: "number", defaultValue: "150000", computed: true, hint: "= 15,020 × عدد الدفعات الربع سنوية (من الإعدادات)" },
 ];
-
-const BUILD_FOR_SALE_HIDDEN_FIELDS = new Set([
-  "reraProjectRegFee",
-  "escrowAccountFee",
-  "bankFees",
-  "reraAuditReportFee",
-  "reraInspectionReportFee",
-]);
 
 function fmt(n: number): string {
   if (!n || isNaN(n)) return "0";
@@ -137,7 +130,7 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
 
   const isBuildForSale = formData.financingScenario === "build_for_sale";
   const visibleFields = isBuildForSale
-    ? ALL_FIELDS.filter((field) => !BUILD_FOR_SALE_HIDDEN_FIELDS.has(field.key))
+    ? ALL_FIELDS.filter((field) => isFinancialStudiesGeneralInputVisible(field.key, formData.financingScenario))
     : ALL_FIELDS;
   const columnSize = Math.ceil(visibleFields.length / 3);
   const col1 = visibleFields.slice(0, columnSize);
