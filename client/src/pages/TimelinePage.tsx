@@ -7,6 +7,7 @@ import { ProjectSelector } from "@/components/ProjectSelector";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { DEFAULT_DESIGN_PAYMENT_STAGES, getProjectDesignTiming } from "@/lib/projectTiming";
 import {
   Calendar, Palette, Rocket, FileCheck, Megaphone, Target, HardHat,
   Save, Loader2, Building2,
@@ -22,16 +23,6 @@ const PROJECT_PHASES = [
   { id: "marketing", name: "التسويق", color: "#ec4899", icon: Megaphone },
   { id: "sales", name: "بدء البيع", color: "#10b981", icon: Target },
   { id: "construction", name: "الإنشاء", color: "#64748b", icon: HardHat },
-];
-
-const DEFAULT_DESIGN_PAYMENTS = [
-  { id: "mobilization", label: "التعبئة وجمع البيانات", labelEn: "Mobilization & Data Collection", pct: 5, durationWeeks: 2 },
-  { id: "concept", label: "التصميم المبدئي", labelEn: "Concept Design", pct: 15, durationWeeks: 4 },
-  { id: "schematic", label: "التصميم التخطيطي", labelEn: "Schematic Design", pct: 20, durationWeeks: 4 },
-  { id: "dd", label: "تطوير التصميم التفصيلي", labelEn: "Detailed Design Development", pct: 25, durationWeeks: 6 },
-  { id: "authorities", label: "اعتماد الجهات", labelEn: "Authorities Approval", pct: 10, durationWeeks: 4 },
-  { id: "tender", label: "تأهيل المقاولين ووثائق المناقصة", labelEn: "Prequalification & Tender Documents", pct: 15, durationWeeks: 4 },
-  { id: "ifc", label: "صادر للتنفيذ", labelEn: "Issued for Construction", pct: 10, durationWeeks: 2 },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -60,19 +51,17 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
 
   // ─── State ─────────────────────────────────────────────────────────────────
   const [planId, setPlanId] = useState<number | undefined>(undefined);
-  const [designMonths, setDesignMonths] = useState(8);
   const [constructionMonths, setConstructionMonths] = useState(30);
   const [marketingPrepLead, setMarketingPrepLead] = useState(2);
   const [reraLead, setReraLead] = useState(2);
   const [projectStartDate, setProjectStartDate] = useState("");
   const [hasChanges, setHasChanges] = useState(false);
-  const [designPayments, setDesignPayments] = useState(DEFAULT_DESIGN_PAYMENTS);
+  const [designPayments, setDesignPayments] = useState(DEFAULT_DESIGN_PAYMENT_STAGES);
 
   // ─── Load from DB ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (projectQuery.data) {
       const p = projectQuery.data as any;
-      if (p.preConMonths) setDesignMonths(Number(p.preConMonths));
       if (p.constructionMonths) setConstructionMonths(Number(p.constructionMonths));
       if (p.marketingPrepMonths) setMarketingPrepLead(Number(p.marketingPrepMonths));
       if (p.reraLeadMonths) setReraLead(Number(p.reraLeadMonths));
@@ -119,7 +108,7 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
   }, [designPayments]);
 
   const timeline = useMemo(() => {
-    const designEnd = designMonths;
+    const designEnd = totalDesignMonths;
     const materialsStart = schematicCompletionMonth + 1;
     const reraStart = schematicCompletionMonth + 2;
     const marketingStart = materialsStart + marketingPrepLead;
@@ -127,7 +116,7 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
     const constructionStart = designEnd + 1;
     const projectEnd = constructionStart + constructionMonths - 1;
     return { designEnd, materialsStart, reraStart, marketingStart, salesStart, constructionStart, projectEnd };
-  }, [designMonths, constructionMonths, marketingPrepLead, reraLead, schematicCompletionMonth]);
+  }, [totalDesignMonths, constructionMonths, marketingPrepLead, reraLead, schematicCompletionMonth]);
 
   // ─── Save ──────────────────────────────────────────────────────────────────
   const handleSave = useCallback(() => {
@@ -148,20 +137,18 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
     savePlan.mutate({
       id: planId,
       projectId: selectedProjectId,
-      designMonths,
       constructionMonths,
       salesAbsorptionJson: JSON.stringify(updatedAbsorption),
     });
     // Also save to projects table so all pages see the updated values
     updateProject.mutate({
       id: selectedProjectId,
-      preConMonths: designMonths,
       constructionMonths,
       marketingPrepMonths: marketingPrepLead,
       reraLeadMonths: reraLead,
     });
     setHasChanges(false);
-  }, [selectedProjectId, planId, designMonths, constructionMonths, marketingPrepLead, reraLead, plansQuery.data, savePlan, updateProject]);
+  }, [selectedProjectId, planId, constructionMonths, marketingPrepLead, reraLead, plansQuery.data, savePlan, updateProject]);
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // RENDER
@@ -210,7 +197,7 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1">
                       <span className="text-[10px] text-gray-500">تصاميم:</span>
-                      <span className="text-[10px] font-bold text-blue-700">{designMonths}</span>
+                      <span className="text-[10px] font-bold text-blue-700">{totalDesignMonths}</span>
                       <span className="text-[10px] text-gray-400">شهر</span>
                     </div>
                     <div className="flex items-center gap-1">
@@ -225,8 +212,8 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
                   <div className="w-32 flex-shrink-0" />
                   <div className="flex-1 flex">
                     {Array.from({ length: timeline.projectEnd }, (_, i) => {
-                      const isDesign = i < designMonths;
-                      const displayNum = isDesign ? i + 1 : i - designMonths + 1;
+                      const isDesign = i < totalDesignMonths;
+                      const displayNum = isDesign ? i + 1 : i - totalDesignMonths + 1;
                       const MN=["\u064a\u0646\u0627","\u0641\u0628\u0631","\u0645\u0627\u0631","\u0623\u0628\u0631","\u0645\u0627\u064a","\u064a\u0648\u0646","\u064a\u0648\u0644","\u0623\u063a\u0633","\u0633\u0628\u062a","\u0623\u0643\u062a","\u0646\u0648\u0641","\u062f\u064a\u0633"];
                       let ml=""; if(projectStartDate){const pts=projectStartDate.split("-").map(Number);if(pts[0]&&pts[1])ml=MN[(pts[1]-1+i)%12];}
                       return (

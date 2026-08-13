@@ -1,4 +1,6 @@
 
+import { getProjectDesignTiming } from "@/lib/projectTiming";
+
 // PROJECT DATA — SINGLE SOURCE OF TRUTH (مثل الإكسل)
 // ═══════════════════════════════════════════════════════════════════
 // البطاقة هي المصدر. كل الصفحات تقرأ من هنا.
@@ -137,6 +139,7 @@ export function dbProjectToInputs(dbProject: any): ProjectInputs {
   const plotArea = parseFloat(dbProject.plotAreaSqft || '0') || 0;
   const landPrice = parseFloat(dbProject.landPrice || '0') || 0;
   const constPricePerSqft = parseFloat(dbProject.estimatedConstructionPricePerSqft || '0') || 400;
+  const designTiming = getProjectDesignTiming(dbProject);
 
   // حساب سعر القدم أرض = سعر الأرض / GFA
   const landPricePerSqft = gfaTotal > 0 ? landPrice / gfaTotal : 0;
@@ -148,7 +151,7 @@ export function dbProjectToInputs(dbProject: any): ProjectInputs {
     constructionCostPerSqft: constPricePerSqft,
     landPricePerSqft: Math.round(landPricePerSqft),
     landPriceTotal: landPrice,
-    designDuration: dbProject.preConMonths || 6,
+    designDuration: designTiming.designMonths,
     constructionDuration: dbProject.constructionMonths || 18,
     startDate: dbProject.startDate || '2026-08',
     gfaResidential: gfaRes,

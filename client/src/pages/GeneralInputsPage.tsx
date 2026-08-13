@@ -7,6 +7,7 @@ import { ProjectSelector } from "@/components/ProjectSelector";
 import { Button } from "@/components/ui/button";
 import { Save, Loader2, Pencil, X } from "lucide-react";
 import { dbProjectToInputs, dbProjectToRates, calculateProjectFormulas } from "@/lib/projectData";
+import { getProjectDesignTiming } from "@/lib/projectTiming";
 
 const ALL_FIELDS = [
   { key: "plotAreaSqft", label: "مساحة الأرض", unit: "قدم²", type: "number" },
@@ -14,7 +15,6 @@ const ALL_FIELDS = [
   { key: "estimatedConstructionPricePerSqft", label: "تكلفة الإنشاء/قدم²", unit: "درهم/قدم²", type: "number", defaultValue: "400" },
   { key: "landPrice", label: "سعر الأرض", unit: "درهم", type: "number" },
   { key: "startDate", label: "تاريخ البدء", unit: "", type: "date" },
-  { key: "preConMonths", label: "مدة التصاميم", unit: "شهر", type: "number", defaultValue: "6" },
   { key: "constructionMonths", label: "مدة الإنشاء", unit: "شهر", type: "number", defaultValue: "18" },
   { key: "marketingPrepMonths", label: "مدة تحضير المواد التسويقية", unit: "شهر", type: "number", defaultValue: "2" },
   { key: "reraLeadMonths", label: "مدة ريرا", unit: "شهر", type: "number", defaultValue: "2" },
@@ -104,10 +104,12 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
   const computed = useMemo(() => {
     const mockDb: any = {};
     ALL_FIELDS.forEach(f => { mockDb[f.key] = formData[f.key] || f.defaultValue || ""; });
+    mockDb.constructionScheduleJson = (projectQuery.data as any)?.constructionScheduleJson;
     const inputs = dbProjectToInputs(mockDb);
     const rates = dbProjectToRates(mockDb);
     return calculateProjectFormulas(inputs, rates);
   }, [formData]);
+  const designTiming = useMemo(() => getProjectDesignTiming(projectQuery.data), [projectQuery.data]);
 
   if (!selectedProjectId) {
     return (<div className="p-4 text-center text-sm text-gray-400" dir="rtl"><ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} /><p className="mt-2">اختر مشروعاً</p></div>);
@@ -151,6 +153,7 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
       {/* Toolbar */}
       <div className="bg-white rounded-lg border border-gray-100 shadow-sm px-4 py-2 mb-3 flex items-center gap-3">
         <ProjectSelector selectedId={selectedProjectId} onSelect={(id) => { setSelectedProjectId(id); setIsEditing(false); }} />
+        <span className="text-[11px] text-blue-700 font-medium">مدة التصاميم: {designTiming.designMonths} شهر <span className="text-gray-400">(من الإعدادات والقواعد)</span></span>
         {!isEditing ? (
           <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} className="h-7 text-[12px] px-3 gap-1 border-gray-200 hover:bg-gray-50">
             <Pencil className="w-3.5 h-3.5" /> تعديل

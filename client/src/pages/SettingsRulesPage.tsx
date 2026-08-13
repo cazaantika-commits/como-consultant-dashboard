@@ -8,6 +8,7 @@ import { ProjectSelector } from "@/components/ProjectSelector";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { DEFAULT_DESIGN_PAYMENT_STAGES, type DesignPaymentStage } from "@/lib/projectTiming";
 import {
   Settings, Save, Loader2, Building2, Calendar,
   Percent, Clock, Banknote, HardHat, Megaphone,
@@ -27,14 +28,6 @@ interface ProjectPhase {
   startOffsetMonths: number; // offset from reference point
   startReference: string; // reference event id
   color: string;
-}
-
-interface DesignPaymentPhase {
-  id: string;
-  label: string;
-  labelEn: string;
-  pct: number;
-  durationWeeks: number;
 }
 
 interface ConfigurableRate {
@@ -58,16 +51,6 @@ const DEFAULT_PROJECT_PHASES: ProjectPhase[] = [
   { id: "marketingLaunch", label: "التسويق", startRule: "فوراً بعد اكتمال تحضير مواد التسويق وإصدار ترخيص التسويق", durationMonths: 0, durationEditable: false, startEditable: false, startOffsetMonths: 0, startReference: "marketingPrepEnd", color: "#ec4899" },
   { id: "salesStart", label: "بدء البيع", startRule: "بعد شهر من اكتمال تسجيل المشروع وإصدار ترخيص البيع", durationMonths: 0, durationEditable: false, startEditable: false, startOffsetMonths: 1, startReference: "reraApprovalsEnd", color: "#10b981" },
   { id: "construction", label: "الإنشاء", startRule: "من المدخلات العامة", durationMonths: 0, durationEditable: false, startEditable: true, startOffsetMonths: 1, startReference: "designsEnd", color: "#64748b" },
-];
-
-const DEFAULT_DESIGN_PAYMENTS: DesignPaymentPhase[] = [
-  { id: "mobilization", label: "التعبئة وجمع البيانات", labelEn: "Mobilization & Data Collection", pct: 5, durationWeeks: 2 },
-  { id: "concept", label: "التصميم المبدئي", labelEn: "Concept Design", pct: 15, durationWeeks: 4 },
-  { id: "schematic", label: "التصميم التخطيطي", labelEn: "Schematic Design", pct: 20, durationWeeks: 4 },
-  { id: "dd", label: "تطوير التصميم التفصيلي", labelEn: "Detailed Design Development", pct: 25, durationWeeks: 6 },
-  { id: "authorities", label: "اعتماد الجهات", labelEn: "Authorities Approval", pct: 10, durationWeeks: 4 },
-  { id: "tender", label: "تأهيل المقاولين ووثائق المناقصة", labelEn: "Prequalification & Tender Documents", pct: 15, durationWeeks: 4 },
-  { id: "ifc", label: "صادر للتنفيذ", labelEn: "Issued for Construction", pct: 10, durationWeeks: 2 },
 ];
 
 const DEFAULT_CONFIGURABLE_RATES: ConfigurableRate[] = [
@@ -143,7 +126,7 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
 
   // ─── State ──────────────────────────────────────────────────────────────────
   const [projectPhases, setProjectPhases] = useState<ProjectPhase[]>(DEFAULT_PROJECT_PHASES);
-  const [designPayments, setDesignPayments] = useState<DesignPaymentPhase[]>(DEFAULT_DESIGN_PAYMENTS);
+  const [designPayments, setDesignPayments] = useState<DesignPaymentStage[]>(DEFAULT_DESIGN_PAYMENT_STAGES);
   const [configurableRates, setConfigurableRates] = useState<ConfigurableRate[]>(DEFAULT_CONFIGURABLE_RATES);
   const [directSalesStartMonth, setDirectSalesStartMonth] = useState(4);
   const [directSalesInstallmentCount, setDirectSalesInstallmentCount] = useState(6);

@@ -1124,3 +1124,9 @@
 - [x] Populate only the Community Fees field in Feasibility Study from the aggregate of the distributed Community Fees cash-flow row
 - [x] Deferred by user: Make Feasibility Study total project cost equal the aggregate of the same distributed monthly cash-flow cost rows
 - [x] Deferred by user: Verify Feasibility Study total, Investor Cash Flow total expenses, and distributed monthly total reconcile exactly for one project
+- [x] Audit the Financial Studies timeline against each project’s saved start date, design duration, construction duration, and phase dependencies; audit found fixed dummy data
+- [x] Replace the fixed Financial Studies timeline with project-driven phases, dates, durations, and dependencies
+- [x] Audit and document the valid saved timing rules in Settings and Rules before rebuilding the project-driven timeline
+- [x] Resolve the Majan design-duration source conflict: Settings design stages total 7 months while General Inputs and cash flow use 8 months
+- [x] Make Settings design-stage weeks the sole source of design duration and remove the duplicate General Inputs design-duration control
+- [x] Verify Settings-derived design duration is used consistently in Investor Cash Flow, Escrow Cash Flow, Feasibility, and the timeline

@@ -44,7 +44,10 @@ describe("project community-fee settings", () => {
     ].reduce((sum, amount) => sum + amount, 0);
     const feasibilityCosts = calculateProjectCosts(project);
 
-    expect(rowTotal).toBe(1_500);
+    // No design stages are overridden in this fixture, so Settings defaults
+    // provide 26 weeks (7 months) plus six construction months: 13 months
+    // total, yielding four payments at the saved four-month frequency.
+    expect(rowTotal).toBe(2_000);
     expect(feasibilityCosts?.communityFees).toBe(rowTotal);
   });
 });

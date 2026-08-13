@@ -8,6 +8,7 @@ import { useProjectContext } from "@/contexts/ProjectContext";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { calculateProjectCosts } from "@/lib/projectCostsCalc";
+import { getProjectDesignTiming } from "@/lib/projectTiming";
 import { ProjectSelector } from "@/components/ProjectSelector";
 import {
   DollarSign, TrendingUp, BarChart2, Briefcase, Building2,
@@ -33,6 +34,7 @@ export default function V2Feasibility() {
   const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
   const project = projectQuery.data;
   const costs = project ? calculateProjectCosts(project) : null;
+  const designDuration = getProjectDesignTiming(project).designMonths;
 
   // Computed values
   const totalRevenue = costs?.totalRevenue || 0;
@@ -85,7 +87,7 @@ export default function V2Feasibility() {
 
   // ═══ IRR ESTIMATE ═══
   // Simple annualized ROI based on project duration
-  const totalMonths = parseInt(project?.preConMonths || "6") + parseInt(project?.constructionMonths || "18");
+  const totalMonths = designDuration + parseInt(project?.constructionMonths || "18");
   const totalYears = totalMonths / 12;
   const annualizedROI = totalYears > 0 && investorROI > 0 ? investorROI / totalYears : 0;
 
@@ -270,7 +272,7 @@ export default function V2Feasibility() {
                   <DetailRow label="مساحة البناء (BUA)" value={project.manualBuaSqft ? `${fmt(parseFloat(project.manualBuaSqft))} قدم²` : "—"} />
                   <DetailRow label="سعر الأرض" value={project.landPrice ? `${fmt(parseFloat(project.landPrice))} AED` : "—"} />
                   <DetailRow label="تكلفة الإنشاء/قدم²" value={project.estimatedConstructionPricePerSqft ? `${parseFloat(project.estimatedConstructionPricePerSqft).toFixed(0)} AED` : "—"} />
-                  <DetailRow label="مدة التصاميم" value={project.preConMonths ? `${project.preConMonths} شهر` : "—"} />
+                  <DetailRow label="مدة التصاميم" value={`${designDuration} شهر`} />
                   <DetailRow label="مدة الإنشاء" value={project.constructionMonths ? `${project.constructionMonths} شهر` : "—"} />
 
                   <DetailRow label="أتعاب المطور" value={project.developerFeePct ? `${project.developerFeePct}%` : "—"} />

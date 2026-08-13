@@ -8,6 +8,7 @@ import {
   calculateCommunityFeeSchedule,
   getProjectCommunityFeeSettings,
 } from "@/lib/communityFee";
+import { getProjectDesignTiming } from "@/lib/projectTiming";
 
 /**
  * Calculate all project costs from raw data.
@@ -135,9 +136,10 @@ export function calculateProjectCosts(
   // رسوم ريرا المحسوبة (الصيغ الجديدة)
   const totalUnits = unitData.reduce((s, u) => s + u.count, 0);
   const computedReraUnitRegFee = totalUnits > 0 ? totalUnits * 800 : reraUnitRegFee;
+  const designDuration = getProjectDesignTiming(p).designMonths;
   const communitySchedule = calculateCommunityFeeSchedule(
     totalGfaSqft,
-    parseInt(p.preConMonths || "6") + parseInt(p.constructionMonths || "16"),
+    designDuration + parseInt(p.constructionMonths || "16"),
     getProjectCommunityFeeSettings(p),
   );
   const computedCommunityFees = communitySchedule.total;
